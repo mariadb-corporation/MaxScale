@@ -1652,7 +1652,7 @@ int blr_file_next_exists(ROUTER_INSTANCE* router,
     MARIADB_GTID_INFO result;
     memset(&result, 0, sizeof(result));
 
-    if ((sptr = strrchr(slave->binlogfile, '.')) == NULL)
+    if ((sptr = strrchr(slave->binlog_name, '.')) == NULL)
     {
         next_file[0] = '\0';
         return 0;
@@ -1685,7 +1685,7 @@ int blr_file_next_exists(ROUTER_INSTANCE* router,
         snprintf(select_query,
                  GTID_SQL_BUFFER_SIZE,
                  select_tpl,
-                 slave->binlogfile,
+                 slave->binlog_name,
                  slave->f_info.gtid_elms.domain_id,
                  slave->f_info.gtid_elms.server_id);
 
@@ -1698,7 +1698,7 @@ int blr_file_next_exists(ROUTER_INSTANCE* router,
         {
             MXS_ERROR("Failed to select next file of %s"
                       " from GTID maps DB: %s, select [%s]",
-                      slave->binlogfile,
+                      slave->binlog_name,
                       errmsg,
                       select_query);
             sqlite3_free(errmsg);
@@ -1728,7 +1728,7 @@ int blr_file_next_exists(ROUTER_INSTANCE* router,
             /**
              * Update GTID elems in the slave->f_info struct:
              * file and domain_id / server_id
-             * Note: slave->binlogfile is untouched
+             * Note: slave->binlog_name is untouched
              */
             strcpy(slave->f_info.file, result.file);
             slave->f_info.gtid_elms.domain_id = result.gtid_elms.domain_id;
@@ -1743,7 +1743,7 @@ int blr_file_next_exists(ROUTER_INSTANCE* router,
                                                                       "has not been found. Router state is [%s]",
                         slave->f_info.gtid_elms.domain_id,
                         slave->f_info.gtid_elms.server_id,
-                        slave->binlogfile,
+                        slave->binlog_name,
                         blrm_states[router->master_state]);
 
             next_file[0] = '\0';
@@ -4822,7 +4822,7 @@ bool blr_is_current_binlog(ROUTER_INSTANCE* router,
     return blr_compare_binlogs(router,
                                &slave->f_info.gtid_elms,
                                router->binlog_name,
-                               slave->binlogfile);
+                               slave->binlog_name);
 }
 
 /**

@@ -582,7 +582,7 @@ typedef struct router_slave
     DCB*     dcb;               /*< The slave server DCB */
     int      state;             /*< The state of this slave */
     uint32_t binlog_pos;        /*< Binlog position for this slave */
-    char     binlogfile[BINLOG_FNAMELEN + 1];
+    char     binlog_name[BINLOG_FNAMELEN + 1];
     /*< Current binlog file for this slave */
     char* uuid;             /*< Slave UUID */
 #ifdef BLFILE_IN_SLAVE

@@ -1917,7 +1917,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
 
     /* Get the current router binlog file */
     spinlock_acquire(&router->binlog_lock);
-    strcpy(slave->binlogfile, router->binlog_name);
+    strcpy(slave->binlog_name, router->binlog_name);
     spinlock_release(&router->binlog_lock);
 
     /* Set the safe pos */
@@ -1971,8 +1971,8 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         }
 
         /* Set the received filename from packet: it could be changed later */
-        memcpy(slave->binlogfile, (char*)ptr, binlognamelen);
-        slave->binlogfile[binlognamelen] = 0;
+        memcpy(slave->binlog_name, (char*)ptr, binlognamelen);
+        slave->binlog_name[binlognamelen] = 0;
     }
 
     /**
@@ -2028,7 +2028,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
                       slave->dcb->remote,
                       dcb_get_port(slave->dcb),
                       slave->serverid,
-                      slave->binlogfile,
+                      slave->binlog_name,
                       (unsigned long)slave->binlog_pos,
                       router->binlog_position,
                       router->current_pos);
@@ -2050,8 +2050,8 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
               router->service->name,
               slave->dcb->remote,
               dcb_get_port(slave->dcb),
-              slave->binlogfile,
-              strlen(slave->binlogfile),
+              slave->binlog_name,
+              strlen(slave->binlog_name),
               (unsigned long)slave->binlog_pos);
 
     /* Check first the requested file exists */
@@ -2062,7 +2062,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         snprintf(errmsg,
                  BINLOG_ERROR_MSG_LEN,
                  "Requested file name '%s' doesn't exist",
-                 slave->binlogfile);
+                 slave->binlog_name);
         errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
         // ERROR
@@ -2094,7 +2094,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         snprintf(errmsg,
                  BINLOG_ERROR_MSG_LEN,
                  "Cannot send Fake Rotate Event for '%s'",
-                 slave->binlogfile);
+                 slave->binlog_name);
         errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
         // ERROR
         blr_slave_abort_dump_request(slave, errmsg);
@@ -2120,7 +2120,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         snprintf(errmsg,
                  BINLOG_ERROR_MSG_LEN,
                  "Cannot read FDE event from file '%s'",
-                 slave->binlogfile);
+                 slave->binlog_name);
         errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
         // ERROR
         blr_slave_abort_dump_request(slave, errmsg);
@@ -2141,7 +2141,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
             snprintf(errmsg,
                      BINLOG_ERROR_MSG_LEN,
                      "Cannot send FDE for file '%s'",
-                     slave->binlogfile);
+                     slave->binlog_name);
             errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
             // ERROR
             blr_slave_abort_dump_request(slave, errmsg);
@@ -2186,7 +2186,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
             snprintf(errmsg,
                      BINLOG_ERROR_MSG_LEN,
                      "Cannot send Fake GTID List Event for '%s'",
-                     slave->binlogfile);
+                     slave->binlog_name);
             errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
             // ERROR
             blr_slave_abort_dump_request(slave, errmsg);
@@ -2208,7 +2208,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
                slave->dcb->remote,
                dcb_get_port(slave->dcb),
                slave->serverid,
-               slave->binlogfile,
+               slave->binlog_name,
                (unsigned long)slave->binlog_pos);
 
     /* Force the slave to call catchup routine */
@@ -2360,7 +2360,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
     {
         rotating = router->rotating;
         if ((file = blr_open_binlog(router,
-                                    slave->binlogfile,
+                                    slave->binlog_name,
                                     f_tree)) == NULL)
         {
             char err_msg[BINLOG_ERROR_MSG_LEN + 1];
@@ -2391,7 +2391,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                       dcb_get_port(slave->dcb),
                       slave->serverid,
                       t_prefix,
-                      slave->binlogfile);
+                      slave->binlog_name);
 
             slave->cstate &= ~CS_BUSY;
             slave->state = BLRS_ERRORED;
@@ -2399,7 +2399,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             snprintf(err_msg,
                      BINLOG_ERROR_MSG_LEN,
                      "Failed to open binlog '%s'",
-                     slave->binlogfile);
+                     slave->binlog_name);
 
             /* Send error that stops slave replication */
             blr_send_custom_error(slave->dcb,
@@ -2444,7 +2444,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                     slave->f_info.gtid_elms.server_id);
         }
 
-        strcpy(binlog_name, slave->binlogfile);
+        strcpy(binlog_name, slave->binlog_name);
         binlog_pos = slave->binlog_pos;
 
         /**
@@ -2494,7 +2494,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                 MXS_INFO("Start Encryption event found while reading. "
                          "Binlog '%s%s' is encrypted. First event at %lu",
                          t_prefix,
-                         slave->binlogfile,
+                         slave->binlog_name,
                          (unsigned long)hdr.next_pos);
             }
             /* MARIADB_ANNOTATE_ROWS_EVENT is skipped: just log that */
@@ -2505,7 +2505,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                          blr_get_event_description(router, hdr.event_type),
                          (unsigned long)hdr.event_size,
                          t_prefix,
-                         slave->binlogfile,
+                         slave->binlog_name,
                          (unsigned long)slave->binlog_pos);
             }
             else
@@ -2515,7 +2515,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                          blr_get_event_description(router, hdr.event_type),
                          (unsigned long)hdr.event_size,
                          t_prefix,
-                         slave->binlogfile,
+                         slave->binlog_name,
                          (unsigned long)slave->binlog_pos);
             }
 
@@ -2540,7 +2540,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             {
                 MXS_ERROR("blr_close_binlog took %ld maxscale beats", beat2 - beat1);
             }
-            /* Set new file in slave->binlogfile */
+            /* Set new file in slave->binlog_name */
             blr_slave_rotate(router, slave, GWBUF_DATA(record));
 
             /* reset the encryption context */
@@ -2551,11 +2551,11 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
 
 #ifdef BLFILE_IN_SLAVE
             if ((slave->file = blr_open_binlog(router,
-                                               slave->binlogfile,
+                                               slave->binlog_name,
                                                f_tree)) == NULL)
 #else
             if ((file = blr_open_binlog(router,
-                                        slave->binlogfile,
+                                        slave->binlog_name,
                                         f_tree)) == NULL)
 #endif
             {
@@ -2586,14 +2586,14 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                           dcb_get_port(slave->dcb),
                           slave->serverid,
                           t_prefix,
-                          slave->binlogfile);
+                          slave->binlog_name);
 
                 slave->state = BLRS_ERRORED;
 
                 snprintf(err_msg,
                          BINLOG_ERROR_MSG_LEN,
                          "Failed to open binlog '%s' in rotate event",
-                         slave->binlogfile);
+                         slave->binlog_name);
 
                 /* Send error that stops slave replication */
                 blr_send_custom_error(slave->dcb,
@@ -2702,7 +2702,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                       dcb_get_port(slave->dcb),
                       slave->serverid,
                       t_prefix,
-                      slave->binlogfile,
+                      slave->binlog_name,
                       read_errmsg);
         }
 
@@ -2714,7 +2714,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                       dcb_get_port(slave->dcb),
                       slave->serverid,
                       t_prefix,
-                      slave->binlogfile,
+                      slave->binlog_name,
                       read_errmsg);
 
             /*
@@ -2737,7 +2737,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                       dcb_get_port(slave->dcb),
                       slave->serverid,
                       t_prefix,
-                      slave->binlogfile,
+                      slave->binlog_name,
                       read_errmsg);
 
             spinlock_acquire(&slave->catch_lock);
@@ -2773,7 +2773,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                        dcb_get_port(slave->dcb),
                        slave->serverid,
                        t_prefix,
-                       slave->binlogfile,
+                       slave->binlog_name,
                        slave->stats.n_events - events_before,
                        router->current_safe_event,
                        read_errmsg);
@@ -3182,8 +3182,8 @@ void blr_slave_rotate(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, uint8_t* ptr
     ptr += BINLOG_EVENT_HDR_LEN;    // Skip header
     slave->binlog_pos = extract_field(ptr, 32);
     slave->binlog_pos += (((uint64_t)extract_field(ptr + 4, 32)) << 32);
-    memcpy(slave->binlogfile, ptr + 8, len);
-    slave->binlogfile[len] = 0;
+    memcpy(slave->binlog_name, ptr + 8, len);
+    slave->binlog_name[len] = 0;
 }
 
 /**
@@ -3217,7 +3217,7 @@ static int blr_slave_fake_rotate(ROUTER_INSTANCE* router,
     /* Set Pos = 4 */
     slave->binlog_pos = 4;
     /* Set Filename */
-    strcpy(slave->binlogfile, new_file);
+    strcpy(slave->binlog_name, new_file);
 
     if ((*filep = blr_open_binlog(router,
                                   new_file,
@@ -3267,7 +3267,7 @@ static GWBUF* blr_slave_read_fde(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     memset(&hdr, 0, BINLOG_EVENT_HDR_LEN);
 
     if ((file = blr_open_binlog(router,
-                                slave->binlogfile,
+                                slave->binlog_name,
                                 f_tree)) == NULL)
     {
         return NULL;
@@ -3287,7 +3287,7 @@ static GWBUF* blr_slave_read_fde(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                       slave->dcb->remote,
                       dcb_get_port(slave->dcb),
                       slave->serverid,
-                      slave->binlogfile,
+                      slave->binlog_name,
                       err_msg);
         }
 
@@ -6229,7 +6229,7 @@ static int blr_slave_send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
     uint8_t* ptr;
     int len = BINLOG_EVENT_HDR_LEN;
     uint32_t chksum;
-    int filename_len = strlen(slave->binlogfile);
+    int filename_len = strlen(slave->binlog_name);
 
     /* Add CRC32 4 bytes */
     if (!slave->nocrc)
@@ -6285,7 +6285,7 @@ static int blr_slave_send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
     ptr = blr_build_header(h_event, &hdr);
 
     /* Copy binlog name */
-    memcpy(ptr, slave->binlogfile, filename_len);
+    memcpy(ptr, slave->binlog_name, filename_len);
 
     ptr += filename_len;
 
@@ -6489,7 +6489,7 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
 
     BLFILE* file;
     if ((file = blr_open_binlog(router,
-                                slave->binlogfile,
+                                slave->binlog_name,
                                 f_tree)) == NULL)
     {
         return 0;
@@ -6509,7 +6509,7 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
                       slave->dcb->remote,
                       dcb_get_port(slave->dcb),
                       slave->serverid,
-                      slave->binlogfile,
+                      slave->binlog_name,
                       err_msg);
         }
 
@@ -6560,7 +6560,7 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
 
         MXS_INFO("Start Encryption event found. Binlog %s is encrypted. "
                  "First event at %lu",
-                 slave->binlogfile,
+                 slave->binlog_name,
                  (unsigned long)fde_end_pos + hdr.event_size);
         /**
          * Note: if the requested pos is equal to MXS_START_ENCRYPTION_EVENT pos
@@ -6904,7 +6904,7 @@ static int blr_send_connect_fake_rotate(ROUTER_INSTANCE* router,
     /* Build Fake Rotate Event */
     GWBUF* r_event = blr_build_fake_rotate_event(slave,
                                                  slave->binlog_pos,
-                                                 slave->binlogfile,
+                                                 slave->binlog_name,
                                                  router->masterid);
 
     /* Send Fake Rotate Event or return 0*/
@@ -7071,7 +7071,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
                     f_gtid.gtid_elms.server_id);
         }
 
-        strcpy(slave->binlogfile, router_curr_file);
+        strcpy(slave->binlog_name, router_curr_file);
         slave->binlog_pos = 4;
 
         MXS_INFO("Slave %d is registering with empty GTID:"
@@ -7079,7 +7079,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
                  " pos %" PRIu32 "",
                  slave->serverid,
                  t_prefix,
-                 slave->binlogfile,
+                 slave->binlog_name,
                  slave->binlog_pos);
 
         /* Add GTID details to slave struct */
@@ -7111,7 +7111,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
             errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
             MXS_ERROR("%s", errmsg);
-            strcpy(slave->binlogfile, "");
+            strcpy(slave->binlog_name, "");
             slave->binlog_pos = 0;
             blr_send_custom_error(slave->dcb,
                                   slave->seqno + 1,
@@ -7150,7 +7150,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
             if (slave->gtid_strict_mode)
             {
                 MXS_ERROR("%s", errmsg);
-                strcpy(slave->binlogfile, "");
+                strcpy(slave->binlog_name, "");
                 slave->binlog_pos = 0;
                 blr_send_custom_error(slave->dcb,
                                       slave->seqno + 1,
@@ -7170,7 +7170,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
                 MXS_FREE(slave->mariadb_gtid);
                 slave->mariadb_gtid = MXS_STRDUP_A(last_gtid);
                 // - 2 - Use current router file and position
-                strcpy(slave->binlogfile, router_curr_file);
+                strcpy(slave->binlog_name, router_curr_file);
                 slave->binlog_pos = router_pos;
 
                 // - 3 Set GTID details for filename
@@ -7202,10 +7202,10 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
              *   if the requested binlog file is equal to GTID info file use it.
              */
             if (!req_file
-                || (strcmp(slave->binlogfile, f_gtid.file) == 0))
+                || (strcmp(slave->binlog_name, f_gtid.file) == 0))
             {
                 /* Set binlog file to the GTID one */
-                strcpy(slave->binlogfile, f_gtid.file);
+                strcpy(slave->binlog_name, f_gtid.file);
 
                 /* Set pos to GTID next event pos */
                 slave->binlog_pos = f_gtid.end;
@@ -7233,7 +7233,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
                 }
 
                 // Get binlog filename full-path
-                blr_get_file_fullpath(slave->binlogfile,
+                blr_get_file_fullpath(slave->binlog_name,
                                       router->binlogdir,
                                       file_path,
                                       t_prefix[0] ? t_prefix : NULL);
@@ -7245,7 +7245,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
                 else
                 {
                     /* Set binlog file to the GTID one */
-                    strcpy(slave->binlogfile, f_gtid.file);
+                    strcpy(slave->binlog_name, f_gtid.file);
 
                     /* Set pos to GTID next event pos */
                     slave->binlog_pos = f_gtid.end;
@@ -8301,7 +8301,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                          * The binlog server has just been configured
                          * master.ini file written in router->binlogdir.
                          *
-                         * Create the binlogfile specified in MASTER_LOG_FILE
+                         * Create the binlog_name specified in MASTER_LOG_FILE
                          * only if MariaDB GTID 'mariadb10_master_gtid' is Off
                          */
 
@@ -8337,7 +8337,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
 
                     /*
                      * The CHAMGE MASTER command might specify a new binlog file.
-                     * Let's create the binlogfile specified in MASTER_LOG_FILE
+                     * Let's create the binlog_name specified in MASTER_LOG_FILE
                      * only if MariaDB GTID 'mariadb10_master_gtid' is Off
                      */
 
@@ -8419,7 +8419,7 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE* router,
     spinlock_release(&router->binlog_lock);
 
     // Set the starting filename
-    strcpy(binlog_file, slave->binlogfile);
+    strcpy(binlog_file, slave->binlog_name);
 
     // Add tree prefix
     if (f_tree)
@@ -8470,7 +8470,7 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE* router,
     // One or more files skipped: set last found filename and pos = 4
     if (skipped_files)
     {
-        strcpy(slave->binlogfile, binlog_file);
+        strcpy(slave->binlog_name, binlog_file);
         slave->binlog_pos = 4;
     }
 }
@@ -9805,7 +9805,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                     dcb_get_port(slave->dcb),
                     slave->serverid,
                     c_prefix,
-                    slave->binlogfile,
+                    slave->binlog_name,
                     (unsigned long)slave->binlog_pos,
                     m_prefix,
                     router->binlog_name[0] ? router->binlog_name : "no_set_yet",
@@ -9825,7 +9825,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                   dcb_get_port(slave->dcb),
                   slave->serverid,
                   c_prefix,
-                  slave->binlogfile,
+                  slave->binlog_name,
                   next_file[0] ? " '" : "",
                   next_file[0] ? r_prefix : "",
                   next_file,
@@ -9850,7 +9850,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                     dcb_get_port(slave->dcb),
                     slave->serverid,
                     c_prefix,
-                    slave->binlogfile,
+                    slave->binlog_name,
                     (unsigned long)slave->binlog_pos,
                     next_file[0] ? " '" : "",
                     next_file[0] ? r_prefix : "",

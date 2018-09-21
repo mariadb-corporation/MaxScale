@@ -1195,7 +1195,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
 #ifdef BLFILE_IN_SLAVE
     slave->file = NULL;
 #endif
-    strcpy(slave->binlogfile, "unassigned");
+    strcpy(slave->binlog_name, "unassigned");
     slave->connect_time = time(0);
     slave->lastEventTimestamp = 0;
     slave->mariadb10_compat = false;
@@ -1346,7 +1346,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
                        slave->stats.n_queries,
                        slave->stats.n_events,
                        slave->stats.n_bytes,
-                       slave->binlogfile,
+                       slave->binlog_name,
                        (unsigned long)slave->binlog_pos);
         }
         else
@@ -1835,7 +1835,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
                        blrs_states[session->state]);
             dcb_printf(dcb,
                        "\t\tBinlog file:                             %s\n",
-                       session->binlogfile);
+                       session->binlog_name);
             dcb_printf(dcb,
                        "\t\tBinlog position:                         %u\n",
                        session->binlog_pos);
@@ -2247,7 +2247,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
             json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->ssl));
             json_object_set_new(rval, "state", json_string(blrs_states[session->state]));
             json_object_set_new(rval, "next_sequence", json_integer(session->seqno));
-            json_object_set_new(rval, "binlog_file", json_string(session->binlogfile));
+            json_object_set_new(rval, "binlog_file", json_string(session->binlog_name));
             json_object_set_new(rval, "binlog_pos", json_integer(session->binlog_pos));
             json_object_set_new(rval, "crc", json_boolean(!session->nocrc));
 
