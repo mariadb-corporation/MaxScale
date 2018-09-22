@@ -259,18 +259,6 @@ static void extract_header(register const uint8_t* event,
     hdr->event_size = gw_mysql_get_byte4(event + 4 + 1 + 4);
     hdr->next_pos = gw_mysql_get_byte4(event + 4 + 1 + 4 + 4);
     hdr->flags = gw_mysql_get_byte2(event + 4 + 1 + 4 + 4 + 4);
-
-    MXS_INFO("Binlog Event, Header: pkt #%d, "
-             "serverId %" PRIu32 ", event_type [%d], "
-                                 "flags %d, event_size %" PRIu32 ", next_pos %" PRIu32 ", "
-                                                                                       "packet size %" PRIu32 "",
-             hdr->seqno,
-             hdr->serverid,
-             hdr->event_type,
-             hdr->flags,
-             hdr->event_size,
-             hdr->next_pos,
-             hdr->payload_len);
 }
 
 /**
@@ -349,9 +337,6 @@ bool BinlogFilterSession::checkEvent(GWBUF* buffer,
                  * Set next pos to 0 instead of real one and new CRC32
                  */
                 fixEvent(event + MYSQL_HEADER_LEN + 1, hdr.event_size);
-
-                MXS_INFO("Skipped events: Setting next_pos = 0 in %s",
-                         event[4] == XID_EVENT ? "XID_EVENT" : "COMMIT");
             }
             break;
 
@@ -409,7 +394,7 @@ static bool should_skip(const BinlogConfig& config, const std::string& str)
 
 static bool should_skip_query(const BinlogConfig& config, const std::string& sql)
 {
-    uint32_t pktlen = sql.size() + 1; // Payload and command byte
+    uint32_t pktlen = sql.size() + 1;   // Payload and command byte
     GWBUF* buf = gwbuf_alloc(MYSQL_HEADER_LEN + pktlen);
     uint8_t* data = GWBUF_DATA(buf);
 
@@ -454,7 +439,9 @@ void BinlogFilterSession::skipDatabaseTable(const uint8_t* data,
     // Note: Each time this event is seen the m_skip is overwritten
     if (hdr.event_type == TABLE_MAP_EVENT)
     {
-        m_skip = should_skip(m_filter.getConfig(), extract_table_info(data));
+        std::string table = extract_table_info(data);
+        m_skip = should_skip(m_filter.getConfig(), table);
+        MXS_INFO("[%s] TABLE_MAP: %s", m_skip ? "SKIP" : "    ", table.c_str());
     }
 }
 
@@ -821,9 +808,6 @@ void BinlogFilterSession::handleEventData(uint32_t len,
     {
         m_is_large = false;
     }
-
-    MXS_INFO("Binlog Event, data_only: pkt #%d, received %" PRIu32 ", remaining %" PRIu32 " bytes\n",
-             seqno, len, m_large_left);
 }
 
 /**
@@ -865,13 +849,16 @@ bool BinlogFilterSession::checkStatement(const uint8_t* event,
     }
 
     m_skip = should_skip_query(m_filter.getConfig(), sql);
+    MXS_INFO("[%s] %s", m_skip ? "SKIP" : "    ", sql.c_str());
 
     return true;
 }
 
 void BinlogFilterSession::checkAnnotate(const uint8_t* event, const uint32_t event_size)
 {
-    int statement_len = event_size - (MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN) - (m_crc ? 4 : 0);
-    std::string sql((char*)event + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN, statement_len);
+    int statement_len = event_size - (MYSQL_HEADER_LEN + BINLOG_EVENT_HDR_LEN);
+    std::string sql((char*)event + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN - 1, statement_len);
+
     m_skip = should_skip_query(m_filter.getConfig(), sql);
+    MXS_INFO("[%s] Annotate: %s", m_skip ? "SKIP" : "    ", sql.c_str());
 }
