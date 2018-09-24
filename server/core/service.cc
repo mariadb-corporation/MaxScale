@@ -947,7 +947,7 @@ static SERVER_REF* server_ref_create(SERVER* server)
         sref->next = NULL;
         sref->server = server;
         // all servers have weight 1.0, when weights are not configured.
-        sref->inv_weight = 1.0;
+        sref->server_weight = 1.0;
         sref->connections = 0;
         sref->active = true;
     }
@@ -1699,22 +1699,24 @@ static void service_calculate_weights(SERVICE* service)
         char buf[50];   // Enough to hold most numbers
         /** Service has a weighting parameter and at least one server */
         double total {0};
-        bool weights_are_in_use = false;
 
         /** Calculate total weight */
         for (SERVER_REF* server = service->dbref; server; server = server->next)
         {
             if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
             {
-                total += atoi(buf);
-                weights_are_in_use = true;
+                long w = atol(buf);
+                if (w > 0)
+                {
+                    total += w;
+                }
             }
         }
 
-        if (!weights_are_in_use)
+        if (total == 0)
         {
-            MXS_WARNING("Weighting Parameter for service '%s' will be ignored as "
-                        "no servers have values for the parameter '%s'.",
+            MXS_WARNING("Weighting parameters for service '%s' will be ignored as "
+                        "no servers have (positive) values for the parameter '%s'.",
                         service->name,
                         weightby);
         }
@@ -1725,10 +1727,10 @@ static void service_calculate_weights(SERVICE* service)
             {
                 if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
                 {
-                    int config_weight = atoi(buf);
+                    long config_weight = atol(buf);
                     if (config_weight <= 0)
                     {
-                        MXS_WARNING("Weighting parameter '%s' is set to %d for server '%s'."
+                        MXS_WARNING("Weighting parameter '%s' is set to %ld for server '%s'."
                                     " The runtime weight will be set to 0, and the server"
                                     " will only be used if no other servers are available.",
                                     weightby,
@@ -1736,7 +1738,7 @@ static void service_calculate_weights(SERVICE* service)
                                     server->server->name);
                         config_weight = 0;
                     }
-                    server->inv_weight = 1.0 - config_weight / total;
+                    server->server_weight = config_weight / total;
                 }
                 else
                 {
@@ -1745,7 +1747,7 @@ static void service_calculate_weights(SERVICE* service)
                                 " will only be used if no other servers are available.",
                                 weightby,
                                 server->server->name);
-                    server->inv_weight = 1.0;
+                    server->server_weight = 0;
                 }
             }
         }

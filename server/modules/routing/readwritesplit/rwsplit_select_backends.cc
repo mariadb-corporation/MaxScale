@@ -79,7 +79,7 @@ SRWBackendVector::iterator best_score(SRWBackendVector& sBackends,
 SRWBackendVector::iterator backend_cmp_router_conn(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->inv_weight * server->connections;
+            return server->server_weight ? server->connections / server->server_weight : 0;
         };
 
     return best_score(sBackends, server_score);
@@ -89,7 +89,7 @@ SRWBackendVector::iterator backend_cmp_router_conn(SRWBackendVector& sBackends)
 SRWBackendVector::iterator backend_cmp_global_conn(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->inv_weight * server->server->stats.n_current;
+            return server->server_weight ? server->server->stats.n_current / server->server_weight : 0;
         };
 
     return best_score(sBackends, server_score);
@@ -99,7 +99,7 @@ SRWBackendVector::iterator backend_cmp_global_conn(SRWBackendVector& sBackends)
 SRWBackendVector::iterator backend_cmp_behind_master(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->inv_weight * server->server->rlag;
+            return server->server_weight ? server->server->rlag / server->server_weight : 0;
         };
 
     return best_score(sBackends, server_score);
@@ -109,7 +109,7 @@ SRWBackendVector::iterator backend_cmp_behind_master(SRWBackendVector& sBackends
 SRWBackendVector::iterator backend_cmp_current_load(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->inv_weight * server->server->stats.n_current_ops;
+            return server->server_weight ? server->server->stats.n_current_ops / server->server_weight : 0;
         };
 
     return best_score(sBackends, server_score);

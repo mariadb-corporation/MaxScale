@@ -364,22 +364,21 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
             {
                 candidate = ref;
             }
-            else if (candidate->connections == 0)
+            else if (ref->server_weight == 0 || candidate->server_weight == 0)
             {
-                /* The candidate is already as good as it gets. */
+                if (ref->server_weight)     // anything with a weight is better
+                {
+                    candidate = ref;
+                }
             }
-            else if (ref->connections == 0)
-            {
-                candidate = ref;
-            }
-            else if (ref->inv_weight * ref->connections
-                     < candidate->inv_weight * candidate->connections)
+            else if (ref->connections / ref->server_weight
+                     < candidate->connections / candidate->server_weight)
             {
                 /* ref has a better score. */
                 candidate = ref;
             }
-            else if (mxs::almost_equal_server_scores(ref->inv_weight * ref->connections,
-                                                     candidate->inv_weight * candidate->connections)
+            else if (mxs::almost_equal_server_scores(ref->server_weight * ref->connections,
+                                                     candidate->server_weight * candidate->connections)
                      && ref->server->stats.n_connections < candidate->server->stats.n_connections)
             {
                 /* The servers are about equally good, but ref has had fewer connections over time.
@@ -712,7 +711,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             dcb_printf(dcb,
                        "\t\t%-20s %3.1f%%     %d\n",
                        ref->server->name,
-                       (1.0 - ref->inv_weight) * 100,
+                       ref->server_weight * 100,
                        ref->connections);
         }
     }
@@ -887,7 +886,7 @@ static SERVER_REF* get_root_master(SERVER_REF* servers)
         if (ref->active && server_is_master(ref->server))
         {
             // No master found yet or this one has better weight.
-            if (master_host == NULL || ref->inv_weight < master_host->inv_weight)
+            if (master_host == NULL || ref->server_weight > master_host->server_weight)
             {
                 master_host = ref;
             }

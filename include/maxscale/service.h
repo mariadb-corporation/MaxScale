@@ -63,7 +63,7 @@ typedef struct server_ref_t
 {
     struct server_ref_t* next;          /**< Next server reference */
     SERVER*              server;        /**< The actual server */
-    double               inv_weight;    /**< Inverse of weight in the range [0..1], 0 is best. */
+    double               server_weight; /**< Weight in the range [0..1]. 0 is worst, and a special case. */
     int                  connections;   /**< Number of connections created through this reference */
     bool                 active;        /**< Whether this reference is valid and in use*/
 } SERVER_REF;

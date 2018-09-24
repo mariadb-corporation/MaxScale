@@ -372,7 +372,7 @@ void RWSplit::diagnostics(DCB* dcb)
             dcb_printf(dcb,
                        "\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
                        ref->server->name,
-                       (1.0 - ref->inv_weight) * 100,
+                       ref->server_weight * 100,
                        ref->server->stats.n_current,
                        ref->connections,
                        ref->server->stats.n_current_ops);
