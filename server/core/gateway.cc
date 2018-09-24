@@ -2257,6 +2257,7 @@ int main(int argc, char** argv)
      * Destroy the router and filter instances of all services.
      */
     service_destroy_instances();
+    filter_destroy_instances();
 
     RoutingWorker::finish();
     maxbase::finish();

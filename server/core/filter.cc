@@ -187,15 +187,7 @@ void filter_destroy(const SFilterDef& filter)
 void filter_destroy_instances()
 {
     Guard guard(this_unit.lock);
-
-    for (const auto& filter : this_unit.filters)
-    {
-        // NOTE: replace this with filter_destroy
-        if (filter->obj->destroyInstance)
-        {
-            filter->obj->destroyInstance(filter->filter);
-        }
-    }
+    this_unit.filters.clear();
 }
 
 const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)
