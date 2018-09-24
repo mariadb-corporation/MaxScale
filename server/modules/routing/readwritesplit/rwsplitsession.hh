@@ -13,7 +13,6 @@
 #pragma once
 
 #include "readwritesplit.hh"
-#include "rwbackend.hh"
 #include "trx.hh"
 
 #include <string>
@@ -21,6 +20,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.h>
 #include <maxscale/queryclassifier.hh>
+#include <maxscale/protocol/rwbackend.hh>
 
 #define TARGET_IS_MASTER(t)       maxscale::QueryClassifier::target_is_master(t)
 #define TARGET_IS_SLAVE(t)        maxscale::QueryClassifier::target_is_slave(t)

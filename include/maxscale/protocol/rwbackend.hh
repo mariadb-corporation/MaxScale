@@ -12,13 +12,12 @@
  */
 #pragma once
 
-#include "response_stat.hh"
-
 #include <map>
 #include <memory>
 
 #include <maxscale/backend.hh>
 #include <maxscale/modutil.h>
+#include <maxscale/response_stat.hh>
 
 namespace maxscale
 {

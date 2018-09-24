@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include "response_stat.hh"
+#include <maxscale/response_stat.hh>
 
 #include <algorithm>
 

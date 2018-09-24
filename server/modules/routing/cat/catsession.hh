@@ -14,7 +14,7 @@
 
 #include "cat.hh"
 
-#include "../readwritesplit/rwbackend.hh"
+#include <maxscale/protocol/rwbackend.hh>
 
 class Cat;
 

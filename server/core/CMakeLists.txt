@@ -33,8 +33,9 @@ add_library(maxscale-common SHARED
   queryclassifier.cc
   query_classifier.cc
   random.cc
-  resultset.cc
   resource.cc
+  response_stat.cc
+  resultset.cc
   router.cc
   routingworker.cc
   secrets.cc

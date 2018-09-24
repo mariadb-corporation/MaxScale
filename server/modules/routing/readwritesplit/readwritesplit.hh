@@ -35,8 +35,7 @@
 #include <maxscale/session_command.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/routingworker.hh>
-
-#include "rwbackend.hh"
+#include <maxscale/protocol/rwbackend.hh>
 
 enum backend_type_t
 {
