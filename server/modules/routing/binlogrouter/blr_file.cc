@@ -834,11 +834,11 @@ static bool inline blr_is_same_slave_file(const BLFILE* file,
     {
         return (file->gtid_elms.domain_id == info->gtid_elms.domain_id)
                && (file->gtid_elms.server_id == info->gtid_elms.server_id)
-               && (strcmp(file->binlogname, binlog) == 0);
+               && (strcmp(file->binlog_name, binlog) == 0);
     }
     else
     {
-        return strcmp(file->binlogname, binlog) == 0;
+        return strcmp(file->binlog_name, binlog) == 0;
     }
 }
 
@@ -910,7 +910,7 @@ BLFILE* blr_open_binlog(ROUTER_INSTANCE* router,
         spinlock_release(&router->fileslock);
         return NULL;
     }
-    strcpy(file->binlogname, binlog);
+    strcpy(file->binlog_name, binlog);
     file->refcnt = 1;
     file->cache = 0;
 
@@ -1024,14 +1024,14 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
         if (!blr_compare_binlogs(router,
                                  &file->gtid_elms,
                                  router->binlog_name,
-                                 file->binlogname))
+                                 file->binlog_name))
         {
             snprintf(errmsg,
                      BINLOG_ERROR_MSG_LEN,
                      "Requested position %lu is beyond "
                      "'closed' binlog file '%s', size %lu. Generating Error '1236'",
                      pos,
-                     file->binlogname,
+                     file->binlog_name,
                      filelen);
         }
         else
@@ -1041,7 +1041,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                      "Requested position %lu is beyond "
                      "end of the latest binlog file '%s', size %lu. Disconnecting",
                      pos,
-                     file->binlogname,
+                     file->binlog_name,
                      filelen);
 
             /* Slave will be disconnected by the calling routine */
@@ -1061,7 +1061,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
     if (blr_compare_binlogs(router,
                             &file->gtid_elms,
                             router->binlog_name,
-                            file->binlogname)
+                            file->binlog_name)
         && pos >= router->binlog_position)
     {
         if (pos > router->binlog_position)
@@ -1109,7 +1109,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                 snprintf(errmsg,
                          BINLOG_ERROR_MSG_LEN,
                          "Failed to read binlog file '%s'; (%s), event at %lu",
-                         file->binlogname,
+                         file->binlog_name,
                          mxs_strerror(errno),
                          pos);
 
@@ -1119,7 +1119,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                              BINLOG_ERROR_MSG_LEN,
                              "Bad file descriptor for binlog file '%s', "
                              "refcount %d, descriptor %d, event at %lu",
-                             file->binlogname,
+                             file->binlog_name,
                              file->refcnt,
                              file->fd,
                              pos);
@@ -1135,7 +1135,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                      BINLOG_EVENT_HDR_LEN,
                      n,
                      pos,
-                     file->binlogname);
+                     file->binlog_name);
             break;
         }
         return NULL;
@@ -1158,7 +1158,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
         if (!blr_binlog_event_check(router,
                                     pos,
                                     hdr,
-                                    file->binlogname,
+                                    file->binlog_name,
                                     errmsg))
         {
             return NULL;
@@ -1171,7 +1171,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                       "rereading event header at pos %lu in file %s, "
                       "file size is %lu. Master will write %lu in %s next.",
                       pos,
-                      file->binlogname,
+                      file->binlog_name,
                       filelen,
                       router->binlog_position,
                       router->binlog_name);
@@ -1196,7 +1196,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                         snprintf(errmsg,
                                  BINLOG_ERROR_MSG_LEN,
                                  "Failed to reread header in binlog file '%s'; (%s), event at %lu",
-                                 file->binlogname,
+                                 file->binlog_name,
                                  mxs_strerror(errno),
                                  pos);
 
@@ -1206,7 +1206,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                                      BINLOG_ERROR_MSG_LEN,
                                      "Bad file descriptor rereading header for binlog file '%s', "
                                      "refcount %d, descriptor %d, event at %lu",
-                                     file->binlogname,
+                                     file->binlog_name,
                                      file->refcnt,
                                      file->fd,
                                      pos);
@@ -1222,7 +1222,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                              BINLOG_EVENT_HDR_LEN,
                              n,
                              pos,
-                             file->binlogname);
+                             file->binlog_name);
                     break;
                 }
                 return NULL;
@@ -1243,7 +1243,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                          "Next event position still incorrect after rereading, "
                          "event at %lu in binlog file '%s'",
                          pos,
-                         file->binlogname);
+                         file->binlog_name);
                 return NULL;
             }
             else
@@ -1272,7 +1272,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                  "size %d, event at %lu in binlog file '%s'",
                  hdr->event_size,
                  pos,
-                 file->binlogname);
+                 file->binlog_name);
         return NULL;
     }
 
@@ -1304,7 +1304,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                      "Error reading the binlog event at %lu in binlog file '%s'; "
                      "(%s), expected %d bytes.",
                      pos,
-                     file->binlogname,
+                     file->binlog_name,
                      mxs_strerror(errno),
                      hdr->event_size - BINLOG_EVENT_HDR_LEN);
         }
@@ -1317,7 +1317,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                      hdr->event_size - BINLOG_EVENT_HDR_LEN,
                      n,
                      pos,
-                     file->binlogname);
+                     file->binlog_name);
 
             if (filelen != 0 && filelen - pos < hdr->event_size)
             {
@@ -1327,7 +1327,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                          "current file size is %lu, event at %lu in binlog file '%s'",
                          filelen,
                          pos,
-                         file->binlogname);
+                         file->binlog_name);
             }
             blr_log_header(LOG_ERR,
                            "Possible malformed event header",
@@ -1361,7 +1361,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                      "file size is %lu, event at %lu in binlog file '%s'",
                      filelen,
                      pos,
-                     file->binlogname);
+                     file->binlog_name);
             gwbuf_free(result);
             return NULL;
         }
@@ -1385,7 +1385,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
         if (!blr_binlog_event_check(router,
                                     pos,
                                     hdr,
-                                    file->binlogname,
+                                    file->binlog_name,
                                     errmsg))
         {
             gwbuf_free(decrypted_event);

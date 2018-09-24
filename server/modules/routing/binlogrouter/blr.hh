@@ -507,7 +507,7 @@ typedef struct
 
 typedef struct blfile
 {
-    char binlogname[BINLOG_FNAMELEN + 1];
+    char binlog_name[BINLOG_FNAMELEN + 1];
     /*< Name of the binlog file */
     int                fd;          /*< Actual file descriptor */
     int                refcnt;      /*< Reference count for file */
