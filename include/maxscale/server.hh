@@ -21,18 +21,7 @@
 
 namespace maxscale
 {
+
 bool server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
 bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
-
-/** Returns true if the two server "scores" are within 1/(see code) of each other.
- *  The epsilon needs tweaking, and might even need to be in config. This
- *  function is important for some compares, where one server might be only
- *  marginally better than others, in which case historical data could determine
- *  the outcome.
- */
-inline bool almost_equal_server_scores(double lhs, double rhs)
-{
-    constexpr double div = 100;     // within 1% of each other.
-    return std::abs((long)(lhs - rhs)) < std::abs((long)std::max(lhs, rhs)) * (1 / div);
-}
 }

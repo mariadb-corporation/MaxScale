@@ -377,18 +377,6 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
                 /* ref has a better score. */
                 candidate = ref;
             }
-            else if (mxs::almost_equal_server_scores(ref->server_weight * ref->connections,
-                                                     candidate->server_weight * candidate->connections)
-                     && ref->server->stats.n_connections < candidate->server->stats.n_connections)
-            {
-                /* The servers are about equally good, but ref has had fewer connections over time.
-                 * TODO: On second thought, if the servers are currently about equally good,
-                 *       should selection not favor the one that has had more connections over time,
-                 *       since load balancing has previously found it to be better? Or perhaps
-                 *       this check has very little effect anyway.
-                 */
-                candidate = ref;
-            }
         }
     }
 
