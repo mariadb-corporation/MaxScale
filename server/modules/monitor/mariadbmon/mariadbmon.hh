@@ -234,15 +234,9 @@ private:
     void           check_cluster_operations_support();
 
     // Switchover methods
-    bool switchover_prepare(SERVER* new_master,
-                            SERVER* current_master,
-                            Log log_mode,
-                            MariaDBServer** promotion_target_out,
-                            MariaDBServer** demotion_target_out,
-                            json_t** error_out);
-    bool switchover_perform(MariaDBServer* promotion_target,
-                            MariaDBServer* demotion_target,
-                            json_t** error_out);
+    std::unique_ptr<ClusterOperation> switchover_prepare(SERVER* new_master, SERVER* current_master,
+                                                         Log log_mode, json_t** error_out);
+    bool switchover_perform(ClusterOperation& operation);
     bool switchover_demote_master(MariaDBServer* current_master, json_t** err_out);
     bool switchover_wait_slaves_catchup(const ServerArray& slaves,
                                         const GtidList& gtid,
