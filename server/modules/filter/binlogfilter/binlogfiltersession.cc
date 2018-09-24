@@ -378,7 +378,7 @@ static bool should_skip(const BinlogConfig& config, const std::string& str)
     return skip;
 }
 
-static bool should_skip_query(const BinlogConfig& config, const std::string& sql)
+static bool should_skip_query(const BinlogConfig& config, const std::string& sql, const std::string& db = "")
 {
     uint32_t pktlen = sql.size() + 1;   // Payload and command byte
     GWBUF* buf = gwbuf_alloc(MYSQL_HEADER_LEN + pktlen);
@@ -397,7 +397,9 @@ static bool should_skip_query(const BinlogConfig& config, const std::string& sql
 
     for (int i = 0; i < n; i++)
     {
-        if (should_skip(config, names[i]))
+        std::string name = strchr(names[i], '.') ? names[i] : db + "." + names[i];
+
+        if (should_skip(config, name))
         {
             rval = true;
             break;
@@ -774,6 +776,8 @@ void BinlogFilterSession::handleEventData(uint32_t len)
  * Note: COMMIT is an exception here, routine returns false
  * and the called will set m_skip to the right value.
  *
+ * @see https://mariadb.com/kb/en/library/query_event/
+ *
  * In case of config match the member variable m_skip is set to true.
  * With empty config it returns true and skipping is always false.
  *
@@ -787,11 +791,11 @@ bool BinlogFilterSession::checkStatement(const uint8_t* event, const uint32_t ev
     int db_name_len = event[4 + 4];
     int var_block_len_offset = 4 + 4 + 1 + 2;
     int var_block_len = gw_mysql_get_byte2(event + var_block_len_offset);
-    int var_block_end = var_block_len_offset + 2;
-    int statement_len = event_size - var_block_end - var_block_len - db_name_len - 1 - (m_crc ? 4 : 0);
+    int static_size = 4 + 4 + 1 + 2 + 2;
+    int statement_len = event_size - static_size - var_block_len - db_name_len - 1 - (m_crc ? 4 : 0);
 
-    // Set SQL statement, NULL is NOT present in the packet !
-    std::string sql((char*)event + var_block_end + var_block_len + db_name_len + 1, statement_len);
+    std::string db((char*)event + static_size + var_block_len, db_name_len);
+    std::string sql((char*)event + static_size + var_block_len + db_name_len + 1, statement_len);
     std::string lower_sql;
     std::transform(sql.begin(), sql.end(), std::back_inserter(lower_sql), tolower);
 
@@ -800,8 +804,8 @@ bool BinlogFilterSession::checkStatement(const uint8_t* event, const uint32_t ev
         return false;
     }
 
-    m_skip = should_skip_query(m_filter.getConfig(), sql);
-    MXS_INFO("[%s] %s", m_skip ? "SKIP" : "    ", sql.c_str());
+    m_skip = should_skip_query(m_filter.getConfig(), sql, db);
+    MXS_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
 
     return true;
 }
