@@ -1,95 +1,69 @@
 # BinlogFilter
 
-This filter was introduced in MariaDB MaxScale 2.3.
+This filter was introduced in MariaDB MaxScale 2.3.0.
 
 ## Overview
-The BinlogFilter filter is capable of filtering and replacing the binlog events
-sent from BinlogRouter to slave servers.
 
-This filter, once configured with a database or table name, inspects
-the binlog events being delivered from Binlog Server to connected slave servers.
-If a match for db/table occurs in binlog events such as
-TABLE_MAP and QUERY_EVENT, all the following ones are replaced
-with small (35 bytes) RAND_EVENT events.
-The replacement continues until a COMMIT, new TABLE_MAP event or
-QUERY_EVENT is seen.
+The `binlogfilter` can be combined with a `binlogrouter` service to selectively
+replicate the binary log events to slave servers.
 
-The result is that the slave server is not getting any real data about
-DDLs or DMLS related to the configured db/table.
+The filter uses two parameters, `match` and `exclude`, to decide which events
+are replicated. If a binlog event does not match or is excluded, the event is
+replaced with an empty data event. The empty event is always 35 bytes which
+translates to a space reduction for most events.
 
-Assuming a simple transaction with an INSERT is being delivered with
-ROW based replication, the slave server sees:
-
- - GTID (BEGIN)
- - RAND_EVENT (instead of TABLE_MAP)
- - RAND_EVENT (instead of WRITE_ROWS)
- - XID (COMMIT)
-
-This replacement also saves network bandwidth as a 3MB BLOB
-update is not sent by MaxScale Binlog Server to any slave,
-just a 35 bytes RAND_EVENT is sent istead.
-
-**Note**:
-
- - In case of large event transmission, i.e. 33MBytes, all the 3 packets
- (16 + 16 + 1 MB) that form the large event are replaced by RAND_EVENT
- - The packet sequence is always kept during the replacement.
- - No configuration is needed in the slave servers.
- - The filter can work with both ROW and STATEMENT based replication.
+The filter works with both row based and statement based replication.
 
 ## Configuration
 
-The BinlogFilter configuration is very easy, and in its first implementation
-it has no mandatory parameters.
+Both the `match` and `exclude` parameters are optional. If neither of them is
+defined, the filter does nothing and all events are replicated.
 
-Optional parameters are:
+The two parameters are matched against the database and table name concatenaed
+with a period.  For example, the string the patterns are matched against for the
+database `test` and table `t1` is `test.t1`.
 
-#### `filter_events`
-Enables the binlog filtering, default is Off
+For statement based replication, the pattern is matched against all the tables
+in the statements. If any of the tables matches the `match` pattern, the event
+is replicated. If any of the tables matches the `exclude` pattern, the event is
+not replicated.
 
-```
-filter_events=On
-```
 
-#### `skip_db`
-Specifies the database name to skip.
-Empty setting, skip_db=, or no setting
-means that all database names are allowed.
-The default value is empty value.
+### `match`
 
-```
-skip_db=orders_t1
-```
+A [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
+that is matched against the database and table name. If the pattern matches, the
+event is replicated to the slave. If no `match` parameter is defined, all events
+are considered to match.
 
-#### `skip_table`
+### `exclude`
 
-Specifies the table name to skip.
-Empty setting, skip_table=, or no setting
-means that all tables names are allowed.
-The default value is empty value.
-
-```
-skip_db=cat_obj
-```
+A [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
+that is matched against the database and table name. If the pattern matches, the
+event is excluded and is not replicated to the slave. If no `exclude` pattern is
+defined, the event filtering is controlled completely by the `match` parameter.
 
 ## Example Configuration
 
-Here is an example of BinlogFilter:
-
-All binlog events belonging to database `
-test` and table `tbl1` are replaced.
+Only events belonging to database `customers` are replicated. In addition to
+this, events for the table `orders` are excluded and thus are not replicated.
 
 ```
 [BinlogFilter]
 type=filter
 module=binlogfilter
-filter_events=On
-skip_db=test
-skip_table=tbl1
+match=/customers[.]/
+exclude=/[.]orders/
 
 [BinlogServer]
 type=service
 router=binlogrouter
-server-id=33,
+server_id=33
 filters=BinlogFilter
+
+[BinlogListener]
+type=listener
+service=BinlogServer
+protocol=MySQLClient
+port=4000
 ```
