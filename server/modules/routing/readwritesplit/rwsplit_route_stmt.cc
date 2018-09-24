@@ -1087,6 +1087,15 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     bool large_query = is_large_query(querybuf);
 
     /**
+     * We should not be routing a query to a server that is busy processing a result.
+     *
+     * TODO: This effectively disables pipelining of queries, very bad for batch insert performance. Replace
+     *       with proper, per server tracking of which responses need to be sent to the client. This would
+     *       also solve MXS-2009 by speeding up session commands.
+     */
+    mxb_assert(target->get_reply_state() == REPLY_STATE_DONE || m_qc.large_query());
+
+    /**
      * If we are starting a new query, we use RWBackend::write, otherwise we use
      * RWBackend::continue_write to continue an ongoing query. RWBackend::write
      * will do the replacement of PS IDs which must not be done if we are
@@ -1107,24 +1116,18 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
         mxb::atomic::add(&target->server()->stats.packets, 1, mxb::atomic::RELAXED);
         m_router->server_stats(target->server()).total++;
 
-        if (!m_qc.large_query())
+        if (!m_qc.large_query() && response == mxs::Backend::EXPECT_RESPONSE)
         {
-            mxb_assert(target->get_reply_state() == REPLY_STATE_DONE);
+            /** The server will reply to this command */
+            m_expected_responses++;
 
-            if (response == mxs::Backend::EXPECT_RESPONSE)
+            if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_END)
             {
-                /** The server will reply to this command */
-                target->set_reply_state(REPLY_STATE_START);
-                m_expected_responses++;
-
-                if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_END)
-                {
-                    /** The final packet in a LOAD DATA LOCAL INFILE is an empty packet
-                     * to which the server responds with an OK or an ERR packet */
-                    mxb_assert(gwbuf_length(querybuf) == 4);
-                    m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
-                    session_set_load_active(m_pSession, false);
-                }
+                /** The final packet in a LOAD DATA LOCAL INFILE is an empty packet
+                 * to which the server responds with an OK or an ERR packet */
+                mxb_assert(gwbuf_length(querybuf) == 4);
+                m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
+                session_set_load_active(m_pSession, false);
             }
         }
 

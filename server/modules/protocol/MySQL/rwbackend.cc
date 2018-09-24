@@ -74,6 +74,12 @@ uint32_t RWBackend::get_ps_handle(uint32_t id) const
 
 bool RWBackend::write(GWBUF* buffer, response_type type)
 {
+    if (type == mxs::Backend::EXPECT_RESPONSE)
+    {
+        /** The server will reply to this command */
+        set_reply_state(REPLY_STATE_START);
+    }
+
     uint8_t cmd = mxs_mysql_get_command(buffer);
 
     m_command = cmd;
@@ -148,7 +154,6 @@ bool RWBackend::reply_is_complete(GWBUF* buffer)
         // If the server responded with an error, n_eof > 0
         if (n_eof > 0 || consume_fetched_rows(buffer))
         {
-
             set_reply_state(REPLY_STATE_DONE);
         }
     }
@@ -240,7 +245,15 @@ bool RWBackend::reply_is_complete(GWBUF* buffer)
         }
     }
 
-    return get_reply_state() == REPLY_STATE_DONE;
+    bool rval = false;
+
+    if (get_reply_state() == REPLY_STATE_DONE)
+    {
+        ack_write();
+        rval = true;
+    }
+
+    return rval;
 }
 
 ResponseStat& RWBackend::response_stat()

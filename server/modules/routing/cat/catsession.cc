@@ -61,7 +61,6 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
         // We have a backend, write the query only to this one. It will be
         // propagated onwards in clientReply.
         rval = (*m_current)->write(gwbuf_clone(pPacket));
-        (*m_current)->set_reply_state(REPLY_STATE_START);
     }
 
     return rval;
@@ -75,7 +74,6 @@ void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 
     if (backend->reply_is_complete(pPacket))
     {
-        backend->ack_write();
         m_completed++;
         m_current++;
 
@@ -88,7 +86,6 @@ void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb)
         else
         {
             (*m_current)->write(gwbuf_clone(m_query));
-            (*m_current)->set_reply_state(REPLY_STATE_START);
         }
     }
 

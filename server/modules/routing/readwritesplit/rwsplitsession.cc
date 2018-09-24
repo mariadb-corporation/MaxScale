@@ -562,8 +562,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
 
     if (backend->reply_is_complete(writebuf))
     {
-        /** Got a complete reply, acknowledge the write and decrement expected response count */
-        backend->ack_write();
+        /** Got a complete reply, decrement expected response count */
         m_expected_responses--;
         mxb_assert(m_expected_responses >= 0);
         mxb_assert(backend->get_reply_state() == REPLY_STATE_DONE);

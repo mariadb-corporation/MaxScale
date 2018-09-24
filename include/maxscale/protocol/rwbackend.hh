@@ -54,11 +54,6 @@ public:
         return m_reply_state;
     }
 
-    inline void set_reply_state(reply_state_t state)
-    {
-        m_reply_state = state;
-    }
-
     void     add_ps_handle(uint32_t id, uint32_t handle);
     uint32_t get_ps_handle(uint32_t id) const;
 
@@ -131,6 +126,11 @@ private:
     inline void set_cursor_opened()
     {
         m_opening_cursor = false;
+    }
+
+    inline void set_reply_state(reply_state_t state)
+    {
+        m_reply_state = state;
     }
 };
 }
