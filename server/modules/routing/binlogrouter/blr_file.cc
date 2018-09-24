@@ -832,8 +832,8 @@ static bool inline blr_is_same_slave_file(const BLFILE* file,
 {
     if (s_tree)
     {
-        return (file->info.domain_id == info->gtid_elms.domain_id)
-               && (file->info.server_id == info->gtid_elms.server_id)
+        return (file->gtid_elms.domain_id == info->gtid_elms.domain_id)
+               && (file->gtid_elms.server_id == info->gtid_elms.server_id)
                && (strcmp(file->binlogname, binlog) == 0);
     }
     else
@@ -917,7 +917,7 @@ BLFILE* blr_open_binlog(ROUTER_INSTANCE* router,
     /* Store additional file informations */
     if (info)
     {
-        memcpy(&file->info,
+        memcpy(&file->gtid_elms,
                &info->gtid_elms,
                sizeof(MARIADB_GTID_ELEMS));
     }
@@ -1022,7 +1022,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
 
         /* Check whether is current router file */
         if (!blr_compare_binlogs(router,
-                                 &file->info,
+                                 &file->gtid_elms,
                                  router->binlog_name,
                                  file->binlogname))
         {
@@ -1059,7 +1059,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
 
     /* Check current router file and router position */
     if (blr_compare_binlogs(router,
-                            &file->info,
+                            &file->gtid_elms,
                             router->binlog_name,
                             file->binlogname)
         && pos >= router->binlog_position)

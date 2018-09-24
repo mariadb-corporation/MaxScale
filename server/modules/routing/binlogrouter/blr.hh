@@ -513,7 +513,7 @@ typedef struct blfile
     int                refcnt;      /*< Reference count for file */
     BLCACHE*           cache;       /*< Record cache for this file */
     SPINLOCK           lock;        /*< The file lock */
-    MARIADB_GTID_ELEMS info;        /*< Elements for file prefix */
+    MARIADB_GTID_ELEMS gtid_elms;   /*< Elements for file prefix */
     struct blfile*     next;        /*< Next file in list */
 } BLFILE;
 
