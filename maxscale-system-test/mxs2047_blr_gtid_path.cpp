@@ -205,8 +205,7 @@ void restart_slave(TestConnections& test, MYSQL* pSlave)
 
     auto replication_failed = [] (const std::string& column)
         {
-            return column.find("from master when reading data from binary log: "
-                               "'Requested file name") != string::npos;
+            return column.find("Got fatal error") != string::npos;
         };
 
     test.try_query(pSlave, "STOP SLAVE");
