@@ -7190,7 +7190,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
                      slave->serverid,
                      f_gtid.gtid_elms.domain_id,
                      f_gtid.gtid_elms.server_id,
-                     f_gtid.file,
+                     f_gtid.binlog_name,
                      f_gtid.start,
                      f_gtid.end);
 
@@ -7202,10 +7202,10 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
              *   if the requested binlog file is equal to GTID info file use it.
              */
             if (!req_file
-                || (strcmp(slave->binlog_name, f_gtid.file) == 0))
+                || (strcmp(slave->binlog_name, f_gtid.binlog_name) == 0))
             {
                 /* Set binlog file to the GTID one */
-                strcpy(slave->binlog_name, f_gtid.file);
+                strcpy(slave->binlog_name, f_gtid.binlog_name);
 
                 /* Set pos to GTID next event pos */
                 slave->binlog_pos = f_gtid.end;
@@ -7245,7 +7245,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
                 else
                 {
                     /* Set binlog file to the GTID one */
-                    strcpy(slave->binlog_name, f_gtid.file);
+                    strcpy(slave->binlog_name, f_gtid.binlog_name);
 
                     /* Set pos to GTID next event pos */
                     slave->binlog_pos = f_gtid.end;
