@@ -76,7 +76,7 @@ private:
     const BinlogFilter& m_filter;
 
     // Skip database/table events in current trasaction
-    void skipDatabaseTable(const uint8_t* data, const REP_HEADER& hdr);
+    void skipDatabaseTable(const uint8_t* data);
 
     // Get Replication Checksum from registration query
     void getReplicationChecksum(GWBUF* pPacket);
@@ -97,7 +97,7 @@ private:
     void handlePackets(uint32_t len, const REP_HEADER& hdr);
 
     // Handle event data
-    void handleEventData(uint32_t len, const uint8_t seqno);
+    void handleEventData(uint32_t len);
 
     // Check SQL statement in QUERY_EVENT
     bool checkStatement(const uint8_t* event,
