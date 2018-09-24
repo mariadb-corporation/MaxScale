@@ -19,16 +19,6 @@
 namespace maxscale
 {
 
-void SessionCommand::mark_reply_received()
-{
-    m_reply_sent = true;
-}
-
-bool SessionCommand::is_reply_received() const
-{
-    return m_reply_sent;
-}
-
 uint8_t SessionCommand::get_command() const
 {
     return m_command;

@@ -32,16 +32,6 @@ class SessionCommand
     SessionCommand(const SessionCommand&);
     SessionCommand& operator=(const SessionCommand&);
 public:
-    /**
-     * @brief Mark reply as received
-     */
-    void mark_reply_received();
-
-    /**
-     * @brief Check if the session command has received a reply
-     * @return True if the reply is already received
-     */
-    bool is_reply_received() const;
 
     /**
      * @brief Get the command type of the session command
