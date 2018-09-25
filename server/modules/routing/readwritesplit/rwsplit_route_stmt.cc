@@ -477,21 +477,14 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
 
     if (name) /*< Choose backend by name from a hint */
     {
-        ss_dassert(btype != BE_MASTER); /*< Master dominates and no name should be passed with it */
-
         for (SRWBackendList::iterator it = rses->backends.begin();
              it != rses->backends.end(); it++)
         {
             SRWBackend& backend = *it;
 
-            /** The server must be a valid slave, relay server, or master */
-
-            if (backend->in_use() &&
-                (strcasecmp(name, backend->name()) == 0) &&
-                (backend->is_slave() ||
-                 backend->is_relay() ||
-                 backend->is_master()))
+            if (backend->in_use() && strcasecmp(name, backend->name()) == 0)
             {
+                /** The server is in use */
                 return backend;
             }
         }
