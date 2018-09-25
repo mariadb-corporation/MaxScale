@@ -1013,23 +1013,19 @@ bool Worker::cancel_delayed_call(uint32_t id)
         // Not particularly likely there will be many of those.
         auto range = m_sorted_calls.equal_range(pCall->at());
 
-        auto k = range.first;
-        mxb_assert(k != range.second);
+        mxb_assert(range.first != range.second);
 
-        while (k != range.second)
+        for (auto k = range.first; k != range.second; ++k)
         {
             if (k->second == pCall)
             {
                 m_sorted_calls.erase(k);
+
+                pCall->call(Worker::Call::CANCEL);
                 delete pCall;
 
-                k = range.second;
-
                 found = true;
-            }
-            else
-            {
-                ++k;
+                break;
             }
         }
 
