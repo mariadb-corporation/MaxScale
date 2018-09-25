@@ -945,7 +945,6 @@ static void server_parameter_free(SERVER_PARAM* tofree)
  */
 static size_t server_get_parameter_nolock(const SERVER* server, const char* name, char* out, size_t size)
 {
-    mxb_assert(SPINLOCK_IS_LOCKED(&server->lock));
     size_t len = 0;
     SERVER_PARAM* param = server->parameters;
 

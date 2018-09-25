@@ -43,7 +43,6 @@ add_library(maxscale-common SHARED
   service.cc
   session.cc
   session_command.cc
-  spinlock.cc
   ssl.cc
   users.cc
   utils.cc
