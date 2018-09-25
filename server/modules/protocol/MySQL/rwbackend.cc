@@ -137,14 +137,11 @@ static inline bool have_next_packet(GWBUF* buffer)
 }
 
 /**
- * @brief Check if we have received a complete reply from the backend
+ * @brief Process a possibly partial response from the backend
  *
- * @param backend Backend reference
  * @param buffer  Buffer containing the response
- *
- * @return True if the complete response has been received
  */
-bool RWBackend::reply_is_complete(GWBUF* buffer)
+void RWBackend::process_reply(GWBUF* buffer)
 {
     if (current_command() == MXS_COM_STMT_FETCH)
     {
@@ -191,9 +188,9 @@ bool RWBackend::reply_is_complete(GWBUF* buffer)
                 // TODO: Don't clone the buffer
                 GWBUF* tmp = gwbuf_clone(buffer);
                 tmp = gwbuf_consume(tmp, mxs_mysql_get_packet_len(tmp));
-                bool rval = reply_is_complete(tmp);
+                process_reply(tmp);
                 gwbuf_free(tmp);
-                return rval;
+                return;
             }
         }
     }
@@ -245,15 +242,10 @@ bool RWBackend::reply_is_complete(GWBUF* buffer)
         }
     }
 
-    bool rval = false;
-
     if (get_reply_state() == REPLY_STATE_DONE)
     {
         ack_write();
-        rval = true;
     }
-
-    return rval;
 }
 
 ResponseStat& RWBackend::response_stat()

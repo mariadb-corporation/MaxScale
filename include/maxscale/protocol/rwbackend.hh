@@ -104,7 +104,17 @@ public:
         return m_local_infile_requested;
     }
 
-    bool reply_is_complete(GWBUF* buffer);
+    void process_reply(GWBUF* buffer);
+
+    /**
+     * Check whether the response from the server is complete
+     *
+     * @return True if no more results are expected from this server
+     */
+    bool reply_is_complete() const
+    {
+        return m_reply_state == REPLY_STATE_DONE;
+    }
 
     // Controlled by the session
     ResponseStat& response_stat();

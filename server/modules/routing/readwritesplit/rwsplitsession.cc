@@ -560,7 +560,9 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         m_current_query.reset();
     }
 
-    if (backend->reply_is_complete(writebuf))
+    backend->process_reply(writebuf);
+
+    if (backend->reply_is_complete())
     {
         /** Got a complete reply, decrement expected response count */
         m_expected_responses--;

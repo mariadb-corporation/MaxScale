@@ -72,7 +72,9 @@ void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     mxb_assert(backend->dcb() == pDcb);
     bool send = false;
 
-    if (backend->reply_is_complete(pPacket))
+    backend->process_reply(pPacket);
+
+    if (backend->reply_is_complete())
     {
         m_completed++;
         m_current++;
