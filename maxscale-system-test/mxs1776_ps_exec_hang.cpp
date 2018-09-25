@@ -154,6 +154,7 @@ int main(int argc, char* argv[])
                 while (mysql_stmt_fetch(stmt) == 0)
                 {
                     mysql_query(conn, "SELECT 1");
+                    mysql_free_result(mysql_store_result(conn));
                 }
 
                 return rval;
