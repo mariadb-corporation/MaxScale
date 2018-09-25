@@ -24,3 +24,4 @@ SELECT IS_FREE_LOCK('lock1');
 SELECT IS_USED_LOCK('lock1');
 SELECT RELEASE_LOCK('lock1');
 deallocate prepare select_stmt;
+SELECT a FROM tbl FOR UPDATE;
