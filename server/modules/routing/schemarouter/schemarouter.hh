@@ -30,6 +30,7 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/service.h>
 #include <maxscale/backend.hh>
+#include <maxscale/protocol/rwbackend.hh>
 
 namespace schemarouter
 {
@@ -96,12 +97,12 @@ struct Stats
  *
  * Owned by router client session.
  */
-class SRBackend : public mxs::Backend
+class SRBackend : public mxs::RWBackend
 {
 public:
 
     SRBackend(SERVER_REF* ref)
-        : mxs::Backend(ref)
+        : mxs::RWBackend(ref)
         , m_mapped(false)
     {
     }

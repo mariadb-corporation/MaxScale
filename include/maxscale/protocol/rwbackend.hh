@@ -47,7 +47,7 @@ public:
     static SRWBackendList from_servers(SERVER_REF* servers);
 
     RWBackend(SERVER_REF* ref);
-    ~RWBackend();
+    virtual ~RWBackend();
 
     inline reply_state_t get_reply_state() const
     {
