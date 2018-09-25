@@ -278,9 +278,6 @@ int create_epoll_instance()
 }
 }
 
-// static
-uint32_t Worker::s_next_delayed_call_id = 1;
-
 Worker::Worker(int max_events)
     : m_epoll_fd(create_epoll_instance())
     , m_state(STOPPED)
@@ -292,6 +289,7 @@ Worker::Worker(int max_events)
     , m_nCurrent_descriptors(0)
     , m_nTotal_descriptors(0)
     , m_pTimer(new PrivateTimer(this, this, &Worker::tick))
+    , m_next_delayed_call_id{1}
 {
     mxb_assert(max_events > 0);
 

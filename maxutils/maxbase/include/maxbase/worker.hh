@@ -573,10 +573,9 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    uint32_t delayed_call(int32_t delay,
-                          bool (* pFunction)(Worker::Call::action_t action))
+    uint32_t delayed_call(int32_t delay, bool (* pFunction)(Worker::Call::action_t action))
     {
-        return add_delayed_call(new DelayedCallFunctionVoid(delay, pFunction));
+        return add_delayed_call(new DelayedCallFunctionVoid(delay, next_delayed_call_id(), pFunction));
     }
 
     /**
@@ -604,7 +603,7 @@ public:
                           bool (* pFunction)(Worker::Call::action_t action, D data),
                           D data)
     {
-        return add_delayed_call(new DelayedCallFunction<D>(delay, pFunction, data));
+        return add_delayed_call(new DelayedCallFunction<D>(delay, next_delayed_call_id(), pFunction, data));
     }
 
     /**
@@ -631,7 +630,7 @@ public:
                           bool (T::* pMethod)(Worker::Call::action_t action),
                           T* pT)
     {
-        return add_delayed_call(new DelayedCallMethodVoid<T>(delay, pMethod, pT));
+        return add_delayed_call(new DelayedCallMethodVoid<T>(delay, next_delayed_call_id(), pMethod, pT));
     }
 
     /**
@@ -660,7 +659,11 @@ public:
                           T* pT,
                           D data)
     {
-        return add_delayed_call(new DelayedCallMethod<T, D>(delay, pMethod, pT, data));
+        return add_delayed_call(new DelayedCallMethod<T, D>(delay,
+                                                            next_delayed_call_id(),
+                                                            pMethod,
+                                                            pT,
+                                                            data));
     }
 
     /**
@@ -734,12 +737,12 @@ private:
     class DelayedCall;
     friend class DelayedCall;
 
-    static uint32_t next_delayed_call_id()
+    uint32_t next_delayed_call_id()
     {
         // Called in single-thread context. Wrapping does not matter
         // as it is unlikely there would be 4 billion pending delayed
         // calls.
-        return ++s_next_delayed_call_id;
+        return ++m_next_delayed_call_id;
     }
 
     class DelayedCall
@@ -779,8 +782,8 @@ private:
         }
 
     protected:
-        DelayedCall(int32_t delay)
-            : m_id(Worker::next_delayed_call_id())
+        DelayedCall(int32_t delay, int32_t id)
+            : m_id(id)
             , m_delay(delay)
             , m_at(get_at(delay))
         {
@@ -815,9 +818,10 @@ private:
 
     public:
         DelayedCallFunction(int32_t delay,
+                            int32_t id,
                             bool (*pFunction)(Worker::Call::action_t action, D data),
                             D data)
-            : DelayedCall(delay)
+            : DelayedCall(delay, id)
             , m_pFunction(pFunction)
             , m_data(data)
         {
@@ -842,8 +846,9 @@ private:
 
     public:
         DelayedCallFunctionVoid(int32_t delay,
+                                int32_t id,
                                 bool (*pFunction)(Worker::Call::action_t action))
-            : DelayedCall(delay)
+            : DelayedCall(delay, id)
             , m_pFunction(pFunction)
         {
         }
@@ -866,10 +871,11 @@ private:
 
     public:
         DelayedCallMethod(int32_t delay,
+                          int32_t id,
                           bool (T::* pMethod)(Worker::Call::action_t action, D data),
                           T* pT,
                           D data)
-            : DelayedCall(delay)
+            : DelayedCall(delay, id)
             , m_pMethod(pMethod)
             , m_pT(pT)
             , m_data(data)
@@ -896,9 +902,10 @@ private:
 
     public:
         DelayedCallMethodVoid(int32_t delay,
+                              int32_t id,
                               bool (T::* pMethod)(Worker::Call::action_t),
                               T* pT)
-            : DelayedCall(delay)
+            : DelayedCall(delay, id)
             , m_pMethod(pMethod)
             , m_pT(pT)
         {
@@ -925,7 +932,6 @@ private:
     void poll_waitevents();
 
     void tick();
-
 private:
     class LaterAt : public std::binary_function<const DelayedCall*, const DelayedCall*, bool>
     {
@@ -956,6 +962,6 @@ private:
     DelayedCallsByTime m_sorted_calls;          /*< Current delayed calls sorted by time. */
     DelayedCallsById   m_calls;                 /*< Current delayed calls indexed by id. */
 
-    static uint32_t s_next_delayed_call_id;     /*< The next delayed call id. */
+    int32_t m_next_delayed_call_id;     /*< The next delayed call id. */
 };
 }
