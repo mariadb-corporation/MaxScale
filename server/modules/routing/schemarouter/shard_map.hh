@@ -14,12 +14,12 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <unordered_map>
-#include <string>
 #include <list>
+#include <mutex>
+#include <string>
+#include <unordered_map>
 
 #include <maxscale/service.h>
-#include <maxscale/spinlock.hh>
 
 using namespace maxscale;
 
@@ -142,6 +142,6 @@ public:
     void update_shard(Shard& shard, std::string user);
 
 private:
-    SPINLOCK m_lock;
-    ShardMap m_maps;
+    mutable std::mutex m_lock;
+    ShardMap           m_maps;
 };

@@ -14,13 +14,9 @@
 #define MXS_MODULE_NAME "cache"
 #include "lrustoragemt.hh"
 
-using maxscale::SpinLockGuard;
-
 LRUStorageMT::LRUStorageMT(const CACHE_STORAGE_CONFIG& config, Storage* pStorage)
     : LRUStorage(config, pStorage)
 {
-    spinlock_init(&m_lock);
-
     MXS_NOTICE("Created multi threaded LRU storage.");
 }
 
@@ -40,7 +36,7 @@ LRUStorageMT* LRUStorageMT::create(const CACHE_STORAGE_CONFIG& config, Storage* 
 cache_result_t LRUStorageMT::get_info(uint32_t what,
                                       json_t** ppInfo) const
 {
-    SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     return LRUStorage::do_get_info(what, ppInfo);
 }
@@ -51,49 +47,49 @@ cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
                                        uint32_t hard_ttl,
                                        GWBUF**  ppValue) const
 {
-    SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     return do_get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
 cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
-    SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     return do_put_value(key, pValue);
 }
 
 cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
 {
-    SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     return do_del_value(key);
 }
 
 cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
 {
-    SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     return LRUStorage::do_get_head(pKey, ppHead);
 }
 
 cache_result_t LRUStorageMT::get_tail(CACHE_KEY* pKey, GWBUF** ppTail) const
 {
-    SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     return LRUStorage::do_get_tail(pKey, ppTail);
 }
 
 cache_result_t LRUStorageMT::get_size(uint64_t* pSize) const
 {
-    SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     return LRUStorage::do_get_size(pSize);
 }
 
 cache_result_t LRUStorageMT::get_items(uint64_t* pItems) const
 {
-    SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     return LRUStorage::do_get_items(pItems);
 }

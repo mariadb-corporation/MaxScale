@@ -76,7 +76,6 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/alloc.h>
-#include <maxscale/spinlock.hh>
 #include <maxscale/utils.h>
 
 #include "rules.hh"
@@ -1201,7 +1200,6 @@ int global_version = 1;
 Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
     : m_action((enum fw_actions)config_get_enum(params, "action", action_values))
     , m_log_match(0)
-    , m_lock(SPINLOCK_INIT)
     , m_filename(config_get_string(params, "rules"))
     , m_version(atomic_add(&global_version, 1))
 {
@@ -1252,7 +1250,7 @@ int Dbfw::get_log_bitmask() const
 
 std::string Dbfw::get_rule_file() const
 {
-    mxs::SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
     return m_filename;
 }
 
@@ -1296,7 +1294,7 @@ bool Dbfw::do_reload_rules(std::string filename)
 
 bool Dbfw::reload_rules(std::string filename)
 {
-    mxs::SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
     return do_reload_rules(filename);
 }
 

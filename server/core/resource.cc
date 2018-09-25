@@ -24,7 +24,6 @@
 #include <maxscale/json_api.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/server.hh>
-#include <maxscale/spinlock.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/config_runtime.h"
@@ -41,8 +40,6 @@ using std::list;
 using std::map;
 using std::string;
 using std::stringstream;
-using mxs::SpinLock;
-using mxs::SpinLockGuard;
 
 Resource::Resource(ResourceCallback cb, int components, ...)
     : m_cb(cb)
@@ -1205,7 +1202,6 @@ private:
 
 static RootResource resources;      /**< Core resource set */
 static ResourceWatcher watcher;     /**< Modification watcher */
-static SpinLock resource_lock;
 
 static bool request_modifies_data(const string& verb)
 {

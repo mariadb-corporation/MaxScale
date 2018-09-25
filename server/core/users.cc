@@ -13,15 +13,15 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <algorithm>
+#include <mutex>
 #include <new>
-#include <unordered_map>
 #include <set>
 #include <string>
-#include <algorithm>
+#include <unordered_map>
 
 #include <maxscale/users.h>
 #include <maxscale/authenticator.h>
-#include <maxscale/spinlock.hh>
 #include <maxscale/log.h>
 #include <maxscale/jansson.hh>
 
@@ -67,13 +67,13 @@ public:
 
     bool add(std::string user, std::string password, user_account_type perm)
     {
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         return m_data.insert(std::make_pair(user, UserInfo(password, perm))).second;
     }
 
     bool remove(std::string user)
     {
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         bool rval = false;
         UserMap::iterator it = m_data.find(user);
 
@@ -88,7 +88,7 @@ public:
 
     bool get(std::string user, UserInfo* output = NULL) const
     {
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         UserMap::const_iterator it = m_data.find(user);
         bool rval = false;
 
@@ -112,7 +112,7 @@ public:
 
     bool check_permissions(std::string user, user_account_type perm) const
     {
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         UserMap::const_iterator it = m_data.find(user);
         bool rval = false;
 
@@ -126,7 +126,7 @@ public:
 
     bool set_permissions(std::string user, user_account_type perm)
     {
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         UserMap::iterator it = m_data.find(user);
         bool rval = false;
 
@@ -141,7 +141,7 @@ public:
 
     json_t* diagnostic_json() const
     {
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         json_t* rval = json_array();
 
         for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
@@ -157,7 +157,7 @@ public:
 
     void diagnostic(DCB* dcb) const
     {
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         if (m_data.size())
         {
             const char* sep = "";
@@ -178,14 +178,14 @@ public:
 
     bool empty() const
     {
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         return m_data.size() > 0;
     }
 
     json_t* to_json() const
     {
         json_t* arr = json_array();
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
 
         for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
         {
@@ -241,8 +241,8 @@ private:
         }
     }
 
-    mxs::SpinLock m_lock;
-    UserMap       m_data;
+    mutable std::mutex m_lock;
+    UserMap            m_data;
 };
 }
 

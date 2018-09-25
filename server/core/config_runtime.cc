@@ -32,7 +32,6 @@
 #include <maxscale/json_api.h>
 #include <maxscale/paths.h>
 #include <maxscale/router.h>
-#include <maxscale/spinlock.hh>
 #include <maxscale/users.h>
 
 #include "internal/config.hh"
@@ -46,7 +45,7 @@ typedef std::vector<std::string> StringVector;
 
 using std::tie;
 
-static mxs::SpinLock crt_lock;
+static std::mutex crt_lock;
 
 #define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local char runtime_errmsg[RUNTIME_ERRMSG_BUFSIZE];
@@ -133,7 +132,7 @@ static std::pair<bool, MXS_CONFIG_PARAMETER*> load_defaults(const char* name,
 
 bool runtime_link_server(SERVER* server, const char* target)
 {
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
 
     bool rval = false;
     Service* service = service_internal_find(target);
@@ -177,7 +176,7 @@ bool runtime_link_server(SERVER* server, const char* target)
 
 bool runtime_unlink_server(SERVER* server, const char* target)
 {
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
 
     bool rval = false;
     Service* service = service_internal_find(target);
@@ -211,7 +210,7 @@ bool runtime_create_server(const char* name,
                            const char* protocol,
                            const char* authenticator)
 {
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (server_find_by_unique_name(name) == NULL)
@@ -274,7 +273,7 @@ bool runtime_create_server(const char* name,
 
 bool runtime_destroy_server(SERVER* server)
 {
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (service_server_in_use(server) || monitor_server_in_use(server))
@@ -370,7 +369,7 @@ bool runtime_enable_server_ssl(SERVER* server,
 
     if (key && cert && ca)
     {
-        mxs::SpinLockGuard guard(crt_lock);
+        std::lock_guard<std::mutex> guard(crt_lock);
         SSL_LISTENER* ssl = create_ssl(server->name, key, cert, ca, version, depth, verify);
 
         if (ssl)
@@ -465,7 +464,7 @@ bool runtime_alter_server(SERVER* server, const char* key, const char* value)
         return false;
     }
 
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
     server_set_parameter(server, key, value);
 
     if (strcmp(key, CN_ADDRESS) == 0)
@@ -557,7 +556,7 @@ bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value, 
         return false;
     }
 
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (restart_monitor)
     {
@@ -671,7 +670,7 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
         return false;
     }
 
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = true;
 
     if (service->is_basic_parameter(key))
@@ -728,7 +727,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     std::string key = name;
     bool rval = false;
 
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (key == CN_AUTH_CONNECT_TIMEOUT)
     {
@@ -927,7 +926,7 @@ bool runtime_create_listener(Service* service,
     unsigned short u_port = atoi(port);
     bool rval = false;
 
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (!serviceHasListener(service, name, proto, addr, u_port))
     {
@@ -997,7 +996,7 @@ bool runtime_destroy_listener(Service* service, const char* name)
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), name);
 
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (unlink(filename) == -1)
     {
@@ -1037,7 +1036,7 @@ bool runtime_destroy_listener(Service* service, const char* name)
 
 bool runtime_create_monitor(const char* name, const char* module)
 {
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (monitor_find(name) == NULL)
@@ -1089,7 +1088,7 @@ bool runtime_create_monitor(const char* name, const char* module)
 
 bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
 {
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (!filter_find(name))
@@ -1139,7 +1138,7 @@ bool runtime_destroy_filter(const SFilterDef& filter)
 {
     mxb_assert(filter);
     bool rval = false;
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (filter_can_be_destroyed(filter))
     {
@@ -1158,7 +1157,7 @@ bool runtime_destroy_filter(const SFilterDef& filter)
 
 static bool runtime_create_service(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
 {
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (service_internal_find(name) == NULL)
@@ -1207,7 +1206,7 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
 bool runtime_destroy_service(Service* service)
 {
     bool rval = false;
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
     mxb_assert(service && service->active);
 
     if (service_can_be_destroyed(service))
@@ -1231,7 +1230,7 @@ bool runtime_destroy_monitor(MXS_MONITOR* monitor)
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->name);
 
-    mxs::SpinLockGuard guard(crt_lock);
+    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {

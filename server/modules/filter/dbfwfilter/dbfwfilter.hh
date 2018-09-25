@@ -16,15 +16,16 @@
 #include <maxscale/ccdefs.hh>
 
 #include <time.h>
-#include <string>
+
 #include <list>
-#include <vector>
 #include <memory>
+#include <mutex>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <maxscale/filter.hh>
 #include <maxscale/query_classifier.h>
-#include <maxscale/spinlock.h>
 
 #include "dbfwfilter.h"
 
@@ -264,11 +265,11 @@ public:
     }
 
 private:
-    fw_actions  m_action;   /*< Default operation mode, defaults to deny */
-    int         m_log_match;/*< Log matching and/or non-matching queries */
-    SPINLOCK    m_lock;     /*< Instance spinlock */
-    std::string m_filename; /*< Path to the rule file */
-    int         m_version;  /*< Latest rule file version, incremented on reload */
+    fw_actions         m_action;    /*< Default operation mode, defaults to deny */
+    int                m_log_match; /*< Log matching and/or non-matching queries */
+    mutable std::mutex m_lock;      /*< Instance spinlock */
+    std::string        m_filename;  /*< Path to the rule file */
+    int                m_version;   /*< Latest rule file version, incremented on reload */
 
     Dbfw(MXS_CONFIG_PARAMETER* param);
     bool do_reload_rules(std::string filename);

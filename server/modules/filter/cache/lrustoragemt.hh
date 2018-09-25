@@ -13,7 +13,9 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/spinlock.hh>
+
+#include <mutex>
+
 #include "lrustorage.hh"
 
 class LRUStorageMT : public LRUStorage
@@ -54,5 +56,5 @@ private:
     LRUStorageMT& operator=(const LRUStorageMT&);
 
 private:
-    mutable SPINLOCK m_lock;
+    mutable std::mutex m_lock;
 };

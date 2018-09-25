@@ -13,7 +13,9 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/spinlock.hh>
+
+#include <mutex>
+
 #include "cachesimple.hh"
 
 class CacheMT : public CacheSimple
@@ -46,5 +48,5 @@ private:
     CacheMT& operator=(const CacheMT&);
 
 private:
-    mutable SPINLOCK m_lock_pending;    // Lock used for protecting 'pending'.
+    mutable std::mutex m_lock_pending;      // Lock used for protecting 'pending'.
 };

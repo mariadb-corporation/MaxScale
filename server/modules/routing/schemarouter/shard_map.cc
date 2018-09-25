@@ -172,7 +172,6 @@ bool Shard::newer_than(const Shard& shard) const
 
 ShardManager::ShardManager()
 {
-    spinlock_init(&m_lock);
 }
 
 ShardManager::~ShardManager()
@@ -181,7 +180,7 @@ ShardManager::~ShardManager()
 
 Shard ShardManager::get_shard(std::string user, double max_interval)
 {
-    mxs::SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     ShardMap::iterator iter = m_maps.find(user);
 
@@ -203,7 +202,7 @@ Shard ShardManager::get_shard(std::string user, double max_interval)
 
 void ShardManager::update_shard(Shard& shard, std::string user)
 {
-    mxs::SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
     ShardMap::iterator iter = m_maps.find(user);
 
     if (iter == m_maps.end() || shard.newer_than(iter->second))

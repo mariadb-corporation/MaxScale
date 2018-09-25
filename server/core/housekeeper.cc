@@ -17,6 +17,7 @@
 #include <string.h>
 #include <string>
 #include <thread>
+#include <mutex>
 
 #include <maxbase/semaphore.h>
 #include <maxscale/alloc.h>
@@ -27,7 +28,6 @@
 #include <maxscale/json_api.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/spinlock.hh>
 
 /**
  * @file housekeeper.cc  Provide a mechanism to run periodic tasks
@@ -117,7 +117,7 @@ private:
     std::thread     m_thread;
     uint32_t        m_running;
     std::list<Task> m_tasks;
-    mxs::SpinLock   m_lock;
+    std::mutex      m_lock;
 
     bool is_running() const
     {
@@ -172,7 +172,7 @@ void Housekeeper::run()
             mxb::atomic::add(&mxs_clock_ticks, 1, mxb::atomic::RELAXED);
         }
 
-        mxs::SpinLockGuard guard(m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
         time_t now = time(0);
         auto it = m_tasks.begin();
 
@@ -205,19 +205,19 @@ void Housekeeper::stop()
 
 void Housekeeper::add(const Task& task)
 {
-    mxs::SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
     m_tasks.push_back(task);
 }
 
 void Housekeeper::remove(std::string name)
 {
-    mxs::SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
     m_tasks.remove_if(Task::NameMatch(name));
 }
 
 void Housekeeper::print_tasks(DCB* pDcb)
 {
-    mxs::SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
     dcb_printf(pDcb, "%-25s | Type     | Frequency | Next Due\n", "Name");
     dcb_printf(pDcb, "--------------------------+----------+-----------+-------------------------\n");
 
@@ -235,7 +235,7 @@ json_t* Housekeeper::tasks_json(const char* host)
 {
     json_t* arr = json_array();
 
-    mxs::SpinLockGuard guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
     for (auto ptr = m_tasks.begin(); ptr != m_tasks.end(); ptr++)
     {

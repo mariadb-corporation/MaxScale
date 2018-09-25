@@ -13,7 +13,9 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/spinlock.hh>
+
+#include <mutex>
+
 #include "inmemorystorage.hh"
 
 class InMemoryStorageMT : public InMemoryStorage
@@ -45,5 +47,5 @@ private:
     InMemoryStorageMT& operator=(const InMemoryStorageMT&);
 
 private:
-    mutable SPINLOCK m_lock;
+    mutable std::mutex m_lock;
 };
