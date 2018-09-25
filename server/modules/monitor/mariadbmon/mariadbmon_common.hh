@@ -89,13 +89,13 @@ class MariaDBServer;
 class ClusterOperation
 {
 public:
-    const OperationType  type;                        // Failover or switchover
-    MariaDBServer* const promotion_target;            // Which server will be promoted
-    MariaDBServer* const demotion_target;             // Which server will be demoted
-    const bool           demotion_target_is_master;   // Was the demotion target the master?
-    const bool           handle_events;               // Should scheduled server events be disabled/enabled?
-    json_t** const       error_out;                   // Json error output
-    maxbase::Duration    time_remaining;              // How much time remains to complete the operation
+    const OperationType  type;                          // Failover or switchover
+    MariaDBServer* const promotion_target;              // Which server will be promoted
+    MariaDBServer* const demotion_target;               // Which server will be demoted
+    const bool           demotion_target_is_master;     // Was the demotion target the master?
+    const bool           handle_events;                 // Should scheduled server events be disabled/enabled?
+    json_t** const       error_out;                     // Json error output
+    maxbase::Duration    time_remaining;                // How much time remains to complete the operation
 
     ClusterOperation(OperationType type,
                      MariaDBServer* promotion_target, MariaDBServer* demotion_target,

@@ -1192,7 +1192,7 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** erro
  * @return The selected promotion target or NULL if no valid candidates
  */
 MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target,
-                                                       OperationType op,
+                                                       OperationType  op,
                                                        Log log_mode,
                                                        json_t** error_out)
 {
@@ -1475,19 +1475,19 @@ unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json
             // repeatedly since it is likely to change continuously.
             if (error_out || log_mode == Log::ON)
             {
-                string unproc_events = string_printf(
-                        "The relay log of '%s' has %" PRIu64 " unprocessed events "
-                        "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s).",
-                        promotion_target->name(),
-                        events,
-                        slave_conn->gtid_io_pos.to_string().c_str(),
-                        promotion_target->m_gtid_current_pos.to_string().c_str());
+                const char unproc_fmt[] =
+                    "The relay log of '%s' has %" PRIu64
+                    " unprocessed events (Gtid_IO_Pos: %s, Gtid_Current_Pos: %s).";
+                string unproc_events = string_printf(unproc_fmt, promotion_target->name(), events,
+                                                     slave_conn->gtid_io_pos.to_string().c_str(),
+                                                     promotion_target->m_gtid_current_pos.to_string().c_str());
                 if (error_out)
                 {
-                    // Print a bit more helpful error for the user, goes to log too. This should be a very rare
-                    // occurrence: either the dba managed to start failover really fast, or the relay log is
-                    // massive. In the latter case it's ok that the monitor does not do the waiting since there
-                    // is no telling how long the wait will be.
+                    /* Print a bit more helpful error for the user, goes to log too.
+                     * This should be a very rare occurrence: either the dba managed to start failover
+                     * really fast, or the relay log is massive. In the latter case it's ok
+                     * that the monitor does not do the waiting since there  is no telling how long
+                     * the wait will be. */
                     const char wait_relay_log[] =
                         "%s To avoid data loss, failover should be postponed until "
                         "the log has been processed. Please try again later.";

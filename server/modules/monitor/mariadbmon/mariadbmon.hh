@@ -248,9 +248,9 @@ private:
 
     // Failover methods
     std::unique_ptr<ClusterOperation> failover_prepare(Log log_mode, json_t** error_out);
-    bool failover_perform(ClusterOperation& operation);
-    const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
-                                                Duration* event_age_out);
+    bool                              failover_perform(ClusterOperation& operation);
+    const MariaDBServer*              slave_receiving_events(const MariaDBServer* demotion_target,
+                                                             Duration* event_age_out);
     bool manual_failover(json_t** output);
     void handle_auto_failover();
 
@@ -264,7 +264,7 @@ private:
 
     // Methods common to failover/switchover/rejoin
     MariaDBServer* select_promotion_target(MariaDBServer* current_master,
-                                           OperationType op,
+                                           OperationType  op,
                                            Log log_mode,
                                            json_t** error_out);
     bool server_is_excluded(const MariaDBServer* server);

@@ -1272,9 +1272,9 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
         if (loc_at != string::npos)
         {
             auto host_begin = loc_at + 1;
-            quoted_definer = event.definer.substr(0, loc_at + 1) +
-                    // host_begin may be the null-char if @ was the last char
-                    "'" + event.definer.substr(host_begin, string::npos) + "'";
+            quoted_definer = event.definer.substr(0, loc_at + 1)
+                +   // host_begin may be the null-char if @ was the last char
+                "'" + event.definer.substr(host_begin, string::npos) + "'";
         }
         else
         {
