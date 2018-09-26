@@ -59,70 +59,27 @@ void gssapi_backend_auth_free(void *data)
 static bool send_new_auth_token(DCB *dcb)
 {
     bool rval = false;
-    OM_uint32 major = 0, minor = 0;
-    gss_ctx_id_t handle = NULL;
-    gss_buffer_desc in = {0, 0};
-    gss_buffer_desc out = {0, 0};
-    gss_buffer_desc target = {0, 0};
-    gss_name_t princ = GSS_C_NO_NAME;
     gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
+    MYSQL_session *ses = (MYSQL_session*)dcb->session->client_dcb->data;
+    GWBUF *buffer = gwbuf_alloc(MYSQL_HEADER_LEN + ses->auth_token_len);
 
-    /** The service principal name is sent by the backend server */
-    target.value = auth->principal_name;
-    target.length = auth->principal_name_len + 1;
+    // This function actually just forwards the client's token to the backend server
 
-    /** Convert the name into GSSAPI format */
-    major = gss_import_name(&minor, &target, GSS_C_NT_USER_NAME, &princ);
-
-    if (GSS_ERROR(major))
+    if (buffer)
     {
-        report_error(major, minor);
-    }
+        uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
+        gw_mysql_set_byte3(data, ses->auth_token_len);
+        data += 3;
+        *data++ = ++auth->sequence;
+        memcpy(data, ses->auth_token, ses->auth_token_len);
 
-    /** Request the token for the service */
-    major = gss_init_sec_context(&minor, GSS_C_NO_CREDENTIAL,
-                                 &handle, princ, GSS_C_NO_OID, 0, 0,
-                                 GSS_C_NO_CHANNEL_BINDINGS, &in, NULL, &out, 0, 0);
-    if (GSS_ERROR(major))
-    {
-        report_error(major, minor);
-    }
-    else
-    {
-        /** We successfully requested the token, send it to the backend server */
-        GWBUF *buffer = gwbuf_alloc(MYSQL_HEADER_LEN + out.length);
-
-        if (buffer)
+        if (dcb_write(dcb, buffer))
         {
-            uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
-            gw_mysql_set_byte3(data, out.length);
-            data += 3;
-            *data++ = ++auth->sequence;
-            memcpy(data, out.value, out.length);
-
-            if (dcb_write(dcb, buffer))
-            {
-                rval = true;
-            }
-        }
-
-        major = gss_delete_sec_context(&minor, &handle, &in);
-
-        if (GSS_ERROR(major))
-        {
-            report_error(major, minor);
-        }
-
-        major = gss_release_name(&minor, &princ);
-
-        if (GSS_ERROR(major))
-        {
-            report_error(major, minor);
+            rval = true;
         }
     }
 
     return rval;
-
 }
 
 /**
