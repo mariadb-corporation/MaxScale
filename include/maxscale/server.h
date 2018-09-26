@@ -134,12 +134,11 @@ typedef struct server
     SERVER_PARAM* parameters;               /**< Additional custom parameters which may affect routing
                                              * decisions. */
     // Base variables
-    SPINLOCK      lock;         /**< Access lock. Required when modifying server status or settings. */
-    bool          is_active;    /**< Server is active and has not been "destroyed" */
-    void*         auth_instance;/**< Authenticator instance data */
-    SSL_LISTENER* server_ssl;   /**< SSL data */
-    DCB**         persistent;   /**< List of unused persistent connections to the server */
-    uint8_t       charset;      /**< Server character set. Read from backend and sent to client. */
+    bool          is_active;        /**< Server is active and has not been "destroyed" */
+    void*         auth_instance;    /**< Authenticator instance data */
+    SSL_LISTENER* server_ssl;       /**< SSL data */
+    DCB**         persistent;       /**< List of unused persistent connections to the server */
+    uint8_t       charset;          /**< Server character set. Read from backend and sent to client. */
     // Statistics and events
     SERVER_STATS stats;         /**< The server statistics, e.g. number of connections */
     int          persistmax;    /**< Maximum pool size actually achieved since startup */

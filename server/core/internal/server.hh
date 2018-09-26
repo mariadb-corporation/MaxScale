@@ -16,6 +16,10 @@
  * Internal header for the server type
  */
 
+#include <maxbase/ccdefs.hh>
+
+#include <mutex>
+
 #include <maxbase/average.hh>
 #include <maxscale/server.h>
 #include <maxscale/resultset.hh>
@@ -47,6 +51,9 @@ public:
     {
         response_time->add(ave, num_samples);
     }
+
+    // TODO: Do all access to Server via methods
+    mutable std::mutex lock;
 
 private:
     // nantti, TODO. Decide whether to expose some of this in config, or if the values

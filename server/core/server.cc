@@ -37,7 +37,6 @@
 #include <maxscale/config.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
 #include <maxscale/log.h>
@@ -163,7 +162,6 @@ SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->persistmaxtime = config_get_integer(params, CN_PERSISTMAXTIME);
     server->proxy_protocol = config_get_bool(params, CN_PROXY_PROTOCOL);
     server->parameters = NULL;
-    spinlock_init(&server->lock);
     server->is_active = true;
     server->auth_instance = auth_instance;
     server->server_ssl = ssl;
@@ -875,10 +873,11 @@ static SERVER_PARAM* allocate_parameter(const char* name, const char* value)
     return param;
 }
 
-bool server_remove_parameter(SERVER* server, const char* name)
+bool server_remove_parameter(SERVER* srv, const char* name)
 {
+    Server* server = static_cast<Server*>(srv);
     bool rval = false;
-    spinlock_acquire(&server->lock);
+    std::lock_guard<std::mutex> guard(server->lock);
 
     for (SERVER_PARAM* p = server->parameters; p; p = p->next)
     {
@@ -890,17 +889,17 @@ bool server_remove_parameter(SERVER* server, const char* name)
         }
     }
 
-    spinlock_release(&server->lock);
     return rval;
 }
 
-void server_set_parameter(SERVER* server, const char* name, const char* value)
+void server_set_parameter(SERVER* srv, const char* name, const char* value)
 {
+    Server* server = static_cast<Server*>(srv);
     SERVER_PARAM* param = allocate_parameter(name, value);
 
     if (param)
     {
-        spinlock_acquire(&server->lock);
+        std::lock_guard<std::mutex> guard(server->lock);
 
         // Insert new value
         param->next = server->parameters;
@@ -915,8 +914,6 @@ void server_set_parameter(SERVER* server, const char* name, const char* value)
                 break;
             }
         }
-
-        spinlock_release(&server->lock);
     }
 }
 
@@ -971,12 +968,11 @@ static size_t server_get_parameter_nolock(const SERVER* server, const char* name
  *
  * @return Length of the parameter value or 0 if parameter was not found
  */
-size_t server_get_parameter(const SERVER* server, const char* name, char* out, size_t size)
+size_t server_get_parameter(const SERVER* srv, const char* name, char* out, size_t size)
 {
-    spinlock_acquire(&server->lock);
-    size_t len = server_get_parameter_nolock(server, name, out, size);
-    spinlock_release(&server->lock);
-    return len;
+    const Server* server = static_cast<const Server*>(srv);
+    std::lock_guard<std::mutex> guard(server->lock);
+    return server_get_parameter_nolock(server, name, out, size);
 }
 
 /**
@@ -1275,14 +1271,16 @@ bool server_serialize(const SERVER* server)
  * @param server        The server to update
  * @param bit           The bit to set for the server
  */
-bool mxs::server_set_status(SERVER* server, int bit, string* errmsg_out)
+bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
 {
+    Server* server = static_cast<Server*>(srv);
     bool written = false;
     /* First check if the server is monitored. This isn't done under a lock
      * but the race condition cannot cause significant harm. Monitors are never
      * freed so the pointer stays valid. */
     MXS_MONITOR* mon = monitor_server_in_use(server);
-    spinlock_acquire(&server->lock);
+    std::lock_guard<std::mutex> guard(server->lock);
+
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
         /* This server is monitored, in which case modifying any other status bit than Maintenance is
@@ -1314,7 +1312,7 @@ bool mxs::server_set_status(SERVER* server, int bit, string* errmsg_out)
         server_set_status_nolock(server, bit);
         written = true;
     }
-    spinlock_release(&server->lock);
+
     return written;
 }
 /**
@@ -1325,11 +1323,13 @@ bool mxs::server_set_status(SERVER* server, int bit, string* errmsg_out)
  * @param server        The server to update
  * @param bit           The bit to clear for the server
  */
-bool mxs::server_clear_status(SERVER* server, int bit, string* errmsg_out)
+bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
 {
+    Server* server = static_cast<Server*>(srv);
     bool written = false;
     MXS_MONITOR* mon = monitor_server_in_use(server);
-    spinlock_acquire(&server->lock);
+    std::lock_guard<std::mutex> guard(server->lock);
+
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
         // See server_set_status().
@@ -1359,7 +1359,7 @@ bool mxs::server_clear_status(SERVER* server, int bit, string* errmsg_out)
         server_clear_status_nolock(server, bit);
         written = true;
     }
-    spinlock_release(&server->lock);
+
     return written;
 }
 
