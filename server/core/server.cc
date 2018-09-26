@@ -877,7 +877,7 @@ bool server_remove_parameter(SERVER* srv, const char* name)
 {
     Server* server = static_cast<Server*>(srv);
     bool rval = false;
-    std::lock_guard<std::mutex> guard(server->lock);
+    std::lock_guard<std::mutex> guard(server->m_lock);
 
     for (SERVER_PARAM* p = server->parameters; p; p = p->next)
     {
@@ -899,7 +899,7 @@ void server_set_parameter(SERVER* srv, const char* name, const char* value)
 
     if (param)
     {
-        std::lock_guard<std::mutex> guard(server->lock);
+        std::lock_guard<std::mutex> guard(server->m_lock);
 
         // Insert new value
         param->next = server->parameters;
@@ -971,7 +971,7 @@ static size_t server_get_parameter_nolock(const SERVER* server, const char* name
 size_t server_get_parameter(const SERVER* srv, const char* name, char* out, size_t size)
 {
     const Server* server = static_cast<const Server*>(srv);
-    std::lock_guard<std::mutex> guard(server->lock);
+    std::lock_guard<std::mutex> guard(server->m_lock);
     return server_get_parameter_nolock(server, name, out, size);
 }
 
@@ -1279,7 +1279,7 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
      * but the race condition cannot cause significant harm. Monitors are never
      * freed so the pointer stays valid. */
     MXS_MONITOR* mon = monitor_server_in_use(server);
-    std::lock_guard<std::mutex> guard(server->lock);
+    std::lock_guard<std::mutex> guard(server->m_lock);
 
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
@@ -1328,7 +1328,7 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
     Server* server = static_cast<Server*>(srv);
     bool written = false;
     MXS_MONITOR* mon = monitor_server_in_use(server);
-    std::lock_guard<std::mutex> guard(server->lock);
+    std::lock_guard<std::mutex> guard(server->m_lock);
 
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
