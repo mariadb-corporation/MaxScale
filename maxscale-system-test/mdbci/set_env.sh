@@ -23,6 +23,7 @@ export node_N=`cat "$MDBCI_VM_PATH/$config_name"_network_config | grep node | gr
 export maxscale_N=`cat "$MDBCI_VM_PATH/$config_name"_network_config | grep maxscale | grep network | wc -l`
 sed "s/^/export /g" "$MDBCI_VM_PATH/$config_name"_network_config > "$curr_dir"/"$config_name"_network_config_export
 source "$curr_dir"/"$config_name"_network_config_export
+rm "$curr_dir"/"$config_name"_network_config_export
 
 
 # User name and Password for Master/Slave replication setup (should have all PRIVILEGES)
