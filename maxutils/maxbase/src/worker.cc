@@ -808,9 +808,6 @@ void Worker::poll_waitevents()
                 m_statistics.evq_max = nfds;
             }
 
-            MXB_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
-                      pthread_self(),
-                      nfds);
             mxb::atomic::add(&m_statistics.n_pollev, 1, mxb::atomic::RELAXED);
 
             m_state = PROCESSING;
