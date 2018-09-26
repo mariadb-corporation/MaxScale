@@ -26,6 +26,7 @@
 #include <zlib.h>
 #include <sys/stat.h>
 #include <vector>
+#include <mutex>
 
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.hh>
@@ -80,7 +81,7 @@ const char CN_SCRIPT[] = "script";
 const char CN_SCRIPT_TIMEOUT[] = "script_timeout";
 
 static MXS_MONITOR* allMonitors = NULL;
-static SPINLOCK monLock = SPINLOCK_INIT;
+static std::mutex monLock;
 
 static void        monitor_server_free_all(MXS_MONITORED_SERVER* servers);
 static void        remove_server_journal(MXS_MONITOR* monitor);
@@ -173,10 +174,9 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
         return NULL;
     }
 
-    spinlock_acquire(&monLock);
+    std::lock_guard<std::mutex> guard(monLock);
     mon->next = allMonitors;
     allMonitors = mon;
-    spinlock_release(&monLock);
 
     return mon;
 }
@@ -191,7 +191,8 @@ void monitor_destroy(MXS_MONITOR* mon)
 {
     MXS_MONITOR* ptr;
 
-    spinlock_acquire(&monLock);
+    std::unique_lock<std::mutex> guard(monLock);
+
     if (allMonitors == mon)
     {
         allMonitors = mon->next;
@@ -208,7 +209,9 @@ void monitor_destroy(MXS_MONITOR* mon)
             ptr->next = mon->next;
         }
     }
-    spinlock_release(&monLock);
+
+    guard.unlock();
+
     mon->api->destroyInstance(mon->instance);
     delete mon->disk_space_threshold;
     config_parameter_free(mon->parameters);
@@ -271,8 +274,8 @@ void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
 void monitor_start_all()
 {
     MXS_MONITOR* ptr;
+    std::lock_guard<std::mutex> guard(monLock);
 
-    spinlock_acquire(&monLock);
     ptr = allMonitors;
     while (ptr)
     {
@@ -282,7 +285,6 @@ void monitor_start_all()
         }
         ptr = ptr->next;
     }
-    spinlock_release(&monLock);
 }
 
 /**
@@ -319,9 +321,8 @@ void monitor_stop(MXS_MONITOR* monitor)
 
 void monitor_deactivate(MXS_MONITOR* monitor)
 {
-    spinlock_acquire(&monLock);
+    std::lock_guard<std::mutex> guard(monLock);
     monitor->active = false;
-    spinlock_release(&monLock);
 }
 
 /**
@@ -329,19 +330,15 @@ void monitor_deactivate(MXS_MONITOR* monitor)
  */
 void monitor_stop_all()
 {
-    spinlock_acquire(&monLock);
+    std::lock_guard<std::mutex> guard(monLock);
 
-    MXS_MONITOR* monitor = allMonitors;
-    while (monitor)
+    for (MXS_MONITOR* monitor = allMonitors; monitor; monitor = monitor->next)
     {
         if (monitor->active)
         {
             monitor_stop(monitor);
         }
-        monitor = monitor->next;
     }
-
-    spinlock_release(&monLock);
 }
 
 /**
@@ -515,19 +512,15 @@ void monitor_add_user(MXS_MONITOR* mon, const char* user, const char* passwd)
  */
 void monitor_show_all(DCB* dcb)
 {
-    MXS_MONITOR* ptr;
+    std::lock_guard<std::mutex> guard(monLock);
 
-    spinlock_acquire(&monLock);
-    ptr = allMonitors;
-    while (ptr)
+    for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
     {
         if (ptr->active)
         {
             monitor_show(dcb, ptr);
         }
-        ptr = ptr->next;
     }
-    spinlock_release(&monLock);
 }
 
 /**
@@ -585,7 +578,7 @@ void monitor_list(DCB* dcb)
 {
     MXS_MONITOR* ptr;
 
-    spinlock_acquire(&monLock);
+    std::lock_guard<std::mutex> guard(monLock);
     ptr = allMonitors;
     dcb_printf(dcb, "---------------------+---------------------\n");
     dcb_printf(dcb, "%-20s | Status\n", "Monitor");
@@ -603,7 +596,6 @@ void monitor_list(DCB* dcb)
         ptr = ptr->next;
     }
     dcb_printf(dcb, "---------------------+---------------------\n");
-    spinlock_release(&monLock);
 }
 
 /**
@@ -614,20 +606,17 @@ void monitor_list(DCB* dcb)
  */
 MXS_MONITOR* monitor_find(const char* name)
 {
-    MXS_MONITOR* ptr;
+    std::lock_guard<std::mutex> guard(monLock);
 
-    spinlock_acquire(&monLock);
-    ptr = allMonitors;
-    while (ptr)
+    for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
     {
         if (!strcmp(ptr->name, name) && ptr->active)
         {
-            break;
+            return ptr;
         }
-        ptr = ptr->next;
     }
-    spinlock_release(&monLock);
-    return ptr;
+
+    return nullptr;
 }
 /**
  * Find a destroyed monitor by name
@@ -638,8 +627,7 @@ MXS_MONITOR* monitor_find(const char* name)
 MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module)
 {
     MXS_MONITOR* rval = NULL;
-
-    spinlock_acquire(&monLock);
+    std::lock_guard<std::mutex> guard(monLock);
 
     for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
     {
@@ -650,8 +638,6 @@ MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module)
             rval = ptr;
         }
     }
-
-    spinlock_release(&monLock);
 
     return rval;
 }
@@ -737,7 +723,7 @@ bool monitor_set_network_timeout(MXS_MONITOR* mon, int type, int value, const ch
 std::unique_ptr<ResultSet> monitor_get_list()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
-    spinlock_acquire(&monLock);
+    std::lock_guard<std::mutex> guard(monLock);
 
     for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
     {
@@ -745,7 +731,6 @@ std::unique_ptr<ResultSet> monitor_get_list()
         set->add_row({ptr->name, state});
     }
 
-    spinlock_release(&monLock);
     return set;
 }
 
@@ -1557,8 +1542,7 @@ static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
 MXS_MONITOR* monitor_server_in_use(const SERVER* server)
 {
     MXS_MONITOR* rval = NULL;
-
-    spinlock_acquire(&monLock);
+    std::lock_guard<std::mutex> guard(monLock);
 
     for (MXS_MONITOR* mon = allMonitors; mon && !rval; mon = mon->next)
     {
@@ -1577,8 +1561,6 @@ MXS_MONITOR* monitor_server_in_use(const SERVER* server)
 
         spinlock_release(&mon->lock);
     }
-
-    spinlock_release(&monLock);
 
     return rval;
 }
@@ -1865,7 +1847,7 @@ json_t* monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();
 
-    spinlock_acquire(&monLock);
+    std::unique_lock<std::mutex> guard(monLock);
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
     {
@@ -1880,7 +1862,7 @@ json_t* monitor_list_to_json(const char* host)
         }
     }
 
-    spinlock_release(&monLock);
+    guard.unlock();
 
     return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
 }
@@ -1888,7 +1870,7 @@ json_t* monitor_list_to_json(const char* host)
 json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 {
     std::vector<std::string> names;
-    spinlock_acquire(&monLock);
+    std::unique_lock<std::mutex> guard(monLock);
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
     {
@@ -1909,7 +1891,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
         spinlock_release(&mon->lock);
     }
 
-    spinlock_release(&monLock);
+    guard.unlock();
 
     json_t* rel = NULL;
 

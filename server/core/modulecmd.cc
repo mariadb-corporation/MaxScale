@@ -49,7 +49,7 @@ typedef struct modulecmd_domain
 
 /** The global list of registered domains */
 static MODULECMD_DOMAIN* modulecmd_domains = NULL;
-static SPINLOCK modulecmd_lock = SPINLOCK_INIT;
+static std::mutex modulecmd_lock;
 
 static inline void prepare_error()
 {
@@ -434,7 +434,7 @@ bool modulecmd_register_command(const char* domain,
 {
     reset_error();
     bool rval = false;
-    spinlock_acquire(&modulecmd_lock);
+    std::lock_guard<std::mutex> guard(modulecmd_lock);
 
     MODULECMD_DOMAIN* dm = get_or_create_domain(domain);
 
@@ -464,8 +464,6 @@ bool modulecmd_register_command(const char* domain,
         }
     }
 
-    spinlock_release(&modulecmd_lock);
-
     return rval;
 }
 
@@ -476,7 +474,7 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
     const char* effective_domain = mxs_module_get_effective_name(domain);
 
     MODULECMD* rval = NULL;
-    spinlock_acquire(&modulecmd_lock);
+    std::lock_guard<std::mutex> guard(modulecmd_lock);
 
     for (MODULECMD_DOMAIN* dm = modulecmd_domains; dm; dm = dm->next)
     {
@@ -493,8 +491,6 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
             break;
         }
     }
-
-    spinlock_release(&modulecmd_lock);
 
     if (rval == NULL)
     {
@@ -641,7 +637,7 @@ bool modulecmd_foreach(const char* domain_re,
 {
     bool rval = true;
     bool stop = false;
-    spinlock_acquire(&modulecmd_lock);
+    std::lock_guard<std::mutex> guard(modulecmd_lock);
 
     for (MODULECMD_DOMAIN* domain = modulecmd_domains; domain && rval && !stop; domain = domain->next)
     {
@@ -686,7 +682,6 @@ bool modulecmd_foreach(const char* domain_re,
         }
     }
 
-    spinlock_release(&modulecmd_lock);
     return rval;
 }
 

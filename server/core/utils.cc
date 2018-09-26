@@ -983,8 +983,6 @@ void utils_end()
     replace_values_re = NULL;
 }
 
-SPINLOCK tmplock = SPINLOCK_INIT;
-
 static bool configure_network_socket(int so)
 {
     int sndbufsize = MXS_BACKEND_SO_SNDBUF;

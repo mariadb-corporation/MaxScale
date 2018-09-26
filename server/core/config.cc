@@ -960,17 +960,16 @@ static bool config_load_dir(const char* dir, DUPLICATE_CONTEXT* dcontext, CONFIG
     // Since there is no way to pass userdata to the callback, we need to store
     // the current context into a static variable. Consequently, we need lock.
     // Should not matter since config_load() is called once at startup.
-    static SPINLOCK lock = SPINLOCK_INIT;
+    static std::mutex lock;
+    std::lock_guard<std::mutex> guard(lock);
 
     int nopenfd = 5;    // Maximum concurrently opened directory descriptors
 
-    spinlock_acquire(&lock);
     current_dcontext = dcontext;
     current_ccontext = ccontext;
     int rv = nftw(dir, config_cb, nopenfd, FTW_PHYS);
     current_ccontext = NULL;
     current_dcontext = NULL;
-    spinlock_release(&lock);
 
     return rv == 0;
 }

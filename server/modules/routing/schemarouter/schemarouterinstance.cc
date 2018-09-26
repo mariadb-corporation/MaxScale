@@ -47,7 +47,6 @@ SchemaRouter::SchemaRouter(SERVICE* service, SConfig config)
     , m_config(config)
     , m_service(service)
 {
-    spinlock_init(&m_lock);
 }
 
 SchemaRouter::~SchemaRouter()

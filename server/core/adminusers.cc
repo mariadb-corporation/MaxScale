@@ -409,11 +409,10 @@ void mxs_crypt(const char* password, const char* salt, char* output)
     char* pw = crypt_r(password, salt, &cdata);
     snprintf(output, MXS_CRYPT_SIZE, "%s", pw);
 #else
-    static SPINLOCK mxs_crypt_lock = SPINLOCK_INIT;
-    spinlock_acquire(&mxs_crypt_lock);
+    static std::mutex mxs_crypt_lock;
+    std::lock_guard<std::mutex> guard(mxs_crypt_lock);
     char* pw = crypt(password, salt);
     snprintf(output, MXS_CRYPT_SIZE, "%s", pw);
-    spinlock_release(&mxs_crypt_lock);
 #endif
 }
 

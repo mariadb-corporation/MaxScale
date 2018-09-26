@@ -153,7 +153,6 @@ public:
     int                   state;        /*< The state of this client */
     enum avro_data_format format;       /*< Stream JSON or Avro data */
     std::string           uuid;         /*< Client UUID */
-    SPINLOCK              catch_lock;   /*< Event catchup lock */
     Avro*                 router;       /*< Pointer to the owning router */
     MAXAVRO_FILE*         file_handle;  /*< Current open file handle */
     uint64_t              last_sent_pos;/*< The last record we sent */

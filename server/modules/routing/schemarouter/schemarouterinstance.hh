@@ -14,6 +14,7 @@
 
 #include "schemarouter.hh"
 
+#include <mutex>
 #include <set>
 #include <string>
 
@@ -51,7 +52,7 @@ private:
     SConfig      m_config;          /*< expanded config info from SERVICE */
     ShardManager m_shard_manager;   /*< Shard maps hashed by user name */
     SERVICE*     m_service;         /*< Pointer to service */
-    SPINLOCK     m_lock;            /*< Lock for the instance data */
+    std::mutex   m_lock;            /*< Lock for the instance data */
     Stats        m_stats;           /*< Statistics for this router */
 };
 }

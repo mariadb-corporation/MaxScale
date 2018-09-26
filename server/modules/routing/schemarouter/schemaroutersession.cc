@@ -111,7 +111,8 @@ void SchemaRouterSession::close()
             }
         }
 
-        spinlock_acquire(&m_router->m_lock);
+        std::lock_guard<std::mutex> guard(m_router->m_lock);
+
         if (m_router->m_stats.longest_sescmd < m_stats.longest_sescmd)
         {
             m_router->m_stats.longest_sescmd = m_stats.longest_sescmd;
@@ -129,8 +130,6 @@ void SchemaRouterSession::close()
         m_router->m_stats.ses_average =
             (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average))
             / (m_router->m_stats.sessions);
-
-        spinlock_release(&m_router->m_lock);
     }
 }
 

@@ -203,7 +203,7 @@ typedef struct
     lua_State* global_lua_state;
     char*      global_script;
     char*      session_script;
-    SPINLOCK   lock;
+    std::mutex lock;
 } LUA_INSTANCE;
 
 /**
@@ -249,17 +249,16 @@ void expose_functions(lua_State* state, GWBUF** active_buffer)
  */
 static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    LUA_INSTANCE* my_instance;
+    LUA_INSTANCE* my_instance = new (std::nothrow) LUA_INSTANCE;
 
-    if ((my_instance = (LUA_INSTANCE*) MXS_CALLOC(1, sizeof(LUA_INSTANCE))) == NULL)
+    if (my_instance == NULL)
     {
         return NULL;
     }
 
-    spinlock_init(&my_instance->lock);
-
     my_instance->global_script = config_copy_string(params, "global_script");
     my_instance->session_script = config_copy_string(params, "session_script");
+    my_instance->global_lua_state = nullptr;
 
     if (my_instance->global_script)
     {
@@ -366,7 +365,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
 
     if (my_session && my_instance->global_lua_state)
     {
-        spinlock_acquire(&my_instance->lock);
+        std::lock_guard<std::mutex> guard(my_instance->lock);
 
         lua_getglobal(my_instance->global_lua_state, "newSession");
         lua_pushstring(my_instance->global_lua_state, session->client_dcb->user);
@@ -379,8 +378,6 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
                         lua_tostring(my_instance->global_lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1);     // Pop the error off the stack
         }
-
-        spinlock_release(&my_instance->lock);
     }
 
     return (MXS_FILTER_SESSION*)my_session;
@@ -415,7 +412,7 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 
     if (my_instance->global_lua_state)
     {
-        spinlock_acquire(&my_instance->lock);
+        std::lock_guard<std::mutex> guard(my_instance->lock);
 
         lua_getglobal(my_instance->global_lua_state, "closeSession");
 
@@ -426,7 +423,6 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
                         lua_tostring(my_instance->global_lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1);
         }
-        spinlock_release(&my_instance->lock);
     }
 }
 
@@ -502,7 +498,7 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GW
 
     if (my_instance->global_lua_state)
     {
-        spinlock_acquire(&my_instance->lock);
+        std::lock_guard<std::mutex> guard(my_instance->lock);
 
         lua_getglobal(my_instance->global_lua_state, "clientReply");
 
@@ -512,8 +508,6 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GW
                       lua_tostring(my_session->lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1);
         }
-
-        spinlock_release(&my_instance->lock);
     }
 
     return my_session->up.clientReply(my_session->up.instance,
@@ -585,7 +579,7 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
 
         if (my_instance->global_lua_state)
         {
-            spinlock_acquire(&my_instance->lock);
+            std::lock_guard<std::mutex> guard(my_instance->lock);
             current_global_query = queue;
 
             lua_getglobal(my_instance->global_lua_state, "routeQuery");
@@ -612,7 +606,6 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
             }
 
             current_global_query = NULL;
-            spinlock_release(&my_instance->lock);
         }
 
         MXS_FREE(fullquery);
@@ -652,7 +645,7 @@ static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* 
     {
         if (my_instance->global_lua_state)
         {
-            spinlock_acquire(&my_instance->lock);
+            std::lock_guard<std::mutex> guard(my_instance->lock);
 
             lua_getglobal(my_instance->global_lua_state, "diagnostic");
 
@@ -672,7 +665,6 @@ static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* 
                            lua_tostring(my_instance->global_lua_state, -1));
                 lua_pop(my_instance->global_lua_state, -1);
             }
-            spinlock_release(&my_instance->lock);
         }
         if (my_instance->global_script)
         {
@@ -703,7 +695,7 @@ static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESS
     {
         if (my_instance->global_lua_state)
         {
-            spinlock_acquire(&my_instance->lock);
+            std::lock_guard<std::mutex> guard(my_instance->lock);
 
             lua_getglobal(my_instance->global_lua_state, "diagnostic");
 
@@ -721,7 +713,6 @@ static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESS
             {
                 lua_pop(my_instance->global_lua_state, -1);
             }
-            spinlock_release(&my_instance->lock);
         }
         if (my_instance->global_script)
         {

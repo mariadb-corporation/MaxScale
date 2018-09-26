@@ -18,10 +18,22 @@
 
 MXS_BEGIN_DECLS
 
-#define SPINLOCK pthread_mutex_t
+typedef pthread_mutex_t SPINLOCK;
 #define SPINLOCK_INIT PTHREAD_MUTEX_INITIALIZER
-#define spinlock_init(a) pthread_mutex_init(a, NULL)
-#define spinlock_acquire(a) pthread_mutex_lock((pthread_mutex_t*)a)
-#define spinlock_release(a) pthread_mutex_unlock((pthread_mutex_t*)a)
+
+static inline void spinlock_init(SPINLOCK* a)
+{
+    pthread_mutex_init(a, NULL);
+}
+
+static inline void spinlock_acquire(const SPINLOCK* a)
+{
+    pthread_mutex_lock((SPINLOCK*)a);
+}
+
+static inline void spinlock_release(const SPINLOCK* a)
+{
+    pthread_mutex_unlock((SPINLOCK*)a);
+}
 
 MXS_END_DECLS

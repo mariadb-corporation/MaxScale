@@ -54,9 +54,6 @@ static uint64_t            getCapabilities(MXS_ROUTER* instance);
 
 extern int execute_cmd(CLI_SESSION* cli);
 
-static SPINLOCK instlock;
-static CLI_INSTANCE* instances;
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -68,8 +65,6 @@ static CLI_INSTANCE* instances;
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise CLI router module");
-    spinlock_init(&instlock);
-    instances = NULL;
 
     static MXS_ROUTER_OBJECT MyObject =
     {
@@ -128,16 +123,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     inst->service = service;
     spinlock_init(&inst->lock);
     inst->sessions = NULL;
-
-    /*
-     * We have completed the creation of the instance data, so now
-     * insert this router instance into the linked list of routers
-     * that have been created with this module.
-     */
-    spinlock_acquire(&instlock);
-    inst->next = instances;
-    instances = inst;
-    spinlock_release(&instlock);
 
     return (MXS_ROUTER*)inst;
 }

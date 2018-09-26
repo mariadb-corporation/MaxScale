@@ -110,8 +110,6 @@ static void handleError(MXS_ROUTER* instance,
                         bool* succp);
 static uint64_t    getCapabilities(MXS_ROUTER* instance);
 static bool        configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params);
-static bool        rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
-static void        rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 static SERVER_REF* get_root_master(SERVER_REF* servers);
 
 /**
@@ -248,7 +246,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     {
 
         inst->service = service;
-        spinlock_init(&inst->lock);
         inst->bitmask_and_bitvalue = 0;
 
         if (!configureInstance((MXS_ROUTER*)inst, params))
@@ -478,28 +475,11 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
 static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
 {
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
-    DCB* backend_dcb;
+    mxb_assert(router_cli_ses->backend_dcb);
 
-    /**
-     * Lock router client session for secure read and update.
-     */
-    if (rses_begin_locked_router_action(router_cli_ses))
+    if (router_cli_ses->backend_dcb)
     {
-        /* decrease server current connection counter */
-
-        backend_dcb = router_cli_ses->backend_dcb;
-        router_cli_ses->backend_dcb = NULL;
-        router_cli_ses->rses_closed = true;
-        /** Unlock */
-        rses_end_locked_router_action(router_cli_ses);
-
-        /**
-         * Close the backend server connection
-         */
-        if (backend_dcb != NULL)
-        {
-            dcb_close(backend_dcb);
-        }
+        dcb_close(router_cli_ses->backend_dcb);
     }
 }
 
@@ -596,33 +576,14 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
     DCB* backend_dcb;
     MySQLProtocol* proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
     mxs_mysql_cmd_t mysql_command = proto->current_command;
-    bool rses_is_closed;
+    bool rses_is_closed = router_cli_ses->rses_closed;
 
     inst->stats.n_queries++;
 
     // Due to the streaming nature of readconnroute, this is not accurate
     mxb::atomic::add(&router_cli_ses->backend->server->stats.packets, 1, mxb::atomic::RELAXED);
 
-    /** Dirty read for quick check if router is closed. */
-    if (router_cli_ses->rses_closed)
-    {
-        rses_is_closed = true;
-    }
-    else
-    {
-        /**
-         * Lock router client session for secure read of DCBs
-         */
-        rses_is_closed = !(rses_begin_locked_router_action(router_cli_ses));
-    }
-
-    if (!rses_is_closed)
-    {
-        backend_dcb = router_cli_ses->backend_dcb;
-        /** unlock */
-        rses_end_locked_router_action(router_cli_ses);
-    }
-
+    backend_dcb = router_cli_ses->backend_dcb;
     bool valid;
     char* trc = NULL;
 
@@ -792,63 +753,6 @@ static void handleError(MXS_ROUTER* instance,
 
     /** false because connection is not available anymore */
     *succp = false;
-}
-
-/** to be inline'd */
-
-/**
- * @node Acquires lock to router client session if it is not closed.
- *
- * Parameters:
- * @param rses - in, use
- *
- *
- * @return true if router session was not closed. If return value is true
- * it means that router is locked, and must be unlocked later. False, if
- * router was closed before lock was acquired.
- *
- *
- * @details (write detailed description here)
- *
- */
-static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses)
-{
-    bool succp = false;
-
-    if (rses->rses_closed)
-    {
-        goto return_succp;
-    }
-    spinlock_acquire(&rses->rses_lock);
-    if (rses->rses_closed)
-    {
-        spinlock_release(&rses->rses_lock);
-        goto return_succp;
-    }
-    succp = true;
-
-return_succp:
-    return succp;
-}
-
-/** to be inline'd */
-
-/**
- * @node Releases router client session lock.
- *
- * Parameters:
- * @param rses - <usage>
- *          <description>
- *
- * @return void
- *
- *
- * @details (write detailed description here)
- *
- */
-static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
-{
-    spinlock_release(&rses->rses_lock);
 }
 
 static uint64_t getCapabilities(MXS_ROUTER* instance)

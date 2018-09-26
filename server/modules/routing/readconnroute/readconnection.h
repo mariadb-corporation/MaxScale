@@ -37,7 +37,6 @@
  */
 struct ROUTER_CLIENT_SES : MXS_ROUTER_SESSION
 {
-    SPINLOCK    rses_lock;  /*< protects rses_deleted              */
     int         rses_versno;/*< even = no active update, else odd  */
     bool        rses_closed;/*< true when closeSession is called   */
     SERVER_REF* backend;    /*< Backend used by the client session */
@@ -62,7 +61,6 @@ struct ROUTER_STATS
 struct ROUTER_INSTANCE : public MXS_ROUTER
 {
     SERVICE*     service;               /*< Pointer to the service using this router */
-    SPINLOCK     lock;                  /*< Spinlock for the instance data           */
     uint64_t     bitmask_and_bitvalue;  /*< Lower 32-bits for bitmask and upper for bitvalue */
     ROUTER_STATS stats;                 /*< Statistics for this router               */
 };

@@ -213,8 +213,8 @@ typedef struct
     int                     conn_stat;  /**state of the connection to the server*/
     int                     rconn_intv; /**delay for reconnects, in seconds*/
     time_t                  last_rconn; /**last reconnect attempt*/
-    SPINLOCK                rconn_lock;
-    SPINLOCK                msg_lock;
+    std::mutex              rconn_lock;
+    std::mutex              msg_lock;
     mqmessage*              messages;
     enum log_trigger_t      trgtype;
     SRC_TRIG*               src_trg;

@@ -19,6 +19,7 @@
 #include <strings.h>
 
 #include <iterator>
+#include <mutex>
 
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
@@ -30,7 +31,6 @@
 #include <maxscale/mysql_utils.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
-static SPINLOCK re_lock = SPINLOCK_INIT;
 static bool pattern_init = false;
 static pcre2_code* re_percent = NULL;
 static pcre2_code* re_single = NULL;
@@ -1113,7 +1113,9 @@ int modutil_count_packets(GWBUF* buffer)
  */
 void prepare_pcre2_patterns()
 {
-    spinlock_acquire(&re_lock);
+    static std::mutex re_lock;
+    std::lock_guard<std::mutex> guard(re_lock);
+
     if (!pattern_init)
     {
         int err;
@@ -1158,7 +1160,6 @@ void prepare_pcre2_patterns()
             re_escape = NULL;
         }
     }
-    spinlock_release(&re_lock);
 }
 
 /**
