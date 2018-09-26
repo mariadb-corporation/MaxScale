@@ -973,6 +973,11 @@ add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS R
 # https://jira.mariadb.org/browse/MXS-2037
 add_test_executable(mxs2037_namedserver_wildcards.cpp mxs2037_namedserver_wildcards mxs2037_namedserver_wildcards LABELS namedserverfilter LIGHT REPL_BACKEND)
 
+# MXS-2043: Error "The MariaDB server is running with the --read-only option"
+#           for "select for update"
+# https://jira.mariadb.org/browse/MXS-2043
+add_test_executable(mxs2043_select_for_update.cpp mxs2043_select_for_update replication LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
