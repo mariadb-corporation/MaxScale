@@ -26,17 +26,25 @@ StopWatch::StopWatch()
     restart();
 }
 
-Duration StopWatch::lap() const
+Duration StopWatch::split() const
 {
     return {Clock::now() - m_start};
+}
+
+Duration StopWatch::lap()
+{
+    auto now = Clock::now();
+    Duration lap = now - m_lap;
+    m_lap = now;
+    return lap;
 }
 
 Duration StopWatch::restart()
 {
     TimePoint now = Clock::now();
-    Duration lap = now - m_start;
-    m_start = now;
-    return lap;
+    Duration split = now - m_start;
+    m_start = m_lap = now;
+    return split;
 }
 }   // maxbase
 
@@ -64,6 +72,7 @@ int convert_size = sizeof(convert) / sizeof(convert[0]);
 
 namespace maxbase
 {
+
 std::pair<double, std::string> dur_to_human_readable(Duration dur)
 {
     using namespace std::chrono;
@@ -89,6 +98,15 @@ std::pair<double, std::string> dur_to_human_readable(Duration dur)
     abort();    // should never get here
 }
 
+std::string to_string(Duration dur, const std::string& sep)
+{
+    auto p = dur_to_human_readable(dur);
+    std::ostringstream os;
+    os << p.first << sep << p.second;
+
+    return os.str();
+}
+
 std::ostream& operator<<(std::ostream& os, Duration dur)
 {
     auto p = dur_to_human_readable(dur);
@@ -97,14 +115,13 @@ std::ostream& operator<<(std::ostream& os, Duration dur)
     return os;
 }
 
-// TODO: this will require some thought. time_point_to_string() for a system_clock is
+// TODO: this will require some thought. to_string() for a system_clock is
 // obvious, but not so for a steady_clock. Maybe TimePoint belongs to a system clock
 // and sould be called something else here, and live in a time_measuring namespace.
-std::string time_point_to_string(TimePoint tp, const std::string& fmt)
+std::string to_string(TimePoint tp, const std::string& fmt)
 {
     using namespace std::chrono;
-    std::time_t timet = system_clock::to_time_t(system_clock::now()
-                                                + (tp - Clock::now()));
+    std::time_t timet = system_clock::to_time_t(system_clock::now() + (tp - Clock::now()));
 
     struct tm* ptm;
     ptm = gmtime (&timet);
@@ -116,7 +133,7 @@ std::string time_point_to_string(TimePoint tp, const std::string& fmt)
 
 std::ostream& operator<<(std::ostream& os, TimePoint tp)
 {
-    os << time_point_to_string(tp);
+    os << to_string(tp);
     return os;
 }
 
@@ -145,4 +162,4 @@ void test_stopwatch_output(std::ostream& os)
         os << Duration(dur[i]) << std::endl;
     }
 }
-}   // maxbase
+}

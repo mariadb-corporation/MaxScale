@@ -42,7 +42,7 @@ void EventCount::increment()
     if (m_timestamps.empty()
         || m_timestamps.back().time_point.time_since_epoch().count() != ticks)
     {
-        m_timestamps.emplace_back(TimePoint(ticks), 1);
+        m_timestamps.emplace_back(TimePoint(Duration(nanoseconds(ticks))), 1);
     }
     else
     {

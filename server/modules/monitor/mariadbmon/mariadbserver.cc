@@ -195,7 +195,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         cmd_success = execute_cmd_no_retry(cmd, &error_msg, &errornum);
 
         // Check if there is time to retry.
-        Duration time_remaining = time_limit - timer.lap();
+        Duration time_remaining = time_limit - timer.split();
         keep_trying = (mxs_mysql_is_net_error(errornum) && (time_remaining.secs() > 0));
         if (!cmd_success)
         {
@@ -1442,12 +1442,12 @@ bool MariaDBServer::promote_v2(ClusterOperation* op)
 
     // Helper function for stopping a slave connection and setting error.
     auto stop_slave_helper = [this, &timer, &stop_slave_error, op, error_out](const string& conn_name) {
-        if (!stop_slave_conn(conn_name, StopMode::RESET_ALL, op->time_remaining, error_out))
-        {
-            stop_slave_error = true;
-        }
-        op->time_remaining -= timer.restart();
-    };
+            if (!stop_slave_conn(conn_name, StopMode::RESET_ALL, op->time_remaining, error_out))
+            {
+                stop_slave_error = true;
+            }
+            op->time_remaining -= timer.restart();
+        };
 
     if (op->type == OperationType::SWITCHOVER)
     {
