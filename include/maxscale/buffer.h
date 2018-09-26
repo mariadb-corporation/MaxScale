@@ -29,7 +29,6 @@
 #include <maxscale/cdefs.h>
 #include <string.h>
 #include <maxscale/hint.h>
-#include <maxscale/spinlock.h>
 #include <stdint.h>
 
 MXS_BEGIN_DECLS

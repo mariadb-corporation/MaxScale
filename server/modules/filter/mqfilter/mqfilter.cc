@@ -75,7 +75,6 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/log.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/session.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
@@ -569,8 +568,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
 
     if (my_instance)
     {
-        spinlock_init(&my_instance->rconn_lock);
-        spinlock_init(&my_instance->msg_lock);
+        pthread_mutex_init(&my_instance->rconn_lock, NULL);
+        pthread_mutex_init(&my_instance->msg_lock, NULL);
         uid_gen = 0;
 
         if ((my_instance->conn = amqp_new_connection()) == NULL)
@@ -680,7 +679,7 @@ int declareQueue(MQ_INSTANCE* my_instance, MQ_SESSION* my_session, char* qname)
     int success = 1;
     amqp_rpc_reply_t reply;
 
-    spinlock_acquire(&my_instance->rconn_lock);
+    pthread_mutex_lock(&my_instance->rconn_lock);
 
     amqp_queue_declare(my_instance->conn,
                        my_instance->channel,
@@ -709,7 +708,7 @@ int declareQueue(MQ_INSTANCE* my_instance, MQ_SESSION* my_session, char* qname)
         success = 0;
         MXS_ERROR("Failed to bind queue to exchange.");
     }
-    spinlock_release(&my_instance->rconn_lock);
+    pthread_mutex_unlock(&my_instance->rconn_lock);
     return success;
 }
 
@@ -725,7 +724,7 @@ bool sendMessage(void* data)
     mqmessage* tmp;
     int err_num = AMQP_STATUS_OK;
 
-    spinlock_acquire(&instance->rconn_lock);
+    pthread_mutex_lock(&instance->rconn_lock);
     if (instance->conn_stat != AMQP_STATUS_OK)
     {
         if (difftime(time(NULL), instance->last_rconn) > instance->rconn_intv)
@@ -745,7 +744,7 @@ bool sendMessage(void* data)
         }
         err_num = instance->conn_stat;
     }
-    spinlock_release(&instance->rconn_lock);
+    pthread_mutex_unlock(&instance->rconn_lock);
 
     if (err_num != AMQP_STATUS_OK)
     {
@@ -753,17 +752,17 @@ bool sendMessage(void* data)
         return true;
     }
 
-    spinlock_acquire(&instance->msg_lock);
+    pthread_mutex_lock(&instance->msg_lock);
     tmp = instance->messages;
 
     if (tmp == NULL)
     {
-        spinlock_release(&instance->msg_lock);
+        pthread_mutex_unlock(&instance->msg_lock);
         return true;
     }
 
     instance->messages = instance->messages->next;
-    spinlock_release(&instance->msg_lock);
+    pthread_mutex_unlock(&instance->msg_lock);
 
     while (tmp)
     {
@@ -776,9 +775,9 @@ bool sendMessage(void* data)
                                      tmp->prop,
                                      amqp_cstring_bytes(tmp->msg));
 
-        spinlock_acquire(&instance->rconn_lock);
+        pthread_mutex_lock(&instance->rconn_lock);
         instance->conn_stat = err_num;
-        spinlock_release(&instance->rconn_lock);
+        pthread_mutex_unlock(&instance->rconn_lock);
 
         if (err_num == AMQP_STATUS_OK)
         {
@@ -789,24 +788,24 @@ bool sendMessage(void* data)
 
             atomic_add(&instance->stats.n_sent, 1);
             atomic_add(&instance->stats.n_queued, -1);
-            spinlock_acquire(&instance->msg_lock);
+            pthread_mutex_lock(&instance->msg_lock);
             tmp = instance->messages;
 
             if (tmp == NULL)
             {
-                spinlock_release(&instance->msg_lock);
+                pthread_mutex_unlock(&instance->msg_lock);
                 return true;
             }
 
             instance->messages = instance->messages->next;
-            spinlock_release(&instance->msg_lock);
+            pthread_mutex_unlock(&instance->msg_lock);
         }
         else
         {
-            spinlock_acquire(&instance->msg_lock);
+            pthread_mutex_lock(&instance->msg_lock);
             tmp->next = instance->messages;
             instance->messages = tmp;
-            spinlock_release(&instance->msg_lock);
+            pthread_mutex_unlock(&instance->msg_lock);
             return true;
         }
     }
@@ -836,12 +835,12 @@ void pushMessage(MQ_INSTANCE* instance, amqp_basic_properties_t* prop, char* msg
         return;
     }
 
-    spinlock_acquire(&instance->msg_lock);
+    pthread_mutex_lock(&instance->msg_lock);
 
     newmsg->next = instance->messages;
     instance->messages = newmsg;
 
-    spinlock_release(&instance->msg_lock);
+    pthread_mutex_unlock(&instance->msg_lock);
 
     atomic_add(&instance->stats.n_msg, 1);
     atomic_add(&instance->stats.n_queued, 1);

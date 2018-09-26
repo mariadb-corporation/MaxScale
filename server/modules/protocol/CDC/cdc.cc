@@ -390,7 +390,7 @@ static CDC_protocol* cdc_protocol_init(DCB* dcb)
 
     p->state = CDC_ALLOC;
 
-    spinlock_init(&p->lock);
+    pthread_mutex_init(&p->lock, NULL);
 
     /* memory allocation here */
     p->state = CDC_STATE_WAIT_FOR_AUTH;
@@ -415,13 +415,13 @@ static void cdc_protocol_done(DCB* dcb)
 
     p = (CDC_protocol*) dcb->protocol;
 
-    spinlock_acquire(&p->lock);
+    pthread_mutex_lock(&p->lock);
 
     /* deallocate memory here */
 
     p->state = CDC_STATE_CLOSE;
 
-    spinlock_release(&p->lock);
+    pthread_mutex_unlock(&p->lock);
 }
 
 /**

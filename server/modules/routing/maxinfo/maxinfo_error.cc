@@ -35,7 +35,6 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxbase/atomic.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
 #include <maxscale/log.h>

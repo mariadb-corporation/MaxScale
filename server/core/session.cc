@@ -35,7 +35,6 @@
 #include <maxscale/poll.h>
 #include <maxscale/router.h>
 #include <maxscale/service.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/json_api.h>
 #include <maxscale/protocol/mysql.h>

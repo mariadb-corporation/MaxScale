@@ -46,7 +46,7 @@ typedef struct servlistener
     struct dcb*           listener; /**< The DCB for the listener */
     struct users*         users;    /**< The user data for this listener */
     struct service*       service;  /**< The service which used by this listener */
-    SPINLOCK              lock;
+    pthread_mutex_t       lock;
     int                   active;   /**< True if the port has not been deleted */
     struct  servlistener* next;     /**< Next service protocol */
 } SERV_LISTENER;                    // TODO: Rename to LISTENER

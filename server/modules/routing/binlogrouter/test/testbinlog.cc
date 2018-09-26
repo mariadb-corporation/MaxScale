@@ -32,9 +32,7 @@
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxbase/atomic.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
 #include <time.h>
 #include <maxscale/log.h>

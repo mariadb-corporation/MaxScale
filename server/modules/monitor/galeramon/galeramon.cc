@@ -30,7 +30,6 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/secrets.h>
-#include <maxscale/spinlock.h>
 
 #define DONOR_NODE_NAME_MAX_LEN 60
 #define DONOR_LIST_SET_VAR      "SET GLOBAL wsrep_sst_donor = \""

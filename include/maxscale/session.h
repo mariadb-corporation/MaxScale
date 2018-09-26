@@ -25,7 +25,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
 #include <maxscale/log.h>
-#include <maxscale/spinlock.h>
 
 MXS_BEGIN_DECLS
 

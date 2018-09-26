@@ -27,7 +27,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/json_api.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/spinlock.h>
 
 /**
  * @file housekeeper.cc  Provide a mechanism to run periodic tasks

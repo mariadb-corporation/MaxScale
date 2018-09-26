@@ -30,7 +30,6 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
-#include <maxscale/spinlock.h>
 
 MXS_BEGIN_DECLS
 
@@ -42,8 +41,8 @@ struct cli_session;
  */
 typedef struct cli_instance
 {
-    SPINLOCK lock;      /*< The instance spinlock */
-    SERVICE* service;   /*< The debug cli service */
+    pthread_mutex_t lock;   /*< The instance spinlock */
+    SERVICE*        service;/*< The debug cli service */
     struct cli_session
     * sessions;     /*< Linked list of sessions within this instance */
     struct cli_instance

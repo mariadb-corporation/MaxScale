@@ -340,11 +340,11 @@ typedef struct mariadb_gtid_elems
 /** MariaDB GTID info */
 typedef struct mariadb_gtid_info
 {
-    char               gtid[GTID_MAX_LEN + 1];      /** MariaDB 10.x GTID, string value */
-    char               binlog_name[BINLOG_FNAMELEN + 1];   /** The binlog file */
-    uint64_t           start;                       /** The BEGIN pos: i.e the GTID event */
-    uint64_t           end;                         /** The next_pos in COMMIT event */
-    MARIADB_GTID_ELEMS gtid_elms;                   /** MariaDB 10.x GTID components */
+    char               gtid[GTID_MAX_LEN + 1];          /** MariaDB 10.x GTID, string value */
+    char               binlog_name[BINLOG_FNAMELEN + 1];/** The binlog file */
+    uint64_t           start;                           /** The BEGIN pos: i.e the GTID event */
+    uint64_t           end;                             /** The next_pos in COMMIT event */
+    MARIADB_GTID_ELEMS gtid_elms;                       /** MariaDB 10.x GTID components */
 } MARIADB_GTID_INFO;
 
 /* Master Server configuration struct */
@@ -499,22 +499,22 @@ typedef struct
  */
 typedef struct
 {
-    BLCACHE_RECORD** records;       /*< The actual binlog records */
-    int              current;       /*< The next record that will be inserted */
-    int              cnt;           /*< The number of records in the cache */
-    SPINLOCK         lock;          /*< The spinlock for the cache */
+    BLCACHE_RECORD**        records;/*< The actual binlog records */
+    int                     current;/*< The next record that will be inserted */
+    int                     cnt;    /*< The number of records in the cache */
+    mutable pthread_mutex_t lock;   /*< The spinlock for the cache */
 } BLCACHE;
 
 typedef struct blfile
 {
     char binlog_name[BINLOG_FNAMELEN + 1];
     /*< Name of the binlog file */
-    int                fd;          /*< Actual file descriptor */
-    int                refcnt;      /*< Reference count for file */
-    BLCACHE*           cache;       /*< Record cache for this file */
-    SPINLOCK           lock;        /*< The file lock */
-    MARIADB_GTID_ELEMS gtid_elms;   /*< Elements for file prefix */
-    struct blfile*     next;        /*< Next file in list */
+    int                     fd;         /*< Actual file descriptor */
+    int                     refcnt;     /*< Reference count for file */
+    BLCACHE*                cache;      /*< Record cache for this file */
+    mutable pthread_mutex_t lock;       /*< The file lock */
+    MARIADB_GTID_ELEMS      gtid_elms;  /*< Elements for file prefix */
+    struct blfile*          next;       /*< Next file in list */
 } BLFILE;
 
 /**
@@ -599,18 +599,18 @@ typedef struct router_slave
     uint8_t  seqno;             /*< Replication dump sequence no */
     uint32_t lastEventTimestamp;
     /*< Last event timestamp sent */
-    SPINLOCK             catch_lock;        /*< Event catchup lock */
-    unsigned int         cstate;            /*< Catch up state */
-    bool                 mariadb10_compat;  /*< MariaDB 10.0 compatibility */
-    SPINLOCK             rses_lock;         /*< Protects rses_deleted */
-    pthread_t            pthread;
-    ROUTER_INSTANCE*     router;/*< Pointer to the owning router */
-    struct router_slave* next;
-    SLAVE_STATS          stats;         /*< Slave statistics */
-    time_t               connect_time;  /*< Connect time of slave */
-    char*                warning_msg;   /*< Warning message */
-    int                  heartbeat;     /*< Heartbeat in seconds */
-    uint8_t              lastEventReceived;
+    mutable pthread_mutex_t catch_lock;         /*< Event catchup lock */
+    unsigned int            cstate;             /*< Catch up state */
+    bool                    mariadb10_compat;   /*< MariaDB 10.0 compatibility */
+    mutable pthread_mutex_t rses_lock;          /*< Protects rses_deleted */
+    pthread_t               pthread;
+    ROUTER_INSTANCE*        router; /*< Pointer to the owning router */
+    struct router_slave*    next;
+    SLAVE_STATS             stats;          /*< Slave statistics */
+    time_t                  connect_time;   /*< Connect time of slave */
+    char*                   warning_msg;    /*< Warning message */
+    int                     heartbeat;      /*< Heartbeat in seconds */
+    uint8_t                 lastEventReceived;
     /*< Last event received */
     time_t lastReply;       /*< Last event sent */
     /*< lsi: Last Sent Information */
@@ -744,19 +744,19 @@ typedef struct binlog_encryption_ctx
  */
 struct ROUTER_INSTANCE : public MXS_ROUTER
 {
-    SERVICE*      service;      /*< Pointer to the service using this router */
-    ROUTER_SLAVE* slaves;       /*< Link list of all the slave connections  */
-    SPINLOCK      lock;         /*< Spinlock for the instance data */
-    char*         uuid;         /*< UUID for the router to use w/master */
-    int           orig_masterid;/*< Server ID of the master, internally used */
-    int           masterid;     /*< Set ID of the master, sent to slaves */
-    int           serverid;     /*< ID for the router to use w/master */
-    int           initbinlog;   /*< Initial binlog file number */
-    char*         user;         /*< User name to use with master */
-    char*         password;     /*< Password to use with master */
-    char*         fileroot;     /*< Root of binlog filename */
-    bool          master_chksum;/*< Does the master provide checksums */
-    bool          mariadb10_compat;
+    SERVICE*                service;        /*< Pointer to the service using this router */
+    ROUTER_SLAVE*           slaves;         /*< Link list of all the slave connections  */
+    mutable pthread_mutex_t lock;           /*< Spinlock for the instance data */
+    char*                   uuid;           /*< UUID for the router to use w/master */
+    int                     orig_masterid;  /*< Server ID of the master, internally used */
+    int                     masterid;       /*< Set ID of the master, sent to slaves */
+    int                     serverid;       /*< ID for the router to use w/master */
+    int                     initbinlog;     /*< Initial binlog file number */
+    char*                   user;           /*< User name to use with master */
+    char*                   password;       /*< Password to use with master */
+    char*                   fileroot;       /*< Root of binlog filename */
+    bool                    master_chksum;  /*< Does the master provide checksums */
+    bool                    mariadb10_compat;
     /*< MariaDB 10.0 compatibility */
     bool         maxwell_compat;/*< Zendesk's Maxwell compatibility */
     char*        master_uuid;   /*< Set UUID of the master, sent to slaves */
@@ -768,11 +768,11 @@ struct ROUTER_INSTANCE : public MXS_ROUTER
     /*< Last event received */
     uint32_t lastEventTimestamp;
     /*< Timestamp from last event */
-    MASTER_RESPONSES    saved_master;       /*< Saved master responses */
-    char*               binlogdir;          /*< The directory with the binlog files */
-    SPINLOCK            binlog_lock;        /*< Lock to control update of the binlog position */
-    int                 trx_safe;           /*< Detect and handle partial transactions */
-    PENDING_TRANSACTION pending_transaction;
+    MASTER_RESPONSES        saved_master;   /*< Saved master responses */
+    char*                   binlogdir;      /*< The directory with the binlog files */
+    mutable pthread_mutex_t binlog_lock;    /*< Lock to control update of the binlog position */
+    int                     trx_safe;       /*< Detect and handle partial transactions */
+    PENDING_TRANSACTION     pending_transaction;
     /*< Pending transaction */
     enum blr_event_state master_event_state;
     /*< Packet read state */
@@ -791,31 +791,31 @@ struct ROUTER_INSTANCE : public MXS_ROUTER
     uint64_t last_event_pos;    /*< Position of last event written */
     uint64_t current_safe_event;
     /*< Position of the latest safe event being sent to slaves */
-    char          prevbinlog[BINLOG_FNAMELEN + 1];
-    int           rotating;             /*< Rotation in progress flag */
-    BLFILE*       files;                /*< Files used by the slaves */
-    SPINLOCK      fileslock;            /*< Lock for the files queue above */
-    unsigned int  short_burst;          /*< Short burst for slave catchup */
-    unsigned int  long_burst;           /*< Long burst for slave catchup */
-    unsigned long burst_size;           /*< Maximum size of burst to send */
-    unsigned long heartbeat;            /*< Configured heartbeat value */
-    ROUTER_STATS  stats;                /*< Statistics for this router */
-    int           active_logs;
-    int           reconnect_pending;
-    int           retry_interval;           /*< Connect retry interval */
-    int           retry_count;              /*< Connect retry counter */
-    int           retry_limit;              /*< Retry limit */
-    time_t        connect_time;
-    int           handling_threads;
-    unsigned long m_errno;              /*< master response mysql errno */
-    char*         m_errmsg;             /*< master response mysql error message */
-    char*         set_master_version;   /*< Send custom Version to slaves */
-    char*         set_master_hostname;  /*< Send custom Hostname to slaves */
-    bool          set_master_uuid;      /*< Send custom Master UUID to slaves */
-    bool          set_master_server_id; /*< Send custom Master server_id to slaves */
-    int           send_slave_heartbeat; /*< Enable sending heartbeat to slaves */
-    bool          ssl_enabled;          /*< Use SSL connection to master */
-    int           ssl_cert_verification_depth;
+    char                    prevbinlog[BINLOG_FNAMELEN + 1];
+    int                     rotating;   /*< Rotation in progress flag */
+    BLFILE*                 files;      /*< Files used by the slaves */
+    mutable pthread_mutex_t fileslock;  /*< Lock for the files queue above */
+    unsigned int            short_burst;/*< Short burst for slave catchup */
+    unsigned int            long_burst; /*< Long burst for slave catchup */
+    unsigned long           burst_size; /*< Maximum size of burst to send */
+    unsigned long           heartbeat;  /*< Configured heartbeat value */
+    ROUTER_STATS            stats;      /*< Statistics for this router */
+    int                     active_logs;
+    int                     reconnect_pending;
+    int                     retry_interval; /*< Connect retry interval */
+    int                     retry_count;    /*< Connect retry counter */
+    int                     retry_limit;    /*< Retry limit */
+    time_t                  connect_time;
+    int                     handling_threads;
+    unsigned long           m_errno;                /*< master response mysql errno */
+    char*                   m_errmsg;               /*< master response mysql error message */
+    char*                   set_master_version;     /*< Send custom Version to slaves */
+    char*                   set_master_hostname;    /*< Send custom Hostname to slaves */
+    bool                    set_master_uuid;        /*< Send custom Master UUID to slaves */
+    bool                    set_master_server_id;   /*< Send custom Master server_id to slaves */
+    int                     send_slave_heartbeat;   /*< Enable sending heartbeat to slaves */
+    bool                    ssl_enabled;            /*< Use SSL connection to master */
+    int                     ssl_cert_verification_depth;
     /*< The maximum length of the certificate
      * authority chain that will be accepted.
      */

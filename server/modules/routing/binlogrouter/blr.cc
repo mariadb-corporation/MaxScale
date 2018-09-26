@@ -47,7 +47,6 @@
 #include <maxscale/secrets.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
@@ -100,7 +99,7 @@ GWBUF*      blr_cache_read_response(ROUTER_INSTANCE* router,
 extern bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE* router,
                                        MARIADB_GTID_INFO* result);
 
-static SPINLOCK instlock;
+static pthread_mutex_t instlock;
 static ROUTER_INSTANCE* instances;
 
 static const MXS_ENUM_VALUE enc_algo_values[] =
@@ -130,7 +129,7 @@ static const MXS_ENUM_VALUE binlog_storage_values[] =
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise binlog router module.");
-    spinlock_init(&instlock);
+    pthread_mutex_init(&instlock, NULL);
     instances = NULL;
 
     static MXS_ROUTER_OBJECT MyObject =
@@ -294,10 +293,10 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     memset(&inst->saved_master, 0, sizeof(MASTER_RESPONSES));
 
     inst->service = service;
-    spinlock_init(&inst->lock);
+    pthread_mutex_init(&inst->lock, NULL);
     inst->files = NULL;
-    spinlock_init(&inst->fileslock);
-    spinlock_init(&inst->binlog_lock);
+    pthread_mutex_init(&inst->fileslock, NULL);
+    pthread_mutex_init(&inst->binlog_lock, NULL);
 
     inst->binlog_fd = -1;
     inst->master_chksum = true;
@@ -975,10 +974,10 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
      * insert this router instance into the linked list of routers
      * that have been created with this module.
      */
-    spinlock_acquire(&instlock);
+    pthread_mutex_lock(&instlock);
     inst->next = instances;
     instances = inst;
-    spinlock_release(&instlock);
+    pthread_mutex_unlock(&instlock);
 
     /*
      * Initialise the binlog cache for this router instance
@@ -1189,7 +1188,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     slave->overrun = 0;
     slave->uuid = NULL;
     slave->hostname = NULL;
-    spinlock_init(&slave->catch_lock);
+    pthread_mutex_init(&slave->catch_lock, NULL);
     slave->dcb = session->client_dcb;
     slave->router = inst;
 #ifdef BLFILE_IN_SLAVE
@@ -1211,10 +1210,10 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     /**
      * Add this session to the list of active sessions.
      */
-    spinlock_acquire(&inst->lock);
+    pthread_mutex_lock(&inst->lock);
     slave->next = inst->slaves;
     inst->slaves = slave;
-    spinlock_release(&inst->lock);
+    pthread_mutex_unlock(&inst->lock);
 
     return reinterpret_cast<MXS_ROUTER_SESSION*>(slave);
 }
@@ -1244,7 +1243,7 @@ static void freeSession(MXS_ROUTER* router_instance,
      * Remove the slave session form the list of slaves that are using the
      * router currently.
      */
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     if (router->slaves == slave)
     {
         router->slaves = slave->next;
@@ -1263,7 +1262,7 @@ static void freeSession(MXS_ROUTER* router_instance,
             ptr->next = slave->next;
         }
     }
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     MXS_DEBUG("%lu [freeSession] Unlinked router_client_session %p from "
               "router %p. Connections : %d. ",
@@ -1469,14 +1468,14 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
     char buf[40];
     struct tm tm;
 
-    spinlock_acquire(&router_inst->lock);
+    pthread_mutex_lock(&router_inst->lock);
     session = router_inst->slaves;
     while (session)
     {
         i++;
         session = session->next;
     }
-    spinlock_release(&router_inst->lock);
+    pthread_mutex_unlock(&router_inst->lock);
 
     minno = router_inst->stats.minno;
     min30 = 0.0;
@@ -1652,7 +1651,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
                router_inst->stats.n_reads != 0 ?
                ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0);
 
-    spinlock_acquire(&router_inst->lock);
+    pthread_mutex_lock(&router_inst->lock);
     if (router_inst->stats.lastReply)
     {
         if (buf[strlen(buf) - 1] == '\n')
@@ -1722,7 +1721,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
     {
         dcb_printf(dcb, "\tNo events received from master yet\n");
     }
-    spinlock_release(&router_inst->lock);
+    pthread_mutex_unlock(&router_inst->lock);
 
     if (router_inst->active_logs)
     {
@@ -1762,7 +1761,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
     if (router_inst->slaves)
     {
         dcb_printf(dcb, "\tSlaves:\n");
-        spinlock_acquire(&router_inst->lock);
+        pthread_mutex_lock(&router_inst->lock);
         session = router_inst->slaves;
         while (session)
         {
@@ -1962,7 +1961,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             dcb_printf(dcb, "\t\t--------------------\n\n");
             session = session->next;
         }
-        spinlock_release(&router_inst->lock);
+        pthread_mutex_unlock(&router_inst->lock);
     }
 }
 
@@ -2108,7 +2107,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 
     json_object_set_new(rval, "average_events_per_packets", json_real(average_packets));
 
-    spinlock_acquire(&router_inst->lock);
+    pthread_mutex_lock(&router_inst->lock);
     if (router_inst->stats.lastReply)
     {
         if (buf[strlen(buf) - 1] == '\n')
@@ -2166,7 +2165,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
             json_object_set_new(rval, "latest_event_timestamp", json_string(buf));
         }
     }
-    spinlock_release(&router_inst->lock);
+    pthread_mutex_unlock(&router_inst->lock);
 
     json_object_set_new(rval, "active_logs", json_boolean(router_inst->active_logs));
     json_object_set_new(rval, "reconnect_pending", json_boolean(router_inst->reconnect_pending));
@@ -2194,7 +2193,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
     if (router_inst->slaves)
     {
         json_t* arr = json_array();
-        spinlock_acquire(&router_inst->lock);
+        pthread_mutex_lock(&router_inst->lock);
 
         for (ROUTER_SLAVE* session = router_inst->slaves; session; session = session->next)
         {
@@ -2307,7 +2306,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 
             json_array_append_new(arr, slave);
         }
-        spinlock_release(&router_inst->lock);
+        pthread_mutex_unlock(&router_inst->lock);
 
         json_object_set_new(rval, "slaves", arr);
     }
@@ -2399,7 +2398,7 @@ static void errorReply(MXS_ROUTER* instance,
             /* Authentication failed: stop replication */
             if (router->master_state == BLRM_TIMESTAMP)
             {
-                spinlock_acquire(&router->lock);
+                pthread_mutex_lock(&router->lock);
                 /* set io error message */
                 if (router->m_errmsg)
                 {
@@ -2411,7 +2410,7 @@ static void errorReply(MXS_ROUTER* instance,
 
                 /* Stop replication */
                 router->master_state = BLRM_SLAVE_STOPPED;
-                spinlock_release(&router->lock);
+                pthread_mutex_unlock(&router->lock);
 
                 /* Force backend DCB close */
                 dcb_close(backend_dcb);
@@ -2458,7 +2457,7 @@ static void errorReply(MXS_ROUTER* instance,
     /** Check router state and set errno and message */
     if (router->master_state != BLRM_SLAVE_STOPPED)
     {
-        spinlock_acquire(&router->lock);
+        pthread_mutex_lock(&router->lock);
         /* set mysql_errno */
         router->m_errno = mysql_errno;
 
@@ -2468,7 +2467,7 @@ static void errorReply(MXS_ROUTER* instance,
             MXS_FREE(router->m_errmsg);
         }
         router->m_errmsg = MXS_STRDUP_A(errmsg);
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
 
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
                   "%sattempting reconnect to master [%s]:%d",
@@ -2541,7 +2540,7 @@ static bool rses_begin_locked_router_action(ROUTER_SLAVE* rses)
 {
     bool succp = false;
 
-    spinlock_acquire(&rses->rses_lock);
+    pthread_mutex_lock(&rses->rses_lock);
     succp = true;
 
     return succp;
@@ -2563,7 +2562,7 @@ static bool rses_begin_locked_router_action(ROUTER_SLAVE* rses)
  */
 static void rses_end_locked_router_action(ROUTER_SLAVE* rses)
 {
-    spinlock_release(&rses->rses_lock);
+    pthread_mutex_unlock(&rses->rses_lock);
 }
 
 
@@ -2590,7 +2589,7 @@ static bool stats_func(void* inst)
         router->stats.minno = 0;
     }
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     slave = router->slaves;
     while (slave)
     {
@@ -2602,7 +2601,7 @@ static bool stats_func(void* inst)
         }
         slave = slave->next;
     }
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     return true;
 }
@@ -2985,14 +2984,14 @@ static void destroyInstance(MXS_ROUTER* instance)
         }
     }
 
-    spinlock_acquire(&inst->lock);
+    pthread_mutex_lock(&inst->lock);
 
     if (inst->master_state != BLRM_UNCONFIGURED)
     {
         inst->master_state = BLRM_SLAVE_STOPPED;
     }
 
-    spinlock_release(&inst->lock);
+    pthread_mutex_unlock(&inst->lock);
 
     if (inst->client)
     {

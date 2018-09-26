@@ -78,10 +78,10 @@ typedef struct cdc_session
  */
 typedef struct  cdc_protocol
 {
-    int      state;                     /*< CDC protocol state          */
-    char     user[CDC_USER_MAXLEN + 1]; /*< username for authentication */
-    SPINLOCK lock;                      /*< Protocol structure lock     */
-    char     type[CDC_TYPE_LEN + 1];    /*< Request Type            */
+    int             state;                      /*< CDC protocol state          */
+    char            user[CDC_USER_MAXLEN + 1];  /*< username for authentication */
+    pthread_mutex_t lock;                       /*< Protocol structure lock     */
+    char            type[CDC_TYPE_LEN + 1];     /*< Request Type            */
 } CDC_protocol;
 
 /* routines */

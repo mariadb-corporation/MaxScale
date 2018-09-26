@@ -43,7 +43,6 @@
 #include <maxscale/router.h>
 #include <maxscale/server.hh>
 #include <maxscale/service.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/version.h>
 
 #include "../../../core/internal/maxscale.h"

@@ -142,7 +142,7 @@ SERV_LISTENER* listener_alloc(struct service* service,
     proto->users = NULL;
     proto->next = NULL;
     proto->auth_instance = auth_instance;
-    spinlock_init(&proto->lock);
+    pthread_mutex_init(&proto->lock, NULL);
 
     return proto;
 }

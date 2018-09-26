@@ -23,7 +23,6 @@
 #include <maxscale/log.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/protocol/mysql.h>

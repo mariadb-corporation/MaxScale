@@ -26,7 +26,6 @@
  * @endverbatim
  */
 #include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
 
 MXS_BEGIN_DECLS
@@ -36,9 +35,9 @@ MXS_BEGIN_DECLS
  */
 typedef struct maxscaled
 {
-    SPINLOCK lock;      /**< Protocol structure lock */
-    int      state;     /**< The connection state */
-    char*    username;  /**< The login name of the user */
+    pthread_mutex_t lock;       /**< Protocol structure lock */
+    int             state;      /**< The connection state */
+    char*           username;   /**< The login name of the user */
 } MAXSCALED;
 
 #define MAXSCALED_STATE_LOGIN  1    /**< Waiting for user */

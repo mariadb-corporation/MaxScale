@@ -22,7 +22,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/hint.h>
 #include <maxscale/log.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
 #if defined (BUFFER_TRACE)

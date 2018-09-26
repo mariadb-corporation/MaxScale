@@ -556,7 +556,7 @@ int cdc_replace_users(SERV_LISTENER* listener)
         int i = cdc_read_users(newusers, path);
         USERS* oldusers = NULL;
 
-        spinlock_acquire(&listener->lock);
+        pthread_mutex_lock(&listener->lock);
 
         if (i > 0)
         {
@@ -578,7 +578,7 @@ int cdc_replace_users(SERV_LISTENER* listener)
 
         cdc_set_service_user(listener);
 
-        spinlock_release(&listener->lock);
+        pthread_mutex_unlock(&listener->lock);
 
         if (oldusers)
         {

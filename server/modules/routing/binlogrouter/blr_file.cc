@@ -40,7 +40,6 @@
 #include <maxscale/secrets.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
 using std::string;
@@ -527,7 +526,7 @@ static int blr_file_create(ROUTER_INSTANCE* router, char* orig_file)
         if (blr_file_add_magic(fd))
         {
             close(router->binlog_fd);
-            spinlock_acquire(&router->binlog_lock);
+            pthread_mutex_lock(&router->binlog_lock);
 
             /// Use an intermediate buffer in case the source and destination overlap
             char new_binlog[strlen(file) + 1];
@@ -540,7 +539,7 @@ static int blr_file_create(ROUTER_INSTANCE* router, char* orig_file)
             router->binlog_position = BINLOG_MAGIC_SIZE;
             router->current_safe_event = BINLOG_MAGIC_SIZE;
             router->last_written = BINLOG_MAGIC_SIZE;
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
 
             created = 1;
 
@@ -630,7 +629,7 @@ void blr_file_append(ROUTER_INSTANCE* router, char* file)
     }
     fsync(fd);
     close(router->binlog_fd);
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
     memmove(router->binlog_name, file, BINLOG_FNAMELEN);
     router->current_pos = lseek(fd, 0L, SEEK_END);
     if (router->current_pos < 4)
@@ -659,12 +658,12 @@ void blr_file_append(ROUTER_INSTANCE* router, char* file)
                       path,
                       router->current_pos);
             close(fd);
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
             return;
         }
     }
     router->binlog_fd = fd;
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 }
 
 /**
@@ -765,11 +764,11 @@ int blr_write_binlog_record(ROUTER_INSTANCE* router,
     }
 
     /* Increment offsets */
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
     router->current_pos = hdr->next_pos;
     router->last_written += size;
     router->last_event_pos = hdr->next_pos - hdr->event_size;
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     /* Check whether adding the Start Encryption event into current binlog */
     if (router->encryption.enabled && write_start_encryption_event)
@@ -884,7 +883,7 @@ BLFILE* blr_open_binlog(ROUTER_INSTANCE* router,
     char path[PATH_MAX + 1] = "";
     BLFILE* file;
 
-    spinlock_acquire(&router->fileslock);
+    pthread_mutex_lock(&router->fileslock);
     file = router->files;
 
     while (file
@@ -901,13 +900,13 @@ BLFILE* blr_open_binlog(ROUTER_INSTANCE* router,
     {
         /* Reuse 'file' */
         file->refcnt++;
-        spinlock_release(&router->fileslock);
+        pthread_mutex_unlock(&router->fileslock);
         return file;
     }
 
     if ((file = (BLFILE*)MXS_CALLOC(1, sizeof(BLFILE))) == NULL)
     {
-        spinlock_release(&router->fileslock);
+        pthread_mutex_unlock(&router->fileslock);
         return NULL;
     }
     strcpy(file->binlog_name, binlog);
@@ -922,7 +921,7 @@ BLFILE* blr_open_binlog(ROUTER_INSTANCE* router,
                sizeof(MARIADB_GTID_ELEMS));
     }
 
-    spinlock_init(&file->lock);
+    pthread_mutex_init(&file->lock, NULL);
 
     strcpy(path, router->binlogdir);
     strcat(path, "/");
@@ -945,13 +944,13 @@ BLFILE* blr_open_binlog(ROUTER_INSTANCE* router,
     {
         MXS_ERROR("Failed to open binlog file %s", path);
         MXS_FREE(file);
-        spinlock_release(&router->fileslock);
+        pthread_mutex_unlock(&router->fileslock);
         return NULL;
     }
 
     file->next = router->files;
     router->files = file;
-    spinlock_release(&router->fileslock);
+    pthread_mutex_unlock(&router->fileslock);
 
     return file;
 }
@@ -995,7 +994,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
         return NULL;
     }
 
-    spinlock_acquire(&file->lock);
+    pthread_mutex_lock(&file->lock);
     if (fstat(file->fd, &statb) == 0)
     {
         filelen = statb.st_size;
@@ -1009,16 +1008,16 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                      BINLOG_ERROR_MSG_LEN,
                      "blr_read_binlog called with invalid file->fd, pos %lu",
                      pos);
-            spinlock_release(&file->lock);
+            pthread_mutex_unlock(&file->lock);
             return NULL;
         }
     }
-    spinlock_release(&file->lock);
+    pthread_mutex_unlock(&file->lock);
 
     if (pos > filelen)
     {
-        spinlock_acquire(&router->binlog_lock);
-        spinlock_acquire(&file->lock);
+        pthread_mutex_lock(&router->binlog_lock);
+        pthread_mutex_lock(&file->lock);
 
         /* Check whether is current router file */
         if (!blr_compare_binlogs(router,
@@ -1048,14 +1047,14 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
             hdr->ok = SLAVE_POS_BEYOND_EOF;
         }
 
-        spinlock_release(&file->lock);
-        spinlock_release(&router->binlog_lock);
+        pthread_mutex_unlock(&file->lock);
+        pthread_mutex_unlock(&router->binlog_lock);
 
         return NULL;
     }
 
-    spinlock_acquire(&router->binlog_lock);
-    spinlock_acquire(&file->lock);
+    pthread_mutex_lock(&router->binlog_lock);
+    pthread_mutex_lock(&file->lock);
 
     /* Check current router file and router position */
     if (blr_compare_binlogs(router,
@@ -1082,14 +1081,14 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
             hdr->ok = SLAVE_POS_READ_OK;
         }
 
-        spinlock_release(&file->lock);
-        spinlock_release(&router->binlog_lock);
+        pthread_mutex_unlock(&file->lock);
+        pthread_mutex_unlock(&router->binlog_lock);
 
         return NULL;
     }
 
-    spinlock_release(&file->lock);
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&file->lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     /* Read the header information from the file */
     if ((n = pread(file->fd,
@@ -1414,7 +1413,7 @@ GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
 void blr_close_binlog(ROUTER_INSTANCE* router, BLFILE* file)
 {
     mxb_assert(file);
-    spinlock_acquire(&router->fileslock);
+    pthread_mutex_lock(&router->fileslock);
     file->refcnt--;
     if (file->refcnt == 0)
     {
@@ -1439,7 +1438,7 @@ void blr_close_binlog(ROUTER_INSTANCE* router, BLFILE* file)
     {
         file = NULL;
     }
-    spinlock_release(&router->fileslock);
+    pthread_mutex_unlock(&router->fileslock);
 
     if (file)
     {
@@ -1723,7 +1722,7 @@ int blr_file_next_exists(ROUTER_INSTANCE* router,
             MXS_DEBUG("The next Binlog file from GTID maps repo is [%s]",
                       bigbuf);
 
-            spinlock_acquire(&slave->catch_lock);
+            pthread_mutex_lock(&slave->catch_lock);
 
             /**
              * Update GTID elems in the slave->f_info struct:
@@ -1734,7 +1733,7 @@ int blr_file_next_exists(ROUTER_INSTANCE* router,
             slave->f_info.gtid_elms.domain_id = result.gtid_elms.domain_id;
             slave->f_info.gtid_elms.server_id = result.gtid_elms.server_id;
 
-            spinlock_release(&slave->catch_lock);
+            pthread_mutex_unlock(&slave->catch_lock);
         }
         else
         {
@@ -3751,13 +3750,13 @@ int blr_write_special_event(ROUTER_INSTANCE* router,
     MXS_FREE(new_event);
 
     // Increment offsets, next event will be written after this special one
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
 
     router->last_written += event_size;
     router->current_pos = file_offset + event_size;
     router->last_event_pos = file_offset;
 
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     // Force write
     fsync(router->binlog_fd);
@@ -3842,7 +3841,7 @@ uint8_t* blr_create_start_encryption_event(ROUTER_INSTANCE* router,
     /* Update the encryption context */
     uint8_t* nonce_ptr = &(new_event[BINLOG_EVENT_HDR_LEN + 4 + 1]);
 
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
 
     memcpy(new_encryption_ctx->nonce, nonce_ptr, BLRM_NONCE_LENGTH);
     new_encryption_ctx->binlog_crypto_scheme = new_event[BINLOG_EVENT_HDR_LEN];
@@ -3854,7 +3853,7 @@ uint8_t* blr_create_start_encryption_event(ROUTER_INSTANCE* router,
     MXS_FREE(router->encryption_ctx);
     router->encryption_ctx = new_encryption_ctx;
 
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     return new_event;
 }

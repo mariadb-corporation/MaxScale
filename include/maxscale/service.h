@@ -29,7 +29,6 @@
 
 #include <maxbase/jansson.h>
 #include <maxscale/protocol.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/server.h>
 #include <maxscale/listener.h>

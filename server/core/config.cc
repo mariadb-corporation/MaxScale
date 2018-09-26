@@ -53,7 +53,6 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/router.h>
 #include <maxscale/secrets.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 #include <maxscale/version.h>

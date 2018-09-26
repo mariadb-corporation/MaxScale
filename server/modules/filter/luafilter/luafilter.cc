@@ -49,7 +49,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.h>
-#include <maxscale/spinlock.h>
 
 /*
  * The filter entry points
@@ -249,7 +248,7 @@ void expose_functions(lua_State* state, GWBUF** active_buffer)
  */
 static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    LUA_INSTANCE* my_instance = new (std::nothrow) LUA_INSTANCE;
+    LUA_INSTANCE* my_instance = new( std::nothrow) LUA_INSTANCE;
 
     if (my_instance == NULL)
     {

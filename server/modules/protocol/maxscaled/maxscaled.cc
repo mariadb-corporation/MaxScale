@@ -376,7 +376,7 @@ static int maxscaled_accept(DCB* listener)
             continue;
         }
 
-        spinlock_init(&maxscaled_protocol->lock);
+        pthread_mutex_init(&maxscaled_protocol->lock, NULL);
         client_dcb->protocol = (void*)maxscaled_protocol;
 
         client_dcb->session = session_alloc(listener->session->service, client_dcb);
@@ -407,13 +407,13 @@ static int maxscaled_close(DCB* dcb)
         return 0;
     }
 
-    spinlock_acquire(&maxscaled->lock);
+    pthread_mutex_lock(&maxscaled->lock);
     if (maxscaled->username)
     {
         MXS_FREE(maxscaled->username);
         maxscaled->username = NULL;
     }
-    spinlock_release(&maxscaled->lock);
+    pthread_mutex_unlock(&maxscaled->lock);
 
     return 0;
 }

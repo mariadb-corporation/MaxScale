@@ -233,7 +233,7 @@ struct mxs_monitor
     char*                 name;                                 /**< The name of the monitor module */
     char                  user[MAX_MONITOR_USER_LEN];           /*< Monitor username */
     char                  password[MAX_MONITOR_PASSWORD_LEN];   /*< Monitor password */
-    SPINLOCK              lock;
+    pthread_mutex_t       lock;
     MXS_CONFIG_PARAMETER* parameters;                       /*< configuration parameters */
     MXS_MONITORED_SERVER* monitored_servers;                /*< List of servers the monitor monitors */
     monitor_state_t       state;                            /**< The state of the monitor. This should ONLY be

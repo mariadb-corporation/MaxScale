@@ -235,17 +235,17 @@ const DEBUG_ARGUMENT debug_arguments[] =
 #ifndef OPENSSL_1_1
 /** SSL multi-threading functions and structures */
 
-static SPINLOCK* ssl_locks;
+static pthread_mutex_t* ssl_locks;
 
 static void ssl_locking_function(int mode, int n, const char* file, int line)
 {
     if (mode & CRYPTO_LOCK)
     {
-        spinlock_acquire(&ssl_locks[n]);
+        pthread_mutex_lock(&ssl_locks[n]);
     }
     else
     {
-        spinlock_release(&ssl_locks[n]);
+        pthread_mutex_unlock(&ssl_locks[n]);
     }
 }
 /**
@@ -253,7 +253,7 @@ static void ssl_locking_function(int mode, int n, const char* file, int line)
  */
 struct CRYPTO_dynlock_value
 {
-    SPINLOCK lock;
+    pthread_mutex_t lock;
 };
 
 /**
@@ -269,7 +269,7 @@ static struct CRYPTO_dynlock_value* ssl_create_dynlock(const char* file, int lin
         (struct CRYPTO_dynlock_value*) MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
     if (lock)
     {
-        spinlock_init(&lock->lock);
+        pthread_mutex_init(&lock->lock, NULL);
     }
     return lock;
 }
@@ -285,11 +285,11 @@ static void ssl_lock_dynlock(int mode, struct CRYPTO_dynlock_value* n, const cha
 {
     if (mode & CRYPTO_LOCK)
     {
-        spinlock_acquire(&n->lock);
+        pthread_mutex_lock(&n->lock);
     }
     else
     {
-        spinlock_release(&n->lock);
+        pthread_mutex_unlock(&n->lock);
     }
 }
 
@@ -1866,7 +1866,7 @@ int main(int argc, char** argv)
 
 #ifndef OPENSSL_1_1
     numlocks = CRYPTO_num_locks();
-    if ((ssl_locks = (SPINLOCK*)MXS_MALLOC(sizeof(SPINLOCK) * (numlocks + 1))) == NULL)
+    if ((ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1))) == NULL)
     {
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1874,7 +1874,7 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < numlocks + 1; i++)
     {
-        spinlock_init(&ssl_locks[i]);
+        pthread_mutex_init(&ssl_locks[i], NULL);
     }
     CRYPTO_set_locking_callback(ssl_locking_function);
     CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);

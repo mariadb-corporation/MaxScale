@@ -30,7 +30,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/routingworker.h>
 

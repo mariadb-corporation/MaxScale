@@ -45,7 +45,6 @@
 #include <maxscale/router.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 
@@ -1767,7 +1766,7 @@ static int blr_slave_send_slave_hosts(ROUTER_INSTANCE* router, ROUTER_SLAVE* sla
     blr_slave_send_eof(router, slave, 7);
 
     seqno = 8;
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     sptr = router->slaves;
     while (sptr)
     {
@@ -1807,7 +1806,7 @@ static int blr_slave_send_slave_hosts(ROUTER_INSTANCE* router, ROUTER_SLAVE* sla
         }
         sptr = sptr->next;
     }
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
     return blr_slave_send_eof(router, slave, seqno);
 }
 
@@ -1916,9 +1915,9 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
     }
 
     /* Get the current router binlog file */
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
     strcpy(slave->binlog_name, router->binlog_name);
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     /* Set the safe pos */
     slave->binlog_pos = 4;
@@ -2010,14 +2009,14 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
     {
         bool force_disconnect = false;
 
-        spinlock_acquire(&router->binlog_lock);
+        pthread_mutex_lock(&router->binlog_lock);
         if (router->pending_transaction.state > BLRM_NO_TRANSACTION
             && blr_is_current_binlog(router, slave)
             && (slave->binlog_pos > router->binlog_position))
         {
             force_disconnect = true;
         }
-        spinlock_release(&router->binlog_lock);
+        pthread_mutex_unlock(&router->binlog_lock);
 
         if (force_disconnect)
         {
@@ -2320,7 +2319,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
 
     int do_return;
 
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
 
     do_return = 0;
 
@@ -2332,14 +2331,14 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         do_return = 1;
     }
 
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     if (do_return)
     {
-        spinlock_acquire(&slave->catch_lock);
+        pthread_mutex_lock(&slave->catch_lock);
         slave->cstate &= ~CS_BUSY;
         slave->cstate |= CS_EXPECTCB;
-        spinlock_release(&slave->catch_lock);
+        pthread_mutex_unlock(&slave->catch_lock);
         poll_fake_write_event(slave->dcb);
 
         return 0;
@@ -2368,10 +2367,10 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
 
             if (rotating)
             {
-                spinlock_acquire(&slave->catch_lock);
+                pthread_mutex_lock(&slave->catch_lock);
                 slave->cstate |= CS_EXPECTCB;
                 slave->cstate &= ~CS_BUSY;
-                spinlock_release(&slave->catch_lock);
+                pthread_mutex_unlock(&slave->catch_lock);
                 poll_fake_write_event(slave->dcb);
                 return rval;
             }
@@ -2464,7 +2463,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
              * Read it if slave->encryption_ctx is NULL and
              * set the slave->encryption_ctx accordingly
              */
-            spinlock_acquire(&slave->catch_lock);
+            pthread_mutex_lock(&slave->catch_lock);
 
             if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT
                 && !slave->encryption_ctx)
@@ -2522,7 +2521,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             /* set next pos */
             slave->binlog_pos = hdr.next_pos;
 
-            spinlock_release(&slave->catch_lock);
+            pthread_mutex_unlock(&slave->catch_lock);
 
             gwbuf_free(record);
             record = NULL;
@@ -2563,10 +2562,10 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                 err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
                 if (rotating)
                 {
-                    spinlock_acquire(&slave->catch_lock);
+                    pthread_mutex_lock(&slave->catch_lock);
                     slave->cstate |= CS_EXPECTCB;
                     slave->cstate &= ~CS_BUSY;
-                    spinlock_release(&slave->catch_lock);
+                    pthread_mutex_unlock(&slave->catch_lock);
                     poll_fake_write_event(slave->dcb);
                     return rval;
                 }
@@ -2740,11 +2739,11 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                       slave->binlog_name,
                       read_errmsg);
 
-            spinlock_acquire(&slave->catch_lock);
+            pthread_mutex_lock(&slave->catch_lock);
 
             slave->state = BLRS_ERRORED;
 
-            spinlock_release(&slave->catch_lock);
+            pthread_mutex_unlock(&slave->catch_lock);
 
             /*
              * Send an error that will stop slave replication
@@ -2782,9 +2781,9 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
     }
 
     /* Remove BUSY state */
-    spinlock_acquire(&slave->catch_lock);
+    pthread_mutex_lock(&slave->catch_lock);
     slave->cstate &= ~CS_BUSY;
-    spinlock_release(&slave->catch_lock);
+    pthread_mutex_unlock(&slave->catch_lock);
 
     mxb_assert(hdr.ok == SLAVE_POS_READ_OK);
 
@@ -2802,8 +2801,8 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         /**
          * (1) Same name and pos as current router file: aka Up To Date
          */
-        spinlock_acquire(&router->binlog_lock);
-        spinlock_acquire(&slave->catch_lock);
+        pthread_mutex_lock(&router->binlog_lock);
+        pthread_mutex_lock(&slave->catch_lock);
 
         /*
          * Now check again since we hold the router->binlog_lock
@@ -2813,8 +2812,8 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             || !blr_is_current_binlog(router, slave))
         {
             slave->cstate |= CS_EXPECTCB;
-            spinlock_release(&slave->catch_lock);
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&slave->catch_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
 
             /* Force slave to read events via catchup routine */
             poll_fake_write_event(slave->dcb);
@@ -2830,8 +2829,8 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
              */
             slave->cstate |= CS_WAIT_DATA;
 
-            spinlock_release(&slave->catch_lock);
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&slave->catch_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
         }
     }
     else
@@ -2860,9 +2859,9 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
              */
             if (f_tree)
             {
-                spinlock_acquire(&slave->catch_lock);
+                pthread_mutex_lock(&slave->catch_lock);
                 blr_slave_info_save(&slave->f_info, &current_info, c_prefix);
-                spinlock_release(&slave->catch_lock);
+                pthread_mutex_unlock(&slave->catch_lock);
             }
 
             /**
@@ -2888,7 +2887,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                      * registration is on:
                      * set CS_WAIT_DATA and return.
                      */
-                    spinlock_acquire(&slave->catch_lock);
+                    pthread_mutex_lock(&slave->catch_lock);
 
                     if (f_tree)
                     {
@@ -2910,7 +2909,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                      */
                     slave->cstate = CS_WAIT_DATA;
 
-                    spinlock_release(&slave->catch_lock);
+                    pthread_mutex_unlock(&slave->catch_lock);
 
 #ifndef BLFILE_IN_SLAVE
                     /* Close file */
@@ -2931,13 +2930,13 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                  */
                 if (router->master_state == BLRM_BINLOGDUMP)
                 {
-                    spinlock_acquire(&slave->catch_lock);
+                    pthread_mutex_lock(&slave->catch_lock);
                     /* Router state is BLRM_BINLOGDUMP (aka replicating) */
                     if (slave->stats.n_failed_read < MISSING_FILE_READ_RETRIES)
                     {
                         slave->stats.n_failed_read++;
 
-                        spinlock_release(&slave->catch_lock);
+                        pthread_mutex_unlock(&slave->catch_lock);
 
                         /* Log warning for missing file */
                         blr_slave_log_next_file_action(router,
@@ -2954,7 +2953,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                          */
                         slave->state = BLRS_ERRORED;
 
-                        spinlock_release(&slave->catch_lock);
+                        pthread_mutex_unlock(&slave->catch_lock);
 
                         /* Log error for missing file */
                         blr_slave_log_next_file_action(router,
@@ -2986,7 +2985,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                  * We need to deal with current slave file:
                  * restore first the GTID info into slave->f_info
                  */
-                spinlock_acquire(&slave->catch_lock);
+                pthread_mutex_lock(&slave->catch_lock);
                 if (f_tree)
                 {
                     memcpy(&slave->f_info,
@@ -3003,7 +3002,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                  */
                 slave->cstate = CS_WAIT_DATA;
 
-                spinlock_release(&slave->catch_lock);
+                pthread_mutex_unlock(&slave->catch_lock);
             }
             else
             {
@@ -3043,9 +3042,9 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                                           next_file))
 #endif
                 {
-                    spinlock_acquire(&slave->catch_lock);
+                    pthread_mutex_lock(&slave->catch_lock);
                     slave->cstate |= CS_EXPECTCB;
-                    spinlock_release(&slave->catch_lock);
+                    pthread_mutex_unlock(&slave->catch_lock);
                     /**
                      * Note:
                      * Fake rotate just written to client,
@@ -3076,9 +3075,9 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
              * (perhaps some ignorable / skipped events)
              * just retry to read again.
              */
-            spinlock_acquire(&slave->catch_lock);
+            pthread_mutex_lock(&slave->catch_lock);
             slave->cstate |= CS_EXPECTCB;
-            spinlock_release(&slave->catch_lock);
+            pthread_mutex_unlock(&slave->catch_lock);
             poll_fake_write_event(slave->dcb);
         }
     }
@@ -3122,15 +3121,15 @@ int blr_slave_callback(DCB* dcb, DCB_REASON reason, void* data)
     {
         if (slave->state == BLRS_DUMPING)
         {
-            spinlock_acquire(&slave->catch_lock);
+            pthread_mutex_lock(&slave->catch_lock);
             if (slave->cstate & CS_BUSY)
             {
-                spinlock_release(&slave->catch_lock);
+                pthread_mutex_unlock(&slave->catch_lock);
                 return 0;
             }
             slave->cstate &= ~(CS_EXPECTCB);
             slave->cstate |= CS_BUSY;
-            spinlock_release(&slave->catch_lock);
+            pthread_mutex_unlock(&slave->catch_lock);
 
             slave->stats.n_dcb++;
 
@@ -3569,7 +3568,7 @@ static int blr_slave_disconnect_server(ROUTER_INSTANCE* router,
     int n;
     int server_found = 0;
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     sptr = router->slaves;
     /* look for server_id among all registered slaves */
@@ -3606,7 +3605,7 @@ static int blr_slave_disconnect_server(ROUTER_INSTANCE* router,
         }
     }
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     /**
      * Server id was not found
@@ -3667,7 +3666,7 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
                              seqno++);
     blr_slave_send_eof(router, slave, seqno++);
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     sptr = router->slaves;
 
     while (sptr)
@@ -3687,7 +3686,7 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
                           sptr->dcb->remote,
                           sptr->serverid);
 
-                spinlock_release(&router->lock);
+                pthread_mutex_unlock(&router->lock);
 
                 blr_slave_send_error(router,
                                      slave,
@@ -3723,7 +3722,7 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
         sptr = sptr->next;
     }
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     blr_slave_send_eof(router, slave, seqno);
 
@@ -3849,7 +3848,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         }
     }
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     router->master_state = BLRM_SLAVE_STOPPED;
 
@@ -3882,7 +3881,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     router->reconnect_pending = 0;
     router->active_logs = 0;
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     MXS_NOTICE("%s: STOP SLAVE executed by %s@%s. Disconnecting from master [%s]:%d, "
                "read up to log %s, pos %lu, transaction safe pos %lu",
@@ -3950,11 +3949,11 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         return 1;
     }
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     router->master_state = BLRM_UNCONNECTED;
     router->retry_count = 0;
     router->config_index = 0;   // Always start from the default configuration.
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     /**
      * Check whether to create the new binlog (router->binlog_name)
@@ -4032,7 +4031,7 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                         router->binlog_name,
                         4);
 
-            spinlock_acquire(&router->lock);
+            pthread_mutex_lock(&router->lock);
 
             router->pending_transaction.state = BLRM_NO_TRANSACTION;
             router->last_safe_pos = 0;
@@ -4041,7 +4040,7 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
             router->binlog_position = 4;
             router->current_safe_event = 4;
 
-            spinlock_release(&router->lock);
+            pthread_mutex_unlock(&router->lock);
 
             /* Send warning message to mysql command */
             blr_slave_send_warning_message(router, slave, msg);
@@ -4446,7 +4445,7 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
 {
     int rc = 0;
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     if (index == static_cast<int>(router->configs.size()))
     {
@@ -4463,7 +4462,7 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
         rc = blr_apply_change_master_0(router, config, error);
     }
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     return rc;
 }
@@ -6180,7 +6179,7 @@ static bool blr_send_slave_heartbeat(void* inst)
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*) inst;
     time_t t_now = time(0);
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     sptr = router->slaves;
 
@@ -6210,7 +6209,7 @@ static bool blr_send_slave_heartbeat(void* inst)
         sptr = sptr->next;
     }
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     return true;
 }
@@ -6449,7 +6448,7 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
 bool blr_notify_waiting_slave(ROUTER_SLAVE* slave)
 {
     bool ret = false;
-    spinlock_acquire(&slave->catch_lock);
+    pthread_mutex_lock(&slave->catch_lock);
     if (slave->cstate & CS_WAIT_DATA)
     {
         ret = true;
@@ -6457,7 +6456,7 @@ bool blr_notify_waiting_slave(ROUTER_SLAVE* slave)
         poll_fake_write_event(slave->dcb);
         slave->cstate &= ~CS_WAIT_DATA;
     }
-    spinlock_release(&slave->catch_lock);
+    pthread_mutex_unlock(&slave->catch_lock);
 
     return ret;
 }
@@ -6547,13 +6546,13 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
         /* Set the pos of first encrypted event */
         new_encryption_ctx->first_enc_event_pos = fde_end_pos + hdr.event_size;
 
-        spinlock_acquire(&slave->catch_lock);
+        pthread_mutex_lock(&slave->catch_lock);
 
         SLAVE_ENCRYPTION_CTX* old_encryption_ctx = slave->encryption_ctx;
         /* Set the new encryption ctx into slave */
         slave->encryption_ctx = new_encryption_ctx;
 
-        spinlock_release(&slave->catch_lock);
+        pthread_mutex_unlock(&slave->catch_lock);
 
         /* Free previous encryption ctx */
         MXS_FREE(old_encryption_ctx);
@@ -6800,9 +6799,9 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE* router,
         if (router->mariadb10_compat
             && router->mariadb10_gtid)
         {
-            spinlock_acquire(&router->binlog_lock);
+            pthread_mutex_lock(&router->binlog_lock);
             strcpy(mariadb_gtid, router->last_mariadb_gtid);
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
         }
 
         /* Return empty gtid_slave_pos if master GTID registration is off */
@@ -7035,7 +7034,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
 
     memset(&f_gtid, 0, sizeof(f_gtid));
 
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
     // Set gtid as current router gtid
     strcpy(last_gtid, router->last_mariadb_gtid);
     // Set file as router current file
@@ -7048,7 +7047,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
         f_gtid.gtid_elms.domain_id = router->mariadb10_gtid_domain;
         f_gtid.gtid_elms.server_id = router->orig_masterid;
     }
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     MXS_INFO("Slave %lu is registering with MariaDB GTID '%s'",
              (unsigned long)slave->serverid,
@@ -8127,7 +8126,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                     MXS_ERROR("%s: %s", router->service->name, error_string);
                 }
 
-                spinlock_acquire(&router->lock);
+                pthread_mutex_lock(&router->lock);
 
                 /* Set the BLRM_UNCONFIGURED state */
                 router->master_state = BLRM_UNCONFIGURED;
@@ -8138,7 +8137,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                 router->m_errmsg = NULL;
                 router->m_errno = 0;
 
-                spinlock_release(&router->lock);
+                pthread_mutex_unlock(&router->lock);
 
                 if (removed_cfg == -1)
                 {
@@ -8253,11 +8252,11 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                     if (ret != 0)
                     {
                         /* file operation failure: restore config */
-                        spinlock_acquire(&router->lock);
+                        pthread_mutex_lock(&router->lock);
 
                         blr_master_apply_config(router, current_master);
 
-                        spinlock_release(&router->lock);
+                        pthread_mutex_unlock(&router->lock);
 
                         snprintf(error_string,
                                  sizeof(error_string),
@@ -8277,13 +8276,13 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                     }
 
                     /* Mark as active the master server struct */
-                    spinlock_acquire(&router->lock);
+                    pthread_mutex_lock(&router->lock);
                     if (!router->service->dbref->server->is_active)
                     {
                         router->service->dbref->server->is_active = true;
                         router->service->dbref->active = true;
                     }
-                    spinlock_release(&router->lock);
+                    pthread_mutex_unlock(&router->lock);
 
                     /**
                      * check if router is BLRM_UNCONFIGURED
@@ -8291,11 +8290,11 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                      */
                     if (rc == 1 || router->master_state == BLRM_UNCONFIGURED)
                     {
-                        spinlock_acquire(&router->lock);
+                        pthread_mutex_lock(&router->lock);
 
                         router->master_state = BLRM_SLAVE_STOPPED;
 
-                        spinlock_release(&router->lock);
+                        pthread_mutex_unlock(&router->lock);
 
                         /*
                          * The binlog server has just been configured
@@ -8414,9 +8413,9 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE* router,
     char next_file[BINLOG_FNAMELEN + 1] = "";
 
     // Save the current router binlog filename
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
     strcpy(router_curr_file, router->binlog_name);
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     // Set the starting filename
     strcpy(binlog_file, slave->binlog_name);
@@ -8538,12 +8537,12 @@ static int blr_show_binary_logs(ROUTER_INSTANCE* router,
     BINARY_LOG_DATA_RESULT result = {};
 
     /* Get current binlog finename and position */
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
 
     strcpy(current_file, router->binlog_name);
     current_pos = router->current_pos;
 
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     /**
      * First part of result set:
@@ -9336,9 +9335,9 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE* router,
     if (!rv)
     {
         /* Force BLRS_ERRORED state */
-        spinlock_acquire(&slave->catch_lock);
+        pthread_mutex_lock(&slave->catch_lock);
         slave->state = BLRS_ERRORED;
-        spinlock_release(&slave->catch_lock);
+        pthread_mutex_unlock(&slave->catch_lock);
 
         /* Send error that stops slave replication */
         blr_send_custom_error(slave->dcb,
@@ -9775,7 +9774,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
     bool have_heartbeat = router->send_slave_heartbeat
         && (slave->heartbeat > 0);
 
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
     if (s_tree)
     {
         /* Get master file prefix */
@@ -9789,7 +9788,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                 slave->f_info.gtid_elms.domain_id,
                 slave->f_info.gtid_elms.server_id);
     }
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     switch (log_action)
     {

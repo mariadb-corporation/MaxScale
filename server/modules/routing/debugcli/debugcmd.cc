@@ -49,7 +49,6 @@
 #include <maxscale/router.h>
 #include <maxscale/server.hh>
 #include <maxscale/service.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
@@ -1232,7 +1231,7 @@ struct subcommand flushoptions[] =
 };
 
 /** This is used to prevent concurrent creation or removal of servers */
-static SPINLOCK server_mod_lock = SPINLOCK_INIT;
+static pthread_mutex_t server_mod_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * Create a new server
@@ -1251,7 +1250,7 @@ static void createServer(DCB* dcb,
                          char* protocol,
                          char* authenticator)
 {
-    spinlock_acquire(&server_mod_lock);
+    pthread_mutex_lock(&server_mod_lock);
 
     if (server_find_by_unique_name(name) == NULL)
     {
@@ -1269,7 +1268,7 @@ static void createServer(DCB* dcb,
         dcb_printf(dcb, "Server '%s' already exists.\n", name);
     }
 
-    spinlock_release(&server_mod_lock);
+    pthread_mutex_unlock(&server_mod_lock);
 }
 
 static void createListener(DCB* dcb,
@@ -2082,7 +2081,7 @@ static bool user_is_authorized(DCB* dcb)
     return rval;
 }
 
-static SPINLOCK debugcmd_lock = SPINLOCK_INIT;
+static pthread_mutex_t debugcmd_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static const char item_separator[] =
     "----------------------------------------------------------------------------\n";
@@ -2177,7 +2176,7 @@ int execute_cmd(CLI_SESSION* cli)
 
     argc = i - 2;   /* The number of extra arguments to commands */
 
-    spinlock_acquire(&debugcmd_lock);
+    pthread_mutex_lock(&debugcmd_lock);
 
     if (!strcasecmp(args[0], "help"))
     {
@@ -2504,7 +2503,7 @@ int execute_cmd(CLI_SESSION* cli)
                    args[0]);
     }
 
-    spinlock_release(&debugcmd_lock);
+    pthread_mutex_unlock(&debugcmd_lock);
 
     memset(cli->cmdbuf, 0, CMDBUFLEN);
 

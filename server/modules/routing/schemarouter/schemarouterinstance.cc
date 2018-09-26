@@ -29,7 +29,6 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.h>
 #include <maxscale/secrets.h>
-#include <maxscale/spinlock.h>
 
 using std::string;
 

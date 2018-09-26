@@ -49,7 +49,6 @@
 #include <maxscale/router.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 

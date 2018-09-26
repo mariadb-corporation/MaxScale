@@ -53,7 +53,6 @@
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
 static GWBUF* blr_make_query(DCB* dcb, char* query);
@@ -139,7 +138,7 @@ static void blr_start_master(void* data)
     }
 
     router->stats.n_binlogs_ses = 0;
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     if (router->master_state != BLRM_UNCONNECTED)
     {
@@ -160,7 +159,7 @@ static void blr_start_master(void* data)
         /* Return only if state is not BLRM_CONNECTING */
         if (router->master_state != BLRM_CONNECTING)
         {
-            spinlock_release(&router->lock);
+            pthread_mutex_unlock(&router->lock);
             return;
         }
     }
@@ -171,7 +170,7 @@ static void blr_start_master(void* data)
     {
         /* Force stopped state */
         router->master_state = BLRM_SLAVE_STOPPED;
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
 
         MXS_ERROR("%s: failure while connecting to master server '%s', "
                   "reached %d maximum number of retries. "
@@ -185,7 +184,7 @@ static void blr_start_master(void* data)
     /* Force connecting state */
     router->master_state = BLRM_CONNECTING;
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     DCB* client = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
 
@@ -223,9 +222,9 @@ static void blr_start_master(void* data)
                                       router->session,
                                       BLR_PROTOCOL)) == NULL)
     {
-        spinlock_acquire(&router->lock);
+        pthread_mutex_lock(&router->lock);
         router->retry_count++;
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
 
         blr_start_master_in_main(router, connect_retry);
 
@@ -355,7 +354,7 @@ void blr_close_master_in_main(void* data)
 static void blr_restart_master(ROUTER_INSTANCE* router)
 {
     /* Now it is safe to unleash other threads on this router instance */
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     router->reconnect_pending = 0;
     router->active_logs = 0;
 
@@ -366,7 +365,7 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
         {
             /* Force stopped state */
             router->master_state = BLRM_SLAVE_STOPPED;
-            spinlock_release(&router->lock);
+            pthread_mutex_unlock(&router->lock);
 
             MXS_ERROR("%s: failed to connect to master server '%s', "
                       "reached %d maximum number of retries. "
@@ -399,7 +398,7 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
                        new_config.port);
         }
 
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
 
         blr_start_master_in_main(router, connect_retry);
 
@@ -413,7 +412,7 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
     {
         /* Force connecting state */
         router->master_state = BLRM_CONNECTING;
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
 
         blr_start_master_in_main(router);
     }
@@ -438,7 +437,7 @@ void blr_master_reconnect(ROUTER_INSTANCE* router)
         return;
     }
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     if (router->active_logs)
     {
         /* Currently processing a response, set a flag
@@ -453,13 +452,13 @@ void blr_master_reconnect(ROUTER_INSTANCE* router)
         router->active_logs = 1;
         do_reconnect = 1;
     }
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
     if (do_reconnect)
     {
         blr_restart_master(router);
-        spinlock_acquire(&router->lock);
+        pthread_mutex_lock(&router->lock);
         router->active_logs = 0;
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
     }
 }
 
@@ -473,13 +472,13 @@ void blr_master_close(ROUTER_INSTANCE* router)
     dcb_close(router->master);
     router->master = NULL;
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     if (router->master_state != BLRM_SLAVE_STOPPED)
     {
         router->master_state = BLRM_UNCONNECTED;
     }
     router->master_event_state = BLR_EVENT_DONE;
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     gwbuf_free(router->stored_event);
     router->stored_event = NULL;
@@ -498,9 +497,9 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     atomic_add(&router->handling_threads, 1);
     mxb_assert(router->handling_threads == 1);
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     router->active_logs = 1;
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     if (router->master_state > BLRM_MAXSTATE)
     {
@@ -508,11 +507,11 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
                   router->master_state);
         gwbuf_free(buf);
 
-        spinlock_acquire(&router->lock);
+        pthread_mutex_lock(&router->lock);
         if (router->reconnect_pending)
         {
             router->active_logs = 0;
-            spinlock_release(&router->lock);
+            pthread_mutex_unlock(&router->lock);
             atomic_add(&router->handling_threads, -1);
             MXS_ERROR("%s: Pending reconnect in state %s.",
                       router->service->name,
@@ -521,7 +520,7 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
             return;
         }
         router->active_logs = 0;
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
         atomic_add(&router->handling_threads, -1);
         return;
     }
@@ -564,7 +563,7 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
                   blrm_states[router->master_state]);
         gwbuf_free(buf);
 
-        spinlock_acquire(&router->lock);
+        pthread_mutex_lock(&router->lock);
 
         /* set mysql errno */
         router->m_errno = mysql_errno;
@@ -579,12 +578,12 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
         router->active_logs = 0;
         if (router->reconnect_pending)
         {
-            spinlock_release(&router->lock);
+            pthread_mutex_unlock(&router->lock);
             atomic_add(&router->handling_threads, -1);
             blr_restart_master(router);
             return;
         }
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
         atomic_add(&router->handling_threads, -1);
         return;
     }
@@ -598,9 +597,9 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
         blr_restart_master(router);
     }
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     router->active_logs = 0;
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
     atomic_add(&router->handling_threads, -1);
 }
 
@@ -811,7 +810,7 @@ static bool verify_checksum(ROUTER_INSTANCE* router, size_t len, uint8_t* ptr)
  */
 static void reset_errors(ROUTER_INSTANCE* router, REP_HEADER* hdr)
 {
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     /* set mysql errno to 0 */
     router->m_errno = 0;
@@ -823,7 +822,7 @@ static void reset_errors(ROUTER_INSTANCE* router, REP_HEADER* hdr)
     }
     router->m_errmsg = NULL;
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 #ifdef SHOW_EVENTS
     printf("blr: event type 0x%02x, flags 0x%04x, "
            "event size %d, event timestamp %" PRIu32 "\n",
@@ -889,10 +888,10 @@ void blr_handle_binlog_record(ROUTER_INSTANCE* router, GWBUF* pkt)
             if (router->master_event_state == BLR_EVENT_DONE)
             {
                 /** This is the start of a new event */
-                spinlock_acquire(&router->lock);
+                pthread_mutex_lock(&router->lock);
                 router->stats.n_binlogs++;
                 router->stats.n_binlogs_ses++;
-                spinlock_release(&router->lock);
+                pthread_mutex_unlock(&router->lock);
 
                 /* Check for semi-sync in event with OK byte[4]:
                  * move pointer 2 bytes ahead and set check_packet_len accordingly
@@ -1182,7 +1181,7 @@ int blr_rotate_event(ROUTER_INSTANCE* router, uint8_t* ptr, REP_HEADER* hdr)
             blr_file_update_gtid(router);
         }
     }
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
     router->rotating = 0;
 
     /* remove current binlog encryption context */
@@ -1191,7 +1190,7 @@ int blr_rotate_event(ROUTER_INSTANCE* router, uint8_t* ptr, REP_HEADER* hdr)
         MXS_FREE(router->encryption_ctx);
         router->encryption_ctx = NULL;
     }
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
     return rotated;
 }
 
@@ -1383,7 +1382,7 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
         }
     }
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     router->master_state = BLRM_SLAVE_STOPPED;
 
@@ -1412,7 +1411,7 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
     }
 
     router->master_state = BLRM_UNCONNECTED;
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     blr_master_reconnect(router);
 }
@@ -1432,13 +1431,13 @@ static bool blr_check_last_master_event(void* inst)
     int master_state = BLRM_UNCONNECTED;
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     master_check = blr_check_heartbeat(router);
 
     master_state = router->master_state;
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     if (!master_check)
     {
@@ -1812,7 +1811,7 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
     *(msg_err + msg_len) = '\0';
 
     std::string s(msg_err);
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
 
     char* old_errmsg = router->m_errmsg;
     router->m_errmsg = msg_err;
@@ -1820,7 +1819,7 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
     router->master_state = BLRM_SLAVE_STOPPED;
     router->stats.n_binlog_errors++;
 
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     MXS_FREE(old_errmsg);
     // TODO: Would it or would it not be safe to access router->m_errmsg here?
@@ -1947,7 +1946,7 @@ void blr_notify_all_slaves(ROUTER_INSTANCE* router)
     ROUTER_SLAVE* slave;
     int notified = 0;
 
-    spinlock_acquire(&router->lock);
+    pthread_mutex_lock(&router->lock);
     slave = router->slaves;
     while (slave)
     {
@@ -1960,7 +1959,7 @@ void blr_notify_all_slaves(ROUTER_INSTANCE* router)
 
         slave = slave->next;
     }
-    spinlock_release(&router->lock);
+    pthread_mutex_unlock(&router->lock);
 
     if (notified > 0)
     {
@@ -2938,7 +2937,7 @@ bool blr_handle_fake_rotate(ROUTER_INSTANCE* router,
         return false;
     }
 
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
 
     /* Set writing pos to 4 if Master GTID */
     if (router->mariadb10_master_gtid && pos == 4)
@@ -2960,7 +2959,7 @@ bool blr_handle_fake_rotate(ROUTER_INSTANCE* router,
 
     router->rotating = 1;
 
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     return blr_rotate_event(router, ptr, hdr);
 }
@@ -3009,11 +3008,11 @@ void blr_handle_fake_gtid_list(ROUTER_INSTANCE* router,
                      hole_size);
 
             /* Set the offet for the write routine */
-            spinlock_acquire(&router->binlog_lock);
+            pthread_mutex_lock(&router->binlog_lock);
 
             router->last_written = binlog_file_eof;
 
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
 
             // Write One Hole
             // TODO: write small holes
@@ -3026,7 +3025,7 @@ void blr_handle_fake_gtid_list(ROUTER_INSTANCE* router,
         else
         {
             // Increment the internal offsets
-            spinlock_acquire(&router->binlog_lock);
+            pthread_mutex_lock(&router->binlog_lock);
 
             router->last_written = hdr->next_pos;
             router->last_event_pos = router->current_pos;
@@ -3034,7 +3033,7 @@ void blr_handle_fake_gtid_list(ROUTER_INSTANCE* router,
             router->binlog_position = router->current_pos;
             router->current_safe_event = router->current_pos;
 
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
         }
     }
 }

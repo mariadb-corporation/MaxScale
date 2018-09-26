@@ -22,7 +22,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/users.h>
 #include <cdc.h>

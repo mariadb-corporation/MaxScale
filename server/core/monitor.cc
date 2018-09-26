@@ -39,7 +39,6 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/routingworker.h>
 #include <maxscale/secrets.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/utils.hh>
 #include <maxscale/json_api.h>
 #include <mysqld_error.h>
@@ -146,7 +145,7 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
     mon->disk_space_threshold = NULL;
     mon->disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
-    spinlock_init(&mon->lock);
+    pthread_mutex_init(&mon->lock, NULL);
 
     for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
     {
@@ -243,7 +242,7 @@ void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
 {
     if (monitor)
     {
-        spinlock_acquire(&monitor->lock);
+        pthread_mutex_lock(&monitor->lock);
 
         // Only start the monitor if it's stopped.
         if (monitor->state == MONITOR_STATE_STOPPED)
@@ -264,7 +263,7 @@ void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
             }
         }
 
-        spinlock_release(&monitor->lock);
+        pthread_mutex_unlock(&monitor->lock);
     }
 }
 
@@ -296,7 +295,7 @@ void monitor_stop(MXS_MONITOR* monitor)
 {
     if (monitor)
     {
-        spinlock_acquire(&monitor->lock);
+        pthread_mutex_lock(&monitor->lock);
 
         /** Only stop the monitor if it is running */
         if (monitor->state == MONITOR_STATE_RUNNING)
@@ -315,7 +314,7 @@ void monitor_stop(MXS_MONITOR* monitor)
             }
         }
 
-        spinlock_release(&monitor->lock);
+        pthread_mutex_unlock(&monitor->lock);
     }
 }
 
@@ -381,7 +380,7 @@ bool monitor_add_server(MXS_MONITOR* mon, SERVER* server)
             monitor_stop(mon);
         }
 
-        spinlock_acquire(&mon->lock);
+        pthread_mutex_lock(&mon->lock);
 
         if (mon->monitored_servers == NULL)
         {
@@ -396,7 +395,7 @@ bool monitor_add_server(MXS_MONITOR* mon, SERVER* server)
             }
             ptr->next = db;
         }
-        spinlock_release(&mon->lock);
+        pthread_mutex_unlock(&mon->lock);
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
@@ -448,7 +447,7 @@ void monitor_remove_server(MXS_MONITOR* mon, SERVER* server)
         monitor_stop(mon);
     }
 
-    spinlock_acquire(&mon->lock);
+    pthread_mutex_lock(&mon->lock);
 
     MXS_MONITORED_SERVER* ptr = mon->monitored_servers;
 
@@ -471,7 +470,7 @@ void monitor_remove_server(MXS_MONITOR* mon, SERVER* server)
             ptr = ptr->next;
         }
     }
-    spinlock_release(&mon->lock);
+    pthread_mutex_unlock(&mon->lock);
 
     if (ptr)
     {
@@ -828,7 +827,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
  */
 void monitor_add_parameters(MXS_MONITOR* monitor, MXS_CONFIG_PARAMETER* params)
 {
-    spinlock_acquire(&monitor->lock);
+    pthread_mutex_lock(&monitor->lock);
 
     while (params)
     {
@@ -849,7 +848,7 @@ void monitor_add_parameters(MXS_MONITOR* monitor, MXS_CONFIG_PARAMETER* params)
         params = params->next;
     }
 
-    spinlock_release(&monitor->lock);
+    pthread_mutex_unlock(&monitor->lock);
 }
 
 void monitor_set_parameter(MXS_MONITOR* monitor, const char* key, const char* value)
@@ -866,7 +865,7 @@ bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key)
     MXS_CONFIG_PARAMETER* prev = NULL;
     bool rval = false;
 
-    spinlock_acquire(&monitor->lock);
+    pthread_mutex_lock(&monitor->lock);
 
     for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
     {
@@ -890,14 +889,14 @@ bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key)
         prev = p;
     }
 
-    spinlock_release(&monitor->lock);
+    pthread_mutex_unlock(&monitor->lock);
 
     return rval;
 }
 
 void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* value)
 {
-    spinlock_acquire(&monitor->lock);
+    pthread_mutex_lock(&monitor->lock);
 
     for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
     {
@@ -909,7 +908,7 @@ void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* valu
         }
     }
 
-    spinlock_release(&monitor->lock);
+    pthread_mutex_unlock(&monitor->lock);
 }
 
 /**
@@ -1546,7 +1545,7 @@ MXS_MONITOR* monitor_server_in_use(const SERVER* server)
 
     for (MXS_MONITOR* mon = allMonitors; mon && !rval; mon = mon->next)
     {
-        spinlock_acquire(&mon->lock);
+        pthread_mutex_lock(&mon->lock);
 
         if (mon->active)
         {
@@ -1559,7 +1558,7 @@ MXS_MONITOR* monitor_server_in_use(const SERVER* server)
             }
         }
 
-        spinlock_release(&mon->lock);
+        pthread_mutex_unlock(&mon->lock);
     }
 
     return rval;
@@ -1579,7 +1578,7 @@ static bool create_monitor_config(const MXS_MONITOR* monitor, const char* filena
         return false;
     }
 
-    spinlock_acquire(&monitor->lock);
+    pthread_mutex_lock((pthread_mutex_t*)&monitor->lock);
 
     dprintf(file, "[%s]\n", monitor->name);
     dprintf(file, "%s=monitor\n", CN_TYPE);
@@ -1606,7 +1605,7 @@ static bool create_monitor_config(const MXS_MONITOR* monitor, const char* filena
                     {CN_TYPE, CN_SERVERS},
                     config_monitor_params,
                     mod->parameters);
-    spinlock_release(&monitor->lock);
+    pthread_mutex_unlock((pthread_mutex_t*)&monitor->lock);
     close(file);
 
     return true;
@@ -1787,7 +1786,7 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
 {
     json_t* rval = json_object();
 
-    spinlock_acquire(&monitor->lock);
+    pthread_mutex_lock((pthread_mutex_t*)&monitor->lock);
 
     json_object_set_new(rval, CN_ID, json_string(monitor->name));
     json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
@@ -1827,7 +1826,7 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
         json_object_set_new(rel, CN_SERVERS, mon_rel);
     }
 
-    spinlock_release(&monitor->lock);
+    pthread_mutex_unlock((pthread_mutex_t*)&monitor->lock);
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
@@ -1874,7 +1873,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
     {
-        spinlock_acquire(&mon->lock);
+        pthread_mutex_lock(&mon->lock);
 
         if (mon->active)
         {
@@ -1888,7 +1887,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
             }
         }
 
-        spinlock_release(&mon->lock);
+        pthread_mutex_unlock(&mon->lock);
     }
 
     guard.unlock();

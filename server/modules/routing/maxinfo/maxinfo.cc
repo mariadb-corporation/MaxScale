@@ -41,7 +41,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/monitor.h>
 #include <maxbase/atomic.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/log.h>
@@ -81,7 +80,7 @@ static void                handleError(MXS_ROUTER* instance,
                                        mxs_error_action_t action,
                                        bool* succp);
 
-static SPINLOCK instlock;
+static pthread_mutex_t instlock;
 static INFO_INSTANCE* instances;
 
 /**
@@ -95,7 +94,7 @@ static INFO_INSTANCE* instances;
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise MaxInfo router module.");
-    spinlock_init(&instlock);
+    pthread_mutex_init(&instlock, NULL);
     instances = NULL;
 
     static MXS_ROUTER_OBJECT MyObject =
@@ -155,17 +154,17 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
 
     inst->sessions = NULL;
     inst->service = service;
-    spinlock_init(&inst->lock);
+    pthread_mutex_init(&inst->lock, NULL);
 
     /*
      * We have completed the creation of the instance data, so now
      * insert this router instance into the linked list of routers
      * that have been created with this module.
      */
-    spinlock_acquire(&instlock);
+    pthread_mutex_lock(&instlock);
     inst->next = instances;
     instances = inst;
-    spinlock_release(&instlock);
+    pthread_mutex_unlock(&instlock);
 
     return (MXS_ROUTER*)inst;
 }
@@ -190,10 +189,10 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     client->dcb = session->client_dcb;
     client->queue = NULL;
 
-    spinlock_acquire(&inst->lock);
+    pthread_mutex_lock(&inst->lock);
     client->next = inst->sessions;
     inst->sessions = client;
-    spinlock_release(&inst->lock);
+    pthread_mutex_unlock(&inst->lock);
 
     session->state = SESSION_STATE_READY;
 
@@ -213,7 +212,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
     INFO_SESSION* session = (INFO_SESSION*)router_session;
 
 
-    spinlock_acquire(&inst->lock);
+    pthread_mutex_lock(&inst->lock);
     if (inst->sessions == session)
     {
         inst->sessions = session->next;
@@ -230,7 +229,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
             ptr->next = session->next;
         }
     }
-    spinlock_release(&inst->lock);
+    pthread_mutex_unlock(&inst->lock);
     /**
      * Router session is freed in session.c:session_close, when session who
      * owns it, is freed.

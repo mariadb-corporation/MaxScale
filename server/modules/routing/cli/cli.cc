@@ -35,7 +35,6 @@
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
 #include <maxbase/atomic.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
@@ -121,7 +120,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     }
 
     inst->service = service;
-    spinlock_init(&inst->lock);
+    pthread_mutex_init(&inst->lock, NULL);
     inst->sessions = NULL;
 
     return (MXS_ROUTER*)inst;
@@ -147,10 +146,10 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
 
     memset(client->cmdbuf, 0, 80);
 
-    spinlock_acquire(&inst->lock);
+    pthread_mutex_lock(&inst->lock);
     client->next = inst->sessions;
     inst->sessions = client;
-    spinlock_release(&inst->lock);
+    pthread_mutex_unlock(&inst->lock);
 
     session->state = SESSION_STATE_READY;
 
@@ -170,7 +169,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
     CLI_SESSION* session = (CLI_SESSION*)router_session;
 
 
-    spinlock_acquire(&inst->lock);
+    pthread_mutex_lock(&inst->lock);
     if (inst->sessions == session)
     {
         inst->sessions = session->next;
@@ -187,7 +186,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
             ptr->next = session->next;
         }
     }
-    spinlock_release(&inst->lock);
+    pthread_mutex_unlock(&inst->lock);
     /**
      * Router session is freed in session.c:session_close, when session who
      * owns it, is freed.

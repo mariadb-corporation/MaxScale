@@ -24,7 +24,6 @@
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/protocol.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/ssl.h>
 
 MXS_BEGIN_DECLS

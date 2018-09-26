@@ -82,7 +82,6 @@
 #include <maxscale/server.hh>
 #include <maxscale/router.h>
 #include <maxbase/atomic.hh>
-#include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/log.h>

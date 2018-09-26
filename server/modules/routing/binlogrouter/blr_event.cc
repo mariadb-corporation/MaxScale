@@ -31,7 +31,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
      * won't be updated to router->current_pos
      */
 
-    spinlock_acquire(&router->binlog_lock);
+    pthread_mutex_lock(&router->binlog_lock);
     if (router->trx_safe == 0
         || (router->trx_safe
             && router->pending_transaction.state == BLRM_NO_TRANSACTION))
@@ -40,7 +40,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
         router->binlog_position = router->current_pos;
         router->current_safe_event = router->current_pos;
     }
-    spinlock_release(&router->binlog_lock);
+    pthread_mutex_unlock(&router->binlog_lock);
 
     /**
      * Detect transactions in events if trx_safe is set:
@@ -71,7 +71,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
             domainid = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8, 32);
             flags = *(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8 + 4);
 
-            spinlock_acquire(&router->binlog_lock);
+            pthread_mutex_lock(&router->binlog_lock);
 
             /**
              * Detect whether it's a standalone transaction:
@@ -126,7 +126,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
             router->pending_transaction.start_pos = router->current_pos;
             router->pending_transaction.end_pos = 0;
 
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
         }
 
         // Query Event check
@@ -147,7 +147,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                    + var_block_len + 1 + db_name_len,
                    statement_len);
 
-            spinlock_acquire(&router->binlog_lock);
+            pthread_mutex_lock(&router->binlog_lock);
 
             /* Check for BEGIN (it comes for START TRANSACTION too) */
             if (strncmp(statement_sql, "BEGIN", 5) == 0)
@@ -181,7 +181,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                 router->pending_transaction.state = BLRM_STANDALONE_SEEN;
             }
 
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
 
             MXS_FREE(statement_sql);
         }
@@ -189,13 +189,13 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
         /* Check for COMMIT in Transactional engines, i.e InnoDB */
         if (hdr.event_type == XID_EVENT)
         {
-            spinlock_acquire(&router->binlog_lock);
+            pthread_mutex_lock(&router->binlog_lock);
 
             if (router->pending_transaction.state >= BLRM_TRANSACTION_START)
             {
                 router->pending_transaction.state = BLRM_XID_EVENT_SEEN;
             }
-            spinlock_release(&router->binlog_lock);
+            pthread_mutex_unlock(&router->binlog_lock);
         }
     }
 
@@ -223,7 +223,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                 hdr.event_type);
         MXS_ERROR("%s", errmsg);
 
-        spinlock_acquire(&router->lock);
+        pthread_mutex_lock(&router->lock);
 
         /* Handle error messages */
         char* old_errmsg = router->m_errmsg;
@@ -234,7 +234,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
         router->master_state = BLRM_SLAVE_STOPPED;
         router->stats.n_binlog_errors++;
 
-        spinlock_release(&router->lock);
+        pthread_mutex_unlock(&router->lock);
 
         MXS_FREE(old_errmsg);
 
@@ -279,9 +279,9 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
         {
             if (hdr.event_type == ROTATE_EVENT)
             {
-                spinlock_acquire(&router->binlog_lock);
+                pthread_mutex_lock(&router->binlog_lock);
                 router->rotating = 1;
-                spinlock_release(&router->binlog_lock);
+                pthread_mutex_unlock(&router->binlog_lock);
             }
 
             uint32_t offset = MYSQL_HEADER_LEN + 1;     // Skip header and OK byte
@@ -334,7 +334,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
              * may depend on pending transaction
              */
 
-            spinlock_acquire(&router->binlog_lock);
+            pthread_mutex_lock(&router->binlog_lock);
 
             if (router->trx_safe == 0
                 || (router->trx_safe
@@ -343,7 +343,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                 router->binlog_position = router->current_pos;
                 router->current_safe_event = router->last_event_pos;
 
-                spinlock_release(&router->binlog_lock);
+                pthread_mutex_unlock(&router->binlog_lock);
 
                 /* Notify clients events can be read */
                 blr_notify_all_slaves(router);
@@ -384,13 +384,13 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                         }
                     }
 
-                    spinlock_release(&router->binlog_lock);
+                    pthread_mutex_unlock(&router->binlog_lock);
 
                     /* Notify clients events can be read */
                     blr_notify_all_slaves(router);
 
                     /* update binlog_position and set pending to NO_TRX */
-                    spinlock_acquire(&router->binlog_lock);
+                    pthread_mutex_lock(&router->binlog_lock);
 
                     router->binlog_position = router->current_pos;
 
@@ -398,11 +398,11 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                     router->pending_transaction.state = BLRM_NO_TRANSACTION;
                     router->pending_transaction.standalone = false;
 
-                    spinlock_release(&router->binlog_lock);
+                    pthread_mutex_unlock(&router->binlog_lock);
                 }
                 else
                 {
-                    spinlock_release(&router->binlog_lock);
+                    pthread_mutex_unlock(&router->binlog_lock);
                 }
             }
         }
