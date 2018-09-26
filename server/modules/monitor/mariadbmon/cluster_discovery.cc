@@ -12,14 +12,13 @@
  */
 
 #include "mariadbmon.hh"
+
 #include <inttypes.h>
 #include <string>
-#include <sstream>
 #include <queue>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/utils.hh>
-
 
 using std::string;
 using maxscale::string_printf;

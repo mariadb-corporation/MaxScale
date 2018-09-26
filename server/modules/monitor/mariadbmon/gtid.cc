@@ -14,10 +14,12 @@
 #include "gtid.hh"
 
 #include <algorithm>
-#include <sstream>
+#include <inttypes.h>
 #include <maxbase/assert.h>
+#include <maxscale/utils.hh>
 
 using std::string;
+using maxscale::string_printf;
 
 GtidList GtidList::from_string(const string& gtid_string)
 {
@@ -226,12 +228,12 @@ bool Gtid::eq(const Gtid& rhs) const
 
 string Gtid::to_string() const
 {
-    std::stringstream ss;
+    string rval;
     if (m_server_id != SERVER_ID_UNKNOWN)
     {
-        ss << m_domain << "-" << m_server_id << "-" << m_sequence;
+        rval += string_printf("%" PRIu32 "-%" PRIi64 "-%" PRIu64, m_domain, m_server_id, m_sequence);
     }
-    return ss.str();
+    return rval;
 }
 
 Gtid GtidList::get_gtid(uint32_t domain) const

@@ -18,7 +18,6 @@
 #include <fstream>
 #include <inttypes.h>
 #include <iomanip>
-#include <sstream>
 #include <thread>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/utils.hh>
@@ -627,29 +626,34 @@ const char* MariaDBServer::name() const
 
 string MariaDBServer::diagnostics() const
 {
-    std::stringstream ss;
-    ss << "Server:                 " << name() << "\n";
-    ss << "Server ID:              " << m_server_id << "\n";
-    ss << "Read only:              " << (m_read_only ? "Yes" : "No") << "\n";
-    ss << (m_slave_status.empty() ? "No slave connections \n" : "Slave connections: \n");
+    // Format strings.
+    const char fmt_string[] = "%-23s %s\n";
+    const char fmt_int[] = "%-23s %i\n";
+    const char fmt_int64[] = "%-23s %" PRIi64 "\n";
 
-    for (const SlaveStatus& sstatus : m_slave_status)
-    {
-        ss << sstatus.to_string() << "\n";
-    }
+    string rval;
+    rval += string_printf(fmt_string, "Server:", name());
+    rval += string_printf(fmt_int64, "Server ID:", m_server_id);
+    rval += string_printf(fmt_string, "Read only:", (m_read_only ? "Yes" : "No"));
     if (!m_gtid_current_pos.empty())
     {
-        ss << "Gtid current position:  " << m_gtid_current_pos.to_string() << "\n";
+        rval += string_printf(fmt_string, "Gtid current position:", m_gtid_current_pos.to_string().c_str());
     }
     if (!m_gtid_binlog_pos.empty())
     {
-        ss << "Gtid binlog position:   " << m_gtid_binlog_pos.to_string() << "\n";
+        rval += string_printf(fmt_string, "Gtid binlog position:", m_gtid_binlog_pos.to_string().c_str());
     }
     if (m_node.cycle != NodeData::CYCLE_NONE)
     {
-        ss << "Master group:           " << m_node.cycle << "\n";
+        rval += string_printf(fmt_int, "Master group:", m_node.cycle);
     }
-    return ss.str();
+
+    rval += (m_slave_status.empty() ? "No slave connections\n" : "Slave connections:\n");
+    for (const SlaveStatus& sstatus : m_slave_status)
+    {
+        rval += sstatus.to_string() + "\n";
+    }
+    return rval;
 }
 
 json_t* MariaDBServer::to_json() const
