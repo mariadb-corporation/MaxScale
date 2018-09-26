@@ -12,9 +12,7 @@
  */
 
 #include "mariadbserver.hh"
-#include "maxbase/stopwatch.hh"
 
-#include <chrono>
 #include <fstream>
 #include <inttypes.h>
 #include <iomanip>
@@ -23,7 +21,6 @@
 #include <maxscale/utils.hh>
 
 using std::string;
-using std::chrono::steady_clock;
 using maxscale::string_printf;
 using maxbase::Duration;
 using maxbase::StopWatch;

@@ -15,13 +15,13 @@
  * @file A MariaDB replication cluster monitor
  */
 #include "mariadbmon.hh"
+
 #include <inttypes.h>
 #include <sstream>
 #include <maxbase/assert.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modulecmd.h>
-
 #include <maxscale/mysql_utils.h>
 #include <maxscale/routingworker.h>
 #include <maxscale/secrets.h>

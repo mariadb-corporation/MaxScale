@@ -12,15 +12,13 @@
  */
 #pragma once
 #include "mariadbmon_common.hh"
-#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
 #include <maxscale/monitor.hh>
-
+#include <maxbase/stopwatch.hh>
 #include "mariadbserver.hh"
 
 extern const char* const CN_AUTO_FAILOVER;
@@ -106,8 +104,6 @@ protected:
     void process_state_changes();
 
 private:
-    typedef std::chrono::duration<double> Duration;
-
     struct CycleInfo
     {
         int         cycle_id = NodeData::CYCLE_NONE;
@@ -250,7 +246,7 @@ private:
     std::unique_ptr<ClusterOperation> failover_prepare(Log log_mode, json_t** error_out);
     bool                              failover_perform(ClusterOperation& operation);
     const MariaDBServer*              slave_receiving_events(const MariaDBServer* demotion_target,
-                                                             Duration* event_age_out);
+                                                             maxbase::Duration* event_age_out);
     bool manual_failover(json_t** output);
     void handle_auto_failover();
 

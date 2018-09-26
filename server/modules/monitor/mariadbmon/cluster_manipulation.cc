@@ -13,7 +13,6 @@
 
 #include "mariadbmon.hh"
 
-#include <chrono>
 #include <inttypes.h>
 #include <sstream>
 #include <maxscale/clock.h>
@@ -22,7 +21,6 @@
 
 using std::string;
 using std::unique_ptr;
-using std::chrono::steady_clock;
 using maxscale::string_printf;
 
 static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
@@ -1537,7 +1535,7 @@ void MariaDBMonitor::handle_auto_failover()
 
     int master_down_count = m_master->m_server_base->mon_err_count;
     const MariaDBServer* connected_slave = NULL;
-    Duration event_age;
+    maxbase::Duration event_age;
 
     if (m_failcount > 1 && m_warn_master_down)
     {
@@ -1553,9 +1551,7 @@ void MariaDBMonitor::handle_auto_failover()
     {
         MXS_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat event %.1f "
                    "seconds ago. Delaying failover.",
-                   connected_slave->name(),
-                   m_master->name(),
-                   event_age.count());
+                   connected_slave->name(), m_master->name(), event_age.secs());
     }
     else if (master_down_count >= m_failcount)
     {
@@ -1682,10 +1678,10 @@ void MariaDBMonitor::check_cluster_operations_support()
  * @return The first connected slave or NULL if none found
  */
 const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer* demotion_target,
-                                                            Duration* event_age_out)
+                                                            maxbase::Duration* event_age_out)
 {
-    steady_clock::time_point alive_after = steady_clock::now()
-        - std::chrono::seconds(m_master_failure_timeout);
+    auto time_now =  maxbase::Clock::now();
+    maxbase::Clock::time_point alive_after = time_now - std::chrono::seconds(m_master_failure_timeout);
 
     const MariaDBServer* connected_slave = NULL;
     for (MariaDBServer* slave : demotion_target->m_node.children)
@@ -1699,7 +1695,7 @@ const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer*
             // The slave is still connected to the correct master and has received events. This means that
             // while MaxScale can't connect to the master, it's probably still alive.
             connected_slave = slave;
-            *event_age_out = steady_clock::now() - slave_conn->last_data_time;
+            *event_age_out = time_now - slave_conn->last_data_time;
             break;
         }
     }

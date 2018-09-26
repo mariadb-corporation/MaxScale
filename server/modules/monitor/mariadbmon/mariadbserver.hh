@@ -12,7 +12,6 @@
  */
 #pragma once
 #include "mariadbmon_common.hh"
-#include <chrono>
 #include <functional>
 #include <string>
 #include <memory>
@@ -56,7 +55,7 @@ public:
                                                              * */
 
     /* Time of the latest gtid event or heartbeat the slave connection has received, timed by the monitor. */
-    std::chrono::steady_clock::time_point last_data_time = std::chrono::steady_clock::now();
+    maxbase::Clock::time_point last_data_time = maxbase::Clock::now();
 
 
     std::string               to_string() const;
