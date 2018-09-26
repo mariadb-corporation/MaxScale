@@ -484,18 +484,11 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
 }
 
 /** Log routing failure due to closed session */
-static void log_closed_session(mxs_mysql_cmd_t mysql_command,
-                               bool is_closed,
-                               SERVER_REF* ref,
-                               bool valid)
+static void log_closed_session(mxs_mysql_cmd_t mysql_command, SERVER_REF* ref)
 {
     char msg[MAX_SERVER_ADDRESS_LEN + 200] = "";    // Extra space for message
 
-    if (is_closed)
-    {
-        sprintf(msg, "Session is closed.");
-    }
-    else if (server_is_down(ref->server))
+    if (server_is_down(ref->server))
     {
         sprintf(msg, "Server '%s' is down.", ref->server->name);
     }
@@ -503,16 +496,12 @@ static void log_closed_session(mxs_mysql_cmd_t mysql_command,
     {
         sprintf(msg, "Server '%s' is in maintenance.", ref->server->name);
     }
-    else if (!valid)
+    else
     {
-        sprintf(msg,
-                "Server '%s' no longer qualifies as a target server.",
-                ref->server->name);
+        sprintf(msg, "Server '%s' no longer qualifies as a target server.", ref->server->name);
     }
 
-    MXS_ERROR("Failed to route MySQL command %d to backend server. %s",
-              mysql_command,
-              msg);
+    MXS_ERROR("Failed to route MySQL command %d to backend server. %s", mysql_command, msg);
 }
 
 /**
@@ -573,26 +562,23 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*) instance;
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
     int rc = 0;
-    DCB* backend_dcb;
     MySQLProtocol* proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
     mxs_mysql_cmd_t mysql_command = proto->current_command;
-    bool rses_is_closed = router_cli_ses->rses_closed;
 
-    inst->stats.n_queries++;
+    mxb::atomic::add(&inst->stats.n_queries, 1, mxb::atomic::RELAXED);
 
     // Due to the streaming nature of readconnroute, this is not accurate
     mxb::atomic::add(&router_cli_ses->backend->server->stats.packets, 1, mxb::atomic::RELAXED);
 
-    backend_dcb = router_cli_ses->backend_dcb;
-    bool valid;
+    DCB* backend_dcb = router_cli_ses->backend_dcb;
+    mxb_assert(backend_dcb);
     char* trc = NULL;
 
-    if (rses_is_closed || backend_dcb == NULL
-        || (valid = !connection_is_valid(inst, router_cli_ses)))
+    if (!connection_is_valid(inst, router_cli_ses))
     {
-        log_closed_session(mysql_command, rses_is_closed, router_cli_ses->backend, valid);
+        log_closed_session(mysql_command, router_cli_ses->backend);
         gwbuf_free(queue);
-        goto return_rc;
+        return rc;
     }
 
     switch (mysql_command)
@@ -621,8 +607,6 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
              trc ? ": " : ".",
              trc ? trc : "");
     MXS_FREE(trc);
-
-return_rc:
 
     return rc;
 }

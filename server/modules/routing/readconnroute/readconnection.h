@@ -37,8 +37,6 @@
  */
 struct ROUTER_CLIENT_SES : MXS_ROUTER_SESSION
 {
-    int         rses_versno;/*< even = no active update, else odd  */
-    bool        rses_closed;/*< true when closeSession is called   */
     SERVER_REF* backend;    /*< Backend used by the client session */
     DCB*        backend_dcb;/*< DCB Connection to the backend      */
     DCB*        client_dcb; /**< Client DCB */
