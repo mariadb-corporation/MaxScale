@@ -91,6 +91,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Tee Filter](Filters/Tee-Filter.md)
  - [Top N Filter](Filters/Top-N-Filter.md)
  - [Transaction Performance Monitoring Filter](Filters/Transaction-Performance-Monitoring-Filter.md)
+ - [Binlog Filter](Filters/BinlogFilter.md)
 
 ## Monitors
 
