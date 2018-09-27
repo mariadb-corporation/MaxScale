@@ -38,6 +38,7 @@ int main(int argc, char** argv)
     test.tprintf("Checking that both the master and slave are used");
     std::vector<MYSQL*> connections;
 
+    test.set_timeout(60);
     test.repl->connect();
     execute_query_silent(test.repl->nodes[0], "DROP USER IF EXISTS 'mxs1743'@'%'");
     test.try_query(test.repl->nodes[0], "%s", "CREATE USER 'mxs1743'@'%' IDENTIFIED BY 'mxs1743'");
@@ -65,6 +66,7 @@ int main(int argc, char** argv)
         "SELECT COUNT(*) AS connections FROM information_schema.processlist WHERE user = 'mxs1743'";
     char master_connections[1024];
     char slave_connections[1024];
+    test.set_timeout(60);
     find_field(test.repl->nodes[0], query.c_str(), "connections", master_connections);
     find_field(test.repl->nodes[1], query.c_str(), "connections", slave_connections);
 

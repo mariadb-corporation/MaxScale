@@ -131,6 +131,7 @@ extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
 
 extern void maxscale_update_function_info(const char* name, const Expr* pExpr);
+extern void maxscale_set_type_mask(unsigned int type_mask);
 
 // Exposed utility functions
 void exposed_sqlite3ExprDelete(sqlite3 *db, Expr *pExpr)
@@ -966,6 +967,10 @@ cmd ::= select(X).  {
 %destructor select {sqlite3SelectDelete(pParse->db, $$);}
 %type selectnowith {Select*}
 %destructor selectnowith {sqlite3SelectDelete(pParse->db, $$);}
+%ifdef MAXSCALE
+%type selectnowithsuffix {Select*}
+%destructor selectnowithsuffix {sqlite3SelectDelete(pParse->db, $$);}
+%endif
 %type oneselect {Select*}
 %destructor oneselect {sqlite3SelectDelete(pParse->db, $$);}
 
@@ -993,7 +998,12 @@ cmd ::= select(X).  {
   }
 }
 
+%ifdef MAXSCALE
+select(A) ::= with(W) selectnowithsuffix(X). {
+%endif
+%ifndef MAXSCALE
 select(A) ::= with(W) selectnowith(X). {
+%endif
   Select *p = X;
   if( p ){
     p->pWith = W;
@@ -1003,6 +1013,15 @@ select(A) ::= with(W) selectnowith(X). {
   }
   A = p;
 }
+
+%ifdef MAXSCALE
+selectnowithsuffix(A) ::= selectnowith(X). {A = X;}
+
+selectnowithsuffix(A) ::= selectnowith(X) FOR UPDATE. {
+  A = X;
+  maxscale_set_type_mask(QUERY_TYPE_WRITE);
+}
+%endif
 
 selectnowith(A) ::= oneselect(X).                      {A = X;}
 %ifndef SQLITE_OMIT_COMPOUND_SELECT

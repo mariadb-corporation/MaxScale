@@ -1076,4 +1076,9 @@ add_test_executable(mxs2047_blr_gtid_path.cpp mxs2047_blr_gtid_path mxs2047_blr_
 # https://jira.mariadb.org/browse/MXS-701
 add_test_executable(mxs701_binlog_filter.cpp mxs701_binlog_filter mxs701_binlog_filter LABELS bilogrouter REPL_BACKEND)
 
+# MXS-2043: Error "The MariaDB server is running with the --read-only option"
+#           for "select for update"
+# https://jira.mariadb.org/browse/MXS-2043
+add_test_executable(mxs2043_select_for_update.cpp mxs2043_select_for_update replication LABELS REPL_BACKEND)
+
 configure_file(templates.h.in ${CMAKE_CURRENT_BINARY_DIR}/templates.h @ONLY)

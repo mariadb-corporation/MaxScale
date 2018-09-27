@@ -2012,7 +2012,14 @@ public:
         }
         else
         {
-            m_type_mask = QUERY_TYPE_READ;
+            // Only if the type has explicitly been set to QUERY_TYPE_WRITE
+            // we don't force it to QUERY_TYPE_READ but with other bits we do.
+            // This is something of kludge to ensure continued compatibility
+            // with qc_mysqlembedded.
+            if (m_type_mask != QUERY_TYPE_WRITE)
+            {
+                m_type_mask = QUERY_TYPE_READ;
+            }
         }
 
         QcAliases aliases;
@@ -3025,6 +3032,12 @@ public:
         m_operation = QUERY_OP_CHANGE_DB;
     }
 
+    void set_type_mask(uint32_t type_mask)
+    {
+        ss_dassert(this_thread.initialized);
+        m_type_mask = type_mask;
+    }
+
 private:
     QcSqliteInfo(uint32_t cllct)
         : m_refs(1)
@@ -3330,6 +3343,8 @@ extern "C"
     extern void maxscaleUse(Parse*, Token*);
 
     extern void maxscale_update_function_info(const char* name, const Expr* pExpr);
+    // 'unsigned int' and not 'uint32_t' because 'uint32_t' is unknown in sqlite3 context.
+    extern void maxscale_set_type_mask(unsigned int type_mask);
 
     extern void maxscaleComment();
     extern int  maxscaleKeyword(int token);
@@ -3714,6 +3729,14 @@ extern void maxscale_update_function_info(const char* name, const Expr* pExpr)
     mxb_assert(pInfo);
 
     pInfo->update_function_info(NULL, name, pExpr, NULL);
+}
+
+extern void maxscale_set_type_mask(unsigned int type_mask)
+{
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
+
+    pInfo->set_type_mask(type_mask);
 }
 
 static const char* get_token_symbol(int token)

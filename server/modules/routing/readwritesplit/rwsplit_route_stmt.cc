@@ -543,8 +543,7 @@ SRWBackend RWSplitSession::get_hinted_backend(char* name)
 
         /** The server must be a valid slave, relay server, or master */
         if ((backend->in_use() || (can_recover_servers() && backend->can_connect()))
-            && strcasecmp(name, backend->name()) == 0
-            && (backend->is_slave() || backend->is_relay() || backend->is_master()))
+            && strcasecmp(name, backend->name()) == 0)
         {
             rval = backend;
             break;
