@@ -24,32 +24,18 @@ MXS_BEGIN_DECLS
 
 
 /**
- * MXS_BACKEND_SO_RCVBUF
+ * MXS_SO_RCVBUF
  *
- * The value used when setting SO_RCVBUF of backend sockets.
+ * The size of the network input buffer.
  */
-#define MXS_BACKEND_SO_RCVBUF (128 * 1024)
+#define MXS_SO_RCVBUF_SIZE (128 * 1024)
 
 /**
- * MXS_BACKEND_SO_SNDBUF
+ * MXS_SO_SNDBUF
  *
- * The value used when setting SO_SNDBUF of backend sockets.
+ * The size of the network output buffer.
  */
-#define MXS_BACKEND_SO_SNDBUF (128 * 1024)
-
-/**
- * MXS_CLIENT_SO_RCVBUF
- *
- * The value used when setting SO_RCVBUF of client sockets.
- */
-#define MXS_CLIENT_SO_RCVBUF  (128 * 1024)
-
-/**
- * MXS_CLIENT_SO_SNDBUF
- *
- * The value used when setting SO_SNDBUF of client sockets.
- */
-#define MXS_CLIENT_SO_SNDBUF  (128 * 1024)
+#define MXS_SO_SNDBUF_SIZE (128 * 1024)
 
 /**
  * MXS_MAX_NW_READ_BUFFER_SIZE

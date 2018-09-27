@@ -942,17 +942,18 @@ void utils_end()
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-static bool configure_network_socket(int so)
+bool configure_network_socket(int so, int type)
 {
-    int sndbufsize = MXS_BACKEND_SO_SNDBUF;
-    int rcvbufsize = MXS_BACKEND_SO_RCVBUF;
+    int sndbufsize = MXS_SO_SNDBUF_SIZE;
+    int rcvbufsize = MXS_SO_RCVBUF_SIZE;
     int one = 1;
 
     if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &sndbufsize, sizeof(sndbufsize)) != 0 ||
         setsockopt(so, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(rcvbufsize)) != 0 ||
-        setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
+        (type != AF_UNIX && setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0))
     {
         MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+        ss_dassert(!true);
         return false;
     }
 
@@ -1022,7 +1023,7 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
 
             freeaddrinfo(ai);
 
-            if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so)) ||
+            if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so, addr->ss_family)) ||
                 (type == MXS_SOCKET_LISTENER && !configure_listener_socket(so)))
             {
                 close(so);
