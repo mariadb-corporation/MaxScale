@@ -711,7 +711,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
             op.time_remaining -= step3_duration;
 
             // Step 4: On new master STOP and RESET SLAVE, set read-only to off.
-            if (promote_new_master(promotion_target, error_out))
+            if (promotion_target->promote(op))
             {
                 catchup_and_promote_success = true;
                 m_next_master = promotion_target;
@@ -800,7 +800,7 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
 
     bool rval = false;
     // Step 2: Stop and reset slave, set read-only to 0.
-    if (promote_new_master(promotion_target, op.error_out))
+    if (promotion_target->promote(op))
     {
         m_next_master = promotion_target;
         m_cluster_modified = true;
@@ -1509,6 +1509,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json
                                             promotion_target, demotion_target,
                                             demotion_target == m_master, m_handle_event_scheduler,
                                             m_promote_sql_file, m_demote_sql_file,
+                                            m_replication_user, m_replication_password,
                                             error_out, time_limit));
         }
     }
@@ -1849,6 +1850,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::switchover_prepare(SERVER* promotio
                                         promotion_target, demotion_target,
                                         demotion_target == m_master, m_handle_event_scheduler,
                                         m_promote_sql_file, m_demote_sql_file,
+                                        m_replication_user, m_replication_password,
                                         error_out, time_limit));
     }
     return rval;

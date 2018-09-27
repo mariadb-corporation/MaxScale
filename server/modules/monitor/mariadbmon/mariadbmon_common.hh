@@ -88,6 +88,10 @@ class MariaDBServer;
  */
 class ClusterOperation
 {
+private:
+    ClusterOperation(const ClusterOperation&) = delete;
+    ClusterOperation& operator=(const ClusterOperation&) = delete;
+
 public:
     const OperationType  type;                          // Failover or switchover
     MariaDBServer* const promotion_target;              // Which server will be promoted
@@ -96,6 +100,8 @@ public:
     const bool           handle_events;                 // Should scheduled server events be disabled/enabled?
     const std::string    promotion_sql_file;            // SQL commands ran on a server promoted to master
     const std::string    demotion_sql_file;             // SQL commands ran on a server demoted from master
+    const std::string    replication_user;              // User for CHANGE MASTER TO ...
+    const std::string    replication_password;          // Password for CHANGE MASTER TO ...
     json_t** const       error_out;                     // Json error output
     maxbase::Duration    time_remaining;                // How much time remains to complete the operation
 
@@ -103,5 +109,6 @@ public:
                      MariaDBServer* promotion_target, MariaDBServer* demotion_target,
                      bool demo_target_is_master, bool handle_events,
                      std::string& promotion_sql_file, std::string& demotion_sql_file,
+                     std::string& replication_user, std::string& replication_password,
                      json_t** error, maxbase::Duration time_remaining);
 };

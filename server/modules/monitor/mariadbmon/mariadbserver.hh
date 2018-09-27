@@ -35,6 +35,8 @@ public:
         SLAVE_IO_NO,
     };
 
+    bool exists = true;                                     /* Has this connection been removed from the
+                                                             * server but the monitor hasn't updated yet? */
     bool seen_connected = false;                            /* Has this slave connection been seen connected,
                                                              * meaning that the master server id is correct?
                                                              **/
@@ -60,6 +62,7 @@ public:
 
     std::string               to_string() const;
     json_t*                   to_json() const;
+    std::string               to_short_string(const std::string& owner) const;
     static slave_io_running_t slave_io_from_string(const std::string& str);
     static std::string        slave_io_to_string(slave_io_running_t slave_io);
 };
@@ -497,7 +500,7 @@ public:
      * @param op Cluster operation descriptor
      * @return True if successful
      */
-    bool promote_v2(ClusterOperation* operation);
+    bool promote(ClusterOperation& operation);
 
 private:
     class EventInfo;
@@ -528,7 +531,7 @@ private:
     bool               alter_event(const EventInfo& event, const std::string& target_status,
                                    json_t** error_out);
 
-    bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
+    bool stop_slave_conn(SlaveStatus* slave_conn, StopMode mode, maxbase::Duration time_limit,
                          json_t** error_out);
 
     bool execute_cmd_ex(const std::string& cmd, QueryRetryMode mode,
@@ -537,7 +540,11 @@ private:
     bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
                                 std::string* errmsg_out);
 
-    bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
+    bool         set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
+    bool         copy_master_slave_conns(ClusterOperation& op);
+    bool         create_start_slave(ClusterOperation& op, const SlaveStatus& slave_conn);
+    SlaveStatus* slave_connection_status_mutable(const MariaDBServer* target);
+    std::string  generate_change_master_cmd(ClusterOperation& op, const SlaveStatus& slave_conn);
 };
 
 /**
