@@ -3034,7 +3034,7 @@ public:
 
     void set_type_mask(uint32_t type_mask)
     {
-        ss_dassert(this_thread.initialized);
+        mxb_assert(this_thread.initialized);
         m_type_mask = type_mask;
     }
 
@@ -3734,7 +3734,7 @@ extern void maxscale_update_function_info(const char* name, const Expr* pExpr)
 extern void maxscale_set_type_mask(unsigned int type_mask)
 {
     QcSqliteInfo* pInfo = this_thread.pInfo;
-    ss_dassert(pInfo);
+    mxb_assert(pInfo);
 
     pInfo->set_type_mask(type_mask);
 }
