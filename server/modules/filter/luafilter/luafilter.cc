@@ -43,6 +43,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <string.h>
+#include <mutex>
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/log.h>
