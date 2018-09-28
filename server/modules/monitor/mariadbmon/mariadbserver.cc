@@ -1824,7 +1824,7 @@ bool MariaDBServer::create_start_slave(ClusterOperation& op, const SlaveStatus& 
 /**
  * Generate a CHANGE MASTER TO-query.
  *
- * @param op Operation descriptor
+ * @param op Operation descriptor, required for username and password
  * @param slave_conn Existing slave connection to emulate
  * @return Generated query
  */
@@ -1832,8 +1832,8 @@ string MariaDBServer::generate_change_master_cmd(ClusterOperation& op, const Sla
 {
     string change_cmd;
     change_cmd += string_printf("CHANGE MASTER '%s' TO MASTER_HOST = '%s', MASTER_PORT = %i, ",
-                                slave_conn.name.c_str(), slave_conn.master_host.c_str(),
-                                slave_conn.master_port);
+                                slave_conn.name.c_str(),
+                                slave_conn.master_host.c_str(), slave_conn.master_port);
     change_cmd += "MASTER_USE_GTID = current_pos, ";
     change_cmd += string_printf("MASTER_USER = '%s', ", op.replication_user.c_str());
     const char MASTER_PW[] = "MASTER_PASSWORD = '%s';";
@@ -1844,6 +1844,58 @@ string MariaDBServer::generate_change_master_cmd(ClusterOperation& op, const Sla
 #endif
     change_cmd += string_printf(MASTER_PW, op.replication_password.c_str());
     return change_cmd;
+}
+
+bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op)
+{
+    StopWatch timer;
+    const MariaDBServer* old_master = op.demotion_target;
+    const MariaDBServer* new_master = op.promotion_target;
+
+    auto old_conn = slave_connection_status_mutable(old_master);
+    mxb_assert(old_conn);
+    bool success = false;
+    // First, just stop the slave connection.
+    bool stopped = stop_slave_conn(old_conn, StopMode::STOP_ONLY, op.time_remaining, op.error_out);
+    op.time_remaining -= timer.restart();
+    if (stopped)
+    {
+        SlaveStatus modified_conn = *old_conn;
+        SERVER* target_server = new_master->m_server_base->server;
+        modified_conn.master_host = target_server->address;
+        modified_conn.master_port = target_server->port;
+        string change_master = generate_change_master_cmd(op, modified_conn);
+        string error_msg;
+        bool changed = execute_cmd_time_limit(change_master, op.time_remaining, &error_msg);
+        op.time_remaining -= timer.restart();
+        if (changed)
+        {
+            string start = string_printf("START SLAVE '%s';", old_conn->name.c_str());
+            bool started = execute_cmd_time_limit(start, op.time_remaining, &error_msg);
+            op.time_remaining -= timer.restart();
+            if (started)
+            {
+                success = true;
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(op.error_out,
+                                     "%s could not be started: %s",
+                                     modified_conn.to_short_string(name()).c_str(),
+                                     error_msg.c_str());
+            }
+        }
+        else
+        {
+            // TODO: This may currently print out passwords.
+            PRINT_MXS_JSON_ERROR(op.error_out,
+                                 "%s could not be redirected to [%s]:%i: %s",
+                                 old_conn->to_short_string(name()).c_str(),
+                                 modified_conn.master_host.c_str(), modified_conn.master_port,
+                                 error_msg.c_str());
+        }
+    }   // 'stop_slave_conn' prints its own errors
+    return success;
 }
 
 string SlaveStatus::to_string() const

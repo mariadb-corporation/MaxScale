@@ -502,6 +502,14 @@ public:
      */
     bool promote(ClusterOperation& operation);
 
+    /**
+     * Redirect the slave connection going to demotion target to replicate from promotion target.
+     *
+     * @param op Operation descriptor
+     * @return True on success
+     */
+    bool redirect_existing_slave_conn(ClusterOperation& op);
+
 private:
     class EventInfo;
     typedef std::function<void (const EventInfo&, json_t** error_out)> ManipulatorFunc;

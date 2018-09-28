@@ -22,6 +22,7 @@
 using std::string;
 using std::unique_ptr;
 using maxscale::string_printf;
+using maxbase::StopWatch;
 
 static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
                                     "for monitor '%s' via MaxAdmin or the REST API, or restart MaxScale.";
@@ -418,6 +419,46 @@ int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master,
 }
 
 /**
+ * Redirect slaves to replicate from the promotion target.
+ *
+ * @param op Operation descriptor
+ * @param slaves An array of slaves to redirect
+ * @param redirected_slaves A vector where to insert successfully redirected slaves
+ * @return The number of slaves successfully redirected
+ */
+int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op, const ServerArray& slaves,
+                                       ServerArray* redirected_slaves)
+{
+    mxb_assert(redirected_slaves != NULL);
+    if (slaves.empty())
+    {
+        // This is ok, nothing to do.
+        return 0;
+    }
+
+    string slave_names = monitored_servers_to_string(slaves);
+    MXS_NOTICE("Redirecting %s to replicate from %s instead of %s.",
+               slave_names.c_str(), op.promotion_target->name(), op.demotion_target->name());
+    int successes = 0;
+    for (MariaDBServer* redirectable : slaves)
+    {
+        if (redirectable->redirect_existing_slave_conn(op))
+        {
+            successes++;
+            redirected_slaves->push_back(redirectable);
+        }
+    }
+    if (size_t(successes) == slaves.size())
+    {
+        MXS_NOTICE("All redirects successful.");
+    }
+    else
+    {
+        MXS_WARNING("%lu out of %lu redirects failed.", slaves.size() - successes, slaves.size());
+    }
+    return successes;
+}
+/**
  * Set the new master to replicate from the cluster external master.
  *
  * @param new_master The server being promoted
@@ -723,13 +764,11 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                 {
                     redirected_slaves.push_back(demotion_target);
                 }
-                int redirects = redirect_slaves(promotion_target, redirectable_slaves, &redirected_slaves);
+                int redirects = redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
 
                 bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
                 if (success)
                 {
-                    op.time_remaining -= timer.restart();
-
                     // Step 6: Finally, add an event to the new master to advance gtid and wait for the slaves
                     // to receive it. If using external replication, skip this step. Come up with an
                     // alternative later.
@@ -793,7 +832,6 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
 {
     mxb_assert(op.promotion_target && op.demotion_target);
     MariaDBServer* const promotion_target = op.promotion_target;
-    maxbase::StopWatch timer;
 
     // Step 1: Populate a vector with all slaves not the selected master.
     ServerArray redirectable_slaves = get_redirectables(promotion_target, op.demotion_target);
@@ -802,17 +840,17 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
     // Step 2: Stop and reset slave, set read-only to 0.
     if (promotion_target->promote(op))
     {
+        // Point of no return. Even if following steps fail, do not try to undo.
         m_next_master = promotion_target;
         m_cluster_modified = true;
 
         // Step 3: Redirect slaves.
         ServerArray redirected_slaves;
-        int redirects = redirect_slaves(promotion_target, redirectable_slaves, &redirected_slaves);
+        int redirects = redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
         bool success = redirectable_slaves.empty() ? true : redirects > 0;
         if (success)
         {
-            op.time_remaining -= timer.restart();
-
+            StopWatch timer;
             // Step 4: Finally, add an event to the new master to advance gtid and wait for the slaves
             // to receive it. seconds_remaining can be 0 or less at this point. Even in such a case
             // wait_cluster_stabilization() may succeed if replication is fast enough. If using external
@@ -1679,9 +1717,9 @@ void MariaDBMonitor::check_cluster_operations_support()
  * @return The first connected slave or NULL if none found
  */
 const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer* demotion_target,
-                                                            maxbase::Duration* event_age_out)
+                                                            maxbase::Duration*   event_age_out)
 {
-    auto time_now =  maxbase::Clock::now();
+    auto time_now = maxbase::Clock::now();
     maxbase::Clock::time_point alive_after = time_now - std::chrono::seconds(m_master_failure_timeout);
 
     const MariaDBServer* connected_slave = NULL;
