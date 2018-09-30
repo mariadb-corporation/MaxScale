@@ -1176,7 +1176,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE *self,
             table_len = default_table_len;
         }
 
-        char buffer[database_len + 1 + table_len + strlen(info->column) + 1];
+        char buffer[database_len + 1 + table_len + 1 + strlen(info->column) + 1];
         buffer[0] = 0;
 
         if (database)
