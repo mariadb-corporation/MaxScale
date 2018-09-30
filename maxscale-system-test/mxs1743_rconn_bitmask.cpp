@@ -43,7 +43,12 @@ int main(int argc, char** argv)
     execute_query_silent(test.repl->nodes[0], "DROP USER IF EXISTS 'mxs1743'@'%'");
     test.try_query(test.repl->nodes[0], "%s", "CREATE USER 'mxs1743'@'%' IDENTIFIED BY 'mxs1743'");
     test.try_query(test.repl->nodes[0], "%s", "GRANT ALL ON *.* TO 'mxs1743'@'%'");
+
+    test.tprintf("Syncing slaves");
+    test.set_timeout(60);
     test.repl->sync_slaves();
+
+    test.tprintf("Opening new connections to verify readconnroute works");
 
     for (int i = 0; i < 20; i++)
     {
@@ -62,6 +67,7 @@ int main(int argc, char** argv)
     // Give the connections a few seconds to establish
     sleep(5);
 
+    test.tprintf("Checking the number of connections");
     std::string query =
         "SELECT COUNT(*) AS connections FROM information_schema.processlist WHERE user = 'mxs1743'";
     char master_connections[1024];

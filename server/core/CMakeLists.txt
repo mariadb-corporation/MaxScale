@@ -48,12 +48,6 @@ add_library(maxscale-common SHARED
   utils.cc
   )
 
-if(WITH_JEMALLOC)
-  target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})
-elseif(WITH_TCMALLOC)
-  target_link_libraries(maxscale-common ${TCMALLOC_LIBRARIES})
-endif()
-
 target_link_libraries(maxscale-common
   maxbase
   ${MARIADB_CONNECTOR_LIBRARIES}
@@ -75,6 +69,10 @@ target_link_libraries(maxscale-common
   ${MICROHTTPD_LIBRARIES}
   ${CURL_LIBRARIES}
 )
+
+if(WITH_ASAN AND ASAN_FOUND)
+  target_link_libraries(maxscale-common ${ASAN_LIBRARIES})
+endif()
 
 find_library(HAVE_LIBDL NAMES dl)
 if (HAVE_LIBDL)
