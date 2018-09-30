@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(300);
-    int iter = 10;
+    int iter = 3;
 
     Test->repl->execute_query_all_nodes( (char *) "set global max_allowed_packet=10000000");
 
