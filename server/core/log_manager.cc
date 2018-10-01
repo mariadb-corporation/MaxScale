@@ -160,6 +160,7 @@ static bool flushall_flag;
 static bool flushall_started_flag;
 static bool flushall_done_flag;
 static HASHTABLE* message_stats;
+static bool redirect_stdout = false;
 
 /** This is used to detect if the initialization of the log manager has failed
  * and that it isn't initialized again after a failure has occurred. */
@@ -572,9 +573,12 @@ static bool logmanager_init_nomutex(const char* ident,
     succ = true;
     lm->lm_enabled = true;
 
-    // Redirect stdout and stderr to the log file
-    freopen(lm->lm_logfile.lf_full_file_name, "a", stdout);
-    freopen(lm->lm_logfile.lf_full_file_name, "a", stderr);
+    if (redirect_stdout)
+    {
+        // Redirect stdout and stderr to the log file
+        freopen(lm->lm_logfile.lf_full_file_name, "a", stdout);
+        freopen(lm->lm_logfile.lf_full_file_name, "a", stderr);
+    }
 
 return_succ:
     if (err != 0)
@@ -2159,7 +2163,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
                 LOG_ERROR("MaxScale Log: Error, could not re-open log file %s.\n",
                           lf->lf_full_file_name);
             }
-            else
+            else if (redirect_stdout)
             {
                 // Redirect stdout and stderr to the new log file
                 freopen(lf->lf_full_file_name, "a", stdout);
@@ -3130,4 +3134,9 @@ json_t* mxs_logs_to_json(const char* host)
     json_object_set_new(data, CN_TYPE, json_string("logs"));
 
     return mxs_json_resource(host, MXS_JSON_API_LOGS, data);
+}
+
+void mxs_log_redirect_stdout(bool redirect)
+{
+    redirect_stdout = redirect;
 }

@@ -1985,6 +1985,11 @@ int main(int argc, char **argv)
             log_target = MXS_LOG_TARGET_SHMEM;
         }
 
+        if (!to_stdout && daemon_mode)
+        {
+            mxs_log_redirect_stdout(true);
+        }
+
         succp = mxs_log_init(NULL, get_logdir(), log_target);
 
         if (!succp)

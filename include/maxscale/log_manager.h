@@ -106,6 +106,7 @@ void mxs_log_set_maxlog_enabled(bool enabled);
 void mxs_log_set_highprecision_enabled(bool enabled);
 void mxs_log_set_augmentation(int bits);
 void mxs_log_set_throttling(const MXS_LOG_THROTTLING* throttling);
+void mxs_log_redirect_stdout(bool redirect);
 
 void mxs_log_get_throttling(MXS_LOG_THROTTLING* throttling);
 json_t* mxs_logs_to_json(const char* host);
