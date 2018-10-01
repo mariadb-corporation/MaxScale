@@ -24,23 +24,9 @@
 #include <maxscale/log.h>
 #include <maxscale/utils.h>
 
-#if defined (BUFFER_TRACE)
-#include <maxscale/hashtable.h>
-#include <execinfo.h>
-
-static HASHTABLE* buffer_hashtable = NULL;
-#endif
-
 static void             gwbuf_free_one(GWBUF* buf);
 static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf,
                                                    buffer_object_t* bufobj);
-
-#if defined (BUFFER_TRACE)
-static void gwbuf_add_to_hashtable(GWBUF* buf);
-static int  bhashfn(void* key);
-static int  bcmpfn(void* key1, void* key2);
-static void gwbuf_remove_from_hashtable(GWBUF* buf);
-#endif
 
 /**
  * Allocate a new gateway buffer structure of size bytes.
@@ -91,12 +77,6 @@ retblock:
     {
         MXS_ERROR("Memory allocation failed due to %s.", mxs_strerror(errno));
     }
-#if defined (BUFFER_TRACE)
-    else
-    {
-        gwbuf_add_to_hashtable(rval);
-    }
-#endif
     return rval;
 }
 
@@ -117,97 +97,6 @@ GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data)
     }
     return rval;
 }
-
-#if defined (BUFFER_TRACE)
-/**
- * Store a trace of buffer creation
- *
- * @param buf The buffer to record
- */
-static void gwbuf_add_to_hashtable(GWBUF* buf)
-{
-    void* array[16];
-    size_t size, i, total;
-    char** strings;
-    char* tracetext;
-
-    size = backtrace(array, 16);
-    strings = backtrace_symbols(array, size);
-    total = (2 * size) + 1;
-    for (i = 0; i < size; i++)
-    {
-        total += strlen(strings[i]);
-    }
-    tracetext = (char*)MXS_MALLOC(total);
-    if (tracetext)
-    {
-        char* ptr = tracetext;
-        for (i = 0; i < size; i++)
-        {
-            sprintf(ptr, "\t%s\n", strings[i]);
-            ptr += (strlen(strings[i]) + 2);
-        }
-        free (strings);
-
-        if (NULL == buffer_hashtable)
-        {
-            buffer_hashtable = hashtable_alloc(10000, bhashfn, bcmpfn);
-            hashtable_memory_fns(buffer_hashtable, NULL, NULL, NULL, hashtable_item_free);
-        }
-        hashtable_add(buffer_hashtable, buf, (void*)tracetext);
-    }
-}
-
-/**
- * Hash a buffer (address) to an integer
- *
- * @param key The pointer to the buffer
- */
-static int bhashfn(void* key)
-{
-    return (int)((uintptr_t) key % INT_MAX);
-}
-
-/**
- * Compare two buffer keys (pointers)
- *
- * @param key1 The pointer to the first buffer
- * @param key2 The pointer to the second buffer
- */
-static int bcmpfn(void* key1, void* key2)
-{
-    return key1 == key2 ? 0 : 1;
-}
-
-/**
- * Remove a buffer from the store of buffer traces
- *
- * @param buf The buffer to be removed
- */
-static void gwbuf_remove_from_hashtable(GWBUF* buf)
-{
-    hashtable_delete(buffer_hashtable, buf);
-}
-
-/**
- * Print all buffer traces via a given print DCB
- *
- * @param pdcb  Print DCB for output
- */
-void dprintAllBuffers(void* pdcb)
-{
-    void* buf;
-    char* backtrace;
-    HASHITERATOR* buffers = hashtable_iterator(buffer_hashtable);
-    while (NULL != (buf = hashtable_next(buffers)))
-    {
-        dcb_printf((DCB*)pdcb, "Buffer: %p\n", (void*)buf);
-        backtrace = hashtable_fetch(buffer_hashtable, buf);
-        dcb_printf((DCB*)pdcb, "%s", backtrace);
-    }
-    hashtable_iterator_free(buffers);
-}
-#endif
 
 /**
  * Free a list of gateway buffers
@@ -265,9 +154,7 @@ static void gwbuf_free_one(GWBUF* buf)
         buf->hint = buf->hint->next;
         hint_free(h);
     }
-#if defined (BUFFER_TRACE)
-    gwbuf_remove_from_hashtable(buf);
-#endif
+
     MXS_FREE(buf);
 }
 
@@ -298,9 +185,7 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
     rval->gwbuf_type = buf->gwbuf_type;
     rval->tail = rval;
     rval->next = NULL;
-#if defined (BUFFER_TRACE)
-    gwbuf_add_to_hashtable(rval);
-#endif
+
     return rval;
 }
 
@@ -381,9 +266,7 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
     clonebuf->hint = NULL;
     clonebuf->next = NULL;
     clonebuf->tail = clonebuf;
-#if defined (BUFFER_TRACE)
-    gwbuf_add_to_hashtable(clonebuf);
-#endif
+
     return clonebuf;
 }
 
