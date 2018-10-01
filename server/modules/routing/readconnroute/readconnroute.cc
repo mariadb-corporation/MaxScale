@@ -367,8 +367,8 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
                     candidate = ref;
                 }
             }
-            else if (ref->connections / ref->server_weight
-                     < candidate->connections / candidate->server_weight)
+            else if ((ref->connections + 1) / ref->server_weight
+                     < (candidate->connections + 1) / candidate->server_weight)
             {
                 /* ref has a better score. */
                 candidate = ref;
