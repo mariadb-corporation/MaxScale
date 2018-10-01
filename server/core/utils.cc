@@ -41,6 +41,7 @@
 #include <netinet/tcp.h>
 #include <openssl/sha.h>
 #include <curl/curl.h>
+#include <thread>
 
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
@@ -1172,17 +1173,8 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un* addr, const 
 
 long get_processor_count()
 {
-    long processors = 1;
-#ifdef _SC_NPROCESSORS_ONLN
-    if ((processors = sysconf(_SC_NPROCESSORS_ONLN)) <= 0)
-    {
-        MXS_WARNING("Unable to establish the number of available cores. Defaulting to 1.");
-        processors = 1;
-    }
-#else
-#error _SC_NPROCESSORS_ONLN not available.
-#endif
-    return processors;
+    mxb_assert(sysconf(_SC_NPROCESSORS_ONLN) == std::thread::hardware_concurrency());
+    return std::max(std::thread::hardware_concurrency(), 1U);
 }
 
 int64_t get_total_memory()
