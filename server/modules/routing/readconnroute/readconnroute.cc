@@ -475,11 +475,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
 {
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
     mxb_assert(router_cli_ses->backend_dcb);
-
-    if (router_cli_ses->backend_dcb)
-    {
-        dcb_close(router_cli_ses->backend_dcb);
-    }
+    dcb_close(router_cli_ses->backend_dcb);
 }
 
 /** Log routing failure due to closed session */
@@ -715,26 +711,11 @@ static void handleError(MXS_ROUTER* instance,
 
 {
     mxb_assert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    DCB* client_dcb;
-    MXS_SESSION* session = problem_dcb->session;
-    mxs_session_state_t sesstate;
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
+    mxb_assert(problem_dcb->session->state == SESSION_STATE_ROUTER_READY);
+    DCB* client_dcb = problem_dcb->session->client_dcb;
+    client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
 
-    sesstate = session->state;
-    client_dcb = session->client_dcb;
-
-    if (sesstate == SESSION_STATE_ROUTER_READY)
-    {
-        client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
-    }
-
-    if (router_cli_ses && problem_dcb == router_cli_ses->backend_dcb)
-    {
-        router_cli_ses->backend_dcb = NULL;
-        dcb_close(problem_dcb);
-    }
-
-    /** false because connection is not available anymore */
+    // The DCB will be closed once the session closes, no need to close it here
     *succp = false;
 }
 
