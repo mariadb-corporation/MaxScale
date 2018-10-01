@@ -572,6 +572,10 @@ static bool logmanager_init_nomutex(const char* ident,
     succ = true;
     lm->lm_enabled = true;
 
+    // Redirect stdout and stderr to the log file
+    freopen(lm->lm_logfile.lf_full_file_name, "a", stdout);
+    freopen(lm->lm_logfile.lf_full_file_name, "a", stderr);
+
 return_succ:
     if (err != 0)
     {
@@ -2154,6 +2158,12 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             {
                 LOG_ERROR("MaxScale Log: Error, could not re-open log file %s.\n",
                           lf->lf_full_file_name);
+            }
+            else
+            {
+                // Redirect stdout and stderr to the new log file
+                freopen(lf->lf_full_file_name, "a", stdout);
+                freopen(lf->lf_full_file_name, "a", stderr);
             }
         }
 

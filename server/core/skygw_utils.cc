@@ -839,7 +839,6 @@ void skygw_file_close(skygw_file_t* file)
         }
         else
         {
-            ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);
             skygw_file_free(file);
         }
     }

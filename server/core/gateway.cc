@@ -350,9 +350,12 @@ static void sigterm_handler(int i)
 
     if (n_shutdowns == 1)
     {
-        if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+        if (!daemon_mode)
         {
-            printf("Failed to write shutdown message!\n");
+            if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+            {
+                printf("Failed to write shutdown message!\n");
+            }
         }
     }
     else
@@ -369,16 +372,22 @@ sigint_handler(int i)
 
     if (n_shutdowns == 1)
     {
-        if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+        if (!daemon_mode)
         {
-            printf("Failed to write shutdown message!\n");
+            if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+            {
+                printf("Failed to write shutdown message!\n");
+            }
         }
     }
     else if (n_shutdowns == 2)
     {
-        if (write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1) == -1)
+        if (!daemon_mode)
         {
-            printf("Failed to write shutdown message!\n");
+            if (write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1) == -1)
+            {
+                printf("Failed to write shutdown message!\n");
+            }
         }
     }
     else
@@ -500,8 +509,11 @@ sigfatal_handler(int i)
     void *addrs[128];
     int count = backtrace(addrs, 128);
 
-    // First print the stack trace to stderr as malloc is likely broken
-    backtrace_symbols_fd(addrs, count, STDERR_FILENO);
+    if (!daemon_mode)
+    {
+        // First print the stack trace to stderr as malloc is likely broken
+        backtrace_symbols_fd(addrs, count, STDERR_FILENO);
+    }
 
     MXS_ALERT("Fatal: MaxScale " MAXSCALE_VERSION " received fatal signal %d. "
               "Attempting backtrace.", i);
