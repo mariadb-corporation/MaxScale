@@ -124,6 +124,9 @@ typedef struct gwbuf
     BUF_PROPERTY*  properties;  /*< Buffer properties */
     struct server* server;      /*< The target server where the buffer is executed */
     uint32_t       gwbuf_type;  /*< buffer's data type information */
+#ifdef SS_DEBUG
+    int owner;      /*< Owner of the thread, only for debugging */
+#endif
 } GWBUF;
 
 /*<
