@@ -35,16 +35,21 @@ int main(int argc, char *argv[])
     test.stop_timeout();
     test.repl->connect();
     test.repl->sync_slaves();
+    test.repl->disconnect();
 
     test.set_timeout(60);
+    test.maxscales->connect();
     check_val(test.maxscales->conn_rwsplit[0], test);
     check_val(test.maxscales->conn_master[0], test);
     check_val(test.maxscales->conn_slave[0], test);
+    test.maxscales->disconnect();
 
+    nodes->connect();
     for (int i = 0; i < test.repl->N; i++)
     {
         check_val(nodes->nodes[i], test);
     }
+    nodes->disconnect();
 
     return test.global_result;
 }
