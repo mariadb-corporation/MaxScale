@@ -14,7 +14,9 @@
 #include "mariadbmon.hh"
 
 #include <inttypes.h>
+#include <set>
 #include <sstream>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/clock.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/utils.hh>
@@ -23,6 +25,7 @@ using std::string;
 using std::unique_ptr;
 using maxscale::string_printf;
 using maxbase::StopWatch;
+using maxbase::Duration;
 
 static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
                                     "for monitor '%s' via MaxAdmin or the REST API, or restart MaxScale.";
@@ -837,52 +840,35 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
     ServerArray redirectable_slaves = get_redirectables(promotion_target, op.demotion_target);
 
     bool rval = false;
-    // Step 2: Stop and reset slave, set read-only to 0.
+    // Step 2: Stop and reset slave, set read-only to OFF.
     if (promotion_target->promote(op))
     {
-        // Point of no return. Even if following steps fail, do not try to undo.
-        m_next_master = promotion_target;
+        // Point of no return. Even if following steps fail, do not try to undo. Failover considered
+        // at least partially successful.
+        rval = true;
         m_cluster_modified = true;
+        if (op.demotion_target_is_master)
+        {
+            // Force a master swap on next tick.
+            m_next_master = promotion_target;
+        }
 
         // Step 3: Redirect slaves.
         ServerArray redirected_slaves;
-        int redirects = redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
-        bool success = redirectable_slaves.empty() ? true : redirects > 0;
-        if (success)
+        redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
+        if (!redirected_slaves.empty())
         {
             StopWatch timer;
-            // Step 4: Finally, add an event to the new master to advance gtid and wait for the slaves
-            // to receive it. seconds_remaining can be 0 or less at this point. Even in such a case
-            // wait_cluster_stabilization() may succeed if replication is fast enough. If using external
-            // replication, skip this step. Come up with an alternative later.
-            if (m_external_master_port != PORT_UNKNOWN)
-            {
-                MXS_WARNING("Replicating from external master, skipping final check.");
-                rval = true;
-            }
-            else if (redirected_slaves.empty())
-            {
-                // No slaves to check. Assume success.
-                rval = true;
-                MXS_DEBUG("Failover: no slaves to redirect, skipping stabilization check.");
-            }
-            else if (wait_cluster_stabilization(promotion_target, redirected_slaves,
-                                                op.time_remaining.secs()))
-            {
-                rval = true;
-                auto step4_time = timer.restart();
-                op.time_remaining -= step4_time;
-                MXS_DEBUG("Failover: slave replication confirmation took %.1f seconds with "
-                          "%.1f seconds to spare.",
-                          step4_time.secs(), op.time_remaining.secs());
-            }
-        }
-        else
-        {
-            print_redirect_errors(NULL, redirectable_slaves, op.error_out);
+            /* Step 4: Finally, check that slaves are connected to the new master. Even if
+             * time is out at this point, wait_cluster_stabilization() will check the slaves
+             * once so that latest status is printed. */
+            wait_cluster_stabilization_ex(op, redirected_slaves);
+            auto step4_time = timer.lap();
+            MXS_DEBUG("Failover: slave replication confirmation took %.1f seconds with "
+                      "%.1f seconds to spare.",
+                      step4_time.secs(), op.time_remaining.secs());
         }
     }
-
     return rval;
 }
 
@@ -1140,6 +1126,132 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master,
                   "the new master failed.");
     }
     return rval;
+}
+
+/**
+ * Check that the given slaves are connected and replicating from the new master. Only checks
+ * the SLAVE STATUS of the slaves.
+ *
+ * @param op Operation descriptor
+ * @param redirected_slaves Slaves to check
+ */
+void MariaDBMonitor::wait_cluster_stabilization_ex(ClusterOperation& op, const ServerArray& redirected_slaves)
+{
+    if (redirected_slaves.empty())
+    {
+        // No need to check anything or print messages.
+        return;
+    }
+
+    StopWatch timer;
+    const MariaDBServer* new_master = op.promotion_target;
+    // Check all the servers in the list. Using a set because erasing from container.
+    std::set<MariaDBServer*> unconfirmed(redirected_slaves.begin(), redirected_slaves.end());
+    ServerArray successes;
+    ServerArray repl_fails;
+    ServerArray query_fails;
+    bool time_is_up = false;    // Try at least once, even if time is up.
+
+    while (!unconfirmed.empty() && !time_is_up)
+    {
+        auto iter = unconfirmed.begin();
+        while (iter != unconfirmed.end())
+        {
+            MariaDBServer* slave = *iter;
+            if (slave->do_show_slave_status())
+            {
+                auto slave_conn = slave->slave_connection_status_host_port(new_master);
+                if (slave_conn == NULL)
+                {
+                    // Highly unlikely. Maybe someone just removed the slave connection after it was created.
+                    MXS_WARNING("%s does not have a slave connection to %s although one should have "
+                                "been created.",
+                                slave->name(), new_master->name());
+                    repl_fails.push_back(*iter);
+                    iter = unconfirmed.erase(iter);
+                }
+                else if (slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_YES
+                         && slave_conn->slave_sql_running == true)
+                {
+                    // This slave has connected to master and replication seems to be ok.
+                    successes.push_back(*iter);
+                    iter = unconfirmed.erase(iter);
+                }
+                else if (slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_NO)
+                {
+                    // IO error on slave
+                    MXS_WARNING("%s cannot start replication because of IO thread error: '%s'.",
+                                slave_conn->to_short_string(slave->name()).c_str(),
+                                slave_conn->last_error.c_str());
+                    repl_fails.push_back(*iter);
+                    iter = unconfirmed.erase(iter);
+                }
+                else if (slave_conn->slave_sql_running == false)
+                {
+                    // SQL error on slave
+                    MXS_WARNING("%s cannot start replication because of SQL thread error: '%s'.",
+                                slave_conn->to_short_string(slave->name()).c_str(),
+                                slave_conn->last_error.c_str());
+                    repl_fails.push_back(*iter);
+                    iter = unconfirmed.erase(iter);
+                }
+                else
+                {
+                    // Slave IO is still connecting, must wait.
+                    ++iter;
+                }
+            }
+            else
+            {
+                query_fails.push_back(*iter);
+                iter = unconfirmed.erase(iter);
+            }
+        }
+
+        op.time_remaining -= timer.lap();
+        if (!unconfirmed.empty())
+        {
+            if (op.time_remaining.secs() > 0)
+            {
+                double standard_sleep = 0.5;    // In seconds.
+                // If we have unconfirmed slaves and have time remaining, sleep a bit and try again.
+                /* TODO: This sleep is kinda pointless, because whether or not replication begins,
+                 * all operations for failover/switchover are complete. The sleep is only required to
+                 * get correct messages to the user. Think about removing it, or shortening the maximum
+                 * time of this function. */
+                Duration sleep_time = (op.time_remaining.secs() > standard_sleep) ?
+                    Duration(standard_sleep) : op.time_remaining;
+                std::this_thread::sleep_for(sleep_time);
+            }
+            else
+            {
+                // Have undecided slaves and is out of time.
+                time_is_up = true;
+            }
+        }
+    }
+
+    if (successes.size() == redirected_slaves.size())
+    {
+        // Complete success.
+        MXS_NOTICE("All redirected slaves successfully started replication from %s.", new_master->name());
+    }
+    else
+    {
+        if (!successes.empty())
+        {
+            MXS_NOTICE("%s successfully started replication from %s.",
+                       monitored_servers_to_string(successes).c_str(), new_master->name());
+        }
+        // Something went wrong.
+        auto fails = query_fails.size() + repl_fails.size() + unconfirmed.size();
+        const char MSG[] = "%lu slaves did not start replicating from %s. "
+                           "%lu encountered an I/O or SQL error, %lu failed to reply and %lu did not "
+                           "connect to %s within the time limit.";
+        MXS_WARNING(MSG, fails, new_master->name(), repl_fails.size(), query_fails.size(),
+                    unconfirmed.size(), new_master->name());
+    }
+    op.time_remaining -= timer.lap();
 }
 
 /**

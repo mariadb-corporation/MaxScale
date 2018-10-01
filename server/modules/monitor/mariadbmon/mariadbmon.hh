@@ -280,6 +280,7 @@ private:
     bool        wait_cluster_stabilization(MariaDBServer* new_master,
                                            const ServerArray& slaves,
                                            int seconds_remaining);
+    void wait_cluster_stabilization_ex(ClusterOperation& op, const ServerArray& slaves);
     void report_and_disable(const std::string& operation,
                             const std::string& setting_name,
                             bool* setting_var);

@@ -282,6 +282,15 @@ public:
     const SlaveStatus* slave_connection_status(const MariaDBServer* target) const;
 
     /**
+     * Find slave connection to the target server. Only considers host and port when selecting
+     * the connection. A matching connection is accepted even if its IO or SQL thread is stopped.
+     *
+     * @param target Immediate master or relay server
+     * @return The slave status info of the slave thread, or NULL if not found
+     */
+    const SlaveStatus* slave_connection_status_host_port(const MariaDBServer* target) const;
+
+    /**
      * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
      *
      * @return True if server has binary log enabled

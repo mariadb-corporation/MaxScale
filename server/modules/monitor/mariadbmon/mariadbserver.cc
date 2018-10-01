@@ -1179,6 +1179,20 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
     return rval;
 }
 
+const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaDBServer* target) const
+{
+    string target_host = target->m_server_base->server->address;
+    int target_port = target->m_server_base->server->port;
+    for (const SlaveStatus& ss : m_slave_status)
+    {
+        if (ss.master_host == target_host && ss.master_port == target_port)
+        {
+            return &ss;
+        }
+    }
+    return NULL;
+}
+
 /**
  * Private, non-const version of 'slave_connection_status'.
  */
