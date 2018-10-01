@@ -692,12 +692,7 @@ static int dcb_read_no_bytes_available(DCB* dcb, int nreadtotal)
 static GWBUF* dcb_basic_read(DCB* dcb, int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread)
 {
     GWBUF* buffer;
-
-    int bufsize = MXS_MIN(bytesavailable, MXS_MAX_NW_READ_BUFFER_SIZE);
-    if (maxbytes)
-    {
-        bufsize = MXS_MIN(bufsize, maxbytes - nreadtotal);
-    }
+    int bufsize = maxbytes == 0 ? bytesavailable : MXS_MIN(bytesavailable, maxbytes - nreadtotal);
 
     if ((buffer = gwbuf_alloc(bufsize)) == NULL)
     {
@@ -787,27 +782,22 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
  */
 static GWBUF* dcb_basic_read_SSL(DCB* dcb, int* nsingleread)
 {
-    unsigned char temp_buffer[MXS_MAX_NW_READ_BUFFER_SIZE];
+    unsigned char temp_buffer[MXS_SO_RCVBUF_SIZE];
     GWBUF* buffer = NULL;
 
-    *nsingleread = SSL_read(dcb->ssl, (void*)temp_buffer, MXS_MAX_NW_READ_BUFFER_SIZE);
+    *nsingleread = SSL_read(dcb->ssl, temp_buffer, MXS_SO_RCVBUF_SIZE);
+
     dcb->stats.n_reads++;
 
     switch (SSL_get_error(dcb->ssl, *nsingleread))
     {
     case SSL_ERROR_NONE:
         /* Successful read */
-        MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
-                  *nsingleread,
-                  dcb,
-                  STRDCBSTATE(dcb->state),
-                  dcb->fd);
         if (*nsingleread && (buffer = gwbuf_alloc_and_load(*nsingleread, (void*)temp_buffer)) == NULL)
         {
             *nsingleread = -1;
             return NULL;
         }
-
         /* If we were in a retry situation, need to clear flag and attempt write */
         if (dcb->ssl_read_want_write || dcb->ssl_read_want_read)
         {
@@ -819,14 +809,12 @@ static GWBUF* dcb_basic_read_SSL(DCB* dcb, int* nsingleread)
 
     case SSL_ERROR_ZERO_RETURN:
         /* react to the SSL connection being closed */
-        MXS_DEBUG("SSL connection appears to have hung up");
         poll_fake_hangup_event(dcb);
         *nsingleread = 0;
         break;
 
     case SSL_ERROR_WANT_READ:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
-        MXS_DEBUG("SSL connection want read");
         dcb->ssl_read_want_write = false;
         dcb->ssl_read_want_read = true;
         *nsingleread = 0;
@@ -834,7 +822,6 @@ static GWBUF* dcb_basic_read_SSL(DCB* dcb, int* nsingleread)
 
     case SSL_ERROR_WANT_WRITE:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
-        MXS_DEBUG("SSL connection want write");
         dcb->ssl_read_want_write = true;
         dcb->ssl_read_want_read = false;
         *nsingleread = 0;
