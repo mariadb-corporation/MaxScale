@@ -1,0 +1,72 @@
+[maxscale]
+threads=###threads###
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+weight=1
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
+protocol=MySQLBackend
+weight=1
+
+[server3]
+type=server
+address=###node_server_IP_3###
+port=###node_server_port_3###
+protocol=MySQLBackend
+weight=0
+
+[server4]
+type=server
+address=###node_server_IP_4###
+port=###node_server_port_4###
+protocol=MySQLBackend
+weight=0
+
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+# Note that server3 and server4 are not monitored
+servers=server1,server2
+user=maxskysql
+password=skysql
+monitor_interval=1000
+
+[hybridizer]
+type=filter
+module=namedserverfilter
+match03=test[.]t3
+target03=server3
+match04=test[.]t4
+target04=server4
+
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1,server2,server3,server4
+user=maxskysql
+password=skysql
+filters=hybridizer
+weightby=weight
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+socket=default
