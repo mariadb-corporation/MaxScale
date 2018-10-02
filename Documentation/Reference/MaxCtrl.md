@@ -20,6 +20,7 @@ For more information about the MaxScale REST API, refer to the
 * [show](#show)
 * [set](#set)
 * [clear](#clear)
+* [drain](#drain)
 * [enable](#enable)
 * [disable](#disable)
 * [create](#create)
@@ -62,6 +63,9 @@ Options:
   --version         Show version number                                [boolean]
   --tls-passphrase  Password for the TLS private key                    [string]
   --help            Show help                                          [boolean]
+
+If no commands are given, maxctrl is started in interactive mode. Use `exit` to
+exit the interactive mode.
 ```
 
 ## list
@@ -77,6 +81,7 @@ Commands:
   sessions             List sessions
   filters              List filters
   modules              List loaded modules
+  threads              List threads
   users                List created network users
   commands             List module commands
 
@@ -124,6 +129,12 @@ List all filters in MaxScale.
 
 List all currently loaded modules.
 
+### list threads
+
+`Usage: list threads`
+
+List all worker threads.
+
 ### list users
 
 `Usage: list users`
@@ -143,13 +154,20 @@ Usage: show <command>
 
 Commands:
   server <server>    Show server
+  servers            Show all servers
   service <service>  Show service
+  services           Show all services
   monitor <monitor>  Show monitor
+  monitors           Show all monitors
   session <session>  Show session
+  sessions           Show all sessions
   filter <filter>    Show filter
+  filters            Show all filters
   module <module>    Show loaded module
+  modules            Show all loaded modules
   maxscale           Show MaxScale information
-  threads            Show worker thread information
+  thread <thread>    Show thread
+  threads            Show all threads
   logging            Show MaxScale logging information
   commands <module>  Show module commands of a module
 
@@ -163,6 +181,12 @@ Show detailed information about a server. The `Parameters` field contains the
 currently configured parameters for this server. See `help alter server` for
 more details about altering server parameters.
 
+### show servers
+
+`Usage: show servers`
+
+Show detailed information about all servers.
+
 ### show service
 
 `Usage: show service <service>`
@@ -170,6 +194,12 @@ more details about altering server parameters.
 Show detailed information about a service. The `Parameters` field contains the
 currently configured parameters for this service. See `help alter service` for
 more details about altering service parameters.
+
+### show services
+
+`Usage: show services`
+
+Show detailed information about all services.
 
 ### show monitor
 
@@ -179,6 +209,12 @@ Show detailed information about a monitor. The `Parameters` field contains the
 currently configured parameters for this monitor. See `help alter monitor` for
 more details about altering monitor parameters.
 
+### show monitors
+
+`Usage: show monitors`
+
+Show detailed information about all monitors.
+
 ### show session
 
 `Usage: show session <session>`
@@ -187,11 +223,27 @@ Show detailed information about a single session. The list of sessions can be
 retrieved with the `list sessions` command. The <session> is the session ID of a
 particular session.
 
+The `Connections` field lists the servers to which the session is connected and
+the `Connection IDs` field lists the IDs for those connections.
+
+### show sessions
+
+`Usage: show sessions`
+
+Show detailed information about all sessions. See `help show session` for more
+details.
+
 ### show filter
 
 `Usage: show filter <filter>`
 
 The list of services that use this filter is show in the `Services` field.
+
+### show filters
+
+`Usage: show filters`
+
+Show detailed information of all filters.
 
 ### show module
 
@@ -200,15 +252,29 @@ The list of services that use this filter is show in the `Services` field.
 This command shows all available parameters as well as detailed version
 information of a loaded module.
 
+### show modules
+
+`Usage: show modules`
+
+Displays detailed information about all modules.
+
 ### show maxscale
 
 `Usage: show maxscale`
 
 See `help alter maxscale` for more details about altering MaxScale parameters.
 
+### show thread
+
+`Usage: show thread <thread>`
+
+Show detailed information about a worker thread.
+
 ### show threads
 
 `Usage: show threads`
+
+Show detailed information about all worker threads.
 
 ### show logging
 
@@ -259,6 +325,31 @@ Commands:
 
 This command clears a server state set by the `set server <server> <state>`
 command
+
+## drain
+
+```
+Usage: drain <command>
+
+Commands:
+  server <server>  Drain a server of connections
+
+Drain options:
+  --drain-timeout  Timeout for the drain operation in seconds. If exceeded, the
+                   server is added back to all services without putting it into
+                   maintenance mode.                      [number] [default: 90]
+
+```
+
+### drain server
+
+`Usage: drain server <server>`
+
+This command drains the server of connections by first removing it from all
+services after which it waits until all connections are closed. When all
+connections are closed, the server is put into the `maintenance` state and added
+back to all the services where it was removed from. To take the server back into
+use, execute `clear server <server> maintenance`.
 
 ## enable
 
@@ -316,10 +407,12 @@ The Linux user accounts are used by the MaxAdmin UNIX Domain Socket interface
 Usage: create <command>
 
 Commands:
-  server <name> <host> <port>       Create a new server
-  monitor <name> <module>           Create a new monitor
-  listener <service> <name> <port>  Create a new listener
-  user <name> <password>            Create a new network user
+  server <name> <host> <port>          Create a new server
+  monitor <name> <module> [params...]  Create a new monitor
+  service <name> <router> <params...>  Create a new service
+  filter <name> <module> [params...]   Create a new filter
+  listener <service> <name> <port>     Create a new listener
+  user <name> <password>               Create a new network user
 
 Common create options:
   --protocol               Protocol module name                         [string]
@@ -336,9 +429,13 @@ Create server options:
   --monitors  Link the created server to these monitors                  [array]
 
 Create monitor options:
-  --servers           Link the created monitor to these servers          [array]
+  --servers           Link the created service to these servers          [array]
   --monitor-user      Username for the monitor user                     [string]
   --monitor-password  Password for the monitor user                     [string]
+
+Create service options:
+  --servers  Link the created service to these servers                   [array]
+  --filters  Link the created service to these filters                   [array]
 
 Create listener options:
   --interface  Interface to listen on                   [string] [default: "::"]
@@ -359,10 +456,26 @@ monitor uses can be altered with the `link` and `unlink` commands.
 
 ### create monitor
 
-`Usage: create monitor <name> <module>`
+`Usage: create monitor <name> <module> [params...]`
 
 The list of servers given with the --servers option should not contain any
-servers that are already monitored by another monitor.
+servers that are already monitored by another monitor. The last argument to this
+command is a list of key=value parameters given as the monitor parameters.
+
+### create service
+
+`Usage: service <name> <router> <params...>`
+
+The last argument to this command is a list of key=value parameters given as the
+service parameters. If the --servers or --filters options are used, they must be
+defined after the service parameters.
+
+### create filter
+
+`Usage: filter <name> <module> [params...]`
+
+The last argument to this command is a list of key=value parameters given as the
+filter parameters.
 
 ### create listener
 
@@ -387,6 +500,8 @@ Commands:
   server <name>              Destroy an unused server
   monitor <name>             Destroy an unused monitor
   listener <service> <name>  Destroy an unused listener
+  service <name>             Destroy an unused service
+  filter <name>              Destroy an unused filter
   user <name>                Remove a network user
 
 ```
@@ -412,6 +527,19 @@ Destroying a monitor causes it to be removed on the next restart. Destroying a
 listener at runtime stops it from accepting new connections but it will still be
 bound to the listening socket. This means that new listeners cannot be created
 to replace destroyed listeners without restarting MaxScale.
+
+### destroy service
+
+`Usage: destroy service <name>`
+
+The service must be unlinked from all servers and filters. All listeners for the
+service must be destroyed before the service itself can be destroyed.
+
+### destroy filter
+
+`Usage: destroy filter <name>`
+
+The filter must not be used by any service when it is destroyed.
 
 ### destroy user
 
@@ -547,11 +675,12 @@ MaxScale.
 Usage: alter <command>
 
 Commands:
-  server <server> <key> <value>    Alter server parameters
-  monitor <monitor> <key> <value>  Alter monitor parameters
-  service <service> <key> <value>  Alter service parameters
-  logging <key> <value>            Alter logging parameters
-  maxscale <key> <value>           Alter MaxScale parameters
+  server <server> <key> <value>           Alter server parameters
+  monitor <monitor> <key> <value>         Alter monitor parameters
+  service <service> <key> <value>         Alter service parameters
+  service-filters <service> [filters...]  Alter filters of a service
+  logging <key> <value>                   Alter logging parameters
+  maxscale <key> <value>                  Alter MaxScale parameters
 
 ```
 
@@ -587,6 +716,19 @@ following list of parameters can be altered at runtime:
     "max_slave_connections",
     "max_slave_replication_lag"
 ]
+
+### alter service-filters
+
+`Usage: alter service-filters <service> [filters...]`
+
+The order of the filters given as the second parameter will also be the order in
+which queries pass through the filter chain. If no filters are given, all
+existing filters are removed from the service.
+
+For example, the command `maxctrl alter service filters my-service A B C` will
+set the filter chain for the service `my-service` so that A gets the query first
+after which it is passed to B and finally to C. This behavior is the same as if
+the `filters=A|B|C` parameter was defined for the service.
 
 ### alter logging
 
