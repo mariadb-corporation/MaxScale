@@ -11,7 +11,6 @@ requirements are as follows:
 * Flex 2.5.35 or later
 * libuuid
 * GNUTLS
-* libcurl
 
 This is the minimum set of requirements that must be met to build the MaxScale
 core package.

@@ -169,24 +169,9 @@ int test_checksums()
     return 0;
 }
 
-void test_http()
-{
-    auto res = mxs::http::get("https://mariadb.com/");
-    std::cout << "https://mariadb.com/ responded with: " << res.code << std::endl;
-    if (res.code == 200)
-    {
-        if (res.headers.count("Date"))
-        {
-            std::cout << "The date is: " << res.headers["Date"] << std::endl;
-        }
-    }
-}
-
 int main(int argc, char* argv[])
 {
     int rv = 0;
-
-    test_http();    // Just to see that it works
 
     rv += test_trim();
     rv += test_trim_leading();

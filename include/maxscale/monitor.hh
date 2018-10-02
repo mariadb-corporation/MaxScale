@@ -338,15 +338,4 @@ MXS_MONITOR_API MonitorApi<MonitorInstance>::s_api =
     &MonitorApi<MonitorInstance>::diagnostics_json,
 };
 
-/**
- * Get the master server of the remote monitor
- *
- * The `peer_hosts`, `peer_user` and `peer_password` parameters must have been defined for this
- * to work.
- *
- * @param name The name of the remote monitor
- *
- * @return The host and port of the monitor or an empty string and 0 if an error occurred
- */
-std::pair<std::string, int> mon_get_external_master(const std::string& name);
 }

@@ -655,26 +655,4 @@ uint64_t get_byteN(const uint8_t* ptr, int bytes);
  */
 uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes);
 
-namespace http
-{
-
-struct Result
-{
-    int                                          code;      // HTTP response code
-    std::string                                  raw_body;  // Raw response body
-    std::unique_ptr<json_t>                      body;      // JSON form of the body if it was valid JSON
-    std::unordered_map<std::string, std::string> headers;   // Headers attached to the response
-};
-
-/**
- * Do a HTTP GET
- *
- * @param url     URL to use
- * @param user    Username to use, optional
- * @param passwor Password for the user, optional
- *
- * @return A Result
- */
-Result get(const std::string& url, const std::string& user = "", const std::string& password = "");
-}
 }
