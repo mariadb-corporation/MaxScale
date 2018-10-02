@@ -18,7 +18,6 @@
 #include <sstream>
 
 #include <maxbase/assert.h>
-#include <maxbase/atomic.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/hint.h>
 #include <maxscale/log.h>
@@ -118,7 +117,9 @@ void gwbuf_free(GWBUF* buf)
  */
 static void gwbuf_free_one(GWBUF* buf)
 {
-    if (mxb::atomic::add(&buf->sbuf->refcount, -1) == 1)
+    --buf->sbuf->refcount;
+
+    if (buf->sbuf->refcount == 0)
     {
         buffer_object_t* bo = buf->sbuf->bufobj;
 
@@ -169,7 +170,7 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
     }
 
     mxb_assert(buf->owner == RoutingWorker::get_current_id());
-    mxb::atomic::add(&buf->sbuf->refcount, 1);
+    ++buf->sbuf->refcount;
 #ifdef SS_DEBUG
     rval->owner = RoutingWorker::get_current_id();
 #endif
@@ -256,7 +257,7 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
         return NULL;
     }
 
-    mxb::atomic::add(&buf->sbuf->refcount, 1);
+    ++buf->sbuf->refcount;
 #ifdef SS_DEBUG
     clonebuf->owner = RoutingWorker::get_current_id();
 #endif
