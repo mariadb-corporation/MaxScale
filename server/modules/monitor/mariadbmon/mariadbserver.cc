@@ -502,20 +502,24 @@ void MariaDBServer::warn_replication_settings() const
     }
 }
 
-bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t** err_out)
+bool MariaDBServer::catchup_to_master(ClusterOperation& op)
 {
-    bool gtid_reached = false;
-    bool error = false;
     /* Prefer to use gtid_binlog_pos, as that is more reliable. But if log_slave_updates is not on,
      * use gtid_current_pos. */
     const bool use_binlog_pos = m_rpl_settings.log_bin && m_rpl_settings.log_slave_updates;
+    bool time_is_up = false;    // Check at least once.
+    bool gtid_reached = false;
+    bool error = false;
+    const GtidList& target = op.demotion_target->m_gtid_binlog_pos;
+    json_t** error_out = op.error_out;
 
-    int seconds_remaining = 1;  // Cheat a bit here to allow at least one iteration.
-    int sleep_ms = 200;         // How long to sleep on next iteration. Incremented slowly.
-    time_t start_time = time(NULL);
-    while (seconds_remaining > 0 && !gtid_reached && !error)
+    Duration sleep_time(0.2);   // How long to sleep before next iteration. Incremented slowly.
+    StopWatch timer;
+
+    while (!time_is_up && !gtid_reached && !error)
     {
-        if (update_gtids())
+        string error_msg;
+        if (update_gtids(&error_msg))
         {
             const GtidList& compare_to = use_binlog_pos ? m_gtid_binlog_pos : m_gtid_current_pos;
             if (target.events_ahead(compare_to, GtidList::MISSING_DOMAIN_IGNORE) == 0)
@@ -524,31 +528,33 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
             }
             else
             {
-                // Query was successful but target gtid not yet reached. Check elapsed time.
-                seconds_remaining = timeout - difftime(time(NULL), start_time);
-                if (seconds_remaining > 0)
+                // Query was successful but target gtid not yet reached. Check how much time left.
+                op.time_remaining -= timer.lap();
+                if (op.time_remaining.secs() > 0)
                 {
                     // Sleep for a moment, then try again.
-                    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
-                    sleep_ms += 100;    // Sleep a bit more next iteration.
+                    Duration this_sleep = MXS_MIN(sleep_time, op.time_remaining);
+                    std::this_thread::sleep_for(this_sleep);
+                    sleep_time += Duration(0.1);    // Sleep a bit more next iteration.
+                }
+                else
+                {
+                    time_is_up = true;
                 }
             }
         }
         else
         {
             error = true;
+            PRINT_MXS_JSON_ERROR(error_out,
+                                 "Failed to update gtid on %s while waiting for catchup: %s",
+                                 name(), error_msg.c_str());
         }
     }
 
-    if (error)
+    if (!error && !gtid_reached)
     {
-        PRINT_MXS_JSON_ERROR(err_out,
-                             "Failed to update gtid on server '%s' while waiting for catchup.",
-                             name());
-    }
-    else if (!gtid_reached)
-    {
-        PRINT_MXS_JSON_ERROR(err_out, "Slave catchup timed out on slave '%s'.", name());
+        PRINT_MXS_JSON_ERROR(error_out, "Slave catchup timed out on slave '%s'.", name());
     }
     return gtid_reached;
 }
@@ -1568,13 +1574,19 @@ bool MariaDBServer::demote(ClusterOperation& op)
 
     if (!stop_slave_error)
     {
-        // Step 2: If this server is master, disable writes and scheduled events.
-        // Flush logs, update gtid:s, run demotion_sql_file.
+        // Step 2: If this server is master, disable writes and scheduled events, flush logs,
+        // update gtid:s, run demotion_sql_file.
+
+        // In theory, this part should be ran in the opposite order so it would "reverse"
+        // the promotion code. However, it's probably better to run the most
+        // likely part to fail, setting read_only=1, first to make undoing easier. Setting
+        // read_only may fail if another session has table locks or is doing long writes.
         bool demotion_error = false;
         if (op.demotion_target_is_master)
         {
             mxb_assert(is_master());
             // Step 2a: Enabling read-only can take time if writes are on or table locks taken.
+            // TODO: use max_statement_time to be safe!
             bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, op.time_remaining, error_out);
             op.time_remaining -= timer.lap();
             if (!ro_enabled)
@@ -1597,33 +1609,7 @@ bool MariaDBServer::demote(ClusterOperation& op)
                     }
                 }
 
-                if (!demotion_error)
-                {
-                    // Step 2c: FLUSH LOGS to ensure that all events have been written to binlog,
-                    // then update gtid:s.
-                    string error_msg;
-                    bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", op.time_remaining, &error_msg);
-                    op.time_remaining -= timer.lap();
-                    if (logs_flushed)
-                    {
-                        if (!update_gtids(&error_msg))
-                        {
-                            demotion_error = true;
-                            PRINT_MXS_JSON_ERROR(error_out,
-                                                 "Failed to update gtid:s of %s during demotion: %s.",
-                                                 name(), error_msg.c_str());
-                        }
-                    }
-                    else
-                    {
-                        demotion_error = true;
-                        PRINT_MXS_JSON_ERROR(error_out,
-                                             "Failed to flush binary logs of %s during demotion: %s.",
-                                             name(), error_msg.c_str());
-                    }
-                }
-
-                // Step 2d: Run demotion_sql_file if no errors so far.
+                // Step 2c: Run demotion_sql_file if no errors so far.
                 if (!demotion_error && !op.demotion_sql_file.empty())
                 {
                     bool file_ran_ok = run_sql_from_file(op.demotion_sql_file, error_out);
@@ -1637,19 +1623,48 @@ bool MariaDBServer::demote(ClusterOperation& op)
                     }
                 }
 
-                if (demotion_error)
+                if (!demotion_error)
                 {
-                    // Read_only was enabled but a later step failed. Disable read_only. Connection is
-                    // likely broken so use a short time limit.
-                    // TODO: add smarter undo
-                    set_read_only(ReadOnlySetting::DISABLE, Duration((double)0), NULL);
+                    // Step 2d: FLUSH LOGS to ensure that all events have been written to binlog.
+                    string error_msg;
+                    bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", op.time_remaining, &error_msg);
+                    op.time_remaining -= timer.lap();
+                    if (!logs_flushed)
+                    {
+                        demotion_error = true;
+                        PRINT_MXS_JSON_ERROR(error_out,
+                                             "Failed to flush binary logs of %s during demotion: %s.",
+                                             name(), error_msg.c_str());
+                    }
                 }
             }
         }
 
         if (!demotion_error)
         {
-            success = true;
+            // Finally, update gtid:s.
+            string error_msg;
+            if (update_gtids(&error_msg))
+            {
+                success = true;
+            }
+            else
+            {
+                demotion_error = true;
+                PRINT_MXS_JSON_ERROR(error_out,
+                                     "Failed to update gtid:s of %s during demotion: %s.",
+                                     name(), error_msg.c_str());
+            }
+        }
+
+        if (demotion_error && op.demotion_target_is_master)
+        {
+            // Read_only was enabled (or tried to be enabled) but a later step failed.
+            // Disable read_only. Connection is likely broken so use a short time limit.
+            // Even this is insufficient, because the server may still be executing the old
+            // 'SET GLOBAL read_only=1' query.
+            // TODO: add smarter undo, KILL QUERY etc.
+            set_read_only(ReadOnlySetting::DISABLE, Duration((double)0), NULL);
         }
     }
     return success;

@@ -733,29 +733,31 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
     ServerArray redirectable_slaves = get_redirectables(promotion_target, demotion_target);
 
     bool rval = false;
-    // Step 2: Set read-only to on, flush logs, update master gtid:s
+    // Step 2: Set read-only to on, flush logs, update gtid:s.
     if (demotion_target->demote(op))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;
-        maxbase::StopWatch timer;
-        // Step 3: Wait for the slaves (including promotion target) to catch up with master.
-        ServerArray catchup_slaves = redirectable_slaves;
-        catchup_slaves.push_back(promotion_target);
-        if (switchover_wait_slaves_catchup(catchup_slaves,
-                                           demotion_target->m_gtid_binlog_pos,
-                                           op.time_remaining.secs(),
-                                           error_out))
+        StopWatch timer;
+        // Step 3: Wait for the promotion target to catch up with the demotion target. Disregard the other
+        // slaves of the promotion target to avoid needless waiting.
+        // The gtid:s of the demotion target were updated at the end of demotion.
+        if (promotion_target->catchup_to_master(op))
         {
-            auto step3_duration = timer.lap();
-            MXS_DEBUG("Switchover: slave catchup took %.1f seconds.", step3_duration.secs());
-            op.time_remaining -= step3_duration;
-
-            // Step 4: On new master STOP and RESET SLAVE, set read-only to off.
+            MXS_INFO("Switchover: Catchup took %.1f seconds.", timer.lap().secs());
+            // Step 4: On new master: remove slave connections, set read-only to OFF etc.
             if (promotion_target->promote(op))
             {
+                // Point of no return. Even if following steps fail, do not try to undo.
+                // Switchover considered at least partially successful.
                 catchup_and_promote_success = true;
-                m_next_master = promotion_target;
+                rval = true;
+                if (op.demotion_target_is_master)
+                {
+                    // Force a master swap on next tick.
+                    m_next_master = promotion_target;
+                }
+
                 timer.restart();
                 // Step 5: Redirect slaves and start replication on old master.
                 ServerArray redirected_slaves;
@@ -764,35 +766,20 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                 {
                     redirected_slaves.push_back(demotion_target);
                 }
+                op.time_remaining -= timer.lap();
+
                 int redirects = redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
 
                 bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
                 if (success)
                 {
-                    op.time_remaining -= timer.lap();
-                    // Step 6: Finally, add an event to the new master to advance gtid and wait for the slaves
-                    // to receive it. If using external replication, skip this step. Come up with an
-                    // alternative later.
-                    if (m_external_master_port != PORT_UNKNOWN)
-                    {
-                        MXS_WARNING("Replicating from external master, skipping final check.");
-                        rval = true;
-                    }
-                    else if (wait_cluster_stabilization(promotion_target,
-                                                        redirected_slaves,
-                                                        op.time_remaining.secs()))
-                    {
-                        rval = true;
-                        auto step6_duration = timer.lap();
-                        op.time_remaining -= step6_duration;
-                        MXS_DEBUG("Switchover: slave replication confirmation took %.1f seconds with "
-                                  "%.1f seconds to spare.",
-                                  step6_duration.secs(), op.time_remaining.secs());
-                    }
-                }
-                else
-                {
-                    print_redirect_errors(demotion_target, redirectable_slaves, error_out);
+                    timer.restart();
+                    // Step 6: Finally, check that slaves are replicating.
+                    wait_cluster_stabilization_ex(op, redirected_slaves);
+                    auto step6_duration = timer.lap();
+                    MXS_INFO("Switchover: slave replication confirmation took %.1f seconds with "
+                             "%.1f seconds to spare.",
+                             step6_duration.secs(), op.time_remaining.secs());
                 }
             }
         }
@@ -992,46 +979,6 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
     }
 
     return !any_error();
-}
-
-/**
- * Wait until slave replication catches up with the master gtid for all slaves in the vector.
- *
- * @param slave Slaves to wait on
- * @param gtid Which gtid must be reached
- * @param total_timeout Maximum wait time in seconds
- * @param err_out json object for error printing. Can be NULL.
- * @return True, if target gtid was reached within allotted time for all servers
- */
-bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerArray& slaves,
-                                                    const GtidList& gtid,
-                                                    int total_timeout,
-                                                    json_t** err_out)
-{
-    bool success = true;
-    int seconds_remaining = total_timeout;
-
-    for (auto iter = slaves.begin(); iter != slaves.end() && success; iter++)
-    {
-        if (seconds_remaining <= 0)
-        {
-            success = false;
-        }
-        else
-        {
-            time_t begin = time(NULL);
-            MariaDBServer* slave_server = *iter;
-            if (slave_server->wait_until_gtid(gtid, seconds_remaining, err_out))
-            {
-                seconds_remaining -= difftime(time(NULL), begin);
-            }
-            else
-            {
-                success = false;
-            }
-        }
-    }
-    return success;
 }
 
 /**

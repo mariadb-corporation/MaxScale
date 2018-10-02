@@ -260,16 +260,17 @@ public:
     void warn_replication_settings() const;
 
     /**
-     * Wait until server catches up to the target gtid. Only considers gtid domains common to this server
-     * and the target gtid. The gtid compared is the gtid_binlog_pos if this server has both log_bin and
-     * log_slave_updates on, and gtid_current_pos otherwise.
+     * Wait until server catches up to demotion target. Only considers gtid domains common
+     * to this server and the target. The gtid compared to on the demotion target is 'gtid_binlog_pos'.
+     * It is not updated during this method.
      *
-     * @param target Which gtid must be reached
-     * @param timeout Maximum wait time in seconds
-     * @param err_out json object for error printing. Can be NULL.
-     * @return True, if target gtid was reached within allotted time
+     * The gtid used for comparison on this server is 'gtid_binlog_pos' if this server has both 'log_bin'
+     * and 'log_slave_updates' on, and 'gtid_current_pos' otherwise. This server is updated during the
+     * method.
+     *
+     * @return True, if target server gtid was reached within allotted time
      */
-    bool wait_until_gtid(const GtidList& target, int timeout, json_t** err_out);
+    bool catchup_to_master(ClusterOperation& op);
 
     /**
      * Find slave connection to the target server. If the IO thread is trying to connect

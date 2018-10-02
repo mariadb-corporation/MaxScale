@@ -234,10 +234,6 @@ private:
                                                          Log log_mode, json_t** error_out);
     bool switchover_perform(ClusterOperation& operation);
     bool switchover_demote_master(MariaDBServer* current_master, json_t** err_out);
-    bool switchover_wait_slaves_catchup(const ServerArray& slaves,
-                                        const GtidList& gtid,
-                                        int total_timeout,
-                                        json_t** err_out);
     bool switchover_start_slave(MariaDBServer* old_master, MariaDBServer* new_master);
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
     void handle_low_disk_space_master();
