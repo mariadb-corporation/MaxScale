@@ -45,8 +45,9 @@ int main(int argc, char** argv)
     test.try_query(test.repl->nodes[0], "%s", "GRANT ALL ON *.* TO 'mxs1743'@'%'");
 
     test.tprintf("Syncing slaves");
-    test.set_timeout(60);
+    test.stop_timeout();
     test.repl->sync_slaves();
+    test.set_timeout(60);
 
     test.tprintf("Opening new connections to verify readconnroute works");
 

@@ -12,28 +12,31 @@ _GSSAPIBackendAuth_ module implements the backend authentication.
 For Unix systems, the usual GSSAPI implementation is Kerberos. This is a short
 guide on how to set up Kerberos for MaxScale.
 
-The first step is to create a new principal for MaxScale. This can be done with
-the _kadmin_ or _kadmin.local_ tools.
+The first step is to configure MariaDB to use GSSAPI authentication. The MariaDB
+documentation for the
+[GSSAPI Authentication Plugin](https://mariadb.com/kb/en/mariadb/gssapi-authentication-plugin/)
+is a good example on how to set it up.
+
+The next step is to copy the keytab file from the server where MariaDB is
+installed to the server where MaxScale is located. The keytab file must be
+placed in the configured default location which almost always is
+`/etc/krb5.keytab`.
+
+To take GSSAPI authentication into use, add the following to the listener.
 
 ```
-kadmin.local -q "addprinc -nokey mariadb/example.com@EXAMPLE.COM"
+authenticator=GSSAPIAuth
+authenticator_options=principal_name=mariadb/localhost.localdomain@EXAMPLE.COM
 ```
 
-The `-nokey` option will make the principal a passwordless one. This allows the
-_maxscale_ user to acquire a ticket for it without a password being prompted.
+Change the principal name to the same value you configured for the MariaDB
+server.
 
-The next step is to export this principal into the Kerberos keytab file.
+After the listeners are configured, add the following to all servers that use GSSAPI users.
 
 ```
-kadmin.local -q "ktadd -k /etc/krb5.keytab -norandkey mariadb/example.com@EXAMPLE.COM"
+authenticator=GSSAPIBackendAuth
 ```
-
-This adds the _mariadb/example.com@EXAMPLE.COM_ principal into the keytab
-file. The `-norandkey` option tells that the password we defined earlier,
-i.e. no password at all, should be used instead of a random password.
-
-The MariaDB documentation for the [GSSAPI Authentication Plugin](https://mariadb.com/kb/en/mariadb/gssapi-authentication-plugin/)
-is a good example on how to set up a new principal for the MariaDB server.
 
 ## Authenticator options
 
@@ -43,14 +46,12 @@ module has no options.
 
 ### `principal_name`
 
-The service principal name to send to the client. This parameter is a
-string parameter which is used by the client to request the token.
+The service principal name to send to the client. This parameter is a string
+parameter which is used by the client to request the token. The default value
+for this option is _mariadb/localhost.localdomain_.
 
-The default value for this option is _mariadb/localhost.localdomain_.
-
-The parameter must be a valid GSSAPI principal name
-e.g. `styx/pluto@EXAMPLE.COM`. The principal name can also be defined
-without the realm part in which case the default realm will be used.
+This parameter *must* be the same as the principal name that the backend MariaDB
+server uses.
 
 ## Implementation details
 

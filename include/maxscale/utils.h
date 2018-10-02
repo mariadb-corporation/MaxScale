@@ -47,6 +47,20 @@ bool utils_init();      /*< Call this first before using any other function */
 void utils_end();
 
 /**
+ * Configure network socket options
+ *
+ * This is a helper function for setting various socket options that are always wanted for all types
+ * of connections. It sets the socket into nonblocking mode, configures sndbuf and rcvbuf sizes
+ * and sets TCP_NODELAY (no Nagle algorithm).
+ *
+ * @param so   Socket to configure
+ * @param type Socket type
+ *
+ * @return True if configuration was successful
+ */
+bool configure_network_socket(int so, int type);
+
+/**
  * @brief Create a network socket and a socket configuration
  *
  * This helper function can be used to open both listener socket and network

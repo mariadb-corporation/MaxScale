@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstring>
 #include <string>
+#include <cstdio>
 #include <mutex>
 #include <unordered_map>
 
@@ -384,6 +385,7 @@ struct this_unit
     bool                             do_highprecision;  // Can change during the lifetime of log_manager.
     bool                             do_syslog;         // Can change during the lifetime of log_manager.
     bool                             do_maxlog;         // Can change during the lifetime of log_manager.
+    bool                             redirect_stdout;
     MXB_LOG_THROTTLING               throttling;        // Can change during the lifetime of log_manager.
     std::unique_ptr<mxb::Logger>     sLogger;
     std::unique_ptr<MessageRegistry> sMessage_registry;
@@ -394,6 +396,7 @@ struct this_unit
     false,                      // do_highprecision
     true,                       // do_syslog
     true,                       // do_maxlog
+    false,                      // redirect_stdout
     DEFAULT_LOG_THROTTLING,     // throttling
 };
 
@@ -486,6 +489,13 @@ bool mxb_log_init(const char* ident,
     case MXB_LOG_TARGET_FS:
     case MXB_LOG_TARGET_DEFAULT:
         this_unit.sLogger = mxb::FileLogger::create(filepath);
+
+        if (this_unit.sLogger && this_unit.redirect_stdout)
+        {
+            // Redirect stdout and stderr to the log file
+            freopen(this_unit.sLogger->filename(), "a", stdout);
+            freopen(this_unit.sLogger->filename(), "a", stderr);
+        }
         break;
 
     case MXB_LOG_TARGET_STDOUT:
@@ -598,9 +608,23 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)
     *throttling = this_unit.throttling;
 }
 
+void mxs_log_redirect_stdout(bool redirect)
+{
+    this_unit.redirect_stdout = redirect;
+}
+
 bool mxb_log_rotate()
 {
-    return this_unit.sLogger->rotate();
+    bool rval = this_unit.sLogger->rotate();
+
+    if (this_unit.redirect_stdout && rval)
+    {
+        // Redirect stdout and stderr to the log file
+        freopen(this_unit.sLogger->filename(), "a", stdout);
+        freopen(this_unit.sLogger->filename(), "a", stderr);
+    }
+
+    return rval;
 }
 
 const char* mxb_log_get_filename()

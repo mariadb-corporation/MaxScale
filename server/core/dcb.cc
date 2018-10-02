@@ -2405,21 +2405,7 @@ DCB* dcb_accept(DCB* dcb)
     {
         dcb->stats.n_accepts++;
 
-        /* set nonblocking  */
-        sendbuf = MXS_CLIENT_SO_SNDBUF;
-
-        if (setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen) != 0)
-        {
-            MXS_ERROR("Failed to set socket options: %d, %s", errno, mxs_strerror(errno));
-        }
-
-        sendbuf = MXS_CLIENT_SO_RCVBUF;
-
-        if (setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen) != 0)
-        {
-            MXS_ERROR("Failed to set socket options: %d, %s", errno, mxs_strerror(errno));
-        }
-        setnonblocking(c_sock);
+        configure_network_socket(c_sock, client_conn.ss_family);
 
         client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dcb->listener);
 

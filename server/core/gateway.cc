@@ -348,9 +348,12 @@ static void sigterm_handler(int i)
 
     if (n_shutdowns == 1)
     {
-        if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+        if (!daemon_mode)
         {
-            printf("Failed to write shutdown message!\n");
+            if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+            {
+                printf("Failed to write shutdown message!\n");
+            }
         }
     }
     else
@@ -366,16 +369,22 @@ static void sigint_handler(int i)
 
     if (n_shutdowns == 1)
     {
-        if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+        if (!daemon_mode)
         {
-            printf("Failed to write shutdown message!\n");
+            if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+            {
+                printf("Failed to write shutdown message!\n");
+            }
         }
     }
     else if (n_shutdowns == 2)
     {
-        if (write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1) == -1)
+        if (!daemon_mode)
         {
-            printf("Failed to write shutdown message!\n");
+            if (write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1) == -1)
+            {
+                printf("Failed to write shutdown message!\n");
+            }
         }
     }
     else
@@ -1917,6 +1926,11 @@ int main(int argc, char** argv)
         // we need to close it so that it can be opened again, this time with
         // the final settings.
         mxs_log_finish();
+    }
+
+    if (cnf->log_target != MXB_LOG_TARGET_STDOUT && daemon_mode)
+    {
+        mxs_log_redirect_stdout(true);
     }
 
     if (!init_log())

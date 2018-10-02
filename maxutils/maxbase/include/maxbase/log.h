@@ -227,6 +227,13 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling);
 void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling);
 
 /**
+ * Redirect  stdout to the log file
+ *
+ * @param redirect Whether to redirect the output to the log file
+ */
+void mxs_log_redirect_stdout(bool redirect);
+
+/**
  * Log a message of a particular priority.
  *
  * @param priority One of the syslog constants: LOG_ERR, LOG_WARNING, ...
