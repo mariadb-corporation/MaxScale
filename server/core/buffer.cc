@@ -44,22 +44,15 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf,
  */
 GWBUF* gwbuf_alloc(unsigned int size)
 {
-    GWBUF* rval;
-    SHARED_BUF* sbuf;
     size_t sbuf_size = sizeof(SHARED_BUF) + (size ? size - 1 : 0);
+    GWBUF* rval = (GWBUF*)MXS_MALLOC(sizeof(GWBUF));
+    SHARED_BUF* sbuf = (SHARED_BUF*)MXS_MALLOC(sbuf_size);
 
-    /* Allocate the buffer header */
-    if ((rval = (GWBUF*)MXS_MALLOC(sizeof(GWBUF))) == NULL)
-    {
-        goto retblock;
-    }
-
-    /* Allocate the shared data buffer */
-    if ((sbuf = (SHARED_BUF*)MXS_MALLOC(sbuf_size)) == NULL)
+    if (rval == NULL || sbuf == NULL)
     {
         MXS_FREE(rval);
-        rval = NULL;
-        goto retblock;
+        MXS_FREE(sbuf);
+        return NULL;
     }
 
     sbuf->refcount = 1;
@@ -78,11 +71,7 @@ GWBUF* gwbuf_alloc(unsigned int size)
     rval->properties = NULL;
     rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
     rval->server = NULL;
-retblock:
-    if (rval == NULL)
-    {
-        MXS_ERROR("Memory allocation failed due to %s.", mxs_strerror(errno));
-    }
+
     return rval;
 }
 
@@ -96,11 +85,13 @@ retblock:
  */
 GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data)
 {
-    GWBUF* rval;
-    if ((rval = gwbuf_alloc(size)) != NULL)
+    GWBUF* rval = gwbuf_alloc(size);
+
+    if (rval)
     {
         memcpy(GWBUF_DATA(rval), data, size);
     }
+
     return rval;
 }
 
@@ -111,14 +102,10 @@ GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data)
  */
 void gwbuf_free(GWBUF* buf)
 {
-    GWBUF* nextbuf;
-    BUF_PROPERTY* prop;
-    buffer_object_t* bo;
-
     while (buf)
     {
         mxb_assert(buf->owner == RoutingWorker::get_current_id());
-        nextbuf = buf->next;
+        GWBUF* nextbuf = buf->next;
         gwbuf_free_one(buf);
         buf = nextbuf;
     }
@@ -131,12 +118,9 @@ void gwbuf_free(GWBUF* buf)
  */
 static void gwbuf_free_one(GWBUF* buf)
 {
-    BUF_PROPERTY* prop;
-    buffer_object_t* bo;
-
     if (mxb::atomic::add(&buf->sbuf->refcount, -1) == 1)
     {
-        bo = buf->sbuf->bufobj;
+        buffer_object_t* bo = buf->sbuf->bufobj;
 
         while (bo != NULL)
         {
@@ -148,7 +132,7 @@ static void gwbuf_free_one(GWBUF* buf)
 
     while (buf->properties)
     {
-        prop = buf->properties;
+        BUF_PROPERTY* prop = buf->properties;
         buf->properties = prop->next;
         MXS_FREE(prop->name);
         MXS_FREE(prop->value);
@@ -177,9 +161,9 @@ static void gwbuf_free_one(GWBUF* buf)
  */
 static GWBUF* gwbuf_clone_one(GWBUF* buf)
 {
-    GWBUF* rval;
+    GWBUF* rval = (GWBUF*)MXS_CALLOC(1, sizeof(GWBUF));
 
-    if ((rval = (GWBUF*)MXS_CALLOC(1, sizeof(GWBUF))) == NULL)
+    if (rval == NULL)
     {
         return NULL;
     }
@@ -202,7 +186,9 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
 
 GWBUF* gwbuf_clone(GWBUF* buf)
 {
-    if (buf == NULL)
+    mxb_assert(buf);
+
+    if (!buf)
     {
         return NULL;
     }
@@ -260,15 +246,16 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
                                   size_t start_offset,
                                   size_t length)
 {
-    GWBUF* clonebuf;
-
     mxb_assert(buf->owner == RoutingWorker::get_current_id());
     mxb_assert(start_offset + length <= GWBUF_LENGTH(buf));
 
-    if ((clonebuf = (GWBUF*)MXS_MALLOC(sizeof(GWBUF))) == NULL)
+    GWBUF* clonebuf = (GWBUF*)MXS_MALLOC(sizeof(GWBUF));
+
+    if (clonebuf == NULL)
     {
         return NULL;
     }
+
     mxb::atomic::add(&buf->sbuf->refcount, 1);
 #ifdef SS_DEBUG
     clonebuf->owner = RoutingWorker::get_current_id();
@@ -466,10 +453,11 @@ GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
     {
         return tail;
     }
-    if (!tail)
+    else if (!tail)
     {
         return head;
     }
+
     mxb_assert(head->owner == RoutingWorker::get_current_id()
                && tail->owner == RoutingWorker::get_current_id());
     head->tail->next = tail;
@@ -514,18 +502,21 @@ unsigned int gwbuf_length(const GWBUF* head)
         rval += GWBUF_LENGTH(head);
         head = head->next;
     }
+
     return rval;
 }
 
 int gwbuf_count(const GWBUF* head)
 {
     int result = 0;
+
     while (head)
     {
         mxb_assert(head->owner == RoutingWorker::get_current_id());
         result++;
         head = head->next;
     }
+
     return result;
 }
 
@@ -598,9 +589,7 @@ void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
 static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* bufobj)
 {
     mxb_assert(buf->owner == RoutingWorker::get_current_id());
-    buffer_object_t* next;
-
-    next = bufobj->bo_next;
+    buffer_object_t* next = bufobj->bo_next;
     /** Call corresponding clean-up function to clean buffer object's data */
     bufobj->bo_donefun_fp(bufobj->bo_data);
     MXS_FREE(bufobj);
@@ -645,16 +634,12 @@ char* gwbuf_get_property(GWBUF* buf, const char* name)
 
 GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 {
-    if (orig == NULL)
-    {
-        mxb_assert_message(!true, "gwbuf_make_contiguous: NULL buffer");
-        return NULL;
-    }
-
+    mxb_assert_message(orig != NULL, "gwbuf_make_contiguous: NULL buffer");
     mxb_assert(orig->owner == RoutingWorker::get_current_id());
 
     if (orig->next == NULL)
     {
+        // Already contiguous
         return orig;
     }
 
