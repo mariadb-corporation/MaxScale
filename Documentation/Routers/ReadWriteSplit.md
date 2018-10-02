@@ -84,7 +84,7 @@ type=service
 router=readwritesplit
 servers=dbserv1, dbserv2, dbserv3
 user=maxscale
-passwd=96F99AA1315BDC3604B006F427DD9484
+password=96F99AA1315BDC3604B006F427DD9484
 disable_sescmd_history=true
 master_failure_mode=fail_on_write
 ```
@@ -381,7 +381,7 @@ are met, the transaction can be safely replayed.
 
 If the results from the replacement server are not identical when the transaction is
 replayed, the client connection is closed. This means that any transaction with a server
-specific result (e.g. `NOW()`, `@@server_id`) cannot be replayed.
+specific result (e.g. `NOW()`, `@@server_id`) cannot be replayed successfully.
 
 Performing MVCC reads (`SELECT` queries without `FOR UPDATE` or `LOCK IN SHARE MODE`)
 with transaction replay is discouraged. If such statements are executed
@@ -428,9 +428,9 @@ subsequent reads performed on slave servers will be done in a manner that
 prevents replication lag from affecting the results. This only applies to the
 modifications done by the client itself.
 
-**Note:** This feature requires MariaDB 10.2.X (TODO: update this once
-  it's merged) or newer to function. In addition to this, the
-  `session_track_system_variables` parameter must be set to `last_gtid`.
+**Note:** This feature requires MariaDB 10.2.16 or newer to function. In
+  addition to this, the `session_track_system_variables` parameter must be set
+  to `last_gtid`.
 
 A practical example can be given by the following set of SQL commands executed
 with `autocommit=1`.
@@ -448,7 +448,7 @@ appear as if the value we just inserted is not there.
 
 By prefixing these types of SELECT statements with a command that guarantees
 consistent results for the reads, read scalability can be improved without
-reduced consistency.
+sacrificing consistency.
 
 The set of example SQL above will be translated by MaxScale into the following
 statements.
@@ -469,7 +469,7 @@ the replication stream (see
 for more details). If the slave has not caught up to the master within the
 configured time, an error will be returned. To the client side
 application, this will appear as an error on the statement that they were
-performing. This is caused by the fact that the syncronization command is
+performing. This is caused by the fact that the synchronization command is
 executed with the original command as a multi-statement command.
 
 ### `causal_reads_timeout`
