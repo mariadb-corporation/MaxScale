@@ -178,7 +178,8 @@ bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd,
  *
  * @param cmd The query to execute. Should be a query with a predictable effect even when retried or
  * ran several times.
- * @param time_limit How long to retry
+ * @param time_limit How long to retry. This does not overwrite the connector-c timeouts which are always
+ * respected.
  * @param errmsg_out Error output
  * @return True, if successful.
  */
@@ -1541,6 +1542,114 @@ bool MariaDBServer::promote(ClusterOperation& op)
                                      "Could not copy slave connections from '%s' to '%s'.",
                                      op.demotion_target->name(), name());
             }
+        }
+    }
+    return success;
+}
+
+bool MariaDBServer::demote(ClusterOperation& op)
+{
+    mxb_assert(op.type == OperationType::SWITCHOVER && op.demotion_target == this);
+    json_t** error_out = op.error_out;
+    bool success = false;
+    StopWatch timer;
+
+    // Step 1: Stop & reset slave connections. The promotion target will copy them. The server object
+    // must not be updated before the connections have been copied.
+    bool stop_slave_error = false;
+    for (size_t i = 0; !stop_slave_error && i < m_slave_status.size(); i++)
+    {
+        if (!stop_slave_conn(&m_slave_status[i], StopMode::RESET_ALL, op.time_remaining, error_out))
+        {
+            stop_slave_error = true;
+        }
+        op.time_remaining -= timer.lap();
+    }
+
+    if (!stop_slave_error)
+    {
+        // Step 2: If this server is master, disable writes and scheduled events.
+        // Flush logs, update gtid:s, run demotion_sql_file.
+        bool demotion_error = false;
+        if (op.demotion_target_is_master)
+        {
+            mxb_assert(is_master());
+            // Step 2a: Enabling read-only can take time if writes are on or table locks taken.
+            bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, op.time_remaining, error_out);
+            op.time_remaining -= timer.lap();
+            if (!ro_enabled)
+            {
+                demotion_error = true;
+            }
+            else
+            {
+                if (op.handle_events)
+                {
+                    // TODO: Add query replying to enable_events
+                    // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
+                    // which could break external replication.
+                    bool events_disabled = disable_events(BinlogMode::BINLOG_OFF, error_out);
+                    op.time_remaining -= timer.lap();
+                    if (!events_disabled)
+                    {
+                        demotion_error = true;
+                        PRINT_MXS_JSON_ERROR(error_out, "Failed to disable events on %s.", name());
+                    }
+                }
+
+                if (!demotion_error)
+                {
+                    // Step 2c: FLUSH LOGS to ensure that all events have been written to binlog,
+                    // then update gtid:s.
+                    string error_msg;
+                    bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", op.time_remaining, &error_msg);
+                    op.time_remaining -= timer.lap();
+                    if (logs_flushed)
+                    {
+                        if (!update_gtids(&error_msg))
+                        {
+                            demotion_error = true;
+                            PRINT_MXS_JSON_ERROR(error_out,
+                                                 "Failed to update gtid:s of %s during demotion: %s.",
+                                                 name(), error_msg.c_str());
+                        }
+                    }
+                    else
+                    {
+                        demotion_error = true;
+                        PRINT_MXS_JSON_ERROR(error_out,
+                                             "Failed to flush binary logs of %s during demotion: %s.",
+                                             name(), error_msg.c_str());
+                    }
+                }
+
+                // Step 2d: Run demotion_sql_file if no errors so far.
+                if (!demotion_error && !op.demotion_sql_file.empty())
+                {
+                    bool file_ran_ok = run_sql_from_file(op.demotion_sql_file, error_out);
+                    op.time_remaining -= timer.lap();
+                    if (!file_ran_ok)
+                    {
+                        demotion_error = true;
+                        PRINT_MXS_JSON_ERROR(error_out,
+                                             "Execution of file '%s' failed during demotion of server %s.",
+                                             op.demotion_sql_file.c_str(), name());
+                    }
+                }
+
+                if (demotion_error)
+                {
+                    // Read_only was enabled but a later step failed. Disable read_only. Connection is
+                    // likely broken so use a short time limit.
+                    // TODO: add smarter undo
+                    set_read_only(ReadOnlySetting::DISABLE, Duration((double)0), NULL);
+                }
+            }
+        }
+
+        if (!demotion_error)
+        {
+            success = true;
         }
     }
     return success;

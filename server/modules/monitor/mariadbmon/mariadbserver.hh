@@ -509,7 +509,15 @@ public:
      * @param op Cluster operation descriptor
      * @return True if successful
      */
-    bool promote(ClusterOperation& operation);
+    bool promote(ClusterOperation& op);
+
+    /**
+     * Demote this server. Removes all slave connections. If server was master, sets read_only.
+     *
+     * @param op Cluster operation descriptor
+     * @return True if successful
+     */
+    bool demote(ClusterOperation& op);
 
     /**
      * Redirect the slave connection going to demotion target to replicate from promotion target.

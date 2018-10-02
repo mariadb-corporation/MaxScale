@@ -727,8 +727,6 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
     json_t** const error_out = op.error_out;
     mxb_assert(promotion_target && demotion_target);
 
-    maxbase::StopWatch timer;
-
     // Step 1: Save all slaves except promotion target to an array.
     // Try to redirect even disconnected slaves.
     // TODO: 'switchover_wait_slaves_catchup' needs to be smarter and not bother with such slaves.
@@ -736,12 +734,11 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
 
     bool rval = false;
     // Step 2: Set read-only to on, flush logs, update master gtid:s
-    if (switchover_demote_master(demotion_target, error_out))
+    if (demotion_target->demote(op))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;
-        op.time_remaining -= timer.restart();
-
+        maxbase::StopWatch timer;
         // Step 3: Wait for the slaves (including promotion target) to catch up with master.
         ServerArray catchup_slaves = redirectable_slaves;
         catchup_slaves.push_back(promotion_target);
@@ -750,7 +747,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                                            op.time_remaining.secs(),
                                            error_out))
         {
-            auto step3_duration = timer.restart();
+            auto step3_duration = timer.lap();
             MXS_DEBUG("Switchover: slave catchup took %.1f seconds.", step3_duration.secs());
             op.time_remaining -= step3_duration;
 
@@ -759,7 +756,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
             {
                 catchup_and_promote_success = true;
                 m_next_master = promotion_target;
-
+                timer.restart();
                 // Step 5: Redirect slaves and start replication on old master.
                 ServerArray redirected_slaves;
                 bool start_ok = switchover_start_slave(demotion_target, promotion_target);
@@ -772,6 +769,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                 bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
                 if (success)
                 {
+                    op.time_remaining -= timer.lap();
                     // Step 6: Finally, add an event to the new master to advance gtid and wait for the slaves
                     // to receive it. If using external replication, skip this step. Come up with an
                     // alternative later.
@@ -785,7 +783,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                                                         op.time_remaining.secs()))
                     {
                         rval = true;
-                        auto step6_duration = timer.restart();
+                        auto step6_duration = timer.lap();
                         op.time_remaining -= step6_duration;
                         MXS_DEBUG("Switchover: slave replication confirmation took %.1f seconds with "
                                   "%.1f seconds to spare.",
