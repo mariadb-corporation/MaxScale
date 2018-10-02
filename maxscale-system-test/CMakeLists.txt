@@ -1068,6 +1068,10 @@ add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_
 # https://jira.mariadb.org/browse/MXS-2037
 add_test_executable(mxs2037_namedserver_wildcards.cpp mxs2037_namedserver_wildcards mxs2037_namedserver_wildcards LABELS namedserverfilter LIGHT REPL_BACKEND)
 
+# MXS-1980: Support Galera cluster nodes as masters for Binlog Router
+# https://jira.mariadb.org/browse/MXS-1980
+add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_ids mxs1980_blr_galera_server_ids LABELS binlogrouter GALERA_BACKEND)
+
 # MXS-701: Binlog filtering
 # https://jira.mariadb.org/browse/MXS-701
 add_test_executable(mxs701_binlog_filter.cpp mxs701_binlog_filter mxs701_binlog_filter LABELS bilogrouter REPL_BACKEND)
