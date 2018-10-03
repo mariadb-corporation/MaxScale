@@ -243,6 +243,13 @@ they are cached for the duration of the session.
 
 For more information about MaxCtrl, see the output of `maxctrl help`.
 
+#### Draining Server Connections
+
+The new `drain server` drains the server of connections by first removing it
+from all services after which it waits until all connections are closed. When
+all connections are closed, the server is put into the `maintenance` state and
+added back to all the services where it was removed from.
+
 ### Resultset Concatenation Router
 
 A new experimental router module, `cat`, was added to the
