@@ -1535,9 +1535,17 @@ bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_thre
     return rv;
 }
 
+namespace
+{
+std::mutex ave_write_mutex;
+}
+
 void server_add_response_average(SERVER* srv, double ave, int num_samples)
 {
     Server* server = static_cast<Server*>(srv);
+
+
+    std::lock_guard<std::mutex> guard(ave_write_mutex);
     server->response_time_add(ave, num_samples);
 }
 

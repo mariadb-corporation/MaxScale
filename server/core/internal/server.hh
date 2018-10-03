@@ -39,17 +39,17 @@ public:
 
     int response_time_num_samples() const
     {
-        return m_response_time->num_samples();
+        return m_response_time.num_samples();
     }
 
     double response_time_average() const
     {
-        return m_response_time->average();
+        return m_response_time.average();
     }
 
     void response_time_add(double ave, int num_samples)
     {
-        m_response_time->add(ave, num_samples);
+        m_response_time.add(ave, num_samples);
     }
 
     mutable std::mutex m_lock;
@@ -59,7 +59,7 @@ private:
     // can be calculated at runtime. The "500" or sample_max affects how often a
     // session should updates this stat. sample_max should be slightly lower than max sample
     // rate (which is less than qps due to the noise filter).
-    mxs::rworker_local<maxbase::EMAverage> m_response_time;
+    maxbase::EMAverage m_response_time;
 };
 
 void server_free(Server* server);
