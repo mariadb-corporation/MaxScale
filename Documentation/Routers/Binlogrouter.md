@@ -381,7 +381,9 @@ From MaxScale 2.3 onwards it is possible to specify secondary masters that
 the binlog router can use in case the connection to the default master fails.
 
 **Note:** This is _only_ supported for gtid based replication in conjunction
-with a Galera cluster.
+with a Galera cluster and provided the following holds:
+* `@@log_slave_updates` is enabled on all servers, and
+* all nodes in the Galera cluster have the *same* `server_id`.
 
 The initial setup is performed exactly like when there is but one default master.
 ```
