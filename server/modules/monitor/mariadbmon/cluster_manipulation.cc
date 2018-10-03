@@ -775,7 +775,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                 {
                     timer.restart();
                     // Step 6: Finally, check that slaves are replicating.
-                    wait_cluster_stabilization_ex(op, redirected_slaves);
+                    wait_cluster_stabilization(op, redirected_slaves);
                     auto step6_duration = timer.lap();
                     MXS_INFO("Switchover: slave replication confirmation took %.1f seconds with "
                              "%.1f seconds to spare.",
@@ -847,227 +847,11 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
             /* Step 4: Finally, check that slaves are connected to the new master. Even if
              * time is out at this point, wait_cluster_stabilization() will check the slaves
              * once so that latest status is printed. */
-            wait_cluster_stabilization_ex(op, redirected_slaves);
-            MXS_DEBUG("Failover: slave replication confirmation took %.1f seconds with "
+            wait_cluster_stabilization(op, redirected_slaves);
+            MXS_INFO("Failover: slave replication confirmation took %.1f seconds with "
                       "%.1f seconds to spare.",
                       timer.lap().secs(), op.time_remaining.secs());
         }
-    }
-    return rval;
-}
-
-/**
- * Demotes the current master server, preparing it for replicating from another server. This step can take a
- * while if long writes are running on the server.
- *
- * @param current_master Server to demote
- * @param info Current master info. Will be written to. TODO: Remove need for this.
- * @param error_out Error output. Can be NULL.
- * @return True if successful.
- */
-bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, json_t** error_out)
-{
-    MXS_NOTICE("Demoting server '%s'.", current_master->name());
-    bool query_error = false;
-    bool gtid_update_error = false;
-    bool event_disable_error = false;
-
-    MYSQL* conn = current_master->m_server_base->con;
-    const char* query = "";     // The next query to execute. Used also for error printing.
-    // The presence of an external master changes several things.
-    const bool external_master = server_is_slave_of_ext_master(current_master->m_server_base->server);
-
-    // Helper function for checking if any error is on.
-    auto any_error = [&query_error, &gtid_update_error, &event_disable_error]() -> bool {
-            return query_error || gtid_update_error || event_disable_error;
-        };
-
-    if (external_master)
-    {
-        // First need to stop slave. read_only is probably on already, although not certain.
-        query = "STOP SLAVE;";
-        query_error = (mxs_mysql_query(conn, query) != 0);
-        if (!query_error)
-        {
-            query = "RESET SLAVE ALL;";
-            query_error = (mxs_mysql_query(conn, query) != 0);
-        }
-    }
-
-    bool error_fetched = false;
-    string error_desc;
-    if (!query_error)
-    {
-        query = "SET GLOBAL read_only=1;";
-        query_error = (mxs_mysql_query(conn, query) != 0);
-        if (!query_error)
-        {
-            // If have external master, no writes are allowed so skip this step. It's not essential, just
-            // adds one to gtid.
-            if (!external_master)
-            {
-                query = "FLUSH TABLES;";
-                query_error = (mxs_mysql_query(conn, query) != 0);
-
-                // Disable all events here
-                if (!query_error && m_handle_event_scheduler
-                    && !current_master->disable_events(MariaDBServer::BinlogMode::BINLOG_ON, error_out))
-                {
-                    event_disable_error = true;
-                }
-            }
-
-            if (!any_error())
-            {
-                query = "FLUSH LOGS;";
-                query_error = (mxs_mysql_query(conn, query) != 0);
-                if (!query_error && !current_master->update_gtids(&error_desc))
-                {
-                    gtid_update_error = true;
-                }
-            }
-
-            if (any_error())
-            {
-                // Somehow, a step after "SET read_only" failed. Try to set read_only back to 0. It may not
-                // work since the connection is likely broken.
-                if (query_error)
-                {
-                    error_desc = mysql_error(conn);     // Read connection error before next step.
-                    error_fetched = true;
-                }
-                mxs_mysql_query(conn, "SET GLOBAL read_only=0;");
-            }
-        }
-    }
-
-    if (query_error && !error_fetched)
-    {
-        error_desc = mysql_error(conn);
-    }
-
-    if (any_error())
-    {
-        if (query_error)
-        {
-            if (error_desc.empty())
-            {
-                const char UNKNOWN_ERROR[] = "Demotion failed due to an unknown error when executing "
-                                             "a query. Query: '%s'.";
-                PRINT_MXS_JSON_ERROR(error_out, UNKNOWN_ERROR, query);
-            }
-            else
-            {
-                const char KNOWN_ERROR[] = "Demotion failed due to a query error: '%s'. Query: '%s'.";
-                PRINT_MXS_JSON_ERROR(error_out, KNOWN_ERROR, error_desc.c_str(), query);
-            }
-        }
-        else if (gtid_update_error)
-        {
-            const char* const GTID_ERROR = "Demotion failed due to a query error: %s";
-            PRINT_MXS_JSON_ERROR(error_out, GTID_ERROR, error_desc.c_str());
-        }
-        // event_disable_error has already been printed
-    }
-    else if (!m_demote_sql_file.empty() && !current_master->run_sql_from_file(m_demote_sql_file, error_out))
-    {
-        PRINT_MXS_JSON_ERROR(error_out,
-                             "%s execution failed when demoting server '%s'.",
-                             CN_DEMOTION_SQL_FILE,
-                             current_master->name());
-        query_error = true;
-    }
-
-    return !any_error();
-}
-
-/**
- * Send an event to new master and wait for slaves to get the event.
- *
- * @param new_master Where to send the event
- * @param slaves Servers to monitor
- * @param seconds_remaining How long can we wait
- * @return True, if at least one slave got the new event within the time limit
- */
-bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master,
-                                                const ServerArray& slaves,
-                                                int seconds_remaining)
-{
-    mxb_assert(!slaves.empty());
-    bool rval = false;
-    time_t begin = time(NULL);
-
-    if (mxs_mysql_query(new_master->m_server_base->con, "FLUSH TABLES;") == 0
-        && new_master->update_gtids())
-    {
-        int query_fails = 0;
-        int repl_fails = 0;
-        int successes = 0;
-        const GtidList& target = new_master->m_gtid_current_pos;
-        ServerArray wait_list = slaves;     // Check all the servers in the list
-        bool first_round = true;
-        bool time_is_up = false;
-
-        while (!wait_list.empty() && !time_is_up)
-        {
-            if (!first_round)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            }
-
-            // Erasing elements from an array, so iterate from last to first
-            int i = wait_list.size() - 1;
-            while (i >= 0)
-            {
-                MariaDBServer* slave = wait_list[i];
-                if (slave->update_gtids() && slave->do_show_slave_status() && !slave->m_slave_status.empty())
-                {
-                    if (!slave->m_slave_status[0].last_error.empty())
-                    {
-                        // IO or SQL error on slave, replication is a fail
-                        MXS_WARNING("Slave '%s' cannot start replication: '%s'.",
-                                    slave->name(),
-                                    slave->m_slave_status[0].last_error.c_str());
-                        wait_list.erase(wait_list.begin() + i);
-                        repl_fails++;
-                    }
-                    else if (target.events_ahead(slave->m_gtid_current_pos,
-                                                 GtidList::MISSING_DOMAIN_IGNORE) == 0)
-                    {
-                        // This slave has reached the same gtid as master, remove from list
-                        wait_list.erase(wait_list.begin() + i);
-                        successes++;
-                    }
-                }
-                else
-                {
-                    wait_list.erase(wait_list.begin() + i);
-                    query_fails++;
-                }
-                i--;
-            }
-
-            first_round = false;    // Sleep at start of next iteration
-            if (difftime(time(NULL), begin) >= seconds_remaining)
-            {
-                time_is_up = true;
-            }
-        }
-
-        auto fails = repl_fails + query_fails + wait_list.size();
-        if (fails > 0)
-        {
-            const char MSG[] = "Replication from the new master could not be confirmed for %lu slaves. "
-                               "%d encountered an I/O or SQL error, %d failed to reply and %lu did not "
-                               "advance in Gtid until time ran out.";
-            MXS_WARNING(MSG, fails, repl_fails, query_fails, wait_list.size());
-        }
-        rval = (successes > 0);
-    }
-    else
-    {
-        MXS_ERROR("Could not confirm replication after switchover/failover because query to "
-                  "the new master failed.");
     }
     return rval;
 }
@@ -1079,7 +863,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master,
  * @param op Operation descriptor
  * @param redirected_slaves Slaves to check
  */
-void MariaDBMonitor::wait_cluster_stabilization_ex(ClusterOperation& op, const ServerArray& redirected_slaves)
+void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const ServerArray& redirected_slaves)
 {
     if (redirected_slaves.empty())
     {
@@ -1196,80 +980,6 @@ void MariaDBMonitor::wait_cluster_stabilization_ex(ClusterOperation& op, const S
                     unconfirmed.size(), new_master->name());
     }
     op.time_remaining -= timer.lap();
-}
-
-/**
- * Prepares a server for the replication master role.
- *
- * @param new_master The new master server
- * @param error_out Error output. Can be NULL.
- * @return True if successful
- */
-bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** error_out)
-{
-    bool success = false;
-    bool event_enable_error = false;
-    MYSQL* new_master_conn = new_master->m_server_base->con;
-    MXS_NOTICE("Promoting server '%s' to master.", new_master->name());
-    const char* query = "STOP SLAVE;";
-    if (mxs_mysql_query(new_master_conn, query) == 0)
-    {
-        query = "RESET SLAVE ALL;";
-        if (mxs_mysql_query(new_master_conn, query) == 0)
-        {
-            query = "SET GLOBAL read_only=0;";
-            if (mxs_mysql_query(new_master_conn, query) == 0)
-            {
-                if (m_handle_event_scheduler)
-                {
-                    if (new_master->enable_events(error_out))
-                    {
-                        success = true;
-                    }
-                    else
-                    {
-                        event_enable_error = true;
-                    }
-                }
-                else
-                {
-                    success = true;
-                }
-            }
-        }
-    }
-
-    if (!success)
-    {
-        if (!event_enable_error)
-        {
-            PRINT_MXS_JSON_ERROR(error_out,
-                                 "Promotion failed: '%s'. Query: '%s'.",
-                                 mysql_error(new_master_conn),
-                                 query);
-        }
-        // event_enable_error has already been printed
-    }
-    else
-    {
-        // Promotion commands ran successfully, run promotion sql script file before external replication.
-        if (!m_promote_sql_file.empty() && !new_master->run_sql_from_file(m_promote_sql_file, error_out))
-        {
-            PRINT_MXS_JSON_ERROR(error_out,
-                                 "%s execution failed when promoting server '%s'.",
-                                 CN_PROMOTION_SQL_FILE,
-                                 new_master->name());
-            success = false;
-        }
-        // If the previous master was a slave to an external master, start the equivalent slave connection on
-        // the new master. Success of replication is not checked.
-        else if (m_external_master_port != PORT_UNKNOWN && !start_external_replication(new_master, error_out))
-        {
-            success = false;
-        }
-    }
-
-    return success;
 }
 
 /**

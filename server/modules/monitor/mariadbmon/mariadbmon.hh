@@ -233,7 +233,6 @@ private:
     std::unique_ptr<ClusterOperation> switchover_prepare(SERVER* new_master, SERVER* current_master,
                                                          Log log_mode, json_t** error_out);
     bool switchover_perform(ClusterOperation& operation);
-    bool switchover_demote_master(MariaDBServer* current_master, json_t** err_out);
     bool switchover_start_slave(MariaDBServer* old_master, MariaDBServer* new_master);
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
     void handle_low_disk_space_master();
@@ -265,7 +264,6 @@ private:
                              const MariaDBServer* demotion_target,
                              uint32_t gtid_domain,
                              std::string* reason_out = NULL);
-    bool promote_new_master(MariaDBServer* new_master, json_t** err_out);
     int  redirect_slaves(MariaDBServer* new_master,
                          const ServerArray& slaves,
                          ServerArray* redirected_slaves);
@@ -273,10 +271,7 @@ private:
                            ServerArray* redirected_slaves);
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
     bool        start_external_replication(MariaDBServer* new_master, json_t** err_out);
-    bool        wait_cluster_stabilization(MariaDBServer* new_master,
-                                           const ServerArray& slaves,
-                                           int seconds_remaining);
-    void wait_cluster_stabilization_ex(ClusterOperation& op, const ServerArray& slaves);
+    void wait_cluster_stabilization(ClusterOperation& op, const ServerArray& slaves);
     void report_and_disable(const std::string& operation,
                             const std::string& setting_name,
                             bool* setting_var);
