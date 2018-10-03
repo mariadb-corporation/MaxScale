@@ -205,6 +205,11 @@ for details.
 
 The `source` parameter can now contain a list of comma separated addresses.
 
+### Table Sharding
+
+The SchemaRouter is now capable of sharding tables. Please see the SchemaRouter
+[documentation](../Routers/SchemaRouter.md) for details.
+
 ### Interactive Mode for MaxCtrl
 
 ### ReadWriteSplit

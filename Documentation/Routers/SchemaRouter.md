@@ -8,6 +8,9 @@ database-based sharding, the schemarouter router also enables cross-node
 session variable usage by routing all queries that modify the session to all
 nodes.
 
+From 2.3.0 onwards, the SchemaRouter is capable of sharding tables, in
+addition to sharding databases.
+
 ## Routing Logic
 
 If a command line client is used, i.e. `mysql`, and a direct connection to
@@ -113,6 +116,29 @@ passwd=mypwd
 refresh_databases=true
 refresh_interval=60
 ```
+
+## Table Sharding
+
+This functionality was introduced in 2.3.0.
+
+If the same database exists on multiple servers, but the database contains
+different tables in each server, the SchemaRouter is capable of
+transparently routing queries to the right server, depending on which table
+is being addressed.
+
+For instance, suppose the database `db` exists on servers _server1_ and
+_server2_, but that the database on _server1_ contains the table `tbl1` and
+on _server2_ contains the table `tbl2`.
+
+In that case, the query
+```
+SELECT * FROM db.tbl1
+```
+will be routed to _server1_ and the query
+```
+SELECT * FROM db.tbl2
+```
+will be routed to _server2_.
 
 ## Router Options
 
