@@ -271,6 +271,15 @@ modified at runtime. Refer to the [REST API](../REST-API/API.md) and
 The router parameters of services can now be altered at runtime. Currently only
 the readwritesplit router implements this feature.
 
+### Binlog Filtering
+
+The `binlogfilter` is a filter module that allows the client side stream of
+binlogs to be filtered. It is designed to be used with the binlogrouter.
+
+This allows conditional replication similar to _replicate_do_table_ but with
+full PCRE2 compliant match/exclude functionality. For more information, refer to
+the [binlogfilter](../Filters/BinlogFilter.md) documentation.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.3.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.3.0)
