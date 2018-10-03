@@ -257,6 +257,20 @@ A new experimental router module, `cat`, was added to the
 concatenates result sets. For more information and an explanation on how the
 router works, read the [`cat` documentation](../Routers/Cat.md).
 
+### REST API Additions
+
+#### Creation of Services and Filters at Runtime
+
+The REST API and MaxCtrl now support the creation and destruction of services
+and filters at runtime. This also means that the filters of a service can now be
+modified at runtime. Refer to the [REST API](../REST-API/API.md) and
+[MaxCtrl](../Reference/MaxCtrl.md) documentation for more details.
+
+#### Alteration of Routers
+
+The router parameters of services can now be altered at runtime. Currently only
+the readwritesplit router implements this feature.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.3.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.3.0)
