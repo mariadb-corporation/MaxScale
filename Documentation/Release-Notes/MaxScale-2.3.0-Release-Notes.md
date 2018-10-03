@@ -190,6 +190,12 @@ for authentication errors. Please see
 [the configuration guide](../Getting-Started/Configuration-Guide.md#events)
 for details.
 
+### Named Server Filter
+
+The `source` parameter can now contain a list of comma separated addresses.
+
+### Interactive Mode for MaxCtrl
+
 ### ReadWriteSplit
 
 A set of new features have been added to readwritesplit.
@@ -219,11 +225,17 @@ allows queries to be automatically retried if their execution is interrupted.
 The [`causal_reads`](../Routers/ReadWriteSplit.md#causal_reads) parameter
 enables distributed consistent reads with MariaDB version 10.2 and newer.
 
-### Named Server Filter
+#### `optimistic_trx`
 
-The `source` parameter can now contain a list of comma separated addresses.
+The [`optimistic_trx`](../Routers/ReadWriteSplit.md#optimistic_trx) parameter
+enables optimistic transaction execution. This parameter controls whether normal
+transactions (i.e. `START TRANSACTION` or `BEGIN`) are load balanced across
+slaves. If the transaction tries to modify a row, it is migrated to the master
+and rolled back on the slave.
 
-### Interactive Mode for MaxCtrl
+### MaxCtrl
+
+#### Interactive Mode for MaxCtrl
 
 MaxCtrl can now be started in an interactive mode similar to MaxAdmin. This
 makes use of passwords more convenient as they have to be input only once and
