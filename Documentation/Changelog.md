@@ -6,6 +6,7 @@
 * User Specified Syslog Facility and Level for Authentication Errors
 * `config reload` removed from MaxAdmin (was deprecated in 2.2)
 * MariaDBMonitor features added, modified and removed
+* A Comment filter has been added.
 
 For more details, please refer to:
 

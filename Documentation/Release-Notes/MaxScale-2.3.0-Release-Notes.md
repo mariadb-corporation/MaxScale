@@ -160,6 +160,13 @@ same server the previous query was routed to.
 
 ## New Features
 
+### Comment Filter
+
+With the comment filter it is possible to prepend statement received
+with a comment before it is sent further to a server. Please see the
+[comment filter documentation](../Filters/Comment.md)
+for more details.
+
 ### Query Classifier Cache
 
 The query classifier now caches the results of each classification which
