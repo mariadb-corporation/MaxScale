@@ -109,7 +109,8 @@ SRWBackendVector::iterator backend_cmp_behind_master(SRWBackendVector& sBackends
 SRWBackendVector::iterator backend_cmp_current_load(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->server_weight ? (server->server->stats.n_current_ops + 1) / server->server_weight : 0;
+            return server->server_weight ? (server->server->stats.n_current_ops + 1)
+                   / server->server_weight : 0;
         };
 
     return best_score(sBackends, server_score);
@@ -122,23 +123,32 @@ SRWBackendVector::iterator backend_cmp_response_time(SRWBackendVector& sBackends
 
     // fill slots with inverses of averages
     double total {0};
+    double fastest {0};
     for (int i = 0; i < SZ; ++i)
     {
         SERVER_REF* server = (**sBackends[i]).backend();
-        auto ave = server_response_time_average(server->server);
+        double ave = server_response_time_average(server->server);
 
         if (ave == 0)
         {
-            constexpr double very_quick = 1.0 / 10000000;   // arbitrary very short duration (0.1
-                                                            // microseconds)
+            constexpr double very_quick = 1.0 / 10000000;   // arbitrary very short duration (0.1 us)
             slot[i] = 1 / very_quick;                       // will be used and updated (almost) immediately.
         }
         else
         {
             slot[i] = 1 / ave;
         }
-        slot[i] = slot[i] * slot[i];    // favor faster servers even more
+        slot[i] = slot[i] * slot[i] * slot[i];      // favor faster servers even more
         total += slot[i];
+        fastest = std::max(fastest, slot[i]);
+    }
+
+    // make the slowest server at least a good fraction of the fastest to guarantee
+    // some amount of sampling, should the slow server become faster.
+    constexpr int divisor = 200;    // 0.5%
+    for (int i = 0; i < SZ; ++i)
+    {
+        slot[i] = std::max(slot[i], fastest / divisor);
     }
 
     // turn slots into a roulette wheel, where sum of slots is 1.0
