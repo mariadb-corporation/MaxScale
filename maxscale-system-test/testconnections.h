@@ -141,6 +141,11 @@ public:
     int copy_mariadb_logs(Mariadb_nodes* repl, const char* prefix, std::vector<std::thread>& threads);
 
     /**
+     * @brief MaxScale runs locally, specified using -l.
+     */
+    bool local_maxscale;
+
+    /**
      * @brief no_backend_log_copy if true logs from backends are not copied
      *        (needed if case of Aurora RDS backend or similar)
      */
