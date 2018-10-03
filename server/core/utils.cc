@@ -40,7 +40,6 @@
 #include <sys/types.h>
 #include <netinet/tcp.h>
 #include <openssl/sha.h>
-#include <curl/curl.h>
 #include <thread>
 
 #include <maxscale/alloc.h>
