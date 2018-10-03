@@ -243,6 +243,13 @@ they are cached for the duration of the session.
 
 For more information about MaxCtrl, see the output of `maxctrl help`.
 
+### Resultset Concatenation Router
+
+A new experimental router module, `cat`, was added to the
+`maxscale-experimental` package. The `cat` router is a special router that
+concatenates result sets. For more information and an explanation on how the
+router works, read the [`cat` documentation](../Routers/Cat.md).
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.3.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.3.0)
