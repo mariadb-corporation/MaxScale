@@ -493,8 +493,9 @@ bool mxb_log_init(const char* ident,
         if (this_unit.sLogger && this_unit.redirect_stdout)
         {
             // Redirect stdout and stderr to the log file
-            freopen(this_unit.sLogger->filename(), "a", stdout);
-            freopen(this_unit.sLogger->filename(), "a", stderr);
+            FILE* unused __attribute__ ((unused));
+            unused = freopen(this_unit.sLogger->filename(), "a", stdout);
+            unused = freopen(this_unit.sLogger->filename(), "a", stderr);
         }
         break;
 
@@ -620,8 +621,9 @@ bool mxb_log_rotate()
     if (this_unit.redirect_stdout && rval)
     {
         // Redirect stdout and stderr to the log file
-        freopen(this_unit.sLogger->filename(), "a", stdout);
-        freopen(this_unit.sLogger->filename(), "a", stderr);
+        FILE* unused __attribute__ ((unused));
+        unused = freopen(this_unit.sLogger->filename(), "a", stdout);
+        unused = freopen(this_unit.sLogger->filename(), "a", stderr);
     }
 
     return rval;

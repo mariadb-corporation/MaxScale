@@ -863,10 +863,9 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
              * time is out at this point, wait_cluster_stabilization() will check the slaves
              * once so that latest status is printed. */
             wait_cluster_stabilization_ex(op, redirected_slaves);
-            auto step4_time = timer.lap();
             MXS_DEBUG("Failover: slave replication confirmation took %.1f seconds with "
                       "%.1f seconds to spare.",
-                      step4_time.secs(), op.time_remaining.secs());
+                      timer.lap(), op.time_remaining.secs());
         }
     }
     return rval;
