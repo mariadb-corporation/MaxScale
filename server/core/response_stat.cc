@@ -17,10 +17,8 @@
 namespace maxscale
 {
 ResponseStat::ResponseStat(int num_filter_samples,
-                           int num_synch_medians,
                            maxbase::Duration sync_duration)
     : m_num_filter_samples {num_filter_samples}
-    , m_num_synch_medians{num_synch_medians}
     , m_sync_duration{sync_duration}
     , m_sample_count{0}
     , m_samples(num_filter_samples)
@@ -39,7 +37,7 @@ void ResponseStat::query_ended()
 {
     if (m_last_start == maxbase::TimePoint())
     {
-        // m_last_start is defaulted. Ignore, avoids extra logic in call sites.
+        // m_last_start is defaulted. Ignore, avoids extra logic at call sites.
         return;
     }
     m_samples[m_sample_count] = maxbase::Clock::now() - m_last_start;
@@ -58,9 +56,11 @@ bool ResponseStat::make_valid()
 {
     if (!m_average.num_samples() && m_sample_count)
     {
+        std::sort(m_samples.begin(), m_samples.begin() + m_sample_count);
         maxbase::Duration new_sample = m_samples[m_sample_count / 2];
         m_average.add(std::chrono::duration<double>(new_sample).count());
         m_sample_count = 0;
+        m_last_start = maxbase::TimePoint();
     }
 
     return is_valid();
@@ -84,8 +84,7 @@ maxbase::Duration ResponseStat::average() const
 bool ResponseStat::sync_time_reached()
 {
     auto now = maxbase::Clock::now();
-    bool reached = m_next_sync < now
-        || m_average.num_samples() >= m_num_synch_medians;
+    bool reached = m_next_sync < now;
 
     if (reached)
     {
