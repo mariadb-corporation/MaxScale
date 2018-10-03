@@ -110,7 +110,13 @@ connections, the smallest lag is used.
 With recent MariaDB Server versions, the monitor can check the disk space on the
 backends and detect if the server is running low. The monitor can be set to
 automatically switchover a master low on disk space. Slaves are instead set to
-maintenance mode.
+maintenance mode. Disk space is also considered when selecting a new master for
+promotion.
+
+#### Replication reset feature
+
+The *reset-replication* monitor command deletes all slave connections and binary
+logs, and then sets up replication. Useful when data is in sync but gtid:s are not.
 
 #### Unused parameters
 

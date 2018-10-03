@@ -247,20 +247,26 @@ section [Manual activation](#manual-activation) for more details.
 **Failover** replaces a failed master with a running slave. It does the
 following:
 
-1. Select the most up-to-date slave of the old master to be the new master. If
-the new master has unprocessed relay log items, cancel and try again later.
-2. Prepare the new master:
+1. Select the most up-to-date slave of the old master to be the new master. The
+selection criteria is as follows in descending priority:
+ 1. gtid_IO_pos (latest event in relay log)
+ 2. gtid_current_pos (most processed events)
+ 3. log_slave_updates is on
+ 4. disk space is not low
+2. If the new master has unprocessed relay log items, cancel and try again
+later.
+3. Prepare the new master:
  1. Remove the slave connection the new master used to replicate from the old
 master.
  2. Disable the *read\_only*-flag.
  3. Enable scheduled server events (if event handling is on).
  4. Run the commands in `promotion_sql_file`.
  5. Start replication from external master is one existed.
-3. Redirect all other slaves to replicate from the new master:
+4. Redirect all other slaves to replicate from the new master:
  1. STOP SLAVE and RESET SLAVE
  2. CHANGE MASTER TO
  3. START SLAVE
-4. Check that all slaves are replicating.
+5. Check that all slaves are replicating.
 
 Failover may lose events if no slave managed to replicate the events before the
 master went down.
@@ -272,11 +278,10 @@ following:
  1. Stop any external replication.
  2. Enable the *read\_only*-flag to stop writes.
  3. Disable scheduled server events (if event handling is on).
- 4. Flush the binary log (FLUSH LOGS) so that all events are on disk.
- 5. Run the commands in `demotion_sql_file`.
-2. Wait for all slaves to catch up with the old master by repeatedly querying
-their gtid:s.
-3. Promote new master and redirect slaves as in failover steps 2 and 3. Also
+ 4. Run the commands in `demotion_sql_file`.
+ 5. Flush the binary log (FLUSH LOGS) so that all events are on disk.
+2. Wait for the new master to catch up with the old master.
+3. Promote new master and redirect slaves as in failover steps 3 and 4. Also
 redirect the demoted old master.
 4. Check that all slaves are replicating.
 
