@@ -96,7 +96,13 @@ source=192.%.%.%
 source=192.168.%.%
 source=192.168.10.%
 ```
-Note that using source=% to match any IP is not allowed.
+Note that using `source=%` to match any IP is not allowed.
+
+Since MaxScale 2.3 it's also possible to specify multiple addresses separated
+by comma. Incoming client connections are subsequently checked against each.
+```
+source=192.168.21.3,192.168.10.%
+```
 
 ### `user`
 

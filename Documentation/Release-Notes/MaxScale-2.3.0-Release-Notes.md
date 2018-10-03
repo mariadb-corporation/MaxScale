@@ -201,6 +201,10 @@ allows queries to be automatically retried if their execution is interrupted.
 The [`causal_reads`](../Routers/ReadWriteSplit.md#causal_reads) parameter
 enables distributed consistent reads with MariaDB version 10.2 and newer.
 
+### Named Server Filter
+
+The `source` parameter can now contain a list of comma separated addresses.
+
 ### Interactive Mode for MaxCtrl
 
 MaxCtrl can now be started in an interactive mode similar to MaxAdmin. This
