@@ -158,6 +158,11 @@ API that provides the same information in a more easy to process format.
 There is now a new hint `last` that will cause a query to be routed to the
 same server the previous query was routed to.
 
+### Backend Connection IDs
+
+The backend connection IDs are now shown in the `show sessions` output of
+MaxCtrl.
+
 ## New Features
 
 ### Comment Filter
