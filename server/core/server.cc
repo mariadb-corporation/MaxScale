@@ -1560,3 +1560,36 @@ double server_response_time_average(const SERVER* srv)
     const Server* server = static_cast<const Server*>(srv);
     return server->response_time_average();
 }
+
+/** Apply backend average and adjust sample_max, which determines the weight of a new average
+ *  applied to EMAverage.
+ *  Sample max is raised if the server is fast, aggresively lowered if the incoming average is clearly
+ *  lower than the EMA, else just lowered a bit. The normal increase and decrease, drifting, of the max
+ *  is done to follow the speed of a server. The important part is the lowering of max, to allow for a
+ *  server that is speeding up to be adjusted and used.
+ *
+ *  Three new magic numbers to replace the sample max magic number...
+ *
+ */
+void Server::response_time_add(double ave, int num_samples)
+{
+    constexpr double drift {1.1};
+    int current_max = m_response_time.sample_max();
+    int new_max {0};
+
+    if (num_samples >= current_max)
+    {
+        new_max = num_samples * drift;
+    }
+    else if (m_response_time.average() / ave > 2)
+    {
+        new_max = current_max * 0.5;
+    }
+    else
+    {
+        new_max = current_max / drift;
+    }
+
+    m_response_time.set_sample_max(new_max);
+    m_response_time.add(ave, num_samples);
+}

@@ -47,18 +47,11 @@ public:
         return m_response_time.average();
     }
 
-    void response_time_add(double ave, int num_samples)
-    {
-        m_response_time.add(ave, num_samples);
-    }
+    void response_time_add(double ave, int num_samples);
 
     mutable std::mutex m_lock;
 
 private:
-    // nantti, TODO. Decide whether to expose some of this in config, or if the values
-    // can be calculated at runtime. The "500" or sample_max affects how often a
-    // session should updates this stat. sample_max should be slightly lower than max sample
-    // rate (which is less than qps due to the noise filter).
     maxbase::EMAverage m_response_time;
 };
 
