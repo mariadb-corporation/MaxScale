@@ -136,9 +136,9 @@ by this API.
 Credentials for authentication. This header should consist of a HTTP Basic
 Access authentication type payload which is the base64 encoded value of the
 username and password joined by a colon e.g. `Base64("maxuser:maxpwd")`. The
-REST API uses the same users as the MaxAdmin interface. For more details about
-MaxScale administrative users, refer to the [MaxAdmin](../Reference/MaxAdmin.md)
-documentation.
+REST API uses the same users as the MaxAdmin network interface. For more details
+about MaxScale administrative users, refer to the
+[MaxAdmin](../Reference/MaxAdmin.md) documentation.
 
 #### Content-Type
 
@@ -146,7 +146,7 @@ All PUT and POST requests must use the `Content-Type: application/json` media
 type and the request body must be a complete and valid JSON representation of a
 resource. All PATCH requests must use the `Content-Type: application/json` media
 type and the request body must be a JSON document containing a partial
-definition of the original resource.
+definition of the modified resource.
 
 #### Host
 

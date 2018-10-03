@@ -111,8 +111,7 @@ As the service to filter relationship is ordered (filters are applied in the
 order they are listed), filter to service relationships cannot be defined at
 creation time.
 
-The following example defines a request body which creates the new filter,
-_test-filter_, and assigns it to a service.
+The following example defines a request body which creates a new filter.
 
 ```javascript
 {

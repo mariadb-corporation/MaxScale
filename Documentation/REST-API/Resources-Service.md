@@ -7,12 +7,12 @@ collection of network listeners, filters, a router and a set of backend servers.
 
 ### Get a service
 
-Get a single service. The _:name_ in the URI must be a valid service name with
-all whitespace replaced with hyphens. The service names are case-insensitive.
-
 ```
 GET /v1/services/:name
 ```
+
+Get a single service. The _:name_ in the URI must be a valid service name with
+all whitespace replaced with hyphens. The service names are case-insensitive.
 
 #### Response
 
@@ -88,11 +88,11 @@ GET /v1/services/:name
 
 ### Get all services
 
-Get all services.
-
 ```
 GET /v1/services
 ```
+
+Get all services.
 
 #### Response
 
@@ -239,13 +239,13 @@ least the following fields.
 * `data.type`
   * Type of the object, must be `services`
 
-* `data.atttributes.router`
+* `data.attributes.router`
   * The router module to use
 
-* `data.atttributes.parameters.user`
+* `data.attributes.parameters.user`
   * The [`user`](../Getting-Started/Configuration-Guide.md#password) to use
 
-* `data.atttributes.parameters.password`
+* `data.attributes.parameters.password`
   * The [`password`](../Getting-Started/Configuration-Guide.md#password) to use
 
 The `data.attributes.parameters` object is used to define router and service
@@ -377,13 +377,13 @@ GET /v1/services/:name/listeners
 
 ### Get a single service listener
 
-Get the listeners of a service. The _:name_ in the URI must be a valid service
-name and _:listener_ must be a valid listener name, both with all whitespace
-replaced with hyphens.
-
 ```
 GET /v1/services/:name/listeners/:listener
 ```
+
+Get the listeners of a service. The _:name_ in the URI must be a valid service
+name and _:listener_ must be a valid listener name, both with all whitespace
+replaced with hyphens.
 
 #### Response
 
@@ -409,7 +409,6 @@ GET /v1/services/:name/listeners/:listener
 ```
 
 ### Create a new listener
-
 
 ```
 POST /v1/services/:name/listeners
@@ -479,12 +478,12 @@ Listener cannot be deleted:
 
 ### Update a service
 
-The _:name_ in the URI must map to a service name and the request body must be a
-valid JSON Patch document which is applied to the resource.
-
 ```
 PATCH /v1/services/:name
 ```
+
+The _:name_ in the URI must map to a service name and the request body must be a
+JSON object which is interpreted as the new definition of the service.
 
 All standard service parameters can be modified. Refer to the
 [service](../Getting-Started/Configuration-Guide.md#service) documentation on
@@ -495,6 +494,20 @@ at runtime if the router module supports it. Refer to the individual router
 documentation for more details on whether the router supports it and which
 parameters can be updated at runtime.
 
+The following example modifies a service by changing the `user` parameter to `admin`.
+
+```javascript
+{
+    "data": {
+        "attributes": {
+            "parameters": {
+                "user": "admin"
+            }
+        }
+    }
+}
+```
+
 #### Response
 
 Service is modified:
@@ -504,12 +517,12 @@ Service is modified:
 ### Update service relationships
 
 ```
-PATCH /v1/services/:name/relationships/servers
-PATCH /v1/services/:name/relationships/filters
+PATCH /v1/services/:name/relationships/:type
 ```
 
 The _:name_ in the URI must map to a service name with all whitespace replaced
-with hyphens.
+with hyphens. The _:type_ in the URI must be either _servers_ or _filters_,
+depending on which relationship is being modified.
 
 The request body must be a JSON object that defines only the _data_ field. The
 value of the _data_ field must be an array of relationship objects that define
@@ -524,7 +537,8 @@ existing relationships of this type for the service. Both `servers` and
  for more details.
 
 The following is an example request and request body that defines a single
-server relationship for a service.
+server relationship for a service that is equivalent to a `servers=my-server`
+parameter.
 
 ```
 PATCH /v1/services/my-rw-service/relationships/servers
@@ -560,11 +574,11 @@ Invalid JSON body:
 
 ### Stop a service
 
-Stops a started service.
-
 ```
 PUT /v1/services/:name/stop
 ```
+
+Stops a started service.
 
 #### Response
 
@@ -574,11 +588,11 @@ Service is stopped:
 
 ### Start a service
 
-Starts a stopped service.
-
 ```
 PUT /v1/services/:name/start
 ```
+
+Starts a stopped service.
 
 #### Response
 

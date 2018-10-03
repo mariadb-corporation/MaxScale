@@ -8,11 +8,12 @@ session is created on a service and each service can have multiple sessions.
 
 ### Get a session
 
-Get a single session. _:id_ must be a valid session ID.
-
 ```
 GET /v1/sessions/:id
 ```
+
+Get a single session. _:id_ must be a valid session ID. The session ID is the
+same that is exposed to the client as the connection ID.
 
 #### Response
 
@@ -55,11 +56,11 @@ GET /v1/sessions/:id
 
 ### Get all sessions
 
-Get all sessions.
-
 ```
 GET /v1/sessions
 ```
+
+Get all sessions.
 
 #### Response
 

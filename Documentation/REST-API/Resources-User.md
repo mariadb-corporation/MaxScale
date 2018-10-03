@@ -7,12 +7,12 @@ MaxScale's configuration.
 
 ### Get network user
 
-Get a single network user. The The _:name_ in the URI must be a valid network
-user name.
-
 ```
 GET /v1/users/inet/:name
 ```
+
+Get a single network user. The The _:name_ in the URI must be a valid network
+user name.
 
 #### Response
 
@@ -38,11 +38,11 @@ GET /v1/users/inet/:name
 
 ### Get all network users
 
-Get all network users.
-
 ```
 GET /v1/users/inet
 ```
+
+Get all network users.
 
 #### Response
 
@@ -70,12 +70,12 @@ GET /v1/users/inet
 
 ### Get enabled UNIX account
 
-Get a single enabled UNIX account. The The _:name_ in the URI must be a valid
-UNIX account name that has been enabled.
-
 ```
 GET /v1/users/unix/:name
 ```
+
+Get a single enabled UNIX account. The The _:name_ in the URI must be a valid
+UNIX account name that has been enabled.
 
 #### Response
 
@@ -101,11 +101,11 @@ GET /v1/users/unix/:name
 
 ### Get all enabled UNIX accounts
 
-Get all enabled UNIX accounts.
-
 ```
 GET /v1/users/unix
 ```
+
+Get all enabled UNIX accounts.
 
 #### Response
 
@@ -133,12 +133,12 @@ GET /v1/users/unix
 
 ### Get all users
 
-Get all administrative users. This fetches both network users and local UNIX
-accounts.
-
 ```
 GET /v1/users
 ```
+
+Get all administrative users. This fetches both network users and local UNIX
+accounts.
 
 #### Response
 
@@ -176,21 +176,24 @@ GET /v1/users
 
 ### Create a network user
 
-Create a new network user.
-
 ```
 POST /v1/users/inet
 ```
 
-The request body must fulfill the following requirements.
+Create a new network user. The request body must define at least the
+following fields.
 
-- The `/data/id`, `/data/type`, `/data/attributes/account` and
-  `/data/attributes/password` fields must be defined.
-- The `/data/id` field defines the name of the account
-- The `/data/attributes/password` field defines the password for this user.
-- The `/data/attributes/account` field should be set to `admin` for
-  administrative users and `basic` to read-only users.
-- The value of the `/data/type` field must always be `inet`.
+* `data.id`
+  * The username
+
+* `data.type`
+  * Type of the object, must be `inet`
+
+* `data.attributes.password`
+  * The password for this user
+
+* `data.attributes.account`
+  * Set to `admin` for administrative users and `basic` to read-only users
 
 Here is an example request body defining the network user _my-user_ with the
 password _my-password_ that is allowed to execute only read-only operations.
@@ -216,20 +219,21 @@ Status: 204 No Content
 
 ### Enable a UNIX account
 
-This enables an existing UNIX account on the system for administrative
-operations.
-
 ```
 POST /v1/users/unix
 ```
 
-The request body must fulfill the following requirements.
+This enables an existing UNIX account on the system for administrative
+operations. The request body must define at least the following fields.
 
-- The `/data/id`, `/data/type` and `/data/attributes/account` fields must be defined.
-- The `/data/id` field defines the name of the account
-- The `/data/attributes/account` field should be set to `admin` for
-  administrative users and `basic` to read-only users.
-- The value of the `/data/type` field must always be `unix`.
+* `data.id`
+  * The username
+
+* `data.type`
+  * Type of the object, must be `unix`
+
+* `data.attributes.account`
+  * Set to `admin` for administrative users and `basic` to read-only users
 
 Here is an example request body enabling the UNIX account _jdoe_ for read-only operations.
 
@@ -253,11 +257,11 @@ Status: 204 No Content
 
 ### Delete a network user
 
-The _:name_ part of the URI must be a valid user name.
-
 ```
 DELETE /v1/users/inet/:name
 ```
+
+The _:name_ part of the URI must be a valid user name.
 
 #### Response
 
@@ -267,11 +271,11 @@ Status: 204 No Content
 
 ### Disable a UNIX account
 
-The _:name_ part of the URI must be a valid user name.
-
 ```
 DELETE /v1/users/unix/:name
 ```
+
+The _:name_ part of the URI must be a valid user name.
 
 #### Response
 

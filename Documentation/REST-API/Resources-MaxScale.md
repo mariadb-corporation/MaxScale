@@ -7,12 +7,12 @@ of which the modules build upon.
 
 ## Get global information
 
-Retrieve global information about a MaxScale instance. This includes various
-file locations, configuration options and version information.
-
 ```
 GET /v1/maxscale
 ```
+
+Retrieve global information about a MaxScale instance. This includes various
+file locations, configuration options and version information.
 
 #### Response
 
@@ -67,6 +67,10 @@ GET /v1/maxscale
 
 ## Update MaxScale parameters
 
+```
+PATCH /v1/maxscale
+```
+
 Update MaxScale parameters. The request body must define updated values for the
 `data.attributes.parameters` object. The following parameters can be altered:
 
@@ -76,10 +80,6 @@ Update MaxScale parameters. The request body must define updated values for the
 - [auth_write_timeout](../Getting-Started/Configuration-Guide.md#auth_write_timeout)
 - [admin_log_auth_failures](../Getting-Started/Configuration-Guide.md#admin_log_auth_failures)
 - [passive](../Getting-Started/Configuration-Guide.md#passive)
-
-```
-PATCH /v1/maxscale
-```
 
 #### Response
 
@@ -93,13 +93,13 @@ Invalid JSON body:
 
 ## Get thread information
 
-Get the information and statistics of a particular thread. The _:id_ in
-the URI must map to a valid thread number between 0 and the configured
-value of `threads`.
-
 ```
 GET /v1/maxscale/threads/:id
 ```
+
+Get the information and statistics of a particular thread. The _:id_ in
+the URI must map to a valid thread number between 0 and the configured
+value of `threads`.
 
 #### Response
 
@@ -143,11 +143,11 @@ GET /v1/maxscale/threads/:id
 
 ## Get information for all threads
 
-Get the informatino for all threads. Returns a collection of threads resources.
-
 ```
 GET /v1/maxscale/threads
 ```
+
+Get the information for all threads. Returns a collection of threads resources.
 
 #### Response
 
@@ -277,12 +277,12 @@ GET /v1/maxscale/threads
 
 ## Get logging information
 
-Get information about the current state of logging, enabled log files and the
-location where the log files are stored.
-
 ```
 GET /v1/maxscale/logs
 ```
+
+Get information about the current state of logging, enabled log files and the
+location where the log files are stored.
 
 #### Response
 
@@ -326,13 +326,13 @@ GET /v1/maxscale/logs
 
 ## Update logging parameters
 
-Update logging parameters. The request body must define updated values for the
-`data.attributes.parameters` object. All logging parameters apart from
-`log_to_shm` can be altered at runtime.
-
 ```
 PATCH /v1/maxscale/logs
 ```
+
+Update logging parameters. The request body must define updated values for the
+`data.attributes.parameters` object. All logging parameters apart from
+`log_to_shm` can be altered at runtime.
 
 #### Response
 
@@ -346,12 +346,12 @@ Invalid JSON body:
 
 ## Flush and rotate log files
 
-Flushes any pending messages to disk and reopens the log files. The body of the
-message is ignored.
-
 ```
 POST /v1/maxscale/logs/flush
 ```
+
+Flushes any pending messages to disk and reopens the log files. The body of the
+message is ignored.
 
 #### Response
 
@@ -359,11 +359,11 @@ POST /v1/maxscale/logs/flush
 
 ## Get task schedule
 
-Retrieve all pending tasks that are queued for execution.
-
 ```
 GET /v1/maxscale/tasks
 ```
+
+Retrieve all pending tasks that are queued for execution.
 
 #### Response
 
@@ -378,14 +378,14 @@ GET /v1/maxscale/tasks
 }
 ```
 
-## Get loaded modules
-
-Retrieve information about a loaded module. This includes version, API and
-maturity information as well as all the parameters that the module defines.
+## Get a loaded module
 
 ```
-GET /v1/maxscale/modules
+GET /v1/maxscale/modules/:name
 ```
+
+Retrieve information about a loaded module. The _:name_ must be the name of a
+valid loaded module.
 
 #### Response
 
@@ -467,11 +467,11 @@ GET /v1/maxscale/modules
 
 ## Get all loaded modules
 
-Retrieve information about all loaded modules.
-
 ```
 GET /v1/maxscale/modules
 ```
+
+Retrieve information about all loaded modules.
 
 #### Response
 
@@ -519,15 +519,6 @@ GET /v1/maxscale/modules
 
 ## Call a module command
 
-Modules can expose commands that can be called via the REST API. The module
-resource lists all commands in the `data.attributes.commands` list. Each value
-is a command sub-resource identified by its `id` field and the HTTP method the
-command uses is defined by the `attributes.method` field.
-
-The _:module_ in the URI must be a valid name of a loaded module and _:command_
-must be a valid command identifier that is exposed by that module. All
-parameters to the module commands are passed as HTTP request parameters.
-
 For read-only commands:
 
 ```
@@ -539,6 +530,15 @@ For commands that can modify data:
 ```
 POST /v1/maxscale/modules/:module/:command
 ```
+
+Modules can expose commands that can be called via the REST API. The module
+resource lists all commands in the `data.attributes.commands` list. Each value
+is a command sub-resource identified by its `id` field and the HTTP method the
+command uses is defined by the `attributes.method` field.
+
+The _:module_ in the URI must be a valid name of a loaded module and _:command_
+must be a valid command identifier that is exposed by that module. All
+parameters to the module commands are passed as HTTP request parameters.
 
 Here is an example POST requests to the dbfwfilter module command _reload_ with
 two parameters, the name of the filter instance and the path to a file:

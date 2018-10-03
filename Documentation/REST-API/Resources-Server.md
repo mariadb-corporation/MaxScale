@@ -232,11 +232,23 @@ Response contains a resource collection with all servers.
 POST /v1/servers
 ```
 
-Create a new server by defining the resource. The posted object must define the
-_data.id_ field with the name of the server and the
-_data.atttributes.parameters_ field with JSON object containing values for the
-_address_ and _port_ parameters. The following is the minimal required JSON
-object for defining a new server.
+Create a new server by defining the resource. The posted object must define at
+least the following fields.
+
+* `data.id`
+  * Name of the server
+
+* `data.type`
+  * Type of the object, must be `servers`
+
+* `data.attributes.parameters.address`
+  * The [`address`](../Getting-Started/Configuration-Guide.md#address) to use
+
+* `data.attributes.parameters.port`
+  * The [`port`](../Getting-Started/Configuration-Guide.md#port) to use
+
+
+The following is the minimal required JSON object for defining a new server.
 
 ```javascript
 {
@@ -246,8 +258,7 @@ object for defining a new server.
         "attributes": {
             "parameters": {
                 "address": "127.0.0.1",
-                "port": 3003,
-                "protocol": "MariaDBBackend"
+                "port": 3003
             }
         }
     }
@@ -265,8 +276,7 @@ new servers to be created and immediately taken into use.
         "attributes": {
             "parameters": {
                 "address": "127.0.0.1",
-                "port": 3002,
-                "protocol": "MariaDBBackend"
+                "port": 3002
             }
         },
         "relationships": {
@@ -301,12 +311,12 @@ The following parameters can be defined when a server is being created.
 - [port](../Getting-Started/Configuration-Guide.md#port)
 - [protocol](../Getting-Started/Configuration-Guide.md#protocol)
 - [authenticator](../Getting-Started/Configuration-Guide.md#authenticator)
-- [authenticator_options](../Getting-Started/Configuration-Guide.md#authenticator-options)
 - [ssl_key](../Getting-Started/Configuration-Guide.md#ssl_key)
 - [ssl_cert](../Getting-Started/Configuration-Guide.md#ssl_cert)
 - [ssl_ca_cert](../Getting-Started/Configuration-Guide.md#ssl_ca_cert)
 - [ssl_version](../Getting-Started/Configuration-Guide.md#ssl_version)
 - [ssl_cert_verify_depth](../Getting-Started/Configuration-Guide.md#ssl_cert_verify_depth)
+- [ssl_verify_peer_certificate](../Getting-Started/Configuration-Guide.md#ssl_verify_peer_certificate)
 
 #### Response
 

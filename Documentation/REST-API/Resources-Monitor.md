@@ -7,12 +7,12 @@ more servers.
 
 ### Get a monitor
 
-Get a single monitor. The _:name_ in the URI must be a valid monitor name with
-all whitespace replaced with hyphens. The monitor names are case-sensitive.
-
 ```
 GET /v1/monitors/:name
 ```
+
+Get a single monitor. The _:name_ in the URI must be a valid monitor name with
+all whitespace replaced with hyphens. The monitor names are case-sensitive.
 
 #### Response
 
@@ -110,11 +110,11 @@ GET /v1/monitors/:name
 
 ### Get all monitors
 
-Get all monitors.
-
 ```
 GET /v1/monitors
 ```
+
+Get all monitors.
 
 #### Response
 
@@ -214,19 +214,33 @@ GET /v1/monitors
 
 ### Create a monitor
 
-Create a new monitor. The request body must define the `/data/id`
-field with the name of the monitor, the `/data/type` field with the
-value of `monitors` and the `/data/attributes/module` field with the
-monitor module for this monitor. All of the monitor parameters can
-be defined at creation time.
-
 ```
 POST /v1/monitors
 ```
 
-The following example defines a request body which creates the new monitor,
-_test-monitor_, and assigns two servers to be monitored by it. It also defines
-a custom value for the _monitor_interval_ parameter.
+Create a new monitor. The request body must define at least the following
+fields.
+
+* `data.id`
+  * Name of the monitor
+
+* `data.type`
+  * Type of the object, must be `monitors`
+
+* `data.attributes.module`
+  * The monitor module to use
+
+* `data.attributes.parameters.user`
+  * The [`user`](../Getting-Started/Configuration-Guide.md#password) to use
+
+* `data.attributes.parameters.password`
+  * The [`password`](../Getting-Started/Configuration-Guide.md#password) to use
+
+All monitor parameters can be defined at creation time.
+
+The following example defines a request body which creates a new monitor and
+assigns two servers to be monitored by it. It also defines a custom value for
+the _monitor_interval_ parameter.
 
 ```javascript
 {
@@ -236,7 +250,9 @@ a custom value for the _monitor_interval_ parameter.
         "attributes": {
             "module": "mariadbmon", // The monitor uses the mariadbmon module
             "parameters": { // Monitor parameters
-                "monitor_interval": 1000
+                "monitor_interval": 1000,
+                "user": "maxuser,
+                "password": "maxpwd"
             }
         },
         "relationships": { // List of server relationships that this monitor uses
@@ -265,16 +281,18 @@ Monitor is created:
 
 ### Update a monitor
 
-The :name in the URI must map to a monitor name with all whitespace replaced with
-hyphens. The request body must be a valid JSON document representing the modified monitor.
-
 ```
 PATCH /v1/monitors/:name
 ```
 
+The :name in the URI must map to a monitor name with all whitespace replaced
+with hyphens. The request body must be a valid JSON document representing the
+modified monitor.
+
 ### Modifiable Fields
 
 The following standard server parameter can be modified.
+
 - [user](../Monitors/Monitor-Common.md#user)
 - [password](../Monitors/Monitor-Common.md#password)
 - [monitor_interval](../Monitors/Monitor-Common.md#monitor_interval)
@@ -283,10 +301,9 @@ The following standard server parameter can be modified.
 - [backend_read_timeout](../Monitors/Monitor-Common.md#backend_read_timeout)
 - [backend_connect_attempts](../Monitors/Monitor-Common.md#backend_connect_attempts)
 
-Refer to the documentation on these parameters for valid values.
-
-In addition to these standard parameters, the monitor specific parameters can also be
-modified. Refer to the monitor module documentation for details on these parameters.
+In addition to these standard parameters, the monitor specific parameters can
+also be modified. Refer to the monitor module documentation for details on these
+parameters.
 
 #### Response
 
@@ -348,13 +365,12 @@ Invalid JSON body:
 
 ### Destroy a monitor
 
-Destroy a created monitor. The monitor must not have relationships to any
-servers and if it does a PATCH request which removes these relationships is
-required before a DELETE request for the monitor can be made.
-
 ```
 DELETE /v1/monitors/:name/stop
 ```
+
+Destroy a created monitor. The monitor must not have relationships to any
+servers in order to be destroyed.
 
 #### Response
 
@@ -368,11 +384,11 @@ Monitor could not be deleted:
 
 ### Stop a monitor
 
-Stops a started monitor.
-
 ```
 PUT /v1/monitors/:name/stop
 ```
+
+Stops a started monitor.
 
 #### Response
 
@@ -382,11 +398,11 @@ Monitor is stopped:
 
 ### Start a monitor
 
-Starts a stopped monitor.
-
 ```
 PUT /v1/monitors/:name/start
 ```
+
+Starts a stopped monitor.
 
 #### Response
 
