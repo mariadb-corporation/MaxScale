@@ -2,8 +2,8 @@
 
 ## Enabling routing hints
 
-To enable routing hints for a service, the hintfilter module needs to be
-configured and the filter needs to be applied to the service.
+To enable user specified routing hints for a service, the hintfilter module
+needs to be configured and the filter needs to be applied to the service.
 
 Here is an example service which has the hint filter configured and applied.
 
@@ -51,7 +51,7 @@ name-value pairs.
 
 These hints will instruct the router to route a query to a certain type of a server.
 ```
--- maxscale route to [master | slave | server <server name>]
+-- maxscale route to [master | slave | server <server name> | last]
 ```
 
 A `master` value in a routing hint will route the query to a master
@@ -59,7 +59,8 @@ server. This can be used to direct read queries to a master server for a
 up-to-date result with no replication lag. A `slave` value will route the
 query to a slave server. A `server` value will route the query to a named
 server. The value of <server name> needs to be the same as the server
-section name in maxscale.cnf.
+section name in maxscale.cnf. A `last` value will route the query to the
+same server the previous query was routed to.
 
 ### Name-value hints
 
