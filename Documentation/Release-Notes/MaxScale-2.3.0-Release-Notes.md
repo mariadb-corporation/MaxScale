@@ -41,6 +41,12 @@ still retaining the relative order of each command.
 To keep the old functionality, add `disable_sescmd_history=true` to the service
 definition.
 
+### Cache Filter
+
+The rules can now be expressed using a JSON array containing rule objects,
+which makes it easier to express more complex rules. Please see the
+[Cache](../Filters/Cache.md) documentation for details.
+
 ### Masking Filter
 
 By default the masking filter rejects statements that use functions on
