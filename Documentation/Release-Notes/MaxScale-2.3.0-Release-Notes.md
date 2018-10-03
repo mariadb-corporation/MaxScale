@@ -280,6 +280,16 @@ This allows conditional replication similar to _replicate_do_table_ but with
 full PCRE2 compliant match/exclude functionality. For more information, refer to
 the [binlogfilter](../Filters/BinlogFilter.md) documentation.
 
+### Network Traffic Buffering
+
+The new
+[`writeq_high_water`](../Getting-Started/Configuration-Guide.md#writeq_high_water)
+and
+[`writeq_low_water`](../Getting-Started/Configuration-Guide.md#writeq_low_water)
+parameters allow network traffic to be throttled if it exceeds the highwater
+mark. This can be used to prevent MaxScale from buffering too much data in
+memory if the client is not reading results fast enough.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.3.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.3.0)
