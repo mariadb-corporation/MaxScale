@@ -1700,7 +1700,7 @@ void MariaDBMonitor::check_cluster_operations_support()
             && server->m_version != MariaDBServer::version::MARIADB_100)
         {
             supported = false;
-            auto reason = string_printf("The version of server '%s' is not supported. Failover/switchover "
+            auto reason = string_printf("The version of server %s is not supported. Failover/switchover "
                                         "requires MariaDB 10.X.",
                                         server->name());
             printer.cat(all_reasons, reason);
@@ -1708,29 +1708,16 @@ void MariaDBMonitor::check_cluster_operations_support()
 
         if (server->is_slave() && !server->m_slave_status.empty())
         {
-            if (server->m_node.parents.size() > 1)
+            for (const auto& slave_conn : server->m_slave_status)
             {
-                supported = false;
-                auto reason = string_printf("Server '%s' is replicating or attempting to replicate from "
-                                            "multiple masters.",
-                                            server->name());
-                printer.cat(all_reasons, reason);
+                if (slave_conn.gtid_io_pos.empty())
+                {
+                    supported = false;
+                    auto reason = string_printf("%s is not using gtid-replication.",
+                                                slave_conn.to_short_string(server->name()).c_str());
+                    printer.cat(all_reasons, reason);
+                }
             }
-            else if (server->m_slave_status[0].gtid_io_pos.empty())
-            {
-                supported = false;
-                auto reason = string_printf("Server '%s' is not using gtid-replication.", server->name());
-                printer.cat(all_reasons, reason);
-            }
-        }
-
-        if (server->is_relay_master())
-        {
-            supported = false;
-            auto reason = string_printf("Server '%s' is a relay. Only topologies with one replication "
-                                        "layer are supported.",
-                                        server->name());
-            printer.cat(all_reasons, reason);
         }
     }
 
@@ -1743,9 +1730,7 @@ void MariaDBMonitor::check_cluster_operations_support()
             "after the above issues have been resolved.";
         string p1 = string_printf(PROBLEMS, all_reasons.c_str());
         string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, m_monitor->name);
-        string p3 = string_printf(RE_ENABLE_FMT,
-                                  "switchover",
-                                  CN_SWITCHOVER_ON_LOW_DISK_SPACE,
+        string p3 = string_printf(RE_ENABLE_FMT, "switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE,
                                   m_monitor->name);
         string total_msg = p1 + " " + p2 + " " + p3;
         MXS_ERROR("%s", total_msg.c_str());
