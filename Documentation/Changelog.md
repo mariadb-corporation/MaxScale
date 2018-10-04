@@ -7,7 +7,7 @@
 * `config reload` removed from MaxAdmin (was deprecated in 2.2)
 * MariaDBMonitor features added, modified and removed
 * A Comment filter has been added.
-* Services and filter can be created at runtime via the REST API
+* Services and filters can be created at runtime via the REST API
 * Runtime router reconfiguration is now possible
 * MaxCtrl
   * The `create monitor` command now accepts a list of key-value parameters
@@ -76,7 +76,7 @@ For more details, please refer to:
 * MariaDB MaxScale is licensed under MariaDB BSL 1.1.
 * Hierarchical configuration files are now supported.
 * Logging is now performed in a way compatible with logrotate(8).
-* Persistent connections are reset upon resuse.
+* Persistent connections are reset upon reuse.
 * Galera monitor now consistently chooses the same node as master.
 * Galera Monitor can set the preferred donor nodes list.
 * The configuration can now be altered dynamically and the changes are persisted.
