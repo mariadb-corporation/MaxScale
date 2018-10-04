@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     test.tprintf("Blocking master and checking that master failure is delayed at least once.");
     test.repl->block_node(0);
     sleep(5);
-    test.log_includes(0, "delaying.*failover");
+    test.log_includes(0, "Delaying failover");
 
     test.tprintf("Waiting to see if failover is performed.");
     sleep(10);

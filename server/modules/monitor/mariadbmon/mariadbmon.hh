@@ -241,7 +241,8 @@ private:
     std::unique_ptr<ClusterOperation> failover_prepare(Log log_mode, json_t** error_out);
     bool                              failover_perform(ClusterOperation& operation);
     const MariaDBServer*              slave_receiving_events(const MariaDBServer* demotion_target,
-                                                             maxbase::Duration* event_age_out);
+                                                             maxbase::Duration* event_age_out,
+                                                             maxbase::Duration* delay_out);
     bool manual_failover(json_t** output);
     void handle_auto_failover();
 
