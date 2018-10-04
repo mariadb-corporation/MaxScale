@@ -159,6 +159,8 @@ The CDC protocol no longer accepts the `QUERY-LAST-TRANSACTION` and
 `QUERY-TRANSACTION` commands. They were removed due to the addition of the REST
 API that provides the same information in a more easy to process format.
 
+## New Features
+
 ### Hints
 
 There is now a new hint `last` that will cause a query to be routed to the
@@ -168,8 +170,6 @@ same server the previous query was routed to.
 
 The backend connection IDs are now shown in the `show sessions` output of
 MaxCtrl.
-
-## New Features
 
 ### Comment Filter
 
