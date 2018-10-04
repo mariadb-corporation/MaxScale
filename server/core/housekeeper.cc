@@ -278,6 +278,8 @@ void hktask_remove(const char* name)
 
 void hkthread(hkstart_result* res)
 {
+    // res is on the stack in Housekeeper::start() and remains valid only
+    // until sem_post() is called.
     res->ok = qc_thread_init(QC_INIT_BOTH);
 
     if (!res->ok)
@@ -285,9 +287,11 @@ void hkthread(hkstart_result* res)
         MXS_ERROR("Could not initialize query classifier in housekeeper thread.");
     }
 
+    bool ok = res->ok;
     sem_post(&res->sem);
+    // NOTE: res is no longer valid here.
 
-    if (res->ok)
+    if (ok)
     {
         MXS_NOTICE("Housekeeper thread started.");
         hk->run();
