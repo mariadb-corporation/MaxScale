@@ -21,7 +21,7 @@
   * Transaction load balancing for normal transactions
   * Support for runtime router reconfiguration
 * Experimental resultset concatenation router, `cat`
-* The schema router is now capable of sharding tables.
+* The schema router is now capable of table family sharding.
 
 For more details, please refer to:
 

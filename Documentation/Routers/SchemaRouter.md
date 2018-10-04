@@ -8,8 +8,8 @@ database-based sharding, the schemarouter router also enables cross-node
 session variable usage by routing all queries that modify the session to all
 nodes.
 
-From 2.3.0 onwards, the SchemaRouter is capable of sharding tables, in
-addition to sharding databases.
+From 2.3.0 onwards, the SchemaRouter is capable of table family sharding,
+in addition to being capable of sharding databases.
 
 ## Routing Logic
 
@@ -117,7 +117,7 @@ refresh_databases=true
 refresh_interval=60
 ```
 
-## Table Sharding
+## Table Family Sharding
 
 This functionality was introduced in 2.3.0.
 
