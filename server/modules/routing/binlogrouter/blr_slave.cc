@@ -753,8 +753,6 @@ static int blr_slave_query(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* 
  */
 static int blr_slave_replay(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* master)
 {
-    GWBUF* clone;
-
     if (router->master_state == BLRM_UNCONFIGURED)
     {
         return blr_slave_send_ok(router, slave);
@@ -765,8 +763,32 @@ static int blr_slave_replay(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF*
         return 0;
     }
 
-    if ((clone = gwbuf_clone(master)) != NULL)
+    /**
+     * Note: The following manipulation of the buffers bypasses the thread-local checks that are present
+     * to prevent cross-thread usage of buffers. As the binlogrouter doesn't care about that, we have to
+     * avoid the checks in order to prevent debug assertions. This is definitely not something that should
+     * be done and a better solution would be to just store the data inside a vector and protect access with
+     * a lock.
+     */
+    size_t len = 0;
+
+    for (GWBUF* b = master; b; b = b->next)
     {
+        len += GWBUF_LENGTH(b);
+    }
+
+    GWBUF* clone = gwbuf_alloc(len);
+
+    if (clone)
+    {
+        uint8_t* data = GWBUF_DATA(clone);
+
+        for (GWBUF* b = master; b; b = b->next)
+        {
+            memcpy(data, GWBUF_DATA(b), GWBUF_LENGTH(b));
+            data += GWBUF_LENGTH(b);
+        }
+
         return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, clone);
     }
     else
