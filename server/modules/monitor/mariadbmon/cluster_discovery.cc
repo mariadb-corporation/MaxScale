@@ -558,7 +558,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
             parent->m_node.index = next_index++;
         }
 
-        bool has_slaves = false;
+        bool has_running_slaves = false;
         for (MariaDBServer* slave : parent->m_node.children)
         {
             // If the slave has an index, it has already been visited and labelled master/slave.
@@ -588,7 +588,11 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
             // yet visited.
             if (found_slave_conn && (conn_is_live || allow_stale_slaves))
             {
-                has_slaves = true;
+                bool slave_is_running = slave->is_running();
+                if (slave_is_running)
+                {
+                    has_running_slaves = true;
+                }
                 if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
                 {
                     // Add the slave server to the priority queue to a position depending on the master
@@ -597,7 +601,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
 
                     // The slave only gets the slave flags if it's running.
                     // TODO: If slaves with broken links should be given different flags, add that here.
-                    if (slave->is_running())
+                    if (slave_is_running)
                     {
                         slave->set_status(SERVER_SLAVE);
                         // Write the replication lag for this slave. It may have multiple slave connections,
@@ -617,7 +621,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
 
         // Finally, if the node itself is a running slave and has slaves of its own, label it as relay.
         if (parent != m_master && parent_has_live_link
-            && parent->has_status(SERVER_SLAVE | SERVER_RUNNING) && has_slaves)
+            && parent->has_status(SERVER_SLAVE | SERVER_RUNNING) && has_running_slaves)
         {
             parent->set_status(SERVER_RELAY);
         }
