@@ -1804,7 +1804,7 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* promotion_tar
     ServerArray redirectable_slaves;
     for (MariaDBServer* slave : demotion_target->m_node.children)
     {
-        if (slave != promotion_target)
+        if (slave->is_usable() && slave != promotion_target)
         {
             auto sstatus = slave->slave_connection_status(demotion_target);
             if (sstatus && !sstatus->gtid_io_pos.empty())
