@@ -472,7 +472,7 @@ static bool duplicate_context_init(DUPLICATE_CONTEXT* context)
     bool rv = false;
 
     const int table_size = 10;
-    std::set<std::string>* sections = new( std::nothrow) std::set<std::string>;
+    std::set<std::string>* sections = new(std::nothrow) std::set<std::string>;
     int errcode;
     PCRE2_SIZE erroffset;
     pcre2_code* re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$",

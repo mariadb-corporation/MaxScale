@@ -28,7 +28,6 @@ static std::string required_repl_version;
 static std::string required_galera_version;
 static bool restart_galera = false;
 static bool multiple_maxscales = false;
-
 }
 
 static void perform_manual_action(const char* zMessage)
@@ -131,18 +130,18 @@ TestConnections::TestConnections(int argc, char* argv[])
     static struct option long_options[] =
     {
 
-        {"help",              no_argument,              0,                        'h'          },
-        {"verbose",           no_argument,              0,                        'v'          },
-        {"silent",            no_argument,              0,                        'n'          },
-        {"quiet",             no_argument,              0,                        'q'          },
-        {"no-maxscale-start", no_argument,              0,                        's'          },
-        {"no-maxscale-init",  no_argument,              0,                        'i'          },
-        {"no-nodes-check",    no_argument,              0,                        'r'          },
-        {"restart-galera",    no_argument,              0,                        'g'          },
-        {"no-timeouts",       no_argument,              0,                        'z'          },
-        {"no-galera",         no_argument,              0,                        'y'          },
-        {"local-maxscale",    optional_argument,        0,                        'l'          },
-        {0,                   0,                        0,                        0            }
+        {"help",              no_argument,              0,                        'h'                },
+        {"verbose",           no_argument,              0,                        'v'                },
+        {"silent",            no_argument,              0,                        'n'                },
+        {"quiet",             no_argument,              0,                        'q'                },
+        {"no-maxscale-start", no_argument,              0,                        's'                },
+        {"no-maxscale-init",  no_argument,              0,                        'i'                },
+        {"no-nodes-check",    no_argument,              0,                        'r'                },
+        {"restart-galera",    no_argument,              0,                        'g'                },
+        {"no-timeouts",       no_argument,              0,                        'z'                },
+        {"no-galera",         no_argument,              0,                        'y'                },
+        {"local-maxscale",    optional_argument,        0,                        'l'                },
+        {0,                   0,                        0,                        0                  }
     };
 
     int c;
@@ -212,11 +211,13 @@ TestConnections::TestConnections(int argc, char* argv[])
         case 'l':
             {
                 const char* local_ip = optarg ? optarg : "127.0.0.1";
-                printf("MaxScale assumed to be running locally; not started and logs not downloaded. IP: %s\n", local_ip);
+                printf(
+                    "MaxScale assumed to be running locally; not started and logs not downloaded. IP: %s\n",
+                    local_ip);
 
                 maxscale_init = false;
                 no_maxscale_log_copy = true;
-                local_maxscale=true;
+                local_maxscale = true;
 
                 setenv("maxscale_IP", local_ip, true);
                 setenv("maxscale_network", local_ip, true);
@@ -977,7 +978,8 @@ int TestConnections::start_binlog(int m)
     if (!local_maxscale)
     {
         binlog =
-            open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
+            open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password,
+                            ssl);
         execute_query(binlog, "stop slave");
         execute_query(binlog, "reset slave all");
         mysql_close(binlog);
@@ -987,7 +989,8 @@ int TestConnections::start_binlog(int m)
     }
     else
     {
-        perform_manual_action("Perform the equivalent of 'STOP SLAVE; RESET SLAVE ALL' and stop local Maxscale");
+        perform_manual_action(
+            "Perform the equivalent of 'STOP SLAVE; RESET SLAVE ALL' and stop local Maxscale");
     }
 
     for (i = 0; i < repl->N; i++)

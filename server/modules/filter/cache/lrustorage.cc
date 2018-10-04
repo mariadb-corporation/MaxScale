@@ -558,7 +558,7 @@ cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
     }
     else
     {
-        pNode = new( std::nothrow) Node;
+        pNode = new(std::nothrow) Node;
     }
 
     if (pNode)

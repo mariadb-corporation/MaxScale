@@ -740,7 +740,7 @@ void AvroSession::client_callback()
 // static
 AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 {
-    return new( std::nothrow) AvroSession(inst, session);
+    return new(std::nothrow) AvroSession(inst, session);
 }
 
 AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)

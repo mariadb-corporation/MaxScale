@@ -435,7 +435,7 @@ std::auto_ptr<CacheRules> CacheRules::create(uint32_t debug)
 
     if (pRules)
     {
-        sThis = std::auto_ptr<CacheRules>(new( std::nothrow) CacheRules(pRules));
+        sThis = std::auto_ptr<CacheRules>(new(std::nothrow) CacheRules(pRules));
     }
 
     return sThis;

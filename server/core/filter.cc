@@ -90,7 +90,7 @@ SFilterDef filter_alloc(const char* name, const char* module, MXS_CONFIG_PARAMET
         return NULL;
     }
 
-    SFilterDef filter(new( std::nothrow) FilterDef(name, module, object, instance, params));
+    SFilterDef filter(new(std::nothrow) FilterDef(name, module, object, instance, params));
 
     if (filter)
     {

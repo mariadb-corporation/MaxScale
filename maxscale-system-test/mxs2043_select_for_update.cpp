@@ -36,10 +36,10 @@
 namespace
 {
 
-const char* ZUSER     = "mxs2043_user";
+const char* ZUSER = "mxs2043_user";
 const char* ZPASSWORD = "mxs2043_user";
-const char* ZTABLE    = "test.mxs2043";
-const char* ZCOLUMN   = "col";
+const char* ZTABLE = "test.mxs2043";
+const char* ZCOLUMN = "col";
 
 void drop_table(TestConnections& test, MYSQL* pMysql, bool silent = false)
 {
@@ -132,7 +132,6 @@ void run_test(TestConnections& test)
         mysql_close(pMysql);
     }
 }
-
 }
 
 int main(int argc, char* argv[])

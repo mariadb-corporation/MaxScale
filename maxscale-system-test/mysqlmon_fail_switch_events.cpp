@@ -65,11 +65,11 @@ void create_event(TestConnections& test)
     const char create_event_query[] = "CREATE EVENT %s ON SCHEDULE EVERY 1 SECOND "
                                       "DO UPDATE test.t1 SET c1 = c1 + 1;";
 
-    if ((test.try_query(conn, EVENT_SHCEDULER, "ON") == 0) &&
-        (test.try_query(conn, "CREATE OR REPLACE TABLE test.t1(c1 INT);") == 0) &&
-        (test.try_query(conn, USE_TEST) == 0) &&
-        (test.try_query(conn, "INSERT INTO t1 VALUES (1);") == 0) &&
-        (test.try_query(conn, create_event_query, EVENT_NAME) == 0))
+    if ((test.try_query(conn, EVENT_SHCEDULER, "ON") == 0)
+        && (test.try_query(conn, "CREATE OR REPLACE TABLE test.t1(c1 INT);") == 0)
+        && (test.try_query(conn, USE_TEST) == 0)
+        && (test.try_query(conn, "INSERT INTO t1 VALUES (1);") == 0)
+        && (test.try_query(conn, create_event_query, EVENT_NAME) == 0))
     {
         test.repl->sync_slaves();
         // Check that the event is running and increasing the value
@@ -84,9 +84,9 @@ void delete_event(TestConnections& test)
     test.maxscales->connect_maxscale(0);
     MYSQL* conn = test.maxscales->conn_rwsplit[0];
 
-    if ((test.try_query(conn, EVENT_SHCEDULER, "OFF") == 0) &&
-        (test.try_query(conn, USE_TEST) == 0) &&
-        (test.try_query(conn, DELETE_EVENT, EVENT_NAME) == 0))
+    if ((test.try_query(conn, EVENT_SHCEDULER, "OFF") == 0)
+        && (test.try_query(conn, USE_TEST) == 0)
+        && (test.try_query(conn, DELETE_EVENT, EVENT_NAME) == 0))
     {
         test.repl->sync_slaves();
         test.expect(!field_is_incrementing(test),

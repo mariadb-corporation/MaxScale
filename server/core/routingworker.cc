@@ -187,7 +187,7 @@ bool RoutingWorker::init()
     if (this_unit.epoll_listener_fd != -1)
     {
         int nWorkers = config_threadcount();
-        RoutingWorker** ppWorkers = new( std::nothrow) RoutingWorker* [MXS_MAX_THREADS]();      // 0-inited
+        RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [MXS_MAX_THREADS]();       // 0-inited
                                                                                                 // array
 
         if (ppWorkers)
@@ -489,7 +489,7 @@ void RoutingWorker::post_run()
 // static
 RoutingWorker* RoutingWorker::create(int epoll_listener_fd)
 {
-    RoutingWorker* pThis = new( std::nothrow) RoutingWorker();
+    RoutingWorker* pThis = new(std::nothrow) RoutingWorker();
 
     if (pThis)
     {

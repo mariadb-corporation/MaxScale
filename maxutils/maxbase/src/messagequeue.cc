@@ -152,7 +152,7 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
                         mxb_strerror(errno));
         }
 #endif
-        pThis = new( std::nothrow) MessageQueue(pHandler, read_fd, write_fd);
+        pThis = new(std::nothrow) MessageQueue(pHandler, read_fd, write_fd);
 
         if (!pThis)
         {

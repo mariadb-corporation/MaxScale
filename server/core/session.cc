@@ -100,7 +100,7 @@ MXS_SESSION* session_alloc(SERVICE* service, DCB* client_dcb)
 
 MXS_SESSION* session_alloc_with_id(SERVICE* service, DCB* client_dcb, uint64_t id)
 {
-    Session* session = new( std::nothrow) Session;
+    Session* session = new(std::nothrow) Session;
 
     if (session == nullptr)
     {

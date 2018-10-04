@@ -125,7 +125,7 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
         }
     }
 
-    return new( std::nothrow) Avro(service, service->svc_config_param, source_service, handler);
+    return new(std::nothrow) Avro(service, service->svc_config_param, source_service, handler);
 }
 
 Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler)

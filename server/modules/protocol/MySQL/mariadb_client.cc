@@ -237,7 +237,7 @@ LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, c
 
     if (fd > 0 && (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS))
     {
-        LocalClient* relay = new( std::nothrow) LocalClient(session, proto, fd);
+        LocalClient* relay = new(std::nothrow) LocalClient(session, proto, fd);
 
         if (relay)
         {

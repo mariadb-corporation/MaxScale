@@ -654,5 +654,4 @@ uint64_t get_byteN(const uint8_t* ptr, int bytes);
  * @return The next byte after the stored value
  */
 uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes);
-
 }

@@ -2456,7 +2456,7 @@ bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_spa
     {
         if (!monitor->disk_space_threshold)
         {
-            monitor->disk_space_threshold = new( std::nothrow) MxsDiskSpaceThreshold;
+            monitor->disk_space_threshold = new(std::nothrow) MxsDiskSpaceThreshold;
         }
 
         if (monitor->disk_space_threshold)
@@ -2928,5 +2928,4 @@ void MonitorInstance::run_one_tick()
     mon_hangup_failed_servers(m_monitor);
     store_server_journal(m_monitor, m_master);
 }
-
 }

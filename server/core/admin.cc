@@ -237,7 +237,7 @@ int handle_client(void* cls,
 {
     if (*con_cls == NULL)
     {
-        if ((*con_cls = new( std::nothrow) Client(connection)) == NULL)
+        if ((*con_cls = new(std::nothrow) Client(connection)) == NULL)
         {
             return MHD_NO;
         }
@@ -335,7 +335,7 @@ static char* load_cert(const char* file)
     struct stat st;
 
     if (stat(file, &st) == 0
-        && (rval = new( std::nothrow) char[st.st_size + 1]))
+        && (rval = new(std::nothrow) char[st.st_size + 1]))
     {
         infile.read(rval, st.st_size);
         rval[st.st_size] = '\0';

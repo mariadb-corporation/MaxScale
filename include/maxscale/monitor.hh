@@ -337,5 +337,4 @@ MXS_MONITOR_API MonitorApi<MonitorInstance>::s_api =
     &MonitorApi<MonitorInstance>::diagnostics,
     &MonitorApi<MonitorInstance>::diagnostics_json,
 };
-
 }

@@ -480,7 +480,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
     {
         // The instance is allocated before opening the file since open_log_file() takes the instance as a
         // parameter. Will be fixed (or at least cleaned) with a later refactoring of functions/methods.
-        my_instance = new( std::nothrow) QlaInstance(name, params);
+        my_instance = new(std::nothrow) QlaInstance(name, params);
         if (my_instance)
         {
             my_instance->re_match = re_match;
@@ -592,14 +592,14 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
     QlaFilterSession* my_session = NULL;
     if (!error)
     {
-        my_session = new( std::nothrow) QlaFilterSession(userName,
-                                                         remote,
-                                                         ses_active,
-                                                         mdata,
-                                                         filename,
-                                                         session_file,
-                                                         session->ses_id,
-                                                         session->service->name);
+        my_session = new(std::nothrow) QlaFilterSession(userName,
+                                                        remote,
+                                                        ses_active,
+                                                        mdata,
+                                                        filename,
+                                                        session_file,
+                                                        session->ses_id,
+                                                        session->service->name);
         if (my_session == NULL)
         {
             error = true;

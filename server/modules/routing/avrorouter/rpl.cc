@@ -541,7 +541,7 @@ STableCreateEvent table_create_alloc(char* ident, const char* sql, int len)
     if (!columns.empty())
     {
         int version = resolve_table_version(database, table);
-        rval.reset(new( std::nothrow) TableCreateEvent(database, table, version, std::move(columns)));
+        rval.reset(new(std::nothrow) TableCreateEvent(database, table, version, std::move(columns)));
     }
     else
     {
@@ -600,13 +600,13 @@ TableMapEvent* table_map_alloc(uint8_t* ptr, uint8_t hdr_len, TableCreateEvent* 
     Bytes cols(column_types, column_types + column_count);
     Bytes nulls(nullmap, nullmap + nullmap_size);
     Bytes meta(metadata, metadata + metadata_size);
-    return new( std::nothrow) TableMapEvent(schema_name,
-                                            table_name,
-                                            table_id,
-                                            create->version,
-                                            std::move(cols),
-                                            std::move(nulls),
-                                            std::move(meta));
+    return new(std::nothrow) TableMapEvent(schema_name,
+                                           table_name,
+                                           table_id,
+                                           create->version,
+                                           std::move(cols),
+                                           std::move(nulls),
+                                           std::move(meta));
 }
 
 Rpl::Rpl(SERVICE* service,
@@ -864,7 +864,7 @@ STableCreateEvent Rpl::table_create_copy(const char* sql, size_t len, const char
 
         if (it != m_created_tables.end())
         {
-            rval.reset(new( std::nothrow) TableCreateEvent(*it->second));
+            rval.reset(new(std::nothrow) TableCreateEvent(*it->second));
             char* table = strchr(target, '.');
             table = table ? table + 1 : target;
             rval->table = table;

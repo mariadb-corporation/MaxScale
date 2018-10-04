@@ -487,7 +487,7 @@ static int dbfw_thr_init()
     mxb_assert(this_thread == NULL);
     int rval = 0;
 
-    if ((this_thread = new( std::nothrow) DbfwThread) == NULL)
+    if ((this_thread = new(std::nothrow) DbfwThread) == NULL)
     {
         MXS_OOM();
         rval = -1;
@@ -1227,7 +1227,7 @@ Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 
     if (process_rule_file(file, &rules, &users))
     {
-        rval = new( std::nothrow) Dbfw(pParams);
+        rval = new(std::nothrow) Dbfw(pParams);
     }
 
     return rval;
@@ -1235,7 +1235,7 @@ Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 
 DbfwSession* Dbfw::newSession(MXS_SESSION* session)
 {
-    return new( std::nothrow) DbfwSession(this, session);
+    return new(std::nothrow) DbfwSession(this, session);
 }
 
 fw_actions Dbfw::get_action() const

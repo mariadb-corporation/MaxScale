@@ -243,7 +243,7 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
         MXS_ERROR("Failed to open SQLite3 handle.");
     }
     PamClientSession* rval = NULL;
-    if (!dbhandle || (rval = new( std::nothrow) PamClientSession(dbhandle, inst)) == NULL)
+    if (!dbhandle || (rval = new(std::nothrow) PamClientSession(dbhandle, inst)) == NULL)
     {
         sqlite3_close_v2(dbhandle);
     }

@@ -67,7 +67,7 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
         }
     }
 
-    TeeSession* tee = new( std::nothrow) TeeSession(session, client, match, md_match, exclude, md_exclude);
+    TeeSession* tee = new(std::nothrow) TeeSession(session, client, match, md_match, exclude, md_exclude);
 
     if (!tee)
     {

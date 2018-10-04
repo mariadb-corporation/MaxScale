@@ -126,7 +126,7 @@ SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    Server* server = new( std::nothrow) Server;
+    Server* server = new(std::nothrow) Server;
     char* my_name = MXS_STRDUP(name);
     char* my_protocol = MXS_STRDUP(protocol);
     char* my_authenticator = MXS_STRDUP(authenticator);
@@ -1519,7 +1519,7 @@ bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_thre
     {
         if (!server->disk_space_threshold)
         {
-            server->disk_space_threshold = new( std::nothrow) MxsDiskSpaceThreshold;
+            server->disk_space_threshold = new(std::nothrow) MxsDiskSpaceThreshold;
         }
 
         if (server->disk_space_threshold)

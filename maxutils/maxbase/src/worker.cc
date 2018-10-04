@@ -487,7 +487,7 @@ bool Worker::execute(function<void ()> func, mxb::Semaphore* pSem, execute_mode_
     };
 
     bool rval = false;
-    CustomTask* task = new( std::nothrow) CustomTask(func);
+    CustomTask* task = new(std::nothrow) CustomTask(func);
 
     if (task)
     {

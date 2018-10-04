@@ -67,7 +67,7 @@ PamInstance* PamInstance::create(char** options)
 
     PamInstance* instance = NULL;
     if (!error
-        && ((instance = new( std::nothrow) PamInstance(dbhandle, pam_db_name, pam_table_name)) == NULL))
+        && ((instance = new(std::nothrow) PamInstance(dbhandle, pam_db_name, pam_table_name)) == NULL))
     {
         sqlite3_close_v2(dbhandle);
     }

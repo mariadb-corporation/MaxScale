@@ -250,7 +250,7 @@ RWSplit* RWSplit::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
         config.master_reconnection = true;
     }
 
-    return new( std::nothrow) RWSplit(service, config);
+    return new(std::nothrow) RWSplit(service, config);
 }
 
 RWSplitSession* RWSplit::newSession(MXS_SESSION* session)

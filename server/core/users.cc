@@ -248,7 +248,7 @@ private:
 
 USERS* users_alloc()
 {
-    Users* rval = new( std::nothrow) Users();
+    Users* rval = new(std::nothrow) Users();
     MXS_OOM_IFNULL(rval);
     return reinterpret_cast<USERS*>(rval);
 }

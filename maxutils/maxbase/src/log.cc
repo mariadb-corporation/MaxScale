@@ -482,7 +482,7 @@ bool mxb_log_init(const char* ident,
         filepath = std::string(logdir) + "/" + suffix;
     }
 
-    this_unit.sMessage_registry.reset(new( std::nothrow) MessageRegistry);
+    this_unit.sMessage_registry.reset(new(std::nothrow) MessageRegistry);
 
     switch (target)
     {

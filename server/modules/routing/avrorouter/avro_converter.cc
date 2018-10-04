@@ -74,7 +74,7 @@ AvroTable* avro_table_alloc(const char* filepath,
         return NULL;
     }
 
-    AvroTable* table = new( std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
+    AvroTable* table = new(std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
 
     if (!table)
     {

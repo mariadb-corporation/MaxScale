@@ -134,7 +134,7 @@ Housekeeper::Housekeeper()
 
 bool Housekeeper::init()
 {
-    hk = new( std::nothrow) Housekeeper;
+    hk = new(std::nothrow) Housekeeper;
     return hk != nullptr;
 }
 

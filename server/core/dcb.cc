@@ -3321,7 +3321,7 @@ static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
     {
         // ... otherwise we post the fake event using the messaging mechanism.
 
-        FakeEventTask* task = new( std::nothrow) FakeEventTask(dcb, buf, ev);
+        FakeEventTask* task = new(std::nothrow) FakeEventTask(dcb, buf, ev);
 
         if (task)
         {
@@ -3530,7 +3530,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
             // Otherwise we'll move the whole operation to the correct worker.
             // This will only happen for "cli" and "maxinfo" services that must
             // be served by one thread as there otherwise deadlocks can occur.
-            AddDcbToWorker* task = new( std::nothrow) AddDcbToWorker(dcb, events);
+            AddDcbToWorker* task = new(std::nothrow) AddDcbToWorker(dcb, events);
             mxb_assert(task);
 
             if (task)

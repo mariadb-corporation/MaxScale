@@ -265,7 +265,7 @@ CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSess
 
     if ((zDb[0] == 0) || zDefaultDb)
     {
-        pCacheFilterSession = new( std::nothrow) CacheFilterSession(pSession, pCache, zDefaultDb);
+        pCacheFilterSession = new(std::nothrow) CacheFilterSession(pSession, pCache, zDefaultDb);
 
         if (!pCacheFilterSession)
         {

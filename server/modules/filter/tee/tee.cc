@@ -74,13 +74,13 @@ Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
     const char* match_str = config_get_string(params, "match");
     const char* exclude_str = config_get_string(params, "exclude");
 
-    Tee* my_instance = new( std::nothrow) Tee(service,
-                                              source,
-                                              user,
-                                              match,
-                                              match_str,
-                                              exclude,
-                                              exclude_str);
+    Tee* my_instance = new(std::nothrow) Tee(service,
+                                             source,
+                                             user,
+                                             match,
+                                             match_str,
+                                             exclude,
+                                             exclude_str);
 
     if (my_instance == NULL)
     {

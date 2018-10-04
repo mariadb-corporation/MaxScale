@@ -147,7 +147,7 @@ TableCreateEvent* table_create_from_schema(const char* file,
 
     if (json_extract_field_names(file, columns))
     {
-        newtable = new( std::nothrow) TableCreateEvent(db, table, version, std::move(columns));
+        newtable = new(std::nothrow) TableCreateEvent(db, table, version, std::move(columns));
     }
 
     return newtable;

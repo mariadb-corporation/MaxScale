@@ -530,7 +530,7 @@ bool qc_thread_init(uint32_t kind)
     if (kind & QC_INIT_SELF)
     {
         mxb_assert(!this_thread.pInfo_cache);
-        this_thread.pInfo_cache = new( std::nothrow) QCInfoCache;
+        this_thread.pInfo_cache = new(std::nothrow) QCInfoCache;
         rc = true;
     }
     else

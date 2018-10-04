@@ -265,17 +265,17 @@ private:
                              const MariaDBServer* demotion_target,
                              uint32_t gtid_domain,
                              std::string* reason_out = NULL);
-    int  redirect_slaves(MariaDBServer* new_master,
-                         const ServerArray& slaves,
-                         ServerArray* redirected_slaves);
+    int redirect_slaves(MariaDBServer* new_master,
+                        const ServerArray& slaves,
+                        ServerArray* redirected_slaves);
     int redirect_slaves_ex(ClusterOperation& op, const ServerArray& slaves,
                            ServerArray* redirected_slaves);
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
     bool        start_external_replication(MariaDBServer* new_master, json_t** err_out);
-    void wait_cluster_stabilization(ClusterOperation& op, const ServerArray& slaves);
-    void report_and_disable(const std::string& operation,
-                            const std::string& setting_name,
-                            bool* setting_var);
+    void        wait_cluster_stabilization(ClusterOperation& op, const ServerArray& slaves);
+    void        report_and_disable(const std::string& operation,
+                                   const std::string& setting_name,
+                                   bool* setting_var);
     bool check_gtid_replication(Log log_mode,
                                 const MariaDBServer* demotion_target,
                                 json_t** error_out);

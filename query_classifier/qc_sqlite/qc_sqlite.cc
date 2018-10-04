@@ -259,7 +259,7 @@ public:
 
     static QcSqliteInfo* create(uint32_t collect)
     {
-        QcSqliteInfo* pInfo = new( std::nothrow) QcSqliteInfo(collect);
+        QcSqliteInfo* pInfo = new(std::nothrow) QcSqliteInfo(collect);
         mxb_assert(pInfo);
         return pInfo;
     }

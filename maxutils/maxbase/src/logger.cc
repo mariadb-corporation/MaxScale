@@ -108,7 +108,7 @@ std::unique_ptr<Logger> FileLogger::create(const std::string& filename)
 
     if (fd != -1)
     {
-        logger.reset(new( std::nothrow) FileLogger(fd, filename));
+        logger.reset(new(std::nothrow) FileLogger(fd, filename));
 
         if (logger)
         {

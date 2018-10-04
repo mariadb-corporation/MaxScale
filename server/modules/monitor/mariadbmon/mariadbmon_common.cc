@@ -50,4 +50,5 @@ ClusterOperation::ClusterOperation(OperationType type,
     , replication_password(replication_password)
     , error_out(error)
     , time_remaining(time_remaining)
-{}
+{
+}
