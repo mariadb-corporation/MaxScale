@@ -190,7 +190,7 @@ BackendSelectFunction get_backend_select_function(select_criteria_t sc)
     case LEAST_CURRENT_OPERATIONS:
         return backend_cmp_current_load;
 
-    case LOWEST_RESPONSE_TIME:
+    case ADAPTIVE_ROUTING:
         return backend_cmp_response_time;
     }
 
@@ -297,7 +297,7 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
                      STRSRVSTATUS(b->server));
             break;
 
-        case LOWEST_RESPONSE_TIME:
+        case ADAPTIVE_ROUTING:
             {
                 maxbase::Duration response_ave(server_response_time_average(b->server));
                 std::ostringstream os;

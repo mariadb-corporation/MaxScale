@@ -65,7 +65,7 @@ enum select_criteria_t
     LEAST_ROUTER_CONNECTIONS,   /**< connections established by this router */
     LEAST_BEHIND_MASTER,
     LEAST_CURRENT_OPERATIONS,
-    LOWEST_RESPONSE_TIME
+    ADAPTIVE_ROUTING
 };
 
 /**
@@ -94,7 +94,7 @@ static const MXS_ENUM_VALUE slave_selection_criteria_values[] =
     {"LEAST_ROUTER_CONNECTIONS", LEAST_ROUTER_CONNECTIONS},
     {"LEAST_BEHIND_MASTER",      LEAST_BEHIND_MASTER     },
     {"LEAST_CURRENT_OPERATIONS", LEAST_CURRENT_OPERATIONS},
-    {"LOWEST_RESPONSE_TIME",     LOWEST_RESPONSE_TIME    },
+    {"ADAPTIVE_ROUTING",         ADAPTIVE_ROUTING        },
     {NULL}
 };
 
@@ -353,8 +353,8 @@ static inline const char* select_criteria_to_str(select_criteria_t type)
     case LEAST_CURRENT_OPERATIONS:
         return "LEAST_CURRENT_OPERATIONS";
 
-    case LOWEST_RESPONSE_TIME:
-        return "LOWEST_RESPONSE_TIME";
+    case ADAPTIVE_ROUTING:
+        return "ADAPTIVE_ROUTING";
 
     default:
         return "UNDEFINED_CRITERIA";
