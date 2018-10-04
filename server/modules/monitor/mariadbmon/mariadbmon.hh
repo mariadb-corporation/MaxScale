@@ -33,6 +33,13 @@ typedef std::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
 // Map of cycle number to cycle members. The elements should be in order for predictability when iterating.
 typedef std::map<int, ServerArray> CycleMap;
 
+// Some methods need a log on/off setting.
+enum class Log
+{
+    OFF,
+    ON
+};
+
 // MariaDB Monitor instance data
 class MariaDBMonitor : public maxscale::MonitorInstance
 {

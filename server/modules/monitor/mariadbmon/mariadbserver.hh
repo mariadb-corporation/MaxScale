@@ -17,55 +17,12 @@
 #include <memory>
 #include <maxscale/monitor.h>
 #include <maxbase/stopwatch.hh>
-#include "gtid.hh"
+#include "server_utils.hh"
 
 class QueryResult;
 class MariaDBServer;
 // Server pointer array
 typedef std::vector<MariaDBServer*> ServerArray;
-
-// Contains data returned by one row of SHOW ALL SLAVES STATUS
-class SlaveStatus
-{
-public:
-    enum slave_io_running_t
-    {
-        SLAVE_IO_YES,
-        SLAVE_IO_CONNECTING,
-        SLAVE_IO_NO,
-    };
-
-    bool exists = true;                                     /* Has this connection been removed from the
-                                                             * server but the monitor hasn't updated yet? */
-    bool seen_connected = false;                            /* Has this slave connection been seen connected,
-                                                             * meaning that the master server id is correct?
-                                                             **/
-    std::string name;                                       /* Slave connection name. Must be unique for
-                                                             * the server.*/
-    int64_t master_server_id = SERVER_ID_UNKNOWN;           /* The master's server_id value. Valid ids are
-                                                             * 32bit unsigned. -1 is unread/error. */
-    std::string        master_host;                         /* Master server host name. */
-    int                master_port = PORT_UNKNOWN;          /* Master server port. */
-    slave_io_running_t slave_io_running = SLAVE_IO_NO;      /* Slave I/O thread running state: * "Yes",
-                                                             * "Connecting" or "No" */
-    bool slave_sql_running = false;                         /* Slave SQL thread running state, true if "Yes"
-                                                             * */
-    GtidList    gtid_io_pos;                                /* Gtid I/O position of the slave thread. */
-    std::string last_error;                                 /* Last IO or SQL error encountered. */
-    int         seconds_behind_master = MXS_RLAG_UNDEFINED; /* How much behind the slave is. */
-    int64_t     received_heartbeats = 0;                    /* How many heartbeats the connection has received
-                                                             * */
-
-    /* Time of the latest gtid event or heartbeat the slave connection has received, timed by the monitor. */
-    maxbase::Clock::time_point last_data_time = maxbase::Clock::now();
-
-
-    std::string               to_string() const;
-    json_t*                   to_json() const;
-    std::string               to_short_string(const std::string& owner) const;
-    static slave_io_running_t slave_io_from_string(const std::string& str);
-    static std::string        slave_io_to_string(slave_io_running_t slave_io);
-};
 
 // This class groups some miscellaneous replication related settings together.
 class ReplicationSettings
@@ -571,85 +528,4 @@ private:
     bool         create_start_slave(ClusterOperation& op, const SlaveStatus& slave_conn);
     SlaveStatus* slave_connection_status_mutable(const MariaDBServer* target);
     std::string  generate_change_master_cmd(ClusterOperation& op, const SlaveStatus& slave_conn);
-};
-
-/**
- * Helper class for simplifying working with resultsets. Used in MariaDBServer.
- */
-class QueryResult
-{
-    // These need to be banned to avoid premature destruction.
-    QueryResult(const QueryResult&) = delete;
-    QueryResult& operator=(const QueryResult&) = delete;
-
-public:
-    QueryResult(MYSQL_RES* resultset = NULL);
-    ~QueryResult();
-
-    /**
-     * Advance to next row. Affects all result returning functions.
-     *
-     * @return True if the next row has data, false if the current row was the last one.
-     */
-    bool next_row();
-
-    /**
-     * Get the index of the current row.
-     *
-     * @return Current row index, or -1 if no data or next_row() has not been called yet.
-     */
-    int64_t get_current_row_index() const;
-
-    /**
-     * How many columns the result set has.
-     *
-     * @return Column count, or -1 if no data.
-     */
-    int64_t get_col_count() const;
-
-    /**
-     * How many rows does the result set have?
-     *
-     * @return The number of rows or -1 on error
-     */
-    int64_t get_row_count() const;
-
-    /**
-     * Get a numeric index for a column name. May give wrong results if column names are not unique.
-     *
-     * @param col_name Column name
-     * @return Index or -1 if not found.
-     */
-    int64_t get_col_index(const std::string& col_name) const;
-
-    /**
-     * Read a string value from the current row and given column. Empty string and (null) are both interpreted
-     * as the empty string.
-     *
-     * @param column_ind Column index
-     * @return Value as string
-     */
-    std::string get_string(int64_t column_ind) const;
-
-    /**
-     * Read a non-negative integer value from the current row and given column.
-     *
-     * @param column_ind Column index
-     * @return Value as integer. 0 or greater indicates success, -1 is returned on error.
-     */
-    int64_t get_uint(int64_t column_ind) const;
-
-    /**
-     * Read a boolean value from the current row and given column.
-     *
-     * @param column_ind Column index
-     * @return Value as boolean. Returns true if the text is either 'Y' or '1'.
-     */
-    bool get_bool(int64_t column_ind) const;
-
-private:
-    MYSQL_RES*                               m_resultset = NULL;    // Underlying result set, freed at dtor.
-    std::unordered_map<std::string, int64_t> m_col_indexes;         // Map of column name -> index
-    MYSQL_ROW                                m_rowdata = NULL;      // Data for current row
-    int64_t                                  m_current_row_ind = -1;// Index of current row
 };

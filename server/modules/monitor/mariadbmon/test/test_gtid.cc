@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "../gtid.hh"
+#include "../server_utils.hh"
 #include "maxbase/log.hh"
 #include <iostream>
 #include <string>
