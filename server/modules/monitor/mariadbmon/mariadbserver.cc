@@ -187,14 +187,19 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
                                            std::string* errmsg_out)
 {
     StopWatch timer;
+    // If a query lasts less than 1s, sleep so that at most 1 query/s is sent.
+    // This prevents busy-looping when faced with some network errors.
+    const Duration min_query_time(1.0);
     // Even if time is up, try at least once.
     bool cmd_success = false;
     bool keep_trying = true;
     while (!cmd_success && keep_trying)
     {
+        StopWatch query_timer;
         string error_msg;
         unsigned int errornum = 0;
         cmd_success = execute_cmd_no_retry(cmd, &error_msg, &errornum);
+        auto query_time = query_timer.lap();
 
         // Check if there is time to retry.
         Duration time_remaining = time_limit - timer.split();
@@ -203,8 +208,14 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         {
             if (keep_trying)
             {
-                MXS_WARNING("Query '%s' failed on '%s': %s Retrying with %.1f seconds left.",
+                MXS_WARNING("Query '%s' failed on %s: %s Retrying with %.1f seconds left.",
                             cmd.c_str(), name(), error_msg.c_str(), time_remaining.secs());
+                if (query_time < min_query_time)
+                {
+                    Duration query_sleep = min_query_time - query_time;
+                    Duration this_sleep = MXS_MIN(time_remaining, query_sleep);
+                    std::this_thread::sleep_for(this_sleep);
+                }
             }
             else if (errmsg_out)
             {
