@@ -7,6 +7,20 @@
 * `config reload` removed from MaxAdmin (was deprecated in 2.2)
 * MariaDBMonitor features added, modified and removed
 * A Comment filter has been added.
+* Services and filter can be created at runtime via the REST API
+* Runtime router reconfiguration is now possible
+* MaxCtrl
+  * The `create monitor` command now accepts a list of key-value parameters
+  * The new `drain server` drains the server of connections
+  * A new interactive input mode was added
+* Readwritesplit
+  * Automatic transaction replay allows transactions to be migrated between servers
+  * Master connections can now be re-opened
+  * Writes with autocommit enabled can be automatically retried
+  * Consistent reads on slaves via MASTER_GTID_WAIT
+  * Transaction load balancing for normal transactions
+  * Support for runtime router reconfiguration
+* Experimental resultset concatenation router, `cat`
 
 For more details, please refer to:
 

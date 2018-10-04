@@ -25,7 +25,7 @@ keep responsiveness high even with default values.
 
 ### Session Command History
 
-The _readwritesplit_ session command history is now enabled mby default but it
+The _readwritesplit_ session command history is now enabled by default but it
 is limited to a total of 50 distict session commands. This default allows most
 sessions to leverage the newly improved reconnection mechanism without having to
 explicitly enable the history. When the limit of 50 commands is exceeded, the
