@@ -59,17 +59,6 @@ static const char DIAG_ERROR[] = "Internal error, could not print diagnostics. "
 
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstance(monitor)
-    , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
-    , m_external_master_port(PORT_UNKNOWN)
-    , m_cluster_topology_changed(true)
-    , m_cluster_modified(false)
-    , m_log_no_master(true)
-    , m_warn_failover_precond(true)
-    , m_warn_switchover_precond(true)
-    , m_warn_cannot_rejoin(true)
-    , m_warn_current_master_invalid(true)
-    , m_warn_have_better_master(true)
-    , m_warn_master_down(true)
 {
 }
 
