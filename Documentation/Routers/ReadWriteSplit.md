@@ -150,15 +150,25 @@ Where `<criteria>` is one of the following values.
 * `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this service
 * `LEAST_BEHIND_MASTER`, the slave with smallest replication lag
 * `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations
+* `ADAPTIVE_ROUTING`, based on server average response times. See below.
 
 The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the
 connections from MariaDB MaxScale to the server, not the amount of connections
 reported by the server itself.
 
-`LEAST_BEHIND_MASTER` does not take server weights into account when choosing a
-server.
+`LEAST_BEHIND_MASTER` and `ADAPTIVE_ROUTING` do not take server weights into account
+when choosing a server.
+
+`ADAPTIVE_ROUTING` Measures average server response times. The server averages
+are used as proxies of server load conditions. At selection time the averages
+are copied and modified to favor faster servers, while at the same time
+guaranteeing at lest some traffic to the slowest servers. The server selection
+is probabilistic based on roulette wheel selection.
 
 #### Server Weights and `slave_selection_criteria`
+
+NOTE: Server Weights have been deprecated in MaxScale 2.3 and will be removed
+at a later time.
 
 The following formula is used to calculate a score for a server when the
 `weightby` parameter is defined.

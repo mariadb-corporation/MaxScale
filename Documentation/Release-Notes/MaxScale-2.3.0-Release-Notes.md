@@ -219,6 +219,10 @@ The `source` parameter can now contain a list of comma separated addresses.
 The SchemaRouter is now capable of table family sharding. Please see the
 SchemaRouter [documentation](../Routers/SchemaRouter.md) for details.
 
+### Throttle filter
+The [throttlefilter](../Filters/Throttle.md) replaces and extends on the limit_queries
+functionality of [the Database Firewall filter](../Filters/Database-Firewall-Filter.md).
+
 ### Interactive Mode for MaxCtrl
 
 ### ReadWriteSplit
@@ -257,6 +261,10 @@ enables optimistic transaction execution. This parameter controls whether normal
 transactions (i.e. `START TRANSACTION` or `BEGIN`) are load balanced across
 slaves. If the transaction tries to modify a row, it is migrated to the master
 and rolled back on the slave.
+
+#### 'Adaptive Routing'
+A new load balancing method. Server load conditions are proxied by measuring
+query response times for each server.
 
 ### MaxCtrl
 

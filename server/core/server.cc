@@ -1577,14 +1577,20 @@ void Server::response_time_add(double ave, int num_samples)
     int current_max = m_response_time.sample_max();
     int new_max {0};
 
+    // This server handles more samples than EMA max.
+    // Increasing max allows all servers to be fairly compared.
     if (num_samples >= current_max)
     {
         new_max = num_samples * drift;
     }
+    // This server is experiencing high load of some kind,
+    // lower max to give more weight to the samples.
     else if (m_response_time.average() / ave > 2)
     {
         new_max = current_max * 0.5;
     }
+    // Let the max slowly trickle down to keep
+    // the sample max close to reality.
     else
     {
         new_max = current_max / drift;

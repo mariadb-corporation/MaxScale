@@ -9,6 +9,7 @@
 * A Comment filter has been added.
 * Services and filters can be created at runtime via the REST API
 * Runtime router reconfiguration is now possible
+* New Throttle filter that replaces and extends on the limit_queries functionality
 * MaxCtrl
   * The `create monitor` command now accepts a list of key-value parameters
   * The new `drain server` drains the server of connections
@@ -20,6 +21,7 @@
   * Consistent reads on slaves via MASTER_GTID_WAIT
   * Transaction load balancing for normal transactions
   * Support for runtime router reconfiguration
+  * A new load balancing method: ADAPTIVE_ROUTING
 * Experimental resultset concatenation router, `cat`
 * The schema router is now capable of table family sharding.
 * The binlog router can now automatically switch to secondary masters
