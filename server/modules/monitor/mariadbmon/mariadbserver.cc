@@ -38,13 +38,6 @@ public:
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index)
     : m_server_base(monitored_server)
     , m_config_index(config_index)
-    , m_version(version::UNKNOWN)
-    , m_server_id(SERVER_ID_UNKNOWN)
-    , m_read_only(false)
-    , m_gtid_domain_id(GTID_DOMAIN_UNKNOWN)
-    , m_topology_changed(true)
-    , m_replication_lag(MXS_RLAG_UNDEFINED)
-    , m_print_update_errormsg(true)
 {
     mxb_assert(monitored_server);
 }

@@ -24,21 +24,6 @@ class MariaDBServer;
 // Server pointer array
 typedef std::vector<MariaDBServer*> ServerArray;
 
-// This class groups some miscellaneous replication related settings together.
-class ReplicationSettings
-{
-public:
-    bool gtid_strict_mode;      /**< Enable additional checks for replication */
-    bool log_bin;               /**< Is binary logging enabled */
-    bool log_slave_updates;     /**< Does the slave log replicated events to binlog */
-    ReplicationSettings()
-        : gtid_strict_mode(false)
-        , log_bin(false)
-        , log_slave_updates(false)
-    {
-    }
-};
-
 /**
  * Data required for checking replication topology cycles and other graph algorithms. This data is mostly
  * used by the monitor object, as the data only makes sense in relation to other nodes.
@@ -105,31 +90,60 @@ public:
         BINLOG_OFF
     };
 
-    MXS_MONITORED_SERVER* m_server_base;/**< Monitored server base class/struct. MariaDBServer does not
-                                         *  own the struct, it is not freed (or connection closed) when
-                                         *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
-    int m_config_index;                 /**< What position this server has in the monitor config */
+    // This class groups some miscellaneous replication related settings together.
+    class ReplicationSettings
+    {
+    public:
+        bool gtid_strict_mode = false;  /* Enable additional checks for replication */
+        bool log_bin = false;           /* Is binary logging enabled? */
+        bool log_slave_updates = false; /* Does the slave write replicated events to binlog? */
+    };
 
-    version m_version;                  /**< Server version/type. */
-    int64_t m_server_id;                /**< Value of @@server_id. Valid values are 32bit unsigned. */
-    bool    m_read_only;                /**< Value of @@read_only */
-    int64_t m_gtid_domain_id;           /**< The value of gtid_domain_id, the domain which is used for
-                                         *  new non-replicated events. */
-    GtidList m_gtid_current_pos;        /**< Gtid of latest event. */
-    GtidList m_gtid_binlog_pos;         /**< Gtid of latest event written to binlog. */
-    bool     m_topology_changed;        /**< Has anything that could affect replication topology changed
-                                         *  this iteration? Causes: server id, slave connections,
-                                         *  read-only. */
-    int m_replication_lag;              /**< Replication lag of the server. Used during calculation so
-                                         *  that the actual SERVER struct is only written to once. */
-    NodeData            m_node;         /**< Replication topology data */
-    SlaveStatusArray    m_slave_status; /**< Data returned from SHOW SLAVE STATUS */
-    ReplicationSettings m_rpl_settings; /**< Miscellaneous replication related settings. These are not
-                                         *  normally queried from the server, call
-                                         * 'update_replication_settings' before use. */
-    bool m_print_update_errormsg;       /**< Should an update error be printed. */
+    /* Monitored server base class/struct. MariaDBServer does not own the struct, it is not freed
+     * (or connection closed) when a MariaDBServer is destroyed. */
+    MXS_MONITORED_SERVER* m_server_base = NULL;
+    /* What position this server has in the monitor config? Used for tiebreaking between servers. */
+    int m_config_index = 0;
+
+    version m_version = version::UNKNOWN;           /* Server version/type. */
+    int64_t m_server_id = SERVER_ID_UNKNOWN;        /* Value of @@server_id. Valid values are
+                                                     * 32bit unsigned. */
+    int64_t m_gtid_domain_id = GTID_DOMAIN_UNKNOWN; /* The value of gtid_domain_id, the domain which is used
+                                                     * for new non-replicated events. */
+
+    bool             m_read_only = false;   /* Value of @@read_only */
+    GtidList         m_gtid_current_pos;    /* Gtid of latest event. */
+    GtidList         m_gtid_binlog_pos;     /* Gtid of latest event written to binlog. */
+    SlaveStatusArray m_slave_status;        /* Data returned from SHOW (ALL) SLAVE(S) STATUS */
+    NodeData         m_node;                /* Replication topology data */
+
+    /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
+     * only written to once. */
+    int m_replication_lag = MXS_RLAG_UNDEFINED;
+    /* Has anything that could affect replication topology changed this iteration?
+     * Causes: server id, slave connections, read-only. */
+    bool m_topology_changed = true;
+    /* Miscellaneous replication related settings. These are not normally queried from the server, call
+     * 'update_replication_settings' before use. */
+    ReplicationSettings m_rpl_settings;
+
+    bool m_print_update_errormsg = true;    /* Should an update error be printed? */
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index);
+
+    /**
+     * Print server information to a json object.
+     *
+     * @return Json diagnostics object
+     */
+    json_t* to_json() const;
+
+    /**
+     * Print server information to a string.
+     *
+     * @return Diagnostics string
+     */
+    std::string diagnostics() const;
 
     /**
      * Query this server.
@@ -137,9 +151,8 @@ public:
     void monitor_server();
 
     /**
-     * Update information which changes rarely. This method should be called after (re)connecting to a
-     * backend.
-     * Calling this every monitoring loop is overkill.
+     * Update server version. This method should be called after (re)connecting to a
+     * backend. Calling this every monitoring loop is overkill.
      */
     void update_server_version();
 
@@ -249,6 +262,121 @@ public:
     const SlaveStatus* slave_connection_status_host_port(const MariaDBServer* target) const;
 
     /**
+     * Checks if this server can replicate from master. Only considers gtid:s and only detects obvious errors.
+     * The non-detected errors will mostly be detected once the slave tries to start replicating.
+     *
+     * @param master_info Master server
+     * @param error_out Details the reason for a negative result
+     * @return True if slave can replicate from master
+     */
+    bool can_replicate_from(MariaDBServer* master, std::string* error_out);
+
+    /**
+     * Redirect one slave server to another master
+     *
+     * @param change_cmd Change master command, usually generated by generate_change_master_cmd()
+     * @return True if slave accepted all commands
+     */
+    bool redirect_one_slave(const std::string& change_cmd);
+
+    /**
+     * Joins this standalone server to the cluster.
+     *
+     * @param change_cmd Change master command
+     * @param disable_server_events Should events be disabled on the server
+     * @return True if commands were accepted by server
+     */
+    bool join_cluster(const std::string& change_cmd, bool disable_server_events);
+
+    /**
+     * Check if the server can be demoted by switchover.
+     *
+     * @param reason_out Output explaining why server cannot be demoted
+     * @return True if server can be demoted
+     */
+    bool can_be_demoted_switchover(std::string* reason_out);
+
+    /**
+     * Check if the server can be demoted by failover.
+     *
+     * @param operation Switchover or failover
+     * @param reason_out Output explaining why server cannot be demoted
+     * @return True if server can be demoted
+     */
+    bool can_be_demoted_failover(std::string* reason_out);
+
+    /**
+     * Check if the server can be promoted by switchover or failover.
+     *
+     * @param op Switchover or failover
+     * @param demotion_target The server this should be promoted to
+     * @param reason_out Output for the reason server cannot be promoted
+     * @return True, if suggested new master is a viable promotion candidate
+     */
+    bool can_be_promoted(OperationType op, const MariaDBServer* demotion_target, std::string* reason_out);
+
+    /**
+     * Read the file contents and send them as sql queries to the server. Any data
+     * returned by the queries is discarded.
+     *
+     * @param server Server to send queries to
+     * @param path Text file path.
+     * @param error_out Error output
+     * @return True if file was read and all commands were completed successfully
+     */
+    bool run_sql_from_file(const std::string& path, json_t** error_out);
+
+    /**
+     * Enable any "SLAVESIDE_DISABLED" events. Event scheduler is not touched.
+     *
+     * @param error_out Error output
+     * @return True if all SLAVESIDE_DISABLED events were enabled
+     */
+    bool enable_events(json_t** error_out);
+
+    /**
+     * Disable any "ENABLED" events. Event scheduler is not touched.
+     *
+     * @param binlog_mode If OFF, binlog event creation is disabled for the session during method execution.
+     * @param error_out Error output
+     * @return True if all ENABLED events were disabled
+     */
+    bool disable_events(BinlogMode binlog_mode, json_t** error_out);
+
+    /**
+     * Stop and delete all slave connections.
+     *
+     * @param error_out Error output
+     * @return True if successful. If false, some connections may have been successfully deleted.
+     */
+    bool reset_all_slave_conns(json_t** error_out);
+
+    /**
+     * Promote this server to take role of demotion target. Remove slave connections from this server.
+     * If target is/was a master, set read-only to OFF. Copy slave connections from target.
+     *
+     * @param op Cluster operation descriptor
+     * @return True if successful
+     */
+    bool promote(ClusterOperation& op);
+
+    /**
+     * Demote this server. Removes all slave connections. If server was master, sets read_only.
+     *
+     * @param op Cluster operation descriptor
+     * @return True if successful
+     */
+    bool demote(ClusterOperation& op);
+
+    /**
+     * Redirect the slave connection going to demotion target to replicate from promotion target.
+     *
+     * @param op Operation descriptor
+     * @return True on success
+     */
+    bool redirect_existing_slave_conn(ClusterOperation& op);
+
+    /**
      * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
      *
      * @return True if server has binary log enabled
@@ -343,85 +471,6 @@ public:
     const char* name() const;
 
     /**
-     * Print server information to a json object.
-     *
-     * @return Json diagnostics object
-     */
-    json_t* to_json() const;
-
-    /**
-     * Print server information to a string.
-     *
-     * @return Diagnostics string
-     */
-    std::string diagnostics() const;
-
-    /**
-     * Checks if this server can replicate from master. Only considers gtid:s and only detects obvious errors.
-     * The non-detected errors will mostly be detected once the slave tries to start replicating.
-     *
-     * @param master_info Master server
-     * @param error_out Details the reason for a negative result
-     * @return True if slave can replicate from master
-     */
-    bool can_replicate_from(MariaDBServer* master, std::string* error_out);
-
-    /**
-     * Redirect one slave server to another master
-     *
-     * @param change_cmd Change master command, usually generated by generate_change_master_cmd()
-     * @return True if slave accepted all commands
-     */
-    bool redirect_one_slave(const std::string& change_cmd);
-
-    /**
-     * Joins this standalone server to the cluster.
-     *
-     * @param change_cmd Change master command
-     * @param disable_server_events Should events be disabled on the server
-     * @return True if commands were accepted by server
-     */
-    bool join_cluster(const std::string& change_cmd, bool disable_server_events);
-
-    /**
-     * Check if the server can be demoted by switchover.
-     *
-     * @param reason_out Output explaining why server cannot be demoted
-     * @return True if server can be demoted
-     */
-    bool can_be_demoted_switchover(std::string* reason_out);
-
-    /**
-     * Check if the server can be demoted by failover.
-     *
-     * @param operation Switchover or failover
-     * @param reason_out Output explaining why server cannot be demoted
-     * @return True if server can be demoted
-     */
-    bool can_be_demoted_failover(std::string* reason_out);
-
-    /**
-     * Check if the server can be promoted by switchover or failover.
-     *
-     * @param op Switchover or failover
-     * @param demotion_target The server this should be promoted to
-     * @param reason_out Output for the reason server cannot be promoted
-     * @return True, if suggested new master is a viable promotion candidate
-     */
-    bool can_be_promoted(OperationType op, const MariaDBServer* demotion_target, std::string* reason_out);
-
-    /**
-     * Read the file contents and send them as sql queries to the server. Any data
-     * returned by the queries is discarded.
-     *
-     * @param server Server to send queries to
-     * @param path Text file path.
-     * @param error_out Error output
-     * @return True if file was read and all commands were completed successfully
-     */
-    bool run_sql_from_file(const std::string& path, json_t** error_out);
-
-    /**
      * Clear server pending status flags.
      *
      * @param bits Which flags to clear
@@ -434,56 +483,6 @@ public:
      * @param bits Which flags to set
      */
     void set_status(uint64_t bits);
-
-    /**
-     * Enable any "SLAVESIDE_DISABLED" events. Event scheduler is not touched.
-     *
-     * @param error_out Error output
-     * @return True if all SLAVESIDE_DISABLED events were enabled
-     */
-    bool enable_events(json_t** error_out);
-
-    /**
-     * Disable any "ENABLED" events. Event scheduler is not touched.
-     *
-     * @param binlog_mode If OFF, binlog event creation is disabled for the session during method execution.
-     * @param error_out Error output
-     * @return True if all ENABLED events were disabled
-     */
-    bool disable_events(BinlogMode binlog_mode, json_t** error_out);
-
-    /**
-     * Stop and delete all slave connections.
-     *
-     * @param error_out Error output
-     * @return True if successful. If false, some connections may have been successfully deleted.
-     */
-    bool reset_all_slave_conns(json_t** error_out);
-
-    /**
-     * Promote this server to take role of demotion target. Remove slave connections from this server.
-     * If target is/was a master, set read-only to OFF. Copy slave connections from target.
-     *
-     * @param op Cluster operation descriptor
-     * @return True if successful
-     */
-    bool promote(ClusterOperation& op);
-
-    /**
-     * Demote this server. Removes all slave connections. If server was master, sets read_only.
-     *
-     * @param op Cluster operation descriptor
-     * @return True if successful
-     */
-    bool demote(ClusterOperation& op);
-
-    /**
-     * Redirect the slave connection going to demotion target to replicate from promotion target.
-     *
-     * @param op Operation descriptor
-     * @return True on success
-     */
-    bool redirect_existing_slave_conn(ClusterOperation& op);
 
 private:
     class EventInfo;
@@ -509,10 +508,11 @@ private:
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
-    void               warn_event_scheduler();
-    bool               events_foreach(ManipulatorFunc& func, json_t** error_out);
-    bool               alter_event(const EventInfo& event, const std::string& target_status,
-                                   json_t** error_out);
+
+    void warn_event_scheduler();
+    bool events_foreach(ManipulatorFunc& func, json_t** error_out);
+    bool alter_event(const EventInfo& event, const std::string& target_status,
+                     json_t** error_out);
 
     bool stop_slave_conn(SlaveStatus* slave_conn, StopMode mode, maxbase::Duration time_limit,
                          json_t** error_out);
