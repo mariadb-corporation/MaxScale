@@ -614,43 +614,30 @@ void TestConnections::process_template(int m, const char* template_name, const c
     sprintf(template_file, "%s/cnf/maxscale.cnf.template.%s", test_dir, template_name);
     sprintf(extended_template_file, "%s.%03d", template_file, m);
 
-    if (stat((char*)extended_template_file, &stb) == 0)
+    if (stat(extended_template_file, &stb) == 0)
     {
         strcpy(template_file, extended_template_file);
     }
     tprintf("Template file is %s\n", template_file);
 
-    sprintf(str, "cp %s maxscale.cnf", template_file);
-    if (verbose)
-    {
-        tprintf("Executing '%s' command\n", str);
-    }
-    if (system(str) != 0)
-    {
-        tprintf("Error copying maxscale.cnf template\n");
-        return;
-    }
+    std::stringstream ss;
+
+    ss << "sed ";
 
     if (backend_ssl)
     {
-        tprintf("Adding ssl settings\n");
-        system(
-            "sed -i \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem|g\" maxscale.cnf");
+        ss << " -e \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem|g\" ";
     }
 
-    sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", threads);
-    system(str);
+    ss << " -e \"s/###threads###/" << threads << "/\" ";
 
-    Mariadb_nodes* mdn[2];
+    Mariadb_nodes* mdn[2] {repl, galera};
     char* IPcnf;
-    mdn[0] = repl;
-    mdn[1] = galera;
-    int i, j;
     int mdn_n = galera ? 2 : 1;
 
-    for (j = 0; j < mdn_n; j++)
+    for (int j = 0; j < mdn_n; j++)
     {
-        for (i = 0; i < mdn[j]->N; i++)
+        for (int i = 0; i < mdn[j]->N; i++)
         {
             if (mdn[j]->use_ipv6)
             {
@@ -661,32 +648,32 @@ void TestConnections::process_template(int m, const char* template_name, const c
                 IPcnf = mdn[j]->IP[i];
             }
             sprintf(str,
-                    "sed -i \"s/###%s_server_IP_%0d###/%s/\" maxscale.cnf",
+                    " -e \"s/###%s_server_IP_%0d###/%s/\" ",
                     mdn[j]->prefix,
                     i + 1,
                     IPcnf);
-            system(str);
+            ss << str;
 
             sprintf(str,
-                    "sed -i \"s/###%s_server_port_%0d###/%d/\" maxscale.cnf",
+                    " -e \"s/###%s_server_port_%0d###/%d/\" ",
                     mdn[j]->prefix,
                     i + 1,
                     mdn[j]->port[i]);
-            system(str);
+            ss << str;
         }
-
-        mdn[j]->connect();
-        execute_query(mdn[j]->nodes[0], "CREATE DATABASE IF NOT EXISTS test");
-        mdn[j]->close_connections();
     }
 
-    sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user[m]);
-    system(str);
+    sprintf(str, " -e \"s/###access_user###/%s/g\" ", maxscales->access_user[m]);
+    ss << str;
 
-    sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir[m]);
-    system(str);
+    sprintf(str, " -e \"s|###access_homedir###|%s|g\" ", maxscales->access_homedir[m]);
+    ss << str;
 
-    maxscales->copy_to_node_legacy((char*) "maxscale.cnf", (char*) dest, m);
+    ss << template_file << " > maxscale.cnf";
+    system(ss.str().c_str());
+
+    maxscales->copy_to_node_legacy("maxscale.cnf", dest, m);
+    maxscales->ssh_node_f(m, true, "cp maxscale.cnf %s", maxscales->maxscale_cnf[m]);
 }
 
 void TestConnections::init_maxscales()
@@ -710,8 +697,7 @@ void TestConnections::init_maxscale(int m)
     process_template(m, template_name, maxscales->access_homedir[m]);
     maxscales->ssh_node_f(m,
                           true,
-                          "cp maxscale.cnf %s;rm -rf %s/certs;mkdir -m a+wrx %s/certs;",
-                          maxscales->maxscale_cnf[m],
+                          "rm -rf %s/certs;mkdir -m a+wrx %s/certs;",
                           maxscales->access_homedir[m],
                           maxscales->access_homedir[m]);
 
