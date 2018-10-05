@@ -121,13 +121,13 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_REGISTER_SLAVE:
         // Connected client is registering as Slave Server
         m_serverid = gw_mysql_get_byte4(data + MYSQL_HEADER_LEN + 1);
-        MXS_INFO("Client is registering as Slave server with ID %" PRIu32 "", m_serverid);
+        MXS_INFO("Client is registering as Slave server with ID %u", m_serverid);
         break;
 
     case MXS_COM_BINLOG_DUMP:
         // Connected Slave server is waiting for binlog events
         m_state = BINLOG_MODE;
-        MXS_INFO("Slave server %" PRIu32 " is waiting for binlog events.", m_serverid);
+        MXS_INFO("Slave server %u is waiting for binlog events.", m_serverid);
         break;
 
     case MXS_COM_QUERY:
@@ -272,7 +272,7 @@ bool BinlogFilterSession::checkEvent(GWBUF* buffer,
         // Error in binlog stream: no filter
         m_state = ERRORED;
         m_skip = false;
-        MXS_INFO("Slave server %" PRIu32 " received error in replication stream", m_serverid);
+        MXS_INFO("Slave server %u received error in replication stream", m_serverid);
     }
     else
     {
