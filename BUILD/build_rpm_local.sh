@@ -10,7 +10,7 @@ cd ./MaxScale
 mkdir _build
 cd _build
 cmake ..  $cmake_flags
-make
+make || exit 1
 
 if [[ "$cmake_flags" =~ "BUILD_TESTS" ]]
 then

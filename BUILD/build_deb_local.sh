@@ -12,7 +12,7 @@ mkdir _build
 cd _build
 cmake ..  $cmake_flags
 export LD_LIBRARY_PATH=$PWD/log_manager:$PWD/query_classifier
-make
+make || exit 1
 
 if [[ "$cmake_flags" =~ "BUILD_TESTS" ]]
 then
