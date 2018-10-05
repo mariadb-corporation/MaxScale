@@ -22,6 +22,9 @@
   * Support for runtime router reconfiguration
 * Experimental resultset concatenation router, `cat`
 * The schema router is now capable of table family sharding.
+* The binlog router can now automatically switch to secondary masters
+  when replicating from a Galera cluster in case the primary master
+  goes down.
 
 For more details, please refer to:
 

@@ -382,8 +382,10 @@ the binlog router can use in case the connection to the default master fails.
 
 **Note:** This is _only_ supported for gtid based replication in conjunction
 with a Galera cluster and provided the following holds:
-* `@@log_slave_updates` is enabled on all servers, and
-* all nodes in the Galera cluster have the *same* `server_id`.
+* `@@log_slave_updates` is enabled on all servers,
+* all nodes in the Galera cluster have the *same* `server_id`, and
+* all nodes in the Galera cluster use the *same* basename for the
+  binlog files (specified in the server config file with `log_bin=basename`).
 
 The initial setup is performed exactly like when there is but one default master.
 ```
@@ -435,6 +437,20 @@ again.
 Once the binlog router has successfully connected to a server, it will stay
 connected to that server until the connection breaks or `STOP SLAVE` is
 issued.
+
+The configurations of the secondary masters are also stored to the
+`master.ini` in sections whose name include the connection name.
+```
+[binlog_configuration]
+master_host=192.168.121.150
+...
+[binlog_configuration:2]
+master_host=192.168.121.148
+...
+[binlog_configuration:3]
+master_host=192.168.121.76
+...
+```
 
 ## Examples
 

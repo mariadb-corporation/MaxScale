@@ -161,6 +161,15 @@ API that provides the same information in a more easy to process format.
 
 ## New Features
 
+### Binlog Router
+
+If the binlog router is replicating from a Galera cluster it is now
+possible to specify secondary masters that the binlog router automatically
+will switch to, in case the primary master for some reason goes down.
+Please see the binlog router
+[documentation](../Routers/Binlogrouter.md)
+for details.
+
 ### Hints
 
 There is now a new hint `last` that will cause a query to be routed to the
