@@ -126,12 +126,12 @@ void load(TestConnections& test)
         };
 
     auto worker = [&](std::atomic<bool>& running) {
-            while (running)
+            while (running && test.global_result == 0)
             {
                 Connection c = test.maxscales->rwsplit();
                 c.connect();
 
-                while (running)
+                while (running && test.global_result == 0)
                 {
                     test.expect(c.query("select 1"), "Query should succeed: %s", c.error());
                 }
@@ -152,12 +152,12 @@ void filter_swap(TestConnections& test)
         };
 
     auto worker = [&](std::atomic<bool>& running) {
-            while (running)
+            while (running && test.global_result == 0)
             {
                 Connection c = test.maxscales->rwsplit();
                 c.connect();
 
-                while (running)
+                while (running && test.global_result == 0)
                 {
                     test.expect(c.check("select 1", "1"), "Query should not return 1 as a result");
                 }
