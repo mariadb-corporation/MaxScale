@@ -1,1 +1,1 @@
-include(${CMAKE_SOURCE_DIR}/VERSION22.cmake)
+include(${CMAKE_SOURCE_DIR}/VERSION23.cmake)
