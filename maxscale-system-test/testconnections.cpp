@@ -661,6 +661,10 @@ void TestConnections::process_template(int m, const char* template_name, const c
                     mdn[j]->port[i]);
             ss << str;
         }
+
+        mdn[j]->connect();
+        execute_query(mdn[j]->nodes[0], "CREATE DATABASE IF NOT EXISTS test");
+        mdn[j]->close_connections();
     }
 
     sprintf(str, " -e \"s/###access_user###/%s/g\" ", maxscales->access_user[m]);
