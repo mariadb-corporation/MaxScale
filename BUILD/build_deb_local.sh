@@ -14,7 +14,7 @@ cmake ..  $cmake_flags
 export LD_LIBRARY_PATH=$PWD/log_manager:$PWD/query_classifier
 make || exit 1
 
-if [[ "$cmake_flags" =~ "BUILD_TESTS" ]]
+if [[ "$cmake_flags" =~ "BUILD_TESTS=Y" ]]
 then
     # We don't care about memory leaks in the tests (e.g. servers are never freed)
     export ASAN_OPTIONS=detect_leaks=0
