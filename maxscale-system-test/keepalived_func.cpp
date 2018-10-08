@@ -65,3 +65,11 @@ void configure_keepalived(TestConnections* Test, char* keepalived_file)
         Test->maxscales->ssh_node(i, "sudo service keepalived restart", true);
     }
 }
+
+void stop_keepalived(TestConnections* Test)
+{
+    for (i = 0; i < Test->maxscales->N; i++)
+    {
+        Test->maxscales->ssh_node(i, "sudo service keepalived stop", true);
+    }
+}

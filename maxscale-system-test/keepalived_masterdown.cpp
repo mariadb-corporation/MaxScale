@@ -182,6 +182,7 @@ int main(int argc, char* argv[])
 //    Test->repl->require_gtid(false);
 //    Test->repl->start_replication();
 
+    stop_keepalived(Test);
     int rval = Test->global_result;
     delete Test;
     return rval;

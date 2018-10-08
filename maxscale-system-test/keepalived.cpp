@@ -96,6 +96,7 @@ int main(int argc, char* argv[])
         Test->add_result(false, "Failover did not happen");
     }
 
+    stop_keepalived(Test);
     int rval = Test->global_result;
     delete Test;
     return rval;
