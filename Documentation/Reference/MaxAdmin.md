@@ -1172,34 +1172,43 @@ resource internally and are used to allow the tuning process to take place.
 
 MariaDB MaxScale uses a number of threads, as defined in the MariaDB MaxScale
 configuration file, to execute the processing of requests received from clients
-and the handling of responses. The _show threads_ command can be used to
-determine what each thread is currently being used for.
+and the handling of responses.
 
+The _show threads_ command can be used to determine how many descriptors the
+threads are currently handling and how many descriptors the threads have handled
+in total during the life-time of MaxScale, and the current and historical load
+of the threads.
 ```
 MaxScale> show threads
 Polling Threads.
 
-Historic Thread Load Average: 1.06.
-Current Thread Load Average: 0.00.
-15 Minute Average: 0.10, 5 Minute Average: 0.30, 1 Minute Average: 0.67
-
-Pending event queue length averages:
-15 Minute Average: 0.00, 5 Minute Average: 0.00, 1 Minute Average: 0.00
-
- ID | State      | # fds  | Descriptor       | Running  | Event
-----+------------+--------+------------------+----------+---------------
-  0 | Polling    |        |                  |          |
-  1 | Polling    |        |                  |          |
-  2 | Processing |      1 | 0x6e0dd0         | <202400ms | IN|OUT
-  3 | Polling    |        |                  |          |
-MaxScale>
+ ID | State      | #descriptors (curr) | #descriptors (tot)  | Load (1s) | Load (1m) | Load (1h) |
+----+------------+---------------------+---------------------+-----------+-----------+-----------+
+  0 | Processing |                   3 |                   3 |         0 |         0 |         0 |
+  1 |    Polling |                   2 |                   2 |         0 |         0 |         0 |
+  2 |    Polling |                   2 |                   2 |         0 |         0 |         0 |
+  3 |    Polling |                   2 |                   2 |         0 |         0 |         0 |
 ```
+Note that as a client session may consist of one client descriptor and
+several server descriptors, it is not possible to deduce the number of
+client sessions from the descriptor count alone. If MaxScale is running ok,
+the number of current and total descriptors should be roughly the same for
+all threads.
 
-The resultant output returns data as to the average thread utilization for the
-past minutes 5 minutes and 15 minutes. It also gives a table, with a row per
-thread that shows what DCB that thread is currently processing events for, the
-events it is processing and how long, to the nearest 100ms has been send
-processing these events.
+The `Load (1s)` column shows the load during the last measured second, an
+operation which is performed once per second. That is, the displayed value
+shows the load for the second that ended 0 - 1 seconds before the
+`show threads` command was issued.
+
+The load during the measured second is defined as
+`100 * (1 - time-spent-blocked-in-epoll_wait() / 1)` which translates into
+a load of `0` if the thread is blocked in `epoll_wait()` for the entire
+second, waiting for events to process, and `100` if the thread spends no time
+blocked in `epoll_wait()` but processing events for the entire duration.
+
+The `Load (1m)` value is the moving average of the last 60 second load values
+and the `Load (1h)` value is the moving average of the last 60 minute load
+values.
 
 ## The Housekeeper Tasks
 
