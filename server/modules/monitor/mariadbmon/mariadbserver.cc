@@ -1486,6 +1486,42 @@ bool MariaDBServer::promote(ClusterOperation& op)
 
     if (!stop_slave_error)
     {
+        // Check that the deleted connection(s) are really gone.
+        string error_msg;
+        if (do_show_slave_status(&error_msg))
+        {
+            if (op.type == OperationType::SWITCHOVER)
+            {
+                if (!m_slave_status.empty())
+                {
+                    stop_slave_error = true;
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "%s has %lu slave connections although all connections should "
+                                         "have been removed.", name(), m_slave_status.size());
+                }
+            }
+            else
+            {
+                if (slave_connection_status(op.demotion_target) != NULL)
+                {
+                    stop_slave_error = true;
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "%s has a slave connection to %s although it should "
+                                         "have been removed.", name(), op.demotion_target->name());
+                }
+            }
+        }
+        else
+        {
+            stop_slave_error = true;
+            PRINT_MXS_JSON_ERROR(error_out,
+                                 "Failed to update slave connections of %s: %s",
+                                 name(), error_msg.c_str());
+        }
+    }
+
+    if (!stop_slave_error)
+    {
         // Step 2: If demotion target is master, meaning this server will become the master,
         // enable writing and scheduled events. Also, run promotion_sql_file.
         bool promotion_error = false;
@@ -1528,20 +1564,35 @@ bool MariaDBServer::promote(ClusterOperation& op)
             }
         }
 
-        // Step 3: Copy slave connections from demotion target. If demotion target was replicating from
-        // this server (circular topology), the connection should be ignored. Also, connections which
-        // already exist on this server (when failovering) need not be regenerated.
+        // Step 3: Copy or merge slave connections from demotion target. The logic used depends on the
+        // operation.
         if (!promotion_error)
         {
-            if (copy_master_slave_conns(op))    // The method updates 'time_remaining' itself.
+            if (op.type == OperationType::FAILOVER)
             {
-                success = true;
+                if (merge_slave_conns(op, op.demotion_target_conns))
+                {
+                    success = true;
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "Could not merge slave connections from %s to %s.",
+                                         op.demotion_target->name(), name());
+                }
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(error_out,
-                                     "Could not copy slave connections from '%s' to '%s'.",
-                                     op.demotion_target->name(), name());
+                if (copy_slave_conns(op, op.demotion_target_conns, op.demotion_target))
+                {
+                    success = true;
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "Could not copy slave connections from %s to %s.",
+                                         op.demotion_target->name(), name());
+                }
             }
         }
     }
@@ -1555,8 +1606,8 @@ bool MariaDBServer::demote(ClusterOperation& op)
     bool success = false;
     StopWatch timer;
 
-    // Step 1: Stop & reset slave connections. The promotion target will copy them. The server object
-    // must not be updated before the connections have been copied.
+    // Step 1: Stop & reset slave connections. The promotion target will copy them. The connection
+    // information has been backed up in the operation object.
     bool stop_slave_error = false;
     for (size_t i = 0; !stop_slave_error && i < m_slave_status.size(); i++)
     {
@@ -1565,6 +1616,29 @@ bool MariaDBServer::demote(ClusterOperation& op)
             stop_slave_error = true;
         }
         op.time_remaining -= timer.lap();
+    }
+
+    if (!stop_slave_error)
+    {
+        // Check that slave connections are really gone.
+        string error_msg;
+        if (do_show_slave_status(&error_msg))
+        {
+            if (!m_slave_status.empty())
+            {
+                stop_slave_error = true;
+                PRINT_MXS_JSON_ERROR(error_out,
+                                     "%s has %lu slave connections although all connections should have been "
+                                     "removed.", name(), m_slave_status.size());
+            }
+        }
+        else
+        {
+            stop_slave_error = true;
+            PRINT_MXS_JSON_ERROR(error_out,
+                                 "Failed to update slave connections of %s: %s",
+                                 name(), error_msg.c_str());
+        }
     }
 
     if (!stop_slave_error)
@@ -1737,70 +1811,63 @@ bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration tim
 }
 
 /**
- * Copy slave connections from the demotion target to this server.
+ * Merge slave connections to this server (promotion target). This should only
+ * be used during failover promotion.
  *
  * @param op Operation descriptor
+ * @param conns_to_merge Connections which should be merged
  * @return True on success
  */
-bool MariaDBServer::copy_master_slave_conns(ClusterOperation& op)
+bool MariaDBServer::merge_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_merge)
 {
-    mxb_assert(this == op.promotion_target);
+    mxb_assert(op.promotion_target == this && op.type == OperationType::FAILOVER
+               && slave_connection_status(op.demotion_target) == NULL);
+
+    /* When promoting a server during failover, the situation is more complicated than in switchover.
+     * Connections cannot be moved to the demotion target (= failed server) as it is off. This means
+     * that the promoting server must combine the roles of both itself and the failed server. Only the
+     * slave connection replicating from the failed server has been removed. This means that
+     * the promotion and demotion targets may have identical connections (connections going to
+     * the same server id or the same host:port). These connections should not be copied or modified.
+     * It's possible that the master had different settings for a duplicate slave connection,
+     * in this case the settings on the master are lost.
+     * TODO: think if the master's settings should take priority.
+     * Also, connection names may collide between the two servers, in this case try to generate
+     * a simple name for the new connection. */
 
     // Helper function for checking if a slave connection should be ignored.
-    auto should_ignore_connection =
-        [this](const SlaveStatus& slave_conn, OperationType type, string* ignore_reason_out) -> bool {
-            bool conn_ignored = false;
+    auto conn_can_be_merged = [this](const SlaveStatus& slave_conn, string* ignore_reason_out) -> bool {
+            bool accepted = true;
             auto master_id = slave_conn.master_server_id;
-            // The connection is only copied if it is running or at least has been seen running.
-            // Also, target should not be this server.
+            // The connection is only merged if it satisfies the copy-conditions. Merging has also
+            // additional requirements.
             string ignore_reason;
-            if (!slave_conn.slave_sql_running)
+            if (!slave_conn.should_be_copied(&ignore_reason))
             {
-                conn_ignored = true;
-                ignore_reason = "its slave sql thread is not running.";
-            }
-            else if (!slave_conn.seen_connected)
-            {
-                conn_ignored = true;
-                ignore_reason = "it has not been seen connected to master.";
-            }
-            else if (master_id <= 0)
-            {
-                conn_ignored = true;
-                ignore_reason = string_printf("its Master_Server_Id (%" PRIi64 ") is invalid .", master_id);
+                accepted = false;
             }
             else if (master_id == m_server_id)
             {
-                // This is not really an error but indicates a complicated topology.
-                conn_ignored = true;
-                ignore_reason = "it points to the server being promoted (according to server id:s).";
+                // This is not an error but indicates a complicated topology. In any case, ignore this.
+                accepted = false;
+                ignore_reason = string_printf("it points to %s (according to server id:s).", name());
             }
-            else if (type == OperationType::FAILOVER)
+            else
             {
-                /* In the case of failover, not all connections have been removed from this server
-                 * (promotion_target). The promotion and demotion targets may have identical connections
-                 * (connections going to the same server id or the same host:port). These connections are
-                 * ignored when copying slave connections. It's possible that the master had different
-                 * settings for a duplicate slave connection, in this case the settings on the master are
-                 * lost. */
-
-                /* This check should not be done in the case of switchover because while the connections
-                 * have been removed on the real server (this), they are still present in the MariaDBServer
-                 * object and could cause false detections. */
+                // Compare to connections already existing on this server.
                 for (const SlaveStatus& my_slave_conn : m_slave_status)
                 {
-                    if (my_slave_conn.seen_connected
-                        && my_slave_conn.master_server_id == slave_conn.master_server_id)
+                    if (my_slave_conn.seen_connected && my_slave_conn.master_server_id == master_id)
                     {
-                        conn_ignored = true;
+                        accepted = false;
                         const char format[] =
                             "its Master_Server_Id (%" PRIi64 ") matches an existing slave connection on %s.";
-                        ignore_reason = string_printf(format, slave_conn.master_server_id, name());
+                        ignore_reason = string_printf(format, master_id, name());
                     }
                     else if (my_slave_conn.master_host == slave_conn.master_host
                              && my_slave_conn.master_port == slave_conn.master_port)
                     {
-                        conn_ignored = true;
+                        accepted = false;
                         ignore_reason = string_printf("its Master_Host (%s) and Master_Port (%i) match "
                                                       "an existing slave connection on %s.",
                                                       slave_conn.master_host.c_str(), slave_conn.master_port,
@@ -1809,44 +1876,30 @@ bool MariaDBServer::copy_master_slave_conns(ClusterOperation& op)
                 }
             }
 
-            if (conn_ignored)
+            if (!accepted)
             {
                 *ignore_reason_out = ignore_reason;
             }
-            return conn_ignored;
+            return accepted;
         };
 
-    // Need to keep track of recently created connection names to avoid using an existing name.
-    std::set<string> created_connection_names;
-    // Helper function which checks that a connection name is unique and modifies it if not.
-    auto check_modify_conn_name = [this, &created_connection_names](SlaveStatus* slave_conn) -> bool {
-            // An inner lambda which checks name uniqueness.
-            auto name_is_used = [this, &created_connection_names](const string& name) -> bool {
-                    if (created_connection_names.count(name) > 0)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        for (const auto& slave_conn : m_slave_status)
-                        {
-                            if (slave_conn.exists && slave_conn.name == name)
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                };
+    // Need to keep track of connection names (both existing and new) to avoid using an existing name.
+    std::set<string> connection_names;
+    for (const auto& conn : m_slave_status)
+    {
+        connection_names.insert(conn.name);
+    }
 
+    // Helper function which checks that a connection name is unique and modifies it if not.
+    auto check_modify_conn_name = [this, &connection_names](SlaveStatus* slave_conn) -> bool {
             bool name_is_unique = false;
-            if (name_is_used(slave_conn->name))
+            if (connection_names.count(slave_conn->name) > 0)
             {
-                // If the name is used, generate a name using the host:port of the master, it should be
-                // unique.
+                // If the name is used, generate a name using the host:port of the master,
+                // it should be unique.
                 string second_try = string_printf("To [%s]:%i",
                                                   slave_conn->master_host.c_str(), slave_conn->master_port);
-                if (name_is_used(second_try))
+                if (connection_names.count(second_try) > 0)
                 {
                     // Even this one exists, something is really wrong. Give up.
                     MXS_ERROR("Could not generate a unique connection name for '%s': both '%s' and '%s' are "
@@ -1868,13 +1921,12 @@ bool MariaDBServer::copy_master_slave_conns(ClusterOperation& op)
         };
 
     bool error = false;
-    const auto& conns_to_copy = op.demotion_target->m_slave_status;
-    for (size_t i = 0; !error && (i < conns_to_copy.size()); i++)
+    for (size_t i = 0; !error && (i < conns_to_merge.size()); i++)
     {
         // Need a copy of the array element here since it may be modified.
-        SlaveStatus slave_conn = conns_to_copy[i];
+        SlaveStatus slave_conn = conns_to_merge[i];
         string ignore_reason;
-        if (should_ignore_connection(slave_conn, op.type, &ignore_reason))
+        if (conn_can_be_merged(slave_conn, &ignore_reason))
         {
             MXS_WARNING("%s was ignored when promoting %s because %s",
                         slave_conn.to_short_string(op.demotion_target->name()).c_str(), name(),
@@ -1882,22 +1934,11 @@ bool MariaDBServer::copy_master_slave_conns(ClusterOperation& op)
         }
         else
         {
-            /* If doing a switchover, all slave connections of this server should have been removed.
-             * It's safe to make new ones and connection names can be assumed unique since they come
-             * from an existing server. */
-            /* When doing failover, this server may have some of the connections of the demotion target.
-             * Those connections have already been detected by 'should_ignore_connection', but this
-             * server may still have connections with identical names. If so, modify the name. */
-            bool can_continue = true;
-            if (op.type == OperationType::FAILOVER)
-            {
-                can_continue = check_modify_conn_name(&slave_conn);
-            }
-            if (can_continue)
+            if (check_modify_conn_name(&slave_conn))
             {
                 if (create_start_slave(op, slave_conn))
                 {
-                    created_connection_names.insert(slave_conn.name);
+                    connection_names.insert(slave_conn.name);
                 }
                 else
                 {
@@ -1912,6 +1953,40 @@ bool MariaDBServer::copy_master_slave_conns(ClusterOperation& op)
     }
 
     return !error;
+}
+
+bool MariaDBServer::copy_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_copy,
+                                     const MariaDBServer* replacement)
+{
+    mxb_assert(op.type == OperationType::SWITCHOVER && m_slave_status.empty());
+    bool start_slave_error = false;
+    for (size_t i = 0; i < conns_to_copy.size() && !start_slave_error; i++)
+    {
+        SlaveStatus slave_conn = conns_to_copy[i];      // slave_conn may be modified
+        string reason_not_copied;
+        if (slave_conn.should_be_copied(&reason_not_copied))
+        {
+            // Any slave connection that was going to this server itself are instead directed
+            // to the replacement server.
+            if (slave_conn.master_server_id == m_server_id)
+            {
+                slave_conn.master_host = replacement->m_server_base->server->address;
+                slave_conn.master_port = replacement->m_server_base->server->port;
+            }
+            if (!create_start_slave(op, slave_conn))
+            {
+                start_slave_error = true;
+            }
+        }
+        else
+        {
+            MXS_WARNING("%s was not copied to %s because %s",
+                        slave_conn.to_short_string(replacement->name()).c_str(),
+                        name(),
+                        reason_not_copied.c_str());
+        }
+    }
+    return !start_slave_error;
 }
 
 /**

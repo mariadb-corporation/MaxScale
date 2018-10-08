@@ -289,7 +289,6 @@ private:
                         ServerArray* redirected_slaves);
     int redirect_slaves_ex(ClusterOperation& op, const ServerArray& slaves,
                            ServerArray* redirected_slaves);
-    bool        switchover_start_slave(MariaDBServer* old_master, MariaDBServer* new_master);
     bool        start_external_replication(MariaDBServer* new_master, json_t** err_out);
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
     void        wait_cluster_stabilization(ClusterOperation& op, const ServerArray& slaves);

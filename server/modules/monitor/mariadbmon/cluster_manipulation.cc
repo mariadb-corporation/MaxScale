@@ -491,38 +491,6 @@ bool MariaDBMonitor::start_external_replication(MariaDBServer* new_master, json_
 }
 
 /**
- * Starts a new slave connection on a server. Should be used on a demoted master server.
- *
- * @param old_master The server which will start replication
- * @param new_master Replication target
- * @return True if commands were accepted. This does not guarantee that replication proceeds
- * successfully.
- */
-bool MariaDBMonitor::switchover_start_slave(MariaDBServer* old_master, MariaDBServer* new_master)
-{
-    bool rval = false;
-    MYSQL* old_master_con = old_master->m_server_base->con;
-    SERVER* new_master_server = new_master->m_server_base->server;
-
-    string change_cmd = generate_change_master_cmd(new_master_server->address, new_master_server->port);
-    if (mxs_mysql_query(old_master_con, change_cmd.c_str()) == 0
-        && mxs_mysql_query(old_master_con, "START SLAVE;") == 0)
-    {
-        MXS_NOTICE("Old master '%s' starting replication from '%s'.",
-                   old_master->name(),
-                   new_master->name());
-        rval = true;
-    }
-    else
-    {
-        MXS_ERROR("Old master '%s' could not start replication: '%s'.",
-                  old_master->name(),
-                  mysql_error(old_master_con));
-    }
-    return rval;
-}
-
-/**
  * (Re)join given servers to the cluster. The servers in the array are assumed to be joinable.
  * Usually the list is created by get_joinable_servers().
  *
@@ -758,20 +726,20 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                     m_next_master = promotion_target;
                 }
 
-                timer.restart();
-                // Step 5: Redirect slaves and start replication on old master.
+                // Step 5: Start replication on old master and redirect slaves.
                 ServerArray redirected_slaves;
-                bool start_ok = switchover_start_slave(demotion_target, promotion_target);
-                if (start_ok)
+                if (demotion_target->copy_slave_conns(op, op.promotion_target_conns, promotion_target))
                 {
                     redirected_slaves.push_back(demotion_target);
                 }
-                op.time_remaining -= timer.lap();
+                else
+                {
+                    MXS_WARNING("Could not copy slave connections from %s to %s.",
+                                promotion_target->name(), demotion_target->name());
+                }
+                redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
 
-                int redirects = redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
-
-                bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
-                if (success)
+                if (!redirected_slaves.empty())
                 {
                     timer.restart();
                     // Step 6: Finally, check that slaves are replicating.
@@ -1311,6 +1279,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json
             auto time_limit = maxbase::Duration((double)m_failover_timeout);
             rval.reset(new ClusterOperation(OperationType::FAILOVER,
                                             promotion_target, demotion_target,
+                                            promotion_target->m_slave_status, demotion_target->m_slave_status,
                                             demotion_target == m_master, m_handle_event_scheduler,
                                             m_promote_sql_file, m_demote_sql_file,
                                             m_replication_user, m_replication_password,
@@ -1641,6 +1610,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::switchover_prepare(SERVER* promotio
         maxbase::Duration time_limit((double)m_switchover_timeout);
         rval.reset(new ClusterOperation(op_type,
                                         promotion_target, demotion_target,
+                                        promotion_target->m_slave_status, demotion_target->m_slave_status,
                                         demotion_target == m_master, m_handle_event_scheduler,
                                         m_promote_sql_file, m_demote_sql_file,
                                         m_replication_user, m_replication_password,

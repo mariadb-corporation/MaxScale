@@ -72,7 +72,6 @@ struct NodeData
 class MariaDBServer
 {
 public:
-    typedef std::vector<SlaveStatus> SlaveStatusArray;
     enum class version
     {
         UNKNOWN,            /* Totally unknown. Server has not been connected to yet. */
@@ -377,6 +376,22 @@ public:
     bool redirect_existing_slave_conn(ClusterOperation& op);
 
     /**
+     * Copy slave connections to this server. This is usually needed during switchover promotion and on
+     * the demoted server. It is assumed that all slave connections of this server have
+     * been stopped & removed so there will be no conflicts with existing connections.
+     * A special rule is applied to a connection which points to this server itself: that connection
+     * is directed towards the 'replacement'. This is required to properly handle connections between
+     * the promotion and demotion targets.
+     *
+     * @param op Operation descriptor
+     * @params conns_to_copy The connections to add to the server
+     * @params replacement Which server should rep
+     * @return True on success
+     */
+    bool copy_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_copy,
+                          const MariaDBServer* replacement);
+
+    /**
      * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
      *
      * @return True if server has binary log enabled
@@ -508,6 +523,7 @@ private:
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
+    SlaveStatus*       slave_connection_status_mutable(const MariaDBServer* target);
 
     void warn_event_scheduler();
     bool events_foreach(ManipulatorFunc& func, json_t** error_out);
@@ -523,9 +539,8 @@ private:
     bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
                                 std::string* errmsg_out);
 
-    bool         set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
-    bool         copy_master_slave_conns(ClusterOperation& op);
-    bool         create_start_slave(ClusterOperation& op, const SlaveStatus& slave_conn);
-    SlaveStatus* slave_connection_status_mutable(const MariaDBServer* target);
-    std::string  generate_change_master_cmd(ClusterOperation& op, const SlaveStatus& slave_conn);
+    bool        set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
+    bool        merge_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_merge);
+    bool        create_start_slave(ClusterOperation& op, const SlaveStatus& slave_conn);
+    std::string generate_change_master_cmd(ClusterOperation& op, const SlaveStatus& slave_conn);
 };

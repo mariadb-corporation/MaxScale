@@ -200,7 +200,10 @@ public:
     std::string               to_short_string(const std::string& owner) const;
     static slave_io_running_t slave_io_from_string(const std::string& str);
     static std::string        slave_io_to_string(slave_io_running_t slave_io);
+    bool                      should_be_copied(std::string* ignore_reason_out) const;
 };
+
+typedef std::vector<SlaveStatus> SlaveStatusArray;
 
 enum class OperationType
 {
@@ -232,8 +235,16 @@ public:
     json_t** const       error_out;                     // Json error output
     maxbase::Duration    time_remaining;                // How much time remains to complete the operation
 
+    /* Slave connections of the demotion target. Saved here in case the data in the server object is
+     * modified before promoted server has copied the connections. */
+    SlaveStatusArray demotion_target_conns;
+
+    /* Similar copy for promotion target connections. */
+    SlaveStatusArray promotion_target_conns;
+
     ClusterOperation(OperationType type,
                      MariaDBServer* promotion_target, MariaDBServer* demotion_target,
+                     const SlaveStatusArray& promo_target_conns, const SlaveStatusArray& demo_target_conns,
                      bool demo_target_is_master, bool handle_events,
                      std::string& promotion_sql_file, std::string& demotion_sql_file,
                      std::string& replication_user, std::string& replication_password,

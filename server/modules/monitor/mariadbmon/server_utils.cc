@@ -125,8 +125,40 @@ string SlaveStatus::slave_io_to_string(SlaveStatus::slave_io_running_t slave_io)
     return rval;
 }
 
+bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
+{
+    bool accepted = true;
+    auto master_id = master_server_id;
+    // The connection is only copied if it is running or at least has been seen running.
+    // Also, target should not be this server.
+    string ignore_reason;
+    if (!slave_sql_running)
+    {
+        accepted = false;
+        ignore_reason = "its slave sql thread is not running.";
+    }
+    else if (!seen_connected)
+    {
+        accepted = false;
+        ignore_reason = "it has not been seen connected to master.";
+    }
+    else if (master_id <= 0)
+    {
+        accepted = false;
+        ignore_reason = string_printf("its Master_Server_Id (%" PRIi64 ") is invalid .", master_id);
+    }
+
+    if (!accepted)
+    {
+        *ignore_reason_out = ignore_reason;
+    }
+    return accepted;
+}
+
 ClusterOperation::ClusterOperation(OperationType type,
                                    MariaDBServer* promotion_target, MariaDBServer* demotion_target,
+                                   const SlaveStatusArray& promo_target_conns,
+                                   const SlaveStatusArray& demo_target_conns,
                                    bool demo_target_is_master, bool handle_events,
                                    string& promotion_sql_file, string& demotion_sql_file,
                                    string& replication_user, string& replication_password,
@@ -142,7 +174,10 @@ ClusterOperation::ClusterOperation(OperationType type,
     , replication_password(replication_password)
     , error_out(error)
     , time_remaining(time_remaining)
-{}
+    , demotion_target_conns(demo_target_conns)
+    , promotion_target_conns(promo_target_conns)
+{
+}
 
 GtidList GtidList::from_string(const string& gtid_string)
 {
