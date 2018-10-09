@@ -60,12 +60,6 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
 }
 }
 
-
-static bool server_config_compare(const MariaDBServer* lhs, const MariaDBServer* rhs)
-{
-    return lhs->m_config_index < rhs->m_config_index;
-}
-
 /**
  * @brief Visit a node in the graph
  *
@@ -146,7 +140,10 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
                         ServerArray& members = m_cycles[cycle_ind];     // Creates array if didn't exist
                         members.push_back(cycle_server);
                         // Sort the cycle members according to monitor config order.
-                        std::sort(members.begin(), members.end(), server_config_compare);
+                        std::sort(members.begin(), members.end(),
+                                  [](const MariaDBServer* lhs, const MariaDBServer* rhs) -> bool {
+                                      return lhs->m_config_index < rhs->m_config_index;
+                                  });
                         // All cycle elements popped. Next cycle...
                         *next_cycle = cycle_ind + 1;
                     }

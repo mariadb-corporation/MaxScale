@@ -317,11 +317,3 @@ private:
  * @return Server names
  */
 std::string monitored_servers_to_string(const ServerArray& servers);
-
-/**
- * Get MariaDB connection error strings from all the given servers, form one string.
- *
- * @param servers Servers with errors
- * @return Concatenated string.
- */
-std::string get_connection_errors(const ServerArray& servers);

@@ -269,12 +269,9 @@ string MariaDBMonitor::diagnostics_to_string() const
     rval += string_printf("Failover timeout:       %u\n", m_failover_timeout);
     rval += string_printf("Switchover timeout:     %u\n", m_switchover_timeout);
     rval += string_printf("Automatic rejoin:       %s\n", m_auto_rejoin ? "Enabled" : "Disabled");
-    rval += string_printf("Enforce read-only:      %s\n",
-                          m_enforce_read_only_slaves ?
-                          "Enabled" : "Disabled");
-    rval += string_printf("Detect stale master:    %s\n",
-                          (m_detect_stale_master == 1) ?
-                          "Enabled" : "Disabled");
+    rval += string_printf("Enforce read-only:      %s\n", m_enforce_read_only_slaves ? "Enabled" :
+                          "Disabled");
+    rval += string_printf("Detect stale master:    %s\n", m_detect_stale_master ? "Enabled" : "Disabled");
     if (m_excluded_servers.size() > 0)
     {
         rval += string_printf("Non-promotable servers (failover): ");
@@ -582,8 +579,7 @@ void MariaDBMonitor::update_gtid_domain()
     if (m_master_gtid_domain != GTID_DOMAIN_UNKNOWN && domain != m_master_gtid_domain)
     {
         MXS_NOTICE("Gtid domain id of master has changed: %" PRId64 " -> %" PRId64 ".",
-                   m_master_gtid_domain,
-                   domain);
+                   m_master_gtid_domain, domain);
     }
     m_master_gtid_domain = domain;
 }
@@ -662,23 +658,6 @@ void MariaDBMonitor::log_master_changes()
             MXS_ERROR("No Master can be determined");
             m_log_no_master = false;
         }
-    }
-}
-
-void MariaDBMonitor::handle_auto_rejoin()
-{
-    ServerArray joinable_servers;
-    if (get_joinable_servers(&joinable_servers))
-    {
-        uint32_t joins = do_rejoin(joinable_servers, NULL);
-        if (joins > 0)
-        {
-            MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
-        }
-    }
-    else
-    {
-        MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.", m_master->name());
     }
 }
 
@@ -778,8 +757,7 @@ bool MariaDBMonitor::execute_manual_command(std::function<void(void)> command, j
     return rval;
 }
 
-bool MariaDBMonitor::run_manual_switchover(SERVER* promotion_server,
-                                           SERVER* demotion_server,
+bool MariaDBMonitor::run_manual_switchover(SERVER* promotion_server, SERVER* demotion_server,
                                            json_t** error_out)
 {
     bool rval = false;
@@ -949,21 +927,6 @@ string monitored_servers_to_string(const ServerArray& servers)
     return rval;
 }
 
-string get_connection_errors(const ServerArray& servers)
-{
-    // Get errors from all connections, form a string.
-    string rval;
-    string separator;
-    for (auto iter = servers.begin(); iter != servers.end(); iter++)
-    {
-        const char* error = mysql_error((*iter)->m_server_base->con);
-        mxb_assert(*error);     // Every connection should have an error.
-        rval += separator + (*iter)->name() + ": '" + error + "'";
-        separator = ", ";
-    }
-    return rval;
-}
-
 /**
  * The module entry point routine. This routine populates the module object structure.
  *
@@ -983,12 +946,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (optional)"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME,
-                               "switchover",
-                               MODULECMD_TYPE_ACTIVE,
-                               handle_manual_switchover,
-                               MXS_ARRAY_NELEMS(switchover_argv),
-                               switchover_argv,
+    modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
+                               handle_manual_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
                                "Perform master switchover");
 
     static modulecmd_arg_type_t failover_argv[] =
@@ -999,12 +958,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         },
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME,
-                               "failover",
-                               MODULECMD_TYPE_ACTIVE,
-                               handle_manual_failover,
-                               MXS_ARRAY_NELEMS(failover_argv),
-                               failover_argv,
+    modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
+                               handle_manual_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
                                "Perform master failover");
 
     static modulecmd_arg_type_t rejoin_argv[] =
@@ -1016,12 +971,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_SERVER, "Joining server"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME,
-                               "rejoin",
-                               MODULECMD_TYPE_ACTIVE,
-                               handle_manual_rejoin,
-                               MXS_ARRAY_NELEMS(rejoin_argv),
-                               rejoin_argv,
+    modulecmd_register_command(MXS_MODULE_NAME, "rejoin", MODULECMD_TYPE_ACTIVE,
+                               handle_manual_rejoin, MXS_ARRAY_NELEMS(rejoin_argv), rejoin_argv,
                                "Rejoin server to a cluster");
 
     static modulecmd_arg_type_t reset_gtid_argv[] =
@@ -1033,9 +984,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Master server (optional)"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME,
-                               "reset-replication",
-                               MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXS_MODULE_NAME, "reset-replication", MODULECMD_TYPE_ACTIVE,
                                handle_manual_reset_replication,
                                MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,
                                "Delete slave connections, delete binary logs and "
@@ -1056,123 +1005,79 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                       /* Thread finish. */
         {
             {
-                "detect_replication_lag",
-                MXS_MODULE_PARAM_BOOL,
-                "false"
+                "detect_replication_lag",            MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
-                "detect_stale_master",
-                MXS_MODULE_PARAM_BOOL,
-                "true"
+                "detect_stale_master",               MXS_MODULE_PARAM_BOOL,   "true"
             },
             {
-                "detect_stale_slave",
-                MXS_MODULE_PARAM_BOOL,
-                "true"
+                "detect_stale_slave",                MXS_MODULE_PARAM_BOOL,   "true"
             },
             {
-                "mysql51_replication",
-                MXS_MODULE_PARAM_BOOL,
-                "false",
+                "mysql51_replication",               MXS_MODULE_PARAM_BOOL,   "false",
                 MXS_MODULE_OPT_DEPRECATED
             },
             {
-                "multimaster",
-                MXS_MODULE_PARAM_BOOL,
-                "false",
+                "multimaster",                       MXS_MODULE_PARAM_BOOL,   "false",
                 MXS_MODULE_OPT_DEPRECATED
             },
             {
-                CN_DETECT_STANDALONE_MASTER,
-                MXS_MODULE_PARAM_BOOL,
-                "true"
+                CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,   "true"
             },
             {
-                CN_FAILCOUNT,
-                MXS_MODULE_PARAM_COUNT,
-                "5"
+                CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,  "5"
             },
             {
-                "allow_cluster_recovery",
-                MXS_MODULE_PARAM_BOOL,
-                "true",
+                "allow_cluster_recovery",            MXS_MODULE_PARAM_BOOL,   "true",
                 MXS_MODULE_OPT_DEPRECATED
             },
             {
-                "ignore_external_masters",
-                MXS_MODULE_PARAM_BOOL,
-                "false"
+                "ignore_external_masters",           MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
-                CN_AUTO_FAILOVER,
-                MXS_MODULE_PARAM_BOOL,
-                "false"
+                CN_AUTO_FAILOVER,                    MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
-                CN_FAILOVER_TIMEOUT,
-                MXS_MODULE_PARAM_COUNT,
-
-                "90"
+                CN_FAILOVER_TIMEOUT,                 MXS_MODULE_PARAM_COUNT,  "90"
             },
             {
-                CN_SWITCHOVER_TIMEOUT,
-                MXS_MODULE_PARAM_COUNT,
-                "90"
+                CN_SWITCHOVER_TIMEOUT,               MXS_MODULE_PARAM_COUNT,  "90"
             },
             {
-                CN_REPLICATION_USER,
-                MXS_MODULE_PARAM_STRING
+                CN_REPLICATION_USER,                 MXS_MODULE_PARAM_STRING
             },
             {
-                CN_REPLICATION_PASSWORD,
-                MXS_MODULE_PARAM_STRING
+                CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_STRING
             },
             {
-                CN_VERIFY_MASTER_FAILURE,
-                MXS_MODULE_PARAM_BOOL,
-                "true"
+                CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,   "true"
             },
             {
-                CN_MASTER_FAILURE_TIMEOUT,
-                MXS_MODULE_PARAM_COUNT,
-                "10"
+                CN_MASTER_FAILURE_TIMEOUT,           MXS_MODULE_PARAM_COUNT,  "10"
             },
             {
-                CN_AUTO_REJOIN,
-                MXS_MODULE_PARAM_BOOL,
-                "false"
+                CN_AUTO_REJOIN,                      MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
-                CN_ENFORCE_READONLY,
-                MXS_MODULE_PARAM_BOOL,
-                "false"
+                CN_ENFORCE_READONLY,                 MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
-                CN_NO_PROMOTE_SERVERS,
-                MXS_MODULE_PARAM_SERVERLIST
+                CN_NO_PROMOTE_SERVERS,               MXS_MODULE_PARAM_SERVERLIST
             },
             {
-                CN_PROMOTION_SQL_FILE,
-                MXS_MODULE_PARAM_PATH
+                CN_PROMOTION_SQL_FILE,               MXS_MODULE_PARAM_PATH
             },
             {
-                CN_DEMOTION_SQL_FILE,
-                MXS_MODULE_PARAM_PATH
+                CN_DEMOTION_SQL_FILE,                MXS_MODULE_PARAM_PATH
             },
             {
-                CN_SWITCHOVER_ON_LOW_DISK_SPACE,
-                MXS_MODULE_PARAM_BOOL,
-                "false"
+                CN_SWITCHOVER_ON_LOW_DISK_SPACE,     MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
-                CN_MAINTENANCE_ON_LOW_DISK_SPACE,
-                MXS_MODULE_PARAM_BOOL,
-                "true"
+                CN_MAINTENANCE_ON_LOW_DISK_SPACE,    MXS_MODULE_PARAM_BOOL,   "true"
             },
             {
-                CN_HANDLE_EVENTS,
-                MXS_MODULE_PARAM_BOOL,
-                "true"
+                CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,   "true"
             },
             {MXS_END_MODULE_PARAMS}
         }

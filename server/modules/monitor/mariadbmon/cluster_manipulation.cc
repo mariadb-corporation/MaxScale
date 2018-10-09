@@ -35,10 +35,6 @@ const char FAILOVER_FAIL[] = "Failover '%s' -> '%s' failed.";
 const char SWITCHOVER_OK[] = "Switchover '%s' -> '%s' performed.";
 const char SWITCHOVER_FAIL[] = "Switchover %s -> %s failed";
 
-static void print_redirect_errors(MariaDBServer* first_server,
-                                  const ServerArray& servers,
-                                  json_t** err_out);
-
 /**
  * Run a manual switchover, promoting a new master server and demoting the existing master.
  *
@@ -401,8 +397,7 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
  * @param redirected_slaves A vector where to insert successfully redirected slaves.
  * @return The number of slaves successfully redirected.
  */
-int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master,
-                                    const ServerArray& slaves,
+int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
                                     ServerArray* redirected_slaves)
 {
     mxb_assert(redirected_slaves != NULL);
@@ -559,7 +554,6 @@ bool MariaDBMonitor::cluster_can_be_joined()
 /**
  * Scan the servers in the cluster and add (re)joinable servers to an array.
  *
- * @param mon Cluster monitor
  * @param output Array to save results to. Each element is a valid (re)joinable server according
  * to latest data.
  * @return False, if there were possible rejoinable servers but communications error to master server
@@ -1111,10 +1105,8 @@ bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
  * @param reason_out Why is the candidate better than current_best
  * @return True if candidate is better
  */
-bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate,
-                                         const MariaDBServer* current_best,
-                                         const MariaDBServer* demotion_target,
-                                         uint32_t gtid_domain,
+bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
+                                         const MariaDBServer* demotion_target, uint32_t gtid_domain,
                                          std::string* reason_out)
 {
     const SlaveStatus* cand_slave_conn = candidate->slave_connection_status(demotion_target);
@@ -1288,11 +1280,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json
 }
 
 /**
- * @brief Process possible failover event
- *
- * If a master failure has occurred and MaxScale is configured with failover functionality, this fuction
- * executes failover to select and promote a new master server. This function should be called immediately
- * after @c mon_process_state_changes. If an error occurs, this method disables automatic failover.
+ * Check if failover is required and perform it if so.
  */
 void MariaDBMonitor::handle_auto_failover()
 {
@@ -1461,39 +1449,6 @@ const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer*
         }
     }
     return connected_slave;
-}
-
-/**
- * Print a redirect error to logs. If err_out exists, generate a combined error message by querying all
- * the server parameters for connection errors and append these errors to err_out.
- *
- * @param demotion_target If not NULL, this is the first server to query.
- * @param redirectable_slaves Other servers to query for errors.
- * @param err_out If not null, the error output object.
- */
-static void print_redirect_errors(MariaDBServer* first_server,
-                                  const ServerArray& servers,
-                                  json_t** err_out)
-{
-    // Individual server errors have already been printed to the log.
-    // For JSON, gather the errors again.
-    const char* const MSG = "Could not redirect any slaves to the new master.";
-    MXS_ERROR(MSG);
-    if (err_out)
-    {
-        ServerArray failed_slaves;
-        if (first_server)
-        {
-            failed_slaves.push_back(first_server);
-        }
-        for (auto iter = servers.begin(); iter != servers.end(); iter++)
-        {
-            failed_slaves.push_back(*iter);
-        }
-
-        string combined_error = get_connection_errors(failed_slaves);
-        *err_out = mxs_json_error_append(*err_out, "%s Errors: %s.", MSG, combined_error.c_str());
-    }
 }
 
 /**
@@ -1700,8 +1655,24 @@ void MariaDBMonitor::handle_low_disk_space_master()
     }
 }
 
-void MariaDBMonitor::report_and_disable(const string& operation,
-                                        const string& setting_name,
+void MariaDBMonitor::handle_auto_rejoin()
+{
+    ServerArray joinable_servers;
+    if (get_joinable_servers(&joinable_servers))
+    {
+        uint32_t joins = do_rejoin(joinable_servers, NULL);
+        if (joins > 0)
+        {
+            MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.", m_master->name());
+    }
+}
+
+void MariaDBMonitor::report_and_disable(const string& operation, const string& setting_name,
                                         bool* setting_var)
 {
     string p1 = string_printf("Automatic %s failed, disabling automatic %s.",
@@ -1723,8 +1694,7 @@ void MariaDBMonitor::report_and_disable(const string& operation,
  * @param error_out Error output
  * @return True if gtid is used
  */
-bool MariaDBMonitor::check_gtid_replication(Log log_mode,
-                                            const MariaDBServer* demotion_target,
+bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target,
                                             json_t** error_out)
 {
     bool gtid_domain_ok = false;
