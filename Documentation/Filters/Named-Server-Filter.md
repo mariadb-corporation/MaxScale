@@ -35,14 +35,14 @@ also be embedded into SQL-queries, see
 type=filter
 module=namedserverfilter
 match01=^Select.*TableOne$
-target01=SlaveServer1, SlaveServer2
+target01=server2,server3
 match22=^SELECT.*TableTwo$
 target22=->master
 
 [MyService]
 type=service
 router=readwritesplit
-servers=server1,server2
+servers=server1,server2,server3
 user=myuser
 passwd=mypasswd
 filters=NamedServerFilter
