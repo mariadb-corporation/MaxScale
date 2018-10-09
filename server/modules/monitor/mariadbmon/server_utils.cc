@@ -49,17 +49,17 @@ string SlaveStatus::to_string() const
     return rval;
 }
 
-string SlaveStatus::to_short_string(const string& owner) const
+string SlaveStatus::to_short_string() const
 {
     if (name.empty())
     {
         return string_printf("Slave connection from %s to [%s]:%i",
-                             owner.c_str(), master_host.c_str(), master_port);
+                             owning_server.c_str(), master_host.c_str(), master_port);
     }
     else
     {
         return string_printf("Slave connection '%s' from %s to [%s]:%i",
-                             name.c_str(), owner.c_str(), master_host.c_str(), master_port);
+                             name.c_str(), owning_server.c_str(), master_host.c_str(), master_port);
     }
 }
 

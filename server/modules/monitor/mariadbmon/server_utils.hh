@@ -170,9 +170,10 @@ public:
         SLAVE_IO_NO,
     };
 
-    bool seen_connected = false;                            /* Has this slave connection been seen connected,
-                                                             * meaning that the master server id is correct?
-                                                             **/
+    std::string owning_server;                              /* Server name of the owner */
+    bool        seen_connected = false;                     /* Has this slave connection been seen connected,
+                                                             * meaning that the master server id
+                                                             * is correct? */
     std::string name;                                       /* Slave connection name. Must be unique for
                                                              * the server.*/
     int64_t master_server_id = SERVER_ID_UNKNOWN;           /* The master's server_id value. Valid ids are
@@ -193,9 +194,16 @@ public:
     maxbase::Clock::time_point last_data_time = maxbase::Clock::now();
 
 
-    std::string               to_string() const;
-    json_t*                   to_json() const;
-    std::string               to_short_string(const std::string& owner) const;
+    std::string to_string() const;
+    json_t*     to_json() const;
+
+    /**
+     * Create a short description in the form of "Slave connection from <slave> to <master>"
+     *
+     * @return Description
+     */
+    std::string to_short_string() const;
+
     static slave_io_running_t slave_io_from_string(const std::string& str);
     static std::string        slave_io_to_string(slave_io_running_t slave_io);
     bool                      should_be_copied(std::string* ignore_reason_out) const;

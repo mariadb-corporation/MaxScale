@@ -877,8 +877,7 @@ void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const Serv
                 {
                     // IO error on slave
                     MXS_WARNING("%s cannot start replication because of IO thread error: '%s'.",
-                                slave_conn->to_short_string(slave->name()).c_str(),
-                                slave_conn->last_error.c_str());
+                                slave_conn->to_short_string().c_str(), slave_conn->last_error.c_str());
                     repl_fails.push_back(*iter);
                     iter = unconfirmed.erase(iter);
                 }
@@ -886,8 +885,7 @@ void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const Serv
                 {
                     // SQL error on slave
                     MXS_WARNING("%s cannot start replication because of SQL thread error: '%s'.",
-                                slave_conn->to_short_string(slave->name()).c_str(),
-                                slave_conn->last_error.c_str());
+                                slave_conn->to_short_string().c_str(), slave_conn->last_error.c_str());
                     repl_fails.push_back(*iter);
                     iter = unconfirmed.erase(iter);
                 }
@@ -1394,7 +1392,7 @@ void MariaDBMonitor::check_cluster_operations_support()
                 {
                     supported = false;
                     auto reason = string_printf("%s is not using gtid-replication.",
-                                                slave_conn.to_short_string(server->name()).c_str());
+                                                slave_conn.to_short_string().c_str());
                     printer.cat(all_reasons, reason);
                 }
             }

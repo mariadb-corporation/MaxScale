@@ -291,6 +291,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     while (result->next_row())
     {
         SlaveStatus new_row;
+        new_row.owning_server = name();
         new_row.master_host = result->get_string(i_master_host);
         new_row.master_port = result->get_uint(i_master_port);
         string last_io_error = result->get_string(i_last_io_error);
@@ -1916,8 +1917,7 @@ bool MariaDBServer::merge_slave_conns(ClusterOperation& op, const SlaveStatusArr
         if (conn_can_be_merged(slave_conn, &ignore_reason))
         {
             MXS_WARNING("%s was ignored when promoting %s because %s",
-                        slave_conn.to_short_string(op.demotion_target->name()).c_str(), name(),
-                        ignore_reason.c_str());
+                        slave_conn.to_short_string().c_str(), name(), ignore_reason.c_str());
         }
         else
         {
@@ -1968,9 +1968,7 @@ bool MariaDBServer::copy_slave_conns(ClusterOperation& op, const SlaveStatusArra
         else
         {
             MXS_WARNING("%s was not copied to %s because %s",
-                        slave_conn.to_short_string(replacement->name()).c_str(),
-                        name(),
-                        reason_not_copied.c_str());
+                        slave_conn.to_short_string().c_str(), name(), reason_not_copied.c_str());
         }
     }
     return !start_slave_error;
@@ -1988,30 +1986,32 @@ bool MariaDBServer::create_start_slave(ClusterOperation& op, const SlaveStatus& 
     StopWatch timer;
     string error_msg;
     bool success = false;
-    string change_master = generate_change_master_cmd(op, slave_conn);
+    SlaveStatus new_conn = slave_conn;
+    new_conn.owning_server = name();
+    string change_master = generate_change_master_cmd(op, new_conn);
     bool conn_created = execute_cmd_time_limit(change_master, op.time_remaining, &error_msg);
     op.time_remaining -= timer.restart();
     if (conn_created)
     {
-        string start_slave = string_printf("START SLAVE '%s';", slave_conn.name.c_str());
+        string start_slave = string_printf("START SLAVE '%s';", new_conn.name.c_str());
         bool slave_started = execute_cmd_time_limit(start_slave, op.time_remaining, &error_msg);
         op.time_remaining -= timer.restart();
         if (slave_started)
         {
             success = true;
-            MXS_NOTICE("%s created and started.", slave_conn.to_short_string(name()).c_str());
+            MXS_NOTICE("%s created and started.", new_conn.to_short_string().c_str());
         }
         else
         {
             MXS_ERROR("%s could not be started: %s",
-                      slave_conn.to_short_string(name()).c_str(), error_msg.c_str());
+                      new_conn.to_short_string().c_str(), error_msg.c_str());
         }
     }
     else
     {
         // TODO: This may currently print out passwords.
         MXS_ERROR("%s could not be created: %s",
-                  slave_conn.to_short_string(name()).c_str(), error_msg.c_str());
+                  new_conn.to_short_string().c_str(), error_msg.c_str());
     }
     return success;
 }
@@ -2076,8 +2076,7 @@ bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op)
             {
                 PRINT_MXS_JSON_ERROR(op.error_out,
                                      "%s could not be started: %s",
-                                     modified_conn.to_short_string(name()).c_str(),
-                                     error_msg.c_str());
+                                     modified_conn.to_short_string().c_str(), error_msg.c_str());
             }
         }
         else
@@ -2085,7 +2084,7 @@ bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op)
             // TODO: This may currently print out passwords.
             PRINT_MXS_JSON_ERROR(op.error_out,
                                  "%s could not be redirected to [%s]:%i: %s",
-                                 old_conn->to_short_string(name()).c_str(),
+                                 old_conn->to_short_string().c_str(),
                                  modified_conn.master_host.c_str(), modified_conn.master_port,
                                  error_msg.c_str());
         }
