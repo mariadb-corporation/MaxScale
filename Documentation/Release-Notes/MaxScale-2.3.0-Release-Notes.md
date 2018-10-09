@@ -279,9 +279,12 @@ transactions (i.e. `START TRANSACTION` or `BEGIN`) are load balanced across
 slaves. If the transaction tries to modify a row, it is migrated to the master
 and rolled back on the slave.
 
-#### 'Adaptive Routing'
-A new load balancing method. Server load conditions are proxied by measuring
-query response times for each server.
+#### Adaptive Routing
+
+A new load balancing method,
+[`ADAPTIVE_ROUTING`](../Routers/ReadWriteSplit.md#slave_selection_criteria), was
+added. It uses the average query response time to distribute the load so that it
+is optimal on all servers.
 
 ### MaxCtrl
 
