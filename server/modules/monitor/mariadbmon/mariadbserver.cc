@@ -1195,14 +1195,6 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
     return NULL;
 }
 
-/**
- * Private, non-const version of 'slave_connection_status'.
- */
-SlaveStatus* MariaDBServer::slave_connection_status_mutable(const MariaDBServer* target)
-{
-    return const_cast<SlaveStatus*>(slave_connection_status(target));
-}
-
 bool MariaDBServer::enable_events(json_t** error_out)
 {
     int found_disabled_events = 0;
@@ -1446,7 +1438,7 @@ bool MariaDBServer::promote(ClusterOperation& op)
 {
     json_t** const error_out = op.error_out;
     // Function should only be called for a master-slave pair.
-    auto master_conn = slave_connection_status_mutable(op.demotion_target);
+    auto master_conn = slave_connection_status(op.demotion_target);
     mxb_assert(master_conn);
     if (master_conn == NULL)
     {
@@ -1461,66 +1453,17 @@ bool MariaDBServer::promote(ClusterOperation& op)
     // Step 1: Stop & reset slave connections. If doing a failover, only remove the connection to demotion
     // target. In case of switchover, remove other slave connections as well since the demotion target
     // will take them over.
-    bool stop_slave_error = false;
-
-    // Helper function for stopping a slave connection and setting error.
-    auto stop_slave_helper = [this, &timer, &stop_slave_error, &op, error_out](SlaveStatus* slave_conn) {
-            if (!stop_slave_conn(slave_conn, StopMode::RESET_ALL, op.time_remaining, error_out))
-            {
-                stop_slave_error = true;
-            }
-            op.time_remaining -= timer.restart();
-        };
-
+    bool stopped = false;
     if (op.type == OperationType::SWITCHOVER)
     {
-        for (size_t i = 0; !stop_slave_error && i < m_slave_status.size(); i++)
-        {
-            stop_slave_helper(&m_slave_status[i]);
-        }
+        stopped = remove_slave_conns(op, m_slave_status);
     }
-    else
+    else if (op.type == OperationType::FAILOVER)
     {
-        stop_slave_helper(master_conn);
+        stopped = remove_slave_conns(op, {*master_conn});
     }
 
-    if (!stop_slave_error)
-    {
-        // Check that the deleted connection(s) are really gone.
-        string error_msg;
-        if (do_show_slave_status(&error_msg))
-        {
-            if (op.type == OperationType::SWITCHOVER)
-            {
-                if (!m_slave_status.empty())
-                {
-                    stop_slave_error = true;
-                    PRINT_MXS_JSON_ERROR(error_out,
-                                         "%s has %lu slave connections although all connections should "
-                                         "have been removed.", name(), m_slave_status.size());
-                }
-            }
-            else
-            {
-                if (slave_connection_status(op.demotion_target) != NULL)
-                {
-                    stop_slave_error = true;
-                    PRINT_MXS_JSON_ERROR(error_out,
-                                         "%s has a slave connection to %s although it should "
-                                         "have been removed.", name(), op.demotion_target->name());
-                }
-            }
-        }
-        else
-        {
-            stop_slave_error = true;
-            PRINT_MXS_JSON_ERROR(error_out,
-                                 "Failed to update slave connections of %s: %s",
-                                 name(), error_msg.c_str());
-        }
-    }
-
-    if (!stop_slave_error)
+    if (stopped)
     {
         // Step 2: If demotion target is master, meaning this server will become the master,
         // enable writing and scheduled events. Also, run promotion_sql_file.
@@ -1568,20 +1511,7 @@ bool MariaDBServer::promote(ClusterOperation& op)
         // operation.
         if (!promotion_error)
         {
-            if (op.type == OperationType::FAILOVER)
-            {
-                if (merge_slave_conns(op, op.demotion_target_conns))
-                {
-                    success = true;
-                }
-                else
-                {
-                    PRINT_MXS_JSON_ERROR(error_out,
-                                         "Could not merge slave connections from %s to %s.",
-                                         op.demotion_target->name(), name());
-                }
-            }
-            else
+            if (op.type == OperationType::SWITCHOVER)
             {
                 if (copy_slave_conns(op, op.demotion_target_conns, op.demotion_target))
                 {
@@ -1591,6 +1521,19 @@ bool MariaDBServer::promote(ClusterOperation& op)
                 {
                     PRINT_MXS_JSON_ERROR(error_out,
                                          "Could not copy slave connections from %s to %s.",
+                                         op.demotion_target->name(), name());
+                }
+            }
+            else if (op.type == OperationType::FAILOVER)
+            {
+                if (merge_slave_conns(op, op.demotion_target_conns))
+                {
+                    success = true;
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "Could not merge slave connections from %s to %s.",
                                          op.demotion_target->name(), name());
                 }
             }
@@ -1604,44 +1547,10 @@ bool MariaDBServer::demote(ClusterOperation& op)
     mxb_assert(op.type == OperationType::SWITCHOVER && op.demotion_target == this);
     json_t** error_out = op.error_out;
     bool success = false;
-    StopWatch timer;
 
     // Step 1: Stop & reset slave connections. The promotion target will copy them. The connection
     // information has been backed up in the operation object.
-    bool stop_slave_error = false;
-    for (size_t i = 0; !stop_slave_error && i < m_slave_status.size(); i++)
-    {
-        if (!stop_slave_conn(&m_slave_status[i], StopMode::RESET_ALL, op.time_remaining, error_out))
-        {
-            stop_slave_error = true;
-        }
-        op.time_remaining -= timer.lap();
-    }
-
-    if (!stop_slave_error)
-    {
-        // Check that slave connections are really gone.
-        string error_msg;
-        if (do_show_slave_status(&error_msg))
-        {
-            if (!m_slave_status.empty())
-            {
-                stop_slave_error = true;
-                PRINT_MXS_JSON_ERROR(error_out,
-                                     "%s has %lu slave connections although all connections should have been "
-                                     "removed.", name(), m_slave_status.size());
-            }
-        }
-        else
-        {
-            stop_slave_error = true;
-            PRINT_MXS_JSON_ERROR(error_out,
-                                 "Failed to update slave connections of %s: %s",
-                                 name(), error_msg.c_str());
-        }
-    }
-
-    if (!stop_slave_error)
+    if (remove_slave_conns(op, m_slave_status))
     {
         // Step 2: If this server is master, disable writes and scheduled events, flush logs,
         // update gtid:s, run demotion_sql_file.
@@ -1654,6 +1563,7 @@ bool MariaDBServer::demote(ClusterOperation& op)
         if (op.demotion_target_is_master)
         {
             mxb_assert(is_master());
+            StopWatch timer;
             // Step 2a: Enabling read-only can take time if writes are on or table locks taken.
             // TODO: use max_statement_time to be safe!
             bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, op.time_remaining, error_out);
@@ -1739,7 +1649,16 @@ bool MariaDBServer::demote(ClusterOperation& op)
     return success;
 }
 
-bool MariaDBServer::stop_slave_conn(SlaveStatus* slave_conn, StopMode mode, Duration time_limit,
+/**
+ * Stop and optionally reset/reset-all a slave connection.
+ *
+ * @param conn_name Slave connection name. Use empty string for the nameless connection.
+ * @param mode STOP, RESET or RESET ALL
+ * @param time_limit Operation time limit
+ * @param error_out Error output
+ * @return True on success
+ */
+bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode, Duration time_limit,
                                     json_t** error_out)
 {
     /* STOP SLAVE is a bit problematic, since sometimes it seems to take several seconds to complete.
@@ -1749,8 +1668,7 @@ bool MariaDBServer::stop_slave_conn(SlaveStatus* slave_conn, StopMode mode, Dura
      * an already stopped slave connection an error. */
     Duration time_left = time_limit;
     StopWatch timer;
-    const char* conn_name = slave_conn->name.c_str();
-    string stop = string_printf("STOP SLAVE '%s';", conn_name);
+    string stop = string_printf("STOP SLAVE '%s';", conn_name.c_str());
     string error_msg;
     bool stop_success = execute_cmd_time_limit(stop, time_left, &error_msg);
     time_left -= timer.restart();
@@ -1763,20 +1681,15 @@ bool MariaDBServer::stop_slave_conn(SlaveStatus* slave_conn, StopMode mode, Dura
         if (mode == StopMode::RESET || mode == StopMode::RESET_ALL)
         {
             string reset = string_printf("RESET SLAVE '%s'%s;",
-                                         conn_name, (mode == StopMode::RESET_ALL) ? " ALL" : "");
+                                         conn_name.c_str(), (mode == StopMode::RESET_ALL) ? " ALL" : "");
             if (execute_cmd_time_limit(reset, time_left, &error_msg))
             {
                 rval = true;
-                if (mode == StopMode::RESET_ALL)
-                {
-                    slave_conn->exists = false;     // The RESET_ALL means that the connection has been
-                                                    // erased.
-                }
             }
             else
             {
                 PRINT_MXS_JSON_ERROR(error_out,
-                                     "Failed to reset slave connection on '%s': %s",
+                                     "Failed to reset slave connection on %s: %s",
                                      name(), error_msg.c_str());
             }
         }
@@ -1788,10 +1701,84 @@ bool MariaDBServer::stop_slave_conn(SlaveStatus* slave_conn, StopMode mode, Dura
     else
     {
         PRINT_MXS_JSON_ERROR(error_out,
-                             "Failed to stop slave connection on '%s': %s",
+                             "Failed to stop slave connection on %s: %s",
                              name(), error_msg.c_str());
     }
     return rval;
+}
+
+/**
+ * Removes the given slave connections from the server and then updates slave connection status.
+ *
+ * @param op Operation descriptor
+ * @param conns_to_remove Which connections should be removed
+ * @return True if succesfull
+ */
+bool MariaDBServer::remove_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_remove)
+{
+    json_t** error_out = op.error_out;
+    StopWatch timer;
+
+    bool stop_slave_error = false;
+    for (size_t i = 0; !stop_slave_error && i < conns_to_remove.size(); i++)
+    {
+        if (!stop_slave_conn(conns_to_remove[i].name, StopMode::RESET_ALL, op.time_remaining, error_out))
+        {
+            stop_slave_error = true;
+        }
+        op.time_remaining -= timer.lap();
+    }
+
+    bool success = false;
+    if (stop_slave_error)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Failed to remove slave connection(s) from %s.", name());
+    }
+    else
+    {
+        // Check that the slave connections are really gone by comparing connection names. It's probably
+        // enough to just update the slave status. Checking that the connections are really gone is
+        // likely overkill, but doesn't hurt.
+        string error_msg;
+        if (do_show_slave_status(&error_msg))
+        {
+            // Insert all existing connection names to a set, then check that none of the removed ones are
+            // there.
+            std::set<string> connection_names;
+            for (auto& slave_conn : m_slave_status)
+            {
+                connection_names.insert(slave_conn.name);
+            }
+            int found = 0;
+            for (auto& removed_conn : conns_to_remove)
+            {
+                if (connection_names.count(removed_conn.name) > 0)
+                {
+                    found++;
+                }
+            }
+
+            if (found == 0)
+            {
+                success = true;
+            }
+            else
+            {
+                // This means server is really bugging.
+                PRINT_MXS_JSON_ERROR(error_out,
+                                     "%s still has %i removed slave connections,"
+                                     "RESET SLAVE must have failed.", name(), found);
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(error_out,
+                                 "Failed to update slave connections of %s: %s",
+                                 name(), error_msg.c_str());
+        }
+    }
+    op.time_remaining -= timer.lap();
+    return success;
 }
 
 bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration time_limit, json_t** error_out)
@@ -2060,11 +2047,11 @@ bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op)
     const MariaDBServer* old_master = op.demotion_target;
     const MariaDBServer* new_master = op.promotion_target;
 
-    auto old_conn = slave_connection_status_mutable(old_master);
+    auto old_conn = slave_connection_status(old_master);
     mxb_assert(old_conn);
     bool success = false;
     // First, just stop the slave connection.
-    bool stopped = stop_slave_conn(old_conn, StopMode::STOP_ONLY, op.time_remaining, op.error_out);
+    bool stopped = stop_slave_conn(old_conn->name, StopMode::STOP_ONLY, op.time_remaining, op.error_out);
     op.time_remaining -= timer.restart();
     if (stopped)
     {

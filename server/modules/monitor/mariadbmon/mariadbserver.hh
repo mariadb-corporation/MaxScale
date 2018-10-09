@@ -523,16 +523,16 @@ private:
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
-    SlaveStatus*       slave_connection_status_mutable(const MariaDBServer* target);
 
     void warn_event_scheduler();
     bool events_foreach(ManipulatorFunc& func, json_t** error_out);
     bool alter_event(const EventInfo& event, const std::string& target_status,
                      json_t** error_out);
 
-    bool stop_slave_conn(SlaveStatus* slave_conn, StopMode mode, maxbase::Duration time_limit,
+    bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
                          json_t** error_out);
 
+    bool remove_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_remove);
     bool execute_cmd_ex(const std::string& cmd, QueryRetryMode mode,
                         std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
 

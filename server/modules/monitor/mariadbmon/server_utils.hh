@@ -170,8 +170,6 @@ public:
         SLAVE_IO_NO,
     };
 
-    bool exists = true;                                     /* Has this connection been removed from the
-                                                             * server but the monitor hasn't updated yet? */
     bool seen_connected = false;                            /* Has this slave connection been seen connected,
                                                              * meaning that the master server id is correct?
                                                              **/
