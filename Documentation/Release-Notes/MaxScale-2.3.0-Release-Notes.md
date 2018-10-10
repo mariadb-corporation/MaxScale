@@ -109,14 +109,26 @@ connections, the smallest lag is used.
 
 With recent MariaDB Server versions, the monitor can check the disk space on the
 backends and detect if the server is running low. The monitor can be set to
-automatically switchover a master low on disk space. Slaves are instead set to
+automatically switchover a master low on disk space. Slaves can be set to
 maintenance mode. Disk space is also considered when selecting a new master for
-promotion.
+promotion. See
+[switchover_on_low_disk_space](../Monitors/MariaDB-Monitor.md#switchover_on_low_disk_space)
+and
+[maintenance_on_low_disk_space](../Monitors/MariaDB-Monitor.md#maintenance_on_low_disk_space)
+for more information.
 
 #### Replication reset feature
 
 The *reset-replication* monitor command deletes all slave connections and binary
-logs, and then sets up replication. Useful when data is in sync but gtid:s are not.
+logs, and then sets up replication. Useful when data is in sync but gtid:s are
+not.
+
+#### Scheduled events handling in failover/switchover/rejoin
+
+Server events lauched by the event scheduler thread are now handled during
+cluster modification operations. See
+[handle_server_events](../Monitors/MariaDB-Monitor.md#handle_server_events)
+for more information.
 
 #### Unused parameters
 
