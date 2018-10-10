@@ -1366,9 +1366,9 @@ void MariaDBMonitor::check_cluster_operations_support()
             && server->m_version != MariaDBServer::version::MARIADB_100)
         {
             supported = false;
-            auto reason = string_printf("The version of server %s is not supported. Failover/switchover "
-                                        "requires MariaDB 10.X.",
-                                        server->name());
+            auto reason = string_printf("The version of %s (%s) is not supported. Failover/switchover "
+                                        "requires MariaDB 10.0.2 or later.",
+                                        server->name(), server->m_server_base->server->version_string);
             printer.cat(all_reasons, reason);
         }
 
