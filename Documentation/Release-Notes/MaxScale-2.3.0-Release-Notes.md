@@ -211,8 +211,9 @@ configure it.
 
 ### Runtime Configuration of the Cache
 
-With the variable `@maxscale.cache.enabled` it is now possible for a
-client to specify whether the cache should be used. Please see the
+With the variables `@maxscale.cache.use` and `@maxscale.cache.populate`
+it is now possible for a client to specify whether the cache should be
+used and/or populated. Please see the
 [Cache](../Filters/Cache.md) documentation for details.
 
 ### User Specified Syslog Facility and Level for Authentication Errors
