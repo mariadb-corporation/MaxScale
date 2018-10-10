@@ -1372,11 +1372,12 @@ void MariaDBMonitor::check_cluster_operations_support()
             printer.cat(all_reasons, reason);
         }
 
-        if (server->is_slave() && !server->m_slave_status.empty())
+        if (server->is_usable() && !server->m_slave_status.empty())
         {
             for (const auto& slave_conn : server->m_slave_status)
             {
-                if (slave_conn.gtid_io_pos.empty())
+                if (slave_conn.slave_io_running == SlaveStatus::SLAVE_IO_YES
+                    && slave_conn.slave_sql_running && slave_conn.gtid_io_pos.empty())
                 {
                     supported = false;
                     auto reason = string_printf("%s is not using gtid-replication.",
