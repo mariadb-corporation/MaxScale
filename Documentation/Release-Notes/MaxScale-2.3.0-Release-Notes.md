@@ -242,8 +242,6 @@ SchemaRouter [documentation](../Routers/SchemaRouter.md) for details.
 The [throttlefilter](../Filters/Throttle.md) replaces and extends on the limit_queries
 functionality of [the Database Firewall filter](../Filters/Database-Firewall-Filter.md).
 
-### Interactive Mode for MaxCtrl
-
 ### ReadWriteSplit
 
 A set of new features have been added to readwritesplit.
