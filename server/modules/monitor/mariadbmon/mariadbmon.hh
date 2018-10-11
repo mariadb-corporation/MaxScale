@@ -284,17 +284,16 @@ private:
                                 json_t** error_out);
 
     ServerArray get_redirectables(const MariaDBServer* old_master, const MariaDBServer* ignored_slave);
-    int redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
-                        ServerArray* redirected_slaves);
-    int redirect_slaves_ex(ClusterOperation& op, const ServerArray& slaves,
-                           const MariaDBServer* old_master, const MariaDBServer* new_master,
-                           ServerArray* redirected_slaves);
+    int         redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
+                                ServerArray* redirected_slaves);
+    int redirect_slaves_ex(ClusterOperation& op,
+                           ServerArray* redirected_to_promo, ServerArray* redirected_to_demo);
     bool        start_external_replication(MariaDBServer* new_master, json_t** err_out);
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
     void        wait_cluster_stabilization(ClusterOperation& op, const ServerArray& slaves,
                                            const MariaDBServer* new_master);
-    void        report_and_disable(const std::string& operation, const std::string& setting_name,
-                                   bool* setting_var);
+    void report_and_disable(const std::string& operation, const std::string& setting_name,
+                            bool* setting_var);
 
     // Rejoin methods
     bool     cluster_can_be_joined();

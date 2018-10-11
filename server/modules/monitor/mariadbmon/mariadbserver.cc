@@ -1838,6 +1838,8 @@ bool MariaDBServer::merge_slave_conns(ClusterOperation& op, const SlaveStatusArr
     auto conn_can_be_merged = [this](const SlaveStatus& slave_conn, string* ignore_reason_out) -> bool {
             bool accepted = true;
             auto master_id = slave_conn.master_server_id;
+            string my_host = m_server_base->server->address;
+            int my_port = m_server_base->server->port;
             // The connection is only merged if it satisfies the copy-conditions. Merging has also
             // additional requirements.
             string ignore_reason;
@@ -1850,6 +1852,11 @@ bool MariaDBServer::merge_slave_conns(ClusterOperation& op, const SlaveStatusArr
                 // This is not an error but indicates a complicated topology. In any case, ignore this.
                 accepted = false;
                 ignore_reason = string_printf("it points to %s (according to server id:s).", name());
+            }
+            else if (slave_conn.master_host == my_host && slave_conn.master_port == my_port)
+            {
+                accepted = false;
+                ignore_reason = string_printf("it points to %s (according to master host:port).", name());
             }
             else
             {

@@ -417,45 +417,129 @@ int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray
 }
 
 /**
- * Redirect slaves to replicate from the promotion target.
+ * Redirect slave connections from the promotion target to replicate from the demotion target and vice versa.
  *
  * @param op Operation descriptor
- * @param slaves An array of slaves to redirect
- * @param old_master The connections to this server are redirected
- * @param new_master The new master for the redirected connections
- * @param redirected_slaves A vector where to insert successfully redirected slaves
+ * @param redirected_to_promo Output for slaves successfully redirected to promotion target
+ * @param redirected_to_demo Output for slaves successfully redirected to demotion target
  * @return The number of slaves successfully redirected
  */
-int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op, const ServerArray& slaves,
-                                       const MariaDBServer* old_master, const MariaDBServer* new_master,
-                                       ServerArray* redirected_slaves)
+int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op,
+                                       ServerArray* redirected_to_promo, ServerArray* redirected_to_demo)
 {
-    mxb_assert(redirected_slaves != NULL);
-    if (slaves.empty())
+    mxb_assert(op.type == OperationType::SWITCHOVER || op.type == OperationType::FAILOVER);
+    MariaDBServer* const promotion_target = op.promotion_target;
+    MariaDBServer* const demotion_target = op.demotion_target;
+
+    // Slaves of demotion target are redirected to promotion target.
+    // Try to redirect even disconnected slaves.
+    ServerArray redirect_to_promo_target = get_redirectables(demotion_target, promotion_target);
+    // Slaves of promotion target are redirected to demotion target in case of switchover.
+    // This list contains elements only when promoting a relay in switchover.
+    ServerArray redirect_to_demo_target;
+    if (op.type == OperationType::SWITCHOVER)
+    {
+        redirect_to_demo_target = get_redirectables(promotion_target, demotion_target);
+    }
+    if (redirect_to_promo_target.empty() && redirect_to_demo_target.empty())
     {
         // This is ok, nothing to do.
         return 0;
     }
 
-    string slave_names = monitored_servers_to_string(slaves);
-    MXS_NOTICE("Redirecting %s to replicate from %s instead of %s.",
-               slave_names.c_str(), op.promotion_target->name(), op.demotion_target->name());
-    int successes = 0;
-    for (MariaDBServer* redirectable : slaves)
+    /* In complicated topologies, this redirection can get tricky. It's possible that a slave is
+     * replicating from both promotion and demotion targets and with different settings. This leads
+     * to a somewhat similar situation as in promotion (connection copy/merge).
+     *
+     * Neither slave connection can be redirected since they would be conflicting. As a temporary
+     * solution, such duplicate slave connections are for now avoided by not redirecting them. If this
+     * becomes an issue (e.g. connection settings need to be properly preserved), add code which:
+     * 1) In switchover, swaps the connections by first deleting or redirecting the other to a nonsensial
+     * host to avoid host:port conflict.
+     * 2) In failover, deletes the connection to promotion target and redirects the one to demotion target,
+     * or does the same as in 1.
+     */
+
+    const char redir_fmt[] = "Redirecting %s to replicate from %s instead of %s.";
+    string slave_names_to_promo = monitored_servers_to_string(redirect_to_promo_target);
+    string slave_names_to_demo = monitored_servers_to_string(redirect_to_demo_target);
+    mxb_assert(slave_names_to_demo.empty() || op.type == OperationType::SWITCHOVER);
+
+    // Print both name lists if both have items, otherwise just the one with items.
+    if (!slave_names_to_promo.empty() && !slave_names_to_demo.empty())
     {
-        if (redirectable->redirect_existing_slave_conn(op, old_master, new_master))
-        {
-            successes++;
-            redirected_slaves->push_back(redirectable);
-        }
+        MXS_NOTICE("Redirecting %s to replicate from %s instead of %s, and %s to replicate from "
+                   "%s instead of %s.",
+                   slave_names_to_promo.c_str(), promotion_target->name(), demotion_target->name(),
+                   slave_names_to_demo.c_str(), demotion_target->name(), promotion_target->name());
     }
-    if (size_t(successes) == slaves.size())
+    else if (!slave_names_to_promo.empty())
+    {
+        MXS_NOTICE(redir_fmt,
+                   slave_names_to_promo.c_str(), promotion_target->name(), demotion_target->name());
+    }
+    else if (!slave_names_to_demo.empty())
+    {
+        MXS_NOTICE(redir_fmt,
+                   slave_names_to_demo.c_str(), demotion_target->name(), promotion_target->name());
+    }
+
+    int successes = 0;
+    int fails = 0;
+    int conflicts = 0;
+    auto redirection_helper =
+        [this, &op, &conflicts, &successes, &fails](ServerArray& redirect_these,
+                                                    const MariaDBServer* from, const MariaDBServer* to,
+                                                    ServerArray* redirected) {
+            for (MariaDBServer* redirectable : redirect_these)
+            {
+                mxb_assert(redirected != NULL);
+                /* If the connection exists, even if disconnected, don't redirect.
+                 * Compare host:port, since that is how server detects duplicate connections.
+                 * Ignore for now the possibility of different host:ports having same server id:s
+                 * etc as such setups shouldn't try failover/switchover anyway. */
+                auto existing_conn = redirectable->slave_connection_status_host_port(to);
+                if (existing_conn)
+                {
+                    // Already has a connection to redirect target.
+                    conflicts++;
+                    MXS_WARNING("%s already has a slave connection to %s, connection to %s was "
+                                "not redirected.",
+                                redirectable->name(), to->name(), from->name());
+                }
+                else
+                {
+                    // No conflict, redirect as normal.
+                    if (redirectable->redirect_existing_slave_conn(op, from, to))
+                    {
+                        successes++;
+                        redirected->push_back(redirectable);
+                    }
+                    else
+                    {
+                        fails++;
+                    }
+                }
+            }
+        };
+
+    redirection_helper(redirect_to_promo_target, demotion_target, promotion_target, redirected_to_promo);
+    redirection_helper(redirect_to_demo_target, promotion_target, demotion_target, redirected_to_demo);
+
+    if (fails == 0 && conflicts == 0)
     {
         MXS_NOTICE("All redirects successful.");
     }
+    else if (fails == 0)
+    {
+        MXS_NOTICE("%i slave connections were redirected while %i connections were ignored.",
+                   successes, conflicts);
+    }
     else
     {
-        MXS_WARNING("%lu out of %lu redirects failed.", slaves.size() - successes, slaves.size());
+        int total = fails + conflicts + successes;
+        MXS_WARNING("%i redirects failed, %i slave connections ignored and %i redirects successful "
+                    "out of %i.", fails, conflicts, successes, total);
     }
     return successes;
 }
@@ -692,26 +776,20 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
     json_t** const error_out = op.error_out;
     mxb_assert(promotion_target && demotion_target);
 
-    // Step 1a: Save all slaves except promotion target to an array.
-    // Try to redirect even disconnected slaves.
-    ServerArray redirect_to_promo_target = get_redirectables(demotion_target, promotion_target);
-    // Step 1b: The slaves of the promotion target must be redirected to the old master. This
-    // list contains elements only when promoting a relay.
-    ServerArray redirect_to_demo_target = get_redirectables(promotion_target, demotion_target);
     bool rval = false;
-    // Step 2: Set read-only to on, flush logs, update gtid:s.
+    // Step 1: Set read-only to on, flush logs, update gtid:s.
     if (demotion_target->demote(op))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;
         StopWatch timer;
-        // Step 3: Wait for the promotion target to catch up with the demotion target. Disregard the other
+        // Step 2: Wait for the promotion target to catch up with the demotion target. Disregard the other
         // slaves of the promotion target to avoid needless waiting.
         // The gtid:s of the demotion target were updated at the end of demotion.
         if (promotion_target->catchup_to_master(op))
         {
             MXS_INFO("Switchover: Catchup took %.1f seconds.", timer.lap().secs());
-            // Step 4: On new master: remove slave connections, set read-only to OFF etc.
+            // Step 3: On new master: remove slave connections, set read-only to OFF etc.
             if (promotion_target->promote(op))
             {
                 // Point of no return. Even if following steps fail, do not try to undo.
@@ -724,7 +802,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                     m_next_master = promotion_target;
                 }
 
-                // Step 5: Start replication on old master and redirect slaves.
+                // Step 4: Start replication on old master and redirect slaves.
                 ServerArray redirected_to_promo_target;
                 if (demotion_target->copy_slave_conns(op, op.promotion_target_conns, promotion_target))
                 {
@@ -735,17 +813,13 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                     MXS_WARNING("Could not copy slave connections from %s to %s.",
                                 promotion_target->name(), demotion_target->name());
                 }
-                redirect_slaves_ex(op, redirect_to_promo_target, demotion_target, promotion_target,
-                                   &redirected_to_promo_target);
-
                 ServerArray redirected_to_demo_target;
-                redirect_slaves_ex(op, redirect_to_demo_target, promotion_target, demotion_target,
-                                   &redirected_to_demo_target);
+                redirect_slaves_ex(op, &redirected_to_promo_target, &redirected_to_demo_target);
 
                 if (!redirected_to_promo_target.empty() || !redirected_to_demo_target.empty())
                 {
                     timer.restart();
-                    // Step 6: Finally, check that slaves are replicating.
+                    // Step 5: Finally, check that slaves are replicating.
                     wait_cluster_stabilization(op, redirected_to_promo_target, promotion_target);
                     wait_cluster_stabilization(op, redirected_to_demo_target, demotion_target);
                     auto step6_duration = timer.lap();
@@ -758,7 +832,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
 
         if (!catchup_and_promote_success)
         {
-            // Step 3 or 4 failed, try to undo step 2.
+            // Step 2 or 3 failed, try to undo step 2.
             const char QUERY_UNDO[] = "SET GLOBAL read_only=0;";
             if (mxs_mysql_query(demotion_target->m_server_base->con, QUERY_UNDO) == 0)
             {
@@ -793,11 +867,8 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
     mxb_assert(op.promotion_target && op.demotion_target);
     MariaDBServer* const promotion_target = op.promotion_target;
 
-    // Step 1: Populate a vector with all slaves not the selected master.
-    ServerArray redirectable_slaves = get_redirectables(op.demotion_target, promotion_target);
-
     bool rval = false;
-    // Step 2: Stop and reset slave, set read-only to OFF.
+    // Step 1: Stop and reset slave, set read-only to OFF.
     if (promotion_target->promote(op))
     {
         // Point of no return. Even if following steps fail, do not try to undo. Failover considered
@@ -810,13 +881,13 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
             m_next_master = promotion_target;
         }
 
-        // Step 3: Redirect slaves.
+        // Step 2: Redirect slaves.
         ServerArray redirected_slaves;
-        redirect_slaves_ex(op, redirectable_slaves, op.demotion_target, promotion_target, &redirected_slaves);
+        redirect_slaves_ex(op, &redirected_slaves, NULL);
         if (!redirected_slaves.empty())
         {
             StopWatch timer;
-            /* Step 4: Finally, check that slaves are connected to the new master. Even if
+            /* Step 3: Finally, check that slaves are connected to the new master. Even if
              * time is out at this point, wait_cluster_stabilization() will check the slaves
              * once so that latest status is printed. */
             wait_cluster_stabilization(op, redirected_slaves, promotion_target);
