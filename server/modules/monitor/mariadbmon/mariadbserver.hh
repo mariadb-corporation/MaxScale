@@ -368,12 +368,15 @@ public:
     bool demote(ClusterOperation& op);
 
     /**
-     * Redirect the slave connection going to demotion target to replicate from promotion target.
+     * Redirect the slave connection going to old master to replicate from new master.
      *
      * @param op Operation descriptor
+     * @param old_master The connection to this server is redirected
+     * @param new_master The new master for the redirected connection
      * @return True on success
      */
-    bool redirect_existing_slave_conn(ClusterOperation& op);
+    bool redirect_existing_slave_conn(ClusterOperation& op, const MariaDBServer* old_master,
+                                      const MariaDBServer* new_master);
 
     /**
      * Copy slave connections to this server. This is usually needed during switchover promotion and on

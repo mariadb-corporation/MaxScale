@@ -421,10 +421,13 @@ int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray
  *
  * @param op Operation descriptor
  * @param slaves An array of slaves to redirect
+ * @param old_master The connections to this server are redirected
+ * @param new_master The new master for the redirected connections
  * @param redirected_slaves A vector where to insert successfully redirected slaves
  * @return The number of slaves successfully redirected
  */
 int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op, const ServerArray& slaves,
+                                       const MariaDBServer* old_master, const MariaDBServer* new_master,
                                        ServerArray* redirected_slaves)
 {
     mxb_assert(redirected_slaves != NULL);
@@ -440,7 +443,7 @@ int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op, const ServerArray& 
     int successes = 0;
     for (MariaDBServer* redirectable : slaves)
     {
-        if (redirectable->redirect_existing_slave_conn(op))
+        if (redirectable->redirect_existing_slave_conn(op, old_master, new_master))
         {
             successes++;
             redirected_slaves->push_back(redirectable);
@@ -689,11 +692,12 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
     json_t** const error_out = op.error_out;
     mxb_assert(promotion_target && demotion_target);
 
-    // Step 1: Save all slaves except promotion target to an array.
+    // Step 1a: Save all slaves except promotion target to an array.
     // Try to redirect even disconnected slaves.
-    // TODO: 'switchover_wait_slaves_catchup' needs to be smarter and not bother with such slaves.
-    ServerArray redirectable_slaves = get_redirectables(promotion_target, demotion_target);
-
+    ServerArray redirect_to_promo_target = get_redirectables(demotion_target, promotion_target);
+    // Step 1b: The slaves of the promotion target must be redirected to the old master. This
+    // list contains elements only when promoting a relay.
+    ServerArray redirect_to_demo_target = get_redirectables(promotion_target, demotion_target);
     bool rval = false;
     // Step 2: Set read-only to on, flush logs, update gtid:s.
     if (demotion_target->demote(op))
@@ -721,23 +725,29 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                 }
 
                 // Step 5: Start replication on old master and redirect slaves.
-                ServerArray redirected_slaves;
+                ServerArray redirected_to_promo_target;
                 if (demotion_target->copy_slave_conns(op, op.promotion_target_conns, promotion_target))
                 {
-                    redirected_slaves.push_back(demotion_target);
+                    redirected_to_promo_target.push_back(demotion_target);
                 }
                 else
                 {
                     MXS_WARNING("Could not copy slave connections from %s to %s.",
                                 promotion_target->name(), demotion_target->name());
                 }
-                redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
+                redirect_slaves_ex(op, redirect_to_promo_target, demotion_target, promotion_target,
+                                   &redirected_to_promo_target);
 
-                if (!redirected_slaves.empty())
+                ServerArray redirected_to_demo_target;
+                redirect_slaves_ex(op, redirect_to_demo_target, promotion_target, demotion_target,
+                                   &redirected_to_demo_target);
+
+                if (!redirected_to_promo_target.empty() || !redirected_to_demo_target.empty())
                 {
                     timer.restart();
                     // Step 6: Finally, check that slaves are replicating.
-                    wait_cluster_stabilization(op, redirected_slaves);
+                    wait_cluster_stabilization(op, redirected_to_promo_target, promotion_target);
+                    wait_cluster_stabilization(op, redirected_to_demo_target, demotion_target);
                     auto step6_duration = timer.lap();
                     MXS_INFO("Switchover: slave replication confirmation took %.1f seconds with "
                              "%.1f seconds to spare.",
@@ -784,7 +794,7 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
     MariaDBServer* const promotion_target = op.promotion_target;
 
     // Step 1: Populate a vector with all slaves not the selected master.
-    ServerArray redirectable_slaves = get_redirectables(promotion_target, op.demotion_target);
+    ServerArray redirectable_slaves = get_redirectables(op.demotion_target, promotion_target);
 
     bool rval = false;
     // Step 2: Stop and reset slave, set read-only to OFF.
@@ -802,14 +812,14 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
 
         // Step 3: Redirect slaves.
         ServerArray redirected_slaves;
-        redirect_slaves_ex(op, redirectable_slaves, &redirected_slaves);
+        redirect_slaves_ex(op, redirectable_slaves, op.demotion_target, promotion_target, &redirected_slaves);
         if (!redirected_slaves.empty())
         {
             StopWatch timer;
             /* Step 4: Finally, check that slaves are connected to the new master. Even if
              * time is out at this point, wait_cluster_stabilization() will check the slaves
              * once so that latest status is printed. */
-            wait_cluster_stabilization(op, redirected_slaves);
+            wait_cluster_stabilization(op, redirected_slaves, promotion_target);
             MXS_INFO("Failover: slave replication confirmation took %.1f seconds with "
                      "%.1f seconds to spare.",
                      timer.lap().secs(), op.time_remaining.secs());
@@ -824,8 +834,10 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
  *
  * @param op Operation descriptor
  * @param redirected_slaves Slaves to check
+ * @param new_master The target server of the slave connections
  */
-void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const ServerArray& redirected_slaves)
+void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const ServerArray& redirected_slaves,
+                                                const MariaDBServer* new_master)
 {
     if (redirected_slaves.empty())
     {
@@ -834,7 +846,6 @@ void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const Serv
     }
 
     StopWatch timer;
-    const MariaDBServer* new_master = op.promotion_target;
     // Check all the servers in the list. Using a set because erasing from container.
     std::set<MariaDBServer*> unconfirmed(redirected_slaves.begin(), redirected_slaves.end());
     ServerArray successes;
@@ -1733,19 +1744,19 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* d
 /**
  * List slaves which should be redirected to the new master.
  *
- * @param promotion_target The server which will be promoted
- * @param demotion_target The server which will be demoted
+ * @param old_master The server whose slaves are listed
+ * @param ignored_slave A slave which should not be listed even if otherwise valid
  * @return A list of slaves to redirect
  */
-ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* promotion_target,
-                                              const MariaDBServer* demotion_target)
+ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
+                                              const MariaDBServer* ignored_slave)
 {
     ServerArray redirectable_slaves;
-    for (MariaDBServer* slave : demotion_target->m_node.children)
+    for (MariaDBServer* slave : old_master->m_node.children)
     {
-        if (slave->is_usable() && slave != promotion_target)
+        if (slave->is_usable() && slave != ignored_slave)
         {
-            auto sstatus = slave->slave_connection_status(demotion_target);
+            auto sstatus = slave->slave_connection_status(old_master);
             if (sstatus && !sstatus->gtid_io_pos.empty())
             {
                 redirectable_slaves.push_back(slave);

@@ -2041,15 +2041,14 @@ string MariaDBServer::generate_change_master_cmd(ClusterOperation& op, const Sla
     return change_cmd;
 }
 
-bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op)
+bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op, const MariaDBServer* old_master,
+                                                 const MariaDBServer* new_master)
 {
     StopWatch timer;
-    const MariaDBServer* old_master = op.demotion_target;
-    const MariaDBServer* new_master = op.promotion_target;
-
     auto old_conn = slave_connection_status(old_master);
     mxb_assert(old_conn);
     bool success = false;
+
     // First, just stop the slave connection.
     bool stopped = stop_slave_conn(old_conn->name, StopMode::STOP_ONLY, op.time_remaining, op.error_out);
     op.time_remaining -= timer.restart();
