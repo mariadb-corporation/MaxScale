@@ -23,7 +23,7 @@ void get_output(TestConnections& test)
         test.tprintf("MaxScale output:");
     }
     output = test.maxscales->ssh_node_output(0,
-                                             "cat /var/log/maxscale/maxscale.log  | tee -a /var/log/maxscale/maxscale_backup.log && "
+                                             "cat /var/log/maxscale/maxscale.log | sudo tee -a /var/log/maxscale/maxscale_backup.log && "
                                              "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
                                              true,
                                              &ec);
