@@ -21,7 +21,7 @@ passwd=some-service-password
 ...
 
 [The-Monitor]
-type=service
+type=monitor
 passwd=some-monitor-password
 ...
 ```
@@ -33,7 +33,7 @@ password=some-service-password
 ...
 
 [The-Monitor]
-type=service
+type=monitor
 password=some-monitor-password
 ...
 ```
