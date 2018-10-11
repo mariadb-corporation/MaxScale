@@ -1058,10 +1058,9 @@ bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
     string reason;
     string query_error;
 
-    // TODO: Add relay server support
-    if (!is_master())
+    if (!is_usable())
     {
-        reason = "it is not the current master or it is in maintenance.";
+        reason = "it is not running or it is in maintenance.";
     }
     else if (!update_replication_settings(&query_error))
     {
@@ -1070,6 +1069,12 @@ bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
     else if (!binlog_on())
     {
         reason = "its binary log is disabled.";
+    }
+    else if (!is_master() && !m_rpl_settings.log_slave_updates)
+    {
+        // This means that gtid_binlog_pos cannot be trusted.
+        // TODO: reduce dependency on gtid_binlog_pos to get rid of this requirement
+        reason = "it is not the master and log_slave_updates is disabled.";
     }
     else if (m_gtid_binlog_pos.empty())
     {

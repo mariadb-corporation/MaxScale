@@ -1505,7 +1505,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::switchover_prepare(SERVER* promotio
     else
     {
         // Autoselect current master as demotion target.
-        if (m_master == NULL)
+        if (m_master == NULL || !m_master->is_master())
         {
             const char msg[] = "Can not autoselect a demotion target for switchover: cluster does "
                                "not have a master.";
