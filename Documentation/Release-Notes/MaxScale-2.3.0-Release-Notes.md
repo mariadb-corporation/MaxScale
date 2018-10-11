@@ -10,6 +10,12 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### maxadmin `list threads`
+
+Maxadmin `list threads` now shows the descriptor counts and load of
+the MaxScale worker threads. For details, please consult the
+maxadmin [documentation](../Reference/MaxAdmin.md).
+
 ### MaxCtrl `create monitor`
 
 The `create monitor` command now accepts a list of key-value parameters that are
