@@ -1442,6 +1442,7 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
 
 bool MariaDBServer::promote(ClusterOperation& op)
 {
+    mxb_assert(op.type == OperationType::SWITCHOVER || op.type == OperationType::FAILOVER);
     json_t** const error_out = op.error_out;
     // Function should only be called for a master-slave pair.
     auto master_conn = slave_connection_status(op.demotion_target);
@@ -1467,6 +1468,7 @@ bool MariaDBServer::promote(ClusterOperation& op)
     else if (op.type == OperationType::FAILOVER)
     {
         stopped = remove_slave_conns(op, {*master_conn});
+        master_conn = NULL; // The connection pointed to may no longer exist.
     }
 
     if (stopped)
@@ -1715,6 +1717,8 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
 
 /**
  * Removes the given slave connections from the server and then updates slave connection status.
+ * The slave connections of the server object will change during this method, so any pointers and
+ * references to such may be invalidated and should be re-acquired.
  *
  * @param op Operation descriptor
  * @param conns_to_remove Which connections should be removed
@@ -1724,6 +1728,8 @@ bool MariaDBServer::remove_slave_conns(ClusterOperation& op, const SlaveStatusAr
 {
     json_t** error_out = op.error_out;
     StopWatch timer;
+    // Take a backup of the soon to be removed connections so they can be compared properly after an update.
+    SlaveStatusArray conns_to_remove_copy = conns_to_remove;
 
     bool stop_slave_error = false;
     for (size_t i = 0; !stop_slave_error && i < conns_to_remove.size(); i++)
@@ -1756,7 +1762,7 @@ bool MariaDBServer::remove_slave_conns(ClusterOperation& op, const SlaveStatusAr
                 connection_names.insert(slave_conn.name);
             }
             int found = 0;
-            for (auto& removed_conn : conns_to_remove)
+            for (auto& removed_conn : conns_to_remove_copy)
             {
                 if (connection_names.count(removed_conn.name) > 0)
                 {
