@@ -110,6 +110,13 @@ public:
      */
     virtual json_t* diagnostics_json() const;
 
+    /**
+     * Get current time from the monotonic clock.
+     *
+     * @return Current time
+     */
+    static int64_t get_time_ms();
+
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);
 
@@ -140,8 +147,6 @@ protected:
      * or cleared if it is not.
      */
     void update_disk_space_status(MXS_MONITORED_SERVER* pMonitored_server);
-
-    static int64_t get_time_ms();
 
     /**
      * @brief Configure the monitor.

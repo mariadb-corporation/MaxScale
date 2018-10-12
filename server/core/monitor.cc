@@ -367,6 +367,9 @@ bool monitor_add_server(MXS_MONITOR* mon, SERVER* server)
         db->next = NULL;
         db->mon_err_count = 0;
         db->log_version_err = true;
+         // Pretend disk space was just checked.
+        db->disk_space_checked = maxscale::MonitorInstance::get_time_ms();
+
 
         /** Server status is uninitialized */
         db->mon_prev_status = -1;
