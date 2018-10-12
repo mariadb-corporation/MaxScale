@@ -173,7 +173,7 @@ SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->triggered_at = 0;
     server->status = SERVER_RUNNING;
     server->maint_request = MAINTENANCE_NO_CHANGE;
-    server->version_string[0] = '\0';
+    memset(server->version_string, '\0', MAX_SERVER_VERSION_LEN);
     server->version = 0;
     server->server_type = SERVER_TYPE_MARIADB;
     server->node_id = -1;
