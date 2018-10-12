@@ -1121,9 +1121,8 @@ bool MariaDBServer::can_be_demoted_failover(string* reason_out)
     return demotable;
 }
 
-bool MariaDBServer::can_be_promoted(OperationType op,
-                                    const MariaDBServer* demotion_target,
-                                    std::string* reason_out)
+bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demotion_target,
+                                    string* reason_out)
 {
     bool promotable = false;
     string reason;
@@ -1133,6 +1132,10 @@ bool MariaDBServer::can_be_promoted(OperationType op,
     if (is_master())
     {
         reason = "it is already the master.";
+    }
+    else if (!is_usable())
+    {
+        reason = "it is down or in maintenance.";
     }
     else if (sstatus == NULL)
     {

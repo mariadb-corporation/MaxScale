@@ -875,3 +875,18 @@ void MariaDBMonitor::update_topology()
         }
     }
 }
+
+void MariaDBMonitor::set_low_disk_slaves_maintenance()
+{
+    // Only set pure slave and standalone servers to maintenance.
+    for (MariaDBServer* server : m_servers)
+    {
+        if (server->is_low_on_disk_space() && server->is_usable()
+            && !server->is_master() && !server->is_relay_master())
+        {
+            // TODO: Handle relays somehow, e.g. switch with a slave
+            MXS_WARNING("Setting %s to maintenance because it is low on disk space.", server->name());
+            server->set_status(SERVER_MAINT);
+        }
+    }
+}

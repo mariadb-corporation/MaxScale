@@ -460,6 +460,13 @@ void MariaDBMonitor::tick()
         update_external_master();
     }
 
+    /* Set low disk space slaves to maintenance. This needs to happen after roles have been assigned.
+     * Is not a real cluster operation, since nothing on the actual backends is changed. */
+    if (m_maintenance_on_low_disk_space)
+    {
+        set_low_disk_slaves_maintenance();
+    }
+
     // Sanity check. Master may not be both slave and master.
     mxb_assert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
 
@@ -530,13 +537,6 @@ void MariaDBMonitor::process_state_changes()
         if (m_enforce_read_only_slaves && !m_cluster_modified)
         {
             enforce_read_only_on_slaves();
-        }
-
-        /* Set low disk space slaves to maintenance.
-         */
-        if (m_maintenance_on_low_disk_space && !m_cluster_modified)
-        {
-            set_low_disk_slaves_maintenance();
         }
 
         /* Check if the master server is on low disk space and act on it. */
