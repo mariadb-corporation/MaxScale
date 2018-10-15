@@ -292,6 +292,10 @@ static void handle_error_reply_client(MXS_SESSION *ses, RWSplitSession *rses,
         CHK_DCB(client_dcb);
         client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
     }
+    else
+    {
+        MXS_INFO("Closing router session that is not ready");
+    }
 }
 
 static bool reroute_stored_statement(RWSplitSession *rses, const SRWBackend& old, GWBUF *stored)
@@ -1335,6 +1339,7 @@ static void handleError(MXS_ROUTER *instance,
 
     if (rses->rses_closed)
     {
+        ss_dassert(!true);
         *succp = false;
         return;
     }
@@ -1399,6 +1404,8 @@ static void handleError(MXS_ROUTER *instance,
                      * Reset the target and close the session. */
                     rses->target_node.reset();
                     *succp = false;
+                    MXS_ERROR("Connection to server %s failed while executing a read-only transaction",
+                              backend->name());
                 }
                 else
                 {
