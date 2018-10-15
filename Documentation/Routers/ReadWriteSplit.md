@@ -215,17 +215,18 @@ the slave with the least amount of connections
 
 **`max_sescmd_history`** sets a limit on how many distinct session commands each
 session can execute before the session command history is disabled. The default
-is 50 session commands.
+is 50 session commands starting with MaxScale 2.3.0. In older versions, the
+session command history was disabled by default.
 
 ```
 # Set a limit on the session command history
 max_sescmd_history=1500
 ```
 
-The first and last execution of each session command is stored. This means that
-with `N` distinct session commands, the minimum value of `max_sescmd_history` to
-guarantee that all of them are kept in the history is `N * 2`. In practice, the
-real history size required to store the commands is closer to `N`.
+When a session command is executed for the first time, it is stored in
+memory. Any subsequent executions of the same command are stored as references
+to the original command. By storing references instead of copies of the data,
+the amount of memory used is reduced.
 
 If you have long-running sessions which change the session state often, increase
 the value of this parameter if server reconnections fail due to disabled session
