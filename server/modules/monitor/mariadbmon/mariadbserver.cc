@@ -1937,11 +1937,6 @@ bool MariaDBServer::merge_slave_conns(ClusterOperation& op, const SlaveStatusArr
         string ignore_reason;
         if (conn_can_be_merged(slave_conn, &ignore_reason))
         {
-            MXS_WARNING("%s was ignored when promoting %s because %s",
-                        slave_conn.to_short_string().c_str(), name(), ignore_reason.c_str());
-        }
-        else
-        {
             if (check_modify_conn_name(&slave_conn))
             {
                 if (create_start_slave(op, slave_conn))
@@ -1957,6 +1952,12 @@ bool MariaDBServer::merge_slave_conns(ClusterOperation& op, const SlaveStatusArr
             {
                 error = true;
             }
+        }
+        else
+        {
+            mxb_assert(!ignore_reason.empty());
+            MXS_WARNING("%s was ignored when promoting %s because %s",
+                        slave_conn.to_short_string().c_str(), name(), ignore_reason.c_str());
         }
     }
 
