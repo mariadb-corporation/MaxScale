@@ -4579,22 +4579,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    if (index != 0)
-    {
-        // Index 0 refers to the default configuration.
-        string use_gtid = router->configs[0].use_mariadb10_gtid;
-
-        if (use_gtid.empty() || (strcasecmp(use_gtid.c_str(), "slave_pos") != 0))
-        {
-            static const char MESSAGE[] =
-                "Secondary masters can only be used in conjunction with GTID based replication. "
-                "Specify MASTER_USE_GTID=Slave_pos for the default master connection.";
-            mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
-            strcpy(error, MESSAGE);
-            return -1;
-        }
-    }
-
     std::vector<char> cmd_string(command, command + strlen(command) + 1);   // Include the NULL
 
     /* Parse SQL command and populate the change_master struct */
