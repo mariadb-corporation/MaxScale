@@ -38,6 +38,12 @@ using namespace std;
 namespace
 {
 
+enum class Approach
+{
+    GTID,
+    FILE_POS
+};
+
 void test_sleep(int seconds)
 {
     cout << "Sleeping " << seconds << " seconds: " << flush;
@@ -101,12 +107,15 @@ bool setup_secondary_masters(TestConnections& test, MYSQL* pMaxscale)
 }
 
 // Setup BLR to replicate from galera_000.
-bool setup_blr(TestConnections& test, MYSQL* pMaxscale, const string& gtid)
+bool setup_blr(TestConnections& test, MYSQL* pMaxscale, const string& gtid, Approach approach)
 {
     test.tprintf("Setting up BLR");
 
     test.try_query(pMaxscale, "STOP SLAVE");
-    test.try_query(pMaxscale, "SET @@global.gtid_slave_pos='%s'", gtid.c_str());
+    if (approach == Approach::GTID)
+    {
+        test.try_query(pMaxscale, "SET @@global.gtid_slave_pos='%s'", gtid.c_str());
+    }
 
     mxb_assert(test.galera);
     Mariadb_nodes& gc = *test.galera;
@@ -117,7 +126,14 @@ bool setup_blr(TestConnections& test, MYSQL* pMaxscale, const string& gtid)
     ss << "TO MASTER_HOST='" << gc.IP[0] << "'";
     ss << ", MASTER_PORT=" << gc.port[0];
     ss << ", MASTER_USER='repl', MASTER_PASSWORD='repl'";
-    ss << ", MASTER_USE_GTID=Slave_pos";
+    if (approach == Approach::GTID)
+    {
+        ss << ", MASTER_USE_GTID=Slave_pos";
+    }
+    else
+    {
+        ss << ", MASTER_LOG_FILE='galera-cluster.000001'";
+    }
     ss << ", MASTER_HEARTBEAT_PERIOD=" << HEARTBEAT_PERIOD;
 
     string stmt = ss.str();
@@ -135,14 +151,18 @@ bool setup_slave(TestConnections& test,
                  const string& gtid,
                  MYSQL* pSlave,
                  const char* zMaxscale_host,
-                 int maxscale_port)
+                 int maxscale_port,
+                 Approach approach)
 {
     test.tprintf("Setting up Slave");
 
     test.try_query(pSlave, "STOP SLAVE");
     test.try_query(pSlave, "RESET SLAVE");
     test.try_query(pSlave, "DROP TABLE IF EXISTS test.MXS1980");
-    test.try_query(pSlave, "SET @@global.gtid_slave_pos='%s'", gtid.c_str());
+    if (approach == Approach::GTID)
+    {
+        test.try_query(pSlave, "SET @@global.gtid_slave_pos='%s'", gtid.c_str());
+    }
 
     stringstream ss;
 
@@ -150,7 +170,14 @@ bool setup_slave(TestConnections& test,
     ss << "MASTER_HOST='" << zMaxscale_host << "'";
     ss << ", MASTER_PORT=" << maxscale_port;
     ss << ", MASTER_USER='repl', MASTER_PASSWORD='repl'";
-    ss << ", MASTER_USE_GTID=Slave_pos";
+    if (approach == Approach::GTID)
+    {
+        ss << ", MASTER_USE_GTID=Slave_pos";
+    }
+    else
+    {
+        ss << ", MASTER_LOG_FILE='galera-cluster.000001'";
+    }
     ss << ", MASTER_HEARTBEAT_PERIOD=" << HEARTBEAT_PERIOD;
 
     string stmt = ss.str();
@@ -171,12 +198,12 @@ bool setup_schema(TestConnections& test, MYSQL* pServer)
     return test.global_result == 0;
 }
 
-unsigned count = 0;
+unsigned inserted_rows = 0;
 
 void insert(TestConnections& test, MYSQL* pMaster)
 {
     stringstream ss;
-    ss << "INSERT INTO test.MXS1980 VALUES (" << ++count << ")";
+    ss << "INSERT INTO test.MXS1980 VALUES (" << ++inserted_rows << ")";
 
     string stmt = ss.str();
 
@@ -204,7 +231,7 @@ void select(TestConnections& test, MYSQL* pSlave)
         {
             mxb_assert(nResult_sets == 1);
 
-            if (nRows != count)
+            if (nRows != inserted_rows)
             {
                 // If we don't get the expected result, we sleep a while and retry with the
                 // assumption that it's just a replication delay.
@@ -212,9 +239,9 @@ void select(TestConnections& test, MYSQL* pSlave)
             }
         }
     }
-    while ((rc == 0) && (nRows != count) && attempts);
+    while ((rc == 0) && (nRows != inserted_rows) && attempts);
 
-    test.expect(nRows == count, "Expected %d rows, got %d.", count, (int)nRows);
+    test.expect(nRows == inserted_rows, "Expected %d rows, got %d.", inserted_rows, (int)nRows);
 }
 
 bool insert_select(TestConnections& test, MYSQL* pSlave, MYSQL* pMaster)
@@ -387,12 +414,6 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.maxscales->ssh_node(0, "rm -f /var/lib/maxscale/master.ini", true);
-    test.maxscales->ssh_node(0, "rm -f /var/lib/maxscale/gtid_maps.db", true);
-    test.maxscales->ssh_node(0, "rm -rf /var/lib/maxscale/0", true);
-
-    test.start_maxscale(0);
-
     bool dont_setup_galera = getenv("MXS1980_DONT_SETUP_GALERA") ? true : false;
 
     if (!dont_setup_galera)
@@ -401,18 +422,10 @@ int main(int argc, char* argv[])
         test.galera->start_replication(); // Causes restart.
     }
 
-    Mariadb_nodes& gc = *test.galera;
-    gc.connect();
-
-    reset_galera(test);
-
-    string gtid = get_gtid_current_pos(test, gc.nodes[0]);
-
-    cout << "GTID: " << gtid << endl;
-
     const char* zValue;
 
-    // Env-vars for debugging.
+    // For debugging the test and functionality, allow the BLR host and port to be
+    // specified/ using environment variables.
     zValue = getenv("MXS1980_BLR_HOST");
     const char* zMaxscale_host = (zValue ? zValue : test.maxscales->IP[0]);
     cout << "MaxScale host: " << zMaxscale_host << endl;
@@ -421,71 +434,110 @@ int main(int argc, char* argv[])
     int maxscale_port = (zValue ? atoi(zValue) : test.maxscales->binlog_port[0]);
     cout << "MaxScale port: " << maxscale_port << endl;
 
+    Mariadb_nodes& gc = *test.galera;
+    gc.connect();
+
     map<int, string> server_ids_by_index;
 
     if (setup_server_ids(test, &server_ids_by_index))
     {
-        MYSQL* pMaxscale = open_conn_no_db(maxscale_port, zMaxscale_host, "repl", "repl");
-        test.expect(pMaxscale, "Could not open connection to BLR at %s:%d.", zMaxscale_host, maxscale_port);
-
-        if (pMaxscale)
+        for (Approach approach : { Approach::GTID, Approach::FILE_POS } )
         {
-            if (setup_blr(test, pMaxscale, gtid))
+            inserted_rows = 0;
+
+            reset_galera(test);
+
+            test.stop_maxscale(0);
+
+            test.maxscales->ssh_node(0, "rm -f /var/lib/maxscale/master.ini", true);
+            test.maxscales->ssh_node(0, "rm -f /var/lib/maxscale/gtid_maps.db", true);
+            test.maxscales->ssh_node(0, "rm -rf /var/lib/maxscale/0", true);
+
+            if (approach == Approach::GTID)
             {
-                int slave_index = test.repl->N - 1; // We use the last slave.
+                cout << "\nRunning tests using GTID replication.\n" << endl;
+                test.add_result(test.maxscales->ssh_node(0, "sed -i -e 's/Off/On/' /etc/maxscale.cnf", true),
+                                "Could not tweak /etc/maxscale.cnf");
+            }
+            else
+            {
+                cout << "\nRunning test using FILE + POS replication.\n" << endl;
+                test.add_result(test.maxscales->ssh_node(0, "sed -i -e 's/On/Off/' /etc/maxscale.cnf", true),
+                                "Could not tweak /etc/maxscale.cnf");
+            }
 
-                Mariadb_nodes& ms = *test.repl;
-                ms.connect(slave_index);
+            test.start_maxscale(0);
 
-                MYSQL* pSlave = ms.nodes[slave_index];
-                mxb_assert(pSlave);
+            string gtid;
+            if (approach == Approach::GTID)
+            {
+                gtid = get_gtid_current_pos(test, gc.nodes[0]);
+                cout << "GTID: " << gtid << endl;
+            }
 
-                if (setup_slave(test, gtid, pSlave, zMaxscale_host, maxscale_port))
+            MYSQL* pMaxscale = open_conn_no_db(maxscale_port, zMaxscale_host, "repl", "repl");
+            test.expect(pMaxscale, "Could not open connection to BLR at %s:%d.",
+                        zMaxscale_host, maxscale_port);
+
+            if (pMaxscale)
+            {
+                if (setup_blr(test, pMaxscale, gtid, approach))
                 {
-                    if (setup_schema(test, gc.nodes[0]))
+                    int slave_index = test.repl->N - 1; // We use the last slave.
+
+                    Mariadb_nodes& ms = *test.repl;
+                    ms.connect(slave_index);
+
+                    MYSQL* pSlave = ms.nodes[slave_index];
+                    mxb_assert(pSlave);
+
+                    if (setup_slave(test, gtid, pSlave, zMaxscale_host, maxscale_port, approach))
                     {
-                        test_sleep(REPLICATION_SLEEP);
-
-                        if (test.ok())
+                        if (setup_schema(test, gc.nodes[0]))
                         {
-                            cout << endl;
-                            test.tprintf("Testing basics.");
-                            test_basics(test, pSlave);
-                        }
+                            test_sleep(REPLICATION_SLEEP);
 
-                        if (test.ok())
-                        {
-                            cout << endl;
-                            test.tprintf("Testing transparent switching of BLR master.");
-
-                            if (setup_secondary_masters(test, pMaxscale))
+                            if (test.ok())
                             {
+                                cout << endl;
+                                test.tprintf("Testing basics.");
+                                test_basics(test, pSlave);
+                            }
+
+                            if (test.ok())
+                            {
+                                cout << endl;
+                                test.tprintf("Testing transparent switching of BLR master.");
+
+                                if (setup_secondary_masters(test, pMaxscale))
+                                {
+                                    test_multiple_masters(test, pSlave);
+                                }
+                            }
+
+                            if (test.ok())
+                            {
+                                cout << endl;
+                                test.tprintf("Testing functionality when master.ini is used.");
+
+                                cout << "Stopping slave and MaxScale." << endl;
+                                test.try_query(pSlave, "STOP SLAVE");
+                                test.maxscales->stop();
+
+                                cout << "Starting MaxScale." << endl;
+                                test.maxscales->start();
+                                test_sleep(5);
+                                cout << "Starting slave." << endl;
+                                test.try_query(pSlave, "START SLAVE");
+                                test_sleep(3);
                                 test_multiple_masters(test, pSlave);
                             }
                         }
-
-                        if (test.ok())
-                        {
-                            cout << endl;
-                            test.tprintf("Testing functionality when master.ini is used.");
-
-                            cout << "Stopping slave and MaxScale." << endl;
-                            test.try_query(pSlave, "STOP SLAVE");
-                            test.maxscales->stop();
-
-                            cout << "Starting MaxScale." << endl;
-                            test.maxscales->start();
-                            test_sleep(5);
-                            cout << "Starting slave." << endl;
-                            test.try_query(pSlave, "START SLAVE");
-                            test_sleep(3);
-                            test_multiple_masters(test, pSlave);
-                        }
                     }
                 }
-            }
 
-            mysql_close(pMaxscale);
+                mysql_close(pMaxscale);
+            }
         }
     }
 
