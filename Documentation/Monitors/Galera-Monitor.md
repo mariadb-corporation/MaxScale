@@ -110,7 +110,9 @@ If the `use_priority` option is set and a server is configured with the
 master node is chosen. This requires the `disable_master_role_setting` to be
 undefined or disabled. The server with the lowest positive value of _priority_
 will be chosen as the master node when a replacement Galera node is promoted to
-a master server inside MaxScale.
+a master server inside MaxScale. If all candidate servers have the same
+priority, the order of the servers in the `servers` parameter dictates which is
+chosen as the master.
 
 Nodes with a non-positive value (_priority_ <= 0) will never be chosen as the master. This allows
 you to mark some servers as permanent slaves by assigning a non-positive value

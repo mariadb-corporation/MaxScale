@@ -872,6 +872,12 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     // Try to replay the transaction on another node
                     can_continue = start_trx_replay();
                     backend->close();
+
+                    if (!can_continue)
+                    {
+                        MXS_ERROR("Connection to server %s failed while executing a read-only transaction",
+                                  backend->name());
+                    }
                 }
                 else if (m_otrx_state != OTRX_INACTIVE)
                 {
@@ -1021,6 +1027,10 @@ void RWSplitSession::handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg)
     if (sesstate == SESSION_STATE_ROUTER_READY)
     {
         m_client->func.write(m_client, gwbuf_clone(errmsg));
+    }
+    else
+    {
+        MXS_INFO("Closing router session that is not ready");
     }
 }
 
