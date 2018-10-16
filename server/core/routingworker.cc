@@ -471,7 +471,8 @@ bool RoutingWorker::pre_run()
 void RoutingWorker::post_run()
 {
     modules_thread_finish();
-    // TODO: Add sercice_thread_finish().
+    qc_thread_end(QC_INIT_SELF);
+    // TODO: Add service_thread_finish().
     this_thread.current_worker_id = WORKER_ABSENT_ID;
 }
 
