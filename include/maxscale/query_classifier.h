@@ -933,4 +933,13 @@ bool qc_get_cache_stats(QC_CACHE_STATS* stats);
  */
 json_t* qc_get_cache_stats_as_json();
 
+/**
+ * String represenation for the parse result.
+ *
+ * @param result A parsing result.
+ *
+ * @return The corresponding string.
+ */
+const char* qc_result_to_string(qc_parse_result_t result);
+
 MXS_END_DECLS

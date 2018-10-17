@@ -775,6 +775,28 @@ GWBUF* qc_get_preparable_stmt(GWBUF* stmt)
     return preparable_stmt;
 }
 
+const char* qc_result_to_string(qc_parse_result_t result)
+{
+    switch (result)
+    {
+    case QC_QUERY_INVALID:
+        return "QC_QUERY_INVALID";
+
+    case QC_QUERY_TOKENIZED:
+        return "QC_QUERY_TOKENIZED";
+
+    case QC_QUERY_PARTIALLY_PARSED:
+        return "QC_QUERY_PARTIALLY_PARSED";
+
+    case QC_QUERY_PARSED:
+        return "QC_QUERY_PARSED";
+
+    default:
+        mxb_assert(!true);
+        return "Unknown";
+    }
+}
+
 const char* qc_op_to_string(qc_query_op_t op)
 {
     switch (op)
@@ -1377,12 +1399,97 @@ bool qc_alter_from_json(json_t* pJson)
     return rv;
 }
 
+namespace
+{
+
+void append_field_info(json_t* pParent,
+                       const char* zName,
+                       const QC_FIELD_INFO* begin, const QC_FIELD_INFO* end)
+{
+    json_t* pFields = json_array();
+
+    std::for_each(begin, end, [pFields](const QC_FIELD_INFO& info) {
+            std::string name;
+
+            if (info.database)
+            {
+                name += info.database;
+                name += '.';
+                mxb_assert(info.table);
+            }
+
+            if (info.table)
+            {
+                name += info.table;
+                name += '.';
+            }
+
+            mxb_assert(info.column);
+
+            name += info.column;
+
+            json_array_append_new(pFields, json_string(name.c_str()));
+        });
+
+    json_object_set_new(pParent, zName, pFields);
+}
+
+void append_field_info(json_t* pParams, GWBUF* pBuffer)
+{
+    const QC_FIELD_INFO* begin;
+    size_t n;
+    qc_get_field_info(pBuffer, &begin, &n);
+
+    append_field_info(pParams, CN_FIELDS, begin, begin + n);
+}
+
+void append_function_info(json_t* pParams, GWBUF* pBuffer)
+{
+    json_t* pFunctions = json_array();
+
+    const QC_FUNCTION_INFO* begin;
+    size_t n;
+    qc_get_function_info(pBuffer, &begin, &n);
+
+    std::for_each(begin, begin + n, [pFunctions](const QC_FUNCTION_INFO& info) {
+            json_t* pFunction = json_object();
+
+            json_object_set_new(pFunction, CN_NAME, json_string(info.name));
+
+            append_field_info(pFunction, CN_ARGUMENTS, info.fields, info.fields + info.n_fields);
+
+            json_array_append_new(pFunctions, pFunction);
+        });
+
+    json_object_set_new(pParams, CN_FUNCTIONS, pFunctions);
+}
+
+}
 
 std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string& statement)
 {
     json_t* pParams = json_object();
 
-    // TODO: Fill object with classification information.
+    std::unique_ptr<GWBUF> sBuffer(modutil_create_query(statement.c_str()));
+    GWBUF* pBuffer = sBuffer.get();
+
+    qc_parse_result result = qc_parse(pBuffer, QC_COLLECT_ALL);
+
+    json_object_set_new(pParams, CN_PARSE_RESULT, json_string(qc_result_to_string(result)));
+
+    if (result != QC_QUERY_INVALID)
+    {
+        char* zType_mask = qc_typemask_to_string(qc_get_type_mask(pBuffer));
+        json_object_set_new(pParams, CN_TYPE_MASK, json_string(zType_mask));
+        MXS_FREE(zType_mask);
+
+        json_object_set_new(pParams, CN_OPERATION, json_string(qc_op_to_string(qc_get_operation(pBuffer))));
+        bool has_clause = qc_query_has_clause(pBuffer);
+        json_object_set_new(pParams, CN_HAS_WHERE_CLAUSE, json_boolean(has_clause));
+
+        append_field_info(pParams, pBuffer);
+        append_function_info(pParams, pBuffer);
+    }
 
     json_t* pAttributes = json_object();
     json_object_set_new(pAttributes, CN_PARAMETERS, pParams);
