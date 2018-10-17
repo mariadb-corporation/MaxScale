@@ -576,8 +576,11 @@ static bool logmanager_init_nomutex(const char* ident,
     if (redirect_stdout)
     {
         // Redirect stdout and stderr to the log file
-        freopen(lm->lm_logfile.lf_full_file_name, "a", stdout);
-        freopen(lm->lm_logfile.lf_full_file_name, "a", stderr);
+        if (!freopen(lm->lm_logfile.lf_full_file_name, "a", stdout) ||
+            !freopen(lm->lm_logfile.lf_full_file_name, "a", stderr))
+        {
+            fprintf(stderr, "Error: Failed to redirect stdout/stderr to log file.\n");
+        }
     }
 
 return_succ:
@@ -2166,8 +2169,12 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             else if (redirect_stdout)
             {
                 // Redirect stdout and stderr to the new log file
-                freopen(lf->lf_full_file_name, "a", stdout);
-                freopen(lf->lf_full_file_name, "a", stderr);
+                if (!freopen(lf->lf_full_file_name, "a", stdout) ||
+                    !freopen(lf->lf_full_file_name, "a", stderr))
+                {
+                    LOG_ERROR("MaxScale Log: Error, could not redirect stdout/stderr to log file %s.\n",
+                              lf->lf_full_file_name);
+                }
             }
         }
 
