@@ -40,6 +40,7 @@
 #include <vector>
 #include <unordered_set>
 
+#include <maxbase/format.hh>
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
@@ -1226,26 +1227,8 @@ bool config_load_global(const char* filename)
             }
             else
             {
-                std::vector<const char*> suffixes
-                {
-                    "B",
-                    "KiB",
-                    "MiB",
-                    "GiB",
-                    "TiB",
-                    "PiB",
-                    "EiB",
-                    "ZiB",
-                    "YiB"
-                };
-                // Get the total used cache memory
-                int64_t total_mem = mem_per_thr * gateway.n_threads;
-                // Calculate log1024(total_mem) and round it up
-                double c = ceil(log(total_mem) / log(1024));
-                // In case someone still uses MaxScale in the year 3054
-                int idx = std::min(c, (double)(suffixes.size())) - 1;
-                double num = total_mem / pow(1024, idx);
-                MXS_NOTICE("Using up to %.2lf%s of memory for query classifier cache", num, suffixes[idx]);
+                MXS_NOTICE("Using up to %s of memory for query classifier cache",
+                           mxb::to_binary_size(mem_per_thr * gateway.n_threads).c_str());
             }
         }
     }
