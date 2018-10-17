@@ -93,7 +93,7 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
-    Service* service = new(std::nothrow) Service(name, router, params);
+    Service* service = new( std::nothrow) Service(name, router, params);
 
     if (service == nullptr)
     {
@@ -1696,6 +1696,11 @@ static void service_calculate_weights(SERVICE* service)
 
     if (*weightby && service->dbref)
     {
+        // DEPRECATED in 2.3, remove in 2.4.
+        MXS_WARNING("Setting of server weigths (%s) has been deprecated"
+                    " and will be removed in a later version of MaxScale.",
+                    weightby);
+
         char buf[50];   // Enough to hold most numbers
         /** Service has a weighting parameter and at least one server */
         double total {0};
