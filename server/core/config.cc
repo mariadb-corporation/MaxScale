@@ -425,6 +425,7 @@ const MXS_MODULE_PARAM config_server_params[] =
      ssl_version_values},
     {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,  "9"},
     {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,   "true"},
+    {CN_DISK_SPACE_THRESHOLD,        MXS_MODULE_PARAM_STRING},
     {NULL}
 };
 
@@ -3831,31 +3832,15 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
     }
 
     MXS_MONITOR* monitor = monitor_create(obj->object, module, obj->parameters);
-
     if (monitor == NULL)
     {
         MXS_ERROR("Failed to create monitor '%s'.", obj->object);
         return 1;
     }
-
-    int error_count = 0;
-
-    // TODO: Parse this in the configuration
-    const char* dst = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
-
-    if (dst)
+    else
     {
-        if (!monitor_set_disk_space_threshold(monitor, dst))
-        {
-            MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                      CN_DISK_SPACE_THRESHOLD,
-                      monitor->name,
-                      dst);
-            error_count++;
-        }
+        return 0;
     }
-
-    return error_count;
 }
 
 /**

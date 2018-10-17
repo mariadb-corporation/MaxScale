@@ -464,6 +464,16 @@ bool runtime_alter_server(SERVER* server, const char* key, const char* value)
         return false;
     }
 
+    if (strcmp(key, CN_DISK_SPACE_THRESHOLD) == 0)
+    {
+        // This cannot be safely modified during runtime since the monitor thread could be reading the
+        // value. TODO: To enable this, the threshold value needs to be moved to the private Server-class
+        // so that locking can be enforced on any access.
+        config_runtime_error("The server parameter '%s' cannot be modified during runtime.",
+                             CN_DISK_SPACE_THRESHOLD);
+        return false;
+    }
+
     std::lock_guard<std::mutex> guard(crt_lock);
     server_set_parameter(server, key, value);
 
@@ -564,6 +574,7 @@ bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value, 
     }
     monitor_set_parameter(monitor, key, value);
 
+    bool success = true;
     if (strcmp(key, CN_USER) == 0)
     {
         monitor_add_user(monitor, value, monitor->password);
@@ -633,6 +644,10 @@ bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value, 
             monitor_set_script_timeout(monitor, ival);
         }
     }
+    else if (strcmp(key, CN_DISK_SPACE_THRESHOLD) == 0)
+    {
+        success = monitor_set_disk_space_threshold(monitor, value);
+    }
     else
     {
         // This should be a module specific parameter
@@ -644,9 +659,11 @@ bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value, 
         monitor_serialize(monitor);
         monitor_start(monitor, monitor->parameters);
     }
-    MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
-
-    return true;
+    if (success)
+    {
+        MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
+    }
+    return success;
 }
 
 bool runtime_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value)

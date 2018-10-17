@@ -153,30 +153,46 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
         monitor_add_server(mon, server_find_by_unique_name(s.c_str()));
     }
 
-    monitor_add_user(mon,
-                     config_get_string(params, CN_USER),
-                     config_get_string(params, CN_PASSWORD));
+    monitor_add_user(mon, config_get_string(params, CN_USER), config_get_string(params, CN_PASSWORD));
 
-    // Store module, used when the monitor is serialized
-    monitor_set_parameter(mon, CN_MODULE, module);
-
-    monitor_add_parameters(mon, params);
-
-    if ((mon->instance = mon->api->createInstance(mon)) == NULL)
+    /* The previous config values were normal types and were checked before this function
+     * to be correct. The following is a complicated type and needs to be checked now. */
+    bool error = false;
+    const char* threshold_string = config_get_string(params, CN_DISK_SPACE_THRESHOLD);
+    if (!monitor_set_disk_space_threshold(mon, threshold_string))
     {
-        MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
-                  name,
-                  module);
-        MXS_FREE(mon);
-        MXS_FREE(my_module);
-        MXS_FREE(my_name);
-        return NULL;
+        MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
+                  CN_DISK_SPACE_THRESHOLD, mon->name, threshold_string);
+        error = true;
     }
 
-    std::lock_guard<std::mutex> guard(monLock);
-    mon->next = allMonitors;
-    allMonitors = mon;
+    if (!error)
+    {
+        // Store module, used when the monitor is serialized
+        monitor_set_parameter(mon, CN_MODULE, module);
+        monitor_add_parameters(mon, params);
 
+        if ((mon->instance = mon->api->createInstance(mon)) == NULL)
+        {
+            MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
+                      name, module);
+            error = true;
+        }
+    }
+
+    if (!error)
+    {
+        std::lock_guard<std::mutex> guard(monLock);
+        mon->next = allMonitors;
+        allMonitors = mon;
+    }
+    else
+    {
+        MXS_FREE(mon);
+        mon = NULL;
+        MXS_FREE(my_module);
+        MXS_FREE(my_name);
+    }
     return mon;
 }
 
@@ -2449,12 +2465,9 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
 
 bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_space_threshold)
 {
-    bool rv = false;
-
+    mxb_assert(monitor->state == MONITOR_STATE_STOPPED);
     MxsDiskSpaceThreshold dst;
-
-    rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
-
+    bool rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
     if (rv)
     {
         if (!monitor->disk_space_threshold)
@@ -2471,7 +2484,6 @@ bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_spa
             rv = false;
         }
     }
-
     return rv;
 }
 
