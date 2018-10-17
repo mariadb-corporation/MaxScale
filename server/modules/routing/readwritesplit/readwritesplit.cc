@@ -433,14 +433,21 @@ static bool handle_error_new_connection(RWSplit *inst,
     }
 
     int max_nslaves = inst->max_slave_count();
-    bool succp;
+    bool succp = false;
     /**
      * Try to get replacement slave or at least the minimum
      * number of slave connections for router session.
      */
     if (inst->config().disable_sescmd_history)
     {
-        succp = inst->have_enough_servers();
+        for (auto it = myrses->backends.begin(); it != myrses->backends.end(); it++)
+	{
+	    if ((*it)->in_use())
+	    {
+		succp = true;
+		break;
+	    }
+	}
     }
     else
     {
