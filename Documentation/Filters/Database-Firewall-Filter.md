@@ -324,6 +324,9 @@ values are:
 |use    |USE operations                |
 |load   |LOAD DATA operations          |
 
+Multiple values can be combined using the pipe character `|` e.g.
+` on_queries select|insert|update`.
+
 ### Applying rules to users
 
 The `users` directive defines the users to which the rule should be applied.
