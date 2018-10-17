@@ -1376,3 +1376,21 @@ bool qc_alter_from_json(json_t* pJson)
 
     return rv;
 }
+
+
+std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string& statement)
+{
+    json_t* pParams = json_object();
+
+    // TODO: Fill object with classification information.
+
+    json_t* pAttributes = json_object();
+    json_object_set_new(pAttributes, CN_PARAMETERS, pParams);
+
+    json_t* pSelf = json_object();
+    json_object_set_new(pSelf, CN_ID, json_string(CN_CLASSIFY));
+    json_object_set_new(pSelf, CN_TYPE, json_string(CN_CLASSIFY));
+    json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
+
+    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CLASSIFY, pSelf));
+}

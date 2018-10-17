@@ -56,4 +56,14 @@ std::unique_ptr<json_t> qc_as_json(const char* zHost);
  */
 bool qc_alter_from_json(json_t* pJson);
 
+/**
+ * Classify statement
+ *
+ * @param zHost      The MaxScale host.
+ * @param statement  The statement to be classified.
+ *
+ * @return A json object containing information about the statement.
+ */
+std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string& statement);
+
 MXS_END_DECLS
