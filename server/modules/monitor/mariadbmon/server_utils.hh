@@ -251,27 +251,9 @@ public:
 
     MariaDBServer* const promotion_target;              // Which server will be promoted
     MariaDBServer* const demotion_target;               // Which server will be demoted
-    const bool           demotion_target_is_master;     // Was the demotion target the master?
-    const bool           handle_events;                 // Should scheduled server events be disabled/enabled?
-    const std::string    promotion_sql_file;            // SQL commands ran on a server promoted to master
-    const std::string    demotion_sql_file;             // SQL commands ran on a server demoted from master
-    const std::string    replication_user;              // User for CHANGE MASTER TO ...
-    const std::string    replication_password;          // Password for CHANGE MASTER TO ...
-    json_t** const       error_out;                     // Json error output
-    maxbase::Duration    time_remaining;                // How much time remains to complete the operation
-
-    /* Slave connections of the demotion target. Saved here in case the data in the server object is
-     * modified before promoted server has copied the connections. */
-    SlaveStatusArray demotion_target_conns;
-
-    /* Similar copy for promotion target connections. */
-    SlaveStatusArray promotion_target_conns;
 
     ClusterOperation(OperationType type, ServerOperation* dem_op, ServerOperation* prom_op,
                      MariaDBServer* promotion_target, MariaDBServer* demotion_target,
-                     const SlaveStatusArray& promo_target_conns, const SlaveStatusArray& demo_target_conns,
-                     bool demo_target_is_master, bool handle_events,
-                     std::string& promotion_sql_file, std::string& demotion_sql_file,
                      std::string& replication_user, std::string& replication_password,
                      json_t** error, maxbase::Duration time_remaining);
     ~ClusterOperation();
@@ -282,7 +264,7 @@ class ServerOperation
 {
 public:
     MariaDBServer* const   target;          // Target server
-    const bool             was_is_master;   // Was the target a master / should it become one
+    const bool             to_from_master;  // Was the target a master / should it become one
     const bool             handle_events;   // Should scheduled server events be disabled/enabled?
     const std::string      sql_file;        // Path to file with SQL commands to run during op
     const SlaveStatusArray conns_to_copy;   // Slave connections the target should copy/merge

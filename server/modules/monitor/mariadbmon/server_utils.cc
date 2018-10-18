@@ -157,10 +157,6 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
 
 ClusterOperation::ClusterOperation(OperationType type, ServerOperation* dem_op, ServerOperation* prom_op,
                                    MariaDBServer* promotion_target, MariaDBServer* demotion_target,
-                                   const SlaveStatusArray& promo_target_conns,
-                                   const SlaveStatusArray& demo_target_conns,
-                                   bool demo_target_is_master, bool handle_events,
-                                   string& promotion_sql_file, string& demotion_sql_file,
                                    string& replication_user, string& replication_password,
                                    json_t** error, maxbase::Duration time_remaining)
     : type(type)
@@ -169,16 +165,6 @@ ClusterOperation::ClusterOperation(OperationType type, ServerOperation* dem_op, 
     , general(type, replication_user, replication_password, error, time_remaining)
     , promotion_target(promotion_target)
     , demotion_target(demotion_target)
-    , demotion_target_is_master(demo_target_is_master)
-    , handle_events(handle_events)
-    , promotion_sql_file(promotion_sql_file)
-    , demotion_sql_file(demotion_sql_file)
-    , replication_user(replication_user)
-    , replication_password(replication_password)
-    , error_out(error)
-    , time_remaining(time_remaining)
-    , demotion_target_conns(demo_target_conns)
-    , promotion_target_conns(promo_target_conns)
 {
 }
 
@@ -192,7 +178,7 @@ ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
                                  bool handle_events, const std::string& sql_file,
                                  const SlaveStatusArray& conns_to_copy)
     : target(target)
-    , was_is_master(was_is_master)
+    , to_from_master(was_is_master)
     , handle_events(handle_events)
     , sql_file(sql_file)
     , conns_to_copy(conns_to_copy)

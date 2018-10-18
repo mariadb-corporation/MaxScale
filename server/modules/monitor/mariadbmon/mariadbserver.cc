@@ -507,7 +507,7 @@ bool MariaDBServer::catchup_to_master(ClusterOperation& op)
     bool gtid_reached = false;
     bool error = false;
     const GtidList& target = op.demotion_target->m_gtid_binlog_pos;
-    json_t** error_out = op.error_out;
+    json_t** error_out = op.general.error_out;
 
     Duration sleep_time(0.2);   // How long to sleep before next iteration. Incremented slowly.
     StopWatch timer;
@@ -525,11 +525,11 @@ bool MariaDBServer::catchup_to_master(ClusterOperation& op)
             else
             {
                 // Query was successful but target gtid not yet reached. Check how much time left.
-                op.time_remaining -= timer.lap();
-                if (op.time_remaining.secs() > 0)
+                op.general.time_remaining -= timer.lap();
+                if (op.general.time_remaining.secs() > 0)
                 {
                     // Sleep for a moment, then try again.
-                    Duration this_sleep = MXS_MIN(sleep_time, op.time_remaining);
+                    Duration this_sleep = MXS_MIN(sleep_time, op.general.time_remaining);
                     std::this_thread::sleep_for(this_sleep);
                     sleep_time += Duration(0.1);    // Sleep a bit more next iteration.
                 }
@@ -1451,7 +1451,7 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
 bool MariaDBServer::promote(ClusterOperation& op)
 {
     mxb_assert(op.type == OperationType::SWITCHOVER || op.type == OperationType::FAILOVER);
-    json_t** const error_out = op.error_out;
+    json_t** const error_out = op.general.error_out;
     // Function should only be called for a master-slave pair.
     auto master_conn = slave_connection_status(op.demotion_target);
     mxb_assert(master_conn);
@@ -1484,22 +1484,22 @@ bool MariaDBServer::promote(ClusterOperation& op)
         // Step 2: If demotion target is master, meaning this server will become the master,
         // enable writing and scheduled events. Also, run promotion_sql_file.
         bool promotion_error = false;
-        if (op.demotion_target_is_master)
+        if (op.demotion->to_from_master)
         {
             // Disabling read-only should be quick.
-            bool ro_disabled = set_read_only(ReadOnlySetting::DISABLE, op.time_remaining, error_out);
-            op.time_remaining -= timer.restart();
+            bool ro_disabled = set_read_only(ReadOnlySetting::DISABLE, op.general.time_remaining, error_out);
+            op.general.time_remaining -= timer.restart();
             if (!ro_disabled)
             {
                 promotion_error = true;
             }
             else
             {
-                if (op.handle_events)
+                if (op.promotion->handle_events)
                 {
                     // TODO: Add query replying to enable_events
                     bool events_enabled = enable_events(error_out);
-                    op.time_remaining -= timer.restart();
+                    op.general.time_remaining -= timer.restart();
                     if (!events_enabled)
                     {
                         promotion_error = true;
@@ -1508,16 +1508,17 @@ bool MariaDBServer::promote(ClusterOperation& op)
                 }
 
                 // Run promotion_sql_file if no errors so far.
-                if (!promotion_error && !op.promotion_sql_file.empty())
+                const string& sql_file = op.promotion->sql_file;
+                if (!promotion_error && !sql_file.empty())
                 {
-                    bool file_ran_ok = run_sql_from_file(op.promotion_sql_file, error_out);
-                    op.time_remaining -= timer.restart();
+                    bool file_ran_ok = run_sql_from_file(sql_file, error_out);
+                    op.general.time_remaining -= timer.restart();
                     if (!file_ran_ok)
                     {
                         promotion_error = true;
                         PRINT_MXS_JSON_ERROR(error_out,
                                              "Execution of file '%s' failed during promotion of server '%s'.",
-                                             op.promotion_sql_file.c_str(), name());
+                                             sql_file.c_str(), name());
                     }
                 }
             }
@@ -1529,7 +1530,7 @@ bool MariaDBServer::promote(ClusterOperation& op)
         {
             if (op.type == OperationType::SWITCHOVER)
             {
-                if (copy_slave_conns(op, op.demotion_target_conns, op.demotion_target))
+                if (copy_slave_conns(op, op.promotion->conns_to_copy, op.demotion_target))
                 {
                     success = true;
                 }
@@ -1542,7 +1543,7 @@ bool MariaDBServer::promote(ClusterOperation& op)
             }
             else if (op.type == OperationType::FAILOVER)
             {
-                if (merge_slave_conns(op, op.demotion_target_conns))
+                if (merge_slave_conns(op, op.promotion->conns_to_copy))
                 {
                     success = true;
                 }
@@ -1576,7 +1577,7 @@ bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
         // likely part to fail, setting read_only=1, first to make undoing easier. Setting
         // read_only may fail if another session has table locks or is doing long writes.
         bool demotion_error = false;
-        if (demo_op.was_is_master)
+        if (demo_op.to_from_master)
         {
             mxb_assert(is_master());
             StopWatch timer;
@@ -1605,16 +1606,17 @@ bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
                 }
 
                 // Step 2c: Run demotion_sql_file if no errors so far.
-                if (!demotion_error && !demo_op.sql_file.empty())
+                const string& sql_file = demo_op.sql_file;
+                if (!demotion_error && !sql_file.empty())
                 {
-                    bool file_ran_ok = run_sql_from_file(demo_op.sql_file, error_out);
+                    bool file_ran_ok = run_sql_from_file(sql_file, error_out);
                     general.time_remaining -= timer.lap();
                     if (!file_ran_ok)
                     {
                         demotion_error = true;
                         PRINT_MXS_JSON_ERROR(error_out,
                                              "Execution of file '%s' failed during demotion of server %s.",
-                                             demo_op.sql_file.c_str(), name());
+                                             sql_file.c_str(), name());
                     }
                 }
 
@@ -1653,7 +1655,7 @@ bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
             }
         }
 
-        if (demotion_error && demo_op.was_is_master)
+        if (demotion_error && demo_op.to_from_master)
         {
             // Read_only was enabled (or tried to be enabled) but a later step failed.
             // Disable read_only. Connection is likely broken so use a short time limit.
@@ -2018,13 +2020,13 @@ bool MariaDBServer::create_start_slave(ClusterOperation& op, const SlaveStatus& 
     SlaveStatus new_conn = slave_conn;
     new_conn.owning_server = name();
     string change_master = generate_change_master_cmd(op, new_conn);
-    bool conn_created = execute_cmd_time_limit(change_master, op.time_remaining, &error_msg);
-    op.time_remaining -= timer.restart();
+    bool conn_created = execute_cmd_time_limit(change_master, op.general.time_remaining, &error_msg);
+    op.general.time_remaining -= timer.restart();
     if (conn_created)
     {
         string start_slave = string_printf("START SLAVE '%s';", new_conn.name.c_str());
-        bool slave_started = execute_cmd_time_limit(start_slave, op.time_remaining, &error_msg);
-        op.time_remaining -= timer.restart();
+        bool slave_started = execute_cmd_time_limit(start_slave, op.general.time_remaining, &error_msg);
+        op.general.time_remaining -= timer.restart();
         if (slave_started)
         {
             success = true;
@@ -2059,14 +2061,14 @@ string MariaDBServer::generate_change_master_cmd(ClusterOperation& op, const Sla
                                 slave_conn.name.c_str(),
                                 slave_conn.master_host.c_str(), slave_conn.master_port);
     change_cmd += "MASTER_USE_GTID = current_pos, ";
-    change_cmd += string_printf("MASTER_USER = '%s', ", op.replication_user.c_str());
+    change_cmd += string_printf("MASTER_USER = '%s', ", op.general.replication_user.c_str());
     const char MASTER_PW[] = "MASTER_PASSWORD = '%s';";
 #if defined (SS_DEBUG)
     string change_cmd_nopw = change_cmd;
     change_cmd_nopw += string_printf(MASTER_PW, "******");
     MXS_DEBUG("Change master command is '%s'.", change_cmd_nopw.c_str());
 #endif
-    change_cmd += string_printf(MASTER_PW, op.replication_password.c_str());
+    change_cmd += string_printf(MASTER_PW, op.general.replication_password.c_str());
     return change_cmd;
 }
 
@@ -2079,8 +2081,9 @@ bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op, const Mar
     bool success = false;
 
     // First, just stop the slave connection.
-    bool stopped = stop_slave_conn(old_conn->name, StopMode::STOP_ONLY, op.time_remaining, op.error_out);
-    op.time_remaining -= timer.restart();
+    bool stopped = stop_slave_conn(old_conn->name, StopMode::STOP_ONLY, op.general.time_remaining,
+                                   op.general.error_out);
+    op.general.time_remaining -= timer.restart();
     if (stopped)
     {
         SlaveStatus modified_conn = *old_conn;
@@ -2089,20 +2092,20 @@ bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op, const Mar
         modified_conn.master_port = target_server->port;
         string change_master = generate_change_master_cmd(op, modified_conn);
         string error_msg;
-        bool changed = execute_cmd_time_limit(change_master, op.time_remaining, &error_msg);
-        op.time_remaining -= timer.restart();
+        bool changed = execute_cmd_time_limit(change_master, op.general.time_remaining, &error_msg);
+        op.general.time_remaining -= timer.restart();
         if (changed)
         {
             string start = string_printf("START SLAVE '%s';", old_conn->name.c_str());
-            bool started = execute_cmd_time_limit(start, op.time_remaining, &error_msg);
-            op.time_remaining -= timer.restart();
+            bool started = execute_cmd_time_limit(start, op.general.time_remaining, &error_msg);
+            op.general.time_remaining -= timer.restart();
             if (started)
             {
                 success = true;
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(op.error_out,
+                PRINT_MXS_JSON_ERROR(op.general.error_out,
                                      "%s could not be started: %s",
                                      modified_conn.to_short_string().c_str(), error_msg.c_str());
             }
@@ -2110,7 +2113,7 @@ bool MariaDBServer::redirect_existing_slave_conn(ClusterOperation& op, const Mar
         else
         {
             // TODO: This may currently print out passwords.
-            PRINT_MXS_JSON_ERROR(op.error_out,
+            PRINT_MXS_JSON_ERROR(op.general.error_out,
                                  "%s could not be redirected to [%s]:%i: %s",
                                  old_conn->to_short_string().c_str(),
                                  modified_conn.master_host.c_str(), modified_conn.master_port,
