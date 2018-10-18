@@ -771,14 +771,14 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
  */
 bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
 {
-    MariaDBServer* const promotion_target = op.promotion_target;
-    MariaDBServer* const demotion_target = op.demotion_target;
-    json_t** const error_out = op.error_out;
-    mxb_assert(promotion_target && demotion_target);
+    mxb_assert(op.demotion && op.promotion);
+    MariaDBServer* const promotion_target = op.promotion->target;
+    MariaDBServer* const demotion_target = op.demotion->target;
+    json_t** const error_out = op.general.error_out;
 
     bool rval = false;
     // Step 1: Set read-only to on, flush logs, update gtid:s.
-    if (demotion_target->demote(op))
+    if (demotion_target->demote(*op.demotion, op.general))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;
@@ -1349,7 +1349,11 @@ unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json
         {
             // The Duration ctor taking a double interprets is as seconds.
             auto time_limit = maxbase::Duration((double)m_failover_timeout);
-            rval.reset(new ClusterOperation(OperationType::FAILOVER,
+            bool promoting_to_master = (demotion_target == m_master);
+            ServerOperation* promotion_op = new ServerOperation(promotion_target, promoting_to_master,
+                                                                m_handle_event_scheduler, m_promote_sql_file,
+                                                                demotion_target->m_slave_status);
+            rval.reset(new ClusterOperation(OperationType::FAILOVER, NULL, promotion_op,
                                             promotion_target, demotion_target,
                                             promotion_target->m_slave_status, demotion_target->m_slave_status,
                                             demotion_target == m_master, m_handle_event_scheduler,
@@ -1644,7 +1648,14 @@ unique_ptr<ClusterOperation> MariaDBMonitor::switchover_prepare(SERVER* promotio
     if (promotion_target && demotion_target && gtid_ok)
     {
         maxbase::Duration time_limit((double)m_switchover_timeout);
-        rval.reset(new ClusterOperation(op_type,
+        bool master_swap = demotion_target->is_master();
+        ServerOperation* demotion_op = new ServerOperation(demotion_target, master_swap,
+                                                           m_handle_event_scheduler, m_demote_sql_file,
+                                                           promotion_target->m_slave_status);
+        ServerOperation* promotion_op = new ServerOperation(promotion_target, master_swap,
+                                                           m_handle_event_scheduler, m_promote_sql_file,
+                                                           demotion_target->m_slave_status);
+        rval.reset(new ClusterOperation(op_type, demotion_op, promotion_op,
                                         promotion_target, demotion_target,
                                         promotion_target->m_slave_status, demotion_target->m_slave_status,
                                         demotion_target == m_master, m_handle_event_scheduler,

@@ -365,7 +365,7 @@ public:
      * @param op Cluster operation descriptor
      * @return True if successful
      */
-    bool demote(ClusterOperation& op);
+    bool demote(ServerOperation& op, GeneralOpData& general);
 
     /**
      * Redirect the slave connection going to old master to replicate from new master.
@@ -535,7 +535,7 @@ private:
     bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
                          json_t** error_out);
 
-    bool remove_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_remove);
+    bool remove_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_remove);
     bool execute_cmd_ex(const std::string& cmd, QueryRetryMode mode,
                         std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
 

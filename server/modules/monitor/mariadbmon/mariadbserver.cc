@@ -1471,12 +1471,12 @@ bool MariaDBServer::promote(ClusterOperation& op)
     bool stopped = false;
     if (op.type == OperationType::SWITCHOVER)
     {
-        stopped = remove_slave_conns(op, m_slave_status);
+        stopped = remove_slave_conns(op.general, m_slave_status);
     }
     else if (op.type == OperationType::FAILOVER)
     {
-        stopped = remove_slave_conns(op, {*master_conn});
-        master_conn = NULL;     // The connection pointed to may no longer exist.
+        stopped = remove_slave_conns(op.general, {*master_conn});
+        master_conn = NULL; // The connection pointed to may no longer exist.
     }
 
     if (stopped)
@@ -1558,15 +1558,15 @@ bool MariaDBServer::promote(ClusterOperation& op)
     return success;
 }
 
-bool MariaDBServer::demote(ClusterOperation& op)
+bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
 {
-    mxb_assert(op.type == OperationType::SWITCHOVER && op.demotion_target == this);
-    json_t** error_out = op.error_out;
+    mxb_assert(demo_op.target == this);
+    json_t** const error_out = general.error_out;
     bool success = false;
 
     // Step 1: Stop & reset slave connections. The promotion target will copy them. The connection
     // information has been backed up in the operation object.
-    if (remove_slave_conns(op, m_slave_status))
+    if (remove_slave_conns(general, m_slave_status))
     {
         // Step 2: If this server is master, disable writes and scheduled events, flush logs,
         // update gtid:s, run demotion_sql_file.
@@ -1576,27 +1576,27 @@ bool MariaDBServer::demote(ClusterOperation& op)
         // likely part to fail, setting read_only=1, first to make undoing easier. Setting
         // read_only may fail if another session has table locks or is doing long writes.
         bool demotion_error = false;
-        if (op.demotion_target_is_master)
+        if (demo_op.was_is_master)
         {
             mxb_assert(is_master());
             StopWatch timer;
             // Step 2a: Enabling read-only can take time if writes are on or table locks taken.
             // TODO: use max_statement_time to be safe!
-            bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, op.time_remaining, error_out);
-            op.time_remaining -= timer.lap();
+            bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, general.time_remaining, error_out);
+            general.time_remaining -= timer.lap();
             if (!ro_enabled)
             {
                 demotion_error = true;
             }
             else
             {
-                if (op.handle_events)
+                if (demo_op.handle_events)
                 {
                     // TODO: Add query replying to enable_events
                     // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
                     // which could break external replication.
                     bool events_disabled = disable_events(BinlogMode::BINLOG_OFF, error_out);
-                    op.time_remaining -= timer.lap();
+                    general.time_remaining -= timer.lap();
                     if (!events_disabled)
                     {
                         demotion_error = true;
@@ -1605,16 +1605,16 @@ bool MariaDBServer::demote(ClusterOperation& op)
                 }
 
                 // Step 2c: Run demotion_sql_file if no errors so far.
-                if (!demotion_error && !op.demotion_sql_file.empty())
+                if (!demotion_error && !demo_op.sql_file.empty())
                 {
-                    bool file_ran_ok = run_sql_from_file(op.demotion_sql_file, error_out);
-                    op.time_remaining -= timer.lap();
+                    bool file_ran_ok = run_sql_from_file(demo_op.sql_file, error_out);
+                    general.time_remaining -= timer.lap();
                     if (!file_ran_ok)
                     {
                         demotion_error = true;
                         PRINT_MXS_JSON_ERROR(error_out,
                                              "Execution of file '%s' failed during demotion of server %s.",
-                                             op.demotion_sql_file.c_str(), name());
+                                             demo_op.sql_file.c_str(), name());
                     }
                 }
 
@@ -1622,8 +1622,9 @@ bool MariaDBServer::demote(ClusterOperation& op)
                 {
                     // Step 2d: FLUSH LOGS to ensure that all events have been written to binlog.
                     string error_msg;
-                    bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", op.time_remaining, &error_msg);
-                    op.time_remaining -= timer.lap();
+                    bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", general.time_remaining,
+                                                               &error_msg);
+                    general.time_remaining -= timer.lap();
                     if (!logs_flushed)
                     {
                         demotion_error = true;
@@ -1652,7 +1653,7 @@ bool MariaDBServer::demote(ClusterOperation& op)
             }
         }
 
-        if (demotion_error && op.demotion_target_is_master)
+        if (demotion_error && demo_op.was_is_master)
         {
             // Read_only was enabled (or tried to be enabled) but a later step failed.
             // Disable read_only. Connection is likely broken so use a short time limit.
@@ -1730,11 +1731,12 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
  *
  * @param op Operation descriptor
  * @param conns_to_remove Which connections should be removed
- * @return True if succesfull
+ * @return True if successful
  */
-bool MariaDBServer::remove_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_remove)
+bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_remove)
 {
     json_t** error_out = op.error_out;
+    maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
     // Take a backup of the soon to be removed connections so they can be compared properly after an update.
     SlaveStatusArray conns_to_remove_copy = conns_to_remove;
@@ -1742,11 +1744,11 @@ bool MariaDBServer::remove_slave_conns(ClusterOperation& op, const SlaveStatusAr
     bool stop_slave_error = false;
     for (size_t i = 0; !stop_slave_error && i < conns_to_remove.size(); i++)
     {
-        if (!stop_slave_conn(conns_to_remove[i].name, StopMode::RESET_ALL, op.time_remaining, error_out))
+        if (!stop_slave_conn(conns_to_remove[i].name, StopMode::RESET_ALL, time_remaining, error_out))
         {
             stop_slave_error = true;
         }
-        op.time_remaining -= timer.lap();
+        time_remaining -= timer.lap();
     }
 
     bool success = false;
@@ -1797,7 +1799,7 @@ bool MariaDBServer::remove_slave_conns(ClusterOperation& op, const SlaveStatusAr
                                  name(), error_msg.c_str());
         }
     }
-    op.time_remaining -= timer.lap();
+    time_remaining -= timer.lap();
     return success;
 }
 
