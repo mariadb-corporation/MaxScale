@@ -58,5 +58,12 @@ int main(int argc, char *argv[])
 
     test.maxscales->close_maxscale_connections(0);
 
+    // MXS-2103
+    test.maxscales->connect();
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TEMPORARY TABLE temp.dummy5 (dum INT);");
+    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO temp.dummy5 VALUES(1),(2);");
+    test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM temp.dummy5;");
+    test.maxscales->disconnect();
+
     return test.global_result;
 }
