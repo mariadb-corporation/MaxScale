@@ -193,6 +193,8 @@ DCB* dcb_alloc(dcb_role_t role, SERV_LISTENER* listener)
     newdcb->dcb_role = role;
     newdcb->listener = listener;
     newdcb->last_read = mxs_clock();
+    newdcb->low_water = config_writeq_low_water();
+    newdcb->high_water = config_writeq_high_water();
 
     if (role == DCB_ROLE_SERVICE_LISTENER)
     {

@@ -40,6 +40,7 @@
 #include <vector>
 #include <unordered_set>
 
+#include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
@@ -2087,13 +2088,40 @@ unsigned int config_nbpolls()
 
 uint32_t config_writeq_high_water()
 {
-    return gateway.writeq_high_water;
+    return mxb::atomic::load(&gateway.writeq_high_water, mxb::atomic::RELAXED);
+}
+
+bool config_set_writeq_high_water(uint32_t size)
+{
+    bool rval = false;
+
+    if (size >= MIN_WRITEQ_HIGH_WATER)
+    {
+        mxb::atomic::store(&gateway.writeq_high_water, size, mxb::atomic::RELAXED);
+        rval = true;
+    }
+
+    return rval;
 }
 
 uint32_t config_writeq_low_water()
 {
-    return gateway.writeq_low_water;
+    return mxb::atomic::load(&gateway.writeq_low_water, mxb::atomic::RELAXED);
 }
+
+bool config_set_writeq_low_water(uint32_t size)
+{
+    bool rval = false;
+
+    if (size >= MIN_WRITEQ_LOW_WATER)
+    {
+        mxb::atomic::store(&gateway.writeq_low_water, size, mxb::atomic::RELAXED);
+        rval = true;
+    }
+
+    return rval;
+}
+
 /**
  * Return the configured number of milliseconds for which we wait when we do
  * a blocking poll call.
@@ -2480,42 +2508,6 @@ static int handle_global_item(const char* name, const char* value)
 
             gateway.users_refresh_time = users_refresh_time;
         }
-        else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
-        {
-            if (!get_suffixed_size(value, &gateway.writeq_high_water))
-            {
-                MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_HIGH_WATER, value);
-                return 0;
-            }
-
-            if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
-            {
-                MXS_WARNING("The specified writeq high water mark %lu, is smaller "
-                            "than the minimum allowed size %lu. Changing to minimum.",
-                            gateway.writeq_high_water,
-                            MIN_WRITEQ_HIGH_WATER);
-                gateway.writeq_high_water = MIN_WRITEQ_HIGH_WATER;
-            }
-            MXS_NOTICE("Writeq high water mark set to: %lu", gateway.writeq_high_water);
-        }
-        else if (strcmp(name, CN_WRITEQ_LOW_WATER) == 0)
-        {
-            if (!get_suffixed_size(value, &gateway.writeq_low_water))
-            {
-                MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_LOW_WATER, value);
-                return 0;
-            }
-
-            if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
-            {
-                MXS_WARNING("The specified writeq low water mark %lu, is smaller "
-                            "than the minimum allowed size %lu. Changing to minimum.",
-                            gateway.writeq_low_water,
-                            MIN_WRITEQ_LOW_WATER);
-                gateway.writeq_low_water = MIN_WRITEQ_LOW_WATER;
-            }
-            MXS_NOTICE("Writeq low water mark set to: %lu", gateway.writeq_low_water);
-        }
         else
         {
             MXS_ERROR("%s is an invalid value for '%s', using default %d instead.",
@@ -2524,6 +2516,42 @@ static int handle_global_item(const char* name, const char* value)
                       USERS_REFRESH_TIME_DEFAULT);
             gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
         }
+    }
+    else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
+    {
+        if (!get_suffixed_size(value, &gateway.writeq_high_water))
+        {
+            MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_HIGH_WATER, value);
+            return 0;
+        }
+
+        if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
+        {
+            MXS_WARNING("The specified writeq high water mark %lu, is smaller "
+                "than the minimum allowed size %lu. Changing to minimum.",
+                        gateway.writeq_high_water,
+                        MIN_WRITEQ_HIGH_WATER);
+            gateway.writeq_high_water = MIN_WRITEQ_HIGH_WATER;
+        }
+        MXS_NOTICE("Writeq high water mark set to: %lu", gateway.writeq_high_water);
+    }
+    else if (strcmp(name, CN_WRITEQ_LOW_WATER) == 0)
+    {
+        if (!get_suffixed_size(value, &gateway.writeq_low_water))
+        {
+            MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_LOW_WATER, value);
+            return 0;
+        }
+
+        if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
+        {
+            MXS_WARNING("The specified writeq low water mark %lu, is smaller "
+                "than the minimum allowed size %lu. Changing to minimum.",
+                        gateway.writeq_low_water,
+                        MIN_WRITEQ_LOW_WATER);
+            gateway.writeq_low_water = MIN_WRITEQ_LOW_WATER;
+        }
+        MXS_NOTICE("Writeq low water mark set to: %lu", gateway.writeq_low_water);
     }
     else if (strcmp(name, CN_RETAIN_LAST_STATEMENTS) == 0)
     {

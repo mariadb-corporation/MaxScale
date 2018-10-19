@@ -567,11 +567,29 @@ json_t* config_maxscale_to_json(const char* host);
 uint32_t config_writeq_high_water();
 
 /**
+ * Set writeq high water mark
+ *
+ * @param size The high water mark in bytes
+ *
+ * @return True if the parameter was larger than MIN_WRITEQ_HIGH_WATER
+ */
+bool config_set_writeq_high_water(uint32_t size);
+
+/**
  * @brief  Get DCB write queue low water mark
  *
  * @return @return  Number of low water mark in bytes
  */
 uint32_t config_writeq_low_water();
+
+/**
+ * Set writeq low water mark
+ *
+ * @param size The low water mark in bytes
+ *
+ * @return True if the parameter was larger than MIN_WRITEQ_LOW_WATER
+ */
+bool config_set_writeq_low_water(uint32_t size);
 
 /**
  * @brief Interpret a @disk_space_threshold configuration string.

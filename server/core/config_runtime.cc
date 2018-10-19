@@ -870,6 +870,46 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             config_runtime_error("Invalid size value for '%s': %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
         }
     }
+    else if (key == CN_WRITEQ_HIGH_WATER)
+    {
+        uint64_t size = 0;
+
+        if (!get_suffixed_size(value, &size))
+        {
+            config_runtime_error("Invalid value for %s: %s", CN_WRITEQ_HIGH_WATER, value);
+        }
+        else if (size < MIN_WRITEQ_HIGH_WATER)
+        {
+            config_runtime_error("The specified '%s' is smaller than the minimum allowed size %lu.",
+                                 CN_WRITEQ_HIGH_WATER, MIN_WRITEQ_HIGH_WATER);
+        }
+        else
+        {
+            rval = true;
+            config_set_writeq_high_water(size);
+            MXS_NOTICE("'%s' set to: %lu", CN_WRITEQ_HIGH_WATER, size);
+        }
+    }
+    else if (key == CN_WRITEQ_LOW_WATER)
+    {
+        uint64_t size = 0;
+
+        if (!get_suffixed_size(value, &size))
+        {
+            config_runtime_error("Invalid value for '%s': %s", CN_WRITEQ_LOW_WATER, value);
+        }
+        else if (size < MIN_WRITEQ_LOW_WATER)
+        {
+            config_runtime_error("The specified '%s' is smaller than the minimum allowed size %lu.",
+                                 CN_WRITEQ_LOW_WATER, MIN_WRITEQ_LOW_WATER);
+        }
+        else
+        {
+            rval = true;
+            config_set_writeq_low_water(size);
+            MXS_NOTICE("'%s' set to: %lu", CN_WRITEQ_LOW_WATER, size);
+        }
+    }
     else
     {
         config_runtime_error("Unknown global parameter: %s=%s", name, value);
