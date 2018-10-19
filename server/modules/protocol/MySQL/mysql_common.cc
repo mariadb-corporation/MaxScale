@@ -1371,7 +1371,7 @@ static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
 
-    if (dcb->session->ses_id == info->target_id)
+    if (dcb->session->ses_id == info->target_id && dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
     {
         MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
