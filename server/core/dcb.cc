@@ -3768,11 +3768,11 @@ static int downstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userd
 {
     if (reason == DCB_REASON_HIGH_WATER)
     {
-        dcb_foreach(backend_dcb_remove_func, dcb->session);
+        dcb_foreach_local(backend_dcb_remove_func, dcb->session);
     }
     else if (reason == DCB_REASON_LOW_WATER)
     {
-        dcb_foreach(backend_dcb_add_func, dcb->session);
+        dcb_foreach_local(backend_dcb_add_func, dcb->session);
     }
 
     return 0;

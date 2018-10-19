@@ -450,6 +450,9 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
 
 GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
 {
+    mxb_assert(!head || head->owner == RoutingWorker::get_current_id());
+    mxb_assert(!tail || tail->owner == RoutingWorker::get_current_id());
+
     if (!head)
     {
         return tail;
@@ -459,8 +462,6 @@ GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
         return head;
     }
 
-    mxb_assert(head->owner == RoutingWorker::get_current_id()
-               && tail->owner == RoutingWorker::get_current_id());
     head->tail->next = tail;
     head->tail = tail->tail;
 
