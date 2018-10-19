@@ -192,9 +192,9 @@ typedef struct dcb
     MXS_PROTOCOL            func;                       /**< The protocol functions for this descriptor */
     MXS_AUTHENTICATOR       authfunc;                   /**< The authenticator functions for this descriptor
                                                          * */
-    uint32_t writeqlen;                                 /**< Current number of byes in the write queue */
-    uint32_t high_water;                                /**< High water mark of write queue */
-    uint32_t low_water;                                 /**< Low water mark of write queue */
+    uint64_t writeqlen;                                 /**< Current number of byes in the write queue */
+    uint64_t high_water;                                /**< High water mark of write queue */
+    uint64_t low_water;                                 /**< Low water mark of write queue */
     GWBUF*   writeq;                                    /**< Write Data Queue */
     GWBUF*   delayq;                                    /**< Delay Backend Write Data Queue */
     GWBUF*   readq;                                     /**< Read queue for storing incomplete reads */
