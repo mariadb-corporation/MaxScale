@@ -510,7 +510,7 @@ int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op,
                 else
                 {
                     // No conflict, redirect as normal.
-                    if (redirectable->redirect_existing_slave_conn(op, from, to))
+                    if (redirectable->redirect_existing_slave_conn(op.general, from, to))
                     {
                         successes++;
                         redirected->push_back(redirectable);
@@ -786,11 +786,11 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
         // Step 2: Wait for the promotion target to catch up with the demotion target. Disregard the other
         // slaves of the promotion target to avoid needless waiting.
         // The gtid:s of the demotion target were updated at the end of demotion.
-        if (promotion_target->catchup_to_master(op))
+        if (promotion_target->catchup_to_master(op.general, demotion_target->m_gtid_binlog_pos))
         {
             MXS_INFO("Switchover: Catchup took %.1f seconds.", timer.lap().secs());
             // Step 3: On new master: remove slave connections, set read-only to OFF etc.
-            if (promotion_target->promote(op))
+            if (promotion_target->promote(op.general, *op.promotion, op.type, demotion_target))
             {
                 // Point of no return. Even if following steps fail, do not try to undo.
                 // Switchover considered at least partially successful.
@@ -804,7 +804,8 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
 
                 // Step 4: Start replication on old master and redirect slaves.
                 ServerArray redirected_to_promo_target;
-                if (demotion_target->copy_slave_conns(op, op.demotion->conns_to_copy, promotion_target))
+                if (demotion_target->copy_slave_conns(op.general, op.demotion->conns_to_copy,
+                                                      promotion_target))
                 {
                     redirected_to_promo_target.push_back(demotion_target);
                 }
@@ -869,7 +870,7 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
 
     bool rval = false;
     // Step 1: Stop and reset slave, set read-only to OFF.
-    if (promotion_target->promote(op))
+    if (promotion_target->promote(op.general, *op.promotion, op.type, op.demotion_target))
     {
         // Point of no return. Even if following steps fail, do not try to undo. Failover considered
         // at least partially successful.
@@ -1826,4 +1827,23 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
         }
     }
     return redirectable_slaves;
+}
+
+ClusterOperation::ClusterOperation(OperationType type, ServerOperation* dem_op, ServerOperation* prom_op,
+                                   MariaDBServer* promotion_target, MariaDBServer* demotion_target,
+                                   string& replication_user, string& replication_password,
+                                   json_t** error, maxbase::Duration time_remaining)
+    : type(type)
+    , demotion(dem_op)
+    , promotion(prom_op)
+    , general(type, replication_user, replication_password, error, time_remaining)
+    , promotion_target(promotion_target)
+    , demotion_target(demotion_target)
+{
+}
+
+ClusterOperation::~ClusterOperation()
+{
+    delete demotion;
+    delete promotion;
 }

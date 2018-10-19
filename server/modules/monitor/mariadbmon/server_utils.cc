@@ -155,25 +155,6 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
     return accepted;
 }
 
-ClusterOperation::ClusterOperation(OperationType type, ServerOperation* dem_op, ServerOperation* prom_op,
-                                   MariaDBServer* promotion_target, MariaDBServer* demotion_target,
-                                   string& replication_user, string& replication_password,
-                                   json_t** error, maxbase::Duration time_remaining)
-    : type(type)
-    , demotion(dem_op)
-    , promotion(prom_op)
-    , general(type, replication_user, replication_password, error, time_remaining)
-    , promotion_target(promotion_target)
-    , demotion_target(demotion_target)
-{
-}
-
-ClusterOperation::~ClusterOperation()
-{
-    delete demotion;
-    delete promotion;
-}
-
 ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
                                  bool handle_events, const std::string& sql_file,
                                  const SlaveStatusArray& conns_to_copy)

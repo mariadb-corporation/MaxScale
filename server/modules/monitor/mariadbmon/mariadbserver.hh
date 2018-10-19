@@ -239,7 +239,7 @@ public:
      *
      * @return True, if target server gtid was reached within allotted time
      */
-    bool catchup_to_master(ClusterOperation& op);
+    bool catchup_to_master(GeneralOpData& op, const GtidList& target);
 
     /**
      * Find slave connection to the target server. If the IO thread is trying to connect
@@ -357,7 +357,8 @@ public:
      * @param op Cluster operation descriptor
      * @return True if successful
      */
-    bool promote(ClusterOperation& op);
+    bool promote(GeneralOpData& op, ServerOperation& promotion, OperationType type,
+                 const MariaDBServer* demotion_target);
 
     /**
      * Demote this server. Removes all slave connections. If server was master, sets read_only.
@@ -375,7 +376,7 @@ public:
      * @param new_master The new master for the redirected connection
      * @return True on success
      */
-    bool redirect_existing_slave_conn(ClusterOperation& op, const MariaDBServer* old_master,
+    bool redirect_existing_slave_conn(GeneralOpData& op, const MariaDBServer* old_master,
                                       const MariaDBServer* new_master);
 
     /**
@@ -391,7 +392,7 @@ public:
      * @params replacement Which server should rep
      * @return True on success
      */
-    bool copy_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_copy,
+    bool copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_copy,
                           const MariaDBServer* replacement);
 
     /**
@@ -543,7 +544,7 @@ private:
                                 std::string* errmsg_out);
 
     bool        set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
-    bool        merge_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_merge);
-    bool        create_start_slave(ClusterOperation& op, const SlaveStatus& slave_conn);
-    std::string generate_change_master_cmd(ClusterOperation& op, const SlaveStatus& slave_conn);
+    bool        merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
+    bool        create_start_slave(GeneralOpData& op, const SlaveStatus& slave_conn);
+    std::string generate_change_master_cmd(GeneralOpData& op, const SlaveStatus& slave_conn);
 };

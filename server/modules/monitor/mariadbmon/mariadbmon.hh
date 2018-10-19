@@ -36,6 +36,33 @@ typedef std::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
 // Map of cycle number to cycle members. The elements should be ordered for predictability when iterating.
 typedef std::map<int, ServerArray> CycleMap;
 
+/**
+ *  Class which encapsulates many settings and status descriptors for a failover/switchover.
+ *  Is more convenient to pass around than the separate elements. Most fields are constants or constant
+ *  pointers since they should not change during an operation.
+ */
+class ClusterOperation
+{
+private:
+    ClusterOperation(const ClusterOperation&) = delete;
+    ClusterOperation& operator=(const ClusterOperation&) = delete;
+
+public:
+    const OperationType    type;                        // Failover or switchover
+    ServerOperation* const demotion;                    // Required by MariaDBServer->demote()
+    ServerOperation* const promotion;                   // Required by MariaDBServer->promote()
+    GeneralOpData          general;                     // General operation data
+
+    MariaDBServer* const promotion_target;              // Which server will be promoted
+    MariaDBServer* const demotion_target;               // Which server will be demoted
+
+    ClusterOperation(OperationType type, ServerOperation* dem_op, ServerOperation* prom_op,
+                     MariaDBServer* promotion_target, MariaDBServer* demotion_target,
+                     std::string& replication_user, std::string& replication_password,
+                     json_t** error, maxbase::Duration time_remaining);
+    ~ClusterOperation();
+};
+
 // MariaDB Monitor instance data
 class MariaDBMonitor : public maxscale::MonitorInstance
 {
@@ -118,6 +145,25 @@ private:
     {
         OFF,
         ON
+    };
+
+    class FailoverParams
+    {
+    public:
+        const MariaDBServer* const demotion_target;
+        ServerOperation promotion; // Required by MariaDBServer->promote()
+        GeneralOpData   general;
+
+        FailoverParams(const MariaDBServer* demotion_target, ServerOperation promotion,
+                       GeneralOpData general);
+    };
+
+    class SwitchoverParams
+    {
+    public:
+        ServerOperation demotion;                    // Required by MariaDBServer->demote()
+        ServerOperation promotion;                   // Required by MariaDBServer->promote()
+        GeneralOpData general;
     };
 
     // Information about a multimaster group (replication cycle)
