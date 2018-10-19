@@ -166,10 +166,9 @@ ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
 {
 }
 
-GeneralOpData::GeneralOpData(OperationType type, const string& replication_user, const string& replication_password,
+GeneralOpData::GeneralOpData(const string& replication_user, const string& replication_password,
                              json_t** error, maxbase::Duration time_remaining)
-    : type(type)
-    , replication_user(replication_user)
+    : replication_user(replication_user)
     , replication_password(replication_password)
     , error_out(error)
     , time_remaining(time_remaining)

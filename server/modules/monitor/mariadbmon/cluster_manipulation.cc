@@ -58,12 +58,12 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
         switchover_done = switchover_perform(*op);
         if (switchover_done)
         {
-            MXS_NOTICE(SWITCHOVER_OK, op->demotion_target->name(), op->promotion_target->name());
+            MXS_NOTICE(SWITCHOVER_OK, op->demotion.target->name(), op->promotion.target->name());
         }
         else
         {
             string msg = string_printf(SWITCHOVER_FAIL,
-                                       op->demotion_target->name(), op->promotion_target->name());
+                                       op->demotion.target->name(), op->promotion.target->name());
             bool failover_setting = config_get_bool(m_monitor->parameters, CN_AUTO_FAILOVER);
             if (failover_setting)
             {
@@ -90,12 +90,12 @@ bool MariaDBMonitor::manual_failover(json_t** output)
         failover_done = failover_perform(*op);
         if (failover_done)
         {
-            MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion_target->name());
+            MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
         }
         else
         {
             PRINT_MXS_JSON_ERROR(output, FAILOVER_FAIL,
-                                 op->demotion_target->name(), op->promotion_target->name());
+                                 op->demotion_target->name(), op->promotion.target->name());
         }
     }
     else
@@ -424,12 +424,12 @@ int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray
  * @param redirected_to_demo Output for slaves successfully redirected to demotion target
  * @return The number of slaves successfully redirected
  */
-int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op,
+int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType type,
+                                       const MariaDBServer* promotion_target,
+                                       const MariaDBServer* demotion_target,
                                        ServerArray* redirected_to_promo, ServerArray* redirected_to_demo)
 {
-    mxb_assert(op.type == OperationType::SWITCHOVER || op.type == OperationType::FAILOVER);
-    MariaDBServer* const promotion_target = op.promotion_target;
-    MariaDBServer* const demotion_target = op.demotion_target;
+    mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::FAILOVER);
 
     // Slaves of demotion target are redirected to promotion target.
     // Try to redirect even disconnected slaves.
@@ -437,7 +437,7 @@ int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op,
     // Slaves of promotion target are redirected to demotion target in case of switchover.
     // This list contains elements only when promoting a relay in switchover.
     ServerArray redirect_to_demo_target;
-    if (op.type == OperationType::SWITCHOVER)
+    if (type == OperationType::SWITCHOVER)
     {
         redirect_to_demo_target = get_redirectables(promotion_target, demotion_target);
     }
@@ -463,7 +463,7 @@ int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op,
     const char redir_fmt[] = "Redirecting %s to replicate from %s instead of %s.";
     string slave_names_to_promo = monitored_servers_to_string(redirect_to_promo_target);
     string slave_names_to_demo = monitored_servers_to_string(redirect_to_demo_target);
-    mxb_assert(slave_names_to_demo.empty() || op.type == OperationType::SWITCHOVER);
+    mxb_assert(slave_names_to_demo.empty() || type == OperationType::SWITCHOVER);
 
     // Print both name lists if both have items, otherwise just the one with items.
     if (!slave_names_to_promo.empty() && !slave_names_to_demo.empty())
@@ -488,7 +488,7 @@ int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op,
     int fails = 0;
     int conflicts = 0;
     auto redirection_helper =
-        [this, &op, &conflicts, &successes, &fails](ServerArray& redirect_these,
+        [this, &general, &conflicts, &successes, &fails](ServerArray& redirect_these,
                                                     const MariaDBServer* from, const MariaDBServer* to,
                                                     ServerArray* redirected) {
             for (MariaDBServer* redirectable : redirect_these)
@@ -510,7 +510,7 @@ int MariaDBMonitor::redirect_slaves_ex(ClusterOperation& op,
                 else
                 {
                     // No conflict, redirect as normal.
-                    if (redirectable->redirect_existing_slave_conn(op.general, from, to))
+                    if (redirectable->redirect_existing_slave_conn(general, from, to))
                     {
                         successes++;
                         redirected->push_back(redirectable);
@@ -769,16 +769,17 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
  * @param op Operation descriptor
  * @return True if successful. If false, replication may be broken.
  */
-bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
+bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
 {
-    mxb_assert(op.demotion && op.promotion);
-    MariaDBServer* const promotion_target = op.promotion->target;
-    MariaDBServer* const demotion_target = op.demotion->target;
+    mxb_assert(op.demotion.target && op.promotion.target);
+    const OperationType type = OperationType::SWITCHOVER;
+    MariaDBServer* const promotion_target = op.promotion.target;
+    MariaDBServer* const demotion_target = op.demotion.target;
     json_t** const error_out = op.general.error_out;
 
     bool rval = false;
     // Step 1: Set read-only to on, flush logs, update gtid:s.
-    if (demotion_target->demote(*op.demotion, op.general))
+    if (demotion_target->demote(op.demotion, op.general))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;
@@ -790,13 +791,13 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
         {
             MXS_INFO("Switchover: Catchup took %.1f seconds.", timer.lap().secs());
             // Step 3: On new master: remove slave connections, set read-only to OFF etc.
-            if (promotion_target->promote(op.general, *op.promotion, op.type, demotion_target))
+            if (promotion_target->promote(op.general, op.promotion, type, demotion_target))
             {
                 // Point of no return. Even if following steps fail, do not try to undo.
                 // Switchover considered at least partially successful.
                 catchup_and_promote_success = true;
                 rval = true;
-                if (op.promotion->to_from_master)
+                if (op.promotion.to_from_master)
                 {
                     // Force a master swap on next tick.
                     m_next_master = promotion_target;
@@ -804,7 +805,7 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
 
                 // Step 4: Start replication on old master and redirect slaves.
                 ServerArray redirected_to_promo_target;
-                if (demotion_target->copy_slave_conns(op.general, op.demotion->conns_to_copy,
+                if (demotion_target->copy_slave_conns(op.general, op.demotion.conns_to_copy,
                                                       promotion_target))
                 {
                     redirected_to_promo_target.push_back(demotion_target);
@@ -815,14 +816,15 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
                                 promotion_target->name(), demotion_target->name());
                 }
                 ServerArray redirected_to_demo_target;
-                redirect_slaves_ex(op, &redirected_to_promo_target, &redirected_to_demo_target);
+                redirect_slaves_ex(op.general, type, promotion_target, demotion_target,
+                                   &redirected_to_promo_target, &redirected_to_demo_target);
 
                 if (!redirected_to_promo_target.empty() || !redirected_to_demo_target.empty())
                 {
                     timer.restart();
                     // Step 5: Finally, check that slaves are replicating.
-                    wait_cluster_stabilization(op, redirected_to_promo_target, promotion_target);
-                    wait_cluster_stabilization(op, redirected_to_demo_target, demotion_target);
+                    wait_cluster_stabilization(op.general, redirected_to_promo_target, promotion_target);
+                    wait_cluster_stabilization(op.general, redirected_to_demo_target, demotion_target);
                     auto step6_duration = timer.lap();
                     MXS_INFO("Switchover: slave replication confirmation took %.1f seconds with "
                              "%.1f seconds to spare.",
@@ -863,20 +865,22 @@ bool MariaDBMonitor::switchover_perform(ClusterOperation& op)
  * @param op Operation descriptor
  * @return True if successful
  */
-bool MariaDBMonitor::failover_perform(ClusterOperation& op)
+bool MariaDBMonitor::failover_perform(FailoverParams& op)
 {
-    mxb_assert(op.promotion_target && op.demotion_target);
-    MariaDBServer* const promotion_target = op.promotion_target;
+    mxb_assert(op.promotion.target && op.demotion_target);
+    const OperationType type = OperationType::FAILOVER;
+    MariaDBServer* const promotion_target = op.promotion.target;
+    auto const demotion_target = op.demotion_target;
 
     bool rval = false;
     // Step 1: Stop and reset slave, set read-only to OFF.
-    if (promotion_target->promote(op.general, *op.promotion, op.type, op.demotion_target))
+    if (promotion_target->promote(op.general, op.promotion, type, demotion_target))
     {
         // Point of no return. Even if following steps fail, do not try to undo. Failover considered
         // at least partially successful.
         rval = true;
         m_cluster_modified = true;
-        if (op.promotion->to_from_master)
+        if (op.promotion.to_from_master)
         {
             // Force a master swap on next tick.
             m_next_master = promotion_target;
@@ -884,14 +888,14 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
 
         // Step 2: Redirect slaves.
         ServerArray redirected_slaves;
-        redirect_slaves_ex(op, &redirected_slaves, NULL);
+        redirect_slaves_ex(op.general, type, promotion_target, demotion_target, &redirected_slaves, NULL);
         if (!redirected_slaves.empty())
         {
             StopWatch timer;
             /* Step 3: Finally, check that slaves are connected to the new master. Even if
              * time is out at this point, wait_cluster_stabilization() will check the slaves
              * once so that latest status is printed. */
-            wait_cluster_stabilization(op, redirected_slaves, promotion_target);
+            wait_cluster_stabilization(op.general, redirected_slaves, promotion_target);
             MXS_INFO("Failover: slave replication confirmation took %.1f seconds with "
                      "%.1f seconds to spare.",
                      timer.lap().secs(), op.general.time_remaining.secs());
@@ -908,7 +912,7 @@ bool MariaDBMonitor::failover_perform(ClusterOperation& op)
  * @param redirected_slaves Slaves to check
  * @param new_master The target server of the slave connections
  */
-void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const ServerArray& redirected_slaves,
+void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerArray& redirected_slaves,
                                                 const MariaDBServer* new_master)
 {
     if (redirected_slaves.empty())
@@ -917,6 +921,7 @@ void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const Serv
         return;
     }
 
+    maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
     // Check all the servers in the list. Using a set because erasing from container.
     std::set<MariaDBServer*> unconfirmed(redirected_slaves.begin(), redirected_slaves.end());
@@ -979,10 +984,10 @@ void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const Serv
             }
         }
 
-        op.general.time_remaining -= timer.lap();
+        time_remaining -= timer.lap();
         if (!unconfirmed.empty())
         {
-            if (op.general.time_remaining.secs() > 0)
+            if (time_remaining.secs() > 0)
             {
                 double standard_sleep = 0.5;    // In seconds.
                 // If we have unconfirmed slaves and have time remaining, sleep a bit and try again.
@@ -990,8 +995,8 @@ void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const Serv
                  * all operations for failover/switchover are complete. The sleep is only required to
                  * get correct messages to the user. Think about removing it, or shortening the maximum
                  * time of this function. */
-                Duration sleep_time = (op.general.time_remaining.secs() > standard_sleep) ?
-                    Duration(standard_sleep) : op.general.time_remaining;
+                Duration sleep_time = (time_remaining.secs() > standard_sleep) ?
+                    Duration(standard_sleep) : time_remaining;
                 std::this_thread::sleep_for(sleep_time);
             }
             else
@@ -1022,7 +1027,7 @@ void MariaDBMonitor::wait_cluster_stabilization(ClusterOperation& op, const Serv
         MXS_WARNING(MSG, fails, new_master->name(), repl_fails.size(), query_fails.size(),
                     unconfirmed.size(), new_master->name());
     }
-    op.general.time_remaining -= timer.lap();
+    time_remaining -= timer.lap();
 }
 
 /**
@@ -1257,7 +1262,7 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const M
  * @param error_out Error output
  * @return Operation object if cluster is suitable and failover may proceed, or NULL on error
  */
-unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json_t** error_out)
+unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log log_mode, json_t** error_out)
 {
     // This function resembles 'switchover_prepare', but does not yet support manual selection.
 
@@ -1303,7 +1308,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json
         gtid_ok = check_gtid_replication(log_mode, demotion_target, error_out);
     }
 
-    unique_ptr<ClusterOperation> rval;
+    unique_ptr<FailoverParams> rval;
     if (promotion_target && demotion_target && gtid_ok)
     {
         const SlaveStatus* slave_conn = promotion_target->slave_connection_status(demotion_target);
@@ -1351,13 +1356,11 @@ unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json
             // The Duration ctor taking a double interprets is as seconds.
             auto time_limit = maxbase::Duration((double)m_failover_timeout);
             bool promoting_to_master = (demotion_target == m_master);
-            ServerOperation* promotion_op = new ServerOperation(promotion_target, promoting_to_master,
-                                                                m_handle_event_scheduler, m_promote_sql_file,
-                                                                demotion_target->m_slave_status);
-            rval.reset(new ClusterOperation(OperationType::FAILOVER, NULL, promotion_op,
-                                            promotion_target, demotion_target,
-                                            m_replication_user, m_replication_password,
-                                            error_out, time_limit));
+            ServerOperation promotion(promotion_target, promoting_to_master,
+                                         m_handle_event_scheduler, m_promote_sql_file,
+                                         demotion_target->m_slave_status);
+            GeneralOpData general(m_replication_user, m_replication_password, error_out, time_limit);
+            rval.reset(new FailoverParams(promotion, demotion_target, general));
         }
     }
     return rval;
@@ -1409,11 +1412,11 @@ void MariaDBMonitor::handle_auto_failover()
             MXS_NOTICE("Performing automatic failover to replace failed master '%s'.", m_master->name());
             if (failover_perform(*op))
             {
-                MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion_target->name());
+                MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
             }
             else
             {
-                MXS_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion_target->name());
+                MXS_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion.target->name());
                 report_and_disable("failover", CN_AUTO_FAILOVER, &m_auto_failover);
             }
         }
@@ -1545,10 +1548,9 @@ const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer*
  * @param error_out Error output
  * @return Operation object if cluster is suitable and switchover may proceed, or NULL on error
  */
-unique_ptr<ClusterOperation> MariaDBMonitor::switchover_prepare(SERVER* promotion_server,
-                                                                SERVER* demotion_server,
-                                                                Log log_mode,
-                                                                json_t** error_out)
+unique_ptr<MariaDBMonitor::SwitchoverParams>
+MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_server, Log log_mode,
+                                   json_t** error_out)
 {
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
@@ -1642,21 +1644,17 @@ unique_ptr<ClusterOperation> MariaDBMonitor::switchover_prepare(SERVER* promotio
         gtid_ok = check_gtid_replication(log_mode, demotion_target, error_out);
     }
 
-    unique_ptr<ClusterOperation> rval;
+    unique_ptr<SwitchoverParams> rval;
     if (promotion_target && demotion_target && gtid_ok)
     {
         maxbase::Duration time_limit((double)m_switchover_timeout);
-        bool master_swap = demotion_target->is_master();
-        ServerOperation* demotion_op = new ServerOperation(demotion_target, master_swap,
-                                                           m_handle_event_scheduler, m_demote_sql_file,
-                                                           promotion_target->m_slave_status);
-        ServerOperation* promotion_op = new ServerOperation(promotion_target, master_swap,
-                                                           m_handle_event_scheduler, m_promote_sql_file,
-                                                           demotion_target->m_slave_status);
-        rval.reset(new ClusterOperation(op_type, demotion_op, promotion_op,
-                                        promotion_target, demotion_target,
-                                        m_replication_user, m_replication_password,
-                                        error_out, time_limit));
+        bool master_swap = (demotion_target == m_master);
+        ServerOperation promotion(promotion_target, master_swap, m_handle_event_scheduler,
+                                  m_promote_sql_file, demotion_target->m_slave_status);
+        ServerOperation demotion(demotion_target, master_swap, m_handle_event_scheduler,
+                                 m_demote_sql_file, promotion_target->m_slave_status);
+        GeneralOpData general(m_replication_user, m_replication_password, error_out, time_limit);
+        rval.reset(new SwitchoverParams(promotion, demotion, general));
     }
     return rval;
 }
@@ -1702,13 +1700,12 @@ void MariaDBMonitor::handle_low_disk_space_master()
             bool switched = switchover_perform(*op);
             if (switched)
             {
-                MXS_NOTICE(SWITCHOVER_OK, op->demotion_target->name(), op->promotion_target->name());
+                MXS_NOTICE(SWITCHOVER_OK, op->demotion.target->name(), op->promotion.target->name());
             }
             else
             {
-                MXS_ERROR(SWITCHOVER_FAIL, op->demotion_target->name(), op->promotion_target->name());
-                report_and_disable("switchover",
-                                   CN_SWITCHOVER_ON_LOW_DISK_SPACE,
+                MXS_ERROR(SWITCHOVER_FAIL, op->demotion.target->name(), op->promotion.target->name());
+                report_and_disable("switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE,
                                    &m_switchover_on_low_disk_space);
             }
         }
@@ -1829,21 +1826,20 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
     return redirectable_slaves;
 }
 
-ClusterOperation::ClusterOperation(OperationType type, ServerOperation* dem_op, ServerOperation* prom_op,
-                                   MariaDBServer* promotion_target, MariaDBServer* demotion_target,
-                                   string& replication_user, string& replication_password,
-                                   json_t** error, maxbase::Duration time_remaining)
-    : type(type)
-    , demotion(dem_op)
-    , promotion(prom_op)
-    , general(type, replication_user, replication_password, error, time_remaining)
-    , promotion_target(promotion_target)
-    , demotion_target(demotion_target)
+MariaDBMonitor::SwitchoverParams::SwitchoverParams(const ServerOperation& promotion,
+                                                   const ServerOperation& demotion,
+                                                   const GeneralOpData& general)
+    : promotion(promotion)
+    , demotion(demotion)
+    , general(general)
 {
 }
 
-ClusterOperation::~ClusterOperation()
+MariaDBMonitor::FailoverParams::FailoverParams(const ServerOperation& promotion,
+                                               const MariaDBServer* demotion_target,
+                                               const GeneralOpData& general)
+    : promotion(promotion)
+    , demotion_target(demotion_target)
+    , general(general)
 {
-    delete demotion;
-    delete promotion;
 }
