@@ -722,7 +722,7 @@ than `0`, this configuration setting will not have an effect.
 #### `writeq_high_water`
 
 High water mark for network write buffer. Controls when network traffic
-throtting is started.
+throtting is started. The parameter accepts size type values.
 
 More specifically, if the client side write queue is above this value, it will
 block traffic coming from backend servers. If the backend side write queue is
@@ -736,8 +736,8 @@ throtting is enabled. By default, traffic throttling is disabled.
 
 Low water mark for network write buffer. Once the traffic throttling is enabled,
 it will only be disabled when the write queue is below `writeq_high_water`. The
-minimum allowed size is 512 bytes. `writeq_high_water` must always be greater
-than `writeq_low_water`.
+parameter accepts size type values. The minimum allowed size is 512
+bytes. `writeq_high_water` must always be greater than `writeq_low_water`.
 
 ### REST API Configuration
 

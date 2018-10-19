@@ -2500,9 +2500,9 @@ static int handle_global_item(const char* name, const char* value)
         }
         else if (strcmp(name, CN_WRITEQ_LOW_WATER) == 0)
         {
-            if (!get_suffixed_size(value, &gateway.writeq_high_water))
+            if (!get_suffixed_size(value, &gateway.writeq_low_water))
             {
-                MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_HIGH_WATER, value);
+                MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_LOW_WATER, value);
                 return 0;
             }
 
