@@ -3597,6 +3597,11 @@ int poll_add_dcb(DCB* dcb)
             // See: https://jira.mariadb.org/browse/MXS-1805 and https://jira.mariadb.org/browse/MXS-1833
             owner = RoutingWorker::get(RoutingWorker::MAIN);
         }
+        else if (dcb->state == DCB_STATE_NOPOLLING)
+        {
+            // This DCB was removed and added back to epoll. Assign it to the same worker it started with.
+            owner = static_cast<RoutingWorker*>(dcb->poll.owner);
+        }
         else
         {
             // Round-robin the client connection worker assignment
