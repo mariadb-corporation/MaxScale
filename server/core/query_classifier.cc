@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
+#include <maxbase/format.hh>
 #include <maxscale/config.h>
 #include <maxscale/json_api.h>
 #include <maxscale/log.h>
@@ -396,9 +397,9 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 
             if (cache_max_size)
             {
-                MXS_NOTICE("Query classification results are cached and reused, "
-                           "cache max size: %" PRIi64 "",
-                           cache_max_size);
+                MXS_NOTICE("Query classification results are cached and reused. "
+                           "Memory used per thread: %s",
+                           mxb::to_binary_size(cache_max_size).c_str());
             }
             else
             {
