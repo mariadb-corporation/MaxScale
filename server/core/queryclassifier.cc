@@ -710,20 +710,36 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
     if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
         set_have_tmp_tables(true);
-        char* tblname = qc_get_created_table_name(querybuf);
+        int size = 0;
+        char** tblname = qc_get_table_names(querybuf, &size, true);
         std::string table;
 
-        if (tblname && *tblname && strchr(tblname, '.') == NULL)
+        for (int i = 0; i < size; i++)
         {
-            const char* db = qc_mysql_get_current_db(session());
-            table += db;
-            table += ".";
-            table += tblname;
+            if (tblname[i] && *tblname[i])
+            {
+                table = tblname[i];
+
+                if (strchr(tblname[i], '.') == NULL)
+                {
+                    const char* db = qc_mysql_get_current_db(session());
+                    table = db;
+                    table += ".";
+                    table += tblname[i];
+                }
+                break;
+            }
         }
+
+        MXS_INFO("Added temporary table %s", table.c_str());
 
         /** Add the table to the set of temporary tables */
         add_tmp_table(table);
 
+        for (int i = 0; i < size; i++)
+        {
+            MXS_FREE(tblname[i]);
+        }
         MXS_FREE(tblname);
     }
 }

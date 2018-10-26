@@ -88,6 +88,9 @@ action=block
 rules=/home/user/blacklist-rules.txt
 ```
 
+If a query is blocked, the filter will return an error to the client with the
+error number 1141 and an SQL state of HY000.
+
 #### `log_match`
 
 Log all queries that match a rule. For the `any` matching mode, the name of the
@@ -325,6 +328,9 @@ values are:
 |drop   |All drop operations           |
 |use    |USE operations                |
 |load   |LOAD DATA operations          |
+
+Multiple values can be combined using the pipe character `|` e.g.
+` on_queries select|insert|update`.
 
 ### Applying rules to users
 

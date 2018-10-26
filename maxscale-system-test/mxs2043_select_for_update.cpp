@@ -78,7 +78,7 @@ bool create_user(TestConnections& test, MYSQL* pMysql)
 
     drop_user(test, pMysql, true);
 
-    test.try_query(pMysql, "CREATE USER '%s' IDENTIFIED by '%s'", ZUSER, ZPASSWORD);
+    test.try_query(pMysql, "CREATE USER '%s'@'%%' IDENTIFIED by '%s'", ZUSER, ZPASSWORD);
     test.try_query(pMysql, "GRANT SELECT, UPDATE ON %s TO '%s'@'%%'", ZTABLE, ZUSER);
 
     return test.global_result == 0;
@@ -149,6 +149,8 @@ int main(int argc, char* argv[])
         if (create_user(test, pMysql))
         {
             int rv = test.repl->connect();
+            test.repl->sync_slaves();
+
             test.expect(rv == 0, "Could not connect to MS.");
 
             if (rv == 0)

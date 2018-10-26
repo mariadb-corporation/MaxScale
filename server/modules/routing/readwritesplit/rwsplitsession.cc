@@ -987,14 +987,21 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
         route_stored_query();
     }
 
-    bool succp;
+    bool succp = false;
     /**
      * Try to get replacement slave or at least the minimum
      * number of slave connections for router session.
      */
     if (m_recv_sescmd > 0 && m_config.disable_sescmd_history)
     {
-        succp = m_router->have_enough_servers();
+        for (const auto& a : m_backends)
+        {
+            if (a->in_use())
+            {
+                succp = true;
+                break;
+            }
+        }
     }
     else
     {
