@@ -196,6 +196,29 @@ static char *gw_default_auth()
     return (char*)"MySQLAuth";
 }
 
+std::string get_version_string(SERVICE* service)
+{
+    std::string rval;
+    uint64_t intver = UINT64_MAX;
+
+    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+    {
+        if (ref->server->version && ref->server->version < intver)
+        {
+            rval = ref->server->version_string;
+            intver = ref->server->version;
+        }
+    }
+
+    // Get the version string from service if no server version is available
+    if (rval.empty())
+    {
+        rval = service->version_string[0] ? service->version_string : GW_MYSQL_VERSION;
+    }
+
+    return rval;
+}
+
 /**
  * MySQLSendHandshake
  *
@@ -222,8 +245,6 @@ int MySQLSendHandshake(DCB* dcb)
     uint8_t mysql_filler_ten[10] = {};
     /* uint8_t mysql_last_byte = 0x00; not needed */
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
-    char *version_string;
-    int len_version_string = 0;
 
     bool is_maria = false;
 
@@ -240,18 +261,7 @@ int MySQLSendHandshake(DCB* dcb)
 
     MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     GWBUF *buf;
-
-    /* get the version string from service property if available*/
-    if (dcb->service->version_string[0])
-    {
-        version_string = dcb->service->version_string;
-        len_version_string = strlen(version_string);
-    }
-    else
-    {
-        version_string = (char*)GW_MYSQL_VERSION;
-        len_version_string = strlen(GW_MYSQL_VERSION);
-    }
+    std::string version = get_version_string(dcb->service);
 
     gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
@@ -285,7 +295,7 @@ int MySQLSendHandshake(DCB* dcb)
     int plugin_name_len = strlen(plugin_name);
 
     mysql_payload_size =
-        sizeof(mysql_protocol_version) + (len_version_string + 1) + sizeof(mysql_thread_id_num) + 8 +
+        sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8 +
         sizeof(/* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one) + sizeof(mysql_server_language) +
         sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len) +
         sizeof(mysql_filler_ten) + 12 + sizeof(/* mysql_last_byte */ uint8_t) + plugin_name_len +
@@ -314,8 +324,8 @@ int MySQLSendHandshake(DCB* dcb)
     mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_protocol_version);
 
     // write server version plus 0 filler
-    strcpy((char *)mysql_handshake_payload, version_string);
-    mysql_handshake_payload = mysql_handshake_payload + len_version_string;
+    strcpy((char *)mysql_handshake_payload, version.c_str());
+    mysql_handshake_payload = mysql_handshake_payload + version.length();
 
     *mysql_handshake_payload = 0x00;
 
