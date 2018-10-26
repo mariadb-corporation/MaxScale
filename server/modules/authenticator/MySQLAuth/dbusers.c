@@ -865,8 +865,10 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
     return rval;
 }
 
-static void report_mdev13453_problem(MYSQL *con, SERVER *server)
+static bool have_mdev13453_problem(MYSQL *con, SERVER *server)
 {
+    bool rval = false;
+
     if (mxs_pcre2_simple_match("SELECT command denied to user .* for table 'users'",
                                mysql_error(con), 0, NULL) == MXS_PCRE2_MATCH)
     {
@@ -888,9 +890,58 @@ static void report_mdev13453_problem(MYSQL *con, SERVER *server)
             mysql_free_result(res);
         }
 
-        MXS_ERROR("Due to MDEV-13453, the service user requires extra grants on the `mysql` database. "
-                  "To fix the problem, add the following grant: GRANT SELECT ON `mysql`.* TO %s", user);
+        MXS_WARNING("Due to MDEV-13453, the service user requires extra grants on the `mysql` database in "
+                    "order for roles to be used. To fix the problem, add the following grant: "
+                    "GRANT SELECT ON `mysql`.* TO %s", user);
+        rval = true;
     }
+
+    return rval;
+}
+
+bool query_and_process_users(const char* query, MYSQL *con, sqlite3* handle, SERVICE* service, bool* anon_user, int* users)
+{
+    bool rval = false;
+
+    if (mxs_mysql_query(con, "USE mysql") == 0 && // Set default database in case we use CTEs
+        mxs_mysql_query(con, query) == 0)
+    {
+        MYSQL_RES *result = mysql_store_result(con);
+
+        if (result)
+        {
+            MYSQL_ROW row;
+
+            while ((row = mysql_fetch_row(result)))
+            {
+                if (service->strip_db_esc)
+                {
+                    strip_escape_chars(row[2]);
+                }
+
+                if (strchr(row[1], '/'))
+                {
+                    merge_netmask(row[1]);
+                }
+
+                add_mysql_user(handle, row[0], row[1], row[2],
+                               row[3] && strcmp(row[3], "Y") == 0, row[4]);
+                (*users)++;
+
+                if (row[0] && *row[0] == '\0')
+                {
+                    /** Empty username is used for the anonymous user. This means
+                     that localhost does not match wildcard host. */
+                    *anon_user = true;
+                }
+            }
+
+            mysql_free_result(result);
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, SERV_LISTENER *listener)
@@ -910,52 +961,25 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
     bool anon_user = false;
     int users = 0;
 
-    if (query)
+    bool rv = query_and_process_users(query, con, handle, service, &anon_user, &users);
+
+    if (!rv && have_mdev13453_problem(con, server_ref->server))
     {
-        if (mxs_mysql_query(con, "USE mysql") == 0 && // Set default database in case we use CTEs
-            mxs_mysql_query(con, query) == 0)
-        {
-            MYSQL_RES *result = mysql_store_result(con);
-
-            if (result)
-            {
-                MYSQL_ROW row;
-
-                while ((row = mysql_fetch_row(result)))
-                {
-                    if (service->strip_db_esc)
-                    {
-                        strip_escape_chars(row[2]);
-                    }
-
-                    if (strchr(row[1], '/'))
-                    {
-                        merge_netmask(row[1]);
-                    }
-
-                    add_mysql_user(handle, row[0], row[1], row[2],
-                                   row[3] && strcmp(row[3], "Y") == 0, row[4]);
-                    users++;
-
-                    if (row[0] && *row[0] == '\0')
-                    {
-                        /** Empty username is used for the anonymous user. This means
-                         that localhost does not match wildcard host. */
-                        anon_user = true;
-                    }
-                }
-
-                mysql_free_result(result);
-            }
-        }
-        else
-        {
-            MXS_ERROR("Failed to load users from server '%s': %s", server_ref->server->name, mysql_error(con));
-            report_mdev13453_problem(con, server_ref->server);
-        }
-
+        /**
+         * Try to work around MDEV-13453 by using a query without CTEs. Masquerading as
+         * a 10.1.10 server makes sure CTEs aren't used.
+         */
         MXS_FREE(query);
+        query = get_users_query(server_ref->server->version_string, 100110, service->enable_root, true);
+        rv = query_and_process_users(query, con, handle, service, &anon_user, &users);
     }
+
+    if (!rv)
+    {
+        MXS_ERROR("Failed to load users from server '%s': %s", server_ref->server->name, mysql_error(con));
+    }
+
+    MXS_FREE(query);
 
     /** Set the parameter if it is not configured by the user */
     if (service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
