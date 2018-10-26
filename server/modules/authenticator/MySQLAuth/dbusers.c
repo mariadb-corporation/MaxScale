@@ -863,8 +863,7 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
 
 static void report_mdev13453_problem(MYSQL *con, SERVER *server)
 {
-    if (server->version >= 100200 && server->version < 100211 &&
-        mxs_pcre2_simple_match("SELECT command denied to user .* for table 'users'",
+    if (mxs_pcre2_simple_match("SELECT command denied to user .* for table 'users'",
                                mysql_error(con), 0, NULL) == MXS_PCRE2_MATCH)
     {
         char user[256] = "<failed to query user>"; // Enough for all user-hostname combinations
