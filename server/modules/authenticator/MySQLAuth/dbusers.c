@@ -56,11 +56,15 @@
 const char* mariadb_102_users_query =
     // `t` is users that are not roles
     "WITH RECURSIVE t AS ( "
-    "  SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role, u.default_role"
+    "  SELECT u.user, u.host, d.db, u.select_priv, "
+    "         IF(u.password <> '', u.password, u.authentication_string) AS password, "
+    "         u.is_role, u.default_role"
     "  FROM mysql.user AS u LEFT JOIN mysql.db AS d "
     "  ON (u.user = d.user AND u.host = d.host) "
     "  UNION "
-    "  SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role, u.default_role "
+    "  SELECT u.user, u.host, t.db, u.select_priv, "
+    "         IF(u.password <> '', u.password, u.authentication_string), "
+    "         u.is_role, u.default_role "
     "  FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
     "  ON (u.user = t.user AND u.host = t.host)"
     "), users AS ("
