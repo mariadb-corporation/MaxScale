@@ -323,9 +323,6 @@ all the listeners pointing to the service have been destroyed. This means that
 the `data.relationships` must be an empty object and `data.attributes.listeners`
 must be an empty array in order for the service to qualify for destruction.
 
-Once a service is destroyed, any listeners associated with it will be freed
-after which the ports can be reused by other listeners.
-
 If there are open client connections that use the service when it is destroyed,
 they are allowed to gracefully close before the service is destroyed. This means
 that the destruction of a service can be acknowledged via the REST API before
@@ -465,6 +462,9 @@ DELETE /v1/services/:service/listeners/:name
 
 In the URI , the _:name_ must map to a listener and the _:service_ must map to a
 service. Both names must have all whitespace replaced with hyphens.
+
+When a listener is destroyed, the network port it listens on is available for
+reuse.
 
 #### Response
 

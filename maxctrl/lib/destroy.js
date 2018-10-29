@@ -34,11 +34,7 @@ exports.builder = function(yargs) {
             })
         })
         .command('listener <service> <name>', 'Destroy an unused listener', function(yargs) {
-            return yargs.epilog('Destroying a monitor causes it to be removed on the next restart. ' +
-                                'Destroying a listener at runtime stops it from accepting new ' +
-                                'connections but it will still be bound to the listening socket. This ' +
-                                'means that new listeners cannot be created to replace destroyed listeners ' +
-                                'without restarting MaxScale.')
+            return yargs.epilog('Destroying a listener closes the listening socket, opening it up for reuse.')
                 .usage('Usage: destroy listener <service> <name>')
         }, function(argv) {
             maxctrl(argv, function(host) {

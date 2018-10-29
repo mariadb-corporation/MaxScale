@@ -1547,8 +1547,8 @@ Example: create listener my-service my-new-listener 192.168.0.101 4006
 
 You can destroy created listeners with the `destroy listener` command. This will
 remove the persisted configuration and it will not be created on the next
-startup. The listener is stopped but it will remain a part of the runtime
-configuration until the next restart.
+startup. The listener is destroyed and the listening port is immediately
+available for reuse.
 
 ```
 destroy listener - Destroy a listener
@@ -1558,7 +1558,7 @@ Usage: destroy listener SERVICE NAME
 Parameters:
 NAME Listener to destroy
 
-The listener is stopped and it will be removed on the next restart of MaxScale
+The listener is deleted
 
 Example: destroy listener my-listener
 ```
@@ -1615,9 +1615,7 @@ Example: alter monitor my-monitor user=maxuser password=maxpwd
 ### Destroying Monitors
 
 To destroy a monitor, use the `destroy monitor` command. All servers need to be
-removed from the monitor before it can be destroyed. Only created monitors
-should be destroyed and they will remain a part of the runtime configuration
-until the next restart.
+removed from the monitor before it can be destroyed.
 
 ```
 destroy monitor - Destroy a monitor
@@ -1627,7 +1625,7 @@ Usage: destroy monitor NAME
 Parameters:
 NAME Monitor to destroy
 
-The monitor is stopped and it will be removed on the next restart of MaxScale
+The monitor is destroyed
 
 Example: destroy monitor my-monitor
 ```

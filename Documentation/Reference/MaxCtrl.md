@@ -523,10 +523,7 @@ The monitor must be unlinked from all servers before it can be destroyed.
 
 `Usage: destroy listener <service> <name>`
 
-Destroying a monitor causes it to be removed on the next restart. Destroying a
-listener at runtime stops it from accepting new connections but it will still be
-bound to the listening socket. This means that new listeners cannot be created
-to replace destroyed listeners without restarting MaxScale.
+Destroying a listener closes the listening socket, opening it up for reuse.
 
 ### destroy service
 

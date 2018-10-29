@@ -751,6 +751,11 @@ bool service_remove_listener(Service* service, const char* target)
             {
                 listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
                 rval = true;
+
+                // TODO: This is not pretty but it works, revise when listeners are refactored. This is
+                // thread-safe as the listener is freed on the same thread that closes the socket.
+                close(listener->listener->fd);
+                listener->listener->fd = -1;
             }
             break;
         }

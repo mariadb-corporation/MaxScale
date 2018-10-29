@@ -1274,6 +1274,11 @@ void dcb_final_close(DCB* dcb)
                 }
             }
         }
+        else
+        {
+            // Only listeners are closed with a fd of -1
+            mxb_assert(dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
+        }
 
         dcb->state = DCB_STATE_DISCONNECTED;
         dcb_remove_from_list(dcb);
