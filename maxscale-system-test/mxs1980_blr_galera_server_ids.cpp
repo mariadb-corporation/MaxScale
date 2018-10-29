@@ -59,8 +59,8 @@ void test_sleep(int seconds)
 // The amount of time slept between various operations that are
 // expected to take some time before becoming visible.
 
-const int HEARTBEAT_PERIOD  = 2; // Seconds
-const int REPLICATION_SLEEP = 6; // Seconds
+const int HEARTBEAT_PERIOD = 2;     // Seconds
+const int REPLICATION_SLEEP = 6;    // Seconds
 
 string get_gtid_current_pos(TestConnections& test, MYSQL* pMysql)
 {
@@ -247,7 +247,7 @@ void select(TestConnections& test, MYSQL* pSlave)
 bool insert_select(TestConnections& test, MYSQL* pSlave, MYSQL* pMaster)
 {
     insert(test, pMaster);
-    test_sleep(REPLICATION_SLEEP); // To ensure that the insert reaches the slave.
+    test_sleep(REPLICATION_SLEEP);      // To ensure that the insert reaches the slave.
     select(test, pSlave);
 
     return test.global_result == 0;
@@ -334,7 +334,7 @@ void restore_server_ids(TestConnections& test, const map<int, string>& server_id
 {
     for_each(server_ids_by_index.begin(),
              server_ids_by_index.end(),
-             [&test] (const pair<int, string>& server_id_by_index) {
+             [&test](const pair<int, string>& server_id_by_index) {
                  test.try_query(test.galera->nodes[server_id_by_index.first],
                                 "set GLOBAL server_id=%s", server_id_by_index.second.c_str());
              });
@@ -345,9 +345,9 @@ void restart_slave(TestConnections& test, MYSQL* pSlave)
 {
     Row row;
 
-    auto replication_failed = [] (const std::string& column) {
-        return column.find("Got fatal error") != string::npos;
-    };
+    auto replication_failed = [](const std::string& column) {
+            return column.find("Got fatal error") != string::npos;
+        };
 
     cout << "Stopping slave." << endl;
     test.try_query(pSlave, "STOP SLAVE");
@@ -404,7 +404,6 @@ bool test_multiple_masters(TestConnections& test, MYSQL* pSlave)
 
     return test.global_result == 0;
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -419,7 +418,7 @@ int main(int argc, char* argv[])
     if (!dont_setup_galera)
     {
         setup_galera(test);
-        test.galera->start_replication(); // Causes restart.
+        test.galera->start_replication();   // Causes restart.
     }
 
     const char* zValue;
@@ -441,7 +440,7 @@ int main(int argc, char* argv[])
 
     if (setup_server_ids(test, &server_ids_by_index))
     {
-        for (Approach approach : { Approach::GTID, Approach::FILE_POS } )
+        for (Approach approach : {Approach::GTID, Approach::FILE_POS})
         {
             inserted_rows = 0;
 
@@ -483,7 +482,7 @@ int main(int argc, char* argv[])
             {
                 if (setup_blr(test, pMaxscale, gtid, approach))
                 {
-                    int slave_index = test.repl->N - 1; // We use the last slave.
+                    int slave_index = test.repl->N - 1;     // We use the last slave.
 
                     Mariadb_nodes& ms = *test.repl;
                     ms.connect(slave_index);

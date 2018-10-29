@@ -93,7 +93,7 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
-    Service* service = new( std::nothrow) Service(name, router, params);
+    Service* service = new(std::nothrow) Service(name, router, params);
 
     if (service == nullptr)
     {

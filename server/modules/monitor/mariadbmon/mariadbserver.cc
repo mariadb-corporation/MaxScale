@@ -1471,7 +1471,7 @@ bool MariaDBServer::promote(ClusterOperation& op)
     else if (op.type == OperationType::FAILOVER)
     {
         stopped = remove_slave_conns(op, {*master_conn});
-        master_conn = NULL; // The connection pointed to may no longer exist.
+        master_conn = NULL;     // The connection pointed to may no longer exist.
     }
 
     if (stopped)

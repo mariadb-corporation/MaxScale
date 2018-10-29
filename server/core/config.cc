@@ -2516,7 +2516,7 @@ static int handle_global_item(const char* name, const char* value)
         if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
         {
             MXS_WARNING("The specified writeq high water mark %lu, is smaller "
-                "than the minimum allowed size %lu. Changing to minimum.",
+                        "than the minimum allowed size %lu. Changing to minimum.",
                         gateway.writeq_high_water,
                         MIN_WRITEQ_HIGH_WATER);
             gateway.writeq_high_water = MIN_WRITEQ_HIGH_WATER;
@@ -2534,7 +2534,7 @@ static int handle_global_item(const char* name, const char* value)
         if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
         {
             MXS_WARNING("The specified writeq low water mark %lu, is smaller "
-                "than the minimum allowed size %lu. Changing to minimum.",
+                        "than the minimum allowed size %lu. Changing to minimum.",
                         gateway.writeq_low_water,
                         MIN_WRITEQ_LOW_WATER);
             gateway.writeq_low_water = MIN_WRITEQ_LOW_WATER;
