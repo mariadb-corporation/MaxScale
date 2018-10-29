@@ -1274,7 +1274,7 @@ static bool ensure_dir_ok(const char* path, int mode)
         if (rp)
         {
             /** Make sure the directory exists */
-            if (mkdir(rp, 0774) == 0 || errno == EEXIST)
+            if (mkdir(rp, 0770) == 0 || errno == EEXIST)
             {
                 if (access(rp, mode) == 0)
                 {
