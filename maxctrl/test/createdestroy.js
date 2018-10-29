@@ -137,7 +137,7 @@ describe("Create/Destroy Commands", function() {
 
     it('will not destroy static listener', function() {
         return doCommand('destroy listener RW-Split-Router RW-Split-Listener')
-            .should.be.rejected
+            .should.be.fulfilled
     })
 
     it('create user', function() {

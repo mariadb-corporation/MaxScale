@@ -1032,7 +1032,6 @@ bool runtime_create_listener(Service* service,
 
 bool runtime_destroy_listener(Service* service, const char* name)
 {
-    bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), name);
 
@@ -1043,20 +1042,20 @@ bool runtime_destroy_listener(Service* service, const char* name)
         if (errno != ENOENT)
         {
             MXS_ERROR("Failed to remove persisted listener configuration '%s': %d, %s",
-                      filename,
-                      errno,
-                      mxs_strerror(errno));
+                      filename, errno, mxs_strerror(errno));
+            return false;
         }
         else
         {
-            config_runtime_error("Persisted configuration file for listener '%s' was not "
-                                 "found. This means that the listener was not created at "
-                                 "runtime. Remove the listener manually from the correct "
-                                 "configuration file.",
-                                 name);
+            MXS_WARNING("Persisted configuration file for listener '%s' was not found. This means that the "
+                        "listener was not created at runtime. Remove the listener manually from the correct "
+                        "configuration file to permanently destroy the listener.", name);
         }
     }
-    else if (!service_remove_listener(service, name))
+
+    bool rval = false;
+
+    if (!service_remove_listener(service, name))
     {
         MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name);
         config_runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name);

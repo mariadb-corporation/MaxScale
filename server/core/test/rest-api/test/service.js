@@ -165,7 +165,7 @@ describe("Service", function() {
 
     it("destroy a static listener", function() {
         return request.delete(base_url + "/services/RW-Split-Router/listeners/RW-Split-Listener")
-            .should.be.rejected
+            .should.be.fulfilled
     });
 
     after(stopMaxScale)
