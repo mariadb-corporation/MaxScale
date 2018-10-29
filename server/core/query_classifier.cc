@@ -174,7 +174,7 @@ public:
         mxb_assert(peek(canonical_stmt) == nullptr);
         mxb_assert(this_unit.classifier);
 
-        int64_t cache_max_size = this_unit.cache_max_size();
+        int64_t cache_max_size = this_unit.cache_max_size() / config_get_global_options()->n_threads;
         int64_t size = canonical_stmt.size();
 
         if (size <= cache_max_size)

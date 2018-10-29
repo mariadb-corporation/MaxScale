@@ -1209,27 +1209,17 @@ bool config_load_global(const char* filename)
     {
         log_config_error(filename, rval);
     }
+    else if (gateway.qc_cache_properties.max_size == -1)
+    {
+        gateway.qc_cache_properties.max_size = 0;
+        MXS_WARNING("Failed to automatically detect available system memory: disabling the query classifier "
+                    "cache. To enable it, add '%s' to the configuration file.",
+                    CN_QUERY_CLASSIFIER_CACHE_SIZE);
+    }
     else
     {
-        // Do some post-processing for auto-sized default variables
-        if (gateway.qc_cache_properties.max_size == -1)
-        {
-            int64_t mem_per_thr = get_total_memory() * 0.4 / gateway.n_threads;
-            mxb_assert(mem_per_thr >= 0);
-            gateway.qc_cache_properties.max_size = mem_per_thr;
-
-            if (mem_per_thr == 0)
-            {
-                MXS_WARNING("Could not auto-detect total system memory for the query classifier "
-                            "cache. Manually define `%s` to enable it.",
-                            CN_QUERY_CLASSIFIER_CACHE_SIZE);
-            }
-            else
-            {
-                MXS_NOTICE("Using up to %s of memory for query classifier cache",
-                           mxb::to_binary_size(mem_per_thr * gateway.n_threads).c_str());
-            }
-        }
+        MXS_NOTICE("Using up to %s of memory for query classifier cache",
+                   mxb::to_binary_size(gateway.qc_cache_properties.max_size).c_str());
     }
 
     return rval == 0;
@@ -2801,8 +2791,13 @@ void config_set_global_defaults()
     gateway.peer_password[0] = '\0';
     gateway.log_target = MXB_LOG_TARGET_DEFAULT;
 
-    // Note: This is not a valid cache value: it is used to detect that the default value is used
-    gateway.qc_cache_properties.max_size = -1;
+    gateway.qc_cache_properties.max_size = get_total_memory() * 0.4;
+
+    if (gateway.qc_cache_properties.max_size == 0)
+    {
+        // Set to -1 so that we know the auto-sizing failed.
+        gateway.qc_cache_properties.max_size = -1;
+    }
 
     gateway.thread_stack_size = 0;
     gateway.writeq_high_water = 0;

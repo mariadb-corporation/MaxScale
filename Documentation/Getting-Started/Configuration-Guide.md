@@ -572,9 +572,10 @@ the cache. The size of the cache can be specifed as explained [here](#sizes).
 query_classifier_cache_size=1MB
 ```
 
-Note that MaxScale uses a separate cache for each worker thread. So, the total
-amount of memory used at most by the cache is obtained by multiplying the size
-specified here, with the value of `threads`.
+Note that MaxScale uses a separate cache for each worker thread. To obtain the
+amount of memory available for each thread, divide the cache size with the value
+of `threads`. If statements are evicted from the cache (visible in the
+diagnostic output), consider increasing the cache size.
 
 ##### `log_unrecognized_statements`
 
