@@ -16,6 +16,13 @@ Secondary masters can now be specified also when file + position
 based replication is used. Earlier it was possible only in conjunction
 with GTID based replication.
 
+### `mmmon` and `ndbclustermon`
+
+Both of these modules have been deprecated and will be removed in a future
+release. The functionality in `mmmon` has been largely obsoleted by the
+advancements in `mariadbmon`. The `ndbclustermon` is largely obsolete due to the
+fact that there are virtually no users who use it.
+
 ## New Features
 
 ### MaxCtrl

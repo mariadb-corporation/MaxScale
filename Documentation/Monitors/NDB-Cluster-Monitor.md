@@ -1,5 +1,7 @@
 # NDB Cluster Monitor
 
+**NOTE:** This module has been deprecated, do not use it.
+
 ## Overview
 
 The MySQL Cluster Monitor is a monitoring module for MaxScale that monitors a MySQL Cluster. It assigns a NDB status for the server if it is a part of a MySQL Cluster.
