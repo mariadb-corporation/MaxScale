@@ -98,6 +98,8 @@ module.exports = function() {
             })
     }
 
+
+    // Filter and format a JSON API resource from JSON to a table
     this.filterResource = function (res, fields) {
         table = []
 
@@ -120,6 +122,8 @@ module.exports = function() {
         return table
     }
 
+
+    // Convert a table that was generated from JSON into a string
     this.tableToString = function(table) {
 
         if (this.argv.tsv)
@@ -137,12 +141,15 @@ module.exports = function() {
         return str
     }
 
+
     // Get a resource as raw collection; a matrix of strings
     this.getRawCollection = function (host, resource, fields) {
         return getJson(host, resource)
             .then((res) => filterResource(res, fields))
     }
 
+
+    // Convert the raw matrix of strings into a formatted string
     this.rawCollectionAsTable = function (arr, fields) {
         var header = []
 
@@ -158,13 +165,15 @@ module.exports = function() {
         return tableToString(table)
     }
 
-    // Request a resource collection and format it as a table
+
+    // Request a resource collection and format it as a string
     this.getCollection = function (host, resource, fields) {
         return getRawCollection(host, resource, fields)
             .then((res) => rawCollectionAsTable(res, fields))
     }
 
-    // Request a part of a resource as a collection
+
+    // Request a part of a resource as a collection and return it as a string
     this.getSubCollection = function (host, resource, subres, fields) {
 
         return doRequest(host, resource, function(res) {
@@ -197,6 +206,8 @@ module.exports = function() {
         })
     }
 
+
+    // Format and filter a JSON object into a string by using a key-value list
     this.formatResource = function (fields, data) {
         var table = getList()
 
@@ -219,13 +230,16 @@ module.exports = function() {
         return tableToString(table)
     }
 
-    // Request a single resource and format it as a key-value list
+
+    // Request a single resource and format it with a key-value list
     this.getResource = function (host, resource, fields) {
         return doRequest(host, resource, (res) => {
             return formatResource(fields, res.data)
         })
     }
 
+
+    // Perform a getResource on a collection of resources and return it in string format
     this.getCollectionAsResource = function(host, resource, fields) {
         return doRequest(host, resource, (res) => {
             //return formatResource(fields, res.data[0])
@@ -233,6 +247,8 @@ module.exports = function() {
         })
     }
 
+
+    // Perform a PATCH on a resource
     this.updateValue = function(host, resource, key, value) {
         var body = {}
 
@@ -247,6 +263,7 @@ module.exports = function() {
         return doRequest(host, resource, null, { method: 'PATCH', body: body })
     }
 
+
     // Helper for converting endpoints to acutal URLs
     this.getUri = function(host, secure, endpoint) {
         var base = 'http://'
@@ -258,11 +275,14 @@ module.exports = function() {
         return base + argv.u + ':' + argv.p + '@' + host + '/v1/' + endpoint
     }
 
+
+    // Return an OK message
     this.OK = function() {
         return Promise.resolve(colors.green('OK'))
     }
 
 
+    // Set TLS certificates
     this.setTlsCerts = function(args) {
         args.agentOptions = {}
         if (this.argv['tls-key']) {
@@ -286,6 +306,7 @@ module.exports = function() {
             }
         }
     }
+
 
     // Helper for executing requests and handling their responses, returns a
     // promise that is fulfilled when all requests successfully complete. The
@@ -319,20 +340,31 @@ module.exports = function() {
             })
     }
 
+
+    // Perform a request, alias for doAsyncRequest
     this.doRequest = function(host, resource, cb, obj) {
         return doAsyncRequest(host, resource, cb, obj)
     }
 
+
+    // Perform a request and return the resulting JSON as a promise
     this.getJson = function(host, resource) {
         return doAsyncRequest(host, resource, (res) => {
             return res
         })
     }
 
+
+    // Return an error message as a rejected promise
     this.error = function(err) {
         return Promise.reject(colors.red('Error: ') +  err)
     }
 }
+
+
+//
+// The following are mainly for internal use
+//
 
 var tsvopts = {
     chars: {
