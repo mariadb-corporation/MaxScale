@@ -47,6 +47,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Syncing slaves");
     test.stop_timeout();
+    test.repl->fix_replication();
     test.repl->sync_slaves();
     test.set_timeout(60);
 
