@@ -1,5 +1,7 @@
 [maxscale]
 threads=###threads###
+query_retries=2
+query_retry_timeout=10
 
 [MySQL-Monitor]
 type=monitor
