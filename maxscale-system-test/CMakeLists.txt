@@ -1084,4 +1084,10 @@ add_test_executable(mxs2043_select_for_update.cpp mxs2043_select_for_update repl
 # MXS-2054: Hybrid clusters
 add_test_executable(mxs2054_hybrid_cluster.cpp mxs2054_hybrid_cluster mxs2054_hybrid_cluster LABELS REPL_BACKEND)
 
+# MXS-2111: mysql.user sometimes has SHA1 in authentication_string instead of password
+add_test_executable(mxs2111_auth_string.cpp mxs2111_auth_string replication LABELS REPL_BACKEND)
+
+# MXS-2115: Automatic version_string detection
+add_test_executable(mxs2115_version_string.cpp mxs2115_version_string replication LABELS REPL_BACKEND)
+
 configure_file(templates.h.in ${CMAKE_CURRENT_BINARY_DIR}/templates.h @ONLY)

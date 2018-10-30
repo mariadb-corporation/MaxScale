@@ -160,7 +160,7 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    int fd = open(path, binlog_file.fix ? O_RDWR : O_RDONLY, 0666);
+    int fd = open(path, binlog_file.fix ? O_RDWR : O_RDONLY, 0660);
     if (fd == -1)
     {
         printf("ERROR: Failed to open binlog file %s: %s.\n",

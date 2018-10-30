@@ -15,12 +15,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
 #include <crypt.h>
 #include <sys/stat.h>
 #include <string>
 
+#include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/log.h>
@@ -60,8 +62,6 @@ void admin_users_init()
 
 static bool admin_dump_users(USERS* users, const char* fname)
 {
-    char path[PATH_MAX];
-
     if (access(get_datadir(), F_OK) != 0)
     {
         if (mkdir(get_datadir(), S_IRWXU) != 0 && errno != EEXIST)
@@ -74,17 +74,40 @@ static bool admin_dump_users(USERS* users, const char* fname)
         }
     }
 
-    snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
-    json_t* json = users_to_json(users);
-    bool rval = true;
+    bool rval = false;
+    std::string path = std::string(get_datadir()) + "/" + fname;
+    std::string tmppath = path + ".tmp";
 
-    if (json_dump_file(json, path, 0) == -1)
+    int fd = open(tmppath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+
+    if (fd == -1)
     {
-        MXS_ERROR("Failed to dump admin users to file");
-        rval = false;
+        MXS_ERROR("Failed to create '%s': %d, %s", tmppath.c_str(), errno, mxs_strerror(errno));
     }
+    else
+    {
+        json_t* json = users_to_json(users);
+        char* str = json_dumps(json, 0);
+        json_decref(json);
 
-    json_decref(json);
+        if (write(fd, str, strlen(str)) == -1)
+        {
+            MXS_ERROR("Failed to dump admin users to '%s': %d, %s",
+                      tmppath.c_str(), errno, mxs_strerror(errno));
+        }
+        else if (rename(tmppath.c_str(), path.c_str()) == -1)
+        {
+            MXS_ERROR("Failed to rename to '%s': %d, %s",
+                      path.c_str(), errno, mxs_strerror(errno));
+        }
+        else
+        {
+            rval = true;
+        }
+
+        MXS_FREE(str);
+        close(fd);
+    }
 
     return rval;
 }

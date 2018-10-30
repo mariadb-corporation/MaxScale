@@ -4055,21 +4055,22 @@ static bool check_path_parameter(const MXS_MODULE_PARAM* params, const char* val
         }
 
         int mode = F_OK;
-        int mask = X_OK;
+        int mask = 0;
 
         if (params->options & MXS_MODULE_OPT_PATH_W_OK)
         {
-            mask |= S_IWUSR;
+            mask |= S_IWUSR | S_IWGRP;
             mode |= W_OK;
         }
         if (params->options & MXS_MODULE_OPT_PATH_R_OK)
         {
-            mask |= S_IRUSR | S_IRGRP | S_IROTH;
+            mask |= S_IRUSR | S_IRGRP;
             mode |= R_OK;
         }
         if (params->options & MXS_MODULE_OPT_PATH_X_OK)
         {
-            mask |= S_IXUSR | S_IXGRP | S_IXOTH;
+            mask |= S_IXUSR | S_IXGRP;
+            mode |= X_OK;
         }
 
         if (access(buf, mode) == 0)

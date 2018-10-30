@@ -55,29 +55,33 @@
     ON (u.user = t.user AND u.host = t.host) WHERE u.plugin IN ('', 'mysql_native_password') %s"
 
 // Used with 10.2 or newer, supports composite roles
-const char* mariadb_102_users_query
-    =   // `t` is users that are not roles
-        "WITH RECURSIVE t AS ( "
-        "  SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role, u.default_role"
-        "  FROM mysql.user AS u LEFT JOIN mysql.db AS d "
-        "  ON (u.user = d.user AND u.host = d.host) "
-        "  UNION "
-        "  SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role, u.default_role "
-        "  FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-        "  ON (u.user = t.user AND u.host = t.host)"
-        "), users AS ("
-        // Select the root row, the actual user
-        "  SELECT t.user, t.host, t.db, t.select_priv, t.password, t.default_role AS role FROM t"
-        "  WHERE t.is_role <> 'Y'"
-        "  UNION"
-        // Recursively select all roles for the users
-        "  SELECT u.user, u.host, t.db, t.select_priv, u.password, r.role FROM t"
-        "  JOIN users AS u"
-        "  ON (t.user = u.role)"
-        "  LEFT JOIN mysql.roles_mapping AS r"
-        "  ON (t.user = r.user)"
-        ")"
-        "SELECT DISTINCT t.user, t.host, t.db, t.select_priv, t.password FROM users AS t %s";
+const char* mariadb_102_users_query =
+    // `t` is users that are not roles
+    "WITH RECURSIVE t AS ( "
+    "  SELECT u.user, u.host, d.db, u.select_priv, "
+    "         IF(u.password <> '', u.password, u.authentication_string) AS password, "
+    "         u.is_role, u.default_role"
+    "  FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "  ON (u.user = d.user AND u.host = d.host) "
+    "  UNION "
+    "  SELECT u.user, u.host, t.db, u.select_priv, "
+    "         IF(u.password <> '', u.password, u.authentication_string), "
+    "         u.is_role, u.default_role "
+    "  FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "  ON (u.user = t.user AND u.host = t.host)"
+    "), users AS ("
+    // Select the root row, the actual user
+    "  SELECT t.user, t.host, t.db, t.select_priv, t.password, t.default_role AS role FROM t"
+    "  WHERE t.is_role <> 'Y'"
+    "  UNION"
+    // Recursively select all roles for the users
+    "  SELECT u.user, u.host, t.db, t.select_priv, u.password, r.role FROM t"
+    "  JOIN users AS u"
+    "  ON (t.user = u.role)"
+    "  LEFT JOIN mysql.roles_mapping AS r"
+    "  ON (t.user = r.user)"
+    ")"
+    "SELECT DISTINCT t.user, t.host, t.db, t.select_priv, t.password FROM users AS t %s";
 
 // Query used with MariaDB 10.1, supports basic roles
 const char* mariadb_users_query
@@ -930,11 +934,12 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
     return rval;
 }
 
-static void report_mdev13453_problem(MYSQL* con, SERVER* server)
+static bool have_mdev13453_problem(MYSQL *con, SERVER *server)
 {
-    if (server->version >= 100200 && server->version < 100211
-        && mxs_pcre2_simple_match("SELECT command denied to user .* for table 'users'",
-                                  mysql_error(con), 0, NULL) == MXS_PCRE2_MATCH)
+    bool rval = false;
+
+    if (mxs_pcre2_simple_match("SELECT command denied to user .* for table 'users'",
+                               mysql_error(con), 0, NULL) == MXS_PCRE2_MATCH)
     {
         char user[256] = "<failed to query user>";      // Enough for all user-hostname combinations
         const char* quoted_user = "select concat(\"'\", user, \"'@'\", host, \"'\") as user "
@@ -954,9 +959,51 @@ static void report_mdev13453_problem(MYSQL* con, SERVER* server)
             mysql_free_result(res);
         }
 
-        MXS_ERROR("Due to MDEV-13453, the service user requires extra grants on the `mysql` database. "
-                  "To fix the problem, add the following grant: GRANT SELECT ON `mysql`.* TO %s", user);
+        MXS_WARNING("Due to MDEV-13453, the service user requires extra grants on the `mysql` database in "
+                    "order for roles to be used. To fix the problem, add the following grant: "
+                    "GRANT SELECT ON `mysql`.* TO %s", user);
+        rval = true;
     }
+
+    return rval;
+}
+
+bool query_and_process_users(const char* query, MYSQL *con, sqlite3* handle, SERVICE* service, int* users)
+{
+    bool rval = false;
+
+    if (mxs_mysql_query(con, "USE mysql") == 0 && // Set default database in case we use CTEs
+        mxs_mysql_query(con, query) == 0)
+    {
+        MYSQL_RES *result = mysql_store_result(con);
+
+        if (result)
+        {
+            MYSQL_ROW row;
+
+            while ((row = mysql_fetch_row(result)))
+            {
+                if (service->strip_db_esc)
+                {
+                    strip_escape_chars(row[2]);
+                }
+
+                if (strchr(row[1], '/'))
+                {
+                    merge_netmask(row[1]);
+                }
+
+                add_mysql_user(handle, row[0], row[1], row[2],
+                               row[3] && strcmp(row[3], "Y") == 0, row[4]);
+                (*users)++;
+            }
+
+            mysql_free_result(result);
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, SERV_LISTENER* listener)
@@ -975,50 +1022,25 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
     sqlite3* handle = get_handle(instance);
     int users = 0;
 
-    if (query)
+    bool rv = query_and_process_users(query, con, handle, service, &users);
+
+    if (!rv && have_mdev13453_problem(con, server_ref->server))
     {
-        if (mxs_mysql_query(con, "USE mysql") == 0      // Set default database in case we use CTEs
-            && mxs_mysql_query(con, query) == 0)
-        {
-            MYSQL_RES* result = mysql_store_result(con);
-
-            if (result)
-            {
-                MYSQL_ROW row;
-
-                while ((row = mysql_fetch_row(result)))
-                {
-                    if (service->strip_db_esc)
-                    {
-                        strip_escape_chars(row[2]);
-                    }
-
-                    if (strchr(row[1], '/'))
-                    {
-                        merge_netmask(row[1]);
-                    }
-
-                    add_mysql_user(handle,
-                                   row[0],
-                                   row[1],
-                                   row[2],
-                                   row[3] && strcmp(row[3], "Y") == 0,
-                                   row[4]);
-                    users++;
-                }
-
-                mysql_free_result(result);
-            }
-        }
-        else
-        {
-            MXS_ERROR("Failed to load users from server '%s': %s", server_ref->server->name,
-                      mysql_error(con));
-            report_mdev13453_problem(con, server_ref->server);
-        }
-
+        /**
+         * Try to work around MDEV-13453 by using a query without CTEs. Masquerading as
+         * a 10.1.10 server makes sure CTEs aren't used.
+         */
         MXS_FREE(query);
+        query = get_users_query(server_ref->server->version_string, 100110, service->enable_root, true);
+        rv = query_and_process_users(query, con, handle, service, &users);
     }
+
+    if (!rv)
+    {
+        MXS_ERROR("Failed to load users from server '%s': %s", server_ref->server->name, mysql_error(con));
+    }
+
+    MXS_FREE(query);
 
     /** Load the list of databases */
     if (mxs_mysql_query(con, "SHOW DATABASES") == 0)

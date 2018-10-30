@@ -519,7 +519,7 @@ static int blr_file_create(ROUTER_INSTANCE* router, char* orig_file)
     // Set final file name full path
     strcat(path, file);
 
-    int fd = open(path, O_RDWR | O_CREAT, 0666);
+    int fd = open(path, O_RDWR | O_CREAT, 0660);
 
     if (fd != -1)
     {
@@ -621,7 +621,7 @@ void blr_file_append(ROUTER_INSTANCE* router, char* file)
     // Add filename
     strcat(path, file);
 
-    if ((fd = open(path, flags, 0666)) == -1)
+    if ((fd = open(path, flags, 0660)) == -1)
     {
         MXS_ERROR("Failed to open binlog file %s for append.",
                   path);
@@ -940,7 +940,7 @@ BLFILE* blr_open_binlog(ROUTER_INSTANCE* router,
     /* Add file name */
     strcat(path, binlog);
 
-    if ((file->fd = open(path, O_RDONLY, 0666)) == -1)
+    if ((file->fd = open(path, O_RDONLY, 0660)) == -1)
     {
         MXS_ERROR("Failed to open binlog file %s", path);
         MXS_FREE(file);
@@ -1531,7 +1531,7 @@ void blr_cache_response(ROUTER_INSTANCE* router, char* response, GWBUF* buf)
     strcat(path, "/");
     strcat(path, response);
 
-    if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666)) == -1)
+    if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0660)) == -1)
     {
         return;
     }
