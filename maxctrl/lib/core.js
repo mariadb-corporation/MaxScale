@@ -112,6 +112,7 @@ program
     .command(require('./call.js'))
     .command(require('./cluster.js'))
     .command(require('./api.js'))
+    .command(require('./classify.js'))
     .epilog('If no commands are given, maxctrl is started in interactive mode. ' +
             'Use `exit` to exit the interactive mode.')
     .help()
