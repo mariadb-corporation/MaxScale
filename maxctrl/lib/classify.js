@@ -41,6 +41,11 @@ exports.handler = function (argv) {
 exports.builder = function(yargs) {
     yargs
         .usage('Usage: classify <statement>')
+        .epilog('Classify the statement using MaxScale and display the result. ' +
+                'The possible values for "Parse result", "Type mask" and "Operation" ' +
+                'can be looked up in ' +
+                'https://github.com/mariadb-corporation/MaxScale/blob/' +
+                '2.3/include/maxscale/query_classifier.h')
         .help()
         .command('*', 'the default command', {}, function(argv) {
             console.log("*");
