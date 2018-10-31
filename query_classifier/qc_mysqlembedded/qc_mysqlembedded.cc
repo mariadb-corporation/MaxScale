@@ -736,7 +736,16 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     /** SELECT ..INTO variable|OUTFILE|DUMPFILE */
     if (lex->result != NULL)
     {
-        type = QUERY_TYPE_GSYSVAR_WRITE;
+        if (lex->result->send_eof())
+        {
+            // SELECT ... INTO DUMPFILE|OUTFILE ...
+            type = QUERY_TYPE_WRITE;
+        }
+        else
+        {
+            // SELECT ... INTO @var
+            type = QUERY_TYPE_GSYSVAR_WRITE;
+        }
         goto return_qtype;
     }
 
