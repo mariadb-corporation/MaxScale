@@ -245,7 +245,6 @@ typedef struct
     bool    config_check;                               /**< Only check config */
     int     n_threads;                                  /**< Number of polling threads */
     size_t  thread_stack_size;                          /**< The stack size of each worker thread */
-    char*   version_string;                             /**< The version string of embedded db library */
     char    release_string[RELEASE_STR_LENGTH];         /**< The release name string of the system */
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address

@@ -135,17 +135,9 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
 
 static std::string get_version_string(MXS_CONFIG_PARAMETER* params)
 {
-
     std::string version_string = config_get_string(params, CN_VERSION_STRING);
 
-    if (version_string.empty())
-    {
-        if (config_get_global_options()->version_string)
-        {
-            version_string = config_get_global_options()->version_string;
-        }
-    }
-    else if (version_string[0] != '5')
+    if (!version_string.empty() && version_string[0] != '5')
     {
         /**
          * Add the 5.5.5- string to the start of the version string if the version

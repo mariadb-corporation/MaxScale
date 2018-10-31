@@ -234,7 +234,6 @@ void       config_fix_param(const MXS_MODULE_PARAM* params, MXS_CONFIG_PARAMETER
 
 static const char* config_file = NULL;
 static MXS_CONFIG gateway;
-char* version_string = NULL;
 static bool is_persisted_config = false;    /**< True if a persisted configuration file is being parsed */
 static CONFIG_CONTEXT config_context;
 
@@ -2816,15 +2815,6 @@ void config_set_global_defaults()
         {
             gateway.thread_stack_size = thread_stack_size;
         }
-    }
-
-    if (version_string != NULL)
-    {
-        gateway.version_string = MXS_STRDUP_A(version_string);
-    }
-    else
-    {
-        gateway.version_string = NULL;
     }
 
     /* get release string */
