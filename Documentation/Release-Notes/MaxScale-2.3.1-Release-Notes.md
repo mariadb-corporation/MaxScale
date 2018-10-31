@@ -16,6 +16,16 @@ Secondary masters can now be specified also when file + position
 based replication is used. Earlier it was possible only in conjunction
 with GTID based replication.
 
+## New Features
+
+### MaxCtrl
+
+There is now a new command `classify <statement>` using which it can
+be checked if and how MaxScale classifies a specific statement. This
+feature can be used for debugging, if there is suspicion that MaxScale
+sends a particular statement to the wrong server (e.g. to a slave when it
+should be sent to the master).
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.3.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.3.1)
