@@ -285,6 +285,10 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_
             {
                 rval = true;
             }
+            else if (row[1] && (strcmp(row[1], "xtrabackup-v2") == 0))
+            {
+                rval = true;
+            }
         }
         mysql_free_result(result);
     }
