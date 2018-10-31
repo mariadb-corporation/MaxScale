@@ -825,9 +825,6 @@ add_test_executable(compound_statement.cpp compound_statement replication LABELS
 # Check if 'weightby' parameter works
 add_test_executable(server_weight.cpp server_weight galera.weight LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
 
-# Executes a lot of session commands with "disable_sescmd_history=true" and check that memory consumption is not increasing
-add_test_executable(ses_bigmem.cpp ses_bigmem no_ses_cmd_store LABELS readwritesplit REPL_BACKEND)
-
 # test for 'max_sescmd_history' and 'connection_timeout' parameters
 add_test_executable(session_limits.cpp session_limits session_limits LABELS readwritesplit REPL_BACKEND)
 

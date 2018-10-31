@@ -43,6 +43,9 @@
 
 MXS_BEGIN_DECLS
 
+// Default version string sent to clients
+#define DEFAULT_VERSION_STRING "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"
+
 #define MYSQL_HEADER_LEN         4
 #define MYSQL_CHECKSUM_LEN       4
 #define MYSQL_EOF_PACKET_LEN     9

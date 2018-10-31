@@ -203,22 +203,33 @@ static char* gw_default_auth()
 
 std::string get_version_string(SERVICE* service)
 {
-    std::string rval;
-    uint64_t intver = UINT64_MAX;
+    std::string rval = DEFAULT_VERSION_STRING;
 
-    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+    if (service->version_string[0])
     {
-        if (ref->server->version && ref->server->version < intver)
+        // User-defined version string, use it
+        rval = service->version_string;
+    }
+    else
+    {
+        uint64_t intver = UINT64_MAX;
+
+        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
         {
-            rval = ref->server->version_string;
-            intver = ref->server->version;
+            if (ref->server->version && ref->server->version < intver)
+            {
+                rval = ref->server->version_string;
+                intver = ref->server->version;
+            }
         }
     }
 
-    // Get the version string from service if no server version is available
-    if (rval.empty())
+    // Older applications don't understand versions other than 5 and cause strange problems
+    const char prefix[] = "5.5.5-";
+
+    if (strncmp(rval.c_str(), prefix, sizeof(prefix) - 1) != 0)
     {
-        rval = service->version_string;
+        rval = prefix + rval;
     }
 
     return rval;

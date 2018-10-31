@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     /** Create a database on each node */
     for (int i = 0; i < test.repl->N; i++)
     {
-        test.set_timeout(20);
+        test.set_timeout(60);
         execute_query(test.repl->nodes[i], "set global max_connections = 600");
         execute_query(test.repl->nodes[i], "DROP DATABASE IF EXISTS shard_db%d", i);
         execute_query(test.repl->nodes[i], "CREATE DATABASE shard_db%d", i);
@@ -31,23 +31,23 @@ int main(int argc, char* argv[])
         {
             char str[256];
             sprintf(str, "shard_db%d", i);
-            test.set_timeout(30);
+            test.set_timeout(60);
             MYSQL* conn = open_conn_db(test.maxscales->rwsplit_port[0],
                                        test.maxscales->IP[0],
                                        str,
                                        test.maxscales->user_name,
                                        test.maxscales->password,
                                        test.ssl);
-            test.set_timeout(30);
+            test.set_timeout(60);
             test.add_result(execute_query(conn, "SELECT 1"), "Trying DB %d failed at %d", i, j);
             mysql_close(conn);
         }
     }
 
-    /** Create a database on each node */
+    /** Drop the databases */
     for (int i = 0; i < test.repl->N; i++)
     {
-        test.set_timeout(20);
+        test.set_timeout(60);
         execute_query(test.repl->nodes[i], "DROP DATABASE shard_db%d", i);
         test.stop_timeout();
     }
