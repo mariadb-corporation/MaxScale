@@ -1177,8 +1177,20 @@ select_into_opt(A) ::= select_into(X). {A = X;}
 %type select_into {ExprList*}
 %destructor select_into {sqlite3ExprListDelete(pParse->db, $$);}
 select_into(A) ::= INTO variables(X). {A = X;}
-select_into(A) ::= INTO DUMPFILE STRING. {A = sqlite3ExprListAppend(pParse, 0, 0);}
-select_into(A) ::= INTO OUTFILE STRING. {A = sqlite3ExprListAppend(pParse, 0, 0);}
+// In order to allow us to distinguish between "INTO @var" and
+// "INTO OUTFILE" or "INTO DUMPFILE", we give the expression list
+// a name that cannot be a variable and look for that in
+// maxscaleCollectInfoFromSelect().
+select_into(A) ::= INTO DUMPFILE STRING. {
+    static Token dumpfile = { ":DUMPFILE:", 10 };
+    A = sqlite3ExprListAppend(pParse, 0, 0);
+    sqlite3ExprListSetName(pParse, A, &dumpfile, 1);
+}
+select_into(A) ::= INTO OUTFILE STRING. {
+    static Token outfile = { ":OUTFILE:", 9 };
+    A = sqlite3ExprListAppend(pParse, 0, 0);
+    sqlite3ExprListSetName(pParse, A, &outfile, 1);
+}
 
 %type select_options {int}
 select_options(A) ::= . {A = 0;}

@@ -2004,9 +2004,26 @@ public:
 
         if (pSelect->pInto)
         {
-            // If there's a single variable, then it's a write.
-            // mysql embedded considers it a system var write.
-            m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+            const ExprList* pInto = pSelect->pInto;
+            mxb_assert(pInto->nExpr >= 1);
+
+            if ((pInto->nExpr == 1)
+                && (pInto->a[0].zName)
+                && ((strcmp(pInto->a[0].zName, ":DUMPFILE:") == 0)
+                    || (strcmp(pInto->a[0].zName, ":OUTFILE:") == 0)))
+            {
+                // If there is exactly one expression that has a name that is either
+                // ":DUMPFILE:" or ":OUTFILE:" then it's a SELECT ... INTO OUTFILE|DUMPFILE
+                // and the statement needs to go to master.
+                // See in parse.y, the rule for select_into.
+                m_type_mask = QUERY_TYPE_WRITE;
+            }
+            else
+            {
+                // If there's a single variable, then it's a write.
+                // mysql embedded considers it a system var write.
+                m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+            }
 
             // Also INTO {OUTFILE|DUMPFILE} will be typed as QUERY_TYPE_GSYSVAR_WRITE.
         }
