@@ -25,3 +25,6 @@ SELECT IS_USED_LOCK('lock1');
 SELECT RELEASE_LOCK('lock1');
 deallocate prepare select_stmt;
 SELECT a FROM tbl FOR UPDATE;
+SELECT a INTO OUTFILE 'out.txt'
+SELECT a INTO DUMPFILE 'dump.txt'
+SELECT a INTO @var;
