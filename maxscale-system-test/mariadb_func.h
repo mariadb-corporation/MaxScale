@@ -323,10 +323,10 @@ public:
         return get_row(m_conn, q);
     }
 
-    std::string field(std::string q)
+    std::string field(std::string q, int idx = 0)
     {
         Row r = get_row(m_conn, q);
-        return r.empty() ? std::string() : r[0];
+        return r.empty() ? std::string() : r[idx];
     }
 
     const char* error() const

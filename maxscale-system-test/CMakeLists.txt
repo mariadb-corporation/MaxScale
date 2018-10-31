@@ -61,6 +61,9 @@ add_test_executable(config_test.cpp config_test replication LABELS CONFIG)
 
 add_subdirectory(cdc_datatypes)
 
+# Routing sanity check
+add_test_executable(sanity_check.cpp sanity_check replication LABELS LIGHT REPL_BACKEND)
+
 # Repeatedly connect to maxscale while the backends reject all connections, expect no crash
 add_test_executable(backend_auth_fail.cpp backend_auth_fail replication LABELS readconnroute REPL_BACKEND)
 
