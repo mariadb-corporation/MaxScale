@@ -39,6 +39,7 @@ enum maxavro_value_type
     MAXAVRO_TYPE_BYTES,
     MAXAVRO_TYPE_ENUM,
     MAXAVRO_TYPE_NULL,
+    MAXAVRO_TYPE_UNION,
     MAXAVRO_TYPE_MAX
 };
 

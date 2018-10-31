@@ -561,7 +561,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                                 uint8_t *ptr, uint8_t *columns_present, uint8_t *end)
 {
     int npresent = 0;
-    avro_value_t field;
+    avro_value_t union_value;
     long ncolumns = map->columns;
     uint8_t *metadata = map->column_metadata;
     size_t metadata_offset = 0;
@@ -580,24 +580,20 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
 
     for (long i = 0; i < ncolumns && npresent < ncolumns; i++)
     {
-        ss_debug(int rc = )avro_value_get_by_name(record, create->column_names[i], &field, NULL);
+        ss_debug(int rc = )avro_value_get_by_name(record, create->column_names[i], &union_value, NULL);
         ss_dassert(rc == 0);
 
         if (bit_is_set(columns_present, ncolumns, i))
         {
+            avro_value_t field;
+            avro_value_set_branch(&union_value, 1, &field);
             npresent++;
+
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
                 sprintf(trace[i], "[%ld] NULL", i);
-                if (column_is_blob(map->column_types[i]))
-                {
-                    uint8_t nullvalue = 0;
-                    avro_value_set_bytes(&field, &nullvalue, 1);
-                }
-                else
-                {
-                    avro_value_set_null(&field);
-                }
+                avro_value_set_branch(&union_value, 0, &field);
+                avro_value_set_null(&field);
             }
             else if (column_is_fixed_string(map->column_types[i]))
             {

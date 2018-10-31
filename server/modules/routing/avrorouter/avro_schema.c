@@ -130,9 +130,9 @@ char* json_new_schema_from_table(TABLE_MAP *map)
         ss_info_dassert(create->column_types[i] && *create->column_types[i],
                         "Column type should not be empty or NULL");
 
-        json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
+        json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:[s, s], s:s, s:i}",
                                                   "name", create->column_names[i],
-                                                  "type", column_type_to_avro_type(map->column_types[i]),
+                                                  "type", "null", column_type_to_avro_type(map->column_types[i]),
                                                   "real_type", create->column_types[i],
                                                   "length", create->column_lengths[i]));
     }

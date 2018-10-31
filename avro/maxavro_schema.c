@@ -78,6 +78,13 @@ static enum maxavro_value_type unpack_to_type(json_t *object,
     enum maxavro_value_type rval = MAXAVRO_TYPE_UNKNOWN;
     json_t* type = NULL;
 
+    if (json_is_array(object) && json_is_object(json_array_get(object, 0)))
+    {
+        json_incref(object);
+        field->extra = object;
+        return MAXAVRO_TYPE_UNION;
+    }
+
     if (json_is_object(object))
     {
         json_t *tmp = NULL;
@@ -191,7 +198,7 @@ static void maxavro_schema_field_free(MAXAVRO_SCHEMA_FIELD *field)
     if (field)
     {
         MXS_FREE(field->name);
-        if (field->type == MAXAVRO_TYPE_ENUM)
+        if (field->type == MAXAVRO_TYPE_ENUM || field->type == MAXAVRO_TYPE_UNION)
         {
             json_decref((json_t*)field->extra);
         }
