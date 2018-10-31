@@ -712,6 +712,12 @@ TABLE_CREATE* table_create_alloc(const char* ident, const char* sql, int len)
     const char* statement_sql = get_table_definition(sql, len, &stmt_len);
     ss_dassert(statement_sql);
 
+    if (!statement_sql)
+    {
+        MXS_ERROR("Cannot process SQL: %.*s", len, sql);
+        return NULL;
+    }
+
     char* tbl_start = strchr(ident, '.');
     ss_dassert(tbl_start);
     *tbl_start++ = '\0';
