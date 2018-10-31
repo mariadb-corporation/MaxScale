@@ -61,7 +61,13 @@ add_test_executable(config_test.cpp config_test replication LABELS CONFIG)
 
 add_subdirectory(cdc_datatypes)
 
-# Routing sanity check
+# Routing sanity check. Also acts as the regression test case the following issues:
+#
+# MXS-127
+# MXS-47
+# MXS-682
+# MXS-957
+# MXS-1786
 add_test_executable(sanity_check.cpp sanity_check replication LABELS LIGHT REPL_BACKEND)
 
 # Repeatedly connect to maxscale while the backends reject all connections, expect no crash
@@ -70,14 +76,8 @@ add_test_executable(backend_auth_fail.cpp backend_auth_fail replication LABELS r
 # Regression case for the bug "MaxScale ignores host in user authentication"
 add_test_executable(bug143.cpp bug143 replication LABELS MySQLAuth REPL_BACKEND)
 
-# Regression case for the bug "Executing '\s' doesn't always produce complete result set"
-add_test_executable(bug422.cpp bug422 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
-
 # Regression case for the bug "Wildcard in host column of mysql.user table don't work properly"
 add_test_executable(bug448.cpp bug448 replication LABELS MySQLAuth LIGHT REPL_BACKEND)
-
-# Regression case for the bug "rwsplit counts every connection twice in master - counnection counts leak"
-add_test_executable(bug469.cpp bug469 replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Regression case for the bug "Routing Hints route to server sometimes doesn't work"
 add_test_executable(bug471.cpp bug471 bug471 LABELS readwritesplit hintfilter REPL_BACKEND)
@@ -87,15 +87,6 @@ add_test_executable(bug473.cpp bug473 hints LABELS readwritesplit hintfilter REP
 
 # Regression case for the bug "The end comment tag in hints isn't properly detected"
 add_test_executable(bug475.cpp bug475 hints LABELS readwritesplit hintfilter REPL_BACKEND)
-
-# Regression case for the bug "SHOW VARIABLES randomly failing with "Lost connection to MySQL server"
-add_test_executable(bug488.cpp bug488 galera LABELS readwritesplit readconnroute maxscale GALERA_BACKEND)
-
-# Regression case for the bug "rw-split router does not send last_insert_id() to master"
-add_test_executable(bug507.cpp bug507 replication LABELS readwritesplit LIGHT REPL_BACKEND)
-
-# Regression case for the bug "Referring to a nonexisting server in servers=... doesn't even raise a warning"
-add_test_executable(bug509.cpp bug509 galera LABELS readwritesplit GALERA_BACKEND)
 
 # Checks "SELECT * INTO OUTFILE" and "LOAD DATA LOCAL INFILE"
 add_test_executable(bug519.cpp bug519 replication LABELS readwritesplit REPL_BACKEND)
@@ -151,9 +142,6 @@ add_test_executable(bug620.cpp bug620 bug620 LABELS MySQLAuth MySQLProtocol REPL
 # Regression case for the bug "Crash when user define with old password style (before 4.1 protocol)"
 add_test_executable(bug626.cpp bug626 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
-# Regression case for the bug 634 "SHOW SLAVE STATUS in RW SPLITTER is send to master"
-add_test_executable(bug634.cpp bug634 replication LABELS readwritesplit REPL_BACKEND)
-
 # Regression cases for several TEE filter hangs
 #add_test_executable(bug645.cpp bug645 bug645 LABELS tee REPL_BACKEND)
 #add_test_executable(bug645_1.cpp bug645_1 bug645_1 LABELS tee REPL_BACKEND)
@@ -190,17 +178,8 @@ add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
 # Crash in case of backend node in Galera cluster stopping and then reconnect to Maxscale
 add_test_executable(bug676.cpp bug676 galera LABELS galeramon GALERA_BACKEND)
 
-# Rgression test for th bug "RWSplit: 'SELECT @a:=@a+1 as a, test.b FROM test' breaks client session"
-add_test_executable(bug694.cpp bug694 bug694 LABELS readwritesplit REPL_BACKEND)
-
-# Compare @@hostname from "select  @@wsrep_node_name, @@hostname" and from "select  @@hostname, @@wsrep_node_name"
-add_test_executable(bug699.cpp bug699 galera LABELS readwritesplit LIGHT GALERA_BACKEND)
-
 # Wrong processing of 'SET GLOBAL sql_mode="ANSI"'
 add_test_executable(bug705.cpp bug705 bug705 LABELS MySQLAuth REPL_BACKEND)
-
-# Try SHOW GLOBAL STATUS via Maxscale
-add_test_executable(bug711.cpp bug711 bug711 LABELS readwritesplit REPL_BACKEND)
 
 # Prepared statement from PHP application
 add_test_executable(bug729.cpp bug729 replication LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -392,9 +371,6 @@ add_test_executable(mm.cpp mm mm LABELS mmmon BREAKS_REPL)
 # Regression case for the bug "Two monitors loaded at the same time result into not working installation"
 add_test_executable(mxs118.cpp mxs118 mxs118 LABELS maxscale LIGHT REPL_BACKEND)
 
-# Regression case for the bug "disable_sescmd_history causes MaxScale to crash under load"
-add_test_executable(mxs127.cpp mxs127 mxs127 LABELS readwritesplit LIGHT REPL_BACKEND)
-
 # Prepearing and execution statements in the loop
 add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop galera LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
 
@@ -435,9 +411,6 @@ add_test_derived(mxs37_table_privilege_galera mxs37_table_privilege galera LABEL
 # Connect repeatedly to Schema router and execute simple query, check if auth is ok
 add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND BREAKS_REPL)
 
-# execute SELECT REPEAT('a',i), where 'i' is changing from 1 to 50000 (bug "Session freeze when small tail packet")
-add_test_executable(mxs47.cpp mxs47 replication LABELS MySQLProtocol LIGHT REPL_BACKEND)
-
 # Regression case for the bug "USE <db> hangs when Tee filter uses matching"
 #add_test_executable(mxs501_tee_usedb.cpp mxs501_tee_usedb mxs501 LABELS tee REPL_BACKEND)
 
@@ -462,12 +435,6 @@ add_test_executable(mxs621_unreadable_cnf.cpp mxs621_unreadable_cnf replication 
 # playing with 'restart service' and restart Maxscale under load
 add_test_executable(mxs657_restart.cpp mxs657_restart replication LABELS maxscale HEAVY REPL_BACKEND)
 add_test_executable(mxs657_restart_service.cpp mxs657_restart_service replication LABELS maxscale REPL_BACKEND)
-
-# put cyrillic letters to the table and check from backend
-add_test_executable(mxs682_cyrillic.cpp mxs682_cyrillic replication LABELS maxscale LIGHT REPL_BACKEND)
-
-# put cyrillic letters to the table and check from backend (Galera backend)
-add_test_derived(mxs682_cyrillic_galera mxs682_cyrillic galera LABELS maxscale GALERA_BACKEND)
 
 # Connect using different default database using user with database and table level grants
 add_test_executable(mxs716.cpp mxs716 replication LABELS MySQLAuth LIGHT REPL_BACKEND)
@@ -553,9 +520,6 @@ add_test_executable(cache_runtime_ttl.cpp cache_runtime_ttl cache_runtime_ttl LA
 
 # Set utf8mb4 in the backend and restart Maxscale
 add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACKEND)
-
-# Execute given SQL through readwritesplit (with temporary tables usage)
-add_test_executable(mxs957.cpp mxs957 replication LABELS readwritesplit REPL_BACKEND)
 
 # Regression case for the bug "Defunct processes after maxscale have executed script during failover"
 add_test_executable(mxs1045.cpp mxs1045 mxs1045 LABELS maxscale REPL_BACKEND)
@@ -704,10 +668,6 @@ add_test_executable(mxs1776_ps_exec_hang.cpp mxs1776_ps_exec_hang replication LA
 # https://jira.mariadb.org/browse/MXS-1776
 add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal_reads LABELS readwritesplit REPL_BACKEND)
 
-# MXS-1786: Hang with COM_STATISTICS
-# https://jira.mariadb.org/browse/MXS-1786
-add_test_executable(mxs1786_statistics.cpp mxs1786_statistics replication LABELS readwritesplit REPL_BACKEND)
-
 # MXS-1787: Crash with PS: CALL p1((SELECT f1()), ?)
 # https://jira.mariadb.org/browse/MXS-1787
 add_test_executable(mxs1787_call_ps.cpp mxs1787_call_ps replication LABELS readwritesplit REPL_BACKEND)
@@ -804,14 +764,6 @@ add_test_executable(rwsplit_readonly_stress.cpp rwsplit_readonly_stress rwsplit_
 
 # Test readwritesplit multi-statement handling
 add_test_executable(rwsplit_multi_stmt.cpp rwsplit_multi_stmt rwsplit_multi_stmt LABELS readwritesplit REPL_BACKEND)
-
-# Test readwritesplit multi-statement handling
-add_test_executable(rwsplit_read_only_trx.cpp rwsplit_read_only_trx rwsplit_read_only_trx LABELS readwritesplit REPL_BACKEND)
-
-# Test replication-manager with MaxScale
-#add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
-#add_test_executable_notest(replication_manager_2nodes.cpp replication_manager_2nodes replication_manager_2nodes LABELS maxscale REPL_BACKEND)
-#add_test_executable_notest(replication_manager_3nodes.cpp replication_manager_3nodes replication_manager_3nodes LABELS maxscale REPL_BACKEND)
 
 # Schemarouter duplicate database detection test: create DB on all nodes and then try query againt schema router
 add_test_executable(schemarouter_duplicate.cpp schemarouter_duplicate schemarouter_duplicate LABELS schemarouter REPL_BACKEND)
