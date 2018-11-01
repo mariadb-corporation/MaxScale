@@ -44,13 +44,16 @@ int main(int argc, char** argv)
     test.try_query(test.repl->nodes[0], "%s", "CREATE USER 'mxs1743'@'%' IDENTIFIED BY 'mxs1743'");
     test.try_query(test.repl->nodes[0], "%s", "GRANT ALL ON *.* TO 'mxs1743'@'%'");
 
-    test.tprintf("Syncing slaves");
-    test.stop_timeout();
-    test.repl->fix_replication();
-    test.repl->sync_slaves();
+    test.tprintf("Fix replication");
     test.set_timeout(60);
+    test.repl->fix_replication();
+
+    test.set_timeout(120);
+    test.tprintf("Syncing slaves");
+    test.repl->sync_slaves();
 
     test.tprintf("Opening new connections to verify readconnroute works");
+    test.set_timeout(60);
 
     for (int i = 0; i < 20; i++)
     {
