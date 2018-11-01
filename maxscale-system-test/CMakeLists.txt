@@ -984,6 +984,9 @@ add_test_executable(mxs2111_auth_string.cpp mxs2111_auth_string replication LABE
 # MXS-2115: Automatic version_string detection
 add_test_executable(mxs2115_version_string.cpp mxs2115_version_string replication LABELS REPL_BACKEND)
 
+# MXS-2106: NULL values with avrorouter
+add_test_executable(mxs2106_avro_null.cpp mxs2106_avro_null avro LABELS avrorouter REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
