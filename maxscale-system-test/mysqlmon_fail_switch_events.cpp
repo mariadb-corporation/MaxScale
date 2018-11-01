@@ -162,7 +162,7 @@ int main(int argc, char** argv)
     // If initialisation failed, fail the test immediately.
     if (test.global_result != 0)
     {
-        delete_event(test);
+        try_delete_event(test);
         return test.global_result;
     }
 
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
     // Again, stop on failure.
     if (test.global_result != 0)
     {
-        delete_event(test);
+        try_delete_event(test);
         return test.global_result;
     }
 
@@ -206,7 +206,7 @@ int main(int argc, char** argv)
 
     if (test.global_result != 0)
     {
-        delete_event(test);
+        try_delete_event(test);
         return test.global_result;
     }
 
@@ -225,7 +225,7 @@ int main(int argc, char** argv)
     check_event_status(test, 0, EVENT_NAME, "ENABLED");
     if (test.global_result != 0)
     {
-        delete_event(test);
+        try_delete_event(test);
         return test.global_result;
     }
 
@@ -237,7 +237,7 @@ int main(int argc, char** argv)
         test.expect(states.count("Slave") == 1, "%s is not a slave.", server_name.c_str());
     }
 
-    delete_event(test);
+    try_delete_event(test);
     if (test.global_result != 0)
     {
         test.repl->fix_replication();
