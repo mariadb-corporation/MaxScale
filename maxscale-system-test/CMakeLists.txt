@@ -851,7 +851,7 @@ add_test_executable(avro_alter.cpp avro_alter avro LABELS avrorouter binlogroute
 add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe LABELS binlogrouter BREAKS_REPL)
 
 # In the binlog router setup stop Master and promote one of the Slaves to be new Master (use GTID)
-add_test_executable(binlog_change_master.cpp binlog_change_master_gtid setup_binlog_tx_safe_gtid LABELS binlogrouter BREAKS_REPL)
+add_test_executable(binlog_change_master_gtid.cpp binlog_change_master_gtid setup_binlog_tx_safe_gtid LABELS binlogrouter BREAKS_REPL)
 
 # trying to start binlog setup with incomplete Maxscale.cnf
 add_test_executable(binlog_incompl.cpp binlog_incompl binlog_incompl LABELS binlogrouter BREAKS_REPL)
