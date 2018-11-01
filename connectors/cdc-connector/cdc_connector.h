@@ -23,6 +23,7 @@
 #include <vector>
 #include <deque>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <jansson.h>
 
@@ -200,6 +201,31 @@ public:
     }
 
     /**
+     * Check if a field has a NULL value
+     *
+     * @param i The field index
+     *
+     * @return True if the field has a NULL value
+     */
+    bool is_null(size_t i) const
+    {
+        return m_nulls.count(i);
+    }
+
+    /**
+     * Check if a field has a NULL value
+     *
+     * @param str The field name
+     *
+     * @return True if the field has a NULL value
+     */
+    bool is_null(const std::string& str) const
+    {
+        ValueVector::const_iterator it = std::find(m_keys->begin(), m_keys->end(), str);
+        return m_nulls.count(it - m_keys->begin());
+    }
+
+    /**
      * Get the GTID of this row
      *
      * @return The GTID of the row in `domain-server_id-sequence` format
@@ -243,15 +269,18 @@ private:
     SValueVector m_keys;
     SValueVector m_types;
     ValueVector m_values;
+    std::set<size_t> m_nulls;
 
     // Only a Connection should construct an InternalRow
     friend class Connection;
 
     Row(SValueVector& keys,
         SValueVector& types,
-        ValueVector& values):
+        ValueVector& values,
+        std::set<size_t>& nulls):
         m_keys(keys),
-        m_types(types)
+        m_types(types),
+        m_nulls(nulls)
     {
         m_values.swap(values);
     }
