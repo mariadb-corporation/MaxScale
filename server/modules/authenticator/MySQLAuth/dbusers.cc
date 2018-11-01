@@ -934,7 +934,7 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
     return rval;
 }
 
-static bool have_mdev13453_problem(MYSQL *con, SERVER *server)
+static bool have_mdev13453_problem(MYSQL* con, SERVER* server)
 {
     bool rval = false;
 
@@ -968,14 +968,14 @@ static bool have_mdev13453_problem(MYSQL *con, SERVER *server)
     return rval;
 }
 
-bool query_and_process_users(const char* query, MYSQL *con, sqlite3* handle, SERVICE* service, int* users)
+bool query_and_process_users(const char* query, MYSQL* con, sqlite3* handle, SERVICE* service, int* users)
 {
     bool rval = false;
 
-    if (mxs_mysql_query(con, "USE mysql") == 0 && // Set default database in case we use CTEs
-        mxs_mysql_query(con, query) == 0)
+    if (mxs_mysql_query(con, "USE mysql") == 0      // Set default database in case we use CTEs
+        && mxs_mysql_query(con, query) == 0)
     {
-        MYSQL_RES *result = mysql_store_result(con);
+        MYSQL_RES* result = mysql_store_result(con);
 
         if (result)
         {

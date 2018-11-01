@@ -7,7 +7,7 @@
 
 #include "testconnections.h"
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
     test.repl->connect();

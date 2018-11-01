@@ -628,7 +628,7 @@ void TestConnections::process_template(int m, const char* template_name, const c
     {
         ss
             <<
-        " -e \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem|g\" ";
+            " -e \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem|g\" ";
     }
 
     ss << " -e \"s/###threads###/" << threads << "/\" ";

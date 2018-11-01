@@ -4,19 +4,19 @@
 
 #include "testconnections.h"
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     TestConnections::require_repl_version("10.2.0");
     TestConnections test(argc, argv);
 
-    auto batch = [&](std::vector<std::string> queries){
-        test.maxscales->connect();
-        for (const auto& a: queries)
-        {
-            test.try_query(test.maxscales->conn_rwsplit[0], "%s", a.c_str());
-        }
-        test.maxscales->disconnect();
-    };
+    auto batch = [&](std::vector<std::string> queries) {
+            test.maxscales->connect();
+            for (const auto& a : queries)
+            {
+                test.try_query(test.maxscales->conn_rwsplit[0], "%s", a.c_str());
+            }
+            test.maxscales->disconnect();
+        };
 
     batch({"CREATE USER 'test' IDENTIFIED BY 'test'",
            "GRANT SELECT ON *.* TO test",

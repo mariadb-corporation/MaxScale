@@ -1409,27 +1409,27 @@ void append_field_info(json_t* pParent,
     json_t* pFields = json_array();
 
     std::for_each(begin, end, [pFields](const QC_FIELD_INFO& info) {
-            std::string name;
+                      std::string name;
 
-            if (info.database)
-            {
-                name += info.database;
-                name += '.';
-                mxb_assert(info.table);
-            }
+                      if (info.database)
+                      {
+                          name += info.database;
+                          name += '.';
+                          mxb_assert(info.table);
+                      }
 
-            if (info.table)
-            {
-                name += info.table;
-                name += '.';
-            }
+                      if (info.table)
+                      {
+                          name += info.table;
+                          name += '.';
+                      }
 
-            mxb_assert(info.column);
+                      mxb_assert(info.column);
 
-            name += info.column;
+                      name += info.column;
 
-            json_array_append_new(pFields, json_string(name.c_str()));
-        });
+                      json_array_append_new(pFields, json_string(name.c_str()));
+                  });
 
     json_object_set_new(pParent, zName, pFields);
 }
@@ -1452,18 +1452,17 @@ void append_function_info(json_t* pParams, GWBUF* pBuffer)
     qc_get_function_info(pBuffer, &begin, &n);
 
     std::for_each(begin, begin + n, [pFunctions](const QC_FUNCTION_INFO& info) {
-            json_t* pFunction = json_object();
+                      json_t* pFunction = json_object();
 
-            json_object_set_new(pFunction, CN_NAME, json_string(info.name));
+                      json_object_set_new(pFunction, CN_NAME, json_string(info.name));
 
-            append_field_info(pFunction, CN_ARGUMENTS, info.fields, info.fields + info.n_fields);
+                      append_field_info(pFunction, CN_ARGUMENTS, info.fields, info.fields + info.n_fields);
 
-            json_array_append_new(pFunctions, pFunction);
-        });
+                      json_array_append_new(pFunctions, pFunction);
+                  });
 
     json_object_set_new(pParams, CN_FUNCTIONS, pFunctions);
 }
-
 }
 
 std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string& statement)
