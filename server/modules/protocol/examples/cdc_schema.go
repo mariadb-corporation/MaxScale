@@ -46,7 +46,7 @@ The "user" and "password" flags are required.
 // Avro field
 type Field struct {
 	Name     string `json:"name"`
-	Type     string `json:"type"`
+	Type     []string `json:"type"`
 	RealType string `json:"real_type"`
 	Length   int    `json:"length"`
 }
@@ -81,25 +81,23 @@ func (f *Field) ToAvroType() {
 	switch f.Type {
 	case "date", "datetime", "time", "timestamp", "year", "tinytext", "text",
 		"mediumtext", "longtext", "char", "varchar":
-		f.Type = "string"
+		f.Type = ["null", "string"]
 		f.Length, _ = strconv.Atoi(length_re.ReplaceAllString(orig, "$1"))
 	case "enum", "set":
-		f.Type = "string"
+		f.Type = ["null", "string"]
 	case "tinyblob", "blob", "mediumblob", "longblob", "binary", "varbinary":
-		f.Type = "bytes"
+		f.Type = ["null", "bytes"]
 	case "int", "smallint", "mediumint", "integer", "tinyint", "short", "bit":
-		f.Type = "int"
+		f.Type = ["null", "int"]
 	case "float":
-		f.Type = "float"
+		f.Type = ["null", "float"]
 	case "double", "decimal":
-		f.Type = "double"
-	case "null":
-		f.Type = "null"
+		f.Type = ["null", "double"]
 	case "long", "bigint":
-		f.Type = "long"
+		f.Type = ["null", "long"]
 	default:
 		LogObject(f)
-		f.Type = "string"
+		f.Type = ["null", "string"]
 	}
 }
 
