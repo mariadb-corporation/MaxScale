@@ -351,11 +351,9 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER* database, const char* server_
 
         while ((row = mysql_fetch_row(result)))
         {
-            if (row[1] && (strcmp(row[1], "xtrabackup") == 0 || strcmp(row[1], "mariabackup") == 0))
-            {
-                rval = true;
-            }
-            else if (row[1] && (strcmp(row[1], "xtrabackup-v2") == 0))
+            if (row[1] && (strcmp(row[1], "xtrabackup") == 0
+                           || strcmp(row[1], "mariabackup") == 0
+                           || strcmp(row[1], "xtrabackup-v2") == 0))
             {
                 rval = true;
             }
