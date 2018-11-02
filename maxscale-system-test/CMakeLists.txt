@@ -98,7 +98,7 @@ add_test_executable(bug529.cpp bug529 replication LABELS readwritesplit readconn
 add_test_executable(bug547.cpp bug547 replication LABELS readwritesplit REPL_BACKEND)
 
 # Regression case for the bug "crash if max_slave_connections=10% and 4 or less backends are configured"
-add_test_executable(bug681.cpp bug681 galera.bug681 LABELS readwritesplit GALERA_BACKEND)
+add_test_executable(bug681.cpp bug681 bug681 LABELS readwritesplit REPL_BACKEND)
 
 # Regression case for the bug "crash with tee filter"
 #add_test_executable(bug643.cpp bug643 bug643 LABELS tee REPL_BACKEND)
