@@ -100,9 +100,6 @@ add_test_executable(bug547.cpp bug547 replication LABELS readwritesplit REPL_BAC
 # Regression case for the bug "crash if max_slave_connections=10% and 4 or less backends are configured"
 add_test_executable(bug681.cpp bug681 bug681 LABELS readwritesplit REPL_BACKEND)
 
-# Regression case for the bug "crash with tee filter"
-#add_test_executable(bug643.cpp bug643 bug643 LABELS tee REPL_BACKEND)
-
 # Regression case for the bug ""Different error messages from MariaDB and Maxscale"
 add_test_script(bug561.sh bug561.sh replication LABELS MySQLAuth REPL_BACKEND)
 
@@ -142,23 +139,11 @@ add_test_executable(bug620.cpp bug620 bug620 LABELS MySQLAuth MySQLProtocol REPL
 # Regression case for the bug "Crash when user define with old password style (before 4.1 protocol)"
 add_test_executable(bug626.cpp bug626 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
-# Regression cases for several TEE filter hangs
-#add_test_executable(bug645.cpp bug645 bug645 LABELS tee REPL_BACKEND)
-#add_test_executable(bug645_1.cpp bug645_1 bug645_1 LABELS tee REPL_BACKEND)
-#add_test_executable(bug649.cpp bug649 bug645 LABELS tee)
-#add_test_executable(bug650.cpp bug650 bug650 LABELS tee REPL_BACKEND)
-
-# Heavy test for TEE filter
-#add_test_script(bug648 sql_queries bug648 LABELS tee UNSTABLE HEAVY REPL_BACKEND)
-
 # Crash when host name for some user in mysql.user is very long
 add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Crash with malformed Maxadmin command
 add_test_executable(bug654.cpp bug654 replication LABELS maxscale REPL_BACKEND)
-
-# Regression case for the bug "Tee filter: closing child session causes MaxScale to fail"
-#add_test_executable(bug657.cpp bug657 bug657 LABELS tee REPL_BACKEND)
 
 # Block backends (master or all slaves) and tries to connect Maxscale
 add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
@@ -168,9 +153,6 @@ add_test_executable(bug662.cpp bug662 bug662 LABELS readwritesplit readconnroute
 
 # Bad TEE filter configuration
 add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol)
-
-# TEE fileter: execute long sequence of queries ans session commands in the loop
-#add_test_executable(bug670.cpp bug670 bug670 LABELS tee REPL_BACKEND)
 
 # Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
 add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
@@ -414,9 +396,6 @@ add_test_script(mariadb_tests_hartmut mariadb_tests_hartmut.sh replication LABEL
 # Creates a number of connections > max_connections setting
 add_test_executable(max_connections.cpp max_connections replication LABELS MySQLAuth MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
 
-# Test of Maxinfo interface (http)
-#add_test_executable(maxinfo.cpp maxinfocpp maxinfo LABELS maxinfo UNSTABLE HEAVY REPL_BACKEND)
-
 # Test of Maxinfo SQL interface
 add_test_executable(maxinfo_sql.cpp maxinfo_sql maxinfo_sql LABELS maxinfo REPL_BACKEND)
 
@@ -459,9 +438,6 @@ add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication 
 
 # Connect repeatedly to Schema router and execute simple query, check if auth is ok
 add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND BREAKS_REPL)
-
-# Regression case for the bug "USE <db> hangs when Tee filter uses matching"
-#add_test_executable(mxs501_tee_usedb.cpp mxs501_tee_usedb mxs501 LABELS tee REPL_BACKEND)
 
 # Open connection, execute 'change user', close connection in the loop
 add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548 LABELS MySQLProtocol readwritesplit REPL_BACKEND)
@@ -711,13 +687,6 @@ add_test_executable(no_password.cpp no_password replication LABELS MySQLAuth LIG
 # Open and immediatelly close a big number of connections
 add_test_executable(open_close_connections.cpp open_close_connections replication LABELS maxscale readwritesplit REPL_BACKEND)
 
-# Open and immediatelly close a big number of connections, ssl is in use
-#
-# The test is broken due to some problem in the connector. It crashes with a
-# double free error somewhere deep inside the connector/SSL libraries.
-#
-# add_test_script(open_close_connections_ssl open_close_connections ssl LABELS maxscale REPL_BACKEND)
-
 # Test with persistant connections configured and big number iof opened connections ,expect no crash
 add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
@@ -805,13 +774,6 @@ add_test_derived(sql_queries_pers10 sql_queries sql_queries_pers10 LABELS maxsca
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, client ssl is ON
 add_test_derived(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND)
 
-
-# Check load balancing, client ssl is ON
-
-# Disabled due to some strangeness in Connector-C 3.0 TLS connections which
-# cause uneven distribution of connections.
-#add_test_script(ssl_load load_balancing ssl_load LABELS maxscale readwritesplit REPL_BACKEND)
-
 # Testing slaves who have lost their master and how MaxScale works with them
 add_test_executable(stale_slaves.cpp stale_slaves stale_slaves LABELS mysqlmon REPL_BACKEND)
 
@@ -831,22 +793,6 @@ add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssa
 
 # Configures 'keepalived' on two Maxscale machines and tried failover
 add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND TWO_MAXSCALES)
-
-# enable after fixing MXS-419
-# add_test_executable(mxs419_lots_of_connections.cpp mxs419_lots_of_connections replication LABELS REPL_BACKEND)
-
-# TODO: Alter the user_cache test
-# add_test_executable(user_cache.cpp user_cache user_cache LABELS REPL_BACKEND)
-
-# https://mariadb.atlassian.net/browse/MXS-576 - it is possible to set negative value for
-# 'persistpoolmax' without any warning
-#add_test_executable(bad_pers.cpp bad_pers bad_pers LABELS REPL_BACKEND)
-
-# Test Aurora RDS monitor
-#add_test_executable(auroramon.cpp auroramon auroramon LABELS HEAVY EXTERNAL_BACKEND)
-
-# Disabled for the time being
-# add_test_executable(gatekeeper.cpp gatekeeper gatekeeper LABELS gatekeeper)
 
 # a tool to delete RDS Aurora cluster
 add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_BACKEND)
