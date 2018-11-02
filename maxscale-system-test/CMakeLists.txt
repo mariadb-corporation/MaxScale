@@ -175,9 +175,6 @@ add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol)
 # Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
 add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
 
-# Crash in case of backend node in Galera cluster stopping and then reconnect to Maxscale
-add_test_executable(bug676.cpp bug676 galera LABELS galeramon GALERA_BACKEND)
-
 # Wrong processing of 'SET GLOBAL sql_mode="ANSI"'
 add_test_executable(bug705.cpp bug705 bug705 LABELS MySQLAuth REPL_BACKEND)
 
@@ -330,6 +327,50 @@ add_test_executable(verify_master_failure.cpp verify_master_failure verify_maste
 # END: Tests that require GTID
 #
 
+#
+# BEGIN: Galera tests
+#
+
+# Crash in case of backend node in Galera cluster stopping and then reconnect to Maxscale
+add_test_executable(bug676.cpp bug676 galera LABELS galeramon GALERA_BACKEND)
+
+# Galera node priority test
+add_test_executable(galera_priority.cpp galera_priority galera_priority LABELS galeramon LIGHT GALERA_BACKEND)
+
+# INSERT extremelly big number of rows
+add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit HEAVY GALERA_BACKEND)
+
+# Prepearing and execution statements in the loop
+add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop galera LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
+
+# Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
+add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol readwritesplit LIGHT GALERA_BACKEND)
+
+# Crash with Galera and backend restart when persistant cfonnections are in use
+add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale GALERA_BACKEND)
+
+# Playing with blocking and unblocking nodes under INSERT load
+add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera_mxs564 LABELS readwritesplit readconnroute GALERA_BACKEND)
+
+# MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current master
+# https://jira.mariadb.org/browse/MXS-1476
+add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS galeramon GALERA_BACKEND)
+
+# MXS-1751: Maxscale crashes when certain config is in play (with nodes down)
+# https://jira.mariadb.org/browse/MXS-1751
+add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS galeramon GALERA_BACKEND)
+
+# Persistant connection test
+add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit GALERA_BACKEND)
+
+# MXS-1980: Support Galera cluster nodes as masters for Binlog Router
+# https://jira.mariadb.org/browse/MXS-1980
+add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_ids mxs1980_blr_galera_server_ids LABELS binlogrouter GALERA_BACKEND)
+
+#
+# END: Galera tests
+#
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
@@ -344,9 +385,6 @@ add_test_executable(fwf_reload.cpp fwf_reload fwf LABELS dbfwfilter REPL_BACKEND
 add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_com_ping.cpp fwf_com_ping fwf_com_ping LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(mxs1583_fwf.cpp mxs1583_fwf mxs1583_fwf LABELS dbfwfilter REPL_BACKEND)
-
-# Galera node priority test
-add_test_executable(galera_priority.cpp galera_priority galera_priority LABELS galeramon LIGHT GALERA_BACKEND)
 
 # Block and unblock Master and check that Maxscale survived
 add_test_executable(kill_master.cpp kill_master replication LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -373,9 +411,6 @@ add_test_executable(mxs1310_implicit_db.cpp mxs1310_implicit_db mxs1310_implicit
 add_test_executable(mxs1323_retry_read.cpp mxs1323_retry_read mxs1323 LABELS readwritesplit LIGHT REPL_BACKEND)
 add_test_executable(mxs1323_stress.cpp mxs1323_stress mxs1323 LABELS readwritesplit REPL_BACKEND)
 
-# INSERT extremelly big number of rows
-add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit HEAVY GALERA_BACKEND)
-
 # A set of MariaDB server tests executed against Maxscale RWSplit
 add_test_script(mariadb_tests_hartmut mariadb_tests_hartmut.sh replication LABELS readwritesplit REPL_BACKEND)
 
@@ -400,14 +435,8 @@ add_test_executable(mm.cpp mm mm LABELS mmmon BREAKS_REPL)
 # Regression case for the bug "Two monitors loaded at the same time result into not working installation"
 add_test_executable(mxs118.cpp mxs118 mxs118 LABELS maxscale LIGHT REPL_BACKEND)
 
-# Prepearing and execution statements in the loop
-add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop galera LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
-
 # Regression case for the bug "SELECT INTO OUTFILE query succeeds even if backed fails"
 add_test_executable(mxs280_select_outfile.cpp mxs280_select_outfile replication LABELS readwritesplit REPL_BACKEND)
-
-# Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
-add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol readwritesplit LIGHT GALERA_BACKEND)
 
 # Testing of the master replacement feature
 add_test_executable(mxs359_master_switch.cpp mxs359_master_switch mxs359_master_switch LABELS readwritesplit REPL_BACKEND)
@@ -424,9 +453,6 @@ add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS rea
 
 # Creates and closes a lot of connections, checks that 'maxadmin list servers' shows 0 connections at the end
 add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit REPL_BACKEND)
-
-# Crash with Galera and backend restart when persistant cfonnections are in use
-add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale GALERA_BACKEND)
 
 # Load huge file with 'LOAD DATA LOCAL INFILE'
 add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BACKEND)
@@ -445,9 +471,6 @@ add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_ch
 
 # Playing with blocking and unblocking Master under load
 add_test_executable(mxs559_block_master.cpp mxs559_block_master mxs559 LABELS readwritesplit REPL_BACKEND)
-
-# Playing with blocking and unblocking nodes under INSERT load
-add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera_mxs564 LABELS readwritesplit readconnroute GALERA_BACKEND)
 
 # Executes simple queries from python script in the loop
 add_test_script(mxs585.py mxs585.py replication LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
@@ -577,10 +600,6 @@ add_test_executable(mxs1457_ignore_deleted.cpp mxs1457_ignore_deleted mxs1457_ig
 # https://jira.mariadb.org/browse/MXS-1468
 add_test_executable(mxs1468.cpp mxs1468 mxs1468 LABELS REPL_BACKEND)
 
-# MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current master
-# https://jira.mariadb.org/browse/MXS-1476
-add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS galeramon GALERA_BACKEND)
-
 # MXS-1503: Test master_reconnection
 # https://jira.mariadb.org/browse/MXS-1503
 add_test_executable(mxs1503_master_reconnection.cpp mxs1503_master_reconnection mxs1503_master_reconnection LABELS readwritesplit REPL_BACKEND)
@@ -642,10 +661,6 @@ add_test_executable(mxs1731_old_persisted_config.cpp mxs1731_old_persisted_confi
 # MXS-1743: Maxscale unable to enforce round-robin between read service for Slave
 # https://jira.mariadb.org/browse/MXS-1743
 add_test_executable(mxs1743_rconn_bitmask.cpp mxs1743_rconn_bitmask mxs1743_rconn_bitmask LABELS REPL_BACKEND)
-
-# MXS-1751: Maxscale crashes when certain config is in play (with nodes down)
-# https://jira.mariadb.org/browse/MXS-1751
-add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS galeramon GALERA_BACKEND)
 
 # MXS-1760: With use_sql_variables_in=master, unknown PS errors are logged
 # https://jira.mariadb.org/browse/MXS-1760
@@ -714,11 +729,8 @@ add_test_executable(open_close_connections.cpp open_close_connections replicatio
 #
 # add_test_script(open_close_connections_ssl open_close_connections ssl LABELS maxscale REPL_BACKEND)
 
-# Persistant connection test
-add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit GALERA_BACKEND)
-
 # Test with persistant connections configured and big number iof opened connections ,expect no crash
-add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit GALERA_BACKEND)
+add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
 # Check if prepared statement works via Maxscale (via RWSplit)
 add_test_executable(prepared_statement.cpp prepared_statement replication LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -810,11 +822,6 @@ add_test_derived(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND
 # Disabled due to some strangeness in Connector-C 3.0 TLS connections which
 # cause uneven distribution of connections.
 #add_test_script(ssl_load load_balancing ssl_load LABELS maxscale readwritesplit REPL_BACKEND)
-
-# Check load balancing, client ssl is ON, Galera backend
-
-# Galera version is also disabled due to C/C 3.0 strangeness
-#add_test_script(ssl_load_galera load_balancing_galera ssl_load_galera LABELS maxscale readwritesplit GALERA_BACKEND)
 
 # Testing slaves who have lost their master and how MaxScale works with them
 add_test_executable(stale_slaves.cpp stale_slaves stale_slaves LABELS mysqlmon REPL_BACKEND)
@@ -926,9 +933,6 @@ add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND TWO
 # Disabled for the time being
 # add_test_executable(gatekeeper.cpp gatekeeper gatekeeper LABELS gatekeeper)
 
-# not implemented, just template
-#add_test_executable(rw_galera_select_insert.cpp rw_galera_select_insert galera LABELS readwritesplit GALERA_BACKEND)
-
 # a tool to delete RDS Aurora cluster
 add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_BACKEND)
 
@@ -1003,10 +1007,6 @@ add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_
 # MXS-2037: Wildcards not working with source in Named Server Filter
 # https://jira.mariadb.org/browse/MXS-2037
 add_test_executable(mxs2037_namedserver_wildcards.cpp mxs2037_namedserver_wildcards mxs2037_namedserver_wildcards LABELS namedserverfilter LIGHT REPL_BACKEND)
-
-# MXS-1980: Support Galera cluster nodes as masters for Binlog Router
-# https://jira.mariadb.org/browse/MXS-1980
-add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_ids mxs1980_blr_galera_server_ids LABELS binlogrouter GALERA_BACKEND)
 
 # MXS-701: Binlog filtering
 # https://jira.mariadb.org/browse/MXS-701
