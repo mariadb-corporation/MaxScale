@@ -571,7 +571,7 @@ void dprintServer(DCB* dcb, const SERVER* srv)
     {
         ave_os << "not available";
     }
-    dcb_printf(dcb, "\tAverage response time:               %s\n", ave_os.str().c_str());
+    dcb_printf(dcb, "\tAdaptive avg. select time:           %s\n", ave_os.str().c_str());
 
     if (server->persistpoolmax)
     {
@@ -1447,6 +1447,9 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(stats, "persistent_connections", json_integer(server->stats.n_persistent));
     json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
     json_object_set_new(stats, "routed_packets", json_integer(server->stats.packets));
+
+    maxbase::Duration response_ave(server_response_time_average(server));
+    json_object_set_new(stats, "adaptive_avg_select_time", json_string(to_string(response_ave).c_str()));
 
     json_object_set_new(attr, "statistics", stats);
 
