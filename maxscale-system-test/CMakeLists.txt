@@ -769,7 +769,7 @@ add_test_executable(sequence.cpp sequence replication LABELS LIGHT)
 add_test_executable(compound_statement.cpp compound_statement replication LABELS readwritesplit LIGHT)
 
 # Check if 'weightby' parameter works
-add_test_executable(server_weight.cpp server_weight galera.weight LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
+add_test_executable(server_weight.cpp server_weight server_weight LABELS readwritesplit readconnroute LIGHT REPL_BACKEND)
 
 # test for 'max_sescmd_history' and 'connection_timeout' parameters
 add_test_executable(session_limits.cpp session_limits session_limits LABELS readwritesplit REPL_BACKEND)
