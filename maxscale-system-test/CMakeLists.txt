@@ -220,6 +220,13 @@ add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABE
 # Basic MaxCtrl test
 add_test_executable(maxctrl_basic.cpp maxctrl_basic replication LABELS maxctrl REPL_BACKEND)
 
+#
+# BEGIN: Tests that require GTID
+#
+
+# Configures 'keepalived' on two Maxscale machines and tried failover
+add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_masterdown LABELS REPL_BACKEND TWO_MAXSCALES)
+
 # MySQL Monitor with Multi-master configurations
 add_test_executable(mysqlmon_multimaster.cpp mysqlmon_multimaster mysqlmon_multimaster LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
 
@@ -285,6 +292,46 @@ add_test_executable(mysqlmon_fail_switch_events.cpp mysqlmon_fail_switch_events 
 
 # MySQL Monitor reset-replication test, use template for Rejoin (good)
 add_test_executable(mysqlmon_reset_replication.cpp mysqlmon_reset_replication mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
+
+# MXS-1506: Delayed query retry
+# https://jira.mariadb.org/browse/MXS-1506
+add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1506: Delayed retry without master
+# https://jira.mariadb.org/browse/MXS-1506
+add_test_executable(mxs1506_no_master.cpp mxs1506_no_master mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1507: Transaction replay
+# https://jira.mariadb.org/browse/MXS-1507
+add_test_executable(mxs1507_trx_replay.cpp mxs1507_trx_replay mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1507: Inconsistent transactions
+# https://jira.mariadb.org/browse/MXS-1507
+add_test_executable(mxs1507_inconsistent_trx.cpp mxs1507_inconsistent_trx mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1507: Transaction migration
+# https://jira.mariadb.org/browse/MXS-1507
+add_test_executable(mxs1507_migrate_trx.cpp mxs1507_migrate_trx mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1507: Transaction replay
+# https://jira.mariadb.org/browse/MXS-1507
+add_test_executable(mxs1507_trx_stress.cpp mxs1507_trx_stress mxs1507_trx_stress LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1778: Use GTID from OK packets for consistent reads
+# https://jira.mariadb.org/browse/MXS-1776
+add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal_reads LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1961: Standalone master loses master status
+# https://jira.mariadb.org/browse/MXS-1961
+add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
+
+# MXS-1493: Use replication heartbeat in mysqlmon
+# https://jira.mariadb.org/browse/MXS-1493
+add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS mysqlmon REPL_BACKEND)
+
+#
+# END: Tests that require GTID
+#
 
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
@@ -554,10 +601,6 @@ add_test_executable(mxs1457_ignore_deleted.cpp mxs1457_ignore_deleted mxs1457_ig
 # https://jira.mariadb.org/browse/MXS-1468
 add_test_executable(mxs1468.cpp mxs1468 mxs1468 LABELS REPL_BACKEND)
 
-# MXS-1493: Use replication heartbeat in mysqlmon
-# https://jira.mariadb.org/browse/MXS-1493
-add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS mysqlmon REPL_BACKEND)
-
 # MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current master
 # https://jira.mariadb.org/browse/MXS-1476
 add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS galeramon GALERA_BACKEND)
@@ -571,30 +614,6 @@ add_test_executable(mxs1503_queued_sescmd.cpp mxs1503_queued_sescmd mxs1503_mast
 
 # Check that no extra slaves are taken into use
 add_test_executable(mxs1503_extra_slaves.cpp mxs1503_extra_slaves mxs1503_extra_slaves LABELS readwritesplit REPL_BACKEND)
-
-# MXS-1506: Delayed query retry
-# https://jira.mariadb.org/browse/MXS-1506
-add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
-
-# MXS-1506: Delayed retry without master
-# https://jira.mariadb.org/browse/MXS-1506
-add_test_executable(mxs1506_no_master.cpp mxs1506_no_master mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
-
-# MXS-1507: Transaction replay
-# https://jira.mariadb.org/browse/MXS-1507
-add_test_executable(mxs1507_trx_replay.cpp mxs1507_trx_replay mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
-
-# MXS-1507: Inconsistent transactions
-# https://jira.mariadb.org/browse/MXS-1507
-add_test_executable(mxs1507_inconsistent_trx.cpp mxs1507_inconsistent_trx mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
-
-# MXS-1507: Transaction migration
-# https://jira.mariadb.org/browse/MXS-1507
-add_test_executable(mxs1507_migrate_trx.cpp mxs1507_migrate_trx mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
-
-# MXS-1507: Transaction replay
-# https://jira.mariadb.org/browse/MXS-1507
-add_test_executable(mxs1507_trx_stress.cpp mxs1507_trx_stress mxs1507_trx_stress LABELS readwritesplit REPL_BACKEND)
 
 # MXS-1509: Show correct server state for multisource replication
 # https://jira.mariadb.org/browse/MXS-1509
@@ -663,10 +682,6 @@ add_test_executable(mxs1773_failing_ldli.cpp mxs1773_failing_ldli replication LA
 # MXS-1776: recursive COM_STMT_EXECUTE execution
 # https://jira.mariadb.org/browse/MXS-1776
 add_test_executable(mxs1776_ps_exec_hang.cpp mxs1776_ps_exec_hang replication LABELS readwritesplit REPL_BACKEND)
-
-# MXS-1778: Use GTID from OK packets for consistent reads
-# https://jira.mariadb.org/browse/MXS-1776
-add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal_reads LABELS readwritesplit REPL_BACKEND)
 
 # MXS-1787: Crash with PS: CALL p1((SELECT f1()), ?)
 # https://jira.mariadb.org/browse/MXS-1787
@@ -919,9 +934,6 @@ add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssa
 # Configures 'keepalived' on two Maxscale machines and tried failover
 add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND TWO_MAXSCALES)
 
-# Configures 'keepalived' on two Maxscale machines and tried failover
-add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_masterdown LABELS REPL_BACKEND TWO_MAXSCALES)
-
 # enable after fixing MXS-419
 # add_test_executable(mxs419_lots_of_connections.cpp mxs419_lots_of_connections replication LABELS REPL_BACKEND)
 
@@ -1003,10 +1015,6 @@ set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
 # MXS-1849: Table family sharding router
 # https://jira.mariadb.org/browse/MXS-1849
 add_test_executable(mxs1849_table_sharding.cpp mxs1849_table_sharding mxs1849_table_sharding LABELS schemarouter BREAKS_REPL)
-
-# MXS-1961: Standalone master loses master status
-# https://jira.mariadb.org/browse/MXS-1961
-add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
 
 # MXS-1985: MaxScale hangs on concurrent KILL processing
 # https://jira.mariadb.org/browse/MXS-1985
