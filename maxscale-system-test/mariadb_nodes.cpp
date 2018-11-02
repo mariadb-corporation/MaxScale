@@ -19,6 +19,9 @@
 #include <vector>
 #include <future>
 
+using std::cout;
+using std::endl;
+
 namespace
 {
 static bool g_require_gtid = false;
@@ -446,6 +449,7 @@ int Galera_nodes::start_galera()
     ssh_node(0, "echo [mysqld] > cluster_address.cnf", false);
     ssh_node(0, "echo wsrep_cluster_address=gcomm:// >>  cluster_address.cnf", false);
     ssh_node(0, "cp cluster_address.cnf /etc/my.cnf.d/", true);
+    ssh_node_f(0, true, "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/galera*", IP[0]);
 
     if (start_node(0, (char*) " --wsrep-cluster-address=gcomm://") != 0)
     {
@@ -471,7 +475,7 @@ int Galera_nodes::start_galera()
         sprintf(str, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", IP_private[0]);
         ssh_node(i, str, true);
         ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
-
+        ssh_node_f(i, true, "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/galera*", IP[i]);
         sprintf(&sys1[0], " --wsrep-cluster-address=gcomm://%s", IP_private[0]);
         if (this->verbose)
         {
@@ -796,30 +800,30 @@ bool Mariadb_nodes::fix_replication()
 
     if (check_replication())
     {
-        printf("Replication is broken, fixing...\n");
+        cout << prefix << ": Replication is broken, fixing..." << endl;
         rval = false;
 
         if (unblock_all_nodes() == 0)
         {
-            printf("Prepare nodes\n");
+            cout << "Prepare nodes" << endl;
             prepare_servers();
-            printf("Starting replication\n");
+            cout << "Starting replication" << endl;
             start_replication();
 
             if (check_replication() == 0)
             {
-                printf("Replication is fixed\n");
+                cout << "Replication is fixed" << endl;
                 flush_hosts();
                 rval = true;
             }
             else
             {
-                printf("FATAL ERROR: Replication is still broken\n");
+                cout << "FATAL ERROR: Replication is still broken" << endl;
             }
         }
         else
         {
-            printf("SSH access to nodes doesn't work\n");
+            cout << "SSH access to nodes doesn't work" << endl;
         }
     }
 
@@ -1453,13 +1457,8 @@ int Mariadb_nodes::prepare_server(int i)
         }
         else
         {
-            printf("Executing mysql_install_db on node %d\n", i);
+            cout << "Executing mysql_install_db on node" << i << endl;
             ssh_node(i, "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql", true);
-            printf("Starting server on node %d\n", i);
-            if (ssh_node(i, start_db_command[i], true))
-            {
-                printf("Server start on node %d failed\n", i);
-            }
         }
     }
 
