@@ -208,9 +208,6 @@ add_test_executable(connection_limit.cpp connection_limit connection_limit LABEL
 # Tries to open to many connections, expect no crash
 add_test_executable(crash_out_of_files.cpp crash_out_of_files load LABELS maxscale HEAVY REPL_BACKEND)
 
-# Tries to open to many connections, expect no crash, with Galera backend
-add_test_executable(crash_out_of_files_galera.cpp crash_out_of_files_galera galera LABELS maxscale HEAVY GALERA_BACKEND)
-
 # Tries INSERTs with size close to 0x0ffffff * N
 add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication LABELS readwritesplit HEAVY REPL_BACKEND)
 
@@ -360,18 +357,6 @@ add_test_script(insertstream insertstream.sh insertstream LABELS insertstream RE
 # Check load balancing
 add_test_executable(load_balancing.cpp load_balancing load LABELS readwritesplit LIGHT REPL_BACKEND)
 
-# Check load balancing with Galera backend
-add_test_executable(load_balancing_galera.cpp load_balancing_galera load_galera LABELS readwritesplit GALERA_BACKEND)
-
-# Check load balancing parameters with Galera backend and 1 persistent connection
-add_test_derived(load_balancing_galera_pers1 load_balancing_galera load_galera_pers1 LABELS readwritesplit HEAVY GALERA_BACKEND)
-
-# Check load balancing parameters with Galera backend and 10 persistent connections
-add_test_derived(load_balancing_galera_pers10 load_balancing_galera load_galera_pers10 LABELS readwritesplit HEAVY GALERA_BACKEND)
-
-# Check load balancing parameters with 1 persistent connection
-add_test_derived(load_balancing_pers1 load_balancing load_pers1 LABELS readwritesplit HEAVY REPL_BACKEND)
-
 # Check load balancing parameters with 10 persistent connections
 add_test_derived(load_balancing_pers10 load_balancing load_pers10 LABELS readwritesplit HEAVY REPL_BACKEND)
 
@@ -393,9 +378,6 @@ add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit H
 
 # A set of MariaDB server tests executed against Maxscale RWSplit
 add_test_script(mariadb_tests_hartmut mariadb_tests_hartmut.sh replication LABELS readwritesplit REPL_BACKEND)
-
-# A set of MariaDB server tests executed against Maxscale RWSplit (Galera backend)
-add_test_script(mariadb_tests_hartmut_galera mariadb_tests_hartmut.sh galera_hartmut LABELS readwritesplit GALERA_BACKEND)
 
 # Creates a number of connections > max_connections setting
 add_test_executable(max_connections.cpp max_connections replication LABELS MySQLAuth MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
@@ -452,9 +434,6 @@ add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BAC
 # Connect to Maxscale with user with only 'SELECT' priveledge
 add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication LABELS MySQLAuth LIGHT REPL_BACKEND)
 
-# Connect to Maxscale with user with only 'SELECT' priveledge (Galera backend)
-add_test_derived(mxs37_table_privilege_galera mxs37_table_privilege galera LABELS MySQLAuth GALERA_BACKEND)
-
 # Connect repeatedly to Schema router and execute simple query, check if auth is ok
 add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND BREAKS_REPL)
 
@@ -494,9 +473,6 @@ add_test_executable(mxs729_maxadmin.cpp mxs729_maxadmin replication LABELS MaxAd
 
 # Simple connect test in bash, checks that defined in cmd line DB is selected
 add_test_script(mxs791.sh mxs791.sh replication LABELS UNSTABLE HEAVY REPL_BACKEND)
-
-# Simple connect test in bash, checks that defined in cmd line DB is selected (Galera backend)
-add_test_script(mxs791_galera.sh mxs791_galera.sh galera LABELS UNSTABLE HEAVY GALERA_BACKEND)
 
 # Checks "Current no. of conns" maxadmin output after long blob inserting
 add_test_executable(mxs812_1.cpp mxs812_1 longblob LABELS readwritesplit REPL_BACKEND)
