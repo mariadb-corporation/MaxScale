@@ -436,7 +436,6 @@ int Galera_nodes::start_galera()
 {
     char str[1024];
     char sys1[1024];
-    int i;
     int local_result = 0;
     local_result += stop_nodes();
 
@@ -449,7 +448,13 @@ int Galera_nodes::start_galera()
     ssh_node(0, "echo [mysqld] > cluster_address.cnf", false);
     ssh_node(0, "echo wsrep_cluster_address=gcomm:// >>  cluster_address.cnf", false);
     ssh_node(0, "cp cluster_address.cnf /etc/my.cnf.d/", true);
-    ssh_node_f(0, true, "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/galera*", IP[0]);
+
+    ssh_node_f(0,
+               true,
+               "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
+               "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
+               IP[0]);
+
 
     if (start_node(0, (char*) " --wsrep-cluster-address=gcomm://") != 0)
     {
@@ -467,25 +472,39 @@ int Galera_nodes::start_galera()
             socket_cmd[0]);
     ssh_node(0, str, false);
 
-    for (i = 1; i < N; i++)
+    std::vector<std::thread> threads;
+
+    for (int i = 1; i < N; i++)
     {
-        printf("Starting node %d\n", i);
-        fflush(stdout);
-        ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
-        sprintf(str, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", IP_private[0]);
-        ssh_node(i, str, true);
-        ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
-        ssh_node_f(i, true, "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/galera*", IP[i]);
-        sprintf(&sys1[0], " --wsrep-cluster-address=gcomm://%s", IP_private[0]);
-        if (this->verbose)
-        {
-            printf("%s\n", sys1);
-            fflush(stdout);
-        }
-        local_result += start_node(i, sys1);
-        fflush(stdout);
+        auto func = [&, i]() {
+                printf("Starting node %d\n", i);
+                fflush(stdout);
+                ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
+                sprintf(str, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", IP_private[0]);
+                ssh_node(i, str, true);
+                ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
+                ssh_node_f(i,
+                           true,
+                           "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
+                           "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
+                           IP[i]);
+
+                sprintf(&sys1[0], " --wsrep-cluster-address=gcomm://%s", IP_private[0]);
+                if (this->verbose)
+                {
+                    printf("%s\n", sys1);
+                    fflush(stdout);
+                }
+                local_result += start_node(i, sys1);
+                fflush(stdout);
+            };
+        threads.emplace_back(func);
     }
-    sleep(5);
+
+    for (auto& a : threads)
+    {
+        a.join();
+    }
 
     local_result += connect();
     local_result += execute_query(nodes[0], "%s", create_repl_user);
