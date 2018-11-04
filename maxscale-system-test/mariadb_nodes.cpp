@@ -867,7 +867,7 @@ bool Mariadb_nodes::revert_nodes_snapshot()
 
 int Galera_nodes::check_galera()
 {
-    int res1 = 0;
+    int res = 1;
 
     if (verbose)
     {
@@ -875,50 +875,26 @@ int Galera_nodes::check_galera()
         fflush(stdout);
     }
 
-    if (this->nodes[0] == NULL)
+    if (connect() == 0)
     {
-        this->connect();
-    }
+        Row r = get_row(nodes[0], "SHOW STATUS WHERE Variable_name='wsrep_cluster_size'");
 
-    res1 = get_versions();
-
-    for (int i = 0; i < N; i++)
-    {
-        MYSQL* conn = open_conn(port[i], IP[i], user_name, password, ssl);
-        if (conn == NULL || mysql_errno(conn) != 0)
+        if (r.size() == 2)
         {
-            printf("Error connectiong node %d: %s\n", i, mysql_error(conn));
-            res1 = 1;
-        }
-        else
-        {
-            char str[1024] = "";
-
-            if (find_field(conn,
-                           (char*) "SHOW STATUS WHERE Variable_name='wsrep_cluster_size';",
-                           (char*) "Value",
-                           str) != 0)
+            if (r[1] == std::to_string(N))
             {
-                printf("wsrep_cluster_size is not found in SHOW STATUS LIKE 'wsrep%%' results\n");
-                fflush(stdout);
-                res1 = 1;
+                res = 0;
             }
             else
             {
-                int cluster_size;
-                sscanf(str, "%d", &cluster_size);
-                if (cluster_size != N)
-                {
-                    printf("wsrep_cluster_size is not %d, it is %d\n", N, cluster_size);
-                    fflush(stdout);
-                    res1 = 1;
-                }
+                cout << "Expected cluster size: " << N << " Actual size: " << r[1] << endl;
             }
         }
-        mysql_close(conn);
     }
 
-    return res1;
+    disconnect();
+
+    return res;
 }
 
 int Mariadb_nodes::set_slave(MYSQL* conn,
