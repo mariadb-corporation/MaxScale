@@ -271,15 +271,6 @@ TestConnections::TestConnections(int argc, char* argv[])
     maxscales->use_ipv6 = use_ipv6;
     maxscales->ssl = ssl;
 
-    // Stop MaxScale to prevent it from interfering with the replication setup process
-    if (!maxscale::manual_debug)
-    {
-        for (int i = 0; i < maxscales->N; i++)
-        {
-            maxscales->stop(i);
-        }
-    }
-
     if (maxscale::required_repl_version.length())
     {
         int ver_repl_required = get_int_version(maxscale::required_repl_version);
@@ -323,8 +314,15 @@ TestConnections::TestConnections(int argc, char* argv[])
         snapshot_reverted = revert_snapshot((char*) "clean");
     }
 
-    if (!snapshot_reverted && maxscale::check_nodes)
+    if (!snapshot_reverted && maxscale::check_nodes
+        && (repl->check_replication() || (!no_galera && galera->check_replication())))
     {
+        // Stop MaxScale to prevent it from interfering with the replication setup process
+        if (!maxscale::manual_debug)
+        {
+            maxscales->stop_all();
+        }
+
         if (!repl->fix_replication())
         {
             exit(200);
@@ -679,7 +677,7 @@ void TestConnections::process_template(int m, const char* template_name, const c
     system(ss.str().c_str());
 
     maxscales->copy_to_node_legacy("maxscale.cnf", dest, m);
-    maxscales->ssh_node_f(m, true, "cp maxscale.cnf %s", maxscales->maxscale_cnf[m]);
+    // The config will now be in ~/maxscale.cnf and is moved into /etc before restarting maxscale
 }
 
 void TestConnections::init_maxscales()
@@ -723,30 +721,13 @@ void TestConnections::init_maxscale(int m)
 
     maxscales->ssh_node_f(m,
                           true,
+                          "cp maxscale.cnf %s;"
                           "iptables -F INPUT;"
                           "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
                           "%s",
+                          maxscales->maxscale_cnf[m],
                           maxscales->maxscale_log_dir[m],
-                          maxscale::start ? "service maxscale start;" : "");
-
-    if (maxscale::start)
-    {
-        int waits;
-
-        for (waits = 0; waits < 15; waits++)
-        {
-            if (maxscales->ssh_node(m, "/bin/sh -c \"maxadmin help > /dev/null || exit 1\"", true) == 0)
-            {
-                break;
-            }
-            sleep(1);
-        }
-
-        if (waits > 0)
-        {
-            tprintf("Waited %d seconds for MaxScale to start", waits);
-        }
-    }
+                          maxscale::start ? "service maxscale restart;" : "");
 }
 
 void TestConnections::copy_one_mariadb_log(int i, std::string filename)

@@ -267,6 +267,15 @@ public:
         return stop_maxscale(m);
     }
 
+    // Helper for stopping all maxscales
+    void stop_all()
+    {
+        for (int i = 0; i < N; i++)
+        {
+            stop(i);
+        }
+    }
+
     int execute_maxadmin_command(int m, const char* cmd);
     int execute_maxadmin_command_print(int m, const char* cmd);
     int check_maxadmin_param(int m, const char* command, const char* param, const char* value);
