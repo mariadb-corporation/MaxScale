@@ -223,7 +223,7 @@ router=readconnroute
 router_options=ndb
 servers=server1,server2
 user=test
-passwd=test
+password=test
 version_string=5.5.37-CLUSTER
 
 [Cluster Listener]
@@ -237,7 +237,7 @@ type=monitor
 module=ndbclustermon
 servers=server1,server2
 user=monitor
-passwd=monitor
+password=monitor
 monitor_interval=8000
 
 [server1]

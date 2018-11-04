@@ -366,7 +366,7 @@ follows.
 type=service
 router=binlogrouter
 user=maxscale
-passwd=maxpwd
+password=maxpwd
 server_id=3
 binlogdir=/var/lib/maxscale/
 mariadb10-compatibility=1

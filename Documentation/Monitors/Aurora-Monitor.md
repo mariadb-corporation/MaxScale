@@ -50,7 +50,7 @@ type=monitor
 module=auroramon
 servers=cluster-1,cluster-2,cluster-3
 user=aurora
-passwd=borealis
+password=borealis
 monitor_interval=2500
 ```
 

@@ -27,7 +27,7 @@ type=service
 router=readconnrouter
 servers=server1
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=DataMartFilter
 ```
 
@@ -138,7 +138,7 @@ type=service
 router=readconnroute
 servers=server1, server2, server3, server4
 user=massi
-passwd=6628C50E07CCE1F0392EDEEB9D1203F3
+password=6628C50E07CCE1F0392EDEEB9D1203F3
 filters=ReplicateOrders
 
 [ReplicateOrders]
@@ -152,7 +152,7 @@ type=service
 router=readconnroute
 servers=datamartserver
 user=massi
-passwd=6628C50E07CCE1F0392EDEEB9D1203F3
+password=6628C50E07CCE1F0392EDEEB9D1203F3
 filters=QLA_DataMart
 
 [QLA_DataMart]

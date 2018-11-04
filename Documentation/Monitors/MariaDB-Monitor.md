@@ -72,7 +72,7 @@ type=monitor
 module=mariadbmon
 servers=server1,server2,server3
 user=myuser
-passwd=mypwd
+password=mypwd
 ```
 
 From MaxScale 2.2.1 onwards, the module name is `mariadbmon` instead of

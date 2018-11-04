@@ -946,14 +946,14 @@ servers=server1,server2,server3
 
 #### `user`
 
-The user parameter, along with the passwd parameter are used to define the
+The user parameter, along with the password parameter are used to define the
 credentials used to connect to the backend servers to extract the list of
 database users from the backend database that is used for the client
 authentication.
 
 ```
 user=maxscale
-passwd=Mhu87p2D
+password=Mhu87p2D
 ```
 
 Authentication of incoming connections is performed by MariaDB MaxScale itself
@@ -1002,7 +1002,6 @@ GRANT SELECT ON mysql.* TO 'maxscale'@'maxscalehost';
 See [MaxScale Troubleshooting](https://mariadb.com/kb/en/mariadb-enterprise/maxscale-troubleshooting/)
 for more information on how to troubleshoot authentication related problems.
 
-<a id="passwd"></a>
 #### `password`
 
 The password parameter provides the password information for the above user and
@@ -1015,6 +1014,10 @@ statements to load database names and grants from the backends:
 * `SELECT user, host, db FROM mysql.db`
 * `SELECT * FROM INFORMATION_SCHEMA.SCHEMATA`
 * `SELECT GRANTEE,PRIVILEGE_TYPE FROM INFORMATION_SCHEMA.USER_PRIVILEGES`
+
+**Note:** In older versions of MaxScale this parameter was called `passwd`. The
+  parameter was deprecated in MaxScale 2.2 and support for it was dropped in
+  2.3.0.
 
 #### `enable_root_user`
 
@@ -1274,14 +1277,14 @@ monitoruser=mymonitoruser
 #### `monitorpw`
 
 The monitor has a username and password that is used to connect to all servers
-for monitoring purposes, this may be overridden by supplying a monpasswd
-statement for the individual servers.
+for monitoring purposes, this may be overridden by supplying a `monitorpw`
+for the individual servers.
 
 ```
 monitorpw=mymonitorpasswd
 ```
 
-The monpasswd parameter may be either a plain text password or it may be an
+The `monitorpw` parameter may be either a plain text password or it may be an
 encrypted password.  See the section on encrypting passwords for use in the
 maxscale.cnf file.
 
@@ -1801,7 +1804,7 @@ signal to the MariaDB MaxScale process or execute `reload config` in the
 The following list of service parameters can be updated at runtime.
 
 * user
-* passwd
+* password
 * enable_root_user
 * max_connections
 * connection_timeout

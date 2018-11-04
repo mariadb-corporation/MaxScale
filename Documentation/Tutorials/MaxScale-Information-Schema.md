@@ -31,7 +31,7 @@ to localhost as well.
 type=service
 router=maxinfo
 user=monitor
-passwd=my_secret
+password=my_secret
 ```
 
 The listener section defines the protocol, port and other information needed

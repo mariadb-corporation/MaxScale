@@ -20,7 +20,7 @@ type=monitor
 module=mmmon
 servers=server1,server2,server3
 user=myuser
-passwd=mypwd
+password=mypwd
 
 ```
 

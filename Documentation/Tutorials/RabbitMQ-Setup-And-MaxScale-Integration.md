@@ -183,7 +183,7 @@ router=readconnroute
 router_options=slave
 servers=server1,server2,server3,server5,server4
 user=massi
-passwd=massi
+password=massi
 filters=MQ
 
 [MQ]

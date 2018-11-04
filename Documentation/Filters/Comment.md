@@ -18,7 +18,7 @@ type=service
 router=readwritesplit
 servers=server1
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=MyComment
 ```
 
@@ -53,7 +53,7 @@ type=service
 router=readwritesplit
 servers=server1
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=IPComment
 ```
 

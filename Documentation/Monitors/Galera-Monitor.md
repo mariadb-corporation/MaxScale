@@ -18,7 +18,7 @@ type=monitor
 module=galeramon
 servers=server1,server2,server3
 user=myuser
-passwd=mypwd
+password=mypwd
 
 ```
 

@@ -26,7 +26,7 @@ type=service
 router=readconnrouter
 servers=server1
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=DatabaseFirewall
 ```
 
@@ -72,7 +72,7 @@ type=service
 servers=server1
 router=readconnroute
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 filters=dbfw-whitelist|dbfw-blacklist
 
 [dbfw-whitelist]

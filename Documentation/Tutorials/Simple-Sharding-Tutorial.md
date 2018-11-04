@@ -49,7 +49,7 @@ type=service
 router=schemarouter
 servers=accounts_west,accounts_east
 user=sharduser
-passwd=YqztlYGDvZ8tVMe3GUm9XCwQi
+password=YqztlYGDvZ8tVMe3GUm9XCwQi
 ```
 
 After this we configure a listener for the service. The listener is the actual port the user connects to. We will use the port 4000.
@@ -70,7 +70,7 @@ type=monitor
 module=mariadbmon
 servers=accounts_west,accounts_east
 user=monitoruser
-passwd=7SP1Zcsow8TG+9EkEBVEbaKa
+password=7SP1Zcsow8TG+9EkEBVEbaKa
 monitor_interval=1000
 ```
 
