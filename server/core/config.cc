@@ -230,15 +230,18 @@ static pcre2_code* compile_regex_string(const char* regex_string,
                                         uint32_t options,
                                         uint32_t* output_ovector_size);
 
-int        config_get_ifaddr(unsigned char* output);
-static int config_get_release_string(char* release);
-bool       config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
-int        create_new_service(CONFIG_CONTEXT* obj);
-int        create_new_server(CONFIG_CONTEXT* obj);
-int        create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers);
-int        create_new_listener(CONFIG_CONTEXT* obj);
-int        create_new_filter(CONFIG_CONTEXT* obj);
-void       config_fix_param(const MXS_MODULE_PARAM* params, MXS_CONFIG_PARAMETER* p);
+int         config_get_ifaddr(unsigned char* output);
+static int  config_get_release_string(char* release);
+bool        config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
+int         create_new_service(CONFIG_CONTEXT* obj);
+int         create_new_server(CONFIG_CONTEXT* obj);
+int         create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers);
+int         create_new_listener(CONFIG_CONTEXT* obj);
+int         create_new_filter(CONFIG_CONTEXT* obj);
+void        config_fix_param(const MXS_MODULE_PARAM* params, MXS_CONFIG_PARAMETER* p);
+std::string closest_matching_parameter(const std::string& str,
+                                       const MXS_MODULE_PARAM* base,
+                                       const MXS_MODULE_PARAM* mod);
 
 static const char* config_file = NULL;
 static MXS_CONFIG gateway;
@@ -3073,10 +3076,11 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
                 // be used as weighting parameters
                 if (type != CN_SERVER)
                 {
-                    MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'",
+                    MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
                               params->name,
                               obj->object,
-                              type.c_str());
+                              type.c_str(),
+                              closest_matching_parameter(params->name, param_set, mod->parameters).c_str());
                     rval = false;
                 }
                 continue;
@@ -4958,4 +4962,89 @@ void dump_param_list(int file,
             dump_if_changed(module_params, file, p->name, p->value);
         }
     }
+}
+
+/**
+ * Optimal string alignment distance of two strings
+ *
+ * @see https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
+ *
+ * @param a First string
+ * @param b Second string
+ *
+ * @return The distance between the two strings
+ */
+int string_distance(const std::string& a, const std::string& b)
+{
+    char d[a.length() + 1][b.length() + 1];
+
+    for (size_t i = 0; i <= a.length(); i++)
+    {
+        d[i][0] = i;
+    }
+
+    for (size_t i = 0; i <= b.length(); i++)
+    {
+        d[0][i] = i;
+    }
+
+    for (size_t i = 1; i <= a.length(); i++)
+    {
+        for (size_t j = 1; j <= b.length(); j++)
+        {
+            char cost = a[i - 1] == b[j - 1] ? 0 : 1;
+            // Remove, add or substitute a character
+            d[i][j] = std::min({d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost});
+
+            if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1])
+            {
+                // Transpose the characters
+                d[i][j] = std::min({d[i][j], (char)(d[i - 2][j - 2] + cost)});
+            }
+        }
+    }
+
+    return d[a.length()][b.length()];
+}
+
+/**
+ * Returns a suggestion with the parameter name closest to @c str
+ *
+ * @param str  String to match against
+ * @param base Module type parameters
+ * @param mod  Module implementation parameters
+ *
+ * @return A suggestion with the parameter name closest to @c str or an empty string if
+ *         the string is not close enough to any of the parameters.
+ */
+std::string closest_matching_parameter(const std::string& str,
+                                       const MXS_MODULE_PARAM* base,
+                                       const MXS_MODULE_PARAM* mod)
+{
+    std::string name;
+    int lowest = 99999;     // Nobody can come up with a parameter name this long
+
+    for (auto params : {base, mod})
+    {
+        for (int i = 0; params[i].name; i++)
+        {
+            int dist = string_distance(str, params[i].name);
+
+            if (dist < lowest)
+            {
+                name = params[i].name;
+                lowest = dist;
+            }
+        }
+    }
+
+    std::string rval;
+
+    if (lowest < (int)std::min(str.length(), name.length()))
+    {
+        rval = "Did you mean '" + name + "'?";
+        name.clear();
+    }
+
+    return rval;
 }
