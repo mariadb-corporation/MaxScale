@@ -854,6 +854,15 @@ int Galera_nodes::check_galera()
                 cout << "Expected cluster size: " << N << " Actual size: " << r[1] << endl;
             }
         }
+        else
+        {
+            cout << "Unexpected result size: "
+                 << (r.empty() ? "Empty result" : std::to_string(r.size())) << endl;
+        }
+    }
+    else
+    {
+        cout << "Failed to connect to the cluster" << endl;
     }
 
     disconnect();
