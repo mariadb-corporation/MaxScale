@@ -842,7 +842,11 @@ void RWSplitSession::log_master_routing_failure(bool found,
                || curr_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100];      // Extra space for error message
 
-    if (!found)
+    if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout)
+    {
+        sprintf(errmsg, "'delayed_retry_timeout' exceeded before a master could be found");
+    }
+    else if (!found)
     {
         sprintf(errmsg, "Could not find a valid master connection");
     }
