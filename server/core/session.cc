@@ -1230,7 +1230,8 @@ void Session::dump_statements() const
 
         for (auto i = m_last_statements.rbegin(); i != m_last_statements.rend(); ++i)
         {
-            const std::shared_ptr<GWBUF>& sBuffer = *i;
+            const StatementInfo& info = *i;
+            const std::shared_ptr<GWBUF>& sBuffer = info.statement();
 
             char* pStmt;
             int len;
@@ -1264,18 +1265,9 @@ json_t* Session::statements_as_json() const
 
     for (auto i = m_last_statements.rbegin(); i != m_last_statements.rend(); ++i)
     {
-        const std::shared_ptr<GWBUF>& sBuffer = *i;
+        const StatementInfo& info = *i;
 
-        char* pStmt;
-        int len;
-        bool deallocate = get_stmt(sBuffer.get(), &pStmt, &len);
-
-        json_array_append_new(pStatements, json_stringn(pStmt, len));
-
-        if (deallocate)
-        {
-            MXS_FREE(pStmt);
-        }
+        json_array_append_new(pStatements, info.as_json());
     }
 
     return pStatements;
@@ -1457,8 +1449,46 @@ void Session::retain_statement(GWBUF* pBuffer)
 
                 std::shared_ptr<GWBUF> sBuffer(gwbuf_clone(pBuffer));
 
-                m_last_statements.push_front(sBuffer);
+                m_last_statements.push_front(StatementInfo(sBuffer));
             }
         }
     }
+}
+
+Session::StatementInfo::StatementInfo(const std::shared_ptr<GWBUF>& sStatement)
+    : m_sStatement(sStatement)
+{
+    clock_gettime(CLOCK_REALTIME, &m_received);
+}
+
+json_t* Session::StatementInfo::as_json() const
+{
+    json_t* pInfo = json_object();
+
+    char* pStmt;
+    int len;
+    bool deallocate = get_stmt(m_sStatement.get(), &pStmt, &len);
+
+    json_object_set_new(pInfo, "statement", json_stringn(pStmt, len));
+
+    if (deallocate)
+    {
+        MXS_FREE(pStmt);
+    }
+
+    tm tm;
+    gmtime_r(&m_received.tv_sec, &tm);
+
+    static const char ISO_TEMPLATE[] = "2018-11-05T16:47:49.123456789";
+    static const int ISO_TIME_LEN = sizeof(ISO_TEMPLATE) - 1;
+
+    char iso_time[ISO_TIME_LEN + 1];
+    size_t i = strftime(iso_time, sizeof(iso_time), "%G-%m-%dT%H:%M:%S", &tm);
+    mxb_assert(i == 19);
+    i = sprintf(iso_time + i, ".%09ld", m_received.tv_nsec);
+    mxb_assert(i == 10);
+
+    json_object_set_new(pInfo, "received", json_stringn(iso_time, ISO_TIME_LEN));
+
+    return pInfo;
 }

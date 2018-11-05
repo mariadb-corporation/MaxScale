@@ -39,7 +39,6 @@ typedef struct SESSION_VARIABLE
 } SESSION_VARIABLE;
 
 typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
-typedef std::deque<std::shared_ptr<GWBUF>>               SessionStmtQueue;
 typedef std::unordered_set<DCB*>                          DCBSet;
 
 // Class that holds the session specific filter data
@@ -62,6 +61,25 @@ public:
 class Session : public MXS_SESSION
 {
 public:
+    class StatementInfo
+    {
+    public:
+        StatementInfo(const std::shared_ptr<GWBUF>& sStatement);
+
+        json_t* as_json() const;
+
+        const std::shared_ptr<GWBUF>& statement() const
+        {
+            return m_sStatement;
+        }
+
+    private:
+        std::shared_ptr<GWBUF> m_sStatement;
+        timespec               m_received;
+    };
+
+    typedef std::deque<StatementInfo> SessionStmtQueue;
+
     using FilterList = std::vector<SessionFilter>;
 
     ~Session();
