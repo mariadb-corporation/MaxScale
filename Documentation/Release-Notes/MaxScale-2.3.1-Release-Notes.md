@@ -29,12 +29,12 @@ The following configuration file options have been deprecated and will
 be removed in 2.4.
 
 #### Global section
-* `non_blocking_polls`
-* `poll_sleep`
-* `thread_stack_size`
+* `non_blocking_polls`, ignored.
+* `poll_sleep`, ignored.
+* `thread_stack_size`, ignored.
 
 #### Services and Monitors
-* `passwd`
+* `passwd`, replaced with `password`.
 
 ### MaxAdmin
 

@@ -1741,14 +1741,11 @@ maxadmin call command dbfwfilter rules/reload my-firewall-filter /home/user/rule
 Here the name of the filter is _my-firewall-filter_ and the optional rule file
 path is `/home/user/rules.txt`.
 
-# Tuning MariaDB MaxScale
+# MaxScale Internals
 
-The _show epoll_ command can be used to see how often we actually poll with a
-timeout, the first two values output are significant. Also the "Number of wake
-with pending events" is a good measure. This is the count of the number of times
-a blocking call returned to find there was some work waiting from another
-thread. If the value is increasing rapidly reducing the maximum sleep value and
-increasing the number of non-blocking polls should help the situation.
+The _show epoll_ command can be used to see what kind of events have been
+processed and also how many events on average have been returned by each
+call to `epoll_wait`.
 
 ```
 MaxScale> show epoll
@@ -1756,16 +1753,12 @@ MaxScale> show epoll
 Poll Statistics.
 
 No. of epoll cycles:                           343
-No. of epoll cycles with wait:                 66
 No. of epoll calls returning events:           19
-No. of non-blocking calls returning events:    10
 No. of read events:                            2
 No. of write events:                           15
 No. of error events:                           0
 No. of hangup events:                          0
 No. of accept events:                          4
-No. of times no threads polling:               4
-Total event queue length:                      1
 Average event queue length:                    1
 Maximum event queue length:                    1
 No of poll completions with descriptors
@@ -1783,19 +1776,10 @@ No of poll completions with descriptors
 MaxScale>
 ```
 
-If the "Number of DCBs with pending events" grows rapidly it is an indication
-that MariaDB MaxScale needs more threads to be able to keep up with the load it
-is under.
-
-The _show threads_ command can be used to see the historic average for the
-pending events queue, it gives 15 minute, 5 minute and 1 minute averages. The
-load average it displays is the event count per poll cycle data. An idea load is
-1, in this case MariaDB MaxScale threads and fully occupied but nothing is
-waiting for threads to become available for processing.
-
-The _show eventstats_ command can be used to see statistics about how long
-events have been queued before processing takes place and also how long the
-events took to execute once they have been allocated a thread to run on.
+The _show eventstats_ command can be used to see statistics about how
+long it has taken for events having been returned from `epoll_wait`
+until they processed, and how long it has taken for events to be
+processed once the processing has started.
 
 ```
 MaxScale> show eventstats
@@ -1804,7 +1788,6 @@ Event statistics.
 Maximum queue time:             000ms
 Maximum execution time:         000ms
 Maximum event queue length:     1
-Total event queue length:       4
 Average event queue length:     1
 
                |    Number of events
