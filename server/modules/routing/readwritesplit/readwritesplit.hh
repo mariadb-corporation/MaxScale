@@ -172,6 +172,28 @@ struct Config
         {
             retry_failed_reads = true;
         }
+
+        /** These options cancel each other out */
+        if (disable_sescmd_history && max_sescmd_history > 0)
+        {
+            max_sescmd_history = 0;
+        }
+
+        if (optimistic_trx)
+        {
+            // Optimistic transaction routing requires transaction replay
+            transaction_replay = true;
+        }
+
+        if (transaction_replay)
+        {
+            /**
+             * Replaying transactions requires that we are able to do delayed query
+             * retries and reconnect to a master.
+             */
+            delayed_retry = true;
+            master_reconnection = true;
+        }
     }
 
     select_criteria_t     slave_selection_criteria;     /**< The slave selection criteria */
