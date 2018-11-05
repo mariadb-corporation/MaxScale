@@ -1743,49 +1743,6 @@ path is `/home/user/rules.txt`.
 
 # Tuning MariaDB MaxScale
 
-The way that MariaDB MaxScale does its polling is that each of the polling
-threads, as defined by the threads parameter in the configuration file, will
-call epoll_wait to obtain the events that are to be processed. The events are
-then added to a queue for execution. Any thread can read from this queue, not
-just the thread that added the event.
-
-Once the thread has done an epoll call with no timeout it will either do an
-epoll_wait call with a timeout or it will take an event from the queue if there
-is one. These two new parameters affect this behavior.
-
-The first parameter, which may be set by using the non_blocking_polls option in
-the configuration file, controls the number of epoll_wait calls that will be
-issued without a timeout before MariaDB MaxScale will make a call with a timeout
-value. The advantage of performing a call without a timeout is that the kernel
-treats this case as different and will not rescheduled the process in this
-case. If a timeout is passed then the system call will cause the MariaDB
-MaxScale thread to be put back in the scheduling queue and may result in lost
-CPU time to MariaDB MaxScale. Setting the value of this parameter too high will
-cause MariaDB MaxScale to consume a lot of CPU when there is infrequent work to
-be done. The default value of this parameter is 3.
-
-This parameter may also be set via the maxadmin client using the command _set
-nbpolls <number>_.
-
-The second parameter is the maximum sleep value that MariaDB MaxScale will pass
-to epoll_wait. What normally happens is that MariaDB MaxScale will do an
-epoll_wait call with a sleep value that is 10% of the maximum, each time the
-returns and there is no more work to be done MariaDB MaxScale will increase this
-percentage by 10%. This will continue until the maximum value is reached or
-until there is some work to be done. Once the thread finds some work to be done
-it will reset the sleep time it uses to 10% of the maximum.
-
-The maximum sleep time is set in milliseconds and can be placed in the
-[maxscale] section of the configuration file with the poll_sleep
-parameter. Alternatively it may be set in the maxadmin client using the command
-_set pollsleep <number>_. The default value of this parameter is 1000.
-
-Setting this value too high means that if a thread collects a large number of
-events and adds to the event queue, the other threads might not return from the
-epoll_wait calls they are running for some time resulting in less overall
-performance. Setting the sleep time too low will cause MariaDB MaxScale to wake
-up too often and consume CPU time when there is no work to be done.
-
 The _show epoll_ command can be used to see how often we actually poll with a
 timeout, the first two values output are significant. Also the "Number of wake
 with pending events" is a good measure. This is the count of the number of times
