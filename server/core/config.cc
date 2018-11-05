@@ -217,7 +217,6 @@ static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 static bool        process_config_context(CONFIG_CONTEXT*);
 static bool        process_config_update(CONFIG_CONTEXT*);
 static char*       config_get_value(MXS_CONFIG_PARAMETER*, const char*);
-static char*       config_get_password(MXS_CONFIG_PARAMETER*);
 static const char* config_get_value_string(const MXS_CONFIG_PARAMETER* params, const char* name);
 static int         handle_global_item(const char*, const char*);
 static bool        check_config_objects(CONFIG_CONTEXT* context);
@@ -300,12 +299,9 @@ const MXS_MODULE_PARAM config_service_params[] =
      MXS_MODULE_OPT_REQUIRED},
     {CN_ROUTER_OPTIONS,                MXS_MODULE_PARAM_STRING},
     {CN_SERVERS,                       MXS_MODULE_PARAM_STRING},
-    {CN_USER,                          MXS_MODULE_PARAM_STRING},// Not mandatory due
-                                                                // to
-                                                                // RCAP_TYPE_NO_AUTH
-    {CN_PASSWORD,                      MXS_MODULE_PARAM_STRING},// Not mandatory due
-                                                                // to
-                                                                // RCAP_TYPE_NO_AUTH
+    {CN_USER,                          MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
+    {CN_PASSWORD,                      MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
+    {"passwd",                         MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
     {CN_ENABLE_ROOT_USER,              MXS_MODULE_PARAM_BOOL,   "false"},
     {CN_MAX_RETRY_INTERVAL,            MXS_MODULE_PARAM_COUNT,  "3600"},
     {CN_MAX_CONNECTIONS,               MXS_MODULE_PARAM_COUNT,  "0"},
@@ -362,8 +358,8 @@ const MXS_MODULE_PARAM config_monitor_params[] =
 
     {CN_USER,                      MXS_MODULE_PARAM_STRING, NULL,
      MXS_MODULE_OPT_REQUIRED},
-    {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING, NULL,
-     MXS_MODULE_OPT_REQUIRED},
+    {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING, NULL,MXS_MODULE_OPT_REQUIRED },
+    {"passwd",                     MXS_MODULE_PARAM_STRING},
 
     {CN_SERVERS,                   MXS_MODULE_PARAM_STRING},
     {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_COUNT,  "2000"},
@@ -1684,27 +1680,18 @@ static bool process_config_context(CONFIG_CONTEXT* context)
     return error_count == 0;
 }
 
-// DEPRECATE: In 2.1 complain but accept if "passwd" is provided, in 2.2
-// DEPRECATE: drop support for "passwd".
-/**
- * Get the value of the password parameter
- *
- * The words looked for are "password" and "passwd".
- *
- * @param params        The linked list of config parameters
- * @return the parameter value or NULL if not found
- */
-static char* config_get_password(MXS_CONFIG_PARAMETER* params)
+void do_passwd_deprecation(CONFIG_CONTEXT* obj)
 {
-    char* password = config_get_value(params, CN_PASSWORD);
-    char* passwd = config_get_value(params, "passwd");
-
-    if (password && passwd)
+    if (auto p = config_get_param(obj->parameters, "passwd"))
     {
-        MXS_WARNING("Both 'password' and 'passwd' specified. Using value of 'password'.");
-    }
+        if (config_get_param(obj->parameters, CN_PASSWORD))
+        {
+            MXS_WARNING("Both 'password' and 'passwd' specified. Using value of '%s'.", CN_PASSWORD);
+        }
 
-    return passwd ? passwd : password;
+        MXS_WARNING("The parameter 'passwd' is deprecated: use '%s' instead", CN_PASSWORD);
+        config_replace_param(obj, CN_PASSWORD, p->value);
+    }
 }
 
 /**
@@ -3115,9 +3102,11 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             }
         }
 
-        for (auto it = to_be_removed.begin(); it != to_be_removed.end(); it++)
+        do_passwd_deprecation(obj);
+
+        for (const auto& a : to_be_removed)
         {
-            config_remove_param(obj, it->c_str());
+            config_remove_param(obj, a.c_str());
         }
 
         if (missing_required_parameters(param_set, obj->parameters, obj->object)
