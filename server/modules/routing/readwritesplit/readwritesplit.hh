@@ -193,6 +193,7 @@ struct Config
              */
             delayed_retry = true;
             master_reconnection = true;
+            master_failure_mode = RW_FAIL_ON_WRITE;
         }
     }
 
