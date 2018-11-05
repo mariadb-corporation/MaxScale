@@ -37,12 +37,14 @@ struct Duration : public Clock::duration
 {
     using Clock::duration::duration;
     Duration() = default;
-    Duration(Clock::duration d) : Clock::duration(d)
+    Duration(Clock::duration d)
+        : Clock::duration(d)
     {
     }
 
     /** From seconds */
-    explicit Duration(double secs) : Duration{rep(secs * period::den / period::num)}
+    explicit Duration(double secs)
+        : Duration{rep(secs * period::den / period::num)}
     {
     }
 
@@ -125,7 +127,7 @@ public:
     /** Resume measuring time. Ok to call multiple times without an end_interval(). */
     void start_interval();
 
-    /** Pause measuring time. */
+    /** Pause measuring time. Ok to call without a start_interval. */
     void end_interval();
 
     /** Total duration of intervals (thus far). */

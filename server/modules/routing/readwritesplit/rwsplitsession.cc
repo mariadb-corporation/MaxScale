@@ -80,6 +80,11 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
             {
                 router->stats().n_sessions += 1;
             }
+
+            for (auto& b : backends)
+            {
+                router->server_stats(b->server()).start_session();
+            }
         }
     }
 
@@ -115,6 +120,11 @@ void RWSplitSession::close()
                                         stat.num_samples());
         }
         backend->response_stat().reset();
+
+        m_router->server_stats(backend->server()).end_session(
+            backend->session_timer().split(),
+            backend->select_timer().total(),
+            backend->num_selects());
     }
 }
 
@@ -620,6 +630,8 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
             m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
             session_set_load_active(m_pSession, true);
         }
+
+        backend->select_ended();
 
         if (m_otrx_state == OTRX_ROLLBACK)
         {

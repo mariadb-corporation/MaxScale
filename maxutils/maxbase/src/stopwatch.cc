@@ -47,7 +47,8 @@ Duration StopWatch::restart()
     return split;
 }
 
-IntervalTimer::IntervalTimer() : m_total(0)
+IntervalTimer::IntervalTimer()
+    : m_total(0)
 {
 }
 
@@ -58,6 +59,12 @@ void IntervalTimer::start_interval()
 
 void IntervalTimer::end_interval()
 {
+    if (m_last_start == maxbase::TimePoint())
+    {
+        // m_last_start is defaulted. Ignore, avoids extra logic at call sites.
+        return;
+    }
+
     m_total += Clock::now() - m_last_start;
     // reset to make it easier to spot usage bugs, like calling end_interval(); end_interval();
     m_last_start = TimePoint();
