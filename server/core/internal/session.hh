@@ -20,6 +20,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <maxscale/buffer.hh>
 #include <maxscale/session.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/utils.hh>
@@ -38,7 +39,7 @@ typedef struct SESSION_VARIABLE
 } SESSION_VARIABLE;
 
 typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
-typedef std::deque<std::vector<uint8_t>>                  SessionStmtQueue;
+typedef std::deque<std::shared_ptr<GWBUF>>               SessionStmtQueue;
 typedef std::unordered_set<DCB*>                          DCBSet;
 
 // Class that holds the session specific filter data

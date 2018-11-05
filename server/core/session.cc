@@ -26,19 +26,20 @@
 #include <string>
 #include <sstream>
 
-#include <maxscale/alloc.h>
 #include <maxbase/atomic.hh>
+#include <maxscale/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/json_api.h>
 #include <maxscale/log.h>
+#include <maxscale/modutil.h>
 #include <maxscale/poll.h>
 #include <maxscale/router.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/service.h>
 #include <maxscale/utils.h>
-#include <maxscale/json_api.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/routingworker.hh>
 
 #include "internal/dcb.h"
 #include "internal/filter.hh"
@@ -1197,15 +1198,29 @@ void Session::dump_statements() const
         if ((id != 0) && (id != ses_id))
         {
             MXS_WARNING("Current session is %" PRIu64 ", yet statements are dumped for %" PRIu64 ". "
-                                                                                                 "The session id in the subsequent dumped statements is the wrong one.",
+                        "The session id in the subsequent dumped statements is the wrong one.",
                         id,
                         ses_id);
         }
 
         for (auto i = m_last_statements.rbegin(); i != m_last_statements.rend(); ++i)
         {
-            int len = i->size();
-            const char* pStmt = (char*)&i->front();
+            std::shared_ptr<GWBUF> sBuffer = *i;
+            GWBUF* pBuffer = sBuffer.get();
+
+            mxb_assert(modutil_is_SQL(pBuffer));
+
+            char* pStmt;
+            int len;
+
+            if (GWBUF_IS_CONTIGUOUS(pBuffer))
+            {
+                modutil_extract_SQL(pBuffer, &pStmt, &len);
+            }
+            else
+            {
+                pStmt = modutil_get_SQL(pBuffer);
+            }
 
             if (id != 0)
             {
@@ -1217,6 +1232,11 @@ void Session::dump_statements() const
                 // log the session id ourselves.
 
                 MXS_NOTICE("(%" PRIu64 ") Stmt %d: %.*s", ses_id, n, len, pStmt);
+            }
+
+            if (!GWBUF_IS_CONTIGUOUS(pBuffer))
+            {
+                MXS_FREE(pStmt);
             }
 
             --n;
@@ -1398,10 +1418,9 @@ void Session::retain_statement(GWBUF* pBuffer)
                     m_last_statements.pop_back();
                 }
 
-                std::vector<uint8_t> stmt(len - MYSQL_HEADER_LEN - 1);
-                gwbuf_copy_data(pBuffer, MYSQL_HEADER_LEN + 1, len - (MYSQL_HEADER_LEN + 1), &stmt.front());
+                std::shared_ptr<GWBUF> sBuffer(gwbuf_clone(pBuffer));
 
-                m_last_statements.push_front(stmt);
+                m_last_statements.push_front(sBuffer);
             }
         }
     }
