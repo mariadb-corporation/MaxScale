@@ -82,6 +82,8 @@ public:
     void retain_statement(GWBUF* pBuffer);
     void dump_statements() const;
 
+    json_t* statements_as_json() const;
+
     void link_backend_dcb(DCB* dcb)
     {
         mxb_assert(m_dcb_set.count(dcb) == 0);

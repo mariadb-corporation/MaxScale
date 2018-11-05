@@ -897,6 +897,9 @@ json_t* session_json_data(const Session* session, const char* host)
 
     json_object_set_new(attr, "connections", dcb_arr);
 
+    json_t* statements = session->statements_as_json();
+    json_object_set_new(attr, "statements", statements);
+
     json_object_set_new(data, CN_ATTRIBUTES, attr);
     json_object_set_new(data, CN_LINKS, mxs_json_self_link(host, CN_SESSIONS, ss.str().c_str()));
 
@@ -1187,6 +1190,28 @@ Session::~Session()
     }
 }
 
+namespace
+{
+
+bool get_stmt(GWBUF* pBuffer, char** ppStmt, int* pLen)
+{
+    mxb_assert(modutil_is_SQL(pBuffer));
+
+    if (GWBUF_IS_CONTIGUOUS(pBuffer))
+    {
+        modutil_extract_SQL(pBuffer, ppStmt, pLen);
+    }
+    else
+    {
+        *ppStmt = modutil_get_SQL(pBuffer);
+        *pLen = strlen(*ppStmt);
+    }
+
+    return !GWBUF_IS_CONTIGUOUS(pBuffer);
+}
+
+}
+
 void Session::dump_statements() const
 {
     if (retain_last_statements)
@@ -1205,22 +1230,11 @@ void Session::dump_statements() const
 
         for (auto i = m_last_statements.rbegin(); i != m_last_statements.rend(); ++i)
         {
-            std::shared_ptr<GWBUF> sBuffer = *i;
-            GWBUF* pBuffer = sBuffer.get();
-
-            mxb_assert(modutil_is_SQL(pBuffer));
+            const std::shared_ptr<GWBUF>& sBuffer = *i;
 
             char* pStmt;
             int len;
-
-            if (GWBUF_IS_CONTIGUOUS(pBuffer))
-            {
-                modutil_extract_SQL(pBuffer, &pStmt, &len);
-            }
-            else
-            {
-                pStmt = modutil_get_SQL(pBuffer);
-            }
+            bool deallocate = get_stmt(sBuffer.get(), &pStmt, &len);
 
             if (id != 0)
             {
@@ -1234,7 +1248,7 @@ void Session::dump_statements() const
                 MXS_NOTICE("(%" PRIu64 ") Stmt %d: %.*s", ses_id, n, len, pStmt);
             }
 
-            if (!GWBUF_IS_CONTIGUOUS(pBuffer))
+            if (deallocate)
             {
                 MXS_FREE(pStmt);
             }
@@ -1242,6 +1256,29 @@ void Session::dump_statements() const
             --n;
         }
     }
+}
+
+json_t* Session::statements_as_json() const
+{
+    json_t* pStatements = json_array();
+
+    for (auto i = m_last_statements.rbegin(); i != m_last_statements.rend(); ++i)
+    {
+        const std::shared_ptr<GWBUF>& sBuffer = *i;
+
+        char* pStmt;
+        int len;
+        bool deallocate = get_stmt(sBuffer.get(), &pStmt, &len);
+
+        json_array_append_new(pStatements, json_stringn(pStmt, len));
+
+        if (deallocate)
+        {
+            MXS_FREE(pStmt);
+        }
+    }
+
+    return pStatements;
 }
 
 bool Session::setup_filters(Service* service)
