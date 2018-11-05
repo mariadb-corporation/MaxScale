@@ -20,6 +20,7 @@
 
 #include <maxscale/service.h>
 #include <maxscale/session_command.hh>
+#include <maxbase/stopwatch.hh>
 
 
 namespace maxscale
@@ -323,6 +324,12 @@ public:
         return m_uri.c_str();
     }
 
+    void select_started();
+    void select_ended();
+
+    int64_t                       num_selects() const;
+    const maxbase::StopWatch&     session_timer() const;
+    const maxbase::IntervalTimer& select_timer() const;
 private:
     /**
      * Internal state of the backend
@@ -357,6 +364,10 @@ private:
     SessionCommandList m_session_commands;  /**< List of session commands that are
                                              * to be executed on this backend server */
     std::string m_uri;                      /**< The combined address and port */
+
+    maxbase::StopWatch     m_session_timer;
+    maxbase::IntervalTimer m_select_timer;
+    int64_t                m_num_selects = 0;
 };
 
 typedef std::shared_ptr<Backend> SBackend;
