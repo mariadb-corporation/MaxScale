@@ -104,9 +104,7 @@ void dprintPollStats(DCB* dcb)
 
     dcb_printf(dcb, "\nPoll Statistics.\n\n");
     dcb_printf(dcb, "No. of epoll cycles:                           %" PRId64 "\n", s.n_polls);
-    dcb_printf(dcb, "No. of epoll cycles with wait:                 %" PRId64 "\n", s.blockingpolls);
     dcb_printf(dcb, "No. of epoll calls returning events:           %" PRId64 "\n", s.n_pollev);
-    dcb_printf(dcb, "No. of non-blocking calls returning events:    %" PRId64 "\n", s.n_nbpollev);
     dcb_printf(dcb, "No. of read events:                            %" PRId64 "\n", s.n_read);
     dcb_printf(dcb, "No. of write events:                           %" PRId64 "\n", s.n_write);
     dcb_printf(dcb, "No. of error events:                           %" PRId64 "\n", s.n_error);
