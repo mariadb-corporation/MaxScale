@@ -230,20 +230,12 @@ int Maxscales::restart_maxscale(int m)
     return res;
 }
 
-int Maxscales::start_maxscale(int m)
-{
-    int res = ssh_node(m, "service maxscale start", true);
-    fflush(stdout);
-    return res;
-}
-
 int Maxscales::stop_maxscale(int m)
 {
     int res = ssh_node(m, "service maxscale stop", true);
     fflush(stdout);
     return res;
 }
-
 
 int Maxscales::execute_maxadmin_command(int m, const char* cmd)
 {

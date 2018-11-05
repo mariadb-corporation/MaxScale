@@ -250,9 +250,12 @@ public:
     }
 
     /**
-     * @brief start_maxscale Issues 'service maxscale start' command
+     * @brief alias for restart_maxscale
      */
-    int start_maxscale(int m = 0);
+    int start_maxscale(int m = 0)
+    {
+        return restart_maxscale(m);
+    }
     int start(int m = 0)
     {
         return start_maxscale(m);
