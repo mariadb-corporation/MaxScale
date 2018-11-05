@@ -1016,8 +1016,7 @@ statements to load database names and grants from the backends:
 * `SELECT GRANTEE,PRIVILEGE_TYPE FROM INFORMATION_SCHEMA.USER_PRIVILEGES`
 
 **Note:** In older versions of MaxScale this parameter was called `passwd`. The
-  parameter was deprecated in MaxScale 2.2 and support for it was dropped in
-  2.3.0.
+  use of `passwd` was deprecated in MaxScale 2.3.0.
 
 #### `enable_root_user`
 
