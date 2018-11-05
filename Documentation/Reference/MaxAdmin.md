@@ -393,8 +393,6 @@ alter:
 
 set:
     set server - Set the status of a server
-    set pollsleep - Set poll sleep period
-    set nbpolls - Set non-blocking polls
     set log_throttling - Set the log throttling configuration
 
 clear:

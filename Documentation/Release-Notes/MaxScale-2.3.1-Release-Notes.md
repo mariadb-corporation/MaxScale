@@ -23,6 +23,24 @@ release. The functionality in `mmmon` has been largely obsoleted by the
 advancements in `mariadbmon`. The `ndbclustermon` is largely obsolete due to the
 fact that there are virtually no users who use it.
 
+### Deprecated options
+
+The following configuration file options have been deprecated and will
+be removed in 2.4.
+
+#### Global section
+* `non_blocking_polls`
+* `poll_sleep`
+* `thread_stack_size`
+
+#### Services and Monitors
+* `passwd`
+
+### MaxAdmin
+
+The commands `set pollsleep` and `set nbpolls` have been deprecated and
+will be removed in 2.4.
+
 ## New Features
 
 ### MaxCtrl
