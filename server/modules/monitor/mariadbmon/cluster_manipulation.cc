@@ -510,7 +510,8 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                 else
                 {
                     // No conflict, redirect as normal.
-                    if (redirectable->redirect_existing_slave_conn(general, from, to))
+                    auto old_conn = redirectable->slave_connection_status(from);
+                    if (redirectable->redirect_existing_slave_conn(general, *old_conn, to))
                     {
                         successes++;
                         redirected->push_back(redirectable);
@@ -587,35 +588,46 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
     uint32_t servers_joined = 0;
     if (!joinable_servers.empty())
     {
-        string change_cmd = generate_change_master_cmd(master_server->address, master_server->port);
         for (MariaDBServer* joinable : joinable_servers)
         {
             const char* name = joinable->name();
             bool op_success = false;
+            // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
+            // the first phase of standalone rejoin is similar to switchover.
+            maxbase::Duration time_limit((double)m_switchover_timeout);
+            GeneralOpData op(m_replication_user, m_replication_password, output, time_limit);
 
             if (joinable->m_slave_status.empty())
             {
-                if (!m_demote_sql_file.empty() && !joinable->run_sql_from_file(m_demote_sql_file, output))
+                // Assume that server is an old master which was failed over. Even if this is not really
+                // the case, the following is unlikely to do damage.
+                ServerOperation demotion(joinable, true, /* treat as old master */
+                                         m_handle_event_scheduler, m_demote_sql_file, {} /* unused */);
+                if (joinable->demote(demotion, op))
                 {
-                    PRINT_MXS_JSON_ERROR(output,
-                                         "%s execution failed when attempting to rejoin server '%s'.",
-                                         CN_DEMOTION_SQL_FILE,
-                                         joinable->name());
+                    MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
+                    // A slave connection description is required. As this is the only connection, no name
+                    // is required.
+                    SlaveStatus new_conn;
+                    new_conn.master_host = master_server->address;
+                    new_conn.master_port = master_server->port;
+                    op_success = joinable->create_start_slave(op, new_conn);
                 }
                 else
                 {
-                    MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
-                    op_success = joinable->join_cluster(change_cmd, m_handle_event_scheduler);
+                    PRINT_MXS_JSON_ERROR(output,
+                                         "Failed to prepare (demote) standalone server %s for rejoin.", name);
                 }
             }
             else
             {
                 MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
                            "redirecting it to '%s'.",
-                           name,
-                           master_name,
-                           master_name);
-                op_success = joinable->redirect_one_slave(change_cmd);
+                           name, master_name, master_name);
+                // Multisource replication does not get to this point.
+                mxb_assert(joinable->m_slave_status.size() == 1);
+                op_success = joinable->redirect_existing_slave_conn(op, joinable->m_slave_status[0],
+                                                                    m_master);
             }
 
             if (op_success)

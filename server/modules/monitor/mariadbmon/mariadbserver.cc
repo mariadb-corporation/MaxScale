@@ -750,42 +750,6 @@ bool MariaDBServer::redirect_one_slave(const string& change_cmd)
     return success;
 }
 
-bool MariaDBServer::join_cluster(const string& change_cmd, bool disable_server_events)
-{
-    /* Server does not have slave connections. This operation can fail, or the resulting
-     * replication may end up broken. */
-    bool success = false;
-    MYSQL* server_conn = m_server_base->con;
-    const char* query = "SET GLOBAL read_only=1;";
-    if (mxs_mysql_query(server_conn, query) == 0)
-    {
-        if (disable_server_events)
-        {
-            // This is unlikely to change anything, since a restarted server does not have event scheduler
-            // ON. If it were on and events were running while the server was standalone, its data would have
-            // diverged from the rest of the cluster.
-            disable_events(BinlogMode::BINLOG_OFF, NULL);
-        }
-        query = "CHANGE MASTER TO ...";     // Don't show the real query as it contains a password.
-        if (mxs_mysql_query(server_conn, change_cmd.c_str()) == 0)
-        {
-            query = "START SLAVE;";
-            if (mxs_mysql_query(server_conn, query) == 0)
-            {
-                success = true;
-                MXS_NOTICE("Standalone server '%s' starting replication.", name());
-            }
-        }
-    }
-
-    if (!success)
-    {
-        const char ERROR_MSG[] = "Standalone server '%s' failed to start replication: '%s'. Query: '%s'.";
-        MXS_WARNING(ERROR_MSG, name(), mysql_error(server_conn), query);
-    }
-    return success;
-}
-
 bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
 {
     MYSQL* conn = m_server_base->con;
@@ -1579,7 +1543,8 @@ bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
         bool demotion_error = false;
         if (demo_op.to_from_master)
         {
-            mxb_assert(is_master());
+            // The server should either be the master or be a standalone being rejoined.
+            mxb_assert(is_master() || m_slave_status.empty());
             StopWatch timer;
             // Step 2a: Enabling read-only can take time if writes are on or table locks taken.
             // TODO: use max_statement_time to be safe!
@@ -2002,13 +1967,6 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
     return !start_slave_error;
 }
 
-/**
- * Create a new slave connection on the server and start it.
- *
- * @param op Operation descriptor
- * @param slave_conn Existing connection to emulate
- * @return True on success
- */
 bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus& slave_conn)
 {
     maxbase::Duration& time_remaining = op.time_remaining;
@@ -2070,22 +2028,20 @@ string MariaDBServer::generate_change_master_cmd(GeneralOpData& op, const SlaveS
     return change_cmd;
 }
 
-bool MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const MariaDBServer* old_master,
+bool MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus& old_conn,
                                                  const MariaDBServer* new_master)
 {
     auto error_out = op.error_out;
     maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
-    auto old_conn = slave_connection_status(old_master);
-    mxb_assert(old_conn);
     bool success = false;
 
     // First, just stop the slave connection.
-    bool stopped = stop_slave_conn(old_conn->name, StopMode::STOP_ONLY, time_remaining, error_out);
+    bool stopped = stop_slave_conn(old_conn.name, StopMode::STOP_ONLY, time_remaining, error_out);
     time_remaining -= timer.restart();
     if (stopped)
     {
-        SlaveStatus modified_conn = *old_conn;
+        SlaveStatus modified_conn = old_conn;
         SERVER* target_server = new_master->m_server_base->server;
         modified_conn.master_host = target_server->address;
         modified_conn.master_port = target_server->port;
@@ -2095,7 +2051,7 @@ bool MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const MariaD
         time_remaining -= timer.restart();
         if (changed)
         {
-            string start = string_printf("START SLAVE '%s';", old_conn->name.c_str());
+            string start = string_printf("START SLAVE '%s';", old_conn.name.c_str());
             bool started = execute_cmd_time_limit(start, time_remaining, &error_msg);
             time_remaining -= timer.restart();
             if (started)
@@ -2114,7 +2070,7 @@ bool MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const MariaD
             // TODO: This may currently print out passwords.
             PRINT_MXS_JSON_ERROR(error_out,
                                  "%s could not be redirected to [%s]:%i: %s",
-                                 old_conn->to_short_string().c_str(),
+                                 old_conn.to_short_string().c_str(),
                                  modified_conn.master_host.c_str(), modified_conn.master_port,
                                  error_msg.c_str());
         }
