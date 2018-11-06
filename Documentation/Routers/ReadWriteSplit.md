@@ -468,7 +468,7 @@ statements.
 INSERT INTO test.t1 (id) VALUES (1);
 SET @maxscale_secret_variable=(
     SELECT CASE
-           WHEN MASTER_GTID_WAIT('0-3000-8', 120) = 0 THEN 1
+           WHEN MASTER_GTID_WAIT('0-3000-8', 10) = 0 THEN 1
            ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES)
     END);
 SELECT * FROM test.t1 WHERE id = 1;
@@ -486,7 +486,7 @@ when the slave timed out.
 ### `causal_reads_timeout`
 
 The timeout for the slave synchronization done by `causal_reads`. The
-default value is 120 seconds.
+default value is 10 seconds.
 
 ## Routing hints
 
