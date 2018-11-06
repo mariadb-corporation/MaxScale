@@ -357,7 +357,7 @@ public:
      * @param op Cluster operation descriptor
      * @return True if successful
      */
-    bool demote(ServerOperation& op, GeneralOpData& general);
+    bool demote(GeneralOpData& general, ServerOperation& op);
 
     /**
      * Redirect the slave connection going to old master to replicate from new master.

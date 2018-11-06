@@ -1523,9 +1523,9 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
     return success;
 }
 
-bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
+bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion)
 {
-    mxb_assert(demo_op.target == this);
+    mxb_assert(demotion.target == this);
     json_t** const error_out = general.error_out;
     bool success = false;
 
@@ -1541,7 +1541,7 @@ bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
         // likely part to fail, setting read_only=1, first to make undoing easier. Setting
         // read_only may fail if another session has table locks or is doing long writes.
         bool demotion_error = false;
-        if (demo_op.to_from_master)
+        if (demotion.to_from_master)
         {
             // The server should either be the master or be a standalone being rejoined.
             mxb_assert(is_master() || m_slave_status.empty());
@@ -1556,7 +1556,7 @@ bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
             }
             else
             {
-                if (demo_op.handle_events)
+                if (demotion.handle_events)
                 {
                     // TODO: Add query replying to enable_events
                     // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
@@ -1571,7 +1571,7 @@ bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
                 }
 
                 // Step 2c: Run demotion_sql_file if no errors so far.
-                const string& sql_file = demo_op.sql_file;
+                const string& sql_file = demotion.sql_file;
                 if (!demotion_error && !sql_file.empty())
                 {
                     bool file_ran_ok = run_sql_from_file(sql_file, error_out);
@@ -1620,7 +1620,7 @@ bool MariaDBServer::demote(ServerOperation& demo_op, GeneralOpData& general)
             }
         }
 
-        if (demotion_error && demo_op.to_from_master)
+        if (demotion_error && demotion.to_from_master)
         {
             // Read_only was enabled (or tried to be enabled) but a later step failed.
             // Disable read_only. Connection is likely broken so use a short time limit.

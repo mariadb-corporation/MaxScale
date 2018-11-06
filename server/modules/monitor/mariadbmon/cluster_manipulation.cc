@@ -595,7 +595,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
             // the first phase of standalone rejoin is similar to switchover.
             maxbase::Duration time_limit((double)m_switchover_timeout);
-            GeneralOpData op(m_replication_user, m_replication_password, output, time_limit);
+            GeneralOpData general(m_replication_user, m_replication_password, output, time_limit);
 
             if (joinable->m_slave_status.empty())
             {
@@ -603,7 +603,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                 // the case, the following is unlikely to do damage.
                 ServerOperation demotion(joinable, true, /* treat as old master */
                                          m_handle_event_scheduler, m_demote_sql_file, {} /* unused */);
-                if (joinable->demote(demotion, op))
+                if (joinable->demote(general, demotion))
                 {
                     MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     // A slave connection description is required. As this is the only connection, no name
@@ -611,7 +611,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                     SlaveStatus new_conn;
                     new_conn.master_host = master_server->address;
                     new_conn.master_port = master_server->port;
-                    op_success = joinable->create_start_slave(op, new_conn);
+                    op_success = joinable->create_start_slave(general, new_conn);
                 }
                 else
                 {
@@ -626,7 +626,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                            name, master_name, master_name);
                 // Multisource replication does not get to this point.
                 mxb_assert(joinable->m_slave_status.size() == 1);
-                op_success = joinable->redirect_existing_slave_conn(op, joinable->m_slave_status[0],
+                op_success = joinable->redirect_existing_slave_conn(general, joinable->m_slave_status[0],
                                                                     m_master);
             }
 
@@ -791,7 +791,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
 
     bool rval = false;
     // Step 1: Set read-only to on, flush logs, update gtid:s.
-    if (demotion_target->demote(op.demotion, op.general))
+    if (demotion_target->demote(op.general, op.demotion))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;
