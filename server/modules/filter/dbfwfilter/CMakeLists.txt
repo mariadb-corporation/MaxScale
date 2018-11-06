@@ -13,7 +13,7 @@ if(BISON_FOUND AND FLEX_FOUND)
 
   add_library(dbfwfilter SHARED dbfwfilter.cc)
   target_link_libraries(dbfwfilter maxscale-common mysqlcommon dbfwfilter-core)
-  set_target_properties(dbfwfilter PROPERTIES VERSION "1.0.0")
+  set_target_properties(dbfwfilter PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
   install_module(dbfwfilter core)
 
   # The offline rule check utility

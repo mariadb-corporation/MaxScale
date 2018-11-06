@@ -1,5 +1,5 @@
 add_library(galeramon SHARED galeramon.cc)
 target_link_libraries(galeramon maxscale-common)
 add_dependencies(galeramon pcre2)
-set_target_properties(galeramon PROPERTIES VERSION "2.0.0")
+set_target_properties(galeramon PROPERTIES VERSION "2.0.0" LINK_FLAGS -Wl,-z,defs)
 install_module(galeramon core)
