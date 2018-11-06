@@ -55,14 +55,24 @@ the [JSON API](http://jsonapi.org/format/) specification.
 - [sessions](Resources-Session.md)
 - [users](Resources-User.md)
 
-All of the current resources are in the `/v1/` namespace of the MaxScale REST
-API. Further additions to the namespace can be added that do not break backwards
-compatibility of any existing resources.
-
 In addition to the named resources, the REST API will respond with a HTTP 200 OK
 response to GET requests on the root resource (`/`) as well as the namespace
 root resource (`/v1/`). These can be used for HTTP health checks to determine
 whether MaxScale is running.
+
+## API Versioning
+
+All of the current resources are in the `/v1/` namespace of the MaxScale REST
+API. Further additions to the namespace can be added that do not break backwards
+compatibility of any existing resources. What this means in practice is that:
+
+* No resources or URLs will be removed
+* The API will be JSON API compliant
+
+Note that this means that the contents of individual resources can change. New
+fields can be added, old ones can be removed and the meaning of existing fields
+can change. The aim is to be as backwards compatible as reasonably possible
+without sacrificing the clarity and functionality of the API.
 
 ### Resource Relationships
 

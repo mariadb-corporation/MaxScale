@@ -101,10 +101,14 @@ Common options for all monitor modules.
 
 Module specific documentation.
 
- - [Aurora Monitor](Monitors/Aurora-Monitor.md)
- - [Galera Monitor](Monitors/Galera-Monitor.md)
- - [Multi-Master Monitor](Monitors/MM-Monitor.md)
  - [MariaDB Monitor](Monitors/MariaDB-Monitor.md)
+ - [Galera Monitor](Monitors/Galera-Monitor.md)
+ - [ColumnStore Monitor](Monitors/ColumnStore-Monitor.md)
+ - [Aurora Monitor](Monitors/Aurora-Monitor.md)
+
+Legacy monitors that have been deprecated.
+
+ - [Multi-Master Monitor](Monitors/MM-Monitor.md)
  - [MySQL Cluster Monitor](Monitors/NDB-Cluster-Monitor.md)
 
 ## Protocols

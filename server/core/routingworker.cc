@@ -759,10 +759,8 @@ Worker::STATISTICS RoutingWorker::get_statistics()
     cs.n_accept = mxs::sum(s, &STATISTICS::n_accept);
     cs.n_polls = mxs::sum(s, &STATISTICS::n_polls);
     cs.n_pollev = mxs::sum(s, &STATISTICS::n_pollev);
-    cs.n_nbpollev = mxs::sum(s, &STATISTICS::n_nbpollev);
     cs.evq_avg = mxs::avg(s, &STATISTICS::evq_avg);
     cs.evq_max = mxs::max(s, &STATISTICS::evq_max);
-    cs.blockingpolls = mxs::sum(s, &STATISTICS::blockingpolls);
     cs.maxqtime = mxs::max(s, &STATISTICS::maxqtime);
     cs.maxexectime = mxs::max(s, &STATISTICS::maxexectime);
     cs.n_fds = mxs::sum_element(s, &STATISTICS::n_fds);
@@ -1033,9 +1031,6 @@ public:
         json_object_set_new(pStats, "errors", json_integer(s.n_error));
         json_object_set_new(pStats, "hangups", json_integer(s.n_hup));
         json_object_set_new(pStats, "accepts", json_integer(s.n_accept));
-        json_object_set_new(pStats, "blocking_polls", json_integer(s.blockingpolls));
-        // TODO: When REST-API v2 is published, remove 'event_queue_length'.
-        json_object_set_new(pStats, "event_queue_length", json_integer(s.evq_avg));
         json_object_set_new(pStats, "avg_event_queue_length", json_integer(s.evq_avg));
         json_object_set_new(pStats, "max_event_queue_length", json_integer(s.evq_max));
         json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));

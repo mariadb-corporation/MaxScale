@@ -48,11 +48,8 @@ struct WORKER_STATISTICS
     int64_t n_accept = 0;       /*< Number of accept events */
     int64_t n_polls = 0;        /*< Number of poll cycles   */
     int64_t n_pollev = 0;       /*< Number of polls returning events */
-    int64_t n_nbpollev = 0;     /*< Number of polls returning events */
     int64_t evq_avg = 0;        /*< Average event queue length */
     int64_t evq_max = 0;        /*< Maximum event queue length */
-    int64_t blockingpolls = 0;  /*< Number of epoll_waits with a timeout
-                                 * specified */
     int64_t                                 maxqtime = 0;
     int64_t                                 maxexectime = 0;
     std::array<int64_t, MAXNFDS>            n_fds {};   /*< Number of wakeups with particular n_fds value */

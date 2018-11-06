@@ -575,6 +575,17 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         mxb_assert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
 
+        ResponseStat& stat = backend->response_stat();
+        stat.query_ended();
+        if (stat.is_valid() && (stat.sync_time_reached()
+                                || server_response_time_num_samples(backend->server()) == 0))
+        {
+            server_add_response_average(backend->server(),
+                                        stat.average().secs(),
+                                        stat.num_samples());
+            stat.reset();
+        }
+
         if (m_config.causal_reads)
         {
             // The reply should never be complete while we are still waiting for the header.
@@ -648,18 +659,6 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         MXS_INFO("Transaction complete");
         m_trx.close();
         m_can_replay_trx = true;
-    }
-
-
-    ResponseStat& stat = backend->response_stat();
-    stat.query_ended();
-    if (stat.is_valid() && (stat.sync_time_reached()
-                            || server_response_time_num_samples(backend->server()) == 0))
-    {
-        server_add_response_average(backend->server(),
-                                    stat.average().secs(),
-                                    stat.num_samples());
-        stat.reset();
     }
 
     if (backend->in_use() && backend->has_session_commands())

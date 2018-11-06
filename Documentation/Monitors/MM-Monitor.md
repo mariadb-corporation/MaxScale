@@ -1,5 +1,7 @@
 # Multi-Master Monitor
 
+**NOTE:** This module has been deprecated, do not use it.
+
 ## Overview
 
 The Multi-Master Monitor is a monitoring module for MaxScale that monitors Master-Master replication.

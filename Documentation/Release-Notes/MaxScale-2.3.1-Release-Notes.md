@@ -16,6 +16,31 @@ Secondary masters can now be specified also when file + position
 based replication is used. Earlier it was possible only in conjunction
 with GTID based replication.
 
+### `mmmon` and `ndbclustermon`
+
+Both of these modules have been deprecated and will be removed in a future
+release. The functionality in `mmmon` has been largely obsoleted by the
+advancements in `mariadbmon`. The `ndbclustermon` is largely obsolete due to the
+fact that there are virtually no users who use it.
+
+### Deprecated options
+
+The following configuration file options have been deprecated and will
+be removed in 2.4.
+
+#### Global section
+* `non_blocking_polls`, ignored.
+* `poll_sleep`, ignored.
+* `thread_stack_size`, ignored.
+
+#### Services and Monitors
+* `passwd`, replaced with `password`.
+
+### MaxAdmin
+
+The commands `set pollsleep` and `set nbpolls` have been deprecated and
+will be removed in 2.4.
+
 ## New Features
 
 ### MaxCtrl

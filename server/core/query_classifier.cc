@@ -397,9 +397,9 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 
             if (cache_max_size)
             {
+                int64_t size_per_thr = cache_max_size / config_get_global_options()->n_threads;
                 MXS_NOTICE("Query classification results are cached and reused. "
-                           "Memory used per thread: %s",
-                           mxb::to_binary_size(cache_max_size).c_str());
+                           "Memory used per thread: %s", mxb::to_binary_size(size_per_thr).c_str());
             }
             else
             {

@@ -302,7 +302,7 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
                 maxbase::Duration response_ave(server_response_time_average(b->server));
                 std::ostringstream os;
                 os << response_ave;
-                MXS_INFO("Average response time : %s from \t[%s]:%d %s",
+                MXS_INFO("adaptive avg. select time: %s from \t[%s]:%d %s",
                          os.str().c_str(),
                          b->server->address,
                          b->server->port,

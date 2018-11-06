@@ -393,8 +393,6 @@ alter:
 
 set:
     set server - Set the status of a server
-    set pollsleep - Set poll sleep period
-    set nbpolls - Set non-blocking polls
     set log_throttling - Set the log throttling configuration
 
 clear:
@@ -1743,57 +1741,11 @@ maxadmin call command dbfwfilter rules/reload my-firewall-filter /home/user/rule
 Here the name of the filter is _my-firewall-filter_ and the optional rule file
 path is `/home/user/rules.txt`.
 
-# Tuning MariaDB MaxScale
+# MaxScale Internals
 
-The way that MariaDB MaxScale does its polling is that each of the polling
-threads, as defined by the threads parameter in the configuration file, will
-call epoll_wait to obtain the events that are to be processed. The events are
-then added to a queue for execution. Any thread can read from this queue, not
-just the thread that added the event.
-
-Once the thread has done an epoll call with no timeout it will either do an
-epoll_wait call with a timeout or it will take an event from the queue if there
-is one. These two new parameters affect this behavior.
-
-The first parameter, which may be set by using the non_blocking_polls option in
-the configuration file, controls the number of epoll_wait calls that will be
-issued without a timeout before MariaDB MaxScale will make a call with a timeout
-value. The advantage of performing a call without a timeout is that the kernel
-treats this case as different and will not rescheduled the process in this
-case. If a timeout is passed then the system call will cause the MariaDB
-MaxScale thread to be put back in the scheduling queue and may result in lost
-CPU time to MariaDB MaxScale. Setting the value of this parameter too high will
-cause MariaDB MaxScale to consume a lot of CPU when there is infrequent work to
-be done. The default value of this parameter is 3.
-
-This parameter may also be set via the maxadmin client using the command _set
-nbpolls <number>_.
-
-The second parameter is the maximum sleep value that MariaDB MaxScale will pass
-to epoll_wait. What normally happens is that MariaDB MaxScale will do an
-epoll_wait call with a sleep value that is 10% of the maximum, each time the
-returns and there is no more work to be done MariaDB MaxScale will increase this
-percentage by 10%. This will continue until the maximum value is reached or
-until there is some work to be done. Once the thread finds some work to be done
-it will reset the sleep time it uses to 10% of the maximum.
-
-The maximum sleep time is set in milliseconds and can be placed in the
-[maxscale] section of the configuration file with the poll_sleep
-parameter. Alternatively it may be set in the maxadmin client using the command
-_set pollsleep <number>_. The default value of this parameter is 1000.
-
-Setting this value too high means that if a thread collects a large number of
-events and adds to the event queue, the other threads might not return from the
-epoll_wait calls they are running for some time resulting in less overall
-performance. Setting the sleep time too low will cause MariaDB MaxScale to wake
-up too often and consume CPU time when there is no work to be done.
-
-The _show epoll_ command can be used to see how often we actually poll with a
-timeout, the first two values output are significant. Also the "Number of wake
-with pending events" is a good measure. This is the count of the number of times
-a blocking call returned to find there was some work waiting from another
-thread. If the value is increasing rapidly reducing the maximum sleep value and
-increasing the number of non-blocking polls should help the situation.
+The _show epoll_ command can be used to see what kind of events have been
+processed and also how many events on average have been returned by each
+call to `epoll_wait`.
 
 ```
 MaxScale> show epoll
@@ -1801,16 +1753,12 @@ MaxScale> show epoll
 Poll Statistics.
 
 No. of epoll cycles:                           343
-No. of epoll cycles with wait:                 66
 No. of epoll calls returning events:           19
-No. of non-blocking calls returning events:    10
 No. of read events:                            2
 No. of write events:                           15
 No. of error events:                           0
 No. of hangup events:                          0
 No. of accept events:                          4
-No. of times no threads polling:               4
-Total event queue length:                      1
 Average event queue length:                    1
 Maximum event queue length:                    1
 No of poll completions with descriptors
@@ -1828,19 +1776,10 @@ No of poll completions with descriptors
 MaxScale>
 ```
 
-If the "Number of DCBs with pending events" grows rapidly it is an indication
-that MariaDB MaxScale needs more threads to be able to keep up with the load it
-is under.
-
-The _show threads_ command can be used to see the historic average for the
-pending events queue, it gives 15 minute, 5 minute and 1 minute averages. The
-load average it displays is the event count per poll cycle data. An idea load is
-1, in this case MariaDB MaxScale threads and fully occupied but nothing is
-waiting for threads to become available for processing.
-
-The _show eventstats_ command can be used to see statistics about how long
-events have been queued before processing takes place and also how long the
-events took to execute once they have been allocated a thread to run on.
+The _show eventstats_ command can be used to see statistics about how
+long it has taken for events having been returned from `epoll_wait`
+until they processed, and how long it has taken for events to be
+processed once the processing has started.
 
 ```
 MaxScale> show eventstats
@@ -1849,7 +1788,6 @@ Event statistics.
 Maximum queue time:             000ms
 Maximum execution time:         000ms
 Maximum event queue length:     1
-Total event queue length:       4
 Average event queue length:     1
 
                |    Number of events
