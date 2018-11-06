@@ -214,7 +214,7 @@ int main(int argc, char** argv)
     // master doesn't have event scheduler on anymore.
     cout << "Step 3: Switchover back to server1. Check that event is enabled. Don't check that the "
             "event is running since the scheduler process is likely off.\n";
-    string switch_cmd = "call command mysqlmon switchover MySQL-Monitor";
+    string switch_cmd = "call command mysqlmon switchover MySQL-Monitor server1";
     test.maxscales->execute_maxadmin_command_print(0, switch_cmd.c_str());
     test.maxscales->wait_for_monitor(1);
     get_output(test);
