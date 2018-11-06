@@ -264,8 +264,6 @@ uint8_t* process_row_event_data(STableMapEvent map,
     {
         if (bit_is_set(columns_present, ncolumns, i))
         {
-            avro_value_t field;
-            avro_value_set_branch(&union_value, 1, &field);
             npresent++;
 
             if (bit_is_set(null_bitmap, ncolumns, i))
