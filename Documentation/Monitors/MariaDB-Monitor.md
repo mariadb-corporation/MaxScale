@@ -1,6 +1,43 @@
 # MariaDB Monitor
 
-Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
+Table of Contents
+=================
+
+  * [Overview](#overview)
+  * [Master selection](#master-selection)
+  * [Configuration](#configuration)
+  * [Common Monitor Parameters](#common-monitor-parameters)
+  * [MariaDB Monitor optional parameters](#mariadb-monitor-optional-parameters)
+     * [detect_replication_lag](#detect_replication_lag)
+     * [detect_stale_master](#detect_stale_master)
+     * [detect_stale_slave](#detect_stale_slave)
+     * [mysql51_replication](#mysql51_replication)
+     * [multimaster](#multimaster)
+     * [ignore_external_masters](#ignore_external_masters)
+     * [detect_standalone_master](#detect_standalone_master)
+     * [failcount](#failcount)
+     * [allow_cluster_recovery](#allow_cluster_recovery)
+     * [enforce_read_only_slaves](#enforce_read_only_slaves)
+     * [maintenance_on_low_disk_space](#maintenance_on_low_disk_space)
+  * [Cluster manipulation operations](#cluster-manipulation-operations)
+     * [Operation details](#operation-details)
+     * [Manual activation](#manual-activation)
+     * [Automatic activation](#automatic-activation)
+     * [Limitations and requirements](#limitations-and-requirements)
+     * [External master support](#external-master-support)
+     * [Configuration parameters](#configuration-parameters)
+        * [auto_failover](#auto_failover)
+        * [auto_rejoin](#auto_rejoin)
+        * [switchover_on_low_disk_space](#switchover_on_low_disk_space)
+        * [replication_user and replication_password](#replication_user-and-replication_password)
+        * [failover_timeout and switchover_timeout](#failover_timeout-and-switchover_timeout)
+        * [verify_master_failure and master_failure_timeout](#verify_master_failure-and-master_failure_timeout)
+        * [servers_no_promotion](#servers_no_promotion)
+        * [promotion_sql_file and demotion_sql_file](#promotion_sql_file-and-demotion_sql_file)
+        * [handle_server_events](#handle_server_events)
+     * [Troubleshooting](#troubleshooting)
+  * [Using the MariaDB Monitor With Binlogrouter](#using-the-mariadb-monitor-with-binlogrouter)
+  * [Example 1 - Monitor script](#example-1---monitor-script)
 
 ## Overview
 
@@ -10,6 +47,8 @@ are used by the routers when deciding where to route a query. It can also modify
 the replication cluster by performing failover, switchover and rejoin. Backend
 server versions older than MariaDB/MySQL 5.5 are not supported. Failover and
 other similar operations require MariaDB 10.0.2 or later.
+
+Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 
 ## Master selection
 
@@ -201,10 +240,21 @@ disable `read_only`. Otherwise the monitor would quickly re-enable it.
 ### `maintenance_on_low_disk_space`
 
 This feature is enabled by default. If a running server that is not the master
-or a relay master is out of disk space (as defined by the general monitor
-setting `disk_space_threshold`) the server is set to maintenance mode. Such
-servers are not used for router sessions and are ignored when performing a
-failover or other cluster modification operation.
+or a relay master is out of disk space the server is set to maintenance mode.
+Such servers are not used for router sessions and are ignored when performing a
+failover or other cluster modification operation. See the general monitor
+parameters [disk_space_threshold](./Monitor-Common.md#disk_space_threshold) and
+[disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
+on how to enable disk space monitoring.
+
+Once a server has been put to maintenance mode, the disk space situation
+of that server is no longer updated. The server will not be taken out of
+maintanance mode even if more disk space becomes available. The maintenance
+flag must be removed manually:
+```
+maxadmin clear server server2 Maint
+maxctrl clear server server2 Maint
+```
 
 ## Cluster manipulation operations
 
@@ -440,6 +490,13 @@ The backends must all use GTID-based replication, and the domain id should not
 change during a switchover or failover. Master and slaves must have
 well-behaving GTIDs with no extra events on slave servers.
 
+Failover may lose events. If a master goes down before sending new events to at
+least one slave, those events are lost when a new master is chosen. If the old
+master comes back online, the other servers have likely moved on with a
+diverging history and the old master can no longer join the replication cluster.
+To minimize the chance for this happening, use
+[semisynchronous replication](https://mariadb.com/kb/en/library/semisynchronous-replication/).
+
 Switchover requires that the cluster is "frozen" for the duration of the
 operation. This means that no data modifying statements such as INSERT or UPDATE
 are executed and the GTID position of the master server is stable. When
@@ -520,22 +577,20 @@ redirected to Slave B, the current master.
 
 #### `switchover_on_low_disk_space`
 
-This feature is disabled by default. If set to `on`, when the disk space of a
-server is exhausted, it will cause the server to be put in maintenance mode.
-If the server is the current master, then a switchover will also be triggered.
+This feature is disabled by default. If enabled, the monitor will attempt to
+switchover a master server low on disk space with a slave. The switch is only
+done if a slave without disk space issues is found. If
+`maintenance_on_low_disk_space` is also enabled, the old master (now a slave)
+will be put to maintenance during the next monitor iteration.
 
-In order for this parameter to have any effect, `disk_space_threshold` must
-have been specified for the
-[server](../Getting-Started/Configuration-Guide.md#disk_space_threshold)
-or the [monitor](./Monitor-Common.md#disk_space_threshold), and
-[disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
-for the monitor.
+For this parameter to have any effect, `disk_space_threshold` must be specified
+for the [server](../Getting-Started/Configuration-Guide.md#disk_space_threshold)
+or the [monitor](./Monitor-Common.md#disk_space_threshold).
+Also, [disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
+must be defined for the monitor.
 ```
 switchover_on_low_disk_space=true
 ```
-Note that once the server has been put in maintenance mode, the disk space
-situation will no longer be monitored and the server will thus not automatically
-be taken out of maintanance mode even if disk space again would become available.
 
 #### `replication_user` and `replication_password`
 
