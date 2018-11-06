@@ -122,8 +122,7 @@ SRWBackendVector::iterator backend_cmp_response_time(SRWBackendVector& sBackends
     double slot[SZ];
 
     // fill slots with inverses of averages
-    double total {0};
-    double fastest {0};
+    double pre_total {0};
     for (int i = 0; i < SZ; ++i)
     {
         SERVER_REF* server = (**sBackends[i]).backend();
@@ -139,16 +138,17 @@ SRWBackendVector::iterator backend_cmp_response_time(SRWBackendVector& sBackends
             slot[i] = 1 / ave;
         }
         slot[i] = slot[i] * slot[i] * slot[i];      // favor faster servers even more
-        total += slot[i];
-        fastest = std::max(fastest, slot[i]);
+        pre_total += slot[i];
     }
 
-    // make the slowest server at least a good fraction of the fastest to guarantee
+    // make the slowest server(s) at least a good fraction of the total to guarantee
     // some amount of sampling, should the slow server become faster.
-    constexpr int divisor = 200;    // 0.5%
+    double total = 0;
+    constexpr int divisor = 197;    // ~0.5%, not exact because SZ>1
     for (int i = 0; i < SZ; ++i)
     {
-        slot[i] = std::max(slot[i], fastest / divisor);
+        slot[i] = std::max(slot[i], pre_total / divisor);
+        total += slot[i];
     }
 
     // turn slots into a roulette wheel, where sum of slots is 1.0
