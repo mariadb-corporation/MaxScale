@@ -733,6 +733,11 @@ HttpResponse cb_unix_user(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str(), USER_TYPE_UNIX));
 }
 
+HttpResponse cb_monitor_wait(const HttpRequest& request)
+{
+    monitor_debug_wait();
+    return HttpResponse(MHD_HTTP_OK);
+}
 HttpResponse cb_create_user(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -975,6 +980,9 @@ public:
         m_get.push_back(SResource(new Resource(cb_all_unix_users, 2, "users", "unix")));
         m_get.push_back(SResource(new Resource(cb_inet_user, 3, "users", "inet", ":inetuser")));
         m_get.push_back(SResource(new Resource(cb_unix_user, 3, "users", "unix", ":unixuser")));
+
+        /** Debug utility endpoints */
+        m_get.push_back(SResource(new Resource(cb_monitor_wait, 3, "maxscale", "debug", "monitor_wait")));
 
         /** Create new resources */
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));

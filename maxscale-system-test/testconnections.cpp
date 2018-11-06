@@ -724,7 +724,8 @@ void TestConnections::init_maxscale(int m)
                           "cp maxscale.cnf %s;"
                           "iptables -F INPUT;"
                           "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
-                          "%s",
+                          "%s"
+                          "maxctrl api get maxscale/debug/monitor_wait",
                           maxscales->maxscale_cnf[m],
                           maxscales->maxscale_log_dir[m],
                           maxscale::start ? "service maxscale restart;" : "");

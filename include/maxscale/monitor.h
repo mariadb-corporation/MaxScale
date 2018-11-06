@@ -423,4 +423,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
  */
 bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_space_threshold);
 
+// Function for waiting one monitor interval
+void monitor_debug_wait();
+
 MXS_END_DECLS

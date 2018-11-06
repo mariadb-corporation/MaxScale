@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <chrono>
 #include <string>
 #include <sstream>
 #include <set>
@@ -2485,6 +2486,34 @@ bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_spa
         }
     }
     return rv;
+}
+
+void monitor_debug_wait()
+{
+    using namespace std::chrono;
+    std::lock_guard<std::mutex> guard(monLock);
+    std::map<MXS_MONITOR*, uint64_t> ticks;
+
+    // Get tick values for all monitors
+    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    {
+        ticks[mon] = mxb::atomic::load(&mon->ticks);
+    }
+
+    // Wait for all running monitors to advance at least one tick
+    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    {
+        if (mon->state == MONITOR_STATE_RUNNING)
+        {
+            auto start = steady_clock::now();
+
+            while (ticks[mon] == mxb::atomic::load(&mon->ticks)
+                   && steady_clock::now() - start < seconds(60))
+            {
+                std::this_thread::sleep_for(milliseconds(100));
+            }
+        }
+    }
 }
 
 namespace maxscale
