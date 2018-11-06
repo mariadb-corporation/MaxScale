@@ -18,10 +18,6 @@
 #include <maxscale/log.h>
 #include <errno.h>
 
-bool        maxavro_read_datablock_start(MAXAVRO_FILE* file);
-bool        maxavro_verify_block(MAXAVRO_FILE* file);
-const char* type_to_string(enum maxavro_value_type type);
-
 /**
  * @brief Read a single value from a file
  * @param file File to read from
@@ -30,10 +26,10 @@ const char* type_to_string(enum maxavro_value_type type);
  * @param field_num Field index in the schema
  * @return JSON object or NULL if an error occurred
  */
-static json_t* read_and_pack_value(MAXAVRO_FILE* file, MAXAVRO_SCHEMA_FIELD* field)
+static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *field, enum maxavro_value_type type)
 {
     json_t* value = NULL;
-    switch (field->type)
+    switch (type)
     {
     case MAXAVRO_TYPE_BOOL:
         if (file->buffer_ptr < file->buffer_end)
@@ -109,6 +105,23 @@ static json_t* read_and_pack_value(MAXAVRO_FILE* file, MAXAVRO_SCHEMA_FIELD* fie
         }
         break;
 
+    case MAXAVRO_TYPE_UNION:
+        {
+            json_t *arr = field->extra;
+            uint64_t val = 0;
+
+            if (maxavro_read_integer(file, &val) && val < json_array_size(arr))
+            {
+                json_t* union_type = json_object_get(json_array_get(arr, val), "type");
+                value = read_and_pack_value(file, field, string_to_type(json_string_value(union_type)));
+            }
+        }
+        break;
+
+    case MAXAVRO_TYPE_NULL:
+        value = json_null();
+        break;
+
     default:
         MXS_ERROR("Unimplemented type: %d", field->type);
         break;
@@ -174,7 +187,7 @@ json_t* maxavro_record_read_json(MAXAVRO_FILE* file)
         {
             for (size_t i = 0; i < file->schema->num_fields; i++)
             {
-                json_t* value = read_and_pack_value(file, &file->schema->fields[i]);
+                json_t* value = read_and_pack_value(file, &file->schema->fields[i], file->schema->fields[i].type);
                 if (value)
                 {
                     json_object_set_new(object, file->schema->fields[i].name, value);

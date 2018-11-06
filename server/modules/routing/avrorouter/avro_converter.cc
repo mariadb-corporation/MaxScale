@@ -232,10 +232,11 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
         json_array_append_new(array,
                               json_pack_ex(&err,
                                            0,
-                                           "{s:s, s:s, s:s, s:i}",
+                                           "{s:s, s:[s, s], s:s, s:i}",
                                            "name",
                                            create->columns[i].name.c_str(),
                                            "type",
+                                           "null",
                                            column_type_to_avro_type(map->column_types[i]),
                                            "real_type",
                                            create->columns[i].type.c_str(),
@@ -449,23 +450,16 @@ void AvroConverter::column(int i, uint8_t* value, int len)
 void AvroConverter::column(int i)
 {
     set_active(i);
-
-    if (column_is_blob(m_map->column_types[i]))
-    {
-        uint8_t nullvalue = 0;
-        avro_value_set_bytes(&m_field, &nullvalue, 1);
-    }
-    else
-    {
-        avro_value_set_null(&m_field);
-    }
+    avro_value_set_branch(&m_union_value, 0, &m_field);
+    avro_value_set_null(&m_field);
 }
 
 void AvroConverter::set_active(int i)
 {
     MXB_AT_DEBUG(int rc = ) avro_value_get_by_name(&m_record,
                                                    m_create->columns[i].name.c_str(),
-                                                   &m_field,
+                                                   &m_union_value,
                                                    NULL);
     mxb_assert(rc == 0);
+    avro_value_set_branch(&m_union_value, 1, &m_field);
 }
