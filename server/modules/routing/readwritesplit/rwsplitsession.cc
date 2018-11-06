@@ -275,7 +275,7 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
     else if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
     {
         // The MASTER_WAIT_GTID command failed and no further packets will come
-        m_wait_gtid = NONE;
+        m_wait_gtid = RETRYING_ON_MASTER;
     }
 
     return buffer;
@@ -524,6 +524,10 @@ void RWSplitSession::manage_transactions(SRWBackend& backend, GWBUF* writebuf)
             }
         }
     }
+    else if (m_wait_gtid == RETRYING_ON_MASTER)
+    {
+        // We're retrying the query on the master and we need to keep the current query
+    }
     else
     {
         /** Normal response, reset the currently active query. This is done before
@@ -574,6 +578,23 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         mxb_assert(m_expected_responses >= 0);
         mxb_assert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
+
+        if (m_wait_gtid == RETRYING_ON_MASTER)
+        {
+            m_wait_gtid = NONE;
+
+            // Discard the error
+            gwbuf_free(writebuf);
+            writebuf = NULL;
+
+            // Retry the query on the master
+            GWBUF* buf = m_current_query.release();
+            buf->hint = hint_create_route(buf->hint, HINT_ROUTE_TO_MASTER, NULL);
+            retry_query(buf, 0);
+
+            // Stop the response processing early
+            return;
+        }
 
         ResponseStat& stat = backend->response_stat();
         stat.query_ended();

@@ -477,11 +477,11 @@ SELECT * FROM test.t1 WHERE id = 1;
 The `SET` command will synchronize the slave to a certain logical point in
 the replication stream (see
 [MASTER_GTID_WAIT](https://mariadb.com/kb/en/library/master_gtid_wait/)
-for more details). If the slave has not caught up to the master within the
-configured time, an error will be returned. To the client side
-application, this will appear as an error on the statement that they were
-performing. This is caused by the fact that the synchronization command is
-executed with the original command as a multi-statement command.
+for more details).
+
+If the slave has not caught up to the master within the configured time, it will
+be retried on the master. In MaxScale 2.3.0 an error was returned to the client
+when the slave timed out.
 
 ### `causal_reads_timeout`
 

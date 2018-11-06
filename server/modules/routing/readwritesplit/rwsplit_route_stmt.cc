@@ -1023,6 +1023,9 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER* server, GWBUF* origin)
         snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_position, gtid_wait_timeout);
         GWBUF* prefix_buff = modutil_create_query(prefix_sql);
 
+        // Copy the original query in case it fails on the slave
+        m_current_query.copy_from(origin);
+
         /* Trim origin to sql, Append origin buffer to the prefix buffer */
         uint8_t header[MYSQL_HEADER_LEN];
         gwbuf_copy_data(origin, 0, MYSQL_HEADER_LEN, header);
@@ -1075,6 +1078,9 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
         // Perform the causal read only when the query is routed to a slave
         send_buf = add_prefix_wait_gtid(target->server(), send_buf);
         m_wait_gtid = WAITING_FOR_HEADER;
+
+        // The storage for causal reads is done inside add_prefix_wait_gtid
+        store = false;
     }
 
     if (m_qc.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE
