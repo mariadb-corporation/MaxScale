@@ -5029,8 +5029,9 @@ std::string closest_matching_parameter(const std::string& str,
     }
 
     std::string rval;
+    const int min_dist = 4;
 
-    if (lowest < (int)std::min(str.length(), name.length()))
+    if (lowest <= min_dist)
     {
         rval = "Did you mean '" + name + "'?";
         name.clear();
