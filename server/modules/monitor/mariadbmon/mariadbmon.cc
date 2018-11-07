@@ -757,6 +757,11 @@ bool MariaDBMonitor::execute_manual_command(std::function<void(void)> command, j
     return rval;
 }
 
+bool MariaDBMonitor::immediate_tick_required() const
+{
+    return m_manual_cmd.command_waiting_exec;
+}
+
 bool MariaDBMonitor::run_manual_switchover(SERVER* promotion_server, SERVER* demotion_server,
                                            json_t** error_out)
 {

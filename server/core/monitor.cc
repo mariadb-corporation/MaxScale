@@ -2496,7 +2496,7 @@ MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     , m_thread_running(false)
     , m_shutdown(0)
     , m_checked(false)
-    , m_loop_called(0)
+    , m_loop_called(get_time_ms())
 {
 }
 
@@ -2563,8 +2563,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 
         if (configure(pParams))
         {
-            m_loop_called = 0;
-
+            m_loop_called = get_time_ms() - m_monitor->interval; // Next tick should happen immediately.
             if (!Worker::start())
             {
                 MXS_ERROR("Failed to start worker for monitor '%s'.", m_monitor->name);
@@ -2906,14 +2905,15 @@ bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
     if (action == Worker::Call::EXECUTE)
     {
         int64_t now = get_time_ms();
-
+        // Enough time has passed,
         if ((now - m_loop_called > static_cast<int64_t>(m_monitor->interval))
-            || atomic_load_int(&m_monitor->check_maintenance_flag) == MAINTENANCE_FLAG_CHECK)
+            // or maintenance flag is set,
+            || atomic_load_int(&m_monitor->check_maintenance_flag) == MAINTENANCE_FLAG_CHECK
+            // or a monitor-specific condition is met.
+            || immediate_tick_required())
         {
             m_loop_called = now;
-
             run_one_tick();
-
             now = get_time_ms();
         }
 
@@ -2925,7 +2925,6 @@ bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
 
         delayed_call(delay, &MonitorInstance::call_run_one_tick, this);
     }
-
     return false;
 }
 
@@ -2942,5 +2941,10 @@ void MonitorInstance::run_one_tick()
 
     mon_hangup_failed_servers(m_monitor);
     store_server_journal(m_monitor, m_master);
+}
+
+bool MonitorInstance::immediate_tick_required() const
+{
+    return false;
 }
 }
