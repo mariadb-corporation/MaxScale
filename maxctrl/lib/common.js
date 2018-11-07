@@ -211,14 +211,58 @@ module.exports = function() {
     this.formatResource = function (fields, data) {
         var table = getList()
 
+        var separator
+        var max_length
+
+        if (this.argv.tsv) {
+            separator = ', '
+            max_length = Number.MAX_SAFE_INTEGER
+        } else {
+            separator = '\n'
+            var max_field_length = 0
+            fields.forEach(function (i) {
+                var k = Object.keys(i)[0]
+                if (k.length > max_field_length) {
+                    max_field_length = k.length
+                }
+            })
+            max_field_length += 7 // Borders etc.
+
+            max_length = process.stdout.columns - max_field_length
+            if (max_length < 30) {
+                // Ignore excessively narrow terminals.
+                max_length = 30
+            }
+        }
+
         fields.forEach(function(i) {
             var k = Object.keys(i)[0]
             var path = i[k]
             var v = _.getPath(data, path, '')
 
             if (Array.isArray(v) && typeof(v[0]) != 'object') {
-                v = v.join(', ')
+                if (separator == '\n') {
+                    var s = ''
+                    v.forEach(function (part) {
+                        if (s.length) {
+                            s = s + '\n'
+                        }
+                        if (part.length > max_length) {
+                            part = part.substr(0, max_length - 3);
+                            part = part + '...'
+                        }
+                        s = s + part;
+                    });
+                    v = s;
+                } else {
+                    v = v.join(separator)
+                    if (v.length > max_length) {
+                        v = v.substr(0, max_length - 3);
+                        v = v + '...'
+                    }
+                }
             } else if (typeof(v) == 'object') {
+                // We ignore max_length here.
                 v = JSON.stringify(v, null, 4)
             }
 
