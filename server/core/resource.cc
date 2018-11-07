@@ -900,6 +900,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
 HttpResponse cb_send_ok(const HttpRequest& request)
 {
+    mxs_rworker_watchdog();
     return HttpResponse(MHD_HTTP_OK);
 }
 
