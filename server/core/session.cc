@@ -51,16 +51,23 @@ using std::stringstream;
 using maxbase::Worker;
 using namespace maxscale;
 
-/** Global session id counter. Must be updated atomically. Value 0 is reserved for
- *  dummy/unused sessions.
- */
-static uint64_t next_session_id = 1;
-
-static uint32_t retain_last_statements = 0;
-static session_dump_statements_t dump_statements = SESSION_DUMP_STATEMENTS_NEVER;
-
 namespace
 {
+
+struct
+{
+    /* Global session id counter. Must be updated atomically. Value 0 is reserved for
+     *  dummy/unused sessions.
+     */
+    uint64_t next_session_id;
+    uint32_t retain_last_statements;
+    session_dump_statements_t dump_statements;
+} this_unit =
+{
+    1,
+    0,
+    SESSION_DUMP_STATEMENTS_NEVER
+};
 
 static struct session dummy_session()
 {
@@ -69,6 +76,7 @@ static struct session dummy_session()
     session.refcount = 1;
     return session;
 }
+
 }
 
 static struct session session_dummy_struct = dummy_session();
@@ -380,7 +388,7 @@ static void session_final_free(MXS_SESSION* ses)
         session->client_dcb = NULL;
     }
 
-    if (dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
+    if (this_unit.dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
     {
         session_dump_statements(session);
     }
@@ -819,7 +827,7 @@ void session_put_ref(MXS_SESSION* session)
 
 uint64_t session_get_next_id()
 {
-    return mxb::atomic::add(&next_session_id, 1, mxb::atomic::RELAXED);
+    return mxb::atomic::add(&this_unit.next_session_id, 1, mxb::atomic::RELAXED);
 }
 
 json_t* session_json_data(const Session* session, const char* host)
@@ -1044,17 +1052,17 @@ static void session_deliver_response(MXS_SESSION* session)
 
 void session_set_retain_last_statements(uint32_t n)
 {
-    retain_last_statements = n;
+    this_unit.retain_last_statements = n;
 }
 
 void session_set_dump_statements(session_dump_statements_t value)
 {
-    dump_statements = value;
+    this_unit.dump_statements = value;
 }
 
 session_dump_statements_t session_get_dump_statements()
 {
-    return dump_statements;
+    return this_unit.dump_statements;
 }
 
 void session_retain_statement(MXS_SESSION* pSession, GWBUF* pBuffer)
@@ -1190,6 +1198,11 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
+Session::Session()
+    : m_retain_last_statements(this_unit.retain_last_statements)
+{
+}
+
 Session::~Session()
 {
     if (router_session)
@@ -1257,7 +1270,7 @@ bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pL
 
 void Session::dump_statements() const
 {
-    if (retain_last_statements)
+    if (m_retain_last_statements)
     {
         int n = m_last_queries.size();
 
@@ -1466,15 +1479,15 @@ bool Session::remove_variable(const char* name, void** context)
 
 void Session::retain_statement(GWBUF* pBuffer)
 {
-    if (retain_last_statements)
+    if (m_retain_last_statements)
     {
-        mxb_assert(m_last_queries.size() <= retain_last_statements);
+        mxb_assert(m_last_queries.size() <= m_retain_last_statements);
 
         std::shared_ptr<GWBUF> sBuffer(gwbuf_clone(pBuffer));
 
         m_last_queries.push_front(QueryInfo(sBuffer));
 
-        if (m_last_queries.size() > retain_last_statements)
+        if (m_last_queries.size() > m_retain_last_statements)
         {
             m_last_queries.pop_back();
         }
@@ -1497,7 +1510,7 @@ void Session::retain_statement(GWBUF* pBuffer)
 
 void Session::book_server_response(SERVER* pServer, bool final_response)
 {
-    if (retain_last_statements && !m_last_queries.empty())
+    if (m_retain_last_statements && !m_last_queries.empty())
     {
         mxb_assert(m_current_query >= 0);
         // If enough queries have been sent by the client, without it waiting
@@ -1527,7 +1540,7 @@ void Session::book_server_response(SERVER* pServer, bool final_response)
 
 void Session::book_last_as_complete()
 {
-    if (retain_last_statements && !m_last_queries.empty())
+    if (m_retain_last_statements && !m_last_queries.empty())
     {
         mxb_assert(m_current_query >= 0);
         // See comment in book_server_response().
@@ -1543,7 +1556,7 @@ void Session::book_last_as_complete()
 
 void Session::reset_server_bookkeeping()
 {
-    if (retain_last_statements && !m_last_queries.empty())
+    if (m_retain_last_statements && !m_last_queries.empty())
     {
         mxb_assert(m_current_query >= 0);
         // See comment in book_server_response().

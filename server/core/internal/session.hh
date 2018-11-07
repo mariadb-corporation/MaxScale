@@ -100,6 +100,7 @@ public:
 
     using FilterList = std::vector<SessionFilter>;
 
+    Session();
     ~Session();
 
     bool setup_filters(Service* service);
@@ -143,9 +144,10 @@ public:
 private:
     FilterList        m_filters;
     SessionVarsByName m_variables;
-    QueryInfos        m_last_queries;       /*< The N last queries by the client */
-    int               m_current_query = -1; /*< The index of the current query */
-    DCBSet            m_dcb_set;            /*< Set of associated backend DCBs */
+    QueryInfos        m_last_queries;           /*< The N last queries by the client */
+    int               m_current_query = -1;     /*< The index of the current query */
+    DCBSet            m_dcb_set;                /*< Set of associated backend DCBs */
+    bool              m_retain_last_statements; /*< Should statement information be stored */
 };
 }
 
