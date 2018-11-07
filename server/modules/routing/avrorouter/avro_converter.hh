@@ -65,6 +65,7 @@ private:
     avro_value_iface_t* m_writer_iface;
     avro_file_writer_t* m_avro_file;
     avro_value_t        m_record;
+    avro_value_t        m_union_value;
     avro_value_t        m_field;
     std::string         m_avrodir;
     AvroTables          m_open_tables;

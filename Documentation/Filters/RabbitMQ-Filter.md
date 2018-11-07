@@ -44,7 +44,7 @@ type=service
 router=readconnrouter
 servers=server1
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=RabbitMQ
 ```
 

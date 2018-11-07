@@ -18,8 +18,7 @@ if (JANSSON_FOUND)
     storagereal.cc
     )
   target_link_libraries(cache maxscale-common ${JANSSON_LIBRARIES} mysqlcommon)
-  set_target_properties(cache PROPERTIES VERSION "1.0.0")
-  set_target_properties(cache PROPERTIES LINK_FLAGS -Wl,-z,defs)
+  set_target_properties(cache PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
   install_module(cache core)
 
   add_subdirectory(storage)

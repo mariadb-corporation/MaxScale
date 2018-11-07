@@ -44,7 +44,7 @@ server_id=4000
 master_id=3000
 filestem=binlog
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 
 # The Avro conversion service
 [avro-service]

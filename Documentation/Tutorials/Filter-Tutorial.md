@@ -51,7 +51,7 @@ type=service
 router=readwritesplit
 servers=dbserver1,dbserver2,dbserver3,dbserver4
 user=massi
-passwd=6628C50E07CCE1F0392EDEEB9D1203F3
+password=6628C50E07CCE1F0392EDEEB9D1203F3
 filters=hints | top10
 ```
 The names used in the filters= parameter are the names of the filter definition sections in the ini file. The same filter definition can be used in multiple services and the same filter module can have multiple instances, each with its own section in the ini file.
@@ -128,7 +128,7 @@ type=service
 router=readwritesplit
 servers=dbbubble1,dbbubble2,dbbubble3,dbbubble4,dbbubble5
 user=maxscale
-passwd=6628C50E07CCE1F0392EDEEB9D1203F3
+password=6628C50E07CCE1F0392EDEEB9D1203F3
 ```
 The table you wish to store in Cassandra in called HighScore and will contain the same columns in both the MariaDB table and the Cassandra table. The first step is to install a MariaDB instance with the Cassandra storage engine to act as a bridge server between the relational database and Cassandra. In this bridge server add a table definition for the HighScore table with the engine type set to Cassandra.
 See [Cassandra Storage Engine Overview]( https://mariadb.com/kb/en/mariadb/cassandra-storage-engine-overview/) for details.
@@ -146,7 +146,7 @@ router=readconnrouter
 router_options=running
 servers=CassandraDB
 user=maxscale
-passwd=6628C50E07CCE1F0392EDEEB9D1203F3
+password=6628C50E07CCE1F0392EDEEB9D1203F3
 ```
 Next add a filter definition for the tee filter that will duplication insert statements that are destined for the HighScore table to this new service.
 ```
@@ -165,6 +165,6 @@ type=service
 router=readwritesplit
 servers=dbbubble1,dbbubble2,dbbubble3,dbbubble4,dbbubble5
 user=maxscale
-passwd=6628C50E07CCE1F0392EDEEB9D1203F3
+password=6628C50E07CCE1F0392EDEEB9D1203F3
 filters=HighScores
 ```

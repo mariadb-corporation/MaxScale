@@ -362,6 +362,7 @@ void Connection::process_schema(json_t* json)
 
 SRow Connection::process_row(json_t* js)
 {
+    std::set<size_t> nulls;
     ValueVector values;
     values.reserve(m_keys->size());
     m_error.clear();
@@ -373,6 +374,11 @@ SRow Connection::process_row(json_t* js)
 
         if (v)
         {
+            if (json_is_null(v))
+            {
+                nulls.insert(values.size());
+            }
+
             values.push_back(json_to_string(v));
         }
         else
@@ -387,7 +393,7 @@ SRow Connection::process_row(json_t* js)
 
     if (m_error.empty())
     {
-        rval = SRow(new Row(m_keys, m_types, values));
+        rval = SRow(new Row(m_keys, m_types, values, nulls));
     }
 
     return rval;

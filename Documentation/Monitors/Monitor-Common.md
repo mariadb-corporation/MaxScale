@@ -14,6 +14,9 @@ the `monitoruser` parameter, that value will be used instead.
 Password for the user defined with the `user` parameter. If a server defines
 the `monitorpw` parameter, that value will be used instead.
 
+**Note:** In older versions of MaxScale this parameter was called `passwd`. The
+  use of `passwd` was deprecated in MaxScale 2.3.0.
+
 ### `monitor_interval`
 
 Defines, in milliseconds, how often the monitor updates the status of the

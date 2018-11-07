@@ -50,9 +50,9 @@ int main(int argc, char** argv)
         pthread_create(&a, NULL, query_thr, &test);
     }
 
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 2; i++)
     {
-        for (int x = 1; x <= 4; x++)
+        for (int x = 1; x <= 2; x++)
         {
             test.maxscales->ssh_node_f(0, true, "maxadmin set server server%d maintenance", x);
             sleep(1);

@@ -99,7 +99,7 @@ type=monitor
 module=mariadbmon
 servers=production-1, archive-1
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 monitor_interval=5000
 ```
 
@@ -120,7 +120,7 @@ type=service
 router=readconnroute
 servers=production-1
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 filters=Tee
 
 [Archive]
@@ -128,7 +128,7 @@ type=service
 router=readconnroute
 servers=archive-1
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 filters=MQ Filter
 ```
 
@@ -238,7 +238,7 @@ type=monitor
 module=mariadbmon
 servers=production-1, archive-1
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 monitor_interval=5000
 
 # Production service
@@ -247,7 +247,7 @@ type=service
 router=readconnroute
 servers=production-1
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 filters=Tee
 
 # Archive service
@@ -256,7 +256,7 @@ type=service
 router=readconnroute
 servers=archive-1
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 filters=MQ Filter
 
 # Listeners for the services

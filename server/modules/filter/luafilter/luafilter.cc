@@ -38,11 +38,18 @@
 
 #define MXS_MODULE_NAME "luafilter"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
+
+extern "C"
+{
+
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
 #include <string.h>
+
+}
+
 #include <mutex>
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>

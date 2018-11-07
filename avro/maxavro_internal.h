@@ -50,7 +50,12 @@ bool               maxavro_datablock_finalize(MAXAVRO_DATABLOCK* block);
 /** Adding values to a datablock. The caller must ensure that the inserted
  * values conform to the file schema and that the required amount of fields
  * is added before finalizing the block. */
-bool maxavro_datablock_add_integer(MAXAVRO_DATABLOCK* file, uint64_t val);
-bool maxavro_datablock_add_string(MAXAVRO_DATABLOCK* file, const char* str);
-bool maxavro_datablock_add_float(MAXAVRO_DATABLOCK* file, float val);
-bool maxavro_datablock_add_double(MAXAVRO_DATABLOCK* file, double val);
+bool maxavro_datablock_add_integer(MAXAVRO_DATABLOCK *file, uint64_t val);
+bool maxavro_datablock_add_string(MAXAVRO_DATABLOCK *file, const char* str);
+bool maxavro_datablock_add_float(MAXAVRO_DATABLOCK *file, float val);
+bool maxavro_datablock_add_double(MAXAVRO_DATABLOCK *file, double val);
+
+bool maxavro_read_datablock_start(MAXAVRO_FILE *file);
+bool maxavro_verify_block(MAXAVRO_FILE *file);
+const char* type_to_string(enum maxavro_value_type type);
+enum maxavro_value_type string_to_type(const char *str);

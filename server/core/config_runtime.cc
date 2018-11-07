@@ -464,6 +464,16 @@ bool runtime_alter_server(SERVER* server, const char* key, const char* value)
         return false;
     }
 
+    if (strcmp(key, CN_DISK_SPACE_THRESHOLD) == 0)
+    {
+        // This cannot be safely modified during runtime since the monitor thread could be reading the
+        // value. TODO: To enable this, the threshold value needs to be moved to the private Server-class
+        // so that locking can be enforced on any access.
+        config_runtime_error("The server parameter '%s' cannot be modified during runtime.",
+                             CN_DISK_SPACE_THRESHOLD);
+        return false;
+    }
+
     std::lock_guard<std::mutex> guard(crt_lock);
     server_set_parameter(server, key, value);
 
@@ -542,8 +552,9 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     return rval;
 }
 
-bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value, bool restart_monitor)
+bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value)
 {
+    mxb_assert(monitor->state == MONITOR_STATE_STOPPED);
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
 
     if (!validate_param(config_monitor_params, mod->parameters, key, value))
@@ -558,12 +569,8 @@ bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value, 
 
     std::lock_guard<std::mutex> guard(crt_lock);
 
-    if (restart_monitor)
-    {
-        monitor_stop(monitor);
-    }
     monitor_set_parameter(monitor, key, value);
-
+    bool success = true;
     if (strcmp(key, CN_USER) == 0)
     {
         monitor_add_user(monitor, value, monitor->password);
@@ -633,25 +640,41 @@ bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value, 
             monitor_set_script_timeout(monitor, ival);
         }
     }
+    else if (strcmp(key, CN_DISK_SPACE_THRESHOLD) == 0)
+    {
+        success = monitor_set_disk_space_threshold(monitor, value);
+    }
     else
     {
         // This should be a module specific parameter
         mxb_assert(config_param_is_valid(mod->parameters, key, value, NULL));
     }
 
-    if (restart_monitor)
+    if (success)
     {
-        monitor_serialize(monitor);
-        monitor_start(monitor, monitor->parameters);
+        MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
     }
-    MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
-
-    return true;
+    return success;
 }
 
 bool runtime_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value)
 {
-    return do_alter_monitor(monitor, key, value, true);
+    // If the monitor is already stopped, don't stop/start it.
+    bool was_running = (monitor->state == MONITOR_STATE_RUNNING);
+    if (was_running)
+    {
+        monitor_stop(monitor);
+    }
+    bool success = do_alter_monitor(monitor, key, value);
+    if (success)
+    {
+        monitor_serialize(monitor);
+    }
+    if (was_running)
+    {
+        monitor_start(monitor, monitor->parameters);
+    }
+    return success;
 }
 
 bool runtime_alter_service(Service* service, const char* zKey, const char* zValue)
@@ -2291,7 +2314,7 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
                 {
                     /** No change in values */
                 }
-                else if (do_alter_monitor(monitor, key, mxs::json_to_string(value).c_str(), false))
+                else if (do_alter_monitor(monitor, key, mxs::json_to_string(value).c_str()))
                 {
                     changed = true;
                 }

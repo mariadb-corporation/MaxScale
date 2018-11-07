@@ -44,7 +44,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=NamedServerFilter
 ```
 
@@ -172,6 +172,6 @@ type=service
 router=readwritesplit
 servers=server1,server2
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=NamedServerFilter
 ```

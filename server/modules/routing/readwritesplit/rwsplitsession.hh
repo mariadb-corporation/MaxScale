@@ -73,6 +73,7 @@ public:
     {
         NONE,
         WAITING_FOR_HEADER,
+        RETRYING_ON_MASTER,
         UPDATING_PACKETS
     };
 

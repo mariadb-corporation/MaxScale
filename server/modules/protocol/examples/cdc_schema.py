@@ -43,24 +43,23 @@ def parse_field(row):
     else:
         res["length"] = -1
 
+    type = "string"
+
     if name in ("date", "datetime", "time", "timestamp", "year", "tinytext", "text",
 	        "mediumtext", "longtext", "char", "varchar", "enum", "set"):
-        res["type"] = "string"
+        type = "string"
     elif name in ("tinyblob", "blob", "mediumblob", "longblob", "binary", "varbinary"):
-        res["type"] = "bytes"
+        type = "bytes"
     elif name in ("int", "smallint", "mediumint", "integer", "tinyint", "short", "bit"):
-        res["type"] = "int"
+        type = "int"
     elif name in ("float"):
-        res["type"] = "float"
+        type = "float"
     elif name in ("double", "decimal"):
-        res["type"] = "double"
-    elif name in ("null"):
-        res["type"] = "null"
+        type = "double"
     elif name in ("long", "bigint"):
-        res["type"] = "long"
-    else:
-        res["type"] = "string"
+        type = "long"
 
+    res["type"] = ["null", type]
 
     res["name"] = row[0].lower()
 

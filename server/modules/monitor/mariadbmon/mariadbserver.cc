@@ -1137,6 +1137,11 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     {
         reason = "it is down or in maintenance.";
     }
+    else if (op == OperationType::SWITCHOVER && is_low_on_disk_space())
+    {
+        // Failover promotion with low disk space is allowed since it's better than nothing.
+        reason = "it is low on disk space.";
+    }
     else if (sstatus == NULL)
     {
         reason = string_printf("it is not replicating from '%s'.", demotion_target->name());

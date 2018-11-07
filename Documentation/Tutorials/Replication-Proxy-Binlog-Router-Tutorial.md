@@ -141,7 +141,7 @@ with MariaDB 10 would be as follows.
 type=service
 router=binlogrouter
 user=maxscale
-passwd=maxpwd
+password=maxpwd
 server_id=1
 mariadb10-compatibility=1
 binlogdir=/var/lib/maxscale/

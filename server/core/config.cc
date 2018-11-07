@@ -217,7 +217,6 @@ static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 static bool        process_config_context(CONFIG_CONTEXT*);
 static bool        process_config_update(CONFIG_CONTEXT*);
 static char*       config_get_value(MXS_CONFIG_PARAMETER*, const char*);
-static char*       config_get_password(MXS_CONFIG_PARAMETER*);
 static const char* config_get_value_string(const MXS_CONFIG_PARAMETER* params, const char* name);
 static int         handle_global_item(const char*, const char*);
 static bool        check_config_objects(CONFIG_CONTEXT* context);
@@ -230,15 +229,18 @@ static pcre2_code* compile_regex_string(const char* regex_string,
                                         uint32_t options,
                                         uint32_t* output_ovector_size);
 
-int        config_get_ifaddr(unsigned char* output);
-static int config_get_release_string(char* release);
-bool       config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
-int        create_new_service(CONFIG_CONTEXT* obj);
-int        create_new_server(CONFIG_CONTEXT* obj);
-int        create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers);
-int        create_new_listener(CONFIG_CONTEXT* obj);
-int        create_new_filter(CONFIG_CONTEXT* obj);
-void       config_fix_param(const MXS_MODULE_PARAM* params, MXS_CONFIG_PARAMETER* p);
+int         config_get_ifaddr(unsigned char* output);
+static int  config_get_release_string(char* release);
+bool        config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
+int         create_new_service(CONFIG_CONTEXT* obj);
+int         create_new_server(CONFIG_CONTEXT* obj);
+int         create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers);
+int         create_new_listener(CONFIG_CONTEXT* obj);
+int         create_new_filter(CONFIG_CONTEXT* obj);
+void        config_fix_param(const MXS_MODULE_PARAM* params, MXS_CONFIG_PARAMETER* p);
+std::string closest_matching_parameter(const std::string& str,
+                                       const MXS_MODULE_PARAM* base,
+                                       const MXS_MODULE_PARAM* mod);
 
 static const char* config_file = NULL;
 static MXS_CONFIG gateway;
@@ -297,12 +299,9 @@ const MXS_MODULE_PARAM config_service_params[] =
      MXS_MODULE_OPT_REQUIRED},
     {CN_ROUTER_OPTIONS,                MXS_MODULE_PARAM_STRING},
     {CN_SERVERS,                       MXS_MODULE_PARAM_STRING},
-    {CN_USER,                          MXS_MODULE_PARAM_STRING},// Not mandatory due
-                                                                // to
-                                                                // RCAP_TYPE_NO_AUTH
-    {CN_PASSWORD,                      MXS_MODULE_PARAM_STRING},// Not mandatory due
-                                                                // to
-                                                                // RCAP_TYPE_NO_AUTH
+    {CN_USER,                          MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
+    {CN_PASSWORD,                      MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
+    {"passwd",                         MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
     {CN_ENABLE_ROOT_USER,              MXS_MODULE_PARAM_BOOL,   "false"},
     {CN_MAX_RETRY_INTERVAL,            MXS_MODULE_PARAM_COUNT,  "3600"},
     {CN_MAX_CONNECTIONS,               MXS_MODULE_PARAM_COUNT,  "0"},
@@ -359,8 +358,8 @@ const MXS_MODULE_PARAM config_monitor_params[] =
 
     {CN_USER,                      MXS_MODULE_PARAM_STRING, NULL,
      MXS_MODULE_OPT_REQUIRED},
-    {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING, NULL,
-     MXS_MODULE_OPT_REQUIRED},
+    {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING, NULL,MXS_MODULE_OPT_REQUIRED },
+    {"passwd",                     MXS_MODULE_PARAM_STRING},
 
     {CN_SERVERS,                   MXS_MODULE_PARAM_STRING},
     {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_COUNT,  "2000"},
@@ -425,6 +424,7 @@ const MXS_MODULE_PARAM config_server_params[] =
      ssl_version_values},
     {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,  "9"},
     {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,   "true"},
+    {CN_DISK_SPACE_THRESHOLD,        MXS_MODULE_PARAM_STRING},
     {NULL}
 };
 
@@ -1680,27 +1680,18 @@ static bool process_config_context(CONFIG_CONTEXT* context)
     return error_count == 0;
 }
 
-// DEPRECATE: In 2.1 complain but accept if "passwd" is provided, in 2.2
-// DEPRECATE: drop support for "passwd".
-/**
- * Get the value of the password parameter
- *
- * The words looked for are "password" and "passwd".
- *
- * @param params        The linked list of config parameters
- * @return the parameter value or NULL if not found
- */
-static char* config_get_password(MXS_CONFIG_PARAMETER* params)
+void do_passwd_deprecation(CONFIG_CONTEXT* obj)
 {
-    char* password = config_get_value(params, CN_PASSWORD);
-    char* passwd = config_get_value(params, "passwd");
-
-    if (password && passwd)
+    if (auto p = config_get_param(obj->parameters, "passwd"))
     {
-        MXS_WARNING("Both 'password' and 'passwd' specified. Using value of 'password'.");
-    }
+        if (config_get_param(obj->parameters, CN_PASSWORD))
+        {
+            MXS_WARNING("Both 'password' and 'passwd' specified. Using value of '%s'.", CN_PASSWORD);
+        }
 
-    return passwd ? passwd : password;
+        MXS_WARNING("The parameter 'passwd' is deprecated: use '%s' instead", CN_PASSWORD);
+        config_replace_param(obj, CN_PASSWORD, p->value);
+    }
 }
 
 /**
@@ -3072,10 +3063,11 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
                 // be used as weighting parameters
                 if (type != CN_SERVER)
                 {
-                    MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'",
+                    MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
                               params->name,
                               obj->object,
-                              type.c_str());
+                              type.c_str(),
+                              closest_matching_parameter(params->name, param_set, mod->parameters).c_str());
                     rval = false;
                 }
                 continue;
@@ -3110,9 +3102,11 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             }
         }
 
-        for (auto it = to_be_removed.begin(); it != to_be_removed.end(); it++)
+        do_passwd_deprecation(obj);
+
+        for (const auto& a : to_be_removed)
         {
-            config_remove_param(obj, it->c_str());
+            config_remove_param(obj, a.c_str());
         }
 
         if (missing_required_parameters(param_set, obj->parameters, obj->object)
@@ -3831,31 +3825,15 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
     }
 
     MXS_MONITOR* monitor = monitor_create(obj->object, module, obj->parameters);
-
     if (monitor == NULL)
     {
         MXS_ERROR("Failed to create monitor '%s'.", obj->object);
         return 1;
     }
-
-    int error_count = 0;
-
-    // TODO: Parse this in the configuration
-    const char* dst = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
-
-    if (dst)
+    else
     {
-        if (!monitor_set_disk_space_threshold(monitor, dst))
-        {
-            MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                      CN_DISK_SPACE_THRESHOLD,
-                      monitor->name,
-                      dst);
-            error_count++;
-        }
+        return 0;
     }
-
-    return error_count;
 }
 
 /**
@@ -4973,4 +4951,89 @@ void dump_param_list(int file,
             dump_if_changed(module_params, file, p->name, p->value);
         }
     }
+}
+
+/**
+ * Optimal string alignment distance of two strings
+ *
+ * @see https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
+ *
+ * @param a First string
+ * @param b Second string
+ *
+ * @return The distance between the two strings
+ */
+int string_distance(const std::string& a, const std::string& b)
+{
+    char d[a.length() + 1][b.length() + 1];
+
+    for (size_t i = 0; i <= a.length(); i++)
+    {
+        d[i][0] = i;
+    }
+
+    for (size_t i = 0; i <= b.length(); i++)
+    {
+        d[0][i] = i;
+    }
+
+    for (size_t i = 1; i <= a.length(); i++)
+    {
+        for (size_t j = 1; j <= b.length(); j++)
+        {
+            char cost = a[i - 1] == b[j - 1] ? 0 : 1;
+            // Remove, add or substitute a character
+            d[i][j] = std::min({d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost});
+
+            if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1])
+            {
+                // Transpose the characters
+                d[i][j] = std::min({d[i][j], (char)(d[i - 2][j - 2] + cost)});
+            }
+        }
+    }
+
+    return d[a.length()][b.length()];
+}
+
+/**
+ * Returns a suggestion with the parameter name closest to @c str
+ *
+ * @param str  String to match against
+ * @param base Module type parameters
+ * @param mod  Module implementation parameters
+ *
+ * @return A suggestion with the parameter name closest to @c str or an empty string if
+ *         the string is not close enough to any of the parameters.
+ */
+std::string closest_matching_parameter(const std::string& str,
+                                       const MXS_MODULE_PARAM* base,
+                                       const MXS_MODULE_PARAM* mod)
+{
+    std::string name;
+    int lowest = 99999;     // Nobody can come up with a parameter name this long
+
+    for (auto params : {base, mod})
+    {
+        for (int i = 0; params[i].name; i++)
+        {
+            int dist = string_distance(str, params[i].name);
+
+            if (dist < lowest)
+            {
+                name = params[i].name;
+                lowest = dist;
+            }
+        }
+    }
+
+    std::string rval;
+
+    if (lowest < (int)std::min(str.length(), name.length()))
+    {
+        rval = "Did you mean '" + name + "'?";
+        name.clear();
+    }
+
+    return rval;
 }

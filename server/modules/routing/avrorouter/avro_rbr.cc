@@ -265,6 +265,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
         if (bit_is_set(columns_present, ncolumns, i))
         {
             npresent++;
+
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
                 sprintf(trace[i], "[%ld] NULL", i);

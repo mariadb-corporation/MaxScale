@@ -76,12 +76,12 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < iter; i++)
     {
-        sleep(5);
         Test->tprintf("Blocking master");
         Test->repl->block_node(0);
-        sleep(5);
+        Test->maxscales->wait_for_monitor();
         Test->tprintf("Unblocking master");
         Test->repl->unblock_node(0);
+        Test->maxscales->wait_for_monitor();
     }
 
     running = false;
@@ -93,12 +93,11 @@ int main(int argc, char* argv[])
     }
 
     Test->stop_timeout();
-    sleep(20);
+
     Test->check_maxscale_alive(0);
     Test->check_current_operations(0, 0);
 
     int rval = Test->global_result;
     delete Test;
-
     return rval;
 }

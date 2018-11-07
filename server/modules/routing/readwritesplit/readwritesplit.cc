@@ -228,28 +228,6 @@ RWSplit* RWSplit::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    /** These options cancel each other out */
-    if (config.disable_sescmd_history && config.max_sescmd_history > 0)
-    {
-        config.max_sescmd_history = 0;
-    }
-
-    if (config.optimistic_trx)
-    {
-        // Optimistic transaction routing requires transaction replay
-        config.transaction_replay = true;
-    }
-
-    if (config.transaction_replay)
-    {
-        /**
-         * Replaying transactions requires that we are able to do delayed query
-         * retries and reconnect to a master.
-         */
-        config.delayed_retry = true;
-        config.master_reconnection = true;
-    }
-
     return new(std::nothrow) RWSplit(service, config);
 }
 
@@ -514,7 +492,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {"master_accept_reads",        MXS_MODULE_PARAM_BOOL,    "false"        },
             {"connection_keepalive",       MXS_MODULE_PARAM_COUNT,   "0"            },
             {"causal_reads",               MXS_MODULE_PARAM_BOOL,    "false"        },
-            {"causal_reads_timeout",       MXS_MODULE_PARAM_STRING,  "120"          },
+            {"causal_reads_timeout",       MXS_MODULE_PARAM_STRING,  "10"           },
             {"master_reconnection",        MXS_MODULE_PARAM_BOOL,    "false"        },
             {"delayed_retry",              MXS_MODULE_PARAM_BOOL,    "false"        },
             {"delayed_retry_timeout",      MXS_MODULE_PARAM_COUNT,   "10"           },

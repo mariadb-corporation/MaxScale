@@ -49,7 +49,7 @@ type=service
 router=binlogrouter
 router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 
 [avro-router]
 type=service
@@ -90,7 +90,7 @@ type=service
 router=binlogrouter
 router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 
 [avro-router]
 type=service

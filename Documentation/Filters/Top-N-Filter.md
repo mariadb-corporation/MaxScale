@@ -18,7 +18,7 @@ type=service
 router=readconnrouter
 servers=server1
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=MyLogFilter
 ```
 
@@ -153,7 +153,7 @@ type=service
 router=readconnrouter
 servers=server1
 user=myuser
-passwd=mypasswd
+password=mypasswd
 filters=SlowAppServer | ControlAppServer
 ```
 
