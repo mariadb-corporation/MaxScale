@@ -585,6 +585,9 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
     {
         /** Got a complete reply, decrement expected response count */
         m_expected_responses--;
+
+        session_book_server_response(m_pSession, backend->backend()->server, m_expected_responses == 0);
+
         mxb_assert(m_expected_responses >= 0);
         mxb_assert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
@@ -639,6 +642,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
             m_otrx_state = OTRX_INACTIVE;
             start_trx_replay();
             gwbuf_free(writebuf);
+            session_reset_server_bookkeeping(m_pSession);
             return;
         }
     }
