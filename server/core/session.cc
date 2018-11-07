@@ -1586,7 +1586,7 @@ static const int ISO_TIME_LEN = sizeof(ISO_TEMPLATE) - 1;
 void timespec_to_iso(char* zIso, const timespec& ts)
 {
     tm tm;
-    gmtime_r(&ts.tv_sec, &tm);
+    localtime_r(&ts.tv_sec, &tm);
 
     size_t i = strftime(zIso, ISO_TIME_LEN + 1, "%G-%m-%dT%H:%M:%S", &tm);
     mxb_assert(i == 19);
