@@ -315,6 +315,7 @@ const MXS_MODULE_PARAM config_service_params[] =
     {CN_LOG_AUTH_WARNINGS,             MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_RETRY_ON_FAILURE,              MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_SESSION_TRACK_TRX_STATE,       MXS_MODULE_PARAM_BOOL,   "false"},
+    {CN_RETAIN_LAST_STATEMENTS,        MXS_MODULE_PARAM_COUNT,  "0"},
     {NULL}
 };
 

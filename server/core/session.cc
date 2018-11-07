@@ -109,7 +109,7 @@ MXS_SESSION* session_alloc(SERVICE* service, DCB* client_dcb)
 
 MXS_SESSION* session_alloc_with_id(SERVICE* service, DCB* client_dcb, uint64_t id)
 {
-    Session* session = new(std::nothrow) Session;
+    Session* session = new (std::nothrow) Session(service);
 
     if (session == nullptr)
     {
@@ -1198,9 +1198,16 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session()
-    : m_retain_last_statements(this_unit.retain_last_statements)
+Session::Session(SERVICE* service)
 {
+    if (service->retain_last_statements != -1) // Explicitly set for the service
+    {
+        m_retain_last_statements = service->retain_last_statements;
+    }
+    else
+    {
+        m_retain_last_statements = this_unit.retain_last_statements;
+    }
 }
 
 Session::~Session()

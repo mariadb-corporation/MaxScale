@@ -51,6 +51,11 @@ feature can be used for debugging, if there is suspicion that MaxScale
 sends a particular statement to the wrong server (e.g. to a slave when it
 should be sent to the master).
 
+### Services
+
+The global configuration parameter `retain_last_statements` can now
+also be specified separately for individual services.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.3.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.3.1)

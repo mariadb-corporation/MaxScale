@@ -13,6 +13,13 @@
 
 #include "maxscale/mock/session.hh"
 
+namespace
+{
+
+SERVICE dummy_service;
+
+}
+
 namespace maxscale
 {
 
@@ -20,7 +27,8 @@ namespace mock
 {
 
 Session::Session(Client* pClient)
-    : m_client(*pClient)
+    : mxs::Session(&dummy_service)
+    , m_client(*pClient)
     , m_client_dcb(this, pClient->user(), pClient->host(), pClient)
 {
     MXS_SESSION* pSession = this;
