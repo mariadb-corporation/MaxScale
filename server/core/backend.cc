@@ -259,3 +259,29 @@ bool Backend::write_stored_command()
 
     return rval;
 }
+
+const maxbase::StopWatch& Backend::session_timer() const
+{
+    return m_session_timer;
+}
+
+const maxbase::IntervalTimer& Backend::select_timer() const
+{
+    return m_select_timer;
+}
+
+void Backend::select_started()
+{
+    m_select_timer.start_interval();
+}
+
+void Backend::select_ended()
+{
+    m_select_timer.end_interval();
+    ++m_num_selects;
+}
+
+int64_t Backend::num_selects() const
+{
+    return m_num_selects;
+}

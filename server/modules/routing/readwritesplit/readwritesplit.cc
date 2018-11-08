@@ -112,7 +112,7 @@ ServerStats& RWSplit::server_stats(SERVER* server)
     return (*m_server_stats)[server];
 }
 
-RWSplit::SrvStatMap RWSplit::all_server_stats() const
+maxscale::SrvStatMap RWSplit::all_server_stats() const
 {
     SrvStatMap stats;
 
@@ -325,10 +325,10 @@ void RWSplit::diagnostics(DCB* dcb)
                stats().n_all,
                all_pct);
     dcb_printf(dcb,
-               "\tNumber of read-write transactions:        %" PRIu64 "\n",
+               "\tNumber of read-write transactions:      %" PRIu64 "\n",
                stats().n_rw_trx);
     dcb_printf(dcb,
-               "\tNumber of read-only transactions:        %" PRIu64 "\n",
+               "\tNumber of read-only transactions:       %" PRIu64 "\n",
                stats().n_ro_trx);
     dcb_printf(dcb,
                "\tNumber of replayed transactions:        %" PRIu64 "\n",
@@ -360,16 +360,23 @@ void RWSplit::diagnostics(DCB* dcb)
 
     if (!srv_stats.empty())
     {
-        dcb_printf(dcb, "    Server    Total    Read    Write\n");
+        dcb_printf(dcb, "    %10s %10s %10s %10s  Sess Avg:%9s  %10s %10s\n",
+                   "Server", "Total", "Read", "Write",
+                   "dur", "active", "selects");
         for (const auto& s : srv_stats)
         {
             mxb_assert(s.second.total == s.second.read + s.second.write);
+            ServerStats::CurrentStats cs = s.second.current_stats();
+
             dcb_printf(dcb,
-                       "    %s %10lu %10lu %10lu\n",
+                       "    %10s %10ld %10ld %10ld           %9s %10.02f%% %10ld\n",
                        s.first->name,
-                       s.second.total,
-                       s.second.read,
-                       s.second.write);
+                       cs.total_queries,
+                       cs.total_read_queries,
+                       cs.total_write_queries,
+                       to_string(cs.ave_session_dur).c_str(),
+                       cs.ave_session_active_pct,
+                       cs.ave_session_selects);
         }
     }
 }
@@ -400,11 +407,17 @@ json_t* RWSplit::diagnostics_json() const
     for (const auto& a : all_server_stats())
     {
         mxb_assert(a.second.total == a.second.read + a.second.write);
+
+        ServerStats::CurrentStats stats = a.second.current_stats();
+
         json_t* obj = json_object();
         json_object_set_new(obj, "id", json_string(a.first->name));
-        json_object_set_new(obj, "total", json_integer(a.second.total));
-        json_object_set_new(obj, "read", json_integer(a.second.read));
-        json_object_set_new(obj, "write", json_integer(a.second.write));
+        json_object_set_new(obj, "total", json_integer(stats.total_queries));
+        json_object_set_new(obj, "read", json_integer(stats.total_read_queries));
+        json_object_set_new(obj, "write", json_integer(stats.total_write_queries));
+        json_object_set_new(obj, "avg_sess_duration", json_string(to_string(stats.ave_session_dur).c_str()));
+        json_object_set_new(obj, "avg_sess_active_pct", json_real(stats.ave_session_active_pct));
+        json_object_set_new(obj, "avg_selects_per_session", json_integer(stats.ave_session_selects));
         json_array_append_new(arr, obj);
     }
 

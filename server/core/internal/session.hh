@@ -20,6 +20,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <maxscale/buffer.hh>
 #include <maxscale/session.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/utils.hh>
@@ -38,7 +39,6 @@ typedef struct SESSION_VARIABLE
 } SESSION_VARIABLE;
 
 typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
-typedef std::deque<std::vector<uint8_t>>                  SessionStmtQueue;
 typedef std::unordered_set<DCB*>                          DCBSet;
 
 // Class that holds the session specific filter data
@@ -61,8 +61,46 @@ public:
 class Session : public MXS_SESSION
 {
 public:
+    class QueryInfo
+    {
+    public:
+        QueryInfo(const std::shared_ptr<GWBUF>& sQuery);
+
+        json_t* as_json() const;
+
+        bool complete() const
+        {
+            return m_complete;
+        }
+
+        const std::shared_ptr<GWBUF>& query() const
+        {
+            return m_sQuery;
+        }
+
+        void book_server_response(SERVER* pServer, bool final_response);
+        void book_as_complete();
+        void reset_server_bookkeeping();
+
+        struct ServerInfo
+        {
+            SERVER*  pServer;
+            timespec processed;
+        };
+
+    private:
+        std::shared_ptr<GWBUF>  m_sQuery;           /*< The packet, COM_QUERY *or* something else. */
+        timespec                m_received;         /*< When was it received. */
+        timespec                m_completed;        /*< When was it completed. */
+        std::vector<ServerInfo> m_server_infos;     /*< When different servers responded. */
+        bool                    m_complete = false; /*< Is this information complete? */
+    };
+
+    typedef std::deque<QueryInfo> QueryInfos;
+
     using FilterList = std::vector<SessionFilter>;
 
+    Session(SERVICE* service);
     ~Session();
 
     bool setup_filters(Service* service);
@@ -80,6 +118,11 @@ public:
     bool remove_variable(const char* name, void** context);
     void retain_statement(GWBUF* pBuffer);
     void dump_statements() const;
+    void book_server_response(SERVER* pServer, bool final_response);
+    void book_last_as_complete();
+    void reset_server_bookkeeping();
+
+    json_t* queries_as_json() const;
 
     void link_backend_dcb(DCB* dcb)
     {
@@ -101,8 +144,10 @@ public:
 private:
     FilterList        m_filters;
     SessionVarsByName m_variables;
-    SessionStmtQueue  m_last_statements;/*< The N last statements by the client */
-    DCBSet            m_dcb_set;        /*< Set of associated backend DCBs */
+    QueryInfos        m_last_queries;           /*< The N last queries by the client */
+    int               m_current_query = -1;     /*< The index of the current query */
+    DCBSet            m_dcb_set;                /*< Set of associated backend DCBs */
+    uint32_t          m_retain_last_statements; /*< How many statements be retained */
 };
 }
 

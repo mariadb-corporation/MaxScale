@@ -239,7 +239,7 @@ public:
      *
      * @return True, if target server gtid was reached within allotted time
      */
-    bool catchup_to_master(ClusterOperation& op);
+    bool catchup_to_master(GeneralOpData& op, const GtidList& target);
 
     /**
      * Find slave connection to the target server. If the IO thread is trying to connect
@@ -277,15 +277,6 @@ public:
      * @return True if slave accepted all commands
      */
     bool redirect_one_slave(const std::string& change_cmd);
-
-    /**
-     * Joins this standalone server to the cluster.
-     *
-     * @param change_cmd Change master command
-     * @param disable_server_events Should events be disabled on the server
-     * @return True if commands were accepted by server
-     */
-    bool join_cluster(const std::string& change_cmd, bool disable_server_events);
 
     /**
      * Check if the server can be demoted by switchover.
@@ -357,7 +348,8 @@ public:
      * @param op Cluster operation descriptor
      * @return True if successful
      */
-    bool promote(ClusterOperation& op);
+    bool promote(GeneralOpData& op, ServerOperation& promotion, OperationType type,
+                 const MariaDBServer* demotion_target);
 
     /**
      * Demote this server. Removes all slave connections. If server was master, sets read_only.
@@ -365,17 +357,17 @@ public:
      * @param op Cluster operation descriptor
      * @return True if successful
      */
-    bool demote(ClusterOperation& op);
+    bool demote(GeneralOpData& general, ServerOperation& op);
 
     /**
      * Redirect the slave connection going to old master to replicate from new master.
      *
      * @param op Operation descriptor
-     * @param old_master The connection to this server is redirected
+     * @param old_conn The connection which is redirected
      * @param new_master The new master for the redirected connection
      * @return True on success
      */
-    bool redirect_existing_slave_conn(ClusterOperation& op, const MariaDBServer* old_master,
+    bool redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus& old_conn,
                                       const MariaDBServer* new_master);
 
     /**
@@ -391,8 +383,17 @@ public:
      * @params replacement Which server should rep
      * @return True on success
      */
-    bool copy_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_copy,
+    bool copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_copy,
                           const MariaDBServer* replacement);
+
+    /**
+     * Create a new slave connection on the server and start it.
+     *
+     * @param op Operation descriptor
+     * @param slave_conn Existing connection to emulate
+     * @return True on success
+     */
+    bool create_start_slave(GeneralOpData& op, const SlaveStatus& slave_conn);
 
     /**
      * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
@@ -535,7 +536,7 @@ private:
     bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
                          json_t** error_out);
 
-    bool remove_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_remove);
+    bool remove_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_remove);
     bool execute_cmd_ex(const std::string& cmd, QueryRetryMode mode,
                         std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
 
@@ -543,7 +544,6 @@ private:
                                 std::string* errmsg_out);
 
     bool        set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
-    bool        merge_slave_conns(ClusterOperation& op, const SlaveStatusArray& conns_to_merge);
-    bool        create_start_slave(ClusterOperation& op, const SlaveStatus& slave_conn);
-    std::string generate_change_master_cmd(ClusterOperation& op, const SlaveStatus& slave_conn);
+    bool        merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
+    std::string generate_change_master_cmd(GeneralOpData& op, const SlaveStatus& slave_conn);
 };

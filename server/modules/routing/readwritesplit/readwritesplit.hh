@@ -36,6 +36,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/routingworker.hh>
 #include <maxscale/protocol/rwbackend.hh>
+#include <maxscale/session_stats.hh>
 
 enum backend_type_t
 {
@@ -241,20 +242,8 @@ struct Stats
     uint64_t n_rw_trx = 0;          /**< Read-write transaction count */
 };
 
-// Statistics for one server
-struct ServerStats
-{
-    uint64_t total = 0;     // Sum of master + slave + all
-    uint64_t read = 0;      // Write queries
-    uint64_t write = 0;     // Read queries
-
-    void operator+=(const ServerStats& rhs)
-    {
-        total += rhs.total;
-        read += rhs.read;
-        write += rhs.write;
-    }
-};
+using maxscale::ServerStats;
+using maxscale::SrvStatMap;
 
 class RWSplitSession;
 
@@ -267,8 +256,6 @@ class RWSplit : public mxs::Router<RWSplit, RWSplitSession>
     RWSplit& operator=(const RWSplit&);
 
 public:
-
-    using SrvStatMap = std::map<SERVER*, ServerStats>;
 
     RWSplit(SERVICE* service, const Config& config);
     ~RWSplit();

@@ -10,6 +10,15 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### REST-API
+
+#### `/v1/sessions`
+
+The response will, if the feature has been enabled with the
+`retain_last_statements` parameter, either globally or specifically
+for a service, contain information about the last queries executed
+by a session.
+
 ### Binlog Router
 
 Secondary masters can now be specified also when file + position
@@ -50,6 +59,11 @@ be checked if and how MaxScale classifies a specific statement. This
 feature can be used for debugging, if there is suspicion that MaxScale
 sends a particular statement to the wrong server (e.g. to a slave when it
 should be sent to the master).
+
+### Services
+
+The global configuration parameter `retain_last_statements` can now
+also be specified separately for individual services.
 
 ## Bug fixes
 

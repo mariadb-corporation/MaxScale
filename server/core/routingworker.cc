@@ -1167,3 +1167,28 @@ json_t* mxs_rworker_list_to_json(const char* host)
     RoutingWorker::execute_concurrently(task);
     return task.resource();
 }
+
+namespace
+{
+
+class WatchdogTask : public Worker::Task
+{
+public:
+    WatchdogTask()
+    {
+    }
+
+    void execute(Worker& worker)
+    {
+        // Success if this is called.
+    }
+};
+
+}
+
+void mxs_rworker_watchdog()
+{
+    MXS_INFO("MaxScale watchdog called.");
+    WatchdogTask task;
+    RoutingWorker::execute_concurrently(task);
+}

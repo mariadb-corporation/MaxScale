@@ -46,6 +46,7 @@ add_library(maxscale-common SHARED
   ssl.cc
   users.cc
   utils.cc
+  session_stats.cc
   )
 
 target_link_libraries(maxscale-common

@@ -155,27 +155,23 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
     return accepted;
 }
 
-ClusterOperation::ClusterOperation(OperationType type,
-                                   MariaDBServer* promotion_target, MariaDBServer* demotion_target,
-                                   const SlaveStatusArray& promo_target_conns,
-                                   const SlaveStatusArray& demo_target_conns,
-                                   bool demo_target_is_master, bool handle_events,
-                                   string& promotion_sql_file, string& demotion_sql_file,
-                                   string& replication_user, string& replication_password,
-                                   json_t** error, maxbase::Duration time_remaining)
-    : type(type)
-    , promotion_target(promotion_target)
-    , demotion_target(demotion_target)
-    , demotion_target_is_master(demo_target_is_master)
+ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
+                                 bool handle_events, const std::string& sql_file,
+                                 const SlaveStatusArray& conns_to_copy)
+    : target(target)
+    , to_from_master(was_is_master)
     , handle_events(handle_events)
-    , promotion_sql_file(promotion_sql_file)
-    , demotion_sql_file(demotion_sql_file)
-    , replication_user(replication_user)
+    , sql_file(sql_file)
+    , conns_to_copy(conns_to_copy)
+{
+}
+
+GeneralOpData::GeneralOpData(const string& replication_user, const string& replication_password,
+                             json_t** error, maxbase::Duration time_remaining)
+    : replication_user(replication_user)
     , replication_password(replication_password)
     , error_out(error)
     , time_remaining(time_remaining)
-    , demotion_target_conns(demo_target_conns)
-    , promotion_target_conns(promo_target_conns)
 {
 }
 

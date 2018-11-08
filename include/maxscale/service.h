@@ -150,6 +150,8 @@ typedef struct service
                                                      * track mechanism */
     int active;                                     /**< Whether the service is still
                                                      * active */
+    int32_t retain_last_statements;                 /**< How many statements to retain per session,
+                                                     * -1 if not explicitly specified. */
 } SERVICE;
 
 typedef enum count_spec_t

@@ -80,6 +80,11 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
             {
                 router->stats().n_sessions += 1;
             }
+
+            for (auto& b : backends)
+            {
+                router->server_stats(b->server()).start_session();
+            }
         }
     }
 
@@ -115,6 +120,11 @@ void RWSplitSession::close()
                                         stat.num_samples());
         }
         backend->response_stat().reset();
+
+        m_router->server_stats(backend->server()).end_session(
+            backend->session_timer().split(),
+            backend->select_timer().total(),
+            backend->num_selects());
     }
 }
 
@@ -575,6 +585,9 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
     {
         /** Got a complete reply, decrement expected response count */
         m_expected_responses--;
+
+        session_book_server_response(m_pSession, backend->backend()->server, m_expected_responses == 0);
+
         mxb_assert(m_expected_responses >= 0);
         mxb_assert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
@@ -621,12 +634,15 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
             session_set_load_active(m_pSession, true);
         }
 
+        backend->select_ended();
+
         if (m_otrx_state == OTRX_ROLLBACK)
         {
             // Transaction rolled back, start replaying it on the master
             m_otrx_state = OTRX_INACTIVE;
             start_trx_replay();
             gwbuf_free(writebuf);
+            session_reset_server_bookkeeping(m_pSession);
             return;
         }
     }

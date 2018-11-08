@@ -26,19 +26,20 @@
 #include <string>
 #include <sstream>
 
-#include <maxscale/alloc.h>
 #include <maxbase/atomic.hh>
+#include <maxscale/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/json_api.h>
 #include <maxscale/log.h>
+#include <maxscale/modutil.h>
 #include <maxscale/poll.h>
 #include <maxscale/router.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/service.h>
 #include <maxscale/utils.h>
-#include <maxscale/json_api.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/routingworker.hh>
 
 #include "internal/dcb.h"
 #include "internal/filter.hh"
@@ -50,16 +51,23 @@ using std::stringstream;
 using maxbase::Worker;
 using namespace maxscale;
 
-/** Global session id counter. Must be updated atomically. Value 0 is reserved for
- *  dummy/unused sessions.
- */
-static uint64_t next_session_id = 1;
-
-static uint32_t retain_last_statements = 0;
-static session_dump_statements_t dump_statements = SESSION_DUMP_STATEMENTS_NEVER;
-
 namespace
 {
+
+struct
+{
+    /* Global session id counter. Must be updated atomically. Value 0 is reserved for
+     *  dummy/unused sessions.
+     */
+    uint64_t next_session_id;
+    uint32_t retain_last_statements;
+    session_dump_statements_t dump_statements;
+} this_unit =
+{
+    1,
+    0,
+    SESSION_DUMP_STATEMENTS_NEVER
+};
 
 static struct session dummy_session()
 {
@@ -68,6 +76,7 @@ static struct session dummy_session()
     session.refcount = 1;
     return session;
 }
+
 }
 
 static struct session session_dummy_struct = dummy_session();
@@ -100,7 +109,7 @@ MXS_SESSION* session_alloc(SERVICE* service, DCB* client_dcb)
 
 MXS_SESSION* session_alloc_with_id(SERVICE* service, DCB* client_dcb, uint64_t id)
 {
-    Session* session = new(std::nothrow) Session;
+    Session* session = new (std::nothrow) Session(service);
 
     if (session == nullptr)
     {
@@ -379,7 +388,7 @@ static void session_final_free(MXS_SESSION* ses)
         session->client_dcb = NULL;
     }
 
-    if (dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
+    if (this_unit.dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
     {
         session_dump_statements(session);
     }
@@ -818,7 +827,7 @@ void session_put_ref(MXS_SESSION* session)
 
 uint64_t session_get_next_id()
 {
-    return mxb::atomic::add(&next_session_id, 1, mxb::atomic::RELAXED);
+    return mxb::atomic::add(&this_unit.next_session_id, 1, mxb::atomic::RELAXED);
 }
 
 json_t* session_json_data(const Session* session, const char* host)
@@ -895,6 +904,9 @@ json_t* session_json_data(const Session* session, const char* host)
     }
 
     json_object_set_new(attr, "connections", dcb_arr);
+
+    json_t* queries = session->queries_as_json();
+    json_object_set_new(attr, "queries", queries);
 
     json_object_set_new(data, CN_ATTRIBUTES, attr);
     json_object_set_new(data, CN_LINKS, mxs_json_self_link(host, CN_SESSIONS, ss.str().c_str()));
@@ -1025,6 +1037,11 @@ static void session_deliver_response(MXS_SESSION* session)
         session->response.up.session = NULL;
         session->response.up.clientReply = NULL;
         session->response.buffer = NULL;
+
+        // If some filter short-circuits the routing, then there will
+        // be no response from a server and we need to ensure that
+        // subsequent book-keeping targets the right statement.
+        static_cast<Session*>(session)->book_last_as_complete();
     }
 
     mxb_assert(!session->response.up.instance);
@@ -1035,23 +1052,32 @@ static void session_deliver_response(MXS_SESSION* session)
 
 void session_set_retain_last_statements(uint32_t n)
 {
-    retain_last_statements = n;
+    this_unit.retain_last_statements = n;
 }
 
 void session_set_dump_statements(session_dump_statements_t value)
 {
-    dump_statements = value;
+    this_unit.dump_statements = value;
 }
 
 session_dump_statements_t session_get_dump_statements()
 {
-    return dump_statements;
+    return this_unit.dump_statements;
 }
 
-void session_retain_statement(MXS_SESSION* session, GWBUF* pBuffer)
+void session_retain_statement(MXS_SESSION* pSession, GWBUF* pBuffer)
 {
-    Session* pSession = static_cast<Session*>(session);
-    pSession->retain_statement(pBuffer);
+    static_cast<Session*>(pSession)->retain_statement(pBuffer);
+}
+
+void session_book_server_response(MXS_SESSION* pSession, SERVER* pServer, bool final_response)
+{
+    static_cast<Session*>(pSession)->book_server_response(pServer, final_response);
+}
+
+void session_reset_server_bookkeeping(MXS_SESSION* pSession)
+{
+    static_cast<Session*>(pSession)->reset_server_bookkeeping();
 }
 
 void session_dump_statements(MXS_SESSION* session)
@@ -1172,6 +1198,18 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
+Session::Session(SERVICE* service)
+{
+    if (service->retain_last_statements != -1) // Explicitly set for the service
+    {
+        m_retain_last_statements = service->retain_last_statements;
+    }
+    else
+    {
+        m_retain_last_statements = this_unit.retain_last_statements;
+    }
+}
+
 Session::~Session()
 {
     if (router_session)
@@ -1186,42 +1224,120 @@ Session::~Session()
     }
 }
 
+namespace
+{
+
+bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pLen)
+{
+    *ppCmd = nullptr;
+    *ppStmt = nullptr;
+    *pLen = 0;
+
+    bool deallocate = false;
+    int len = gwbuf_length(pBuffer);
+
+    if (len > MYSQL_HEADER_LEN)
+    {
+        uint8_t header[MYSQL_HEADER_LEN + 1];
+        uint8_t* pHeader = NULL;
+
+        if (GWBUF_LENGTH(pBuffer) > MYSQL_HEADER_LEN)
+        {
+            pHeader = GWBUF_DATA(pBuffer);
+        }
+        else
+        {
+            gwbuf_copy_data(pBuffer, 0, MYSQL_HEADER_LEN + 1, header);
+            pHeader = header;
+        }
+
+        int cmd = MYSQL_GET_COMMAND(pHeader);
+
+        *ppCmd = STRPACKETTYPE(cmd);
+
+        if (cmd == MXS_COM_QUERY)
+        {
+            if (GWBUF_IS_CONTIGUOUS(pBuffer))
+            {
+                modutil_extract_SQL(pBuffer, ppStmt, pLen);
+            }
+            else
+            {
+                *ppStmt = modutil_get_SQL(pBuffer);
+                *pLen = strlen(*ppStmt);
+                deallocate = true;
+            }
+        }
+    }
+
+    return deallocate;
+}
+
+}
+
 void Session::dump_statements() const
 {
-    if (retain_last_statements)
+    if (m_retain_last_statements)
     {
-        int n = m_last_statements.size();
+        int n = m_last_queries.size();
 
         uint64_t id = session_get_current_id();
 
         if ((id != 0) && (id != ses_id))
         {
             MXS_WARNING("Current session is %" PRIu64 ", yet statements are dumped for %" PRIu64 ". "
-                                                                                                 "The session id in the subsequent dumped statements is the wrong one.",
+                        "The session id in the subsequent dumped statements is the wrong one.",
                         id,
                         ses_id);
         }
 
-        for (auto i = m_last_statements.rbegin(); i != m_last_statements.rend(); ++i)
+        for (auto i = m_last_queries.rbegin(); i != m_last_queries.rend(); ++i)
         {
-            int len = i->size();
-            const char* pStmt = (char*)&i->front();
+            const QueryInfo& info = *i;
+            GWBUF* pBuffer = info.query().get();
 
-            if (id != 0)
-            {
-                MXS_NOTICE("Stmt %d: %.*s", n, len, pStmt);
-            }
-            else
-            {
-                // We are in a context where we do not have a current session, so we need to
-                // log the session id ourselves.
+            const char* pCmd;
+            char* pStmt;
+            int len;
+            bool deallocate = get_cmd_and_stmt(pBuffer, &pCmd, &pStmt, &len);
 
-                MXS_NOTICE("(%" PRIu64 ") Stmt %d: %.*s", ses_id, n, len, pStmt);
+            if (pStmt)
+            {
+                if (id != 0)
+                {
+                    MXS_NOTICE("Stmt %d: %.*s", n, len, pStmt);
+                }
+                else
+                {
+                    // We are in a context where we do not have a current session, so we need to
+                    // log the session id ourselves.
+
+                    MXS_NOTICE("(%" PRIu64 ") Stmt %d: %.*s", ses_id, n, len, pStmt);
+                }
+
+                if (deallocate)
+                {
+                    MXS_FREE(pStmt);
+                }
             }
 
             --n;
         }
     }
+}
+
+json_t* Session::queries_as_json() const
+{
+    json_t* pQueries = json_array();
+
+    for (auto i = m_last_queries.rbegin(); i != m_last_queries.rend(); ++i)
+    {
+        const QueryInfo& info = *i;
+
+        json_array_append_new(pQueries, info.as_json());
+    }
+
+    return pQueries;
 }
 
 bool Session::setup_filters(Service* service)
@@ -1370,39 +1486,216 @@ bool Session::remove_variable(const char* name, void** context)
 
 void Session::retain_statement(GWBUF* pBuffer)
 {
-    if (retain_last_statements)
+    if (m_retain_last_statements)
     {
-        size_t len = gwbuf_length(pBuffer);
+        mxb_assert(m_last_queries.size() <= m_retain_last_statements);
 
-        if (len > MYSQL_HEADER_LEN)
+        std::shared_ptr<GWBUF> sBuffer(gwbuf_clone(pBuffer));
+
+        m_last_queries.push_front(QueryInfo(sBuffer));
+
+        if (m_last_queries.size() > m_retain_last_statements)
         {
-            uint8_t header[MYSQL_HEADER_LEN + 1];
-            uint8_t* pHeader = NULL;
+            m_last_queries.pop_back();
+        }
 
-            if (GWBUF_LENGTH(pBuffer) > MYSQL_HEADER_LEN)
-            {
-                pHeader = GWBUF_DATA(pBuffer);
-            }
-            else
-            {
-                gwbuf_copy_data(pBuffer, 0, MYSQL_HEADER_LEN + 1, header);
-                pHeader = header;
-            }
-
-            if (MYSQL_GET_COMMAND(pHeader) == MXS_COM_QUERY)
-            {
-                mxb_assert(m_last_statements.size() <= retain_last_statements);
-
-                if (m_last_statements.size() == retain_last_statements)
-                {
-                    m_last_statements.pop_back();
-                }
-
-                std::vector<uint8_t> stmt(len - MYSQL_HEADER_LEN - 1);
-                gwbuf_copy_data(pBuffer, MYSQL_HEADER_LEN + 1, len - (MYSQL_HEADER_LEN + 1), &stmt.front());
-
-                m_last_statements.push_front(stmt);
-            }
+        if (m_last_queries.size() == 1)
+        {
+            mxb_assert(m_current_query == -1);
+            m_current_query = 0;
+        }
+        else
+        {
+            // If requests are streamed, without the response being waited for,
+            // then this may cause the index to grow past the length of the array.
+            // That's ok and is dealt with in book_server_response() and friends.
+            ++m_current_query;
+            mxb_assert(m_current_query >= 0);
         }
     }
+}
+
+void Session::book_server_response(SERVER* pServer, bool final_response)
+{
+    if (m_retain_last_statements && !m_last_queries.empty())
+    {
+        mxb_assert(m_current_query >= 0);
+        // If enough queries have been sent by the client, without it waiting
+        // for the responses, then at this point it may be so that the query
+        // object has been popped from the size limited queue. That's apparent
+        // by the index pointing past the end of the queue. In that case
+        // we simply ignore the result.
+        if (m_current_query < static_cast<int>(m_last_queries.size()))
+        {
+            auto i = m_last_queries.begin() + m_current_query;
+            QueryInfo& info = *i;
+
+            mxb_assert(!info.complete());
+
+            info.book_server_response(pServer, final_response);
+        }
+
+        if (final_response)
+        {
+            // In case what is described in the comment above has occurred,
+            // this will eventually take the index back into the queue.
+            --m_current_query;
+            mxb_assert(m_current_query >= -1);
+        }
+    }
+}
+
+void Session::book_last_as_complete()
+{
+    if (m_retain_last_statements && !m_last_queries.empty())
+    {
+        mxb_assert(m_current_query >= 0);
+        // See comment in book_server_response().
+        if (m_current_query < static_cast<int>(m_last_queries.size()))
+        {
+            auto i = m_last_queries.begin() + m_current_query;
+            QueryInfo& info = *i;
+
+            info.book_as_complete();
+        }
+    }
+}
+
+void Session::reset_server_bookkeeping()
+{
+    if (m_retain_last_statements && !m_last_queries.empty())
+    {
+        mxb_assert(m_current_query >= 0);
+        // See comment in book_server_response().
+        if (m_current_query < static_cast<int>(m_last_queries.size()))
+        {
+            auto i = m_last_queries.begin() + m_current_query;
+            QueryInfo& info = *i;
+            info.reset_server_bookkeeping();
+        }
+    }
+}
+
+Session::QueryInfo::QueryInfo(const std::shared_ptr<GWBUF>& sQuery)
+    : m_sQuery(sQuery)
+{
+    clock_gettime(CLOCK_REALTIME_COARSE, &m_received);
+    m_completed.tv_sec = 0;
+    m_completed.tv_nsec = 0;
+}
+
+namespace
+{
+
+static const char ISO_TEMPLATE[] = "2018-11-05T16:47:49.123";
+static const int ISO_TIME_LEN = sizeof(ISO_TEMPLATE) - 1;
+
+void timespec_to_iso(char* zIso, const timespec& ts)
+{
+    tm tm;
+    localtime_r(&ts.tv_sec, &tm);
+
+    size_t i = strftime(zIso, ISO_TIME_LEN + 1, "%G-%m-%dT%H:%M:%S", &tm);
+    mxb_assert(i == 19);
+    long int ms = ts.tv_nsec / 1000000;
+    i = sprintf(zIso + i, ".%03ld", ts.tv_nsec / 1000000);
+    mxb_assert(i == 4);
+}
+
+}
+
+json_t* Session::QueryInfo::as_json() const
+{
+    json_t* pQuery = json_object();
+
+    const char* pCmd;
+    char* pStmt;
+    int len;
+    bool deallocate = get_cmd_and_stmt(m_sQuery.get(), &pCmd, &pStmt, &len);
+
+    if (pCmd)
+    {
+        json_object_set_new(pQuery, "command", json_string(pCmd));
+    }
+
+    if (pStmt)
+    {
+        json_object_set_new(pQuery, "statement", json_stringn(pStmt, len));
+
+        if (deallocate)
+        {
+            MXS_FREE(pStmt);
+        }
+    }
+
+    char iso_time[ISO_TIME_LEN + 1];
+
+    timespec_to_iso(iso_time, m_received);
+    json_object_set_new(pQuery, "received", json_stringn(iso_time, ISO_TIME_LEN));
+
+    if (m_complete)
+    {
+        timespec_to_iso(iso_time, m_completed);
+        json_object_set_new(pQuery, "completed", json_stringn(iso_time, ISO_TIME_LEN));
+    }
+
+    json_t* pResponses = json_array();
+
+    for (auto& info : m_server_infos)
+    {
+        json_t* pResponse = json_object();
+
+        // Calculate and report in milliseconds.
+        long int received = m_received.tv_sec * 1000 + m_received.tv_nsec / 1000000;
+        long int processed = info.processed.tv_sec * 1000 + info.processed.tv_nsec / 1000000;
+        mxb_assert(processed >= received);
+
+        long int duration = processed - received;
+
+        json_object_set_new(pResponse, "server", json_string(info.pServer->name));
+        json_object_set_new(pResponse, "duration", json_integer(duration));
+
+        json_array_append_new(pResponses, pResponse);
+    }
+
+    json_object_set_new(pQuery, "responses", pResponses);
+
+    return pQuery;
+}
+
+void Session::QueryInfo::book_server_response(SERVER* pServer, bool final_response)
+{
+    // If the information has been completed, no more information may be provided.
+    mxb_assert(!m_complete);
+    // A particular server may be reported only exactly once.
+    mxb_assert(find_if(m_server_infos.begin(), m_server_infos.end(), [pServer](const ServerInfo& info) {
+                return info.pServer == pServer;
+            }) == m_server_infos.end());
+
+    timespec now;
+    clock_gettime(CLOCK_REALTIME_COARSE, &now);
+
+    m_server_infos.push_back(ServerInfo {pServer, now});
+
+    m_complete = final_response;
+
+    if (m_complete)
+    {
+        m_completed = now;
+    }
+}
+
+void Session::QueryInfo::book_as_complete()
+{
+    timespec now;
+    clock_gettime(CLOCK_REALTIME_COARSE, &m_completed);
+    m_complete = true;
+}
+
+void Session::QueryInfo::reset_server_bookkeeping()
+{
+    m_server_infos.clear();
+    m_completed.tv_sec = 0;
+    m_completed.tv_nsec = 0;
+    m_complete = false;
 }

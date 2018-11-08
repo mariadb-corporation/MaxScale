@@ -1,6 +1,43 @@
 # MariaDB Monitor
 
-Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
+Table of Contents
+=================
+
+  * [Overview](#overview)
+  * [Master selection](#master-selection)
+  * [Configuration](#configuration)
+  * [Common Monitor Parameters](#common-monitor-parameters)
+  * [MariaDB Monitor optional parameters](#mariadb-monitor-optional-parameters)
+     * [detect_replication_lag](#detect_replication_lag)
+     * [detect_stale_master](#detect_stale_master)
+     * [detect_stale_slave](#detect_stale_slave)
+     * [mysql51_replication](#mysql51_replication)
+     * [multimaster](#multimaster)
+     * [ignore_external_masters](#ignore_external_masters)
+     * [detect_standalone_master](#detect_standalone_master)
+     * [failcount](#failcount)
+     * [allow_cluster_recovery](#allow_cluster_recovery)
+     * [enforce_read_only_slaves](#enforce_read_only_slaves)
+     * [maintenance_on_low_disk_space](#maintenance_on_low_disk_space)
+  * [Cluster manipulation operations](#cluster-manipulation-operations)
+     * [Operation details](#operation-details)
+     * [Manual activation](#manual-activation)
+     * [Automatic activation](#automatic-activation)
+     * [Limitations and requirements](#limitations-and-requirements)
+     * [External master support](#external-master-support)
+     * [Configuration parameters](#configuration-parameters)
+        * [auto_failover](#auto_failover)
+        * [auto_rejoin](#auto_rejoin)
+        * [switchover_on_low_disk_space](#switchover_on_low_disk_space)
+        * [replication_user and replication_password](#replication_user-and-replication_password)
+        * [failover_timeout and switchover_timeout](#failover_timeout-and-switchover_timeout)
+        * [verify_master_failure and master_failure_timeout](#verify_master_failure-and-master_failure_timeout)
+        * [servers_no_promotion](#servers_no_promotion)
+        * [promotion_sql_file and demotion_sql_file](#promotion_sql_file-and-demotion_sql_file)
+        * [handle_server_events](#handle_server_events)
+     * [Troubleshooting](#troubleshooting)
+  * [Using the MariaDB Monitor With Binlogrouter](#using-the-mariadb-monitor-with-binlogrouter)
+  * [Example 1 - Monitor script](#example-1---monitor-script)
 
 ## Overview
 
@@ -10,6 +47,8 @@ are used by the routers when deciding where to route a query. It can also modify
 the replication cluster by performing failover, switchover and rejoin. Backend
 server versions older than MariaDB/MySQL 5.5 are not supported. Failover and
 other similar operations require MariaDB 10.0.2 or later.
+
+Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 
 ## Master selection
 
@@ -201,10 +240,21 @@ disable `read_only`. Otherwise the monitor would quickly re-enable it.
 ### `maintenance_on_low_disk_space`
 
 This feature is enabled by default. If a running server that is not the master
-or a relay master is out of disk space (as defined by the general monitor
-setting `disk_space_threshold`) the server is set to maintenance mode. Such
-servers are not used for router sessions and are ignored when performing a
-failover or other cluster modification operation.
+or a relay master is out of disk space the server is set to maintenance mode.
+Such servers are not used for router sessions and are ignored when performing a
+failover or other cluster modification operation. See the general monitor
+parameters [disk_space_threshold](./Monitor-Common.md#disk_space_threshold) and
+[disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
+on how to enable disk space monitoring.
+
+Once a server has been put to maintenance mode, the disk space situation
+of that server is no longer updated. The server will not be taken out of
+maintanance mode even if more disk space becomes available. The maintenance
+flag must be removed manually:
+```
+maxadmin clear server server2 Maint
+maxctrl clear server server2 Maint
+```
 
 ## Cluster manipulation operations
 
@@ -249,37 +299,34 @@ following:
 
 1. Select the most up-to-date slave of the old master to be the new master. The
 selection criteria is as follows in descending priority:
- 1. gtid_IO_pos (latest event in relay log)
- 2. gtid_current_pos (most processed events)
- 3. log_slave_updates is on
- 4. disk space is not low
+   1. gtid_IO_pos (latest event in relay log)
+   2. gtid_current_pos (most processed events)
+   3. log_slave_updates is on
+   4. disk space is not low
 2. If the new master has unprocessed relay log items, cancel and try again
 later.
 3. Prepare the new master:
- 1. Remove the slave connection the new master used to replicate from the old
+   1. Remove the slave connection the new master used to replicate from the old
 master.
- 2. Disable the *read\_only*-flag.
- 3. Enable scheduled server events (if event handling is on).
- 4. Run the commands in `promotion_sql_file`.
- 5. Start replication from external master is one existed.
+   2. Disable the *read\_only*-flag.
+   3. Enable scheduled server events (if event handling is on).
+   4. Run the commands in `promotion_sql_file`.
+   5. Start replication from external master if one existed.
 4. Redirect all other slaves to replicate from the new master:
- 1. STOP SLAVE and RESET SLAVE
- 2. CHANGE MASTER TO
- 3. START SLAVE
+   1. STOP SLAVE and RESET SLAVE
+   2. CHANGE MASTER TO
+   3. START SLAVE
 5. Check that all slaves are replicating.
-
-Failover may lose events if no slave managed to replicate the events before the
-master went down.
 
 **Switchover** swaps a running master with a running slave. It does the
 following:
 
 1. Prepare the old master for demotion:
- 1. Stop any external replication.
- 2. Enable the *read\_only*-flag to stop writes.
- 3. Disable scheduled server events (if event handling is on).
- 4. Run the commands in `demotion_sql_file`.
- 5. Flush the binary log (FLUSH LOGS) so that all events are on disk.
+   1. Stop any external replication.
+   2. Enable the *read\_only*-flag to stop writes.
+   3. Disable scheduled server events (if event handling is on).
+   4. Run the commands in `demotion_sql_file`.
+   5. Flush the binary log (FLUSH LOGS) so that all events are on disk.
 2. Wait for the new master to catch up with the old master.
 3. Promote new master and redirect slaves as in failover steps 3 and 4. Also
 redirect the demoted old master.
@@ -288,6 +335,7 @@ redirect the demoted old master.
 **Rejoin** joins a standalone server to the cluster or redirects a slave
 replicating from a server other than the master. A standalone server is joined
 by:
+
 1. Run the commands in `demotion_sql_file`.
 2. Enable the *read\_only*-flag.
 3. Disable scheduled server events (if event handling is on).
@@ -300,16 +348,17 @@ STOP SLAVE, RESET SLAVE, CHANGE MASTER TO and START SLAVE commands.
 gtid:s. This destructive command is meant for situations where the gtid:s in the
 cluster are out of sync while the actual data is known to be in sync. The
 operation  proceeds as follows:
+
 1. Reset gtid:s and delete binary logs on all servers:
- 1. Stop (STOP SLAVE) and delete (RESET SLAVE ALL) all slave connections.
- 2. Enable the *read\_only*-flag.
- 3. Disable scheduled server events (if event handling is on).
- 3. Delete binary logs (RESET MASTER).
- 4. Set the sequence number of *gtid\_slave\_pos* to zero. This also affects
+   1. Stop (STOP SLAVE) and delete (RESET SLAVE ALL) all slave connections.
+   2. Enable the *read\_only*-flag.
+   3. Disable scheduled server events (if event handling is on).
+   3. Delete binary logs (RESET MASTER).
+   4. Set the sequence number of *gtid\_slave\_pos* to zero. This also affects
  *gtid\_current\_pos*.
 2. Prepare new master:
- 1. Disable the *read\_only*-flag.
- 2. Enable scheduled server events (if event handling is on).
+   1. Disable the *read\_only*-flag.
+   2. Enable scheduled server events (if event handling is on).
 3. Direct other servers to replicate from the new master as in the other
 operations.
 
@@ -440,6 +489,18 @@ The backends must all use GTID-based replication, and the domain id should not
 change during a switchover or failover. Master and slaves must have
 well-behaving GTIDs with no extra events on slave servers.
 
+Failover cannot be performed if MaxScale was started only after the master
+server went down. This is because MaxScale needs reliable information on the
+gtid domain of the cluster and the replication topology in general to properly
+select the new master.
+
+Failover may lose events. If a master goes down before sending new events to at
+least one slave, those events are lost when a new master is chosen. If the old
+master comes back online, the other servers have likely moved on with a
+diverging history and the old master can no longer join the replication cluster.
+To minimize the chance for this happening, use
+[semisynchronous replication](https://mariadb.com/kb/en/library/semisynchronous-replication/).
+
 Switchover requires that the cluster is "frozen" for the duration of the
 operation. This means that no data modifying statements such as INSERT or UPDATE
 are executed and the GTID position of the master server is stable. When
@@ -520,22 +581,20 @@ redirected to Slave B, the current master.
 
 #### `switchover_on_low_disk_space`
 
-This feature is disabled by default. If set to `on`, when the disk space of a
-server is exhausted, it will cause the server to be put in maintenance mode.
-If the server is the current master, then a switchover will also be triggered.
+This feature is disabled by default. If enabled, the monitor will attempt to
+switchover a master server low on disk space with a slave. The switch is only
+done if a slave without disk space issues is found. If
+`maintenance_on_low_disk_space` is also enabled, the old master (now a slave)
+will be put to maintenance during the next monitor iteration.
 
-In order for this parameter to have any effect, `disk_space_threshold` must
-have been specified for the
-[server](../Getting-Started/Configuration-Guide.md#disk_space_threshold)
-or the [monitor](./Monitor-Common.md#disk_space_threshold), and
-[disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
-for the monitor.
+For this parameter to have any effect, `disk_space_threshold` must be specified
+for the [server](../Getting-Started/Configuration-Guide.md#disk_space_threshold)
+or the [monitor](./Monitor-Common.md#disk_space_threshold).
+Also, [disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
+must be defined for the monitor.
 ```
 switchover_on_low_disk_space=true
 ```
-Note that once the server has been put in maintenance mode, the disk space
-situation will no longer be monitored and the server will thus not automatically
-be taken out of maintanance mode even if disk space again would become available.
 
 #### `replication_user` and `replication_password`
 
@@ -557,17 +616,14 @@ encrypted with the same key to avoid erroneous decryption.
 
 #### `failover_timeout` and `switchover_timeout`
 
-Time limit for the cluster failover and switchover in seconds. The default values
-are 90 seconds.
+Time limit for failover and switchover operations, in seconds. The default
+values are 90 seconds for both. `switchover_timeout` is also used as the time
+limit for a rejoin operation. Rejoin should rarely time out, since it is a
+faster operation than switchover.
 
 If no successful failover/switchover takes place within the configured time
 period, a message is logged and automatic failover is disabled. This prevents
 further automatic modifications to the misbehaving cluster.
-
-`failover_timeout` also controls how long a MaxScale instance that has
-transitioned from passive to active will wait for a failover to take place after
-an apparent loss of a master server. If no new master server is detected within
-the configured time period, failover will be initiated again.
 
 #### `verify_master_failure` and `master_failure_timeout`
 

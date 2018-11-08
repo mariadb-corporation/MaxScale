@@ -200,6 +200,15 @@ Service::Service(const std::string& service_name,
     strip_db_esc = config_get_bool(params, CN_STRIP_DB_ESC);
     session_track_trx_state = config_get_bool(params, CN_SESSION_TRACK_TRX_STATE);
 
+    if (config_get_param(params, CN_RETAIN_LAST_STATEMENTS))
+    {
+        retain_last_statements = config_get_integer(params, CN_RETAIN_LAST_STATEMENTS);
+    }
+    else
+    {
+        retain_last_statements = -1; // Indicates that it has not been set.
+    }
+
     /**
      * At service start last update is set to config->users_refresh_time seconds earlier.
      * This way MaxScale could try reloading users just after startup. But only if user
@@ -2344,7 +2353,8 @@ bool Service::is_basic_parameter(const std::string& name)
         CN_USER,
         CN_VERSION_STRING,
         CN_WEIGHTBY,
-        CN_FILTERS
+        CN_FILTERS,
+        CN_RETAIN_LAST_STATEMENTS
     };
 
     return names.find(name) != names.end();
@@ -2414,5 +2424,9 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
     else if (key == CN_RETRY_ON_FAILURE)
     {
         retry_start = config_truth_value(value.c_str());
+    }
+    else if (key == CN_RETAIN_LAST_STATEMENTS)
+    {
+        retain_last_statements = std::stoi(value);
     }
 }

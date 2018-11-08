@@ -121,12 +121,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
     MXS_DEBUG("Request:\n%s", request.to_string().c_str());
 
-    if (url == "/")
-    {
-        // Respond to pings with 200 OK
-        reply = HttpResponse(MHD_HTTP_OK);
-    }
-    else if (request.validate_api_version())
+    if (request.validate_api_version())
     {
         reply = resource_handle_request(request);
     }

@@ -254,6 +254,8 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
                 bool is_sql = command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE;
                 if (is_sql)
                 {
+                    target->select_started();
+
                     target->response_stat().query_started();
 
                     if (m_config.retry_failed_reads)

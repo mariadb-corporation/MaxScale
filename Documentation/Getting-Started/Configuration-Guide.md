@@ -1230,6 +1230,22 @@ The following Server side config is needed too.
   session_track_transaction_info = CHARACTERISTICS
   ```
 
+#### `retain_last_statements`
+
+How many statements MaxScale should store for each session of this service.
+This overrides the value of the global setting with the same name. If
+`retain_last_statements` has been specified in the global section of the
+MaxScale configuration file, then if it has _not_ been explicitly specified
+for the service, the global value holds, otherwise the service specific
+value rules. That is, it is possible to enable the setting globally and
+turn it off for a specific service, or just enable it for specific services.
+
+The value of this parameter can be changed at runtime using `maxctrl` and the
+new value will take effect for sessions created thereafter.
+```
+maxctrl alter service MyService retain_last_statements 5
+```
+
 ### Server
 
 Server sections are used to define the backend database servers that can be

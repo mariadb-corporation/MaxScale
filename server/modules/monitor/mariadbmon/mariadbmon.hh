@@ -120,6 +120,28 @@ private:
         ON
     };
 
+    class SwitchoverParams
+    {
+    public:
+        ServerOperation promotion;
+        ServerOperation demotion;
+        GeneralOpData   general;
+
+        SwitchoverParams(const ServerOperation& promotion, const ServerOperation& demotion,
+                         const GeneralOpData& general);
+    };
+
+    class FailoverParams
+    {
+    public:
+        ServerOperation            promotion;   // Required by MariaDBServer->promote()
+        const MariaDBServer* const demotion_target;
+        GeneralOpData              general;
+
+        FailoverParams(const ServerOperation& promotion, const MariaDBServer* demotion_target,
+                       const GeneralOpData& general);
+    };
+
     // Information about a multimaster group (replication cycle)
     struct CycleInfo
     {
@@ -266,12 +288,12 @@ private:
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration*   event_age_out,
                                                 maxbase::Duration*   delay_out);
-    std::unique_ptr<ClusterOperation> switchover_prepare(SERVER* new_master, SERVER* current_master,
+    std::unique_ptr<SwitchoverParams> switchover_prepare(SERVER* new_master, SERVER* current_master,
                                                          Log log_mode, json_t** error_out);
-    std::unique_ptr<ClusterOperation> failover_prepare(Log log_mode, json_t** error_out);
+    std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, json_t** error_out);
 
-    bool switchover_perform(ClusterOperation& operation);
-    bool failover_perform(ClusterOperation& operation);
+    bool switchover_perform(SwitchoverParams& operation);
+    bool failover_perform(FailoverParams& op);
 
     // Methods used by failover/switchover/rejoin
     MariaDBServer* select_promotion_target(MariaDBServer* current_master, OperationType op,
@@ -286,11 +308,15 @@ private:
     ServerArray get_redirectables(const MariaDBServer* old_master, const MariaDBServer* ignored_slave);
     int         redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
                                 ServerArray* redirected_slaves);
-    int redirect_slaves_ex(ClusterOperation& op,
-                           ServerArray* redirected_to_promo, ServerArray* redirected_to_demo);
+    int redirect_slaves_ex(GeneralOpData& op,
+                           OperationType type,
+                           const MariaDBServer* promotion_target,
+                           const MariaDBServer* demotion_target,
+                           ServerArray* redirected_to_promo,
+                           ServerArray* redirected_to_demo);
     bool        start_external_replication(MariaDBServer* new_master, json_t** err_out);
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
-    void        wait_cluster_stabilization(ClusterOperation& op, const ServerArray& slaves,
+    void        wait_cluster_stabilization(GeneralOpData& op, const ServerArray& slaves,
                                            const MariaDBServer* new_master);
     void report_and_disable(const std::string& operation, const std::string& setting_name,
                             bool* setting_var);

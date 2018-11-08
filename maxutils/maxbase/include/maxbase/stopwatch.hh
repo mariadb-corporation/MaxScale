@@ -37,12 +37,14 @@ struct Duration : public Clock::duration
 {
     using Clock::duration::duration;
     Duration() = default;
-    Duration(Clock::duration d) : Clock::duration(d)
+    Duration(Clock::duration d)
+        : Clock::duration(d)
     {
     }
 
     /** From seconds */
-    explicit Duration(double secs) : Duration{rep(secs * period::den / period::num)}
+    explicit Duration(double secs)
+        : Duration{rep(secs * period::den / period::num)}
     {
     }
 
@@ -99,6 +101,40 @@ public:
 private:
     TimePoint m_start;
     TimePoint m_lap;
+};
+
+/** IntervalTimer for accumulating intervals (i.e. durations). Do not expect many very short
+ *  durations to accumulate properly (unless you have a superfast processor, RTLinux, etc.)
+ *
+ * Usage pattern:
+ * IntervalTimer timer;  // created ahead of time.
+ * ...
+ * In some sort of a loop (explicit or implicit):
+ * timer.start_interval();
+ * foo();
+ * timer.end_interval();
+ * ...
+ * And finally:
+ * std::cout << timer.total() << std::endl;
+ *
+ */
+class IntervalTimer
+{
+public:
+    /** Create but do not start the intervaltimer, i.e. starting in paused mode. */
+    IntervalTimer();
+
+    /** Resume measuring time. Ok to call multiple times without an end_interval(). */
+    void start_interval();
+
+    /** Pause measuring time. Ok to call without a start_interval. */
+    void end_interval();
+
+    /** Total duration of intervals (thus far). */
+    Duration total() const;
+private:
+    TimePoint m_last_start;
+    Duration  m_total;
 };
 
 /** Returns the duration as a double and string adjusted to a suffix like ms for milliseconds.

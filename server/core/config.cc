@@ -315,6 +315,7 @@ const MXS_MODULE_PARAM config_service_params[] =
     {CN_LOG_AUTH_WARNINGS,             MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_RETRY_ON_FAILURE,              MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_SESSION_TRACK_TRX_STATE,       MXS_MODULE_PARAM_BOOL,   "false"},
+    {CN_RETAIN_LAST_STATEMENTS,        MXS_MODULE_PARAM_COUNT,  "0"},
     {NULL}
 };
 
@@ -5028,8 +5029,9 @@ std::string closest_matching_parameter(const std::string& str,
     }
 
     std::string rval;
+    const int min_dist = 4;
 
-    if (lowest < (int)std::min(str.length(), name.length()))
+    if (lowest <= min_dist)
     {
         rval = "Did you mean '" + name + "'?";
         name.clear();

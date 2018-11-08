@@ -609,3 +609,11 @@ json_t* mxs_rworker_to_json(const char* host, int id);
  * @see mxs_json_resource()
  */
 json_t* mxs_rworker_list_to_json(const char* host);
+
+/**
+ * @brief MaxScale worker watchdog
+ *
+ * If this function returns, then MaxScale is alive. If not,
+ * then some thread is dead.
+ */
+void mxs_rworker_watchdog();

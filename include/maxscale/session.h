@@ -629,6 +629,26 @@ void session_set_retain_last_statements(uint32_t n);
 void session_retain_statement(MXS_SESSION* session, GWBUF* buffer);
 
 /**
+ * @brief Book a server response for the statement currently being handled.
+ *
+ * @param session         The session.
+ * @param server          The server having returned a response.
+ * @param final_response  True if this was the final server to respond,
+ *                        false otherwise.
+ */
+void session_book_server_response(MXS_SESSION* session, struct server* server, bool final_response);
+
+/**
+ * @brief Reset the server bookkeeping for the current statement.
+ *
+ * To be called, e.g., after a transaction is rolled back (possibly with
+ * results having been reported) and before it is replayed.
+ *
+ * @param session  The session.
+ */
+void session_reset_server_bookkeeping(MXS_SESSION* session);
+
+/**
  * @brief Dump the last statements, if statements have been retained.
  *
  * @param session  The session.
