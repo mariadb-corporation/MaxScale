@@ -338,6 +338,7 @@ redirect the demoted old master.
 **Rejoin** joins a standalone server to the cluster or redirects a slave
 replicating from a server other than the master. A standalone server is joined
 by:
+
 1. Run the commands in `demotion_sql_file`.
 2. Enable the *read\_only*-flag.
 3. Disable scheduled server events (if event handling is on).
@@ -350,6 +351,7 @@ STOP SLAVE, RESET SLAVE, CHANGE MASTER TO and START SLAVE commands.
 gtid:s. This destructive command is meant for situations where the gtid:s in the
 cluster are out of sync while the actual data is known to be in sync. The
 operation  proceeds as follows:
+
 1. Reset gtid:s and delete binary logs on all servers:
  1. Stop (STOP SLAVE) and delete (RESET SLAVE ALL) all slave connections.
  2. Enable the *read\_only*-flag.
