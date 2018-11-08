@@ -51,6 +51,7 @@ add_library(maxscale-common SHARED
 
 target_link_libraries(maxscale-common
   maxbase
+  maxsql
   ${MARIADB_CONNECTOR_LIBRARIES}
   ${LZMA_LINK_FLAGS}
   ${PCRE2_LIBRARIES}

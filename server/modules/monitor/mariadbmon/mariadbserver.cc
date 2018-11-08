@@ -19,6 +19,7 @@
 #include <thread>
 #include <set>
 #include <maxbase/format.hh>
+#include <maxsql/mariadb.hh>
 #include <maxscale/mysql_utils.h>
 
 
@@ -114,7 +115,7 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
     }
     else
     {
-        query_success = (mxs_mysql_query_ex(conn, cmd.c_str(), 0, 0) == 0);
+        query_success = (maxsql::mysql_query_ex(conn, cmd, 0, 0) == 0);
     }
 
     bool rval = false;
@@ -207,7 +208,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         Duration time_remaining = time_limit - timer.split();
         keep_trying = (time_remaining.secs() > 0)
             // either a connector-c timeout
-            && (mxs_mysql_is_net_error(errornum)
+            && (maxsql::mysql_is_net_error(errornum)
                 // or query was interrupted by max_statement_time.
                 || (!cmd_prefix.empty() && errornum == ER_STATEMENT_TIMEOUT));
         if (!cmd_success)

@@ -170,6 +170,7 @@ include_directories(server/modules/include)
 include_directories(${CMAKE_BINARY_DIR}/include)
 include_directories(${CURL_INCLUDE_DIRS})
 include_directories(maxutils/maxbase/include)
+include_directories(maxutils/maxsql/include)
 
 if (BUILD_CDC)
   include_directories(avro)

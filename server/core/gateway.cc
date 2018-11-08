@@ -46,6 +46,7 @@
 
 #include <maxbase/maxbase.hh>
 #include <maxbase/stacktrace.hh>
+#include <maxsql/mariadb.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/dcb.h>
@@ -3165,12 +3166,12 @@ static void disable_module_unloading(const char* arg)
 
 static void enable_statement_logging(const char* arg)
 {
-    mxs_mysql_set_log_statements(true);
+    maxsql::mysql_set_log_statements(true);
 }
 
 static void disable_statement_logging(const char* arg)
 {
-    mxs_mysql_set_log_statements(false);
+    maxsql::mysql_set_log_statements(false);
 }
 
 static void redirect_output_to_file(const char* arg)

@@ -42,14 +42,6 @@ char* mxs_lestr_consume(uint8_t** c, size_t* size);
 MYSQL* mxs_mysql_real_connect(MYSQL* mysql, SERVER* server, const char* user, const char* passwd);
 
 /**
- * Check if the MYSQL error number is a connection error.
- *
- * @param Error code
- * @return True if the MYSQL error number is a connection error
- */
-bool mxs_mysql_is_net_error(unsigned int errcode);
-
-/**
  * Execute a query using global query retry settings.
  *
  * @param conn  MySQL connection
@@ -58,17 +50,6 @@ bool mxs_mysql_is_net_error(unsigned int errcode);
  * @return return value of mysql_query
  */
 int mxs_mysql_query(MYSQL* conn, const char* query);
-
-/**
- * Execute a query, manually defining retry limits.
- *
- * @param conn MySQL connection
- * @param query Query to execute
- * @param query_retries Maximum number of retries
- * @param query_retry_timeout Maximum time to spend retrying, in seconds
- * @return return value of mysql_query
- */
-int mxs_mysql_query_ex(MYSQL* conn, const char* query, int query_retries, time_t query_retry_timeout);
 
 /**
  * Trim MySQL quote characters surrounding a string.
@@ -141,20 +122,5 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
  * @param server  Server object to write.
  */
 void mxs_mysql_update_server_version(MYSQL* mysql, SERVER* server);
-
-/**
- * Enable/disable the logging of all SQL statements MaxScale sends to
- * the servers.
- *
- * @param enable If true, enable, if false, disable.
- */
-void mxs_mysql_set_log_statements(bool enable);
-
-/**
- * Returns whether SQL statements sent to the servers are logged or not.
- *
- * @return True, if statements are logged, false otherwise.
- */
-bool mxs_mysql_get_log_statements();
 
 MXS_END_DECLS

@@ -27,24 +27,11 @@
 #include <stdbool.h>
 #include <errmsg.h>
 
+#include <maxsql/mariadb.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/config.hh>
 #include <maxscale/log.h>
 #include <maxbase/atomic.hh>
-
-namespace
-{
-
-struct THIS_UNIT
-{
-    bool log_statements;    // Should all statements sent to server be logged?
-};
-
-static THIS_UNIT this_unit =
-{
-    false
-};
-}
 
 /**
  * @brief Calculate the length of a length-encoded integer in bytes
@@ -224,53 +211,10 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
     return mysql;
 }
 
-bool mxs_mysql_is_net_error(unsigned int errcode)
-{
-    switch (errcode)
-    {
-    case CR_SOCKET_CREATE_ERROR:
-    case CR_CONNECTION_ERROR:
-    case CR_CONN_HOST_ERROR:
-    case CR_IPSOCK_ERROR:
-    case CR_SERVER_GONE_ERROR:
-    case CR_TCP_CONNECTION:
-    case CR_SERVER_LOST:
-        return true;
-
-    default:
-        return false;
-    }
-}
-
-int mxs_mysql_query_ex(MYSQL* conn, const char* query, int query_retries, time_t query_retry_timeout)
-{
-    time_t start = time(NULL);
-    int rc = mysql_query(conn, query);
-
-    for (int n = 0; rc != 0 && n < query_retries
-         && mxs_mysql_is_net_error(mysql_errno(conn))
-         && time(NULL) - start < query_retry_timeout; n++)
-    {
-        rc = mysql_query(conn, query);
-    }
-
-    if (this_unit.log_statements)
-    {
-        const char* host = "0.0.0.0";
-        unsigned int port = 0;
-        MXB_AT_DEBUG(int rc1 = ) mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host);
-        MXB_AT_DEBUG(int rc2 = ) mariadb_get_info(conn, MARIADB_CONNECTION_PORT, &port);
-        mxb_assert(!rc1 && !rc2);
-        MXS_NOTICE("SQL([%s]:%u): %d, \"%s\"", host, port, rc, query);
-    }
-
-    return rc;
-}
-
 int mxs_mysql_query(MYSQL* conn, const char* query)
 {
     MXS_CONFIG* cnf = config_get_global_options();
-    return mxs_mysql_query_ex(conn, query, cnf->query_retries, cnf->query_retry_timeout);
+    return maxsql::mysql_query_ex(conn, query, cnf->query_retries, cnf->query_retry_timeout);
 }
 
 const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* key)
@@ -414,14 +358,4 @@ void mxs_mysql_update_server_version(MYSQL* mysql, SERVER* server)
     unsigned long version_num = mysql_get_server_version(mysql);
     mxb_assert(version_string != NULL && version_num != 0);
     server_set_version(server, version_string, version_num);
-}
-
-void mxs_mysql_set_log_statements(bool enable)
-{
-    this_unit.log_statements = enable;
-}
-
-bool mxs_mysql_get_log_statements()
-{
-    return this_unit.log_statements;
 }
