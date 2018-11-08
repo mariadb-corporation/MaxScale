@@ -441,13 +441,19 @@ static bool handle_error_new_connection(RWSplit *inst,
     if (inst->config().disable_sescmd_history)
     {
         for (auto it = myrses->backends.begin(); it != myrses->backends.end(); it++)
-	{
-	    if ((*it)->in_use())
-	    {
-		succp = true;
-		break;
-	    }
-	}
+        {
+            if ((*it)->in_use())
+            {
+                succp = true;
+                break;
+            }
+        }
+
+        if (!succp)
+        {
+            MXS_ERROR("Unable to continue session as all connections have failed, "
+                      "last server to fail was '%s'.", backend->name());
+        }
     }
     else
     {
@@ -1387,6 +1393,10 @@ static void handleError(MXS_ROUTER *instance,
                               "service can't locate the master. Client sessions "
                               "will be closed.", srv->name, srv->port);
                     srv->master_err_is_logged = true;
+                }
+                else
+                {
+                    MXS_ERROR("Lost connection to the master server, closing session.");
                 }
 
                 *succp = can_continue;
