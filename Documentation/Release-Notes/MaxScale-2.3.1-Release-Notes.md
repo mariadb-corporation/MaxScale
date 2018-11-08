@@ -10,6 +10,15 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### REST-API
+
+#### `/v1/sessions`
+
+The response will, if the feature has been enabled with the
+`retain_last_statements` parameter, either globally or specifically
+for a service, contain information about the last queries executed
+by a session.
+
 ### Binlog Router
 
 Secondary masters can now be specified also when file + position
