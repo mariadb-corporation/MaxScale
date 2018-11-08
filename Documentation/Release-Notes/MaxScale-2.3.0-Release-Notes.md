@@ -288,13 +288,14 @@ is optimal on all servers.
 
 ### MaxCtrl
 
+For more detailed information about the features of MaxCtrl, see the
+[documentation](../Reference/MaxCtrl.md) or the output of `maxctrl help`.
+
 #### Interactive Mode for MaxCtrl
 
 MaxCtrl can now be started in an interactive mode similar to MaxAdmin. This
 makes use of passwords more convenient as they have to be input only once and
 they are cached for the duration of the session.
-
-For more information about MaxCtrl, see the output of `maxctrl help`.
 
 #### Draining Server Connections
 
