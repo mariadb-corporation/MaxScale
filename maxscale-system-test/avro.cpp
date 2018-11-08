@@ -37,6 +37,11 @@ int main(int argc, char *argv[])
     test.set_timeout(120);
     test.repl->connect();
 
+    // MXS-2095: Crash on GRANT CREATE TABLE
+    execute_query(test.repl->nodes[0], "CREATE USER test IDENTIFIED BY 'test'");
+    execute_query(test.repl->nodes[0], "GRANT CREATE TEMPORARY TABLES ON *.* TO test");
+    execute_query(test.repl->nodes[0], "DROP USER test");
+
     create_t1(test.repl->nodes[0]);
     insert_into_t1(test.repl->nodes[0], 3);
     execute_query(test.repl->nodes[0], "FLUSH LOGS");
