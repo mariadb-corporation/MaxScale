@@ -1229,34 +1229,6 @@ uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes)
     return ptr + bytes;
 }
 
-std::string string_printf(const char* format, ...)
-{
-    /* Use 'vsnprintf' for the formatted printing. It outputs the optimal buffer length - 1. */
-    va_list args;
-    va_start(args, format);
-    int characters = vsnprintf(NULL, 0, format, args);
-    va_end(args);
-    std::string rval;
-    if (characters < 0)
-    {
-        // Encoding (programmer) error.
-        mxb_assert(!true);
-        MXS_ERROR("Could not format the string %s.", format);
-    }
-    else if (characters > 0)
-    {
-        // 'characters' does not include the \0-byte.
-        int total_size = characters + 1;
-        rval.reserve(total_size);
-        rval.resize(characters);    // The final "length" of the string
-        va_start(args, format);
-        // Write directly to the string internal array, avoiding any temporary arrays.
-        vsnprintf(&rval[0], total_size, format, args);
-        va_end(args);
-    }
-    return rval;
-}
-
 namespace
 {
 

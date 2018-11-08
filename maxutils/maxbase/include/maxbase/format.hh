@@ -29,4 +29,14 @@ namespace maxbase
  * @return Value as a human readable size e.g. 5.01MiB
  */
 std::string to_binary_size(int64_t size);
+
+/**
+ * Format parameters to a string. Uses printf-formatting.
+ *
+ * @param format Format string
+ * @param ... Items to convert according to format string
+ * @return The result string
+ */
+std::string string_printf(const char* format, ...) mxb_attribute((format (printf, 1, 2)));
+
 }

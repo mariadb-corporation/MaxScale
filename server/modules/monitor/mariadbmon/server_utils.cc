@@ -14,11 +14,12 @@
 
 #include <algorithm>
 #include <inttypes.h>
+#include <maxbase/format.hh>
 #include <maxbase/assert.h>
-#include <maxscale/utils.hh>
+
 
 using std::string;
-using maxscale::string_printf;
+using maxbase::string_printf;
 
 namespace
 {

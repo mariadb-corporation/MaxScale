@@ -138,15 +138,6 @@ inline std::vector<std::string> strtok(std::string str, const char* delim)
 }
 
 /**
- * Format parameters to a string. Uses printf-formatting.
- *
- * @param format Format string
- * @param ... Items to convert according to format string
- * @return The result string
- */
-std::string string_printf(const char* format, ...) mxb_attribute((format (printf, 1, 2)));
-
-/**
  * @class CloserTraits utils.hh <maxscale/utils.hh>
  *
  * A traits class used by Closer. To be specialized for all types that are

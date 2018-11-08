@@ -17,12 +17,13 @@
 #include <inttypes.h>
 #include <iomanip>
 #include <thread>
-#include <maxscale/mysql_utils.h>
-#include <maxscale/utils.hh>
 #include <set>
+#include <maxbase/format.hh>
+#include <maxscale/mysql_utils.h>
+
 
 using std::string;
-using maxscale::string_printf;
+using maxbase::string_printf;
 using maxbase::Duration;
 using maxbase::StopWatch;
 

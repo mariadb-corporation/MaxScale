@@ -12,18 +12,18 @@
  */
 
 #include "mariadbmon.hh"
-
+#include <algorithm>
 #include <inttypes.h>
 #include <set>
 #include <sstream>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/format.hh>
 #include <maxscale/clock.h>
 #include <maxscale/mysql_utils.h>
-#include <maxscale/utils.hh>
 
 using std::string;
 using std::unique_ptr;
-using maxscale::string_printf;
+using maxbase::string_printf;
 using maxbase::StopWatch;
 using maxbase::Duration;
 

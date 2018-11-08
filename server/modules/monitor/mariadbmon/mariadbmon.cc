@@ -19,18 +19,19 @@
 #include <inttypes.h>
 #include <sstream>
 #include <maxbase/assert.h>
+#include <maxbase/format.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/routingworker.h>
 #include <maxscale/secrets.h>
-#include <maxscale/utils.hh>
+#include <maxscale/utils.h>
 // TODO: For monitor_add_parameters
 #include "../../../core/internal/monitor.h"
 
 using std::string;
-using maxscale::string_printf;
+using maxbase::string_printf;
 
 // Config parameter names
 const char* const CN_AUTO_FAILOVER = "auto_failover";
@@ -278,7 +279,6 @@ void MariaDBMonitor::diagnostics(DCB* dcb) const
 
 string MariaDBMonitor::diagnostics_to_string() const
 {
-    using maxscale::string_printf;
     string rval;
     rval += string_printf("Automatic failover:     %s\n", m_auto_failover ? "Enabled" : "Disabled");
     rval += string_printf("Failcount:              %d\n", m_failcount);
