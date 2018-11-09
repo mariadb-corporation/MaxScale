@@ -106,6 +106,12 @@ void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
     uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
     gw_mysql_set_byte4(ptr, id);
 }
+
+uint32_t extract_binary_ps_id(GWBUF* buffer)
+{
+    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+    return gw_mysql_get_byte4(ptr);
+}
 }
 
 bool RWSplitSession::have_connected_slaves() const
@@ -178,14 +184,6 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     uint8_t command = info.command();
     uint32_t qtype = info.type_mask();
     route_target_t route_target = info.target();
-    bool not_locked_to_master = !is_locked_to_master();
-
-    if (not_locked_to_master && mxs_mysql_is_ps_command(command) && !m_qc.large_query())
-    {
-        /** Replace the client statement ID with our internal one only if the
-         * target node is not the current master */
-        replace_binary_ps_id(querybuf, stmt_id);
-    }
 
     SRWBackend target;
 
@@ -312,7 +310,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
                 // Target server was found and is in the correct state
                 succp = handle_got_target(querybuf, target, store_stmt);
 
-                if (succp && command == MXS_COM_STMT_EXECUTE && not_locked_to_master)
+                if (succp && command == MXS_COM_STMT_EXECUTE && !is_locked_to_master())
                 {
                     /** Track the targets of the COM_STMT_EXECUTE statements. This
                      * information is used to route all COM_STMT_FETCH commands
@@ -1106,6 +1104,16 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
      */
     mxb_assert(target->get_reply_state() == REPLY_STATE_DONE || m_qc.large_query());
 
+    uint32_t orig_id = 0;
+
+    if (!is_locked_to_master() && mxs_mysql_is_ps_command(cmd) && !m_qc.large_query())
+    {
+        // Store the original ID in case routing fails
+        orig_id = extract_binary_ps_id(querybuf);
+        // Replace the ID with our internal one, the backends will replace it with their own ID
+        replace_binary_ps_id(querybuf, m_qc.current_route_info().stmt_id());
+    }
+
     /**
      * If we are starting a new query, we use RWBackend::write, otherwise we use
      * RWBackend::continue_write to continue an ongoing query. RWBackend::write
@@ -1156,11 +1164,17 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
         {
             m_target_node.reset();
         }
-        return true;
     }
     else
     {
+        if (orig_id)
+        {
+            // Put the original ID back in case we try to route the query again
+            replace_binary_ps_id(querybuf, orig_id);
+        }
+
         MXS_ERROR("Routing query failed.");
-        return false;
     }
+
+    return success;
 }

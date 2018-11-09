@@ -395,6 +395,11 @@ TestConnections::~TestConnections()
         delete galera;
     }
 
+    if (maxscale::multiple_maxscales)
+    {
+        maxscales->stop_all();
+    }
+
     if (global_result)
     {
         // This causes the test to fail if a core dump is found

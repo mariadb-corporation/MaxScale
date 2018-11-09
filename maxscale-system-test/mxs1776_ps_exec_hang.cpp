@@ -50,8 +50,9 @@ void run_test(TestConnections& test, TestCase test_case)
 
     cout << test_case.name << endl;
     test.expect(test_case.func(test.maxscales->conn_rwsplit[0], stmt, bind),
-                "Test '%s' failed",
-                test_case.name.c_str());
+                "Test '%s' failed: %s %s", test_case.name.c_str(),
+                mysql_error(test.maxscales->conn_rwsplit[0]),
+                mysql_stmt_error(stmt));
 
     mysql_stmt_close(stmt);
 
