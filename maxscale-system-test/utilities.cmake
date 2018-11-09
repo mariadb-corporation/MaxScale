@@ -99,10 +99,7 @@ macro(unstable_tests)
 endmacro()
 
 # Test utilities
-add_test_executable_notest(t.cpp t replication)
 add_test_executable_notest(non_native_setup.cpp non_native_setup replication)
-add_test_executable_notest(binlog_big_transaction.cpp binlog_big_transaction setup_binlog2)
-add_test_executable_notest(avro_long.cpp avro_long avro)
 add_test_executable_notest(sysbench_example.cpp sysbench_example replication)
 
 #

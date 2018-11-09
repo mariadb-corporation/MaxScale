@@ -271,15 +271,6 @@ TestConnections::TestConnections(int argc, char* argv[])
     maxscales->use_ipv6 = use_ipv6;
     maxscales->ssl = ssl;
 
-    // Stop MaxScale to prevent it from interfering with the replication setup process
-    if (!maxscale::manual_debug)
-    {
-        for (int i = 0; i < maxscales->N; i++)
-        {
-            maxscales->stop(i);
-        }
-    }
-
     if (maxscale::required_repl_version.length())
     {
         int ver_repl_required = get_int_version(maxscale::required_repl_version);
@@ -323,8 +314,15 @@ TestConnections::TestConnections(int argc, char* argv[])
         snapshot_reverted = revert_snapshot((char*) "clean");
     }
 
-    if (!snapshot_reverted && maxscale::check_nodes)
+    if (!snapshot_reverted && maxscale::check_nodes
+        && (repl->check_replication() || (!no_galera && galera->check_replication())))
     {
+        // Stop MaxScale to prevent it from interfering with the replication setup process
+        if (!maxscale::manual_debug)
+        {
+            maxscales->stop_all();
+        }
+
         if (!repl->fix_replication())
         {
             exit(200);
@@ -679,7 +677,7 @@ void TestConnections::process_template(int m, const char* template_name, const c
     system(ss.str().c_str());
 
     maxscales->copy_to_node_legacy("maxscale.cnf", dest, m);
-    maxscales->ssh_node_f(m, true, "cp maxscale.cnf %s", maxscales->maxscale_cnf[m]);
+    // The config will now be in ~/maxscale.cnf and is moved into /etc before restarting maxscale
 }
 
 void TestConnections::init_maxscales()
@@ -723,30 +721,14 @@ void TestConnections::init_maxscale(int m)
 
     maxscales->ssh_node_f(m,
                           true,
+                          "cp maxscale.cnf %s;"
                           "iptables -F INPUT;"
                           "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
-                          "%s",
+                          "%s"
+                          "maxctrl api get maxscale/debug/monitor_wait",
+                          maxscales->maxscale_cnf[m],
                           maxscales->maxscale_log_dir[m],
-                          maxscale::start ? "service maxscale start;" : "");
-
-    if (maxscale::start)
-    {
-        int waits;
-
-        for (waits = 0; waits < 15; waits++)
-        {
-            if (maxscales->ssh_node(m, "/bin/sh -c \"maxadmin help > /dev/null || exit 1\"", true) == 0)
-            {
-                break;
-            }
-            sleep(1);
-        }
-
-        if (waits > 0)
-        {
-            tprintf("Waited %d seconds for MaxScale to start", waits);
-        }
-    }
+                          maxscale::start ? "service maxscale restart;" : "");
 }
 
 void TestConnections::copy_one_mariadb_log(int i, std::string filename)
@@ -837,27 +819,25 @@ int TestConnections::copy_maxscale_logs(double timestamp)
         system(sys);
         if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
         {
-            maxscales->ssh_node_f(i,
-                                  true,
-                                  "rm -rf %s/logs; mkdir %s/logs; \
-                                  %s cp %s/*.log %s/logs/; \
-                                  %s cp /tmp/core* %s/logs/;\
-                                  %s cp %s %s/logs/;\
-                                  %s chmod 777 -R %s/logs",
+            int rc = maxscales->ssh_node_f(i, true,
+                                  "rm -rf %s/logs;"
+                                  "mkdir %s/logs;"
+                                  "cp %s/*.log %s/logs/;"
+                                  "cp /tmp/core* %s/logs/;"
+                                  "cp %s %s/logs/;"
+                                  "chmod 777 -R %s/logs;"
+                                  "ls /tmp/core* && exit 42;",
                                   maxscales->access_homedir[i],
                                   maxscales->access_homedir[i],
-                                  maxscales->access_sudo[i],
                                   maxscales->maxscale_log_dir[i],
                                   maxscales->access_homedir[i],
-                                  maxscales->access_sudo[i],
                                   maxscales->access_homedir[i],
-                                  maxscales->access_sudo[i],
                                   maxscales->maxscale_cnf[i],
                                   maxscales->access_homedir[i],
-                                  maxscales->access_sudo[i],
                                   maxscales->access_homedir[i]);
             sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
             maxscales->copy_from_node(i, sys, log_dir_i);
+            expect(rc != 42, "Test should not generate core files");
         }
         else
         {
@@ -866,10 +846,6 @@ int TestConnections::copy_maxscale_logs(double timestamp)
             maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i], log_dir_i);
             maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
         }
-
-        const char* command = "ls /tmp/core* && exit 42";
-        int rc = maxscales->ssh_node_f(i, true, "%s", command);
-        expect(rc != 42, "Test should not generate core files");
     }
     return 0;
 }

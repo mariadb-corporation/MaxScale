@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <chrono>
 #include <string>
 #include <sstream>
 #include <set>
@@ -2487,6 +2488,34 @@ bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_spa
     return rv;
 }
 
+void monitor_debug_wait()
+{
+    using namespace std::chrono;
+    std::lock_guard<std::mutex> guard(monLock);
+    std::map<MXS_MONITOR*, uint64_t> ticks;
+
+    // Get tick values for all monitors
+    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    {
+        ticks[mon] = mxb::atomic::load(&mon->ticks);
+    }
+
+    // Wait for all running monitors to advance at least one tick
+    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    {
+        if (mon->state == MONITOR_STATE_RUNNING)
+        {
+            auto start = steady_clock::now();
+
+            while (ticks[mon] == mxb::atomic::load(&mon->ticks)
+                   && steady_clock::now() - start < seconds(60))
+            {
+                std::this_thread::sleep_for(milliseconds(100));
+            }
+        }
+    }
+}
+
 namespace maxscale
 {
 
@@ -2496,7 +2525,7 @@ MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     , m_thread_running(false)
     , m_shutdown(0)
     , m_checked(false)
-    , m_loop_called(0)
+    , m_loop_called(get_time_ms())
 {
 }
 
@@ -2563,8 +2592,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 
         if (configure(pParams))
         {
-            m_loop_called = 0;
-
+            m_loop_called = get_time_ms() - m_monitor->interval; // Next tick should happen immediately.
             if (!Worker::start())
             {
                 MXS_ERROR("Failed to start worker for monitor '%s'.", m_monitor->name);
@@ -2906,14 +2934,15 @@ bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
     if (action == Worker::Call::EXECUTE)
     {
         int64_t now = get_time_ms();
-
+        // Enough time has passed,
         if ((now - m_loop_called > static_cast<int64_t>(m_monitor->interval))
-            || atomic_load_int(&m_monitor->check_maintenance_flag) == MAINTENANCE_FLAG_CHECK)
+            // or maintenance flag is set,
+            || atomic_load_int(&m_monitor->check_maintenance_flag) == MAINTENANCE_FLAG_CHECK
+            // or a monitor-specific condition is met.
+            || immediate_tick_required())
         {
             m_loop_called = now;
-
             run_one_tick();
-
             now = get_time_ms();
         }
 
@@ -2925,7 +2954,6 @@ bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
 
         delayed_call(delay, &MonitorInstance::call_run_one_tick, this);
     }
-
     return false;
 }
 
@@ -2942,5 +2970,10 @@ void MonitorInstance::run_one_tick()
 
     mon_hangup_failed_servers(m_monitor);
     store_server_journal(m_monitor, m_master);
+}
+
+bool MonitorInstance::immediate_tick_required() const
+{
+    return false;
 }
 }

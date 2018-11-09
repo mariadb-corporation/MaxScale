@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
         test.galera->stop_node(1);
         test.galera->start_node(1);
         test.galera->start_node(0);
-        test.galera->fix_replication();
+        test.maxscales->wait_for_monitor(2);
     }
 
     return test.global_result;

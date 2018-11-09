@@ -14,7 +14,7 @@ void check_conn_num(TestConnections& test, int* Nc)
 {
     for (int i = 0; i < 4; i++)
     {
-        int conn_num = get_conn_num(test.galera->nodes[i],
+        int conn_num = get_conn_num(test.repl->nodes[i],
                                     test.maxscales->IP[0],
                                     test.maxscales->hostname[0],
                                     (char*) "test");
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     test.set_timeout(30);
     int i;
 
-    test.galera->connect();
+    test.repl->connect();
 
     test.tprintf("Connecting to ReadConnMaster on %s\n", test.maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
@@ -77,9 +77,6 @@ int main(int argc, char* argv[])
     test.tprintf("Sleeping 15 seconds\n");
     sleep(15);
 
-    /** Readwritesplit should always create a connection to the master. For
-     * this test we use the priority mechanism to force the first node as
-     * the master since Galera clusters don't have a deterministic master node. */
     Nc[1] = maxscale_conn_num / 2;
     Nc[2] = maxscale_conn_num / 3;
     Nc[3] = maxscale_conn_num / 6;
@@ -93,7 +90,7 @@ int main(int argc, char* argv[])
     {
         mysql_close(conn_rwsplit[0][i]);
     }
-    test.galera->close_connections();
+    test.repl->close_connections();
 
     return test.global_result;
 }

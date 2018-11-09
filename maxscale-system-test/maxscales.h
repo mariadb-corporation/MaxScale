@@ -250,9 +250,12 @@ public:
     }
 
     /**
-     * @brief start_maxscale Issues 'service maxscale start' command
+     * @brief alias for restart_maxscale
      */
-    int start_maxscale(int m = 0);
+    int start_maxscale(int m = 0)
+    {
+        return restart_maxscale(m);
+    }
     int start(int m = 0)
     {
         return start_maxscale(m);
@@ -265,6 +268,15 @@ public:
     int stop(int m = 0)
     {
         return stop_maxscale(m);
+    }
+
+    // Helper for stopping all maxscales
+    void stop_all()
+    {
+        for (int i = 0; i < N; i++)
+        {
+            stop(i);
+        }
     }
 
     int execute_maxadmin_command(int m, const char* cmd);

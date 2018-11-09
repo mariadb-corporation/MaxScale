@@ -245,6 +245,7 @@ private:
     void clear_server_info();
     void reset_node_index_info();
     bool execute_manual_command(std::function<void ()> command, json_t** error_out);
+    bool immediate_tick_required() const;
 
     std::string diagnostics_to_string() const;
     json_t*     to_json() const;

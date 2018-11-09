@@ -223,6 +223,9 @@ public:
      */
     virtual int start_replication();
 
+    // Create the default users used by all tests
+    void create_users(int node);
+
     /**
      * @brif BlockNode setup firewall on a backend node to block MariaDB port
      * @param node Index of node to block
@@ -403,16 +406,20 @@ public:
     void add_server_setting(int node, const char* setting);
 
     /**
-     * Restore the original configuration for this server
+     * Get the configuration file name for a particular node
      *
-     * @param node Node to restore
+     * @param node Node number for which the configuration is requested
+     *
+     * @return The name of the configuration file
      */
-    void reset_server_settings(int node);
+    virtual std::string get_config_name(int node);
 
     /**
      * Restore the original configuration for all servers
      */
     void reset_server_settings();
+    // Same but for an individual server
+    void reset_server_settings(int node);
 
     /**
      * @brief revert_nodes_snapshot Execute MDBCI snapshot revert command for all nodes
@@ -477,12 +484,7 @@ public:
         return check_galera();
     }
 
-    // int prepare_galera_server(int i);
-
-    // virtual int prepare_server(int i)
-    // {
-    //    return prepare_galera_server(i);
-    // }
+    std::string get_config_name(int node) override;
 };
 
 #endif      // MARIADB_NODES_H

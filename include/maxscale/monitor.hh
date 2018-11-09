@@ -209,6 +209,15 @@ protected:
      */
     virtual void process_state_changes();
 
+    /**
+     * Should a monitor tick be ran immediately? The base class version always returns false. A monitor can
+     * override this to add specific conditions. This function is called every MXS_MON_BASE_INTERVAL_MS
+     * (100 ms) by the monitor worker thread, which then runs a monitor tick if true is returned.
+     *
+     * @return True if tick should be ran
+     */
+    virtual bool immediate_tick_required() const;
+
     MXS_MONITOR*          m_monitor;    /**< The generic monitor structure. */
     MXS_MONITORED_SERVER* m_master;     /**< Master server */
 

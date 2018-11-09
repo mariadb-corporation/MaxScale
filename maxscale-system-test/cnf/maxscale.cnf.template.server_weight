@@ -1,15 +1,12 @@
 [maxscale]
 threads=###threads###
-log_warning=1
 
-[Galera Monitor]
+[Mariadb Monitor]
 type=monitor
-module=galeramon
+module=mariadbmon
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
-use_priority=true
-root_node_as_master=false
 
 [RW Split Router]
 type=service
@@ -24,7 +21,7 @@ password=skysql
 [Read Connection Router]
 type=service
 router=readconnroute
-router_options=synced
+router_options=running
 servers=server1,server2,server3,server4
 weightby=serversize
 user=maxskysql
@@ -35,14 +32,12 @@ type=listener
 service=RW Split Router
 protocol=MySQLClient
 port=4006
-#socket=/tmp/rwsplit.sock
 
 [Read Connection Listener]
 type=listener
 service=Read Connection Router
 protocol=MySQLClient
 port=4008
-#socket=/tmp/readconn.sock
 
 [CLI]
 type=service
@@ -56,33 +51,32 @@ socket=default
 
 [server1]
 type=server
-address=###galera_server_IP_1###
-port=###galera_server_port_1###
+address=###node_server_IP_1###
+port=###node_server_port_1###
 protocol=MySQLBackend
 serversize=1
 serversize_rws=1
-priority=1
 
 [server2]
 type=server
-address=###galera_server_IP_2###
-port=###galera_server_port_2###
+address=###node_server_IP_2###
+port=###node_server_port_2###
 protocol=MySQLBackend
 serversize=2
 serversize_rws=30000
 
 [server3]
 type=server
-address=###galera_server_IP_3###
-port=###galera_server_port_3###
+address=###node_server_IP_3###
+port=###node_server_port_3###
 protocol=MySQLBackend
 serversize=3
 serversize_rws=20000
 
 [server4]
 type=server
-address=###galera_server_IP_4###
-port=###galera_server_port_4###
+address=###node_server_IP_4###
+port=###node_server_port_4###
 protocol=MySQLBackend
 serversize=0
 serversize_rws=10000
