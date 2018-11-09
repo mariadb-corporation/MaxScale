@@ -37,25 +37,14 @@ the _ssn_ would be masked, as in
 
 ## Security
 
-Note that he masking filter alone is *not* sufficient for preventing
-access to a particular column. As the masking filter works on the column
-name alone a query like
-```
-> SELECT name, concat(ssn) FROM person;
-```
-will reveal the value. Also, executing a query like
-```
-> SELECT name FROM person WHERE ssn = ...;
-```
-a sufficient number of times with different _ssn_ values, will, eventually,
-reveal the social security number of all persons in the database.
+From MaxScale 2.3 onwards, the masking filter will reject statements
+that use functions in conjunction with columns that should be masked.
+Allowing function usage provides a way for circumventing the masking,
+unless a firewall filter is separately configured and installed.
 
-For a secure solution, the masking filter *must* be combined with the
-firewall filter to prevent the use of functions using which the masking
-can be bypassed.
-
-In a future release, the combined use of the masking filter and the
-database firewall filter will be simplified.
+Please see the configuration parameter
+[prevent_function_usage](#prevent_function_usage)
+for how to change the default behaviour.
 
 ## Limitations
 
