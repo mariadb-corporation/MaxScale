@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <systemd/sd-daemon.h>
 #include <vector>
 #include <sstream>
 
@@ -163,8 +164,14 @@ void modules_thread_finish()
 namespace maxscale
 {
 
+// static
+maxbase::Duration RoutingWorker::s_watchdog_interval {0};
+// static
+maxbase::TimePoint RoutingWorker::s_watchdog_next_check;
+
 RoutingWorker::RoutingWorker()
     : m_id(next_worker_id())
+    , m_alive(true)
 {
     MXB_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
     MXB_POLL_DATA::owner = this;
@@ -266,6 +273,12 @@ bool RoutingWorker::init()
         // bofore the workes have been started) will be handled by the worker
         // that will be running in the main thread.
         this_thread.current_worker_id = 0;
+
+        if (s_watchdog_interval.count() != 0)
+        {
+            MXS_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",
+                       to_string(s_watchdog_interval).c_str());
+        }
     }
 
     return this_unit.initialized;
@@ -535,6 +548,8 @@ void RoutingWorker::epoll_tick()
     m_state = ZPROCESSING;
 
     delete_zombies();
+
+    check_systemd_watchdog();
 }
 
 /**
@@ -964,6 +979,61 @@ RoutingWorker* RoutingWorker::pick_worker()
         + (mxb::atomic::add(&id_generator, 1, mxb::atomic::RELAXED) % this_unit.nWorkers);
     return get(id);
 }
+
+// static
+void maxscale::RoutingWorker::set_watchdog_interval(uint64_t microseconds)
+{
+    // Do not call anything from here, assume nothing has been initialized (like logging).
+
+    // The internal timeout is 2/3 of the systemd configured interval.
+    double seconds = 2.0 * microseconds / 3000000;
+
+    s_watchdog_interval = maxbase::Duration(seconds);
+    s_watchdog_next_check = maxbase::Clock::now();
+}
+
+// A note about the below code. While the main worker is turning the "m_alive" values to false,
+// it is a possibility that another RoutingWorker sees the old value of "s_watchdog_next_check"
+// but its new "m_alive==false" value, marks itself alive and promptly hangs. This would cause a
+// watchdog kill delay of about "s_watchdog_interval" time.
+// Release-acquire would fix that, but is an unneccesary expense.
+void RoutingWorker::check_systemd_watchdog()
+{
+    if (s_watchdog_interval.count() == 0)   // not turned on
+    {
+        return;
+    }
+
+    maxbase::TimePoint now = maxbase::Clock::now();
+    if (now > s_watchdog_next_check)
+    {
+        if (m_id == this_unit.id_main_worker)
+        {
+            m_alive.store(true, std::memory_order_relaxed);
+            bool all_alive = std::all_of(this_unit.ppWorkers, this_unit.ppWorkers + this_unit.nWorkers,
+                                         [](RoutingWorker* rw) {
+                                             return rw->m_alive.load(std::memory_order_relaxed);
+                                         });
+            if (all_alive)
+            {
+                s_watchdog_next_check = now + s_watchdog_interval;
+                MXS_NOTICE("sd_notify\n");
+                sd_notify(false, "WATCHDOG=1");
+                std::for_each(this_unit.ppWorkers, this_unit.ppWorkers + this_unit.nWorkers,
+                              [](RoutingWorker* rw) {
+                                  rw->m_alive.store(false, std::memory_order_relaxed);
+                              });
+            }
+        }
+        else
+        {
+            if (m_alive.load(std::memory_order_relaxed) == false)
+            {
+                m_alive.store(true, std::memory_order_relaxed);
+            }
+        }
+    }
+}
 }
 
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
@@ -1183,7 +1253,6 @@ public:
         // Success if this is called.
     }
 };
-
 }
 
 void mxs_rworker_watchdog()

@@ -27,6 +27,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <systemd/sd-daemon.h>
 
 #include <set>
 #include <map>
@@ -1766,6 +1767,13 @@ int main(int argc, char** argv)
     {
         daemon_mode = false;
         cnf->log_target = MXB_LOG_TARGET_STDOUT;
+    }
+
+    // Systemd watchdog. Must be called in the initial thread */
+    uint64_t systemd_interval;      // in microseconds
+    if (sd_watchdog_enabled(false, &systemd_interval) > 0)
+    {
+        RoutingWorker::set_watchdog_interval(systemd_interval);
     }
 
     if (!daemon_mode)
