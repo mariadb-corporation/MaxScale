@@ -34,7 +34,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.h>
-#include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/session.h>
 #include <maxscale/ssl.h>
 #include <maxscale/utils.h>
@@ -424,6 +424,7 @@ int MySQLSendHandshake(DCB* dcb)
 
     // writing data in the Client buffer queue
     dcb->func.write(dcb, buf);
+    protocol->protocol_auth_state = MXS_AUTH_STATE_MESSAGE_READ;
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
@@ -1422,25 +1423,6 @@ int gw_MySQLAccept(DCB* listener)
 
 static void gw_process_one_new_client(DCB* client_dcb)
 {
-    MySQLProtocol* protocol;
-
-    protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
-
-    if (protocol == NULL)
-    {
-        /** delete client_dcb */
-        dcb_close(client_dcb);
-        MXS_ERROR("Failed to create protocol object for client connection.");
-        return;
-    }
-    client_dcb->protocol = protocol;
-
-    // send handshake to the client_dcb
-    MySQLSendHandshake(client_dcb);
-
-    // client protocol state change
-    protocol->protocol_auth_state = MXS_AUTH_STATE_MESSAGE_READ;
-
     /**
      * Set new descriptor to event set. At the same time,
      * change state to DCB_STATE_POLLING so that
@@ -1466,6 +1448,15 @@ static void gw_process_one_new_client(DCB* client_dcb)
     }
     else
     {
+        // Move the rest of the initialization process to the owning worker
+        mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(client_dcb->poll.owner);
+
+        worker->execute([=](){
+            client_dcb->protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
+            MXS_ABORT_IF_NULL(client_dcb->protocol);
+            MySQLSendHandshake(client_dcb);
+        }, mxs::RoutingWorker::EXECUTE_AUTO);
+
         MXS_DEBUG("Added dcb %p for fd %d to epoll set.",
                   client_dcb,
                   client_dcb->fd);
