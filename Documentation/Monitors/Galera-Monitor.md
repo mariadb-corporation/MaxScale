@@ -2,15 +2,21 @@
 
 ## Overview
 
-The Galera Monitor is a monitoring module for MaxScale that monitors a Galera cluster. It detects whether nodes are a part of the cluster and if they are in sync with the rest of the cluster. It can also assign master and slave roles inside MaxScale, allowing Galera clusters to be used with modules designed for traditional master-slave clusters.
+The Galera Monitor is a monitoring module for MaxScale that monitors a Galera
+cluster. It detects whether nodes are a part of the cluster and if they are in
+sync with the rest of the cluster. It can also assign master and slave roles
+inside MaxScale, allowing Galera clusters to be used with modules designed for
+traditional master-slave clusters.
 
-By default, the Galera Monitor will choose the node with the lowest `wsrep_local_index`
-value as the master. This will mean that two MaxScales running on different
-servers will choose the same server as the master.
+By default, the Galera Monitor will choose the node with the lowest
+`wsrep_local_index` value as the master. This will mean that two MaxScales
+running on different servers will choose the same server as the master.
 
 ## Configuration
 
-A minimal configuration for a  monitor requires a set of servers for monitoring and a username and a password to connect to these servers. The user requires the REPLICATION CLIENT privilege to successfully monitor the state of the servers.
+A minimal configuration for a monitor requires a set of servers for monitoring
+and a username and a password to connect to these servers. The user requires the
+REPLICATION CLIENT privilege to successfully monitor the state of the servers.
 
 ```
 [Galera Monitor]
@@ -24,7 +30,8 @@ password=mypwd
 
 ## Common Monitor Parameters
 
-For a list of optional parameters that all monitors support, read the [Monitor Common](Monitor-Common.md) document.
+For a list of optional parameters that all monitors support, read the
+[Monitor Common](Monitor-Common.md) document.
 
 ## Galera Monitor optional parameters
 
@@ -32,7 +39,11 @@ These are optional parameters specific to the Galera Monitor.
 
 ### `disable_master_failback`
 
-If a node marked as master inside MaxScale happens to fail and the master status is assigned to another node MaxScale will normally return the master status to the original node after it comes back up. With this option enabled, if the master status is assigned to a new node it will not be reassigned to the original node for as long as the new master node is running.
+If a node marked as master inside MaxScale happens to fail and the master status
+is assigned to another node MaxScale will normally return the master status to
+the original node after it comes back up. With this option enabled, if the
+master status is assigned to a new node it will not be reassigned to the
+original node for as long as the new master node is running.
 
 ```
 disable_master_failback=true
@@ -40,7 +51,20 @@ disable_master_failback=true
 
 ### `available_when_donor`
 
-This option only has an effect if there is a single Galera node being backed up an XtraBackup instance. This causes the initial node to go into Donor state which would normally prevent if from being marked as a valid server inside MaxScale. If this option is enabled, a single node in Donor state where the method is XtraBackup will be kept in Synced state.
+This option allows Galera nodes to be used normally when they are donors in an
+SST operation when the SST method is non-blocking
+(e.g. `wsrep_sst_method=mariabackup`).
+
+Normally when an SST is performed, both participating nodes lose their Synced,
+Master or Slave statuses. When this option is enabled, the donor is treated as
+if it was a normal member of the cluster (i.e. `wsrep_local_state = 4`). This is
+especially useful if the cluster drops down to one node and an SST is required
+to increase the cluster size.
+
+The current list of non-blocking SST
+methods are `xtrabackup`, `xtrabackup-v2` and `mariabackup`. Read the
+[wsrep_sst_method](https://mariadb.com/kb/en/library/galera-cluster-system-variables/#wsrep_sst_method)
+documentation for more details.
 
 ```
 available_when_donor=true
@@ -48,7 +72,9 @@ available_when_donor=true
 
 ### `disable_master_role_setting`
 
-This disables the assignment of master and slave roles to the Galera cluster nodes. If this option is enabled, Synced is the only status assigned by this monitor.
+This disables the assignment of master and slave roles to the Galera cluster
+nodes. If this option is enabled, Synced is the only status assigned by this
+monitor.
 
 ```
 disable_master_role_setting=true
@@ -56,7 +82,9 @@ disable_master_role_setting=true
 
 ### `use_priority`
 
-Enable interaction with server priorities. This will allow the monitor to deterministically pick the write node for the monitored Galera cluster and will allow for controlled node replacement.
+Enable interaction with server priorities. This will allow the monitor to
+deterministically pick the write node for the monitored Galera cluster and will
+allow for controlled node replacement.
 
 ```
 use_priority=true
@@ -114,9 +142,9 @@ a master server inside MaxScale. If all candidate servers have the same
 priority, the order of the servers in the `servers` parameter dictates which is
 chosen as the master.
 
-Nodes with a non-positive value (_priority_ <= 0) will never be chosen as the master. This allows
-you to mark some servers as permanent slaves by assigning a non-positive value
-into _priority_.
+Nodes with a non-positive value (_priority_ <= 0) will never be chosen as the
+master. This allows you to mark some servers as permanent slaves by assigning a
+non-positive value into _priority_.
 
 Here is an example.
 
