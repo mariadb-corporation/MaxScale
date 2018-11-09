@@ -41,6 +41,12 @@ if(NOT HAVE_LIBPTHREAD)
   message(FATAL_ERROR "Could not find libpthread")
 endif()
 
+# systemd libraries are optional
+find_library(HAVE_SYSTEMD NAMES systemd)
+if(HAVE_SYSTEMD)
+  add_definitions(-DHAVE_SYSTEMD=1)
+endif()
+
 # The XSI version of strerror_r return an int and the GNU version a char*
 check_cxx_source_compiles("
   #define _GNU_SOURCE 1

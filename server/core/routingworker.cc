@@ -18,7 +18,9 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
+#endif
 #include <vector>
 #include <sstream>
 
@@ -1017,8 +1019,9 @@ void RoutingWorker::check_systemd_watchdog()
             if (all_alive)
             {
                 s_watchdog_next_check = now + s_watchdog_interval;
-                MXS_NOTICE("sd_notify\n");
+#ifdef HAVE_SYSTEMD
                 sd_notify(false, "WATCHDOG=1");
+#endif
                 std::for_each(this_unit.ppWorkers, this_unit.ppWorkers + this_unit.nWorkers,
                               [](RoutingWorker* rw) {
                                   rw->m_alive.store(false, std::memory_order_relaxed);
