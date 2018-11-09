@@ -65,7 +65,7 @@ void test_new_master(TestConnections& test, std::ostream& out)
     test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM test.t1");
 
     change_master(1, 0);
-    test.maxscales->wait_for_monitor();
+    test.maxscales->wait_for_monitor(2);
 
     out << "Both reads and writes after master change should work" << endl;
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (2)");
