@@ -51,11 +51,20 @@ disable_master_failback=true
 
 ### `available_when_donor`
 
-This option only has an effect if there is a single Galera node being backed up
-an XtraBackup instance. This causes the initial node to go into Donor state
-which would normally prevent if from being marked as a valid server inside
-MaxScale. If this option is enabled, a single node in Donor state where the
-method is XtraBackup will be kept in Synced state.
+This option allows Galera nodes to be used normally when they are donors in an
+SST operation when the SST method is non-blocking
+(e.g. `wsrep_sst_method=mariabackup`).
+
+Normally when an SST is performed, both participating nodes lose their Synced,
+Master or Slave statuses. When this option is enabled, the donor is treated as
+if it was a normal member of the cluster (i.e. `wsrep_local_state = 4`). This is
+especially useful if the cluster drops down to one node and an SST is required
+to increase the cluster size.
+
+The current list of non-blocking SST
+methods are `xtrabackup`, `xtrabackup-v2` and `mariabackup`. Read the
+[wsrep_sst_method](https://mariadb.com/kb/en/library/galera-cluster-system-variables/#wsrep_sst_method)
+documentation for more details.
 
 ```
 available_when_donor=true
