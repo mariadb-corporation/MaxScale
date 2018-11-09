@@ -121,10 +121,9 @@ void RWSplitSession::close()
         }
         backend->response_stat().reset();
 
-        m_router->server_stats(backend->server()).end_session(
-            backend->session_timer().split(),
-            backend->select_timer().total(),
-            backend->num_selects());
+        m_router->server_stats(backend->server()).end_session(backend->session_timer().split(),
+                                                              backend->select_timer().total(),
+                                                              backend->num_selects());
     }
 }
 
@@ -878,14 +877,20 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                         send_readonly_error(m_client);
                     }
 
-                    if (!can_continue && !backend->is_master()
-                        && !backend->server()->master_err_is_logged)
+                    if (!can_continue)
                     {
-                        MXS_ERROR("Server %s (%s) lost the master status while waiting"
-                                  " for a result. Client sessions will be closed.",
-                                  backend->name(),
-                                  backend->uri());
-                        backend->server()->master_err_is_logged = true;
+                        if (!backend->is_master() && !backend->server()->master_err_is_logged)
+                        {
+                            MXS_ERROR("Server %s (%s) lost the master status while waiting"
+                                      " for a result. Client sessions will be closed.",
+                                      backend->name(),
+                                      backend->uri());
+                            backend->server()->master_err_is_logged = true;
+                        }
+                        else
+                        {
+                            MXS_ERROR("Lost connection to the master server, closing session.");
+                        }
                     }
                 }
 
@@ -1037,6 +1042,12 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
                 succp = true;
                 break;
             }
+        }
+
+        if (!succp)
+        {
+            MXS_ERROR("Unable to continue session as all connections have failed, "
+                      "last server to fail was '%s'.", backend->name());
         }
     }
     else

@@ -625,8 +625,8 @@ Rpl::Rpl(SERVICE* service,
     , m_md_exclude(m_exclude ? pcre2_match_data_create_from_pattern(m_exclude, NULL) : nullptr)
 {
     /** For detection of CREATE/ALTER TABLE statements */
-    static const char* create_table_regex = "(?i)create[a-z0-9[:space:]_]+table";
-    static const char* alter_table_regex = "(?i)alter[[:space:]]+table";
+    static const char* create_table_regex = "(?i)^[[:space:]]*create[a-z0-9[:space:]_]+table";
+    static const char* alter_table_regex = "(?i)^[[:space:]]*alter[[:space:]]+table";
     int pcreerr;
     size_t erroff;
     m_create_table_re = pcre2_compile((PCRE2_SPTR) create_table_regex,
