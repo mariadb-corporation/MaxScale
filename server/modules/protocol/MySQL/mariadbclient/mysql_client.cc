@@ -1019,11 +1019,13 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 
     /** Ask what type of input the router/filter chain expects */
     capabilities = service_get_capabilities(session->service);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol);
 
     /** If the router requires statement input we need to make sure that
      * a complete SQL packet is read before continuing. The current command
      * that is tracked by the protocol module is updated in route_by_statement() */
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
+        || proto->current_command == MXS_COM_CHANGE_USER)
     {
         uint8_t pktlen[MYSQL_HEADER_LEN];
         size_t n_copied = gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, pktlen);
@@ -1062,7 +1064,6 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
 
     spec_com_res_t res = RES_CONTINUE;
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol);
 
     if (!proto->changing_user)
     {
@@ -1137,7 +1138,8 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     /** Reset error handler when routing of the new query begins */
     dcb->dcb_errhandle_called = false;
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
+        || proto->current_command == MXS_COM_CHANGE_USER)
     {
         /**
          * Feed each statement completely and separately to router.
