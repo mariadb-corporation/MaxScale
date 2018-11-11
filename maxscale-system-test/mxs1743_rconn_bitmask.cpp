@@ -44,13 +44,11 @@ int main(int argc, char** argv)
     test.try_query(test.repl->nodes[0], "%s", "CREATE USER 'mxs1743'@'%' IDENTIFIED BY 'mxs1743'");
     test.try_query(test.repl->nodes[0], "%s", "GRANT ALL ON *.* TO 'mxs1743'@'%'");
 
-    test.tprintf("Fix replication");
-    test.set_timeout(60);
-    test.repl->fix_replication();
-
     test.set_timeout(120);
     test.tprintf("Syncing slaves");
+    test.repl->connect();
     test.repl->sync_slaves();
+    test.repl->disconnect();
 
     test.tprintf("Opening new connections to verify readconnroute works");
     test.set_timeout(60);
@@ -78,6 +76,7 @@ int main(int argc, char** argv)
     char master_connections[1024];
     char slave_connections[1024];
     test.set_timeout(60);
+    test.repl->connect();
     find_field(test.repl->nodes[0], query.c_str(), "connections", master_connections);
     find_field(test.repl->nodes[1], query.c_str(), "connections", slave_connections);
 
