@@ -458,6 +458,10 @@ int Galera_nodes::start_galera()
 
     if (start_node(0, (char*) " --wsrep-cluster-address=gcomm://") != 0)
     {
+        cout << "Failed to start first node, trying to prepare it again" << endl;
+        cout << "---------- BEGIN LOGS ----------" << endl;
+        ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
+        cout << "----------- END LOGS -----------" << endl;
         prepare_server(0);
         local_result += start_node(0, (char*) " --wsrep-cluster-address=gcomm://");
     }
@@ -473,6 +477,7 @@ int Galera_nodes::start_galera()
     ssh_node(0, str, false);
 
     std::vector<std::thread> threads;
+    std::mutex lock;
 
     for (int i = 1; i < N; i++)
     {
@@ -495,8 +500,17 @@ int Galera_nodes::start_galera()
                     printf("%s\n", sys1);
                     fflush(stdout);
                 }
-                local_result += start_node(i, sys1);
                 fflush(stdout);
+
+                if (start_node(i, sys1))
+                {
+                    std::lock_guard<std::mutex> guard(lock);
+                    cout << "Failed to start node " << i << endl;
+                    cout << "---------- BEGIN LOGS ----------" << endl;
+                    ssh_node_f(i, true, "sudo journalctl -u mariadb | tail -n 50");
+                    cout << "----------- END LOGS -----------" << endl;
+                    local_result++;
+                }
             };
         threads.emplace_back(func);
     }
