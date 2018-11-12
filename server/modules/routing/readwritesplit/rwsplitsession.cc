@@ -131,6 +131,15 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
 {
     int rval = 0;
 
+    if (m_is_replay_active && !GWBUF_IS_REPLAYED(querybuf))
+    {
+        MXS_INFO("New query received while transaction replay is active: %s",
+                 mxs::extract_sql(querybuf).c_str());
+        mxb_assert(!m_interrupted_query.get());
+        m_interrupted_query.reset(querybuf);
+        return 1;
+    }
+
     if (m_query_queue == NULL
         && (m_expected_responses == 0
             || m_qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE
@@ -775,7 +784,9 @@ bool RWSplitSession::start_trx_replay()
             if (m_replayed_trx.have_stmts())
             {
                 // Pop the first statement and start replaying the transaction
-                retry_query(m_replayed_trx.pop_stmt(), 0);
+                GWBUF* buf = m_replayed_trx.pop_stmt();
+                MXS_INFO("Replaying: %s", mxs::extract_sql(buf, 1024).c_str());
+                retry_query(buf, 0);
             }
             else
             {
@@ -786,6 +797,8 @@ bool RWSplitSession::start_trx_replay()
                  */
                 mxb_assert_message(qc_get_trx_type_mask(m_interrupted_query.get()) & QUERY_TYPE_BEGIN_TRX,
                                    "The current query should start a transaction");
+                 MXS_INFO("Retrying interrupted query: %s",
+                          mxs::extract_sql(m_interrupted_query.get()).c_str());
                 retry_query(m_interrupted_query.release(), 0);
             }
         }
