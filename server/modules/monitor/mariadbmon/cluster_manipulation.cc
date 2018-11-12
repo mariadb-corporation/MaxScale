@@ -115,17 +115,42 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         if (mon_slave_cand)
         {
             MariaDBServer* slave_cand = get_server_info(mon_slave_cand);
-
             if (server_is_rejoin_suspect(slave_cand, output))
             {
                 string gtid_update_error;
                 if (m_master->update_gtids(&gtid_update_error))
                 {
+                    // The manual version of rejoin does not need to be as careful as the automatic one.
+                    // The rules are mostly the same, the only difference is that a server with empty gtid:s
+                    // can be rejoined manually.
+                    // TODO: Add the warning to JSON output.
                     string no_rejoin_reason;
-                    if (slave_cand->can_replicate_from(m_master, &no_rejoin_reason))
+                    bool safe_rejoin = slave_cand->can_replicate_from(m_master, &no_rejoin_reason);
+                    bool empty_gtid = slave_cand->m_gtid_current_pos.empty();
+                    bool rejoin_allowed = false;
+                    if (safe_rejoin)
                     {
-                        ServerArray joinable_server;
-                        joinable_server.push_back(slave_cand);
+                        rejoin_allowed = true;
+                    }
+                    else
+                    {
+                        if (empty_gtid)
+                        {
+                            rejoin_allowed = true;
+                            MXB_WARNING("gtid_curren_pos of %s is empty. Manual rejoin is unsafe "
+                                        "but allowed.", rejoin_serv_name);
+                        }
+                        else
+                        {
+                            PRINT_MXS_JSON_ERROR(output, "%s cannot replicate from master server %s: %s",
+                                                 rejoin_serv_name, m_master->name(),
+                                                 no_rejoin_reason.c_str());
+                        }
+                    }
+
+                    if (rejoin_allowed)
+                    {
+                        ServerArray joinable_server = {slave_cand};
                         if (do_rejoin(joinable_server, output) == 1)
                         {
                             rval = true;
@@ -135,12 +160,6 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
                         {
                             PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but failed.");
                         }
-                    }
-                    else
-                    {
-                        PRINT_MXS_JSON_ERROR(output,
-                                             "%s cannot replicate from cluster master %s: %s.",
-                                             rejoin_serv_name, m_master->name(), no_rejoin_reason.c_str());
                     }
                 }
                 else
@@ -153,8 +172,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(output,
-                                 "The given server '%s' is not monitored by this monitor.",
+            PRINT_MXS_JSON_ERROR(output, "The given server '%s' is not monitored by this monitor.",
                                  rejoin_serv_name);
         }
     }
