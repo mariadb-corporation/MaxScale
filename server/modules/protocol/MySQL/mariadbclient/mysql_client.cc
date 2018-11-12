@@ -596,7 +596,11 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
     ss_dassert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len ||
                len == MYSQL_AUTH_PACKET_BASE_SIZE); // For SSL request packet
 
-    proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
+    // We OR the capability bits in order to retain the starting bits sent
+    // when an SSL connection is opened. Oracle Connector/J 8.0 appears to drop
+    // the SSL capability bit mid-authentication which causes MaxScale to think
+    // that SSL is not used.
+    proto->client_capabilities |= gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
     proto->charset = data[MYSQL_CHARSET_OFFSET];
 
     /** MariaDB 10.2 compatible clients don't set the first bit to signal that
