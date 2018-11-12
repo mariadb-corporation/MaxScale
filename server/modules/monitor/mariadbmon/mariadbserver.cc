@@ -376,32 +376,39 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
 
     bool rval = false;
     auto result = execute_query(query, errmsg_out);
-    if (result.get() != NULL && result->next_row())
+    if (result.get() != NULL)
     {
-        auto current_str = result->get_string(i_current_pos);
-        auto binlog_str = result->get_string(i_binlog_pos);
-        bool current_ok = false;
-        if (current_str.empty())
+        rval = true;
+        if (result->next_row())
         {
-            m_gtid_current_pos = GtidList();
+            // Query returned at least some data.
+            auto current_str = result->get_string(i_current_pos);
+            auto binlog_str = result->get_string(i_binlog_pos);
+            if (current_str.empty())
+            {
+                m_gtid_current_pos = GtidList();
+            }
+            else
+            {
+                m_gtid_current_pos = GtidList::from_string(current_str);
+            }
+
+            if (binlog_str.empty())
+            {
+                m_gtid_binlog_pos = GtidList();
+            }
+            else
+            {
+                m_gtid_binlog_pos = GtidList::from_string(binlog_str);
+            }
         }
         else
         {
-            m_gtid_current_pos = GtidList::from_string(current_str);
-            current_ok = !m_gtid_current_pos.empty();
-        }
-
-        if (binlog_str.empty())
-        {
+            // Query succeeded but returned 0 rows. This means that the server has no gtid:s.
+            m_gtid_current_pos = GtidList();
             m_gtid_binlog_pos = GtidList();
         }
-        else
-        {
-            m_gtid_binlog_pos = GtidList::from_string(binlog_str);
-        }
-
-        rval = current_ok;
-    }
+    } // If query failed, do not update gtid:s.
     return rval;
 }
 
