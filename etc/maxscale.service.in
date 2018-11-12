@@ -21,6 +21,9 @@ TimeoutStartSec=120
 LimitNOFILE=65535
 StartLimitBurst=0
 
+# Uncomment to enable the systemd Watchdog
+#WatchdogSec=30s
+
 # Only relevant when MaxScale is linked with -fsanitize=address
 Environment=ASAN_OPTIONS=abort_on_error=1
 

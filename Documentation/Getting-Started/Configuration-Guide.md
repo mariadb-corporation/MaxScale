@@ -26,6 +26,8 @@ plugin modules that tailor the behavior of the program.
 * [Runtime Configuration Changes](#runtime-configuration-changes)
 * [Authentication](#authentication)
 * [Error Reporting](#error-reporting)
+* [Troubleshooting](#troubleshooting)
+* [Systemd Watchdog](#systemd-watchdog)
 
 ## Glossary
 
@@ -1979,3 +1981,18 @@ TCP/IP Traffic must be permitted to 192.168.3.33 port 4408
 
 For Unix socket, the socket file path (example: `/servers/maxscale/galera.sock`)
 must be writable by the Unix user MariaDB MaxScale runs as.
+
+### Systemd Watchdog
+If MaxScale is running as a systemd service, the systemd Watchdog can be enabled.
+To enable, insert the **WatchdogSec** option into the Service section of the maxscale
+systemd configuration file, e.g.
+
+```
+WatchdogSec=30s
+```
+
+It is not recommended to use a watchdog timeout less than 30 seconds. When
+enabled MaxScale will check that all threads are running and notify systemd
+with a "keep-alive ping".
+
+Systemd reference: https://www.freedesktop.org/software/systemd/man/systemd.service.html
