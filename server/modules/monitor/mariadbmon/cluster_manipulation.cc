@@ -310,29 +310,32 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
 
         if (!error)
         {
-            // Step 6: Enable writing and events on new master.
+            // Step 6: Enable writing and events on new master, add gtid event.
             string error_msg;
             if (new_master->execute_cmd("SET GLOBAL read_only=0;", &error_msg))
             {
+                // Point of no return, perform later steps even if an error occurs.
                 m_next_master = new_master;
-                if (!new_master->enable_events(error_out))
+
+                if (m_handle_event_scheduler)
+                {
+                    if (!new_master->enable_events(error_out))
+                    {
+                        error = true;
+                        PRINT_MXS_JSON_ERROR(error_out, "Could not enable events on '%s': %s",
+                                             new_master->name(), error_msg.c_str());
+                    }
+                }
+
+                // Add an event to the new master so that it has a non-empty gtid_current_pos.
+                if (!new_master->execute_cmd("FLUSH TABLES;", &error_msg))
                 {
                     error = true;
+                    PRINT_MXS_JSON_ERROR(error_out, "Could not add event to %s: %s",
+                                         new_master->name(), error_msg.c_str());
                 }
-            }
-            else
-            {
-                error = true;
-                PRINT_MXS_JSON_ERROR(error_out,
-                                     "Could not enable writes on '%s': %s",
-                                     new_master->name(), error_msg.c_str());
-            }
 
-            if (m_next_master == new_master)
-            {
-                // Step 7: Set all slaves to replicate from the master. Perform this step even if enabling
-                // events failed.
-
+                // Step 7: Set all slaves to replicate from the master.
                 // The following commands are only sent to slaves.
                 auto location = std::find(targets.begin(), targets.end(), new_master);
                 targets.erase(location);
@@ -352,7 +355,14 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
                                          "Some servers were not redirected to '%s'.", new_master->name());
                 }
             }
+            else
+            {
+                error = true;
+                PRINT_MXS_JSON_ERROR(error_out, "Could not enable writes on '%s': %s",
+                                     new_master->name(), error_msg.c_str());
+            }
         }
+
         if (error)
         {
             PRINT_MXS_JSON_ERROR(error_out, "Replication reset failed or succeeded only partially. "
