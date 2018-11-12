@@ -1703,7 +1703,7 @@ static void service_calculate_weights(SERVICE* service)
     if (*weightby && service->dbref)
     {
         // DEPRECATED in 2.3, remove in 2.4.
-        MXS_WARNING("Setting of server weigths (%s) has been deprecated"
+        MXS_WARNING("Setting of server weights (%s) has been deprecated"
                     " and will be removed in a later version of MaxScale.",
                     weightby);
 

@@ -400,6 +400,17 @@ void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type
  */
 bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type)
 {
+    if (mxs_mysql_is_ps_command(m_qc.current_route_info().command()))
+    {
+        /**
+         * Replace the ID with our internal one, the backends will replace it with their own ID
+         * when the packet is being written. We use the internal ID when we store the command
+         * to remove the need for extra conversions from external to internal form when the command
+         * is being replayed on a server.
+         */
+        replace_binary_ps_id(querybuf, m_qc.current_route_info().stmt_id());
+    }
+
     /** The SessionCommand takes ownership of the buffer */
     uint64_t id = m_sescmd_count++;
     mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));

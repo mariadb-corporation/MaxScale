@@ -18,10 +18,12 @@
 #include <vector>
 #include <mutex>
 #include <type_traits>
+#include <atomic>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.hh>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/poll.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/routingworker.h>
@@ -426,6 +428,10 @@ public:
      */
     static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
+    /**
+     * To be called from the initial (parent) thread if the systemd watchdog is on.
+     */
+    static void set_watchdog_interval(uint64_t microseconds);
 private:
     const int    m_id;              /*< The id of the worker. */
     SessionsById m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
@@ -447,9 +453,14 @@ private:
     void epoll_tick();  // override
 
     void delete_zombies();
+    void check_systemd_watchdog();
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
+
+    static maxbase::Duration  s_watchdog_interval;  /*< Duration between notifications, if any. */
+    static maxbase::TimePoint s_watchdog_next_check;/*< Next time to notify systemd. */
+    std::atomic<bool>         m_alive;              /*< Set to true in epoll_tick(), false on notification. */
 };
 
 // Data local to a routing worker

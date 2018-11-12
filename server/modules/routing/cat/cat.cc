@@ -55,7 +55,7 @@ json_t* Cat::diagnostics_json() const
     return NULL;
 }
 
-const uint64_t caps = RCAP_TYPE_STMT_OUTPUT | RCAP_TYPE_STMT_INPUT;
+const uint64_t caps = RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT | RCAP_TYPE_STMT_INPUT;
 
 uint64_t Cat::getCapabilities()
 {

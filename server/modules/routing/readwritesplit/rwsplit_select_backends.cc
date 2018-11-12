@@ -79,7 +79,8 @@ SRWBackendVector::iterator best_score(SRWBackendVector& sBackends,
 SRWBackendVector::iterator backend_cmp_router_conn(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->server_weight ? (server->connections + 1) / server->server_weight : 0;
+            return server->server_weight ? (server->connections + 1) / server->server_weight :
+                   std::numeric_limits<double>::max();
         };
 
     return best_score(sBackends, server_score);
@@ -89,7 +90,8 @@ SRWBackendVector::iterator backend_cmp_router_conn(SRWBackendVector& sBackends)
 SRWBackendVector::iterator backend_cmp_global_conn(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->server_weight ? (server->server->stats.n_current + 1) / server->server_weight : 0;
+            return server->server_weight ? (server->server->stats.n_current + 1) / server->server_weight :
+                   std::numeric_limits<double>::max();
         };
 
     return best_score(sBackends, server_score);
@@ -99,7 +101,8 @@ SRWBackendVector::iterator backend_cmp_global_conn(SRWBackendVector& sBackends)
 SRWBackendVector::iterator backend_cmp_behind_master(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->server_weight ? server->server->rlag / server->server_weight : 0;
+            return server->server_weight ? server->server->rlag / server->server_weight :
+                   std::numeric_limits<double>::max();
         };
 
     return best_score(sBackends, server_score);
@@ -109,8 +112,8 @@ SRWBackendVector::iterator backend_cmp_behind_master(SRWBackendVector& sBackends
 SRWBackendVector::iterator backend_cmp_current_load(SRWBackendVector& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->server_weight ? (server->server->stats.n_current_ops + 1)
-                   / server->server_weight : 0;
+            return server->server_weight ? (server->server->stats.n_current_ops + 1) / server->server_weight :
+                   std::numeric_limits<double>::max();
         };
 
     return best_score(sBackends, server_score);
