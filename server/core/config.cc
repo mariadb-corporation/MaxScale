@@ -134,9 +134,6 @@ const char CN_PARAMETERS[] = "parameters";
 const char CN_PARSE_RESULT[] = "parse_result";
 const char CN_PASSIVE[] = "passive";
 const char CN_PASSWORD[] = "password";
-const char CN_PEER_HOSTS[] = "peer_hosts";
-const char CN_PEER_PASSWORD[] = "peer_password";
-const char CN_PEER_USER[] = "peer_user";
 const char CN_POLL_SLEEP[] = "poll_sleep";
 const char CN_PORT[] = "port";
 const char CN_PROTOCOL[] = "protocol";
@@ -2574,28 +2571,6 @@ static int handle_global_item(const char* name, const char* value)
                       CN_DUMP_LAST_STATEMENTS);
         }
     }
-    else if (strcmp(name, CN_PEER_HOSTS) == 0)
-    {
-        if (strchr(value, ','))
-        {
-            MXS_ERROR("Only a single host in '%s' is currently supported", CN_PEER_HOSTS);
-            return 0;
-        }
-        else
-        {
-            strcpy(gateway.peer_hosts, value);
-        }
-    }
-    else if (strcmp(name, CN_PEER_USER) == 0)
-    {
-        strcpy(gateway.peer_user, value);
-    }
-    else if (strcmp(name, CN_PEER_PASSWORD) == 0)
-    {
-        char* pw = decrypt_password(value);
-        strcpy(gateway.peer_password, pw);
-        MXS_FREE(pw);
-    }
     else
     {
         bool found = false;
@@ -4469,8 +4444,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
     json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
     json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
-    json_object_set_new(param, CN_PEER_HOSTS, json_string(cnf->peer_hosts));
-    json_object_set_new(param, CN_PEER_USER, json_string(cnf->peer_user));
     json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
 
     json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
