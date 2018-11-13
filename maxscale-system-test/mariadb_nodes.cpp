@@ -434,6 +434,7 @@ int Mariadb_nodes::start_replication()
 
 int Galera_nodes::start_galera()
 {
+    bool old_verbose = verbose;
     char str[1024];
     char sys1[1024];
     int local_result = 0;
@@ -460,6 +461,7 @@ int Galera_nodes::start_galera()
     {
         cout << "Failed to start first node, trying to prepare it again" << endl;
         cout << "---------- BEGIN LOGS ----------" << endl;
+        verbose = true;
         ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
         cout << "----------- END LOGS -----------" << endl;
         prepare_server(0);
@@ -507,6 +509,7 @@ int Galera_nodes::start_galera()
                     std::lock_guard<std::mutex> guard(lock);
                     cout << "Failed to start node " << i << endl;
                     cout << "---------- BEGIN LOGS ----------" << endl;
+                    verbose = true;
                     ssh_node_f(i, true, "sudo journalctl -u mariadb | tail -n 50");
                     cout << "----------- END LOGS -----------" << endl;
                     local_result++;
@@ -524,6 +527,7 @@ int Galera_nodes::start_galera()
     local_result += execute_query(nodes[0], "%s", create_repl_user);
 
     close_connections();
+    verbose = old_verbose;
     return local_result;
 }
 
