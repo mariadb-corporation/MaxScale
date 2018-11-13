@@ -956,6 +956,9 @@ add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection 
 # MXS-2106: NULL values with avrorouter
 add_test_executable(mxs2106_avro_null.cpp mxs2106_avro_null avro LABELS avrorouter REPL_BACKEND)
 
+# MXS-2057 systemd watchdog
+add_test_executable(mxs2057_systemd_watchdog.cpp mxs2057_systemd_watchdog mxs2057_systemd_watchdog LABELS REPL_BACKEND)
+
 ############################################
 # END: binlogrouter and avrorouter tests   #
 ############################################

@@ -988,7 +988,7 @@ void maxscale::RoutingWorker::set_watchdog_interval(uint64_t microseconds)
     // Do not call anything from here, assume nothing has been initialized (like logging).
 
     // The internal timeout is 2/3 of the systemd configured interval.
-    double seconds = 2.0 * microseconds / 3000000;
+    double seconds = 1.0 * microseconds / 2000000;
 
     s_watchdog_interval = maxbase::Duration(seconds);
     s_watchdog_next_check = maxbase::Clock::now();
