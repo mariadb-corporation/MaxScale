@@ -527,6 +527,15 @@ bool mxs_mysql_is_ok_packet(GWBUF* buffer);
 bool mxs_mysql_is_err_packet(GWBUF* buffer);
 
 /**
+ * Extract the error code from an ERR packet
+ *
+ * @param buffer Buffer containing the ERR packet
+ *
+ * @return The error code or 0 if the buffer is not an ERR packet
+ */
+uint16_t mxs_mysql_get_mysql_errno(GWBUF* buffer);
+
+/**
  * @brief Check if a buffer contains a result set
  *
  * @param buffer Buffer to check

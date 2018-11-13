@@ -1171,6 +1171,21 @@ bool mxs_mysql_is_err_packet(GWBUF* buffer)
     return cmd == MYSQL_REPLY_ERR;
 }
 
+uint16_t mxs_mysql_get_mysql_errno(GWBUF* buffer)
+{
+    uint16_t rval = 0;
+
+    if (mxs_mysql_is_err_packet(buffer))
+    {
+        uint8_t buf[2];
+        // First two bytes after the 0xff byte are the error code
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 2, buf);
+        rval = gw_mysql_get_byte2(buf);
+    }
+
+    return rval;
+}
+
 bool mxs_mysql_is_result_set(GWBUF* buffer)
 {
     bool rval = false;
