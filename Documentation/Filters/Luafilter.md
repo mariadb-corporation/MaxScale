@@ -73,6 +73,38 @@ The entry points for the Lua script expect the following signatures:
 These functions, if found in the script, will be called whenever a call to the
 matching entry point is made.
 
+#### Script Template
+
+Here is a script template that can be used to try out the luafilter. Copy it
+into a file and add `global_script=<path to script>` into the filter
+configuration. Make sure the file is readable by the `maxscale` user.
+
+```
+function createInstance()
+
+end
+
+function newSession()
+
+end
+
+function closeSession()
+
+end
+
+function routeQuery(query)
+
+end
+
+function clientReply(query)
+
+end
+
+function diagnostic()
+
+end
+```
+
 ### Functions Exposed by the Luafilter
 
 The luafilter exposes three functions that can be called from the Lua script.

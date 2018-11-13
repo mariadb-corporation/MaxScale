@@ -517,7 +517,7 @@ int Mariadb_nodes::clean_iptables(int node)
 {
     return ssh_node_f(node, true,
                       "while [ \"$(iptables -n -L INPUT 1|grep '%d')\" != \"\" ]; do iptables -D INPUT 1; done;"
-                      "while [ \"$(iptables6 -n -L INPUT 1|grep '%d')\" != \"\" ]; do iptables6 -D INPUT 1; done;",
+                      "while [ \"$(ip6tables -n -L INPUT 1|grep '%d')\" != \"\" ]; do ip6tables -D INPUT 1; done;",
                       port[node], port[node]);
 }
 

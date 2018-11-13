@@ -94,6 +94,16 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
     mxb_assert(querybuf);
     // Try to route the query again later
     MXS_SESSION* session = m_client->session;
+
+    /**
+     * Used to distinct retried queries from new ones while we're doing transaction replay.
+     * Not the cleanest way to do things but this will have to do for 2.3.
+     *
+     * TODO: Figure out a way to "cork" the client DCB as that would remove the need for this and be
+     * architecturally more clear.
+     */
+    gwbuf_set_type(querybuf, GWBUF_TYPE_REPLAYED);
+
     session_delay_routing(session, router_as_downstream(session), querybuf, delay);
     ++m_retry_duration;
 }
