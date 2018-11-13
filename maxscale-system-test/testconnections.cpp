@@ -1255,6 +1255,7 @@ static int read_log(const char* name, char** err_log_content_p)
             err_log_content[size] = '\0';
             // printf("s=%ld\n", strlen(err_log_content));
             * err_log_content_p = err_log_content;
+            fclose(f);
             return 0;
         }
         else

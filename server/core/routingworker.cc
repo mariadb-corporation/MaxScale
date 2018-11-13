@@ -1020,6 +1020,7 @@ void RoutingWorker::check_systemd_watchdog()
             {
                 s_watchdog_next_check = now + s_watchdog_interval;
 #ifdef HAVE_SYSTEMD
+                MXS_DEBUG("systemd watchdog keep-alive ping: sd_notify(false, \"WATCHDOG=1\")");
                 sd_notify(false, "WATCHDOG=1");
 #endif
                 std::for_each(this_unit.ppWorkers, this_unit.ppWorkers + this_unit.nWorkers,

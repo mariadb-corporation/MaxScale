@@ -49,7 +49,7 @@ struct Duration : public Clock::duration
     }
 
     /** To seconds */
-    double secs()
+    double secs() const
     {
         return std::chrono::duration<double>(*this).count();
     }
