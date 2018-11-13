@@ -104,14 +104,17 @@ void WorkerLoad::about_to_work(uint64_t now)
 }
 
 // static
-uint64_t WorkerLoad::get_time()
+uint64_t WorkerLoad::get_time_ms()
 {
-    uint64_t now;
-
     timespec t;
 
-    MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC, &t);
-    mxb_assert(rv == 0);
+    int rv = clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    if (rv != 0)
+    {
+        mxb_assert(errno == EINVAL); // CLOCK_MONOTONIC_COARSE not supported.
+        rv = clock_gettime(CLOCK_MONOTONIC, &t);
+        mxb_assert(rv == 0);
+    }
 
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
 }
@@ -764,7 +767,7 @@ void Worker::poll_waitevents()
 
         atomic::add(&m_statistics.n_polls, 1, atomic::RELAXED);
 
-        uint64_t now = Load::get_time();
+        uint64_t now = Load::get_time_ms();
         int timeout = Load::GRANULARITY - (now - m_load.start_time());
 
         if (timeout < 0)
@@ -884,22 +887,9 @@ void Worker::poll_waitevents()
     }   /*< while(1) */
 }
 
-namespace
-{
-
-int64_t get_current_time_ms()
-{
-    struct timespec ts;
-    MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC, &ts);
-    mxb_assert(rv == 0);
-
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
-}
-
 void Worker::tick()
 {
-    int64_t now = get_current_time_ms();
+    int64_t now = WorkerLoad::get_time_ms();
 
     vector<DelayedCall*> repeating_calls;
 
@@ -979,7 +969,7 @@ void Worker::adjust_timer()
     {
         DelayedCall* pCall = m_sorted_calls.begin()->second;
 
-        uint64_t now = get_current_time_ms();
+        uint64_t now = WorkerLoad::get_time_ms();
         int64_t delay = pCall->at() - now;
 
         if (delay <= 0)

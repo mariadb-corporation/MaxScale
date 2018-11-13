@@ -97,7 +97,7 @@ public:
      */
     void reset()
     {
-        uint64_t now = get_time();
+        uint64_t now = get_time_ms();
 
         m_start_time = now;
         m_wait_start = 0;
@@ -116,7 +116,7 @@ public:
 
     void about_to_wait()
     {
-        about_to_wait(get_time());
+        about_to_wait(get_time_ms());
     }
 
     /**
@@ -128,7 +128,7 @@ public:
 
     void about_to_work()
     {
-        about_to_work(get_time());
+        about_to_work(get_time_ms());
     }
 
     /**
@@ -170,7 +170,7 @@ public:
      *
      * @return Current time in milliseconds.
      */
-    static uint64_t get_time();
+    static uint64_t get_time_ms();
 
 private:
 
