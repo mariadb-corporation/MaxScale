@@ -366,6 +366,11 @@ TestConnections::TestConnections(int argc, char* argv[])
 
 TestConnections::~TestConnections()
 {
+    for (auto& a : m_on_destroy)
+    {
+        a();
+    }
+
     if (backend_ssl)
     {
         repl->disable_ssl();

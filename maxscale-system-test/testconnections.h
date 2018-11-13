@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <functional>
 
 #include <maxbase/ccdefs.hh>
 
@@ -597,9 +598,21 @@ public:
      */
     int get_master_server_id(int m = 0);
 
+    /**
+     * Add a callback that is called when the test ends
+     *
+     * @param func Function to call
+     */
+    void on_destroy(std::function<void (void)> func)
+    {
+        m_on_destroy.push_back(func);
+    }
+
 private:
     void report_result(const char* format, va_list argp);
     void copy_one_mariadb_log(int i, std::string filename);
+
+    std::vector<std::function<void (void)>> m_on_destroy;
 };
 
 /**
