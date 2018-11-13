@@ -119,9 +119,11 @@ exports.builder = function(yargs) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'sessions',[
                     {'Id': 'id'},
-                    {'Service': 'relationships.services.data[].id'},
                     {'User': 'attributes.user'},
-                    {'Host': 'attributes.remote'}
+                    {'Host': 'attributes.remote'},
+                    {'Connected': 'attributes.connected'},
+                    {'Idle': 'attributes.idle'},
+                    {'Service': 'relationships.services.data[].id'}
                 ])
             })
         })
