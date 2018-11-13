@@ -2178,7 +2178,7 @@ static int handle_global_item(const char* name, const char* value)
             }
             else
             {
-                MXS_WARNING("Invalid value for 'threads': %s.", value);
+                MXS_ERROR("Invalid value for 'threads': %s.", value);
                 return 0;
             }
         }
@@ -2232,7 +2232,8 @@ static int handle_global_item(const char* name, const char* value)
         }
         else
         {
-            MXS_WARNING("Invalid timeout value for 'auth_connect_timeout': %s", value);
+            MXS_ERROR("Invalid timeout value for 'auth_connect_timeout': %s", value);
+            return 0;
         }
     }
     else if (strcmp(name, CN_AUTH_READ_TIMEOUT) == 0)
@@ -2246,6 +2247,7 @@ static int handle_global_item(const char* name, const char* value)
         else
         {
             MXS_ERROR("Invalid timeout value for 'auth_read_timeout': %s", value);
+            return 0;
         }
     }
     else if (strcmp(name, CN_AUTH_WRITE_TIMEOUT) == 0)
@@ -2259,6 +2261,7 @@ static int handle_global_item(const char* name, const char* value)
         else
         {
             MXS_ERROR("Invalid timeout value for 'auth_write_timeout': %s", value);
+            return 0;
         }
     }
     else if (strcmp(name, CN_QUERY_CLASSIFIER) == 0)
@@ -2272,10 +2275,7 @@ static int handle_global_item(const char* name, const char* value)
         }
         else
         {
-            MXS_ERROR("The length of '%s' is %d, while the maximum length is %d.",
-                      value,
-                      len,
-                      max_len);
+            MXS_ERROR("The length of '%s' is %d, while the maximum length is %d.", value, len, max_len);
             return 0;
         }
     }
@@ -2317,10 +2317,9 @@ static int handle_global_item(const char* name, const char* value)
         }
         else
         {
-            MXS_ERROR("'%s' is not a valid value for '%s'. Allowed values are 'DEFAULT' and "
-                      "'ORACLE'. Using 'DEFAULT' as default.",
-                      value,
-                      name);
+            MXS_ERROR("'%s' is not a valid value for '%s'. Allowed values are 'DEFAULT' and 'ORACLE'.",
+                      value, name);
+            return 0;
         }
     }
     else if (strcmp(name, CN_QUERY_RETRIES) == 0)
@@ -2383,13 +2382,12 @@ static int handle_global_item(const char* name, const char* value)
 
             if (!count || !window_ms || !suppress_ms)
             {
-                MXS_ERROR("Invalid value for the `log_throttling` configuration entry: \"%s\". "
-                          "No throttling will now be performed.",
-                          value);
-                MXS_NOTICE("The format of the value for 'log_throttling' is \"X, Y, Z\", where "
-                           "X is the maximum number of times a particular error can be logged "
-                           "in the time window of Y milliseconds, before the logging is suppressed "
-                           "for Z milliseconds.");
+                MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
+                          "The format of the value for `log_throttling` is 'X, Y, Z', where "
+                          "X is the maximum number of times a particular error can be logged "
+                          "in the time window of Y milliseconds, before the logging is suppressed "
+                          "for Z milliseconds.", value);
+                return 0;
             }
             else
             {
@@ -2408,11 +2406,10 @@ static int handle_global_item(const char* name, const char* value)
                 }
                 else
                 {
-                    MXS_ERROR("Invalid value for the `log_throttling` configuration entry: \"%s\". "
-                              "No throttling will now be performed.",
-                              value);
-                    MXS_NOTICE("The configuration entry 'log_throttling' requires as value three positive "
-                               "integers (or 0).");
+                    MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
+                              "The configuration entry `log_throttling` requires as value three positive "
+                              "integers (or 0).", value);
+                    return 0;
                 }
             }
 
@@ -2495,11 +2492,8 @@ static int handle_global_item(const char* name, const char* value)
         }
         else
         {
-            MXS_ERROR("%s is an invalid value for '%s', using default %d instead.",
-                      value,
-                      CN_USERS_REFRESH_TIME,
-                      USERS_REFRESH_TIME_DEFAULT);
-            gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
+            MXS_ERROR("%s is an invalid value for '%s'.", value, CN_USERS_REFRESH_TIME);
+            return 0;
         }
     }
     else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
@@ -2549,6 +2543,7 @@ static int handle_global_item(const char* name, const char* value)
         else
         {
             MXS_ERROR("Invalid value for '%s': %s", CN_RETAIN_LAST_STATEMENTS, value);
+            return 0;
         }
     }
     else if (strcmp(name, CN_DUMP_LAST_STATEMENTS) == 0)
@@ -2569,6 +2564,7 @@ static int handle_global_item(const char* name, const char* value)
         {
             MXS_ERROR("%s can have the values 'never', 'on_close' or 'on_error'.",
                       CN_DUMP_LAST_STATEMENTS);
+            return 0;
         }
     }
     else
@@ -2611,8 +2607,7 @@ static int handle_global_item(const char* name, const char* value)
                 break;
 
             case maxscale::event::INVALID:
-                // TODO: Should we bail out?
-                break;
+                return 0;
             }
         }
 
@@ -2629,12 +2624,10 @@ static int handle_global_item(const char* name, const char* value)
 
     if (!processed)
     {
-        MXS_WARNING("Config entry '%s' is unknown."
-                    " Please remove it from the configuration file.",
-                    name);
+        MXS_ERROR("Unknown global parameter '%s'.", name);
     }
 
-    return 1;
+    return processed ? 1 : 0;
 }
 
 /**
