@@ -266,6 +266,9 @@ add_test_executable(mysqlmon_fail_switch_events.cpp mysqlmon_fail_switch_events 
 # MySQL Monitor reset-replication test, use template for Rejoin (good)
 add_test_executable(mysqlmon_reset_replication.cpp mysqlmon_reset_replication mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor low disk switchover
+add_test_executable(mysqlmon_switchover_auto.cpp mysqlmon_switchover_auto mysqlmon_switchover_auto LABELS mysqlmon REPL_BACKEND)
+
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
 add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
