@@ -1318,8 +1318,8 @@ void Mariadb_nodes::disable_server_setting(int node, const char* setting)
 
 void Mariadb_nodes::add_server_setting(int node, const char* setting)
 {
-    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/server*.cnf");
-    ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/server*.cnf", setting);
+    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/*server*.cnf");
+    ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting);
 }
 
 std::string Mariadb_nodes::get_config_name(int node)
