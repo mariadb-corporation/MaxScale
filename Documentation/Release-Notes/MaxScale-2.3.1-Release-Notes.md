@@ -10,6 +10,12 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### Unknown global parameters
+
+Unknown global parameters or parameters with invalid values are now treated as
+errors. If MaxScale refuses to start after upgrading to 2.3.1, check whether it
+is due to an unknown global parameter.
+
 ### REST-API
 
 #### `/v1/sessions`

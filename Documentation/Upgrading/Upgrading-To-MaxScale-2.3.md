@@ -9,11 +9,16 @@ to the [ChangeLog](../Changelog.md).
 Before starting the upgrade, we recommend you back up your current
 configuration file.
 
-### `passwd` is no longer accepted
+### Unknown global parameters
 
-In the configuration file, passwords for monitors and services must be
-specified using `password`; the support for the earlier deprecated
-`passwd` has been removed. That is, the following
+All unknown parameters are now treated as errors. Check your configuration for
+errors if MaxScale fails to start after upgrading to 2.3.1.
+
+### `passwd` is deprecated
+
+In the configuration file, passwords for monitors and services should be
+specified using `password`; the support for the deprecated
+`passwd` will be removed in the future. That is, the following
 ```
 [The-Service]
 type=service
@@ -25,7 +30,7 @@ type=monitor
 passwd=some-monitor-password
 ...
 ```
-must be changed to
+should be changed to
 ```
 [The-Service]
 type=service
