@@ -58,6 +58,17 @@ will be removed in 2.4.
 
 ## New Features
 
+### ColumnStore Monitor
+
+The new `csmon` monitor can be used to monitor ColumnStore clusters where the
+primary UM will be assigned as the master and secondary UMs as slaves. Automatic
+detection of the primary UM is supported with ColumnStore versions 1.2.1 and
+newer. For older versions the primary UM must be designated with the `primary`
+parameter of the monitor.
+
+Read the [csmon documentation](../Monitors/ColumnStore-Monitor.md) for more
+information on how to use it.
+
 ### MaxCtrl
 
 There is now a new command `classify <statement>` using which it can
