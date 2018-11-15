@@ -107,6 +107,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     , threads(4)
     , use_ipv6(false)
 {
+    std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
     signal_set(SIGABRT, sigfatal_handler);
     signal_set(SIGFPE, sigfatal_handler);
@@ -366,6 +367,11 @@ TestConnections::TestConnections(int argc, char* argv[])
 
 TestConnections::~TestConnections()
 {
+    for (auto& a : m_on_destroy)
+    {
+        a();
+    }
+
     if (backend_ssl)
     {
         repl->disable_ssl();
@@ -1255,6 +1261,7 @@ static int read_log(const char* name, char** err_log_content_p)
             err_log_content[size] = '\0';
             // printf("s=%ld\n", strlen(err_log_content));
             * err_log_content_p = err_log_content;
+            fclose(f);
             return 0;
         }
         else

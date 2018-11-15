@@ -12,6 +12,7 @@
 # this is only for the mysqld standalone daemon
 [mysqld]
 log-slave-updates
+plugin_maturity=unknown
 log-bin=mar-bin
 binlog-format=row
 binlog_row_image=full

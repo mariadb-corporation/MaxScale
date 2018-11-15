@@ -196,6 +196,9 @@ add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABE
 # Basic MaxCtrl test
 add_test_executable(maxctrl_basic.cpp maxctrl_basic replication LABELS maxctrl REPL_BACKEND)
 
+# MXS-2167: Monitors should be able to use extra_port
+add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: Tests that require GTID           #
 ############################################
@@ -265,6 +268,9 @@ add_test_executable(mysqlmon_fail_switch_events.cpp mysqlmon_fail_switch_events 
 
 # MySQL Monitor reset-replication test, use template for Rejoin (good)
 add_test_executable(mysqlmon_reset_replication.cpp mysqlmon_reset_replication mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
+
+# MySQL Monitor low disk switchover
+add_test_executable(mysqlmon_switchover_auto.cpp mysqlmon_switchover_auto mysqlmon_switchover_auto LABELS mysqlmon REPL_BACKEND)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
@@ -955,6 +961,9 @@ add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection 
 
 # MXS-2106: NULL values with avrorouter
 add_test_executable(mxs2106_avro_null.cpp mxs2106_avro_null avro LABELS avrorouter REPL_BACKEND)
+
+# MXS-2057 systemd watchdog
+add_test_executable(mxs2057_systemd_watchdog.cpp mxs2057_systemd_watchdog mxs2057_systemd_watchdog LABELS REPL_BACKEND)
 
 ############################################
 # END: binlogrouter and avrorouter tests   #

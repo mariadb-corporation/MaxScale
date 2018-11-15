@@ -1,0 +1,46 @@
+[maxscale]
+threads = ###threads###
+log_debug=1
+
+[Monitor]
+type = monitor
+module = mariadbmon
+servers = server1
+user = maxskysql
+password = skysql
+monitor_interval = 1000
+
+[RW-Split-Router]
+type = service
+router = readwritesplit
+servers = server1
+user = maxskysql
+password = skysql
+filters = lua
+
+[RW-Split-Listener]
+type = listener
+service = RW-Split-Router
+protocol = mariadbclient
+port = 4006
+
+[lua]
+type = filter
+module = luafilter
+session_script=/home/vagrant/infinite_loop.lua
+
+[MaxAdmin-Service]
+type = service
+router = cli
+
+[MaxAdmin-Unix-Listener]
+type = listener
+service = MaxAdmin-Service
+protocol = maxscaled
+socket = default
+
+[server1]
+type = server
+address = ###node_server_IP_1###
+port = ###node_server_port_1###
+protocol = MariaDBBackend

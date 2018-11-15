@@ -555,6 +555,12 @@ void RWSplitSession::manage_transactions(SRWBackend& backend, GWBUF* writebuf)
     }
 }
 
+static bool server_is_shutting_down(GWBUF* writebuf)
+{
+    uint64_t err = mxs_mysql_get_mysql_errno(writebuf);
+    return err == ER_SERVER_SHUTDOWN || err == ER_NORMAL_SHUTDOWN || err == ER_SHUTDOWN_COMPLETE;
+}
+
 void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
 {
     DCB* client_dcb = backend_dcb->session->client_dcb;
@@ -576,6 +582,14 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
             log_unexpected_response(backend, writebuf, m_current_query.get());
             MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
         }
+        return;
+    }
+    else if (backend->get_reply_state() == REPLY_STATE_START && server_is_shutting_down(writebuf))
+    {
+        // The server is shutting down, act as if the network connection failed. This allows
+        // the query to be retried on another server without the client noticing it.
+        poll_fake_hangup_event(backend_dcb);
+        gwbuf_free(writebuf);
         return;
     }
 

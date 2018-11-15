@@ -434,6 +434,7 @@ int Mariadb_nodes::start_replication()
 
 int Galera_nodes::start_galera()
 {
+    bool old_verbose = verbose;
     char str[1024];
     char sys1[1024];
     int local_result = 0;
@@ -458,6 +459,11 @@ int Galera_nodes::start_galera()
 
     if (start_node(0, (char*) " --wsrep-cluster-address=gcomm://") != 0)
     {
+        cout << "Failed to start first node, trying to prepare it again" << endl;
+        cout << "---------- BEGIN LOGS ----------" << endl;
+        verbose = true;
+        ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
+        cout << "----------- END LOGS -----------" << endl;
         prepare_server(0);
         local_result += start_node(0, (char*) " --wsrep-cluster-address=gcomm://");
     }
@@ -473,6 +479,7 @@ int Galera_nodes::start_galera()
     ssh_node(0, str, false);
 
     std::vector<std::thread> threads;
+    std::mutex lock;
 
     for (int i = 1; i < N; i++)
     {
@@ -495,8 +502,18 @@ int Galera_nodes::start_galera()
                     printf("%s\n", sys1);
                     fflush(stdout);
                 }
-                local_result += start_node(i, sys1);
                 fflush(stdout);
+
+                if (start_node(i, sys1))
+                {
+                    std::lock_guard<std::mutex> guard(lock);
+                    cout << "Failed to start node " << i << endl;
+                    cout << "---------- BEGIN LOGS ----------" << endl;
+                    verbose = true;
+                    ssh_node_f(i, true, "sudo journalctl -u mariadb | tail -n 50");
+                    cout << "----------- END LOGS -----------" << endl;
+                    local_result++;
+                }
             };
         threads.emplace_back(func);
     }
@@ -510,6 +527,7 @@ int Galera_nodes::start_galera()
     local_result += execute_query(nodes[0], "%s", create_repl_user);
 
     close_connections();
+    verbose = old_verbose;
     return local_result;
 }
 
@@ -587,7 +605,7 @@ bool Mariadb_nodes::check_master_node(MYSQL* conn)
 
     if (mysql_query(conn, "SHOW SLAVE STATUS"))
     {
-        printf("%s\n", mysql_error(conn));
+        cout << mysql_error(conn) << endl;
         rval = false;
     }
     else
@@ -598,7 +616,7 @@ bool Mariadb_nodes::check_master_node(MYSQL* conn)
         {
             if (mysql_num_rows(res) > 0)
             {
-                printf("The master is configured as a slave\n");
+                cout << "The master is configured as a slave" << endl;
                 rval = false;
             }
             mysql_free_result(res);
@@ -736,11 +754,14 @@ int Mariadb_nodes::check_replication()
 
     if (connect())
     {
-        printf("Failed to connect to all servers\n");
+        cout << "Failed to connect to all servers" << endl;
         return 1;
     }
 
-    res = get_versions();
+    if ((res = get_versions()) != 0)
+    {
+        cout << "Failed to get versions" << endl;
+    }
 
     for (int i = 0; i < N && res == 0; i++)
     {
@@ -1036,12 +1057,12 @@ int Mariadb_nodes::get_version(int i)
     int local_result = 0;
     if (find_field(nodes[i], "SELECT @@version", "@@version", version[i]))
     {
-        printf("Failed to get version: %s, trying ssh node and use MariaDB client\n", mysql_error(nodes[i]));
+        cout << "Failed to get version: " << mysql_error(nodes[i]) << ", trying ssh node and use MariaDB client" << endl;
         str = ssh_node_output(i, "mysql --batch --silent  -e \"select @@version\"", true, &ec);
         if (ec)
         {
             local_result++;
-            printf("Failed to get version, node %d is broken\n", i);
+            cout << "Failed to get version, node " << i << " is broken" << endl;
         }
         else
         {
@@ -1318,8 +1339,8 @@ void Mariadb_nodes::disable_server_setting(int node, const char* setting)
 
 void Mariadb_nodes::add_server_setting(int node, const char* setting)
 {
-    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/server*.cnf");
-    ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/server*.cnf", setting);
+    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/*server*.cnf");
+    ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting);
 }
 
 std::string Mariadb_nodes::get_config_name(int node)

@@ -636,8 +636,6 @@ void run(TestConnections& test)
 
 int main(int argc, char* argv[])
 {
-    std::ios::sync_with_stdio(true);
-
     Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);
 

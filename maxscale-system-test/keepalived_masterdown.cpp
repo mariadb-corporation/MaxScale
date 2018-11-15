@@ -23,18 +23,22 @@ int main(int argc, char* argv[])
     TestConnections::multiple_maxscales(true);
     Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);
+
+    if (test.maxscales->N < 2)
+    {
+        test.tprintf("At least 2 Maxscales are needed for this test. Exiting");
+        exit(0);
+    }
+
+    test.on_destroy([&](){
+                        test.maxscales->ssh_node_f(0, true, "service keepalived stop");
+                        test.maxscales->ssh_node_f(1, true, "service keepalived stop");
+                    });
+
     test.repl->connect();
     delete_slave_binlogs(test);
     basic_test(test);
     print_gtids(test);
-
-    test.tprintf("Number of MaxScales: %d\n", test.maxscales->N);
-    test.expect(test.maxscales->N == 2,
-                "Two Maxscales are needed for this test, %i nodes was/were detected.", test.maxscales->N);
-    if (test.global_result != 0)
-    {
-        return test.global_result;
-    }
 
     test.tprintf("Configuring 'keepalived'\n");
     // Get test client IP, replace last number in it with 253 and use it as Virtual IP

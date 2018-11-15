@@ -26,6 +26,8 @@ plugin modules that tailor the behavior of the program.
 * [Runtime Configuration Changes](#runtime-configuration-changes)
 * [Authentication](#authentication)
 * [Error Reporting](#error-reporting)
+* [Troubleshooting](#troubleshooting)
+* [Systemd Watchdog](#systemd-watchdog)
 
 ## Glossary
 
@@ -794,24 +796,6 @@ be completely disabled to prevent access to it.
 Log authentication failures for the admin interface. This parameter expects a
 boolean value and is enabled by default.
 
-#### `peer_hosts`
-
-The REST API URL of a remote peer MaxScale. This is used to communicate with
-other MaxScale instances and can be a required parameter for some other features
-in MaxScale.
-
-Note that currently only one URL is supported. Defining more than one is
-considered a configuration error.
-
-#### `peer_user`
-
-Username used when connecting to remote MaxScale instances.
-
-#### `peer_password`
-
-Password used when connecting to remote MaxScale instances. This password can be
-encrypted with `maxpasswd`.
-
 #### _events_
 
 MaxScale logs warnings and errors for various reasons and often it is self-
@@ -1302,6 +1286,16 @@ monitorpw=mymonitorpasswd
 The `monitorpw` parameter may be either a plain text password or it may be an
 encrypted password.  See the section on encrypting passwords for use in the
 maxscale.cnf file.
+
+#### `extra_port`
+
+An alternative port used to monitor the server. This allows MaxScale to connect
+even when `max_connections` has been reached on the backend server. If this
+parameter is defined and a connection to the normal port fails, the alternative
+port is used.
+
+For more information, read the
+[extra_port documentation](https://mariadb.com/kb/en/library/thread-pool-system-and-status-variables/#extra_port).
 
 #### `persistpoolmax`
 
@@ -1979,3 +1973,18 @@ TCP/IP Traffic must be permitted to 192.168.3.33 port 4408
 
 For Unix socket, the socket file path (example: `/servers/maxscale/galera.sock`)
 must be writable by the Unix user MariaDB MaxScale runs as.
+
+### Systemd Watchdog
+If MaxScale is running as a systemd service, the systemd Watchdog can be enabled.
+To enable, insert the **WatchdogSec** option into the Service section of the maxscale
+systemd configuration file, e.g.
+
+```
+WatchdogSec=30s
+```
+
+It is not recommended to use a watchdog timeout less than 30 seconds. When
+enabled MaxScale will check that all threads are running and notify systemd
+with a "keep-alive ping".
+
+Systemd reference: https://www.freedesktop.org/software/systemd/man/systemd.service.html

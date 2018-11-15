@@ -2,13 +2,19 @@
 
 Release 2.3.1 is a Beta release.
 
-This document describes the changes in release 2.3.1, when compared to
-release 2.3.0.
+This document describes the changes in release 2.3.1, when compared to the
+previous release in the same series.
 
 For any problems you encounter, please consider submitting a bug
-report at [Jira](https://jira.mariadb.org).
+report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
+
+### Unknown global parameters
+
+Unknown global parameters or parameters with invalid values are now treated as
+errors. If MaxScale refuses to start after upgrading to 2.3.1, check whether it
+is due to an unknown global parameter.
 
 ### REST-API
 
@@ -52,6 +58,17 @@ will be removed in 2.4.
 
 ## New Features
 
+### ColumnStore Monitor
+
+The new `csmon` monitor can be used to monitor ColumnStore clusters where the
+primary UM will be assigned as the master and secondary UMs as slaves. Automatic
+detection of the primary UM is supported with ColumnStore versions 1.2.1 and
+newer. For older versions the primary UM must be designated with the `primary`
+parameter of the monitor.
+
+Read the [csmon documentation](../Monitors/ColumnStore-Monitor.md) for more
+information on how to use it.
+
 ### MaxCtrl
 
 There is now a new command `classify <statement>` using which it can
@@ -65,9 +82,40 @@ should be sent to the master).
 The global configuration parameter `retain_last_statements` can now
 also be specified separately for individual services.
 
+### Watchdog
+
+If MaxScale is running as a systemd service, the systemd Watchdog can be
+enabled and MaxScale will behave accordingly. Please see the
+[documentation](Getting-Started/Configuration-Guide.md#systemd-watchdog)
+for more details.
+
+By default there will be a watchdog timeout of 30 seconds. That is, if
+MaxScale is hung, then systemd will detect that and restart MaxScale after
+slightly more than 30 seconds.
+
+### Miscellaneous
+
+* [MXS-2141](https://jira.mariadb.org/browse/MXS-2141) Retry read on master when causal_reads timeout is exceeded
+* [MXS-2122](https://jira.mariadb.org/browse/MXS-2122) Immediately close the listening socket when a listener is destroyed
+* [MXS-2077](https://jira.mariadb.org/browse/MXS-2077) Provide more information in list clients output.
+* [MXS-1976](https://jira.mariadb.org/browse/MXS-1976) MaxAdmin Shutting Down A Service should specify / warn that new session requests are neither accepted nor denied.
+
 ## Bug fixes
 
-[Here is a list of bugs fixed in MaxScale 2.3.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.3.1)
+* [MXS-2147](https://jira.mariadb.org/browse/MXS-2147) Luafilter is missing symbols
+* [MXS-2144](https://jira.mariadb.org/browse/MXS-2144) Doing a controlled shutdown doesn't trigger query retrying
+* [MXS-2142](https://jira.mariadb.org/browse/MXS-2142) Default timeout value for causal_reads is excessive
+* [MXS-2140](https://jira.mariadb.org/browse/MXS-2140) Enabling transaction_replay at runtime doesn't enable implicit parameters
+* [MXS-2139](https://jira.mariadb.org/browse/MXS-2139) transaction_replay doesn't implicitly enable master_failure_mode=fail_on_write
+* [MXS-2136](https://jira.mariadb.org/browse/MXS-2136) passwd errors out as a attribute in [monitor] and [service] in maxscale.cnf
+* [MXS-2121](https://jira.mariadb.org/browse/MXS-2121) Listeners defined in the configuration cannot be destroyed
+* [MXS-2109](https://jira.mariadb.org/browse/MXS-2109) query_classifier_cache_size is per thread
+* [MXS-2107](https://jira.mariadb.org/browse/MXS-2107) writeq_high_water doesn't work
+* [MXS-2100](https://jira.mariadb.org/browse/MXS-2100) Unknown global parameters are not detected
+* [MXS-2098](https://jira.mariadb.org/browse/MXS-2098) maintenance_on_low_disk_space does not work
+* [MXS-2096](https://jira.mariadb.org/browse/MXS-2096) SELECT ... INTO OUTFILE is routed to all back end servers
+* [MXS-2055](https://jira.mariadb.org/browse/MXS-2055) Monitor REST-API documentation
+* [MXS-1978](https://jira.mariadb.org/browse/MXS-1978) SELECT INTO OUTFILE is routed to all servers
 
 ## Known Issues and Limitations
 
@@ -76,15 +124,15 @@ For more information, please refer to the [Limitations](../About/Limitations.md)
 
 ## Packaging
 
-RPM and Debian packages are provided for the Linux distributions supported
-by MariaDB Enterprise.
+RPM and Debian packages are provided for supported the Linux distributions.
 
-Packages can be downloaded [here](https://mariadb.com/resources/downloads).
+Packages can be downloaded [here](https://mariadb.com/downloads/mariadb-tx/maxscale).
 
 ## Source Code
 
 The source code of MaxScale is tagged at GitHub with a tag, which is identical
 with the version of MaxScale. For instance, the tag of version X.Y.Z of MaxScale
-is X.Y.Z. Further, *master* always refers to the latest released non-beta version.
+is `maxscale-X.Y.Z`. Further, the default branch is always the latest GA version
+of MaxScale.
 
 The source code is available [here](https://github.com/mariadb-corporation/MaxScale).

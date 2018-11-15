@@ -202,7 +202,7 @@ public:
      * Query gtid_current_pos and gtid_binlog_pos and save the values to the server.
      *
      * @param errmsg_out Where to store an error message if query fails. Can be null.
-     * @return True if successful
+     * @return True if query succeeded
      */
     bool update_gtids(std::string* errmsg_out = NULL);
 

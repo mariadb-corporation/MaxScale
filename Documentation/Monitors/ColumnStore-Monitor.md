@@ -5,6 +5,19 @@ servers. It supports multiple UM nodes and can detect the correct server for
 DML/DDL statements which will be labeled as the master. Other UM nodes will be
 used for reads.
 
+## Required Grants
+
+The credentials defined with the `user` and `password` parameters must have all
+grants on the `infinidb_vtable` database.
+
+For example, to create a user for this monitor with the required grants execute
+the following SQL.
+
+```
+CREATE USER 'maxuser'@'%' IDENTIFIED BY 'maxpwd';
+GRANT ALL ON infinidb_vtable.* TO 'maxuser'@'%';
+```
+
 ## Master Selection
 
 The automatic master detection only works with ColumnStore 1.1.7 (planned

@@ -695,6 +695,9 @@ requests will remain in a queue that is processed once the service is
 restarted. A client application will see old connections work normally but new
 connections are unresponsive as long as the service is stopped.
 
+**Note:** To forcefully prevent new connections from being made,
+          [destroy the listener](#destroying-listeners).
+
 ```
 MaxScale> shutdown service RWSplit
 MaxScale>
