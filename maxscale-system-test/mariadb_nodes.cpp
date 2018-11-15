@@ -605,7 +605,7 @@ bool Mariadb_nodes::check_master_node(MYSQL* conn)
 
     if (mysql_query(conn, "SHOW SLAVE STATUS"))
     {
-        printf("%s\n", mysql_error(conn));
+        cout << mysql_error(conn) << endl;
         rval = false;
     }
     else
@@ -616,7 +616,7 @@ bool Mariadb_nodes::check_master_node(MYSQL* conn)
         {
             if (mysql_num_rows(res) > 0)
             {
-                printf("The master is configured as a slave\n");
+                cout << "The master is configured as a slave" << endl;
                 rval = false;
             }
             mysql_free_result(res);
@@ -754,11 +754,14 @@ int Mariadb_nodes::check_replication()
 
     if (connect())
     {
-        printf("Failed to connect to all servers\n");
+        cout << "Failed to connect to all servers" << endl;
         return 1;
     }
 
-    res = get_versions();
+    if ((res = get_versions()) != 0)
+    {
+        cout << "Failed to get versions" << endl;
+    }
 
     for (int i = 0; i < N && res == 0; i++)
     {
@@ -1054,12 +1057,12 @@ int Mariadb_nodes::get_version(int i)
     int local_result = 0;
     if (find_field(nodes[i], "SELECT @@version", "@@version", version[i]))
     {
-        printf("Failed to get version: %s, trying ssh node and use MariaDB client\n", mysql_error(nodes[i]));
+        cout << "Failed to get version: " << mysql_error(nodes[i]) << ", trying ssh node and use MariaDB client" << endl;
         str = ssh_node_output(i, "mysql --batch --silent  -e \"select @@version\"", true, &ec);
         if (ec)
         {
             local_result++;
-            printf("Failed to get version, node %d is broken\n", i);
+            cout << "Failed to get version, node " << i << " is broken" << endl;
         }
         else
         {
