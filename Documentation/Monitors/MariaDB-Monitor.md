@@ -141,6 +141,9 @@ switchover and rejoin-specific parameters are listed in their own
 
 Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
 
+Is effectively always on. The monitor uses the "Seconds_Behind_Master"-field of
+"SHOW SLAVE STATUS" to get the replication lag.
+
 ### `detect_stale_master`
 
 Allow previous master to be available even in case of stopped or misconfigured
