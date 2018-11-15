@@ -107,6 +107,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     , threads(4)
     , use_ipv6(false)
 {
+    std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
     signal_set(SIGABRT, sigfatal_handler);
     signal_set(SIGFPE, sigfatal_handler);

@@ -197,8 +197,6 @@ void run(TestConnections& test)
 
 int main(int argc, char* argv[])
 {
-    std::ios::sync_with_stdio(true);
-
     TestConnections test(argc, argv);
 
     if (test.maxscales->connect_rwsplit() == 0)
