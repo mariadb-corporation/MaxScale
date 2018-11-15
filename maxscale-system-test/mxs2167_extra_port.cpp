@@ -20,6 +20,11 @@ int main(int argc, char** argv)
     // Add the extra_port parameter to all servers
     for (int i = 0; i < test.repl->N; i++)
     {
+        // Temporary workaround for firewall issues
+        test.repl->ssh_node_f(i, true,
+                              "iptables -I INPUT -p tcp --dport 33066 -j ACCEPT;"
+                              "ip6tables -I INPUT -p tcp --dport 33066 -j ACCEPT");
+
         test.repl->stash_server_settings(i);
         test.repl->add_server_setting(i, "extra_port=33066");
         test.repl->ssh_node_f(i, true, "service mysql restart");
