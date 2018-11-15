@@ -196,6 +196,12 @@ add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABE
 # Basic MaxCtrl test
 add_test_executable(maxctrl_basic.cpp maxctrl_basic replication LABELS maxctrl REPL_BACKEND)
 
+# MXS-2167: Monitors should be able to use extra_port
+add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port LABELS REPL_BACKEND)
+
+# TODO: Remove this once MXS-2167 is fixed
+set_tests_properties(mxs2167_extra_port PROPERTIES WILL_FAIL TRUE)
+
 ############################################
 # BEGIN: Tests that require GTID           #
 ############################################
