@@ -261,14 +261,16 @@ public:
     const SlaveStatus* slave_connection_status_host_port(const MariaDBServer* target) const;
 
     /**
-     * Checks if this server can replicate from master. Only considers gtid:s and only detects obvious errors.
-     * The non-detected errors will mostly be detected once the slave tries to start replicating.
+     * Checks if this server can replicate from master. Only considers gtid:s and only detects obvious
+     * errors. The non-detected errors will mostly be detected once the slave tries to start replicating.
+     * Before calling this, update the gtid:s of the master so that the the gtid:s of the master are more
+     * recent than those of this server.
      *
      * @param master_info Master server
-     * @param error_out Details the reason for a negative result
+     * @param reason_out Details the reason for a negative result
      * @return True if slave can replicate from master
      */
-    bool can_replicate_from(MariaDBServer* master, std::string* error_out);
+    bool can_replicate_from(MariaDBServer* master, std::string* reason_out);
 
     /**
      * Redirect one slave server to another master
