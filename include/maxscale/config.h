@@ -155,6 +155,7 @@ extern const char CN_PASSIVE[];
 extern const char CN_PASSWORD[];
 extern const char CN_POLL_SLEEP[];
 extern const char CN_PORT[];
+extern const char CN_EXTRA_PORT[];
 extern const char CN_PROTOCOL[];
 extern const char CN_QUERY_CLASSIFIER[];
 extern const char CN_QUERY_CLASSIFIER_ARGS[];

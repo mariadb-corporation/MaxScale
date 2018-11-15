@@ -122,6 +122,7 @@ typedef struct server
     char*          name;                            /**< Server config name */
     char           address[MAX_SERVER_ADDRESS_LEN]; /**< Server hostname/IP-address */
     unsigned short port;                            /**< Server port */
+    unsigned short extra_port;                      /**< Server extra_port */
     char*          protocol;                        /**< Backend protocol module name */
     char*          authenticator;                   /**< Authenticator module name */
     // Other settings
@@ -505,6 +506,7 @@ extern DCB*    server_get_persistent(SERVER* server,
                                      int id);
 extern void     server_update_address(SERVER* server, const char* address);
 extern void     server_update_port(SERVER* server, unsigned short port);
+extern void     server_update_extra_port(SERVER* server, unsigned short port);
 extern uint64_t server_map_status(const char* str);
 extern void     server_set_version_string(SERVER* server, const char* version_string);
 extern void     server_set_version(SERVER* server, const char* version_string, uint64_t version);

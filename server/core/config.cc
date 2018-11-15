@@ -136,6 +136,7 @@ const char CN_PASSIVE[] = "passive";
 const char CN_PASSWORD[] = "password";
 const char CN_POLL_SLEEP[] = "poll_sleep";
 const char CN_PORT[] = "port";
+const char CN_EXTRA_PORT[] = "extra_port";
 const char CN_PROTOCOL[] = "protocol";
 const char CN_QUERY_CLASSIFIER[] = "query_classifier";
 const char CN_QUERY_CLASSIFIER_ARGS[] = "query_classifier_args";
@@ -402,6 +403,7 @@ const MXS_MODULE_PARAM config_server_params[] =
     {CN_PROTOCOL,                    MXS_MODULE_PARAM_STRING, NULL,
      MXS_MODULE_OPT_REQUIRED},
     {CN_PORT,                        MXS_MODULE_PARAM_COUNT,  "3306"},
+    {CN_EXTRA_PORT,                  MXS_MODULE_PARAM_COUNT,  "0"},
     {CN_AUTHENTICATOR,               MXS_MODULE_PARAM_STRING},
     {CN_MONITORUSER,                 MXS_MODULE_PARAM_STRING},
     {CN_MONITORPW,                   MXS_MODULE_PARAM_STRING},

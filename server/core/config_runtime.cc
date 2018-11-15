@@ -488,6 +488,10 @@ bool runtime_alter_server(SERVER* server, const char* key, const char* value)
             server_update_port(server, ival);
         }
     }
+    else if (strcmp(key, CN_EXTRA_PORT) == 0)
+    {
+        server_update_extra_port(server, atoi(value));
+    }
     else if (strcmp(key, CN_MONITORUSER) == 0)
     {
         server_update_credentials(server, value, server->monpw);

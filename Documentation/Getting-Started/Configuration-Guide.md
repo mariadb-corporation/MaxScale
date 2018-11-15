@@ -1287,6 +1287,16 @@ The `monitorpw` parameter may be either a plain text password or it may be an
 encrypted password.  See the section on encrypting passwords for use in the
 maxscale.cnf file.
 
+#### `extra_port`
+
+An alternative port used to monitor the server. This allows MaxScale to connect
+even when `max_connections` has been reached on the backend server. If this
+parameter is defined and a connection to the normal port fails, the alternative
+port is used.
+
+For more information, read the
+[extra_port documentation](https://mariadb.com/kb/en/library/thread-pool-system-and-status-variables/#extra_port).
+
 #### `persistpoolmax`
 
 The `persistpoolmax` parameter defaults to zero but can be set to an integer

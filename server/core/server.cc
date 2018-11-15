@@ -154,6 +154,7 @@ SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 
     server->name = my_name;
     server->port = config_get_integer(params, CN_PORT);
+    server->extra_port = config_get_integer(params, CN_EXTRA_PORT);
     server->protocol = my_protocol;
     server->authenticator = my_authenticator;
     server->monuser[0] = '\0';
@@ -1032,6 +1033,18 @@ void server_update_port(SERVER* server, unsigned short port)
     {
         server->port = port;
     }
+}
+
+/*
+ * Update the extra_port value of a specific server
+ *
+ * @param server        The server to update
+ * @param port          The new extra_port value
+ *
+ */
+void server_update_extra_port(SERVER* server, unsigned short port)
+{
+    mxb::atomic::store(&server->extra_port, port, mxb::atomic::RELAXED);
 }
 
 static struct
