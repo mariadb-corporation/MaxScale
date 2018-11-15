@@ -17,6 +17,8 @@
 #include "testconnections.h"
 
 using namespace mxb;
+using std::cout;
+using std::endl;
 
 namespace maxscale
 {
@@ -27,6 +29,7 @@ static bool manual_debug = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
 static bool restart_galera = false;
+static bool require_galera = false;
 static bool multiple_maxscales = false;
 }
 
@@ -81,6 +84,11 @@ void TestConnections::require_repl_version(const char* version)
 void TestConnections::require_galera_version(const char* version)
 {
     maxscale::required_galera_version = version;
+}
+
+void TestConnections::require_galera(bool value)
+{
+    maxscale::require_galera = value;
 }
 
 void TestConnections::restart_galera(bool value)
@@ -248,6 +256,12 @@ TestConnections::TestConnections(int argc, char* argv[])
             test_dir,
             test_dir);
     setenv("ssl_options", ssl_options, 1);
+
+    if (no_galera && maxscale::require_galera)
+    {
+        cout << "Galera not in use, skipping test" <<endl;
+        exit(0);
+    }
 
     repl = new Mariadb_nodes("node", test_dir, verbose);
     if (!no_galera)

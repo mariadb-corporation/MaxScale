@@ -46,6 +46,7 @@ void query_thread(TestConnections* t)
 
 int main(int argc, char* argv[])
 {
+    TestConnections::require_galera(true);
     TestConnections test(argc, argv);
 
     int master = test.maxscales->find_master_maxadmin(test.galera);

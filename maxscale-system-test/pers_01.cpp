@@ -58,6 +58,7 @@ void check_pers_conn(TestConnections* Test, int pers_conn_expected[], char* serv
 
 int main(int argc, char* argv[])
 {
+    TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
     int pers_conn_expected[4];
     int galera_pers_conn_expected[4];

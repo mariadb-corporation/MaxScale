@@ -90,6 +90,7 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char* expe
 
 int main(int argc, char* argv[])
 {
+    TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(100);
 

@@ -163,6 +163,7 @@ int simple_failover(TestConnections* test)
 
 int main(int argc, char** argv)
 {
+    TestConnections::require_galera(true);
     TestConnections* test = new TestConnections(argc, argv);
     test->galera->verbose = false;
     int rval1 = 0;

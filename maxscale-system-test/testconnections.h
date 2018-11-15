@@ -263,6 +263,9 @@ public:
     static void require_repl_version(const char* version);
     static void require_galera_version(const char* version);
 
+    /** Require that a backend is present*/
+    static void require_galera(bool value);
+
     /**
      * @brief Specify whether galera should be restarted.
      *
