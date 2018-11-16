@@ -81,13 +81,6 @@ void MariaDBMonitor::reset_server_info()
     {
         m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_assume_unique_hostnames));
     }
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-    {
-        auto mon_server = (*iter)->m_server_base;
-        mxb_assert(m_server_info.count(mon_server) == 0);
-        ServerInfoMap::value_type new_val(mon_server, *iter);
-        m_server_info.insert(new_val);
-    }
 }
 
 void MariaDBMonitor::clear_server_info()
@@ -98,7 +91,6 @@ void MariaDBMonitor::clear_server_info()
     }
     // All MariaDBServer*:s are now invalid, as well as any dependant data.
     m_servers.clear();
-    m_server_info.clear();
     m_servers_by_id.clear();
     m_excluded_servers.clear();
     assign_new_master(NULL);
@@ -116,42 +108,6 @@ void MariaDBMonitor::reset_node_index_info()
     }
 }
 
-/**
- * Get monitor-specific server info for the monitored server.
- *
- * @param handle
- * @param db Server to get info for. Must be a valid server or function crashes.
- * @return The server info.
- */
-MariaDBServer* MariaDBMonitor::get_server_info(MXS_MONITORED_SERVER* db)
-{
-    mxb_assert(m_server_info.count(db) == 1);   // Should always exist in the map
-    return m_server_info[db];
-}
-
-MariaDBServer* MariaDBMonitor::get_server(int64_t id)
-{
-    auto found = m_servers_by_id.find(id);
-    return (found != m_servers_by_id.end()) ? (*found).second : NULL;
-}
-
-/**
- * Get the equivalent MariaDBServer.
- *
- * @param server Which server to search for
- * @return MariaDBServer if found, NULL otherwise
- */
-MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
-{
-    MariaDBServer* found = NULL;
-    auto mon_server = mon_get_monitored_server(m_monitor, server);
-    if (mon_server)
-    {
-        found = get_server_info(mon_server);
-    }
-    return found;
-}
-
 MariaDBServer* MariaDBMonitor::get_server(const std::string& host, int port)
 {
     // TODO: Do this with a map lookup
@@ -166,6 +122,29 @@ MariaDBServer* MariaDBMonitor::get_server(const std::string& host, int port)
         }
     }
     return found;
+}
+
+MariaDBServer* MariaDBMonitor::get_server(int64_t id)
+{
+    auto found = m_servers_by_id.find(id);
+    return (found != m_servers_by_id.end()) ? (*found).second : NULL;
+}
+
+MariaDBServer* MariaDBMonitor::get_server(MXS_MONITORED_SERVER* mon_server)
+{
+    return get_server(mon_server->server);
+}
+
+MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
+{
+    for (auto iter : m_servers)
+    {
+        if (iter->m_server_base->server == server)
+        {
+            return iter;
+        }
+    }
+    return NULL;
 }
 
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
@@ -234,7 +213,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, m_monitor, &excluded_array);
     for (int i = 0; i < n_excluded; i++)
     {
-        m_excluded_servers.push_back(get_server_info(excluded_array[i]));
+        m_excluded_servers.push_back(get_server(excluded_array[i]));
     }
     MXS_FREE(excluded_array);
 
@@ -437,7 +416,7 @@ void MariaDBMonitor::pre_loop()
         // This is somewhat questionable, as the journal only contains status bits but no actual topology
         // info. In a fringe case the actual queried topology may not match the journal data, freezing the
         // master to a suboptimal choice.
-        assign_new_master(get_server_info(journal_master));
+        assign_new_master(get_server(journal_master));
     }
 
     /* This loop can be removed if/once the replication check code is inside tick. It's required so that

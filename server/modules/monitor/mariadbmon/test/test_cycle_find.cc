@@ -140,8 +140,7 @@ int MariaDBMonitor::Test::run_tests()
 void MariaDBMonitor::Test::init_servers(int count)
 {
     clear_servers();
-    mxb_assert(m_monitor->m_server_info.empty() && m_monitor->m_servers.empty()
-               && m_monitor->m_servers_by_id.empty());
+    mxb_assert(m_monitor->m_servers.empty() && m_monitor->m_servers_by_id.empty());
 
     for (int i = 1; i < count + 1; i++)
     {
@@ -154,7 +153,6 @@ void MariaDBMonitor::Test::init_servers(int count)
         MariaDBServer* new_server = new MariaDBServer(mon_server, i - 1);
         new_server->m_server_id = i;
         m_monitor->m_servers.push_back(new_server);
-        m_monitor->m_server_info[mon_server] = new_server;
         m_monitor->m_servers_by_id[i] = new_server;
     }
     m_current_test++;
@@ -165,7 +163,6 @@ void MariaDBMonitor::Test::init_servers(int count)
  */
 void MariaDBMonitor::Test::clear_servers()
 {
-    m_monitor->m_server_info.clear();
     m_monitor->m_servers_by_id.clear();
     for (MariaDBServer* server : m_monitor->m_servers)
     {

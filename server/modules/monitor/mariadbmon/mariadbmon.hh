@@ -29,8 +29,6 @@ extern const char* const CN_SWITCHOVER_ON_LOW_DISK_SPACE;
 extern const char* const CN_PROMOTION_SQL_FILE;
 extern const char* const CN_DEMOTION_SQL_FILE;
 
-// Map of base struct to MariaDBServer. Does not own the server objects.
-typedef std::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
 // Map of server id:s to MariaDBServer. Useful when constructing the replication graph.
 typedef std::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
 // Map of cycle number to cycle members. The elements should be ordered for predictability when iterating.
@@ -168,7 +166,6 @@ private:
 
     // Server containers, mostly constant.
     ServerArray   m_servers;        /* Servers of the monitor */
-    ServerInfoMap m_server_info;    /* Map from server base struct to MariaDBServer */
     IdToServerMap m_servers_by_id;  /* Map from server id:s to MariaDBServer */
 
     // Topology related fields
@@ -251,10 +248,10 @@ private:
     std::string diagnostics_to_string() const;
     json_t*     to_json() const;
 
-    MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
-    MariaDBServer* get_server(int64_t id);
-    MariaDBServer* get_server(SERVER* server);
     MariaDBServer* get_server(const std::string& host, int port);
+    MariaDBServer* get_server(int64_t id);
+    MariaDBServer* get_server(MXS_MONITORED_SERVER* mon_server);
+    MariaDBServer* get_server(SERVER* server);
 
     // Cluster discovery and status assignment methods, top levels
     void update_server(MariaDBServer* server);
@@ -283,7 +280,7 @@ private:
     // Cluster operation launchers
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
     bool manual_failover(json_t** output);
-    bool manual_rejoin(SERVER* rejoin_server, json_t** output);
+    bool manual_rejoin(SERVER* rejoin_cand_srv, json_t** output);
     void handle_low_disk_space_master();
     void handle_auto_failover();
     void handle_auto_rejoin();
