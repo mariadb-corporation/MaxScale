@@ -119,6 +119,8 @@ public:
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
      * only written to once. */
     int m_replication_lag = MXS_RLAG_UNDEFINED;
+    /* Copy of same field in monitor object. TODO: pass in struct when adding concurrent updating. */
+    bool m_assume_unique_hostnames = true;
     /* Has anything that could affect replication topology changed this iteration?
      * Causes: server id, slave connections, read-only. */
     bool m_topology_changed = true;
@@ -128,7 +130,8 @@ public:
 
     bool m_print_update_errormsg = true;    /* Should an update error be printed? */
 
-    MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index);
+    MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index,
+                  bool assume_unique_hostnames = true);
 
     /**
      * Print server information to a json object.

@@ -47,6 +47,7 @@ static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_DETECT_STANDALONE_MASTER[] = "detect_standalone_master";
 static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
+static const char CN_ASSUME_UNIQUE_HOSTNAMES[] = "assume_unique_hostnames";
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[] = "verify_master_failure";
 static const char CN_MASTER_FAILURE_TIMEOUT[] = "master_failure_timeout";
@@ -78,7 +79,7 @@ void MariaDBMonitor::reset_server_info()
     // Next, initialize the data.
     for (auto mon_server = m_monitor->monitored_servers; mon_server; mon_server = mon_server->next)
     {
-        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size()));
+        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_assume_unique_hostnames));
     }
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
@@ -151,6 +152,22 @@ MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
     return found;
 }
 
+MariaDBServer* MariaDBMonitor::get_server(const std::string& host, int port)
+{
+    // TODO: Do this with a map lookup
+    MariaDBServer* found = NULL;
+    for (MariaDBServer* server : m_servers)
+    {
+        SERVER* srv = server->m_server_base->server;
+        if (host == srv->address && srv->port == port)
+        {
+            found = server;
+            break;
+        }
+    }
+    return found;
+}
+
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
 {
     bool rval = false;
@@ -197,6 +214,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_detect_stale_slave = config_get_bool(params, "detect_stale_slave");
     m_ignore_external_masters = config_get_bool(params, "ignore_external_masters");
     m_detect_standalone_master = config_get_bool(params, CN_DETECT_STANDALONE_MASTER);
+    m_assume_unique_hostnames = config_get_bool(params, CN_ASSUME_UNIQUE_HOSTNAMES);
     m_failcount = config_get_integer(params, CN_FAILCOUNT);
     m_failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
     m_switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
@@ -229,6 +247,25 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     {
         MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
         settings_ok = false;
+    }
+    if (!m_assume_unique_hostnames)
+    {
+        const char requires[] = "%s requires that %s is on.";
+        if (m_auto_failover)
+        {
+            MXB_ERROR(requires, CN_AUTO_FAILOVER, CN_ASSUME_UNIQUE_HOSTNAMES);
+            settings_ok = false;
+        }
+        if (m_switchover_on_low_disk_space)
+        {
+            MXB_ERROR(requires, CN_SWITCHOVER_ON_LOW_DISK_SPACE, CN_ASSUME_UNIQUE_HOSTNAMES);
+            settings_ok = false;
+        }
+        if (m_auto_rejoin)
+        {
+            MXB_ERROR(requires, CN_AUTO_REJOIN, CN_ASSUME_UNIQUE_HOSTNAMES);
+            settings_ok = false;
+        }
     }
     return settings_ok;
 }
@@ -1083,6 +1120,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,   "true"
+            },
+            {
+                CN_ASSUME_UNIQUE_HOSTNAMES,         MXS_MODULE_PARAM_BOOL,    "true"
             },
             {MXS_END_MODULE_PARAMS}
         }

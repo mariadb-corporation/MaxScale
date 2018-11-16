@@ -160,8 +160,13 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
     }
 }
 
+/**
+ * Use slave status and server id information to build the replication graph. Needs to be called whenever
+ * topology has changed, or it's suspected.
+ */
 void MariaDBMonitor::build_replication_graph()
 {
+    const bool use_hostnames = m_assume_unique_hostnames;
     // First, reset all node data.
     for (MariaDBServer* server : m_servers)
     {
@@ -169,39 +174,64 @@ void MariaDBMonitor::build_replication_graph()
         server->m_node.reset_results();
     }
 
-    /* Here, all slave connections are added to the graph, even if the IO thread cannot connect. Strictly
-     * speaking, building the parents-array is not required as the data already exists. This construction
-     * is more for convenience and faster access later on. */
     for (MariaDBServer* slave : m_servers)
     {
-        /* All servers are accepted in this loop, even if the server is [Down] or [Maintenance]. For these
-         * servers, we just use the latest available information. Not adding such servers could suddenly
-         * change the topology quite a bit and all it would take is a momentarily network failure. */
-
+        /* Check all slave connections of all servers. Connections are added even if one or both endpoints
+         * are down or in maintenance. */
         for (SlaveStatus& slave_conn : slave->m_slave_status)
         {
-            /* We always trust the "Master_Server_Id"-field of the SHOW SLAVE STATUS output, as long as
-             * the id is > 0 (server uses 0 for default). This means that the graph constructed is faulty if
-             * an old "Master_Server_Id"- value is read from a slave which is still trying to connect to
-             * a new master. However, a server is only designated [Slave] if both IO- and SQL-threads are
-             * running fine, so the faulty graph does not cause wrong status settings. */
-
             /* IF THIS PART IS CHANGED, CHANGE THE COMPARISON IN 'sstatus_arrays_topology_equal'
              * (in MariaDBServer) accordingly so that any possible topology changes are detected. */
-            auto master_id = slave_conn.master_server_id;
-            if (slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO && master_id > 0)
+            if (slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO && slave_conn.slave_sql_running)
             {
-                // Valid slave connection, find the MariaDBServer with this id.
-                auto master = get_server(master_id);
-                if (master != NULL)
+                // Looks promising, check hostname or server id.
+                MariaDBServer* found_master = NULL;
+                bool is_external = false;
+                if (use_hostnames)
                 {
-                    slave->m_node.parents.push_back(master);
-                    master->m_node.children.push_back(slave);
+                    found_master = get_server(slave_conn.master_host, slave_conn.master_port);
+                    if (!found_master)
+                    {
+                        // Must be an external server.
+                        is_external = true;
+                    }
                 }
                 else
                 {
+                    /* Cannot trust hostname:port since network may be complicated. Instead,
+                     * trust the "Master_Server_Id"-field of the SHOW SLAVE STATUS output if
+                     * the slave connection has been seen connected before. This means that
+                     * the graph will miss slave-master relations that have not connected
+                     * while the monitor has been running. TODO: This data should be saved so
+                     * that monitor restarts do not lose this information. */
+                    if (slave_conn.seen_connected)
+                    {
+                        // Valid slave connection, find the MariaDBServer with the matching server id.
+                        found_master = get_server(slave_conn.master_server_id);
+                        if (!found_master)
+                        {
+                            /* Likely an external master. It's possible that the master is a monitored
+                             * server which has not been queried yet and the monitor does not know its
+                             * id. */
+                            is_external = true;
+                        }
+                    }
+                }
+
+                // Valid slave connection, find the MariaDBServer with this id.
+                if (found_master)
+                {
+                    /* Building the parents-array is not strictly required as the same data is in
+                     * the children-array. This construction is more for convenience and faster
+                     * access later on. */
+                    slave->m_node.parents.push_back(found_master);
+                    found_master->m_node.children.push_back(slave);
+                }
+                else if (is_external)
+                {
                     // This is an external master connection. Save just the master id for now.
-                    slave->m_node.external_masters.push_back(master_id);
+                    // TODO: Save host:port instead
+                    slave->m_node.external_masters.push_back(slave_conn.master_server_id);
                 }
             }
         }

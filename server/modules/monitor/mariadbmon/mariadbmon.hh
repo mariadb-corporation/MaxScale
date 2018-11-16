@@ -200,6 +200,7 @@ private:
                                              * TODO: think about removing */
     bool m_ignore_external_masters = false; /* Ignore masters outside of the monitor configuration.
                                              * TODO: requires work */
+    bool m_assume_unique_hostnames = true;  /* Are server hostnames consistent between MaxScale and servers */
     int m_failcount = 1;                    /* Number of ticks master must be down before it's considered
                                              * totally down, allowing failover or master change. */
 
@@ -253,6 +254,7 @@ private:
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
     MariaDBServer* get_server(SERVER* server);
+    MariaDBServer* get_server(const std::string& host, int port);
 
     // Cluster discovery and status assignment methods, top levels
     void update_server(MariaDBServer* server);
