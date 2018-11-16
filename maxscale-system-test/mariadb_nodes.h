@@ -154,6 +154,13 @@ public:
     int connect();
 
     /**
+     * Repeatedly try to connect with one second sleep in between attempts
+     *
+     * @return True on success
+     */
+    bool robust_connect(int n);
+
+    /**
      * @brief Close connections opened by connect()
      *
      * This sets the values of used @c nodes to NULL.
