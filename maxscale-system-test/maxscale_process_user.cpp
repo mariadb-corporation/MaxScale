@@ -1,37 +1,17 @@
 /**
- * @file maxscale_process_user.cpp bug143 maxscale_process_user check if Maxscale priocess is running as
- *'maxscale'
- *
+ * Check if Maxscale priocess is running as 'maxscale'
  */
 
-
-
-#include <iostream>
 #include "testconnections.h"
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    int exit_code;
+    TestConnections test(argc, argv);
 
-    Test->set_timeout(50);
-    char* user = Test->maxscales->ssh_node_output(0,
-                                                  "ps -FC maxscale|tail -n 1|cut -f 1 -d \" \"",
-                                                  false,
-                                                  &exit_code);
-    char* nl = user ? strchr(user, '\n') : NULL;
+    test.set_timeout(50);
+    auto res = test.maxscales->ssh_output("ps -U maxscale -C maxscale -o user --no-headers").second;
+    res = res.substr(0, strlen("maxscale"));
+    test.expect(res == "maxscale", "MaxScale running as '%s' instead of 'maxscale'", res.c_str());
 
-    if (nl)
-    {
-        *nl = '\0';
-    }
-
-    Test->tprintf("MaxScale is running as '%s'", user);
-    Test->add_result(strcmp(user, "maxscale"),
-                     "MaxScale process running as '%s' instead of 'maxscale'\n",
-                     user);
-
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return test.global_result;
 }
