@@ -16,8 +16,6 @@ int main(int argc, char* argv[])
     Test->set_timeout(60);
     Test->maxscales->connect_maxscale(0);
     Test->maxscales->close_maxscale_connections(0);
-    sleep(10);
-    Test->check_log_err(0, "fatal signal 11", false);
 
     int rval = Test->global_result;
     delete Test;

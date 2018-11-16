@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
     // Wait for the avrorouter to process the data
     sleep(10);
-    test.check_log_err(0, "Possible STATEMENT or MIXED", true);
+    test.log_includes(0, "Possible STATEMENT or MIXED");
 
     test.revert_replicate_from_master();
 

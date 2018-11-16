@@ -102,9 +102,9 @@ int main(int argc, char* argv[])
     }
 
     Test->stop_timeout();
-    Test->check_log_err(0, (char*) "Length (0) is 0", false);
-    Test->check_log_err(0, (char*) "Unable to parse query", false);
-    Test->check_log_err(0, (char*) "query string allocation failed", false);
+    Test->log_excludes(0, "Length (0) is 0");
+    Test->log_excludes(0, "Unable to parse query");
+    Test->log_excludes(0, "query string allocation failed");
 
     Test->check_maxscale_alive(0);
 

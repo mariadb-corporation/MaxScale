@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(30);
     Test->maxscales->restart_maxscale(0);
     Test->set_timeout(30);
-    Test->check_log_err(0, (char*) "Opening file '/etc/maxscale.cnf' for reading failed", true);
+    Test->log_includes(0, "Opening file '/etc/maxscale.cnf' for reading failed");
     Test->set_timeout(30);
     Test->maxscales->ssh_node_f(0, true, "chmod 777 /etc/maxscale.cnf");
 

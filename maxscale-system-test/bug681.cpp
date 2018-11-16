@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 
     Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_log_err(0, "There are too few backend servers configured in", true);
+    Test->log_includes(0, "There are too few backend servers configured in");
 
     int rval = Test->global_result;
     delete Test;

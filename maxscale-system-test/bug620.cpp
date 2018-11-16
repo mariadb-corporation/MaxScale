@@ -285,9 +285,9 @@ int main(int argc, char* argv[])
 
     Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_log_err(0, (char*) "Failed to add user skysql", false);
-    Test->check_log_err(0, (char*) "getaddrinfo failed", false);
-    Test->check_log_err(0, (char*) "Couldn't find suitable Master", false);
+    Test->log_excludes(0, "Failed to add user skysql");
+    Test->log_excludes(0, "getaddrinfo failed");
+    Test->log_excludes(0, "Couldn't find suitable Master");
 
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;

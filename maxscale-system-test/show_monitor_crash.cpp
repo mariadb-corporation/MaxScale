@@ -22,8 +22,7 @@ int main(int argc, char* argv[])
     Test->maxscales->execute_maxadmin_command(0, (char*) "show monitors");
     sleep(5);
     // Servers should get the Auth Error state when credentials are bad
-    Test->check_log_err(0, (char*) "Auth Error, Down", true);
-    Test->check_log_err(0, (char*) "fatal signal 11", false);
+    Test->log_includes(0, "Auth Error, Down");
 
     Test->check_maxscale_processes(0, 1);
 

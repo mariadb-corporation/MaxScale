@@ -69,10 +69,10 @@ int main(int argc, char* argv[])
     char str[1024];
     sprintf(str, "Performing automatic failover to replace failed master 'server%d'", first_master + 1);
     test.tprintf("Checking Maxscale log on 000 for the failover message %s\n", str);
-    test.check_log_err(0, str, true);
+    test.log_includes(0, str);
     sprintf(str, "Performing automatic failover to replace failed master");
     test.tprintf("Checking Maxscale log on 001 for the lack of failover message\n");
-    test.check_log_err(1, str, false);
+    test.log_excludes(1, str);
     if (test.global_result != 0)
     {
         return test.global_result;
@@ -100,11 +100,11 @@ int main(int argc, char* argv[])
 
     sprintf(str, "Performing automatic failover to replace failed master 'server%d'", second_master + 1);
     test.tprintf("Checking Maxscale log on 001 for the failover message %s\n", str);
-    test.check_log_err(1, str, true);
+    test.log_includes(1, str);
 
-    test.check_log_err(1, (char*) "Multiple failed master servers detected", false);
-    test.check_log_err(1, (char*) "Failed to perform failover", false);
-    test.check_log_err(1, (char*) "disabling automatic failover", false);
+    test.log_excludes(1, "Multiple failed master servers detected");
+    test.log_excludes(1, "Failed to perform failover");
+    test.log_excludes(1, "disabling automatic failover");
     if (test.global_result != 0)
     {
         return test.global_result;
@@ -123,17 +123,17 @@ int main(int argc, char* argv[])
 
     sprintf(str, "Performing automatic failover to replace failed master 'server%d'", second_master + 1);
     test.tprintf("Checking Maxscale log on 001 for the failover message %s\n", str);
-    test.check_log_err(1, str, true);
+    test.log_includes(1, str);
     test.tprintf("Checking Maxscale log on 000 for the lack of failover message %s\n", str);
-    test.check_log_err(0, str, false);
+    test.log_excludes(0, str);
 
-    test.check_log_err(1, (char*) "Multiple failed master servers detected", false);
-    test.check_log_err(1, (char*) "Failed to perform failover", false);
-    test.check_log_err(1, (char*) "disabling automatic failover", false);
+    test.log_excludes(1, "Multiple failed master servers detected");
+    test.log_excludes(1, "Failed to perform failover");
+    test.log_excludes(1, "disabling automatic failover");
 
-    test.check_log_err(0, (char*) "Multiple failed master servers detected", false);
-    test.check_log_err(0, (char*) "Failed to perform failover", false);
-    test.check_log_err(0, (char*) "disabling automatic failover", false);
+    test.log_excludes(0, "Multiple failed master servers detected");
+    test.log_excludes(0, "Failed to perform failover");
+    test.log_excludes(0, "disabling automatic failover");
 
     stop_keepalived(&test);
     return test.global_result;

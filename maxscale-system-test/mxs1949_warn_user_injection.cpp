@@ -10,6 +10,6 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.check_log_err(0, " No users were loaded but 'inject_service_user' is enabled", false);
+    test.log_excludes(0, " No users were loaded but 'inject_service_user' is enabled");
     return test.global_result;
 }

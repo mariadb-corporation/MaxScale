@@ -164,9 +164,8 @@ int main(int argc, char* argv[])
     Test->tprintf("Checking if Maxscale alive\n");
     Test->check_maxscale_alive(0);
     Test->tprintf("Checking log for unwanted errors\n");
-    Test->check_log_err(0, (char*) "due to authentication failure", false);
-    Test->check_log_err(0, (char*) "fatal signal 11", false);
-    Test->check_log_err(0, (char*) "due to handshake failure", false);
+    Test->log_excludes(0, "due to authentication failure");
+    Test->log_excludes(0, "due to handshake failure");
 
     // We need to wait for the TCP connections in TIME_WAIT state so that
     // later tests don't fail due to a lack of file descriptors

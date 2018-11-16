@@ -45,9 +45,9 @@ int main(int argc, char* argv[])
     test.start_binlog(0);
     test_binlog(&test);
 
-    test.check_log_err(0, "SET NAMES utf8mb4", false);
-    test.check_log_err(0, "set autocommit=1", false);
-    test.check_log_err(0, "select USER()", false);
+    test.log_excludes(0, "SET NAMES utf8mb4");
+    test.log_excludes(0, "set autocommit=1");
+    test.log_excludes(0, "select USER()");
 
     return test.global_result;
 }

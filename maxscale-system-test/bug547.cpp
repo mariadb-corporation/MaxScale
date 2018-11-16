@@ -53,7 +53,6 @@ int main(int argc, char* argv[])
     test.repl->unblock_all_nodes();
 
     test.stop_timeout();
-    test.check_log_err(0, "fatal signal 11", false);
 
     return test.global_result;
 }

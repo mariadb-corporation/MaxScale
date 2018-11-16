@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
     sleep(15);
 
     Test->tprintf("Cheching Maxscale logs");
-    Test->check_log_err(0, (char*) "Cannot execute file", true);
+    Test->log_includes(0, "Cannot execute file");
 
     Test->tprintf("checking if Maxscale is alive");
     Test->check_maxscale_alive(0);
