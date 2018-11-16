@@ -16,7 +16,7 @@ then
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
-       libedit-dev
+       libedit-dev libsystemd-dev
 
   ## separatelibgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
@@ -70,6 +70,9 @@ else
 
     # Attempt to install libasan, it'll only work on CentOS 7
     sudo yum install -y --nogpgcheck libasan
+
+    # Attempt to install systemd-devel, doesn't work on CentOS 6
+    sudo yum install -y systemd-devel
 
     grep "release 6" /etc/redhat-release
     if [ $? == 0 ]
