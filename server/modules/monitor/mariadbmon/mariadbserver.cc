@@ -693,35 +693,32 @@ json_t* MariaDBServer::to_json() const
     return result;
 }
 
-bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* error_out)
+bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out)
 {
-    bool rval = false;
-    if (update_gtids())
+    mxb_assert(reason_out);
+    mxb_assert(is_usable()); // The server must be running.
+
+    bool can_replicate = false;
+    if (m_gtid_current_pos.empty())
     {
-        if (m_gtid_current_pos.empty())
-        {
-            *error_out = string("'") + name() + "' does not have a valid 'gtid_current_pos'.";
-        }
-        else if (master->m_gtid_binlog_pos.empty())
-        {
-            *error_out = string("'") + master->name() + "' does not have a valid 'gtid_binlog_pos'.";
-        }
-        else
-        {
-            rval = m_gtid_current_pos.can_replicate_from(master->m_gtid_binlog_pos);
-            if (!rval)
-            {
-                *error_out = string("gtid_current_pos of '") + name() + "' ("
-                    + m_gtid_current_pos.to_string() + ") is incompatible with gtid_binlog_pos of '"
-                    + master->name() + "' (" + master->m_gtid_binlog_pos.to_string() + ").";
-            }
-        }
+        *reason_out = string_printf("%s does not have a valid gtid_current_pos.", name());
+    }
+    else if (master->m_gtid_binlog_pos.empty())
+    {
+        *reason_out = string_printf("%s does not have a valid gtid_binlog_pos.", master->name());
     }
     else
     {
-        *error_out = string("Server '") + name() + "' could not be queried.";
+        can_replicate = m_gtid_current_pos.can_replicate_from(master->m_gtid_binlog_pos);
+        if (!can_replicate)
+        {
+            *reason_out = string_printf("gtid_current_pos of %s (%s) is incompatible with "
+                                        "gtid_binlog_pos of %s (%s).",
+                                        name(), m_gtid_current_pos.to_string().c_str(),
+                                        master->name(), master->m_gtid_binlog_pos.to_string().c_str());
+        }
     }
-    return rval;
+    return can_replicate;
 }
 
 bool MariaDBServer::redirect_one_slave(const string& change_cmd)

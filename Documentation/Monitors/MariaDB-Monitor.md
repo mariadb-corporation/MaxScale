@@ -141,6 +141,9 @@ switchover and rejoin-specific parameters are listed in their own
 
 Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
 
+Is effectively always on. The monitor uses the "Seconds_Behind_Master"-field of
+"SHOW SLAVE STATUS" to get the replication lag.
+
 ### `detect_stale_master`
 
 Allow previous master to be available even in case of stopped or misconfigured
@@ -365,12 +368,17 @@ operations.
 ### Manual activation
 
 Cluster operations can be activated manually through the REST API, MaxCtrl or
-MaxAdmin. The commands are only performed when MaxScale is in active mode. All
-commands require the monitor instance name as the first parameter. Failover
+MaxAdmin. The commands are only performed when MaxScale is in active mode. The
+commands generally match their automatic versions. The exception is _rejoin_, in
+which the manual command allows rejoining even when the joining server has empty
+gtid:s. This rule allows the user to force a rejoin on a server without binary
+logs.
+
+All commands require the monitor instance name as the first parameter. Failover
 selects the new master server automatically and does not require additional
 parameters. Rejoin requires the name of the joining server as second parameter.
-Replication reset accepts the name of the new master server as second
-parameter. If not given, the current master is selected.
+Replication reset accepts the name of the new master server as second parameter.
+If not given, the current master is selected.
 
 Switchover takes one to three parameters. If only the monitor name is given,
 switchover will autoselect both the slave to promote and the current master as
@@ -398,8 +406,8 @@ to demote (OldMasterServ). For rejoin, the server to join (OldMasterServ) is
 required. Replication reset requires the server to promote (NewMasterServ).
 
 It is safe to perform manual operations even with automatic failover, switchover
-or rejoin enabled since the automatic operations cannot happen simultaneously
-with the manual one.
+or rejoin enabled since automatic operations cannot happen simultaneously
+with manual ones.
 
 If a switchover or failover fails, automatic failover is disabled to prevent
 master changes to a possibly malfunctioning cluster. Automatic failover can be
