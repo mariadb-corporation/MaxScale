@@ -1233,7 +1233,18 @@ int TestConnections::start_mm(int m)
 
 bool TestConnections::log_matches(int m, const char* pattern)
 {
-    return maxscales->ssh_node_f(m, true, "grep '%s' /var/log/maxscale/maxscale*.log", pattern) == 0;
+
+    // Replace single quotes with wildcard characters, should solve most problems
+    std::string p = pattern;
+    for (auto& a : p)
+    {
+        if (a == '\'')
+        {
+            a = '.';
+        }
+    }
+
+    return maxscales->ssh_node_f(m, true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
 }
 
 void TestConnections::log_includes(int m, const char* pattern)
