@@ -8,6 +8,7 @@ set(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
 set(CPACK_RPM_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
 set(CPACK_RPM_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}")
 set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION}")
+set(CPACK_RPM_SPEC_INSTALL_POST "/bin/true")
 
 # This prevents the default %post from running which causes binaries to be
 # striped. Without this, MaxCtrl will not work on all systems as the
