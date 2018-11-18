@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     printf("Connecting to RWSplit");
     test.set_timeout(60);
     test.add_result(test.maxscales->connect_rwsplit(0), "Error connection to RWSplit! Exiting");
-    sleep(5);
+    test.maxscales->wait_for_monitor();
 
     test.tprintf("Checking current slave");
     int res = 0;
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Waiting for MaxScale to find a new slave");
     test.stop_timeout();
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     test.set_timeout(20);
     int current_slave = test.find_connected_slave(0, &res);

@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 {
     int maxscale_conn_num = 60;
     MYSQL* conn_read[maxscale_conn_num];
-    MYSQL* conn_rwsplit[0][maxscale_conn_num];
+    MYSQL* conn_rwsplit[maxscale_conn_num];
     TestConnections test(argc, argv);
     test.set_timeout(30);
     int i;
@@ -40,12 +40,11 @@ int main(int argc, char* argv[])
     test.tprintf("Connecting to ReadConnMaster on %s\n", test.maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
     {
+        // Open the connection and perform a query on it. This way we know it'll
+        // be fully established when we count the connections.
         conn_read[i] = test.maxscales->open_readconn_master_connection(0);
+        test.try_query(conn_read[i], "SELECT 1");
     }
-
-    test.stop_timeout();
-    test.tprintf("Sleeping 15 seconds\n");
-    sleep(15);
 
     int Nc[4];
 
@@ -62,20 +61,13 @@ int main(int argc, char* argv[])
         mysql_close(conn_read[i]);
     }
 
-    test.stop_timeout();
-    test.tprintf("Sleeping 15 seconds\n");
-    sleep(15);
-
     test.set_timeout(30);
     test.tprintf("Connecting to RWSplit on %s\n", test.maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        conn_rwsplit[0][i] = test.maxscales->open_rwsplit_connection(0);
+        conn_rwsplit[i] = test.maxscales->open_rwsplit_connection(0);
+        test.try_query(conn_rwsplit[i], "SELECT 1");
     }
-
-    test.stop_timeout();
-    test.tprintf("Sleeping 15 seconds\n");
-    sleep(15);
 
     Nc[1] = maxscale_conn_num / 2;
     Nc[2] = maxscale_conn_num / 3;
@@ -88,7 +80,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        mysql_close(conn_rwsplit[0][i]);
+        mysql_close(conn_rwsplit[i]);
     }
     test.repl->close_connections();
 
