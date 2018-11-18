@@ -37,29 +37,12 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    test.tprintf("Connecting to RWSplit");
-
-    test.set_timeout(30);
-    MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
-                                  test.maxscales->IP[0],
-                                  test.maxscales->user_name,
-                                  test.maxscales->password,
-                                  test.ssl);
-    test.add_result(conn == NULL, "Error connecting to MaxScale");
-
-    test.tprintf("Removing 'test_db' DB");
-    execute_query(conn, "DROP DATABASE IF EXISTS test_db");
-    test.tprintf("Closing connections and waiting 5 seconds");
-    mysql_close(conn);
-    test.stop_timeout();
-    sleep(5);
-
     test.set_timeout(30);
     test.tprintf("Connection to non-existing DB (all maxscales->routers[0])");
     test.add_result(try_connect(test), "Connection with dropped database should fail");
 
     test.tprintf("Connecting to RWSplit again to recreate 'test_db' db");
-    conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
+    MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
                            test.maxscales->IP[0],
                            test.maxscales->user_name,
                            test.maxscales->password,
@@ -88,6 +71,7 @@ int main(int argc, char* argv[])
     test.set_timeout(60);
     test.add_result(execute_select_query_and_check(conn, "SELECT * FROM t1", 1),
                     "Error execution SELECT * FROM t1;");
+    test.try_query(conn, "DROP DATABASE test_db");
     mysql_close(conn);
 
     return test.global_result;
