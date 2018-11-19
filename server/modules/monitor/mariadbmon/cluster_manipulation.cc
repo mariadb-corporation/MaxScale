@@ -1488,8 +1488,7 @@ void MariaDBMonitor::check_cluster_operations_support()
     {
         // Need to accept unknown versions here. Otherwise servers which are down when the monitor starts
         // would deactivate failover.
-        if (server->m_version != MariaDBServer::version::UNKNOWN
-            && server->m_version != MariaDBServer::version::MARIADB_100)
+        if (server->m_srv_type != MariaDBServer::server_type::UNKNOWN && !server->m_capabilities.gtid)
         {
             supported = false;
             auto reason = string_printf("The version of %s (%s) is not supported. Failover/switchover "
@@ -1704,7 +1703,7 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
     for (MariaDBServer* server : m_servers)
     {
         if (server->is_slave() && !server->is_read_only()
-            && (server->m_version != MariaDBServer::version::BINLOG_ROUTER))
+            && (server->m_srv_type != MariaDBServer::server_type::BINLOG_ROUTER))
         {
             MYSQL* conn = server->m_server_base->con;
             if (mxs_mysql_query(conn, QUERY) == 0)

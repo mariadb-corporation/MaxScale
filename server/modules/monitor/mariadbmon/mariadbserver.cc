@@ -218,21 +218,20 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     unsigned int columns = 0;
     string query;
     bool all_slaves_status = false;
-    switch (m_version)
+    if (m_capabilities.gtid || m_srv_type == server_type::BINLOG_ROUTER)
     {
-    case version::MARIADB_100:
-    case version::BINLOG_ROUTER:
+        // Versions with gtid also support the extended slave status query.
         columns = 42;
         all_slaves_status = true;
-        query = "SHOW ALL SLAVES STATUS";
-        break;
-
-    case version::MARIADB_MYSQL_55:
+        query = "SHOW ALL SLAVES STATUS;";
+    }
+    else if (m_capabilities.basic_support)
+    {
         columns = 40;
-        query = "SHOW SLAVE STATUS";
-        break;
-
-    default:
+        query = "SHOW SLAVE STATUS;";
+    }
+    else
+    {
         mxb_assert(!true);      // This method should not be called for versions < 5.5
         return false;
     }
@@ -432,15 +431,10 @@ bool MariaDBServer::update_replication_settings(std::string* errmsg_out)
 
 bool MariaDBServer::read_server_variables(string* errmsg_out)
 {
-    MXS_MONITORED_SERVER* database = m_server_base;
-    string query = "SELECT @@global.server_id, @@read_only;";
-    int columns = 2;
-    if (m_version == version::MARIADB_100)
-    {
-        query.erase(query.end() - 1);
-        query += ", @@global.gtid_domain_id;";
-        columns = 3;
-    }
+    const string query_no_gtid = "SELECT @@global.server_id, @@read_only;";
+    const string query_with_gtid = "SELECT @@global.server_id, @@read_only, @@global.gtid_domain_id;";
+    const bool use_gtid = m_capabilities.gtid;
+    const string& query = use_gtid ? query_with_gtid : query_no_gtid;
 
     int i_id = 0;
     int i_ro = 1;
@@ -461,7 +455,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
             m_server_id = server_id_parsed;
             m_topology_changed = true;
         }
-        database->server->node_id = server_id_parsed;
+        m_server_base->server->node_id = server_id_parsed;
 
         bool read_only_parsed = result->get_bool(i_ro);
         if (read_only_parsed != m_read_only)
@@ -470,7 +464,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
             m_topology_changed = true;
         }
 
-        if (columns == 3)
+        if (use_gtid)
         {
             int64_t domain_id_parsed = result->get_uint(i_domain);
             if (domain_id_parsed < 0)   // Same here.
@@ -818,26 +812,23 @@ void MariaDBServer::monitor_server()
     string errmsg;
     bool query_ok = false;
     /* Query different things depending on server version/type. */
-    switch (m_version)
+    if (m_srv_type == server_type::BINLOG_ROUTER)
     {
-    case version::MARIADB_MYSQL_55:
-        query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
-        break;
-
-    case version::MARIADB_100:
-        query_ok = read_server_variables(&errmsg) && update_gtids(&errmsg)
-            && update_slave_status(&errmsg);
-        break;
-
-    case version::BINLOG_ROUTER:
         // TODO: Add special version of server variable query.
         query_ok = update_slave_status(&errmsg);
-        break;
-
-    default:
-        // Do not update unknown versions.
+    }
+    else if (m_capabilities.basic_support)
+    {
+        query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
+        if (query_ok && m_capabilities.gtid)
+        {
+            query_ok = update_gtids(&errmsg);
+        }
+    }
+    else
+    {
+        // Not a binlog server and no normal support, don't update.
         query_ok = true;
-        break;
     }
 
     if (query_ok)
@@ -875,7 +866,7 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
 
 void MariaDBServer::update_server_version()
 {
-    m_version = version::UNKNOWN;
+    m_srv_type = server_type::UNKNOWN;
     auto conn = m_server_base->con;
     auto srv = m_server_base->server;
 
@@ -888,28 +879,43 @@ void MariaDBServer::update_server_version()
     if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0
         && (result = mysql_store_result(conn)) != NULL)
     {
-        m_version = version::BINLOG_ROUTER;
+        m_srv_type = server_type::BINLOG_ROUTER;
         mysql_free_result(result);
     }
     else
     {
-        /* Not a binlog server, check version number. */
-        uint64_t version_num = server_get_version(srv);
-        if (version_num >= 100000 && srv->server_type == SERVER_TYPE_MARIADB)
+        /* Not a binlog server, check version number and supported features. */
+        m_srv_type = server_type::NORMAL;
+        m_capabilities = Capabilities();
+        SERVER_VERSION decoded = {0, 0, 0};
+        server_decode_version(server_get_version(srv), &decoded);
+        auto major = decoded.major;
+        auto minor = decoded.minor;
+        auto patch = decoded.patch;
+        // MariaDB/MySQL 5.5 is the oldest supported version. MySQL 6 and later are treated as 5.5.
+        if ((major == 5 && minor >= 5) || major > 5)
         {
-            m_version = version::MARIADB_100;
-        }
-        else if (version_num >= 5 * 10000 + 5 * 100)
-        {
-            m_version = version::MARIADB_MYSQL_55;
+            m_capabilities.basic_support = true;
+            // For more specific features, at least MariaDB 10.X is needed.
+            if (srv->server_type == SERVER_TYPE_MARIADB && major >= 10)
+            {
+                // 10.0.2 or 10.1.X or greater than 10
+                if (((minor == 0 && patch >= 2)  || minor >= 1) || major > 10)
+                {
+                    m_capabilities.gtid = true;
+                }
+                // 10.1.2 (10.1.1 has limited support, not enough) or 10.2.X or greater than 10
+                if (((minor == 1 && patch >= 2)  || minor >= 2) || major > 10)
+                {
+                    m_capabilities.max_statement_time = true;
+                }
+            }
         }
         else
         {
-            m_version = version::OLD;
-            MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
-                      "The server is ignored by the monitor. Server version: '%s'.",
-                      name(),
-                      srv->version_string);
+            MXS_ERROR("MariaDB/MySQL version of %s is less than 5.5, which is not supported. "
+                      "The server is ignored by the monitor. Server version string: '%s'.",
+                      name(), srv->version_string);
         }
     }
 }

@@ -72,14 +72,10 @@ struct NodeData
 class MariaDBServer
 {
 public:
-    enum class version
+    enum class server_type
     {
         UNKNOWN,            /* Totally unknown. Server has not been connected to yet. */
-        OLD,                /* Anything older than 5.5. These are no longer supported by the monitor. */
-        MARIADB_MYSQL_55,   /* MariaDB 5.5 series or MySQL 5.5 and later. Does not have gtid (on MariaDB) so
-                             * all gtid-related features (failover etc.) are disabled. */
-        MARIADB_100,        /* MariaDB 10.0 and greater. In practice though, 10.0.2 or greater is assumed.
-                             * All monitor features are on. */
+        NORMAL,             /* A normal MariaDB/MySQL server, possibly supported. */
         BINLOG_ROUTER       /* MaxScale binlog server. Requires special handling. */
     };
 
@@ -87,6 +83,15 @@ public:
     {
         BINLOG_ON,
         BINLOG_OFF
+    };
+
+    // Class which encapsulates server capabilities depending on its version.
+    class Capabilities
+    {
+    public:
+        bool basic_support = false;         // Is the server version supported by the monitor at all?
+        bool gtid = false;                  // Supports MariaDB gtid? Required for failover etc.
+        bool max_statement_time = false;    // Supports max_statement_time?
     };
 
     // This class groups some miscellaneous replication related settings together.
@@ -104,7 +109,9 @@ public:
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
     int m_config_index = 0;
 
-    version m_version = version::UNKNOWN;           /* Server version/type. */
+    server_type  m_srv_type = server_type::UNKNOWN; /* Server type. */
+    Capabilities m_capabilities;                    /* Server capabilities */
+
     int64_t m_server_id = SERVER_ID_UNKNOWN;        /* Value of @@server_id. Valid values are
                                                      * 32bit unsigned. */
     int64_t m_gtid_domain_id = GTID_DOMAIN_UNKNOWN; /* The value of gtid_domain_id, the domain which is used
