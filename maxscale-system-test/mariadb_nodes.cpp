@@ -59,7 +59,7 @@ Mariadb_nodes::~Mariadb_nodes()
     }
 }
 
-int Mariadb_nodes::connect(int i)
+int Mariadb_nodes::connect(int i, const std::string& db)
 {
     if (nodes[i] == NULL || mysql_ping(nodes[i]) != 0)
     {
@@ -67,7 +67,7 @@ int Mariadb_nodes::connect(int i)
         {
             mysql_close(nodes[i]);
         }
-        nodes[i] = open_conn_db_timeout(port[i], IP[i], "test", user_name, password, 50, ssl);
+        nodes[i] = open_conn_db_timeout(port[i], IP[i], db.c_str(), user_name, password, 50, ssl);
     }
 
     if ((nodes[i] != NULL) && (mysql_errno(nodes[i]) != 0))
@@ -80,13 +80,13 @@ int Mariadb_nodes::connect(int i)
     }
 }
 
-int Mariadb_nodes::connect()
+int Mariadb_nodes::connect(const std::string& db)
 {
     int res = 0;
 
     for (int i = 0; i < N; i++)
     {
-        res += connect(i);
+        res += connect(i, db);
     }
 
     return res;

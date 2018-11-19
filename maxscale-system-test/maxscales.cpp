@@ -103,20 +103,22 @@ int Maxscales::read_env()
 }
 
 
-int Maxscales::connect_rwsplit(int m)
+int Maxscales::connect_rwsplit(int m, const std::string& db)
 {
     if (use_ipv6)
     {
-        conn_rwsplit[m] = open_conn(rwsplit_port[m],
+        conn_rwsplit[m] = open_conn_db(rwsplit_port[m],
                                     IP6[m],
+                                    db,
                                     user_name,
                                     password,
                                     ssl);
     }
     else
     {
-        conn_rwsplit[m] = open_conn(rwsplit_port[m],
+        conn_rwsplit[m] = open_conn_db(rwsplit_port[m],
                                     IP[m],
+                                    db,
                                     user_name,
                                     password,
                                     ssl);
@@ -138,20 +140,22 @@ int Maxscales::connect_rwsplit(int m)
     return rc;
 }
 
-int Maxscales::connect_readconn_master(int m)
+int Maxscales::connect_readconn_master(int m, const std::string& db)
 {
     if (use_ipv6)
     {
-        conn_master[m] = open_conn(readconn_master_port[m],
+        conn_master[m] = open_conn_db(readconn_master_port[m],
                                    IP6[m],
+                                   db,
                                    user_name,
                                    password,
                                    ssl);
     }
     else
     {
-        conn_master[m] = open_conn(readconn_master_port[m],
+        conn_master[m] = open_conn_db(readconn_master_port[m],
                                    IP[m],
+                                   db,
                                    user_name,
                                    password,
                                    ssl);
@@ -173,20 +177,22 @@ int Maxscales::connect_readconn_master(int m)
     return rc;
 }
 
-int Maxscales::connect_readconn_slave(int m)
+int Maxscales::connect_readconn_slave(int m, const std::string& db)
 {
     if (use_ipv6)
     {
-        conn_slave[m] = open_conn(readconn_slave_port[m],
+        conn_slave[m] = open_conn_db(readconn_slave_port[m],
                                   IP6[m],
+                                  db,
                                   user_name,
                                   password,
                                   ssl);
     }
     else
     {
-        conn_slave[m] = open_conn(readconn_slave_port[m],
+        conn_slave[m] = open_conn_db(readconn_slave_port[m],
                                   IP[m],
+                                  db,
                                   user_name,
                                   password,
                                   ssl);
@@ -208,11 +214,11 @@ int Maxscales::connect_readconn_slave(int m)
     return rc;
 }
 
-int Maxscales::connect_maxscale(int m)
+int Maxscales::connect_maxscale(int m, const std::string& db)
 {
-    return connect_rwsplit(m)
-           + connect_readconn_master(m)
-           + connect_readconn_slave(m);
+    return connect_rwsplit(m, db)
+           + connect_readconn_master(m, db)
+           + connect_readconn_slave(m, db);
 }
 
 int Maxscales::close_maxscale_connections(int m)

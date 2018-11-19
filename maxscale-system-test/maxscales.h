@@ -114,10 +114,10 @@ public:
      * maxscales->conn_slave[0] MYSQL structs
      * @return 0 in case of success
      */
-    int connect_maxscale(int m = 0);
-    int connect(int m = 0)
+    int connect_maxscale(int m = 0, const std::string& db = "test");
+    int connect(int m = 0, const std::string& db = "test")
     {
-        return connect_maxscale(m);
+        return connect_maxscale(m, db);
     }
 
     /**
@@ -135,28 +135,28 @@ public:
      * maxscales->conn_rwsplit[0]
      * @return 0 in case of success
      */
-    int connect_rwsplit(int m = 0);
+    int connect_rwsplit(int m = 0, const std::string& db = "test");
 
     /**
      * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in
      * maxscales->conn_master[0]
      * @return 0 in case of success
      */
-    int connect_readconn_master(int m = 0);
+    int connect_readconn_master(int m = 0, const std::string& db = "test");
 
     /**
      * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in
      * maxscales->conn_slave[0]
      * @return 0 in case of success
      */
-    int connect_readconn_slave(int m = 0);
+    int connect_readconn_slave(int m = 0, const std::string& db = "test");
 
     /**
      * @brief OpenRWSplitConn   Opens new connections to RWSplit and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL* open_rwsplit_connection(int m = 0)
+    MYSQL* open_rwsplit_connection(int m = 0, const std::string& db = "test")
     {
         return open_conn(rwsplit_port[m], IP[m], user_name, password, ssl);
     }
@@ -164,9 +164,9 @@ public:
     /**
      * Get a readwritesplit Connection
      */
-    Connection rwsplit(int m = 0)
+    Connection rwsplit(int m = 0, const std::string& db = "test")
     {
-        return Connection(IP[m], rwsplit_port[m], user_name, password, "test", ssl);
+        return Connection(IP[m], rwsplit_port[m], user_name, password, db, ssl);
     }
 
     /**
@@ -186,9 +186,9 @@ public:
     /**
      * Get a readconnroute master Connection
      */
-    Connection readconn_master(int m = 0)
+    Connection readconn_master(int m = 0, const std::string& db = "test")
     {
-        return Connection(IP[m], readconn_master_port[m], user_name, password, "test", ssl);
+        return Connection(IP[m], readconn_master_port[m], user_name, password, db, ssl);
     }
 
     /**
@@ -208,9 +208,9 @@ public:
     /**
      * Get a readconnroute slave Connection
      */
-    Connection readconn_slave(int m = 0)
+    Connection readconn_slave(int m = 0, const std::string& db = "test")
     {
-        return Connection(IP[m], readconn_slave_port[m], user_name, password, "test", ssl);
+        return Connection(IP[m], readconn_slave_port[m], user_name, password, db, ssl);
     }
 
     /**
