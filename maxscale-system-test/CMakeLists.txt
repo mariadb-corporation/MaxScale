@@ -9,6 +9,7 @@
 #     REPL_BACKEND
 #     GALERA_BACKEND
 #     EXTERN_BACKEND
+#     CS_BACKEND
 #     BREAKS_REPL
 #     BREAKS_GALERA
 set(CTEST_BUILD_NAME "${BUILDNAME}")
@@ -354,6 +355,18 @@ add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_
 
 ############################################
 # END: Galera tests                        #
+############################################
+
+############################################
+# BEGIN: ColumnStore tests                 #
+############################################
+
+# MXS-2146: Add test case for csmon
+# https://jira.mariadb.org/browse/MXS-2146
+add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND)
+
+############################################
+# END: ColumnStore tests                   #
 ############################################
 
 # Test monitor state change events when manually clearing server bits
