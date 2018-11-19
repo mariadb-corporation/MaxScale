@@ -109,10 +109,10 @@ add_test_executable_notest(sysbench_example.cpp sysbench_example replication)
 
 find_program(HAVE_MYSQLTEST mysqltest)
 if (NOT HAVE_MYSQLTEST)
-  message(FATAL_ERROR "Could not find mysqltest.")
+  message(FATAL_ERROR "Could not find mysqltest. Add -DHAVE_MYSQLTEST=Y to CMake invocation ignore this.")
 endif()
 
 find_program(HAVE_PHP php)
 if (NOT HAVE_PHP)
-  message(FATAL_ERROR "Could not find php.")
+  message(FATAL_ERROR "Could not find php. Add -DHAVE_PHP=Y to CMake invocation ignore this.")
 endif()
