@@ -1092,13 +1092,11 @@ uint64_t server_map_status(const char* str)
  */
 void server_set_version_string(SERVER* server, const char* version_string)
 {
-    // There is a race here. The string may be accessed, while we are
-    // updating it. Thus we take some precautions to ensure that the
-    // string cannot be completely garbled at any point.
-
+    // Possible data race. The string may be accessed while we are updating it.
+    // Take some precautions to ensure that the string cannot be completely garbled at any point.
+    // Strictly speaking, this is not fool-proof as writes may not appear in order to the reader.
     size_t old_len = strlen(server->version_string);
     size_t new_len = strlen(version_string);
-
     if (new_len >= MAX_SERVER_VERSION_LEN)
     {
         new_len = MAX_SERVER_VERSION_LEN - 1;
@@ -1111,10 +1109,9 @@ void server_set_version_string(SERVER* server, const char* version_string)
         memset(server->version_string + new_len, 0, old_len - new_len);
     }
 
+    // No null-byte needs to be set. The array starts out as all zeros and the above memset adds
+    // the necessary null, should the new string be shorter than the old.
     strncpy(server->version_string, version_string, new_len);
-    // No null-byte needs to be set. The array starts out as all zeros
-    // and the above memset adds the necessary null, should the new string
-    // be shorter than the old.
 }
 
 /**
@@ -1128,8 +1125,9 @@ void server_set_version_string(SERVER* server, const char* version_string)
 void server_set_version(SERVER* server, const char* version_string, uint64_t version)
 {
     server_set_version_string(server, version_string);
-
     atomic_store_uint64(&server->version, version);
+    bool is_mariadb = (strcasestr(version_string, "mariadb") != NULL);
+    server->server_type = is_mariadb ? SERVER_TYPE_MARIADB : SERVER_TYPE_MYSQL;
 }
 
 uint64_t server_get_version(const SERVER* server)

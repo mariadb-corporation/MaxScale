@@ -881,7 +881,7 @@ void MariaDBServer::update_server_version()
 
     /* Get server version string, also get/set numeric representation. This function does not query the
      * server, since the data was obtained when connecting. */
-    mxs_mysql_set_server_version(conn, srv);
+    mxs_mysql_update_server_version(conn, srv);
 
     // Check whether this server is a MaxScale Binlog Server.
     MYSQL_RES* result;

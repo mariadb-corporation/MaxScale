@@ -407,25 +407,13 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
     return rv;
 }
 
-void mxs_mysql_set_server_version(MYSQL* mysql, SERVER* server)
+void mxs_mysql_update_server_version(MYSQL* mysql, SERVER* server)
 {
+    // This function should only be called for a live connection.
     const char* version_string = mysql_get_server_info(mysql);
-
-    if (version_string)
-    {
-        unsigned long version = mysql_get_server_version(mysql);
-
-        server_set_version(server, version_string, version);
-
-        if (strcasestr(version_string, "mariadb") != NULL)
-        {
-            server->server_type = SERVER_TYPE_MARIADB;
-        }
-        else
-        {
-            server->server_type = SERVER_TYPE_MYSQL;
-        }
-    }
+    unsigned long version_num = mysql_get_server_version(mysql);
+    mxb_assert(version_string != NULL && version_num != 0);
+    server_set_version(server, version_string, version_num);
 }
 
 void mxs_mysql_set_log_statements(bool enable)

@@ -134,12 +134,13 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
                                              mxs_pcre_quote_approach_t approach);
 
 /**
- * Set the server information
+ * Get server information from connector, store it to server object. This does not query
+ * the server as the data has been read while connecting.
  *
- * @param mysql   A MySQL handle to the server.
- * @param server  The server whose version information should be updated.
+ * @param mysql   MySQL handle from which information is read.
+ * @param server  Server object to write.
  */
-void mxs_mysql_set_server_version(MYSQL* mysql, SERVER* server);
+void mxs_mysql_update_server_version(MYSQL* mysql, SERVER* server);
 
 /**
  * Enable/disable the logging of all SQL statements MaxScale sends to
