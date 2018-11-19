@@ -27,20 +27,6 @@ using std::stringstream;
 namespace
 {
 
-void sleep(int s)
-{
-    cout << "Sleeping " << s << " seconds" << flush;
-    do
-    {
-        ::sleep(1);
-        cout << "." << flush;
-        --s;
-    }
-    while (s > 0);
-
-    cout << endl;
-}
-
 namespace x
 {
 
@@ -120,8 +106,6 @@ void insert_data(TestConnections& test)
 
 void run(TestConnections& test)
 {
-    sleep(10);
-
     cout << "\nConnecting to MaxScale." << endl;
     x::connect_maxscale(test);
 
@@ -148,6 +132,7 @@ void run(TestConnections& test)
     list_servers(test);
 
     cout << "\nPerforming failover... " << endl;
+    test.maxscales->wait_for_monitor();
     test.maxscales->execute_maxadmin_command_print(0, (char*)"call command mysqlmon failover MySQL-Monitor");
 
     list_servers(test);
@@ -159,8 +144,7 @@ void run(TestConnections& test)
 
     cout << "\nClosing connection to MaxScale." << endl;
     test.maxscales->close_maxscale_connections(0);
-
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     cout << "\nConnecting to MaxScale." << endl;
     x::connect_maxscale(test);
@@ -170,6 +154,7 @@ void run(TestConnections& test)
     cout << "Trying to insert data... " << flush;
     insert_data(test);
     cout << "succeeded." << endl;
+    x::try_query(test, "DROP TABLE test.t1");
 }
 }
 
