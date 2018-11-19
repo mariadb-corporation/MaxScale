@@ -30,6 +30,7 @@ static std::string required_repl_version;
 static std::string required_galera_version;
 static bool restart_galera = false;
 static bool require_galera = false;
+static bool require_columnstore = false;
 static bool multiple_maxscales = false;
 }
 
@@ -89,6 +90,11 @@ void TestConnections::require_galera_version(const char* version)
 void TestConnections::require_galera(bool value)
 {
     maxscale::require_galera = value;
+}
+
+void TestConnections::require_columnstore(bool value)
+{
+    maxscale::require_columnstore = value;
 }
 
 void TestConnections::restart_galera(bool value)
@@ -259,7 +265,13 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (no_galera && maxscale::require_galera)
     {
-        cout << "Galera not in use, skipping test" <<endl;
+        cout << "Galera not in use, skipping test" << endl;
+        exit(0);
+    }
+
+    if (maxscale::require_columnstore)
+    {
+        cout << "ColumnStore testing is not yet implemented, skipping test" << endl;
         exit(0);
     }
 
