@@ -2042,14 +2042,14 @@ int TestConnections::revert_snapshot(char* snapshot_name)
 
 bool TestConnections::test_bad_config(int m, const char* config)
 {
-    process_template(m, config, "./");
+    process_template(m, config, "/tmp/");
 
     // Set the timeout to prevent hangs with configurations that work
     set_timeout(20);
 
     return maxscales->ssh_node_f(m,
                                  true,
-                                 "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
+                                 "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
                                  "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale")
            == 0;
 }
