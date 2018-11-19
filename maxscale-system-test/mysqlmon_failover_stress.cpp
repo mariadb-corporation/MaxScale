@@ -501,6 +501,20 @@ void check_server_statuses(TestConnections& test)
     }
 }
 
+bool is_valid_server_id(TestConnections& test, int id)
+{
+    std::set<int> ids;
+    test.repl->connect();
+
+    for (int i = 0; i < test.repl->N; i++)
+    {
+        ids.insert(test.repl->get_server_id(i));
+    }
+
+    test.repl->disconnect();
+    return ids.count(id);
+}
+
 void run(TestConnections& test)
 {
     cout << "\nConnecting to MaxScale." << endl;
@@ -528,7 +542,7 @@ void run(TestConnections& test)
 
             int master_id = get_master_server_id(test);
 
-            if (master_id > 0 && master_id <= 4)
+            if (is_valid_server_id(test, master_id))
             {
                 test.set_timeout(20);
                 cout << "\nStopping node: " << master_id << endl;
