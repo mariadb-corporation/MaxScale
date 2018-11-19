@@ -9,6 +9,11 @@ set(CPACK_RPM_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
 set(CPACK_RPM_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}")
 set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION}")
 
+# This prevents the default %post from running which causes binaries to be
+# striped. Without this, MaxCtrl will not work on all systems as the
+# binaries will be stripped.
+set(CPACK_RPM_SPEC_INSTALL_POST "/bin/true")
+
 # If the package defines an explicit license, use that. Otherwise, use BSL 1.1
 if (${TARGET_COMPONENT}_LICENSE)
   set(CPACK_RPM_PACKAGE_LICENSE ${TARGET_COMPONENT}_LICENSE)
