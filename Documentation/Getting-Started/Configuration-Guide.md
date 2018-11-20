@@ -1978,3 +1978,9 @@ enabled MaxScale will check that all threads are running and notify systemd
 with a "keep-alive ping".
 
 Systemd reference: https://www.freedesktop.org/software/systemd/man/systemd.service.html
+
+*NOTE*: In 2.3.1 there is a deficiency that manifests itself so that if
+_any_ administrative operation, performed using _maxctrl_ or _maxadmin_,
+takes longer that the specified watchdog timeout, then the watchdog will
+kill and restart MaxScale. Please take that into account before enabling
+the watchdog.

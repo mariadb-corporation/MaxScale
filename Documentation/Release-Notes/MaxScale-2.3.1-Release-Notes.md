@@ -89,9 +89,13 @@ enabled and MaxScale will behave accordingly. Please see the
 [documentation](Getting-Started/Configuration-Guide.md#systemd-watchdog)
 for more details.
 
-By default the watchdog timeout is 60 seconds. That is, if MaxScale is
-hung, then systemd will detect that and restart MaxScale after slightly
-more than 60 seconds.
+By default the watchdog is disabled.
+
+*NOTE*: In 2.3.1 there is a deficiency that manifests itself so that if
+_any_ administrative operation, performed using _maxctrl_ or _maxadmin_,
+takes longer that the specified watchdog timeout, then the watchdog will
+kill and restart MaxScale. Please take that into account before enabling
+the watchdog.
 
 ### Miscellaneous
 
