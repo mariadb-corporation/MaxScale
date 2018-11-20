@@ -128,16 +128,16 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
         {
             int cols = mysql_num_fields(result);
             int rows = mysql_num_rows(result);
-            *errmsg_out = string_printf("Query '%s' returned %d columns and %d rows of data when none "
-                                        "was expected.",
-                                        cmd.c_str(), cols, rows);
+            *errmsg_out = string_printf("Query '%s' on '%s' returned %d columns and %d rows of data when "
+                                        "none was expected.", cmd.c_str(), name(), cols, rows);
         }
     }
     else
     {
         if (errmsg_out)
         {
-            *errmsg_out = string_printf("Query '%s' failed: '%s'.", cmd.c_str(), mysql_error(conn));
+            *errmsg_out = string_printf("Query '%s' failed on '%s': '%s' (%i).",
+                                        cmd.c_str(), name(), mysql_error(conn), mysql_errno(conn));
         }
         if (errno_out)
         {
@@ -160,7 +160,8 @@ bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd,
 
 /**
  * Execute a query which does not return data. If the query fails because of a network error
- * (e.g. Connector-C timeout), automatically retry the query until time is up.
+ * (e.g. Connector-C timeout), automatically retry the query until time is up. Uses max_statement_time
+ * when available to ensure no lingering timed out commands are left on the server.
  *
  * @param cmd The query to execute. Should be a query with a predictable effect even when retried or
  * ran several times.
@@ -173,6 +174,20 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
                                            std::string* errmsg_out)
 {
     StopWatch timer;
+    string cmd_prefix;
+    int connector_timeout = -1;
+    if (m_capabilities.max_statement_time)
+    {
+        MXB_AT_DEBUG(int rv = ) mysql_get_optionv(m_server_base->con, MYSQL_OPT_READ_TIMEOUT,
+                                                  &connector_timeout);
+        mxb_assert(rv == 0);
+        if (connector_timeout > 0)
+        {
+            cmd_prefix = string_printf("SET STATEMENT max_statement_time=%i FOR ", connector_timeout);
+        }
+    }
+
+    string command = cmd_prefix + cmd;
     // If a query lasts less than 1s, sleep so that at most 1 query/s is sent.
     // This prevents busy-looping when faced with some network errors.
     const Duration min_query_time(1.0);
@@ -184,18 +199,22 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         StopWatch query_timer;
         string error_msg;
         unsigned int errornum = 0;
-        cmd_success = execute_cmd_no_retry(cmd, &error_msg, &errornum);
+        cmd_success = execute_cmd_no_retry(command, &error_msg, &errornum);
         auto query_time = query_timer.lap();
 
         // Check if there is time to retry.
         Duration time_remaining = time_limit - timer.split();
-        keep_trying = (mxs_mysql_is_net_error(errornum) && (time_remaining.secs() > 0));
+        keep_trying = (time_remaining.secs() > 0)
+            // either a connector-c timeout
+            && (mxs_mysql_is_net_error(errornum)
+                // or query was interrupted by max_statement_time.
+                || (!cmd_prefix.empty() && errornum == ER_STATEMENT_TIMEOUT));
         if (!cmd_success)
         {
             if (keep_trying)
             {
-                MXS_WARNING("Query '%s' failed on '%s': %s Retrying with %.1f seconds left.",
-                            cmd.c_str(), name(), error_msg.c_str(), time_remaining.secs());
+                MXS_WARNING("Query '%s' timed out on '%s': Retrying with %.1f seconds left.",
+                            command.c_str(), name(), time_remaining.secs());
                 if (query_time < min_query_time)
                 {
                     Duration query_sleep = min_query_time - query_time;
@@ -205,8 +224,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
             }
             else if (errmsg_out)
             {
-                *errmsg_out = string_printf("Query '%s' failed on '%s': %s",
-                                            cmd.c_str(), name(), error_msg.c_str());
+                *errmsg_out = error_msg;    // The error string already has all required info.
             }
         }
     }
