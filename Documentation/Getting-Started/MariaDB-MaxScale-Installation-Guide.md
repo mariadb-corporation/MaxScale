@@ -6,9 +6,19 @@ Download the MaxScale package from the MariaDB Downloads page:
 
 * [https://mariadb.com/downloads/mariadb-tx/maxscale](https://mariadb.com/downloads/mariadb-tx/maxscale)
 
-Select your operating system and download the package. You can also use
+Select your operating system and download either the RPM or the DEB package.
+
+* For RHEL/CentOS variants, use `yum` to install the downloaded RPM
+
+* For SLES, use `zypper`
+
+* For Debian/Ubuntu systems, install the package with `dpkg -i` and run `apt-get install`
+  after it to install the dependencies
+
+You can also use
 [the MariaDB package repository](https://mariadb.com/kb/en/library/mariadb-package-repository-setup-and-usage/)
-to install MaxScale.
+to install MaxScale by first configuring the repository and then
+installing the `maxscale` package via your package manager.
 
 ## Install MariaDB MaxScale Using a Tarball
 
