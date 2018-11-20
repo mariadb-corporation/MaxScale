@@ -93,7 +93,7 @@ static INFO_INSTANCE* instances;
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Initialise MaxInfo router module.");
+    MXS_WARNING("THE 'maxinfo' MODULE IS DEPRECATED");
     pthread_mutex_init(&instlock, NULL);
     instances = NULL;
 

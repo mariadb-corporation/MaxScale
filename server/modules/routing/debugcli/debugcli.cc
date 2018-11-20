@@ -65,7 +65,7 @@ static CLI_INSTANCE* instances;
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Initialise debug CLI router module.");
+    MXS_WARNING("THE 'debugcli' MODULE IS DEPRECATED");
     pthread_mutex_init(&instlock, NULL);
     instances = NULL;
 
