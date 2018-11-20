@@ -63,7 +63,7 @@ extern int execute_cmd(CLI_SESSION* cli);
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Initialise CLI router module");
+    MXS_WARNING("THE 'cli' MODULE AND 'maxadmin' ARE DEPRECATED: Use 'maxctrl' instead");
 
     static MXS_ROUTER_OBJECT MyObject =
     {
