@@ -1,6 +1,6 @@
 [maxscale]
 threads=###threads###
-retry_queries=1
+query_retries=1
 
 [Galera Monitor]
 type=monitor
