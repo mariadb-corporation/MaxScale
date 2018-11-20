@@ -85,7 +85,7 @@ void test_routing(TestConnections& test)
     strcpy(buf, "-1");
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1 (id INT)");
     test.try_query(test.maxscales->conn_rwsplit[0], "PREPARE ps2 FROM 'INSERT INTO test.t1 VALUES (?)'");
-    test.try_query(test.maxscales->conn_rwsplit[0], "SET @a = 1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "SET @a = @@server_id");
     test.try_query(test.maxscales->conn_rwsplit[0], "EXECUTE ps2 USING @a");
     test.repl->sync_slaves();
     test.add_result(find_field(test.maxscales->conn_rwsplit[0], "SELECT id FROM test.t1", "id", buf),

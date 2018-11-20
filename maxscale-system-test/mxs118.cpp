@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(10);
     Test->maxscales->connect_maxscale(0);
 
-    Test->check_log_err(0, (char*) "Multiple monitors are monitoring server", true);
+    Test->log_includes(0, "Multiple monitors are monitoring server");
 
     int rval = Test->global_result;
     delete Test;

@@ -20,7 +20,9 @@ ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale
 TimeoutStartSec=120
 LimitNOFILE=65535
 StartLimitBurst=0
-WatchdogSec=60s
+#Please see the MaxScale release notes and/or watchdog documentation
+#before turning the watchdog on.
+#WatchdogSec=60s
 
 # Only relevant when MaxScale is linked with -fsanitize=address
 Environment=ASAN_OPTIONS=abort_on_error=1

@@ -17,6 +17,7 @@
 
 int main(int argc, char* argv[])
 {
+    TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
     long unsigned iterations = (Test->smoke) ? 1000 : 25000;
     int r = (Test->smoke) ? 1 : 3;

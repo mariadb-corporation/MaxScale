@@ -115,10 +115,9 @@ int main(int argc, char* argv[])
     test.maxscales->close_maxscale_connections(0);
 
     test.check_maxscale_alive(0);
-    test.check_log_err(0, "due to authentication failure", false);
-    test.check_log_err(0, "fatal signal 11", false);
-    test.check_log_err(0, "due to handshake failure", false);
-    test.check_log_err(0, "Refresh rate limit exceeded for load of users' table", false);
+    test.log_excludes(0, "due to authentication failure");
+    test.log_excludes(0, "due to handshake failure");
+    test.log_excludes(0, "Refresh rate limit exceeded for load of users' table");
 
     return test.global_result;
 }

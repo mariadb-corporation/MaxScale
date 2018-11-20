@@ -24,6 +24,8 @@
 #include <limits.h>
 #include <getopt.h>
 
+#include <maxscale/log.h>
+
 static int verbose = 0;
 static uint64_t seekto = 0;
 static int64_t num_rows = -1;
@@ -134,6 +136,12 @@ int main(int argc, char** argv)
     {
         printf("Usage: %s FILE\n", argv[0]);
         return 1;
+    }
+
+    if (!mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT))
+    {
+        fprintf(stderr, "Failed to initialize log.\n");
+        return 2;
     }
 
     char c;

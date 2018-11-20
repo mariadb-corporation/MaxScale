@@ -295,8 +295,8 @@ int main(int argc, char* argv[])
     Test->set_timeout(120);
     Test->maxscales->restart_maxscale(0);
 
-    Test->check_log_err(0, (char*) "Loading database names", false);
-    Test->check_log_err(0, (char*) "Unknown column", false);
+    Test->log_excludes(0, "Loading database names");
+    Test->log_excludes(0, "Unknown column");
 
     int rval = Test->global_result;
     delete Test;

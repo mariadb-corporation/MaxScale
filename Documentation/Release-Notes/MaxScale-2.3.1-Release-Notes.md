@@ -38,7 +38,7 @@ release. The functionality in `mmmon` has been largely obsoleted by the
 advancements in `mariadbmon`. The `ndbclustermon` is largely obsolete due to the
 fact that there are virtually no users who use it.
 
-### Deprecated options
+## Deprecated features
 
 The following configuration file options have been deprecated and will
 be removed in 2.4.
@@ -53,8 +53,19 @@ be removed in 2.4.
 
 ### MaxAdmin
 
-The commands `set pollsleep` and `set nbpolls` have been deprecated and
-will be removed in 2.4.
+MaxAdmin has been deprecated in favor of the REST API and MaxCtrl. It will be
+removed in a later release.
+
+In addition to this the commands `set pollsleep` and `set nbpolls` have been
+deprecated and will be removed already in 2.4.
+
+### MaxInfo
+
+The `maxinfo` router has been deprecated and will be removed in a later release.
+
+### Debugcli
+
+The `debugcli` module has been deprecated and will be removed in 2.4.
 
 ## New Features
 
@@ -89,9 +100,13 @@ enabled and MaxScale will behave accordingly. Please see the
 [documentation](Getting-Started/Configuration-Guide.md#systemd-watchdog)
 for more details.
 
-By default there will be a watchdog timeout of 30 seconds. That is, if
-MaxScale is hung, then systemd will detect that and restart MaxScale after
-slightly more than 30 seconds.
+By default the watchdog is disabled.
+
+*NOTE*: In 2.3.1 there is a deficiency that manifests itself so that if
+_any_ administrative operation, performed using _maxctrl_ or _maxadmin_,
+takes longer that the specified watchdog timeout, then the watchdog will
+kill and restart MaxScale. Please take that into account before enabling
+the watchdog.
 
 ### Miscellaneous
 

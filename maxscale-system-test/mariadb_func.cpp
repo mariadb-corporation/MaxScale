@@ -456,12 +456,11 @@ int get_conn_num(MYSQL* conn, std::string ip, std::string hostname, std::string 
                     row = mysql_fetch_row(res);
                     if ((row[2] != NULL ) && (row[3] != NULL))
                     {
-                        if ((strstr(row[2], ip.c_str()) != NULL) && (strstr(row[3], db.c_str()) != NULL))
+                        if (strstr(row[2], ip.c_str()) && strstr(row[3], db.c_str()))
                         {
                             conn_num++;
                         }
-                        if ((strstr(row[2],
-                                    hostname_internal) != NULL) && (strstr(row[3], db.c_str()) != NULL))
+                        else if (strstr(row[2], hostname_internal) && strstr(row[3], db.c_str()))
                         {
                             conn_num++;
                         }

@@ -49,8 +49,8 @@ int main(int argc, char** argv)
 
     /** Check that the logs contains entries for both matching and
      * non-matching queries */
-    test->check_log_err(0, "matched by", true);
-    test->check_log_err(0, "was not matched", true);
+    test->log_includes(0, "matched by");
+    test->log_includes(0, "was not matched");
 
     int rval = test->global_result;
     delete test;

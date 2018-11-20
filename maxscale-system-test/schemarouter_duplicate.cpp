@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
                     "Query should fail when duplicate table is found.");
     test.stop_timeout();
     sleep(10);
-    test.check_log_err(0, (char*) "Duplicate tables found", true);
+    test.log_includes(0, "Duplicate tables found");
     test.repl->execute_query_all_nodes("DROP DATABASE IF EXISTS duplicate");
     test.repl->execute_query_all_nodes("START SLAVE");
     return test.global_result;

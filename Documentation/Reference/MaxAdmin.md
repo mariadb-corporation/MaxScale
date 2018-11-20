@@ -1,5 +1,7 @@
 # MaxAdmin - Admin Interface
 
+**NOTE:** MaxAdmin is deprecated, use [MaxCtrl](./MaxCtrl.md) instead.
+
 # The Maxscale Administrative & Monitoring Client Application
 
  - [Overview](#overview)

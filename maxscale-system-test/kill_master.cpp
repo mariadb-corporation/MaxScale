@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     Test->repl->unblock_node(0);
 
     Test->stop_timeout();
-    sleep(10);
+    Test->maxscales->wait_for_monitor();
 
     Test->set_timeout(30);
     Test->tprintf("Reconnecting and trying query to RWSplit\n");

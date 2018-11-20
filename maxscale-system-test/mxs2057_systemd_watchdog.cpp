@@ -39,12 +39,12 @@ bool staying_alive(TestConnections& test, const maxbase::Duration& dur)
 // The bulk of the test.
 void test_watchdog(TestConnections& test, int argc, char* argv[])
 {
-    test.check_log_err(0, "The systemd watchdog is Enabled", true);
+    test.log_includes(0, "The systemd watchdog is Enabled");
 
     // Wait for one watchdog interval, systemd should have been notified in that time.
     bool maxscale_alive = staying_alive(test, watchdog_interval);
 
-    test.check_log_err(0, "systemd watchdog keep-alive ping", true);
+    test.log_includes(0, "systemd watchdog keep-alive ping");
 
     test.set_timeout(2 * watchdog_interval.secs());
 
@@ -61,7 +61,7 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
     }
     else
     {
-        test.check_log_err(0, "received fatal signal 6", true);
+        test.log_includes(0, "received fatal signal 6");
         if (test.global_result == 0)
         {
             test.tprintf("Maxscale was killed by systemd - ok");

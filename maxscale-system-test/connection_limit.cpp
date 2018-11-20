@@ -59,8 +59,6 @@ int main(int argc, char* argv[])
     Test->tprintf("Trying 26 connections with Readconnn slave\n");
     check_max_conn(2, 25, Test);
 
-    sleep(10);
-
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;

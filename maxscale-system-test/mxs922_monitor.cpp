@@ -75,7 +75,6 @@ int main(int argc, char* argv[])
     sleep(1);
     test->check_maxscale_alive(0);
 
-    test->check_log_err(0, "Fatal", false);
     int rval = test->global_result;
     delete test;
     return rval;

@@ -5,9 +5,8 @@
 
 int main(int argc, char** argv)
 {
-
     TestConnections test(argc, argv);
-    char server_id[test.galera->N][1024];
+    char server_id[test.repl->N][1024];
 
     test.repl->connect();
 

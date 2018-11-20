@@ -90,6 +90,7 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char* expe
 
 int main(int argc, char* argv[])
 {
+    TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(100);
 
@@ -231,7 +232,7 @@ int main(int argc, char* argv[])
     sleep(15);
 
     Test->tprintf("Cheching Maxscale logs");
-    Test->check_log_err(0, (char*) "Cannot execute file", true);
+    Test->log_includes(0, "Cannot execute file");
 
     Test->tprintf("checking if Maxscale is alive");
     Test->check_maxscale_alive(0);

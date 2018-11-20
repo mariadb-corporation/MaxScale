@@ -17,6 +17,8 @@
 #include "testconnections.h"
 
 using namespace mxb;
+using std::cout;
+using std::endl;
 
 namespace maxscale
 {
@@ -27,6 +29,8 @@ static bool manual_debug = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
 static bool restart_galera = false;
+static bool require_galera = false;
+static bool require_columnstore = false;
 static bool multiple_maxscales = false;
 }
 
@@ -81,6 +85,16 @@ void TestConnections::require_repl_version(const char* version)
 void TestConnections::require_galera_version(const char* version)
 {
     maxscale::required_galera_version = version;
+}
+
+void TestConnections::require_galera(bool value)
+{
+    maxscale::require_galera = value;
+}
+
+void TestConnections::require_columnstore(bool value)
+{
+    maxscale::require_columnstore = value;
 }
 
 void TestConnections::restart_galera(bool value)
@@ -248,6 +262,18 @@ TestConnections::TestConnections(int argc, char* argv[])
             test_dir,
             test_dir);
     setenv("ssl_options", ssl_options, 1);
+
+    if (no_galera && maxscale::require_galera)
+    {
+        cout << "Galera not in use, skipping test" << endl;
+        exit(0);
+    }
+
+    if (maxscale::require_columnstore)
+    {
+        cout << "ColumnStore testing is not yet implemented, skipping test" << endl;
+        exit(0);
+    }
 
     repl = new Mariadb_nodes("node", test_dir, verbose);
     if (!no_galera)
@@ -1219,7 +1245,18 @@ int TestConnections::start_mm(int m)
 
 bool TestConnections::log_matches(int m, const char* pattern)
 {
-    return maxscales->ssh_node_f(m, true, "grep '%s' /var/log/maxscale/maxscale*.log", pattern) == 0;
+
+    // Replace single quotes with wildcard characters, should solve most problems
+    std::string p = pattern;
+    for (auto& a : p)
+    {
+        if (a == '\'')
+        {
+            a = '.';
+        }
+    }
+
+    return maxscales->ssh_node_f(m, true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
 }
 
 void TestConnections::log_includes(int m, const char* pattern)
@@ -1274,77 +1311,6 @@ static int read_log(const char* name, char** err_log_content_p)
     {
         printf ("Error reading log %s \n", name);
         return 1;
-    }
-}
-
-void TestConnections::check_log_err(int m, const char* err_msg, bool expected)
-{
-
-    char* err_log_content;
-
-    if (verbose)
-    {
-        tprintf("Getting logs");
-    }
-    char sys1[4096];
-    char dest[1024];
-    char log_file[64];
-    set_timeout(500);
-    sprintf(dest, "maxscale_log_%03d/", m);
-    sprintf(&sys1[0],
-            "mkdir -p maxscale_log_%03d; rm -f %s*.log",
-            m,
-            dest);
-
-    system(sys1);
-    sprintf(sys1, "%s/*", maxscales->maxscale_log_dir[m]);
-    maxscales->copy_from_node(m, sys1, dest);
-
-    if (verbose)
-    {
-        tprintf("Reading maxscale.log");
-    }
-    sprintf(log_file, "maxscale_log_%03d/maxscale.log", m);
-    if (read_log(log_file, &err_log_content) != 0 || strlen(err_log_content) < 2)
-    {
-        if (verbose)
-        {
-            tprintf("Reading maxscale1.log");
-        }
-        sprintf(log_file, "maxscale_log_%03d/maxscale1.log", m);
-        free(err_log_content);
-        if (read_log(log_file, &err_log_content) != 0)
-        {
-            add_result(1, "Error reading log");
-        }
-    }
-
-    if (err_log_content != NULL)
-    {
-        if (expected)
-        {
-            if (strstr(err_log_content, err_msg) == NULL)
-            {
-                add_result(1, "There is NO \"%s\" error in the log", err_msg);
-            }
-            else
-            {
-                tprintf("There is a proper \"%s \" error in the log", err_msg);
-            }
-        }
-        else
-        {
-            if (strstr(err_log_content, err_msg) != NULL)
-            {
-                add_result(1, "There is an UNEXPECTED \"%s\" error in the log", err_msg);
-            }
-            else
-            {
-                tprintf("There are no unxpected \"%s \" errors in the log", err_msg);
-            }
-        }
-
-        free(err_log_content);
     }
 }
 
@@ -2088,14 +2054,14 @@ int TestConnections::revert_snapshot(char* snapshot_name)
 
 bool TestConnections::test_bad_config(int m, const char* config)
 {
-    process_template(m, config, "./");
+    process_template(m, config, "/tmp/");
 
     // Set the timeout to prevent hangs with configurations that work
     set_timeout(20);
 
     return maxscales->ssh_node_f(m,
                                  true,
-                                 "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
+                                 "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
                                  "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale")
            == 0;
 }

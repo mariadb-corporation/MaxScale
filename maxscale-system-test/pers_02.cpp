@@ -18,6 +18,7 @@
 
 int main(int argc, char* argv[])
 {
+    TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
 
     Test->set_timeout(60);
@@ -38,7 +39,6 @@ int main(int argc, char* argv[])
     Test->add_result(Test->create_connections(0, 70, true, true, true, true),
                      "Connections creation error \n");
 
-    Test->check_log_err(0, (char*) "fatal signal 11", false);
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;

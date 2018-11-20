@@ -263,6 +263,12 @@ public:
     static void require_repl_version(const char* version);
     static void require_galera_version(const char* version);
 
+    /** Require that galera is present*/
+    static void require_galera(bool value);
+
+    /** Require that columnstore is present*/
+    static void require_columnstore(bool value);
+
     /**
      * @brief Specify whether galera should be restarted.
      *
@@ -447,15 +453,6 @@ public:
      */
 
     int check_t1_table(int m, bool presence, char* db);
-
-    /**
-     * @brief CheckLogErr Reads error log and tried to search for given string
-     * @param err_msg Error message to search in the log
-     * @param expected TRUE if err_msg is expedted in the log, false if err_msg should NOT be in the log
-     * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected
-     * is false)
-     */
-    void check_log_err(int m, const char* err_msg, bool expected);
 
     /**
      * @brief Check whether logs match a pattern

@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     test.tprintf("Execute one more session command and expect message in error log");
     execute_query(test.maxscales->conn_rwsplit[0], "set @test=11");
     sleep(1);
-    test.check_log_err(0, "Router session exceeded session command history limit", true);
+    test.log_includes(0, "Router session exceeded session command history limit");
     test.maxscales->close_maxscale_connections(0);
 
     return test.global_result;

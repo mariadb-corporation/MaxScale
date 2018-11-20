@@ -28,9 +28,9 @@ int main(int argc, char* argv[])
     Test->start_binlog(0);
     test_binlog(Test);
 
-    Test->check_log_err(0, "SET NAMES utf8mb4", false);
-    Test->check_log_err(0, "set autocommit=1", false);
-    Test->check_log_err(0, "select USER()", false);
+    Test->log_excludes(0, "SET NAMES utf8mb4");
+    Test->log_excludes(0, "set autocommit=1");
+    Test->log_excludes(0, "select USER()");
 
     int rval = Test->global_result;
     delete Test;

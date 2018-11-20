@@ -410,6 +410,7 @@ int main(int argc, char* argv[])
 {
     mxb::Log log(MXB_LOG_TARGET_STDOUT);
 
+    TestConnections::require_galera(true);
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 

@@ -92,6 +92,27 @@ int Mariadb_nodes::connect()
     return res;
 }
 
+bool Mariadb_nodes::robust_connect(int n)
+{
+    bool rval = false;
+
+    for (int i = 0; i < n; i++)
+    {
+        if (connect() == 0)
+        {
+            // Connected successfully, return immediately
+            rval = true;
+            break;
+        }
+
+        // We failed to connect, disconnect and wait for a second before trying again
+        disconnect();
+        sleep(1);
+    }
+
+    return rval;
+}
+
 void Mariadb_nodes::close_connections()
 {
     for (int i = 0; i < N; i++)
@@ -397,7 +418,7 @@ int Mariadb_nodes::start_replication()
         create_users(i);
     }
 
-    connect();
+    robust_connect(10);
 
     for (int i = 0; i < N; i++)
     {
@@ -523,7 +544,7 @@ int Galera_nodes::start_galera()
         a.join();
     }
 
-    local_result += connect();
+    local_result += robust_connect(5) ? 0 : 1;
     local_result += execute_query(nodes[0], "%s", create_repl_user);
 
     close_connections();
