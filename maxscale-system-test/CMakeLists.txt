@@ -210,6 +210,9 @@ add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_m
 # MySQL Monitor with Multi-master configurations
 add_test_executable(mysqlmon_multimaster.cpp mysqlmon_multimaster mysqlmon_multimaster LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
 
+# MySQL Monitor with Multi-master configurations (assume_unique_hostnames=OFF)
+add_test_derived(mysqlmon_multimaster_serverid mysqlmon_multimaster mysqlmon_multimaster_serverid LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
+
 # MySQL Monitor Failover Test
 add_test_executable(mysqlmon_detect_standalone_master.cpp mysqlmon_detect_standalone_master mysqlmon_detect_standalone_master LABELS mysqlmon REPL_BACKEND)
 
