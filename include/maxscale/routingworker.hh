@@ -433,36 +433,61 @@ public:
      */
     static void set_watchdog_interval(uint64_t microseconds);
 
+    class WatchdogWorkaround;
+    friend WatchdogWorkaround;
+
     /**
-     * The internal watchdog interval.
+     * @class WatchdogWorkaround
      *
-     * @return The interval in seconds, 0 if not enabled.
+     * RAII-class using which the systemd watchdog notification can be
+     * handled during synchronous worker activity that causes the epoll
+     * event handling to be stalled.
+     *
+     * The constructor turns on the workaround and the destructor
+     * turns it off.
      */
-    static uint32_t get_internal_watchdog_interval()
+    class WatchdogWorkaround
     {
-        return s_watchdog_interval.secs();
-    }
+        WatchdogWorkaround(const WatchdogWorkaround&);
+        WatchdogWorkaround& operator=(const WatchdogWorkaround&);
 
-    // TODO: Public now ONLY so that it can be used in the workaround for the
-    // TODO "long max[admin|ctrl] operations may trigger the watchdog" problem.
-    void check_systemd_watchdog();
+    public:
+        /**
+         * Turns on the watchdog workaround for a specific worker.
+         *
+         * @param pWorker  The worker for which the systemd notification
+         *                 should be arranged. Need not be the calling worker.
+         */
+        WatchdogWorkaround(RoutingWorker* pWorker)
+            : m_pWorker(pWorker)
+        {
+            mxb_assert(pWorker);
+            m_pWorker->start_watchdog_workaround();
+        }
 
-    /**
-     * Turn on the watchdog workaround for this worker.
-     *
-     * @see mxs::WatchdogWorkaround
-     */
-    void start_watchdog_workaround();
+        /**
+         * Turns on the watchdog workaround for the calling worker.
+         */
+        WatchdogWorkaround()
+            : WatchdogWorkaround(RoutingWorker::get_current())
+        {
+        }
 
-    /**
-     * Turn off the watchdog workaround for this worker.
-     *
-     * @see mxs::WatchdogWorkaround
-     */
-    void stop_watchdog_workaround();
+        /**
+         * Turns off the watchdog workaround.
+         */
+        ~WatchdogWorkaround()
+        {
+            m_pWorker->stop_watchdog_workaround();
+        }
+
+    private:
+        RoutingWorker* m_pWorker;
+    };
 
 private:
     class WatchdogNotifier;
+    friend WatchdogNotifier;
 
     const int    m_id;              /*< The id of the worker. */
     SessionsById m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
@@ -484,7 +509,9 @@ private:
     void epoll_tick();  // override
 
     void delete_zombies();
-    //void check_systemd_watchdog();
+    void check_systemd_watchdog();
+    void start_watchdog_workaround();
+    void stop_watchdog_workaround();
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
@@ -495,54 +522,7 @@ private:
     WatchdogNotifier*         m_pWatchdog_notifier;   /*< Watchdog notifier, if systemd enabled. */
 };
 
-/**
- * @class WatchdogWorkaround
- *
- * RAII-class using which the systemd watchdog notification can be
- * handled during synchronous worker activity that causes the epoll
- * event handling to be stalled.
- *
- * The constructor turns on the workaround and the destructor
- * turns it off.
- */
-class WatchdogWorkaround
-{
-    WatchdogWorkaround(const WatchdogWorkaround&);
-    WatchdogWorkaround& operator=(const WatchdogWorkaround&);
-
-public:
-    /**
-     * Turns on the watchdog workaround for a specific worker.
-     *
-     * @param pWorker  The worker for which the systemd notification
-     *                 should be arranged. Need not be the calling worker.
-     */
-    WatchdogWorkaround(RoutingWorker* pWorker)
-        : m_pWorker(pWorker)
-    {
-        mxb_assert(pWorker);
-        m_pWorker->start_watchdog_workaround();
-    }
-
-    /**
-     * Turns on the watchdog workaround for the calling worker.
-     */
-    WatchdogWorkaround()
-        : WatchdogWorkaround(RoutingWorker::get_current())
-    {
-    }
-
-    /**
-     * Turns off the watchdog workaround.
-     */
-    ~WatchdogWorkaround()
-    {
-        m_pWorker->stop_watchdog_workaround();
-    }
-
-private:
-    RoutingWorker* m_pWorker;
-};
+using WatchdogWorkaround = RoutingWorker::WatchdogWorkaround;
 
 // Data local to a routing worker
 template<class T>

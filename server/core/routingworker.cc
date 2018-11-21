@@ -183,7 +183,7 @@ public:
         , m_terminate(false)
     {
         m_thread = std::thread([this] {
-                uint32_t interval = mxs::RoutingWorker::get_internal_watchdog_interval();
+                uint32_t interval = mxs::RoutingWorker::s_watchdog_interval.secs();
                 timespec timeout = { interval, 0 };
 
                 while (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
