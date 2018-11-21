@@ -171,16 +171,102 @@ maxbase::Duration RoutingWorker::s_watchdog_interval {0};
 // static
 maxbase::TimePoint RoutingWorker::s_watchdog_next_check;
 
+class RoutingWorker::WatchdogNotifier
+{
+    WatchdogNotifier(const WatchdogNotifier&) = delete;
+    WatchdogNotifier& operator=(const WatchdogNotifier&) = delete;
+
+public:
+    WatchdogNotifier(mxs::RoutingWorker* pOwner)
+        : m_owner(*pOwner)
+        , m_nClients(0)
+        , m_terminate(false)
+    {
+        m_thread = std::thread([this] {
+                uint32_t interval = mxs::RoutingWorker::get_internal_watchdog_interval();
+                timespec timeout = { interval, 0 };
+
+                while (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
+                {
+                    // We will wakeup when someone wants the notifier to run,
+                    // or when MaxScale is going down.
+                    m_sem_start.wait();
+
+                    if (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
+                    {
+                        // If MaxScale is not going down...
+                        do
+                        {
+                            // we check the systemd watchdog...
+                            m_owner.check_systemd_watchdog();
+                        } while (!m_sem_stop.timedwait(timeout));
+                        // until the semaphore is actually posted, which it will be
+                        // once the notification should stop.
+                    }
+                }
+            });
+    }
+
+    ~WatchdogNotifier()
+    {
+        mxb_assert(m_nClients == 0);
+        mxb::atomic::store(&m_terminate, true, mxb::atomic::RELAXED);
+        m_sem_start.post();
+        m_thread.join();
+    }
+
+    void start()
+    {
+        Guard guard(m_lock);
+        mxb::atomic::add(&m_nClients, 1, mxb::atomic::RELAXED);
+
+        if (m_nClients == 1)
+        {
+            m_sem_start.post();
+        }
+    }
+
+    void stop()
+    {
+        Guard guard(m_lock);
+        mxb::atomic::add(&m_nClients, -1, mxb::atomic::RELAXED);
+        mxb_assert(m_nClients >= 0);
+
+        if (m_nClients == 0)
+        {
+            m_sem_stop.post();
+        }
+    }
+
+private:
+    using Guard = std::lock_guard<std::mutex>;
+
+    mxs::RoutingWorker& m_owner;
+    int                 m_nClients;
+    bool                m_terminate;
+    std::thread         m_thread;
+    std::mutex          m_lock;
+    mxb::Semaphore      m_sem_start;
+    mxb::Semaphore      m_sem_stop;
+};
+
 RoutingWorker::RoutingWorker()
     : m_id(next_worker_id())
     , m_alive(true)
+    , m_pWatchdog_notifier(nullptr)
 {
     MXB_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
     MXB_POLL_DATA::owner = this;
+
+    if (s_watchdog_interval.count() != 0)
+    {
+        m_pWatchdog_notifier = new WatchdogNotifier(this);
+    }
 }
 
 RoutingWorker::~RoutingWorker()
 {
+    delete m_pWatchdog_notifier;
 }
 
 // static
@@ -992,6 +1078,22 @@ void maxscale::RoutingWorker::set_watchdog_interval(uint64_t microseconds)
 
     s_watchdog_interval = maxbase::Duration(seconds);
     s_watchdog_next_check = maxbase::Clock::now();
+}
+
+void maxscale::RoutingWorker::start_watchdog_workaround()
+{
+    if (m_pWatchdog_notifier)
+    {
+        m_pWatchdog_notifier->start();
+    }
+}
+
+void maxscale::RoutingWorker::stop_watchdog_workaround()
+{
+    if (m_pWatchdog_notifier)
+    {
+        m_pWatchdog_notifier->stop();
+    }
 }
 
 // A note about the below code. While the main worker is turning the "m_alive" values to false,
