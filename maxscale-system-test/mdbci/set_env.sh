@@ -41,44 +41,22 @@ export maxadmin_password="mariadb"
 
 for prefix in "node" "galera" "maxscale"
 do
-	N_var="$prefix"_N
-	Nx=${!N_var}
-	N=`expr $Nx - 1`
-	for i in $(seq 0 $N)
-	do
-		num=`printf "%03d" $i`
-		eval 'export "$prefix"_"$num"_port=3306'
-		eval 'export "$prefix"_"$num"_access_sudo=sudo'
+    N_var="$prefix"_N
+    Nx=${!N_var}
+    N=`expr $Nx - 1`
+    for i in $(seq 0 $N)
+    do
+        num=`printf "%03d" $i`
+        eval 'export "$prefix"_"$num"_port=3306'
+        eval 'export "$prefix"_"$num"_access_sudo=sudo'
 
-		start_cmd_var="$prefix"_"$num"_start_db_command
-		stop_cmd_var="$prefix"_"$num"_stop_db_command
-		mysql_exe=`${mdbci_dir}/mdbci ssh --command 'ls /etc/init.d/mysql* 2> /dev/null | tr -cd "[:print:]"' $config_name/node_$num  --silent 2> /dev/null`
-		echo $mysql_exe | grep -i "mysql"
-		if [ $? != 0 ] ; then
-			service_name=`${mdbci_dir}/mdbci ssh --command 'systemctl list-unit-files | grep mysql' $config_name/node_$num  --silent`
-			echo $service_name | grep mysql
-			if [ $? == 0 ] ; then
-				echo $service_name | grep mysqld
-				if [ $? == 0 ] ; then
-		                        eval 'export $start_cmd_var="service mysqld start "'
-	        	                eval 'export $stop_cmd_var="service mysqld stop  "'
-				else
-	                        	eval 'export $start_cmd_var="service mysql start "'
-	        	                eval 'export $stop_cmd_var="service mysql stop  "'
-				fi
-			else
-				${mdbci_dir}/mdbci ssh --command 'echo \"/usr/sbin/mysqld \$* 2> stderr.log > stdout.log &\" > mysql_start.sh; echo \"sleep 20\" >> mysql_start.sh; echo \"disown\" >> mysql_start.sh; chmod a+x mysql_start.sh' $config_name/node_$num --silent
-        	                eval 'export $start_cmd_var="/home/$au/mysql_start.sh "'
-				eval 'export $stop_cmd_var="killall mysqld "'
-			fi
-		else
-			eval 'export $start_cmd_var="$mysql_exe start "'
-			eval 'export $stop_cmd_var="$mysql_exe stop "'
-		fi
-
-		eval 'export "$prefix"_"$num"_start_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant resume ${prefix}_$num ; cd $curr_dir"'
-		eval 'export "$prefix"_"$num"_stop_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant suspend ${prefix}_$num ; cd $curr_dir"'
-	done
+        start_cmd_var="$prefix"_"$num"_start_db_command
+        stop_cmd_var="$prefix"_"$num"_stop_db_command
+        eval 'export $start_cmd_var="service mysql start "'
+        eval 'export $stop_cmd_var="service mysql stop  "'
+        eval 'export "$prefix"_"$num"_start_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant resume ${prefix}_$num ; cd $curr_dir"'
+        eval 'export "$prefix"_"$num"_stop_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant suspend ${prefix}_$num ; cd $curr_dir"'
+    done
 done
 
 
