@@ -1422,6 +1422,7 @@ void dListListeners(DCB* dcb)
 
 bool Service::refresh_users()
 {
+    mxs::WatchdogWorkaround workaround;
     bool ret = true;
     int self = mxs_rworker_get_current_id();
     mxb_assert(self >= 0);
