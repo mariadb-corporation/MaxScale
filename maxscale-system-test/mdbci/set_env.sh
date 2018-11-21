@@ -41,23 +41,22 @@ export maxadmin_password="mariadb"
 
 for prefix in "node" "galera" "maxscale"
 do
-	N_var="$prefix"_N
-	Nx=${!N_var}
-	N=`expr $Nx - 1`
-	for i in $(seq 0 $N)
-	do
-		num=`printf "%03d" $i`
-		eval 'export "$prefix"_"$num"_port=3306'
-		eval 'export "$prefix"_"$num"_access_sudo=sudo'
+    N_var="$prefix"_N
+    Nx=${!N_var}
+    N=`expr $Nx - 1`
+    for i in $(seq 0 $N)
+    do
+        num=`printf "%03d" $i`
+        eval 'export "$prefix"_"$num"_port=3306'
+        eval 'export "$prefix"_"$num"_access_sudo=sudo'
 
-		start_cmd_var="$prefix"_"$num"_start_db_command
-		stop_cmd_var="$prefix"_"$num"_stop_db_command
-                eval 'export $start_cmd_var="service mysql start "'
-                eval 'export $stop_cmd_var="service mysql stop  "'
-
-		eval 'export "$prefix"_"$num"_start_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant resume ${prefix}_$num ; cd $curr_dir"'
-		eval 'export "$prefix"_"$num"_stop_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant suspend ${prefix}_$num ; cd $curr_dir"'
-	done
+        start_cmd_var="$prefix"_"$num"_start_db_command
+        stop_cmd_var="$prefix"_"$num"_stop_db_command
+        eval 'export $start_cmd_var="service mysql start "'
+        eval 'export $stop_cmd_var="service mysql stop  "'
+        eval 'export "$prefix"_"$num"_start_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant resume ${prefix}_$num ; cd $curr_dir"'
+        eval 'export "$prefix"_"$num"_stop_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant suspend ${prefix}_$num ; cd $curr_dir"'
+    done
 done
 
 
