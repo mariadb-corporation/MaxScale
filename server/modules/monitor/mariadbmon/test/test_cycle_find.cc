@@ -16,7 +16,6 @@
 #include <iostream>
 #include <numeric>
 #include <string>
-#include <sstream>
 #include <vector>
 #include <maxbase/log.hh>
 #include <maxbase/maxbase.hh>
@@ -33,7 +32,7 @@ const int MAX_EDGES = 20;
 
 class MariaDBMonitor::Test
 {
-    // These defines are required since Centos 6 doesn't support vector literal initialisers :/
+    // TODO: Now using C++11 even on Centos 6 so get rid of these
     typedef struct
     {
         int members[MAX_CYCLE_SIZE];
@@ -56,17 +55,22 @@ class MariaDBMonitor::Test
     } EdgeArray;
 
 public:
-    Test();
+    Test(bool use_hostnames);
     ~Test();
     int run_tests();
 private:
-    MariaDBMonitor* m_monitor;
-    int             m_current_test;
+    MariaDBMonitor* m_monitor = NULL;
+    int             m_current_test = 0;
+    bool            m_use_hostnames = true;
 
     void init_servers(int count);
     void clear_servers();
     void add_replication(EdgeArray edges);
     int  check_result_cycles(CycleArray expected_cycles);
+
+    string         create_servername(int i);
+    string         create_hostname(int i);
+    MariaDBServer* get_server(int i);
 };
 
 int main()
@@ -74,13 +78,19 @@ int main()
     maxbase::init();
     maxbase::Log log;
 
-    MariaDBMonitor::Test tester;
-    return tester.run_tests();
+    bool use_hostnames = true;
+    MariaDBMonitor::Test tester1(use_hostnames);
+    int rval = tester1.run_tests();
+
+    use_hostnames = false;
+    MariaDBMonitor::Test tester2(use_hostnames);
+    rval += tester2.run_tests();
+    return rval;
 }
 
-MariaDBMonitor::Test::Test()
+MariaDBMonitor::Test::Test(bool use_hostnames)
     : m_monitor(new MariaDBMonitor(NULL))
-    , m_current_test(0)
+    , m_use_hostnames(use_hostnames)
 {
 }
 
@@ -140,22 +150,36 @@ int MariaDBMonitor::Test::run_tests()
 void MariaDBMonitor::Test::init_servers(int count)
 {
     clear_servers();
-    mxb_assert(m_monitor->m_server_info.empty() && m_monitor->m_servers.empty()
-               && m_monitor->m_servers_by_id.empty());
+    m_monitor->m_assume_unique_hostnames = m_use_hostnames;
+    mxb_assert(m_monitor->m_servers.empty() && m_monitor->m_servers_by_id.empty());
 
     for (int i = 1; i < count + 1; i++)
     {
         SERVER* base_server = new SERVER;   // Contents mostly undefined
-        std::stringstream server_name;
-        server_name << "Server" << i;
-        base_server->name = MXS_STRDUP(server_name.str().c_str());
+        string server_name = create_servername(i);
+        base_server->name = MXS_STRDUP(server_name.c_str());
+
         MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER;    // Contents mostly undefined
         mon_server->server = base_server;
-        MariaDBServer* new_server = new MariaDBServer(mon_server, i - 1);
-        new_server->m_server_id = i;
-        m_monitor->m_servers.push_back(new_server);
-        m_monitor->m_server_info[mon_server] = new_server;
-        m_monitor->m_servers_by_id[i] = new_server;
+
+        MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_use_hostnames);
+
+        if (m_use_hostnames)
+        {
+            string hostname = create_hostname(i);
+            strcpy(base_server->address, hostname.c_str());
+            base_server->port = i;
+        }
+        else
+        {
+            mariadb_server->m_server_id = i;
+        }
+
+        m_monitor->m_servers.push_back(mariadb_server);
+        if (!m_use_hostnames)
+        {
+            m_monitor->m_servers_by_id[i] = mariadb_server;
+        }
     }
     m_current_test++;
 }
@@ -165,7 +189,6 @@ void MariaDBMonitor::Test::init_servers(int count)
  */
 void MariaDBMonitor::Test::clear_servers()
 {
-    m_monitor->m_server_info.clear();
     m_monitor->m_servers_by_id.clear();
     for (MariaDBServer* server : m_monitor->m_servers)
     {
@@ -192,12 +215,23 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
         {
             break;
         }
-        auto iter2 = m_monitor->m_servers_by_id.find(slave_id);
-        mxb_assert(iter2 != m_monitor->m_servers_by_id.end());
+
         SlaveStatus ss;
-        ss.master_server_id = master_id;
         ss.slave_io_running = SlaveStatus::SLAVE_IO_YES;
-        (*iter2).second->m_slave_status.push_back(ss);
+        ss.slave_sql_running = true;
+        if (m_use_hostnames)
+        {
+            ss.master_host = create_hostname(master_id);
+            ss.master_port = master_id;
+        }
+        else
+        {
+            ss.master_server_id = master_id;
+            ss.seen_connected = true;
+        }
+
+        MariaDBServer* slave = get_server(slave_id);
+        slave->m_slave_status.push_back(ss);
     }
 
     m_monitor->build_replication_graph();
@@ -212,12 +246,12 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
  */
 int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
 {
-    std::stringstream test_name_ss;
-    test_name_ss << "Test " << m_current_test << ": ";
-    string test_name = test_name_ss.str();
+    string test_name = "Test " + std::to_string(m_current_test) + " ("
+        + (m_use_hostnames ? "hostnames" : "server id:s") + "): ";
     int errors = 0;
-    // Copy the index->server map so it can be checked later
-    IdToServerMap no_cycle_servers = m_monitor->m_servers_by_id;
+
+    // Copy the servers for later comparison.
+    std::set<MariaDBServer*> no_cycle_servers(m_monitor->m_servers.begin(), m_monitor->m_servers.end());
     std::set<int> used_cycle_ids;
     for (auto ind_cycles = 0; ind_cycles < MAX_CYCLES; ind_cycles++)
     {
@@ -230,7 +264,8 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
             {
                 break;
             }
-            auto cycle_server = m_monitor->get_server(search_id);
+
+            MariaDBServer* cycle_server = get_server(search_id);
             if (cycle_server->m_node.cycle == NodeData::CYCLE_NONE)
             {
                 cout << test_name << cycle_server->name() << " is not in a cycle when it should.\n";
@@ -257,14 +292,13 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
                      << " when " << cycle_id << " was expected.\n";
                 errors++;
             }
-            no_cycle_servers.erase(cycle_server->m_server_id);
+            no_cycle_servers.erase(cycle_server);
         }
     }
 
     // Check that servers not in expected_cycles are not in a cycle
-    for (auto& map_elem : no_cycle_servers)
+    for (MariaDBServer* server : no_cycle_servers)
     {
-        MariaDBServer* server = map_elem.second;
         if (server->m_node.cycle != NodeData::CYCLE_NONE)
         {
             cout << server->name() << " is in cycle " << server->m_node.cycle << " when none was expected.\n";
@@ -273,4 +307,22 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
     }
 
     return errors;
+}
+
+MariaDBServer* MariaDBMonitor::Test::get_server(int i)
+{
+    auto rval = m_use_hostnames ? m_monitor->get_server(create_hostname(i), i) :
+        m_monitor->get_server(i);
+    mxb_assert(rval);
+    return rval;
+}
+
+string MariaDBMonitor::Test::create_servername(int i)
+{
+    return "Server" + std::to_string(i);
+}
+
+string MariaDBMonitor::Test::create_hostname(int i)
+{
+    return "hostname" + std::to_string(i) + ".mariadb.com";
 }

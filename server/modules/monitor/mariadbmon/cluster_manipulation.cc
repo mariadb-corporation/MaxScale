@@ -105,17 +105,15 @@ bool MariaDBMonitor::manual_failover(json_t** output)
     return failover_done;
 }
 
-bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
+bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
 {
     bool rval = false;
     if (cluster_can_be_joined())
     {
-        const char* rejoin_serv_name = rejoin_server->name;
-        MXS_MONITORED_SERVER* mon_slave_cand = mon_get_monitored_server(m_monitor, rejoin_server);
-        if (mon_slave_cand)
+        MariaDBServer* rejoin_cand = get_server(rejoin_cand_srv);
+        if (rejoin_cand)
         {
-            MariaDBServer* slave_cand = get_server_info(mon_slave_cand);
-            if (server_is_rejoin_suspect(slave_cand, output))
+            if (server_is_rejoin_suspect(rejoin_cand, output))
             {
                 string gtid_update_error;
                 if (m_master->update_gtids(&gtid_update_error))
@@ -125,8 +123,8 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
                     // can be rejoined manually.
                     // TODO: Add the warning to JSON output.
                     string no_rejoin_reason;
-                    bool safe_rejoin = slave_cand->can_replicate_from(m_master, &no_rejoin_reason);
-                    bool empty_gtid = slave_cand->m_gtid_current_pos.empty();
+                    bool safe_rejoin = rejoin_cand->can_replicate_from(m_master, &no_rejoin_reason);
+                    bool empty_gtid = rejoin_cand->m_gtid_current_pos.empty();
                     bool rejoin_allowed = false;
                     if (safe_rejoin)
                     {
@@ -138,19 +136,19 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
                         {
                             rejoin_allowed = true;
                             MXB_WARNING("gtid_curren_pos of %s is empty. Manual rejoin is unsafe "
-                                        "but allowed.", rejoin_serv_name);
+                                        "but allowed.", rejoin_cand->name());
                         }
                         else
                         {
                             PRINT_MXS_JSON_ERROR(output, "%s cannot replicate from master server %s: %s",
-                                                 rejoin_serv_name, m_master->name(),
+                                                 rejoin_cand->name(), m_master->name(),
                                                  no_rejoin_reason.c_str());
                         }
                     }
 
                     if (rejoin_allowed)
                     {
-                        ServerArray joinable_server = {slave_cand};
+                        ServerArray joinable_server = {rejoin_cand};
                         if (do_rejoin(joinable_server, output) == 1)
                         {
                             rval = true;
@@ -172,13 +170,13 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(output, "The given server '%s' is not monitored by this monitor.",
-                                 rejoin_serv_name);
+            PRINT_MXS_JSON_ERROR(output, "%s is not monitored by %s, cannot rejoin.",
+                                 rejoin_cand_srv->name, m_monitor->name);
         }
     }
     else
     {
-        const char BAD_CLUSTER[] = "The server cluster of monitor '%s' is not in a state valid for joining. "
+        const char BAD_CLUSTER[] = "The server cluster of monitor %s is not in a valid state for joining. "
                                    "Either it has no master or its gtid domain is unknown.";
         PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_monitor->name);
     }
@@ -1490,8 +1488,7 @@ void MariaDBMonitor::check_cluster_operations_support()
     {
         // Need to accept unknown versions here. Otherwise servers which are down when the monitor starts
         // would deactivate failover.
-        if (server->m_version != MariaDBServer::version::UNKNOWN
-            && server->m_version != MariaDBServer::version::MARIADB_100)
+        if (server->m_srv_type != MariaDBServer::server_type::UNKNOWN && !server->m_capabilities.gtid)
         {
             supported = false;
             auto reason = string_printf("The version of %s (%s) is not supported. Failover/switchover "
@@ -1706,7 +1703,7 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
     for (MariaDBServer* server : m_servers)
     {
         if (server->is_slave() && !server->is_read_only()
-            && (server->m_version != MariaDBServer::version::BINLOG_ROUTER))
+            && (server->m_srv_type != MariaDBServer::server_type::BINLOG_ROUTER))
         {
             MYSQL* conn = server->m_server_base->con;
             if (mxs_mysql_query(conn, QUERY) == 0)

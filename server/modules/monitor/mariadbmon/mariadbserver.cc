@@ -35,9 +35,11 @@ public:
     std::string status;
 };
 
-MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index)
+MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index,
+                             bool assume_unique_hostnames)
     : m_server_base(monitored_server)
     , m_config_index(config_index)
+    , m_assume_unique_hostnames(assume_unique_hostnames)
 {
     mxb_assert(monitored_server);
 }
@@ -216,21 +218,20 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     unsigned int columns = 0;
     string query;
     bool all_slaves_status = false;
-    switch (m_version)
+    if (m_capabilities.gtid || m_srv_type == server_type::BINLOG_ROUTER)
     {
-    case version::MARIADB_100:
-    case version::BINLOG_ROUTER:
+        // Versions with gtid also support the extended slave status query.
         columns = 42;
         all_slaves_status = true;
-        query = "SHOW ALL SLAVES STATUS";
-        break;
-
-    case version::MARIADB_MYSQL_55:
+        query = "SHOW ALL SLAVES STATUS;";
+    }
+    else if (m_capabilities.basic_support)
+    {
         columns = 40;
-        query = "SHOW SLAVE STATUS";
-        break;
-
-    default:
+        query = "SHOW SLAVE STATUS;";
+    }
+    else
+    {
         mxb_assert(!true);      // This method should not be called for versions < 5.5
         return false;
     }
@@ -430,15 +431,10 @@ bool MariaDBServer::update_replication_settings(std::string* errmsg_out)
 
 bool MariaDBServer::read_server_variables(string* errmsg_out)
 {
-    MXS_MONITORED_SERVER* database = m_server_base;
-    string query = "SELECT @@global.server_id, @@read_only;";
-    int columns = 2;
-    if (m_version == version::MARIADB_100)
-    {
-        query.erase(query.end() - 1);
-        query += ", @@global.gtid_domain_id;";
-        columns = 3;
-    }
+    const string query_no_gtid = "SELECT @@global.server_id, @@read_only;";
+    const string query_with_gtid = "SELECT @@global.server_id, @@read_only, @@global.gtid_domain_id;";
+    const bool use_gtid = m_capabilities.gtid;
+    const string& query = use_gtid ? query_with_gtid : query_no_gtid;
 
     int i_id = 0;
     int i_ro = 1;
@@ -459,7 +455,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
             m_server_id = server_id_parsed;
             m_topology_changed = true;
         }
-        database->server->node_id = server_id_parsed;
+        m_server_base->server->node_id = server_id_parsed;
 
         bool read_only_parsed = result->get_bool(i_ro);
         if (read_only_parsed != m_read_only)
@@ -468,7 +464,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
             m_topology_changed = true;
         }
 
-        if (columns == 3)
+        if (use_gtid)
         {
             int64_t domain_id_parsed = result->get_uint(i_domain);
             if (domain_id_parsed < 0)   // Same here.
@@ -816,26 +812,23 @@ void MariaDBServer::monitor_server()
     string errmsg;
     bool query_ok = false;
     /* Query different things depending on server version/type. */
-    switch (m_version)
+    if (m_srv_type == server_type::BINLOG_ROUTER)
     {
-    case version::MARIADB_MYSQL_55:
-        query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
-        break;
-
-    case version::MARIADB_100:
-        query_ok = read_server_variables(&errmsg) && update_gtids(&errmsg)
-            && update_slave_status(&errmsg);
-        break;
-
-    case version::BINLOG_ROUTER:
         // TODO: Add special version of server variable query.
         query_ok = update_slave_status(&errmsg);
-        break;
-
-    default:
-        // Do not update unknown versions.
+    }
+    else if (m_capabilities.basic_support)
+    {
+        query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
+        if (query_ok && m_capabilities.gtid)
+        {
+            query_ok = update_gtids(&errmsg);
+        }
+    }
+    else
+    {
+        // Not a binlog server and no normal support, don't update.
         query_ok = true;
-        break;
     }
 
     if (query_ok)
@@ -873,41 +866,56 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
 
 void MariaDBServer::update_server_version()
 {
-    m_version = version::UNKNOWN;
+    m_srv_type = server_type::UNKNOWN;
     auto conn = m_server_base->con;
     auto srv = m_server_base->server;
 
     /* Get server version string, also get/set numeric representation. This function does not query the
      * server, since the data was obtained when connecting. */
-    mxs_mysql_set_server_version(conn, srv);
+    mxs_mysql_update_server_version(conn, srv);
 
     // Check whether this server is a MaxScale Binlog Server.
     MYSQL_RES* result;
     if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0
         && (result = mysql_store_result(conn)) != NULL)
     {
-        m_version = version::BINLOG_ROUTER;
+        m_srv_type = server_type::BINLOG_ROUTER;
         mysql_free_result(result);
     }
     else
     {
-        /* Not a binlog server, check version number. */
-        uint64_t version_num = server_get_version(srv);
-        if (version_num >= 100000 && srv->server_type == SERVER_TYPE_MARIADB)
+        /* Not a binlog server, check version number and supported features. */
+        m_srv_type = server_type::NORMAL;
+        m_capabilities = Capabilities();
+        SERVER_VERSION decoded = {0, 0, 0};
+        server_decode_version(server_get_version(srv), &decoded);
+        auto major = decoded.major;
+        auto minor = decoded.minor;
+        auto patch = decoded.patch;
+        // MariaDB/MySQL 5.5 is the oldest supported version. MySQL 6 and later are treated as 5.5.
+        if ((major == 5 && minor >= 5) || major > 5)
         {
-            m_version = version::MARIADB_100;
-        }
-        else if (version_num >= 5 * 10000 + 5 * 100)
-        {
-            m_version = version::MARIADB_MYSQL_55;
+            m_capabilities.basic_support = true;
+            // For more specific features, at least MariaDB 10.X is needed.
+            if (srv->server_type == SERVER_TYPE_MARIADB && major >= 10)
+            {
+                // 10.0.2 or 10.1.X or greater than 10
+                if (((minor == 0 && patch >= 2)  || minor >= 1) || major > 10)
+                {
+                    m_capabilities.gtid = true;
+                }
+                // 10.1.2 (10.1.1 has limited support, not enough) or 10.2.X or greater than 10
+                if (((minor == 1 && patch >= 2)  || minor >= 2) || major > 10)
+                {
+                    m_capabilities.max_statement_time = true;
+                }
+            }
         }
         else
         {
-            m_version = version::OLD;
-            MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
-                      "The server is ignored by the monitor. Server version: '%s'.",
-                      name(),
-                      srv->version_string);
+            MXS_ERROR("MariaDB/MySQL version of %s is less than 5.5, which is not supported. "
+                      "The server is ignored by the monitor. Server version string: '%s'.",
+                      name(), srv->version_string);
         }
     }
 }
@@ -951,8 +959,9 @@ void MariaDBServer::set_status(uint64_t bits)
 
 /**
  * Compare if the given slave status array is equal to the one stored in the MariaDBServer.
- * Only compares the parts relevant for building replication topology: master server id:s and
- * slave connection io states.
+ * Only compares the parts relevant for building replication topology: slave IO/SQL state,
+ * host:port and master server id:s. When unsure, return false. This must match
+ * 'build_replication_graph()' in the monitor class.
  *
  * @param new_slave_status Right hand side
  * @return True if equal
@@ -969,10 +978,14 @@ bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_sla
     {
         for (size_t i = 0; i < old_slave_status.size(); i++)
         {
-            // It's enough to check just the following two items, as these are used in
-            // 'build_replication_graph'.
-            if (old_slave_status[i].slave_io_running != new_slave_status[i].slave_io_running
-                || old_slave_status[i].master_server_id != new_slave_status[i].master_server_id)
+            const auto new_row = new_slave_status[i];
+            const auto old_row = old_slave_status[i];
+            // Strictly speaking, the following should depend on the 'assume_unique_hostnames',
+            // but the situations it would make a difference are so rare they can be ignored.
+            if (new_row.slave_io_running != old_row.slave_io_running
+                || new_row.slave_sql_running != old_row.slave_sql_running
+                || new_row.master_host != old_row.master_host || new_row.master_port != old_row.master_port
+                || new_row.master_server_id != old_row.master_server_id)
             {
                 rval = false;
                 break;
@@ -1144,19 +1157,40 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
 const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* target) const
 {
     // The slave node may have several slave connections, need to find the one that is
-    // connected to the parent. This section is quite similar to the one in
-    // 'build_replication_graph', although here we require that the sql thread is running.
-    auto target_id = target->m_server_id;
+    // connected to the parent. TODO: Use the information gathered in 'build_replication_graph'
+    // to skip this function, as the contents are very similar.
     const SlaveStatus* rval = NULL;
-    for (const SlaveStatus& ss : m_slave_status)
+    if (m_assume_unique_hostnames)
     {
-        auto master_id = ss.master_server_id;
-        // Should this check 'Master_Host' and 'Master_Port' instead of server id:s?
-        if (master_id > 0 && master_id == target_id && ss.slave_sql_running && ss.seen_connected
-            && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
+        // Can simply compare host:port.
+        SERVER* target_srv = target->m_server_base->server;
+        string target_host = target_srv->address;
+        int target_port = target_srv->port;
+        for (const SlaveStatus& ss : m_slave_status)
         {
-            rval = &ss;
-            break;
+            if (ss.master_host == target_host && ss.master_port == target_port &&
+                ss.slave_sql_running && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
+            {
+                rval = &ss;
+                break;
+            }
+        }
+    }
+    else
+    {
+        // Compare server id:s instead. If the master's id is wrong (e.g. never updated) this gives a
+        // wrong result. Also gives wrong result if monitor has never seen the slave connection in the
+        // connected state.
+        auto target_id = target->m_server_id;
+        for (const SlaveStatus& ss : m_slave_status)
+        {
+            auto master_id = ss.master_server_id;
+            if (master_id > 0 && master_id == target_id && ss.slave_sql_running && ss.seen_connected
+                && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
+            {
+                rval = &ss;
+                break;
+            }
         }
     }
     return rval;

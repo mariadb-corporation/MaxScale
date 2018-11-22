@@ -102,7 +102,7 @@ add_test_executable(bug547.cpp bug547 replication LABELS readwritesplit REPL_BAC
 add_test_executable(bug681.cpp bug681 bug681 LABELS readwritesplit REPL_BACKEND)
 
 # Regression case for the bug ""Different error messages from MariaDB and Maxscale"
-add_test_script(bug561.sh bug561.sh replication LABELS MySQLAuth REPL_BACKEND)
+add_test_executable(error_messages.cpp error_messages replication LABELS MySQLAuth REPL_BACKEND)
 
 # Regression case for the bug "Wrong error message for Access denied error"
 add_test_script(bug562.sh bug562.sh replication LABELS MySQLAuth REPL_BACKEND)
@@ -209,6 +209,9 @@ add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_m
 
 # MySQL Monitor with Multi-master configurations
 add_test_executable(mysqlmon_multimaster.cpp mysqlmon_multimaster mysqlmon_multimaster LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
+
+# MySQL Monitor with Multi-master configurations (assume_unique_hostnames=OFF)
+add_test_derived(mysqlmon_multimaster_serverid mysqlmon_multimaster mysqlmon_multimaster_serverid LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
 
 # MySQL Monitor Failover Test
 add_test_executable(mysqlmon_detect_standalone_master.cpp mysqlmon_detect_standalone_master mysqlmon_detect_standalone_master LABELS mysqlmon REPL_BACKEND)

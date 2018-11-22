@@ -41,10 +41,21 @@ if(NOT HAVE_LIBPTHREAD)
   message(FATAL_ERROR "Could not find libpthread")
 endif()
 
-# systemd libraries are optional
+# run "ps -p 1 | grep systemd" to determine if this system uses systemd
+execute_process(
+    COMMAND "ps" "-p" "1"
+    COMMAND "grep" "systemd"
+    RESULT_VARIABLE NOT_SYSTEMD_IS_RUNNING
+    OUTPUT_VARIABLE PS_OUTPUT)
+
 find_library(HAVE_SYSTEMD NAMES systemd)
 if(HAVE_SYSTEMD)
-  add_definitions(-DHAVE_SYSTEMD=1)
+    add_definitions(-DHAVE_SYSTEMD=1)
+else()
+    # If systemd is in use, require libsystemd-dev to be installed
+    if(NOT NOT_SYSTEMD_IS_RUNNING)
+        message( FATAL_ERROR "systemd is running: please install libsystemd-dev" )
+    endif()
 endif()
 
 # The XSI version of strerror_r return an int and the GNU version a char*

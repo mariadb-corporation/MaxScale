@@ -90,7 +90,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     server_version = mysql_get_server_version(monitored_server->con);
 
     /* get server version string */
-    mxs_mysql_set_server_version(monitored_server->con, monitored_server->server);
+    mxs_mysql_update_server_version(monitored_server->con, monitored_server->server);
     server_string = monitored_server->server->version_string;
 
     /* get server_id form current node */

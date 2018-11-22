@@ -47,6 +47,7 @@ static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_DETECT_STANDALONE_MASTER[] = "detect_standalone_master";
 static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
+static const char CN_ASSUME_UNIQUE_HOSTNAMES[] = "assume_unique_hostnames";
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[] = "verify_master_failure";
 static const char CN_MASTER_FAILURE_TIMEOUT[] = "master_failure_timeout";
@@ -78,14 +79,7 @@ void MariaDBMonitor::reset_server_info()
     // Next, initialize the data.
     for (auto mon_server = m_monitor->monitored_servers; mon_server; mon_server = mon_server->next)
     {
-        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size()));
-    }
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-    {
-        auto mon_server = (*iter)->m_server_base;
-        mxb_assert(m_server_info.count(mon_server) == 0);
-        ServerInfoMap::value_type new_val(mon_server, *iter);
-        m_server_info.insert(new_val);
+        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_assume_unique_hostnames));
     }
 }
 
@@ -97,7 +91,6 @@ void MariaDBMonitor::clear_server_info()
     }
     // All MariaDBServer*:s are now invalid, as well as any dependant data.
     m_servers.clear();
-    m_server_info.clear();
     m_servers_by_id.clear();
     m_excluded_servers.clear();
     assign_new_master(NULL);
@@ -115,17 +108,20 @@ void MariaDBMonitor::reset_node_index_info()
     }
 }
 
-/**
- * Get monitor-specific server info for the monitored server.
- *
- * @param handle
- * @param db Server to get info for. Must be a valid server or function crashes.
- * @return The server info.
- */
-MariaDBServer* MariaDBMonitor::get_server_info(MXS_MONITORED_SERVER* db)
+MariaDBServer* MariaDBMonitor::get_server(const std::string& host, int port)
 {
-    mxb_assert(m_server_info.count(db) == 1);   // Should always exist in the map
-    return m_server_info[db];
+    // TODO: Do this with a map lookup
+    MariaDBServer* found = NULL;
+    for (MariaDBServer* server : m_servers)
+    {
+        SERVER* srv = server->m_server_base->server;
+        if (host == srv->address && srv->port == port)
+        {
+            found = server;
+            break;
+        }
+    }
+    return found;
 }
 
 MariaDBServer* MariaDBMonitor::get_server(int64_t id)
@@ -134,21 +130,21 @@ MariaDBServer* MariaDBMonitor::get_server(int64_t id)
     return (found != m_servers_by_id.end()) ? (*found).second : NULL;
 }
 
-/**
- * Get the equivalent MariaDBServer.
- *
- * @param server Which server to search for
- * @return MariaDBServer if found, NULL otherwise
- */
+MariaDBServer* MariaDBMonitor::get_server(MXS_MONITORED_SERVER* mon_server)
+{
+    return get_server(mon_server->server);
+}
+
 MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
 {
-    MariaDBServer* found = NULL;
-    auto mon_server = mon_get_monitored_server(m_monitor, server);
-    if (mon_server)
+    for (auto iter : m_servers)
     {
-        found = get_server_info(mon_server);
+        if (iter->m_server_base->server == server)
+        {
+            return iter;
+        }
     }
-    return found;
+    return NULL;
 }
 
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
@@ -197,6 +193,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_detect_stale_slave = config_get_bool(params, "detect_stale_slave");
     m_ignore_external_masters = config_get_bool(params, "ignore_external_masters");
     m_detect_standalone_master = config_get_bool(params, CN_DETECT_STANDALONE_MASTER);
+    m_assume_unique_hostnames = config_get_bool(params, CN_ASSUME_UNIQUE_HOSTNAMES);
     m_failcount = config_get_integer(params, CN_FAILCOUNT);
     m_failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
     m_switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
@@ -216,7 +213,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, m_monitor, &excluded_array);
     for (int i = 0; i < n_excluded; i++)
     {
-        m_excluded_servers.push_back(get_server_info(excluded_array[i]));
+        m_excluded_servers.push_back(get_server(excluded_array[i]));
     }
     MXS_FREE(excluded_array);
 
@@ -229,6 +226,25 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     {
         MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
         settings_ok = false;
+    }
+    if (!m_assume_unique_hostnames)
+    {
+        const char requires[] = "%s requires that %s is on.";
+        if (m_auto_failover)
+        {
+            MXB_ERROR(requires, CN_AUTO_FAILOVER, CN_ASSUME_UNIQUE_HOSTNAMES);
+            settings_ok = false;
+        }
+        if (m_switchover_on_low_disk_space)
+        {
+            MXB_ERROR(requires, CN_SWITCHOVER_ON_LOW_DISK_SPACE, CN_ASSUME_UNIQUE_HOSTNAMES);
+            settings_ok = false;
+        }
+        if (m_auto_rejoin)
+        {
+            MXB_ERROR(requires, CN_AUTO_REJOIN, CN_ASSUME_UNIQUE_HOSTNAMES);
+            settings_ok = false;
+        }
     }
     return settings_ok;
 }
@@ -341,10 +357,8 @@ void MariaDBMonitor::update_server(MariaDBServer* server)
             server->update_server_version();
         }
 
-        auto server_vrs = server->m_version;
-        if (server_vrs == MariaDBServer::version::MARIADB_MYSQL_55
-            || server_vrs == MariaDBServer::version::MARIADB_100
-            || server_vrs == MariaDBServer::version::BINLOG_ROUTER)
+        if (server->m_capabilities.basic_support
+            || server->m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
         {
             // Check permissions if permissions failed last time or if this is a new connection.
             if (server->had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
@@ -400,7 +414,7 @@ void MariaDBMonitor::pre_loop()
         // This is somewhat questionable, as the journal only contains status bits but no actual topology
         // info. In a fringe case the actual queried topology may not match the journal data, freezing the
         // master to a suboptimal choice.
-        assign_new_master(get_server_info(journal_master));
+        assign_new_master(get_server(journal_master));
     }
 
     /* This loop can be removed if/once the replication check code is inside tick. It's required so that
@@ -1083,6 +1097,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,   "true"
+            },
+            {
+                CN_ASSUME_UNIQUE_HOSTNAMES,         MXS_MODULE_PARAM_BOOL,    "true"
             },
             {MXS_END_MODULE_PARAMS}
         }

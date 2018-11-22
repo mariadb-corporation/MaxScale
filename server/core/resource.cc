@@ -1327,10 +1327,11 @@ static HttpResponse handle_request(const HttpRequest& request)
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
-    mxb::Worker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    mxs::RoutingWorker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
 
     HttpResponse response;
-    worker->call([&request, &response]() {
+    worker->call([&request, &response, worker]() {
+                     mxs::WatchdogWorkaround workaround(worker);
                      response = handle_request(request);
                  },
                  mxb::Worker::EXECUTE_AUTO);

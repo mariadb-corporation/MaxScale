@@ -35,9 +35,9 @@
 #include <sys/syslog.h>
 #include <telnetd.h>
 
+#include <maxbase/atomic.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
-#include <maxbase/atomic.h>
 #include <maxscale/buffer.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
@@ -47,13 +47,12 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/router.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
-#include <maxscale/routingworker.h>
-#include <maxscale/routingworker.hh>
 
 #include <debugcli.h>
 
@@ -2102,6 +2101,10 @@ static const char item_separator[] =
  */
 int execute_cmd(CLI_SESSION* cli)
 {
+    mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
+    mxb_assert(worker == mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN));
+    mxs::WatchdogWorkaround workaround(worker);
+
     DCB* dcb = cli->session->client_dcb;
     int argc, i, j, found = 0;
     char* args[MAXARGS + 4];

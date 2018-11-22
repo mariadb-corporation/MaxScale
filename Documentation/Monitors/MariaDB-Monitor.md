@@ -8,6 +8,7 @@ Table of Contents
   * [Configuration](#configuration)
   * [Common Monitor Parameters](#common-monitor-parameters)
   * [MariaDB Monitor optional parameters](#mariadb-monitor-optional-parameters)
+     * [assume_unique_hostnames](#assume_unique_hostnames)
      * [detect_replication_lag](#detect_replication_lag)
      * [detect_stale_master](#detect_stale_master)
      * [detect_stale_slave](#detect_stale_slave)
@@ -136,6 +137,33 @@ For a list of optional parameters that all monitors support, read the
 These are optional parameters specific to the MariaDB Monitor. Failover,
 switchover and rejoin-specific parameters are listed in their own
 [section](#cluster-manipulation-operations).
+
+### `assume_unique_hostnames`
+
+Boolean, default: ON. When active, the monitor assumes that server hostnames and
+ports are consistent between the MaxScale configuration file server definitions
+and the "SHOW ALL SLAVES STATUS" outputs of the servers. Specifically, the
+monitor assumes that if server A is replicating from server B, then A must have
+a slave connection with `Master_Host` and `Master_Port` equal to B's address and
+port in the configuration file. If this is not the case, e.g. an IP is used in
+the server while a hostname is given in the file, the monitor will misinterpret
+the topology.
+
+This setting must be ON to use any cluster operation features such as failover
+or switchover, because MaxScale uses the addresses and ports in the
+configuration file when issuing "CHANGE MASTER TO"-commands.
+
+If the network configuration is such that the addresses MaxScale uses to connect
+to backends are different from the ones the servers use to connect to each
+other, `assume_unique_hostnames` should be set to OFF. In this mode, MaxScale
+uses server id:s it queries from the servers and the `Master_Server_Id` fields
+of the slave connections to deduce which server is replicating from which. This
+is not perfect though, since MaxScale doesn't know the id:s of servers it has
+never connected to (e.g. server has been down since MaxScale was started). Also,
+the `Master_Server_Id`-field may have an incorrect value if the slave connection
+has not been established. MaxScale will only trust the value if the monitor has
+seen the slave connection IO thread connected at least once. If this is not the
+case, the slave connection is ignored.
 
 ### `detect_replication_lag`
 

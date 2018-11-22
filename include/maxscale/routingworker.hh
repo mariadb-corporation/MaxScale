@@ -432,7 +432,63 @@ public:
      * To be called from the initial (parent) thread if the systemd watchdog is on.
      */
     static void set_watchdog_interval(uint64_t microseconds);
+
+    class WatchdogWorkaround;
+    friend WatchdogWorkaround;
+
+    /**
+     * @class WatchdogWorkaround
+     *
+     * RAII-class using which the systemd watchdog notification can be
+     * handled during synchronous worker activity that causes the epoll
+     * event handling to be stalled.
+     *
+     * The constructor turns on the workaround and the destructor
+     * turns it off.
+     */
+    class WatchdogWorkaround
+    {
+        WatchdogWorkaround(const WatchdogWorkaround&);
+        WatchdogWorkaround& operator=(const WatchdogWorkaround&);
+
+    public:
+        /**
+         * Turns on the watchdog workaround for a specific worker.
+         *
+         * @param pWorker  The worker for which the systemd notification
+         *                 should be arranged. Need not be the calling worker.
+         */
+        WatchdogWorkaround(RoutingWorker* pWorker)
+            : m_pWorker(pWorker)
+        {
+            mxb_assert(pWorker);
+            m_pWorker->start_watchdog_workaround();
+        }
+
+        /**
+         * Turns on the watchdog workaround for the calling worker.
+         */
+        WatchdogWorkaround()
+            : WatchdogWorkaround(RoutingWorker::get_current())
+        {
+        }
+
+        /**
+         * Turns off the watchdog workaround.
+         */
+        ~WatchdogWorkaround()
+        {
+            m_pWorker->stop_watchdog_workaround();
+        }
+
+    private:
+        RoutingWorker* m_pWorker;
+    };
+
 private:
+    class WatchdogNotifier;
+    friend WatchdogNotifier;
+
     const int    m_id;              /*< The id of the worker. */
     SessionsById m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
                                      *  should contain sessions exclusive to this
@@ -454,14 +510,19 @@ private:
 
     void delete_zombies();
     void check_systemd_watchdog();
+    void start_watchdog_workaround();
+    void stop_watchdog_workaround();
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
 
-    static maxbase::Duration  s_watchdog_interval;  /*< Duration between notifications, if any. */
-    static maxbase::TimePoint s_watchdog_next_check;/*< Next time to notify systemd. */
-    std::atomic<bool>         m_alive;              /*< Set to true in epoll_tick(), false on notification. */
+    static maxbase::Duration  s_watchdog_interval;    /*< Duration between notifications, if any. */
+    static maxbase::TimePoint s_watchdog_next_check;  /*< Next time to notify systemd. */
+    std::atomic<bool>         m_alive;                /*< Set to true in epoll_tick(), false on notification. */
+    WatchdogNotifier*         m_pWatchdog_notifier;   /*< Watchdog notifier, if systemd enabled. */
 };
+
+using WatchdogWorkaround = RoutingWorker::WatchdogWorkaround;
 
 // Data local to a routing worker
 template<class T>

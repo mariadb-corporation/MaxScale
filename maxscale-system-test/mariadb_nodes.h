@@ -150,8 +150,8 @@ public:
      */
     char* revert_snapshot_command;
 
-    int connect(int i);
-    int connect();
+    int connect(int i, const std::string& db = "test");
+    int connect(const std::string& db = "test");
 
     /**
      * Repeatedly try to connect with one second sleep in between attempts
