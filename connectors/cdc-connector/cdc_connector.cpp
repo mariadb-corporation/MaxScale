@@ -169,6 +169,8 @@ template <> void Closer<int>::close(int fd)
 namespace CDC
 {
 
+const char* const TIMEOUT  = "Request timed out";
+
 /**
  * Public functions
  */

@@ -32,7 +32,7 @@ namespace CDC
 
 // The error strings returned by the getError library. These can be used to
 // check for the most common errors (which right now is only the timeout).
-static const char* TIMEOUT = "Request timed out";
+extern const char* const TIMEOUT;
 
 // The typedef for the Row type
 class Row;
