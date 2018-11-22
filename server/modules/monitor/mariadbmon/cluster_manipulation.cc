@@ -135,12 +135,12 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
                         if (empty_gtid)
                         {
                             rejoin_allowed = true;
-                            MXB_WARNING("gtid_curren_pos of %s is empty. Manual rejoin is unsafe "
+                            MXB_WARNING("gtid_curren_pos of '%s' is empty. Manual rejoin is unsafe "
                                         "but allowed.", rejoin_cand->name());
                         }
                         else
                         {
-                            PRINT_MXS_JSON_ERROR(output, "%s cannot replicate from master server %s: %s",
+                            PRINT_MXS_JSON_ERROR(output, "'%s' cannot replicate from master server '%s': %s",
                                                  rejoin_cand->name(), m_master->name(),
                                                  no_rejoin_reason.c_str());
                         }
@@ -163,7 +163,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
                 else
                 {
                     PRINT_MXS_JSON_ERROR(output,
-                                         "The GTIDs of master server %s could not be updated: %s",
+                                         "The GTIDs of master server '%s' could not be updated: %s",
                                          m_master->name(), gtid_update_error.c_str());
                 }
             }   // server_is_rejoin_suspect has added any error messages to the output, no need to print here
@@ -345,7 +345,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
                 if (!new_master->execute_cmd("FLUSH TABLES;", &error_msg))
                 {
                     error = true;
-                    PRINT_MXS_JSON_ERROR(error_out, "Could not add event to %s: %s",
+                    PRINT_MXS_JSON_ERROR(error_out, "Could not add event to '%s': %s",
                                          new_master->name(), error_msg.c_str());
                 }
 
@@ -484,7 +484,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
      * or does the same as in 1.
      */
 
-    const char redir_fmt[] = "Redirecting %s to replicate from %s instead of %s.";
+    const char redir_fmt[] = "Redirecting %s to replicate from '%s' instead of '%s'.";
     string slave_names_to_promo = monitored_servers_to_string(redirect_to_promo_target);
     string slave_names_to_demo = monitored_servers_to_string(redirect_to_demo_target);
     mxb_assert(slave_names_to_demo.empty() || type == OperationType::SWITCHOVER);
@@ -492,8 +492,8 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
     // Print both name lists if both have items, otherwise just the one with items.
     if (!slave_names_to_promo.empty() && !slave_names_to_demo.empty())
     {
-        MXS_NOTICE("Redirecting %s to replicate from %s instead of %s, and %s to replicate from "
-                   "%s instead of %s.",
+        MXS_NOTICE("Redirecting %s to replicate from '%s' instead of '%s', and %s to replicate from "
+                   "'%s' instead of '%s'.",
                    slave_names_to_promo.c_str(), promotion_target->name(), demotion_target->name(),
                    slave_names_to_demo.c_str(), demotion_target->name(), promotion_target->name());
     }
@@ -527,7 +527,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                 {
                     // Already has a connection to redirect target.
                     conflicts++;
-                    MXS_WARNING("%s already has a slave connection to %s, connection to %s was "
+                    MXS_WARNING("'%s' already has a slave connection to '%s', connection to '%s' was "
                                 "not redirected.",
                                 redirectable->name(), to->name(), from->name());
                 }
@@ -640,7 +640,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                 else
                 {
                     PRINT_MXS_JSON_ERROR(output,
-                                         "Failed to prepare (demote) standalone server %s for rejoin.", name);
+                                         "Failed to prepare (demote) standalone server '%s' for rejoin.", name);
                 }
             }
             else
@@ -725,7 +725,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
         }
         else
         {
-            MXS_ERROR("The GTIDs of master server %s could not be updated while attempting an automatic "
+            MXS_ERROR("The GTIDs of master server '%s' could not be updated while attempting an automatic "
                       "rejoin: %s", m_master->name(), gtid_update_error.c_str());
             comm_ok = false;
         }
@@ -851,7 +851,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                 }
                 else
                 {
-                    MXS_WARNING("Could not copy slave connections from %s to %s.",
+                    MXS_WARNING("Could not copy slave connections from '%s' to '%s'.",
                                 promotion_target->name(), demotion_target->name());
                 }
                 ServerArray redirected_to_demo_target;
@@ -878,12 +878,13 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
             const char QUERY_UNDO[] = "SET GLOBAL read_only=0;";
             if (mxs_mysql_query(demotion_target->m_server_base->con, QUERY_UNDO) == 0)
             {
-                PRINT_MXS_JSON_ERROR(error_out, "read_only disabled on server %s.", demotion_target->name());
+                PRINT_MXS_JSON_ERROR(error_out, "read_only disabled on server '%s'.",
+                                     demotion_target->name());
             }
             else
             {
                 PRINT_MXS_JSON_ERROR(error_out,
-                                     "Could not disable read_only on server %s: '%s'.",
+                                     "Could not disable read_only on server '%s': '%s'.",
                                      demotion_target->name(),
                                      mysql_error(demotion_target->m_server_base->con));
             }
@@ -981,7 +982,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                 if (slave_conn == NULL)
                 {
                     // Highly unlikely. Maybe someone just removed the slave connection after it was created.
-                    MXS_WARNING("%s does not have a slave connection to %s although one should have "
+                    MXS_WARNING("'%s' does not have a slave connection to '%s' although one should have "
                                 "been created.",
                                 slave->name(), new_master->name());
                     repl_fails.push_back(*iter);
@@ -1049,20 +1050,20 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
     if (successes.size() == redirected_slaves.size())
     {
         // Complete success.
-        MXS_NOTICE("All redirected slaves successfully started replication from %s.", new_master->name());
+        MXS_NOTICE("All redirected slaves successfully started replication from '%s'.", new_master->name());
     }
     else
     {
         if (!successes.empty())
         {
-            MXS_NOTICE("%s successfully started replication from %s.",
+            MXS_NOTICE("%s successfully started replication from '%s'.",
                        monitored_servers_to_string(successes).c_str(), new_master->name());
         }
         // Something went wrong.
         auto fails = query_fails.size() + repl_fails.size() + unconfirmed.size();
-        const char MSG[] = "%lu slaves did not start replicating from %s. "
+        const char MSG[] = "%lu slaves did not start replicating from '%s'. "
                            "%lu encountered an I/O or SQL error, %lu failed to reply and %lu did not "
-                           "connect to %s within the time limit.";
+                           "connect to '%s' within the time limit.";
         MXS_WARNING(MSG, fails, new_master->name(), repl_fails.size(), query_fails.size(),
                     unconfirmed.size(), new_master->name());
     }
@@ -1436,7 +1437,7 @@ void MariaDBMonitor::handle_auto_failover()
     else if (m_verify_master_failure
              && (connected_slave = slave_receiving_events(m_master, &event_age, &delay_time)) != NULL)
     {
-        MXS_NOTICE("Slave %s is still connected to %s and received a new gtid or heartbeat event %.1f "
+        MXS_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat event %.1f "
                    "seconds ago. Delaying failover for at least %.1f seconds.",
                    connected_slave->name(), m_master->name(), event_age.secs(), delay_time.secs());
     }
@@ -1491,7 +1492,7 @@ void MariaDBMonitor::check_cluster_operations_support()
         if (server->m_srv_type != MariaDBServer::server_type::UNKNOWN && !server->m_capabilities.gtid)
         {
             supported = false;
-            auto reason = string_printf("The version of %s (%s) is not supported. Failover/switchover "
+            auto reason = string_printf("The version of '%s' (%s) is not supported. Failover/switchover "
                                         "requires MariaDB 10.0.2 or later.",
                                         server->name(), server->m_server_base->server->version_string);
             printer.cat(all_reasons, reason);
@@ -1604,11 +1605,9 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         }
         else if (!demotion_candidate->can_be_demoted_switchover(&demotion_msg))
         {
-            PRINT_ERROR_IF(log_mode,
-                           error_out,
+            PRINT_ERROR_IF(log_mode, error_out,
                            "'%s' is not a valid demotion target for switchover: %s",
-                           demotion_candidate->name(),
-                           demotion_msg.c_str());
+                           demotion_candidate->name(), demotion_msg.c_str());
         }
         else
         {
@@ -1708,11 +1707,11 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
             MYSQL* conn = server->m_server_base->con;
             if (mxs_mysql_query(conn, QUERY) == 0)
             {
-                MXS_NOTICE("read_only set to ON on server '%s'.", server->name());
+                MXS_NOTICE("read_only set to ON on '%s'.", server->name());
             }
             else
             {
-                MXS_ERROR("Setting read_only on server '%s' failed: '%s.", server->name(), mysql_error(conn));
+                MXS_ERROR("Setting read_only on '%s' failed: '%s'.", server->name(), mysql_error(conn));
             }
         }
     }
@@ -1824,11 +1823,9 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* d
         auto sstatus = server->slave_connection_status(demotion_target);
         if (sstatus && sstatus->gtid_io_pos.empty())
         {
-            PRINT_ERROR_IF(log_mode,
-                           error_out,
+            PRINT_ERROR_IF(log_mode, error_out,
                            "The slave connection '%s' -> '%s' is not using gtid replication.",
-                           server->name(),
-                           demotion_target->name());
+                           server->name(), demotion_target->name());
             gtid_ok = false;
         }
     }

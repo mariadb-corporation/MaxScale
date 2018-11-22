@@ -915,7 +915,7 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
             && !server->is_master() && !server->is_relay_master())
         {
             // TODO: Handle relays somehow, e.g. switch with a slave
-            MXS_WARNING("Setting %s to maintenance because it is low on disk space.", server->name());
+            MXS_WARNING("Setting '%s' to maintenance because it is low on disk space.", server->name());
             server->set_status(SERVER_MAINT);
         }
     }
