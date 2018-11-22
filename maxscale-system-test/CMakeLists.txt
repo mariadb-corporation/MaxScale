@@ -276,6 +276,9 @@ add_test_executable(mysqlmon_reset_replication.cpp mysqlmon_reset_replication my
 # MySQL Monitor low disk switchover
 add_test_executable(mysqlmon_switchover_auto.cpp mysqlmon_switchover_auto mysqlmon_switchover_auto LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor series of failovers and rejoins
+add_test_executable(mysqlmon_failover_readonly.cpp mysqlmon_failover_readonly mysqlmon_failover_readonly LABELS mysqlmon REPL_BACKEND)
+
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
 add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
