@@ -424,24 +424,9 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
                 info.local_state = atoi(row[1]);
             }
 
-            /* We can check:
-             * wsrep_local_state == 0
-             * wsrep_cluster_size == 0
-             * wsrep_cluster_state_uuid == ""
-             */
             if (strcmp(row[0], "wsrep_cluster_state_uuid") == 0)
             {
-                if (row[1] == NULL || !strlen(row[1]))
-                {
-                    MXS_DEBUG("Node %s is not running Galera Cluster",
-                              database->server->unique_name);
-                    info.cluster_uuid = NULL;
-                    info.joined = 0;
-                }
-                else
-                {
-                    info.cluster_uuid = MXS_STRDUP(row[1]);
-                }
+                info.cluster_uuid = row[1] && *row[1] ? MXS_STRDUP(row[1]) : NULL;
             }
         }
 
@@ -1141,28 +1126,20 @@ static void set_galera_cluster(MXS_MONITOR *mon)
         {
             /* fetch the Value for the Key */
             value = hashtable_fetch(table, key);
-            if (value)
+            ss_dassert(value);
+
+            if (SERVER_IS_RUNNING(value->node) && value->joined && value->cluster_size)
             {
-                if (!SERVER_IN_MAINT(value->node) &&
-                    SERVER_IS_RUNNING(value->node) &&
-                    value->joined)
+                /* This server is part of a cluster */
+                n_nodes++;
+
+                /* Pick the cluster UUID of the largest cluster if we have no previous cluster. */
+                if ((handle->cluster_info.c_uuid == NULL && value->cluster_size > cluster_size) ||
+                    (handle->cluster_info.c_uuid &&
+                     strcmp(handle->cluster_info.c_uuid, value->cluster_uuid) == 0))
                 {
-                    /* This server can be part of a cluster */
-                    n_nodes++;
-
-                    /* Set cluster_uuid for nodes that report
-                     * highest value of cluster_size
-                     */
-                    if (value->cluster_size > cluster_size)
-                    {
-                        cluster_size = value->cluster_size;
-                        cluster_uuid = value->cluster_uuid;
-                    }
-
-                    MXS_DEBUG("Candidate cluster member %s: UUID %s, joined nodes %d",
-                              value->node->unique_name,
-                              value->cluster_uuid,
-                              value->cluster_size);
+                    cluster_size = value->cluster_size;
+                    cluster_uuid = value->cluster_uuid;
                 }
             }
         }
@@ -1181,16 +1158,21 @@ static void set_galera_cluster(MXS_MONITOR *mon)
                               n_nodes,
                               cluster_uuid,
                               cluster_size);
-    /**
-     * Free && set the new cluster_uuid:
-     * Handling the special case n_nodes == 1
-     */
-    if (ret || (!ret && n_nodes != 1))
+
+    if (ret)
     {
-        /* Set the new cluster_uuid */
+        // We have a working cluster
+        ss_dassert(cluster_uuid);
         MXS_FREE(handle->cluster_info.c_uuid);
-        handle->cluster_info.c_uuid = ret ? MXS_STRDUP(cluster_uuid) : NULL;
+        handle->cluster_info.c_uuid = MXS_STRDUP(cluster_uuid);
         handle->cluster_info.c_size = cluster_size;
+    }
+    else if (n_nodes == 0)
+    {
+        // No live nodes, clear the stored cluster UUID
+        MXS_FREE(handle->cluster_info.c_uuid);
+        handle->cluster_info.c_uuid = NULL;
+        handle->cluster_info.c_size = 0;
     }
 
     /**
@@ -1295,36 +1277,10 @@ static bool detect_cluster_size(const GALERA_MONITOR *handle,
     }
     else if (n_nodes == 1)
     {
-        char *msg = "Galera cluster with 1 node only";
-
-        /* If 1 node only:
-         * ifc_uuid is not set, return value will be true.
-         * if c_uuid is equal to candidate_uuid, return value will be true.
-         */
-        if (c_uuid == NULL ||
-            (c_uuid && strcmp(c_uuid, candidate_uuid) == 0))
+        if (c_uuid == NULL || strcmp(c_uuid, candidate_uuid) == 0)
         {
+            // No previous cluster or this node is in the correct cluster
             ret = true;
-        }
-
-        /* Log change if no previous UUID was set */
-        if (c_uuid == NULL)
-        {
-            if (ret)
-            {
-                MXS_INFO("%s has UUID %s: continue", msg, candidate_uuid);
-            }
-        }
-        else
-        {
-            if (strcmp(c_uuid, candidate_uuid) && c_size != 1)
-            {
-                /* This error should be logged once */
-                MXS_ERROR("%s and its UUID %s is different from previous set one %s: aborting",
-                          msg,
-                          candidate_uuid,
-                          c_uuid);
-            }
         }
     }
     else
@@ -1332,7 +1288,8 @@ static bool detect_cluster_size(const GALERA_MONITOR *handle,
         int min_cluster_size = (n_nodes / 2) + 1;
 
         /* Return true if there are enough members */
-        if (candidate_size >= min_cluster_size)
+        if ((c_uuid && strcmp(c_uuid, candidate_uuid) == 0) ||
+            (c_uuid == NULL && candidate_size >= min_cluster_size))
         {
             ret = true;
             /* Log the successful change once */
