@@ -9,17 +9,50 @@ logs. You can switch to a new master server without the slaves noticing that the
 actual master server has changed. This allows for a more highly available
 replication setup where replication is high-priority.
 
-# Configuration
+Table of Contents
+=================
 
-## Mandatory Router Parameters
+* [Configuration](#configuration)
+   * [Mandatory Router Parameters](#mandatory-router-parameters)
+   * [Router Parameters](#router-parameters)
+      * [binlogdir](#binlogdir)
+      * [server_id](#server_id)
+      * [master_id](#master_id)
+      * [uuid](#uuid)
+      * [master_uuid](#master_uuid)
+      * [master_version](#master_version)
+      * [master_hostname](#master_hostname)
+      * [slave_hostname](#slave_hostname)
+      * [user](#user)
+      * [password](#password)
+      * [heartbeat](#heartbeat)
+      * [burstsize](#burstsize)
+      * [mariadb10-compatibility](#mariadb10-compatibility)
+      * [transaction_safety](#transaction_safety)
+      * [send_slave_heartbeat](#send_slave_heartbeat)
+      * [semisync](#semisync)
+      * [ssl_cert_verification_depth](#ssl_cert_verification_depth)
+      * [encrypt_binlog](#encrypt_binlog)
+      * [encryption_algorithm](#encryption_algorithm)
+      * [encryption_key_file](#encryption_key_file)
+      * [mariadb10_master_gtid](#mariadb10_master_gtid)
+      * [master_retry_count](#master_retry_count)
+      * [connect_retry](#connect_retry)
+   * [Using secondary masters](#using-secondary-masters)
+* [Examples](#examples)
+
+## Configuration
+
+### Mandatory Router Parameters
 
 The binlogrouter requires the `user` and `password` parameters. These should be
 configured according to the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md#service).
 
-In addition to these two parameters, the `server_id` and `binlogdir` parameters needs to be defined.
+In addition to these two parameters, the `server_id` and `binlogdir` parameters
+needs to be defined.
 
-## Router Parameters
+### Router Parameters
 
 The binlogrouter accepts the following parameters.
 
@@ -30,7 +63,7 @@ parameters. The values defined in `router_options` will have priority over the
 parameters to support legacy configurations. The use of `router_options` is
 deprecated.
 
-### `binlogdir`
+#### `binlogdir`
 
 This parameter controls the location where MariaDB MaxScale stores the binary log
 files. This is a mandatory parameter.
@@ -50,7 +83,7 @@ Read the [MySQL Authenticator](../Authenticators/MySQL-Authenticator.md)
 documentation for instructions on how to define a custom location for the user
 cache.
 
-### `server_id`
+#### `server_id`
 
 MariaDB MaxScale must have a unique _server_id_. This parameter configures
 the value of the _server_id_ that MariaDB MaxScale will use when
@@ -59,7 +92,7 @@ connecting to the master. This is a mandatory parameter.
 Older versions of MaxScale allowed the ID to be specified using `server-id`.
 This has been deprecated and will be removed in a future release of MariaDB MaxScale.
 
-### `master_id`
+#### `master_id`
 
 The _server_id_ value that MariaDB MaxScale should use to report to the slaves
 that connect to MariaDB MaxScale.
@@ -71,36 +104,36 @@ layer. The real master server ID will be used if the option is not set.
 Older versions of MaxScale allowed the ID to be specified using `master-id`.
 This has been deprecated and will be removed in a future release of MariaDB MaxScale.
 
-### `uuid`
+#### `uuid`
 
 This is used to set the unique UUID that the binlog router uses when it connects
 to the master server. By default the UUID will be generated.
 
-### `master_uuid`
+#### `master_uuid`
 
 It is a requirement of replication that each server has a unique UUID value. If
 this option is not set, binlogrouter will identify itself to the slaves using
 the UUID of the real master.
 
-### `master_version`
+#### `master_version`
 
 By default, the router will identify itself to the slaves using the server
 version of the real master. This option allows the router to use a custom
 version string.
 
-### `master_hostname`
+#### `master_hostname`
 
 By default, the router will identify itself to the slaves using the hostname of
 the real master. This option allows the router to use a custom hostname.
 
-### `slave_hostname`
+#### `slave_hostname`
 
 Since MaxScale 2.1.6 the router can optionally identify itself to the master
 using a custom hostname. The specified hostname can be seen in the master via
 `SHOW SLAVE HOSTS` command. The default is not to send any hostname string
 during registration.
 
-### `user`
+#### `user`
 
 *Note:* This is option can only be given to the `router_options` parameter. Use
  the `user` parameter of the service instead.
@@ -128,7 +161,7 @@ CREATE USER 'repl'@'maxscalehost' IDENTIFIED by 'password';
 GRANT REPLICATION SLAVE ON *.* TO 'repl'@'maxscalehost';
 ```
 
-### `password`
+#### `password`
 
 *Note:* This is option can only be given to the `router_options` parameter. Use
  the `password` parameter of the service instead.
@@ -138,7 +171,7 @@ password in the service entry will be used. For compatibility with other
 username and password definitions within the MariaDB MaxScale configuration file
 it is also possible to use the parameter `passwd`.
 
-### `heartbeat`
+#### `heartbeat`
 
 This defines the value of the heartbeat interval in seconds for the connection
 to the master. The default value for the heartbeat period is every 5 minutes.
@@ -148,7 +181,7 @@ least every heartbeat period. If there are no real binlog events to send the
 master will sent a special heartbeat event. The current interval value is
 reported in the diagnostic output.
 
-### `burstsize`
+#### `burstsize`
 
 This parameter is used to define the maximum amount of data that will be sent to
 a slave by MariaDB MaxScale when that slave is lagging behind the master. The
@@ -164,7 +197,7 @@ designed to both prevent flooding of that slave and also to prevent threads
 within MariaDB MaxScale spending disproportionate amounts of time with slaves
 that are lagging behind the master.
 
-### `mariadb10-compatibility`
+#### `mariadb10-compatibility`
 
 This parameter allows binlogrouter to replicate from a MariaDB 10.0 master
 server: this parameter is enabled by default since MaxScale 2.2.0.
@@ -200,7 +233,7 @@ When a slave server connects with a GTID request a lookup is made for
 the value match and following binlog events will be sent.
 
 
-### `transaction_safety`
+#### `transaction_safety`
 
 This parameter is used to enable/disable incomplete transactions detection in
 binlog router. The default value is _off_.
@@ -210,7 +243,7 @@ is corrupted or an incomplete transaction is found. During normal operations
 binlog events are not distributed to the slaves until a COMMIT is seen. Set
 transaction_safety=on to enable detection of incomplete transactions.
 
-### `send_slave_heartbeat`
+#### `send_slave_heartbeat`
 
 This defines whether MariaDB MaxScale sends the heartbeat packet to the slave
 when there are no real binlog events to send. This parameter takes a boolean
@@ -221,7 +254,7 @@ If value is set to true the interval value (requested by the slave during
 registration) is reported in the diagnostic output and the packet is send after
 the time interval without any event to send.
 
-### `semisync`
+#### `semisync`
 
 This parameter controls whether binlog server could ask Master server to start
 the Semi-Synchronous replication. This parameter takes a boolean value and the
@@ -233,7 +266,7 @@ value of the GLOBAL VARIABLE *rpl_semi_sync_master_enabled* are checked in the
 Master registration phase: if the plugin is installed in the Master database,
 the binlog server subsequently requests the semi-sync option.
 
-Note:
+**Note:**
  - the network replication stream from Master has two additional bytes before
    each binlog event.
  - the Semi-Sync protocol requires an acknowledge packet to be sent back to
@@ -245,7 +278,7 @@ Note:
 Please note that semi-sync replication is only related to binlog server to
 Master communication.
 
-### `ssl_cert_verification_depth`
+#### `ssl_cert_verification_depth`
 
 This parameter sets the maximum length of the certificate authority chain that
 will be accepted. Legal values are positive integers. This applies to SSL
@@ -253,7 +286,7 @@ connection to master server that could be acivated either by writing options in
 master.ini or later via a _CHANGE MASTER TO_ command. This parameter cannot be
 modified at runtime. The default verification depth is 9.
 
-### `encrypt_binlog`
+#### `encrypt_binlog`
 
 Whether to encrypt binlog files: the default is _off_.
 
@@ -275,11 +308,11 @@ MaxScale binlog server adds its own StartEncryption to binlog files consequently
 the binlog events positions in binlog file are the same as in the master binlog
 file and there is no position mismatch.
 
-### `encryption_algorithm`
+#### `encryption_algorithm`
 
 The encryption algorithm, either 'aes_ctr' or 'aes_cbc'. The default is 'aes_cbc'
 
-### `encryption_key_file`
+#### `encryption_key_file`
 
 The specified key file must contains lines with following format:
 
@@ -308,7 +341,7 @@ Example key file with multiple keys:
 3;bbbbbbbbbaaaaaaabbbbbccccceeeddddd3333333ddddaaaaffffffeeeeecccd
 ```
 
-### `mariadb10_master_gtid`
+#### `mariadb10_master_gtid`
 
 This option allows MaxScale binlog router to register with MariaDB 10.X master
 using GTID instead of _binlog_file_ name and _position_ in CHANGE MASTER TO
@@ -347,15 +380,18 @@ by the master server before any event.
 In order to avoid holes in the binlog files, MaxScale will fill all gaps
 in the binlog files with ignorable events.
 - It's not possible to specify the GTID _domain_id: the master one
-is being used for all operations. All slave servers must use the same replication domain as the master server.
+is being used for all operations. All slave servers must use the same replication
+domain as the master server.
 
-### `master_retry_count`
+#### `master_retry_count`
 
-This option sets the maximum number of connection retries when the master server is disconnected or not reachable.
+This option sets the maximum number of connection retries when the master server is
+disconnected or not reachable.
 Default value is 1000.
 
-### `connect_retry`
-The option sets the time interval for a new connection retry to master server, default value is 60 seconds.
+#### `connect_retry`
+The option sets the time interval for a new connection retry to master server,
+default value is 60 seconds.
 
 
 **A complete example** of a service entry for a binlog router service would be as
@@ -375,7 +411,7 @@ encryption_algorithm=aes_ctr
 encryption_key_file=/var/binlogs/enc_key.txt
 ```
 
-## Using secondary masters
+### Using secondary masters
 
 From MaxScale 2.3 onwards it is possible to specify secondary masters that
 the binlog router can use in case the connection to the default master fails.
@@ -454,8 +490,8 @@ master_host=192.168.121.76
 
 ## Examples
 
-The [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md) tutorial will
-show you how to configure and administrate a binlogrouter installation.
+The [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
+tutorial will show you how to configure and administrate a binlogrouter installation.
 
 Tutorial also includes SSL communication setup to the master server and SSL
 client connections setup to MaxScale Binlog Server.

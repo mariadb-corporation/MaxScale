@@ -1,15 +1,33 @@
-# SchemaRouter Router
+# SchemaRouter
 
-The SchemaRouter router provides an easy and manageable sharding SOLUTION by
+The SchemaRouter provides an easy and manageable sharding solution by
 building a single logical database server from multiple separate ones. Each
 database is shown to the client and queries targeting unique databases are
 routed to their respective servers. In addition to providing simple
-database-based sharding, the schemarouter router also enables cross-node
+database-based sharding, the schemarouter also enables cross-node
 session variable usage by routing all queries that modify the session to all
 nodes.
 
 From 2.3.0 onwards, the SchemaRouter is capable of table family sharding,
 in addition to being capable of sharding databases.
+
+Table of Contents
+=================
+
+* [Routing Logic](#routing-logic)
+* [Configuration](#configuration)
+* [Router Parameters](#router-parameters)
+   * [ignore_databases](#ignore_databases)
+   * [ignore_databases_regex](#ignore_databases_regex)
+   * [preferred_server](#preferred_server)
+* [Table Family Sharding](#table-family-sharding)
+* [Router Options](#router-options)
+   * [max_sescmd_history](#max_sescmd_history)
+   * [disable_sescmd_history](#disable_sescmd_history)
+   * [refresh_databases](#refresh_databases)
+   * [refresh_interval](#refresh_interval)
+* [Limitations](#limitations)
+* [Examples](#examples)
 
 ## Routing Logic
 
@@ -34,7 +52,7 @@ configuration in the next chapter.
 
 ## Configuration
 
-Here is an example configuration of the schemarouter router:
+Here is an example configuration of the schemarouter:
 
 ```
 [Shard Router]
