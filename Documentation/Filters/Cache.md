@@ -2,6 +2,57 @@
 
 This filter was introduced in MariaDB MaxScale 2.1.
 
+Table of Contents
+=================
+
+* [Overview](#overview)
+* [Limitations](#limitations)
+   * [Invalidation](#invalidation)
+   * [Prepared Statements](#prepared-statements)
+   * [Security](#security)
+* [Configuration](#configuration)
+   * [Filter Parameters](#filter-parameters)
+      * [storage](#storage)
+      * [storage_options](#storage_options)
+      * [hard_ttl](#hard_ttl)
+      * [soft_ttl](#soft_ttl)
+      * [max_resultset_rows](#max_resultset_rows)
+      * [max_resultset_size](#max_resultset_size)
+      * [max_count](#max_count)
+      * [max_size](#max_size)
+      * [rules](#rules)
+      * [cached_data](#cached_data)
+      * [selects](#selects)
+      * [cache_inside_transactions](#cache_inside_transactions)
+      * [debug](#debug)
+      * [enabled](#enabled)
+   * [Runtime Configuration](#runtime-configuration)
+      * [@maxscale.cache.populate](#maxscalecachepopulate)
+      * [@maxscale.cache.use](#maxscalecacheuse)
+      * [@maxscale.cache.soft_ttl](#maxscalecachesoft_ttl)
+      * [@maxscale.cache.hard_ttl](#maxscalecachehard_ttl)
+      * [Client Driven Caching](#client-driven-caching)
+* [Rules](#rules-1)
+   * [When to Store](#when-to-store)
+      * [Qualified Names](#qualified-names)
+      * [Implication of the <em>default</em> database](#implication-of-the-default-database)
+      * [Regexp Matching](#regexp-matching)
+      * [Examples](#examples)
+   * [When to Use](#when-to-use)
+      * [Examples](#examples-1)
+* [Security](#security-1)
+* [Storage](#storage-1)
+   * [storage_inmemory](#storage_inmemory)
+   * [storage_rocksdb](#storage_rocksdb)
+   * [Parameters](#parameters)
+      * [cache_directory](#cache_directory)
+      * [collect_statistics](#collect_statistics)
+* [Example](#example)
+   * [Configuration](#configuration-1)
+   * [cache_rules.json](#cache_rulesjson)
+* [Performance](#performance)
+   * [Summary](#summary)
+
 ## Overview
 
 From MaxScale version 2.2.11 onwards, the cache filter is no longer
@@ -326,9 +377,10 @@ at runtime. Please see
 [Runtime Configuration](#runtime-configuation)
 for details.
 
-## Runtime Configuration
+### Runtime Configuration
 
-### `@maxscale.cache.populate`
+#### `@maxscale.cache.populate`
+
 Using the variable `@maxscale.cache.populate` it is possible to specify at
 runtime whether the cache should be populated or not. Its initial value is
 the value of the configuration parameter `enabled`. That is, by default the
@@ -354,7 +406,8 @@ SELECT @maxscale.cache.populate;
 ```
 but only _after_ it has been explicitly set once.
 
-### `@maxscale.cache.use`
+#### `@maxscale.cache.use`
+
 Using the variable `@maxscale.cache.use` it is possible to specify at
 runtime whether the cache should be used or not. Its initial value is
 the value of the configuration parameter `enabled`. That is, by default the
@@ -387,7 +440,8 @@ SELECT @maxscale.cache.use;
 ```
 but only after it has explicitly been set once.
 
-### `@maxscale.cache.soft_ttl`
+#### `@maxscale.cache.soft_ttl`
+
 Using the variable `@maxscale.cache.soft_ttl` it is possible to specify
 at runtime what _soft ttl_ should be applied. Its initial value is the
 value of the configuration parameter `soft_ttl`. That is, by default the
@@ -416,7 +470,8 @@ SELECT @maxscale.cache.soft_ttl;
 ```
 but only after it has explicitly been set once.
 
-### `@maxscale.cache.hard_ttl`
+#### `@maxscale.cache.hard_ttl`
+
 Using the variable `@maxscale.cache.hard_ttl` it is possible to specify
 at runtime what _hard ttl_ should be applied. Its initial value is the
 value of the configuration parameter `hard_ttl`. That is, by default the
@@ -442,7 +497,8 @@ SELECT @maxscale.cache.hard_ttl;
 ```
 but only after it has explicitly been set once.
 
-### Client Driven Caching
+#### Client Driven Caching
+
 With `@maxscale.cache.populate` and `@maxscale.cache.use` is it possible
 to make the caching completely client driven.
 
@@ -488,10 +544,9 @@ SELECT a, b FROM tbl1;
 SET @maxscale.cache.populate=false;
 ```
 
-# Rules
+## Rules
 
-The caching rules are expressed as a JSON object or as an array
-of JSON objects.
+The caching rules are expressed as a JSON object or as an array of JSON objects.
 
 There are two decisions to be made regarding the caching; in what circumstances
 should data be stored to the cache and in what circumstances should the data in
@@ -526,7 +581,7 @@ matches, the `store` field of each object are evaluated in sequential order
 until a match is found. Then, the `use` field of that object is used when
 deciding whether data in the cache should be used.
 
-## When to Store
+### When to Store
 
 By default, if no rules file have been provided or if the `store` field is
 missing from the object, the results of all queries will be stored to the
@@ -608,7 +663,7 @@ and so will
 select b from tbl where a > 5;
 ```
 
-### Qualified Names
+#### Qualified Names
 
 When using `=` or `!=` in the rule object in conjunction with `database`,
 `table` and `column`, the provided string is interpreted as a name, that is,
@@ -626,12 +681,12 @@ always be capable of deducing in what table a particular column is. If
 that is the case, then a value like `tbl.field` may not necessarily
 be a match even if the field is `field` and the table actually is `tbl`.
 
-### Implication of the _default_ database.
+#### Implication of the _default_ database
 
 If the rules concerns the `database`, then only if the statement refers
 to *no* specific database, will the default database be considered.
 
-### Regexp Matching
+#### Regexp Matching
 
 The string used for matching the regular expression contains as much
 information as there is available. For instance, in a situation like
@@ -641,7 +696,7 @@ select fld from tbl;
 ```
 the string matched against the regular expression will be `somedb.tbl.fld`.
 
-### Examples
+#### Examples
 
 Cache all queries targeting a particular database.
 ```
@@ -700,7 +755,7 @@ Cache all queries containing a WHERE clause
 Note that that will actually cause all queries that contain WHERE anywhere,
 to be cached.
 
-## When to Use
+### When to Use
 
 By default, if no rules file have been provided or if the `use` field is
 missing from the object, all users may be returned data from the cache.
@@ -764,7 +819,7 @@ Note that `use` is relevant only if the query is subject to caching,
 that is, if all queries are cached or if a query matches a particular
 rule in the `store` array.
 
-### Examples
+#### Examples
 
 Use data from the cache for all users except `admin` (actually `'admin'@'%'`),
 regardless of what host the `admin` user comes from.
@@ -779,7 +834,7 @@ regardless of what host the `admin` user comes from.
     ]
 }
 ```
-# Security
+## Security
 
 As the cache is not aware of grants, unless the cache has been explicitly
 configured who the caching should apply to, the presence of the cache
@@ -859,9 +914,9 @@ should be applied to _alice_ only.
 With these rules in place, _bob_ is again denied access, since queries
 targeting the table `access` will in his case not be served from the cache.
 
-# Storage
+## Storage
 
-## `storage_inmemory`
+### `storage_inmemory`
 
 This simple storage module uses the standard memory allocator for storing
 the cached data.
@@ -869,7 +924,7 @@ the cached data.
 storage=storage_inmemory
 ```
 
-## `storage_rocksdb`
+### `storage_rocksdb`
 
 This storage module is not built by default and is not included in the
 MariaDB MaxScale packages.
@@ -915,7 +970,7 @@ The value is a boolean and the default is `false`.
 storage_options=collect_statistics=true
 ```
 
-# Example
+## Example
 
 In the following we define a cache _MyCache_ that uses the cache storage module
 `storage_inmemory` and whose _soft ttl_ is `30` seconds and whose _hard ttl_ is
@@ -956,7 +1011,7 @@ The rules specify that the data of the table `sbtest` should be cached.
 }
 ```
 
-# Performance
+## Performance
 
 Perhaps the most significant factor affecting the performance of the cache is
 whether the statements need to be parsed or not. By default, all statements are
@@ -1043,7 +1098,7 @@ high load may be significantly _greater_.
 | `verify_cacheable` | _regexp match_ |  58 |
 | `verify_cacheable` | _exact match_  |  58 |
 
-## Summary
+### Summary
 
 For maximum performance:
 

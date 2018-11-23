@@ -2,7 +2,32 @@
 
 This filter was introduced in MariaDB MaxScale 2.1.
 
+Table of Contents
+=================
+
+* [Overview](#overview)
+* [Security](#security)
+* [Limitations](#limitations)
+* [Configuration](#configuration)
+   * [Filter Parameters](#filter-parameters)
+      * [rules](#rules)
+      * [warn_type_mismatch](#warn_type_mismatch)
+      * [large_payload](#large_payload)
+      * [prevent_function_usage](#prevent_function_usage)
+* [Rules](#rules-1)
+   * [replace](#replace)
+   * [obfuscate](#obfuscate)
+   * [with](#with)
+   * [applies_to](#applies_to)
+   * [exempted](#exempted)
+* [Module commands](#module-commands)
+   * [reload](#reload)
+* [Example](#example)
+   * [Configuration](#configuration-1)
+   * [masking_rules.json](#masking_rulesjson)
+
 ## Overview
+
 With the _masking_ filter it is possible to obfuscate the returned
 value of a particular column.
 
@@ -77,7 +102,7 @@ type=service
 filters=Mask-SSN
 ```
 
-## Filter Parameters
+### Filter Parameters
 
 The masking filter has one mandatory parameter - `rules`.
 
@@ -145,7 +170,7 @@ prevent_function_usage=false
 ```
 The default value is `true`.
 
-# Rules
+## Rules
 
 The masking rules are expressed as a JSON object.
 
@@ -156,8 +181,6 @@ value is an array of rule objects.
     "rules": [ ... ]
 }
 ```
-
-## Rule
 
 Each rule in the rules array is a JSON object, expected to
 contain the keys `replace`, `with`, `applies_to` and
@@ -177,7 +200,7 @@ latter ones optional.
 }
 ```
 
-#### `replace`
+### `replace`
 
 The value of this key is an object that specifies the column
 whose values should be masked. The object must contain the key
@@ -251,7 +274,7 @@ The `match` value must be a valid pcre2 regular expression.
             }
 ```
 
-#### `obfuscate`
+### `obfuscate`
 
 The obfuscate rule allows the obfuscation of the value
 by passing it through an obfuscation algorithm.
@@ -284,7 +307,7 @@ SELECT name from db1.tbl1;`
 +------+
 ```
 
-#### `with`
+### `with`
 
 The value of this key is an object that specifies what the value of the matched
 column should be replaced with for the `replace` rule. Currently, the object
@@ -341,7 +364,7 @@ of the mask value to get the lengths to match.
 }
 ```
 
-#### `applies_to`
+### `applies_to`
 
 With this _optional_ key, whose value must be an array of strings,
 it can be specified what users the rule is applied to. Each string
@@ -363,7 +386,7 @@ should be a MariaDB account string, that is, `%` is a wildcard.
 If this key is not specified, then the masking is performed for all
 users, except the ones exempted using the key `exempted`.
 
-#### `exempted`
+### `exempted`
 
 With this _optional_ key, whose value must be an array of strings,
 it can be specified what users the rule is *not* applied to. Each
@@ -384,7 +407,8 @@ string should be a MariaDB account string, that is, `%` is a wildcard.
 
 ## Module commands
 
-Read [Module Commands](../Reference/Module-Commands.md) documentation for details about module commands.
+Read [Module Commands](../Reference/Module-Commands.md) documentation for details
+about module commands.
 
 The masking filter supports the following module commands.
 
@@ -398,7 +422,7 @@ MaxScale> call command masking reload MyMaskingFilter
 `MyMaskingFilter` refers to a particular filter section in the
 MariaDB MaxScale configuration file.
 
-# Example
+## Example
 
 In the following we configure a masking filter _MyMasking_ that should always log a
 warning if a masking rule matches a column that is of a type that cannot be masked,
