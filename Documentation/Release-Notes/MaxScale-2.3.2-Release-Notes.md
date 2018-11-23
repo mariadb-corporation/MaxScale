@@ -16,6 +16,14 @@ The systemd watchdog is now safe to use in all circumstances.
 
 By default it is enabled with a timeout of 60 seconds.
 
+### Readwritesplit
+
+#### `connection_keepalive`
+
+The default value of `connection_keepalive` is now 300 seconds. This prevents
+the connections from dying due to wait_timeout with longer sessions. This is
+especially helpful with pooled connections that stay alive for a very long time.
+
 ## Bug fixes
 
 ## Known Issues and Limitations

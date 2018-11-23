@@ -92,7 +92,8 @@ master_failure_mode=fail_on_write
 ### `connection_keepalive`
 
 Send keepalive pings to backend servers. This feature was introduced in MaxScale
-2.2.0 and is disabled by default.
+2.2.0. The default value is 300 seconds starting with 2.3.2 and for older
+versions the feature was disabled by default.
 
 The parameter value is the interval in seconds between each keepalive ping. A
 keepalive ping will be sent to a backend server if the connection is idle and it
@@ -103,7 +104,8 @@ client executes a query.
 This functionality allows the readwritesplit module to keep all backend
 connections alive even if they are not used. This is a common problem if the
 backend servers have a low _wait_timeout_ value and the client connections live
-for a long time.
+for a long time or if your workload is extremely read-heavy with writes done at
+lower intervals than the configured _wait_timeout_.
 
 ### `master_reconnection`
 
