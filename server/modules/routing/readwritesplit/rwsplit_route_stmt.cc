@@ -344,7 +344,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         }
     }
 
-    if (succp && m_config.connection_keepalive && !TARGET_IS_ALL(route_target))
+    if (succp && target && m_config.connection_keepalive && !TARGET_IS_ALL(route_target))
     {
         handle_connection_keepalive(target);
     }
