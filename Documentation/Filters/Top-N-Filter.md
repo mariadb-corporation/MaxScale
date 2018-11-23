@@ -1,13 +1,35 @@
 # Top Filter
 
+Table of Contents
+=================
+
+* [Overview](#overview)
+* [Configuration](#configuration)
+   * [Filter Options](#filter-options)
+   * [Filter Parameters](#filter-parameters)
+      * [filebase](#filebase)
+      * [count](#count)
+      * [match](#match)
+      * [exclude](#exclude)
+      * [source](#source)
+      * [user](#user)
+* [Examples](#examples)
+   * [Example 1 - Heavily Contended Table](#example-1---heavily-contended-table)
+   * [Example 2 - One Application Server is Slow](#example-2---one-application-server-is-slow)
+* [Output Report](#output-report)
+
 ## Overview
 
-The top filter is a filter module for MariaDB MaxScale that monitors every SQL statement that passes through the filter. It measures the duration of that statement, the time between the statement being sent and the first result being returned. The top N times are kept, along with the SQL text itself and a list sorted on the execution times of the query is written to a file upon closure of the client session.
+The top filter is a filter module for MariaDB MaxScale that monitors every SQL
+statement that passes through the filter. It measures the duration of that
+statement, the time between the statement being sent and the first result being
+returned. The top N times are kept, along with the SQL text itself and a list
+sorted on the execution times of the query is written to a file upon closure of
+the client session.
 
 ## Configuration
 
-The configuration block for the TOP filter requires the minimal filter options in it’s section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
-
+Example minimal configuration:
 ```
 [MyLogFilter]
 type=filter
@@ -22,7 +44,7 @@ password=mypasswd
 filters=MyLogFilter
 ```
 
-## Filter Options
+### Filter Options
 
 The top filter accepts the following options.
 
@@ -38,21 +60,25 @@ To use multiple filter options, list them in a comma-separated list.
 options=case,extended
 ```
 
-## Filter Parameters
+### Filter Parameters
 
-The top filter has one mandatory parameter, `filebase`, and a number of optional parameters.
+The top filter has one mandatory parameter, `filebase`, and a number of optional
+parameters.
 
-### Filebase
+#### `filebase`
 
-The basename of the output file created for each session. The session ID is added to the filename for each file written. This is a mandatory parameter.
+The basename of the output file created for each session. The session ID is
+added to the filename for each file written. This is a mandatory parameter.
 
 ```
 filebase=/tmp/SqlQueryLog
 ```
 
-The filebase may also be set as the filter, the mechanism to set the filebase via the filter option is superseded by the parameter. If both are set the parameter setting will be used and the filter option ignored.
+The filebase may also be set as the filter, the mechanism to set the filebase
+via the filter option is superseded by the parameter. If both are set the
+parameter setting will be used and the filter option ignored.
 
-### Count
+#### `count`
 
 The number of SQL statements to store and report upon.
 
@@ -62,37 +88,52 @@ count=30
 
 The default value for the number of statements recorded is 10.
 
-### Match
+#### `match`
 
-An optional parameter that can be used to limit the queries that will be logged by the top filter. The parameter value is a regular expression that is used to match against the SQL text. Only SQL statements that matches the text passed as the value of this parameter will be logged.
+An optional parameter that can be used to limit the queries that will be logged
+by the top filter. The parameter value is a regular expression that is used to
+match against the SQL text. Only SQL statements that matches the text passed as
+the value of this parameter will be logged.
 
 ```
 match=select.*from.*customer.*where
 ```
 
-All regular expressions are evaluated with the option to ignore the case of the text, therefore a match option of select will match both select, SELECT and any form of the word with upper or lowercase characters.
+All regular expressions are evaluated with the option to ignore the case of the
+text, therefore a match option of select will match both select, SELECT and any
+form of the word with upper or lowercase characters.
 
-### Exclude
+#### `exclude`
 
-An optional parameter that can be used to limit the queries that will be logged by the top filter. The parameter value is a regular expression that is used to match against the SQL text. SQL statements that match the text passed as the value of this parameter will be excluded from the log output.
+An optional parameter that can be used to limit the queries that will be logged
+by the top filter. The parameter value is a regular expression that is used to
+match against the SQL text. SQL statements that match the text passed as the
+value of this parameter will be excluded from the log output.
 
 ```
 exclude=where
 ```
 
-All regular expressions are evaluated with the option to ignore the case of the text, therefore an exclude option of select will exclude statements that contain both where, WHERE or any form of the word with upper or lowercase characters.
+All regular expressions are evaluated with the option to ignore the case of the
+text, therefore an exclude option of select will exclude statements that contain
+both where, WHERE or any form of the word with upper or lowercase characters.
 
-### Source
+#### `source`
 
-The optional source parameter defines an address that is used to match against the address from which the client connection to MariaDB MaxScale originates. Only sessions that originate from this address will be logged.
+The optional source parameter defines an address that is used to match against
+the address from which the client connection to MariaDB MaxScale originates.
+Only sessions that originate from this address will be logged.
 
 ```
 source=127.0.0.1
 ```
 
-### User
+#### `user`
 
-The optional user parameter defines a user name that is used to match against the user from which the client connection to MariaDB MaxScale originates. Only sessions that are connected using this username will result in results being generated.
+The optional user parameter defines a user name that is used to match against
+the user from which the client connection to MariaDB MaxScale originates. Only
+sessions that are connected using this username will result in results being
+generated.
 
 ```
 user=john
@@ -102,7 +143,9 @@ user=john
 
 ### Example 1 - Heavily Contended Table
 
-You have an order system and believe the updates of the PRODUCTS table is causing some performance issues for the rest of your application. You would like to know which of the many updates in your application is causing the issue.
+You have an order system and believe the updates of the PRODUCTS table is
+causing some performance issues for the rest of your application. You would like
+to know which of the many updates in your application is causing the issue.
 
 Add a filter with the following definition:
 
@@ -116,11 +159,13 @@ exclude=UPDATE.*PRODUCTS_STOCK.*WHERE
 filebase=/var/logs/top/ProductsUpdate
 ```
 
-Note the exclude entry, this is to prevent updates to the PRODUCTS_STOCK table from being included in the report.
+Note the exclude entry, this is to prevent updates to the PRODUCTS_STOCK table
+from being included in the report.
 
 ### Example 2 - One Application Server is Slow
 
-One of your applications servers is slower than the rest, you believe it is related to database access but you are not sure what is taking the time.
+One of your applications servers is slower than the rest, you believe it is
+related to database access but you are not sure what is taking the time.
 
 Add a filter with the following definition:
 
@@ -133,7 +178,8 @@ source=192.168.0.32
 filebase=/var/logs/top/SlowAppServer
 ```
 
-In order to produce a comparison with an unaffected application server you can also add a second filter as a control.
+In order to produce a comparison with an unaffected application server you can
+also add a second filter as a control.
 
 ```
 [ControlAppServer]
@@ -157,11 +203,15 @@ password=mypasswd
 filters=SlowAppServer | ControlAppServer
 ```
 
-You will then have two sets of logs files written, one which profiles the top 20 queries of the slow application server and another that gives you the top 20 queries of your control application server. These two sets of files can then be compared to determine what if anything is different between the two.
+You will then have two sets of logs files written, one which profiles the top 20
+queries of the slow application server and another that gives you the top 20
+queries of your control application server. These two sets of files can then be
+compared to determine what if anything is different between the two.
 
-# Output Report
+## Output Report
 
-The following is an example report for a number of fictitious queries executed against the employees example database available for MySQL.
+The following is an example report for a number of fictitious queries executed
+against the employees example database available for MySQL.
 
 ```
 -bash-4.1$ cat /var/logs/top/Employees-top-10.137
