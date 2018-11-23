@@ -903,27 +903,27 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                         can_continue = true;
                         send_readonly_error(m_client);
                     }
-
-                    if (!can_continue)
-                    {
-                        if (!backend->is_master() && !backend->server()->master_err_is_logged)
-                        {
-                            MXS_ERROR("Server %s (%s) lost the master status while waiting"
-                                      " for a result. Client sessions will be closed.",
-                                      backend->name(),
-                                      backend->uri());
-                            backend->server()->master_err_is_logged = true;
-                        }
-                        else
-                        {
-                            MXS_ERROR("Lost connection to the master server, closing session.");
-                        }
-                    }
                 }
 
                 if (session_trx_is_active(session))
                 {
                     can_continue = start_trx_replay();
+                }
+
+                if (!can_continue)
+                {
+                    if (!backend->is_master() && !backend->server()->master_err_is_logged)
+                    {
+                        MXS_ERROR("Server %s (%s) lost the master status while waiting"
+                            " for a result. Client sessions will be closed.",
+                                  backend->name(),
+                                  backend->uri());
+                        backend->server()->master_err_is_logged = true;
+                    }
+                    else
+                    {
+                        MXS_ERROR("Lost connection to the master server, closing session.");
+                    }
                 }
 
                 backend->close();
