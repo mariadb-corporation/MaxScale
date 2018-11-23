@@ -118,14 +118,14 @@ public:
      */
     ValueMap fields() const
     {
-        ValueMap fields;
+        ValueMap flds;
 
         for (size_t i = 0; i < m_keys->size(); i++)
         {
-            fields[(*m_keys)[i]] = (*m_types)[i];
+            flds[(*m_keys)[i]] = (*m_types)[i];
         }
 
-        return fields;
+        return flds;
     }
 
 private:
