@@ -365,7 +365,6 @@ void RWSplit::diagnostics(DCB* dcb)
                    "dur", "active", "selects");
         for (const auto& s : srv_stats)
         {
-            mxb_assert(s.second.total == s.second.read + s.second.write);
             ServerStats::CurrentStats cs = s.second.current_stats();
 
             dcb_printf(dcb,
