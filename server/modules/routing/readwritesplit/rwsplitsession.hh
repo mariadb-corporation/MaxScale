@@ -270,6 +270,12 @@ private:
                && !session_trx_is_active(m_client->session);
     }
 
+    // Whether a transaction replay can remain active
+    inline bool can_continue_trx_replay() const
+    {
+        return m_is_replay_active && m_retry_duration < m_config.delayed_retry_timeout;
+    }
+
     inline bool can_recover_servers() const
     {
         return !m_config.disable_sescmd_history || m_recv_sescmd == 0;

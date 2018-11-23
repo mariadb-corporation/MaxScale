@@ -330,7 +330,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
                 }
             }
         }
-        else if (can_retry_query() || m_is_replay_active)
+        else if (can_retry_query() || can_continue_trx_replay())
         {
             retry_query(gwbuf_clone(querybuf));
             succp = true;
