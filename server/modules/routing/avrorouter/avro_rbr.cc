@@ -652,6 +652,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
                  * a different type */
                 if (event_type == UPDATE_EVENT)
                 {
+                    m_gtid.event_num++;
                     m_handler->prepare_row(m_gtid, *hdr, UPDATE_EVENT_AFTER);
                     ptr = process_row_event_data(map, create->second, m_handler, ptr, col_present, end);
                     m_handler->commit(m_gtid);
