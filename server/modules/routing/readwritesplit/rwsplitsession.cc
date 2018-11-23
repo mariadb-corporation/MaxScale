@@ -586,9 +586,8 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
     }
     else if (backend->get_reply_state() == REPLY_STATE_START && server_is_shutting_down(writebuf))
     {
-        // The server is shutting down, act as if the network connection failed. This allows
-        // the query to be retried on another server without the client noticing it.
-        poll_fake_hangup_event(backend_dcb);
+        // The server is shutting down, ignore this error and wait for the TCP connection to die.
+        // This allows the query to be retried on another server without the client noticing it.
         gwbuf_free(writebuf);
         return;
     }
