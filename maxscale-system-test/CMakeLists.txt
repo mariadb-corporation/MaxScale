@@ -306,6 +306,10 @@ add_test_executable(mxs1507_migrate_trx.cpp mxs1507_migrate_trx mxs1507_trx_repl
 # https://jira.mariadb.org/browse/MXS-1507
 add_test_executable(mxs1507_trx_stress.cpp mxs1507_trx_stress mxs1507_trx_stress LABELS readwritesplit REPL_BACKEND)
 
+# MXS-2187: Multiple transaction replays
+# https://jira.mariadb.org/browse/MXS-1507
+add_test_executable(mxs2187_multi_replay.cpp mxs2187_multi_replay mxs2187_multi_replay LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1778: Use GTID from OK packets for consistent reads
 # https://jira.mariadb.org/browse/MXS-1776
 add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal_reads LABELS readwritesplit REPL_BACKEND)
