@@ -425,7 +425,7 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
         {
             uint8_t* data = GWBUF_DATA(buffer);
 
-            if (!proto->large_query)
+            if (!proto->large_query && !session_is_load_active(dcb->session))
             {
                 proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(data);
             }

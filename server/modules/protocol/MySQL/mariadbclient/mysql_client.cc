@@ -1094,7 +1094,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
          */
         MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
-        if (!proto->changing_user)
+        if (!proto->changing_user && !session_is_load_active(session))
         {
             proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
         }
