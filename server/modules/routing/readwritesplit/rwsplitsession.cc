@@ -799,7 +799,7 @@ bool RWSplitSession::start_trx_replay()
                 // Pop the first statement and start replaying the transaction
                 GWBUF* buf = m_replayed_trx.pop_stmt();
                 MXS_INFO("Replaying: %s", mxs::extract_sql(buf, 1024).c_str());
-                retry_query(buf, 0);
+                retry_query(buf, 1);
             }
             else
             {
@@ -812,7 +812,7 @@ bool RWSplitSession::start_trx_replay()
                                    "The current query should start a transaction");
                 MXS_INFO("Retrying interrupted query: %s",
                          mxs::extract_sql(m_interrupted_query.get()).c_str());
-                retry_query(m_interrupted_query.release(), 0);
+                retry_query(m_interrupted_query.release(), 1);
             }
         }
         else
