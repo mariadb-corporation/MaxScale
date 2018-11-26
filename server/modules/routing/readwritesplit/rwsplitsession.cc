@@ -810,16 +810,17 @@ bool RWSplitSession::start_trx_replay()
                  */
                 mxb_assert_message(qc_get_trx_type_mask(m_interrupted_query.get()) & QUERY_TYPE_BEGIN_TRX,
                                    "The current query should start a transaction");
-                 MXS_INFO("Retrying interrupted query: %s",
-                          mxs::extract_sql(m_interrupted_query.get()).c_str());
+                MXS_INFO("Retrying interrupted query: %s",
+                         mxs::extract_sql(m_interrupted_query.get()).c_str());
                 retry_query(m_interrupted_query.release(), 0);
             }
         }
         else
         {
-            mxb_assert_message(!session_is_autocommit(m_client->session),
-                               "Session should have autocommit disabled if the transaction "
-                               "had no statements and no query was interrupted");
+            mxb_assert_message(!session_is_autocommit(m_client->session)
+                               || session_trx_is_ending(m_client->session),
+                               "Session should have autocommit disabled or transaction just ended if the "
+                               "transaction had no statements and no query was interrupted");
         }
 
         rval = true;
@@ -914,7 +915,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     if (!backend->is_master() && !backend->server()->master_err_is_logged)
                     {
                         MXS_ERROR("Server %s (%s) lost the master status while waiting"
-                            " for a result. Client sessions will be closed.",
+                                  " for a result. Client sessions will be closed.",
                                   backend->name(),
                                   backend->uri());
                         backend->server()->master_err_is_logged = true;
