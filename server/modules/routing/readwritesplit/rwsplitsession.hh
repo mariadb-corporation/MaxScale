@@ -163,8 +163,10 @@ public:
                                                  * transaction */
     bool        m_can_replay_trx;               /**< Whether the transaction can be replayed */
     Trx         m_replayed_trx;                 /**< The transaction we are replaying */
-    mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction.
-                                                 * */
+    mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction. */
+    Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
+    mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
+
     otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
 
 private:

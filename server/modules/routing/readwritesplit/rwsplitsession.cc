@@ -775,8 +775,23 @@ bool RWSplitSession::start_trx_replay()
 {
     bool rval = false;
 
-    if (!m_is_replay_active && m_config.transaction_replay && m_can_replay_trx)
+    if (m_config.transaction_replay && m_can_replay_trx)
     {
+        if (!m_is_replay_active)
+        {
+            // This is the first time we're retrying this transaction, store it and the interrupted query
+            m_orig_trx = m_trx;
+            m_orig_stmt.copy_from(m_current_query);
+        }
+        else
+        {
+            // Not the first time, copy the original
+            m_replayed_trx.close();
+            m_trx.close();
+            m_trx = m_orig_trx;
+            m_current_query.copy_from(m_orig_stmt);
+        }
+
         if (m_trx.have_stmts() || m_current_query.get())
         {
             // Stash any interrupted queries while we replay the transaction
