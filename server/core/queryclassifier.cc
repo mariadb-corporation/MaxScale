@@ -387,6 +387,7 @@ bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
         && !qc_query_is_type(qtype, QUERY_TYPE_WRITE)
         && (qc_query_is_type(qtype, QUERY_TYPE_READ)
             || qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES)
+            || qc_query_is_type(qtype, QUERY_TYPE_SHOW_DATABASES)
             || qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ)
             || qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ)
             || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)))
