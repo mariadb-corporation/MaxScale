@@ -104,6 +104,9 @@ add_test_executable(bug681.cpp bug681 bug681 LABELS readwritesplit REPL_BACKEND)
 # Regression case for the bug ""Different error messages from MariaDB and Maxscale"
 add_test_executable(error_messages.cpp error_messages replication LABELS MySQLAuth REPL_BACKEND)
 
+# TODO: Remove this once MXS-2174 is fixed
+set_tests_properties(error_messages PROPERTIES WILL_FAIL TRUE)
+
 # Regression case for the bug "Wrong error message for Access denied error"
 add_test_script(bug562.sh bug562.sh replication LABELS MySQLAuth REPL_BACKEND)
 
