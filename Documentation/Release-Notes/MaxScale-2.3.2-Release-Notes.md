@@ -24,6 +24,15 @@ The default value of `connection_keepalive` is now 300 seconds. This prevents
 the connections from dying due to wait_timeout with longer sessions. This is
 especially helpful with pooled connections that stay alive for a very long time.
 
+### MariaDBMonitor
+
+The monitor by default assumes that hostnames used by MaxScale to connect to the backends
+are equal to the ones backends use to connect to each other. Specifically, for the slave
+connections to be properly detected the `Master_Host` and `Master_Port` fields of the
+output to "SHOW ALL SLAVES STATUS"-query must match server entries in the MaxScale
+configuration file. If the network configuration is such that this is not the case, the
+setting `assume_unique_hostnames` should be disabled.
+
 ## Bug fixes
 
 ## Known Issues and Limitations
