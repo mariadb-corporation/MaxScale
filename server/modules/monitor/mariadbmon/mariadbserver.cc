@@ -236,7 +236,11 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     unsigned int columns = 0;
     string query;
     bool all_slaves_status = false;
-    if (m_capabilities.gtid || m_srv_type == server_type::BINLOG_ROUTER)
+    if (m_srv_type == server_type::CLUSTRIX)
+    {
+        return false;
+    }
+    else if (m_capabilities.gtid || m_srv_type == server_type::BINLOG_ROUTER)
     {
         // Versions with gtid also support the extended slave status query.
         columns = 42;
@@ -891,8 +895,12 @@ void MariaDBServer::update_server_version()
 
     // Check whether this server is a MaxScale Binlog Server.
     MYSQL_RES* result;
-    if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0
-        && (result = mysql_store_result(conn)) != NULL)
+    if (strcasestr(srv->version_string, "clustrix") != nullptr)
+    {
+        m_srv_type = server_type::CLUSTRIX;
+    }
+    else if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0
+             && (result = mysql_store_result(conn)) != NULL)
     {
         m_srv_type = server_type::BINLOG_ROUTER;
         mysql_free_result(result);

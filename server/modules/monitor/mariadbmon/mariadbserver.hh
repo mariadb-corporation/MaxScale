@@ -76,7 +76,8 @@ public:
     {
         UNKNOWN,            /* Totally unknown. Server has not been connected to yet. */
         NORMAL,             /* A normal MariaDB/MySQL server, possibly supported. */
-        BINLOG_ROUTER       /* MaxScale binlog server. Requires special handling. */
+        BINLOG_ROUTER,      /* MaxScale binlog server. Requires special handling. */
+        CLUSTRIX            /* Clustrix server. Requires special handling. */
     };
 
     enum class BinlogMode
