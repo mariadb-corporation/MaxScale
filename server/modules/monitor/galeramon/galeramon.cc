@@ -208,22 +208,9 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                 info.local_state = atoi(row[1]);
             }
 
-            /* We can check:
-             * wsrep_local_state == 0
-             * wsrep_cluster_size == 0
-             * wsrep_cluster_state_uuid == ""
-             */
             if (strcmp(row[0], "wsrep_cluster_state_uuid") == 0)
             {
-                if (row[1] == NULL || !strlen(row[1]))
-                {
-                    info.cluster_uuid.clear();
-                    info.joined = 0;
-                }
-                else
-                {
-                    info.cluster_uuid = MXS_STRDUP(row[1]);
-                }
+                info.cluster_uuid = row[1] && *row[1] ? MXS_STRDUP(row[1]) : NULL;
             }
         }
 
