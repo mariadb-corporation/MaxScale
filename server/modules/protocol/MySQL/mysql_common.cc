@@ -105,6 +105,16 @@ bool mysql_protocol_done(DCB* dcb)
 
         gwbuf_free(p->stored_query);
 
+        server_command_t* s = &p->protocol_command;
+
+        while (s->scom_next)
+        {
+            server_command_t tmp = *(s->scom_next);
+            MXS_FREE(s->scom_next);
+            p->protocol_command = tmp;
+            s = &p->protocol_command;
+        }
+
         p->protocol_state = MYSQL_PROTOCOL_DONE;
         rval = true;
     }
