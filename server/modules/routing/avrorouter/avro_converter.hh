@@ -49,7 +49,7 @@ public:
 
     AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec);
     bool open_table(const STableMapEvent& map, const STableCreateEvent& create);
-    bool prepare_table(std::string database, std::string table);
+    bool prepare_table(const STableMapEvent& map, const STableCreateEvent& create);
     void flush_tables();
     void prepare_row(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type);
     bool commit(const gtid_pos_t& gtid);

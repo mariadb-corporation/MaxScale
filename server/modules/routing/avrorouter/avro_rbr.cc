@@ -243,6 +243,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                                 uint8_t* columns_present,
                                 uint8_t* end)
 {
+    mxb_assert(create->database == map->database && create->table == map->table);
     int npresent = 0;
     long ncolumns = map->columns();
     uint8_t* metadata = &map->column_metadata[0];
@@ -624,11 +625,17 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
             return true;
         }
 
-        bool ok = m_handler->prepare_table(map->database, map->table);
         auto create = m_created_tables.find(table_ident);
+        bool ok = false;
 
-        if (ok && create != m_created_tables.end()
-            && ncolumns == map->columns() && create->second->columns.size() == map->columns())
+        if (create != m_created_tables.end() && ncolumns == map->columns()
+            && create->second->columns.size() == map->columns()
+            && m_handler->prepare_table(map, create->second))
+        {
+            ok = true;
+        }
+
+        if (ok)
         {
             /** Each event has one or more rows in it. The number of rows is not known
              * beforehand so we must continue processing them until we reach the end
