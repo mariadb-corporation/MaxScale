@@ -47,6 +47,7 @@ int main(int argc, char** argv)
         cout << "Disks-plugin installed and gtid_strict_mode enabled on all servers. "
                 "Starting MaxScale.\n";
         test.start_maxscale();
+        test.maxscales->wait_for_monitor(1);
         disks_plugin_loaded = true;
     }
     else
@@ -61,7 +62,7 @@ int main(int argc, char** argv)
                 rval += elem + ",";
             }
             return rval;
-    };
+        };
 
     auto expect_server_status = [&test, &set_to_string](const string& server_name, const string& status) {
             auto status_set = test.maxscales->get_server_status(server_name.c_str());
@@ -91,7 +92,7 @@ int main(int argc, char** argv)
         print_gtids(test);
 
         expect_server_status(server_names[0], master);
-        expect_server_status(server_names[1], maint); // Always out of disk space
+        expect_server_status(server_names[1], maint);   // Always out of disk space
         expect_server_status(server_names[2], slave);
         expect_server_status(server_names[3], slave);
     }
@@ -101,7 +102,7 @@ int main(int argc, char** argv)
         // If ok so far, change the disk space threshold to something really small to force a switchover.
         cout << "Changing disk space threshold for the monitor, should cause a switchover.\n";
         test.maxscales->execute_maxadmin_command(0, "alter monitor MySQL-Monitor disk_space_threshold=/:1");
-        sleep(2); // The disk space is checked depending on wall clock time.
+        sleep(2);   // The disk space is checked depending on wall clock time.
         test.maxscales->wait_for_monitor(2);
 
         // server2 was in maintenance before the switchover, so it was ignored. This means that it is
@@ -122,8 +123,8 @@ int main(int argc, char** argv)
 
         cout << "Changing disk space threshold for the monitor, should prevent low disk switchovers.\n";
         test.maxscales->execute_maxadmin_command(0, "alter monitor MySQL-Monitor "
-                                                 "disk_space_threshold=/:100");
-        sleep(2); // To update disk space status
+                                                    "disk_space_threshold=/:100");
+        sleep(2);   // To update disk space status
         test.maxscales->wait_for_monitor(1);
         get_output(test);
     }
