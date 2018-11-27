@@ -183,8 +183,8 @@ public:
         return true;
     }
 
-    // Prepare a new row for processing
-    virtual bool prepare_table(std::string database, std::string table)
+    // Prepare a table for row processing
+    virtual bool prepare_table(const STableMapEvent& map, const STableCreateEvent& create)
     {
         return true;
     }
