@@ -11,6 +11,7 @@ monitor_interval=1000
 detect_stale_master=false
 detect_standalone_master=false
 auto_failover=true
+failcount=1
 
 [RW Split Router]
 type=service
