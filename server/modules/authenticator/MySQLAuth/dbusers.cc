@@ -637,6 +637,76 @@ retblock:
 }
 
 /**
+ * @brief Check permissions for a particular table.
+ *
+ * @param mysql         A valid MySQL connection.
+ * @param service       The service in question.
+ * @param user          The user in question.
+ * @param table         The table whose permissions are checked.
+ * @param query         The query using which the table permissions are checked.
+ * @param log_priority  The priority using which a possible ER_TABLE_ACCESS_DENIED_ERROR
+ *                      should be logged.
+ *
+ * @return True if the table could accessed or if the priority is less than LOG_ERR,
+ *         false otherwise.
+ */
+static bool check_table_permissions(MYSQL* mysql,
+                                    SERVICE* service,
+                                    const char* user,
+                                    const char* table,
+                                    const char* query,
+                                    int log_priority)
+{
+    bool rval = true;
+
+    if (mxs_mysql_query(mysql, query) != 0)
+    {
+        if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
+        {
+            if (log_priority >= LOG_ERR)
+            {
+                rval = false;
+            }
+
+            MXS_LOG_MESSAGE(log_priority,
+                            "[%s] User '%s' is missing SELECT privileges "
+                            "on %s table. MySQL error message: %s",
+                            service->name,
+                            user,
+                            table,
+                            mysql_error(mysql));
+        }
+        else
+        {
+            MXS_ERROR("[%s] Failed to query from %s table."
+                      " MySQL error message: %s",
+                      service->name,
+                      table,
+                      mysql_error(mysql));
+        }
+    }
+    else
+    {
+
+        MYSQL_RES* res = mysql_use_result(mysql);
+        if (res == NULL)
+        {
+            MXS_ERROR("[%s] Result retrieval failed when checking for permissions to "
+                      "the %s table: %s",
+                      service->name,
+                      table,
+                      mysql_error(mysql));
+        }
+        else
+        {
+            mysql_free_result(res);
+        }
+    }
+
+    return rval;
+}
+
+/**
  * @brief Check table permissions on MySQL/MariaDB server
  *
  * @return True if the table permissions are OK, false otherwise.
@@ -785,6 +855,39 @@ static bool check_default_table_permissions(MYSQL* mysql,
 }
 
 /**
+ * @brief Check table permissions on a Clustrix server
+ *
+ * @return True if the table permissions are OK, false otherwise.
+ */
+static bool check_clustrix_table_permissions(MYSQL* mysql,
+                                             SERVICE* service,
+                                             SERVER*  server,
+                                             const char* user)
+{
+    bool rval = true;
+
+    if (!check_table_permissions(mysql, service, user,
+                                 "system.users",
+                                 "SELECT username, host, password FROM system.users LIMIT 1",
+                                 LOG_ERR))
+    {
+        rval = false;
+    }
+
+    if (!check_table_permissions(mysql, service, user,
+                                 "system.user_acl",
+                                 "SELECT privileges, role FROM system.user_acl LIMIT 1",
+                                 LOG_ERR))
+    {
+        rval = false;
+    }
+
+    // TODO: SHOW DATABASES privilege is not checked.
+
+    return rval;
+}
+
+/**
  * @brief Check service permissions on one server
  *
  * @param server Server to check
@@ -838,7 +941,17 @@ static bool check_server_permissions(SERVICE* service,
         mxs_mysql_update_server_version(mysql, server);
     }
 
-    bool rval = check_default_table_permissions(mysql, service, server, user);
+    bool is_clustrix = (strcasestr(server->version_string, "clustrix") != nullptr);
+
+    bool rval = true;
+    if (is_clustrix)
+    {
+        rval = check_clustrix_table_permissions(mysql, service, server, user);
+    }
+    else
+    {
+        rval = check_default_table_permissions(mysql, service, server, user);
+    }
 
     mysql_close(mysql);
 
