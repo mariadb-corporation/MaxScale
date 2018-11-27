@@ -920,7 +920,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     }
                 }
 
-                if (session_trx_is_active(session))
+                if (session_trx_is_active(session) && m_otrx_state == OTRX_INACTIVE)
                 {
                     can_continue = start_trx_replay();
                 }
