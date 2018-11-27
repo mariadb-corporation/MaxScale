@@ -45,14 +45,20 @@
 #define MYSQL57_PASSWORD "authentication_string"
 
 // Query used with 10.0 or older
-#define NEW_LOAD_DBUSERS_QUERY \
-    "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
-    FROM mysql.user AS u LEFT JOIN mysql.db AS d \
-    ON (u.user = d.user AND u.host = d.host) WHERE u.plugin IN ('', 'mysql_native_password') %s \
-    UNION \
-    SELECT u.user, u.host, t.db, u.select_priv, u.%s \
-    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
-    ON (u.user = t.user AND u.host = t.host) WHERE u.plugin IN ('', 'mysql_native_password') %s"
+const char* mariadb_users_query_format =
+    "SELECT u.user, u.host, d.db, u.select_priv, u.%s "
+    "FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin IN ('', 'mysql_native_password') %s "
+    "UNION "
+    "SELECT u.user, u.host, t.db, u.select_priv, u.%s "
+    "FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin IN ('', 'mysql_native_password') %s";
+
+const char* clustrix_users_query_format =
+    "SELECT u.username AS user, u.host, a.dbname AS db, "
+    "       IF(a.privileges & 1048576, 'Y', 'N') AS select_priv, u.password "
+    "FROM system.users AS u LEFT JOIN system.user_acl AS a ON (u.user = a. role) "
+    "WHERE u.plugin in ('', 'mysql_native_password')";
 
 // Used with 10.2 or newer, supports composite roles
 const char* mariadb_102_users_query =
@@ -160,24 +166,45 @@ static char* get_mariadb_users_query(bool include_root)
 
 static char* get_users_query(const char* server_version, int version, bool include_root, bool is_mariadb)
 {
+    char* rval;
+
     if (is_mariadb)     // 10.1.1 or newer, supports default roles
     {
-        return version >= 100202 ?
-               get_mariadb_102_users_query(include_root) :
-               get_mariadb_users_query(include_root);
+        rval =
+            version >= 100202 ?
+            get_mariadb_102_users_query(include_root) :
+            get_mariadb_users_query(include_root);
     }
-
-    // Either an older MariaDB version or a MySQL variant, use the legacy query
-    const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.") ?
-        MYSQL57_PASSWORD : MYSQL_PASSWORD;
-    const char* with_root = include_root ? "" : " AND u.user NOT IN ('root')";
-
-    size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
-    char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
-
-    if (rval)
+    else
     {
-        snprintf(rval, n_bytes + 1, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
+        bool is_clustrix = (strstr(server_version, "clustrix") != nullptr);
+
+        if (is_clustrix)
+        {
+            const char* with_root = include_root ? "" : " AND u.username <> 'root'";
+            size_t n = snprintf(NULL, 0, clustrix_users_query_format, with_root);
+            rval = static_cast<char*>(MXS_MALLOC(n + 1));
+
+            if (rval)
+            {
+                snprintf(rval, n + 1, clustrix_users_query_format, with_root);
+            }
+        }
+        else
+        {
+            // Either an older MariaDB version or a MySQL variant, use the legacy query
+            const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.") ?
+                MYSQL57_PASSWORD : MYSQL_PASSWORD;
+            const char* with_root = include_root ? "" : " AND u.user NOT IN ('root')";
+
+            size_t n = snprintf(NULL, 0, mariadb_users_query_format, password, with_root, password, with_root);
+            char* rval = static_cast<char*>(MXS_MALLOC(n + 1));
+
+            if (rval)
+            {
+                snprintf(rval, n + 1, mariadb_users_query_format, password, with_root, password, with_root);
+            }
+        }
     }
 
     return rval;
