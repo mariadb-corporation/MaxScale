@@ -637,64 +637,21 @@ retblock:
 }
 
 /**
- * @brief Check service permissions on one server
+ * @brief Check table permissions on MySQL/MariaDB server
  *
- * @param server Server to check
- * @param user Username
- * @param password Password
- * @return True if the service permissions are OK, false if one or more permissions
- * are missing.
+ * @return True if the table permissions are OK, false otherwise.
  */
-static bool check_server_permissions(SERVICE* service,
-                                     SERVER*  server,
-                                     const char* user,
-                                     const char* password)
+static bool check_default_table_permissions(MYSQL* mysql,
+                                            SERVICE* service,
+                                            SERVER*  server,
+                                            const char* user)
 {
-    MYSQL* mysql = gw_mysql_init();
-
-    if (mysql == NULL)
-    {
-        return false;
-    }
-
-    MXS_CONFIG* cnf = config_get_global_options();
-    mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
-    mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
-    mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
-    mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, get_connector_plugindir());
-
-    if (mxs_mysql_real_connect(mysql, server, user, password) == NULL)
-    {
-        int my_errno = mysql_errno(mysql);
-
-        MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
-                  " checking authentication user credentials and permissions: %d %s",
-                  service->name,
-                  server->name,
-                  server->address,
-                  server->port,
-                  my_errno,
-                  mysql_error(mysql));
-
-        mysql_close(mysql);
-        return my_errno != ER_ACCESS_DENIED_ERROR;
-    }
-
-    /** Copy the server charset */
-    MY_CHARSET_INFO cs_info;
-    mysql_get_character_set_info(mysql, &cs_info);
-    server->charset = cs_info.number;
-
-    if (server->version_string[0] == 0)
-    {
-        mxs_mysql_update_server_version(mysql, server);
-    }
+    bool rval = true;
 
     const char* format = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
     const char* query_pw = strstr(server->version_string, "5.7.") ?
         MYSQL57_PASSWORD : MYSQL_PASSWORD;
     char query[strlen(format) + strlen(query_pw) + 1];
-    bool rval = true;
     sprintf(query, format, query_pw);
 
     if (mxs_mysql_query(mysql, query) != 0)
@@ -823,6 +780,65 @@ static bool check_server_permissions(SERVICE* service,
             mysql_free_result(res);
         }
     }
+
+    return rval;
+}
+
+/**
+ * @brief Check service permissions on one server
+ *
+ * @param server Server to check
+ * @param user Username
+ * @param password Password
+ * @return True if the service permissions are OK, false if one or more permissions
+ * are missing.
+ */
+static bool check_server_permissions(SERVICE* service,
+                                     SERVER*  server,
+                                     const char* user,
+                                     const char* password)
+{
+    MYSQL* mysql = gw_mysql_init();
+
+    if (mysql == NULL)
+    {
+        return false;
+    }
+
+    MXS_CONFIG* cnf = config_get_global_options();
+    mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
+    mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
+    mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
+    mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, get_connector_plugindir());
+
+    if (mxs_mysql_real_connect(mysql, server, user, password) == NULL)
+    {
+        int my_errno = mysql_errno(mysql);
+
+        MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
+                  " checking authentication user credentials and permissions: %d %s",
+                  service->name,
+                  server->name,
+                  server->address,
+                  server->port,
+                  my_errno,
+                  mysql_error(mysql));
+
+        mysql_close(mysql);
+        return my_errno != ER_ACCESS_DENIED_ERROR;
+    }
+
+    /** Copy the server charset */
+    MY_CHARSET_INFO cs_info;
+    mysql_get_character_set_info(mysql, &cs_info);
+    server->charset = cs_info.number;
+
+    if (server->version_string[0] == 0)
+    {
+        mxs_mysql_update_server_version(mysql, server);
+    }
+
+    bool rval = check_default_table_permissions(mysql, service, server, user);
 
     mysql_close(mysql);
 
