@@ -28,6 +28,7 @@
   the master. There is also limited capability for rejoining nodes.
 
 For more details, please refer to:
+* [MariaDB MaxScale 2.2.17 Release Notes](Release-Notes/MaxScale-2.2.17-Release-Notes.md)
 * [MariaDB MaxScale 2.2.16 Release Notes](Release-Notes/MaxScale-2.2.16-Release-Notes.md)
 * [MariaDB MaxScale 2.2.15 Release Notes](Release-Notes/MaxScale-2.2.15-Release-Notes.md)
 * [MariaDB MaxScale 2.2.14 Release Notes](Release-Notes/MaxScale-2.2.14-Release-Notes.md)
