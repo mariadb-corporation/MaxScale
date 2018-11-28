@@ -3,7 +3,6 @@ if (JANSSON_FOUND)
     cache.cc
     cachefilter.cc
     cachefiltersession.cc
-    cache_storage_api.c
     cache_storage_api.cc
     cachemt.cc
     cachept.cc

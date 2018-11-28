@@ -26,3 +26,19 @@ std::string cache_key_to_string(const CACHE_KEY& key)
 
     return ss.str();
 }
+
+size_t cache_key_hash(const CACHE_KEY* key)
+{
+    mxb_assert(key);
+    mxb_assert(sizeof(key->data) == sizeof(size_t));
+
+    return key->data;
+}
+
+bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs)
+{
+    mxb_assert(lhs);
+    mxb_assert(rhs);
+
+    return lhs->data == rhs->data;
+}

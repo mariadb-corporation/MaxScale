@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <unordered_map>
-#include "cachefilter.h"
+#include "cachefilter.hh"
 #include "cache_storage_api.hh"
 #include "storage.hh"
 

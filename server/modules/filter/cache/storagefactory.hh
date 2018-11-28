@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include "cache_storage_api.h"
+#include "cache_storage_api.hh"
 
 class Storage;
 

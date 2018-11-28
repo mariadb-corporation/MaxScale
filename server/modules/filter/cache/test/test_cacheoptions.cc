@@ -18,7 +18,7 @@
 #include <maxscale/mock/client.hh>
 #include <maxscale/mock/routersession.hh>
 #include <maxscale/mock/session.hh>
-#include "../cachefilter.h"
+#include "../cachefilter.hh"
 
 using namespace std;
 using maxscale::FilterModule;

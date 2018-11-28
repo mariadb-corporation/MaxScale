@@ -16,8 +16,8 @@
 #include <maxscale/buffer.h>
 #include <maxscale/filter.hh>
 #include "cache.hh"
-#include "cachefilter.h"
-#include "cache_storage_api.h"
+#include "cachefilter.hh"
+#include "cache_storage_api.hh"
 
 class CacheFilterSession : public maxscale::FilterSession
 {

@@ -13,7 +13,7 @@
 
 #define MXS_MODULE_NAME "storage_inmemory"
 #include <maxscale/ccdefs.hh>
-#include "../../cache_storage_api.h"
+#include "../../cache_storage_api.hh"
 #include "../storagemodule.hh"
 #include "inmemorystoragest.hh"
 

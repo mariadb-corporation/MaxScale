@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "rules.h"
+#include "rules.hh"
 
 #include <errno.h>
 #include <stdio.h>
@@ -27,7 +27,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.h>
 
-#include "cachefilter.h"
+#include "cachefilter.hh"
 
 static int next_thread_id = 0;
 static thread_local int current_thread_id = -1;

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "rules.h"
+#include "rules.hh"
 #include <algorithm>
 #include <iostream>
 #include <maxscale/alloc.h>

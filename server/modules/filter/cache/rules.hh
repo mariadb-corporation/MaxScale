@@ -14,7 +14,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <stdbool.h>
 #include <jansson.h>
 #include <memory>

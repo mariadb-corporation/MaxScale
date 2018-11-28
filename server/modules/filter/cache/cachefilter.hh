@@ -13,9 +13,12 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <limits.h>
 #include <maxscale/filter.hh>
-#include "cachefilter.h"
+#include "rules.hh"
+#include "cache.hh"
 #include "cachefiltersession.hh"
+
 
 class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
 {
