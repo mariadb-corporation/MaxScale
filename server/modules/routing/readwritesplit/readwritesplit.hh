@@ -132,7 +132,7 @@ static const char gtid_wait_stmt[] =
 /** Function that returns a "score" for a server to enable comparison.
  *  Smaller numbers are better.
  */
-using SRWBackendVector = std::vector<mxs::SRWBackend*>;
+using SRWBackendVector = std::vector<mxs::RWBackend**>;
 using BackendSelectFunction = std::function
     <SRWBackendVector::iterator (SRWBackendVector& sBackends)>;
 BackendSelectFunction get_backend_select_function(select_criteria_t);
@@ -270,8 +270,8 @@ public:
     int  max_slave_count() const;
     bool have_enough_servers() const;
     bool select_connect_backend_servers(MXS_SESSION* session,
-                                        mxs::SRWBackendList& backends,
-                                        mxs::SRWBackend& current_master,
+                                        mxs::PRWBackends& backends,
+                                        mxs::RWBackend**  current_master,
                                         mxs::SessionCommandList* sescmd_list,
                                         int* expected_responses,
                                         connection_type type);
@@ -393,7 +393,7 @@ static inline const char* failure_mode_to_str(enum failure_mode type)
 void closed_session_reply(GWBUF* querybuf);
 bool send_readonly_error(DCB* dcb);
 
-mxs::SRWBackend get_root_master(const mxs::SRWBackendList& backends);
+mxs::RWBackend* get_root_master(const mxs::PRWBackends& backends);
 
 /**
  * Get total slave count and connected slave count
@@ -403,13 +403,13 @@ mxs::SRWBackend get_root_master(const mxs::SRWBackendList& backends);
  *
  * @return Total number of slaves and number of slaves we are connected to
  */
-std::pair<int, int> get_slave_counts(mxs::SRWBackendList& backends, mxs::SRWBackend& master);
+std::pair<int, int> get_slave_counts(mxs::PRWBackends& backends, mxs::RWBackend* master);
 
 /**
  * Find the best backend by grouping the servers by priority, and then applying
  * selection criteria to the best group.
  *
- * @param backends: vector of SRWBackend
+ * @param backends: vector of RWBackend*
  * @param select:   selection function
  * @param master_accept_reads: NOTE: even if this is false, in some cases a master can
  *                             still be selected for reads.
@@ -423,4 +423,4 @@ SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
-void close_all_connections(mxs::SRWBackendList& backends);
+void close_all_connections(mxs::PRWBackends& backends);

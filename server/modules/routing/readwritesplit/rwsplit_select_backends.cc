@@ -51,7 +51,7 @@ double toss()
  *
  * @return True if this server is a valid slave candidate
  */
-static bool valid_for_slave(const SRWBackend& backend, const SRWBackend& master)
+static bool valid_for_slave(const RWBackend* backend, const RWBackend* master)
 {
     return (backend->is_slave() || backend->is_relay())
            && (!master || backend != master);
@@ -257,12 +257,12 @@ SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
  * @param criteria Slave selection criteria
  * @param rses     Router client session
  */
-static void log_server_connections(select_criteria_t criteria, const SRWBackendList& backends)
+static void log_server_connections(select_criteria_t criteria, const PRWBackends& backends)
 {
     MXS_INFO("Servers and %s connection counts:",
              criteria == LEAST_GLOBAL_CONNECTIONS ? "all MaxScale" : "router");
 
-    for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
+    for (PRWBackends::const_iterator it = backends.begin(); it != backends.end(); it++)
     {
         SERVER_REF* b = (*it)->backend();
 
@@ -320,9 +320,9 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
     }
 }
 
-SRWBackend get_root_master(const SRWBackendList& backends)
+RWBackend* get_root_master(const PRWBackends& backends)
 {
-    SRWBackend master;
+    RWBackend* master;
     for (auto candidate : backends)
     {
         if (candidate->is_master())
@@ -335,15 +335,15 @@ SRWBackend get_root_master(const SRWBackendList& backends)
     return master;
 }
 
-std::pair<int, int> get_slave_counts(SRWBackendList& backends, SRWBackend& master)
+std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
 {
     int slaves_found = 0;
     int slaves_connected = 0;
 
     /** Calculate how many connections we already have */
-    for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
+    for (PRWBackends::const_iterator it = backends.begin(); it != backends.end(); it++)
     {
-        const SRWBackend& backend = *it;
+        const RWBackend* backend = *it;
 
         if (backend->can_connect() && valid_for_slave(backend, master))
         {
@@ -373,13 +373,13 @@ std::pair<int, int> get_slave_counts(SRWBackendList& backends, SRWBackend& maste
  * @return True if session can continue
  */
 bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
-                                             SRWBackendList& backends,
-                                             SRWBackend& current_master,
+                                             PRWBackends& backends,
+                                             mxs::RWBackend** current_master,
                                              SessionCommandList* sescmd_list,
                                              int* expected_responses,
                                              connection_type type)
 {
-    SRWBackend master = get_root_master(backends);
+    RWBackend* master = get_root_master(backends);
     const Config& cnf {config()};
 
     if (!master && cnf.master_failure_mode == RW_FAIL_INSTANTLY)
@@ -398,16 +398,16 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
     if (type == ALL)
     {
         /** Find a master server */
-        for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
+        for (PRWBackends::const_iterator it = backends.begin(); it != backends.end(); it++)
         {
-            const SRWBackend& backend = *it;
+            RWBackend* backend = *it;
 
             if (backend->can_connect() && master && backend == master)
             {
                 if (backend->connect(session))
                 {
                     MXS_INFO("Selected Master: %s", backend->name());
-                    current_master = backend;
+                    *current_master = backend;
                 }
                 break;
             }

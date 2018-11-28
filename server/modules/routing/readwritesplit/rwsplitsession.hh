@@ -35,10 +35,10 @@ typedef std::unordered_set<std::string> TableSet;
 typedef std::map<uint64_t, uint8_t>     ResponseMap;
 
 /** List of slave responses that arrived before the master */
-typedef std::list<std::pair<mxs::SRWBackend, uint8_t>> SlaveResponseList;
+typedef std::list<std::pair<mxs::RWBackend*, uint8_t>> SlaveResponseList;
 
 /** Map of COM_STMT_EXECUTE targets by internal ID */
-typedef std::unordered_map<uint32_t, mxs::SRWBackend> ExecMap;
+typedef std::unordered_map<uint32_t, mxs::RWBackend*> ExecMap;
 
 /**
  * The client session of a RWSplit instance
@@ -131,15 +131,15 @@ public:
     }
 
     // TODO: Make member variables private
-    mxs::SRWBackendList m_backends;             /**< List of backend servers */
-    mxs::SRWBackend     m_current_master;       /**< Current master server */
-    mxs::SRWBackend     m_target_node;          /**< The currently locked target node */
-    mxs::SRWBackend     m_prev_target;          /**< The previous target where a query was sent */
-    Config              m_config;               /**< Configuration for this session */
-    int                 m_nbackends;            /**< Number of backend servers (obsolete) */
-    DCB*                m_client;               /**< The client DCB */
-    uint64_t            m_sescmd_count;         /**< Number of executed session commands */
-    int                 m_expected_responses;   /**< Number of expected responses to the current
+    mxs::PRWBackends m_backends;                /**< List of backend servers */
+    mxs::RWBackend*  m_current_master;          /**< Current master server */
+    mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
+    mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
+    Config           m_config;                  /**< Configuration for this session */
+    int              m_nbackends;               /**< Number of backend servers (obsolete) */
+    DCB*             m_client;                  /**< The client DCB */
+    uint64_t         m_sescmd_count;            /**< Number of executed session commands */
+    int              m_expected_responses;      /**< Number of expected responses to the current
                                                  * query */
     GWBUF*                  m_query_queue;      /**< Queued commands waiting to be executed */
     RWSplit*                m_router;           /**< The router instance */
@@ -172,10 +172,10 @@ public:
 private:
     RWSplitSession(RWSplit* instance,
                    MXS_SESSION* session,
-                   const mxs::SRWBackendList& backends,
-                   const mxs::SRWBackend& master);
+                   mxs::PRWBackends backends,
+                   mxs::RWBackend*  master);
 
-    void process_sescmd_response(mxs::SRWBackend& backend, GWBUF** ppPacket);
+    void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket);
     void compress_history(mxs::SSessionCommand& sescmd);
 
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
@@ -183,42 +183,42 @@ private:
     bool route_single_stmt(GWBUF* querybuf);
     bool route_stored_query();
 
-    mxs::SRWBackend get_hinted_backend(char* name);
-    mxs::SRWBackend get_slave_backend(int max_rlag);
-    mxs::SRWBackend get_master_backend();
-    mxs::SRWBackend get_last_used_backend();
-    mxs::SRWBackend get_target_backend(backend_type_t btype, char* name, int max_rlag);
+    mxs::RWBackend* get_hinted_backend(char* name);
+    mxs::RWBackend* get_slave_backend(int max_rlag);
+    mxs::RWBackend* get_master_backend();
+    mxs::RWBackend* get_last_used_backend();
+    mxs::RWBackend* get_target_backend(backend_type_t btype, char* name, int max_rlag);
 
     bool handle_target_is_all(route_target_t route_target,
                               GWBUF* querybuf,
                               int packet_type,
                               uint32_t qtype);
-    mxs::SRWBackend handle_hinted_target(GWBUF* querybuf, route_target_t route_target);
-    mxs::SRWBackend handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
-    bool            handle_master_is_target(mxs::SRWBackend* dest);
-    bool            handle_got_target(GWBUF* querybuf, mxs::SRWBackend& target, bool store);
-    void            handle_connection_keepalive(mxs::SRWBackend& target);
-    bool            prepare_target(mxs::SRWBackend& target, route_target_t route_target);
+    mxs::RWBackend* handle_hinted_target(GWBUF* querybuf, route_target_t route_target);
+    mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
+    bool            handle_master_is_target(mxs::RWBackend** dest);
+    bool            handle_got_target(GWBUF* querybuf, mxs::RWBackend* target, bool store);
+    void            handle_connection_keepalive(mxs::RWBackend* target);
+    bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
     void            retry_query(GWBUF* querybuf, int delay = 1);
 
-    bool should_replace_master(mxs::SRWBackend& target);
-    void replace_master(mxs::SRWBackend& target);
-    bool should_migrate_trx(mxs::SRWBackend& target);
+    bool should_replace_master(mxs::RWBackend* target);
+    void replace_master(mxs::RWBackend* target);
+    bool should_migrate_trx(mxs::RWBackend* target);
     void log_master_routing_failure(bool found,
-                                    mxs::SRWBackend& old_master,
-                                    mxs::SRWBackend& curr_master);
+                                    mxs::RWBackend* old_master,
+                                    mxs::RWBackend* curr_master);
 
-    GWBUF* handle_causal_read_reply(GWBUF* writebuf, mxs::SRWBackend& backend);
+    GWBUF* handle_causal_read_reply(GWBUF* writebuf, mxs::RWBackend* backend);
     GWBUF* add_prefix_wait_gtid(SERVER* server, GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);
     GWBUF* discard_master_wait_gtid_result(GWBUF* buffer);
 
-    int              get_max_replication_lag();
-    mxs::SRWBackend& get_backend_from_dcb(DCB* dcb);
+    int             get_max_replication_lag();
+    mxs::RWBackend* get_backend_from_dcb(DCB* dcb);
 
     void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
     bool handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg);
-    void manage_transactions(mxs::SRWBackend& backend, GWBUF* writebuf);
+    void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf);
 
     void trx_replay_next_stmt();
 

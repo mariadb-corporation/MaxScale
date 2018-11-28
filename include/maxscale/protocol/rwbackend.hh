@@ -34,8 +34,12 @@ enum reply_state_t
 typedef std::map<uint32_t, uint32_t> BackendHandleMap;      /** Internal ID to external ID */
 
 class RWBackend;
-typedef std::shared_ptr<RWBackend> SRWBackend;
-typedef std::list<SRWBackend>      SRWBackendList;
+
+// All interfacing is now handled via RWBackend*.
+using PRWBackends = std::vector<RWBackend*>;
+
+// Internal storage for a class containing RWBackend:s. Not used yet.
+using SRWBackends = std::vector<std::unique_ptr<RWBackend>>;
 
 class RWBackend : public mxs::Backend
 {
@@ -44,7 +48,7 @@ class RWBackend : public mxs::Backend
 
 public:
 
-    static SRWBackendList from_servers(SERVER_REF* servers);
+    static PRWBackends from_servers(SERVER_REF* servers);
 
     RWBackend(SERVER_REF* ref);
     virtual ~RWBackend();

@@ -36,7 +36,7 @@ using namespace maxscale;
  * write split router, and not intended to be called from anywhere else.
  */
 
-void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
+void RWSplitSession::handle_connection_keepalive(RWBackend* target)
 {
     mxb_assert(target);
     MXB_AT_DEBUG(int nserv = 0);
@@ -45,7 +45,7 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
 
     for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        SRWBackend backend = *it;
+        RWBackend* backend = *it;
 
         if (backend->in_use() && backend != target && !backend->is_waiting_result())
         {
@@ -65,7 +65,7 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
     mxb_assert(nserv < m_nbackends);
 }
 
-bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_target)
+bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_target)
 {
     bool rval = true;
 
@@ -195,7 +195,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     uint32_t qtype = info.type_mask();
     route_target_t route_target = info.target();
 
-    SRWBackend target;
+    RWBackend* target;
 
     if (TARGET_IS_ALL(route_target))
     {
@@ -380,7 +380,7 @@ void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type
 {
     for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        SRWBackend& backend = *it;
+        RWBackend* backend = *it;
 
         if (backend->in_use())
         {
@@ -448,7 +448,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 
     for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        SRWBackend& backend = *it;
+        RWBackend* backend = *it;
 
         if (backend->in_use())
         {
@@ -549,14 +549,14 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 /**
  * Check if replication lag is below acceptable levels
  */
-static inline bool rpl_lag_is_ok(SRWBackend& backend, int max_rlag)
+static inline bool rpl_lag_is_ok(RWBackend* backend, int max_rlag)
 {
     return max_rlag == MXS_RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
 }
 
-SRWBackend RWSplitSession::get_hinted_backend(char* name)
+RWBackend* RWSplitSession::get_hinted_backend(char* name)
 {
-    SRWBackend rval;
+    RWBackend* rval;
 
     for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
@@ -574,7 +574,7 @@ SRWBackend RWSplitSession::get_hinted_backend(char* name)
     return rval;
 }
 
-SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
+RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
     // create a list of useable backends (includes masters, function name is a bit off),
     // then feed that list to compare.
@@ -605,14 +605,14 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
                                                               m_config.backend_select_fct,
                                                               m_config.master_accept_reads);
 
-    return (rval == candidates.end()) ? SRWBackend() : **rval;
+    return (rval == candidates.end()) ? nullptr : **rval;
 }
 
-SRWBackend RWSplitSession::get_master_backend()
+RWBackend* RWSplitSession::get_master_backend()
 {
-    SRWBackend rval;
+    RWBackend* rval;
     /** get root master from available servers */
-    SRWBackend master = get_root_master(m_backends);
+    RWBackend* master = get_root_master(m_backends);
 
     if (master)
     {
@@ -639,7 +639,7 @@ SRWBackend RWSplitSession::get_master_backend()
     return rval;
 }
 
-SRWBackend RWSplitSession::get_last_used_backend()
+RWBackend* RWSplitSession::get_last_used_backend()
 {
     return m_prev_target ? m_prev_target : get_master_backend();
 }
@@ -655,7 +655,7 @@ SRWBackend RWSplitSession::get_last_used_backend()
  *
  * @return True if a backend was found
  */
-SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
+RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
                                               char* name,
                                               int   max_rlag)
 {
@@ -665,7 +665,7 @@ SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
         return m_target_node;
     }
 
-    SRWBackend rval;
+    RWBackend* rval;
 
     if (name)   /*< Choose backend by name from a hint */
     {
@@ -721,7 +721,7 @@ int RWSplitSession::get_max_replication_lag()
  *
  *  @return bool - true if succeeded, false otherwise
  */
-SRWBackend RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t route_target)
+RWBackend* RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t route_target)
 {
     char* named_server = NULL;
     int rlag_max = MXS_RLAG_UNDEFINED;
@@ -768,7 +768,7 @@ SRWBackend RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
      * Search backend server by name or replication lag.
      * If it fails, then try to find valid slave or master.
      */
-    SRWBackend target = get_target_backend(btype, named_server, rlag_max);
+    RWBackend* target = get_target_backend(btype, named_server, rlag_max);
 
     if (!target)
     {
@@ -799,10 +799,10 @@ SRWBackend RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
  *
  * @return The target backend if one was found
  */
-SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
+RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
 {
     int rlag_max = get_max_replication_lag();
-    SRWBackend target;
+    RWBackend* target;
 
     if (cmd == MXS_COM_STMT_FETCH)
     {
@@ -852,8 +852,8 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
  * @brief Log master write failure
  */
 void RWSplitSession::log_master_routing_failure(bool found,
-                                                SRWBackend& old_master,
-                                                SRWBackend& curr_master)
+                                                RWBackend* old_master,
+                                                RWBackend* curr_master)
 {
     /** Both backends should either be empty, not connected or the DCB should
      * be a backend (the last check is slightly redundant). */
@@ -915,7 +915,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
                 errmsg);
 }
 
-bool RWSplitSession::should_replace_master(SRWBackend& target)
+bool RWSplitSession::should_replace_master(RWBackend* target)
 {
     return m_config.master_reconnection
            &&   // We have a target server and it's not the current master
@@ -926,14 +926,14 @@ bool RWSplitSession::should_replace_master(SRWBackend& target)
            !is_locked_to_master();
 }
 
-void RWSplitSession::replace_master(SRWBackend& target)
+void RWSplitSession::replace_master(RWBackend* target)
 {
     m_current_master = target;
 
     m_qc.master_replaced();
 }
 
-bool RWSplitSession::should_migrate_trx(SRWBackend& target)
+bool RWSplitSession::should_migrate_trx(RWBackend* target)
 {
     return m_config.transaction_replay
            &&   // We have a target server and it's not the current master
@@ -957,9 +957,9 @@ bool RWSplitSession::should_migrate_trx(SRWBackend& target)
  *
  *  @return bool - true if succeeded, false otherwise
  */
-bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
+bool RWSplitSession::handle_master_is_target(RWBackend** dest)
 {
-    SRWBackend target = get_target_backend(BE_MASTER, NULL, MXS_RLAG_UNDEFINED);
+    RWBackend* target = get_target_backend(BE_MASTER, NULL, MXS_RLAG_UNDEFINED);
     bool succp = true;
 
     if (should_replace_master(target))
@@ -1001,7 +1001,7 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
         && m_target_node == m_current_master)
     {
         /** Reset the forced node as we're in relaxed multi-statement mode */
-        m_target_node.reset();
+        m_target_node = nullptr;
     }
 
     *dest = target;
@@ -1073,7 +1073,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER* server, GWBUF* origin)
  *
  *  @return True on success
  */
-bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool store)
+bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool store)
 {
     mxb_assert(target->in_use());
     /**
@@ -1183,7 +1183,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
             && session_trx_is_read_only(m_client->session)
             && session_trx_is_ending(m_client->session))
         {
-            m_target_node.reset();
+            m_target_node = nullptr;
         }
     }
     else

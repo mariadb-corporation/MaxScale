@@ -27,7 +27,7 @@ class CatSession : public mxs::RouterSession
     CatSession& operator=(const CatSession&) = delete;
 public:
 
-    CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackendList& backends);
+    CatSession(MXS_SESSION* session, Cat* router, mxs::PRWBackends& backends);
 
     /**
      * The RouterSession instance will be deleted when a client session
@@ -70,12 +70,12 @@ public:
                      bool* pSuccess);
 private:
 
-    MXS_SESSION*                  m_session;
-    mxs::SRWBackendList           m_backends;
-    uint64_t                      m_completed;
-    uint8_t                       m_packet_num;
-    mxs::SRWBackendList::iterator m_current;
-    GWBUF*                        m_query;
+    MXS_SESSION*               m_session;
+    mxs::PRWBackends           m_backends;
+    uint64_t                   m_completed;
+    uint8_t                    m_packet_num;
+    mxs::PRWBackends::iterator m_current;
+    GWBUF*                     m_query;
 
     /**
      * Iterate to next backend

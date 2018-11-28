@@ -18,7 +18,7 @@
 
 using namespace maxscale;
 
-CatSession::CatSession(MXS_SESSION* session, Cat* router, SRWBackendList& backends)
+CatSession::CatSession(MXS_SESSION* session, Cat* router, PRWBackends& backends)
     : RouterSession(session)
     , m_session(session)
     , m_backends(backends)

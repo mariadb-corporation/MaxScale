@@ -55,7 +55,7 @@ static std::string extract_error(GWBUF* buffer)
  * @param master_cmd Master's reply
  * @param slave_cmd  Slave's reply
  */
-static void discard_if_response_differs(SRWBackend backend,
+static void discard_if_response_differs(RWBackend* backend,
                                         uint8_t master_response,
                                         uint8_t slave_response,
                                         SSessionCommand sescmd)
@@ -76,7 +76,7 @@ static void discard_if_response_differs(SRWBackend backend,
     }
 }
 
-void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPacket)
+void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacket)
 {
     if (backend->has_session_commands())
     {
