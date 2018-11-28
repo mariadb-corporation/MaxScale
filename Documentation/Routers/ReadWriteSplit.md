@@ -34,9 +34,28 @@ For more details about the standard service parameters, refer to the
 ### `max_slave_connections`
 
 **`max_slave_connections`** sets the maximum number of slaves a router session
-uses at any moment. The default is to use all available slaves.
+uses at any moment. The default is to use at most 255 slave connections per
+client connection. In older versions the default was to use all available slaves
+with no limit.
 
-	max_slave_connections=<max. number, or % of available slaves>
+```
+max_slave_connections=<max. number, or % of available slaves>
+```
+
+For example, if you have configured MaxScale with one master and three slaves
+and set `max_slave_connections=2`, for each client connection a connection to
+the master and two slave connections would be opened. The read query load
+balancing is then done between these two slaves and writes are sent to the
+master.
+
+By tuning this parameter, you can control how dynamic the load balancing is at
+the cost of extra created connections. With a lower value of
+`max_slave_connections`, less connections per session are created and the set of
+possible slave servers is smaller. With a higher value in
+`max_slave_connections`, more connections are created which requires more
+resources but load balancing will almost always give the best single query
+response time and performance. Longer sessions are less affected by a high
+`max_slave_connections` as the relative cost of opening a connection is lower.
 
 ### `max_slave_replication_lag`
 
