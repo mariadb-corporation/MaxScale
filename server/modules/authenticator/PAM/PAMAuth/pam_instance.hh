@@ -14,7 +14,7 @@
 #include "pam_auth.hh"
 
 #include <string>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 
 /** The instance class for the client side PAM authenticator, created in pam_auth_init() */

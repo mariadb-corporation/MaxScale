@@ -44,7 +44,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/json_api.h>

@@ -27,7 +27,7 @@
 #include <string.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/session.h>
 #include <sys/ioctl.h>
 #include <errno.h>

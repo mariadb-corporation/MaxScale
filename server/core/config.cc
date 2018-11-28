@@ -15,7 +15,6 @@
  * @file config.c Configuration file processing
  */
 
-#include <maxscale/config.h>
 #include <maxscale/config.hh>
 
 #include <ctype.h>

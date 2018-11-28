@@ -20,7 +20,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/log.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>

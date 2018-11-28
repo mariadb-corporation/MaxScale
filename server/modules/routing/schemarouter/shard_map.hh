@@ -19,7 +19,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 
 using namespace maxscale;
 

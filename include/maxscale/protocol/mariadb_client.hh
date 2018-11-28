@@ -18,7 +18,7 @@
 
 #include <maxbase/poll.h>
 #include <maxscale/buffer.hh>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/protocol/mysql.h>
 
 /** A DCB-like client abstraction which ignores responses */

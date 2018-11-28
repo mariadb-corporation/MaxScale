@@ -16,7 +16,7 @@
  * @file core/maxscale/config.h - The private config interface
  */
 
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 
 #include <sstream>
 #include <initializer_list>

@@ -28,7 +28,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/session.h>
 
 MXS_BEGIN_DECLS

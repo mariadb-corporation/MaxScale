@@ -39,7 +39,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/filter.h>
 #include <maxscale/housekeeper.h>
@@ -49,7 +49,7 @@
 #include <maxscale/router.h>
 #include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>

@@ -37,7 +37,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/poll.h>
 #include <maxscale/router.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/session.h>
 
 /* The router entry points */

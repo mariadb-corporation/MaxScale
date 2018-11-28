@@ -43,7 +43,7 @@
 #include <thread>
 
 #include <maxscale/alloc.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/limits.h>

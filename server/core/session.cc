@@ -37,7 +37,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/router.h>
 #include <maxscale/routingworker.hh>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mysql.h>
 

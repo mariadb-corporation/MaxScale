@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxbase/atomic.h>

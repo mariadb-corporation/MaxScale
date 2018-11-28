@@ -32,7 +32,7 @@
 #include <maxscale/authenticator.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mysql.h>
 

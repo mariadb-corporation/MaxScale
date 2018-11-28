@@ -20,12 +20,10 @@
 #include <stdint.h>
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/routing.h>
 #include <maxscale/session.h>
-
-MXS_BEGIN_DECLS
 
 /**
  * MXS_FILTER is an opaque type representing a particular filter instance.
@@ -264,5 +262,3 @@ typedef enum filter_capability
 {
     FCAP_TYPE_NONE = 0x0    // TODO: remove once filter capabilities are defined
 } filter_capability_t;
-
-MXS_END_DECLS

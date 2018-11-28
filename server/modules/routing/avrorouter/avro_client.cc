@@ -24,7 +24,7 @@
 #include <maxavro.h>
 #include <fstream>
 #include <sstream>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxbase/atomic.h>

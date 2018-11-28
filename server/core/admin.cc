@@ -29,7 +29,7 @@
 #include <maxbase/atomic.h>
 #include <maxbase/assert.h>
 #include <maxscale/utils.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/adminusers.h>

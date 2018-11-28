@@ -36,7 +36,7 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/jansson.h>
 
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/paths.h>

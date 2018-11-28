@@ -13,7 +13,7 @@
 
 #include "dcb.hh"
 #include <maxbase/atomic.hh>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 
 Dcb::Dcb(DCB* pDcb)
     : m_sInner()

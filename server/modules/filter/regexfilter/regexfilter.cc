@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/filter.h>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>

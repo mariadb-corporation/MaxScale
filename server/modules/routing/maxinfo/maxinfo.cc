@@ -34,7 +34,7 @@
 #include <time.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>

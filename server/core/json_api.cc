@@ -15,7 +15,7 @@
 
 #include <string>
 
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <jansson.h>
 
 using std::string;

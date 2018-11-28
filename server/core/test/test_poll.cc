@@ -35,7 +35,7 @@
 #include <errno.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 
 #include "test_utils.h"
 

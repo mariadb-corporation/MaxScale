@@ -36,7 +36,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/router.h>
 #include <maxscale/secrets.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/mysql_binlog.h>
 

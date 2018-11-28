@@ -12,30 +12,22 @@
  */
 #pragma once
 
-/**
- * @file service.h
- *
- * The service level definitions within the gateway
- */
+#include <maxscale/ccdefs.hh>
 
-#include <maxscale/cdefs.h>
-
-#include <math.h>
-#include <time.h>
+#include <cmath>
+#include <ctime>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/dh.h>
 
 #include <maxbase/jansson.h>
+#include <maxscale/config.hh>
 #include <maxscale/protocol.h>
 #include <maxscale/dcb.h>
-#include <maxscale/server.h>
-#include <maxscale/listener.h>
+#include <maxscale/listener.hh>
 #include <maxscale/filter.h>
-#include <maxscale/config.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/server.h>
 
 struct server;
 struct mxs_router;
@@ -97,8 +89,9 @@ typedef struct server_ref_t
  * and a set of client side protocol/port pairs used to listen for new connections
  * to the service.
  */
-typedef struct service
+class SERVICE
 {
+public:
     const char*    name;                            /**< The service name */
     int            state;                           /**< The service state */
     int            client_count;                    /**< Number of connected clients */
@@ -152,7 +145,7 @@ typedef struct service
                                                      * active */
     int32_t retain_last_statements;                 /**< How many statements to retain per session,
                                                      * -1 if not explicitly specified. */
-} SERVICE;
+};
 
 typedef enum count_spec_t
 {
@@ -280,5 +273,3 @@ typedef enum service_version_which_t
  * @return The version of the service.
  */
 uint64_t service_get_version(const SERVICE* service, service_version_which_t which);
-
-MXS_END_DECLS

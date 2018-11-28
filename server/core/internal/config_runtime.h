@@ -21,7 +21,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/monitor.h>
 #include <maxscale/server.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 
 #include "service.hh"
 #include "filter.hh"

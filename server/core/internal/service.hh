@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/resultset.hh>
 
 #include <mutex>

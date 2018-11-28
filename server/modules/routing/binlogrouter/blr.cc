@@ -46,7 +46,7 @@
 #include <maxscale/router.h>
 #include <maxscale/secrets.h>
 #include <maxscale/server.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>

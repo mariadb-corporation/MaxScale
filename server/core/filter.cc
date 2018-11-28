@@ -34,7 +34,7 @@
 #include <maxscale/log.h>
 #include <maxscale/paths.h>
 #include <maxscale/session.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/json_api.h>
 

@@ -23,7 +23,7 @@
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/json_api.h>
 #include <maxscale/query_classifier.h>

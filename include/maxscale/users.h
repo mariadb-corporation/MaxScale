@@ -20,7 +20,7 @@
 #include <maxbase/jansson.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <openssl/sha.h>
 
 MXS_BEGIN_DECLS

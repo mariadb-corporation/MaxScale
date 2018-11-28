@@ -32,7 +32,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
 #include <openssl/bio.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
 

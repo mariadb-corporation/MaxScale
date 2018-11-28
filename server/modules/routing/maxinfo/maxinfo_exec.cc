@@ -33,7 +33,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
@@ -42,7 +42,7 @@
 #include <maxscale/resultset.hh>
 #include <maxscale/router.h>
 #include <maxscale/server.hh>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/version.h>
 
 #include "../../../core/internal/maxscale.h"

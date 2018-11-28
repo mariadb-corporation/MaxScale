@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <iostream>
 #include <maxscale/alloc.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/log.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>

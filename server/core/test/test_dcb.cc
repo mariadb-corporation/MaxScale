@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/listener.h>
 #include <maxscale/routingworker.hh>
 

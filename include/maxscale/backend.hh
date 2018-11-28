@@ -18,7 +18,7 @@
 #include <string>
 #include <memory>
 
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/session_command.hh>
 #include <maxbase/stopwatch.hh>
 

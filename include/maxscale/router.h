@@ -23,7 +23,7 @@
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.h>
 #include <maxscale/routing.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/session.h>
 
 MXS_BEGIN_DECLS

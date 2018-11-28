@@ -20,10 +20,8 @@
 
 #include <maxscale/cdefs.h>
 #include <maxbase/jansson.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/dcb.h>
-
-MXS_BEGIN_DECLS
 
 #define MAX_SERVER_ADDRESS_LEN 1024
 #define MAX_SERVER_MONUSER_LEN 1024
@@ -522,5 +520,3 @@ extern void dListServers(DCB*);
 
 int    server_response_time_num_samples(const SERVER* server);
 double server_response_time_average(const SERVER* server);
-
-MXS_END_DECLS

@@ -33,7 +33,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/poll.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 
 /**
  * @brief Check client's SSL capability and start SSL if appropriate.

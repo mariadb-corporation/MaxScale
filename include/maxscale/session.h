@@ -29,7 +29,7 @@
 MXS_BEGIN_DECLS
 
 struct dcb;
-struct service;
+class SERVICE;
 struct mxs_filter_def;
 struct mxs_filter;
 struct mxs_filter_session;
@@ -218,7 +218,7 @@ typedef struct session
 
     struct mxs_router_session* router_session;          /*< The router instance data */
     MXS_SESSION_STATS          stats;                   /*< Session statistics */
-    struct service*            service;                 /*< The service this session is using */
+    SERVICE*                   service;                 /*< The service this session is using */
     MXS_DOWNSTREAM             head;                    /*< Head of the filter chain */
     MXS_UPSTREAM               tail;                    /*< The tail of the filter chain */
     int                        refcount;                /*< Reference count on the session */
@@ -295,7 +295,7 @@ bool session_route_reply(MXS_SESSION* session, GWBUF* buffer);
  * @param client_dcb    The client side DCB
  * @return              The newly created session or NULL if an error occurred
  */
-MXS_SESSION* session_alloc(struct service*, struct dcb*);
+MXS_SESSION* session_alloc(SERVICE*, struct dcb*);
 
 /**
  * A version of session_alloc() which takes the session id number as parameter.
@@ -306,7 +306,7 @@ MXS_SESSION* session_alloc(struct service*, struct dcb*);
  * @param id            Id for the new session.
  * @return              The newly created session or NULL if an error occurred
  */
-MXS_SESSION* session_alloc_with_id(struct service*, struct dcb*, uint64_t);
+MXS_SESSION* session_alloc_with_id(SERVICE*, struct dcb*, uint64_t);
 
 MXS_SESSION* session_set_dummy(struct dcb*);
 

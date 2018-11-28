@@ -21,7 +21,7 @@
 #include <vector>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/users.h>
 #include <cdc.h>

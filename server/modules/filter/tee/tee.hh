@@ -18,7 +18,7 @@
 #include <regex.h>
 
 #include <maxscale/filter.hh>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 
 #include "teesession.hh"
 

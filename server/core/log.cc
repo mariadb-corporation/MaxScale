@@ -21,7 +21,7 @@
 #include <maxbase/log.h>
 #include <maxbase/logger.hh>
 
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/session.h>
 

@@ -40,7 +40,7 @@
 #include <maxscale/log.h>
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 
 static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
@@ -58,7 +58,7 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
  * @param ssl           SSL configuration
  * @return      New listener object or NULL if unable to allocate
  */
-SERV_LISTENER* listener_alloc(struct service* service,
+SERV_LISTENER* listener_alloc(SERVICE* service,
                               const char* name,
                               const char* protocol,
                               const char* address,

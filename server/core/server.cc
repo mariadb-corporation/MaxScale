@@ -34,8 +34,8 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/stopwatch.hh>
 
-#include <maxscale/config.h>
-#include <maxscale/service.h>
+#include <maxscale/config.hh>
+#include <maxscale/service.hh>
 #include <maxscale/session.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>

@@ -31,7 +31,7 @@
 #include <maxscale/log.h>
 #include <maxscale/queryclassifier.hh>
 #include <maxscale/router.hh>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/session_command.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/routingworker.hh>

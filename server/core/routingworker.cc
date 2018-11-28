@@ -27,7 +27,7 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/semaphore.hh>
 #include <maxscale/alloc.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/json_api.h>

@@ -35,7 +35,7 @@
 #include <maxscale/random.h>
 #include <maxscale/router.h>
 #include <maxscale/server.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.h>
 #include <binlog_common.h>

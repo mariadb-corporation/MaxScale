@@ -29,7 +29,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/router.h>
 
 /**

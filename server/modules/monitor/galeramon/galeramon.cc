@@ -24,7 +24,7 @@
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>

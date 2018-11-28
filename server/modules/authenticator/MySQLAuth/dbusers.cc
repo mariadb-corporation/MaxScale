@@ -31,7 +31,7 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/router.h>
 #include <maxscale/secrets.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 

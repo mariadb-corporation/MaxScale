@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/config.h>
+#include <maxscale/config.hh>
 #include <maxscale/modinfo.h>
 #include <string>
 

@@ -28,7 +28,7 @@
 #include <maxscale/filter.h>
 #include <maxscale/monitor.h>
 #include <maxscale/server.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/session.h>
 
 MXS_BEGIN_DECLS

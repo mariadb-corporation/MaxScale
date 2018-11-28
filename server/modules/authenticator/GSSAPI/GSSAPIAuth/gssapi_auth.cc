@@ -22,7 +22,7 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/users.h>
 

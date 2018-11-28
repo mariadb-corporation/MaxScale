@@ -20,7 +20,7 @@
 #include <unordered_map>
 
 #include <maxscale/pcre2.h>
-#include <maxscale/service.h>
+#include <maxscale/service.hh>
 #include <binlog_common.h>
 
 typedef std::vector<uint8_t> Bytes;
