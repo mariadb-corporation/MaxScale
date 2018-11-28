@@ -27,6 +27,7 @@
 * The binlog router can now automatically switch to secondary masters
   when replicating from a Galera cluster in case the primary master
   goes down.
+* MaxScale now has a systemd compatible watchdog.
 
 For more details, please refer to:
 
