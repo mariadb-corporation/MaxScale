@@ -256,10 +256,10 @@ void dprintAllFilters(DCB* dcb)
  * Designed to be called within a debug CLI in order
  * to display all active filters in MaxScale
  */
-void dprintFilter(DCB* dcb, const SFilterDef& filter)
+void dprintFilter(DCB* dcb, const FilterDef* filter)
 {
     mxb_assert(filter);
-    dcb_printf(dcb, "FilterDef %p (%s)\n", filter.get(), filter->name.c_str());
+    dcb_printf(dcb, "FilterDef %p (%s)\n", filter, filter->name.c_str());
     dcb_printf(dcb, "\tModule:      %s\n", filter->module.c_str());
     if (filter->obj && filter->filter)
     {
