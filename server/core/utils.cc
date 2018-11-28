@@ -1064,8 +1064,6 @@ int open_network_socket(enum mxs_socket_type type,
             memcpy(addr, ai->ai_addr, ai->ai_addrlen);
             set_port(addr, port);
 
-            freeaddrinfo(ai);
-
             if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so, addr->ss_family))
                 || (type == MXS_SOCKET_LISTENER && !configure_listener_socket(so)))
             {
@@ -1088,12 +1086,15 @@ int open_network_socket(enum mxs_socket_type type,
 
                 if (config->local_address)
                 {
+                    freeaddrinfo(ai);
+                    ai = NULL;
+
                     if ((rc = getaddrinfo(config->local_address, NULL, &hint, &ai)) == 0)
                     {
                         struct sockaddr_storage local_address = {};
 
                         memcpy(&local_address, ai->ai_addr, ai->ai_addrlen);
-                        freeaddrinfo(ai);
+
 
                         if (bind(so, (struct sockaddr*)&local_address, sizeof(local_address)) == 0)
                         {
@@ -1117,6 +1118,8 @@ int open_network_socket(enum mxs_socket_type type,
                 }
             }
         }
+
+        freeaddrinfo(ai);
     }
 
     return so;

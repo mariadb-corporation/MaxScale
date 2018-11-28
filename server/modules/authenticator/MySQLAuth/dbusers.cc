@@ -226,7 +226,7 @@ static bool check_password(const char* output,
 
     /** Next, extract the SHA1 of the real password by XOR'ing it with
      * the output of the previous calculation */
-    uint8_t step2[SHA_DIGEST_LENGTH];
+    uint8_t step2[SHA_DIGEST_LENGTH] = {};
     gw_str_xor(step2, token, step1, token_len);
 
     /** The phase 2 scramble needs to be copied to the shared data structure as it
