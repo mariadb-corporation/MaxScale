@@ -26,14 +26,15 @@
 #include <maxscale/protocol.h>
 #include <maxscale/ssl.h>
 
+class SERVICE;
+class SERV_LISTENER;
+
 MXS_BEGIN_DECLS
 
 #define ERRHANDLE
 
 struct session;
 struct server;
-struct service;
-struct servlistener;
 
 struct dcb;
 
@@ -188,7 +189,7 @@ typedef struct dcb
     size_t                  protocol_packet_length;     /**< How long the protocol specific packet is */
     size_t                  protocol_bytes_processed;   /**< How many bytes of a packet have been read */
     struct session*         session;                    /**< The owning session */
-    struct servlistener*    listener;                   /**< For a client DCB, the listener data */
+    SERV_LISTENER*          listener;                   /**< For a client DCB, the listener data */
     MXS_PROTOCOL            func;                       /**< The protocol functions for this descriptor */
     MXS_AUTHENTICATOR       authfunc;                   /**< The authenticator functions for this descriptor
                                                          * */
@@ -201,26 +202,26 @@ typedef struct dcb
     GWBUF*   fakeq;                                     /**< Fake event queue for generated events */
     uint32_t fake_event;                                /**< Fake event to be delivered to handler */
 
-    DCBSTATS    stats;                      /**< DCB related statistics */
-    struct dcb* nextpersistent;             /**< Next DCB in the persistent pool for SERVER */
-    time_t      persistentstart;            /**<    0: Not in the persistent pool.
-                                             *      -1: Evicted from the persistent pool and being closed.
-                                             *   non-0: Time when placed in the persistent pool.
-                                             */
-    struct service* service;                /**< The related service */
-    void*           data;                   /**< Specific client data, shared between DCBs of this session */
-    void*           authenticator_data;     /**< The authenticator data for this DCB */
-    DCB_CALLBACK*   callbacks;              /**< The list of callbacks for the DCB */
-    int64_t         last_read;              /*< Last time the DCB received data */
-    struct server*  server;                 /**< The associated backend server */
-    SSL*            ssl;                    /*< SSL struct for connection */
-    bool            ssl_read_want_read;     /*< Flag */
-    bool            ssl_read_want_write;    /*< Flag */
-    bool            ssl_write_want_read;    /*< Flag */
-    bool            ssl_write_want_write;   /*< Flag */
-    bool            was_persistent;         /**< Whether this DCB was in the persistent pool */
-    bool            high_water_reached;     /** High water mark reached, to determine whether need release
-                                             * throttle */
+    DCBSTATS    stats;                  /**< DCB related statistics */
+    struct dcb* nextpersistent;         /**< Next DCB in the persistent pool for SERVER */
+    time_t      persistentstart;        /**<    0: Not in the persistent pool.
+                                         *      -1: Evicted from the persistent pool and being closed.
+                                         *   non-0: Time when placed in the persistent pool.
+                                         */
+    SERVICE*       service;             /**< The related service */
+    void*          data;                /**< Specific client data, shared between DCBs of this session */
+    void*          authenticator_data;  /**< The authenticator data for this DCB */
+    DCB_CALLBACK*  callbacks;           /**< The list of callbacks for the DCB */
+    int64_t        last_read;           /*< Last time the DCB received data */
+    struct server* server;              /**< The associated backend server */
+    SSL*           ssl;                 /*< SSL struct for connection */
+    bool           ssl_read_want_read;  /*< Flag */
+    bool           ssl_read_want_write; /*< Flag */
+    bool           ssl_write_want_read; /*< Flag */
+    bool           ssl_write_want_write;/*< Flag */
+    bool           was_persistent;      /**< Whether this DCB was in the persistent pool */
+    bool           high_water_reached;  /** High water mark reached, to determine whether need release
+                                         * throttle */
     struct
     {
         struct dcb* next;   /**< Next DCB in owning thread's list */
@@ -260,7 +261,7 @@ void dcb_global_init();
 
 int  dcb_write(DCB*, GWBUF*);
 DCB* dcb_accept(DCB* listener);
-DCB* dcb_alloc(dcb_role_t, struct servlistener*);
+DCB* dcb_alloc(dcb_role_t, SERV_LISTENER*);
 DCB* dcb_connect(struct server*, struct session*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_drain_writeq(DCB*);

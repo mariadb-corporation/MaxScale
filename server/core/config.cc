@@ -327,9 +327,9 @@ const MXS_MODULE_PARAM config_listener_params[] =
     {CN_PORT,                        MXS_MODULE_PARAM_COUNT},   // Either port or socket,
                                                                 // checked when created
     {CN_SOCKET,                      MXS_MODULE_PARAM_STRING},
-    {CN_AUTHENTICATOR_OPTIONS,       MXS_MODULE_PARAM_STRING},
+    {CN_AUTHENTICATOR_OPTIONS,       MXS_MODULE_PARAM_STRING,  ""},
     {CN_ADDRESS,                     MXS_MODULE_PARAM_STRING,  "::"},
-    {CN_AUTHENTICATOR,               MXS_MODULE_PARAM_STRING},
+    {CN_AUTHENTICATOR,               MXS_MODULE_PARAM_STRING,  "MySQLAuth"},
     {CN_SSL,                         MXS_MODULE_PARAM_ENUM,    "false",
      MXS_MODULE_OPT_ENUM_UNIQUE,
      ssl_values},
@@ -3860,7 +3860,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
                       "listener '%s' already listens on the %s %s.",
                       obj->object,
                       service->name,
-                      l->name,
+                      l->name.c_str(),
                       socket ? "socket" : "port",
                       socket ? socket : port);
             return 1;

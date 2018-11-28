@@ -206,7 +206,7 @@ static int httpd_read_event(DCB* dcb)
     /** If listener->authenticator is the default authenticator, it means that
      * we don't need to check the user credentials. All other authenticators
      * cause a 401 Unauthorized to be returned on the first try. */
-    bool auth_ok = strcmp(httpd_default_auth(), dcb->listener->authenticator) == 0;
+    bool auth_ok = httpd_default_auth() == dcb->listener->authenticator;
 
     /**
      * Get the request headers

@@ -47,11 +47,11 @@ bool authenticator_init(void** dest, const char* authenticator, const char* opti
     else if (func->initialize)
     {
         char* optarray[AUTHENTICATOR_MAX_OPTIONS + 1];
-        size_t optlen = options ? strlen(options) : 0;
+        size_t optlen = options && *options ? strlen(options) : 0;
         char optcopy[optlen + 1];
         int optcount = 0;
 
-        if (options)
+        if (options && *options)
         {
             strcpy(optcopy, options);
             char* opt = optcopy;

@@ -43,7 +43,7 @@
 #include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
-#include <maxscale/listener.h>
+#include <maxscale/listener.hh>
 #include <maxscale/log.h>
 #include <maxscale/poll.h>
 #include <maxscale/router.h>
@@ -2451,9 +2451,9 @@ DCB* dcb_accept(DCB* dcb)
                 }
             }
             memcpy(&client_dcb->func, protocol_funcs, sizeof(MXS_PROTOCOL));
-            if (dcb->listener->authenticator)
+            if (!dcb->listener->authenticator.empty())
             {
-                authenticator_name = dcb->listener->authenticator;
+                authenticator_name = dcb->listener->authenticator.c_str();
             }
             else if (client_dcb->func.auth_default != NULL)
             {

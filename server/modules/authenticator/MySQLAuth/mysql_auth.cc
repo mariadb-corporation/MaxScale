@@ -635,8 +635,8 @@ static int mysql_auth_load_users(SERV_LISTENER* port)
         {
             MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.",
                       service->name,
-                      port->name,
-                      port->address ? port->address : "::",
+                      port->name.c_str(),
+                      !port->address.empty() ? port->address.c_str() : "::",
                       port->port);
         }
 
@@ -673,7 +673,7 @@ static int mysql_auth_load_users(SERV_LISTENER* port)
     }
     else if (loaded > 0 && first_load)
     {
-        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name);
+        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name.c_str());
     }
 
     return rc;

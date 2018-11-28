@@ -35,7 +35,7 @@
 #include <string.h>
 
 #include <maxscale/config.hh>
-#include <maxscale/listener.h>
+#include <maxscale/listener.hh>
 #include <maxscale/routingworker.hh>
 
 #include "../dcb.cc"
@@ -48,10 +48,10 @@
 static int test1()
 {
     DCB* dcb;
-    SERV_LISTENER dummy;
+    SERV_LISTENER* dummy = nullptr;
     /* Single buffer tests */
     fprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_INTERNAL");
-    dcb = dcb_alloc(DCB_ROLE_INTERNAL, &dummy);
+    dcb = dcb_alloc(DCB_ROLE_INTERNAL, dummy);
     printDCB(dcb);
     fprintf(stderr, "\t..done\nAllocated dcb.");
     // TODO: Without running workers, the following will hang. As it does not

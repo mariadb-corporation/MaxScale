@@ -33,7 +33,7 @@
 #include <fcntl.h>
 #include <string>
 
-#include <maxscale/listener.h>
+#include <maxscale/listener.hh>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.h>
 #include <maxscale/protocol.h>
@@ -46,6 +46,40 @@ static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
 
 static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
+
+SERV_LISTENER::SERV_LISTENER(SERVICE* service, const std::string& name, const std::string& address,
+                             uint16_t port, const std::string& protocol, const std::string& authenticator,
+                             const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl)
+    : name(name)
+    , protocol(protocol)
+    , port(port)
+    , address(address)
+    , authenticator(authenticator)
+    , auth_options(auth_opts)
+    , auth_instance(auth_instance)
+    , ssl(ssl)
+    , listener(nullptr)
+    , users(nullptr)
+    , service(service)
+    , active(1)
+    , next(nullptr)
+{
+}
+
+SERV_LISTENER::~SERV_LISTENER()
+{
+    if (users)
+    {
+        users_free(users);
+    }
+
+    if (listener)
+    {
+        dcb_close(listener);
+    }
+
+    SSL_LISTENER_free(ssl);
+}
 
 /**
  * Create a new listener structure
@@ -67,84 +101,27 @@ SERV_LISTENER* listener_alloc(SERVICE* service,
                               const char* auth_options,
                               SSL_LISTENER* ssl)
 {
-    char* my_address = NULL;
-    if (address)
+    if (!authenticator)
     {
-        my_address = MXS_STRDUP(address);
-        if (!my_address)
+        if ((authenticator = get_default_authenticator(protocol)) == NULL)
         {
-            return NULL;
+            MXS_ERROR("No authenticator defined for listener '%s' and could not get "
+                      "default authenticator for protocol '%s'.", name, protocol);
+            return nullptr;
         }
-    }
-
-    char* my_auth_options = NULL;
-
-    if (auth_options && (my_auth_options = MXS_STRDUP(auth_options)) == NULL)
-    {
-        MXS_FREE(my_address);
-        return NULL;
-    }
-
-    char* my_authenticator = NULL;
-
-    if (authenticator)
-    {
-        my_authenticator = MXS_STRDUP(authenticator);
-    }
-    else if ((authenticator = get_default_authenticator(protocol)) == NULL
-             || (my_authenticator = MXS_STRDUP(authenticator)) == NULL)
-    {
-        MXS_ERROR("No authenticator defined for listener '%s' and could not get "
-                  "default authenticator for protocol '%s'.",
-                  name,
-                  protocol);
-        MXS_FREE(my_address);
-        return NULL;
     }
 
     void* auth_instance = NULL;
 
-    if (!authenticator_init(&auth_instance, my_authenticator, my_auth_options))
+    if (!authenticator_init(&auth_instance, authenticator, auth_options))
     {
-        MXS_ERROR("Failed to initialize authenticator module '%s' for "
-                  "listener '%s'.",
-                  my_authenticator,
-                  name);
-        MXS_FREE(my_address);
-        MXS_FREE(my_authenticator);
-        return NULL;
+        MXS_ERROR("Failed to initialize authenticator module '%s' for listener '%s'.",
+                  authenticator, name);
+        return nullptr;
     }
 
-    char* my_protocol = MXS_STRDUP(protocol);
-    char* my_name = MXS_STRDUP(name);
-    SERV_LISTENER* proto = (SERV_LISTENER*)MXS_MALLOC(sizeof(SERV_LISTENER));
-
-    if (!my_protocol || !proto || !my_name || !my_authenticator)
-    {
-        MXS_FREE(my_authenticator);
-        MXS_FREE(my_protocol);
-        MXS_FREE(my_address);
-        MXS_FREE(my_name);
-        MXS_FREE(proto);
-        return NULL;
-    }
-
-    proto->active = 1;
-    proto->name = my_name;
-    proto->listener = NULL;
-    proto->service = service;
-    proto->protocol = my_protocol;
-    proto->address = my_address;
-    proto->port = port;
-    proto->authenticator = my_authenticator;
-    proto->auth_options = my_auth_options;
-    proto->ssl = ssl;
-    proto->users = NULL;
-    proto->next = NULL;
-    proto->auth_instance = auth_instance;
-    pthread_mutex_init(&proto->lock, NULL);
-
-    return proto;
+    return new(std::nothrow) SERV_LISTENER(service, name, address, port, protocol, authenticator,
+                                           auth_options, auth_instance, ssl);
 }
 
 /**
@@ -154,26 +131,7 @@ SERV_LISTENER* listener_alloc(SERVICE* service,
  */
 void listener_free(SERV_LISTENER* listener)
 {
-    if (listener)
-    {
-        if (listener->users)
-        {
-            users_free(listener->users);
-        }
-
-        if (listener->listener)
-        {
-            dcb_close(listener->listener);
-        }
-
-        SSL_LISTENER_free(listener->ssl);
-        MXS_FREE(listener->address);
-        MXS_FREE(listener->authenticator);
-        MXS_FREE(listener->auth_options);
-        MXS_FREE(listener->name);
-        MXS_FREE(listener->protocol);
-        MXS_FREE(listener);
-    }
+    delete listener;
 }
 
 /**
@@ -480,24 +438,24 @@ static bool create_listener_config(const SERV_LISTENER* listener, const char* fi
     {
         MXS_ERROR("Failed to open file '%s' when serializing listener '%s': %d, %s",
                   filename,
-                  listener->name,
+                  listener->name.c_str(),
                   errno,
                   mxs_strerror(errno));
         return false;
     }
 
     // TODO: Check for return values on all of the dprintf calls
-    dprintf(file, "[%s]\n", listener->name);
+    dprintf(file, "[%s]\n", listener->name.c_str());
     dprintf(file, "type=listener\n");
-    dprintf(file, "protocol=%s\n", listener->protocol);
+    dprintf(file, "protocol=%s\n", listener->protocol.c_str());
     dprintf(file, "service=%s\n", listener->service->name);
-    dprintf(file, "address=%s\n", listener->address);
+    dprintf(file, "address=%s\n", listener->address.c_str());
     dprintf(file, "port=%u\n", listener->port);
-    dprintf(file, "authenticator=%s\n", listener->authenticator);
+    dprintf(file, "authenticator=%s\n", listener->authenticator.c_str());
 
-    if (listener->auth_options)
+    if (!listener->auth_options.empty())
     {
-        dprintf(file, "authenticator_options=%s\n", listener->auth_options);
+        dprintf(file, "authenticator_options=%s\n", listener->auth_options.c_str());
     }
 
     if (listener->ssl)
@@ -518,7 +476,7 @@ bool listener_serialize(const SERV_LISTENER* listener)
              sizeof(filename),
              "%s/%s.cnf.tmp",
              get_config_persistdir(),
-             listener->name);
+             listener->name.c_str());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -555,11 +513,11 @@ bool listener_serialize(const SERV_LISTENER* listener)
 json_t* listener_to_json(const SERV_LISTENER* listener)
 {
     json_t* param = json_object();
-    json_object_set_new(param, "address", json_string(listener->address));
+    json_object_set_new(param, "address", json_string(listener->address.c_str()));
     json_object_set_new(param, "port", json_integer(listener->port));
-    json_object_set_new(param, "protocol", json_string(listener->protocol));
-    json_object_set_new(param, "authenticator", json_string(listener->authenticator));
-    json_object_set_new(param, "auth_options", json_string(listener->auth_options));
+    json_object_set_new(param, "protocol", json_string(listener->protocol.c_str()));
+    json_object_set_new(param, "authenticator", json_string(listener->authenticator.c_str()));
+    json_object_set_new(param, "auth_options", json_string(listener->auth_options.c_str()));
 
     if (listener->ssl)
     {
@@ -589,7 +547,7 @@ json_t* listener_to_json(const SERV_LISTENER* listener)
     }
 
     json_t* rval = json_object();
-    json_object_set_new(rval, CN_ID, json_string(listener->name));
+    json_object_set_new(rval, CN_ID, json_string(listener->name.c_str()));
     json_object_set_new(rval, CN_TYPE, json_string(CN_LISTENERS));
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
 

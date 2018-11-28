@@ -34,7 +34,7 @@
 #include <string.h>
 #include <errno.h>
 #include <maxscale/dcb.h>
-#include <maxscale/listener.h>
+#include <maxscale/listener.hh>
 #include <maxscale/service.hh>
 
 #include "test_utils.h"
@@ -49,7 +49,7 @@ static int test1()
     DCB* dcb;
     int result;
     int eno = 0;
-    SERV_LISTENER dummy;
+    SERV_LISTENER* dummy = nullptr;
 
     SERVICE service;
     service.routerModule = (char*)"required by a check in dcb.cc";
@@ -59,7 +59,7 @@ static int test1()
             "testpoll : Initialise the polling system.");
     init_test_env(NULL);
     fprintf(stderr, "\t..done\nAdd a DCB");
-    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, &dummy);
+    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dummy);
 
     if (dcb == NULL)
     {

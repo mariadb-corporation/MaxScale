@@ -41,7 +41,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/paths.h>
 #include <maxscale/housekeeper.h>
-#include <maxscale/listener.h>
+#include <maxscale/listener.hh>
 #include <maxscale/log.h>
 #include <maxscale/poll.h>
 #include <maxscale/protocol.h>
@@ -351,7 +351,7 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
 
     int listeners = 0;
     size_t config_bind_len =
-        (port->address ? strlen(port->address) : ANY_IPV4_ADDRESS_LEN) + 1 + UINTLEN(port->port);
+        (!port->address.empty() ? port->address.length() : ANY_IPV4_ADDRESS_LEN) + 1 + UINTLEN(port->port);
     char config_bind[config_bind_len + 1];      // +1 for NULL
     MXS_PROTOCOL* funcs;
 
@@ -375,10 +375,10 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
 
     port->listener->service = service;
 
-    if ((funcs = (MXS_PROTOCOL*)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
+    if ((funcs = (MXS_PROTOCOL*)load_module(port->protocol.c_str(), MODULE_PROTOCOL)) == NULL)
     {
         MXS_ERROR("Unable to load protocol module %s. Listener for service %s not started.",
-                  port->protocol,
+                  port->protocol.c_str(),
                   service->name);
         close_port(port);
         return 0;
@@ -388,9 +388,9 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
 
     const char* authenticator_name = "NullAuthDeny";
 
-    if (port->authenticator)
+    if (!port->authenticator.empty())
     {
-        authenticator_name = port->authenticator;
+        authenticator_name = port->authenticator.c_str();
     }
     else if (port->listener->func.auth_default)
     {
@@ -403,13 +403,13 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
     {
         MXS_ERROR("Failed to load authenticator module '%s' for listener '%s'",
                   authenticator_name,
-                  port->name);
+                  port->name.c_str());
         close_port(port);
         return 0;
     }
 
     // Add protocol and authenticator capabilities from the listener
-    const MXS_MODULE* proto_mod = get_module(port->protocol, MODULE_PROTOCOL);
+    const MXS_MODULE* proto_mod = get_module(port->protocol.c_str(), MODULE_PROTOCOL);
     const MXS_MODULE* auth_mod = get_module(authenticator_name, MODULE_AUTHENTICATOR);
     mxb_assert(proto_mod && auth_mod);
     service->capabilities |= proto_mod->module_capabilities | auth_mod->module_capabilities;
@@ -421,9 +421,9 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
      * listeners aren't normal DCBs, we can skip that.
      */
 
-    if (port->address)
+    if (!port->address.empty())
     {
-        sprintf(config_bind, "%s|%d", port->address, port->port);
+        sprintf(config_bind, "%s|%d", port->address.c_str(), port->port);
     }
     else
     {
@@ -439,7 +439,7 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
             MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
                       "service is not started.",
                       service->name,
-                      port->name);
+                      port->name.c_str());
             close_port(port);
             return 0;
 
@@ -447,7 +447,7 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
             MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
                         " might not work.",
                         service->name,
-                        port->name);
+                        port->name.c_str());
             break;
 
         default:
@@ -594,7 +594,7 @@ bool serviceStopListener(SERVICE* svc, const char* name)
     for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
+        if (listener_is_active(listener) && listener->name == name)
         {
             if (poll_remove_dcb(listener->listener) == 0)
             {
@@ -617,7 +617,7 @@ bool serviceStartListener(SERVICE* svc, const char* name)
     for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
+        if (listener_is_active(listener) && listener->name == name)
         {
             if (listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED
                 && poll_add_dcb(listener->listener) == 0)
@@ -752,7 +752,7 @@ bool service_remove_listener(Service* service, const char* target)
     for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener) && strcmp(listener->name, target) == 0)
+        if (listener_is_active(listener) && listener->name == target)
         {
             listener_set_active(listener, false);
 
@@ -821,28 +821,10 @@ SERV_LISTENER* service_find_listener(Service* service,
     for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener))
+        if (listener_is_active(listener) && port == listener->port)
         {
-            bool is_same_port = false;
-
-            if (port && (port == listener->port)
-                && ((address && listener->address && strcmp(listener->address, address) == 0)
-                    || (address == NULL && listener->address == NULL)))
-            {
-                is_same_port = true;
-            }
-
-            bool is_same_socket = false;
-
-            if (!is_same_port)
-            {
-                if (socket && listener->address && strcmp(listener->address, socket) == 0)
-                {
-                    is_same_socket = true;
-                }
-            }
-
-            if (is_same_port || is_same_socket)
+            if ((!address && listener->address.empty()) || listener->address == address
+                || (!socket && listener->address.empty()) || listener->address == socket)
             {
                 return listener;
             }
@@ -872,15 +854,12 @@ bool serviceHasListener(Service* service,
     for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener)
-            &&      // Listener with same name exists
-            (strcmp(listener->name, name) == 0
-             ||     // Listener listening on the same interface and port exists
-             ((strcmp(listener->protocol, protocol) == 0 && listener->port == port
-               && ((address && listener->address && strcmp(listener->address, address) == 0)
-                   || (address == NULL && listener->address == NULL))))))
+        if (listener_is_active(listener) && listener->port == port)
         {
-            return true;
+            if ((!address && listener->address.empty()) || listener->address == address)
+            {
+                return true;
+            }
         }
     }
 
@@ -894,7 +873,7 @@ bool service_has_named_listener(Service* service, const char* name)
     for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
+        if (listener_is_active(listener) && listener->name == name)
         {
             return true;
         }
@@ -1403,10 +1382,10 @@ void dListListeners(DCB* dcb)
             {
                 dcb_printf(dcb,
                            "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
-                           listener->name,
+                           listener->name.c_str(),
                            service->name,
-                           listener->protocol,
-                           (listener && listener->address) ? listener->address : "*",
+                           listener->protocol.c_str(),
+                           (listener && !listener->address.empty()) ? listener->address.c_str() : "*",
                            listener->port,
                            listener_state_to_string(listener));
             }
@@ -1473,7 +1452,7 @@ bool Service::refresh_users()
                     MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
                               " authentication will not work.",
                               m_name.c_str(),
-                              listener->name);
+                              listener->name.c_str());
                     ret = false;
                     break;
 
@@ -1481,7 +1460,7 @@ bool Service::refresh_users()
                     MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
                                 " might not work.",
                                 m_name.c_str(),
-                                listener->name);
+                                listener->name.c_str());
                     ret = false;
                     break;
 
@@ -1938,7 +1917,7 @@ void service_print_users(DCB* dcb, const SERVICE* service)
         if (listener_is_active(listener) && listener->listener
             && listener->listener->authfunc.diagnostic)
         {
-            dcb_printf(dcb, "User names (%s): ", listener->name);
+            dcb_printf(dcb, "User names (%s): ", listener->name.c_str());
 
             listener->listener->authfunc.diagnostic(dcb, listener);
 
@@ -2048,7 +2027,7 @@ static json_t* service_listener_json_data(const SERVICE* service, const char* na
     for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
+        if (listener_is_active(listener) && listener->name == name)
         {
             return listener_to_json(listener);
         }
