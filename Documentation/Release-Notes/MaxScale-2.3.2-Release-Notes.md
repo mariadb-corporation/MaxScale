@@ -1,6 +1,6 @@
 # MariaDB MaxScale 2.3.2 Release Notes
 
-Release 2.3.2 is a XXX release.
+Release 2.3.2 is a GA release.
 
 This document describes the changes in release 2.3.2, when compared to the
 previous release in the same series.
@@ -33,7 +33,20 @@ output to "SHOW ALL SLAVES STATUS"-query must match server entries in the MaxSca
 configuration file. If the network configuration is such that this is not the case, the
 setting `assume_unique_hostnames` should be disabled.
 
+## New Features
+
+* [MXS-1598](https://jira.mariadb.org/browse/MXS-1598) heartbeat replication don't support multimaster
+
 ## Bug fixes
+
+* [MXS-2189](https://jira.mariadb.org/browse/MXS-2189) optimistic_trx is rolled back if master fails
+* [MXS-2187](https://jira.mariadb.org/browse/MXS-2187) Transaction replay is only attempted once
+* [MXS-2186](https://jira.mariadb.org/browse/MXS-2186) SHOW DATABASES is routed to the master
+* [MXS-2184](https://jira.mariadb.org/browse/MXS-2184) event_number is not incremented for updates
+* [MXS-2179](https://jira.mariadb.org/browse/MXS-2179) Watchdog notifications must be generated also when users are fetched.
+* [MXS-2178](https://jira.mariadb.org/browse/MXS-2178) Admin operations may cause systemd watchdog to be triggered.
+* [MXS-2167](https://jira.mariadb.org/browse/MXS-2167) Monitors should be able to use extra_port
+* [MXS-2158](https://jira.mariadb.org/browse/MXS-2158) Node rejoin fails, if the node was never a slave (but was master before going down)
 
 ## Known Issues and Limitations
 
