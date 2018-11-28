@@ -586,9 +586,8 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
     }
     else if (backend->get_reply_state() == REPLY_STATE_START && server_is_shutting_down(writebuf))
     {
-        // The server is shutting down, act as if the network connection failed. This allows
-        // the query to be retried on another server without the client noticing it.
-        poll_fake_hangup_event(backend_dcb);
+        // The server is shutting down, ignore this error and wait for the TCP connection to die.
+        // This allows the query to be retried on another server without the client noticing it.
         gwbuf_free(writebuf);
         return;
     }
@@ -776,8 +775,23 @@ bool RWSplitSession::start_trx_replay()
 {
     bool rval = false;
 
-    if (!m_is_replay_active && m_config.transaction_replay && m_can_replay_trx)
+    if (m_config.transaction_replay && m_can_replay_trx)
     {
+        if (!m_is_replay_active)
+        {
+            // This is the first time we're retrying this transaction, store it and the interrupted query
+            m_orig_trx = m_trx;
+            m_orig_stmt.copy_from(m_current_query);
+        }
+        else
+        {
+            // Not the first time, copy the original
+            m_replayed_trx.close();
+            m_trx.close();
+            m_trx = m_orig_trx;
+            m_current_query.copy_from(m_orig_stmt);
+        }
+
         if (m_trx.have_stmts() || m_current_query.get())
         {
             // Stash any interrupted queries while we replay the transaction
@@ -800,7 +814,7 @@ bool RWSplitSession::start_trx_replay()
                 // Pop the first statement and start replaying the transaction
                 GWBUF* buf = m_replayed_trx.pop_stmt();
                 MXS_INFO("Replaying: %s", mxs::extract_sql(buf, 1024).c_str());
-                retry_query(buf, 0);
+                retry_query(buf, 1);
             }
             else
             {
@@ -811,16 +825,17 @@ bool RWSplitSession::start_trx_replay()
                  */
                 mxb_assert_message(qc_get_trx_type_mask(m_interrupted_query.get()) & QUERY_TYPE_BEGIN_TRX,
                                    "The current query should start a transaction");
-                 MXS_INFO("Retrying interrupted query: %s",
-                          mxs::extract_sql(m_interrupted_query.get()).c_str());
-                retry_query(m_interrupted_query.release(), 0);
+                MXS_INFO("Retrying interrupted query: %s",
+                         mxs::extract_sql(m_interrupted_query.get()).c_str());
+                retry_query(m_interrupted_query.release(), 1);
             }
         }
         else
         {
-            mxb_assert_message(!session_is_autocommit(m_client->session),
-                               "Session should have autocommit disabled if the transaction "
-                               "had no statements and no query was interrupted");
+            mxb_assert_message(!session_is_autocommit(m_client->session)
+                               || session_trx_is_ending(m_client->session),
+                               "Session should have autocommit disabled or transaction just ended if the "
+                               "transaction had no statements and no query was interrupted");
         }
 
         rval = true;
@@ -903,27 +918,27 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                         can_continue = true;
                         send_readonly_error(m_client);
                     }
-
-                    if (!can_continue)
-                    {
-                        if (!backend->is_master() && !backend->server()->master_err_is_logged)
-                        {
-                            MXS_ERROR("Server %s (%s) lost the master status while waiting"
-                                      " for a result. Client sessions will be closed.",
-                                      backend->name(),
-                                      backend->uri());
-                            backend->server()->master_err_is_logged = true;
-                        }
-                        else
-                        {
-                            MXS_ERROR("Lost connection to the master server, closing session.");
-                        }
-                    }
                 }
 
-                if (session_trx_is_active(session))
+                if (session_trx_is_active(session) && m_otrx_state == OTRX_INACTIVE)
                 {
                     can_continue = start_trx_replay();
+                }
+
+                if (!can_continue)
+                {
+                    if (!backend->is_master() && !backend->server()->master_err_is_logged)
+                    {
+                        MXS_ERROR("Server %s (%s) lost the master status while waiting"
+                                  " for a result. Client sessions will be closed.",
+                                  backend->name(),
+                                  backend->uri());
+                        backend->server()->master_err_is_logged = true;
+                    }
+                    else
+                    {
+                        MXS_ERROR("Lost connection to the master server, closing session.");
+                    }
                 }
 
                 backend->close();

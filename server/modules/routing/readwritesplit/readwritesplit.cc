@@ -365,7 +365,6 @@ void RWSplit::diagnostics(DCB* dcb)
                    "dur", "active", "selects");
         for (const auto& s : srv_stats)
         {
-            mxb_assert(s.second.total == s.second.read + s.second.write);
             ServerStats::CurrentStats cs = s.second.current_stats();
 
             dcb_printf(dcb,
@@ -503,7 +502,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {"strict_multi_stmt",          MXS_MODULE_PARAM_BOOL,    "false"        },
             {"strict_sp_calls",            MXS_MODULE_PARAM_BOOL,    "false"        },
             {"master_accept_reads",        MXS_MODULE_PARAM_BOOL,    "false"        },
-            {"connection_keepalive",       MXS_MODULE_PARAM_COUNT,   "0"            },
+            {"connection_keepalive",       MXS_MODULE_PARAM_COUNT,   "300"          },
             {"causal_reads",               MXS_MODULE_PARAM_BOOL,    "false"        },
             {"causal_reads_timeout",       MXS_MODULE_PARAM_STRING,  "10"           },
             {"master_reconnection",        MXS_MODULE_PARAM_BOOL,    "false"        },

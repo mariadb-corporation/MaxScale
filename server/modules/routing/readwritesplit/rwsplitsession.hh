@@ -163,8 +163,10 @@ public:
                                                  * transaction */
     bool        m_can_replay_trx;               /**< Whether the transaction can be replayed */
     Trx         m_replayed_trx;                 /**< The transaction we are replaying */
-    mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction.
-                                                 * */
+    mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction. */
+    Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
+    mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
+
     otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
 
 private:
@@ -268,6 +270,12 @@ private:
         return m_config.delayed_retry
                && m_retry_duration < m_config.delayed_retry_timeout
                && !session_trx_is_active(m_client->session);
+    }
+
+    // Whether a transaction replay can remain active
+    inline bool can_continue_trx_replay() const
+    {
+        return m_is_replay_active && m_retry_duration < m_config.delayed_retry_timeout;
     }
 
     inline bool can_recover_servers() const

@@ -104,6 +104,9 @@ add_test_executable(bug681.cpp bug681 bug681 LABELS readwritesplit REPL_BACKEND)
 # Regression case for the bug ""Different error messages from MariaDB and Maxscale"
 add_test_executable(error_messages.cpp error_messages replication LABELS MySQLAuth REPL_BACKEND)
 
+# TODO: Remove this once MXS-2174 is fixed
+set_tests_properties(error_messages PROPERTIES WILL_FAIL TRUE)
+
 # Regression case for the bug "Wrong error message for Access denied error"
 add_test_script(bug562.sh bug562.sh replication LABELS MySQLAuth REPL_BACKEND)
 
@@ -276,6 +279,9 @@ add_test_executable(mysqlmon_reset_replication.cpp mysqlmon_reset_replication my
 # MySQL Monitor low disk switchover
 add_test_executable(mysqlmon_switchover_auto.cpp mysqlmon_switchover_auto mysqlmon_switchover_auto LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor series of failovers and rejoins
+add_test_executable(mysqlmon_failover_readonly.cpp mysqlmon_failover_readonly mysqlmon_failover_readonly LABELS mysqlmon REPL_BACKEND)
+
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
 add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
@@ -299,6 +305,10 @@ add_test_executable(mxs1507_migrate_trx.cpp mxs1507_migrate_trx mxs1507_trx_repl
 # MXS-1507: Transaction replay
 # https://jira.mariadb.org/browse/MXS-1507
 add_test_executable(mxs1507_trx_stress.cpp mxs1507_trx_stress mxs1507_trx_stress LABELS readwritesplit REPL_BACKEND)
+
+# MXS-2187: Multiple transaction replays
+# https://jira.mariadb.org/browse/MXS-1507
+add_test_executable(mxs2187_multi_replay.cpp mxs2187_multi_replay mxs2187_multi_replay LABELS readwritesplit REPL_BACKEND)
 
 # MXS-1778: Use GTID from OK packets for consistent reads
 # https://jira.mariadb.org/browse/MXS-1776

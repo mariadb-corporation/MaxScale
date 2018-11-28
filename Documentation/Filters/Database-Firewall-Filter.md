@@ -1,5 +1,48 @@
 # Database Firewall filter
 
+Table of Contents
+=================
+
+* [Overview](#overview)
+* [Configuration](#configuration)
+   * [Filter Parameters](#filter-parameters)
+      * [rules](#rules)
+      * [action](#action)
+      * [log_match](#log_match)
+      * [log_no_match](#log_no_match)
+* [Rule syntax](#rule-syntax)
+   * [Mandatory rule parameters](#mandatory-rule-parameters)
+      * [wildcard](#wildcard)
+         * [Example](#example)
+      * [columns](#columns)
+         * [Example](#example-1)
+      * [function](#function)
+         * [Example](#example-2)
+      * [not_function](#not_function)
+      * [Example](#example-3)
+      * [uses_function](#uses_function)
+         * [Example](#example-4)
+      * [function and columns](#function-and-columns)
+         * [Example](#example-5)
+      * [not_function and columns](#not_function-and-columns)
+         * [Example](#example-6)
+      * [regex](#regex)
+         * [Example](#example-7)
+      * [limit_queries](#limit_queries)
+         * [Example](#example-8)
+      * [no_where_clause](#no_where_clause)
+         * [Example](#example-9)
+   * [Optional rule parameters](#optional-rule-parameters)
+      * [at_times](#at_times)
+      * [on_queries](#on_queries)
+   * [Applying rules to users](#applying-rules-to-users)
+* [Module commands](#module-commands)
+   * [dbfwfilter::rules/reload [FILE]](#dbfwfilterrulesreload-file)
+   * [dbfwfilter::rules](#dbfwfilterrules)
+* [Use Cases](#use-cases)
+   * [Use Case 1 - Prevent rapid execution of specific queries](#use-case-1---prevent-rapid-execution-of-specific-queries)
+   * [Use Case 2 - Only allow deletes with a where clause](#use-case-2---only-allow-deletes-with-a-where-clause)
+
 ## Overview
 
 The Database Firewall filter is used to block queries that match a set of

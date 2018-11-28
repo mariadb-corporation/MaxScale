@@ -32,7 +32,7 @@ namespace CDC
 
 // The error strings returned by the getError library. These can be used to
 // check for the most common errors (which right now is only the timeout).
-const char* TIMEOUT = "Request timed out";
+extern const char* const TIMEOUT;
 
 // The typedef for the Row type
 class Row;
@@ -118,14 +118,14 @@ public:
      */
     ValueMap fields() const
     {
-        ValueMap fields;
+        ValueMap flds;
 
         for (size_t i = 0; i < m_keys->size(); i++)
         {
-            fields[(*m_keys)[i]] = (*m_types)[i];
+            flds[(*m_keys)[i]] = (*m_types)[i];
         }
 
-        return fields;
+        return flds;
     }
 
 private:

@@ -939,7 +939,7 @@ string monitored_servers_to_string(const ServerArray& servers)
         for (size_t i = 0; i < array_size; i++)
         {
             rval += separator;
-            rval += servers[i]->name();
+            rval += string("'") + servers[i]->name() + "'";
             separator = ", ";
         }
     }

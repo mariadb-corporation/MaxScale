@@ -5,6 +5,44 @@ and its intended use case scenarios. It also displays all router configuration
 parameters with their descriptions. A list of current limitations of the module
 is included and use examples are provided.
 
+Table of Contents
+=================
+
+
+* [Overview](#overview)
+* [Configuration](#configuration)
+* [Parameters](#parameters)
+   * [max_slave_connections](#max_slave_connections)
+   * [max_slave_replication_lag](#max_slave_replication_lag)
+   * [use_sql_variables_in](#use_sql_variables_in)
+   * [connection_keepalive](#connection_keepalive)
+   * [master_reconnection](#master_reconnection)
+   * [slave_selection_criteria](#slave_selection_criteria)
+      * [Server Weights and slave_selection_criteria](#server-weights-and-slave_selection_criteria)
+      * [Interaction Between slave_selection_criteria and max_slave_connections](#interaction-between-slave_selection_criteria-and-max_slave_connections)
+   * [max_sescmd_history](#max_sescmd_history)
+   * [disable_sescmd_history](#disable_sescmd_history)
+   * [master_accept_reads](#master_accept_reads)
+   * [strict_multi_stmt](#strict_multi_stmt)
+   * [strict_sp_calls](#strict_sp_calls)
+   * [master_failure_mode](#master_failure_mode)
+   * [retry_failed_reads](#retry_failed_reads)
+   * [delayed_retry](#delayed_retry)
+   * [delayed_retry_timeout](#delayed_retry_timeout)
+   * [transaction_replay](#transaction_replay)
+   * [transaction_replay_max_size](#transaction_replay_max_size)
+   * [optimistic_trx](#optimistic_trx)
+   * [causal_reads](#causal_reads)
+   * [causal_reads_timeout](#causal_reads_timeout)
+* [Routing hints](#routing-hints)
+* [Limitations](#limitations)
+* [Legacy Configuration](#legacy-configuration)
+* [Examples](#examples)
+* [Readwritesplit routing decisions](#readwritesplit-routing-decisions)
+   * [Routing to Master](#routing-to-master)
+   * [Routing to Slaves](#routing-to-slaves)
+   * [Routing to every session backend](#routing-to-every-session-backend)
+
 ## Overview
 
 The **readwritesplit** router is designed to increase the read-only processing
@@ -92,7 +130,8 @@ master_failure_mode=fail_on_write
 ### `connection_keepalive`
 
 Send keepalive pings to backend servers. This feature was introduced in MaxScale
-2.2.0 and is disabled by default.
+2.2.0. The default value is 300 seconds starting with 2.3.2 and for older
+versions the feature was disabled by default.
 
 The parameter value is the interval in seconds between each keepalive ping. A
 keepalive ping will be sent to a backend server if the connection is idle and it
@@ -103,7 +142,8 @@ client executes a query.
 This functionality allows the readwritesplit module to keep all backend
 connections alive even if they are not used. This is a common problem if the
 backend servers have a low _wait_timeout_ value and the client connections live
-for a long time.
+for a long time or if your workload is extremely read-heavy with writes done at
+lower intervals than the configured _wait_timeout_.
 
 ### `master_reconnection`
 

@@ -51,7 +51,7 @@ execute_process(
 find_library(HAVE_SYSTEMD NAMES systemd)
 if(HAVE_SYSTEMD)
     add_definitions(-DHAVE_SYSTEMD=1)
-else()
+elseif(NOT BUILD_SYSTEM_TESTS)
     # If systemd is in use, require libsystemd-dev to be installed
     if(NOT NOT_SYSTEMD_IS_RUNNING)
         message( FATAL_ERROR "systemd is running: please install libsystemd-dev" )
