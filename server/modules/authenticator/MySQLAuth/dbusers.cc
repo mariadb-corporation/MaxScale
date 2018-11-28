@@ -90,7 +90,7 @@ const char* mariadb_102_users_query =
     "SELECT DISTINCT t.user, t.host, t.db, t.select_priv, t.password FROM users AS t %s";
 
 // Query used with MariaDB 10.1, supports basic roles
-const char* mariadb_users_query
+const char* mariadb_101_users_query
     =   // First, select all users
         "SELECT t.user, t.host, t.db, t.select_priv, t.password FROM "
         "( "
@@ -149,74 +149,78 @@ static bool   get_hostname(DCB* dcb, char* client_hostname, size_t size);
 
 static char* get_mariadb_102_users_query(bool include_root)
 {
-    const char* root = include_root ? "" : " WHERE t.user <> 'root'";
+    const char* with_root = include_root ? "" : " WHERE t.user <> 'root'";
 
-    size_t n_bytes = snprintf(NULL, 0, mariadb_102_users_query, root);
+    size_t n_bytes = snprintf(NULL, 0, mariadb_102_users_query, with_root);
     char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
     MXS_ABORT_IF_NULL(rval);
-    snprintf(rval, n_bytes + 1, mariadb_102_users_query, root);
+    snprintf(rval, n_bytes + 1, mariadb_102_users_query, with_root);
 
     return rval;
 }
 
-static char* get_mariadb_users_query(bool include_root)
+static char* get_mariadb_101_users_query(bool include_root)
 {
-    const char* root = include_root ? "" : " AND t.user NOT IN ('root')";
+    const char* with_root = include_root ? "" : " AND t.user NOT IN ('root')";
 
-    size_t n_bytes = snprintf(NULL, 0, mariadb_users_query, root, root);
+    size_t n_bytes = snprintf(NULL, 0, mariadb_101_users_query, with_root, with_root);
     char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
     MXS_ABORT_IF_NULL(rval);
-    snprintf(rval, n_bytes + 1, mariadb_users_query, root, root);
+    snprintf(rval, n_bytes + 1, mariadb_101_users_query, with_root, with_root);
+
+    return rval;
+}
+
+static char* get_mariadb_users_query(bool include_root, const char* server_version)
+{
+    const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char* with_root = include_root ? "" : " AND u.user NOT IN ('root')";
+
+    size_t n_bytes = snprintf(NULL, 0, mariadb_users_query_format, password, with_root, password, with_root);
+    char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
+    MXS_ABORT_IF_NULL(rval);
+    snprintf(rval, n_bytes + 1, mariadb_users_query_format, password, with_root, password, with_root);
+
+    return rval;
+}
+
+static char* get_clustrix_users_query(bool include_root)
+{
+    const char* with_root = include_root ? "" : " AND u.username <> 'root'";
+
+    size_t n_bytes = snprintf(NULL, 0, clustrix_users_query_format, with_root);
+    char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
+    MXS_ABORT_IF_NULL(rval);
+    snprintf(rval, n_bytes + 1, clustrix_users_query_format, with_root);
 
     return rval;
 }
 
 static char* get_users_query(const char* server_version, int version, bool include_root, server_category_t category)
 {
-    char* rval;
+    char* rval = nullptr;
 
     switch (category)
     {
     case SERVER_ROLES:
-        {
-            rval =
-                version >= 100202 ?
-                get_mariadb_102_users_query(include_root) :
-                get_mariadb_users_query(include_root);
-        }
+        rval =
+            version >= 100202 ?
+            get_mariadb_102_users_query(include_root) :
+            get_mariadb_101_users_query(include_root);
         break;
 
     case SERVER_CLUSTRIX:
-        {
-            const char* with_root = include_root ? "" : " AND u.username <> 'root'";
-            size_t n = snprintf(NULL, 0, clustrix_users_query_format, with_root);
-            rval = static_cast<char*>(MXS_MALLOC(n + 1));
+        rval = get_clustrix_users_query(include_root);
+        break;
 
-            if (rval)
-            {
-                snprintf(rval, n + 1, clustrix_users_query_format, with_root);
-            }
-        }
+    case SERVER_NO_ROLES:
+        // Either an older MariaDB version or a MySQL variant, use the legacy query
+        rval = get_mariadb_users_query(include_root, server_version);
         break;
 
     default:
         mxb_assert(!true);
-    case SERVER_NO_ROLES:
-        {
-            // Either an older MariaDB version or a MySQL variant, use the legacy query
-            const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.") ?
-                MYSQL57_PASSWORD : MYSQL_PASSWORD;
-            const char* with_root = include_root ? "" : " AND u.user NOT IN ('root')";
-
-            size_t n = snprintf(NULL, 0, mariadb_users_query_format, password, with_root, password, with_root);
-            char* rval = static_cast<char*>(MXS_MALLOC(n + 1));
-
-            if (rval)
-            {
-                snprintf(rval, n + 1, mariadb_users_query_format, password, with_root, password, with_root);
-            }
-        }
-        break;
     }
 
     return rval;
@@ -685,6 +689,7 @@ retblock:
  * @param query         The query using which the table permissions are checked.
  * @param log_priority  The priority using which a possible ER_TABLE_ACCESS_DENIED_ERROR
  *                      should be logged.
+ * @param message       Additional log message.
  *
  * @return True if the table could accessed or if the priority is less than LOG_ERR,
  *         false otherwise.
@@ -694,7 +699,8 @@ static bool check_table_permissions(MYSQL* mysql,
                                     const char* user,
                                     const char* table,
                                     const char* query,
-                                    int log_priority)
+                                    int log_priority,
+                                    const char* message = nullptr)
 {
     bool rval = true;
 
@@ -709,10 +715,11 @@ static bool check_table_permissions(MYSQL* mysql,
 
             MXS_LOG_MESSAGE(log_priority,
                             "[%s] User '%s' is missing SELECT privileges "
-                            "on %s table. MySQL error message: %s",
+                            "on %s table.%sMySQL error message: %s",
                             service->name,
                             user,
                             table,
+                            message ? message : " ",
                             mysql_error(mysql));
         }
         else
@@ -763,110 +770,19 @@ static bool check_default_table_permissions(MYSQL* mysql,
     char query[strlen(format) + strlen(query_pw) + 1];
     sprintf(query, format, query_pw);
 
-    if (mxs_mysql_query(mysql, query) != 0)
-    {
-        if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
-        {
-            MXS_ERROR("[%s] User '%s' is missing SELECT privileges"
-                      " on mysql.user table. MySQL error message: %s",
-                      service->name,
-                      user,
-                      mysql_error(mysql));
-            rval = false;
-        }
-        else
-        {
-            MXS_ERROR("[%s] Failed to query from mysql.user table."
-                      " MySQL error message: %s",
-                      service->name,
-                      mysql_error(mysql));
-        }
-    }
-    else
-    {
+    rval = check_table_permissions(mysql, service, user, "mysql.user", query, LOG_ERR);
 
-        MYSQL_RES* res = mysql_use_result(mysql);
-        if (res == NULL)
-        {
-            MXS_ERROR("[%s] Result retrieval failed when checking for permissions to "
-                      "the mysql.user table: %s",
-                      service->name,
-                      mysql_error(mysql));
-        }
-        else
-        {
-            mysql_free_result(res);
-        }
-    }
+    check_table_permissions(mysql, service, user,
+                            "mysql.db",
+                            "SELECT user, host, db FROM mysql.db limit 1",
+                            LOG_WARNING,
+                            "Database name will be ignored in authentication. ");
 
-    if (mxs_mysql_query(mysql, "SELECT user, host, db FROM mysql.db limit 1") != 0)
-    {
-        if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
-        {
-            MXS_WARNING("[%s] User '%s' is missing SELECT privileges on mysql.db table. "
-                        "Database name will be ignored in authentication. "
-                        "MySQL error message: %s",
-                        service->name,
-                        user,
-                        mysql_error(mysql));
-        }
-        else
-        {
-            MXS_ERROR("[%s] Failed to query from mysql.db table. MySQL error message: %s",
-                      service->name,
-                      mysql_error(mysql));
-        }
-    }
-    else
-    {
-        MYSQL_RES* res = mysql_use_result(mysql);
-        if (res == NULL)
-        {
-            MXS_ERROR("[%s] Result retrieval failed when checking for permissions "
-                      "to the mysql.db table: %s",
-                      service->name,
-                      mysql_error(mysql));
-        }
-        else
-        {
-            mysql_free_result(res);
-        }
-    }
-
-    if (mxs_mysql_query(mysql, "SELECT user, host, db FROM mysql.tables_priv limit 1") != 0)
-    {
-        if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
-        {
-            MXS_WARNING("[%s] User '%s' is missing SELECT privileges on mysql.tables_priv table. "
-                        "Database name will be ignored in authentication. "
-                        "MySQL error message: %s",
-                        service->name,
-                        user,
-                        mysql_error(mysql));
-        }
-        else
-        {
-            MXS_ERROR("[%s] Failed to query from mysql.tables_priv table. "
-                      "MySQL error message: %s",
-                      service->name,
-                      mysql_error(mysql));
-        }
-    }
-    else
-    {
-        MYSQL_RES* res = mysql_use_result(mysql);
-        if (res == NULL)
-        {
-            MXS_ERROR("[%s] Result retrieval failed when checking for permissions "
-                      "to the mysql.tables_priv table: %s",
-                      service->name,
-                      mysql_error(mysql));
-        }
-        else
-        {
-            mysql_free_result(res);
-        }
-    }
+    check_table_permissions(mysql, service, user,
+                            "mysql.tables_priv",
+                            "SELECT user, host, db FROM mysql.tables_priv limit 1",
+                            LOG_WARNING,
+                            "Database name will be ignored in authentication. ");
 
     // Check whether the current user has the SHOW DATABASES privilege
     if (mxs_mysql_query(mysql,
@@ -1143,11 +1059,11 @@ bool query_and_process_users(const char* query,
                              int* users,
                              server_category_t category)
 {
-    bool rval = false;
+    // Clustrix does not have a mysql database. If non-clustrix we set the
+    // default database in case CTEs are used.
+    bool rval = (category == SERVER_CLUSTRIX || mxs_mysql_query(con, "USE mysql") == 0);
 
-    if (((category == SERVER_CLUSTRIX)
-         || (mxs_mysql_query(con, "USE mysql") == 0)) // Set default database in case we use CTEs.
-        && mxs_mysql_query(con, query) == 0)
+    if (rval && mxs_mysql_query(con, query) == 0)
     {
         MYSQL_RES* result = mysql_store_result(con);
 
