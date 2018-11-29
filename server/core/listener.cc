@@ -74,14 +74,14 @@ SERV_LISTENER::~SERV_LISTENER()
     SSL_LISTENER_free(ssl);
 }
 
-SERV_LISTENER* listener_alloc(SERVICE* service,
-                              const char* name,
-                              const char* protocol,
-                              const char* address,
-                              unsigned short port,
-                              const char* authenticator,
-                              const char* auth_options,
-                              SSL_LISTENER* ssl)
+SListener listener_alloc(SERVICE* service,
+                         const char* name,
+                         const char* protocol,
+                         const char* address,
+                         unsigned short port,
+                         const char* authenticator,
+                         const char* auth_options,
+                         SSL_LISTENER* ssl)
 {
     if (!authenticator)
     {
@@ -102,27 +102,25 @@ SERV_LISTENER* listener_alloc(SERVICE* service,
         return nullptr;
     }
 
-    auto listener = new(std::nothrow) SERV_LISTENER(service, name, address, port, protocol, authenticator,
-                                                    auth_options, auth_instance, ssl);
+    SListener listener(new(std::nothrow) SERV_LISTENER(service, name, address, port, protocol, authenticator,
+                                                       auth_options, auth_instance, ssl));
 
     if (listener)
     {
         std::lock_guard<std::mutex> guard(listener_lock);
-        all_listeners.emplace_back(listener);
+        all_listeners.push_back(listener);
     }
 
     return listener;
 }
 
-void listener_free(SERV_LISTENER* listener)
+void listener_free(const SListener& listener)
 {
     std::lock_guard<std::mutex> guard(listener_lock);
-    all_listeners.remove_if([&](const SListener& l) {
-                                return l.get() == listener;
-                            });
+    all_listeners.remove(listener);
 }
 
-void listener_destroy(SERV_LISTENER* listener)
+void listener_destroy(const SListener& listener)
 {
     listener_set_active(listener, false);
     listener_stop(listener);
@@ -133,7 +131,7 @@ void listener_destroy(SERV_LISTENER* listener)
     listener->listener->fd = -1;
 }
 
-bool listener_stop(SERV_LISTENER* listener)
+bool listener_stop(const SListener& listener)
 {
     bool rval = false;
     mxb_assert(listener->listener);
@@ -148,7 +146,7 @@ bool listener_stop(SERV_LISTENER* listener)
     return rval;
 }
 
-bool listener_start(SERV_LISTENER* listener)
+bool listener_start(const SListener& listener)
 {
     bool rval = true;
     mxb_assert(listener->listener);
@@ -492,7 +490,7 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_listener_config(const SERV_LISTENER* listener, const char* filename)
+static bool create_listener_config(const SListener& listener, const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -530,7 +528,7 @@ static bool create_listener_config(const SERV_LISTENER* listener, const char* fi
     return true;
 }
 
-bool listener_serialize(const SERV_LISTENER* listener)
+bool listener_serialize(const SListener& listener)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -572,7 +570,7 @@ bool listener_serialize(const SERV_LISTENER* listener)
     return rval;
 }
 
-json_t* listener_to_json(const SERV_LISTENER* listener)
+json_t* listener_to_json(const SListener& listener)
 {
     json_t* param = json_object();
     json_object_set_new(param, "address", json_string(listener->address.c_str()));
@@ -600,7 +598,7 @@ json_t* listener_to_json(const SERV_LISTENER* listener)
 
     if (listener->listener->authfunc.diagnostic_json)
     {
-        json_t* diag = listener->listener->authfunc.diagnostic_json(listener);
+        json_t* diag = listener->listener->authfunc.diagnostic_json(listener.get());
 
         if (diag)
         {
@@ -616,17 +614,17 @@ json_t* listener_to_json(const SERV_LISTENER* listener)
     return rval;
 }
 
-void listener_set_active(SERV_LISTENER* listener, bool active)
+void listener_set_active(const SListener& listener, bool active)
 {
     atomic_store_int32(&listener->active, active ? 1 : 0);
 }
 
-bool listener_is_active(SERV_LISTENER* listener)
+bool listener_is_active(const SListener& listener)
 {
     return atomic_load_int32(&listener->active);
 }
 
-const char* listener_state_to_string(const SERV_LISTENER* listener)
+const char* listener_state_to_string(const SListener& listener)
 {
     mxb_assert(listener);
 

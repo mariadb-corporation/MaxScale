@@ -67,7 +67,7 @@ using SListener = std::shared_ptr<SERV_LISTENER>;
  * @param listener Listener to serialize
  * @return True if the serialization of the listener was successful, false if it fails
  */
-bool listener_serialize(const SERV_LISTENER* listener);
+bool listener_serialize(const SListener& listener);
 
 /**
  * @brief Convert listener to JSON
@@ -76,7 +76,7 @@ bool listener_serialize(const SERV_LISTENER* listener);
  *
  * @return Converted listener
  */
-json_t* listener_to_json(const SERV_LISTENER* listener);
+json_t* listener_to_json(const SListener& listener);
 
 /**
  * Create a new listener
@@ -92,14 +92,14 @@ json_t* listener_to_json(const SERV_LISTENER* listener);
  *
  * @return New listener or nullptr on error
  */
-SERV_LISTENER* listener_alloc(SERVICE* service,
-                              const char* name,
-                              const char* protocol,
-                              const char* address,
-                              unsigned short port,
-                              const char* authenticator,
-                              const char* auth_options,
-                              SSL_LISTENER* ssl);
+SListener listener_alloc(SERVICE* service,
+                         const char* name,
+                         const char* protocol,
+                         const char* address,
+                         unsigned short port,
+                         const char* authenticator,
+                         const char* auth_options,
+                         SSL_LISTENER* ssl);
 
 /**
  * @brief Free a listener
@@ -108,7 +108,7 @@ SERV_LISTENER* listener_alloc(SERVICE* service,
  *
  * @param listener Listener to free
  */
-void listener_free(SERV_LISTENER* listener);
+void listener_free(const SListener& listener);
 
 /**
  * Destroy a listener
@@ -118,7 +118,7 @@ void listener_free(SERV_LISTENER* listener);
  *
  * @param listener Listener to destroy
  */
-void listener_destroy(SERV_LISTENER* listener);
+void listener_destroy(const SListener& listener);
 
 /**
  * Stop a listener
@@ -127,7 +127,7 @@ void listener_destroy(SERV_LISTENER* listener);
  *
  * @return True if listener was successfully stopped
  */
-bool listener_stop(SERV_LISTENER* listener);
+bool listener_stop(const SListener& listener);
 
 /**
  * Start a stopped listener
@@ -136,7 +136,7 @@ bool listener_stop(SERV_LISTENER* listener);
  *
  * @return True if listener was successfully started
  */
-bool listener_start(SERV_LISTENER* listener);
+bool listener_start(const SListener& listener);
 
 /**
  * Find a listener
@@ -191,7 +191,7 @@ void SSL_LISTENER_free(SSL_LISTENER* ssl);
  *
  * @return True if listener is active
  */
-bool listener_is_active(SERV_LISTENER* listener);
+bool listener_is_active(const SListener& listener);
 
 /**
  * @brief Modify listener active state
@@ -199,7 +199,7 @@ bool listener_is_active(SERV_LISTENER* listener);
  * @param listener Listener to modify
  * @param active True to activate, false to disable
  */
-void listener_set_active(SERV_LISTENER* listener, bool active);
+void listener_set_active(const SListener& listener, bool active);
 
 /**
  * Get listener state as a string
@@ -208,4 +208,4 @@ void listener_set_active(SERV_LISTENER* listener, bool active);
  *
  * @return State of the listener as a string
  */
-const char* listener_state_to_string(const SERV_LISTENER* listener);
+const char* listener_state_to_string(const SListener& listener);
