@@ -134,19 +134,19 @@ static void pam_auth_free_data(DCB* dcb)
  *
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-static int pam_auth_load_users(SERV_LISTENER* listener)
+static int pam_auth_load_users(Listener* listener)
 {
     PamInstance* inst = static_cast<PamInstance*>(listener->auth_instance);
     return inst->load_users(listener->service);
 }
 
-static void pam_auth_diagnostic(DCB* dcb, SERV_LISTENER* listener)
+static void pam_auth_diagnostic(DCB* dcb, Listener* listener)
 {
     PamInstance* inst = static_cast<PamInstance*>(listener->auth_instance);
     inst->diagnostic(dcb);
 }
 
-static json_t* pam_auth_diagnostic_json(const SERV_LISTENER* listener)
+static json_t* pam_auth_diagnostic_json(const Listener* listener)
 {
     PamInstance* inst = static_cast<PamInstance*>(listener->auth_instance);
     return inst->diagnostic_json();

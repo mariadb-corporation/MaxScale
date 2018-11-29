@@ -48,7 +48,7 @@
 static int test1()
 {
     DCB* dcb;
-    SERV_LISTENER* dummy = nullptr;
+    Listener* dummy = nullptr;
     /* Single buffer tests */
     fprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_INTERNAL");
     dcb = dcb_alloc(DCB_ROLE_INTERNAL, dummy, NULL);

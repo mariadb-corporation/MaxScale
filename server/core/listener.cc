@@ -43,9 +43,9 @@ static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
 static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
 
-SERV_LISTENER::SERV_LISTENER(SERVICE* service, const std::string& name, const std::string& address,
-                             uint16_t port, const std::string& protocol, const std::string& authenticator,
-                             const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl)
+Listener::Listener(SERVICE* service, const std::string& name, const std::string& address,
+                   uint16_t port, const std::string& protocol, const std::string& authenticator,
+                   const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl)
     : m_name(name)
     , m_protocol(protocol)
     , m_port(port)
@@ -61,7 +61,7 @@ SERV_LISTENER::SERV_LISTENER(SERVICE* service, const std::string& name, const st
 {
 }
 
-SERV_LISTENER::~SERV_LISTENER()
+Listener::~Listener()
 {
     if (m_users)
     {
@@ -104,8 +104,8 @@ SListener listener_alloc(SERVICE* service,
         return nullptr;
     }
 
-    SListener listener(new(std::nothrow) SERV_LISTENER(service, name, address, port, protocol, authenticator,
-                                                       auth_options, auth_instance, ssl));
+    SListener listener(new(std::nothrow) Listener(service, name, address, port, protocol, authenticator,
+                                                  auth_options, auth_instance, ssl));
 
     if (listener)
     {
@@ -122,7 +122,7 @@ void listener_free(const SListener& listener)
     all_listeners.remove(listener);
 }
 
-void SERV_LISTENER::close()
+void Listener::close()
 {
     deactivate();
     stop();
@@ -133,7 +133,7 @@ void SERV_LISTENER::close()
     m_listener->fd = -1;
 }
 
-bool SERV_LISTENER::stop()
+bool Listener::stop()
 {
     bool rval = false;
     mxb_assert(m_listener);
@@ -148,7 +148,7 @@ bool SERV_LISTENER::stop()
     return rval;
 }
 
-bool SERV_LISTENER::start()
+bool Listener::start()
 {
     bool rval = true;
     mxb_assert(m_listener);
@@ -492,7 +492,7 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-bool SERV_LISTENER::create_listener_config(const char* filename)
+bool Listener::create_listener_config(const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -572,7 +572,7 @@ bool listener_serialize(const SListener& listener)
     return rval;
 }
 
-json_t* SERV_LISTENER::to_json() const
+json_t* Listener::to_json() const
 {
     json_t* param = json_object();
     json_object_set_new(param, "address", json_string(m_address.c_str()));
@@ -616,57 +616,57 @@ json_t* SERV_LISTENER::to_json() const
     return rval;
 }
 
-void SERV_LISTENER::deactivate()
+void Listener::deactivate()
 {
     m_active = false;
 }
 
-bool SERV_LISTENER::is_active() const
+bool Listener::is_active() const
 {
     return m_active;
 }
 
-const char* SERV_LISTENER::name() const
+const char* Listener::name() const
 {
     return m_name.c_str();
 }
 
-const char* SERV_LISTENER::address() const
+const char* Listener::address() const
 {
     return m_address.c_str();
 }
 
-uint16_t SERV_LISTENER::port() const
+uint16_t Listener::port() const
 {
     return m_port;
 }
 
-SERVICE* SERV_LISTENER::service() const
+SERVICE* Listener::service() const
 {
     return m_service;
 }
 
-const char* SERV_LISTENER::authenticator() const
+const char* Listener::authenticator() const
 {
     return m_authenticator.c_str();
 }
 
-const char* SERV_LISTENER::protocol() const
+const char* Listener::protocol() const
 {
     return m_protocol.c_str();
 }
 
-void* SERV_LISTENER::auth_instance() const
+void* Listener::auth_instance() const
 {
     return m_auth_instance;
 }
 
-SSL_LISTENER* SERV_LISTENER::ssl() const
+SSL_LISTENER* Listener::ssl() const
 {
     return m_ssl;
 }
 
-const char* SERV_LISTENER::state() const
+const char* Listener::state() const
 {
     if (m_listener && m_listener->session)
     {
@@ -689,7 +689,7 @@ const char* SERV_LISTENER::state() const
     }
 }
 
-void SERV_LISTENER::print_users(DCB* dcb)
+void Listener::print_users(DCB* dcb)
 {
     if (m_listener && m_listener->authfunc.diagnostic)
     {
@@ -701,7 +701,7 @@ void SERV_LISTENER::print_users(DCB* dcb)
     }
 }
 
-int SERV_LISTENER::load_users()
+int Listener::load_users()
 {
     int rval = MXS_AUTH_LOADUSERS_OK;
 
@@ -713,18 +713,18 @@ int SERV_LISTENER::load_users()
     return rval;
 }
 
-struct users* SERV_LISTENER::users() const
+struct users* Listener::users() const
 {
     return m_users;
 }
 
 
-void SERV_LISTENER::set_users(struct users* u)
+void Listener::set_users(struct users* u)
 {
     m_users = u;
 }
 
-bool SERV_LISTENER::listen()
+bool Listener::listen()
 {
     m_listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, this, m_service);
 

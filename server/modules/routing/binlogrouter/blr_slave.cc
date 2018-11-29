@@ -79,7 +79,7 @@ typedef enum
 } slave_eof_action_t;
 
 static char*    get_next_token(char* str, const char* delim, char** saveptr);
-extern int      load_mysql_users(SERV_LISTENER* listener);
+extern int      load_mysql_users(Listener* listener);
 extern void     blr_master_close(ROUTER_INSTANCE* router);
 extern int      blr_file_new_binlog(ROUTER_INSTANCE* router, char* file);
 extern int      blr_file_write_master_config(ROUTER_INSTANCE* router, char* error);

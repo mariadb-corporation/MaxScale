@@ -144,7 +144,7 @@ USERS* users_from_json(json_t* json);
  * @param port Listener configuration
  * @return Always AUTH_LOADUSERS_OK
  */
-int users_default_loadusers(SERV_LISTENER* port);
+int users_default_loadusers(Listener* port);
 
 /**
  * @brief Default authenticator diagnostic function
@@ -152,14 +152,14 @@ int users_default_loadusers(SERV_LISTENER* port);
  * @param dcb DCB where data is printed
  * @param port Port whose data is to be printed
  */
-void users_default_diagnostic(DCB* dcb, SERV_LISTENER* port);
+void users_default_diagnostic(DCB* dcb, Listener* port);
 
 /**
  * @brief Default authenticator diagnostic function
  *
  * @param port Port whose data is to be printed
  */
-json_t* users_default_diagnostic_json(const SERV_LISTENER* port);
+json_t* users_default_diagnostic_json(const Listener* port);
 
 /**
  * Print users to a DCB

@@ -31,8 +31,7 @@ class SERVICE;
  * The Listener class is used to link a network port to a service. It defines the name of the
  * protocol module that should be loaded as well as the authenticator that is used.
  */
-// TODO: Rename to Listener
-class SERV_LISTENER
+class Listener
 {
 public:
 
@@ -49,10 +48,10 @@ public:
      * @param auth_instance The authenticator instance
      * @param ssl           The SSL configuration
      */
-    SERV_LISTENER(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
-                  const std::string& protocol, const std::string& authenticator,
-                  const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
-    ~SERV_LISTENER();
+    Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
+             const std::string& protocol, const std::string& authenticator,
+             const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
+    ~Listener();
 
     /**
      * Start listening on the configured port
@@ -183,7 +182,7 @@ private:
     std::atomic<bool> m_active;         /**< True if the port has not been deleted */
 };
 
-using SListener = std::shared_ptr<SERV_LISTENER>;
+using SListener = std::shared_ptr<Listener>;
 
 /**
  * @brief Serialize a listener to a file

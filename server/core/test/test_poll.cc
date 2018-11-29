@@ -49,7 +49,7 @@ static int test1()
     DCB* dcb;
     int result;
     int eno = 0;
-    SERV_LISTENER* dummy = nullptr;
+    Listener* dummy = nullptr;
 
     SERVICE service;
     service.routerModule = (char*)"required by a check in dcb.cc";

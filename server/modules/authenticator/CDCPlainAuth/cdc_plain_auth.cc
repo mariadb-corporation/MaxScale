@@ -52,8 +52,8 @@ static bool cdc_auth_is_client_ssl_capable(DCB* dcb);
 static int  cdc_auth_authenticate(DCB* dcb);
 static void cdc_auth_free_client_data(DCB* dcb);
 
-static int cdc_set_service_user(SERV_LISTENER* listener);
-static int cdc_replace_users(SERV_LISTENER* listener);
+static int cdc_set_service_user(Listener* listener);
+static int cdc_replace_users(Listener* listener);
 
 static int cdc_auth_check(DCB* dcb,
                           CDC_protocol* protocol,
@@ -437,7 +437,7 @@ static void cdc_auth_free_client_data(DCB* dcb)
  * @param service   The current service
  * @return      0 on success, 1 on failure
  */
-static int cdc_set_service_user(SERV_LISTENER* listener)
+static int cdc_set_service_user(Listener* listener)
 {
     SERVICE* service = listener->service;
     char* dpwd = NULL;
@@ -538,7 +538,7 @@ static int cdc_read_users(USERS* users, char* usersfile)
  *
  * @param service The current service
  */
-int cdc_replace_users(SERV_LISTENER* listener)
+int cdc_replace_users(Listener* listener)
 {
     int rc = MXS_AUTH_LOADUSERS_ERROR;
     USERS* newusers = users_alloc();

@@ -326,7 +326,7 @@ json_t* users_diagnostic_json(USERS* users)
     return u->diagnostic_json();
 }
 
-void users_default_diagnostic(DCB* dcb, SERV_LISTENER* port)
+void users_default_diagnostic(DCB* dcb, Listener* port)
 {
     if (port->users)
     {
@@ -334,12 +334,12 @@ void users_default_diagnostic(DCB* dcb, SERV_LISTENER* port)
     }
 }
 
-json_t* users_default_diagnostic_json(const SERV_LISTENER* port)
+json_t* users_default_diagnostic_json(const Listener* port)
 {
     return port->users ? users_diagnostic_json(port->users) : json_array();
 }
 
-int users_default_loadusers(SERV_LISTENER* port)
+int users_default_loadusers(Listener* port)
 {
     users_free(port->users);
     port->users = users_alloc();

@@ -23,7 +23,7 @@
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.h>
 
-class SERV_LISTENER;
+class Listener;
 
 MXS_BEGIN_DECLS
 
@@ -97,8 +97,8 @@ typedef struct mxs_authenticator
     int (* authenticate)(struct dcb*);
     void (* free)(struct dcb*);
     void (* destroy)(void*);
-    int (* loadusers)(SERV_LISTENER*);
-    void (* diagnostic)(struct dcb*, SERV_LISTENER*);
+    int (* loadusers)(Listener*);
+    void (* diagnostic)(struct dcb*, Listener*);
 
     /**
      * @brief Return diagnostic information about the authenticator
@@ -112,7 +112,7 @@ typedef struct mxs_authenticator
      *
      * @see jansson.h
      */
-    json_t*  (*diagnostic_json)(const SERV_LISTENER * listener);
+    json_t*  (*diagnostic_json)(const Listener * listener);
 
     /** This entry point was added to avoid calling authenticator functions
      * directly when a COM_CHANGE_USER command is executed. */

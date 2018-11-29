@@ -180,7 +180,7 @@ static void dcb_initialize(DCB* dcb)
  *
  * @return An available DCB or NULL if none could be allocated.
  */
-DCB* dcb_alloc(dcb_role_t role, SERV_LISTENER* listener, SERVICE* service)
+DCB* dcb_alloc(dcb_role_t role, Listener* listener, SERVICE* service)
 {
     DCB* newdcb;
 

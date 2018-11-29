@@ -42,7 +42,7 @@ static bool  mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
 static bool  mysql_auth_is_client_ssl_capable(DCB* dcb);
 static int   mysql_auth_authenticate(DCB* dcb);
 static void  mysql_auth_free_client_data(DCB* dcb);
-static int   mysql_auth_load_users(SERV_LISTENER* port);
+static int   mysql_auth_load_users(Listener* port);
 static void* mysql_auth_create(void* instance);
 static void  mysql_auth_destroy(void* data);
 
@@ -58,8 +58,8 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                        MySQLProtocol* protocol,
                                        GWBUF* buffer);
 
-void    mysql_auth_diagnostic(DCB* dcb, SERV_LISTENER* port);
-json_t* mysql_auth_diagnostic_json(const SERV_LISTENER* port);
+void    mysql_auth_diagnostic(DCB* dcb, Listener* port);
+json_t* mysql_auth_diagnostic_json(const Listener* port);
 
 int mysql_auth_reauthenticate(DCB* dcb,
                               const char* user,
@@ -552,7 +552,7 @@ static void mysql_auth_free_client_data(DCB* dcb)
  * @param port Service listener
  * @return True on success, false on error
  */
-static bool add_service_user(SERV_LISTENER* port)
+static bool add_service_user(Listener* port)
 {
     const char* user = NULL;
     const char* password = NULL;
@@ -607,7 +607,7 @@ static bool service_has_servers(SERVICE* service)
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR and
  * MXS_AUTH_LOADUSERS_FATAL on fatal error
  */
-static int mysql_auth_load_users(SERV_LISTENER* port)
+static int mysql_auth_load_users(Listener* port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE* service = port->listener->service;
@@ -721,7 +721,7 @@ int diag_cb(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-void mysql_auth_diagnostic(DCB* dcb, SERV_LISTENER* port)
+void mysql_auth_diagnostic(DCB* dcb, Listener* port)
 {
     MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance;
     sqlite3* handle = get_handle(instance);
@@ -750,7 +750,7 @@ int diag_cb_json(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-json_t* mysql_auth_diagnostic_json(const SERV_LISTENER* port)
+json_t* mysql_auth_diagnostic_json(const Listener* port)
 {
     json_t* rval = json_array();
 

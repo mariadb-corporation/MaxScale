@@ -27,7 +27,7 @@
 #include <maxscale/ssl.h>
 
 class SERVICE;
-class SERV_LISTENER;
+class Listener;
 
 MXS_BEGIN_DECLS
 
@@ -189,7 +189,7 @@ typedef struct dcb
     size_t                  protocol_packet_length;     /**< How long the protocol specific packet is */
     size_t                  protocol_bytes_processed;   /**< How many bytes of a packet have been read */
     struct session*         session;                    /**< The owning session */
-    SERV_LISTENER*          listener;                   /**< For a client DCB, the listener data */
+    Listener*               listener;                   /**< For a client DCB, the listener data */
     MXS_PROTOCOL            func;                       /**< The protocol functions for this descriptor */
     MXS_AUTHENTICATOR       authfunc;                   /**< The authenticator functions for this descriptor
                                                          * */
@@ -261,7 +261,7 @@ void dcb_global_init();
 
 int  dcb_write(DCB*, GWBUF*);
 DCB* dcb_accept(DCB* listener);
-DCB* dcb_alloc(dcb_role_t, SERV_LISTENER*, SERVICE* service);
+DCB* dcb_alloc(dcb_role_t, Listener*, SERVICE* service);
 DCB* dcb_connect(struct server*, struct session*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_drain_writeq(DCB*);

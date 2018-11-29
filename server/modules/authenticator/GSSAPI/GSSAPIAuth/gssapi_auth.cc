@@ -622,7 +622,7 @@ static void add_gssapi_user(sqlite3* handle,
  * @param listener Listener definition
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-int gssapi_auth_load_users(SERV_LISTENER* listener)
+int gssapi_auth_load_users(Listener* listener)
 {
     const char* user;
     const char* password;

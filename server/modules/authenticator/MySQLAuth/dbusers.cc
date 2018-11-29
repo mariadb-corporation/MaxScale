@@ -141,7 +141,7 @@ enum server_category_t
     SERVER_CLUSTRIX
 };
 
-static int    get_users(SERV_LISTENER* listener, bool skip_local);
+static int    get_users(Listener* listener, bool skip_local);
 static MYSQL* gw_mysql_init(void);
 static int    gw_mysql_set_timeouts(MYSQL* handle);
 static char*  mysql_format_user_entry(void* data);
@@ -226,7 +226,7 @@ static char* get_users_query(const char* server_version, int version, bool inclu
     return rval;
 }
 
-int replace_mysql_users(SERV_LISTENER* listener, bool skip_local)
+int replace_mysql_users(Listener* listener, bool skip_local)
 {
     int i = get_users(listener, skip_local);
     return i;
@@ -1096,7 +1096,7 @@ bool query_and_process_users(const char* query,
     return rval;
 }
 
-int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, SERV_LISTENER* listener)
+int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, Listener* listener)
 {
     if (server_ref->server->version_string[0] == 0)
     {
@@ -1178,7 +1178,7 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
  * @param users     The users table into which to load the users
  * @return          -1 on any error or the number of users inserted
  */
-static int get_users(SERV_LISTENER* listener, bool skip_local)
+static int get_users(Listener* listener, bool skip_local)
 {
     const char* service_user = NULL;
     const char* service_passwd = NULL;
