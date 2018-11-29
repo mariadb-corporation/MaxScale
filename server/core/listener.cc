@@ -41,6 +41,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/service.hh>
+#include <maxscale/poll.h>
 
 static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
@@ -81,17 +82,6 @@ SERV_LISTENER::~SERV_LISTENER()
     SSL_LISTENER_free(ssl);
 }
 
-/**
- * Create a new listener structure
- *
- * @param protocol      The name of the protocol module
- * @param address       The address to listen with
- * @param port          The port to listen on
- * @param authenticator Name of the authenticator to be used
- * @param options       Authenticator options
- * @param ssl           SSL configuration
- * @return      New listener object or NULL if unable to allocate
- */
 SERV_LISTENER* listener_alloc(SERVICE* service,
                               const char* name,
                               const char* protocol,
@@ -124,14 +114,50 @@ SERV_LISTENER* listener_alloc(SERVICE* service,
                                            auth_options, auth_instance, ssl);
 }
 
-/**
- * @brief Free a listener
- *
- * @param listener Listener to free
- */
 void listener_free(SERV_LISTENER* listener)
 {
     delete listener;
+}
+
+void listener_destroy(SERV_LISTENER* listener)
+{
+    listener_set_active(listener, false);
+    listener_stop(listener);
+
+    // TODO: This is not pretty but it works, revise when listeners are refactored. This is
+    // thread-safe as the listener is freed on the same thread that closes the socket.
+    close(listener->listener->fd);
+    listener->listener->fd = -1;
+}
+
+bool listener_stop(SERV_LISTENER* listener)
+{
+    bool rval = false;
+    mxb_assert(listener->listener);
+
+    if (listener->listener->session->state == SESSION_STATE_LISTENER
+        && poll_remove_dcb(listener->listener) == 0)
+    {
+        listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool listener_start(SERV_LISTENER* listener)
+{
+    bool rval = true;
+    mxb_assert(listener->listener);
+
+    if (listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED
+        && poll_add_dcb(listener->listener) == 0)
+    {
+        listener->listener->session->state = SESSION_STATE_LISTENER;
+        rval = true;
+    }
+
+    return rval;
 }
 
 /**

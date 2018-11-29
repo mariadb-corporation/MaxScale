@@ -596,9 +596,8 @@ bool serviceStopListener(SERVICE* svc, const char* name)
     {
         if (listener_is_active(listener) && listener->name == name)
         {
-            if (poll_remove_dcb(listener->listener) == 0)
+            if (listener_stop(listener))
             {
-                listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
                 rval = true;
             }
             break;
@@ -619,10 +618,8 @@ bool serviceStartListener(SERVICE* svc, const char* name)
     {
         if (listener_is_active(listener) && listener->name == name)
         {
-            if (listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED
-                && poll_add_dcb(listener->listener) == 0)
+            if (listener_start(listener))
             {
-                listener->listener->session->state = SESSION_STATE_LISTENER;
                 rval = true;
             }
             break;
@@ -672,14 +669,9 @@ bool serviceStop(SERVICE* service)
         for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
              listener; listener = listener_iterator_next(&iter))
         {
-            if (listener_is_active(listener)
-                && listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER)
+            if (listener_is_active(listener) && listener_stop(listener))
             {
-                if (poll_remove_dcb(listener->listener) == 0)
-                {
-                    listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
-                    listeners++;
-                }
+                listeners++;
             }
         }
 
@@ -708,14 +700,9 @@ bool serviceStart(SERVICE* service)
         for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
              listener; listener = listener_iterator_next(&iter))
         {
-            if (listener_is_active(listener)
-                && listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
+            if (listener_is_active(listener) && listener_start(listener))
             {
-                if (poll_add_dcb(listener->listener) == 0)
-                {
-                    listener->listener->session->state = SESSION_STATE_LISTENER;
-                    listeners++;
-                }
+                listeners++;
             }
         }
 
@@ -754,18 +741,8 @@ bool service_remove_listener(Service* service, const char* target)
     {
         if (listener_is_active(listener) && listener->name == target)
         {
-            listener_set_active(listener, false);
-
-            if (poll_remove_dcb(listener->listener) == 0)
-            {
-                listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
-                rval = true;
-
-                // TODO: This is not pretty but it works, revise when listeners are refactored. This is
-                // thread-safe as the listener is freed on the same thread that closes the socket.
-                close(listener->listener->fd);
-                listener->listener->fd = -1;
-            }
+            listener_destroy(listener);
+            rval = true;
             break;
         }
     }
