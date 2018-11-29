@@ -11,29 +11,20 @@
  * Public License.
  */
 
-/**
- * @file listener.c  -  Listener generic functions
- *
- * Listeners wait for new client connections and, if the connection is successful
- * a new session is created. A listener typically knows about a port or a socket,
- * and a few other things. It may know about SSL if it is expecting an SSL
- * connection.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 26/01/16     Martin Brampton         Initial implementation
- *
- * @endverbatim
- */
+#include <maxscale/listener.hh>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <string>
 
-#include <maxscale/listener.hh>
+#include <algorithm>
+#include <list>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <vector>
+
 #include <maxscale/paths.h>
 #include <maxscale/ssl.h>
 #include <maxscale/protocol.h>
@@ -43,9 +34,11 @@
 #include <maxscale/service.hh>
 #include <maxscale/poll.h>
 
+static std::list<SListener> all_listeners;
+static std::mutex listener_lock;
+
 static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
-
 static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
 
 SERV_LISTENER::SERV_LISTENER(SERVICE* service, const std::string& name, const std::string& address,
@@ -110,13 +103,24 @@ SERV_LISTENER* listener_alloc(SERVICE* service,
         return nullptr;
     }
 
-    return new(std::nothrow) SERV_LISTENER(service, name, address, port, protocol, authenticator,
-                                           auth_options, auth_instance, ssl);
+    auto listener = new(std::nothrow) SERV_LISTENER(service, name, address, port, protocol, authenticator,
+                                                    auth_options, auth_instance, ssl);
+
+    if (listener)
+    {
+        std::lock_guard<std::mutex> guard(listener_lock);
+        all_listeners.emplace_back(listener);
+    }
+
+    return listener;
 }
 
 void listener_free(SERV_LISTENER* listener)
 {
-    delete listener;
+    std::lock_guard<std::mutex> guard(listener_lock);
+    all_listeners.remove_if([&](const SListener& l) {
+                                return l.get() == listener;
+                            });
 }
 
 void listener_destroy(SERV_LISTENER* listener)

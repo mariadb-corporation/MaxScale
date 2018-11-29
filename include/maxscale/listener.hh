@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <string>
+#include <memory>
 
 #include <maxbase/jansson.h>
 #include <maxscale/protocol.h>
@@ -33,25 +34,27 @@ class SERV_LISTENER
 {
 public:
     SERV_LISTENER(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
-             const std::string& protocol, const std::string& authenticator,
-             const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
+                  const std::string& protocol, const std::string& authenticator,
+                  const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
     ~SERV_LISTENER();
 
 public:
-    std::string   name;         /**< Name of the listener */
-    std::string   protocol;     /**< Protocol module to load */
-    uint16_t      port;         /**< Port to listen on */
-    std::string   address;      /**< Address to listen with */
-    std::string   authenticator;/**< Name of authenticator */
-    std::string   auth_options; /**< Authenticator options */
-    void*         auth_instance;/**< Authenticator instance */
-    SSL_LISTENER* ssl;          /**< Structure of SSL data or NULL */
-    struct dcb*   listener;     /**< The DCB for the listener */
-    struct users* users;        /**< The user data for this listener */
-    SERVICE*      service;      /**< The service which used by this listener */
-    int           active;       /**< True if the port has not been deleted */
-    SERV_LISTENER*     next;         /**< Next service protocol */
+    std::string    name;            /**< Name of the listener */
+    std::string    protocol;        /**< Protocol module to load */
+    uint16_t       port;            /**< Port to listen on */
+    std::string    address;         /**< Address to listen with */
+    std::string    authenticator;   /**< Name of authenticator */
+    std::string    auth_options;    /**< Authenticator options */
+    void*          auth_instance;   /**< Authenticator instance */
+    SSL_LISTENER*  ssl;             /**< Structure of SSL data or NULL */
+    struct dcb*    listener;        /**< The DCB for the listener */
+    struct users*  users;           /**< The user data for this listener */
+    SERVICE*       service;         /**< The service which used by this listener */
+    int            active;          /**< True if the port has not been deleted */
+    SERV_LISTENER* next;            /**< Next service protocol */
 };
+
+using SListener = std::shared_ptr<SERV_LISTENER>;
 
 typedef struct listener_iterator
 {
@@ -94,13 +97,13 @@ json_t* listener_to_json(const SERV_LISTENER* listener);
  * @return New listener or nullptr on error
  */
 SERV_LISTENER* listener_alloc(SERVICE* service,
-                         const char* name,
-                         const char* protocol,
-                         const char* address,
-                         unsigned short port,
-                         const char* authenticator,
-                         const char* auth_options,
-                         SSL_LISTENER* ssl);
+                              const char* name,
+                              const char* protocol,
+                              const char* address,
+                              unsigned short port,
+                              const char* authenticator,
+                              const char* auth_options,
+                              SSL_LISTENER* ssl);
 
 /**
  * @brief Free a listener
