@@ -43,7 +43,7 @@ CatSession* Cat::newSession(MXS_SESSION* pSession)
         }
     }
 
-    return connected ? new CatSession(pSession, this, backends) : NULL;
+    return connected ? new CatSession(pSession, this, std::move(backends)) : NULL;
 }
 
 void Cat::diagnostics(DCB* dcb)

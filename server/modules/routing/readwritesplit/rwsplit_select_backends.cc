@@ -373,8 +373,8 @@ std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
  * @return True if session can continue
  */
 bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
-                                             PRWBackends& backends,
-                                             mxs::RWBackend** current_master,
+                                             mxs::PRWBackends& backends,
+                                             mxs::RWBackend**  current_master,
                                              SessionCommandList* sescmd_list,
                                              int* expected_responses,
                                              connection_type type)

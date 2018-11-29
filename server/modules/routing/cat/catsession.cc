@@ -18,10 +18,10 @@
 
 using namespace maxscale;
 
-CatSession::CatSession(MXS_SESSION* session, Cat* router, PRWBackends& backends)
+CatSession::CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backends)
     : RouterSession(session)
     , m_session(session)
-    , m_backends(backends)
+    , m_backends(std::move(backends))
     , m_completed(0)
     , m_packet_num(0)
     , m_query(NULL)
@@ -68,7 +68,7 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
 
 void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 {
-    auto backend = *m_current;
+    auto& backend = *m_current;
     mxb_assert(backend->dcb() == pDcb);
     bool send = false;
 

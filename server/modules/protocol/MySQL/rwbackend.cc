@@ -253,15 +253,15 @@ ResponseStat& RWBackend::response_stat()
     return m_response_stat;
 }
 
-PRWBackends RWBackend::from_servers(SERVER_REF* servers)
+mxs::SRWBackends RWBackend::from_servers(SERVER_REF* servers)
 {
-    PRWBackends backends;
+    SRWBackends backends;
 
     for (SERVER_REF* ref = servers; ref; ref = ref->next)
     {
         if (ref->active)
         {
-            backends.push_back(new mxs::RWBackend(ref));
+            backends.emplace_back(new mxs::RWBackend(ref));
         }
     }
 

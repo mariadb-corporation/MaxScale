@@ -14,6 +14,7 @@
 
 #include <map>
 #include <memory>
+#include <algorithm>
 
 #include <maxscale/backend.hh>
 #include <maxscale/modutil.hh>
@@ -21,6 +22,17 @@
 
 namespace maxscale
 {
+
+/** Move this somewhere else */
+template<typename Smart>
+std::vector<typename Smart::pointer> sptr_vec_to_ptr_vec(const std::vector<Smart>& sVec)
+{
+    std::vector<typename Smart::pointer> pVec;
+    std::for_each(sVec.begin(), sVec.end(), [&pVec](const Smart& smart) {
+                      pVec.push_back(smart.get());
+                  });
+    return pVec;
+}
 
 /** Enum for tracking client reply state */
 enum reply_state_t
@@ -38,7 +50,7 @@ class RWBackend;
 // All interfacing is now handled via RWBackend*.
 using PRWBackends = std::vector<RWBackend*>;
 
-// Internal storage for a class containing RWBackend:s. Not used yet.
+// Internal storage for a class containing RWBackend:s.
 using SRWBackends = std::vector<std::unique_ptr<RWBackend>>;
 
 class RWBackend : public mxs::Backend
@@ -48,7 +60,7 @@ class RWBackend : public mxs::Backend
 
 public:
 
-    static PRWBackends from_servers(SERVER_REF* servers);
+    static SRWBackends from_servers(SERVER_REF* servers);
 
     RWBackend(SERVER_REF* ref);
     virtual ~RWBackend();

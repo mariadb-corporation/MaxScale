@@ -131,7 +131,8 @@ public:
     }
 
     // TODO: Make member variables private
-    mxs::PRWBackends m_backends;                /**< List of backend servers */
+    mxs::SRWBackends m_backends;                /**< Mem. management, not for use outside RWSplitSession */
+    mxs::PRWBackends m_raw_backends;            /**< Backend pointers for use in interfaces . */
     mxs::RWBackend*  m_current_master;          /**< Current master server */
     mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
     mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
@@ -172,7 +173,7 @@ public:
 private:
     RWSplitSession(RWSplit* instance,
                    MXS_SESSION* session,
-                   mxs::PRWBackends backends,
+                   mxs::SRWBackends backends,
                    mxs::RWBackend*  master);
 
     void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket);

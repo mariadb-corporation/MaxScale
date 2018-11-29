@@ -43,7 +43,7 @@ void RWSplitSession::handle_connection_keepalive(RWBackend* target)
     /** Each heartbeat is 1/10th of a second */
     int keepalive = m_config.connection_keepalive * 10;
 
-    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
+    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
     {
         RWBackend* backend = *it;
 
@@ -126,7 +126,7 @@ uint32_t extract_binary_ps_id(GWBUF* buffer)
 
 bool RWSplitSession::have_connected_slaves() const
 {
-    for (const auto& b : m_backends)
+    for (const auto& b : m_raw_backends)
     {
         if (b->is_slave() && b->in_use())
         {
@@ -378,7 +378,7 @@ void RWSplitSession::compress_history(mxs::SSessionCommand& sescmd)
 
 void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type)
 {
-    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
+    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
     {
         RWBackend* backend = *it;
 
@@ -446,7 +446,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     MXS_INFO("Session write, routing to all servers.");
     bool attempted_write = false;
 
-    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
+    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
     {
         RWBackend* backend = *it;
 
@@ -558,7 +558,7 @@ RWBackend* RWSplitSession::get_hinted_backend(char* name)
 {
     RWBackend* rval;
 
-    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
+    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
     {
         auto& backend = *it;
 
@@ -579,9 +579,9 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     // create a list of useable backends (includes masters, function name is a bit off),
     // then feed that list to compare.
     PRWBackends candidates;
-    auto counts = get_slave_counts(m_backends, m_current_master);
+    auto counts = get_slave_counts(m_raw_backends, m_current_master);
 
-    for (auto& backend : m_backends)
+    for (auto& backend : m_raw_backends)
     {
         bool can_take_slave_into_use = backend->is_slave()
             && !backend->in_use()
@@ -612,7 +612,7 @@ RWBackend* RWSplitSession::get_master_backend()
 {
     RWBackend* rval;
     /** get root master from available servers */
-    RWBackend* master = get_root_master(m_backends);
+    RWBackend* master = get_root_master(m_raw_backends);
 
     if (master)
     {

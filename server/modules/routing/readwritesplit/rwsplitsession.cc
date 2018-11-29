@@ -22,10 +22,11 @@ using namespace maxscale;
 
 RWSplitSession::RWSplitSession(RWSplit* instance,
                                MXS_SESSION* session,
-                               PRWBackends  backends,
-                               RWBackend*   master)
+                               mxs::SRWBackends backends,
+                               mxs::RWBackend*  master)
     : mxs::RouterSession(session)
-    , m_backends(backends)
+    , m_backends(std::move(backends))
+    , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
     , m_current_master(master)
     , m_config(instance->config())
     , m_nbackends(instance->service()->n_dbref)
@@ -60,7 +61,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
 
     if (router->have_enough_servers())
     {
-        PRWBackends backends = RWBackend::from_servers(router->service()->dbref);
+        SRWBackends backends = RWBackend::from_servers(router->service()->dbref);
 
         /**
          * At least the master must be found if the router is in the strict mode.
@@ -69,14 +70,16 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
 
         RWBackend* master;
 
+        auto backend_ptrs = sptr_vec_to_ptr_vec(backends);
+
         if (router->select_connect_backend_servers(session,
-                                                   backends,
+                                                   backend_ptrs,
                                                    &master,
                                                    NULL,
                                                    NULL,
                                                    connection_type::ALL))
         {
-            if ((rses = new RWSplitSession(router, session, backends, master)))
+            if ((rses = new RWSplitSession(router, session, std::move(backends), master)))
             {
                 router->stats().n_sessions += 1;
             }
@@ -106,10 +109,10 @@ void close_all_connections(PRWBackends& backends)
 
 void RWSplitSession::close()
 {
-    close_all_connections(m_backends);
+    close_all_connections(m_raw_backends);
     m_current_query.reset();
 
-    for (auto& backend : m_backends)
+    for (auto& backend : m_raw_backends)
     {
         ResponseStat& stat = backend->response_stat();
 
@@ -310,7 +313,7 @@ RWBackend* RWSplitSession::get_backend_from_dcb(DCB* dcb)
 {
     mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
 
-    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
+    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
     {
         RWBackend* backend = *it;
 
@@ -1076,7 +1079,7 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
      */
     if (m_recv_sescmd > 0 && m_config.disable_sescmd_history)
     {
-        for (const auto& a : m_backends)
+        for (const auto& a : m_raw_backends)
         {
             if (a->in_use())
             {
@@ -1093,8 +1096,9 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
     }
     else
     {
+
         succp = m_router->select_connect_backend_servers(ses,
-                                                         m_backends,
+                                                         m_raw_backends,
                                                          &m_current_master,
                                                          &m_sescmd_list,
                                                          &m_expected_responses,
