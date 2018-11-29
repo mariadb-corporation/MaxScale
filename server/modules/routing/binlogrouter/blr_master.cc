@@ -186,7 +186,7 @@ static void blr_start_master(void* data)
 
     pthread_mutex_unlock(&router->lock);
 
-    DCB* client = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
+    DCB* client = dcb_alloc(DCB_ROLE_INTERNAL, NULL, NULL);
 
     /* Create fake 'client' DCB */
     if (client == NULL)

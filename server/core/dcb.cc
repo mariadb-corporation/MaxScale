@@ -180,7 +180,7 @@ static void dcb_initialize(DCB* dcb)
  *
  * @return An available DCB or NULL if none could be allocated.
  */
-DCB* dcb_alloc(dcb_role_t role, SERV_LISTENER* listener)
+DCB* dcb_alloc(dcb_role_t role, SERV_LISTENER* listener, SERVICE* service)
 {
     DCB* newdcb;
 
@@ -192,6 +192,7 @@ DCB* dcb_alloc(dcb_role_t role, SERV_LISTENER* listener)
     dcb_initialize(newdcb);
     newdcb->dcb_role = role;
     newdcb->listener = listener;
+    newdcb->service = service;
     newdcb->last_read = mxs_clock();
     newdcb->low_water = config_writeq_low_water();
     newdcb->high_water = config_writeq_high_water();
@@ -410,7 +411,7 @@ DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
         }
     }
 
-    if ((dcb = dcb_alloc(DCB_ROLE_BACKEND_HANDLER, NULL)) == NULL)
+    if ((dcb = dcb_alloc(DCB_ROLE_BACKEND_HANDLER, NULL, session->service)) == NULL)
     {
         return NULL;
     }
@@ -2401,7 +2402,7 @@ DCB* dcb_accept(DCB* dcb)
 
         configure_network_socket(c_sock, client_conn.ss_family);
 
-        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dcb->listener);
+        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dcb->listener, dcb->service);
 
         if (client_dcb == NULL)
         {

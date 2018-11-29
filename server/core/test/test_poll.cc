@@ -59,7 +59,7 @@ static int test1()
             "testpoll : Initialise the polling system.");
     init_test_env(NULL);
     fprintf(stderr, "\t..done\nAdd a DCB");
-    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dummy);
+    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dummy, NULL);
 
     if (dcb == NULL)
     {

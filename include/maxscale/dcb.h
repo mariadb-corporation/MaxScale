@@ -261,7 +261,7 @@ void dcb_global_init();
 
 int  dcb_write(DCB*, GWBUF*);
 DCB* dcb_accept(DCB* listener);
-DCB* dcb_alloc(dcb_role_t, SERV_LISTENER*);
+DCB* dcb_alloc(dcb_role_t, SERV_LISTENER*, SERVICE* service);
 DCB* dcb_connect(struct server*, struct session*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_drain_writeq(DCB*);
