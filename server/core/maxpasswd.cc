@@ -23,7 +23,7 @@
  * @endverbatim
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <stdio.h>
 #include <errno.h>

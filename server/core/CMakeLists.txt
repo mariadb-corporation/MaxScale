@@ -97,11 +97,11 @@ endif()
 target_link_libraries(maxscale maxscale-common)
 install_executable(maxscale core)
 
-add_executable(maxkeys maxkeys.c)
+add_executable(maxkeys maxkeys.cc)
 target_link_libraries(maxkeys maxscale-common)
 install_executable(maxkeys core)
 
-add_executable(maxpasswd maxpasswd.c)
+add_executable(maxpasswd maxpasswd.cc)
 target_link_libraries(maxpasswd maxscale-common)
 install_executable(maxpasswd core)
 
