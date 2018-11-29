@@ -198,7 +198,7 @@ add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replicatio
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
 
 # Basic MaxCtrl test
-add_test_executable(maxctrl_basic.cpp maxctrl_basic replication LABELS maxctrl REPL_BACKEND)
+add_test_executable(maxctrl_basic.cpp maxctrl_basic maxctrl_basic LABELS maxctrl REPL_BACKEND)
 
 # MXS-2167: Monitors should be able to use extra_port
 add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port LABELS REPL_BACKEND)
