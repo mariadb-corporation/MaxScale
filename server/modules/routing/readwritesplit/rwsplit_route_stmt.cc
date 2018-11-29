@@ -578,7 +578,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
     // create a list of useable backends (includes masters, function name is a bit off),
     // then feed that list to compare.
-    SRWBackendVector candidates;
+    PRWBackends candidates;
     auto counts = get_slave_counts(m_backends, m_current_master);
 
     for (auto& backend : m_backends)
@@ -597,15 +597,15 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 
         if (server_is_candidate)
         {
-            candidates.push_back(&backend);
+            candidates.push_back(backend);
         }
     }
 
-    SRWBackendVector::const_iterator rval = find_best_backend(candidates,
-                                                              m_config.backend_select_fct,
-                                                              m_config.master_accept_reads);
+    PRWBackends::const_iterator rval = find_best_backend(candidates,
+                                                         m_config.backend_select_fct,
+                                                         m_config.master_accept_reads);
 
-    return (rval == candidates.end()) ? nullptr : **rval;
+    return (rval == candidates.end()) ? nullptr : *rval;
 }
 
 RWBackend* RWSplitSession::get_master_backend()

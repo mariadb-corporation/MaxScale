@@ -132,9 +132,7 @@ static const char gtid_wait_stmt[] =
 /** Function that returns a "score" for a server to enable comparison.
  *  Smaller numbers are better.
  */
-using SRWBackendVector = std::vector<mxs::RWBackend**>;
-using BackendSelectFunction = std::function
-    <SRWBackendVector::iterator (SRWBackendVector& sBackends)>;
+using BackendSelectFunction = std::function<mxs::PRWBackends::iterator (mxs::PRWBackends& sBackends)>;
 BackendSelectFunction get_backend_select_function(select_criteria_t);
 
 struct Config
@@ -416,7 +414,7 @@ std::pair<int, int> get_slave_counts(mxs::PRWBackends& backends, mxs::RWBackend*
  *
  * @return Valid iterator into argument backends, or end(backends) if empty
  */
-SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
+mxs::PRWBackends::iterator find_best_backend(mxs::PRWBackends& backends,
                                              BackendSelectFunction select,
                                              bool masters_accepts_reads);
 

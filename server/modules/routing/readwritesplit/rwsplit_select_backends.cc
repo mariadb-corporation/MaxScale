@@ -57,14 +57,14 @@ static bool valid_for_slave(const RWBackend* backend, const RWBackend* master)
            && (!master || backend != master);
 }
 
-SRWBackendVector::iterator best_score(SRWBackendVector& sBackends,
-                                      std::function<double(SERVER_REF* server)> server_score)
+PRWBackends::iterator best_score(PRWBackends& sBackends,
+                                 std::function<double(SERVER_REF* server)> server_score)
 {
     double min {std::numeric_limits<double>::max()};
     auto best = sBackends.end();
     for (auto ite = sBackends.begin(); ite != sBackends.end(); ++ite)
     {
-        double score = server_score((***ite).backend());
+        double score = server_score((**ite).backend());
         if (min > score)
         {
             min = score;
@@ -76,7 +76,7 @@ SRWBackendVector::iterator best_score(SRWBackendVector& sBackends,
 }
 
 /** Compare number of connections from this router in backend servers */
-SRWBackendVector::iterator backend_cmp_router_conn(SRWBackendVector& sBackends)
+PRWBackends::iterator backend_cmp_router_conn(PRWBackends& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
             return server->server_weight ? (server->connections + 1) / server->server_weight :
@@ -87,7 +87,7 @@ SRWBackendVector::iterator backend_cmp_router_conn(SRWBackendVector& sBackends)
 }
 
 /** Compare number of global connections in backend servers */
-SRWBackendVector::iterator backend_cmp_global_conn(SRWBackendVector& sBackends)
+PRWBackends::iterator backend_cmp_global_conn(PRWBackends& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
             return server->server_weight ? (server->server->stats.n_current + 1) / server->server_weight :
@@ -98,7 +98,7 @@ SRWBackendVector::iterator backend_cmp_global_conn(SRWBackendVector& sBackends)
 }
 
 /** Compare replication lag between backend servers */
-SRWBackendVector::iterator backend_cmp_behind_master(SRWBackendVector& sBackends)
+PRWBackends::iterator backend_cmp_behind_master(PRWBackends& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
             return server->server_weight ? server->server->rlag / server->server_weight :
@@ -109,7 +109,7 @@ SRWBackendVector::iterator backend_cmp_behind_master(SRWBackendVector& sBackends
 }
 
 /** Compare number of current operations in backend servers */
-SRWBackendVector::iterator backend_cmp_current_load(SRWBackendVector& sBackends)
+PRWBackends::iterator backend_cmp_current_load(PRWBackends& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
             return server->server_weight ? (server->server->stats.n_current_ops + 1) / server->server_weight :
@@ -119,7 +119,7 @@ SRWBackendVector::iterator backend_cmp_current_load(SRWBackendVector& sBackends)
     return best_score(sBackends, server_score);
 }
 
-SRWBackendVector::iterator backend_cmp_response_time(SRWBackendVector& sBackends)
+PRWBackends::iterator backend_cmp_response_time(PRWBackends& sBackends)
 {
     const int SZ = sBackends.size();
     double slot[SZ];
@@ -128,7 +128,7 @@ SRWBackendVector::iterator backend_cmp_response_time(SRWBackendVector& sBackends
     double pre_total {0};
     for (int i = 0; i < SZ; ++i)
     {
-        SERVER_REF* server = (**sBackends[i]).backend();
+        SERVER_REF* server = (*sBackends[i]).backend();
         double ave = server_response_time_average(server->server);
 
         if (ave == 0)
@@ -211,17 +211,17 @@ BackendSelectFunction get_backend_select_function(select_criteria_t sc)
  *
  * @return iterator to the best slave or backends.end() if none found
  */
-SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
-                                             BackendSelectFunction select,
-                                             bool masters_accepts_reads)
+PRWBackends::iterator find_best_backend(PRWBackends& backends,
+                                        BackendSelectFunction select,
+                                        bool masters_accepts_reads)
 {
     // Group backends by priority. The set of highest priority backends will then compete.
-    std::map<int, SRWBackendVector> priority_map;
+    std::map<int, PRWBackends> priority_map;
     int best_priority {INT_MAX};    // low numbers are high priority
 
     for (auto& psBackend : backends)
     {
-        auto& backend = **psBackend;
+        auto& backend = *psBackend;
         bool is_busy = backend.in_use() && backend.has_session_commands();
         bool acts_slave = backend.is_slave() || (backend.is_master() && masters_accepts_reads);
 
@@ -420,14 +420,14 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
 
     mxb_assert(slaves_connected <= max_nslaves || max_nslaves == 0);
 
-    SRWBackendVector candidates;
-    for (auto& sBackend : backends)
+    PRWBackends candidates;
+    for (auto& pBackend : backends)
     {
-        if (!sBackend->in_use()
-            && sBackend->can_connect()
-            && valid_for_slave(sBackend, master))
+        if (!pBackend->in_use()
+            && pBackend->can_connect()
+            && valid_for_slave(pBackend, master))
         {
-            candidates.push_back(&sBackend);
+            candidates.push_back(pBackend);
         }
     }
 
@@ -439,7 +439,7 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
             break;
         }
 
-        auto& backend = **ite;
+        auto& backend = *ite;
 
         if (backend->connect(session, sescmd_list))
         {
