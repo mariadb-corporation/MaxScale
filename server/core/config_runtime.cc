@@ -1015,14 +1015,14 @@ bool runtime_create_listener(Service* service,
         else
         {
             const char* print_addr = addr ? addr : "::";
-            SERV_LISTENER* listener = serviceCreateListener(service,
-                                                            name,
-                                                            proto,
-                                                            addr,
-                                                            u_port,
-                                                            auth,
-                                                            auth_opt,
-                                                            ssl);
+            SListener listener = listener_alloc(service,
+                                                name,
+                                                proto,
+                                                addr,
+                                                u_port,
+                                                auth,
+                                                auth_opt,
+                                                ssl);
 
             if (listener && listener_serialize(listener))
             {

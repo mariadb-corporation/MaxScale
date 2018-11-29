@@ -60,9 +60,10 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
                                           (MySQLProtocol*)session->client_dcb->protocol,
                                           my_instance->get_service())) == NULL)
         {
+            const char* extra = !listener_find_by_service(my_instance->get_service()).empty() ? "" :
+                ": Service has no network listeners";
             MXS_ERROR("Failed to create local client connection to '%s'%s",
-                      my_instance->get_service()->name,
-                      my_instance->get_service()->ports ? "" : ": Service has no network listeners");
+                      my_instance->get_service()->name, extra);
             return NULL;
         }
     }

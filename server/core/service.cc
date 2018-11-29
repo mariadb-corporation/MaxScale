@@ -181,7 +181,6 @@ Service::Service(const std::string& service_name,
     stats.n_sessions = 0;
     state = SERVICE_STATE_ALLOC;
     active = true;
-    ports = NULL;
     dbref = NULL;
     n_dbref = 0;
     snprintf(user, sizeof(user), "%s", m_user.c_str());
@@ -206,7 +205,7 @@ Service::Service(const std::string& service_name,
     }
     else
     {
-        retain_last_statements = -1; // Indicates that it has not been set.
+        retain_last_statements = -1;    // Indicates that it has not been set.
     }
 
     /**
@@ -237,11 +236,10 @@ Service::~Service()
 {
     mxs_rworker_delete_data(m_wkey);
 
-    while (auto tmp = ports)
+    for (const auto& tmp : listener_find_by_service(this))
     {
-        ports = ports->next;
         mxb_assert(!tmp->active || maxscale_teardown_in_progress());
-        listener_free(tmp);
+        listener_free(listener_find(tmp->name));
     }
 
     if (router && router_instance && router->destroyInstance)
@@ -321,23 +319,6 @@ bool service_isvalid(Service* service)
                      service) != this_unit.services.end();
 }
 
-static inline void close_port(SERV_LISTENER* port)
-{
-    if (port->service->state == SERVICE_STATE_ALLOC)
-    {
-        /** The service failed when it was being allocated */
-        port->service->state = SERVICE_STATE_FAILED;
-    }
-
-    if (port->listener)
-    {
-        dcb_close(port->listener);
-        port->listener = NULL;
-    }
-
-    listener_set_active(port, false);
-}
-
 /**
  * Start an individual port/protocol pair
  *
@@ -345,7 +326,7 @@ static inline void close_port(SERV_LISTENER* port)
  * @param port          The port to start
  * @return              The number of listeners started
  */
-static int serviceStartPort(Service* service, SERV_LISTENER* port)
+static int serviceStartPort(Service* service, const SListener& port)
 {
     const size_t ANY_IPV4_ADDRESS_LEN = 7;      // strlen("0:0:0:0");
 
@@ -359,17 +340,15 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
     {
         /* Should never happen, this guarantees it can't */
         MXS_ERROR("Attempt to start port with null or incomplete service");
-        close_port(port);
         mxb_assert(false);
         return 0;
     }
 
-    port->listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, port);
+    port->listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, port.get());
 
     if (port->listener == NULL)
     {
         MXS_ERROR("Failed to create listener for service %s.", service->name);
-        close_port(port);
         return 0;
     }
 
@@ -380,7 +359,6 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
         MXS_ERROR("Unable to load protocol module %s. Listener for service %s not started.",
                   port->protocol.c_str(),
                   service->name);
-        close_port(port);
         return 0;
     }
 
@@ -404,7 +382,6 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
         MXS_ERROR("Failed to load authenticator module '%s' for listener '%s'",
                   authenticator_name,
                   port->name.c_str());
-        close_port(port);
         return 0;
     }
 
@@ -433,14 +410,13 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
     /** Load the authentication users before before starting the listener */
     if (port->listener->authfunc.loadusers)
     {
-        switch (port->listener->authfunc.loadusers(port))
+        switch (port->listener->authfunc.loadusers(port.get()))
         {
         case MXS_AUTH_LOADUSERS_FATAL:
             MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
                       "service is not started.",
                       service->name,
                       port->name.c_str());
-            close_port(port);
             return 0;
 
         case MXS_AUTH_LOADUSERS_ERROR:
@@ -467,13 +443,11 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
         else
         {
             MXS_ERROR("[%s] Failed to create listener session.", service->name);
-            close_port(port);
         }
     }
     else
     {
         MXS_ERROR("[%s] Failed to listen on %s", service->name, config_bind);
-        close_port(port);
     }
 
     return listeners;
@@ -489,15 +463,19 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
  */
 int serviceStartAllPorts(Service* service)
 {
-    SERV_LISTENER* port = service->ports;
     int listeners = 0;
+    auto my_listeners = listener_find_by_service(service);
 
-    if (port)
+    if (!my_listeners.empty())
     {
-        while (!maxscale_is_shutting_down() && port)
+        for (const auto& listener : my_listeners)
         {
-            listeners += serviceStartPort(service, port);
-            port = port->next;
+            if (maxscale_is_shutting_down())
+            {
+                break;
+            }
+
+            listeners += serviceStartPort(service, listener);
         }
 
         if (service->state == SERVICE_STATE_FAILED)
@@ -569,7 +547,7 @@ int serviceInitialize(Service* service)
     return listeners;
 }
 
-bool serviceLaunchListener(Service* service, SERV_LISTENER* port)
+bool serviceLaunchListener(Service* service, const SListener& port)
 {
     mxb_assert(service->state != SERVICE_STATE_FAILED);
     bool rval = true;
@@ -674,25 +652,6 @@ bool serviceStart(SERVICE* service)
     return listeners > 0;
 }
 
-/**
- * Add a listener to a service
- *
- * @param service Service where listener is added
- * @param proto   Listener to add
- */
-static void service_add_listener(SERVICE* service, SERV_LISTENER* proto)
-{
-    do
-    {
-        /** Read the current value of the list's head. This will be our expected
-         * value for the following compare-and-swap operation. */
-        proto->next = (SERV_LISTENER*)atomic_load_ptr((void**)&service->ports);
-    }
-    /** Compare the current value to our expected value and if they match, replace
-     * the current value with our new value. */
-    while (!atomic_cas_ptr((void**)&service->ports, (void**)&proto->next, proto));
-}
-
 bool service_remove_listener(Service* service, const char* target)
 {
     bool rval = false;
@@ -707,48 +666,10 @@ bool service_remove_listener(Service* service, const char* target)
     return rval;
 }
 
-/**
- * Create a listener for the service
- *
- * @param service       The service
- * @param protocol      The name of the protocol module
- * @param address       The address to listen with
- * @param port          The port to listen on
- * @param authenticator Name of the authenticator to be used
- * @param ssl           SSL configuration
- *
- * @return Created listener or NULL on error
- */
-SERV_LISTENER* serviceCreateListener(Service* service,
-                                     const char* name,
-                                     const char* protocol,
-                                     const char* address,
-                                     unsigned short port,
-                                     const char* authenticator,
-                                     const char* options,
-                                     SSL_LISTENER* ssl)
-{
-    SERV_LISTENER* proto = listener_alloc(service,
-                                          name,
-                                          protocol,
-                                          address,
-                                          port,
-                                          authenticator,
-                                          options,
-                                          ssl);
-
-    if (proto)
-    {
-        service_add_listener(service, proto);
-    }
-
-    return proto;
-}
-
-SERV_LISTENER* service_find_listener(Service* service,
-                                     const char* socket,
-                                     const char* address,
-                                     unsigned short port)
+SListener service_find_listener(Service* service,
+                                const char* socket,
+                                const char* address,
+                                unsigned short port)
 {
     for (const auto& listener : listener_find_by_service(service))
     {
@@ -1893,7 +1814,7 @@ static json_t* service_all_listeners_json_data(const SERVICE* service)
 
     for (const auto& listener : listener_find_by_service(service))
     {
-        json_array_append_new(arr, listener_to_json(listener.get()));
+        json_array_append_new(arr, listener_to_json(listener));
     }
 
     return arr;
@@ -1905,7 +1826,7 @@ static json_t* service_listener_json_data(const SERVICE* service, const char* na
 
     if (listener && listener->service == service)
     {
-        return listener_to_json(listener.get());
+        return listener_to_json(listener);
     }
 
     return NULL;

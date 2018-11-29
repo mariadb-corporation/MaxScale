@@ -3881,25 +3881,25 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 
         if (socket)
         {
-            serviceCreateListener(service,
-                                  obj->object,
-                                  protocol,
-                                  socket,
-                                  0,
-                                  authenticator,
-                                  authenticator_options,
-                                  ssl_info);
+            listener_alloc(service,
+                           obj->object,
+                           protocol,
+                           socket,
+                           0,
+                           authenticator,
+                           authenticator_options,
+                           ssl_info);
         }
         else if (port)
         {
-            serviceCreateListener(service,
-                                  obj->object,
-                                  protocol,
-                                  address,
-                                  atoi(port),
-                                  authenticator,
-                                  authenticator_options,
-                                  ssl_info);
+            listener_alloc(service,
+                           obj->object,
+                           protocol,
+                           address,
+                           atoi(port),
+                           authenticator,
+                           authenticator_options,
+                           ssl_info);
         }
     }
 

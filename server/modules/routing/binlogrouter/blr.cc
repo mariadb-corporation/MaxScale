@@ -1131,11 +1131,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
  */
 static void free_instance(ROUTER_INSTANCE* instance)
 {
-    for (SERV_LISTENER* port = instance->service->ports; port; port = port->next)
-    {
-        users_free(port->users);
-    }
-
     MXS_FREE(instance->uuid);
     MXS_FREE(instance->user);
     MXS_FREE(instance->password);

@@ -689,10 +689,6 @@ static GWBUF* blr_make_registration(ROUTER_INSTANCE* router)
     // Set empty password
     *data++ = 0;            // Slave password length
     // Add port
-    if (router->service->ports)
-    {
-        port = router->service->ports->port;
-    }
     encode_value(&data[0], port, 16);               // Slave master port, 2 bytes
     encode_value(&data[2], 0, 32);                  // Replication rank, 4 bytes
     encode_value(&data[6], router->masterid, 32);   // Master server-id, 4 bytes

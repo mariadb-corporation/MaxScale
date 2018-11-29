@@ -92,13 +92,10 @@ typedef struct server_ref_t
 class SERVICE
 {
 public:
-    const char*    name;                            /**< The service name */
-    int            state;                           /**< The service state */
-    int            client_count;                    /**< Number of connected clients */
-    int            max_connections;                 /**< Maximum client connections */
-    SERV_LISTENER* ports;                           /**< Linked list of ports and
-                                                     * protocols
-                                                     * that this service will listen on */
+    const char*               name;                 /**< The service name */
+    int                       state;                /**< The service state */
+    int                       client_count;         /**< Number of connected clients */
+    int                       max_connections;      /**< Maximum client connections */
     const char*               routerModule;         /**< Name of router module to use */
     struct mxs_router_object* router;               /**< The router we are using */
     struct mxs_router*        router_instance;      /**< The router instance for this

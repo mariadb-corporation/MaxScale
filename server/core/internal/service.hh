@@ -209,18 +209,6 @@ int service_launch_all(void);
 bool service_thread_init();
 
 /**
- * Creating and adding new components to services
- */
-SERV_LISTENER* serviceCreateListener(Service* service,
-                                     const char* name,
-                                     const char* protocol,
-                                     const char* address,
-                                     unsigned short port,
-                                     const char* authenticator,
-                                     const char* options,
-                                     SSL_LISTENER* ssl);
-
-/**
  * @brief Remove a listener from use
  *
  * @note This does not free the memory
@@ -328,7 +316,7 @@ bool serviceHasBackend(Service* service, SERVER* server);
  * @param port Listener to start
  * @return True if listener was started
  */
-bool serviceLaunchListener(Service* service, SERV_LISTENER* port);
+bool serviceLaunchListener(Service* service, const SListener& port);
 
 /**
  * @brief Find listener with specified properties.
@@ -343,10 +331,10 @@ bool serviceLaunchListener(Service* service, SERV_LISTENER* port);
  *
  * @return True if service has the listener
  */
-SERV_LISTENER* service_find_listener(Service* service,
-                                     const char* socket,
-                                     const char* address,
-                                     unsigned short port);
+SListener service_find_listener(Service* service,
+                                const char* socket,
+                                const char* address,
+                                unsigned short port);
 
 /**
  * @brief Check if a service has a listener

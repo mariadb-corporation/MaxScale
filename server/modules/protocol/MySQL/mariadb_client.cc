@@ -272,7 +272,7 @@ LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, S
         if (listener->port > 0)
         {
             /** Pick the first network listener */
-            rval = create(session, proto, "127.0.0.1", service->ports->port);
+            rval = create(session, proto, "127.0.0.1", listener->port);
             break;
         }
     }
