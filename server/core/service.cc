@@ -587,46 +587,14 @@ bool serviceLaunchListener(Service* service, SERV_LISTENER* port)
 
 bool serviceStopListener(SERVICE* svc, const char* name)
 {
-    Service* service = static_cast<Service*>(svc);
-    bool rval = false;
-    LISTENER_ITERATOR iter;
-
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
-    {
-        if (listener_is_active(listener) && listener->name == name)
-        {
-            if (listener_stop(listener))
-            {
-                rval = true;
-            }
-            break;
-        }
-    }
-
-    return rval;
+    auto listener = listener_find(name);
+    return listener && listener->service == svc && listener_stop(listener);
 }
 
 bool serviceStartListener(SERVICE* svc, const char* name)
 {
-    Service* service = static_cast<Service*>(svc);
-    bool rval = false;
-    LISTENER_ITERATOR iter;
-
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
-    {
-        if (listener_is_active(listener) && listener->name == name)
-        {
-            if (listener_start(listener))
-            {
-                rval = true;
-            }
-            break;
-        }
-    }
-
-    return rval;
+    auto listener = listener_find(name);
+    return listener && listener->service == svc && listener_start(listener);
 }
 
 int service_launch_all()
@@ -664,12 +632,9 @@ bool serviceStop(SERVICE* service)
 
     if (service)
     {
-        LISTENER_ITERATOR iter;
-
-        for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-             listener; listener = listener_iterator_next(&iter))
+        for (const auto& listener : listener_find_by_service(service))
         {
-            if (listener_is_active(listener) && listener_stop(listener))
+            if (listener_stop(listener))
             {
                 listeners++;
             }
@@ -695,12 +660,9 @@ bool serviceStart(SERVICE* service)
 
     if (service)
     {
-        LISTENER_ITERATOR iter;
-
-        for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-             listener; listener = listener_iterator_next(&iter))
+        for (const auto& listener : listener_find_by_service(service))
         {
-            if (listener_is_active(listener) && listener_start(listener))
+            if (listener_start(listener))
             {
                 listeners++;
             }
@@ -734,17 +696,12 @@ static void service_add_listener(SERVICE* service, SERV_LISTENER* proto)
 bool service_remove_listener(Service* service, const char* target)
 {
     bool rval = false;
-    LISTENER_ITERATOR iter;
+    auto listener = listener_find(target);
 
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
+    if (listener && listener->service == service)
     {
-        if (listener_is_active(listener) && listener->name == target)
-        {
-            listener_destroy(listener);
-            rval = true;
-            break;
-        }
+        listener_destroy(listener);
+        rval = true;
     }
 
     return rval;
@@ -793,12 +750,9 @@ SERV_LISTENER* service_find_listener(Service* service,
                                      const char* address,
                                      unsigned short port)
 {
-    LISTENER_ITERATOR iter;
-
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
+    for (const auto& listener : listener_find_by_service(service))
     {
-        if (listener_is_active(listener) && port == listener->port)
+        if (port == listener->port)
         {
             if ((!address && listener->address.empty()) || listener->address == address
                 || (!socket && listener->address.empty()) || listener->address == socket)
@@ -826,12 +780,9 @@ bool serviceHasListener(Service* service,
                         const char* address,
                         unsigned short port)
 {
-    LISTENER_ITERATOR iter;
-
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
+    for (const auto& listener : listener_find_by_service(service))
     {
-        if (listener_is_active(listener) && listener->port == port)
+        if (listener->port == port)
         {
             if ((!address && listener->address.empty()) || listener->address == address)
             {
@@ -845,34 +796,13 @@ bool serviceHasListener(Service* service,
 
 bool service_has_named_listener(Service* service, const char* name)
 {
-    LISTENER_ITERATOR iter;
-
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
-    {
-        if (listener_is_active(listener) && listener->name == name)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    auto listener = listener_find(name);
+    return listener && listener->service == service;
 }
 
 bool service_can_be_destroyed(Service* service)
 {
-    bool rval = true;
-    LISTENER_ITERATOR iter;
-
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
-    {
-        if (listener_is_active(listener))
-        {
-            rval = false;
-            break;
-        }
-    }
+    bool rval = listener_find_by_service(service).empty();
 
     if (rval)
     {
@@ -1350,22 +1280,16 @@ void dListListeners(DCB* dcb)
     }
     for (Service* service : this_unit.services)
     {
-        LISTENER_ITERATOR iter;
-
-        for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-             listener; listener = listener_iterator_next(&iter))
+        for (const auto& listener : listener_find_by_service(service))
         {
-            if (listener_is_active(listener))
-            {
-                dcb_printf(dcb,
-                           "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
-                           listener->name.c_str(),
-                           service->name,
-                           listener->protocol.c_str(),
-                           (listener && !listener->address.empty()) ? listener->address.c_str() : "*",
-                           listener->port,
-                           listener_state_to_string(listener));
-            }
+            dcb_printf(dcb,
+                       "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
+                       listener->name.c_str(),
+                       service->name,
+                       listener->protocol.c_str(),
+                       (listener && !listener->address.empty()) ? listener->address.c_str() : "*",
+                       listener->port,
+                       listener_state_to_string(listener));
         }
     }
     if (!this_unit.services.empty())
@@ -1414,16 +1338,12 @@ bool Service::refresh_users()
         m_rate_limits[self].last = now;
         m_rate_limits[self].warned = false;
 
-        LISTENER_ITERATOR iter;
-
-        for (SERV_LISTENER* listener = listener_iterator_init(this, &iter);
-             listener; listener = listener_iterator_next(&iter))
+        for (const auto& listener : listener_find_by_service(this))
         {
             /** Load the authentication users before before starting the listener */
-            if (listener_is_active(listener) && listener->listener
-                && listener->listener->authfunc.loadusers)
+            if (listener->listener && listener->listener->authfunc.loadusers)
             {
-                switch (listener->listener->authfunc.loadusers(listener))
+                switch (listener->listener->authfunc.loadusers(listener.get()))
                 {
                 case MXS_AUTH_LOADUSERS_FATAL:
                     MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
@@ -1586,13 +1506,10 @@ std::unique_ptr<ResultSet> serviceGetListenerList()
 
     for (Service* service : this_unit.services)
     {
-        LISTENER_ITERATOR iter;
-
-        for (SERV_LISTENER* lptr = listener_iterator_init(service, &iter);
-             lptr; lptr = listener_iterator_next(&iter))
+        for (const auto& listener : listener_find_by_service(service))
         {
-            set->add_row({service->name, lptr->protocol, lptr->address,
-                          std::to_string(lptr->port), listener_state_to_string(lptr)});
+            set->add_row({service->name, listener->protocol, listener->address,
+                          std::to_string(listener->port), listener_state_to_string(listener)});
         }
     }
 
@@ -1641,10 +1558,7 @@ bool service_all_services_have_listeners()
 
     for (Service* service : this_unit.services)
     {
-        LISTENER_ITERATOR iter;
-        SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-
-        if (listener == NULL)
+        if (listener_find_by_service(service).empty())
         {
             MXS_ERROR("Service '%s' has no listeners.", service->name);
             rval = false;
@@ -1886,17 +1800,13 @@ bool service_serialize(const Service* service)
 
 void service_print_users(DCB* dcb, const SERVICE* service)
 {
-    LISTENER_ITERATOR iter;
-
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
+    for (const auto& listener : listener_find_by_service(service))
     {
-        if (listener_is_active(listener) && listener->listener
-            && listener->listener->authfunc.diagnostic)
+        if (listener->listener && listener->listener->authfunc.diagnostic)
         {
             dcb_printf(dcb, "User names (%s): ", listener->name.c_str());
 
-            listener->listener->authfunc.diagnostic(dcb, listener);
+            listener->listener->authfunc.diagnostic(dcb, listener.get());
 
             dcb_printf(dcb, "\n");
         }
@@ -1910,12 +1820,9 @@ bool service_port_is_used(unsigned short port)
 
     for (Service* service : this_unit.services)
     {
-        LISTENER_ITERATOR iter;
-
-        for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-             listener; listener = listener_iterator_next(&iter))
+        for (const auto& listener : listener_find_by_service(service))
         {
-            if (listener_is_active(listener) && listener->port == port)
+            if (listener->port == port)
             {
                 rval = true;
                 break;
@@ -1983,15 +1890,10 @@ static inline bool have_active_servers(const SERVICE* service)
 static json_t* service_all_listeners_json_data(const SERVICE* service)
 {
     json_t* arr = json_array();
-    LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
+    for (const auto& listener : listener_find_by_service(service))
     {
-        if (listener_is_active(listener))
-        {
-            json_array_append_new(arr, listener_to_json(listener));
-        }
+        json_array_append_new(arr, listener_to_json(listener.get()));
     }
 
     return arr;
@@ -1999,15 +1901,11 @@ static json_t* service_all_listeners_json_data(const SERVICE* service)
 
 static json_t* service_listener_json_data(const SERVICE* service, const char* name)
 {
-    LISTENER_ITERATOR iter;
+    auto listener = listener_find(name);
 
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
+    if (listener && listener->service == service)
     {
-        if (listener_is_active(listener) && listener->name == name)
-        {
-            return listener_to_json(listener);
-        }
+        return listener_to_json(listener.get());
     }
 
     return NULL;

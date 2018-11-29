@@ -16,6 +16,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 #include <maxbase/jansson.h>
 #include <maxscale/protocol.h>
@@ -55,11 +56,6 @@ public:
 };
 
 using SListener = std::shared_ptr<SERV_LISTENER>;
-
-typedef struct listener_iterator
-{
-    SERV_LISTENER* current;
-} LISTENER_ITERATOR;
 
 /**
  * @brief Serialize a listener to a file
@@ -142,6 +138,24 @@ bool listener_stop(SERV_LISTENER* listener);
  */
 bool listener_start(SERV_LISTENER* listener);
 
+/**
+ * Find a listener
+ *
+ * @param name Name of the listener
+ *
+ * @return The listener if it exists or an empty SListener if it doesn't
+ */
+SListener listener_find(const std::string& name);
+
+/**
+ * Find all listeners that point to a service
+ *
+ * @param service Service whose listeners are returned
+ *
+ * @return The listeners that point to the service
+ */
+std::vector<SListener> listener_find_by_service(const SERVICE* service);
+
 int  listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
 void listener_set_certificates(SSL_LISTENER* ssl_listener, char* cert, char* key, char* ca_cert);
 
@@ -186,25 +200,6 @@ bool listener_is_active(SERV_LISTENER* listener);
  * @param active True to activate, false to disable
  */
 void listener_set_active(SERV_LISTENER* listener, bool active);
-
-/**
- * @brief Initialize a listener iterator for iterating service listeners
- *
- * @param service Service whose listeners are iterated
- * @param iter    Pointer to iterator to initialize
- *
- * @return The first value pointed by the iterator
- */
-SERV_LISTENER* listener_iterator_init(const SERVICE* service, LISTENER_ITERATOR* iter);
-
-/**
- * @brief Get the next listener
- *
- * @param iter Listener iterator
- *
- * @return The next listener or NULL on end of list
- */
-SERV_LISTENER* listener_iterator_next(LISTENER_ITERATOR* iter);
 
 /**
  * Get listener state as a string

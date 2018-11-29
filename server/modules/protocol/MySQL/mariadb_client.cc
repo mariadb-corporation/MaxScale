@@ -266,10 +266,8 @@ LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, c
 LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, SERVICE* service)
 {
     LocalClient* rval = NULL;
-    LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
+    for (const auto& listener : listener_find_by_service(service))
     {
         if (listener->port > 0)
         {

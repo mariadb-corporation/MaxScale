@@ -23,7 +23,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <vector>
 
 #include <maxscale/paths.h>
 #include <maxscale/ssl.h>
@@ -159,6 +158,39 @@ bool listener_start(SERV_LISTENER* listener)
     {
         listener->listener->session->state = SESSION_STATE_LISTENER;
         rval = true;
+    }
+
+    return rval;
+}
+
+SListener listener_find(const std::string& name)
+{
+    SListener rval;
+    std::lock_guard<std::mutex> guard(listener_lock);
+
+    for (const auto& a : all_listeners)
+    {
+        if (listener_is_active(a) && a->name == name)
+        {
+            rval = a;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+std::vector<SListener> listener_find_by_service(const SERVICE* service)
+{
+    std::vector<SListener> rval;
+    std::lock_guard<std::mutex> guard(listener_lock);
+
+    for (const auto& a : all_listeners)
+    {
+        if (listener_is_active(a) && a->service == service)
+        {
+            rval.push_back(a);
+        }
     }
 
     return rval;
@@ -592,30 +624,6 @@ void listener_set_active(SERV_LISTENER* listener, bool active)
 bool listener_is_active(SERV_LISTENER* listener)
 {
     return atomic_load_int32(&listener->active);
-}
-
-static inline SERV_LISTENER* load_port(SERV_LISTENER const* const* const port)
-{
-    return (SERV_LISTENER*)atomic_load_ptr((void**)port);
-}
-
-SERV_LISTENER* listener_iterator_init(const SERVICE* service, LISTENER_ITERATOR* iter)
-{
-    mxb_assert(iter);
-    iter->current = load_port(&service->ports);
-    return iter->current;
-}
-
-SERV_LISTENER* listener_iterator_next(LISTENER_ITERATOR* iter)
-{
-    mxb_assert(iter);
-
-    if (iter->current)
-    {
-        iter->current = load_port(&iter->current->next);
-    }
-
-    return iter->current;
 }
 
 const char* listener_state_to_string(const SERV_LISTENER* listener)
