@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <atomic>
 #include <string>
 #include <memory>
 #include <vector>
@@ -34,25 +35,152 @@ class SERVICE;
 class SERV_LISTENER
 {
 public:
+
+    /**
+     * Creates a new listener that points to a service
+     *
+     * @param service       Service where the listener points to
+     * @param name          Name of the listener
+     * @param address       The address where the listener listens
+     * @param port          The port on which the listener listens
+     * @param protocol      The protocol module to use
+     * @param authenticator The authenticator module to use
+     * @param auth_opts     Options for the authenticator
+     * @param auth_instance The authenticator instance
+     * @param ssl           The SSL configuration
+     */
     SERV_LISTENER(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
                   const std::string& protocol, const std::string& authenticator,
                   const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
     ~SERV_LISTENER();
 
-public:
-    std::string    name;            /**< Name of the listener */
-    std::string    protocol;        /**< Protocol module to load */
-    uint16_t       port;            /**< Port to listen on */
-    std::string    address;         /**< Address to listen with */
-    std::string    authenticator;   /**< Name of authenticator */
-    std::string    auth_options;    /**< Authenticator options */
-    void*          auth_instance;   /**< Authenticator instance */
-    SSL_LISTENER*  ssl;             /**< Structure of SSL data or NULL */
-    struct dcb*    listener;        /**< The DCB for the listener */
-    struct users*  users;           /**< The user data for this listener */
-    SERVICE*       service;         /**< The service which used by this listener */
-    int            active;          /**< True if the port has not been deleted */
-    SERV_LISTENER* next;            /**< Next service protocol */
+    /**
+     * Start listening on the configured port
+     *
+     * @return True if the listener was able to start listening
+     */
+    bool listen();
+
+    /**
+     * Stop the listener
+     *
+     * @return True if the listener was successfully stopped
+     */
+    bool stop();
+
+    /**
+     * Start a stopped listener
+     *
+     * @return True if the listener was successfully started
+     */
+    bool start();
+
+    /**
+     * Closes a listener
+     *
+     * This closes the network socket the listener listens on to allow immediate reuse of it. The listener
+     * instance can remain if there are open sessions for it.
+     */
+    void close();
+
+    /**
+     * Listener name
+     */
+    const char* name() const;
+
+    /**
+     * Network address the listener listens on
+     */
+    const char* address() const;
+
+    /**
+     * Network port the listener listens on
+     */
+    uint16_t port() const;
+
+    /**
+     * Service the listener points to
+     */
+    SERVICE* service() const;
+
+    /**
+     * The authenticator module name
+     */
+    const char* authenticator() const;
+
+    /**
+     * The protocol module name
+     */
+    const char* protocol() const;
+
+    /**
+     * The authenticator instance
+     */
+    void* auth_instance() const;
+
+    /**
+     * The state of the listener
+     */
+    const char* state() const;
+
+    /**
+     * Whether the listener is active
+     */
+    bool is_active() const;
+
+    /**
+     * Deactivate the listener
+     *
+     * TODO: Remove and deactivate via removal from global listener list
+     */
+    void deactivate();
+
+    /**
+     * The SSL_LISTENER object
+     */
+    SSL_LISTENER* ssl() const;
+
+    /**
+     * Convert to JSON
+     *
+     * @return JSON representation of the object
+     */
+    json_t* to_json() const;
+
+    /**
+     * Load users for a listener
+     *
+     * @return The result from the authenticator module
+     */
+    int load_users();
+
+    /**
+     * Print the users into a DCB
+     *
+     * Note: not const due to authenticator API
+     *
+     * @param dcb DCB to write into
+     */
+    void print_users(DCB* dcb);
+
+    // Functions that are temporarily public
+    bool          create_listener_config(const char* filename);
+    struct users* users() const;
+    void          set_users(struct users* u);
+
+private:
+    std::string       m_name;           /**< Name of the listener */
+    std::string       m_protocol;       /**< Protocol module to load */
+    uint16_t          m_port;           /**< Port to listen on */
+    std::string       m_address;        /**< Address to listen with */
+    std::string       m_authenticator;  /**< Name of authenticator */
+    std::string       m_auth_options;   /**< Authenticator options */
+    void*             m_auth_instance;  /**< Authenticator instance */
+    SSL_LISTENER*     m_ssl;            /**< Structure of SSL data or NULL */
+    struct dcb*       m_listener;       /**< The DCB for the listener */
+    struct users*     m_users;          /**< The user data for this listener */
+    SERVICE*          m_service;        /**< The service which used by this listener */
+    std::atomic<bool> m_active;         /**< True if the port has not been deleted */
 };
 
 using SListener = std::shared_ptr<SERV_LISTENER>;
@@ -68,15 +196,6 @@ using SListener = std::shared_ptr<SERV_LISTENER>;
  * @return True if the serialization of the listener was successful, false if it fails
  */
 bool listener_serialize(const SListener& listener);
-
-/**
- * @brief Convert listener to JSON
- *
- * @param listener Listener to convert
- *
- * @return Converted listener
- */
-json_t* listener_to_json(const SListener& listener);
 
 /**
  * Create a new listener
@@ -109,34 +228,6 @@ SListener listener_alloc(SERVICE* service,
  * @param listener Listener to free
  */
 void listener_free(const SListener& listener);
-
-/**
- * Destroy a listener
- *
- * This deactivates the listener and closes the network port it listens on. Once destroyed, the listener
- * can no longer be used.
- *
- * @param listener Listener to destroy
- */
-void listener_destroy(const SListener& listener);
-
-/**
- * Stop a listener
- *
- * @param listener Listener to stop
- *
- * @return True if listener was successfully stopped
- */
-bool listener_stop(const SListener& listener);
-
-/**
- * Start a stopped listener
- *
- * @param listener Listener to start
- *
- * @return True if listener was successfully started
- */
-bool listener_start(const SListener& listener);
 
 /**
  * Find a listener
@@ -183,29 +274,3 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl);
  * @param ssl SSL_LISTENER to free
  */
 void SSL_LISTENER_free(SSL_LISTENER* ssl);
-
-/**
- * @brief Check if listener is active
- *
- * @param listener Listener to check
- *
- * @return True if listener is active
- */
-bool listener_is_active(const SListener& listener);
-
-/**
- * @brief Modify listener active state
- *
- * @param listener Listener to modify
- * @param active True to activate, false to disable
- */
-void listener_set_active(const SListener& listener, bool active);
-
-/**
- * Get listener state as a string
- *
- * @param listener Listener to inspect
- *
- * @return State of the listener as a string
- */
-const char* listener_state_to_string(const SListener& listener);

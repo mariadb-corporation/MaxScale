@@ -22,6 +22,7 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <string>
 
 #include <maxscale/paths.h>
@@ -33,6 +34,8 @@
 #include <maxscale/service.hh>
 #include <maxscale/poll.h>
 
+#include "internal/modules.hh"
+
 static std::list<SListener> all_listeners;
 static std::mutex listener_lock;
 
@@ -43,35 +46,34 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
 SERV_LISTENER::SERV_LISTENER(SERVICE* service, const std::string& name, const std::string& address,
                              uint16_t port, const std::string& protocol, const std::string& authenticator,
                              const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl)
-    : name(name)
-    , protocol(protocol)
-    , port(port)
-    , address(address)
-    , authenticator(authenticator)
-    , auth_options(auth_opts)
-    , auth_instance(auth_instance)
-    , ssl(ssl)
-    , listener(nullptr)
-    , users(nullptr)
-    , service(service)
-    , active(1)
-    , next(nullptr)
+    : m_name(name)
+    , m_protocol(protocol)
+    , m_port(port)
+    , m_address(address)
+    , m_authenticator(authenticator)
+    , m_auth_options(auth_opts)
+    , m_auth_instance(auth_instance)
+    , m_ssl(ssl)
+    , m_listener(nullptr)
+    , m_users(nullptr)
+    , m_service(service)
+    , m_active(1)
 {
 }
 
 SERV_LISTENER::~SERV_LISTENER()
 {
-    if (users)
+    if (m_users)
     {
-        users_free(users);
+        users_free(m_users);
     }
 
-    if (listener)
+    if (m_listener)
     {
-        dcb_close(listener);
+        dcb_close(m_listener);
     }
 
-    SSL_LISTENER_free(ssl);
+    SSL_LISTENER_free(m_ssl);
 }
 
 SListener listener_alloc(SERVICE* service,
@@ -120,41 +122,41 @@ void listener_free(const SListener& listener)
     all_listeners.remove(listener);
 }
 
-void listener_destroy(const SListener& listener)
+void SERV_LISTENER::close()
 {
-    listener_set_active(listener, false);
-    listener_stop(listener);
+    deactivate();
+    stop();
 
     // TODO: This is not pretty but it works, revise when listeners are refactored. This is
     // thread-safe as the listener is freed on the same thread that closes the socket.
-    close(listener->listener->fd);
-    listener->listener->fd = -1;
+    ::close(m_listener->fd);
+    m_listener->fd = -1;
 }
 
-bool listener_stop(const SListener& listener)
+bool SERV_LISTENER::stop()
 {
     bool rval = false;
-    mxb_assert(listener->listener);
+    mxb_assert(m_listener);
 
-    if (listener->listener->session->state == SESSION_STATE_LISTENER
-        && poll_remove_dcb(listener->listener) == 0)
+    if (m_listener->session->state == SESSION_STATE_LISTENER
+        && poll_remove_dcb(m_listener) == 0)
     {
-        listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+        m_listener->session->state = SESSION_STATE_LISTENER_STOPPED;
         rval = true;
     }
 
     return rval;
 }
 
-bool listener_start(const SListener& listener)
+bool SERV_LISTENER::start()
 {
     bool rval = true;
-    mxb_assert(listener->listener);
+    mxb_assert(m_listener);
 
-    if (listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED
-        && poll_add_dcb(listener->listener) == 0)
+    if (m_listener->session->state == SESSION_STATE_LISTENER_STOPPED
+        && poll_add_dcb(m_listener) == 0)
     {
-        listener->listener->session->state = SESSION_STATE_LISTENER;
+        m_listener->session->state = SESSION_STATE_LISTENER;
         rval = true;
     }
 
@@ -168,7 +170,7 @@ SListener listener_find(const std::string& name)
 
     for (const auto& a : all_listeners)
     {
-        if (listener_is_active(a) && a->name == name)
+        if (a->is_active() && a->name() == name)
         {
             rval = a;
             break;
@@ -185,7 +187,7 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
 
     for (const auto& a : all_listeners)
     {
-        if (listener_is_active(a) && a->service == service)
+        if (a->is_active() && a->service() == service)
         {
             rval.push_back(a);
         }
@@ -490,7 +492,7 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_listener_config(const SListener& listener, const char* filename)
+bool SERV_LISTENER::create_listener_config(const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -498,32 +500,32 @@ static bool create_listener_config(const SListener& listener, const char* filena
     {
         MXS_ERROR("Failed to open file '%s' when serializing listener '%s': %d, %s",
                   filename,
-                  listener->name.c_str(),
+                  m_name.c_str(),
                   errno,
                   mxs_strerror(errno));
         return false;
     }
 
     // TODO: Check for return values on all of the dprintf calls
-    dprintf(file, "[%s]\n", listener->name.c_str());
+    dprintf(file, "[%s]\n", m_name.c_str());
     dprintf(file, "type=listener\n");
-    dprintf(file, "protocol=%s\n", listener->protocol.c_str());
-    dprintf(file, "service=%s\n", listener->service->name);
-    dprintf(file, "address=%s\n", listener->address.c_str());
-    dprintf(file, "port=%u\n", listener->port);
-    dprintf(file, "authenticator=%s\n", listener->authenticator.c_str());
+    dprintf(file, "protocol=%s\n", m_protocol.c_str());
+    dprintf(file, "service=%s\n", m_service->name);
+    dprintf(file, "address=%s\n", m_address.c_str());
+    dprintf(file, "port=%u\n", m_port);
+    dprintf(file, "authenticator=%s\n", m_authenticator.c_str());
 
-    if (!listener->auth_options.empty())
+    if (!m_auth_options.empty())
     {
-        dprintf(file, "authenticator_options=%s\n", listener->auth_options.c_str());
+        dprintf(file, "authenticator_options=%s\n", m_auth_options.c_str());
     }
 
-    if (listener->ssl)
+    if (m_ssl)
     {
-        write_ssl_config(file, listener->ssl);
+        write_ssl_config(file, m_ssl);
     }
 
-    close(file);
+    ::close(file);
 
     return true;
 }
@@ -536,7 +538,7 @@ bool listener_serialize(const SListener& listener)
              sizeof(filename),
              "%s/%s.cnf.tmp",
              get_config_persistdir(),
-             listener->name.c_str());
+             listener->name());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -545,7 +547,7 @@ bool listener_serialize(const SListener& listener)
                   errno,
                   mxs_strerror(errno));
     }
-    else if (create_listener_config(listener, filename))
+    else if (listener->create_listener_config(filename))
     {
         char final_filename[PATH_MAX];
         strcpy(final_filename, filename);
@@ -570,35 +572,35 @@ bool listener_serialize(const SListener& listener)
     return rval;
 }
 
-json_t* listener_to_json(const SListener& listener)
+json_t* SERV_LISTENER::to_json() const
 {
     json_t* param = json_object();
-    json_object_set_new(param, "address", json_string(listener->address.c_str()));
-    json_object_set_new(param, "port", json_integer(listener->port));
-    json_object_set_new(param, "protocol", json_string(listener->protocol.c_str()));
-    json_object_set_new(param, "authenticator", json_string(listener->authenticator.c_str()));
-    json_object_set_new(param, "auth_options", json_string(listener->auth_options.c_str()));
+    json_object_set_new(param, "address", json_string(m_address.c_str()));
+    json_object_set_new(param, "port", json_integer(m_port));
+    json_object_set_new(param, "protocol", json_string(m_protocol.c_str()));
+    json_object_set_new(param, "authenticator", json_string(m_authenticator.c_str()));
+    json_object_set_new(param, "auth_options", json_string(m_auth_options.c_str()));
 
-    if (listener->ssl)
+    if (m_ssl)
     {
         json_t* ssl = json_object();
 
-        const char* ssl_method = ssl_method_type_to_string(listener->ssl->ssl_method_type);
+        const char* ssl_method = ssl_method_type_to_string(m_ssl->ssl_method_type);
         json_object_set_new(ssl, "ssl_version", json_string(ssl_method));
-        json_object_set_new(ssl, "ssl_cert", json_string(listener->ssl->ssl_cert));
-        json_object_set_new(ssl, "ssl_ca_cert", json_string(listener->ssl->ssl_ca_cert));
-        json_object_set_new(ssl, "ssl_key", json_string(listener->ssl->ssl_key));
+        json_object_set_new(ssl, "ssl_cert", json_string(m_ssl->ssl_cert));
+        json_object_set_new(ssl, "ssl_ca_cert", json_string(m_ssl->ssl_ca_cert));
+        json_object_set_new(ssl, "ssl_key", json_string(m_ssl->ssl_key));
 
         json_object_set_new(param, "ssl", ssl);
     }
 
     json_t* attr = json_object();
-    json_object_set_new(attr, CN_STATE, json_string(listener_state_to_string(listener)));
+    json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
-    if (listener->listener->authfunc.diagnostic_json)
+    if (m_listener->authfunc.diagnostic_json)
     {
-        json_t* diag = listener->listener->authfunc.diagnostic_json(listener.get());
+        json_t* diag = m_listener->authfunc.diagnostic_json(this);
 
         if (diag)
         {
@@ -607,30 +609,68 @@ json_t* listener_to_json(const SListener& listener)
     }
 
     json_t* rval = json_object();
-    json_object_set_new(rval, CN_ID, json_string(listener->name.c_str()));
+    json_object_set_new(rval, CN_ID, json_string(m_name.c_str()));
     json_object_set_new(rval, CN_TYPE, json_string(CN_LISTENERS));
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
 
     return rval;
 }
 
-void listener_set_active(const SListener& listener, bool active)
+void SERV_LISTENER::deactivate()
 {
-    atomic_store_int32(&listener->active, active ? 1 : 0);
+    m_active = false;
 }
 
-bool listener_is_active(const SListener& listener)
+bool SERV_LISTENER::is_active() const
 {
-    return atomic_load_int32(&listener->active);
+    return m_active;
 }
 
-const char* listener_state_to_string(const SListener& listener)
+const char* SERV_LISTENER::name() const
 {
-    mxb_assert(listener);
+    return m_name.c_str();
+}
 
-    if (listener->listener && listener->listener->session)
+const char* SERV_LISTENER::address() const
+{
+    return m_address.c_str();
+}
+
+uint16_t SERV_LISTENER::port() const
+{
+    return m_port;
+}
+
+SERVICE* SERV_LISTENER::service() const
+{
+    return m_service;
+}
+
+const char* SERV_LISTENER::authenticator() const
+{
+    return m_authenticator.c_str();
+}
+
+const char* SERV_LISTENER::protocol() const
+{
+    return m_protocol.c_str();
+}
+
+void* SERV_LISTENER::auth_instance() const
+{
+    return m_auth_instance;
+}
+
+SSL_LISTENER* SERV_LISTENER::ssl() const
+{
+    return m_ssl;
+}
+
+const char* SERV_LISTENER::state() const
+{
+    if (m_listener && m_listener->session)
     {
-        switch (listener->listener->session->state)
+        switch (m_listener->session->state)
         {
         case SESSION_STATE_LISTENER_STOPPED:
             return "Stopped";
@@ -647,4 +687,132 @@ const char* listener_state_to_string(const SListener& listener)
     {
         return "Failed";
     }
+}
+
+void SERV_LISTENER::print_users(DCB* dcb)
+{
+    if (m_listener && m_listener->authfunc.diagnostic)
+    {
+        dcb_printf(dcb, "User names (%s): ", name());
+
+        m_listener->authfunc.diagnostic(dcb, this);
+
+        dcb_printf(dcb, "\n");
+    }
+}
+
+int SERV_LISTENER::load_users()
+{
+    int rval = MXS_AUTH_LOADUSERS_OK;
+
+    if (m_listener && m_listener->authfunc.loadusers)
+    {
+        rval = m_listener->authfunc.loadusers(this);
+    }
+
+    return rval;
+}
+
+struct users* SERV_LISTENER::users() const
+{
+    return m_users;
+}
+
+
+void SERV_LISTENER::set_users(struct users* u)
+{
+    m_users = u;
+}
+
+bool SERV_LISTENER::listen()
+{
+    m_listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, this, m_service);
+
+    if (!m_listener)
+    {
+        MXS_ERROR("Failed to create listener for service %s.", m_service->name);
+        return false;
+    }
+
+    MXS_PROTOCOL* funcs = (MXS_PROTOCOL*)load_module(protocol(), MODULE_PROTOCOL);
+
+    if (!funcs)
+    {
+        MXS_ERROR("Unable to load protocol module %s. Listener for service %s not started.",
+                  protocol(), m_service->name);
+        return false;
+    }
+
+    memcpy(&(m_listener->func), funcs, sizeof(MXS_PROTOCOL));
+
+    if (m_authenticator.empty())
+    {
+        m_authenticator = m_listener->func.auth_default();
+    }
+
+    MXS_AUTHENTICATOR* authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator(), MODULE_AUTHENTICATOR);
+
+    if (!authfuncs)
+    {
+        MXS_ERROR("Failed to load authenticator module '%s' for listener '%s'", authenticator(), name());
+        return false;
+    }
+
+    // Add protocol and authenticator capabilities from the listener
+    const MXS_MODULE* proto_mod = get_module(protocol(), MODULE_PROTOCOL);
+    const MXS_MODULE* auth_mod = get_module(authenticator(), MODULE_AUTHENTICATOR);
+    mxb_assert(proto_mod && auth_mod);
+
+    // Note: This isn't good: we modify the service from a listener and the service itself should do this.
+    m_service->capabilities |= proto_mod->module_capabilities | auth_mod->module_capabilities;
+
+    memcpy(&m_listener->authfunc, authfuncs, sizeof(MXS_AUTHENTICATOR));
+
+    /**
+     * Normally, we'd allocate the DCB specific authentication data. As the
+     * listeners aren't normal DCBs, we can skip that.
+     */
+    std::stringstream ss;
+    ss << m_address << "|" << m_port;
+    auto config_bind = ss.str();
+
+    /** Load the authentication users before before starting the listener */
+    if (m_listener->authfunc.loadusers)
+    {
+        switch (m_listener->authfunc.loadusers(this))
+        {
+        case MXS_AUTH_LOADUSERS_FATAL:
+            MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
+                      "service is not started.", m_service->name, name());
+            return 0;
+
+        case MXS_AUTH_LOADUSERS_ERROR:
+            MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
+                        " might not work.", m_service->name, name());
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    if (m_listener->func.listen(m_listener, &config_bind[0]))
+    {
+        m_listener->session = session_alloc(m_service, m_listener);
+
+        if (m_listener->session != NULL)
+        {
+            m_listener->session->state = SESSION_STATE_LISTENER;
+        }
+        else
+        {
+            MXS_ERROR("[%s] Failed to create listener session.", m_service->name);
+        }
+    }
+    else
+    {
+        MXS_ERROR("[%s] Failed to listen on %s", m_service->name, config_bind.c_str());
+    }
+
+    return true;
 }
