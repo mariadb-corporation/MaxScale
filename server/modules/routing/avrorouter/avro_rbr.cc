@@ -588,7 +588,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
     }
 
     /** Number of columns in the table */
-    uint64_t ncolumns = mxs_leint_consume(&ptr);
+    uint64_t ncolumns = mxq::leint_consume(&ptr);
 
     /** If full row image is used, all columns are present. Currently only full
      * row image is supported and thus the bitfield should be all ones. In

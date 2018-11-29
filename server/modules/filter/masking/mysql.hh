@@ -37,7 +37,7 @@ public:
      */
     LEncInt(uint8_t* pData)
     {
-        m_value = mxs_leint_value(pData);
+        m_value = mxq::leint_value(pData);
     }
 
     /**
@@ -49,8 +49,8 @@ public:
      */
     LEncInt(uint8_t** ppData)
     {
-        size_t nBytes = mxs_leint_bytes(*ppData);
-        m_value = mxs_leint_value(*ppData);
+        size_t nBytes = mxq::leint_bytes(*ppData);
+        m_value = mxq::leint_value(*ppData);
         *ppData += nBytes;
     }
 
@@ -226,7 +226,7 @@ public:
         // NULL is sent as 0xfb. See https://dev.mysql.com/doc/internals/en/com-query-response.html
         if (*pData != 0xfb)
         {
-            m_pString = mxs_lestr_consume(&pData, &m_length);
+            m_pString = mxq::lestr_consume(&pData, &m_length);
         }
         else
         {
@@ -247,7 +247,7 @@ public:
         // NULL is sent as 0xfb. See https://dev.mysql.com/doc/internals/en/com-query-response.html
         if (**ppData != 0xfb)
         {
-            m_pString = mxs_lestr_consume(ppData, &m_length);
+            m_pString = mxq::lestr_consume(ppData, &m_length);
         }
         else
         {

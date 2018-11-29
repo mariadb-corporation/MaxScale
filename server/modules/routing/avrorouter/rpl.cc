@@ -585,15 +585,15 @@ TableMapEvent* table_map_alloc(uint8_t* ptr, uint8_t hdr_len, TableCreateEvent* 
     memcpy(table_name, ptr, table_name_len + 1);
     ptr += table_name_len + 1;
 
-    uint64_t column_count = mxs_leint_value(ptr);
-    ptr += mxs_leint_bytes(ptr);
+    uint64_t column_count = mxq::leint_value(ptr);
+    ptr += mxq::leint_bytes(ptr);
 
     /** Column types */
     uint8_t* column_types = ptr;
     ptr += column_count;
 
     size_t metadata_size = 0;
-    uint8_t* metadata = (uint8_t*)mxs_lestr_consume(&ptr, &metadata_size);
+    uint8_t* metadata = (uint8_t*) mxq::lestr_consume(&ptr, &metadata_size);
     uint8_t* nullmap = ptr;
     size_t nullmap_size = (column_count + 7) / 8;
 

@@ -211,4 +211,14 @@ private:
     mutable ConversionError                  m_error;       /**< Error information */
     std::unordered_map<std::string, int64_t> m_col_indexes; /**< Map of column name -> index */
 };
+
+/** Length-encoded integers */
+size_t   leint_bytes(const uint8_t* ptr);
+uint64_t leint_value(const uint8_t* c);
+uint64_t leint_consume(uint8_t** c);
+
+/** Length-encoded strings */
+char* lestr_consume_dup(uint8_t** c);
+char* lestr_consume(uint8_t** c, size_t* size);
+
 }

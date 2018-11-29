@@ -768,7 +768,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA* csdata)
             {
                 // mxs_leint_bytes() returns the length of the int type field + the size of the
                 // integer.
-                size_t n_bytes = mxs_leint_bytes(&header[4]);
+                size_t n_bytes = mxq::leint_bytes(&header[4]);
 
                 if (MYSQL_HEADER_LEN + n_bytes <= buflen)
                 {
@@ -779,7 +779,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA* csdata)
                                     n_bytes - 1,
                                     &header[MYSQL_HEADER_LEN + 1]);
 
-                    csdata->res.n_totalfields = mxs_leint_value(&header[4]);
+                    csdata->res.n_totalfields = mxq::leint_value(&header[4]);
                     csdata->res.offset += MYSQL_HEADER_LEN + n_bytes;
 
                     csdata->state = MAXROWS_EXPECTING_FIELDS;

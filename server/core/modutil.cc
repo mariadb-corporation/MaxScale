@@ -24,6 +24,7 @@
 #include <functional>
 #include <cctype>
 
+#include <maxsql/mariadb.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
@@ -730,8 +731,8 @@ int modutil_count_signal_packets(GWBUF* reply, int n_found, bool* more_out, modu
                 gwbuf_copy_data(reply, offset + MYSQL_HEADER_LEN + 1, sizeof(data), data);
 
                 uint8_t* ptr = data;
-                ptr += mxs_leint_bytes(ptr);
-                ptr += mxs_leint_bytes(ptr);
+                ptr += mxq::leint_bytes(ptr);
+                ptr += mxq::leint_bytes(ptr);
 
                 uint16_t* status = (uint16_t*)ptr;
                 more = (*status) & SERVER_MORE_RESULTS_EXIST;

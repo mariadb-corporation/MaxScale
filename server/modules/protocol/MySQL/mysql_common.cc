@@ -21,6 +21,7 @@
 #include <sstream>
 #include <map>
 
+#include <maxsql/mariadb.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/modutil.hh>
@@ -1245,8 +1246,8 @@ bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, sizeof(data), data);
 
         uint8_t* ptr = data;
-        ptr += mxs_leint_bytes(ptr);
-        ptr += mxs_leint_bytes(ptr);
+        ptr += mxq::leint_bytes(ptr);
+        ptr += mxq::leint_bytes(ptr);
         uint16_t* status = (uint16_t*)ptr;
         rval = (*status) & SERVER_MORE_RESULTS_EXIST;
     }
@@ -1482,8 +1483,8 @@ void mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_
 
     gwbuf_copy_data(buff, packet_offset, packet_len, local_buf);
     ptr += (MYSQL_HEADER_LEN + 1);  // Header and Command type
-    mxs_leint_consume(&ptr);        // Affected rows
-    mxs_leint_consume(&ptr);        // Last insert-id
+    mxq::leint_consume(&ptr);        // Affected rows
+    mxq::leint_consume(&ptr);        // Last insert-id
     uint16_t server_status = gw_mysql_get_byte2(ptr);
     ptr += 2;   // status
     ptr += 2;   // number of warnings
@@ -1491,19 +1492,18 @@ void mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_
     if (ptr < (local_buf + packet_len))
     {
         size_t size;
-        mxs_lestr_consume(&ptr, &size);     // info
+        mxq::lestr_consume(&ptr, &size);     // info
 
         if (server_status & SERVER_SESSION_STATE_CHANGED)
         {
-            MXB_AT_DEBUG(uint64_t data_size = ) mxs_leint_consume(&ptr);    // total
+            MXB_AT_DEBUG(uint64_t data_size = ) mxq::leint_consume(&ptr);    // total
                                                                             // SERVER_SESSION_STATE_CHANGED
                                                                             // length
             mxb_assert(data_size == packet_len - (ptr - local_buf));
 
             while (ptr < (local_buf + packet_len))
             {
-                enum_session_state_type type =
-                    (enum enum_session_state_type)mxs_leint_consume(&ptr);
+                enum_session_state_type type = (enum enum_session_state_type)mxq::leint_consume(&ptr);
 #if defined (SS_DEBUG)
                 mxb_assert(type <= SESSION_TRACK_TRANSACTION_TYPE);
 #endif
@@ -1511,30 +1511,30 @@ void mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_
                 {
                 case SESSION_TRACK_STATE_CHANGE:
                 case SESSION_TRACK_SCHEMA:
-                    size = mxs_leint_consume(&ptr);     // Length of the overall entity.
+                    size = mxq::leint_consume(&ptr);     // Length of the overall entity.
                     ptr += size;
                     break;
 
                 case SESSION_TRACK_GTIDS:
-                    mxs_leint_consume(&ptr);    // Length of the overall entity.
-                    mxs_leint_consume(&ptr);    // encoding specification
-                    var_value = mxs_lestr_consume_dup(&ptr);
+                    mxq::leint_consume(&ptr);    // Length of the overall entity.
+                    mxq::leint_consume(&ptr);    // encoding specification
+                    var_value = mxq::lestr_consume_dup(&ptr);
                     gwbuf_add_property(buff, MXS_LAST_GTID, var_value);
                     MXS_FREE(var_value);
                     break;
 
                 case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
-                    mxs_leint_consume(&ptr);    // length
-                    var_value = mxs_lestr_consume_dup(&ptr);
+                    mxq::leint_consume(&ptr);    // length
+                    var_value = mxq::lestr_consume_dup(&ptr);
                     gwbuf_add_property(buff, "trx_characteristics", var_value);
                     MXS_FREE(var_value);
                     break;
 
                 case SESSION_TRACK_SYSTEM_VARIABLES:
-                    mxs_leint_consume(&ptr);    // lenth
+                    mxq::leint_consume(&ptr);    // lenth
                     // system variables like autocommit, schema, charset ...
-                    var_name = mxs_lestr_consume_dup(&ptr);
-                    var_value = mxs_lestr_consume_dup(&ptr);
+                    var_name = mxq::lestr_consume_dup(&ptr);
+                    var_value = mxq::lestr_consume_dup(&ptr);
                     gwbuf_add_property(buff, var_name, var_value);
                     MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
                     MXS_FREE(var_name);
@@ -1542,15 +1542,15 @@ void mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_
                     break;
 
                 case SESSION_TRACK_TRANSACTION_TYPE:
-                    mxs_leint_consume(&ptr);    // length
-                    trx_info = mxs_lestr_consume_dup(&ptr);
+                    mxq::leint_consume(&ptr);    // length
+                    trx_info = mxq::lestr_consume_dup(&ptr);
                     MXS_DEBUG("get trx_info:%s", trx_info);
                     gwbuf_add_property(buff, (char*)"trx_state", trx_info);
                     MXS_FREE(trx_info);
                     break;
 
                 default:
-                    mxs_lestr_consume(&ptr, &size);
+                    mxq::lestr_consume(&ptr, &size);
                     MXS_WARNING("recieved unexpecting session track type:%d", type);
                     break;
                 }

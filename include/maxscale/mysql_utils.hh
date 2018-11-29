@@ -19,17 +19,6 @@
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 
-MXS_BEGIN_DECLS
-
-/** Length-encoded integers */
-size_t   mxs_leint_bytes(const uint8_t* ptr);
-uint64_t mxs_leint_value(const uint8_t* c);
-uint64_t mxs_leint_consume(uint8_t** c);
-
-/** Length-encoded strings */
-char* mxs_lestr_consume_dup(uint8_t** c);
-char* mxs_lestr_consume(uint8_t** c, size_t* size);
-
 /**
  * Creates a connection to a MySQL database engine. If necessary, initializes SSL.
  *
@@ -141,5 +130,3 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
                                                 std::string* errmsg_out = nullptr,
                                                 unsigned int* errno_out = nullptr);
 }
-
-MXS_END_DECLS
