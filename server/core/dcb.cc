@@ -105,7 +105,7 @@ static void   dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno);
 static int    gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    gw_write_SSL(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    dcb_log_errors_SSL(DCB* dcb, int ret);
-static int    dcb_accept_one_connection(DCB* dcb, struct sockaddr* client_conn);
+static int    dcb_accept_one_connection(int fd, struct sockaddr* client_conn);
 static int    dcb_listen_create_socket_inet(const char* host, uint16_t port);
 static int    dcb_listen_create_socket_unix(const char* path);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
@@ -2384,22 +2384,21 @@ int dcb_connect_SSL(DCB* dcb)
  * are set before returning the new DCB to the caller, or returning NULL if
  * no new connection could be achieved.
  *
- * @param dcb Listener DCB that has detected new connection request
+ * @param listener Listener that has a new connection request
+ *
  * @return DCB - The new client DCB for the new connection, or NULL if failed
  */
-DCB* dcb_accept(DCB* dcb)
+DCB* dcb_accept(Listener* listener)
 {
     DCB* client_dcb = NULL;
     int c_sock;
     struct sockaddr_storage client_conn;
 
-    if ((c_sock = dcb_accept_one_connection(dcb, (struct sockaddr*)&client_conn)) >= 0)
+    if ((c_sock = dcb_accept_one_connection(listener->m_listener->fd, (struct sockaddr*)&client_conn)) >= 0)
     {
-        dcb->stats.n_accepts++;
-
         configure_network_socket(c_sock, client_conn.ss_family);
 
-        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dcb->listener, dcb->listener->service());
+        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, listener, listener->service());
 
         if (client_dcb == NULL)
         {
@@ -2408,7 +2407,7 @@ DCB* dcb_accept(DCB* dcb)
         }
         else
         {
-            client_dcb->service = dcb->listener->service();
+            client_dcb->service = listener->service();
             client_dcb->session = session_set_dummy(client_dcb);
             client_dcb->fd = c_sock;
 
@@ -2418,7 +2417,7 @@ DCB* dcb_accept(DCB* dcb)
                 // client address
                 client_dcb->ip.ss_family = AF_UNIX;
                 client_dcb->remote = MXS_STRDUP_A("localhost");
-                client_dcb->path = MXS_STRDUP_A(dcb->path);
+                client_dcb->path = MXS_STRDUP_A(listener->address());
             }
             else
             {
@@ -2446,8 +2445,8 @@ DCB* dcb_accept(DCB* dcb)
                 }
             }
 
-            client_dcb->func = dcb->listener->protocol_func();
-            client_dcb->authfunc = dcb->listener->auth_func();
+            client_dcb->func = listener->protocol_func();
+            client_dcb->authfunc = listener->auth_func();
 
             /** Allocate DCB specific authentication data */
             if (client_dcb->authfunc.create
@@ -2460,7 +2459,7 @@ DCB* dcb_accept(DCB* dcb)
             }
 
             /* Register downstream throttling callbacks */
-            if (DCB_THROTTLING_ENABLED(dcb))
+            if (DCB_THROTTLING_ENABLED(client_dcb))
             {
                 dcb_add_callback(client_dcb, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
                 dcb_add_callback(client_dcb, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
@@ -2475,7 +2474,7 @@ DCB* dcb_accept(DCB* dcb)
                 {
                     client_dcb->func.connlimit(client_dcb, client_dcb->service->max_connections);
                 }
-                dcb->session->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
+                client_dcb->session->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
                 dcb_close(client_dcb);
                 client_dcb = NULL;
             }
@@ -2493,14 +2492,16 @@ DCB* dcb_accept(DCB* dcb)
 /**
  * @brief Accept a new client connection, given listener, return file descriptor
  *
- * Up to 10 retries will be attempted in case of non-permanent errors.  Calls
+ * Up to 10 retries will be attempted in case of non-permanent errors. Calls
  * the accept function and analyses the return, logging any errors and making
  * an appropriate return.
  *
- * @param dcb Listener DCB that has detected new connection request
+ * @param fd          File descriptor to accept from
+ * @param client_conn Output where connection information is stored
+ *
  * @return -1 for failure, or a file descriptor for the new connection
  */
-static int dcb_accept_one_connection(DCB* dcb, struct sockaddr* client_conn)
+static int dcb_accept_one_connection(int fd, struct sockaddr* client_conn)
 {
     int c_sock;
 
@@ -2511,9 +2512,7 @@ static int dcb_accept_one_connection(DCB* dcb, struct sockaddr* client_conn)
         int eno = 0;
 
         /* new connection from client */
-        c_sock = accept(dcb->fd,
-                        client_conn,
-                        &client_len);
+        c_sock = accept(fd, client_conn, &client_len);
         eno = errno;
         errno = 0;
 

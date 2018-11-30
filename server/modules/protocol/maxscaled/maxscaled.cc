@@ -352,7 +352,7 @@ static int maxscaled_accept(DCB* listener)
     socklen_t len = sizeof(struct ucred);
     struct ucred ucred;
 
-    while ((client_dcb = dcb_accept(listener)) != NULL)
+    while ((client_dcb = dcb_accept(listener->listener)) != NULL)
     {
         MAXSCALED* maxscaled_protocol = (MAXSCALED*)calloc(1, sizeof(MAXSCALED));
 

@@ -209,6 +209,8 @@ private:
     Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
              const std::string& protocol, const std::string& authenticator,
              const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
+
+    friend DCB* dcb_accept(Listener* listener);
 };
 
 /**

@@ -1397,7 +1397,7 @@ int gw_MySQLAccept(DCB* listener)
 {
     DCB* client_dcb;
 
-    while ((client_dcb = dcb_accept(listener)) != NULL)
+    while ((client_dcb = dcb_accept(listener->listener)) != NULL)
     {
         gw_process_one_new_client(client_dcb);
     }   /**< while client_dcb != NULL */

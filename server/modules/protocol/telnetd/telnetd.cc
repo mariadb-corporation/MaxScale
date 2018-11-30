@@ -281,7 +281,7 @@ static int telnetd_accept(DCB* listener)
     int n_connect = 0;
     DCB* client_dcb;
 
-    while ((client_dcb = dcb_accept(listener)) != NULL)
+    while ((client_dcb = dcb_accept(listener->listener)) != NULL)
     {
         TELNETD* telnetd_protocol = NULL;
 

@@ -260,7 +260,7 @@ typedef enum
 void dcb_global_init();
 
 int  dcb_write(DCB*, GWBUF*);
-DCB* dcb_accept(DCB* listener);
+DCB* dcb_accept(Listener* listener);
 DCB* dcb_alloc(dcb_role_t, Listener*, SERVICE* service);
 DCB* dcb_connect(struct server*, struct session*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
