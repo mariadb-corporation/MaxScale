@@ -182,11 +182,9 @@ struct DCB : public MXB_POLL_DATA
     int                     fd = DCBFD_CLOSED;                  /**< The descriptor */
     dcb_state_t             state = DCB_STATE_ALLOC;            /**< Current descriptor state */
     SSL_STATE               ssl_state = SSL_HANDSHAKE_UNKNOWN;  /**< Current state of SSL if in use */
-    int                     flags = 0;                          /**< DCB flags */
     char*                   remote = nullptr;                   /**< Address of remote end */
     char*                   user = nullptr;                     /**< User name for connection */
     struct sockaddr_storage ip;                                 /**< remote IPv4/IPv6 address */
-    char*                   protoname = nullptr;                /**< Name of the protocol */
     void*                   protocol = nullptr;                 /**< The protocol specific state */
     size_t                  protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  protocol_bytes_processed = 0;       /**< How many bytes have been read */

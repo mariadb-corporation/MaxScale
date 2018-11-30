@@ -1194,9 +1194,6 @@ static int gw_read_finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capa
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
     int return_code = 0;
 
-    /** Reset error handler when routing of the new query begins */
-    dcb->dcb_errhandle_called = false;
-
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
         || proto->current_command == MXS_COM_CHANGE_USER)
     {

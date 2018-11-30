@@ -195,7 +195,6 @@ DCB::~DCB()
         SSL_free(ssl);
     }
 
-    MXS_FREE(protoname);
     MXS_FREE(remote);
     MXS_FREE(user);
     MXS_FREE(path);
@@ -371,7 +370,6 @@ DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
         return NULL;
     }
     memcpy(&(dcb->func), funcs, sizeof(MXS_PROTOCOL));
-    dcb->protoname = MXS_STRDUP_A(protocol);
 
     if (session->client_dcb->remote)
     {
@@ -1252,7 +1250,6 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         && dcb->server->persistpoolmax
         && (dcb->server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
-        && !(dcb->flags & DCBF_HUNG)
         && dcb_persistent_clean_count(dcb, owner->id(), false) < dcb->server->persistpoolmax
         && mxb::atomic::load(&dcb->server->stats.n_persistent) < dcb->server->persistpoolmax)
     {
@@ -1295,19 +1292,7 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
         return true;
     }
-    else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER && dcb->server)
-    {
-        MXS_DEBUG("Not adding DCB %p to persistent pool, "
-                  "user %s, max for pool %ld, error handle called %s, hung flag %s, "
-                  "server status %lu, pool count %d.",
-                  dcb,
-                  dcb->user ? dcb->user : "",
-                  dcb->server->persistpoolmax,
-                  dcb->dcb_errhandle_called ? "true" : "false",
-                  (dcb->flags & DCBF_HUNG) ? "true" : "false",
-                  dcb->server->status,
-                  dcb->server->stats.n_persistent);
-    }
+
     return false;
 }
 
@@ -1329,9 +1314,9 @@ void printDCB(DCB* dcb)
     {
         printf("\tUsername:             %s\n", dcb->user);
     }
-    if (dcb->protoname)
+    if (dcb->listener)
     {
-        printf("\tProtocol:             %s\n", dcb->protoname);
+        printf("\tProtocol:             %s\n", dcb->listener->protocol());
     }
     if (dcb->writeq)
     {
@@ -1437,11 +1422,9 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
                    "\tUsername:           %s\n",
                    dcb->user);
     }
-    if (dcb->protoname)
+    if (dcb->listener)
     {
-        dcb_printf(pdcb,
-                   "\tProtocol:           %s\n",
-                   dcb->protoname);
+        dcb_printf(pdcb, "\tProtocol:           %s\n", dcb->listener->protocol());
     }
     if (dcb->writeq)
     {
@@ -1595,11 +1578,9 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
                    "\tUsername:                   %s\n",
                    dcb->user);
     }
-    if (dcb->protoname)
+    if (dcb->listener)
     {
-        dcb_printf(pdcb,
-                   "\tProtocol:                   %s\n",
-                   dcb->protoname);
+        dcb_printf(pdcb, "\tProtocol:                   %s\n", dcb->listener->protocol());
     }
 
     if (dcb->session && dcb->session->state != SESSION_STATE_DUMMY)
@@ -1982,10 +1963,9 @@ static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct server* server)
 
     for (DCB* dcb = this_unit.all_dcbs[id]; dcb; dcb = dcb->thread.next)
     {
-        if (dcb->state == DCB_STATE_POLLING && dcb->server
-            && dcb->server == server)
+        if (dcb->state == DCB_STATE_POLLING && dcb->server && dcb->server == server)
         {
-            dcb->flags |= DCBF_HUNG;
+            dcb->dcb_errhandle_called = true;
             dcb->func.hangup(dcb);
         }
     }
@@ -3084,9 +3064,10 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
-        if ((dcb->flags & DCBF_HUNG) == 0)
+
+        if (!dcb->dcb_errhandle_called)
         {
-            dcb->flags |= DCBF_HUNG;
+            dcb->dcb_errhandle_called = true;
 
             if (dcb_session_check(dcb, "hangup EPOLLHUP"))
             {
@@ -3111,9 +3092,9 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
-        if ((dcb->flags & DCBF_HUNG) == 0)
+        if (!dcb->dcb_errhandle_called)
         {
-            dcb->flags |= DCBF_HUNG;
+            dcb->dcb_errhandle_called = true;
 
             if (dcb_session_check(dcb, "hangup EPOLLRDHUP"))
             {

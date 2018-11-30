@@ -265,14 +265,12 @@ DCB* server_get_persistent(SERVER* server, const char* user, const char* ip, con
         while (dcb)
         {
             if (dcb->user
-                && dcb->protoname
                 && dcb->remote
                 && ip
                 && !dcb->dcb_errhandle_called
-                && !(dcb->flags & DCBF_HUNG)
                 && 0 == strcmp(dcb->user, user)
                 && 0 == strcmp(dcb->remote, ip)
-                && 0 == strcmp(dcb->protoname, protocol))
+                && 0 == strcmp(dcb->listener->protocol(), protocol))
             {
                 if (NULL == previous)
                 {
@@ -288,20 +286,7 @@ DCB* server_get_persistent(SERVER* server, const char* user, const char* ip, con
                 mxb::atomic::add(&server->stats.n_current, 1, mxb::atomic::RELAXED);
                 return dcb;
             }
-            else
-            {
-                MXS_DEBUG("%lu [server_get_persistent] Rejected dcb "
-                          "%p from pool, user %s looking for %s, protocol %s "
-                          "looking for %s, hung flag %s, error handle called %s.",
-                          pthread_self(),
-                          dcb,
-                          dcb->user ? dcb->user : "NULL",
-                          user,
-                          dcb->protoname ? dcb->protoname : "NULL",
-                          protocol,
-                          (dcb->flags & DCBF_HUNG) ? "true" : "false",
-                          dcb->dcb_errhandle_called ? "true" : "false");
-            }
+
             previous = dcb;
             dcb = dcb->nextpersistent;
         }

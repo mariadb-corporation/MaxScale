@@ -356,18 +356,6 @@ void RRRouter::handle_error(RRRouterSession* rses,
                             mxs_error_action_t action,
                             bool* succp)
 {
-    /* Don't handle same error twice on same DCB */
-    if (problem_dcb->dcb_errhandle_called)
-    {
-        /* Assume that previous call succeed. */
-        *succp = true;
-        return;
-    }
-    else
-    {
-        problem_dcb->dcb_errhandle_called = true;
-    }
-
     MXS_SESSION* session = problem_dcb->session;
     DCB* client_dcb = session->client_dcb;
     mxs_session_state_t sesstate = session->state;

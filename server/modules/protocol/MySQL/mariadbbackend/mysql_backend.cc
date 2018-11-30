@@ -482,7 +482,7 @@ static int gw_read_backend_event(DCB* dcb)
     {
         /** If a DCB gets a read event when it's in the persistent pool, it is
          * treated as if it were an error. */
-        dcb->dcb_errhandle_called = true;
+        poll_fake_hangup_event(dcb);
         return 0;
     }
 
@@ -603,7 +603,6 @@ static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* err
                             &succp);
 
         gwbuf_free(errbuf);
-        dcb->dcb_errhandle_called = true;
     }
     /**
      * If error handler fails it means that routing session can't continue
@@ -1352,27 +1351,26 @@ static int gw_backend_hangup(DCB* dcb)
 {
     MXS_SESSION* session = dcb->session;
 
-    if (dcb->persistentstart)
+    if (!dcb->persistentstart)
     {
-        dcb->dcb_errhandle_called = true;
-    }
-    else if (session->state != SESSION_STATE_ROUTER_READY)
-    {
-        int error;
-        int len = sizeof(error);
-        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
+        if (session->state != SESSION_STATE_ROUTER_READY)
         {
-            if (error != 0 && session->state != SESSION_STATE_STOPPING)
+            int error;
+            int len = sizeof(error);
+            if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
             {
-                MXS_ERROR("Hangup in session that is not ready for routing, "
-                          "Error reported is '%s'.",
-                          mxs_strerror(errno));
+                if (error != 0 && session->state != SESSION_STATE_STOPPING)
+                {
+                    MXS_ERROR("Hangup in session that is not ready for routing, "
+                        "Error reported is '%s'.",
+                              mxs_strerror(errno));
+                }
             }
         }
-    }
-    else
-    {
-        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
+        else
+        {
+            do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
+        }
     }
 
     return 1;
