@@ -1,4 +1,5 @@
 add_library(maxbase STATIC
+  alloc.cc
   atomic.cc
   eventcount.cc
   format.cc

@@ -2404,7 +2404,7 @@ static void errorReply(MXS_ROUTER* instance,
                 {
                     free(router->m_errmsg);
                 }
-                router->m_errmsg = mxs_strdup("#28000 Authentication with master server failed");
+                router->m_errmsg = mxb_strdup("#28000 Authentication with master server failed");
                 /* set mysql_errno */
                 router->m_errno = 1045;
 

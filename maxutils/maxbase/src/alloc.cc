@@ -11,9 +11,10 @@
  * Public License.
  */
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <stdlib.h>
-#include <maxscale/log.h>
+#include <string.h>
+#include <maxbase/log.h>
 
 /**
  * @brief Allocates memory; behaves exactly like `malloc`.
@@ -27,16 +28,14 @@
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void* mxs_malloc(size_t size    /*, const char *caller*/)
+void* mxb_malloc(size_t size    /*, const char *caller*/)
 {
     void* ptr = malloc(size);
-
     if (!ptr)
     {
         // MXS_OOM_MESSAGE(caller);
-        MXS_OOM();
+        MXB_OOM();
     }
-
     return ptr;
 }
 
@@ -53,16 +52,14 @@ void* mxs_malloc(size_t size    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void* mxs_calloc(size_t nmemb, size_t size    /*, const char *caller*/)
+void* mxb_calloc(size_t nmemb, size_t size    /*, const char *caller*/)
 {
     void* ptr = calloc(nmemb, size);
-
     if (!ptr)
     {
         // MXS_OOM_MESSAGE(caller);
-        MXS_OOM();
+        MXB_OOM();
     }
-
     return ptr;
 }
 
@@ -81,16 +78,14 @@ void* mxs_calloc(size_t nmemb, size_t size    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void* mxs_realloc(void* ptr, size_t size    /*, const char *caller*/)
+void* mxb_realloc(void* ptr, size_t size    /*, const char *caller*/)
 {
     ptr = realloc(ptr, size);
-
     if (!ptr)
     {
         // MXS_OOM_MESSAGE(caller);
-        MXS_OOM();
+        MXB_OOM();
     }
-
     return ptr;
 }
 
@@ -105,16 +100,14 @@ void* mxs_realloc(void* ptr, size_t size    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char* mxs_strdup(const char* s1    /*, const char *caller*/)
+char* mxb_strdup(const char* s1    /*, const char *caller*/)
 {
     char* s2 = strdup(s1);
-
     if (!s2)
     {
         // MXS_OOM_MESSAGE(caller);
-        MXS_OOM();
+        MXB_OOM();
     }
-
     return s2;
 }
 
@@ -130,16 +123,14 @@ char* mxs_strdup(const char* s1    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char* mxs_strndup(const char* s1, size_t n    /*, const char *caller*/)
+char* mxb_strndup(const char* s1, size_t n    /*, const char *caller*/)
 {
     char* s2 = strndup(s1, n);
-
     if (!s2)
     {
         // MXS_OOM_MESSAGE(caller);
-        MXS_OOM();
+        MXB_OOM();
     }
-
     return s2;
 }
 
@@ -155,7 +146,7 @@ char* mxs_strndup(const char* s1, size_t n    /*, const char *caller*/)
  * @param ptr Pointer to the memory to be freed.
  * @param caller The name of the function calling this function.
  */
-void mxs_free(void* ptr    /*, const char *caller*/)
+void mxb_free(void* ptr    /*, const char *caller*/)
 {
     free(ptr);
 }
@@ -176,15 +167,13 @@ void mxs_free(void* ptr    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char* mxs_strdup_a(const char* s1    /*, const char *caller*/)
+char* mxb_strdup_a(const char* s1    /*, const char *caller*/)
 {
-    char* s2 = mxs_strdup(s1    /*, caller*/);
-
+    char* s2 = mxb_strdup(s1    /*, caller*/);
     if (!s2)
     {
         abort();
     }
-
     return s2;
 }
 
@@ -205,14 +194,12 @@ char* mxs_strdup_a(const char* s1    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char* mxs_strndup_a(const char* s1, size_t n    /*, const char *caller*/)
+char* mxb_strndup_a(const char* s1, size_t n    /*, const char *caller*/)
 {
-    char* s2 = mxs_strndup(s1, n    /*, caller*/);
-
+    char* s2 = mxb_strndup(s1, n    /*, caller*/);
     if (!s2)
     {
         abort();
     }
-
     return s2;
 }

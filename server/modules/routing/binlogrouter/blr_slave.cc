@@ -7763,12 +7763,12 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE* router,
             v_len = strlen(word);
             if (v_len > 6)
             {
-                new_val = mxs_strndup_a(word, v_len - 6);
+                new_val = mxb_strndup_a(word, v_len - 6);
                 slave->heartbeat = atoi(new_val) / 1000;
             }
             else
             {
-                new_val = mxs_strndup_a(word, v_len);
+                new_val = mxb_strndup_a(word, v_len);
                 slave->heartbeat = atoi(new_val) / 1000000;
             }
 

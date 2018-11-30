@@ -3083,10 +3083,10 @@ private:
     {
         mxb_assert(m_refs == 0);
 
-        std::for_each(m_table_names.begin(), m_table_names.end(), mxs_free);
-        std::for_each(m_table_fullnames.begin(), m_table_fullnames.end(), mxs_free);
+        std::for_each(m_table_names.begin(), m_table_names.end(), mxb_free);
+        std::for_each(m_table_fullnames.begin(), m_table_fullnames.end(), mxb_free);
         free(m_zCreated_table_name);
-        std::for_each(m_database_names.begin(), m_database_names.end(), mxs_free);
+        std::for_each(m_database_names.begin(), m_database_names.end(), mxb_free);
         free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
         std::for_each(m_field_infos.begin(), m_field_infos.end(), finish_field_info);

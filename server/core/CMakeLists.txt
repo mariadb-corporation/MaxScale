@@ -1,7 +1,6 @@
 add_library(maxscale-common SHARED
   admin.cc
   adminusers.cc
-  alloc.cc
   authenticator.cc
   backend.cc
   buffer.cc
