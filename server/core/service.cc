@@ -1304,8 +1304,14 @@ std::unique_ptr<ResultSet> serviceGetList()
  */
 static bool service_internal_restart(void* data)
 {
-    Service* service = (Service*)data;
-    serviceStartAllPorts(service);
+    auto func = [=]() {
+        Service* service = static_cast<Service*>(data);
+        serviceStartAllPorts(service);
+    };
+
+    auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    worker->execute(func, nullptr, mxs::RoutingWorker::EXECUTE_AUTO);
+
     return false;
 }
 
