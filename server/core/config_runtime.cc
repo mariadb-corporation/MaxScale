@@ -13,7 +13,7 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include "internal/config_runtime.h"
+#include "internal/config_runtime.hh"
 
 #include <algorithm>
 #include <cinttypes>

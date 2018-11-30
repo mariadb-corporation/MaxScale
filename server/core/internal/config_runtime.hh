@@ -13,14 +13,14 @@
 #pragma once
 
 /**
- * @file config_runtime.h  - Functions for runtime configuration modifications
+ * @file config_runtime.hh  - Functions for runtime configuration modifications
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <maxscale/adminusers.h>
-#include <maxscale/monitor.h>
-#include <maxscale/server.h>
+#include <maxscale/monitor.hh>
+#include <maxscale/server.hh>
 #include <maxscale/service.hh>
 
 #include "service.hh"

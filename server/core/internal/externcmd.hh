@@ -12,13 +12,12 @@
  */
 #pragma once
 
-#include <maxscale/cdefs.h>
-
+#include <maxscale/ccdefs.hh>
 #include <unistd.h>
 
-MXS_BEGIN_DECLS
-
 #define MAXSCALE_EXTCMD_ARG_MAX 256
+
+MXS_BEGIN_DECLS
 
 typedef struct extern_cmd_t
 {

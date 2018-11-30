@@ -45,7 +45,7 @@
 #include <mysqld_error.h>
 
 #include "internal/config.hh"
-#include "internal/externcmd.h"
+#include "internal/externcmd.hh"
 #include "internal/monitor.hh"
 #include "internal/modules.h"
 

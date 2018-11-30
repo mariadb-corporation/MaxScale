@@ -26,7 +26,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/routingworker.hh>
 
-#include "internal/config_runtime.h"
+#include "internal/config_runtime.hh"
 #include "internal/filter.hh"
 #include "internal/httprequest.hh"
 #include "internal/httpresponse.hh"

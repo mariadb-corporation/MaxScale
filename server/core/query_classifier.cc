@@ -29,7 +29,7 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/buffer.hh>
 
-#include "internal/config_runtime.h"
+#include "internal/config_runtime.hh"
 #include "internal/modules.h"
 #include "internal/trxboundaryparser.hh"
 

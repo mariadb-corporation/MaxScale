@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "internal/externcmd.h"
+#include "internal/externcmd.hh"
 
 #include <ctype.h>
 #include <errno.h>

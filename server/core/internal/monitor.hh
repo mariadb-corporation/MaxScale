@@ -18,7 +18,7 @@
 
 #include <maxscale/monitor.hh>
 #include <maxscale/resultset.hh>
-#include "externcmd.h"
+#include "externcmd.hh"
 
 #define MON_ARG_MAX 8192
 

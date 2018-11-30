@@ -57,7 +57,7 @@
 #include <debugcli.h>
 
 #include "../../../core/internal/config.hh"
-#include "../../../core/internal/config_runtime.h"
+#include "../../../core/internal/config_runtime.hh"
 #include "../../../core/internal/maxscale.h"
 #include "../../../core/internal/modules.h"
 #include "../../../core/internal/monitor.hh"
