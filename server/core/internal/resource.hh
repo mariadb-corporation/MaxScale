@@ -27,7 +27,7 @@
 #include "monitor.hh"
 #include "service.hh"
 #include "filter.hh"
-#include "session.h"
+#include "session.hh"
 
 typedef HttpResponse (* ResourceCallback)(const HttpRequest& request);
 

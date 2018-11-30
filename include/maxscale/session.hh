@@ -12,7 +12,9 @@
  */
 #pragma once
 
+#include <maxscale/ccdefs.hh>
 #include <maxscale/utils.hh>
+#include <maxscale/session.h>
 
 namespace maxscale
 {

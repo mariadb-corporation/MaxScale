@@ -34,7 +34,7 @@
 #include "internal/monitor.hh"
 #include "internal/query_classifier.hh"
 #include "internal/service.hh"
-#include "internal/session.h"
+#include "internal/session.hh"
 
 using std::list;
 using std::map;

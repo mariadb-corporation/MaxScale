@@ -53,7 +53,6 @@
 
 #include "../../../core/internal/modules.hh"
 #include "../../../core/internal/monitor.hh"
-#include "../../../core/internal/session.h"
 #include "../../../core/internal/session.hh"
 #include "../../../core/internal/poll.hh"
 
