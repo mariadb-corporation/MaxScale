@@ -28,7 +28,7 @@
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
 // TODO: For monitor_add_parameters
-#include "../../../core/internal/monitor.h"
+#include "../../../core/internal/monitor.hh"
 
 using std::string;
 using maxbase::string_printf;

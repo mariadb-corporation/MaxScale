@@ -37,7 +37,7 @@
 #include "internal/config.hh"
 #include "internal/filter.hh"
 #include "internal/modules.h"
-#include "internal/monitor.h"
+#include "internal/monitor.hh"
 #include "internal/query_classifier.hh"
 
 typedef std::set<std::string>    StringSet;

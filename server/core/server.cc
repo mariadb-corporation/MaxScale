@@ -51,7 +51,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/routingworker.hh>
 
-#include "internal/monitor.h"
+#include "internal/monitor.hh"
 #include "internal/poll.hh"
 #include "internal/config.hh"
 #include "internal/service.hh"

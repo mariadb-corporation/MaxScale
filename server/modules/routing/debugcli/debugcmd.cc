@@ -60,7 +60,7 @@
 #include "../../../core/internal/config_runtime.h"
 #include "../../../core/internal/maxscale.h"
 #include "../../../core/internal/modules.h"
-#include "../../../core/internal/monitor.h"
+#include "../../../core/internal/monitor.hh"
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/session.h"
 #include "../../../core/internal/filter.hh"

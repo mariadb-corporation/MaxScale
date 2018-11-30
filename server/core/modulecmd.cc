@@ -21,7 +21,7 @@
 
 #include "internal/filter.hh"
 #include "internal/modules.h"
-#include "internal/monitor.h"
+#include "internal/monitor.hh"
 
 /** Size of the error buffer */
 #define MODULECMD_ERRBUF_SIZE 512

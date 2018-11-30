@@ -52,7 +52,7 @@
 #include <maxscale/protocol/mysql.h>
 
 #include "../../../core/internal/modules.h"
-#include "../../../core/internal/monitor.h"
+#include "../../../core/internal/monitor.hh"
 #include "../../../core/internal/session.h"
 #include "../../../core/internal/session.hh"
 #include "../../../core/internal/poll.hh"

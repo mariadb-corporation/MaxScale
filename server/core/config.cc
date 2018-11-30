@@ -62,7 +62,7 @@
 #include "internal/event.hh"
 #include "internal/filter.hh"
 #include "internal/modules.h"
-#include "internal/monitor.h"
+#include "internal/monitor.hh"
 #include "internal/service.hh"
 
 using std::set;

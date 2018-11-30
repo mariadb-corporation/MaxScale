@@ -23,7 +23,7 @@
 #include <maxscale/session.h>
 #include <maxscale/json_api.h>
 
-#include "../internal/monitor.h"
+#include "../internal/monitor.hh"
 
 #define TEST(a, b) do {if (!(a)) {printf("%s:%d " b "\n", __FILE__, __LINE__); return 1;}} while (false)
 
