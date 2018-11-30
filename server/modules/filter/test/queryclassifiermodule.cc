@@ -12,7 +12,7 @@
  */
 
 #include "maxscale/queryclassifiermodule.hh"
-#include "../../../core/internal/modules.h"
+#include "../../../core/internal/modules.hh"
 
 namespace maxscale
 {

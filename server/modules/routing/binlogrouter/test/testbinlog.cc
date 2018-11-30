@@ -39,7 +39,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.hh>
-#include "../../../../core/internal/modules.h"
+#include "../../../../core/internal/modules.hh"
 #include "../../../../core/internal/config.hh"
 
 #include <maxscale/protocol/mysql.h>

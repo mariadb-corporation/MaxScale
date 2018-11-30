@@ -39,7 +39,7 @@
 #include <maxscale/json_api.h>
 
 #include "internal/config.hh"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/service.hh"
 
 using std::string;

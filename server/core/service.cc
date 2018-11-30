@@ -59,7 +59,7 @@
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/service.hh"
 #include "internal/maxscale.h"
 

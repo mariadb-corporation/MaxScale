@@ -15,7 +15,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
 
-#include "internal/modules.h"
+#include "internal/modules.hh"
 /**
  * @file authenticator.c - Authenticator module functions
  */

@@ -52,7 +52,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/session.h"
 
 using maxscale::RoutingWorker;

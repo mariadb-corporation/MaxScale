@@ -35,7 +35,7 @@
 #include <maxscale/statistics.hh>
 
 #include "internal/dcb.h"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/poll.hh"
 #include "internal/service.hh"
 

@@ -55,7 +55,7 @@
 #include "internal/poll.hh"
 #include "internal/config.hh"
 #include "internal/service.hh"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 
 
 using maxbase::Worker;

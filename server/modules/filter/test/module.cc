@@ -13,7 +13,7 @@
 
 #include "maxscale/module.hh"
 #include <string>
-#include "../../../core/internal/modules.h"
+#include "../../../core/internal/modules.hh"
 
 using std::auto_ptr;
 

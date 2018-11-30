@@ -30,7 +30,7 @@
 #include <maxscale/buffer.hh>
 
 #include "internal/config_runtime.hh"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/trxboundaryparser.hh"
 
 // #define QC_TRACE_ENABLED

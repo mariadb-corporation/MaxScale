@@ -13,7 +13,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include "maxscale/filtermodule.hh"
-#include "../../../core/internal/modules.h"
+#include "../../../core/internal/modules.hh"
 
 using std::auto_ptr;
 

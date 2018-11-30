@@ -20,7 +20,7 @@
 #include <maxscale/pcre2.h>
 
 #include "internal/filter.hh"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/monitor.hh"
 
 /** Size of the error buffer */

@@ -47,7 +47,7 @@
 #include "internal/config.hh"
 #include "internal/externcmd.hh"
 #include "internal/monitor.hh"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 
 /** Schema version, journals must have a matching version */
 #define MMB_SCHEMA_VERSION 2

@@ -36,7 +36,7 @@
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/query_classifier.hh"
 

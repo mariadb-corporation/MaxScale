@@ -30,7 +30,7 @@
 #include "internal/filter.hh"
 #include "internal/httprequest.hh"
 #include "internal/httpresponse.hh"
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/query_classifier.hh"
 #include "internal/service.hh"
