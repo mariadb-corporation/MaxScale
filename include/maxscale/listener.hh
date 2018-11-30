@@ -27,6 +27,9 @@
 struct dcb;
 class SERVICE;
 
+class Listener;
+using SListener = std::shared_ptr<Listener>;
+
 /**
  * The Listener class is used to link a network port to a service. It defines the name of the
  * protocol module that should be loaded as well as the authenticator that is used.
@@ -35,23 +38,30 @@ class Listener
 {
 public:
 
+    ~Listener();
+
     /**
-     * Creates a new listener that points to a service
+     * Create a new listener
      *
      * @param service       Service where the listener points to
      * @param name          Name of the listener
-     * @param address       The address where the listener listens
-     * @param port          The port on which the listener listens
-     * @param protocol      The protocol module to use
-     * @param authenticator The authenticator module to use
-     * @param auth_opts     Options for the authenticator
-     * @param auth_instance The authenticator instance
-     * @param ssl           The SSL configuration
+     * @param protocol      Protocol module to use
+     * @param address       The address to listen with
+     * @param port          The port to listen on
+     * @param authenticator Name of the authenticator to be used
+     * @param auth_options  Authenticator options
+     * @param ssl           SSL configuration
+     *
+     * @return New listener or nullptr on error
      */
-    Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
-             const std::string& protocol, const std::string& authenticator,
-             const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
-    ~Listener();
+    static SListener create(SERVICE* service,
+                            const std::string& name,
+                            const std::string& protocol,
+                            const std::string& address,
+                            unsigned short port,
+                            const std::string& authenticator,
+                            const std::string& auth_options,
+                            SSL_LISTENER* ssl);
 
     /**
      * Start listening on the configured port
@@ -180,9 +190,24 @@ private:
     struct users*     m_users;          /**< The user data for this listener */
     SERVICE*          m_service;        /**< The service which used by this listener */
     std::atomic<bool> m_active;         /**< True if the port has not been deleted */
-};
 
-using SListener = std::shared_ptr<Listener>;
+    /**
+     * Creates a new listener that points to a service
+     *
+     * @param service       Service where the listener points to
+     * @param name          Name of the listener
+     * @param address       The address where the listener listens
+     * @param port          The port on which the listener listens
+     * @param protocol      The protocol module to use
+     * @param authenticator The authenticator module to use
+     * @param auth_opts     Options for the authenticator
+     * @param auth_instance The authenticator instance
+     * @param ssl           The SSL configuration
+     */
+    Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
+             const std::string& protocol, const std::string& authenticator,
+             const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
+};
 
 /**
  * @brief Serialize a listener to a file
@@ -195,29 +220,6 @@ using SListener = std::shared_ptr<Listener>;
  * @return True if the serialization of the listener was successful, false if it fails
  */
 bool listener_serialize(const SListener& listener);
-
-/**
- * Create a new listener
- *
- * @param service       Service where the listener points to
- * @param name          Name of the listener
- * @param protocol      Protocol module to use
- * @param address       The address to listen with
- * @param port          The port to listen on
- * @param authenticator Name of the authenticator to be used
- * @param auth_options  Authenticator options
- * @param ssl           SSL configuration
- *
- * @return New listener or nullptr on error
- */
-SListener listener_alloc(SERVICE* service,
-                         const char* name,
-                         const char* protocol,
-                         const char* address,
-                         unsigned short port,
-                         const char* authenticator,
-                         const char* auth_options,
-                         SSL_LISTENER* ssl);
 
 /**
  * @brief Free a listener

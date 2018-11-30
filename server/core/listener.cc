@@ -76,35 +76,35 @@ Listener::~Listener()
     SSL_LISTENER_free(m_ssl);
 }
 
-SListener listener_alloc(SERVICE* service,
-                         const char* name,
-                         const char* protocol,
-                         const char* address,
-                         unsigned short port,
-                         const char* authenticator,
-                         const char* auth_options,
-                         SSL_LISTENER* ssl)
+SListener Listener::create(SERVICE* service,
+                           const std::string& name,
+                           const std::string& protocol,
+                           const std::string& address,
+                           unsigned short port,
+                           const std::string& authenticator,
+                           const std::string& auth_options,
+                           SSL_LISTENER* ssl)
 {
-    if (!authenticator)
+    const char* auth = !authenticator.empty() ? authenticator.c_str() :
+        get_default_authenticator(protocol.c_str());
+
+    if (!auth)
     {
-        if ((authenticator = get_default_authenticator(protocol)) == NULL)
-        {
-            MXS_ERROR("No authenticator defined for listener '%s' and could not get "
-                      "default authenticator for protocol '%s'.", name, protocol);
-            return nullptr;
-        }
+        MXS_ERROR("No authenticator defined for listener '%s' and could not get "
+                  "default authenticator for protocol '%s'.", name.c_str(), protocol.c_str());
+        return nullptr;
     }
 
     void* auth_instance = NULL;
 
-    if (!authenticator_init(&auth_instance, authenticator, auth_options))
+    if (!authenticator_init(&auth_instance, auth, auth_options.c_str()))
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for listener '%s'.",
-                  authenticator, name);
+                  auth, name.c_str());
         return nullptr;
     }
 
-    SListener listener(new(std::nothrow) Listener(service, name, address, port, protocol, authenticator,
+    SListener listener(new(std::nothrow) Listener(service, name, address, port, protocol, auth,
                                                   auth_options, auth_instance, ssl));
 
     if (listener)
