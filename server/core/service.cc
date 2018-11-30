@@ -323,7 +323,7 @@ bool service_isvalid(Service* service)
 static int serviceStartPort(Service* service, const SListener& port)
 {
     mxb_assert(service && service->router && service->router_instance);
-    return port->listen();
+    return port->listen(port);
 }
 
 /**
@@ -833,16 +833,6 @@ void Service::update_local_filters()
 const Service::FilterList& Service::get_filters() const
 {
     return *get_local_filters();
-}
-
-void Service::add_listener(const SListener& listener)
-{
-    m_listeners.push_back(listener);
-}
-
-void Service::remove_listener(const SListener& listener)
-{
-    m_listeners.erase(std::remove(m_listeners.begin(), m_listeners.end(), listener), m_listeners.end());
 }
 
 Service* service_internal_find(const char* name)

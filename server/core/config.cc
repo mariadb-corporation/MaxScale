@@ -3892,11 +3892,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
         auto listener = Listener::create(service, obj->object, protocol, socket ? socket : address,
                                          net_port, authenticator, authenticator_options, ssl_info);
 
-        if (listener)
-        {
-            service->add_listener(listener);
-        }
-        else
+        if (!listener)
         {
             ++error_count;
         }

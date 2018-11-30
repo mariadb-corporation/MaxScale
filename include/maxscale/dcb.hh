@@ -26,8 +26,11 @@
 #include <maxscale/protocol.h>
 #include <maxscale/ssl.h>
 
+#include <memory>
+
 class SERVICE;
 class Listener;
+using SListener = std::shared_ptr<Listener>;
 
 MXS_BEGIN_DECLS
 
@@ -174,7 +177,7 @@ typedef enum
  */
 struct DCB : public MXB_POLL_DATA
 {
-    DCB(dcb_role_t role, Listener* listener, SERVICE* service);
+    DCB(dcb_role_t role, const SListener& listener, SERVICE* service);
     ~DCB();
 
     bool                    dcb_errhandle_called = false;   /**< this can be called only once */
@@ -189,7 +192,7 @@ struct DCB : public MXB_POLL_DATA
     size_t                  protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  protocol_bytes_processed = 0;       /**< How many bytes have been read */
     struct session*         session = nullptr;                  /**< The owning session */
-    Listener*               listener = nullptr;                 /**< For a client DCB, the listener data */
+    SListener               listener;                           /**< The origin of the connection */
     MXS_PROTOCOL            func = {};                          /**< Protocol functions for the DCB */
     MXS_AUTHENTICATOR       authfunc = {};                      /**< Authenticator functions for the DCB */
     uint64_t                writeqlen = 0;                      /**< Bytes in writeq */
@@ -260,8 +263,8 @@ typedef enum
 void dcb_global_init();
 
 int  dcb_write(DCB*, GWBUF*);
-DCB* dcb_accept(Listener* listener);
-DCB* dcb_alloc(dcb_role_t, Listener*, SERVICE* service);
+DCB* dcb_accept(const SListener& listener);
+DCB* dcb_alloc(dcb_role_t, const SListener&, SERVICE* service);
 DCB* dcb_connect(struct server*, struct session*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_drain_writeq(DCB*);

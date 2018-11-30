@@ -80,7 +80,7 @@ static int test1()
                                         "localhost",
                                         9876,
                                         "MySQLAuth",
-                                        NULL,
+                                        "",
                                         NULL),
                        "Add Protocol should succeed");
     mxb_assert_message(service_find_listener(service, "", "localhost", 9876),

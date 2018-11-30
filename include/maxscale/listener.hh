@@ -78,7 +78,7 @@ public:
      *
      * @return True if the listener was able to start listening
      */
-    bool listen();
+    bool listen(const SListener& self);
 
     /**
      * Stop the listener
@@ -220,7 +220,7 @@ private:
              const std::string& protocol, const std::string& authenticator,
              const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
 
-    friend DCB* dcb_accept(Listener* listener);
+    friend DCB* dcb_accept(const SListener& listener);
 };
 
 /**

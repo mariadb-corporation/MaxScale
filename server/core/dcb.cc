@@ -160,7 +160,7 @@ static MXB_WORKER* get_dcb_owner(dcb_role_t role)
     return owner;
 }
 
-DCB::DCB(dcb_role_t role, Listener* listener, SERVICE* service)
+DCB::DCB(dcb_role_t role, const SListener& listener, SERVICE* service)
     : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner(role)}
     , dcb_role(role)
     , listener(listener)
@@ -216,12 +216,13 @@ DCB::~DCB()
  * Remaining fields are set from the given parameters, and then the DCB is
  * flagged as ready for use.
  *
- * @param dcb_role_t    The role for the new DCB
- * @param listener      The listener if applicable.
+ * @param role     The role for the new DCB
+ * @param listener The listener if applicable.
+ * @param service  The service which is used
  *
  * @return An available DCB or NULL if none could be allocated.
  */
-DCB* dcb_alloc(dcb_role_t role, Listener* listener, SERVICE* service)
+DCB* dcb_alloc(dcb_role_t role, const SListener& listener, SERVICE* service)
 {
     return new(std::nothrow) DCB(role, listener, service);
 }
@@ -2314,7 +2315,7 @@ int dcb_connect_SSL(DCB* dcb)
  *
  * @return DCB - The new client DCB for the new connection, or NULL if failed
  */
-DCB* dcb_accept(Listener* listener)
+DCB* dcb_accept(const SListener& listener)
 {
     DCB* client_dcb = NULL;
     int c_sock;

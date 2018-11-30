@@ -136,6 +136,9 @@ void Listener::destroy(const SListener& listener)
     listener->m_listener->fd = -1;
     listener->m_state = DESTROYED;
 
+    // This frees the self-reference the listener's own DCB has to itself
+    listener->m_listener->listener.reset();
+
     std::lock_guard<std::mutex> guard(listener_lock);
     all_listeners.remove(listener);
 }
@@ -731,10 +734,12 @@ void Listener::set_users(struct users* u)
     m_users = u;
 }
 
-bool Listener::listen()
+bool Listener::listen(const SListener& self)
 {
     m_state = FAILED;
-    m_listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, this, m_service);
+
+    // This is a temporary workaround until the DCBs are removed from listeners
+    m_listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, self, m_service);
 
     if (!m_listener)
     {
