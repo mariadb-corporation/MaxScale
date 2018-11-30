@@ -353,15 +353,17 @@ bool AvroConverter::open_table(const STableMapEvent& map, const STableCreateEven
     return rval;
 }
 
-bool AvroConverter::prepare_table(std::string database, std::string table)
+bool AvroConverter::prepare_table(const STableMapEvent& map, const STableCreateEvent& create)
 {
     bool rval = false;
-    auto it = m_open_tables.find(database + "." + table);
+    auto it = m_open_tables.find(map->database + "." + map->table);
 
     if (it != m_open_tables.end())
     {
         m_writer_iface = it->second->avro_writer_iface;
         m_avro_file = &it->second->avro_file;
+        m_map = map;
+        m_create = create;
         rval = true;
     }
 

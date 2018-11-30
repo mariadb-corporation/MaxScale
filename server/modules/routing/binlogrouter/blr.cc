@@ -807,7 +807,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         {
             {"address", "_none_"},
             {"port", "3306"},
-            {"protocol", "MySQLBackend"},
+            {"protocol", "mariadbbackend"},
             {"authenticator", "MySQLBackendAuth"}
         }, config_server_params);
 

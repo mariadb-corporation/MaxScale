@@ -139,7 +139,7 @@ git clone https://github.com/alanxz/rabbitmq-c.git
 if [ $? != 0 ]
 then
     echo "Error cloning rabbitmq-c"
-    rm -rf $tmpdir
+    sudo rm -rf $tmpdir
     exit 1
 fi
 
@@ -157,7 +157,7 @@ wget -q --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-s
 if [ $? != 0 ]
 then
     echo "Error getting tcl"
-    rm -rf $tmpdir
+    sudo rm -rf $tmpdir
     exit 1
 fi
 
@@ -173,7 +173,7 @@ git clone https://github.com/akheron/jansson.git
 if [ $? != 0 ]
 then
     echo "Error cloning jansson"
-    rm -rf $tmpdir
+    sudo rm -rf $tmpdir
     exit 1
 fi
 
@@ -191,7 +191,7 @@ wget -q -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories http://mi
 if [ $? != 0 ]
 then
     echo "Error getting avro-c"
-    rm -rf $tmpdir
+    sudo rm -rf $tmpdir
     exit 1
 fi
 avro_filename=`ls -1 avro*.tar.gz`
@@ -209,4 +209,4 @@ wget --quiet https://nodejs.org/dist/v6.11.2/node-v6.11.2-linux-x64.tar.xz
 tar -axf node-v6.11.2-linux-x64.tar.xz
 sudo cp -t /usr -r node-v6.11.2-linux-x64/*
 
-rm -rf $tmpdir
+sudo rm -rf $tmpdir
