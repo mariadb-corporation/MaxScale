@@ -174,9 +174,9 @@ class ResultSetDCB : public DCB
 {
 public:
     ResultSetDCB()
+        : DCB(DCB_ROLE_CLIENT_HANDLER, nullptr, nullptr)
     {
         DCB* pDcb = this;
-        memset(pDcb, 0, sizeof(*pDcb));
 
         pDcb->func.write = &ResultSetDCB::write;
     }

@@ -312,13 +312,13 @@ int test_map()
     return 0;
 }
 
-static DCB my_dcb;
+static DCB* my_dcb = (DCB*)0xdeadbeef;
 
 bool ptrfn(const MODULECMD_ARG* argv, json_t** output)
 {
     bool rval = false;
 
-    if (argv->argc == 1 && argv->argv[0].value.dcb == &my_dcb)
+    if (argv->argc == 1 && argv->argv[0].value.dcb == my_dcb)
     {
         rval = true;
     }
@@ -343,7 +343,7 @@ int test_pointers()
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
-    const void* params[] = {&my_dcb};
+    const void* params[] = {my_dcb};
 
     MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 1, params);
     TEST(arg, "Parsing arguments should succeed");

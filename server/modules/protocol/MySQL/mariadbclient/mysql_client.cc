@@ -1434,7 +1434,7 @@ static void gw_process_one_new_client(DCB* client_dcb)
     else
     {
         // Move the rest of the initialization process to the owning worker
-        mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(client_dcb->poll.owner);
+        mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(client_dcb->owner);
 
         worker->execute([=]() {
                             client_dcb->protocol = mysql_protocol_init(client_dcb, client_dcb->fd);

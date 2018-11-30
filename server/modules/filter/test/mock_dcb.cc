@@ -18,8 +18,6 @@ namespace
 
 void initialize_dcb(DCB* pDcb)
 {
-    memset(pDcb, 0, sizeof(DCB));
-
     pDcb->fd = DCBFD_CLOSED;
     pDcb->state = DCB_STATE_ALLOC;
     pDcb->ssl_state = SSL_HANDSHAKE_UNKNOWN;
@@ -36,7 +34,8 @@ Dcb::Dcb(MXS_SESSION* pSession,
          const char*  zUser,
          const char*  zHost,
          Handler* pHandler)
-    : m_user(zUser)
+    : DCB(DCB_ROLE_CLIENT_HANDLER, nullptr, nullptr)
+    , m_user(zUser)
     , m_host(zHost)
     , m_pHandler(pHandler)
 {

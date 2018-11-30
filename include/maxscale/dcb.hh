@@ -172,63 +172,65 @@ typedef enum
  * Note that the first few fields (up to and including "entry_is_ready") must
  * precisely match the LIST_ENTRY structure defined in the list manager.
  */
-struct DCB
+struct DCB : public MXB_POLL_DATA
 {
-    MXB_POLL_DATA           poll;
-    bool                    dcb_errhandle_called;   /*< this can be called only once */
-    dcb_role_t              dcb_role;
-    int                     fd;                         /**< The descriptor */
-    dcb_state_t             state;                      /**< Current descriptor state */
-    SSL_STATE               ssl_state;                  /**< Current state of SSL if in use */
-    int                     flags;                      /**< DCB flags */
-    char*                   remote;                     /**< Address of remote end */
-    char*                   user;                       /**< User name for connection */
-    struct sockaddr_storage ip;                         /**< remote IPv4/IPv6 address */
-    char*                   protoname;                  /**< Name of the protocol */
-    void*                   protocol;                   /**< The protocol specific state */
-    size_t                  protocol_packet_length;     /**< How long the protocol specific packet is */
-    size_t                  protocol_bytes_processed;   /**< How many bytes of a packet have been read */
-    struct session*         session;                    /**< The owning session */
-    Listener*               listener;                   /**< For a client DCB, the listener data */
-    MXS_PROTOCOL            func;                       /**< The protocol functions for this descriptor */
-    MXS_AUTHENTICATOR       authfunc;                   /**< The authenticator functions for this descriptor
-                                                         * */
-    uint64_t writeqlen;                                 /**< Current number of byes in the write queue */
-    uint64_t high_water;                                /**< High water mark of write queue */
-    uint64_t low_water;                                 /**< Low water mark of write queue */
-    GWBUF*   writeq;                                    /**< Write Data Queue */
-    GWBUF*   delayq;                                    /**< Delay Backend Write Data Queue */
-    GWBUF*   readq;                                     /**< Read queue for storing incomplete reads */
-    GWBUF*   fakeq;                                     /**< Fake event queue for generated events */
-    uint32_t fake_event;                                /**< Fake event to be delivered to handler */
+    DCB(dcb_role_t role, Listener* listener, SERVICE* service);
+    ~DCB();
 
-    DCBSTATS stats;                     /**< DCB related statistics */
-    DCB*     nextpersistent;            /**< Next DCB in the persistent pool for SERVER */
-    time_t   persistentstart;           /**<    0: Not in the persistent pool.
-                                         *      -1: Evicted from the persistent pool and being closed.
-                                         *   non-0: Time when placed in the persistent pool.
-                                         */
-    SERVICE*       service;             /**< The related service */
-    void*          data;                /**< Specific client data, shared between DCBs of this session */
-    void*          authenticator_data;  /**< The authenticator data for this DCB */
-    DCB_CALLBACK*  callbacks;           /**< The list of callbacks for the DCB */
-    int64_t        last_read;           /*< Last time the DCB received data */
-    struct server* server;              /**< The associated backend server */
-    SSL*           ssl;                 /*< SSL struct for connection */
-    bool           ssl_read_want_read;  /*< Flag */
-    bool           ssl_read_want_write; /*< Flag */
-    bool           ssl_write_want_read; /*< Flag */
-    bool           ssl_write_want_write;/*< Flag */
-    bool           was_persistent;      /**< Whether this DCB was in the persistent pool */
-    bool           high_water_reached;  /** High water mark reached, to determine whether need release
-                                         * throttle */
+    bool                    dcb_errhandle_called = false;   /**< this can be called only once */
+    dcb_role_t              dcb_role;
+    int                     fd = DCBFD_CLOSED;                  /**< The descriptor */
+    dcb_state_t             state = DCB_STATE_ALLOC;            /**< Current descriptor state */
+    SSL_STATE               ssl_state = SSL_HANDSHAKE_UNKNOWN;  /**< Current state of SSL if in use */
+    int                     flags = 0;                          /**< DCB flags */
+    char*                   remote = nullptr;                   /**< Address of remote end */
+    char*                   user = nullptr;                     /**< User name for connection */
+    struct sockaddr_storage ip;                                 /**< remote IPv4/IPv6 address */
+    char*                   protoname = nullptr;                /**< Name of the protocol */
+    void*                   protocol = nullptr;                 /**< The protocol specific state */
+    size_t                  protocol_packet_length = 0;         /**< protocol packet length */
+    size_t                  protocol_bytes_processed = 0;       /**< How many bytes have been read */
+    struct session*         session = nullptr;                  /**< The owning session */
+    Listener*               listener = nullptr;                 /**< For a client DCB, the listener data */
+    MXS_PROTOCOL            func = {};                          /**< Protocol functions for the DCB */
+    MXS_AUTHENTICATOR       authfunc = {};                      /**< Authenticator functions for the DCB */
+    uint64_t                writeqlen = 0;                      /**< Bytes in writeq */
+    uint64_t                high_water = 0;                     /**< High water mark of write queue */
+    uint64_t                low_water = 0;                      /**< Low water mark of write queue */
+    GWBUF*                  writeq = nullptr;                   /**< Write Data Queue */
+    GWBUF*                  delayq = nullptr;                   /**< Delay Backend Write Data Queue */
+    GWBUF*                  readq = nullptr;                    /**< Read queue for incomplete reads */
+    GWBUF*                  fakeq = nullptr;                    /**< Fake event queue for generated events */
+    uint32_t                fake_event = 0;                     /**< Fake event to be delivered to handler */
+
+    DCBSTATS stats = {};                        /**< DCB related statistics */
+    DCB*     nextpersistent = nullptr;          /**< Next DCB in the persistent pool for SERVER */
+    time_t   persistentstart = 0;               /**<    0: Not in the persistent pool.
+                                                 *      -1: Evicted from the persistent pool and being closed.
+                                                 *   non-0: Time when placed in the persistent pool.
+                                                 */
+    SERVICE*       service = nullptr;           /**< The related service */
+    void*          data = nullptr;              /**< Client protocol data, owned by client DCB */
+    void*          authenticator_data = nullptr;/**< The authenticator data for this DCB */
+    DCB_CALLBACK*  callbacks = nullptr;         /**< The list of callbacks for the DCB */
+    int64_t        last_read = 0;               /**< Last time the DCB received data */
+    struct server* server = nullptr;            /**< The associated backend server */
+    SSL*           ssl = nullptr;               /**< SSL struct for connection */
+    bool           ssl_read_want_read = false;
+    bool           ssl_read_want_write = false;
+    bool           ssl_write_want_read = false;
+    bool           ssl_write_want_write = false;
+    bool           was_persistent = false;      /**< Whether this DCB was in the persistent pool */
+    bool           high_water_reached = false;  /** High water mark reached, to determine whether we need to
+                                                 * release
+                                                 * throttle */
     struct
     {
-        DCB* next;      /**< Next DCB in owning thread's list */
-        DCB* tail;      /**< Last DCB in owning thread's list */
+        DCB* next = nullptr;        /**< Next DCB in owning thread's list */
+        DCB* tail = nullptr;        /**< Last DCB in owning thread's list */
     }        thread;
-    uint32_t n_close;           /** How many times dcb_close has been called. */
-    char*    path;              /** If a Unix socket, the path it was bound to. */
+    uint32_t n_close = 0;           /** How many times dcb_close has been called. */
+    char*    path = nullptr;        /** If a Unix socket, the path it was bound to. */
 };
 
 /**

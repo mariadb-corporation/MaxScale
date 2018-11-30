@@ -536,7 +536,7 @@ RoutingWorker::SessionsById& RoutingWorker::session_registry()
 
 void RoutingWorker::register_zombie(DCB* pDcb)
 {
-    mxb_assert(pDcb->poll.owner == this);
+    mxb_assert(pDcb->owner == this);
 
     m_zombies.push_back(pDcb);
 }
