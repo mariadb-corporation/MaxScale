@@ -45,7 +45,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/version.h>
 
-#include "../../../core/internal/maxscale.h"
+#include "../../../core/internal/maxscale.hh"
 #include "../../../core/internal/modules.hh"
 #include "../../../core/internal/monitor.hh"
 #include "../../../core/internal/poll.hh"

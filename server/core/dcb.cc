@@ -20,7 +20,7 @@
  * the state data and pointers to other components that relate to the
  * use of a file descriptor.
  */
-#include "internal/dcb.h"
+#include "internal/dcb.hh"
 
 #include <arpa/inet.h>
 #include <errno.h>

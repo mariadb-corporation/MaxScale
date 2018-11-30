@@ -13,7 +13,7 @@
 #pragma once
 
 /**
- * @file core/maxscale/maxscale.h - The private maxscale general definitions
+ * @file core/maxscale/maxscale.hh - The private maxscale general definitions
  */
 
 #include <maxscale/maxscale.h>

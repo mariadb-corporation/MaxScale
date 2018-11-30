@@ -66,7 +66,7 @@
 
 #include "internal/admin.hh"
 #include "internal/config.hh"
-#include "internal/maxscale.h"
+#include "internal/maxscale.hh"
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/poll.hh"

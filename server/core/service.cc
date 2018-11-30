@@ -61,7 +61,7 @@
 #include "internal/filter.hh"
 #include "internal/modules.hh"
 #include "internal/service.hh"
-#include "internal/maxscale.h"
+#include "internal/maxscale.hh"
 
 /** This define is needed in CentOS 6 systems */
 #if !defined (UINT64_MAX)
