@@ -491,7 +491,7 @@ int gssapi_auth_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
     gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
-    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->listener->auth_instance;
+    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->listener->auth_instance();
 
     if (auth->state == GSSAPI_AUTH_INIT)
     {
@@ -627,15 +627,15 @@ int gssapi_auth_load_users(Listener* listener)
     const char* user;
     const char* password;
     int rval = MXS_AUTH_LOADUSERS_ERROR;
-    GSSAPI_INSTANCE* inst = (GSSAPI_INSTANCE*)listener->auth_instance;
-    serviceGetUser(listener->service, &user, &password);
+    GSSAPI_INSTANCE* inst = (GSSAPI_INSTANCE*)listener->auth_instance();
+    serviceGetUser(listener->service(), &user, &password);
     char* pw;
 
     if ((pw = decrypt_password(password)))
     {
         bool no_active_servers = true;
 
-        for (SERVER_REF* servers = listener->service->dbref; servers; servers = servers->next)
+        for (SERVER_REF* servers = listener->service()->dbref; servers; servers = servers->next)
         {
             if (!SERVER_REF_IS_ACTIVE(servers) || !server_is_active(servers->server))
             {

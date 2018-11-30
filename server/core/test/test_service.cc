@@ -83,7 +83,7 @@ static int test1()
                                         NULL,
                                         NULL),
                        "Add Protocol should succeed");
-    mxb_assert_message(0 != serviceHasListener(service, "TestProtocol", "mariadbclient", "localhost", 9876),
+    mxb_assert_message(service_find_listener(service, "", "localhost", 9876),
                        "Service should have new protocol as requested");
 
     return 0;

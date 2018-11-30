@@ -293,7 +293,7 @@ static int mysql_auth_authenticate(DCB* dcb)
                   client_data->user,
                   client_data->db);
 
-        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
+        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->listener->auth_instance();
         MySQLProtocol* protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         auth_ret = validate_mysql_user(instance,
                                        dcb,
@@ -558,7 +558,7 @@ static bool add_service_user(Listener* port)
     const char* password = NULL;
     bool rval = false;
 
-    serviceGetUser(port->service, &user, &password);
+    serviceGetUser(port->service(), &user, &password);
 
     char* pw;
 
@@ -568,7 +568,7 @@ static bool add_service_user(Listener* port)
 
         if (newpw)
         {
-            MYSQL_AUTH* inst = (MYSQL_AUTH*)port->auth_instance;
+            MYSQL_AUTH* inst = (MYSQL_AUTH*)port->auth_instance();
             sqlite3* handle = get_handle(inst);
             add_mysql_user(handle, user, "%", "", "Y", newpw);
             add_mysql_user(handle, user, "localhost", "", "Y", newpw);
@@ -579,7 +579,7 @@ static bool add_service_user(Listener* port)
     }
     else
     {
-        MXS_ERROR("[%s] Failed to decrypt service user password.", port->service->name);
+        MXS_ERROR("[%s] Failed to decrypt service user password.", port->service()->name);
     }
 
     return rval;
@@ -610,13 +610,13 @@ static bool service_has_servers(SERVICE* service)
 static int mysql_auth_load_users(Listener* port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
-    SERVICE* service = port->listener->service;
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance;
+    SERVICE* service = port->service();
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance();
     bool first_load = false;
 
     if (should_check_permissions(instance))
     {
-        if (!check_service_permissions(port->service))
+        if (!check_service_permissions(port->service()))
         {
             return MXS_AUTH_LOADUSERS_FATAL;
         }
@@ -635,9 +635,9 @@ static int mysql_auth_load_users(Listener* port)
         {
             MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.",
                       service->name,
-                      port->name.c_str(),
-                      !port->address.empty() ? port->address.c_str() : "::",
-                      port->port);
+                      port->name(),
+                      *port->address() ? port->address() : "::",
+                      port->port());
         }
 
         if (instance->inject_service_user)
@@ -646,7 +646,7 @@ static int mysql_auth_load_users(Listener* port)
              * if loading of the users fails */
             if (!add_service_user(port))
             {
-                MXS_ERROR("[%s] Failed to inject service user.", port->service->name);
+                MXS_ERROR("[%s] Failed to inject service user.", port->service()->name);
             }
             else
             {
@@ -673,7 +673,7 @@ static int mysql_auth_load_users(Listener* port)
     }
     else if (loaded > 0 && first_load)
     {
-        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name.c_str());
+        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name());
     }
 
     return rc;
@@ -697,7 +697,7 @@ int mysql_auth_reauthenticate(DCB* dcb,
     temp.auth_token = token;
     temp.auth_token_len = token_len;
 
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->listener->auth_instance();
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
     if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service) == 0)
@@ -723,7 +723,7 @@ int diag_cb(void* data, int columns, char** row, char** field_names)
 
 void mysql_auth_diagnostic(DCB* dcb, Listener* port)
 {
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance();
     sqlite3* handle = get_handle(instance);
     char* err;
 
@@ -754,7 +754,7 @@ json_t* mysql_auth_diagnostic_json(const Listener* port)
 {
     json_t* rval = json_array();
 
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance();
     char* err;
     sqlite3* handle = get_handle(instance);
 

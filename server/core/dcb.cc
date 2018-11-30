@@ -2230,8 +2230,8 @@ static int dcb_create_SSL(DCB* dcb, SSL_LISTENER* ssl)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    if ((NULL == dcb->listener || NULL == dcb->listener->ssl)
-        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->listener->ssl) != 0))
+    if ((NULL == dcb->listener || NULL == dcb->listener->ssl())
+        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->listener->ssl()) != 0))
     {
         return -1;
     }
@@ -2451,10 +2451,11 @@ DCB* dcb_accept(DCB* dcb)
                               INET6_ADDRSTRLEN);
                 }
             }
+
             memcpy(&client_dcb->func, protocol_funcs, sizeof(MXS_PROTOCOL));
-            if (!dcb->listener->authenticator.empty())
+            if (*dcb->listener->authenticator())
             {
-                authenticator_name = dcb->listener->authenticator.c_str();
+                authenticator_name = dcb->listener->authenticator();
             }
             else if (client_dcb->func.auth_default != NULL)
             {
@@ -2476,7 +2477,7 @@ DCB* dcb_accept(DCB* dcb)
             /** Allocate DCB specific authentication data */
             if (client_dcb->authfunc.create
                 && (client_dcb->authenticator_data =
-                        client_dcb->authfunc.create(client_dcb->listener->auth_instance)) == NULL)
+                        client_dcb->authfunc.create(client_dcb->listener->auth_instance())) == NULL)
             {
                 MXS_ERROR("Failed to create authenticator for client DCB");
                 dcb_close(client_dcb);
@@ -2908,7 +2909,7 @@ void dcb_process_idle_sessions(int thr)
             if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
             {
                 mxb_assert(dcb->listener);
-                SERVICE* service = dcb->listener->service;
+                SERVICE* service = dcb->listener->service();
 
                 if (service->conn_idle_timeout && dcb->state == DCB_STATE_POLLING)
                 {

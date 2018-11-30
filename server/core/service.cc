@@ -238,8 +238,8 @@ Service::~Service()
 
     for (const auto& tmp : listener_find_by_service(this))
     {
-        mxb_assert(!tmp->active || maxscale_teardown_in_progress());
-        listener_free(listener_find(tmp->name));
+        mxb_assert(!tmp->is_active() || maxscale_teardown_in_progress());
+        listener_free(listener_find(tmp->name()));
     }
 
     if (router && router_instance && router->destroyInstance)
@@ -546,58 +546,28 @@ bool service_remove_listener(Service* service, const char* target)
 }
 
 SListener service_find_listener(Service* service,
-                                const char* socket,
-                                const char* address,
+                                const std::string& socket,
+                                const std::string& address,
                                 unsigned short port)
 {
+    SListener rval;
+
     for (const auto& listener : listener_find_by_service(service))
     {
-        if (port == listener->port)
+        if (port == listener->port() && (listener->address() == address || listener->address() == socket))
         {
-            if ((!address && listener->address.empty()) || listener->address == address
-                || (!socket && listener->address.empty()) || listener->address == socket)
-            {
-                return listener;
-            }
+            rval = listener;
+            break;
         }
     }
 
-    return NULL;
-}
-
-/**
- * Check if a protocol/port pair is part of the service
- *
- * @param service       The service
- * @param protocol      The name of the protocol module
- * @param address       The address to listen on
- * @param port          The port to listen on
- * @return      True if the protocol/port is already part of the service
- */
-bool serviceHasListener(Service* service,
-                        const char* name,
-                        const char* protocol,
-                        const char* address,
-                        unsigned short port)
-{
-    for (const auto& listener : listener_find_by_service(service))
-    {
-        if (listener->port == port)
-        {
-            if ((!address && listener->address.empty()) || listener->address == address)
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    return rval;
 }
 
 bool service_has_named_listener(Service* service, const char* name)
 {
     auto listener = listener_find(name);
-    return listener && listener->service == service;
+    return listener && listener->service() == service;
 }
 
 bool service_can_be_destroyed(Service* service)
@@ -1094,12 +1064,12 @@ void dListListeners(DCB* dcb)
         {
             dcb_printf(dcb,
                        "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
-                       listener->name.c_str(),
+                       listener->name(),
                        service->name,
-                       listener->protocol.c_str(),
-                       (listener && !listener->address.empty()) ? listener->address.c_str() : "*",
-                       listener->port,
-                       listener_state_to_string(listener));
+                       listener->protocol(),
+                       (listener && *listener->address()) ? listener->address() : "*",
+                       listener->port(),
+                       listener->state());
         }
     }
     if (!this_unit.services.empty())
@@ -1316,8 +1286,8 @@ std::unique_ptr<ResultSet> serviceGetListenerList()
     {
         for (const auto& listener : listener_find_by_service(service))
         {
-            set->add_row({service->name, listener->protocol, listener->address,
-                          std::to_string(listener->port), listener_state_to_string(listener)});
+            set->add_row({service->name, listener->protocol(), listener->address(),
+                          std::to_string(listener->port()), listener->state()});
         }
     }
 
@@ -1623,7 +1593,7 @@ bool service_port_is_used(unsigned short port)
     {
         for (const auto& listener : listener_find_by_service(service))
         {
-            if (listener->port == port)
+            if (listener->port() == port)
             {
                 rval = true;
                 break;
@@ -1694,7 +1664,7 @@ static json_t* service_all_listeners_json_data(const SERVICE* service)
 
     for (const auto& listener : listener_find_by_service(service))
     {
-        json_array_append_new(arr, listener_to_json(listener));
+        json_array_append_new(arr, listener->to_json());
     }
 
     return arr;
@@ -1704,9 +1674,9 @@ static json_t* service_listener_json_data(const SERVICE* service, const char* na
 {
     auto listener = listener_find(name);
 
-    if (listener && listener->service == service)
+    if (listener && listener->service() == service)
     {
-        return listener_to_json(listener);
+        return listener->to_json();
     }
 
     return NULL;

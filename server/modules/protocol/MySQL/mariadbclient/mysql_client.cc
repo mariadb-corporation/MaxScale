@@ -673,7 +673,7 @@ static void check_packet(DCB* dcb, GWBUF* buf, int bytes)
     if (bytes == MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         /** This is an SSL request packet */
-        mxb_assert(dcb->listener->ssl);
+        mxb_assert(dcb->listener->ssl());
         mxb_assert(buflen == bytes && pktlen >= buflen);
     }
     else
@@ -1436,11 +1436,11 @@ static void gw_process_one_new_client(DCB* client_dcb)
         // Move the rest of the initialization process to the owning worker
         mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(client_dcb->poll.owner);
 
-        worker->execute([=](){
-            client_dcb->protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
-            MXS_ABORT_IF_NULL(client_dcb->protocol);
-            MySQLSendHandshake(client_dcb);
-        }, mxs::RoutingWorker::EXECUTE_AUTO);
+        worker->execute([=]() {
+                            client_dcb->protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
+                            MXS_ABORT_IF_NULL(client_dcb->protocol);
+                            MySQLSendHandshake(client_dcb);
+                        }, mxs::RoutingWorker::EXECUTE_AUTO);
 
         MXS_DEBUG("Added dcb %p for fd %d to epoll set.",
                   client_dcb,

@@ -347,24 +347,9 @@ bool serviceLaunchListener(Service* service, const SListener& port);
  * @return True if service has the listener
  */
 SListener service_find_listener(Service* service,
-                                const char* socket,
-                                const char* address,
+                                const std::string& socket,
+                                const std::string& address,
                                 unsigned short port);
-
-/**
- * @brief Check if a service has a listener
- *
- * @param service Service to check
- * @param protocol Listener protocol
- * @param address Listener address
- * @param port Listener port
- * @return True if service has the listener
- */
-bool serviceHasListener(Service* service,
-                        const char* name,
-                        const char* protocol,
-                        const char* address,
-                        unsigned short port);
 
 /**
  * @brief Check if a MaxScale service listens on a port

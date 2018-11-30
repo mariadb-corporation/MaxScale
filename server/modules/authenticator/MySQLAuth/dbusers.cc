@@ -1123,7 +1123,7 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
                                   service->enable_root,
                                   category);
 
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)listener->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)listener->auth_instance();
     sqlite3* handle = get_handle(instance);
     int users = 0;
 
@@ -1182,7 +1182,7 @@ static int get_users(Listener* listener, bool skip_local)
 {
     const char* service_user = NULL;
     const char* service_passwd = NULL;
-    SERVICE* service = listener->service;
+    SERVICE* service = listener->service();
 
     serviceGetUser(service, &service_user, &service_passwd);
 
@@ -1194,7 +1194,7 @@ static int get_users(Listener* listener, bool skip_local)
     }
 
     /** Delete the old users */
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)listener->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)listener->auth_instance();
     sqlite3* handle = get_handle(instance);
     delete_mysql_users(handle);
 

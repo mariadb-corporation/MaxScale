@@ -219,7 +219,7 @@ static int cdc_auth_check(DCB* dcb,
 {
     int rval = CDC_STATE_AUTH_FAILED;
 
-    if (dcb->listener->users)
+    if (dcb->listener->users())
     {
         /* compute SHA1 of auth_data */
         uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
@@ -228,7 +228,7 @@ static int cdc_auth_check(DCB* dcb,
         gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
         gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
 
-        if (users_auth(dcb->listener->users, username, hex_step1))
+        if (users_auth(dcb->listener->users(), username, hex_step1))
         {
             rval = CDC_STATE_AUTH_OK;
         }
@@ -439,7 +439,7 @@ static void cdc_auth_free_client_data(DCB* dcb)
  */
 static int cdc_set_service_user(Listener* listener)
 {
-    SERVICE* service = listener->service;
+    SERVICE* service = listener->service();
     char* dpwd = NULL;
     char* newpasswd = NULL;
     const char* service_user = NULL;
@@ -472,7 +472,7 @@ static int cdc_set_service_user(Listener* listener)
     const char* user;
     const char* password;
     serviceGetUser(service, &user, &password);
-    users_add(listener->users, user, newpasswd, USER_ACCOUNT_ADMIN);
+    users_add(listener->users(), user, newpasswd, USER_ACCOUNT_ADMIN);
 
     MXS_FREE(newpasswd);
     MXS_FREE(dpwd);
@@ -550,7 +550,7 @@ int cdc_replace_users(Listener* listener)
                  PATH_MAX,
                  "%s/%s/%s",
                  get_datadir(),
-                 listener->service->name,
+                 listener->service()->name,
                  CDC_USERS_FILENAME);
 
         int i = cdc_read_users(newusers, path);
@@ -559,11 +559,11 @@ int cdc_replace_users(Listener* listener)
         if (i > 0)
         {
             /** Successfully loaded at least one user */
-            oldusers = listener->users;
-            listener->users = newusers;
+            oldusers = listener->users();
+            listener->set_users(newusers);
             rc = MXS_AUTH_LOADUSERS_OK;
         }
-        else if (listener->users)
+        else if (listener->users())
         {
             /** Failed to load users, use the old users table */
             users_free(newusers);
@@ -571,7 +571,7 @@ int cdc_replace_users(Listener* listener)
         else
         {
             /** No existing users, use the new empty users table */
-            listener->users = newusers;
+            listener->set_users(newusers);
         }
 
         cdc_set_service_user(listener);

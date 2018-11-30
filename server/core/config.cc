@@ -3863,13 +3863,13 @@ int create_new_listener(CONFIG_CONTEXT* obj)
             address = "";
         }
 
-        if (auto l = service_find_listener(service, socket, address, socket ? 0 : atoi(port)))
+        if (auto l = service_find_listener(service, socket ? socket : "", address, socket ? 0 : atoi(port)))
         {
             MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
                       "listener '%s' already listens on the %s %s.",
                       obj->object,
                       service->name,
-                      l->name.c_str(),
+                      l->name(),
                       socket ? "socket" : "port",
                       socket ? socket : port);
             return 1;

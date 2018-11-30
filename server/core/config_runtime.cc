@@ -978,16 +978,16 @@ bool runtime_create_listener(Service* service,
         proto = "mariadbclient";
     }
 
-    if (auth && strcasecmp(auth, CN_DEFAULT) == 0)
+    if (!auth || strcasecmp(auth, CN_DEFAULT) == 0)
     {
-        /** Set auth to NULL so the protocol default authenticator is used */
-        auth = NULL;
+        /** Use protocol default authenticator*/
+        auth = "";
     }
 
-    if (auth_opt && strcasecmp(auth_opt, CN_DEFAULT) == 0)
+    if (!auth_opt || strcasecmp(auth_opt, CN_DEFAULT) == 0)
     {
         /** Don't pass options to the authenticator */
-        auth_opt = NULL;
+        auth_opt = "";
     }
 
     unsigned short u_port = atoi(port);
@@ -995,7 +995,7 @@ bool runtime_create_listener(Service* service,
 
     std::lock_guard<std::mutex> guard(crt_lock);
 
-    if (!serviceHasListener(service, name, proto, addr, u_port))
+    if (!listener_find(name) && !service_find_listener(service, "", addr, u_port))
     {
         SSL_LISTENER* ssl = NULL;
 
