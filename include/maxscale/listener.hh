@@ -125,6 +125,16 @@ public:
     const char* protocol() const;
 
     /**
+     * The protocol module entry points
+     */
+    const MXS_PROTOCOL& protocol_func() const;
+
+    /**
+     * The authenticator module entry points
+     */
+    const MXS_AUTHENTICATOR& auth_func() const;
+
+    /**
      * The authenticator instance
      */
     void* auth_instance() const;
@@ -180,6 +190,8 @@ private:
     struct users*     m_users;          /**< The user data for this listener */
     SERVICE*          m_service;        /**< The service which used by this listener */
     std::atomic<bool> m_active;         /**< True if the port has not been deleted */
+    MXS_PROTOCOL      m_proto_func;     /**< Preloaded protocol functions */
+    MXS_AUTHENTICATOR m_auth_func;      /**< Preloaded authenticator functions */
 
     /**
      * Creates a new listener that points to a service

@@ -57,6 +57,8 @@ Listener::Listener(SERVICE* service, const std::string& name, const std::string&
     , m_listener(nullptr)
     , m_users(nullptr)
     , m_service(service)
+    , m_proto_func(*(MXS_PROTOCOL*)load_module(protocol.c_str(), MODULE_PROTOCOL))
+    , m_auth_func(*(MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR))
 {
 }
 
@@ -103,11 +105,19 @@ SListener Listener::create(SERVICE* service,
         return nullptr;
     }
 
+    // Add protocol and authenticator capabilities from the listener
+    const MXS_MODULE* proto_mod = get_module(protocol.c_str(), MODULE_PROTOCOL);
+    const MXS_MODULE* auth_mod = get_module(auth, MODULE_AUTHENTICATOR);
+    mxb_assert(proto_mod && auth_mod);
+
     SListener listener(new(std::nothrow) Listener(service, name, address, port, protocol, auth,
                                                   auth_options, auth_instance, ssl));
 
     if (listener)
     {
+        // Note: This isn't good: we modify the service from a listener and the service itself should do this.
+        service->capabilities |= proto_mod->module_capabilities | auth_mod->module_capabilities;
+
         std::lock_guard<std::mutex> guard(listener_lock);
         all_listeners.push_back(listener);
     }
@@ -593,9 +603,9 @@ json_t* Listener::to_json() const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
-    if (m_listener->authfunc.diagnostic_json)
+    if (m_auth_func.diagnostic_json)
     {
-        json_t* diag = m_listener->authfunc.diagnostic_json(this);
+        json_t* diag = m_auth_func.diagnostic_json(this);
 
         if (diag)
         {
@@ -639,6 +649,16 @@ const char* Listener::authenticator() const
 const char* Listener::protocol() const
 {
     return m_protocol.c_str();
+}
+
+const MXS_PROTOCOL& Listener::protocol_func() const
+{
+    return m_proto_func;
+}
+
+const MXS_AUTHENTICATOR& Listener::auth_func() const
+{
+    return m_auth_func;
 }
 
 void* Listener::auth_instance() const
@@ -719,39 +739,8 @@ bool Listener::listen()
         return false;
     }
 
-    MXS_PROTOCOL* funcs = (MXS_PROTOCOL*)load_module(protocol(), MODULE_PROTOCOL);
-
-    if (!funcs)
-    {
-        MXS_ERROR("Unable to load protocol module %s. Listener for service %s not started.",
-                  protocol(), m_service->name);
-        return false;
-    }
-
-    memcpy(&(m_listener->func), funcs, sizeof(MXS_PROTOCOL));
-
-    if (m_authenticator.empty())
-    {
-        m_authenticator = m_listener->func.auth_default();
-    }
-
-    MXS_AUTHENTICATOR* authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator(), MODULE_AUTHENTICATOR);
-
-    if (!authfuncs)
-    {
-        MXS_ERROR("Failed to load authenticator module '%s' for listener '%s'", authenticator(), name());
-        return false;
-    }
-
-    // Add protocol and authenticator capabilities from the listener
-    const MXS_MODULE* proto_mod = get_module(protocol(), MODULE_PROTOCOL);
-    const MXS_MODULE* auth_mod = get_module(authenticator(), MODULE_AUTHENTICATOR);
-    mxb_assert(proto_mod && auth_mod);
-
-    // Note: This isn't good: we modify the service from a listener and the service itself should do this.
-    m_service->capabilities |= proto_mod->module_capabilities | auth_mod->module_capabilities;
-
-    memcpy(&m_listener->authfunc, authfuncs, sizeof(MXS_AUTHENTICATOR));
+    m_listener->func = m_proto_func;
+    m_listener->authfunc = m_auth_func;
 
     /**
      * Normally, we'd allocate the DCB specific authentication data. As the

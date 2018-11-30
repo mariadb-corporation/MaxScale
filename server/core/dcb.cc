@@ -2390,11 +2390,8 @@ int dcb_connect_SSL(DCB* dcb)
 DCB* dcb_accept(DCB* dcb)
 {
     DCB* client_dcb = NULL;
-    MXS_PROTOCOL* protocol_funcs = &dcb->func;
     int c_sock;
-    int sendbuf;
     struct sockaddr_storage client_conn;
-    socklen_t optlen = sizeof(sendbuf);
 
     if ((c_sock = dcb_accept_one_connection(dcb, (struct sockaddr*)&client_conn)) >= 0)
     {
@@ -2402,7 +2399,7 @@ DCB* dcb_accept(DCB* dcb)
 
         configure_network_socket(c_sock, client_conn.ss_family);
 
-        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dcb->listener, dcb->service);
+        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dcb->listener, dcb->listener->service());
 
         if (client_dcb == NULL)
         {
@@ -2411,10 +2408,7 @@ DCB* dcb_accept(DCB* dcb)
         }
         else
         {
-            const char* authenticator_name = "NullAuthDeny";
-            MXS_AUTHENTICATOR* authfuncs;
-
-            client_dcb->service = dcb->session->service;
+            client_dcb->service = dcb->listener->service();
             client_dcb->session = session_set_dummy(client_dcb);
             client_dcb->fd = c_sock;
 
@@ -2452,27 +2446,8 @@ DCB* dcb_accept(DCB* dcb)
                 }
             }
 
-            memcpy(&client_dcb->func, protocol_funcs, sizeof(MXS_PROTOCOL));
-            if (*dcb->listener->authenticator())
-            {
-                authenticator_name = dcb->listener->authenticator();
-            }
-            else if (client_dcb->func.auth_default != NULL)
-            {
-                authenticator_name = client_dcb->func.auth_default();
-            }
-            if ((authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator_name,
-                                                             MODULE_AUTHENTICATOR)) == NULL)
-            {
-                if ((authfuncs = (MXS_AUTHENTICATOR*)load_module("NullAuthDeny",
-                                                                 MODULE_AUTHENTICATOR)) == NULL)
-                {
-                    MXS_ERROR("Failed to load authenticator module '%s'", authenticator_name);
-                    dcb_close(client_dcb);
-                    return NULL;
-                }
-            }
-            memcpy(&(client_dcb->authfunc), authfuncs, sizeof(MXS_AUTHENTICATOR));
+            client_dcb->func = dcb->listener->protocol_func();
+            client_dcb->authfunc = dcb->listener->auth_func();
 
             /** Allocate DCB specific authentication data */
             if (client_dcb->authfunc.create
