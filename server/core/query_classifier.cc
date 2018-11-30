@@ -26,6 +26,8 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>
+#include <maxscale/jansson.hh>
+#include <maxscale/buffer.hh>
 
 #include "internal/config_runtime.h"
 #include "internal/modules.h"
