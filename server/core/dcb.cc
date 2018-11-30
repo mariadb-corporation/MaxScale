@@ -3000,7 +3000,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
             if (dcb_session_check(dcb, "accept"))
             {
                 DCB_EH_NOTICE("Calling dcb->func.accept(%p)", dcb);
-                dcb->func.accept(dcb);
+                dcb->func.accept(dcb->listener);
             }
         }
         else

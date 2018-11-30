@@ -63,7 +63,7 @@ static int   telnetd_write_event(DCB* dcb);
 static int   telnetd_write(DCB* dcb, GWBUF* queue);
 static int   telnetd_error(DCB* dcb);
 static int   telnetd_hangup(DCB* dcb);
-static int   telnetd_accept(DCB* dcb);
+static int   telnetd_accept(const SListener& listener);
 static int   telnetd_close(DCB* dcb);
 static char* telnetd_default_auth();
 
@@ -276,12 +276,12 @@ static int telnetd_hangup(DCB* dcb)
  * @param listener   The descriptor control block
  * @return The number of new connections created
  */
-static int telnetd_accept(DCB* listener)
+static int telnetd_accept(const SListener& listener)
 {
     int n_connect = 0;
     DCB* client_dcb;
 
-    while ((client_dcb = dcb_accept(listener->listener)) != NULL)
+    while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         TELNETD* telnetd_protocol = NULL;
 
@@ -294,7 +294,7 @@ static int telnetd_accept(DCB* listener)
         telnetd_protocol->username = NULL;
         client_dcb->protocol = (void*)telnetd_protocol;
 
-        client_dcb->session = session_alloc(listener->session->service, client_dcb);
+        client_dcb->session = session_alloc(listener->service(), client_dcb);
         if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
         {
             dcb_close(client_dcb);

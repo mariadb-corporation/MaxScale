@@ -18,9 +18,15 @@
  * The protocol module interface definition.
  */
 
+#include <maxscale/ccdefs.hh>
+
 #include <maxbase/jansson.h>
-#include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
+
+#include <memory>
+
+class Listener;
+using SListener = std::shared_ptr<Listener>;
 
 MXS_BEGIN_DECLS
 
@@ -94,7 +100,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* accept)(DCB* dcb);
+    int32_t (* accept)(const SListener& listener);
 
     /**
      * Connect to a server, only for backend side protocol modules

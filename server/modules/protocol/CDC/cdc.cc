@@ -48,7 +48,7 @@ static int           cdc_write_event(DCB* dcb);
 static int           cdc_write(DCB* dcb, GWBUF* queue);
 static int           cdc_error(DCB* dcb);
 static int           cdc_hangup(DCB* dcb);
-static int           cdc_accept(DCB* dcb);
+static int           cdc_accept(const SListener& listener);
 static int           cdc_close(DCB* dcb);
 static CDC_protocol* cdc_protocol_init(DCB* dcb);
 static void          cdc_protocol_done(DCB* dcb);
@@ -280,12 +280,12 @@ static int cdc_hangup(DCB* dcb)
  *
  * @param dcb    The descriptor control block
  */
-static int cdc_accept(DCB* listener)
+static int cdc_accept(const SListener& listener)
 {
     int n_connect = 0;
     DCB* client_dcb;
 
-    while ((client_dcb = dcb_accept(listener->listener)) != NULL)
+    while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         CDC_session* client_data = NULL;
         CDC_protocol* protocol = NULL;

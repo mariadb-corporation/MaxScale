@@ -50,7 +50,7 @@ static int   httpd_write_event(DCB* dcb);
 static int   httpd_write(DCB* dcb, GWBUF* queue);
 static int   httpd_error(DCB* dcb);
 static int   httpd_hangup(DCB* dcb);
-static int   httpd_accept(DCB* dcb);
+static int   httpd_accept(const SListener& listener);
 static int   httpd_close(DCB* dcb);
 static int   httpd_get_line(int sock, char* buf, int size);
 static void  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
@@ -358,12 +358,12 @@ static int httpd_hangup(DCB* dcb)
  *
  * @param listener   The descriptor control block
  */
-static int httpd_accept(DCB* listener)
+static int httpd_accept(const SListener& listener)
 {
     int n_connect = 0;
     DCB* client_dcb;
 
-    while ((client_dcb = dcb_accept(listener->listener)) != NULL)
+    while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         HTTPD_session* client_data = NULL;
 
@@ -375,7 +375,7 @@ static int httpd_accept(DCB* listener)
         }
         client_dcb->data = client_data;
 
-        client_dcb->session = session_alloc(listener->session->service, client_dcb);
+        client_dcb->session = session_alloc(listener->service(), client_dcb);
         if (NULL == client_dcb->session || poll_add_dcb(client_dcb) == -1)
         {
             dcb_close(client_dcb);
