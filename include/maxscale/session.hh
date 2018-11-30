@@ -23,7 +23,7 @@
 #include <maxscale/log.h>
 #include <maxscale/utils.hh>
 
-struct dcb;
+struct DCB;
 class SERVICE;
 struct mxs_filter_def;
 struct mxs_filter;
@@ -207,9 +207,9 @@ typedef char* (* session_variable_handler_t)(void* context,
  */
 typedef struct session
 {
-    mxs_session_state_t state;              /*< Current descriptor state */
-    uint64_t            ses_id;             /*< Unique session identifier */
-    struct dcb*         client_dcb;         /*< The client connection */
+    mxs_session_state_t state;      /*< Current descriptor state */
+    uint64_t            ses_id;     /*< Unique session identifier */
+    DCB*                client_dcb; /*< The client connection */
 
     struct mxs_router_session* router_session;          /*< The router instance data */
     MXS_SESSION_STATS          stats;                   /*< Session statistics */
@@ -290,7 +290,7 @@ bool session_route_reply(MXS_SESSION* session, GWBUF* buffer);
  * @param client_dcb    The client side DCB
  * @return              The newly created session or NULL if an error occurred
  */
-MXS_SESSION* session_alloc(SERVICE*, struct dcb*);
+MXS_SESSION* session_alloc(SERVICE*, DCB*);
 
 /**
  * A version of session_alloc() which takes the session id number as parameter.
@@ -301,9 +301,9 @@ MXS_SESSION* session_alloc(SERVICE*, struct dcb*);
  * @param id            Id for the new session.
  * @return              The newly created session or NULL if an error occurred
  */
-MXS_SESSION* session_alloc_with_id(SERVICE*, struct dcb*, uint64_t);
+MXS_SESSION* session_alloc_with_id(SERVICE*, DCB*, uint64_t);
 
-MXS_SESSION* session_set_dummy(struct dcb*);
+MXS_SESSION* session_set_dummy(DCB*);
 
 static inline bool session_is_dummy(MXS_SESSION* session)
 {

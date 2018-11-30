@@ -36,7 +36,7 @@ MXS_BEGIN_DECLS
 struct session;
 struct server;
 
-struct dcb;
+struct DCB;
 
 #define DCBFD_CLOSED -1
 
@@ -141,7 +141,7 @@ typedef enum
 typedef struct dcb_callback
 {
     DCB_REASON reason;          /*< The reason for the callback */
-    int (* cb)(struct dcb* dcb, DCB_REASON reason, void* userdata);
+    int (* cb)(DCB* dcb, DCB_REASON reason, void* userdata);
     void*                userdata;      /*< User data to be sent in the callback */
     struct dcb_callback* next;          /*< Next callback for this DCB */
 } DCB_CALLBACK;
@@ -172,7 +172,7 @@ typedef enum
  * Note that the first few fields (up to and including "entry_is_ready") must
  * precisely match the LIST_ENTRY structure defined in the list manager.
  */
-typedef struct dcb
+struct DCB
 {
     MXB_POLL_DATA           poll;
     bool                    dcb_errhandle_called;   /*< this can be called only once */
@@ -202,9 +202,9 @@ typedef struct dcb
     GWBUF*   fakeq;                                     /**< Fake event queue for generated events */
     uint32_t fake_event;                                /**< Fake event to be delivered to handler */
 
-    DCBSTATS    stats;                  /**< DCB related statistics */
-    struct dcb* nextpersistent;         /**< Next DCB in the persistent pool for SERVER */
-    time_t      persistentstart;        /**<    0: Not in the persistent pool.
+    DCBSTATS stats;                     /**< DCB related statistics */
+    DCB*     nextpersistent;            /**< Next DCB in the persistent pool for SERVER */
+    time_t   persistentstart;           /**<    0: Not in the persistent pool.
                                          *      -1: Evicted from the persistent pool and being closed.
                                          *   non-0: Time when placed in the persistent pool.
                                          */
@@ -224,12 +224,12 @@ typedef struct dcb
                                          * throttle */
     struct
     {
-        struct dcb* next;   /**< Next DCB in owning thread's list */
-        struct dcb* tail;   /**< Last DCB in owning thread's list */
+        DCB* next;      /**< Next DCB in owning thread's list */
+        DCB* tail;      /**< Last DCB in owning thread's list */
     }        thread;
     uint32_t n_close;           /** How many times dcb_close has been called. */
     char*    path;              /** If a Unix socket, the path it was bound to. */
-} DCB;
+};
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason
@@ -292,8 +292,8 @@ void dListDCBs(DCB*);                                                           
 void dListClients(DCB*);                                                        /* List al the client DCBs */
 const char* gw_dcb_state2string(dcb_state_t);                                   /* DCB state to string */
 void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); /* DCB version of printf */
-int dcb_add_callback(DCB*, DCB_REASON, int (*)(struct dcb*, DCB_REASON, void*), void*);
-int dcb_remove_callback(DCB*, DCB_REASON, int (*)(struct dcb*, DCB_REASON, void*), void*);
+int dcb_add_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
+int dcb_remove_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
 int dcb_count_by_usage(DCB_USAGE);                      /* Return counts of DCBs */
 int      dcb_persistent_clean_count(DCB*, int, bool);   /* Clean persistent and return count */
 void     dcb_hangup_foreach(struct server* server);

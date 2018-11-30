@@ -24,7 +24,7 @@
 
 MXS_BEGIN_DECLS
 
-struct dcb;
+struct DCB;
 struct server;
 struct session;
 
@@ -40,7 +40,7 @@ typedef struct mxs_protocol
      *
      * @return 1 on success, 0 on error
      */
-    int32_t (* read)(struct dcb* dcb);
+    int32_t (* read)(DCB* dcb);
 
     /**
      * Write data to a network socket
@@ -50,7 +50,7 @@ typedef struct mxs_protocol
      *
      * @return 1 on success, 0 on error
      */
-    int32_t (* write)(struct dcb* dcb, GWBUF* buffer);
+    int32_t (* write)(DCB* dcb, GWBUF* buffer);
 
     /**
      * EPOLLOUT handler, used to write buffered data
@@ -61,7 +61,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* write_ready)(struct dcb* dcb);
+    int32_t (* write_ready)(DCB* dcb);
 
     /**
      * EPOLLERR handler
@@ -72,7 +72,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* error)(struct dcb* dcb);
+    int32_t (* error)(DCB* dcb);
 
     /**
      * EPOLLHUP and EPOLLRDHUP handler
@@ -83,7 +83,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* hangup)(struct dcb* dcb);
+    int32_t (* hangup)(DCB* dcb);
 
     /**
      * Accept a connection, only for client side protocol modules
@@ -94,7 +94,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* accept)(struct dcb* dcb);
+    int32_t (* accept)(DCB* dcb);
 
     /**
      * Connect to a server, only for backend side protocol modules
@@ -105,7 +105,7 @@ typedef struct mxs_protocol
      *
      * @return The opened file descriptor or DCBFD_CLOSED on error
      */
-    int32_t (* connect)(struct dcb* dcb, struct server* server, struct session* session);
+    int32_t (* connect)(DCB* dcb, struct server* server, struct session* session);
 
     /**
      * Free protocol data allocated in the connect handler
@@ -116,7 +116,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* close)(struct dcb* dcb);
+    int32_t (* close)(DCB* dcb);
 
     /**
      * Perform user re-authentication
@@ -130,7 +130,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* auth)(struct dcb* dcb, struct server* server, struct session* session, GWBUF* buffer);
+    int32_t (* auth)(DCB* dcb, struct server* server, struct session* session, GWBUF* buffer);
 
     /**
      * Returns the name of the default authenticator module for this protocol
@@ -149,7 +149,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* connlimit)(struct dcb* dcb, int limit);
+    int32_t (* connlimit)(DCB* dcb, int limit);
 
     /**
      * Check if the connection has been fully established, used by connection pooling
@@ -158,7 +158,7 @@ typedef struct mxs_protocol
      *
      * @return True if the connection is fully established and can be pooled
      */
-    bool (* established)(struct dcb*);
+    bool (* established)(DCB*);
 
     /**
      * Provide JSON formatted diagnostics about a DCB
@@ -167,7 +167,7 @@ typedef struct mxs_protocol
      *
      * @return JSON representation of the DCB
      */
-    json_t* (*diagnostics_json)(struct dcb* dcb);
+    json_t* (*diagnostics_json)(DCB * dcb);
 } MXS_PROTOCOL;
 
 /**

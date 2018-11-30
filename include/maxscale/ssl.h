@@ -27,7 +27,7 @@
 
 MXS_BEGIN_DECLS
 
-struct dcb;
+struct DCB;
 
 typedef enum ssl_method_type
 {
@@ -73,11 +73,11 @@ typedef struct ssl_listener
     * next;             /*< Next SSL configuration, currently used to store obsolete configurations */
 } SSL_LISTENER;
 
-int               ssl_authenticate_client(struct dcb* dcb, bool is_capable);
-bool              ssl_is_connection_healthy(struct dcb* dcb);
-bool              ssl_check_data_to_process(struct dcb* dcb);
-bool              ssl_required_by_dcb(struct dcb* dcb);
-bool              ssl_required_but_not_negotiated(struct dcb* dcb);
+int               ssl_authenticate_client(DCB* dcb, bool is_capable);
+bool              ssl_is_connection_healthy(DCB* dcb);
+bool              ssl_check_data_to_process(DCB* dcb);
+bool              ssl_required_by_dcb(DCB* dcb);
+bool              ssl_required_but_not_negotiated(DCB* dcb);
 const char*       ssl_method_type_to_string(ssl_method_type_t method_type);
 ssl_method_type_t string_to_ssl_method_type(const char* str);
 
@@ -91,7 +91,7 @@ ssl_method_type_t string_to_ssl_method_type(const char* str);
  * if ssl authentication is in progress and should be retried, MXS_AUTH_SSL_COMPLETE
  * if ssl authentication is complete or not required.
  */
-int ssl_authenticate_check_status(struct dcb* dcb);
+int ssl_authenticate_check_status(DCB* dcb);
 
 // TODO: Move this to an internal ssl.h header
 void write_ssl_config(int fd, SSL_LISTENER* ssl);

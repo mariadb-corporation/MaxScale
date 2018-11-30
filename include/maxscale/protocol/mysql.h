@@ -111,7 +111,7 @@ MXS_BEGIN_DECLS
 
 #define GW_NOINTR_CALL(A) do {errno = 0; A;} while (errno == EINTR)
 #define COM_QUIT_PACKET_SIZE (4 + 1)
-struct dcb;
+struct DCB;
 
 typedef enum
 {
@@ -321,7 +321,7 @@ static const char* const MXS_LAST_GTID = "last_gtid";
 typedef struct
 {
     int                    fd;                          /*< The socket descriptor */
-    struct dcb*            owner_dcb;                   /*< The DCB of the socket we are running on */
+    DCB*                   owner_dcb;                   /*< The DCB of the socket we are running on */
     mxs_mysql_cmd_t        current_command;             /*< Current command being executed */
     mxs_auth_state_t       protocol_auth_state;         /*< Authentication status */
     mysql_protocol_state_t protocol_state;              /*< Protocol struct status */

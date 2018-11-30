@@ -24,7 +24,7 @@
 #include <maxscale/ssl.h>
 #include <maxscale/service.hh>
 
-struct dcb;
+struct DCB;
 class SERVICE;
 
 class Listener;
@@ -196,7 +196,7 @@ private:
     std::string       m_auth_options;   /**< Authenticator options */
     void*             m_auth_instance;  /**< Authenticator instance */
     SSL_LISTENER*     m_ssl;            /**< Structure of SSL data or NULL */
-    struct dcb*       m_listener;       /**< The DCB for the listener */
+    DCB*              m_listener;       /**< The DCB for the listener */
     struct users*     m_users;          /**< The user data for this listener */
     SERVICE*          m_service;        /**< The service which used by this listener */
     std::atomic<bool> m_active;         /**< True if the port has not been deleted */

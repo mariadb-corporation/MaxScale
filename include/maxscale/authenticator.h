@@ -43,7 +43,7 @@ typedef enum authenticator_capability
 /** Maximum number of authenticator options */
 #define AUTHENTICATOR_MAX_OPTIONS 256
 
-struct dcb;
+struct DCB;
 struct server;
 struct session;
 
@@ -92,13 +92,13 @@ typedef struct mxs_authenticator
 {
     void* (*initialize)(char** options);
     void* (*create)(void* instance);
-    bool (* extract)(struct dcb*, GWBUF*);
-    bool (* connectssl)(struct dcb*);
-    int (* authenticate)(struct dcb*);
-    void (* free)(struct dcb*);
+    bool (* extract)(DCB*, GWBUF*);
+    bool (* connectssl)(DCB*);
+    int (* authenticate)(DCB*);
+    void (* free)(DCB*);
     void (* destroy)(void*);
     int (* loadusers)(Listener*);
-    void (* diagnostic)(struct dcb*, Listener*);
+    void (* diagnostic)(DCB*, Listener*);
 
     /**
      * @brief Return diagnostic information about the authenticator
@@ -116,7 +116,7 @@ typedef struct mxs_authenticator
 
     /** This entry point was added to avoid calling authenticator functions
      * directly when a COM_CHANGE_USER command is executed. */
-    int (* reauthenticate)(struct dcb*,
+    int (* reauthenticate)(DCB*,
                            const char* user,
                            uint8_t* token,
                            size_t   token_len,              /**< Client auth token */

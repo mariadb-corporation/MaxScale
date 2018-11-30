@@ -1910,7 +1910,7 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
  */
 int dcb_add_callback(DCB* dcb,
                      DCB_REASON reason,
-                     int (* callback)(struct dcb*, DCB_REASON, void*),
+                     int (* callback)(DCB*, DCB_REASON, void*),
                      void* userdata)
 {
     DCB_CALLBACK* cb, * ptr, * lastcb = NULL;
@@ -1963,7 +1963,7 @@ int dcb_add_callback(DCB* dcb,
  */
 int dcb_remove_callback(DCB* dcb,
                         DCB_REASON reason,
-                        int (* callback)(struct dcb*, DCB_REASON, void*),
+                        int (* callback)(DCB*, DCB_REASON, void*),
                         void* userdata)
 {
     DCB_CALLBACK* cb, * pcb = NULL;
