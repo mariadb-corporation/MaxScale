@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/protocol.h>
 #include <maxscale/service.hh>

@@ -41,7 +41,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/modutil.hh>

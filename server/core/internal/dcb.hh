@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 
 MXS_BEGIN_DECLS
 

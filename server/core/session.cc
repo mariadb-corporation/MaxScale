@@ -29,7 +29,7 @@
 #include <maxbase/atomic.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/json_api.h>
 #include <maxscale/log.h>

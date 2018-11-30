@@ -18,7 +18,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxbase/jansson.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
 #include <openssl/sha.h>

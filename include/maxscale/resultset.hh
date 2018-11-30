@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/mysql_binlog.h>
 
 /**

@@ -16,7 +16,7 @@
 
 #include <memory>
 
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 
 class Dcb
 {

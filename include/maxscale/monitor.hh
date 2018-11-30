@@ -24,7 +24,7 @@
 #include <maxbase/worker.hh>
 #include <maxbase/jansson.h>
 #include <maxscale/config.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/server.hh>
 #include <maxscale/protocol/mysql.h>
 

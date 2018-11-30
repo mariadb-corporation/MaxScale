@@ -39,7 +39,7 @@
 #include <maxbase/worker.h>
 #include <maxscale/alloc.h>
 #include <maxscale/config.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>

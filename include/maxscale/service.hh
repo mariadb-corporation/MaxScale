@@ -24,7 +24,7 @@
 #include <maxbase/jansson.h>
 #include <maxscale/config.hh>
 #include <maxscale/protocol.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/server.hh>

@@ -32,7 +32,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/encryption.h>
 #include <maxscale/log.h>
 #include <maxscale/paths.h>

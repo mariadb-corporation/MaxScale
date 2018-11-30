@@ -20,7 +20,7 @@
 #include <arpa/inet.h>
 
 #include <maxscale/authenticator.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>

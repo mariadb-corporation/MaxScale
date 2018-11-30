@@ -18,7 +18,7 @@
 
 #include <maxscale/resultset.hh>
 #include <maxscale/buffer.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/protocol/mysql.h>
 

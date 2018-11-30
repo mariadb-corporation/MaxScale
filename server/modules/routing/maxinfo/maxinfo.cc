@@ -41,7 +41,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/monitor.hh>
 #include <maxbase/atomic.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/log.h>
 #include <maxscale/resultset.hh>

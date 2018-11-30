@@ -13,7 +13,7 @@
 #pragma once
 
 #include "mock.hh"
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/session.hh>
 
 namespace maxscale

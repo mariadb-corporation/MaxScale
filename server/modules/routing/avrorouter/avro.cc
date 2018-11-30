@@ -31,7 +31,7 @@
 #include <maxbase/atomic.h>
 #include <maxbase/worker.hh>
 #include <maxscale/alloc.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/log.h>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>

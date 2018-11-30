@@ -40,7 +40,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
 #include <maxscale/config.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/log.h>

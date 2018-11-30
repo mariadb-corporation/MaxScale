@@ -22,7 +22,7 @@
 #include <stdio.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>

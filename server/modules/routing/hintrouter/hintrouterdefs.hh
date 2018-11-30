@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/log.h>
 
 #if defined (SS_DEBUG)

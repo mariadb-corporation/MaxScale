@@ -28,7 +28,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/router.hh>
 #include <maxbase/atomic.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/log.h>
 #include <maxscale/version.h>
 #include <maxscale/alloc.h>

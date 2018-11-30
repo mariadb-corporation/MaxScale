@@ -22,7 +22,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/log.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.h>

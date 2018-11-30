@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/resultset.hh>
 

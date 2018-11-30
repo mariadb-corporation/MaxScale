@@ -82,7 +82,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/router.hh>
 #include <maxbase/atomic.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>

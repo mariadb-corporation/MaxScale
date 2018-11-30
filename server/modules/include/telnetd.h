@@ -27,7 +27,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 
 MXS_BEGIN_DECLS

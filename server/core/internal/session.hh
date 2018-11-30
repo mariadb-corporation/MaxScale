@@ -60,7 +60,7 @@ const char* session_state(mxs_session_state_t);
  * @param session  The session to link with the dcb
  * @param dcb      The backend DCB to be linked
  */
-void session_link_backend_dcb(MXS_SESSION* session, struct dcb* dcb);
+void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb);
 
 /**
  * Unlink a session to a backend DCB.
@@ -68,15 +68,15 @@ void session_link_backend_dcb(MXS_SESSION* session, struct dcb* dcb);
  * @param session  The session to unlink with the dcb
  * @param dcb      The backend DCB to be unlinked
  */
-void session_unlink_backend_dcb(MXS_SESSION* session, struct dcb* dcb);
+void session_unlink_backend_dcb(MXS_SESSION* session, DCB* dcb);
 
 void printAllSessions();
 void printSession(MXS_SESSION*);
 
 void dprintSessionList(DCB* pdcb);
-void dprintAllSessions(struct dcb*);
-void dprintSession(struct dcb*, MXS_SESSION*);
-void dListSessions(struct dcb*);
+void dprintAllSessions(DCB*);
+void dprintSession(DCB*, MXS_SESSION*);
+void dListSessions(DCB*);
 
 /**
  * @brief Get a session reference

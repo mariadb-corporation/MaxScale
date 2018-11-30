@@ -21,7 +21,7 @@
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/config.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/routing.h>
 #include <maxscale/session.hh>
 

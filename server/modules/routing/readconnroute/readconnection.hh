@@ -19,7 +19,7 @@
 #define MXS_MODULE_NAME "readconnroute"
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/service.hh>
 #include <maxscale/router.hh>
 

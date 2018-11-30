@@ -18,7 +18,7 @@
 
 #include <maxbase/atomic.h>
 #include <maxbase/jansson.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/log.h>
 #include <maxscale/utils.hh>

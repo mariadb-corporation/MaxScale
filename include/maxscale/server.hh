@@ -17,7 +17,7 @@
 #include <string>
 #include <maxbase/jansson.h>
 #include <maxscale/config.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 
 #define MAX_SERVER_ADDRESS_LEN 1024
 #define MAX_SERVER_MONUSER_LEN 1024

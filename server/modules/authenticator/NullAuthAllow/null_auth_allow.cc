@@ -31,7 +31,7 @@
 
 #include <maxscale/authenticator.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/users.h>
 

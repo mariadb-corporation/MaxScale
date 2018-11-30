@@ -19,7 +19,7 @@
 #include <maxscale/ccdefs.hh>
 #include <string>
 #include <maxscale/buffer.hh>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/pcre2.h>
 
 #define PTR_IS_RESULTSET(b)    (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)

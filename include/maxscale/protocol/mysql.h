@@ -37,7 +37,7 @@
 #include <unistd.h>
 
 #include <maxscale/buffer.h>
-#include <maxscale/dcb.h>
+#include <maxscale/dcb.hh>
 #include <maxscale/session.hh>
 #include <maxscale/version.h>
 
