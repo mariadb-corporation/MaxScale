@@ -23,7 +23,7 @@
 
 #include <maxscale/config.hh>
 #include <maxscale/json_api.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 namespace
 {

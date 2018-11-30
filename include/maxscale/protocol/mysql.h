@@ -38,7 +38,7 @@
 
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/version.h>
 
 MXS_BEGIN_DECLS

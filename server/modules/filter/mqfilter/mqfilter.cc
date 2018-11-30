@@ -75,7 +75,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/log.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
 

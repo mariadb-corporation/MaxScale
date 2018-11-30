@@ -51,7 +51,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/random.h>
 #include <maxscale/secrets.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 #if !defined (PATH_MAX)
 # if defined (__USE_POSIX)

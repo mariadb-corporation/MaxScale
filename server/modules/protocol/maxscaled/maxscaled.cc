@@ -21,7 +21,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/protocol.h>
 #include <maxscale/service.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <pwd.h>

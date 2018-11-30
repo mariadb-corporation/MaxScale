@@ -20,7 +20,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/paths.h>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/json_api.h>
 
 #include "../internal/monitor.hh"

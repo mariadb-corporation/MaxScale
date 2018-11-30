@@ -58,7 +58,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/server.hh>
 #include <maxscale/sqlite3.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 #include <maxscale/random.h>

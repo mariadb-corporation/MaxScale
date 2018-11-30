@@ -30,7 +30,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/service.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/resultset.hh>
 
 struct maxinfo_session;

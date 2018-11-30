@@ -14,7 +14,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxbase/worker.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 MXS_BEGIN_DECLS
 

@@ -35,7 +35,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/ssl.h>
 #include <maxscale/utils.h>
 

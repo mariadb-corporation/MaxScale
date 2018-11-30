@@ -19,7 +19,7 @@
 #include <unordered_set>
 #include <maxscale/hint.h>
 #include <maxscale/router.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 namespace maxscale
 {

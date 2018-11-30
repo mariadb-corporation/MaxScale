@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 #include <maxscale/buffer.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 #include "rules.hh"
 #include "cache_storage_api.hh"

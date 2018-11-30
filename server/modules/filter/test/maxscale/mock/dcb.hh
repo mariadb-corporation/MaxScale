@@ -14,7 +14,7 @@
 
 #include "mock.hh"
 #include <maxscale/dcb.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 namespace maxscale
 {

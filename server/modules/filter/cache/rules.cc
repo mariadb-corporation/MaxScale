@@ -25,7 +25,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 #include "cachefilter.hh"
 

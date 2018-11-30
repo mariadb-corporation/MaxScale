@@ -39,7 +39,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 /* The router entry points */
 static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);

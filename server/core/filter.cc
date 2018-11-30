@@ -33,7 +33,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/log.h>
 #include <maxscale/paths.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/service.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/json_api.h>

@@ -56,7 +56,7 @@ extern "C"
 #include <maxscale/log.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.h>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 /*
  * The filter entry points

@@ -32,7 +32,7 @@
 #include <string.h>
 #include <maxscale/alloc.h>
 #include <maxscale/service.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/router.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>

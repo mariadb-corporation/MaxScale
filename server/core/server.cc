@@ -36,7 +36,7 @@
 
 #include <maxscale/config.hh>
 #include <maxscale/service.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
 #include <maxscale/log.h>

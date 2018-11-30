@@ -29,7 +29,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/service.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 MXS_BEGIN_DECLS
 

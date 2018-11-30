@@ -14,7 +14,7 @@
 /**
  * @file session.c  - A representation of the session within the gateway.
  */
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 #include <inttypes.h>
 #include <stdio.h>

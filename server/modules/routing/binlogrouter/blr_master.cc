@@ -52,7 +52,7 @@
 #include <maxbase/worker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 #include <maxscale/utils.h>
 
 static GWBUF* blr_make_query(DCB* dcb, char* query);
