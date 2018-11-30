@@ -178,7 +178,17 @@ public:
     void          set_users(struct users* u);
 
 private:
+    enum State
+    {
+        CREATED,
+        STARTED,
+        STOPPED,
+        FAILED,
+        DESTROYED
+    };
+
     std::string       m_name;           /**< Name of the listener */
+    State             m_state;          /**< Listener state */
     std::string       m_protocol;       /**< Protocol module to load */
     uint16_t          m_port;           /**< Port to listen on */
     std::string       m_address;        /**< Address to listen with */

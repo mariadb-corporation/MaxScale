@@ -47,6 +47,7 @@ Listener::Listener(SERVICE* service, const std::string& name, const std::string&
                    uint16_t port, const std::string& protocol, const std::string& authenticator,
                    const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl)
     : m_name(name)
+    , m_state(CREATED)
     , m_protocol(protocol)
     , m_port(port)
     , m_address(address)
@@ -133,6 +134,7 @@ void Listener::destroy(const SListener& listener)
     // thread-safe as the listener is freed on the same thread that closes the socket.
     ::close(listener->m_listener->fd);
     listener->m_listener->fd = -1;
+    listener->m_state = DESTROYED;
 
     std::lock_guard<std::mutex> guard(listener_lock);
     all_listeners.remove(listener);
@@ -140,13 +142,12 @@ void Listener::destroy(const SListener& listener)
 
 bool Listener::stop()
 {
-    bool rval = false;
+    bool rval = (m_state == STOPPED);
     mxb_assert(m_listener);
 
-    if (m_listener->session->state == SESSION_STATE_LISTENER
-        && poll_remove_dcb(m_listener) == 0)
+    if (m_state == STARTED && poll_remove_dcb(m_listener) == 0)
     {
-        m_listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+        m_state = STOPPED;
         rval = true;
     }
 
@@ -155,13 +156,12 @@ bool Listener::stop()
 
 bool Listener::start()
 {
-    bool rval = true;
+    bool rval = (m_state == STARTED);
     mxb_assert(m_listener);
 
-    if (m_listener->session->state == SESSION_STATE_LISTENER_STOPPED
-        && poll_add_dcb(m_listener) == 0)
+    if (m_state == STOPPED && poll_add_dcb(m_listener) == 0)
     {
-        m_listener->session->state = SESSION_STATE_LISTENER;
+        m_state = STARTED;
         rval = true;
     }
 
@@ -673,24 +673,26 @@ SSL_LISTENER* Listener::ssl() const
 
 const char* Listener::state() const
 {
-    if (m_listener && m_listener->session)
+    switch (m_state)
     {
-        switch (m_listener->session->state)
-        {
-        case SESSION_STATE_LISTENER_STOPPED:
+        case CREATED:
+            return "Created";
+
+        case STARTED:
+            return "Running";
+
+        case STOPPED:
             return "Stopped";
 
-        case SESSION_STATE_LISTENER:
-            return "Running";
+        case FAILED:
+            return "Failed";
+
+        case DESTROYED:
+            return "Destroyed";
 
         default:
             mxb_assert(!true);
             return "Unknown";
-        }
-    }
-    else
-    {
-        return "Failed";
     }
 }
 
@@ -731,6 +733,7 @@ void Listener::set_users(struct users* u)
 
 bool Listener::listen()
 {
+    m_state = FAILED;
     m_listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, this, m_service);
 
     if (!m_listener)
@@ -779,6 +782,7 @@ bool Listener::listen()
         if (m_listener->session != NULL)
         {
             m_listener->session->state = SESSION_STATE_LISTENER;
+            m_state = STARTED;
             rval = true;
         }
         else
