@@ -301,7 +301,7 @@ uint64_t dcb_get_session_id(DCB* dcb);
 char*    dcb_role_name(DCB*);               /* Return the name of a role */
 int      dcb_accept_SSL(DCB* dcb);
 int      dcb_connect_SSL(DCB* dcb);
-int      dcb_listen(DCB* listener, const char* config, const char* protocol_name);
+int      dcb_listen(DCB* listener, const char* config);
 void     dcb_enable_session_timeouts();
 void     dcb_process_idle_sessions(int thr);
 

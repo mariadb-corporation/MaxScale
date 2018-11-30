@@ -59,7 +59,6 @@ static int  thread_init(void);
 static void thread_finish(void);
 
 static int   gw_MySQLAccept(DCB* listener);
-static int   gw_MySQLListener(DCB* listener, char* config_bind);
 static int   gw_read_client_event(DCB* dcb);
 static int   gw_write_client_event(DCB* dcb);
 static int   gw_MySQLWrite_client(DCB* dcb, GWBUF* queue);
@@ -107,7 +106,6 @@ extern "C"
             gw_MySQLAccept,                         /* Accept                        */
             NULL,                                   /* Connect                       */
             gw_client_close,                        /* Close                         */
-            gw_MySQLListener,                       /* Listen                        */
             NULL,                                   /* Authentication                */
             gw_default_auth,                        /* Default authenticator         */
             gw_connection_limit,                    /* Send error connection limit   */
@@ -1383,25 +1381,6 @@ int gw_write_client_event(DCB* dcb)
 return_1:
     return 1;
 }
-
-/**
- * Bind the DCB to a network port or a UNIX Domain Socket.
- * @param listen_dcb Listener DCB
- * @param config_bind Bind address in either IP:PORT format for network sockets or PATH
- *                    for UNIX Domain Sockets
- * @return 1 on success, 0 on error
- */
-int gw_MySQLListener(DCB* listen_dcb, char* config_bind)
-{
-    if (dcb_listen(listen_dcb, config_bind, "MySQL") < 0)
-    {
-        return 0;
-    }
-    listen_dcb->func.accept = gw_MySQLAccept;
-
-    return 1;
-}
-
 
 /**
  * @node Accept a new connection, using the DCB code for the basic work

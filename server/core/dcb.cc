@@ -2606,10 +2606,10 @@ static int dcb_accept_one_connection(DCB* dcb, struct sockaddr* client_conn)
  *
  * @param dcb Listener DCB that is being created
  * @param config Configuration for port to listen on
- * @param protocol_name Name of protocol that is listening
+ *
  * @return 0 if new listener created successfully, otherwise -1
  */
-int dcb_listen(DCB* dcb, const char* config, const char* protocol_name)
+int dcb_listen(DCB* dcb, const char* config)
 {
     char host[strlen(config) + 1];
     strcpy(host, config);
@@ -2667,17 +2667,16 @@ int dcb_listen(DCB* dcb, const char* config, const char* protocol_name)
      */
     if (listen(listener_socket, INT_MAX) != 0)
     {
-        MXS_ERROR("Failed to start listening on [%s]:%u with protocol '%s': %d, %s",
+        MXS_ERROR("Failed to start listening on [%s]:%u: %d, %s",
                   host,
                   port,
-                  protocol_name,
                   errno,
                   mxs_strerror(errno));
         close(listener_socket);
         return -1;
     }
 
-    MXS_NOTICE("Listening for connections at [%s]:%u with protocol %s", host, port, protocol_name);
+    MXS_NOTICE("Listening for connections at [%s]:%u", host, port);
 
     // assign listener_socket to dcb
     dcb->fd = listener_socket;

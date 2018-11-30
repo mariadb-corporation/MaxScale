@@ -119,16 +119,6 @@ typedef struct mxs_protocol
     int32_t (* close)(struct dcb* dcb);
 
     /**
-     * Listen on a network socket, only for client side protocol modules
-     *
-     * @param dcb     DCB to listen with
-     * @param address Address to listen on in `address|port` format
-     *
-     * @return 1 on success, 0 on error
-     */
-    int32_t (* listen)(struct dcb* dcb, char* address);
-
-    /**
      * Perform user re-authentication
      *
      * @param dcb     DCB to re-authenticate

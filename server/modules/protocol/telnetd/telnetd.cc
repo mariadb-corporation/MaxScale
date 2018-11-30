@@ -65,7 +65,6 @@ static int   telnetd_error(DCB* dcb);
 static int   telnetd_hangup(DCB* dcb);
 static int   telnetd_accept(DCB* dcb);
 static int   telnetd_close(DCB* dcb);
-static int   telnetd_listen(DCB* dcb, char* config);
 static char* telnetd_default_auth();
 
 /**
@@ -100,7 +99,6 @@ extern "C"
             telnetd_accept,             /**< Accept                        */
             NULL,                       /**< Connect                       */
             telnetd_close,              /**< Close                         */
-            telnetd_listen,             /**< Create a listener             */
             NULL,                       /**< Authentication                */
             telnetd_default_auth,       /**< Default authenticator         */
             NULL,                       /**< Connection limit reached      */
@@ -328,17 +326,6 @@ static int telnetd_close(DCB* dcb)
     }
 
     return 0;
-}
-
-/**
- * Telnet daemon listener entry point
- *
- * @param       listener        The Listener DCB
- * @param       config          Configuration (ip:port)
- */
-static int telnetd_listen(DCB* listener, char* config)
-{
-    return (dcb_listen(listener, config, "telnet") < 0) ? 0 : 1;
 }
 
 /**

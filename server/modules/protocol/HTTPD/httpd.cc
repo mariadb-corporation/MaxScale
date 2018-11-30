@@ -52,7 +52,6 @@ static int   httpd_error(DCB* dcb);
 static int   httpd_hangup(DCB* dcb);
 static int   httpd_accept(DCB* dcb);
 static int   httpd_close(DCB* dcb);
-static int   httpd_listen(DCB* dcb, char* config);
 static int   httpd_get_line(int sock, char* buf, int size);
 static void  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
 static char* httpd_default_auth();
@@ -79,7 +78,6 @@ extern "C"
             httpd_accept,       /**< Accept                        */
             NULL,               /**< Connect                       */
             httpd_close,        /**< Close                         */
-            httpd_listen,       /**< Create a listener             */
             NULL,               /**< Authentication                */
             httpd_default_auth, /**< Default authenticator         */
             NULL,               /**< Connection limit reached      */
@@ -399,17 +397,6 @@ static int httpd_accept(DCB* listener)
 static int httpd_close(DCB* dcb)
 {
     return 0;
-}
-
-/**
- * HTTTP daemon listener entry point
- *
- * @param       listener        The Listener DCB
- * @param       config          Configuration (ip:port)
- */
-static int httpd_listen(DCB* listener, char* config)
-{
-    return (dcb_listen(listener, config, "HTTPD") < 0) ? 0 : 1;
 }
 
 /**

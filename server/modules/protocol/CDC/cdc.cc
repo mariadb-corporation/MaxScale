@@ -50,7 +50,6 @@ static int           cdc_error(DCB* dcb);
 static int           cdc_hangup(DCB* dcb);
 static int           cdc_accept(DCB* dcb);
 static int           cdc_close(DCB* dcb);
-static int           cdc_listen(DCB* dcb, char* config);
 static CDC_protocol* cdc_protocol_init(DCB* dcb);
 static void          cdc_protocol_done(DCB* dcb);
 static int           do_auth(DCB* dcb, GWBUF* buffer, void* data);
@@ -84,7 +83,6 @@ extern "C"
             cdc_accept,         /* Accept                        */
             NULL,               /* Connect                       */
             cdc_close,          /* Close                         */
-            cdc_listen,         /* Create a listener             */
             NULL,               /* Authentication                */
             cdc_default_auth,   /* default authentication */
             NULL,
@@ -357,17 +355,6 @@ static int cdc_close(DCB* dcb)
     cdc_protocol_done(dcb);
 
     return 1;
-}
-
-/**
- * CDC protocol listener entry point
- *
- * @param   listener    The Listener DCB
- * @param   config      Configuration (ip:port)
- */
-static int cdc_listen(DCB* listener, char* config)
-{
-    return (dcb_listen(listener, config, "CDC") < 0) ? 0 : 1;
 }
 
 /**

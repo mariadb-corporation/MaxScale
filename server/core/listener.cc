@@ -796,13 +796,16 @@ bool Listener::listen()
         }
     }
 
-    if (m_listener->func.listen(m_listener, &config_bind[0]))
+    bool rval = false;
+
+    if (dcb_listen(m_listener, config_bind.data()) == 0)
     {
         m_listener->session = session_alloc(m_service, m_listener);
 
         if (m_listener->session != NULL)
         {
             m_listener->session->state = SESSION_STATE_LISTENER;
+            rval = true;
         }
         else
         {
@@ -814,5 +817,5 @@ bool Listener::listen()
         MXS_ERROR("[%s] Failed to listen on %s", m_service->name, config_bind.c_str());
     }
 
-    return true;
+    return rval;
 }

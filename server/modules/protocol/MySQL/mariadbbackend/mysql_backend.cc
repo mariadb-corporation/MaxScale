@@ -84,7 +84,6 @@ extern "C"
             NULL,                           /* Accept                        */
             gw_create_backend_connection,   /* Connect                     */
             gw_backend_close,               /* Close                         */
-            NULL,                           /* Listen                        */
             gw_change_user,                 /* Authentication                */
             gw_backend_default_auth,        /* Default authenticator         */
             NULL,                           /* Connection limit reached      */

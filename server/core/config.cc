@@ -50,6 +50,7 @@
 #include <maxscale/limits.h>
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
+#include <maxscale/maxadmin.h>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/router.hh>
@@ -3831,8 +3832,8 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 
     int error_count = 0;
 
-    char* port = config_get_value(obj->parameters, CN_PORT);
-    char* socket = config_get_value(obj->parameters, CN_SOCKET);
+    const char* port = config_get_value(obj->parameters, CN_PORT);
+    const char* socket = config_get_value(obj->parameters, CN_SOCKET);
 
     if (socket && port)
     {
@@ -3853,6 +3854,14 @@ int create_new_listener(CONFIG_CONTEXT* obj)
         const char* address = config_get_string(obj->parameters, CN_ADDRESS);
         Service* service = static_cast<Service*>(config_get_service(obj->parameters, CN_SERVICE));
         mxb_assert(service);
+
+        // Remove this once maxadmin is removed
+        if (strcasecmp(protocol, "maxscaled") == 0 && socket
+            && strcmp(socket, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG) == 0)
+        {
+            socket = MAXADMIN_DEFAULT_SOCKET;
+            address = "";
+        }
 
         if (auto l = service_find_listener(service, socket, address, socket ? 0 : atoi(port)))
         {

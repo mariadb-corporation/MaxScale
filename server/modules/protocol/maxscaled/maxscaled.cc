@@ -63,7 +63,6 @@ static int   maxscaled_error(DCB* dcb);
 static int   maxscaled_hangup(DCB* dcb);
 static int   maxscaled_accept(DCB* dcb);
 static int   maxscaled_close(DCB* dcb);
-static int   maxscaled_listen(DCB* dcb, char* config);
 static char* mxsd_default_auth();
 
 static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* dcb)
@@ -181,7 +180,6 @@ extern "C"
             maxscaled_accept,           /**< Accept                        */
             NULL,                       /**< Connect                       */
             maxscaled_close,            /**< Close                         */
-            maxscaled_listen,           /**< Create a listener             */
             NULL,                       /**< Authentication                */
             mxsd_default_auth,          /**< Default authenticator         */
             NULL,                       /**< Connection limit reached      */
@@ -416,28 +414,4 @@ static int maxscaled_close(DCB* dcb)
     pthread_mutex_unlock(&maxscaled->lock);
 
     return 0;
-}
-
-/**
- * Maxscale daemon listener entry point
- *
- * @param       listener        The Listener DCB
- * @param       config          Configuration (ip:port)
- * @return      0 on failure, 1 on success
- */
-static int maxscaled_listen(DCB* listener, char* config)
-{
-    const char* socket_path = NULL;
-
-    /* check for default UNIX socket */
-    if (strncmp(config, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN) == 0)
-    {
-        socket_path = MAXADMIN_DEFAULT_SOCKET;
-    }
-    else
-    {
-        socket_path = config;
-    }
-
-    return (dcb_listen(listener, socket_path, "MaxScale Admin") < 0) ? 0 : 1;
 }
