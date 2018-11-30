@@ -57,7 +57,6 @@ Listener::Listener(SERVICE* service, const std::string& name, const std::string&
     , m_listener(nullptr)
     , m_users(nullptr)
     , m_service(service)
-    , m_active(1)
 {
 }
 
@@ -116,21 +115,17 @@ SListener Listener::create(SERVICE* service,
     return listener;
 }
 
-void listener_free(const SListener& listener)
+void Listener::destroy(const SListener& listener)
 {
-    std::lock_guard<std::mutex> guard(listener_lock);
-    all_listeners.remove(listener);
-}
-
-void Listener::close()
-{
-    deactivate();
-    stop();
+    listener->stop();
 
     // TODO: This is not pretty but it works, revise when listeners are refactored. This is
     // thread-safe as the listener is freed on the same thread that closes the socket.
-    ::close(m_listener->fd);
-    m_listener->fd = -1;
+    ::close(listener->m_listener->fd);
+    listener->m_listener->fd = -1;
+
+    std::lock_guard<std::mutex> guard(listener_lock);
+    all_listeners.remove(listener);
 }
 
 bool Listener::stop()
@@ -170,7 +165,7 @@ SListener listener_find(const std::string& name)
 
     for (const auto& a : all_listeners)
     {
-        if (a->is_active() && a->name() == name)
+        if (a->name() == name)
         {
             rval = a;
             break;
@@ -187,7 +182,7 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
 
     for (const auto& a : all_listeners)
     {
-        if (a->is_active() && a->service() == service)
+        if (a->service() == service)
         {
             rval.push_back(a);
         }
@@ -614,16 +609,6 @@ json_t* Listener::to_json() const
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
 
     return rval;
-}
-
-void Listener::deactivate()
-{
-    m_active = false;
-}
-
-bool Listener::is_active() const
-{
-    return m_active;
 }
 
 const char* Listener::name() const

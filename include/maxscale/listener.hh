@@ -64,6 +64,16 @@ public:
                             SSL_LISTENER* ssl);
 
     /**
+     * Destroy a listener
+     *
+     * This removes the listener from the global list of active listeners. Once destroyed, the port used
+     * by a listener is open for immediate reuse.
+     *
+     * @param listener Listener to destroy
+     */
+    static void destroy(const SListener& listener);
+
+    /**
      * Start listening on the configured port
      *
      * @return True if the listener was able to start listening
@@ -83,14 +93,6 @@ public:
      * @return True if the listener was successfully started
      */
     bool start();
-
-    /**
-     * Closes a listener
-     *
-     * This closes the network socket the listener listens on to allow immediate reuse of it. The listener
-     * instance can remain if there are open sessions for it.
-     */
-    void close();
 
     /**
      * Listener name
@@ -131,18 +133,6 @@ public:
      * The state of the listener
      */
     const char* state() const;
-
-    /**
-     * Whether the listener is active
-     */
-    bool is_active() const;
-
-    /**
-     * Deactivate the listener
-     *
-     * TODO: Remove and deactivate via removal from global listener list
-     */
-    void deactivate();
 
     /**
      * The SSL_LISTENER object
@@ -220,15 +210,6 @@ private:
  * @return True if the serialization of the listener was successful, false if it fails
  */
 bool listener_serialize(const SListener& listener);
-
-/**
- * @brief Free a listener
- *
- * The listener must be destroyed before it can be freed.
- *
- * @param listener Listener to free
- */
-void listener_free(const SListener& listener);
 
 /**
  * Find a listener

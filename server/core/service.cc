@@ -236,12 +236,6 @@ Service::~Service()
 {
     mxs_rworker_delete_data(m_wkey);
 
-    for (const auto& tmp : listener_find_by_service(this))
-    {
-        mxb_assert(!tmp->is_active() || maxscale_teardown_in_progress());
-        listener_free(listener_find(tmp->name()));
-    }
-
     if (router && router_instance && router->destroyInstance)
     {
         router->destroyInstance(router_instance);
@@ -538,7 +532,7 @@ bool service_remove_listener(Service* service, const char* target)
 
     if (listener && listener->service() == service)
     {
-        listener->close();
+        Listener::destroy(listener);
         rval = true;
     }
 
