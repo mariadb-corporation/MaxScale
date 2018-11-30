@@ -82,6 +82,20 @@ public:
     const FilterList& get_filters() const;
 
     /**
+     * Add a listener to a service
+     *
+     * @param listener Listener to add
+     */
+    void add_listener(const SListener& listener);
+
+    /**
+     * Remove a listener from a service
+     *
+     * @param listener Listener to remove
+     */
+    void remove_listener(const SListener& listener);
+
+    /**
      * Reload users for all listeners
      *
      * @return True if loading of users was successful
@@ -104,15 +118,16 @@ public:
     mutable std::mutex lock;
 
 private:
-    FilterList  m_filters;          /**< Ordered list of filters */
-    std::string m_name;             /**< Name of the service */
-    std::string m_router_name;      /**< Router module */
-    std::string m_user;             /**< Username */
-    std::string m_password;         /**< Password */
-    std::string m_weightby;         /**< Weighting parameter name */
-    std::string m_version_string;   /**< Version string sent to clients */
-    RateLimits  m_rate_limits;      /**< The refresh rate limits for users of each thread */
-    uint64_t    m_wkey;             /**< Key for worker local data */
+    FilterList             m_filters;       /**< Ordered list of filters */
+    std::vector<SListener> m_listeners;     /**< Listeners pointing to this service */
+    std::string            m_name;          /**< Name of the service */
+    std::string            m_router_name;   /**< Router module */
+    std::string            m_user;          /**< Username */
+    std::string            m_password;      /**< Password */
+    std::string            m_weightby;      /**< Weighting parameter name */
+    std::string            m_version_string;/**< Version string sent to clients */
+    RateLimits             m_rate_limits;   /**< The refresh rate limits for users of each thread */
+    uint64_t               m_wkey;          /**< Key for worker local data */
 
     // Get the worker local filter list
     FilterList* get_local_filters() const;

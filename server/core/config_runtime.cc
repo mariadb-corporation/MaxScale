@@ -1015,24 +1015,23 @@ bool runtime_create_listener(Service* service,
         else
         {
             const char* print_addr = addr ? addr : "::";
-            SListener listener = listener_alloc(service,
-                                                name,
-                                                proto,
-                                                addr,
-                                                u_port,
-                                                auth,
-                                                auth_opt,
-                                                ssl);
+            SListener listener = Listener::create(service,
+                                                  name,
+                                                  proto,
+                                                  addr,
+                                                  u_port,
+                                                  auth,
+                                                  auth_opt,
+                                                  ssl);
 
             if (listener && listener_serialize(listener))
             {
                 MXS_NOTICE("Created %slistener '%s' at %s:%s for service '%s'",
-                           ssl ? "TLS encrypted " : "",
-                           name,
-                           print_addr,
-                           port,
-                           service->name);
-                if (serviceLaunchListener(service, listener))
+                           ssl ? "TLS encrypted " : "", name, print_addr, port, service->name);
+
+                service->add_listener(listener);
+
+                if (listener->listen())
                 {
                     rval = true;
                 }
