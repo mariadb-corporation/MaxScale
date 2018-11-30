@@ -12,26 +12,16 @@
  */
 #pragma once
 
-/*
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 02/02/2016   Martin Brampton         Initial implementation
- *
- * @endverbatim
- */
-
 #define MXS_MODULE_NAME "MySQLAuth"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <stdint.h>
 #include <arpa/inet.h>
 
 #include <maxscale/authenticator.h>
 #include <maxscale/dcb.h>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mysql.h>

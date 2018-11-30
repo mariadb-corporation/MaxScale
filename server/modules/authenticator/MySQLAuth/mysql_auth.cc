@@ -25,7 +25,7 @@
  * @endverbatim
  */
 
-#include "mysql_auth.h"
+#include "mysql_auth.hh"
 
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/authenticator.h>

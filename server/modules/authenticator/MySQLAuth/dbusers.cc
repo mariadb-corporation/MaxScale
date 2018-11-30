@@ -15,7 +15,7 @@
  * Loading MySQL users from a MySQL backend server
  */
 
-#include "mysql_auth.h"
+#include "mysql_auth.hh"
 
 #include <ctype.h>
 #include <netdb.h>
