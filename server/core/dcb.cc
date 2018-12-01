@@ -2321,7 +2321,7 @@ DCB* dcb_accept(const SListener& listener)
     int c_sock;
     struct sockaddr_storage client_conn;
 
-    if ((c_sock = dcb_accept_one_connection(listener->m_listener->fd, (struct sockaddr*)&client_conn)) >= 0)
+    if ((c_sock = dcb_accept_one_connection(listener->fd(), (struct sockaddr*)&client_conn)) >= 0)
     {
         configure_network_socket(c_sock, client_conn.ss_family);
 
@@ -2334,7 +2334,6 @@ DCB* dcb_accept(const SListener& listener)
         }
         else
         {
-            client_dcb->service = listener->service();
             client_dcb->session = session_set_dummy(client_dcb);
             client_dcb->fd = c_sock;
 
@@ -2495,145 +2494,6 @@ static int dcb_accept_one_connection(int fd, struct sockaddr* client_conn)
         }
     }
     return c_sock;
-}
-
-/**
- * @brief Create a listener, add new information to the given DCB
- *
- * First creates and opens a socket, either TCP or Unix according to the
- * configuration data provided.  Then try to listen on the socket and
- * record the socket in the given DCB.  Add the given DCB into the poll
- * list.  The protocol name does not affect the logic, but is used in
- * log messages.
- *
- * @param dcb Listener DCB that is being created
- * @param config Configuration for port to listen on
- *
- * @return 0 if new listener created successfully, otherwise -1
- */
-int dcb_listen(DCB* dcb, const char* config)
-{
-    char host[strlen(config) + 1];
-    strcpy(host, config);
-    char* port_str = strrchr(host, '|');
-    uint16_t port = 0;
-
-    if (port_str)
-    {
-        *port_str++ = 0;
-        port = atoi(port_str);
-    }
-
-    int listener_socket = -1;
-
-    if (strchr(host, '/'))
-    {
-        listener_socket = dcb_listen_create_socket_unix(host);
-
-        if (listener_socket != -1)
-        {
-            dcb->path = MXS_STRDUP_A(host);
-        }
-    }
-    else if (port > 0)
-    {
-        listener_socket = dcb_listen_create_socket_inet(host, port);
-
-        if (listener_socket == -1 && strcmp(host, "::") == 0)
-        {
-            /** Attempt to bind to the IPv4 if the default IPv6 one is used */
-            MXS_WARNING("Failed to bind on default IPv6 host '::', attempting "
-                        "to bind on IPv4 version '0.0.0.0'");
-            strcpy(host, "0.0.0.0");
-            listener_socket = dcb_listen_create_socket_inet(host, port);
-        }
-    }
-    else
-    {
-        // We don't have a socket path or a network port
-        mxb_assert(false);
-    }
-
-    if (listener_socket < 0)
-    {
-        mxb_assert(listener_socket == -1);
-        return -1;
-    }
-
-    /**
-     * The use of INT_MAX for backlog length in listen() allows the end-user to
-     * control the backlog length with the net.ipv4.tcp_max_syn_backlog kernel
-     * option since the parameter is silently truncated to the configured value.
-     *
-     * @see man 2 listen
-     */
-    if (listen(listener_socket, INT_MAX) != 0)
-    {
-        MXS_ERROR("Failed to start listening on [%s]:%u: %d, %s",
-                  host,
-                  port,
-                  errno,
-                  mxs_strerror(errno));
-        close(listener_socket);
-        return -1;
-    }
-
-    MXS_NOTICE("Listening for connections at [%s]:%u", host, port);
-
-    // assign listener_socket to dcb
-    dcb->fd = listener_socket;
-
-    // add listening socket to poll structure
-    if (poll_add_dcb(dcb) != 0)
-    {
-        MXS_ERROR("MaxScale encountered system limit while "
-                  "attempting to register on an epoll instance.");
-        return -1;
-    }
-    return 0;
-}
-
-/**
- * @brief Create a network listener socket
- *
- * @param host The network address to listen on
- * @param port The port to listen on
- * @return     The opened socket or -1 on error
- */
-static int dcb_listen_create_socket_inet(const char* host, uint16_t port)
-{
-    struct sockaddr_storage server_address = {};
-    return open_network_socket(MXS_SOCKET_LISTENER, &server_address, host, port);
-}
-
-/**
- * @brief Create a Unix domain socket
- *
- * @param path The socket path
- * @return     The opened socket or -1 on error
- */
-static int dcb_listen_create_socket_unix(const char* path)
-{
-    if (unlink(path) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to unlink Unix Socket %s: %d %s",
-                  path,
-                  errno,
-                  mxs_strerror(errno));
-    }
-
-    struct sockaddr_un local_addr;
-    int listener_socket = open_unix_socket(MXS_SOCKET_LISTENER, &local_addr, path);
-
-    if (listener_socket >= 0 && chmod(path, 0777) < 0)
-    {
-        MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %d, %s",
-                  path,
-                  errno,
-                  mxs_strerror(errno));
-    }
-
-    return listener_socket;
 }
 
 /**
@@ -2989,49 +2849,28 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
     }
     if ((events & EPOLLIN) && (dcb->n_close == 0))
     {
-        if (dcb->state == DCB_STATE_LISTENING)
+        MXS_DEBUG("%lu [poll_waitevents] "
+                  "Read in dcb %p fd %d",
+                  pthread_self(),
+                  dcb,
+                  dcb->fd);
+        rc |= MXB_POLL_READ;
+
+        if (dcb_session_check(dcb, "read"))
         {
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "Accept in fd %d",
-                      pthread_self(),
-                      dcb->fd);
-            rc |= MXB_POLL_ACCEPT;
-
-            if (dcb_session_check(dcb, "accept"))
+            int return_code = 1;
+            /** SSL authentication is still going on, we need to call dcb_accept_SSL
+             * until it return 1 for success or -1 for error */
+            if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
             {
-                DCB* client_dcb;
-
-                while ((client_dcb = dcb_accept(dcb->listener)))
-                {
-                    dcb->func.accept(client_dcb);
-                }
+                return_code = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role) ?
+                    dcb_accept_SSL(dcb) :
+                    dcb_connect_SSL(dcb);
             }
-        }
-        else
-        {
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "Read in dcb %p fd %d",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd);
-            rc |= MXB_POLL_READ;
-
-            if (dcb_session_check(dcb, "read"))
+            if (1 == return_code)
             {
-                int return_code = 1;
-                /** SSL authentication is still going on, we need to call dcb_accept_SSL
-                 * until it return 1 for success or -1 for error */
-                if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
-                {
-                    return_code = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role) ?
-                        dcb_accept_SSL(dcb) :
-                        dcb_connect_SSL(dcb);
-                }
-                if (1 == return_code)
-                {
-                    DCB_EH_NOTICE("Calling dcb->func.read(%p)", dcb);
-                    dcb->func.read(dcb);
-                }
+                DCB_EH_NOTICE("Calling dcb->func.read(%p)", dcb);
+                dcb->func.read(dcb);
             }
         }
     }

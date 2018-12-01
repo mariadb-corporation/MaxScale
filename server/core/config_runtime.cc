@@ -1022,7 +1022,7 @@ bool runtime_create_listener(Service* service,
                 MXS_NOTICE("Created %slistener '%s' at %s:%s for service '%s'",
                            ssl ? "TLS encrypted " : "", name, print_addr, port, service->name);
 
-                if (listener->listen(listener))
+                if (listener->listen())
                 {
                     rval = true;
                 }

@@ -23,6 +23,7 @@
 #include <maxscale/protocol.h>
 #include <maxscale/ssl.h>
 #include <maxscale/service.hh>
+#include <maxscale/routingworker.hh>
 
 struct DCB;
 class SERVICE;
@@ -34,7 +35,7 @@ using SListener = std::shared_ptr<Listener>;
  * The Listener class is used to link a network port to a service. It defines the name of the
  * protocol module that should be loaded as well as the authenticator that is used.
  */
-class Listener
+class Listener : public MXB_POLL_DATA
 {
 public:
 
@@ -78,7 +79,7 @@ public:
      *
      * @return True if the listener was able to start listening
      */
-    bool listen(const SListener& self);
+    bool listen();
 
     /**
      * Stop the listener
@@ -172,6 +173,12 @@ public:
      */
     void print_users(DCB* dcb);
 
+    // TODO: Move dcb_accept code into listener.cc and remove this
+    int fd() const
+    {
+        return m_fd;
+    }
+
     // Functions that are temporarily public
     bool          create_listener_config(const char* filename);
     struct users* users() const;
@@ -196,12 +203,26 @@ private:
     std::string       m_auth_options;   /**< Authenticator options */
     void*             m_auth_instance;  /**< Authenticator instance */
     SSL_LISTENER*     m_ssl;            /**< Structure of SSL data or NULL */
-    DCB*              m_listener;       /**< The DCB for the listener */
     struct users*     m_users;          /**< The user data for this listener */
     SERVICE*          m_service;        /**< The service which used by this listener */
     std::atomic<bool> m_active;         /**< True if the port has not been deleted */
     MXS_PROTOCOL      m_proto_func;     /**< Preloaded protocol functions */
     MXS_AUTHENTICATOR m_auth_func;      /**< Preloaded authenticator functions */
+
+    int m_fd;     /**< File descriptor the listener listens on */
+
+    /** A shared pointer to the listener itself that is passed as the argument to
+     * the protocol's accept function. This allows client connections to live
+     * longer than the listener they started on.
+     *
+     * This will eventually be replaced with a shared_ptr of the authenticator instance as that is
+     * what is actually required by the client sessions.
+     *
+     * In practice as a service must outlive all sessions on it, the reference could be owned by the service
+     * instead of each individual client. This would remove the need to increment the listener reference
+     * count every time a client is accepted.
+     */
+    SListener m_self;
 
     /**
      * Creates a new listener that points to a service
@@ -219,6 +240,12 @@ private:
     Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
              const std::string& protocol, const std::string& authenticator,
              const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
+
+    // Listen on a file descriptor shared between all workers
+    bool listen_shared(std::string config_bind);
+
+    // Handler for EPOLL_IN events
+    static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
 
     friend DCB* dcb_accept(const SListener& listener);
 };

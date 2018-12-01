@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include <algorithm>
 #include <list>
@@ -33,6 +34,7 @@
 #include <maxscale/users.h>
 #include <maxscale/service.hh>
 #include <maxscale/poll.h>
+#include <maxscale/routingworker.hh>
 
 #include "internal/modules.hh"
 
@@ -46,7 +48,8 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
 Listener::Listener(SERVICE* service, const std::string& name, const std::string& address,
                    uint16_t port, const std::string& protocol, const std::string& authenticator,
                    const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl)
-    : m_name(name)
+    : MXB_POLL_DATA{Listener::poll_handler}
+    , m_name(name)
     , m_state(CREATED)
     , m_protocol(protocol)
     , m_port(port)
@@ -55,7 +58,6 @@ Listener::Listener(SERVICE* service, const std::string& name, const std::string&
     , m_auth_options(auth_opts)
     , m_auth_instance(auth_instance)
     , m_ssl(ssl)
-    , m_listener(nullptr)
     , m_users(nullptr)
     , m_service(service)
     , m_proto_func(*(MXS_PROTOCOL*)load_module(protocol.c_str(), MODULE_PROTOCOL))
@@ -68,11 +70,6 @@ Listener::~Listener()
     if (m_users)
     {
         users_free(m_users);
-    }
-
-    if (m_listener)
-    {
-        dcb_close(m_listener);
     }
 
     SSL_LISTENER_free(m_ssl);
@@ -116,6 +113,10 @@ SListener Listener::create(SERVICE* service,
 
     if (listener)
     {
+        // Storing a self-reference to the listener makes it possible to easily
+        // increment the reference count when new connections are accepted.
+        listener->m_self = listener;
+
         // Note: This isn't good: we modify the service from a listener and the service itself should do this.
         service->capabilities |= proto_mod->module_capabilities | auth_mod->module_capabilities;
 
@@ -128,16 +129,13 @@ SListener Listener::create(SERVICE* service,
 
 void Listener::destroy(const SListener& listener)
 {
+    // Remove the listener from all workers. This makes sure that there's no concurrent access while we're
+    // closing things up.
     listener->stop();
 
-    // TODO: This is not pretty but it works, revise when listeners are refactored. This is
-    // thread-safe as the listener is freed on the same thread that closes the socket.
-    ::close(listener->m_listener->fd);
-    listener->m_listener->fd = -1;
+    close(listener->m_fd);
+    listener->m_fd = -1;
     listener->m_state = DESTROYED;
-
-    // This frees the self-reference the listener's own DCB has to itself
-    listener->m_listener->listener.reset();
 
     std::lock_guard<std::mutex> guard(listener_lock);
     all_listeners.remove(listener);
@@ -146,9 +144,8 @@ void Listener::destroy(const SListener& listener)
 bool Listener::stop()
 {
     bool rval = (m_state == STOPPED);
-    mxb_assert(m_listener);
 
-    if (m_state == STARTED && poll_remove_dcb(m_listener) == 0)
+    if (m_state == STARTED && mxs::RoutingWorker::remove_shared_fd(m_fd))
     {
         m_state = STOPPED;
         rval = true;
@@ -160,9 +157,8 @@ bool Listener::stop()
 bool Listener::start()
 {
     bool rval = (m_state == STARTED);
-    mxb_assert(m_listener);
 
-    if (m_state == STOPPED && poll_add_dcb(m_listener) == 0)
+    if (m_state == STOPPED && mxs::RoutingWorker::add_shared_fd(m_fd, EPOLLIN, this))
     {
         m_state = STARTED;
         rval = true;
@@ -701,11 +697,11 @@ const char* Listener::state() const
 
 void Listener::print_users(DCB* dcb)
 {
-    if (m_listener && m_listener->authfunc.diagnostic)
+    if (m_auth_func.diagnostic)
     {
         dcb_printf(dcb, "User names (%s): ", name());
 
-        m_listener->authfunc.diagnostic(dcb, this);
+        m_auth_func.diagnostic(dcb, this);
 
         dcb_printf(dcb, "\n");
     }
@@ -715,9 +711,9 @@ int Listener::load_users()
 {
     int rval = MXS_AUTH_LOADUSERS_OK;
 
-    if (m_listener && m_listener->authfunc.loadusers)
+    if (m_auth_func.loadusers)
     {
-        rval = m_listener->authfunc.loadusers(this);
+        rval = m_auth_func.loadusers(this);
     }
 
     return rval;
@@ -734,34 +730,138 @@ void Listener::set_users(struct users* u)
     m_users = u;
 }
 
-bool Listener::listen(const SListener& self)
+namespace
+{
+
+/**
+ * @brief Create a Unix domain socket
+ *
+ * @param path The socket path
+ * @return     The opened socket or -1 on error
+ */
+static int create_unix_socket(const char* path)
+{
+    if (unlink(path) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to unlink Unix Socket %s: %d %s", path, errno, mxs_strerror(errno));
+    }
+
+    struct sockaddr_un local_addr;
+    int listener_socket = open_unix_socket(MXS_SOCKET_LISTENER, &local_addr, path);
+
+    if (listener_socket >= 0 && chmod(path, 0777) < 0)
+    {
+        MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %d, %s",
+                  path, errno, mxs_strerror(errno));
+    }
+
+    return listener_socket;
+}
+
+/**
+ * @brief Create a listener, add new information to the given DCB
+ *
+ * First creates and opens a socket, either TCP or Unix according to the
+ * configuration data provided.  Then try to listen on the socket and
+ * record the socket in the given DCB.  Add the given DCB into the poll
+ * list.  The protocol name does not affect the logic, but is used in
+ * log messages.
+ *
+ * @param config Configuration for port to listen on
+ *
+ * @return New socket or -1 on error
+ */
+int start_listening(const char* config)
+{
+    char host[strlen(config) + 1];
+    strcpy(host, config);
+    char* port_str = strrchr(host, '|');
+    uint16_t port = 0;
+
+    if (port_str)
+    {
+        *port_str++ = 0;
+        port = atoi(port_str);
+    }
+
+    mxb_assert(strchr(host, '/') || port > 0);
+
+    int listener_socket = -1;
+
+    if (strchr(host, '/'))
+    {
+        listener_socket = create_unix_socket(host);
+    }
+    else if (port > 0)
+    {
+        struct sockaddr_storage server_address = {};
+        listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, host, port);
+
+        if (listener_socket == -1 && strcmp(host, "::") == 0)
+        {
+            /** Attempt to bind to the IPv4 if the default IPv6 one is used */
+            MXS_WARNING("Failed to bind on default IPv6 host '::', attempting "
+                        "to bind on IPv4 version '0.0.0.0'");
+            strcpy(host, "0.0.0.0");
+            listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, host, port);
+        }
+    }
+
+    if (listener_socket != -1)
+    {
+        /**
+         * The use of INT_MAX for backlog length in listen() allows the end-user to
+         * control the backlog length with the net.ipv4.tcp_max_syn_backlog kernel
+         * option since the parameter is silently truncated to the configured value.
+         *
+         * @see man 2 listen
+         */
+        if (listen(listener_socket, INT_MAX) != 0)
+        {
+            MXS_ERROR("Failed to start listening on [%s]:%u: %d, %s", host, port, errno, mxs_strerror(errno));
+            close(listener_socket);
+            return -1;
+        }
+    }
+
+    return listener_socket;
+}
+}
+
+bool Listener::listen_shared(std::string config_bind)
+{
+    bool rval = false;
+    int fd = start_listening(config_bind.data());
+
+    if (fd != -1)
+    {
+        if (mxs::RoutingWorker::add_shared_fd(fd, EPOLLIN, this))
+        {
+            m_fd = fd;
+            rval = true;
+            m_state = STARTED;
+        }
+        else
+        {
+            close(fd);
+        }
+    }
+    else
+    {
+        MXS_ERROR("[%s] Failed to listen on %s", m_service->name, config_bind.c_str());
+    }
+
+    return rval;
+}
+
+bool Listener::listen()
 {
     m_state = FAILED;
 
-    // This is a temporary workaround until the DCBs are removed from listeners
-    m_listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, self, m_service);
-
-    if (!m_listener)
-    {
-        MXS_ERROR("Failed to create listener for service %s.", m_service->name);
-        return false;
-    }
-
-    m_listener->func = m_proto_func;
-    m_listener->authfunc = m_auth_func;
-
-    /**
-     * Normally, we'd allocate the DCB specific authentication data. As the
-     * listeners aren't normal DCBs, we can skip that.
-     */
-    std::stringstream ss;
-    ss << m_address << "|" << m_port;
-    auto config_bind = ss.str();
-
     /** Load the authentication users before before starting the listener */
-    if (m_listener->authfunc.loadusers)
+    if (m_auth_func.loadusers)
     {
-        switch (m_listener->authfunc.loadusers(this))
+        switch (m_auth_func.loadusers(this))
         {
         case MXS_AUTH_LOADUSERS_FATAL:
             MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
@@ -779,26 +879,29 @@ bool Listener::listen(const SListener& self)
     }
 
     bool rval = false;
+    std::stringstream ss;
+    ss << m_address << "|" << m_port;
 
-    if (dcb_listen(m_listener, config_bind.data()) == 0)
-    {
-        m_listener->session = session_alloc(m_service, m_listener);
+    // TODO: Detect the need for SO_REUSEPORT here
+    rval = listen_shared(ss.str());
 
-        if (m_listener->session != NULL)
-        {
-            m_listener->session->state = SESSION_STATE_LISTENER;
-            m_state = STARTED;
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("[%s] Failed to create listener session.", m_service->name);
-        }
-    }
-    else
+    if (rval)
     {
-        MXS_ERROR("[%s] Failed to listen on %s", m_service->name, config_bind.c_str());
+        MXS_NOTICE("Listening for connections at [%s]:%u", m_address.c_str(), m_port);
     }
 
     return rval;
+}
+
+uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
+{
+    Listener* listener = static_cast<Listener*>(data);
+    DCB* client_dcb;
+
+    while ((client_dcb = dcb_accept(listener->m_self)))
+    {
+        listener->m_proto_func.accept(client_dcb);
+    }
+
+    return 1;
 }

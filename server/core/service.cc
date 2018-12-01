@@ -323,7 +323,7 @@ bool service_isvalid(Service* service)
 static int serviceStartPort(Service* service, const SListener& port)
 {
     mxb_assert(service && service->router && service->router_instance);
-    return port->listen(port);
+    return port->listen();
 }
 
 /**
