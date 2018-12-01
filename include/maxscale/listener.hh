@@ -246,8 +246,6 @@ private:
 
     // Handler for EPOLL_IN events
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
-
-    friend DCB* dcb_accept(const SListener& listener);
 };
 
 /**

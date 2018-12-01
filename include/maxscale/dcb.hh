@@ -262,8 +262,7 @@ typedef enum
  */
 void dcb_global_init();
 
-int  dcb_write(DCB*, GWBUF*);
-DCB* dcb_accept(const SListener& listener);
+int dcb_write(DCB*, GWBUF*);
 DCB* dcb_alloc(dcb_role_t, const SListener&, SERVICE* service);
 DCB* dcb_connect(struct server*, struct session*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
