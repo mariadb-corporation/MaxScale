@@ -186,7 +186,7 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
 
     if (m_fd != -1)
     {
-        if (!m_pWorker->add_fd(m_fd, EPOLLIN, this))
+        if (!m_pWorker->add_fd(m_fd, EPOLLIN | EPOLLET, this))
         {
             MXB_ALERT("Could not add timer descriptor to worker, system will not work.");
             ::close(m_fd);
@@ -358,9 +358,6 @@ void Worker::get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal)
 bool Worker::add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 {
     bool rv = true;
-
-    // Must be edge-triggered.
-    events |= EPOLLET;
 
     struct epoll_event ev;
 

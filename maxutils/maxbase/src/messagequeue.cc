@@ -246,7 +246,7 @@ bool MessageQueue::add_to_worker(Worker* pWorker)
         m_pWorker = NULL;
     }
 
-    if (pWorker->add_fd(m_read_fd, EPOLLIN, this))
+    if (pWorker->add_fd(m_read_fd, EPOLLIN | EPOLLET, this))
     {
         m_pWorker = pWorker;
     }
