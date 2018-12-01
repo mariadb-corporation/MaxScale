@@ -168,6 +168,15 @@ DCB::DCB(dcb_role_t role, const SListener& listener, SERVICE* service)
     , service(service)
     , last_read(mxs_clock())
 {
+    session_set_dummy(this);
+
+    // TODO: Remove DCB_ROLE_INTERNAL to always have a valid listener
+    if (listener)
+    {
+        func = listener->protocol_func();
+        authfunc = listener->auth_func();
+    }
+
     if (high_water && low_water)
     {
         dcb_add_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
@@ -201,7 +210,6 @@ DCB::~DCB()
 
     MXS_FREE(remote);
     MXS_FREE(user);
-    MXS_FREE(path);
     MXS_FREE(protocol);
     gwbuf_free(delayq);
     gwbuf_free(writeq);
@@ -1214,14 +1222,6 @@ void dcb_final_close(DCB* dcb)
                 dcb->fd = DCBFD_CLOSED;
 
                 MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
-            }
-
-            if (dcb->path && (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER))
-            {
-                if (unlink(dcb->path) != 0)
-                {
-                    MXS_ERROR("Could not unlink %s: %s", dcb->path, mxs_strerror(errno));
-                }
             }
         }
         else

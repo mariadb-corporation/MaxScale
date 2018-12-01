@@ -332,26 +332,13 @@ static int mysql_auth_authenticate(DCB* dcb)
                 strcpy(extra, "Wrong password.");
             }
 
-            if (dcb->path)
-            {
-                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                              "%s: login attempt for user '%s'@[%s]:%s, authentication failed. %s",
-                              dcb->service->name,
-                              client_data->user,
-                              dcb->remote,
-                              dcb->path,
-                              extra);
-            }
-            else
-            {
-                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                              "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
-                              dcb->service->name,
-                              client_data->user,
-                              dcb->remote,
-                              dcb_get_port(dcb),
-                              extra);
-            }
+            MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                          "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
+                          dcb->service->name,
+                          client_data->user,
+                          dcb->remote,
+                          dcb_get_port(dcb),
+                          extra);
 
             if (is_localhost_address(&dcb->ip)
                 && !dcb->service->localhost_match_wildcard_host)

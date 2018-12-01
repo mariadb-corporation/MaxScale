@@ -942,7 +942,6 @@ DCB* dcb_accept(const SListener& listener)
         }
         else
         {
-            client_dcb->session = session_set_dummy(client_dcb);
             client_dcb->fd = c_sock;
 
             // get client address
@@ -951,7 +950,6 @@ DCB* dcb_accept(const SListener& listener)
                 // client address
                 client_dcb->ip.ss_family = AF_UNIX;
                 client_dcb->remote = MXS_STRDUP_A("localhost");
-                client_dcb->path = MXS_STRDUP_A(listener->address());
             }
             else
             {
@@ -975,9 +973,6 @@ DCB* dcb_accept(const SListener& listener)
                     inet_ntop(client_dcb->ip.ss_family, ptr, client_dcb->remote, INET6_ADDRSTRLEN);
                 }
             }
-
-            client_dcb->func = listener->protocol_func();
-            client_dcb->authfunc = listener->auth_func();
 
             /** Allocate DCB specific authentication data */
             if (client_dcb->authfunc.create

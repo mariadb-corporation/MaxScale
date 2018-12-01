@@ -191,7 +191,7 @@ struct DCB : public MXB_POLL_DATA
     void*                   protocol = nullptr;                 /**< The protocol specific state */
     size_t                  protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  protocol_bytes_processed = 0;       /**< How many bytes have been read */
-    struct session*         session = nullptr;                  /**< The owning session */
+    struct session*         session;                            /**< The owning session */
     SListener               listener;                           /**< The origin of the connection */
     MXS_PROTOCOL            func = {};                          /**< Protocol functions for the DCB */
     MXS_AUTHENTICATOR       authfunc = {};                      /**< Authenticator functions for the DCB */
@@ -231,7 +231,6 @@ struct DCB : public MXB_POLL_DATA
         DCB* tail = nullptr;        /**< Last DCB in owning thread's list */
     }        thread;
     uint32_t n_close = 0;           /** How many times dcb_close has been called. */
-    char*    path = nullptr;        /** If a Unix socket, the path it was bound to. */
 };
 
 /**
