@@ -23,11 +23,6 @@
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.h>
 
-#include <memory>
-
-class Listener;
-using SListener = std::shared_ptr<Listener>;
-
 MXS_BEGIN_DECLS
 
 struct DCB;
@@ -94,13 +89,13 @@ typedef struct mxs_protocol
     /**
      * Accept a connection, only for client side protocol modules
      *
-     * @param dcb The listener DCB
+     * @param dcb The client DCB
      *
      * @return 1 on success, 0 on error
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* accept)(const SListener& listener);
+    int32_t (* accept)(DCB* client_dcb);
 
     /**
      * Connect to a server, only for backend side protocol modules

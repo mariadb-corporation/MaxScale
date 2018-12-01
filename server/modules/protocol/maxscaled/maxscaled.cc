@@ -61,7 +61,7 @@ static int   maxscaled_write_event(DCB* dcb);
 static int   maxscaled_write(DCB* dcb, GWBUF* queue);
 static int   maxscaled_error(DCB* dcb);
 static int   maxscaled_hangup(DCB* dcb);
-static int   maxscaled_accept(const SListener& listener);
+static int   maxscaled_accept(DCB*);
 static int   maxscaled_close(DCB* dcb);
 static char* mxsd_default_auth();
 
@@ -345,48 +345,43 @@ static int maxscaled_hangup(DCB* dcb)
  * @param dcb   The descriptor control block
  * @return The number of new connections created
  */
-static int maxscaled_accept(const SListener& listener)
+static int maxscaled_accept(DCB* client_dcb)
 {
-    int n_connect = 0;
-    DCB* client_dcb;
     socklen_t len = sizeof(struct ucred);
     struct ucred ucred;
 
-    while ((client_dcb = dcb_accept(listener)) != NULL)
+    MAXSCALED* maxscaled_protocol = (MAXSCALED*)calloc(1, sizeof(MAXSCALED));
+
+    if (!maxscaled_protocol)
     {
-        MAXSCALED* maxscaled_protocol = (MAXSCALED*)calloc(1, sizeof(MAXSCALED));
-
-        if (!maxscaled_protocol)
-        {
-            dcb_close(client_dcb);
-            continue;
-        }
-
-        maxscaled_protocol->username = NULL;
-        maxscaled_protocol->state = MAXSCALED_STATE_LOGIN;
-
-        bool authenticated = false;
-
-        if (!authenticate_socket(maxscaled_protocol, client_dcb))
-        {
-            dcb_close(client_dcb);
-            free(maxscaled_protocol);
-            continue;
-        }
-
-        pthread_mutex_init(&maxscaled_protocol->lock, NULL);
-        client_dcb->protocol = (void*)maxscaled_protocol;
-
-        client_dcb->session = session_alloc(listener->service(), client_dcb);
-
-        if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
-        {
-            dcb_close(client_dcb);
-            continue;
-        }
-        n_connect++;
+        dcb_close(client_dcb);
+        return 0;
     }
-    return n_connect;
+
+    maxscaled_protocol->username = NULL;
+    maxscaled_protocol->state = MAXSCALED_STATE_LOGIN;
+
+    bool authenticated = false;
+
+    if (!authenticate_socket(maxscaled_protocol, client_dcb))
+    {
+        dcb_close(client_dcb);
+        free(maxscaled_protocol);
+        return 0;
+    }
+
+    pthread_mutex_init(&maxscaled_protocol->lock, NULL);
+    client_dcb->protocol = (void*)maxscaled_protocol;
+
+    client_dcb->session = session_alloc(client_dcb->service, client_dcb);
+
+    if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
+    {
+        dcb_close(client_dcb);
+        return 0;
+    }
+
+    return 1;
 }
 
 /**

@@ -48,7 +48,7 @@ static int           cdc_write_event(DCB* dcb);
 static int           cdc_write(DCB* dcb, GWBUF* queue);
 static int           cdc_error(DCB* dcb);
 static int           cdc_hangup(DCB* dcb);
-static int           cdc_accept(const SListener& listener);
+static int           cdc_accept(DCB*);
 static int           cdc_close(DCB* dcb);
 static CDC_protocol* cdc_protocol_init(DCB* dcb);
 static void          cdc_protocol_done(DCB* dcb);
@@ -280,60 +280,52 @@ static int cdc_hangup(DCB* dcb)
  *
  * @param dcb    The descriptor control block
  */
-static int cdc_accept(const SListener& listener)
+static int cdc_accept(DCB* client_dcb)
 {
-    int n_connect = 0;
-    DCB* client_dcb;
+    CDC_session* client_data = NULL;
+    CDC_protocol* protocol = NULL;
 
-    while ((client_dcb = dcb_accept(listener)) != NULL)
+    /* allocating CDC protocol */
+    protocol = cdc_protocol_init(client_dcb);
+    if (protocol == NULL)
     {
-        CDC_session* client_data = NULL;
-        CDC_protocol* protocol = NULL;
-
-        /* allocating CDC protocol */
-        protocol = cdc_protocol_init(client_dcb);
-        if (protocol == NULL)
-        {
-            client_dcb->protocol = NULL;
-            dcb_close(client_dcb);
-            continue;
-        }
-
-        client_dcb->protocol = (CDC_protocol*) protocol;
-
-        /* Dummy session */
-        client_dcb->session = session_set_dummy(client_dcb);
-
-        if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
-        {
-            dcb_close(client_dcb);
-            continue;
-        }
-
-        /*
-         * create the session data for CDC
-         * this coud be done in anothe routine, let's keep it here for now
-         */
-        client_data = (CDC_session*) MXS_CALLOC(1, sizeof(CDC_session));
-        if (client_data == NULL)
-        {
-            dcb_close(client_dcb);
-            continue;
-        }
-
-        client_dcb->data = client_data;
-
-        /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
-        protocol->state = CDC_STATE_WAIT_FOR_AUTH;
-
-        MXS_NOTICE("%s: new connection from [%s]",
-                   client_dcb->service->name,
-                   client_dcb->remote != NULL ? client_dcb->remote : "");
-
-        n_connect++;
+        client_dcb->protocol = NULL;
+        dcb_close(client_dcb);
+        return 0;
     }
 
-    return n_connect;
+    client_dcb->protocol = (CDC_protocol*) protocol;
+
+    /* Dummy session */
+    client_dcb->session = session_set_dummy(client_dcb);
+
+    if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
+    {
+        dcb_close(client_dcb);
+        return 0;
+    }
+
+    /*
+     * create the session data for CDC
+     * this coud be done in anothe routine, let's keep it here for now
+     */
+    client_data = (CDC_session*) MXS_CALLOC(1, sizeof(CDC_session));
+    if (client_data == NULL)
+    {
+        dcb_close(client_dcb);
+        return 0;
+    }
+
+    client_dcb->data = client_data;
+
+    /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
+    protocol->state = CDC_STATE_WAIT_FOR_AUTH;
+
+    MXS_NOTICE("%s: new connection from [%s]",
+               client_dcb->service->name,
+               client_dcb->remote != NULL ? client_dcb->remote : "");
+
+    return 1;
 }
 
 /**

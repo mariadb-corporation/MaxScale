@@ -63,7 +63,7 @@ static int   telnetd_write_event(DCB* dcb);
 static int   telnetd_write(DCB* dcb, GWBUF* queue);
 static int   telnetd_error(DCB* dcb);
 static int   telnetd_hangup(DCB* dcb);
-static int   telnetd_accept(const SListener& listener);
+static int   telnetd_accept(DCB*);
 static int   telnetd_close(DCB* dcb);
 static char* telnetd_default_auth();
 
@@ -276,37 +276,31 @@ static int telnetd_hangup(DCB* dcb)
  * @param listener   The descriptor control block
  * @return The number of new connections created
  */
-static int telnetd_accept(const SListener& listener)
+static int telnetd_accept(DCB* client_dcb)
 {
-    int n_connect = 0;
-    DCB* client_dcb;
+    TELNETD* telnetd_protocol = NULL;
 
-    while ((client_dcb = dcb_accept(listener)) != NULL)
+    if ((telnetd_protocol = (TELNETD*)MXS_CALLOC(1, sizeof(TELNETD))) == NULL)
     {
-        TELNETD* telnetd_protocol = NULL;
-
-        if ((telnetd_protocol = (TELNETD*)MXS_CALLOC(1, sizeof(TELNETD))) == NULL)
-        {
-            dcb_close(client_dcb);
-            continue;
-        }
-        telnetd_protocol->state = TELNETD_STATE_LOGIN;
-        telnetd_protocol->username = NULL;
-        client_dcb->protocol = (void*)telnetd_protocol;
-
-        client_dcb->session = session_alloc(listener->service(), client_dcb);
-        if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
-        {
-            dcb_close(client_dcb);
-            continue;
-        }
-
-        ssl_authenticate_client(client_dcb, client_dcb->authfunc.connectssl(client_dcb));
-
-        n_connect++;
-        dcb_printf(client_dcb, "MaxScale login: ");
+        dcb_close(client_dcb);
+        return 0;
     }
-    return n_connect;
+    telnetd_protocol->state = TELNETD_STATE_LOGIN;
+    telnetd_protocol->username = NULL;
+    client_dcb->protocol = (void*)telnetd_protocol;
+
+    client_dcb->session = session_alloc(client_dcb->service, client_dcb);
+    if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
+    {
+        dcb_close(client_dcb);
+        return 0;
+    }
+
+    ssl_authenticate_client(client_dcb, client_dcb->authfunc.connectssl(client_dcb));
+
+    dcb_printf(client_dcb, "MaxScale login: ");
+
+    return 1;
 }
 
 /**

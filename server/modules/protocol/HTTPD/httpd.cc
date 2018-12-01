@@ -50,7 +50,7 @@ static int   httpd_write_event(DCB* dcb);
 static int   httpd_write(DCB* dcb, GWBUF* queue);
 static int   httpd_error(DCB* dcb);
 static int   httpd_hangup(DCB* dcb);
-static int   httpd_accept(const SListener& listener);
+static int   httpd_accept(DCB*);
 static int   httpd_close(DCB* dcb);
 static int   httpd_get_line(int sock, char* buf, int size);
 static void  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
@@ -358,33 +358,26 @@ static int httpd_hangup(DCB* dcb)
  *
  * @param listener   The descriptor control block
  */
-static int httpd_accept(const SListener& listener)
+static int httpd_accept(DCB* client_dcb)
 {
-    int n_connect = 0;
-    DCB* client_dcb;
+    HTTPD_session* client_data = NULL;
 
-    while ((client_dcb = dcb_accept(listener)) != NULL)
+    /* create the session data for HTTPD */
+    if ((client_data = (HTTPD_session*)MXS_CALLOC(1, sizeof(HTTPD_session))) == NULL)
     {
-        HTTPD_session* client_data = NULL;
+        dcb_close(client_dcb);
+        return 0;
+    }
+    client_dcb->data = client_data;
 
-        /* create the session data for HTTPD */
-        if ((client_data = (HTTPD_session*)MXS_CALLOC(1, sizeof(HTTPD_session))) == NULL)
-        {
-            dcb_close(client_dcb);
-            continue;
-        }
-        client_dcb->data = client_data;
-
-        client_dcb->session = session_alloc(listener->service(), client_dcb);
-        if (NULL == client_dcb->session || poll_add_dcb(client_dcb) == -1)
-        {
-            dcb_close(client_dcb);
-            continue;
-        }
-        n_connect++;
+    client_dcb->session = session_alloc(client_dcb->service, client_dcb);
+    if (NULL == client_dcb->session || poll_add_dcb(client_dcb) == -1)
+    {
+        dcb_close(client_dcb);
+        return 0;
     }
 
-    return n_connect;
+    return 1;
 }
 
 /**

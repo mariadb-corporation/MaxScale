@@ -2999,8 +2999,12 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
 
             if (dcb_session_check(dcb, "accept"))
             {
-                DCB_EH_NOTICE("Calling dcb->func.accept(%p)", dcb);
-                dcb->func.accept(dcb->listener);
+                DCB* client_dcb;
+
+                while ((client_dcb = dcb_accept(dcb->listener)))
+                {
+                    dcb->func.accept(client_dcb);
+                }
             }
         }
         else

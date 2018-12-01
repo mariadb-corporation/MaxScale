@@ -58,7 +58,7 @@ static void process_finish(void);
 static int  thread_init(void);
 static void thread_finish(void);
 
-static int   gw_MySQLAccept(const SListener& listener);
+static int   gw_MySQLAccept(DCB*);
 static int   gw_read_client_event(DCB* dcb);
 static int   gw_write_client_event(DCB* dcb);
 static int   gw_MySQLWrite_client(DCB* dcb, GWBUF* queue);
@@ -1390,16 +1390,9 @@ return_1:
  * @return 0 in success, 1 in failure
  *
  */
-int gw_MySQLAccept(const SListener& listener)
+int gw_MySQLAccept(DCB* client_dcb)
 {
-    DCB* client_dcb;
-
-    while ((client_dcb = dcb_accept(listener)) != NULL)
-    {
-        gw_process_one_new_client(client_dcb);
-    }   /**< while client_dcb != NULL */
-
-    /* Must have broken out of while loop or received NULL client_dcb */
+    gw_process_one_new_client(client_dcb);
     return 1;
 }
 
