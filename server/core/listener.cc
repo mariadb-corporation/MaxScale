@@ -830,106 +830,42 @@ int start_listening(const char* config)
 
 
 /**
- * @brief Accept a new client connection, given listener, return file descriptor
- *
- * Up to 10 retries will be attempted in case of non-permanent errors. Calls
- * the accept function and analyses the return, logging any errors and making
- * an appropriate return.
+ * @brief Accept a new client connection
  *
  * @param fd          File descriptor to accept from
  * @param client_conn Output where connection information is stored
  *
  * @return -1 for failure, or a file descriptor for the new connection
  */
-static int dcb_accept_one_connection(int fd, struct sockaddr* client_conn)
+static int accept_one_connection(int fd, struct sockaddr* client_conn)
 {
-    int c_sock;
+    socklen_t client_len = sizeof(struct sockaddr_storage);
 
-    /* Try up to 10 times to get a file descriptor by use of accept */
-    for (int i = 0; i < 10; i++)
+    /* new connection from client */
+    int client_fd = accept(fd, client_conn, &client_len);
+
+    if (client_fd == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
     {
-        socklen_t client_len = sizeof(struct sockaddr_storage);
-        int eno = 0;
-
-        /* new connection from client */
-        c_sock = accept(fd, client_conn, &client_len);
-        eno = errno;
-        errno = 0;
-
-        if (c_sock == -1)
-        {
-            /* Did not get a file descriptor */
-            if (eno == EAGAIN || eno == EWOULDBLOCK)
-            {
-                /**
-                 * We have processed all incoming connections, break out
-                 * of loop for return of -1.
-                 */
-                break;
-            }
-            else if (eno == ENFILE || eno == EMFILE)
-            {
-                struct timespec ts1;
-                long long nanosecs;
-
-                /**
-                 * Exceeded system's (ENFILE) or processes
-                 * (EMFILE) max. number of files limit.
-                 */
-
-                /* Log an error the first time this happens */
-                if (i == 0)
-                {
-                    MXS_ERROR("Failed to accept new client connection: %d, %s",
-                              eno,
-                              mxs_strerror(eno));
-                }
-                nanosecs = (long long)1000000 * 100 * i * i;
-                ts1.tv_sec = nanosecs / 1000000000;
-                ts1.tv_nsec = nanosecs % 1000000000;
-                nanosleep(&ts1, NULL);
-
-                /* Remain in loop for up to the loop limit, retries. */
-            }
-            else
-            {
-                /**
-                 * Other error, log it then break out of loop for return of -1.
-                 */
-                MXS_ERROR("Failed to accept new client connection: %d, %s",
-                          eno,
-                          mxs_strerror(eno));
-                break;
-            }
-        }
-        else
-        {
-            break;
-        }
+        MXS_ERROR("Failed to accept new client connection: %d, %s", errno, mxs_strerror(errno));
     }
-    return c_sock;
+
+    return client_fd;
 }
 
 /**
- * @brief Accept a new client connection, given a listener, return new DCB
- *
- * Calls dcb_accept_one_connection to do the basic work of obtaining a new
- * connection from a listener.  If that succeeds, some settings are fixed and
- * a client DCB is created to handle the new connection. Further DCB details
- * are set before returning the new DCB to the caller, or returning NULL if
- * no new connection could be achieved.
+ * @brief Accept a new client connection
  *
  * @param listener Listener that has a new connection request
  *
  * @return DCB - The new client DCB for the new connection, or NULL if failed
  */
-DCB* dcb_accept(const SListener& listener)
+DCB* accept_one_dcb(const SListener& listener)
 {
     DCB* client_dcb = NULL;
     int c_sock;
     struct sockaddr_storage client_conn;
 
-    if ((c_sock = dcb_accept_one_connection(listener->fd(), (struct sockaddr*)&client_conn)) >= 0)
+    if ((c_sock = accept_one_connection(listener->fd(), (struct sockaddr*)&client_conn)) >= 0)
     {
         configure_network_socket(c_sock, client_conn.ss_family);
 
@@ -1079,7 +1015,7 @@ uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_
     Listener* listener = static_cast<Listener*>(data);
     DCB* client_dcb;
 
-    while ((client_dcb = dcb_accept(listener->m_self)))
+    while ((client_dcb = accept_one_dcb(listener->m_self)))
     {
         listener->m_proto_func.accept(client_dcb);
     }
