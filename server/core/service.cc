@@ -422,10 +422,10 @@ bool serviceStartListener(SERVICE* svc, const char* name)
     return listener && listener->service() == svc && listener->start();
 }
 
-int service_launch_all()
+bool service_launch_all()
 {
     int n = 0, i;
-    bool error = false;
+    bool ok = true;
     int num_svc = this_unit.services.size();
 
     MXS_NOTICE("Starting a total of %d services...", num_svc);
@@ -439,7 +439,7 @@ int service_launch_all()
         if (i == 0)
         {
             MXS_ERROR("Failed to start service '%s'.", service->name);
-            error = true;
+            ok = false;
         }
 
         if (maxscale_is_shutting_down())
@@ -448,7 +448,7 @@ int service_launch_all()
         }
     }
 
-    return error ? -1 : n;
+    return ok;
 }
 
 bool serviceStop(SERVICE* service)
@@ -1909,21 +1909,6 @@ uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
     }
 
     return version;
-}
-
-bool service_thread_init()
-{
-    LockGuard guard(this_unit.lock);
-
-    for (Service* service : this_unit.services)
-    {
-        if (service->capabilities & ACAP_TYPE_ASYNC)
-        {
-            service_refresh_users(service);
-        }
-    }
-
-    return true;
 }
 
 bool Service::is_basic_parameter(const std::string& name)

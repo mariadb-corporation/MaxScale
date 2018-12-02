@@ -195,18 +195,9 @@ void service_destroy_instances(void);
  * Initialize and start all services. This should only be called once by the
  * main initialization code.
  *
- * @return Number of successfully started services or -1 on error
+ * @return False if a fatal error occurred
  */
-int service_launch_all(void);
-
-/**
- * Perform thread-specific initialization
- *
- * Currently this function only pre-loads users for all threads.
- *
- * @return True on success, false on error (currently always returns true).
- */
-bool service_thread_init();
+bool service_launch_all(void);
 
 /**
  * @brief Remove a listener from use

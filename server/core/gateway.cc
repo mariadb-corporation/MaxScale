@@ -1413,6 +1413,33 @@ int main(int argc, char** argv)
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
 
+    /**
+     * The following lambda function is executed as the first event on the main worker. This is what starts
+     * up the listeners for all services.
+     *
+     * Due to the fact that the main thread runs a worker thread we have to queue the starting
+     * of the listeners to happen after all workers have started. This allows worker messages to be used
+     * when listeners are being started.
+     *
+     * Once the main worker is dedicated to doing work other than handling traffic the code could be executed
+     * immediately after the worker thread have been started. This would make the startup logic clearer as
+     * the order of the events would be the way they appear to be.
+     */
+    auto do_startup = [&]() {
+            if (!service_launch_all())
+            {
+                const char* logerr = "Failed to start all MaxScale services. Exiting.";
+                print_log_n_stderr(true, true, logerr, logerr, 0);
+                rc = MAXSCALE_NOSERVICES;
+                RoutingWorker::shutdown_all();
+            }
+            else if (daemon_mode)
+            {
+                // Successful start, notify the parent process that it can exit.
+                write_child_exit_code(daemon_pipe[1], rc);
+            }
+        };
+
     config_init();
     config_set_global_defaults();
     mxb_assert(cnf);
@@ -2177,17 +2204,6 @@ int main(int argc, char** argv)
     /** Start all monitors */
     monitor_start_all();
 
-    /** Start the services that were created above */
-    n_services = service_launch_all();
-
-    if (n_services == -1)
-    {
-        const char* logerr = "Failed to start all MaxScale services. Exiting.";
-        print_log_n_stderr(true, true, logerr, logerr, 0);
-        rc = MAXSCALE_NOSERVICES;
-        goto return_main;
-    }
-
     if (cnf->config_check)
     {
         MXS_NOTICE("Configuration was successfully verified.");
@@ -2241,20 +2257,20 @@ int main(int argc, char** argv)
                config_threadcount(),
                config_thread_stack_size());
 
-    /**
-     * Successful start, notify the parent process that it can exit.
-     */
-    mxb_assert(rc == MAXSCALE_SHUTDOWN);
-    if (daemon_mode)
+    worker = RoutingWorker::get(RoutingWorker::MAIN);
+    mxb_assert(worker);
+
+    if (!worker->execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
     {
-        write_child_exit_code(daemon_pipe[1], rc);
+        const char* logerr = "Failed to queue startup task.";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
     }
 
     /*<
      * Run worker 0 in the main thread.
      */
-    worker = RoutingWorker::get(RoutingWorker::MAIN);
-    mxb_assert(worker);
     worker->run();
 
     /** Stop administrative interface */
