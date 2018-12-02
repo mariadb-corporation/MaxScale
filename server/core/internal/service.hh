@@ -310,15 +310,6 @@ Service* service_internal_find(const char* name);
 bool serviceHasBackend(Service* service, SERVER* server);
 
 /**
- * @brief Start new a listener for a service
- *
- * @param service Service where the listener is linked
- * @param port Listener to start
- * @return True if listener was started
- */
-bool serviceLaunchListener(Service* service, const SListener& port);
-
-/**
  * @brief Find listener with specified properties.
  *
  * @param service Service to check

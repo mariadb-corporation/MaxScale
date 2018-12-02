@@ -314,19 +314,6 @@ bool service_isvalid(Service* service)
 }
 
 /**
- * Start an individual port/protocol pair
- *
- * @param service       The service
- * @param port          The port to start
- * @return              The number of listeners started
- */
-static int serviceStartPort(Service* service, const SListener& port)
-{
-    mxb_assert(service && service->router && service->router_instance);
-    return port->listen();
-}
-
-/**
  * Start all ports for a service.
  * serviceStartAllPorts will try to start all listeners associated with the service.
  * If no listeners are started, the starting of ports will be retried after a period of time.
@@ -348,7 +335,10 @@ int serviceStartAllPorts(Service* service)
                 break;
             }
 
-            listeners += serviceStartPort(service, listener);
+            if (listener->listen())
+            {
+                ++listeners;
+            }
         }
 
         if (service->state == SERVICE_STATE_FAILED)
@@ -418,22 +408,6 @@ int serviceInitialize(Service* service)
     }
 
     return listeners;
-}
-
-bool serviceLaunchListener(Service* service, const SListener& port)
-{
-    mxb_assert(service->state != SERVICE_STATE_FAILED);
-    bool rval = true;
-    LockGuard guard(service->lock);
-
-    if (serviceStartPort(service, port) == 0)
-    {
-        /** Failed to start the listener */
-        rval = false;
-    }
-
-
-    return rval;
 }
 
 bool serviceStopListener(SERVICE* svc, const char* name)
