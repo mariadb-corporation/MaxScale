@@ -852,24 +852,19 @@ static int accept_one_connection(int fd, struct sockaddr* client_conn)
     return client_fd;
 }
 
-/**
- * @brief Accept a new client connection
- *
- * @param listener Listener that has a new connection request
- *
- * @return DCB - The new client DCB for the new connection, or NULL if failed
- */
-DCB* accept_one_dcb(const SListener& listener)
+}
+
+DCB* Listener::accept_one_dcb()
 {
     DCB* client_dcb = NULL;
     int c_sock;
     struct sockaddr_storage client_conn;
 
-    if ((c_sock = accept_one_connection(listener->fd(), (struct sockaddr*)&client_conn)) >= 0)
+    if ((c_sock = accept_one_connection(fd(), (struct sockaddr*)&client_conn)) >= 0)
     {
         configure_network_socket(c_sock, client_conn.ss_family);
 
-        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, listener, listener->service());
+        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, m_self, m_service);
 
         if (client_dcb == NULL)
         {
@@ -938,11 +933,10 @@ DCB* accept_one_dcb(const SListener& listener)
 
     if (client_dcb)
     {
-        mxb::atomic::add(&client_dcb->service->client_count, 1);
+        mxb::atomic::add(&m_service->client_count, 1);
     }
 
     return client_dcb;
-}
 }
 
 bool Listener::listen_shared(std::string config_bind)
@@ -1015,7 +1009,7 @@ uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_
     Listener* listener = static_cast<Listener*>(data);
     DCB* client_dcb;
 
-    while ((client_dcb = accept_one_dcb(listener->m_self)))
+    while ((client_dcb = listener->accept_one_dcb()))
     {
         listener->m_proto_func.accept(client_dcb);
     }

@@ -173,12 +173,6 @@ public:
      */
     void print_users(DCB* dcb);
 
-    // TODO: Move dcb_accept code into listener.cc and remove this
-    int fd() const
-    {
-        return m_fd;
-    }
-
     // Functions that are temporarily public
     bool          create_listener_config(const char* filename);
     struct users* users() const;
@@ -241,8 +235,33 @@ private:
              const std::string& protocol, const std::string& authenticator,
              const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
 
-    // Listen on a file descriptor shared between all workers
+    /**
+     * Listen on a file descriptor shared between all workers
+     *
+     * @param config_bind The bind configuration consisting of an address and a port separated by the pipe
+     *                    character. For UNIX domain sockets, the address is the socket path and the port
+     *                    is always zero.
+     *
+     * @return True if the listening was started successfully
+     */
     bool listen_shared(std::string config_bind);
+
+    /**
+     * Accept a single client connection
+     *
+     * @return The new DCB or nullptr on error
+     */
+    DCB* accept_one_dcb();
+
+    /**
+     * The file descriptor for accepting new connections
+     *
+     * When SO_REUSEPORT is in use, each worker has a separate file descriptor that they accept on.
+     */
+    int fd() const
+    {
+        return m_fd;
+    }
 
     // Handler for EPOLL_IN events
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
