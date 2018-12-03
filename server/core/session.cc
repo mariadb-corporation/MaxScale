@@ -158,96 +158,68 @@ static MXS_SESSION* session_alloc_body(SERVICE* service,
     memset(&session->response, 0, sizeof(session->response));
     session->close_reason = SESSION_CLOSE_NONE;
 
+    if (client_dcb->dcb_role != DCB_ROLE_INTERNAL && !session_start(session, service))
+    {
+        // The session will be freed when the client DCB is freed
+        session = nullptr;
+    }
+
+    return session;
+}
+
+bool session_start(MXS_SESSION* session, SERVICE* service)
+{
+    session->router_session = service->router->newSession(service->router_instance, session);
+
+    if (session->router_session == NULL)
+    {
+        session->state = SESSION_STATE_TO_BE_FREED;
+        MXS_ERROR("Failed to create new router session for service '%s'. "
+                  "See previous errors for more details.", service->name);
+        return false;
+    }
+
     /*
-     * Only create a router session if we are not the listening DCB or an
-     * internal DCB. Creating a router session may create a connection to
-     * a backend server, depending upon the router module implementation
-     * and should be avoided for a listener session.
+     * Pending filter chain being setup set the head of the chain to
+     * be the router. As filters are inserted the current head will
+     * be pushed to the filter and the head updated.
      *
-     * Router session creation may create other DCBs that link to the
-     * session.
+     * NB This dictates that filters are created starting at the end
+     * of the chain nearest the router working back to the client
+     * protocol end of the chain.
      */
-    if (client_dcb->state != DCB_STATE_LISTENING
-        && client_dcb->dcb_role != DCB_ROLE_INTERNAL)
+    // NOTE: Here we cast the router instance into a MXS_FILTER and
+    // NOTE: the router session into a MXS_FILTER_SESSION and
+    // NOTE: the router routeQuery into a filter routeQuery. That
+    // NOTE: is in order to be able to treat the router as the first
+    // NOTE: filter.
+    session->head = router_as_downstream(session);
+
+    // NOTE: Here we cast the session into a MXS_FILTER and MXS_FILTER_SESSION
+    // NOTE: and session_reply into a filter clientReply. That's dubious but ok
+    // NOTE: as session_reply will know what to do. In practice, the session
+    // NOTE: will be called as if it would be the last filter.
+    session->tail.instance = (MXS_FILTER*)session;
+    session->tail.session = (MXS_FILTER_SESSION*)session;
+    session->tail.clientReply = session_reply;
+
+    if (!session_setup_filters(session))
     {
-        session->router_session = service->router->newSession(service->router_instance, session);
-        if (session->router_session == NULL)
-        {
-            session->state = SESSION_STATE_TO_BE_FREED;
-            MXS_ERROR("Failed to create new router session for service '%s'. "
-                      "See previous errors for more details.",
-                      service->name);
-        }
-        /*
-         * Pending filter chain being setup set the head of the chain to
-         * be the router. As filters are inserted the current head will
-         * be pushed to the filter and the head updated.
-         *
-         * NB This dictates that filters are created starting at the end
-         * of the chain nearest the router working back to the client
-         * protocol end of the chain.
-         */
-        // NOTE: Here we cast the router instance into a MXS_FILTER and
-        // NOTE: the router session into a MXS_FILTER_SESSION and
-        // NOTE: the router routeQuery into a filter routeQuery. That
-        // NOTE: is in order to be able to treat the router as the first
-        // NOTE: filter.
-        session->head = router_as_downstream(session);
-
-        // NOTE: Here we cast the session into a MXS_FILTER and MXS_FILTER_SESSION
-        // NOTE: and session_reply into a filter clientReply. That's dubious but ok
-        // NOTE: as session_reply will know what to do. In practice, the session
-        // NOTE: will be called as if it would be the last filter.
-        session->tail.instance = (MXS_FILTER*)session;
-        session->tail.session = (MXS_FILTER_SESSION*)session;
-        session->tail.clientReply = session_reply;
-
-        if (SESSION_STATE_TO_BE_FREED != session->state
-            && !session_setup_filters(session))
-        {
-            session->state = SESSION_STATE_TO_BE_FREED;
-            MXS_ERROR("Setting up filters failed. "
-                      "Terminating session %s.",
-                      service->name);
-        }
+        session->state = SESSION_STATE_TO_BE_FREED;
+        MXS_ERROR("Setting up filters failed. Terminating session %s.", session->service->name);
+        return false;
     }
 
-    if (SESSION_STATE_TO_BE_FREED != session->state)
-    {
-        session->state = SESSION_STATE_ROUTER_READY;
-
-        if (session->client_dcb->user == NULL)
-        {
-            MXS_INFO("Started session [%" PRIu64 "] for %s service ",
-                     session->ses_id,
-                     service->name);
-        }
-        else
-        {
-            MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
-                     service->name,
-                     session->ses_id,
-                     session->client_dcb->user,
-                     session->client_dcb->remote);
-        }
-    }
-    else
-    {
-        MXS_INFO("Start %s client session [%" PRIu64 "] for '%s' from %s failed, will be "
-                                                     "closed as soon as all related DCBs have been closed.",
-                 service->name,
-                 session->ses_id,
-                 session->client_dcb->user,
-                 session->client_dcb->remote);
-    }
+    session->state = SESSION_STATE_ROUTER_READY;
     mxb::atomic::add(&service->stats.n_sessions, 1, mxb::atomic::RELAXED);
     mxb::atomic::add(&service->stats.n_current, 1, mxb::atomic::RELAXED);
 
-    // Store the session in the client DCB even if the session creation fails.
-    // It will be freed later on when the DCB is closed.
-    client_dcb->session = session;
+    MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
+             service->name, session->ses_id,
+             session->client_dcb->user ? session->client_dcb->user : "<no user>",
+             session->client_dcb->remote);
 
-    return (session->state == SESSION_STATE_TO_BE_FREED) ? NULL : session;
+    return true;
 }
 
 /**

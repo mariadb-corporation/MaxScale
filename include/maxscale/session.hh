@@ -303,6 +303,19 @@ MXS_SESSION* session_alloc(SERVICE*, DCB*);
  */
 MXS_SESSION* session_alloc_with_id(SERVICE*, DCB*, uint64_t);
 
+/**
+ * Start the session
+ *
+ * Called after the session is initialized and authentication is complete. This creates the router and filter
+ * sessions.
+ *
+ * @param session Session to start
+ * @param service The service where the session is started
+ *
+ * @return True if session was started successfully
+ */
+bool session_start(MXS_SESSION* session, SERVICE* service);
+
 MXS_SESSION* session_set_dummy(DCB*);
 
 static inline bool session_is_dummy(MXS_SESSION* session)
