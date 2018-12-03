@@ -32,7 +32,7 @@
 
 #define MXS_MODULE_NAME "CDC"
 
-#include <cdc.h>
+#include <cdc.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/log.h>

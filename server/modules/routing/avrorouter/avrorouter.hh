@@ -24,7 +24,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/users.h>
-#include <cdc.h>
+#include <cdc.hh>
 #include <maxavro.h>
 #include <binlog_common.h>
 #include <maxscale/protocol/mysql.h>

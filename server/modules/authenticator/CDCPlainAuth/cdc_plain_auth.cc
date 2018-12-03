@@ -30,7 +30,7 @@
 #include <maxscale/authenticator.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <cdc.h>
+#include <cdc.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/event.hh>
 #include <maxscale/modulecmd.hh>
