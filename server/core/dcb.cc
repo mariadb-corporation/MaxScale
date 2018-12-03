@@ -150,14 +150,13 @@ static MXB_WORKER* get_dcb_owner(dcb_role_t role)
 DCB::DCB(dcb_role_t role, const SListener& listener, SERVICE* service)
     : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner(role)}
     , dcb_role(role)
+    , session(nullptr)
     , listener(listener)
     , high_water(config_writeq_high_water())
     , low_water(config_writeq_low_water())
     , service(service)
     , last_read(mxs_clock())
 {
-    session_set_dummy(this);
-
     // TODO: Remove DCB_ROLE_INTERNAL to always have a valid listener
     if (listener)
     {
@@ -245,25 +244,22 @@ static void dcb_final_free(DCB* dcb)
          */
         MXS_SESSION* local_session = dcb->session;
         dcb->session = NULL;
-        if (SESSION_STATE_DUMMY != local_session->state)
+        if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
         {
-            if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
-            {
-                session_unlink_backend_dcb(local_session, dcb);
-            }
-            else
-            {
-                /**
-                 * The client DCB is only freed once all other DCBs that the session
-                 * uses have been freed. This will guarantee that the authentication
-                 * data will be usable for all DCBs even if the client DCB has already
-                 * been closed.
-                 */
+            session_unlink_backend_dcb(local_session, dcb);
+        }
+        else
+        {
+            /**
+             * The client DCB is only freed once all other DCBs that the session
+             * uses have been freed. This will guarantee that the authentication
+             * data will be usable for all DCBs even if the client DCB has already
+             * been closed.
+             */
 
-                mxb_assert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER || dcb->dcb_role == DCB_ROLE_INTERNAL);
-                session_put_ref(local_session);
-                return;
-            }
+            mxb_assert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER || dcb->dcb_role == DCB_ROLE_INTERNAL);
+            session_put_ref(local_session);
+            return;
         }
     }
 
@@ -1237,18 +1233,8 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->user);
         dcb->was_persistent = false;
         dcb->persistentstart = time(NULL);
-        if (dcb->session)
-        /*<
-         * Terminate client session.
-         */
-        {
-            MXS_SESSION* local_session = dcb->session;
-            session_set_dummy(dcb);
-            if (SESSION_STATE_DUMMY != local_session->state)
-            {
-                session_unlink_backend_dcb(local_session, dcb);
-            }
-        }
+        session_unlink_backend_dcb(dcb->session, dcb);
+        dcb->session = nullptr;
 
         while ((loopcallback = dcb->callbacks) != NULL)
         {
@@ -1563,7 +1549,7 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
         dcb_printf(pdcb, "\tProtocol:                   %s\n", dcb->listener->protocol());
     }
 
-    if (dcb->session && dcb->session->state != SESSION_STATE_DUMMY)
+    if (dcb->session)
     {
         dcb_printf(pdcb, "\tOwning Session:     %" PRIu64 "\n", dcb->session->ses_id);
     }
@@ -2493,15 +2479,17 @@ public:
              dcb && atomic_load_int32(&m_more);
              dcb = dcb->thread.next)
         {
-            mxb_assert(dcb->session);
-
-            if (dcb->session->state != SESSION_STATE_DUMMY)
+            if (dcb->session)
             {
                 if (!m_func(dcb, m_data))
                 {
                     atomic_store_int32(&m_more, 0);
                     break;
                 }
+            }
+            else
+            {
+                mxb_assert_message(dcb->persistentstart > 0, "The DCB must be in a connection pool");
             }
         }
     }

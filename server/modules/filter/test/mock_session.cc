@@ -27,13 +27,13 @@ namespace mock
 {
 
 Session::Session(Client* pClient)
-    : mxs::Session(&dummy_service)
+    : mxs::Session(&dummy_service, &m_client_dcb)
     , m_client(*pClient)
     , m_client_dcb(this, pClient->user(), pClient->host(), pClient)
 {
     MXS_SESSION* pSession = this;
 
-    memset(pSession, 0, sizeof(MXS_SESSION));
+    memset((void*)pSession, 0, sizeof(MXS_SESSION));
 
     pSession->state = SESSION_STATE_ALLOC;
 

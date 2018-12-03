@@ -293,9 +293,6 @@ static int cdc_accept(DCB* client_dcb)
 
     client_dcb->protocol = (CDC_protocol*) protocol;
 
-    /* Dummy session */
-    client_dcb->session = session_set_dummy(client_dcb);
-
     if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
     {
         dcb_close(client_dcb);

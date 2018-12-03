@@ -69,17 +69,7 @@ struct
     SESSION_DUMP_STATEMENTS_NEVER
 };
 
-static MXS_SESSION dummy_session()
-{
-    MXS_SESSION session = {};
-    session.state = SESSION_STATE_DUMMY;
-    session.refcount = 1;
-    return session;
 }
-
-}
-
-static MXS_SESSION session_dummy_struct = dummy_session();
 
 static void         session_initialize(void* session);
 static int          session_setup_filters(MXS_SESSION* session);
@@ -98,50 +88,33 @@ static void session_deliver_response(MXS_SESSION* session);
  */
 static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* data);
 
+MXS_SESSION::MXS_SESSION(DCB* client_dcb)
+    : state(SESSION_STATE_READY)
+    , ses_id(session_get_next_id())
+    , client_dcb(client_dcb)
+    , router_session(nullptr)
+    , stats{time(0)}
+    , service(client_dcb->service)
+    , head{}
+    , tail{}
+    , refcount(1)
+    , trx_state(SESSION_TRX_INACTIVE)
+    , autocommit(config_get_global_options()->qc_sql_mode == QC_SQL_MODE_ORACLE ? false : true)
+    , client_protocol_data(0)
+    , qualifies_for_pooling(false)
+    , response{}
+    , close_reason(SESSION_CLOSE_NONE)
+    , load_active(false)
+{
+}
+
+MXS_SESSION::~MXS_SESSION()
+{
+}
+
 MXS_SESSION* session_alloc(SERVICE* service, DCB* client_dcb)
 {
-    Session* session = new (std::nothrow) Session(service);
-
-    if (session == nullptr)
-    {
-        return NULL;
-    }
-
-    session->state = SESSION_STATE_READY;
-    session->ses_id = session_get_next_id();
-    session->client_dcb = client_dcb;
-    session->router_session = NULL;
-    session->stats.connect = time(0);
-    session->service = service;
-    memset(&session->head, 0, sizeof(session->head));
-    memset(&session->tail, 0, sizeof(session->tail));
-    session->load_active = false;
-
-    /*<
-     * Associate the session to the client DCB and set the reference count on
-     * the session to indicate that there is a single reference to the
-     * session. There is no need to protect this or use atomic add as the
-     * session has not been made available to the other threads at this
-     * point.
-     *
-     * Note: Strictly speaking, we do have to increment it with a relaxed atomic
-     *       operation but in practice it doesn't matter.
-     */
-    session->refcount = 1;
-    session->trx_state = SESSION_TRX_INACTIVE;
-
-    MXS_CONFIG* config = config_get_global_options();
-    // If MaxScale is running in Oracle mode, then autocommit needs to
-    // initially be off.
-    bool autocommit = (config->qc_sql_mode == QC_SQL_MODE_ORACLE) ? false : true;
-    session_set_autocommit(session, autocommit);
-
-    session->client_protocol_data = 0;
-    session->qualifies_for_pooling = false;
-    memset(&session->response, 0, sizeof(session->response));
-    session->close_reason = SESSION_CLOSE_NONE;
-
-    return session;
+    return new(std::nothrow) Session(service, client_dcb);
 }
 
 bool session_start(MXS_SESSION* session)
@@ -200,21 +173,6 @@ bool session_start(MXS_SESSION* session)
     return true;
 }
 
-/**
- * Allocate a dummy session so that DCBs can always have sessions.
- *
- * Only one dummy session exists, it is statically declared
- *
- * @param client_dcb    The client side DCB
- * @return              The dummy created session
- */
-MXS_SESSION* session_set_dummy(DCB* client_dcb)
-{
-    MXS_SESSION* session = &session_dummy_struct;
-    client_dcb->session = session;
-    return session;
-}
-
 void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
 {
     mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
@@ -255,11 +213,7 @@ static void session_simple_free(MXS_SESSION* session, DCB* dcb)
     }
     if (session)
     {
-        if (SESSION_STATE_DUMMY == session->state)
-        {
-            return;
-        }
-        if (session && session->router_session)
+        if (session->router_session)
         {
             session->service->router->freeSession(session->service->router_instance,
                                                   session->router_session);
@@ -402,8 +356,7 @@ void printAllSessions()
 /** Callback for dprintAllSessions */
 bool dprintAllSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER
-        && dcb->session->state != SESSION_STATE_DUMMY)
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
         DCB* out_dcb = (DCB*)data;
         dprintSession(out_dcb, dcb->session);
@@ -519,9 +472,6 @@ const char* session_state(mxs_session_state_t state)
     {
     case SESSION_STATE_ALLOC:
         return "Session Allocated";
-
-    case SESSION_STATE_DUMMY:
-        return "Dummy Session";
 
     case SESSION_STATE_READY:
         return "Session Ready";
@@ -765,7 +715,7 @@ MXS_SESSION* session_get_ref(MXS_SESSION* session)
 
 void session_put_ref(MXS_SESSION* session)
 {
-    if (session && session->state != SESSION_STATE_DUMMY)
+    if (session)
     {
         /** Remove one reference. If there are no references left, free session */
         if (mxb::atomic::add(&session->refcount, -1) == 1)
@@ -904,7 +854,6 @@ void session_qualify_for_pool(MXS_SESSION* session)
 
 bool session_valid_for_pool(const MXS_SESSION* session)
 {
-    mxb_assert(session->state != SESSION_STATE_DUMMY);
     return session->qualifies_for_pooling;
 }
 
@@ -1148,7 +1097,8 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(SERVICE* service)
+Session::Session(SERVICE* service, DCB* client_dcb)
+    : MXS_SESSION(client_dcb)
 {
     if (service->retain_last_statements != -1) // Explicitly set for the service
     {

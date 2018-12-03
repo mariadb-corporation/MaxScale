@@ -41,7 +41,6 @@ typedef enum
     SESSION_STATE_LISTENER_STOPPED, /*< for listener session */
     SESSION_STATE_TO_BE_FREED,      /*< ready to be freed as soon as there are no references */
     SESSION_STATE_FREE,             /*< for all sessions */
-    SESSION_STATE_DUMMY             /*< dummy session for consistency */
 } mxs_session_state_t;
 
 #define STRSESSIONSTATE(s) \
@@ -79,14 +78,7 @@ typedef enum
                                                                                 SESSION_STATE_FREE \
                                                                                 ? \
                                                                                 "SESSION_STATE_TO_BE_FREE"   \
-                                                                                : (( \
-                                                                                       s) \
-                                                                                   == \
-                                                                                   SESSION_STATE_DUMMY \
-                                                                                   ? \
-                                                                                   "SESSION_STATE_DUMMY"   \
-                                                                                   : \
-                                                                                   "SESSION_STATE_UNKNOWN")))))))))
+                                                                                :  "SESSION_STATE_UNKNOWN"))))))))
 
 typedef enum
 {
@@ -207,6 +199,9 @@ typedef char* (* session_variable_handler_t)(void* context,
  */
 struct MXS_SESSION
 {
+    MXS_SESSION(DCB* client_dcb);
+    ~MXS_SESSION();
+
     mxs_session_state_t state;      /*< Current descriptor state */
     uint64_t            ses_id;     /*< Unique session identifier */
     DCB*                client_dcb; /*< The client connection */
@@ -303,13 +298,6 @@ MXS_SESSION* session_alloc(SERVICE*, DCB*);
  * @return True if session was started successfully
  */
 bool session_start(MXS_SESSION* session);
-
-MXS_SESSION* session_set_dummy(DCB*);
-
-static inline bool session_is_dummy(MXS_SESSION* session)
-{
-    return session->state == SESSION_STATE_DUMMY;
-}
 
 const char* session_get_remote(const MXS_SESSION*);
 const char* session_get_user(const MXS_SESSION*);

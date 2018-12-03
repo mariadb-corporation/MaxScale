@@ -596,8 +596,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
         mxb_assert(dcb->data);
         memcpy(session, dcb->data, sizeof(MYSQL_session));
     }
-    else if (dcb->session->state != SESSION_STATE_ALLOC
-             && dcb->session->state != SESSION_STATE_DUMMY)
+    else if (dcb->session->state != SESSION_STATE_ALLOC)
     {
         memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }

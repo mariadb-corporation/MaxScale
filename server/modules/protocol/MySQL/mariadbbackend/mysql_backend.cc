@@ -347,11 +347,8 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
              || errcode == ER_DBACCESS_DENIED_ERROR
              || errcode == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
     {
-        if (dcb->session->state != SESSION_STATE_DUMMY)
-        {
-            // Authentication failed, reload users
-            service_refresh_users(dcb->service);
-        }
+        // Authentication failed, reload users
+        service_refresh_users(dcb->service);
     }
 }
 
@@ -404,12 +401,8 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
 {
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
-    /**
-     * The DCB's session is set to the dummy session when it is put into the
-     * persistent connection pool. If this is not the dummy session, track
-     * the current command being executed.
-     */
-    if (!session_is_dummy(dcb->session))
+     // The DCB's session is set to null when it is put into the persistent connection pool.
+    if (dcb->session)
     {
         uint64_t capabilities = service_get_capabilities(dcb->session->service);
 
@@ -486,11 +479,7 @@ static int gw_read_backend_event(DCB* dcb)
         return 0;
     }
 
-    if (dcb->session == NULL
-        || dcb->session->state == SESSION_STATE_DUMMY)
-    {
-        return 0;
-    }
+    mxb_assert(dcb->session);
 
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
@@ -1299,7 +1288,7 @@ static int gw_error_backend_event(DCB* dcb)
 {
     MXS_SESSION* session = dcb->session;
 
-    if (session->state == SESSION_STATE_DUMMY)
+    if (!session)
     {
         if (dcb->persistentstart == 0)
         {
