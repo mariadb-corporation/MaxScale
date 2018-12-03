@@ -52,7 +52,7 @@ extern "C"
 
 #include <mutex>
 #include <maxscale/alloc.h>
-#include <maxscale/filter.h>
+#include <maxscale/filter.hh>
 #include <maxscale/log.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.h>

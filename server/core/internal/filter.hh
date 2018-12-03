@@ -16,7 +16,7 @@
  * @file core/maxscale/filter.h - The private filter interface
  */
 
-#include <maxscale/filter.h>
+#include <maxscale/filter.hh>
 
 #include <memory>
 #include <mutex>

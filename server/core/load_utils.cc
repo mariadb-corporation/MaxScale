@@ -33,7 +33,7 @@
 #include <maxscale/modulecmd.hh>
 #include <maxscale/protocol.h>
 #include <maxscale/router.h>
-#include <maxscale/filter.h>
+#include <maxscale/filter.hh>
 #include <maxscale/authenticator.h>
 #include <maxscale/monitor.hh>
 #include <maxscale/query_classifier.h>

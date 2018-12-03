@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "hintfilter"
 
 #include <stdio.h>
-#include <maxscale/filter.h>
+#include <maxscale/filter.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>

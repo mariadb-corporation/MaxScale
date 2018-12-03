@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <memory>
 #include <string>
-#include <maxscale/filter.h>
+#include <maxscale/filter.hh>
 #include "../filtermodule.hh"
 #include "dcb.hh"
 

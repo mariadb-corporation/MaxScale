@@ -26,7 +26,7 @@
 #include <maxscale/protocol.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.hh>
-#include <maxscale/filter.h>
+#include <maxscale/filter.hh>
 #include <maxscale/server.h>
 
 struct server;
