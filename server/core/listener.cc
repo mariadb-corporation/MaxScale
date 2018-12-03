@@ -874,6 +874,7 @@ DCB* Listener::accept_one_dcb()
         else
         {
             client_dcb->fd = c_sock;
+            client_dcb->session = session_alloc(m_service, client_dcb);
 
             // get client address
             if (client_conn.ss_family == AF_UNIX)

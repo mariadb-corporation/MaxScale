@@ -289,8 +289,7 @@ static int telnetd_accept(DCB* client_dcb)
     telnetd_protocol->username = NULL;
     client_dcb->protocol = (void*)telnetd_protocol;
 
-    client_dcb->session = session_alloc(client_dcb->service, client_dcb);
-    if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
+    if (!session_start(client_dcb->session) || poll_add_dcb(client_dcb))
     {
         dcb_close(client_dcb);
         return 0;

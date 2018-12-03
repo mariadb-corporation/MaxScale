@@ -373,9 +373,7 @@ static int maxscaled_accept(DCB* client_dcb)
     pthread_mutex_init(&maxscaled_protocol->lock, NULL);
     client_dcb->protocol = (void*)maxscaled_protocol;
 
-    client_dcb->session = session_alloc(client_dcb->service, client_dcb);
-
-    if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
+    if (!session_start(client_dcb->session) || poll_add_dcb(client_dcb))
     {
         dcb_close(client_dcb);
         return 0;

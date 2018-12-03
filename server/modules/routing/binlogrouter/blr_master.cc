@@ -201,14 +201,15 @@ static void blr_start_master(void* data)
 
     /* Create MySQL Athentication from configured user/passwd */
     client->data = CreateMySQLAuthData(router->user, router->password, "");
+    client->session = session_alloc(router->service, client);
+    router->session = client->session;
 
     /* Create a session for dummy client DCB */
-    if ((router->session = session_alloc(router->service, client)) == NULL)
+    if (router->session == NULL || session_start(router->session))
     {
         MXS_ERROR("failed to create session for connection to master");
         return;
     }
-    client->session = router->session;
     client->service = router->service;
 
     /**

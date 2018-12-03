@@ -293,7 +293,7 @@ int MySQLSendHandshake(DCB* dcb)
     }
 
     // Get the equivalent of the server thread id.
-    protocol->thread_id = session_get_next_id();
+    protocol->thread_id = dcb->session->ses_id;
     // Send only the low 32bits in the handshake.
     gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(protocol->thread_id));
     memcpy(mysql_scramble_buf, server_scramble, 8);
@@ -766,23 +766,20 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
 
         protocol->protocol_auth_state = MXS_AUTH_STATE_RESPONSE_SENT;
         /**
-         * Create session, and a router session for it.
+         * Start session, and a router session for it.
          * If successful, there will be backend connection(s)
          * after this point. The protocol authentication state
          * is changed so that future data will go through the
          * normal data handling function instead of this one.
          */
-        MXS_SESSION* session =
-            session_alloc_with_id(dcb->service, dcb, protocol->thread_id);
-
-        if (session != NULL)
+        if (session_start(dcb->session))
         {
-            mxb_assert(session->state != SESSION_STATE_ALLOC
-                       && session->state != SESSION_STATE_DUMMY);
+            mxb_assert(dcb->session->state != SESSION_STATE_ALLOC
+                       && dcb->session->state != SESSION_STATE_DUMMY);
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
-            session->client_protocol_data = QC_SQL_MODE_DEFAULT;
+            dcb->session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
-            MXB_AT_DEBUG(bool check = ) mxs_rworker_register_session(session);
+            MXB_AT_DEBUG(bool check = ) mxs_rworker_register_session(dcb->session);
             mxb_assert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 

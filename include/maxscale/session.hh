@@ -282,26 +282,15 @@ bool session_route_reply(MXS_SESSION* session, GWBUF* buffer);
 /**
  * Allocate a new session for a new client of the specified service.
  *
- * Create the link to the router session by calling the newSession
- * entry point of the router using the router instance of the
- * service this session is part of.
+ * The start_session function needs to be called after the user authentication is done. This will
+ * trigger the creation of router and filter sessions.
  *
  * @param service       The service this connection was established by
  * @param client_dcb    The client side DCB
+ *
  * @return              The newly created session or NULL if an error occurred
  */
 MXS_SESSION* session_alloc(SERVICE*, DCB*);
-
-/**
- * A version of session_alloc() which takes the session id number as parameter.
- * The id should have been generated with session_get_next_id().
- *
- * @param service       The service this connection was established by
- * @param client_dcb    The client side DCB
- * @param id            Id for the new session.
- * @return              The newly created session or NULL if an error occurred
- */
-MXS_SESSION* session_alloc_with_id(SERVICE*, DCB*, uint64_t);
 
 /**
  * Start the session
@@ -310,11 +299,10 @@ MXS_SESSION* session_alloc_with_id(SERVICE*, DCB*, uint64_t);
  * sessions.
  *
  * @param session Session to start
- * @param service The service where the session is started
  *
  * @return True if session was started successfully
  */
-bool session_start(MXS_SESSION* session, SERVICE* service);
+bool session_start(MXS_SESSION* session);
 
 MXS_SESSION* session_set_dummy(DCB*);
 

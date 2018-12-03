@@ -144,10 +144,7 @@ static int cdc_read_event(DCB* dcb)
 
             if (auth_val == CDC_STATE_AUTH_OK)
             {
-                /* start a real session */
-                session = session_alloc(dcb->service, dcb);
-
-                if (session != NULL)
+                if (session_start(dcb->session))
                 {
                     protocol->state = CDC_STATE_HANDLE_REQUEST;
 

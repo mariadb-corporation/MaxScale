@@ -87,10 +87,6 @@ static void         session_simple_free(MXS_SESSION* session, DCB* dcb);
 static void         session_add_to_all_list(MXS_SESSION* session);
 static MXS_SESSION* session_find_free();
 static void         session_final_free(MXS_SESSION* session);
-static MXS_SESSION* session_alloc_body(SERVICE* service,
-                                       DCB* client_dcb,
-                                       MXS_SESSION* session,
-                                       uint64_t id);
 static void session_deliver_response(MXS_SESSION* session);
 
 /**
@@ -104,11 +100,6 @@ static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* d
 
 MXS_SESSION* session_alloc(SERVICE* service, DCB* client_dcb)
 {
-    return session_alloc_with_id(service, client_dcb, session_get_next_id());
-}
-
-MXS_SESSION* session_alloc_with_id(SERVICE* service, DCB* client_dcb, uint64_t id)
-{
     Session* session = new (std::nothrow) Session(service);
 
     if (session == nullptr)
@@ -116,16 +107,8 @@ MXS_SESSION* session_alloc_with_id(SERVICE* service, DCB* client_dcb, uint64_t i
         return NULL;
     }
 
-    return session_alloc_body(service, client_dcb, session, id);
-}
-
-static MXS_SESSION* session_alloc_body(SERVICE* service,
-                                       DCB* client_dcb,
-                                       MXS_SESSION* session,
-                                       uint64_t id)
-{
     session->state = SESSION_STATE_READY;
-    session->ses_id = id;
+    session->ses_id = session_get_next_id();
     session->client_dcb = client_dcb;
     session->router_session = NULL;
     session->stats.connect = time(0);
@@ -158,24 +141,19 @@ static MXS_SESSION* session_alloc_body(SERVICE* service,
     memset(&session->response, 0, sizeof(session->response));
     session->close_reason = SESSION_CLOSE_NONE;
 
-    if (client_dcb->dcb_role != DCB_ROLE_INTERNAL && !session_start(session, service))
-    {
-        // The session will be freed when the client DCB is freed
-        session = nullptr;
-    }
-
     return session;
 }
 
-bool session_start(MXS_SESSION* session, SERVICE* service)
+bool session_start(MXS_SESSION* session)
 {
-    session->router_session = service->router->newSession(service->router_instance, session);
+    session->router_session = session->service->router->newSession(session->service->router_instance,
+                                                                   session);
 
     if (session->router_session == NULL)
     {
         session->state = SESSION_STATE_TO_BE_FREED;
         MXS_ERROR("Failed to create new router session for service '%s'. "
-                  "See previous errors for more details.", service->name);
+                  "See previous errors for more details.", session->service->name);
         return false;
     }
 
@@ -211,11 +189,11 @@ bool session_start(MXS_SESSION* session, SERVICE* service)
     }
 
     session->state = SESSION_STATE_ROUTER_READY;
-    mxb::atomic::add(&service->stats.n_sessions, 1, mxb::atomic::RELAXED);
-    mxb::atomic::add(&service->stats.n_current, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&session->service->stats.n_sessions, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&session->service->stats.n_current, 1, mxb::atomic::RELAXED);
 
     MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
-             service->name, session->ses_id,
+             session->service->name, session->ses_id,
              session->client_dcb->user ? session->client_dcb->user : "<no user>",
              session->client_dcb->remote);
 
