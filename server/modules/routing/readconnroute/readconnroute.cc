@@ -70,7 +70,7 @@
  * @endverbatim
  */
 
-#include "readconnection.h"
+#include "readconnection.hh"
 
 #include <stdio.h>
 #include <stdlib.h>

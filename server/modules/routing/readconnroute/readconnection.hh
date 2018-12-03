@@ -13,24 +13,15 @@
 #pragma once
 
 /**
- * @file readconnection.h - The read connection balancing query module heder file
- *
- * @verbatim
- * Revision History
- *
- * Date     Who     Description
- * 14/06/13 Mark Riddoch    Initial implementation
- * 27/06/14 Mark Riddoch    Addition of server weight percentage
- *
- * @endverbatim
+ * @file readconnection.hh - The read connection balancing query module header file
  */
 
 #define MXS_MODULE_NAME "readconnroute"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/service.hh>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 
 /**
  * The client session structure used within this router.
