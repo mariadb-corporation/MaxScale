@@ -27,7 +27,7 @@ MXS_BEGIN_DECLS
 
 struct DCB;
 struct server;
-struct session;
+struct MXS_SESSION;
 
 /**
  * Protocol module API
@@ -106,7 +106,7 @@ typedef struct mxs_protocol
      *
      * @return The opened file descriptor or DCBFD_CLOSED on error
      */
-    int32_t (* connect)(DCB* dcb, struct server* server, struct session* session);
+    int32_t (* connect)(DCB* dcb, struct server* server, MXS_SESSION* session);
 
     /**
      * Free protocol data allocated in the connect handler
@@ -131,7 +131,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* auth)(DCB* dcb, struct server* server, struct session* session, GWBUF* buffer);
+    int32_t (* auth)(DCB* dcb, struct server* server, MXS_SESSION* session, GWBUF* buffer);
 
     /**
      * Returns the name of the default authenticator module for this protocol

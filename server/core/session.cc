@@ -69,9 +69,9 @@ struct
     SESSION_DUMP_STATEMENTS_NEVER
 };
 
-static struct session dummy_session()
+static MXS_SESSION dummy_session()
 {
-    struct session session = {};
+    MXS_SESSION session = {};
     session.state = SESSION_STATE_DUMMY;
     session.refcount = 1;
     return session;
@@ -79,7 +79,7 @@ static struct session dummy_session()
 
 }
 
-static struct session session_dummy_struct = dummy_session();
+static MXS_SESSION session_dummy_struct = dummy_session();
 
 static void         session_initialize(void* session);
 static int          session_setup_filters(MXS_SESSION* session);

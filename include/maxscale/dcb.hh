@@ -36,7 +36,7 @@ MXS_BEGIN_DECLS
 
 #define ERRHANDLE
 
-struct session;
+struct MXS_SESSION;
 struct server;
 
 struct DCB;
@@ -172,7 +172,7 @@ struct DCB : public MXB_POLL_DATA
     void*                   protocol = nullptr;                 /**< The protocol specific state */
     size_t                  protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  protocol_bytes_processed = 0;       /**< How many bytes have been read */
-    struct session*         session;                            /**< The owning session */
+    MXS_SESSION*            session;                            /**< The owning session */
     SListener               listener;                           /**< The origin of the connection */
     MXS_PROTOCOL            func = {};                          /**< Protocol functions for the DCB */
     MXS_AUTHENTICATOR       authfunc = {};                      /**< Authenticator functions for the DCB */
@@ -244,7 +244,7 @@ void dcb_global_init();
 
 int dcb_write(DCB*, GWBUF*);
 DCB* dcb_alloc(dcb_role_t, const SListener&, SERVICE* service);
-DCB* dcb_connect(struct server*, struct session*, const char*);
+DCB* dcb_connect(struct server*, MXS_SESSION*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_drain_writeq(DCB*);
 void dcb_close(DCB*);

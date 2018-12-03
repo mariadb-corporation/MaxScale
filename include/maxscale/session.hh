@@ -205,7 +205,7 @@ typedef char* (* session_variable_handler_t)(void* context,
  * Note that the first few fields (up to and including "entry_is_ready") must
  * precisely match the LIST_ENTRY structure defined in the list manager.
  */
-typedef struct session
+struct MXS_SESSION
 {
     mxs_session_state_t state;      /*< Current descriptor state */
     uint64_t            ses_id;     /*< Unique session identifier */
@@ -229,7 +229,7 @@ typedef struct session
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
     bool            load_active;    /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
-} MXS_SESSION;
+};
 
 /**
  * A filter that terminates the request processing and delivers a response

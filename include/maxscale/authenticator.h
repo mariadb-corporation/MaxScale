@@ -45,7 +45,7 @@ typedef enum authenticator_capability
 
 struct DCB;
 struct server;
-struct session;
+struct MXS_SESSION;
 
 /**
  * @verbatim
