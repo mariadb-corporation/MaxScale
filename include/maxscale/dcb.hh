@@ -95,34 +95,10 @@ typedef enum
 
 typedef enum
 {
-    DCB_ROLE_SERVICE_LISTENER,      /*< Receives initial connect requests from clients */
     DCB_ROLE_CLIENT_HANDLER,        /*< Serves dedicated client */
     DCB_ROLE_BACKEND_HANDLER,       /*< Serves back end connection */
     DCB_ROLE_INTERNAL               /*< Internal DCB not connected to the outside */
 } dcb_role_t;
-
-#define STRDCBROLE(r) \
-    ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER"   \
-                                      : ((r) == DCB_ROLE_CLIENT_HANDLER ? "DCB_ROLE_CLIENT_HANDLER"   \
-                                                                        : ((r) \
-                                                                           == DCB_ROLE_BACKEND_HANDLER   \
-                                                                           ? "DCB_ROLE_BACKEND_HANDLER"   \
-                                                                           : (( \
-                                                                                  r) \
-                                                                              == \
-                                                                              DCB_ROLE_INTERNAL \
-                                                                              ? \
-                                                                              "DCB_ROLE_INTERNAL"   \
-                                                                              : \
-                                                                              "UNKNOWN DCB ROLE"))))
-
-#define DCB_STRTYPE(dcb) \
-    (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ? "Client DCB"   \
-                                              : dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER ? "Backend DCB"   \
-                                                                                          : dcb->dcb_role \
-     == DCB_ROLE_SERVICE_LISTENER ? "Listener DCB"   \
-                                  : \
-     dcb->dcb_role == DCB_ROLE_INTERNAL ? "Internal DCB" : "Unknown DCB")
 
 /**
  * Callback reasons for the DCB callback mechanism.
@@ -179,6 +155,11 @@ struct DCB : public MXB_POLL_DATA
 {
     DCB(dcb_role_t role, const SListener& listener, SERVICE* service);
     ~DCB();
+
+    /**
+     * DCB type in string form
+     */
+    const char* type();
 
     bool                    dcb_errhandle_called = false;   /**< this can be called only once */
     dcb_role_t              dcb_role;
