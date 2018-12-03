@@ -827,6 +827,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
     }
     else if (lex->option_type == OPT_SESSION)
     {
+        bool do_return = true;
         /**
          * SHOW syntax http://dev.mysql.com/doc/refman/5.6/en/show.html
          */
@@ -870,10 +871,16 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         }
         else
         {
-            type |= QUERY_TYPE_READ;
+            // This will cause the type of a statement like
+            // "SET STATEMENT ... FOR XYZ" to be the type
+            // of XYZ.
+            do_return = false;
         }
 
-        goto return_qtype;
+        if (do_return)
+        {
+            goto return_qtype;
+        }
     }
 
     /**
