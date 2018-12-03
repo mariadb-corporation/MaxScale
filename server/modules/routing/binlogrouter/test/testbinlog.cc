@@ -29,7 +29,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/router.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.h>

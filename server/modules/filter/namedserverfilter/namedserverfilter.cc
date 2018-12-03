@@ -42,7 +42,7 @@
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/utils.h>
 
 static void generate_param_names(int pairs);

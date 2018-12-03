@@ -34,7 +34,7 @@
 #include <string.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/log.h>
 #include <maxscale/paths.h>
 #include <maxscale/config.hh>

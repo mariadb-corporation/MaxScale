@@ -27,7 +27,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/listener.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 
 struct server;
 struct mxs_router;

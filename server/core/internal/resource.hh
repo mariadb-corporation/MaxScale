@@ -19,7 +19,7 @@
 #include <string>
 #include <deque>
 
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/http.hh>
 
 #include "httprequest.hh"

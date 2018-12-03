@@ -60,7 +60,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/log.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/query_classifier.h>
 

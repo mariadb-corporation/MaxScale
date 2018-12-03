@@ -50,7 +50,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.h>
 #include <maxbase/worker.hh>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session.h>
 #include <maxscale/utils.h>

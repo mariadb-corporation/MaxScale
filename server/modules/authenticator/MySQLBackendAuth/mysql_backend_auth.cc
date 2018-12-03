@@ -27,7 +27,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/utils.h>
 
 /** Authentication states */

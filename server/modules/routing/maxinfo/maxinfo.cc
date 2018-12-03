@@ -35,7 +35,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/service.hh>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/router.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>

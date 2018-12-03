@@ -17,7 +17,7 @@
 
 #include <map>
 
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxbase/average.hh>
 #include <maxbase/stopwatch.hh>
 

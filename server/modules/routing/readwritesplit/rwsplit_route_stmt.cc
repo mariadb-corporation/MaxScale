@@ -24,7 +24,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/router.hh>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/session_command.hh>
 #include <maxscale/utils.hh>
 

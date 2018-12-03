@@ -32,7 +32,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/config.hh>
 #include <maxscale/clock.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/statistics.hh>
 #include <maxscale/routingworker.hh>
 

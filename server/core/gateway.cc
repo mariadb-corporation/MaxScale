@@ -56,7 +56,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.h>

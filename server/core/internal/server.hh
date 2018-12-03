@@ -21,7 +21,7 @@
 #include <mutex>
 
 #include <maxbase/average.hh>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/resultset.hh>
 #include <maxscale/routingworker.hh>
 

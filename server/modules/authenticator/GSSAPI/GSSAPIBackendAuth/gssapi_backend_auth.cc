@@ -18,7 +18,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 
 #include "../gssapi_auth.h"
 

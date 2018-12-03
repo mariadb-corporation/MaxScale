@@ -25,7 +25,7 @@
 #include <fstream>
 #include <sstream>
 #include <maxscale/service.hh>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/router.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.h>

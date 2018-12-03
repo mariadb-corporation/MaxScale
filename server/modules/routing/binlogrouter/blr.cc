@@ -45,7 +45,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/service.hh>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
