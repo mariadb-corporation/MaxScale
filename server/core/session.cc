@@ -33,7 +33,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/json_api.h>
 #include <maxscale/log.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/poll.h>
 #include <maxscale/router.h>
 #include <maxscale/routingworker.hh>

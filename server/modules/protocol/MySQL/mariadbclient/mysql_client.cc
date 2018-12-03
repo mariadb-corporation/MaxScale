@@ -28,7 +28,7 @@
 #include <maxscale/authenticator.h>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/poll.h>
 #include <maxscale/protocol.h>
 #include <maxscale/protocol/mysql.h>

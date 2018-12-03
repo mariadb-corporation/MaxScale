@@ -22,7 +22,7 @@
 #include <maxscale/hint.h>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>
 #include <maxscale/query_classifier.h>
 

@@ -14,7 +14,7 @@
 #include "catsession.hh"
 
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 
 using namespace maxscale;
 

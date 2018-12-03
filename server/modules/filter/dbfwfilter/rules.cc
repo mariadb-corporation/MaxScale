@@ -18,7 +18,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
 #include <maxscale/log.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.h>
 
 static inline bool query_is_sql(GWBUF* query)

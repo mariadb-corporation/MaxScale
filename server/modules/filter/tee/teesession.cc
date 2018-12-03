@@ -17,7 +17,7 @@
 #include <set>
 #include <string>
 
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 
 TeeSession::TeeSession(MXS_SESSION* session,
                        LocalClient* client,

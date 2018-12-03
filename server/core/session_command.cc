@@ -13,7 +13,7 @@
 
 #include <maxscale/session_command.hh>
 
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.h>
 
 namespace maxscale

@@ -21,7 +21,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/router.h>
 #include <maxscale/server.h>

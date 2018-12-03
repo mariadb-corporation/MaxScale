@@ -16,7 +16,7 @@
 #include <string>
 #include <string.h>
 #include <maxscale/buffer.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 
 
 namespace maxscale

@@ -41,7 +41,7 @@
 #include <maxscale/hint.h>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/server.h>
 #include <maxscale/utils.h>
 

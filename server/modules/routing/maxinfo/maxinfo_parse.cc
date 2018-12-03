@@ -35,7 +35,7 @@
 #include <maxscale/session.h>
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>

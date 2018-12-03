@@ -16,7 +16,7 @@
 #include <memory>
 
 #include <maxscale/backend.hh>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/response_stat.hh>
 
 namespace maxscale

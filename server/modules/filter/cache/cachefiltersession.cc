@@ -15,7 +15,7 @@
 #include "cachefiltersession.hh"
 #include <new>
 #include <maxscale/alloc.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/query_classifier.h>
 #include "storage.hh"

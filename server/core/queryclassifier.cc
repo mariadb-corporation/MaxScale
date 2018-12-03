@@ -14,7 +14,7 @@
 #include <maxscale/queryclassifier.hh>
 #include <unordered_map>
 #include <maxscale/alloc.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 

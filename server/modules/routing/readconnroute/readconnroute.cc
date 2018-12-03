@@ -86,7 +86,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/utils.hh>
 
 /* The router entry points */

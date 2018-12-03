@@ -19,7 +19,7 @@
 #include <maxscale/log.h>
 #include <maxscale/filter.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include "mysqlhint.h"
 #include <maxscale/alloc.h>
 

@@ -18,7 +18,7 @@
 #include <string>
 
 #include <maxscale/buffer.hh>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/queryclassifier.hh>
 #include <maxscale/protocol/rwbackend.hh>
 

@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "storage_inmemory"
 #include "inmemorystorage.hh"
 #include <maxscale/alloc.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.h>
 #include "inmemorystoragest.hh"
 #include "inmemorystoragemt.hh"

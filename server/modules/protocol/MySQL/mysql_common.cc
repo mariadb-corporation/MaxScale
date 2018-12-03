@@ -24,7 +24,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/log.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>

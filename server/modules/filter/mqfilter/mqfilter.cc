@@ -63,7 +63,7 @@
 #include <fcntl.h>
 #include <maxscale/filter.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>

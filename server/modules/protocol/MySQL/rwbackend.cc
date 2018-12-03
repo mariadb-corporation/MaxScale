@@ -13,7 +13,7 @@
 
 #include <maxscale/protocol/rwbackend.hh>
 
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/log.h>
 

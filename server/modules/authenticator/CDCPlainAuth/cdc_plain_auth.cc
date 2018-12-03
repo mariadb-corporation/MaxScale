@@ -34,7 +34,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/event.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>

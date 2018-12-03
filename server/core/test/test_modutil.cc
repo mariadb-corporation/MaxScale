@@ -34,7 +34,7 @@
 #include <string.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/buffer.h>
 
 /**

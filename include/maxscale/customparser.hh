@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/log.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <ctype.h>
 
 namespace maxscale

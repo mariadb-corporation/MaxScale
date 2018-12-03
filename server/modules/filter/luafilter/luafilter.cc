@@ -54,7 +54,7 @@ extern "C"
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/log.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.h>
 

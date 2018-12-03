@@ -17,7 +17,7 @@
 #include <string>
 #include <queue>
 #include <maxbase/format.hh>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 
 using std::string;

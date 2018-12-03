@@ -38,7 +38,7 @@
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/resultset.hh>
 #include <maxscale/router.h>
 #include <maxscale/server.hh>

@@ -38,7 +38,7 @@
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/monitor.h>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
