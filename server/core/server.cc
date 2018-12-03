@@ -264,13 +264,14 @@ DCB* server_get_persistent(SERVER* server, const char* user, const char* ip, con
         dcb = server->persistent[id];
         while (dcb)
         {
+            // TODO: Fix this, it won't work (DCB in pool has no session)
             if (dcb->user
                 && dcb->remote
                 && ip
                 && !dcb->dcb_errhandle_called
                 && 0 == strcmp(dcb->user, user)
                 && 0 == strcmp(dcb->remote, ip)
-                && 0 == strcmp(dcb->listener->protocol(), protocol))
+                && 0 == strcmp(dcb->session->listener->protocol(), protocol))
             {
                 if (NULL == previous)
                 {

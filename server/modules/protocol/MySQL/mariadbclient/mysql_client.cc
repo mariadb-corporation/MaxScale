@@ -673,7 +673,7 @@ static void check_packet(DCB* dcb, GWBUF* buf, int bytes)
     if (bytes == MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         /** This is an SSL request packet */
-        mxb_assert(dcb->listener->ssl());
+        mxb_assert(dcb->session->listener->ssl());
         mxb_assert(buflen == bytes && pktlen >= buflen);
     }
     else
@@ -1463,10 +1463,8 @@ static int gw_client_close(DCB* dcb)
     {
         MXS_SESSION* target = dcb->session;
 
-        if (target->state != SESSION_STATE_TO_BE_FREED)
+        if (target->state == SESSION_STATE_ROUTER_READY || target->state == SESSION_STATE_STOPPING)
         {
-            mxb_assert(target->state == SESSION_STATE_ROUTER_READY
-                       || target->state == SESSION_STATE_STOPPING);
             MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->ses_id);
             mxb_assert(removed);
             session_close(target);
@@ -1648,7 +1646,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
             {
                 mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
-                SERVICE* service = session->client_dcb->service;
+                SERVICE* service = session->service;
 
                 if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
                     && !service->session_track_trx_state

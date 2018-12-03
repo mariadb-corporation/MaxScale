@@ -49,15 +49,12 @@ static int test1()
     DCB* dcb;
     int eno = 0;
 
-    SERVICE service;
-    service.routerModule = (char*)"required by a check in dcb.cc";
-
     /* Poll tests */
     fprintf(stderr,
             "testpoll : Initialise the polling system.");
     init_test_env(NULL);
     fprintf(stderr, "\t..done\nAdd a DCB");
-    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, nullptr, nullptr);
+    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, nullptr);
 
     if (dcb == NULL)
     {
@@ -66,7 +63,6 @@ static int test1()
     }
 
     dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    dcb->service = &service;
 
     if (dcb->fd < 0)
     {
@@ -101,8 +97,6 @@ static int test1()
     sleep(10);
     // TODO, fix this for workers: poll_shutdown();
     fprintf(stderr, "\t..done\nTidy up.");
-    SERVICE my_service = {};
-    dcb->service = &my_service;
     dcb_close(dcb);
     fprintf(stderr, "\t..done\n");
 

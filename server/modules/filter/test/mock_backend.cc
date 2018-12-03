@@ -174,7 +174,7 @@ class ResultSetDCB : public DCB
 {
 public:
     ResultSetDCB()
-        : DCB(DCB_ROLE_CLIENT_HANDLER, nullptr, nullptr)
+        : DCB(DCB_ROLE_CLIENT_HANDLER, nullptr)
     {
         DCB* pDcb = this;
 

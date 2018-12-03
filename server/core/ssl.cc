@@ -54,7 +54,7 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
     const char* remote = dcb->remote ? dcb->remote : "";
     const char* service = (dcb->service && dcb->service->name) ? dcb->service->name : "";
 
-    if (NULL == dcb->listener || NULL == dcb->listener->ssl())
+    if (NULL == dcb->session->listener || NULL == dcb->session->listener->ssl())
     {
         /* Not an SSL connection on account of listener configuration */
         return SSL_AUTH_CHECKS_OK;
@@ -133,8 +133,8 @@ bool ssl_is_connection_healthy(DCB* dcb)
      * then everything is as we wish. Otherwise, either there is a problem or
      * more to be done.
      */
-    return NULL == dcb->listener
-           || NULL == dcb->listener->ssl()
+    return NULL == dcb->session->listener
+           || NULL == dcb->session->listener->ssl()
            || dcb->ssl_state == SSL_ESTABLISHED;
 }
 
@@ -171,7 +171,7 @@ bool ssl_check_data_to_process(DCB* dcb)
  */
 bool ssl_required_by_dcb(DCB* dcb)
 {
-    return NULL != dcb->listener && NULL != dcb->listener->ssl();
+    return NULL != dcb->session->listener && NULL != dcb->session->listener->ssl();
 }
 
 /**
@@ -186,8 +186,8 @@ bool ssl_required_by_dcb(DCB* dcb)
  */
 bool ssl_required_but_not_negotiated(DCB* dcb)
 {
-    return NULL != dcb->listener
-           && NULL != dcb->listener->ssl()
+    return NULL != dcb->session->listener
+           && NULL != dcb->session->listener->ssl()
            && SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state;
 }
 

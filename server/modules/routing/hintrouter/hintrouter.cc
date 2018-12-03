@@ -205,7 +205,6 @@ Dcb HintRouter::connect_to_backend(MXS_SESSION* session,
     {
         HR_DEBUG("Connected.");
         mxb::atomic::add(&sref->connections, 1, mxb::atomic::RELAXED);
-        new_connection->service = session->service;
 
         result = Dcb(new_connection);
         string name(new_connection->server->name);

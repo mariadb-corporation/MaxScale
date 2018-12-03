@@ -77,7 +77,7 @@ static void         session_simple_free(MXS_SESSION* session, DCB* dcb);
 static void         session_add_to_all_list(MXS_SESSION* session);
 static MXS_SESSION* session_find_free();
 static void         session_final_free(MXS_SESSION* session);
-static void session_deliver_response(MXS_SESSION* session);
+static void         session_deliver_response(MXS_SESSION* session);
 
 /**
  * The clientReply of the session.
@@ -88,13 +88,14 @@ static void session_deliver_response(MXS_SESSION* session);
  */
 static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* data);
 
-MXS_SESSION::MXS_SESSION(DCB* client_dcb)
+MXS_SESSION::MXS_SESSION(const SListener& listener)
     : state(SESSION_STATE_READY)
     , ses_id(session_get_next_id())
-    , client_dcb(client_dcb)
+    , client_dcb(nullptr)
+    , listener(listener)
     , router_session(nullptr)
     , stats{time(0)}
-    , service(client_dcb->service)
+    , service(listener ? listener->service() : nullptr)
     , head{}
     , tail{}
     , refcount(1)
@@ -110,11 +111,6 @@ MXS_SESSION::MXS_SESSION(DCB* client_dcb)
 
 MXS_SESSION::~MXS_SESSION()
 {
-}
-
-MXS_SESSION* session_alloc(SERVICE* service, DCB* client_dcb)
-{
-    return new(std::nothrow) Session(service, client_dcb);
 }
 
 bool session_start(MXS_SESSION* session)
@@ -179,7 +175,6 @@ void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
 
     mxb::atomic::add(&session->refcount, 1);
     dcb->session = session;
-    dcb->service = session->service;
     /** Move this DCB under the same thread */
     dcb->owner = session->client_dcb->owner;
 
@@ -1097,10 +1092,10 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(SERVICE* service, DCB* client_dcb)
-    : MXS_SESSION(client_dcb)
+Session::Session(const SListener& listener)
+    : MXS_SESSION(listener)
 {
-    if (service->retain_last_statements != -1) // Explicitly set for the service
+    if (service->retain_last_statements != -1)      // Explicitly set for the service
     {
         m_retain_last_statements = service->retain_last_statements;
     }
@@ -1122,6 +1117,13 @@ Session::~Session()
         f.filter->obj->closeSession(f.instance, f.session);
         f.filter->obj->freeSession(f.instance, f.session);
     }
+}
+
+void Session::set_client_dcb(DCB* dcb)
+{
+    mxb_assert(client_dcb == nullptr);
+    mxb_assert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER);
+    client_dcb = dcb;
 }
 
 namespace
@@ -1172,7 +1174,6 @@ bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pL
 
     return deallocate;
 }
-
 }
 
 void Session::dump_statements() const

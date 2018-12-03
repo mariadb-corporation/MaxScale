@@ -147,21 +147,20 @@ static MXB_WORKER* get_dcb_owner(dcb_role_t role)
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(dcb_role_t role, const SListener& listener, SERVICE* service)
+DCB::DCB(dcb_role_t role, MXS_SESSION* session)
     : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner(role)}
     , dcb_role(role)
-    , session(nullptr)
-    , listener(listener)
+    , session(session)
     , high_water(config_writeq_high_water())
     , low_water(config_writeq_low_water())
-    , service(service)
+    , service(session->service)
     , last_read(mxs_clock())
 {
     // TODO: Remove DCB_ROLE_INTERNAL to always have a valid listener
-    if (listener)
+    if (session->listener)
     {
-        func = listener->protocol_func();
-        authfunc = listener->auth_func();
+        func = session->listener->protocol_func();
+        authfunc = session->listener->auth_func();
     }
 
     if (high_water && low_water)
@@ -221,9 +220,9 @@ DCB::~DCB()
  *
  * @return An available DCB or NULL if none could be allocated.
  */
-DCB* dcb_alloc(dcb_role_t role, const SListener& listener, SERVICE* service)
+DCB* dcb_alloc(dcb_role_t role, MXS_SESSION* session)
 {
-    return new(std::nothrow) DCB(role, listener, service);
+    return new(std::nothrow) DCB(role, session);
 }
 
 /**
@@ -351,7 +350,7 @@ DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
         }
     }
 
-    if ((dcb = dcb_alloc(DCB_ROLE_BACKEND_HANDLER, NULL, session->service)) == NULL)
+    if ((dcb = dcb_alloc(DCB_ROLE_BACKEND_HANDLER, session)) == NULL)
     {
         return NULL;
     }
@@ -1280,9 +1279,9 @@ void printDCB(DCB* dcb)
     {
         printf("\tUsername:             %s\n", dcb->user);
     }
-    if (dcb->listener)
+    if (dcb->session->listener)
     {
-        printf("\tProtocol:             %s\n", dcb->listener->protocol());
+        printf("\tProtocol:             %s\n", dcb->session->listener->protocol());
     }
     if (dcb->writeq)
     {
@@ -1388,9 +1387,9 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
                    "\tUsername:           %s\n",
                    dcb->user);
     }
-    if (dcb->listener)
+    if (dcb->session->listener)
     {
-        dcb_printf(pdcb, "\tProtocol:           %s\n", dcb->listener->protocol());
+        dcb_printf(pdcb, "\tProtocol:           %s\n", dcb->session->listener->protocol());
     }
     if (dcb->writeq)
     {
@@ -1544,9 +1543,9 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
                    "\tUsername:                   %s\n",
                    dcb->user);
     }
-    if (dcb->listener)
+    if (dcb->session->listener)
     {
-        dcb_printf(pdcb, "\tProtocol:                   %s\n", dcb->listener->protocol());
+        dcb_printf(pdcb, "\tProtocol:                   %s\n", dcb->session->listener->protocol());
     }
 
     if (dcb->session)
@@ -2122,8 +2121,8 @@ static int dcb_create_SSL(DCB* dcb, SSL_LISTENER* ssl)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    if ((NULL == dcb->listener || NULL == dcb->listener->ssl())
-        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->listener->ssl()) != 0))
+    if (NULL == dcb->session->listener->ssl()
+        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->session->listener->ssl()) != 0))
     {
         return -1;
     }
@@ -2435,8 +2434,7 @@ void dcb_process_idle_sessions(int thr)
         {
             if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
             {
-                mxb_assert(dcb->listener);
-                SERVICE* service = dcb->listener->service();
+                SERVICE* service = dcb->session->service;
 
                 if (service->conn_idle_timeout && dcb->state == DCB_STATE_POLLING)
                 {

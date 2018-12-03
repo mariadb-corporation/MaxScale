@@ -30,6 +30,8 @@ struct mxs_filter;
 struct mxs_filter_session;
 struct mxs_router_session;
 struct server;
+class Listener;
+using SListener = std::shared_ptr<Listener>;
 
 typedef enum
 {
@@ -199,12 +201,13 @@ typedef char* (* session_variable_handler_t)(void* context,
  */
 struct MXS_SESSION
 {
-    MXS_SESSION(DCB* client_dcb);
-    ~MXS_SESSION();
+    MXS_SESSION(const SListener& listener);
+    virtual ~MXS_SESSION();
 
     mxs_session_state_t state;      /*< Current descriptor state */
     uint64_t            ses_id;     /*< Unique session identifier */
     DCB*                client_dcb; /*< The client connection */
+    SListener           listener;   /*< The origin of the connection */
 
     struct mxs_router_session* router_session;          /*< The router instance data */
     MXS_SESSION_STATS          stats;                   /*< Session statistics */
@@ -273,19 +276,6 @@ bool session_route_reply(MXS_SESSION* session, GWBUF* buffer);
  * the protocol.
  */
 #define MXS_SESSION_ROUTE_REPLY(sess, buf) session_route_reply(sess, buf)
-
-/**
- * Allocate a new session for a new client of the specified service.
- *
- * The start_session function needs to be called after the user authentication is done. This will
- * trigger the creation of router and filter sessions.
- *
- * @param service       The service this connection was established by
- * @param client_dcb    The client side DCB
- *
- * @return              The newly created session or NULL if an error occurred
- */
-MXS_SESSION* session_alloc(SERVICE*, DCB*);
 
 /**
  * Start the session

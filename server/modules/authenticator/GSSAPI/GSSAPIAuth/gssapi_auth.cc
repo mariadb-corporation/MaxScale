@@ -491,7 +491,7 @@ int gssapi_auth_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
     gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
-    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->listener->auth_instance();
+    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->session->listener->auth_instance();
 
     if (auth->state == GSSAPI_AUTH_INIT)
     {

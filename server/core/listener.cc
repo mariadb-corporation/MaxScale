@@ -38,6 +38,7 @@
 #include <maxscale/routingworker.hh>
 
 #include "internal/modules.hh"
+#include "internal/session.hh"
 
 static std::list<SListener> all_listeners;
 static std::mutex listener_lock;
@@ -675,24 +676,24 @@ const char* Listener::state() const
 {
     switch (m_state)
     {
-        case CREATED:
-            return "Created";
+    case CREATED:
+        return "Created";
 
-        case STARTED:
-            return "Running";
+    case STARTED:
+        return "Running";
 
-        case STOPPED:
-            return "Stopped";
+    case STOPPED:
+        return "Stopped";
 
-        case FAILED:
-            return "Failed";
+    case FAILED:
+        return "Failed";
 
-        case DESTROYED:
-            return "Destroyed";
+    case DESTROYED:
+        return "Destroyed";
 
-        default:
-            mxb_assert(!true);
-            return "Unknown";
+    default:
+        mxb_assert(!true);
+        return "Unknown";
     }
 }
 
@@ -864,17 +865,21 @@ DCB* Listener::accept_one_dcb()
     {
         configure_network_socket(c_sock, client_conn.ss_family);
 
-        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, m_self, m_service);
+        mxs::Session* session = new(std::nothrow) mxs::Session(m_self);
+        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, session);
 
-        if (client_dcb == NULL)
+        if (!session || !client_dcb)
         {
-            MXS_ERROR("Failed to create DCB object for client connection.");
+            MXS_ERROR("Failed to create session objects for client connection.");
             close(c_sock);
+            delete session;
+            dcb_close(client_dcb);
+            return NULL;
         }
         else
         {
+            session->set_client_dcb(client_dcb);
             client_dcb->fd = c_sock;
-            client_dcb->session = session_alloc(m_service, client_dcb);
 
             // get client address
             if (client_conn.ss_family == AF_UNIX)
@@ -907,25 +912,28 @@ DCB* Listener::accept_one_dcb()
             }
 
             /** Allocate DCB specific authentication data */
-            if (client_dcb->authfunc.create
-                && (client_dcb->authenticator_data =
-                        client_dcb->authfunc.create(client_dcb->listener->auth_instance())) == NULL)
+            if (m_auth_func.create
+                && (client_dcb->authenticator_data = m_auth_func.create(m_auth_instance)) == NULL)
             {
                 MXS_ERROR("Failed to create authenticator for client DCB");
+                delete session;
                 dcb_close(client_dcb);
                 return NULL;
             }
 
-            if (client_dcb->service->max_connections
-                && client_dcb->service->client_count >= client_dcb->service->max_connections)
+            if (m_service->max_connections && m_service->client_count >= m_service->max_connections)
             {
                 // TODO: If connections can be queued, this is the place to put the
                 // TODO: connection on that queue.
-                if (client_dcb->func.connlimit)
+                if (m_proto_func.connlimit)
                 {
-                    client_dcb->func.connlimit(client_dcb, client_dcb->service->max_connections);
+                    m_proto_func.connlimit(client_dcb, m_service->max_connections);
                 }
+
+                // TODO: This is never used as the client connection is not up yet
                 client_dcb->session->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
+
+                delete session;
                 dcb_close(client_dcb);
                 client_dcb = NULL;
             }

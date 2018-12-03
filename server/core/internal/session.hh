@@ -164,8 +164,11 @@ public:
 
     using FilterList = std::vector<SessionFilter>;
 
-    Session(SERVICE* service, DCB* client_dcb);
+    Session(const SListener& listener);
     ~Session();
+
+    // Links a client DCB to a session
+    void set_client_dcb(DCB* dcb);
 
     bool setup_filters(Service* service);
 

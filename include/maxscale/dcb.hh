@@ -29,8 +29,6 @@
 #include <memory>
 
 class SERVICE;
-class Listener;
-using SListener = std::shared_ptr<Listener>;
 
 MXS_BEGIN_DECLS
 
@@ -153,7 +151,7 @@ typedef enum
  */
 struct DCB : public MXB_POLL_DATA
 {
-    DCB(dcb_role_t role, const SListener& listener, SERVICE* service);
+    DCB(dcb_role_t role, MXS_SESSION*);
     ~DCB();
 
     /**
@@ -173,7 +171,6 @@ struct DCB : public MXB_POLL_DATA
     size_t                  protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  protocol_bytes_processed = 0;       /**< How many bytes have been read */
     MXS_SESSION*            session;                            /**< The owning session */
-    SListener               listener;                           /**< The origin of the connection */
     MXS_PROTOCOL            func = {};                          /**< Protocol functions for the DCB */
     MXS_AUTHENTICATOR       authfunc = {};                      /**< Authenticator functions for the DCB */
     uint64_t                writeqlen = 0;                      /**< Bytes in writeq */
@@ -243,7 +240,7 @@ typedef enum
 void dcb_global_init();
 
 int dcb_write(DCB*, GWBUF*);
-DCB* dcb_alloc(dcb_role_t, const SListener&, SERVICE* service);
+DCB* dcb_alloc(dcb_role_t, MXS_SESSION*);
 DCB* dcb_connect(struct server*, MXS_SESSION*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_drain_writeq(DCB*);

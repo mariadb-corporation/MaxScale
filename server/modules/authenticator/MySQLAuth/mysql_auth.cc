@@ -293,7 +293,7 @@ static int mysql_auth_authenticate(DCB* dcb)
                   client_data->user,
                   client_data->db);
 
-        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->listener->auth_instance();
+        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session->listener->auth_instance();
         MySQLProtocol* protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         auth_ret = validate_mysql_user(instance,
                                        dcb,
@@ -684,7 +684,7 @@ int mysql_auth_reauthenticate(DCB* dcb,
     temp.auth_token = token;
     temp.auth_token_len = token_len;
 
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->listener->auth_instance();
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session->listener->auth_instance();
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
     if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service) == 0)

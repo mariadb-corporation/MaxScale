@@ -55,6 +55,8 @@
 #include <maxscale/session.hh>
 #include <maxscale/utils.h>
 
+#include "../../../core/internal/session.hh"
+
 static GWBUF* blr_make_query(DCB* dcb, char* query);
 static GWBUF* blr_make_registration(ROUTER_INSTANCE* router);
 static GWBUF* blr_make_binlog_dump(ROUTER_INSTANCE* router);
@@ -186,7 +188,8 @@ static void blr_start_master(void* data)
 
     pthread_mutex_unlock(&router->lock);
 
-    DCB* client = dcb_alloc(DCB_ROLE_INTERNAL, NULL, NULL);
+    // TODO: Fix this
+    DCB* client = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
 
     /* Create fake 'client' DCB */
     if (client == NULL)
@@ -201,7 +204,8 @@ static void blr_start_master(void* data)
 
     /* Create MySQL Athentication from configured user/passwd */
     client->data = CreateMySQLAuthData(router->user, router->password, "");
-    client->session = session_alloc(router->service, client);
+    // TODO: Fix this
+    client->session = new mxs::Session(nullptr);
     router->session = client->session;
 
     /* Create a session for dummy client DCB */
@@ -210,7 +214,6 @@ static void blr_start_master(void* data)
         MXS_ERROR("failed to create session for connection to master");
         return;
     }
-    client->service = router->service;
 
     /**
      * 'client' is the fake DCB that emulates a client session:
@@ -237,7 +240,6 @@ static void blr_start_master(void* data)
         return;
     }
     router->master->remote = MXS_STRDUP_A(router->service->dbref->server->address);
-    router->master->service = router->service;
 
     MXS_NOTICE("%s: attempting to connect to master"
                " server [%s]:%d, binlog='%s', pos=%lu%s%s",
