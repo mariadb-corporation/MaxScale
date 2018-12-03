@@ -34,7 +34,7 @@
 
 #define MXS_MODULE_NAME "HTTPD"
 
-#include "httpd.h"
+#include "httpd.hh"
 #include <ctype.h>
 #include <maxscale/alloc.h>
 #include <maxscale/protocol.h>
