@@ -20,7 +20,7 @@
 #include <string>
 
 #include <maxscale/modinfo.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 namespace
 {

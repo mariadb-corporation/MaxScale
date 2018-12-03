@@ -19,7 +19,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/poll.h>
 #include <maxscale/protocol/mysql.h>
 

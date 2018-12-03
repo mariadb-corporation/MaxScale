@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 #include <maxbase/stopwatch.hh>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 class MariaDBServer;
 

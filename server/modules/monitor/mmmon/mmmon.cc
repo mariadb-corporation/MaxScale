@@ -29,7 +29,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/secrets.h>
 
 static void detectStaleMaster(void*, int);

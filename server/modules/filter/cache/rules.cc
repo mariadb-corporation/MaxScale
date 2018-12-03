@@ -22,7 +22,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.hh>
 #include <maxscale/modutil.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.h>

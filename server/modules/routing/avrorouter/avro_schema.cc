@@ -17,7 +17,7 @@
 
 #include "avrorouter.hh"
 
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <jansson.h>
 #include <stdio.h>
 #include <limits.h>

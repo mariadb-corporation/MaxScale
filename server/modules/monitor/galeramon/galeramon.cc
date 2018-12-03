@@ -28,7 +28,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/secrets.h>
 
 #define DONOR_NODE_NAME_MAX_LEN 60

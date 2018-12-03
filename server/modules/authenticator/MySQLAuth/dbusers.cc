@@ -25,7 +25,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/pcre2.h>

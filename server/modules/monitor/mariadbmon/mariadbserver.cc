@@ -20,7 +20,7 @@
 #include <set>
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 
 using std::string;

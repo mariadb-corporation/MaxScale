@@ -35,7 +35,7 @@
 #include <maxscale/json_api.h>
 #include <maxscale/log.h>
 #include <maxscale/mariadb.hh>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/routingworker.h>

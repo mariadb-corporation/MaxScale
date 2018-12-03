@@ -19,7 +19,7 @@
 
 #include "ndbclustermon.hh"
 #include <maxscale/alloc.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 
 NDBCMonitor::NDBCMonitor(MXS_MONITOR* monitor)

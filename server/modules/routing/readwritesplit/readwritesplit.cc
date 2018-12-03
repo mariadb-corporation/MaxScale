@@ -30,7 +30,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.h>
 
 #include "rwsplitsession.hh"

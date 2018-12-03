@@ -25,7 +25,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/log.h>
 #include <maxscale/modutil.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb_client.hh>

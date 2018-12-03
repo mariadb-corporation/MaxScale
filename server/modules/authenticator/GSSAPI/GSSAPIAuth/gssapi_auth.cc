@@ -19,7 +19,7 @@
 #include <maxscale/authenticator.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
 #include <maxscale/service.hh>

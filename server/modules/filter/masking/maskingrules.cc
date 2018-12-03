@@ -19,7 +19,7 @@
 #include <string.h>
 #include <maxbase/assert.h>
 #include <maxscale/jansson.hh>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/json_api.h>

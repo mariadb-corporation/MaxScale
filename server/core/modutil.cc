@@ -28,7 +28,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 /** These are used when converting MySQL wildcards to regular expressions */
 static bool pattern_init = false;

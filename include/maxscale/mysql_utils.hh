@@ -12,11 +12,11 @@
  */
 #pragma once
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <stdlib.h>
 #include <stdint.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 
 MXS_BEGIN_DECLS
 

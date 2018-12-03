@@ -20,7 +20,7 @@
  * row based replication.
  */
 
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 #include <string.h>
 #include <strings.h>

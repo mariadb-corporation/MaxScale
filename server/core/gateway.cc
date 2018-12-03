@@ -53,7 +53,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/server.h>

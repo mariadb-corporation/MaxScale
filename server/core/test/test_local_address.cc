@@ -15,7 +15,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <maxscale/config.hh>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 using namespace std;
 

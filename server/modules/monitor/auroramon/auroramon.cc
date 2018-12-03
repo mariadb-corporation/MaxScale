@@ -22,7 +22,7 @@
 #include <maxscale/alloc.h>
 #include <maxbase/assert.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 
 AuroraMonitor::AuroraMonitor(MXS_MONITOR* monitor)

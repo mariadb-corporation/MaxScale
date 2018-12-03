@@ -18,7 +18,7 @@
 #include <algorithm>
 
 #include <maxbase/assert.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.h>
 
 void gtid_pos_t::extract(const REP_HEADER& hdr, uint8_t* ptr)

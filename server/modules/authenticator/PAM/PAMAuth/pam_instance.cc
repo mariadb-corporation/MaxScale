@@ -18,7 +18,7 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/log.h>
 #include <maxscale/secrets.h>
-#include <maxscale/mysql_utils.h>
+#include <maxscale/mysql_utils.hh>
 
 #define DEFAULT_PAM_DATABASE_NAME "file:pam.db?mode=memory&cache=shared"
 #define DEFAULT_PAM_TABLE_NAME    "pam_users"
