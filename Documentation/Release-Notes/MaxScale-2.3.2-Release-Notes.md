@@ -40,6 +40,7 @@ setting `assume_unique_hostnames` should be disabled.
 ## Bug fixes
 
 * [MXS-2189](https://jira.mariadb.org/browse/MXS-2189) optimistic_trx is rolled back if master fails
+* [MXS-2188](https://jira.mariadb.org/browse/MXS-2188) MaxScale crashing when replicating
 * [MXS-2187](https://jira.mariadb.org/browse/MXS-2187) Transaction replay is only attempted once
 * [MXS-2186](https://jira.mariadb.org/browse/MXS-2186) SHOW DATABASES is routed to the master
 * [MXS-2184](https://jira.mariadb.org/browse/MXS-2184) event_number is not incremented for updates
