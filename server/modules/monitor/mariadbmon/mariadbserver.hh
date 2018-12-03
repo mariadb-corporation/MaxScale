@@ -15,7 +15,7 @@
 #include <functional>
 #include <string>
 #include <memory>
-#include <maxscale/monitor.h>
+#include <maxscale/monitor.hh>
 #include <maxbase/stopwatch.hh>
 #include "server_utils.hh"
 

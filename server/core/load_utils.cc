@@ -35,7 +35,7 @@
 #include <maxscale/router.h>
 #include <maxscale/filter.h>
 #include <maxscale/authenticator.h>
-#include <maxscale/monitor.h>
+#include <maxscale/monitor.hh>
 #include <maxscale/query_classifier.h>
 
 #include "internal/modules.hh"

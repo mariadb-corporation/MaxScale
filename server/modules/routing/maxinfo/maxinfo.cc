@@ -39,7 +39,7 @@
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/monitor.h>
+#include <maxscale/monitor.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
 #include <maxscale/maxscale.h>
