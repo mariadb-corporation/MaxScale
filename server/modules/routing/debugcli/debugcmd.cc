@@ -46,7 +46,7 @@
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>

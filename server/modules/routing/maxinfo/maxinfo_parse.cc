@@ -33,7 +33,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/service.hh>
 #include <maxscale/session.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxbase/atomic.h>

@@ -31,7 +31,7 @@
 #include <string.h>
 #include <maxscale/service.hh>
 #include <maxscale/server.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
 

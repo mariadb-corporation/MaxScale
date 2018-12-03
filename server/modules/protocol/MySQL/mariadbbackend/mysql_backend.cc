@@ -21,7 +21,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/protocol.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
 

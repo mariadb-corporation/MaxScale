@@ -52,7 +52,7 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>

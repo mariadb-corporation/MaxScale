@@ -40,7 +40,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/resultset.hh>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
 #include <maxscale/version.h>

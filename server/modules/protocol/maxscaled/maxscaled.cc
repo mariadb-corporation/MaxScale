@@ -30,7 +30,7 @@
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/poll.h>
 #include <maxbase/atomic.h>
 #include <maxscale/adminusers.h>

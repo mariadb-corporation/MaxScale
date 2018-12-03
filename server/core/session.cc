@@ -35,7 +35,7 @@
 #include <maxscale/log.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>

@@ -32,7 +32,7 @@
 #include <maxscale/json_api.h>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/protocol.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/authenticator.h>
 #include <maxscale/monitor.hh>

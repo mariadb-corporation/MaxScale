@@ -37,7 +37,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/random.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/server.h>
 #include <maxscale/service.hh>
 #include <maxscale/utils.hh>

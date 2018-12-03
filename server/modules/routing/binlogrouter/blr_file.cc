@@ -36,7 +36,7 @@
 #include <maxscale/encryption.h>
 #include <maxscale/log.h>
 #include <maxscale/paths.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/server.h>
 #include <maxscale/service.hh>

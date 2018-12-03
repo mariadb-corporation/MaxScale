@@ -80,7 +80,7 @@
 #include <vector>
 #include <maxscale/alloc.h>
 #include <maxscale/server.hh>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxbase/atomic.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>

@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/log.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/dcb.h>

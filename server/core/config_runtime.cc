@@ -31,7 +31,7 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/paths.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/users.h>
 
 #include "internal/config.hh"

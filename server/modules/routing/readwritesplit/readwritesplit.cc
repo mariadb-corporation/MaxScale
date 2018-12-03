@@ -29,7 +29,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.h>
 

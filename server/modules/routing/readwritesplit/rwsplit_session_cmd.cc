@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 
 using namespace maxscale;
 

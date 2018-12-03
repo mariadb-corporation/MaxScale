@@ -46,7 +46,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/protocol.h>
 #include <maxscale/resultset.hh>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/server.h>
 #include <maxscale/session.h>
 #include <maxscale/users.h>

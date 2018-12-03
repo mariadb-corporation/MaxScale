@@ -42,7 +42,7 @@
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/poll.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/server.h>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>

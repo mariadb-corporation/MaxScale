@@ -47,7 +47,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 
 // #define DEBUG_RRROUTER
 #undef DEBUG_RROUTER

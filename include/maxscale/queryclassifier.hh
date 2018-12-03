@@ -18,7 +18,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <maxscale/hint.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/session.h>
 
 namespace maxscale

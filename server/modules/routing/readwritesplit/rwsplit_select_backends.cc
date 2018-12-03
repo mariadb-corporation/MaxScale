@@ -24,7 +24,7 @@
 #include <iostream>
 
 #include <maxbase/stopwatch.hh>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 
 using namespace maxscale;
 

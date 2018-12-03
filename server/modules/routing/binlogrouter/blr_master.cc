@@ -47,7 +47,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/routingworker.h>
 #include <maxbase/worker.hh>
 #include <maxscale/server.h>
