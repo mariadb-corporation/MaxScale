@@ -29,7 +29,7 @@
 #include <sys/stat.h>
 
 #include "../internal/poll.hh"
-
+#include "../internal/modules.hh"
 
 void init_test_env(char* path)
 {
@@ -48,6 +48,14 @@ void init_test_env(char* path)
     maxbase::init();
     maxscale::RoutingWorker::init();
     hkinit();
+    set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/protocol/MySQL/mariadbclient/"));
+    load_module("mariadbclient", MODULE_PROTOCOL);
+    set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/routing/readconnroute/"));
+    load_module("readconnroute", MODULE_ROUTER);
+    set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/routing/readwritesplit/"));
+    load_module("readwritesplit", MODULE_ROUTER);
+    set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/authenticator/MySQLAuth/"));
+    load_module("mysqlauth", MODULE_AUTHENTICATOR);
 }
 
 #endif

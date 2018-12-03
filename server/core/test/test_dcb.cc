@@ -50,7 +50,10 @@ static int test1()
     DCB* dcb;
     /* Single buffer tests */
     fprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_INTERNAL");
-    dcb = dcb_alloc(DCB_ROLE_INTERNAL, nullptr);
+    auto service = service_alloc("service", "readconnroute", nullptr);
+    auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
+    auto session = new mxs::Session(listener);
+    dcb = dcb_alloc(DCB_ROLE_INTERNAL, session);
     printDCB(dcb);
     fprintf(stderr, "\t..done\nAllocated dcb.");
     // TODO: Without running workers, the following will hang. As it does not

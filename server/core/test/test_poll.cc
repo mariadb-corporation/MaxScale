@@ -38,6 +38,8 @@
 #include <maxscale/service.hh>
 
 #include "test_utils.h"
+#include "../internal/service.hh"
+#include "../internal/session.hh"
 
 /**
  * test1    Allocate a service and do lots of other things
@@ -54,7 +56,11 @@ static int test1()
             "testpoll : Initialise the polling system.");
     init_test_env(NULL);
     fprintf(stderr, "\t..done\nAdd a DCB");
-    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, nullptr);
+
+    auto service = service_alloc("service", "readconnroute", nullptr);
+    auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
+    auto session = new mxs::Session(listener);
+    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, session);
 
     if (dcb == NULL)
     {
