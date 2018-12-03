@@ -70,7 +70,7 @@
 #include <map>
 
 #include <maxbase/atomic.h>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/modutil.h>
 #include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>

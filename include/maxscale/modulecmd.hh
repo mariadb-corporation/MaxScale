@@ -13,7 +13,7 @@
 #pragma once
 
 /**
- * @file module_command.h Module driven commands
+ * @file module_command.hh Module driven commands
  *
  * This header describes the structures and functions used to register new
  * functions for modules. It allows modules to introduce custom commands that
@@ -22,14 +22,14 @@
  * same functionality again.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxbase/jansson.h>
 #include <maxscale/dcb.h>
-#include <maxscale/filter.h>
-#include <maxscale/monitor.h>
-#include <maxscale/server.h>
+#include <maxscale/filter.hh>
+#include <maxscale/monitor.hh>
+#include <maxscale/server.hh>
 #include <maxscale/service.hh>
-#include <maxscale/session.h>
+#include <maxscale/session.hh>
 
 MXS_BEGIN_DECLS
 

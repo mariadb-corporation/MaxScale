@@ -19,7 +19,7 @@ The following example registers the module command _my_command_ for module
 _my_module_.
 
 ```
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 
 bool my_simple_cmd(const MODULECMD_ARG *argv)
 {

@@ -33,7 +33,7 @@
 #include <cdc.h>
 #include <maxscale/alloc.h>
 #include <maxscale/event.hh>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/modutil.h>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>

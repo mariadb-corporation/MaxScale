@@ -16,7 +16,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/jansson.hh>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>
 

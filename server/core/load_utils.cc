@@ -30,7 +30,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
 #include <maxscale/json_api.h>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/protocol.h>
 #include <maxscale/router.h>
 #include <maxscale/filter.h>

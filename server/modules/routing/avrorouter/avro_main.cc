@@ -29,7 +29,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/random.h>

@@ -22,7 +22,7 @@
 #include <maxscale/http.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/server.hh>
 #include <maxscale/routingworker.hh>
 

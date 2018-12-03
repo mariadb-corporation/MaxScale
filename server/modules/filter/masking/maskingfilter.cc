@@ -15,7 +15,7 @@
 #include "maskingfilter.hh"
 
 #include <maxscale/json_api.h>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>
 

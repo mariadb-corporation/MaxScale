@@ -43,7 +43,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/modutil.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>

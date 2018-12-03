@@ -46,7 +46,7 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/json_api.h>
 
 using std::string;

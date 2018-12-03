@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 
 #include <string>
 

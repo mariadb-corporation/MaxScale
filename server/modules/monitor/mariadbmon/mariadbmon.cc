@@ -22,7 +22,7 @@
 #include <maxbase/format.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
-#include <maxscale/modulecmd.h>
+#include <maxscale/modulecmd.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.h>
 #include <maxscale/secrets.h>
