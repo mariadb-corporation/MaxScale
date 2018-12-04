@@ -995,7 +995,15 @@ bool runtime_create_listener(Service* service,
 
     std::lock_guard<std::mutex> guard(crt_lock);
 
-    if (!listener_find(name) && !service_find_listener(service, "", addr, u_port))
+    if (listener_find(name))
+    {
+        config_runtime_error("Listener '%s' already exists", name);
+    }
+    else if (SListener l = service_find_listener(service, "", addr, u_port))
+    {
+        config_runtime_error("Listener '%s' already listens on [%s]:%u", l->name(), addr, u_port);
+    }
+    else
     {
         SSL_LISTENER* ssl = NULL;
 
@@ -1030,6 +1038,8 @@ bool runtime_create_listener(Service* service,
                 {
                     MXS_ERROR("Listener '%s' was created but failed to start it.", name);
                     config_runtime_error("Listener '%s' was created but failed to start it.", name);
+                    Listener::destroy(listener);
+                    mxb_assert(!listener_find(name));
                 }
             }
             else
@@ -1038,10 +1048,6 @@ bool runtime_create_listener(Service* service,
                 config_runtime_error("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
             }
         }
-    }
-    else
-    {
-        config_runtime_error("Listener '%s' already exists", name);
     }
 
     return rval;
