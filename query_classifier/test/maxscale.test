@@ -112,3 +112,6 @@ SET STATEMENT max_statement_time=30 FOR SELECT seq FROM seq_0_to_100000;
 
 # MXS-1935
 PREPARE a FROM @sql;
+
+# MXS-2207
+SET STATEMENT max_statement_time=30 FOR UPDATE tbl SET a = 42;
