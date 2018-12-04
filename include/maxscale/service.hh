@@ -29,7 +29,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/server.hh>
 
-struct server;
+struct SERVER;
 struct mxs_router;
 struct mxs_router_object;
 struct users;

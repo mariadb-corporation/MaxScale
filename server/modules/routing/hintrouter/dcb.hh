@@ -36,7 +36,7 @@ public:
         return *this;
     }
 
-    struct server* server() const
+    struct SERVER* server() const
     {
         return (this->m_sInner.get()) ? m_sInner.get()->server : NULL;
     }

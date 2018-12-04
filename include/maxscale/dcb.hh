@@ -35,7 +35,7 @@ MXS_BEGIN_DECLS
 #define ERRHANDLE
 
 struct MXS_SESSION;
-struct server;
+struct SERVER;
 
 struct DCB;
 
@@ -193,7 +193,7 @@ struct DCB : public MXB_POLL_DATA
     void*          authenticator_data = nullptr;/**< The authenticator data for this DCB */
     DCB_CALLBACK*  callbacks = nullptr;         /**< The list of callbacks for the DCB */
     int64_t        last_read = 0;               /**< Last time the DCB received data */
-    struct server* server = nullptr;            /**< The associated backend server */
+    struct SERVER* server = nullptr;            /**< The associated backend server */
     SSL*           ssl = nullptr;               /**< SSL struct for connection */
     bool           ssl_read_want_read = false;
     bool           ssl_read_want_write = false;
@@ -241,7 +241,7 @@ void dcb_global_init();
 
 int  dcb_write(DCB*, GWBUF*);
 DCB* dcb_alloc(DCB::Role, MXS_SESSION*);
-DCB* dcb_connect(struct server*, MXS_SESSION*, const char*);
+DCB* dcb_connect(struct SERVER*, MXS_SESSION*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_drain_writeq(DCB*);
 void dcb_close(DCB*);
@@ -275,7 +275,7 @@ int dcb_add_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
 int dcb_remove_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
 int dcb_count_by_usage(DCB_USAGE);                      /* Return counts of DCBs */
 int      dcb_persistent_clean_count(DCB*, int, bool);   /* Clean persistent and return count */
-void     dcb_hangup_foreach(struct server* server);
+void     dcb_hangup_foreach(struct SERVER* server);
 uint64_t dcb_get_session_id(DCB* dcb);
 char*    dcb_role_name(DCB*);               /* Return the name of a role */
 int      dcb_accept_SSL(DCB* dcb);

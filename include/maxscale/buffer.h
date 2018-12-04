@@ -33,7 +33,7 @@
 
 MXS_BEGIN_DECLS
 
-struct server;
+struct SERVER;
 
 /**
  * Buffer properties - used to store properties related to the buffer
@@ -126,7 +126,7 @@ typedef struct gwbuf
     SHARED_BUF*    sbuf;        /*< The shared buffer with the real data */
     HINT*          hint;        /*< Hint data for this buffer */
     BUF_PROPERTY*  properties;  /*< Buffer properties */
-    struct server* server;      /*< The target server where the buffer is executed */
+    struct SERVER* server;      /*< The target server where the buffer is executed */
     uint32_t       gwbuf_type;  /*< buffer's data type information */
 #ifdef SS_DEBUG
     int owner;      /*< Owner of the thread, only for debugging */

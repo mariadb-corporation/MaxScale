@@ -29,7 +29,7 @@ struct mxs_filter_def;
 struct mxs_filter;
 struct mxs_filter_session;
 struct mxs_router_session;
-struct server;
+struct SERVER;
 class Listener;
 using SListener = std::shared_ptr<Listener>;
 
@@ -610,7 +610,7 @@ void session_retain_statement(MXS_SESSION* session, GWBUF* buffer);
  * @param final_response  True if this was the final server to respond,
  *                        false otherwise.
  */
-void session_book_server_response(MXS_SESSION* session, struct server* server, bool final_response);
+void session_book_server_response(MXS_SESSION* session, struct SERVER* server, bool final_response);
 
 /**
  * @brief Reset the server bookkeeping for the current statement.

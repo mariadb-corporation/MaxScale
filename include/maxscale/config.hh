@@ -422,7 +422,7 @@ SERVICE* config_get_service(const MXS_CONFIG_PARAMETER* params, const char* key)
  *
  * @return Pointer to configured server
  */
-struct server* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key);
+struct SERVER* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get an array of servers. The caller should free the produced array,
@@ -435,7 +435,7 @@ struct server* config_get_server(const MXS_CONFIG_PARAMETER* params, const char*
  */
 int config_get_server_list(const MXS_CONFIG_PARAMETER* params,
                            const char* key,
-                           struct server*** output);
+                           struct SERVER*** output);
 
 /**
  * Get a compiled regular expression and the ovector size of the pattern. The

@@ -23,7 +23,7 @@
 #define MAX_SERVER_MONUSER_LEN 1024
 #define MAX_SERVER_MONPW_LEN   1024
 #define MAX_SERVER_VERSION_LEN 256
-#define MAX_NUM_SLAVES 128      /**< Maximum number of slaves under a single server*/
+#define MAX_NUM_SLAVES         128  /**< Maximum number of slaves under a single server*/
 
 /**
  * Server configuration parameters names
@@ -46,21 +46,17 @@ const int MAINTENANCE_FLAG_CHECK = -1;
 // Default replication lag value
 const int MXS_RLAG_UNDEFINED = -1;
 
-/**
- * The server parameters used for weighting routing decisions
- */
-typedef struct server_params
+/* Custom server parameters. These can be used by modules for e.g. weighting routing decisions. */
+struct SERVER_PARAM
 {
-    char*                 name;     /**< Parameter name */
-    char*                 value;    /**< Parameter value */
-    bool                  active;   /**< Whether the parameter is valid */
-    struct server_params* next;     /**< Next Paramter in the linked list */
-} SERVER_PARAM;
+    char*                name;      /**< Parameter name */
+    char*                value;     /**< Parameter value */
+    bool                 active;    /**< Whether the parameter is valid */
+    struct SERVER_PARAM* next;      /**< Next Paramter in the linked list */
+};
 
-/**
- * The server statistics structure
- */
-typedef struct
+/* Server connection and usage statistics */
+struct SERVER_STATS
 {
     int      n_connections; /**< Number of connections */
     int      n_current;     /**< Current connections */
@@ -69,23 +65,21 @@ typedef struct
     uint64_t n_new_conn;    /**< Times the current pool was empty */
     uint64_t n_from_pool;   /**< Times when a connection was available from the pool */
     uint64_t packets;       /**< Number of packets routed to this server */
-} SERVER_STATS;
+};
 
-/**
- * The server version.
- */
-typedef struct server_version
+/* Server version */
+struct SERVER_VERSION
 {
     uint32_t major;
     uint32_t minor;
     uint32_t patch;
-} SERVER_VERSION;
+};
 
-typedef enum
+enum server_type_t
 {
     SERVER_TYPE_MARIADB,
     SERVER_TYPE_MYSQL
-} server_type_t;
+};
 
 static inline void server_decode_version(uint64_t version, SERVER_VERSION* server_version)
 {
@@ -109,7 +103,7 @@ static uint64_t server_encode_version(const SERVER_VERSION* server_version)
  * the name of a protocol module that is loaded to implement the protocol
  * between the gateway and the server.
  */
-typedef struct server
+struct SERVER
 {
     // Base settings
     char*          name;                            /**< Server config name */
@@ -126,7 +120,7 @@ typedef struct server
     bool proxy_protocol;                    /**< Send proxy-protocol header to backends when connecting
                                              *   routing sessions. */
     SERVER_PARAM* parameters;               /**< Additional custom parameters which may affect routing
-                                             * decisions. */
+                                             *   decisions. */
     // Base variables
     bool          is_active;        /**< Server is active and has not been "destroyed" */
     void*         auth_instance;    /**< Authenticator instance data */
@@ -158,7 +152,7 @@ typedef struct server
                                                  *   by rwsplit. TODO: Move to rwsplit */
     bool                   warn_ssl_not_enabled;/**< SSL not used for an SSL enabled server */
     MxsDiskSpaceThreshold* disk_space_threshold;/**< Disk space thresholds */
-} SERVER;
+};
 
 /**
  * Status bits in the SERVER->status member, which describes the general state of a server. Although the

@@ -1920,7 +1920,7 @@ static void dcb_call_callback(DCB* dcb, DCB_REASON reason)
     }
 }
 
-static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct server* server)
+static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct SERVER* server)
 {
     RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
     int id = rworker->id();
@@ -1940,7 +1940,7 @@ static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct server* server)
  *
  * @param reason        The DCB_REASON that triggers the callback
  */
-void dcb_hangup_foreach(struct server* server)
+void dcb_hangup_foreach(struct SERVER* server)
 {
     intptr_t arg1 = (intptr_t)dcb_hangup_foreach_worker;
     intptr_t arg2 = (intptr_t)server;

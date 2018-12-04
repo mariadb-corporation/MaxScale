@@ -44,7 +44,7 @@ typedef enum authenticator_capability
 #define AUTHENTICATOR_MAX_OPTIONS 256
 
 struct DCB;
-struct server;
+struct SERVER;
 struct MXS_SESSION;
 
 /**
