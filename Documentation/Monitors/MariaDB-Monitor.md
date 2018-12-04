@@ -36,7 +36,9 @@ Table of Contents
         * [servers_no_promotion](#servers_no_promotion)
         * [promotion_sql_file and demotion_sql_file](#promotion_sql_file-and-demotion_sql_file)
         * [handle_server_events](#handle_server_events)
-     * [Troubleshooting](#troubleshooting)
+  * [Troubleshooting](#troubleshooting)
+     * [Failover/switchover fails](#failoverswitchover-fails)
+     * [Slave detection shows external masters](#slave-detection-shows-external-masters)
   * [Using the MariaDB Monitor With Binlogrouter](#using-the-mariadb-monitor-with-binlogrouter)
   * [Example 1 - Monitor script](#example-1---monitor-script)
 
@@ -754,24 +756,37 @@ the monitor rejoins the server and disables the events. This should only be an
 issue for events running more often than the monitor interval or events that run
 immediately after the server has restarted.
 
-### Troubleshooting
+## Troubleshooting
+
+### Failover/switchover fails
 
 Before performing failover or switchover, the MariaDB Monitor first checks that
 prerequisites are fulfilled, printing any found errors. This should catch and
 explain most issues with failover or switchover not working. If the operations
 are attempted and still fail, then most likely one of the commands the monitor
-issued to a server failed or timed out. To find out exactly what the queries
-sent to the servers are, start MaxScale with `--debug=enable-statement-logging`.
-This setting prints all queries sent to the backends by monitors and
-authenticators.
+issued to a server failed or timed out. The log should explain which query failed.
+To print out all queries sent to the servers, start MaxScale with
+`--debug=enable-statement-logging`. This setting prints all queries sent to the
+backends by monitors and authenticators.
 
-A typical reason for failure is that a command such as `STOP SLAVE` takes longer
-than the `backend_read_timeout` of the monitor, causing the connection to break.
-In this case , increasing the timeout settings of the monitor should help.
-Another settings to look at are `query_retries` and `query_retry_timeout`. These
-are general MaxScale settings described in the
-[Configuration guide](#../Getting-Started/Configuration-Guide.md). Setting
+A typical reason for failure is that a command such as `STOP SLAVE` takes longer than the
+`backend_read_timeout` of the monitor, causing the connection to break. As of 2.3, the
+monitor will retry most such queries if the failure was caused by a timeout. The retrying
+continues until the total time for a failover or switchover has been spent. If the log
+shows warnings or errors about commands timing out, increasing the backend timeout
+settings of the monitor should help. Another settings to look at are `query_retries` and
+`query_retry_timeout`. These are general MaxScale settings described in the
+[Configuration guide](../Getting-Started/Configuration-Guide.md). Setting
 `query_retries` to 2 is a reasonable first try.
+
+### Slave detection shows external masters
+
+If a slave is shown in _maxadmin_ or _maxctrl_ as "Slave of External Server" instead of
+"Slave", the reason is likely that the "Master_Host"-setting of the replication connection
+does not match the MaxScale server definition. As of 2.3.2, the MariaDB Monitor by default
+assumes that the slave connections (as shown by `SHOW ALL SLAVES STATUS`) use the exact
+same "Master_Host" as used the MaxScale configuration file server definitions. This is
+controlled by the setting [assume_unique_hostnames](#assume_unique_hostnames).
 
 ## Using the MariaDB Monitor With Binlogrouter
 
