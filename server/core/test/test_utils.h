@@ -31,7 +31,18 @@
 #include "../internal/poll.hh"
 #include "../internal/modules.hh"
 
-void init_test_env(char* path)
+void preload_module(const char* name, const char* path, const char* type)
+{
+    std::string old_libdir = get_libdir();
+    std::string fullpath = TEST_DIR;
+    fullpath += "/";
+    fullpath += path;
+    set_libdir(MXS_STRDUP(fullpath.c_str()));
+    load_module(name, type);
+    set_libdir(MXS_STRDUP(old_libdir.c_str()));
+}
+
+void init_test_env(char* __attribute((unused)) path = nullptr, uint32_t init_type = QC_INIT_BOTH)
 {
     config_get_global_options()->n_threads = 1;
 
@@ -41,21 +52,19 @@ void init_test_env(char* path)
     }
     atexit(mxs_log_finish);
     dcb_global_init();
+    std::string old_libdir = get_libdir();
     set_libdir(MXS_STRDUP(TEST_DIR "/query_classifier/qc_sqlite/"));
     qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
-    qc_process_init(QC_INIT_BOTH);
+    qc_process_init(init_type);
     poll_init();
     maxbase::init();
     maxscale::RoutingWorker::init();
     hkinit();
-    set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/protocol/MySQL/mariadbclient/"));
-    load_module("mariadbclient", MODULE_PROTOCOL);
-    set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/routing/readconnroute/"));
-    load_module("readconnroute", MODULE_ROUTER);
-    set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/routing/readwritesplit/"));
-    load_module("readwritesplit", MODULE_ROUTER);
-    set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/authenticator/MySQLAuth/"));
-    load_module("mysqlauth", MODULE_AUTHENTICATOR);
+    set_libdir(MXS_STRDUP(old_libdir.c_str()));
+
+    preload_module("mariadbclient", "server/modules/protocol/MySQL/mariadbclient/", MODULE_PROTOCOL);
+    preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);
+    preload_module("mysqlauth", "/server/modules/authenticator/MySQLAuth/", MODULE_AUTHENTICATOR);
 }
 
 #endif

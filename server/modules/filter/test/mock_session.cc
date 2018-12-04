@@ -13,20 +13,14 @@
 
 #include "maxscale/mock/session.hh"
 
-namespace
-{
-
-SERVICE dummy_service;
-}
-
 namespace maxscale
 {
 
 namespace mock
 {
 
-Session::Session(Client* pClient)
-    : mxs::Session(nullptr)
+Session::Session(Client* pClient, const SListener& listener)
+    : mxs::Session(listener)
     , m_client(*pClient)
     , m_client_dcb(this, pClient->user(), pClient->host(), pClient)
 {
@@ -47,6 +41,8 @@ Session::Session(Client* pClient)
 
 Session::~Session()
 {
+    // This prevents the protocol module from freeing the data
+    m_client_dcb.data = nullptr;
 }
 
 Client& Session::client() const

@@ -16,8 +16,10 @@
 #include <memory>
 #include <deque>
 #include <maxscale/router.hh>
+#include <maxscale/session.hh>
 #include "../filtermodule.hh"
 #include "mock.hh"
+#include "session.hh"
 
 namespace maxscale
 {
@@ -42,7 +44,7 @@ public:
      *
      * @param pBackend  The backend associated with the router.
      */
-    RouterSession(Backend* pBackend);
+    RouterSession(Backend* pBackend, maxscale::mock::Session* session);
     ~RouterSession();
 
     /**
@@ -90,6 +92,11 @@ public:
      */
     void discard_all_responses();
 
+    MXS_SESSION* session() const
+    {
+        return static_cast<MXS_SESSION*>(m_pSession);
+    }
+
 private:
     int32_t routeQuery(MXS_ROUTER* pInstance, GWBUF* pStatement);
 
@@ -99,6 +106,8 @@ private:
     MXS_ROUTER             m_instance;
     Backend*               m_pBackend;
     FilterModule::Session* m_pUpstream_filter_session;
+
+    maxscale::mock::Session*   m_pSession;
 };
 }
 }

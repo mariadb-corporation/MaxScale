@@ -20,6 +20,8 @@
 #include <maxscale/mock/session.hh>
 #include "../cachefilter.hh"
 
+#include "../../../../core/test/test_utils.h"
+
 using namespace std;
 using maxscale::FilterModule;
 namespace mock = maxscale::mock;
@@ -286,11 +288,14 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 {
     int rv = 0;
 
-    mock::ResultSetBackend backend;
-    mock::RouterSession router_session(&backend);
 
+    auto service = service_alloc("service", "readconnroute", nullptr);
+    auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
     mock::Client client("bob", "127.0.0.1");
-    mock::Session session(&client);
+    mock::Session session(&client, listener);
+    mock::ResultSetBackend backend;
+    mock::RouterSession router_session(&backend, &session);
+
 
     auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session);
 
@@ -419,30 +424,14 @@ int main(int argc, char* argv[])
 
     if (rv == 0)
     {
-        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
-        {
-            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
-            {
-                if (qc_process_init(QC_INIT_SELF))
-                {
-                    rv = run();
+        init_test_env(nullptr, QC_INIT_SELF);
+        preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
 
-                    cout << rv << " failures." << endl;
+        rv = run();
 
-                    qc_process_end(QC_INIT_SELF);
-                }
-                else
-                {
-                    cerr << "error: Could not initialize query classifier." << endl;
-                }
-            }
-            else
-            {
-                cerr << "error: Could not setup query classifier." << endl;
-            }
+        cout << rv << " failures." << endl;
 
-            mxs_log_finish();
-        }
+        qc_process_end(QC_INIT_SELF);
     }
     else
     {

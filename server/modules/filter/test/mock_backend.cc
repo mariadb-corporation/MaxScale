@@ -173,8 +173,8 @@ namespace
 class ResultSetDCB : public DCB
 {
 public:
-    ResultSetDCB()
-        : DCB(DCB_ROLE_CLIENT_HANDLER, nullptr)
+    ResultSetDCB(MXS_SESSION* session)
+        : DCB(DCB_ROLE_CLIENT_HANDLER, session)
     {
         DCB* pDcb = this;
 
@@ -219,7 +219,7 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStateme
     {
         std::unique_ptr<ResultSet> set = ResultSet::create({"a"});
         set->add_row({std::to_string(++m_counter)});
-        ResultSetDCB dcb;
+        ResultSetDCB dcb(pSession->session());
         set->write(&dcb);
 
         enqueue_response(pSession, dcb.create_response());

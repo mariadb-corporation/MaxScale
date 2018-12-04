@@ -23,6 +23,8 @@
 #include <maxscale/mock/client.hh>
 #include "tempfile.hh"
 
+#include "../../../../core/test/test_utils.h"
+
 using namespace std;
 using maxscale::FilterModule;
 using maxscale::QueryClassifierModule;
@@ -757,9 +759,6 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
 {
     int rv = 0;
 
-    mock::OkBackend backend;
-    mock::RouterSession router_session(&backend);
-
     for (size_t i = 0; i < N_MAX_CASES; ++i)
     {
         const FW_TEST_CASE& c = t.cases[i];
@@ -770,7 +769,11 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             const char* zHost = c.zHost ? c.zHost : DEFAULT_HOST;
 
             mock::Client client(zUser, zHost);
-            mock::Session session(&client);
+            auto service = service_alloc("service", "readconnroute", nullptr);
+            auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
+            mock::Session session(&client, listener);
+            mock::OkBackend backend;
+            mock::RouterSession router_session(&backend, &session);
 
             auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session);
 
@@ -991,30 +994,14 @@ int main(int argc, char* argv[])
 
     if (rv == 0)
     {
-        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_STDOUT))
-        {
-            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
-            {
-                if (qc_process_init(QC_INIT_SELF))
-                {
-                    rv = run();
+        init_test_env(nullptr, QC_INIT_SELF);
+        preload_module("dbfwfilter", "server/modules/filter/dbfwfilter/", MODULE_FILTER);
 
-                    cout << rv << " failures." << endl;
+        rv = run();
 
-                    qc_process_end(QC_INIT_SELF);
-                }
-                else
-                {
-                    cerr << "error: Could not initialize query classifier." << endl;
-                }
-            }
-            else
-            {
-                cerr << "error: Could not setup query classifier." << endl;
-            }
+        cout << rv << " failures." << endl;
 
-            mxs_log_finish();
-        }
+        qc_process_end(QC_INIT_SELF);
     }
     else
     {

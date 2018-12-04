@@ -14,6 +14,7 @@
 
 #include "mock.hh"
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/listener.hh>
 #include "client.hh"
 
 #include "../../../core/internal/session.hh"
@@ -42,7 +43,7 @@ public:
      * @param pClient  The client of the session. Must remain valid for
      *                 the lifetime of the Session.
      */
-    Session(Client* pClient);
+    Session(Client* pClient, const SListener& listener);
     ~Session();
 
     Client& client() const;

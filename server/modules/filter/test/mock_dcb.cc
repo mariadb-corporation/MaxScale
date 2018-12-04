@@ -34,7 +34,7 @@ Dcb::Dcb(MXS_SESSION* pSession,
          const char*  zUser,
          const char*  zHost,
          Handler* pHandler)
-    : DCB(DCB_ROLE_CLIENT_HANDLER, nullptr)
+    : DCB(DCB_ROLE_CLIENT_HANDLER, pSession)
     , m_user(zUser)
     , m_host(zHost)
     , m_pHandler(pHandler)
@@ -43,8 +43,8 @@ Dcb::Dcb(MXS_SESSION* pSession,
     initialize_dcb(this);
 
     pDcb->session = pSession;
-    pDcb->remote = const_cast<char*>(zHost);
-    pDcb->user = const_cast<char*>(zUser);
+    pDcb->remote = MXS_STRDUP(zHost);
+    pDcb->user = MXS_STRDUP(zUser);
 
     pDcb->func.write = &Dcb::write;
 }

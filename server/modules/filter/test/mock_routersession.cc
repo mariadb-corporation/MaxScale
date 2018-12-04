@@ -20,8 +20,9 @@ namespace maxscale
 namespace mock
 {
 
-RouterSession::RouterSession(Backend* pBackend)
+RouterSession::RouterSession(Backend* pBackend, maxscale::mock::Session* session)
     : m_pBackend(pBackend)
+    , m_pSession(session)
 {
     memset(&m_instance, 0, sizeof(m_instance));
 }
