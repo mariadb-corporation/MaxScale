@@ -2516,9 +2516,16 @@ void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
 
     for (DCB* dcb = this_unit.all_dcbs[thread_id]; dcb; dcb = dcb->thread.next)
     {
-        if (!func(dcb, data))
+        if (dcb->session)
         {
-            break;
+            if (!func(dcb, data))
+            {
+                break;
+            }
+        }
+        else
+        {
+            mxb_assert_message(dcb->persistentstart > 0, "The DCB must be in a connection pool");
         }
     }
 }
