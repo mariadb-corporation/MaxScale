@@ -29,7 +29,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb_client.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/routingworker.h>
 
 

@@ -13,12 +13,12 @@
 #pragma once
 
 /**
- * @file include/maxscale/poll.h - The public poll interface
+ * @file include/maxscale/poll.hh - The public poll interface
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 
 MXS_BEGIN_DECLS

@@ -15,7 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/query_classifier.h>
 
 #include "throttlesession.hh"

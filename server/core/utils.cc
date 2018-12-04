@@ -48,7 +48,7 @@
 #include <maxscale/log.h>
 #include <maxscale/limits.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/random.h>
 #include <maxscale/secrets.h>
 #include <maxscale/session.hh>

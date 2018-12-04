@@ -20,7 +20,7 @@
 #include <maxbase/atomic.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/resultset.hh>
 

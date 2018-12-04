@@ -31,7 +31,7 @@
 #include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/event.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>

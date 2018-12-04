@@ -41,7 +41,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>

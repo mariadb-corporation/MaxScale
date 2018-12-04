@@ -17,7 +17,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/resultset.hh>
 
 struct mxs_worker;

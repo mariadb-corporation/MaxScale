@@ -15,7 +15,7 @@
  * @file poll.c  - Abstraction of the epoll functionality
  */
 
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 
 #include <errno.h>
 #include <inttypes.h>

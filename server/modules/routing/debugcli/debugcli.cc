@@ -35,7 +35,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>

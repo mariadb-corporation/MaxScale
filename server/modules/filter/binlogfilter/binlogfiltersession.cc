@@ -50,7 +50,7 @@
 
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 
 #include "binlogfilter.hh"
 #include "binlogfiltersession.hh"

@@ -24,7 +24,7 @@
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.hh>
 #include <maxbase/stopwatch.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/routingworker.h>
 #include <maxscale/session.hh>

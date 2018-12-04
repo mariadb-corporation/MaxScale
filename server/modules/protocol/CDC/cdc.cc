@@ -38,7 +38,7 @@
 #include <maxscale/log.h>
 #include <maxscale/protocol.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"

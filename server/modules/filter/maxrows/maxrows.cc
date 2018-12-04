@@ -31,7 +31,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 

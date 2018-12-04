@@ -29,7 +29,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <maxscale/router.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxbase/atomic.h>
 #include <telnetd.h>
 #include <maxscale/adminusers.h>

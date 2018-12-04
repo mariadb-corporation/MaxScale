@@ -36,7 +36,7 @@
 #include <maxscale/modutil.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/log.h>
 
 

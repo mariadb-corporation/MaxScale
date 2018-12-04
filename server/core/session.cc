@@ -34,7 +34,7 @@
 #include <maxscale/json_api.h>
 #include <maxscale/log.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>

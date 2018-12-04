@@ -29,7 +29,7 @@
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/protocol.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>

@@ -27,7 +27,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
 #include <maxscale/router.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxbase/atomic.h>
 
 MXS_BEGIN_DECLS

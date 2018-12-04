@@ -34,7 +34,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/service.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/modules.hh"

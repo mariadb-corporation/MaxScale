@@ -43,7 +43,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/listener.hh>
 #include <maxscale/log.h>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/protocol.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/router.hh>

@@ -25,7 +25,7 @@
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.h>

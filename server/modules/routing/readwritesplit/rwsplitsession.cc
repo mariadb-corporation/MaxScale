@@ -16,7 +16,7 @@
 #include <cmath>
 
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 
 using namespace maxscale;
 

@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <maxscale/poll.h>
+#include <maxscale/poll.hh>
 #include <dcb.h>
 
 /**
