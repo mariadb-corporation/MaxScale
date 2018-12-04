@@ -311,7 +311,7 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
  */
 RWBackend* RWSplitSession::get_backend_from_dcb(DCB* dcb)
 {
-    mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(dcb->role == DCB::Role::BACKEND);
 
     for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
     {
@@ -866,7 +866,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                                  mxs_error_action_t action,
                                  bool* succp)
 {
-    mxb_assert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(problem_dcb->role == DCB::Role::BACKEND);
     MXS_SESSION* session = problem_dcb->session;
     mxb_assert(session);
 

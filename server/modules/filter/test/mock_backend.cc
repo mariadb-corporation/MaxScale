@@ -174,7 +174,7 @@ class ResultSetDCB : public DCB
 {
 public:
     ResultSetDCB(MXS_SESSION* session)
-        : DCB(DCB_ROLE_CLIENT_HANDLER, session)
+        : DCB(DCB::Role::CLIENT, session)
     {
         DCB* pDcb = this;
 

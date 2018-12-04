@@ -140,23 +140,23 @@ uint64_t dcb_get_session_id(DCB* dcb)
     return (dcb && dcb->session) ? dcb->session->ses_id : 0;
 }
 
-static MXB_WORKER* get_dcb_owner(dcb_role_t role)
+static MXB_WORKER* get_dcb_owner()
 {
     /** The DCB is owned by the thread that allocates it */
     mxb_assert(RoutingWorker::get_current_id() != -1);
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(dcb_role_t role, MXS_SESSION* session)
-    : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner(role)}
-    , dcb_role(role)
+DCB::DCB(Role role, MXS_SESSION* session)
+    : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner()}
+    , role(role)
     , session(session)
     , high_water(config_writeq_high_water())
     , low_water(config_writeq_low_water())
     , service(session->service)
     , last_read(mxs_clock())
 {
-    // TODO: Remove DCB_ROLE_INTERNAL to always have a valid listener
+    // TODO: Remove DCB::Role::INTERNAL to always have a valid listener
     if (session->listener)
     {
         func = session->listener->protocol_func();
@@ -220,7 +220,7 @@ DCB::~DCB()
  *
  * @return An available DCB or NULL if none could be allocated.
  */
-DCB* dcb_alloc(dcb_role_t role, MXS_SESSION* session)
+DCB* dcb_alloc(DCB::Role role, MXS_SESSION* session)
 {
     return new(std::nothrow) DCB(role, session);
 }
@@ -232,8 +232,7 @@ DCB* dcb_alloc(dcb_role_t role, MXS_SESSION* session)
  */
 static void dcb_final_free(DCB* dcb)
 {
-    mxb_assert_message(dcb->state == DCB_STATE_DISCONNECTED
-                       || dcb->state == DCB_STATE_ALLOC,
+    mxb_assert_message(dcb->state == DCB_STATE_DISCONNECTED || dcb->state == DCB_STATE_ALLOC,
                        "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
     if (dcb->session)
@@ -243,7 +242,7 @@ static void dcb_final_free(DCB* dcb)
          */
         MXS_SESSION* local_session = dcb->session;
         dcb->session = NULL;
-        if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+        if (dcb->role == DCB::Role::BACKEND)
         {
             session_unlink_backend_dcb(local_session, dcb);
         }
@@ -256,7 +255,7 @@ static void dcb_final_free(DCB* dcb)
              * been closed.
              */
 
-            mxb_assert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER || dcb->dcb_role == DCB_ROLE_INTERNAL);
+            mxb_assert(dcb->role == DCB::Role::CLIENT || dcb->role == DCB::Role::INTERNAL);
             session_put_ref(local_session);
             return;
         }
@@ -350,7 +349,7 @@ DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
         }
     }
 
-    if ((dcb = dcb_alloc(DCB_ROLE_BACKEND_HANDLER, session)) == NULL)
+    if ((dcb = dcb_alloc(DCB::Role::BACKEND, session)) == NULL)
     {
         return NULL;
     }
@@ -599,7 +598,7 @@ static int dcb_bytes_readable(DCB* dcb)
 static int dcb_read_no_bytes_available(DCB* dcb, int nreadtotal)
 {
     /** Handle closed client socket */
-    if (nreadtotal == 0 && DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
+    if (nreadtotal == 0 && DCB::Role::CLIENT == dcb->role)
     {
         char c;
         int l_errno = 0;
@@ -998,17 +997,17 @@ static void log_illegal_dcb(DCB* dcb)
 {
     const char* connected_to;
 
-    switch (dcb->dcb_role)
+    switch (dcb->role)
     {
-    case DCB_ROLE_BACKEND_HANDLER:
+    case DCB::Role::BACKEND:
         connected_to = dcb->server->name;
         break;
 
-    case DCB_ROLE_CLIENT_HANDLER:
+    case DCB::Role::CLIENT:
         connected_to = dcb->remote;
         break;
 
-    case DCB_ROLE_INTERNAL:
+    case DCB::Role::INTERNAL:
         connected_to = "Internal DCB";
         break;
 
@@ -1138,11 +1137,11 @@ void dcb_final_close(DCB* dcb)
 #endif
     mxb_assert(dcb->n_close != 0);
 
-    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER       // Backend DCB
-        && dcb->state == DCB_STATE_POLLING              // Being polled
-        && dcb->persistentstart == 0                    /** Not already in (> 0) or being evicted from (-1)
-                                                         * the persistent pool. */
-        && dcb->server)                                 // And has a server
+    if (dcb->role == DCB::Role::BACKEND         // Backend DCB
+        && dcb->state == DCB_STATE_POLLING      // Being polled
+        && dcb->persistentstart == 0            /** Not already in (> 0) or being evicted from (-1)
+                                                 * the persistent pool. */
+        && dcb->server)                         // And has a server
     {
         /* May be a candidate for persistence, so save user name */
         const char* user;
@@ -1167,7 +1166,7 @@ void dcb_final_close(DCB* dcb)
 
         if (dcb->server)
         {
-            // This is now a DCB_ROLE_BACKEND_HANDLER.
+            // This is now a DCB::Role::BACKEND_HANDLER.
             // TODO: Make decisions according to the role and assert
             // TODO: that what the role implies is preset.
             mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
@@ -1197,7 +1196,7 @@ void dcb_final_close(DCB* dcb)
         else
         {
             // Only internal DCBs are closed with a fd of -1
-            mxb_assert(dcb->dcb_role == DCB_ROLE_INTERNAL);
+            mxb_assert(dcb->role == DCB::Role::INTERNAL);
         }
 
         dcb->state = DCB_STATE_DISCONNECTED;
@@ -1483,7 +1482,7 @@ static bool dlist_clients_cb(DCB* dcb, void* data)
 {
     DCB* pdcb = (DCB*)data;
 
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role == DCB::Role::CLIENT)
     {
         dcb_printf(pdcb,
                    " %-15s | %16p | %-20s | %10p\n",
@@ -2031,7 +2030,7 @@ bool count_by_usage_cb(DCB* dcb, void* data)
     switch (d->type)
     {
     case DCB_USAGE_CLIENT:
-        if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
+        if (DCB::Role::CLIENT == dcb->role)
         {
             d->count++;
         }
@@ -2045,15 +2044,15 @@ bool count_by_usage_cb(DCB* dcb, void* data)
         break;
 
     case DCB_USAGE_BACKEND:
-        if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+        if (dcb->role == DCB::Role::BACKEND)
         {
             d->count++;
         }
         break;
 
     case DCB_USAGE_INTERNAL:
-        if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER
-            || dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+        if (dcb->role == DCB::Role::CLIENT
+            || dcb->role == DCB::Role::BACKEND)
         {
             d->count++;
         }
@@ -2305,15 +2304,15 @@ char* dcb_role_name(DCB* dcb)
     if (name)
     {
         name[0] = 0;
-        if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
+        if (DCB::Role::CLIENT == dcb->role)
         {
             strcat(name, "Client Request Handler");
         }
-        else if (DCB_ROLE_BACKEND_HANDLER == dcb->dcb_role)
+        else if (DCB::Role::BACKEND == dcb->role)
         {
             strcat(name, "Backend Request Handler");
         }
-        else if (DCB_ROLE_INTERNAL == dcb->dcb_role)
+        else if (DCB::Role::INTERNAL == dcb->role)
         {
             strcat(name, "Internal");
         }
@@ -2432,7 +2431,7 @@ void dcb_process_idle_sessions(int thr)
 
         for (DCB* dcb = this_unit.all_dcbs[thr]; dcb; dcb = dcb->thread.next)
         {
-            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+            if (dcb->role == DCB::Role::CLIENT)
             {
                 SERVICE* service = dcb->session->service;
 
@@ -2621,7 +2620,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
              * until it return 1 for success or -1 for error */
             if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
             {
-                return_code = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role) ?
+                return_code = (DCB::Role::CLIENT == dcb->role) ?
                     dcb_accept_SSL(dcb) :
                     dcb_connect_SSL(dcb);
             }
@@ -3046,7 +3045,7 @@ int poll_add_dcb(DCB* dcb)
     dcb_state_t new_state;
     RoutingWorker* owner = nullptr;
 
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role == DCB::Role::CLIENT)
     {
         if (strcasecmp(dcb->service->routerModule, "cli") == 0
             || strcasecmp(dcb->service->routerModule, "maxinfo") == 0)
@@ -3074,7 +3073,7 @@ int poll_add_dcb(DCB* dcb)
     }
     else
     {
-        mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+        mxb_assert(dcb->role == DCB::Role::BACKEND);
         mxb_assert(RoutingWorker::get_current_id() != -1);
         mxb_assert(RoutingWorker::get_current() == dcb->owner);
 
@@ -3135,7 +3134,7 @@ int poll_remove_dcb(DCB* dcb)
      * Only positive fds can be removed from epoll set.
      */
     dcbfd = dcb->fd;
-    mxb_assert(dcbfd > 0 || dcb->dcb_role == DCB_ROLE_INTERNAL);
+    mxb_assert(dcbfd > 0 || dcb->role == DCB::Role::INTERNAL);
 
     if (dcbfd > 0)
     {
@@ -3188,7 +3187,7 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
 {
     MXS_SESSION* session = (MXS_SESSION*)data;
 
-    if (dcb->session == session && dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+    if (dcb->session == session && dcb->role == DCB::Role::BACKEND)
     {
         poll_remove_dcb(dcb);
     }
@@ -3200,7 +3199,7 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
 {
     MXS_SESSION* session = (MXS_SESSION*)data;
 
-    if (dcb->session == session && dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+    if (dcb->session == session && dcb->role == DCB::Role::BACKEND)
     {
         poll_add_dcb(dcb);
     }
@@ -3255,14 +3254,17 @@ json_t* dcb_to_json(DCB* dcb)
 
 const char* DCB::type()
 {
-    switch (dcb_role)
+    switch (role)
     {
-    case DCB_ROLE_CLIENT_HANDLER:
+    case DCB::Role::CLIENT:
         return "Client DCB";
-    case DCB_ROLE_BACKEND_HANDLER:
+
+    case DCB::Role::BACKEND:
         return "Backend DCB";
-    case DCB_ROLE_INTERNAL:
+
+    case DCB::Role::INTERNAL:
         return "Internal DCB";
+
     default:
         mxb_assert(!true);
         return "Unknown DCB";

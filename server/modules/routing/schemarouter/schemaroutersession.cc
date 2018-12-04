@@ -616,7 +616,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
                                       mxs_error_action_t action,
                                       bool* pSuccess)
 {
-    mxb_assert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(pProblem->role == DCB::Role::BACKEND);
     SSRBackend bref = get_bref_from_dcb(pProblem);
 
     if (bref.get() == NULL)     // Should never happen

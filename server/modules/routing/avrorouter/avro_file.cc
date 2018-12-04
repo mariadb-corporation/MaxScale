@@ -375,7 +375,7 @@ bool notify_cb(DCB* dcb, void* data)
 {
     SERVICE* service = static_cast<SERVICE*>(data);
 
-    if (dcb->service == service && dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->service == service && dcb->role == DCB::Role::CLIENT)
     {
         poll_fake_write_event(dcb);
     }

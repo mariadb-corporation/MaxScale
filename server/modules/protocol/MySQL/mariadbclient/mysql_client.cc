@@ -456,7 +456,7 @@ int gw_read_client_event(DCB* dcb)
     uint32_t nbytes_read = 0;
     uint32_t max_bytes = 0;
 
-    if (dcb->dcb_role != DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role != DCB::Role::CLIENT)
     {
         MXS_ERROR("DCB must be a client handler for MySQL client protocol.");
         return 1;

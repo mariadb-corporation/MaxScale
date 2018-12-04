@@ -59,8 +59,8 @@ struct
     /* Global session id counter. Must be updated atomically. Value 0 is reserved for
      *  dummy/unused sessions.
      */
-    uint64_t next_session_id;
-    uint32_t retain_last_statements;
+    uint64_t                  next_session_id;
+    uint32_t                  retain_last_statements;
     session_dump_statements_t dump_statements;
 } this_unit =
 {
@@ -68,7 +68,6 @@ struct
     0,
     SESSION_DUMP_STATEMENTS_NEVER
 };
-
 }
 
 static void         session_initialize(void* session);
@@ -171,7 +170,7 @@ bool session_start(MXS_SESSION* session)
 
 void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
 {
-    mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(dcb->role == DCB::Role::BACKEND);
 
     mxb::atomic::add(&session->refcount, 1);
     dcb->session = session;
@@ -329,7 +328,7 @@ void printSession(MXS_SESSION* session)
 
 bool printAllSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role == DCB::Role::CLIENT)
     {
         printSession(dcb->session);
     }
@@ -351,7 +350,7 @@ void printAllSessions()
 /** Callback for dprintAllSessions */
 bool dprintAllSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role == DCB::Role::CLIENT)
     {
         DCB* out_dcb = (DCB*)data;
         dprintSession(out_dcb, dcb->session);
@@ -420,7 +419,7 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
 
 bool dListSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role == DCB::Role::CLIENT)
     {
         DCB* out_dcb = (DCB*)data;
         MXS_SESSION* session = dcb->session;
@@ -605,7 +604,7 @@ const char* session_get_user(const MXS_SESSION* session)
 
 bool dcb_iter_cb(DCB* dcb, void* data)
 {
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role == DCB::Role::CLIENT)
     {
         ResultSet* set = static_cast<ResultSet*>(data);
         MXS_SESSION* ses = dcb->session;
@@ -825,7 +824,7 @@ struct SessionListData
 
 bool seslist_cb(DCB* dcb, void* data)
 {
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role == DCB::Role::CLIENT)
     {
         SessionListData* d = (SessionListData*)data;
         Session* session = static_cast<Session*>(dcb->session);
@@ -1122,7 +1121,7 @@ Session::~Session()
 void Session::set_client_dcb(DCB* dcb)
 {
     mxb_assert(client_dcb == nullptr);
-    mxb_assert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER);
+    mxb_assert(dcb->role == DCB::Role::CLIENT);
     client_dcb = dcb;
 }
 
@@ -1187,7 +1186,7 @@ void Session::dump_statements() const
         if ((id != 0) && (id != ses_id))
         {
             MXS_WARNING("Current session is %" PRIu64 ", yet statements are dumped for %" PRIu64 ". "
-                        "The session id in the subsequent dumped statements is the wrong one.",
+                                                                                                 "The session id in the subsequent dumped statements is the wrong one.",
                         id,
                         ses_id);
         }
@@ -1502,7 +1501,6 @@ void timespec_to_iso(char* zIso, const timespec& ts)
     i = sprintf(zIso + i, ".%03ld", ts.tv_nsec / 1000000);
     mxb_assert(i == 4);
 }
-
 }
 
 json_t* Session::QueryInfo::as_json() const
@@ -1570,8 +1568,8 @@ void Session::QueryInfo::book_server_response(SERVER* pServer, bool final_respon
     mxb_assert(!m_complete);
     // A particular server may be reported only exactly once.
     mxb_assert(find_if(m_server_infos.begin(), m_server_infos.end(), [pServer](const ServerInfo& info) {
-                return info.pServer == pServer;
-            }) == m_server_infos.end());
+                           return info.pServer == pServer;
+                       }) == m_server_infos.end());
 
     timespec now;
     clock_gettime(CLOCK_REALTIME_COARSE, &now);

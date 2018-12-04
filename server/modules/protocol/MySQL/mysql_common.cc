@@ -590,7 +590,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
 {
     bool rval = true;
 
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->role == DCB::Role::CLIENT)
     {
         // The shared session data can be extracted at any time if the client DCB is used.
         mxb_assert(dcb->data);
@@ -1385,7 +1385,7 @@ static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
 
-    if (dcb->session->ses_id == info->target_id && dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+    if (dcb->session->ses_id == info->target_id && dcb->role == DCB::Role::BACKEND)
     {
         MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
@@ -1411,7 +1411,7 @@ static bool kill_user_func(DCB* dcb, void* data)
 {
     UserKillInfo* info = (UserKillInfo*)data;
 
-    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER
+    if (dcb->role == DCB::Role::BACKEND
         && strcasecmp(dcb->session->client_dcb->user, info->user.c_str()) == 0)
     {
         info->targets[dcb->server] = info->query_base;

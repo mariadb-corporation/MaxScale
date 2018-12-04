@@ -363,7 +363,7 @@ void RRRouter::handle_error(RRRouterSession* rses,
     /* If the erroneous dcb is a client handler, close it. Setting succp to
      * false will cause the entire attached session to be closed.
      */
-    if (problem_dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (problem_dcb->role == DCB::Role::CLIENT)
     {
         dcb_close(problem_dcb);
         *succp = false;
@@ -391,7 +391,7 @@ void RRRouter::handle_error(RRRouterSession* rses,
         case ERRACT_NEW_CONNECTION:
             {
                 /* React to a failed backend */
-                if (problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+                if (problem_dcb->role == DCB::Role::BACKEND)
                 {
                     if (problem_dcb == rses->m_write_dcb)
                     {

@@ -401,7 +401,7 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
 {
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
-     // The DCB's session is set to null when it is put into the persistent connection pool.
+    // The DCB's session is set to null when it is put into the persistent connection pool.
     if (dcb->session)
     {
         uint64_t capabilities = service_get_capabilities(dcb->session->service);
@@ -645,7 +645,7 @@ static inline bool session_ok_to_route(DCB* dcb)
                 rval = true;
             }
         }
-        else if (dcb->session->client_dcb->dcb_role == DCB_ROLE_INTERNAL)
+        else if (dcb->session->client_dcb->role == DCB::Role::INTERNAL)
         {
             rval = true;
         }
@@ -1351,7 +1351,7 @@ static int gw_backend_hangup(DCB* dcb)
                 if (error != 0 && session->state != SESSION_STATE_STOPPING)
                 {
                     MXS_ERROR("Hangup in session that is not ready for routing, "
-                        "Error reported is '%s'.",
+                              "Error reported is '%s'.",
                               mxs_strerror(errno));
                 }
             }

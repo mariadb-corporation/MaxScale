@@ -2374,7 +2374,7 @@ static void errorReply(MXS_ROUTER* instance,
                        mxs_error_action_t action,
                        bool* succp)
 {
-    mxb_assert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(backend_dcb->role == DCB::Role::BACKEND);
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
     int error;
     socklen_t len;

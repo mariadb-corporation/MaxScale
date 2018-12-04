@@ -858,9 +858,9 @@ void RWSplitSession::log_master_routing_failure(bool found,
     /** Both backends should either be empty, not connected or the DCB should
      * be a backend (the last check is slightly redundant). */
     mxb_assert(!old_master || !old_master->in_use()
-               || old_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+               || old_master->dcb()->role == DCB::Role::BACKEND);
     mxb_assert(!curr_master || !curr_master->in_use()
-               || curr_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+               || curr_master->dcb()->role == DCB::Role::BACKEND);
     char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100];      // Extra space for error message
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout)

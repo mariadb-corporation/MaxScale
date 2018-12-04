@@ -852,7 +852,6 @@ static int accept_one_connection(int fd, struct sockaddr* client_conn)
 
     return client_fd;
 }
-
 }
 
 DCB* Listener::accept_one_dcb()
@@ -866,7 +865,7 @@ DCB* Listener::accept_one_dcb()
         configure_network_socket(c_sock, client_conn.ss_family);
 
         mxs::Session* session = new(std::nothrow) mxs::Session(m_self);
-        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, session);
+        client_dcb = dcb_alloc(DCB::Role::CLIENT, session);
 
         if (!session || !client_dcb)
         {

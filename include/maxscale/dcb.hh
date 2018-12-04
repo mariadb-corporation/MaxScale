@@ -91,13 +91,6 @@ typedef enum
                                                                                                : \
                                                                                                "DCB_STATE_UNKNOWN"))))))
 
-typedef enum
-{
-    DCB_ROLE_CLIENT_HANDLER,        /*< Serves dedicated client */
-    DCB_ROLE_BACKEND_HANDLER,       /*< Serves back end connection */
-    DCB_ROLE_INTERNAL               /*< Internal DCB not connected to the outside */
-} dcb_role_t;
-
 /**
  * Callback reasons for the DCB callback mechanism.
  */
@@ -151,7 +144,14 @@ typedef enum
  */
 struct DCB : public MXB_POLL_DATA
 {
-    DCB(dcb_role_t role, MXS_SESSION*);
+    enum class Role
+    {
+        CLIENT,         /*< Serves dedicated client */
+        BACKEND,        /*< Serves back end connection */
+        INTERNAL        /*< Internal DCB not connected to the outside */
+    };
+
+    DCB(Role role, MXS_SESSION*);
     ~DCB();
 
     /**
@@ -160,7 +160,7 @@ struct DCB : public MXB_POLL_DATA
     const char* type();
 
     bool                    dcb_errhandle_called = false;   /**< this can be called only once */
-    dcb_role_t              dcb_role;
+    Role                    role;
     int                     fd = DCBFD_CLOSED;                  /**< The descriptor */
     dcb_state_t             state = DCB_STATE_ALLOC;            /**< Current descriptor state */
     SSL_STATE               ssl_state = SSL_HANDSHAKE_UNKNOWN;  /**< Current state of SSL if in use */
@@ -239,8 +239,8 @@ typedef enum
  */
 void dcb_global_init();
 
-int dcb_write(DCB*, GWBUF*);
-DCB* dcb_alloc(dcb_role_t, MXS_SESSION*);
+int  dcb_write(DCB*, GWBUF*);
+DCB* dcb_alloc(DCB::Role, MXS_SESSION*);
 DCB* dcb_connect(struct server*, MXS_SESSION*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_drain_writeq(DCB*);
