@@ -17,7 +17,7 @@
 #include <maxscale/authenticator.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/log.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 
 #include "../gssapi_auth.h"

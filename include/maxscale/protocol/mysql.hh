@@ -12,31 +12,29 @@
  */
 #pragma once
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
-#include <mysql.h>
-#include <mysqld_error.h>
-
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <openssl/crypto.h>
-#include <openssl/err.h>
-#include <openssl/sha.h>
-#include <openssl/ssl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
-
-#include <maxscale/buffer.h>
+#include <openssl/crypto.h>
+#include <openssl/err.h>
+#include <openssl/sha.h>
+#include <openssl/ssl.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/session.hh>
 #include <maxscale/version.h>

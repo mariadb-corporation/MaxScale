@@ -20,7 +20,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/log.h>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>

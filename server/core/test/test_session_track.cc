@@ -4,7 +4,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 MySQLProtocol proto;
 

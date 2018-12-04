@@ -23,7 +23,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 using std::string;
 

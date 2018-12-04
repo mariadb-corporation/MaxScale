@@ -25,7 +25,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/alloc.h>
 
 /**

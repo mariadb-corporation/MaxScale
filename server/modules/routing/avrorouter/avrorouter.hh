@@ -27,7 +27,7 @@
 #include <cdc.hh>
 #include <maxavro.h>
 #include <binlog_common.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <blr_constants.h>
 
 #include "rpl.hh"

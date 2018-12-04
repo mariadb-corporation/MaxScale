@@ -33,7 +33,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session_command.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/protocol/rwbackend.hh>
 #include <maxscale/session_stats.hh>

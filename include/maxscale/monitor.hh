@@ -26,7 +26,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/server.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 MXS_BEGIN_DECLS
 

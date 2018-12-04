@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <stdlib.h>
 #include <stdint.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 
 MXS_BEGIN_DECLS

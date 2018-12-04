@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <vector>
 #include <maxscale/query_classifier.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <iostream>
 
 using namespace std;

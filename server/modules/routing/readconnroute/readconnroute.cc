@@ -85,7 +85,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/log.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/utils.hh>
 

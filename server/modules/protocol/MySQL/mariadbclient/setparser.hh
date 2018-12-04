@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <vector>
 #include <maxscale/customparser.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 
 class SetParser : public maxscale::CustomParser

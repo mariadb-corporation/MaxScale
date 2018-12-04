@@ -12,7 +12,7 @@
  */
 
 #include "maxscale/mock/mock.hh"
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 
 namespace maxscale

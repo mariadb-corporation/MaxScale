@@ -20,7 +20,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/mysql_binlog.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 /**
  * Send the field count packet in a response packet sequence.

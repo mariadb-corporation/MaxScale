@@ -23,7 +23,7 @@
 #include <my_config.h>
 #include <maxscale/paths.h>
 #include <maxscale/log.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/query_classifier.h>
 #include "../../server/modules/protocol/MySQL/mariadbclient/setsqlmodeparser.hh"
 #include "testreader.hh"

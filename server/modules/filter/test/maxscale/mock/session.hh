@@ -13,8 +13,9 @@
 #pragma once
 
 #include "mock.hh"
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/listener.hh>
+#include <maxscale/protocol/mysql.hh>
 #include "client.hh"
 
 #include "../../../core/internal/session.hh"

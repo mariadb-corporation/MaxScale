@@ -48,7 +48,7 @@
 #include <inttypes.h>
 #include <algorithm>
 
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.hh>
 

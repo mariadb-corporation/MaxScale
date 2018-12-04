@@ -27,7 +27,7 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/pcre2.h>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.h>

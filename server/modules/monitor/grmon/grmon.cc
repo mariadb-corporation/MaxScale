@@ -22,7 +22,7 @@
 #include <new>
 #include <string>
 
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <mysqld_error.h>
 
 

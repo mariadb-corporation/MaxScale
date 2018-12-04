@@ -32,7 +32,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/poll.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/query_classifier.h>
 
 #include "maxrows.h"

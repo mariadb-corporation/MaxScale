@@ -19,7 +19,7 @@
 #include <maxbase/poll.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 /** A DCB-like client abstraction which ignores responses */
 class LocalClient : public MXB_POLL_DATA

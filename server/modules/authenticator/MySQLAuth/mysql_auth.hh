@@ -24,7 +24,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 MXS_BEGIN_DECLS
 

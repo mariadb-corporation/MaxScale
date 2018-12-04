@@ -31,7 +31,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>

@@ -19,7 +19,7 @@
 #include <vector>
 #include <maxscale/buffer.h>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 /**
  * @class LEncInt

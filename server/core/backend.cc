@@ -17,7 +17,7 @@
 
 #include <maxbase/atomic.hh>
 
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 using namespace maxscale;
 

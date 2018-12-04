@@ -26,7 +26,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
 

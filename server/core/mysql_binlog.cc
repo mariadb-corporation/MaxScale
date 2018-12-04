@@ -24,7 +24,7 @@
 #include <strings.h>
 #include <math.h>
 
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 static uint64_t unpack_bytes(uint8_t* ptr, size_t bytes);
 

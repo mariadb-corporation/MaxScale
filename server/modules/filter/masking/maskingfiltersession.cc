@@ -21,7 +21,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 #include "maskingfilter.hh"
 #include "mysql.hh"

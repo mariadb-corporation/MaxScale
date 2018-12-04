@@ -21,4 +21,4 @@
 
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>

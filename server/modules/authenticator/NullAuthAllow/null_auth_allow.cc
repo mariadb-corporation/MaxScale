@@ -36,7 +36,7 @@
 #include <maxscale/users.h>
 
 /** MXS-1026: Without MySQL protocol data structures, the NullAuth authenticator will crash. */
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 static bool null_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
 static bool null_auth_is_client_ssl_capable(DCB* dcb);

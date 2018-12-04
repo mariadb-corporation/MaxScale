@@ -14,7 +14,7 @@
 #include <maxscale/protocol/rwbackend.hh>
 
 #include <maxscale/modutil.hh>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <maxscale/log.h>
 
 namespace maxscale

@@ -49,7 +49,7 @@
 #include <maxscale/resultset.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 
 #include "../../../core/internal/modules.hh"
 #include "../../../core/internal/monitor.hh"

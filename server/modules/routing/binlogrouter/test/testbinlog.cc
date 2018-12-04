@@ -42,7 +42,7 @@
 #include "../../../../core/internal/modules.hh"
 #include "../../../../core/internal/config.hh"
 
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/protocol/mysql.hh>
 #include <ini.h>
 #include <sys/stat.h>
 #include <getopt.h>
