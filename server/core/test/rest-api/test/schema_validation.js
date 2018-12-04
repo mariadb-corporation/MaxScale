@@ -1,6 +1,20 @@
 // These tests use the server/test/maxscale_test.cnf configuration
 
 require("../utils.js")()
+const mariadb = require('mariadb');
+var conn
+
+function createConnection() {
+    return mariadb.createConnection({host: '127.0.0.1', port: 4006, user: 'maxuser', password: 'maxpwd'})
+        .then(c => {
+            conn = c
+        })
+}
+
+function closeConnection() {
+    conn.end()
+    conn = null
+}
 
 describe("Resource Collections", function() {
     before(startMaxScale)
@@ -36,6 +50,7 @@ describe("Resource Collections", function() {
 
 describe("Individual Resources", function() {
     before(startMaxScale)
+    before(createConnection)
 
     var tests = [
         "/servers/server1",
@@ -63,11 +78,13 @@ describe("Individual Resources", function() {
         });
     })
 
+    after(closeConnection)
     after(stopMaxScale)
 });
 
 describe("Resource Self Links", function() {
     before(startMaxScale)
+    before(createConnection)
 
     var tests = [
         "/servers",
@@ -108,5 +125,6 @@ describe("Resource Self Links", function() {
         });
     })
 
+    after(closeConnection)
     after(stopMaxScale)
 });

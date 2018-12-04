@@ -12,6 +12,7 @@
     "ajv": "^5.5.2",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
+    "mariadb": "^2.0.1-beta",
     "mocha": "^5.2.0",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5"

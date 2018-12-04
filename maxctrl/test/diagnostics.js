@@ -24,7 +24,7 @@ var tests = [
     'show server server1',
     'show service RW-Split-Router',
     'show monitor MariaDB-Monitor',
-    'show session 5',
+    'show sessions',
     'show filter Hint',
     'show module readwritesplit',
     'show maxscale',
