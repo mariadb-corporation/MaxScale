@@ -30,7 +30,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb_client.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";

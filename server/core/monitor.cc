@@ -38,7 +38,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.hh>
 #include <maxscale/json_api.h>

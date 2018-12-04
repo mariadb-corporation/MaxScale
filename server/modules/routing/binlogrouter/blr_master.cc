@@ -48,7 +48,7 @@
 #include <maxscale/log.h>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/router.hh>
-#include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>

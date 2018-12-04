@@ -24,8 +24,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/mysql_utils.hh>
-
-#include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
 // TODO: For monitor_add_parameters

@@ -42,7 +42,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/pcre2.h>
-#include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 #include <binlog_common.h>
 
 #include "avro_converter.hh"

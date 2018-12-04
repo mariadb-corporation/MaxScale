@@ -35,7 +35,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
-#include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 
 static void* mysql_auth_init(char** options);
 static bool  mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf);

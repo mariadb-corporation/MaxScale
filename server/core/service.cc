@@ -54,7 +54,7 @@
 #include <maxscale/utils.hh>
 #include <maxscale/version.h>
 #include <maxscale/json_api.h>
-#include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/config.hh"
