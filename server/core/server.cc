@@ -261,17 +261,18 @@ DCB* server_get_persistent(SERVER* server, const char* user, const char* ip, con
         && server->persistent[id]   // Check after cleaning
         && (server->status & SERVER_RUNNING))
     {
+        mxb_assert(dcb->server);
+
         dcb = server->persistent[id];
         while (dcb)
         {
-            // TODO: Fix this, it won't work (DCB in pool has no session)
             if (dcb->user
                 && dcb->remote
                 && ip
                 && !dcb->dcb_errhandle_called
                 && 0 == strcmp(dcb->user, user)
                 && 0 == strcmp(dcb->remote, ip)
-                && 0 == strcmp(dcb->session->listener->protocol(), protocol))
+                && 0 == strcmp(dcb->server->protocol, protocol))
             {
                 if (NULL == previous)
                 {
