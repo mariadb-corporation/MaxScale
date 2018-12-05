@@ -20,7 +20,6 @@
 %{
 #include <lex.yy.h>
 #include "dbfwfilter.h"
-#include <maxscale/log.h>
 %}
 
 /** We need a reentrant scanner so no global variables are used */
@@ -53,7 +52,7 @@
 
 input
     : line_input
-    | line_input command { MXS_WARNING("Firewall rules file lacks a trailing newline."); }
+    | line_input command { FW_LOG_WARNING("Firewall rules file lacks a trailing newline.", ""); }
     ;
 
 line_input

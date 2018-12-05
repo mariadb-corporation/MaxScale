@@ -1779,3 +1779,13 @@ json_t* Dbfw::diagnostics_json() const
 {
     return rules_to_json(this_thread->rules(this));
 }
+
+extern "C"
+void dbfilter_log_warning(const char* file, int line, const char* function,
+                          const char* format, const char* what)
+{
+    char buffer[strlen(format) + strlen(what) + 1];
+
+    sprintf(buffer, format, what);
+    mxb_log_message(LOG_WARNING, file, line, function, "%s", buffer);
+}

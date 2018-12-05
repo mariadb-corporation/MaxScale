@@ -21,6 +21,10 @@
 
 #include <maxscale/cdefs.h>
 
+#ifndef MXS_MODULE_NAME
+#define MXS_MODULE_NAME "dbfwfilter"
+#endif
+
 MXS_BEGIN_DECLS
 
 /** Matching type */
@@ -55,5 +59,12 @@ void add_active_user(void* scanner, const char* name);
 void add_active_rule(void* scanner, const char* name);
 void set_matching_mode(void* scanner, enum match_type mode);
 bool create_user_templates(void* scanner);
+
+/** Log warnings from C code */
+void log_warning(const char* module, const char* file, int line, const char* function,
+                 const char* format, const char* what);
+
+#define FW_LOG_WARNING(format, what)\
+    log_warning(MXS_MODULE_NAME, __FILE__, __LINE__, __func__, format, what)
 
 MXS_END_DECLS
