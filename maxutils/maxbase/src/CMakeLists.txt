@@ -3,6 +3,7 @@ add_library(maxbase STATIC
   atomic.cc
   eventcount.cc
   format.cc
+  http.cc
   log.cc
   logger.cc
   maxbase.cc
@@ -21,4 +22,7 @@ target_link_libraries(maxbase systemd)
 endif()
 
 set_target_properties(maxbase PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
+target_link_libraries(maxbase
+  ${CURL_LIBRARIES}
+)
 add_subdirectory(test)

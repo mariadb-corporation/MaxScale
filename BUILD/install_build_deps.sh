@@ -20,7 +20,7 @@ then
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
-       libedit-dev
+       libedit-dev libcurl4-openssl-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   sudo apt-get install -y libsystemd-dev || \
@@ -57,7 +57,7 @@ else
          make libtool libopenssl-devel libaio libaio-devel flex \
          pcre-devel git wget tcl libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls-devel libgcrypt-devel pam-devel systemd-devel
+         gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
@@ -74,7 +74,7 @@ else
          libedit-devel systemtap-sdt-devel rpm-sign wget \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         gnutls-devel libgcrypt-devel pam-devel
+         gnutls-devel libgcrypt-devel pam-devel libcurl-devel
 
     # Attempt to install libasan, it'll only work on CentOS 7
     sudo yum install -y --nogpgcheck libasan
