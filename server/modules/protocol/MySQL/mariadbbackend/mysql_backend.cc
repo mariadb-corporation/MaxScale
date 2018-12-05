@@ -577,22 +577,16 @@ static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* err
     bool succp = true;
     MXS_SESSION* session = dcb->session;
 
-    if (!dcb->dcb_errhandle_called)
-    {
-        GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
-        MXS_ROUTER_SESSION* rsession = static_cast<MXS_ROUTER_SESSION*>(session->router_session);
-        MXS_ROUTER_OBJECT* router = session->service->router;
-        MXS_ROUTER* router_instance = session->service->router_instance;
+    mxb_assert(!dcb->dcb_errhandle_called);
 
-        router->handleError(router_instance,
-                            rsession,
-                            errbuf,
-                            dcb,
-                            action,
-                            &succp);
+    GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
+    MXS_ROUTER_SESSION* rsession = static_cast<MXS_ROUTER_SESSION*>(session->router_session);
+    MXS_ROUTER_OBJECT* router = session->service->router;
+    MXS_ROUTER* router_instance = session->service->router_instance;
 
-        gwbuf_free(errbuf);
-    }
+    router->handleError(router_instance, rsession, errbuf, dcb, action, &succp);
+
+    gwbuf_free(errbuf);
     /**
      * If error handler fails it means that routing session can't continue
      * and it must be closed. In success, only this DCB is closed.
