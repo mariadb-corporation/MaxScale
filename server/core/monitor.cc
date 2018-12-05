@@ -2863,7 +2863,7 @@ void MonitorInstanceSimple::tick()
                 MXS_DEBUG("Backend server [%s]:%d state : %s",
                           pMs->server->address,
                           pMs->server->port,
-                          STRSRVSTATUS(&server));
+                          mxs::server_status(&server).c_str());
             }
 #endif
 

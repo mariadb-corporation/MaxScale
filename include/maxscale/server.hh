@@ -175,33 +175,6 @@ struct SERVER
 // Bits providing general information
 #define SERVER_DISK_SPACE_EXHAUSTED (1 << 31)   /**<< The disk space of the server is exhausted */
 
-#define STRSRVSTATUS(s) \
-    (server_is_master(s)  ? "RUNNING MASTER"        \
-                          : (server_is_slave(s)   ? "RUNNING SLAVE"        \
-                                                  : (server_is_joined(s)  ? "RUNNING JOINED"      \
-                                                                          : (server_is_ndb(s)       \
-                                                                             ? "RUNNING NDB"        \
-                                                                             : (( \
-                                                                                    server_is_running(s) \
-                                                                                    && \
-                                                                                    server_is_in_maint(s)) \
-                                                                                ? \
-                                                                                "RUNNING MAINTENANCE"   \
-                                                                                : ( \
-                                                                                    server_is_relay(s) \
-                                                                                    ? \
-                                                                                    "RUNNING RELAY"   \
-                                                                                    : ( \
-                                                                                        server_is_usable(s) \
-                                                                                        ? \
-                                                                                        "RUNNING (only)"   \
-                                                                                        : ( \
-                                                                                            server_is_down(s) \
-                                                                                            ? \
-                                                                                            "DOWN" \
-                                                                                            : \
-                                                                                            "UNKNOWN STATUS"))))))))
-
 /**
  * Is the server valid and active?
  *

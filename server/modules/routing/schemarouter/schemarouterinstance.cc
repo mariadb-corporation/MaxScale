@@ -116,7 +116,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
                      b->server->stats.n_current,
                      b->server->address,
                      b->server->port,
-                     STRSRVSTATUS(b->server));
+                     mxs::server_status(b->server).c_str());
         }
     }
     /**
@@ -170,7 +170,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
                 if ((*it)->in_use())
                 {
                     MXS_INFO("Connected %s in \t%s:%d",
-                             STRSRVSTATUS(b->server),
+                             mxs::server_status(b->server).c_str(),
                              b->server->address,
                              b->server->port);
                 }

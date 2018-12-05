@@ -1219,7 +1219,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
                       dcb->server->name,
                       backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
                       "handshake" : "authentication",
-                      STRSRVSTATUS(dcb->server));
+                      mxs::server_status(dcb->server).c_str());
         }
 
         gwbuf_free(queue);
