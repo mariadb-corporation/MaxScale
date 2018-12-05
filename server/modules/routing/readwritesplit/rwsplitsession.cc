@@ -1123,7 +1123,7 @@ void RWSplitSession::handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg)
 
     backend->close();
 
-    if (sesstate == SESSION_STATE_ROUTER_READY)
+    if (sesstate == SESSION_STATE_STARTED)
     {
         m_client->func.write(m_client, gwbuf_clone(errmsg));
     }

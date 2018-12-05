@@ -33,11 +33,6 @@
 #define MXS_UPSTREAM_INIT   {0}
 #define SESSION_FILTER_INIT {0}
 
-#define SESSION_INIT \
-    {.ses_chk_top = CHK_NUM_SESSION, \
-     .stats = SESSION_STATS_INIT, .head = MXS_DOWNSTREAM_INIT, .tail = MXS_UPSTREAM_INIT, \
-     .state = SESSION_STATE_ALLOC, .client_protocol_data = 0, .ses_chk_tail = CHK_NUM_SESSION}
-
 #define SESSION_PROTOCOL(x, type) DCB_PROTOCOL((x)->client_dcb, type)
 
 MXS_BEGIN_DECLS
@@ -52,7 +47,6 @@ typedef enum
 } SESSIONLISTFILTER;
 
 int session_isvalid(MXS_SESSION*);
-const char* session_state(mxs_session_state_t);
 
 /**
  * Link a session to a backend DCB.

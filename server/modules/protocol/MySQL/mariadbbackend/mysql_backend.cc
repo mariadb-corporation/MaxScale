@@ -624,7 +624,7 @@ static inline bool session_ok_to_route(DCB* dcb)
 {
     bool rval = false;
 
-    if (dcb->session->state == SESSION_STATE_ROUTER_READY
+    if (dcb->session->state == SESSION_STATE_STARTED
         && dcb->session->client_dcb != NULL
         && dcb->session->client_dcb->state == DCB_STATE_POLLING
         && (dcb->session->router_session
@@ -1292,7 +1292,7 @@ static int gw_error_backend_event(DCB* dcb)
         }
         dcb_close(dcb);
     }
-    else if (dcb->state != DCB_STATE_POLLING || session->state != SESSION_STATE_ROUTER_READY)
+    else if (dcb->state != DCB_STATE_POLLING || session->state != SESSION_STATE_STARTED)
     {
         int error;
         int len = sizeof(error);
@@ -1336,7 +1336,7 @@ static int gw_backend_hangup(DCB* dcb)
 
     if (!dcb->persistentstart)
     {
-        if (session->state != SESSION_STATE_ROUTER_READY)
+        if (session->state != SESSION_STATE_STARTED)
         {
             int error;
             int len = sizeof(error);

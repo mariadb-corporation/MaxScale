@@ -168,7 +168,7 @@ void HintRouterSession::handleError(GWBUF* pMessage,
     case ERRACT_REPLY_CLIENT:
         {
             /* React to failed authentication, send message to client */
-            if (sesstate == SESSION_STATE_ROUTER_READY)
+            if (sesstate == SESSION_STATE_STARTED)
             {
                 /* Send error report to client */
                 GWBUF* pCopy = gwbuf_clone(pMessage);

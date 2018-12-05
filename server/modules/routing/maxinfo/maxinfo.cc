@@ -192,7 +192,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     inst->sessions = client;
     pthread_mutex_unlock(&inst->lock);
 
-    session->state = SESSION_STATE_READY;
+    session->state = SESSION_STATE_CREATED;
 
     return reinterpret_cast<MXS_ROUTER_SESSION*>(client);
 }
@@ -274,7 +274,7 @@ static void handleError(MXS_ROUTER* instance,
 
     client_dcb = session->client_dcb;
 
-    if (session->state == SESSION_STATE_ROUTER_READY)
+    if (session->state == SESSION_STATE_STARTED)
     {
         client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
     }

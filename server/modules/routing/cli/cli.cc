@@ -150,7 +150,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     inst->sessions = client;
     pthread_mutex_unlock(&inst->lock);
 
-    session->state = SESSION_STATE_READY;
+    session->state = SESSION_STATE_CREATED;
 
     return reinterpret_cast<MXS_ROUTER_SESSION*>(client);
 }

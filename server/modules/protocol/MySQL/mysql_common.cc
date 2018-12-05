@@ -595,15 +595,15 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
         mxb_assert(dcb->data);
         memcpy(session, dcb->data, sizeof(MYSQL_session));
     }
-    else if (dcb->session->state != SESSION_STATE_ALLOC)
+    else if (dcb->session->state != SESSION_STATE_CREATED)
     {
         memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }
     else
     {
         mxb_assert(false);
-        MXS_ERROR("Couldn't get session authentication info. Session in a wrong state %s.",
-                  STRSESSIONSTATE(dcb->session->state));
+        MXS_ERROR("Couldn't get session authentication info. Session in wrong state: %s.",
+                  session_state_to_string(dcb->session->state));
         rval = false;
     }
 
@@ -970,8 +970,8 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
     if (dcb->session == NULL
-        || (dcb->session->state != SESSION_STATE_READY
-            && dcb->session->state != SESSION_STATE_ROUTER_READY)
+        || (dcb->session->state != SESSION_STATE_CREATED
+            && dcb->session->state != SESSION_STATE_STARTED)
         || (dcb->server->server_ssl
             && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
     {

@@ -34,52 +34,14 @@ using SListener = std::shared_ptr<Listener>;
 
 typedef enum
 {
-    SESSION_STATE_ALLOC,            /*< for all sessions */
-    SESSION_STATE_READY,            /*< for router session */
-    SESSION_STATE_ROUTER_READY,     /*< for router session */
+    SESSION_STATE_CREATED,          /*< Session created but not started */
+    SESSION_STATE_STARTED,          /*< Session is fully functional */
     SESSION_STATE_STOPPING,         /*< session and router are being closed */
-    SESSION_STATE_LISTENER,         /*< for listener session */
-    SESSION_STATE_LISTENER_STOPPED, /*< for listener session */
     SESSION_STATE_TO_BE_FREED,      /*< ready to be freed as soon as there are no references */
     SESSION_STATE_FREE,             /*< for all sessions */
 } mxs_session_state_t;
 
-#define STRSESSIONSTATE(s) \
-    ((s) == SESSION_STATE_ALLOC ? "SESSION_STATE_ALLOC"   \
-                                : ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY"   \
-                                                              : ((s) \
-                                                                 == SESSION_STATE_ROUTER_READY   \
-                                                                 ? "SESSION_STATE_ROUTER_READY"   \
-                                                                 : ((s) \
-                                                                    == \
-                                                                    SESSION_STATE_STOPPING \
-                                                                    ? \
-                                                                    "SESSION_STATE_STOPPING"  \
-                                                                    : (( \
-                                                                           s) \
-                                                                       == \
-                                                                       SESSION_STATE_LISTENER \
-                                                                       ? \
-                                                                       "SESSION_STATE_LISTENER"   \
-                                                                       : (( \
-                                                                              s) \
-                                                                          == \
-                                                                          SESSION_STATE_LISTENER_STOPPED \
-                                                                          ? \
-                                                                          "SESSION_STATE_LISTENER_STOPPED"   \
-                                                                          : (( \
-                                                                                 s) \
-                                                                             == \
-                                                                             SESSION_STATE_TO_BE_FREED \
-                                                                             ? \
-                                                                             "SESSION_STATE_TO_BE_FREED"   \
-                                                                             : (( \
-                                                                                    s) \
-                                                                                == \
-                                                                                SESSION_STATE_FREE \
-                                                                                ? \
-                                                                                "SESSION_STATE_TO_BE_FREE"   \
-                                                                                :  "SESSION_STATE_UNKNOWN"))))))))
+const char* session_state_to_string(mxs_session_state_t);
 
 typedef enum
 {

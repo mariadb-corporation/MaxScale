@@ -87,7 +87,7 @@ static void         session_deliver_response(MXS_SESSION* session);
 static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* data);
 
 MXS_SESSION::MXS_SESSION(const SListener& listener)
-    : state(SESSION_STATE_READY)
+    : state(SESSION_STATE_CREATED)
     , ses_id(session_get_next_id())
     , client_dcb(nullptr)
     , listener(listener)
@@ -155,7 +155,7 @@ bool session_start(MXS_SESSION* session)
         return false;
     }
 
-    session->state = SESSION_STATE_ROUTER_READY;
+    session->state = SESSION_STATE_STARTED;
     mxb::atomic::add(&session->service->stats.n_sessions, 1, mxb::atomic::RELAXED);
     mxb::atomic::add(&session->service->stats.n_current, 1, mxb::atomic::RELAXED);
 
@@ -317,7 +317,7 @@ void printSession(MXS_SESSION* session)
     char timebuf[40];
 
     printf("Session %p\n", session);
-    printf("\tState:        %s\n", session_state(session->state));
+    printf("\tState:        %s\n", session_state_to_string(session->state));
     printf("\tService:      %s (%p)\n", session->service->name, session->service);
     printf("\tClient DCB:   %p\n", session->client_dcb);
     printf("\tConnected:    %s\n",
@@ -386,7 +386,7 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
     int i;
 
     dcb_printf(dcb, "Session %" PRIu64 "\n", print_session->ses_id);
-    dcb_printf(dcb, "\tState:               %s\n", session_state(print_session->state));
+    dcb_printf(dcb, "\tState:               %s\n", session_state_to_string(print_session->state));
     dcb_printf(dcb, "\tService:             %s\n", print_session->service->name);
 
     if (print_session->client_dcb && print_session->client_dcb->remote)
@@ -429,7 +429,7 @@ bool dListSessions_cb(DCB* dcb, void* data)
                    session->client_dcb->remote : "",
                    session->service && session->service->name ?
                    session->service->name : "",
-                   session_state(session->state));
+                   session_state_to_string(session->state));
     }
 
     return true;
@@ -459,24 +459,15 @@ void dListSessions(DCB* dcb)
  * @param state         The session state
  * @return A string representation of the session state
  */
-const char* session_state(mxs_session_state_t state)
+const char* session_state_to_string(mxs_session_state_t state)
 {
     switch (state)
     {
-    case SESSION_STATE_ALLOC:
-        return "Session Allocated";
+    case SESSION_STATE_CREATED:
+        return "Session created";
 
-    case SESSION_STATE_READY:
-        return "Session Ready";
-
-    case SESSION_STATE_ROUTER_READY:
-        return "Session ready for routing";
-
-    case SESSION_STATE_LISTENER:
-        return "Listener Session";
-
-    case SESSION_STATE_LISTENER_STOPPED:
-        return "Stopped Listener Session";
+    case SESSION_STATE_STARTED:
+        return "Session started";
 
     case SESSION_STATE_STOPPING:
         return "Stopping session";
@@ -610,7 +601,7 @@ bool dcb_iter_cb(DCB* dcb, void* data)
         char buf[20];
         snprintf(buf, sizeof(buf), "%p", ses);
 
-        set->add_row({buf, ses->client_dcb->remote, ses->service->name, session_state(ses->state)});
+        set->add_row({buf, ses->client_dcb->remote, ses->service->name, session_state_to_string(ses->state)});
     }
 
     return true;
@@ -761,7 +752,7 @@ json_t* session_json_data(const Session* session, const char* host)
 
     /** Session attributes */
     json_t* attr = json_object();
-    json_object_set_new(attr, "state", json_string(session_state(session->state)));
+    json_object_set_new(attr, "state", json_string(session_state_to_string(session->state)));
 
     if (session->client_dcb->user)
     {
@@ -999,7 +990,7 @@ public:
 
     void execute()
     {
-        if (m_session->state == SESSION_STATE_ROUTER_READY)
+        if (m_session->state == SESSION_STATE_STARTED)
         {
             GWBUF* buffer = m_buffer;
             m_buffer = NULL;

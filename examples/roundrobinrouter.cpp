@@ -375,7 +375,7 @@ void RRRouter::handle_error(RRRouterSession* rses,
         case ERRACT_REPLY_CLIENT:
             {
                 /* React to failed authentication, send message to client */
-                if (sesstate == SESSION_STATE_ROUTER_READY)
+                if (sesstate == SESSION_STATE_STARTED)
                 {
                     /* Send error report to client */
                     GWBUF* copy = gwbuf_clone(message);

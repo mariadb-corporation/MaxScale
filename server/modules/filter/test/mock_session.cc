@@ -28,7 +28,7 @@ Session::Session(Client* pClient, const SListener& listener)
 
     memset((void*)pSession, 0, sizeof(MXS_SESSION));
 
-    pSession->state = SESSION_STATE_ALLOC;
+    pSession->state = SESSION_STATE_CREATED;
 
     pSession->client_dcb = &m_client_dcb;
 
