@@ -57,7 +57,7 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
             uint64_t val = 0;
             maxavro_read_integer(file, &val);
 
-            json_t* arr = field->extra;
+            json_t* arr = (json_t*)field->extra;
             mxb_assert(arr);
             mxb_assert(json_is_array(arr));
 
@@ -107,7 +107,7 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
 
     case MAXAVRO_TYPE_UNION:
         {
-            json_t *arr = field->extra;
+            json_t *arr = (json_t*)field->extra;
             uint64_t val = 0;
 
             if (maxavro_read_integer(file, &val) && val < json_array_size(arr))
@@ -332,7 +332,7 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
         {
             fseek(file->file, file->block_start_pos, SEEK_SET);
 
-            if (fread(GWBUF_DATA(rval), 1, data_size, file->file) == data_size)
+            if (fread(GWBUF_DATA(rval), 1, data_size, file->file) == (size_t)data_size)
             {
                 memcpy(((uint8_t*) GWBUF_DATA(rval)) + data_size, file->sync, sizeof(file->sync));
                 maxavro_next_block(file);

@@ -45,7 +45,7 @@ int check_file(const char* filename)
     if (!dump)
     {
         printf("File sync marker: ");
-        for (int i = 0; i < sizeof(file->sync); i++)
+        for (size_t i = 0; i < sizeof(file->sync); i++)
         {
             printf("%hhx", file->sync[i]);
         }

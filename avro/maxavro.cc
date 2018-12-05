@@ -144,7 +144,7 @@ char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
 
     if (maxavro_read_integer(file, &len))
     {
-        key = MXS_MALLOC(len + 1);
+        key = (char*)MXS_MALLOC(len + 1);
         if (key)
         {
             memcpy(key, file->buffer_ptr, len);
@@ -178,7 +178,7 @@ char* maxavro_read_string_from_file(MAXAVRO_FILE* file, size_t* size)
 
     if (maxavro_read_integer_from_file(file, &len))
     {
-        key = MXS_MALLOC(len + 1);
+        key = (char*)MXS_MALLOC(len + 1);
         if (key)
         {
             if (fread(key, 1, len, file->file) == len)
@@ -333,10 +333,10 @@ MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE* file)
 
     while (blocks > 0)
     {
-        for (long i = 0; i < blocks; i++)
+        for (long i = 0; i < (long)blocks; i++)
         {
             size_t size;
-            MAXAVRO_MAP* val = calloc(1, sizeof(MAXAVRO_MAP));
+            MAXAVRO_MAP* val = (MAXAVRO_MAP*)calloc(1, sizeof(MAXAVRO_MAP));
             if (val
                 && (val->key =
                         maxavro_read_string_from_file(file,

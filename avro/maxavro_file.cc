@@ -90,10 +90,10 @@ bool maxavro_verify_block(MAXAVRO_FILE* file)
 
 static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
 {
-    uint8_t* temp_buffer = MXS_MALLOC(deflate_size);
+    uint8_t* temp_buffer = (uint8_t*)MXS_MALLOC(deflate_size);
     uint8_t* buffer = NULL;
 
-    if (temp_buffer && fread(temp_buffer, 1, deflate_size, file->file) == deflate_size)
+    if (temp_buffer && fread(temp_buffer, 1, deflate_size, file->file) == (size_t)deflate_size)
     {
         unsigned long inflate_size = 0;
 
@@ -108,7 +108,7 @@ static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
         case MAXAVRO_CODEC_DEFLATE:
             inflate_size = deflate_size * 2;
 
-            if ((buffer = MXS_MALLOC(inflate_size)))
+            if ((buffer = (uint8_t*)MXS_MALLOC(inflate_size)))
             {
                 z_stream stream;
                 stream.avail_in = deflate_size;
@@ -124,7 +124,7 @@ static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
                 while ((rc = inflate(&stream, Z_FINISH)) == Z_BUF_ERROR)
                 {
                     int increment = inflate_size;
-                    uint8_t* temp = MXS_REALLOC(buffer, inflate_size + increment);
+                    uint8_t* temp = (uint8_t*)MXS_REALLOC(buffer, inflate_size + increment);
 
                     if (temp)
                     {
@@ -300,7 +300,7 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
 
     bool error = false;
 
-    MAXAVRO_FILE* avrofile = calloc(1, sizeof(MAXAVRO_FILE));
+    MAXAVRO_FILE* avrofile = (MAXAVRO_FILE*)calloc(1, sizeof(MAXAVRO_FILE));
     char* my_filename = strdup(filename);
 
     if (avrofile && my_filename)
@@ -419,7 +419,7 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file)
     {
         if ((rval = gwbuf_alloc(pos)))
         {
-            if (fread(GWBUF_DATA(rval), 1, pos, file->file) != pos)
+            if (fread(GWBUF_DATA(rval), 1, pos, file->file) != (size_t)pos)
             {
                 if (ferror(file->file))
                 {

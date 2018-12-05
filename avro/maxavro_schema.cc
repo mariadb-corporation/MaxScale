@@ -19,16 +19,16 @@
 
 static const MAXAVRO_SCHEMA_FIELD types[MAXAVRO_TYPE_MAX] =
 {
-    {"int",    NULL, MAXAVRO_TYPE_INT    },
-    {"long",   NULL, MAXAVRO_TYPE_LONG   },
-    {"float",  NULL, MAXAVRO_TYPE_FLOAT  },
-    {"double", NULL, MAXAVRO_TYPE_DOUBLE },
-    {"bool",   NULL, MAXAVRO_TYPE_BOOL   },
-    {"bytes",  NULL, MAXAVRO_TYPE_BYTES  },
-    {"string", NULL, MAXAVRO_TYPE_STRING },
-    {"enum",   NULL, MAXAVRO_TYPE_ENUM   },
-    {"null",   NULL, MAXAVRO_TYPE_NULL   },
-    {NULL,     NULL, MAXAVRO_TYPE_UNKNOWN}
+    {(char*)"int",    NULL, MAXAVRO_TYPE_INT    },
+    {(char*)"long",   NULL, MAXAVRO_TYPE_LONG   },
+    {(char*)"float",  NULL, MAXAVRO_TYPE_FLOAT  },
+    {(char*)"double", NULL, MAXAVRO_TYPE_DOUBLE },
+    {(char*)"bool",   NULL, MAXAVRO_TYPE_BOOL   },
+    {(char*)"bytes",  NULL, MAXAVRO_TYPE_BYTES  },
+    {(char*)"string", NULL, MAXAVRO_TYPE_STRING },
+    {(char*)"enum",   NULL, MAXAVRO_TYPE_ENUM   },
+    {(char*)"null",   NULL, MAXAVRO_TYPE_NULL   },
+    {NULL,            NULL, MAXAVRO_TYPE_UNKNOWN}
 };
 /**
  * @brief Convert string to Avro value type
@@ -123,7 +123,7 @@ static enum maxavro_value_type unpack_to_type(json_t* object,
  */
 MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
 {
-    MAXAVRO_SCHEMA* rval = malloc(sizeof(MAXAVRO_SCHEMA));
+    MAXAVRO_SCHEMA* rval = (MAXAVRO_SCHEMA*)malloc(sizeof(MAXAVRO_SCHEMA));
 
     if (rval)
     {
@@ -138,10 +138,10 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
             if (json_unpack(schema, "{s:o}", "fields", &field_arr) == 0)
             {
                 size_t arr_size = json_array_size(field_arr);
-                rval->fields = malloc(sizeof(MAXAVRO_SCHEMA_FIELD) * arr_size);
+                rval->fields = (MAXAVRO_SCHEMA_FIELD*)malloc(sizeof(MAXAVRO_SCHEMA_FIELD) * arr_size);
                 rval->num_fields = arr_size;
 
-                for (int i = 0; i < arr_size; i++)
+                for (int i = 0; i < (int)arr_size; i++)
                 {
                     json_t* object = json_array_get(field_arr, i);
                     char* key;
@@ -213,7 +213,7 @@ void maxavro_schema_free(MAXAVRO_SCHEMA* schema)
 {
     if (schema)
     {
-        for (int i = 0; i < schema->num_fields; i++)
+        for (unsigned int i = 0; i < schema->num_fields; i++)
         {
             maxavro_schema_field_free(&schema->fields[i]);
         }
