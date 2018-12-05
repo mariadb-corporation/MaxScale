@@ -36,7 +36,6 @@ static bool isMySQLEvent(mxs_monitor_event_t event);
 
 MMMonitor::MMMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstanceSimple(monitor)
-    , m_id(MXS_MONITOR_DEFAULT_ID)
     , m_detectStaleMaster(false)
 {
 }

@@ -33,7 +33,5 @@ protected:
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
 private:
-    unsigned long m_id;     /**< Monitor ID */
-
     NDBCMonitor(MXS_MONITOR* monitor);
 };

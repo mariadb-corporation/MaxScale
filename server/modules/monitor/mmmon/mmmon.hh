@@ -37,7 +37,6 @@ protected:
     void post_tick();
 
 private:
-    unsigned long m_id;                 /**< Monitor ID */
     int           m_detectStaleMaster;  /**< Monitor flag for Stale Master detection */
 
     MMMonitor(MXS_MONITOR* monitor);

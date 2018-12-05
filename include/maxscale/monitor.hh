@@ -28,18 +28,14 @@
 #include <maxscale/server.hh>
 #include <maxscale/protocol/mysql.hh>
 
-MXS_BEGIN_DECLS
-
-struct mxs_monitor;
-typedef struct mxs_monitor MXS_MONITOR;
+struct MXS_MONITOR;
 
 /**
- * An opaque type from which types specific for a particular
- * monitor can be derived.
+ * An opaque type representing a monitor instance.
  */
-typedef struct mxs_monitor_instance
+struct MXS_MONITOR_INSTANCE
 {
-} MXS_MONITOR_INSTANCE;
+};
 
 /**
  * @verbatim
@@ -64,7 +60,7 @@ typedef struct mxs_monitor_instance
  *
  * @see load_module
  */
-typedef struct mxs_monitor_api
+struct MXS_MONITOR_API
 {
     /**
      * @brief Create the monitor.
@@ -137,7 +133,7 @@ typedef struct mxs_monitor_api
      * @see jansson.h
      */
     json_t* (*diagnostics_json)(const MXS_MONITOR_INSTANCE * monitor);
-} MXS_MONITOR_API;
+};
 
 /**
  * The monitor API version number. Any change to the monitor module API
@@ -153,39 +149,31 @@ typedef struct mxs_monitor_api
  * @note The values of the capabilities here *must* be between 0x0001 0000 0000 0000
  *       and 0x0080 0000 0000 0000, that is, bits 48 to 55.
  */
-typedef enum monitor_capability
+enum monitor_capability_t
 {
     MCAP_TYPE_NONE = 0x0    // TODO: remove once monitor capabilities are defined
-} monitor_capability_t;
-
-/** Monitor's poll frequency */
-#define MXS_MON_BASE_INTERVAL_MS 100
-
-#define MXS_MONITOR_DEFAULT_ID 1UL      // unsigned long value
-
-#define MAX_MONITOR_USER_LEN     512
-#define MAX_MONITOR_PASSWORD_LEN 512
+};
 
 // Monitor state enum
-typedef enum
+enum monitor_state_t
 {
     MONITOR_STATE_RUNNING,
     MONITOR_STATE_STOPPING,
     MONITOR_STATE_STOPPED
-} monitor_state_t;
+};
 
 /* Return type of mon_ping_or_connect_to_db(). */
-typedef enum
+enum mxs_connect_result_t
 {
     MONITOR_CONN_EXISTING_OK,   /* Existing connection was ok and server replied to ping. */
     MONITOR_CONN_NEWCONN_OK,    /* No existing connection or no ping reply. New connection created
                                  * successfully. */
     MONITOR_CONN_REFUSED,       /* No existing connection or no ping reply. Server refused new connection. */
     MONITOR_CONN_TIMEOUT        /* No existing connection or no ping reply. Timeout on new connection. */
-} mxs_connect_result_t;
+};
 
 /** Monitor events */
-typedef enum
+enum mxs_monitor_event_t
 {
     UNDEFINED_EVENT   = 0,
     MASTER_DOWN_EVENT = (1 << 0),   /**< master_down */
@@ -210,12 +198,12 @@ typedef enum
     NEW_SYNCED_EVENT  = (1 << 19),  /**< new_synced */
     NEW_DONOR_EVENT   = (1 << 20),  /**< new_donor */
     NEW_NDB_EVENT     = (1 << 21),  /**< new_ndb */
-} mxs_monitor_event_t;
+};
 
 /**
  * The linked list of servers that are being monitored by the monitor module.
  */
-typedef struct monitored_server
+struct MXS_MONITORED_SERVER
 {
     SERVER*                  server;/**< The server being monitored */
     MYSQL*                   con;   /**< The MySQL connection */
@@ -224,13 +212,16 @@ typedef struct monitored_server
     uint64_t                 mon_prev_status;   /**< Status before starting the current monitor loop */
     uint64_t                 pending_status;    /**< Status during current monitor loop */
     int64_t                  disk_space_checked;/**< When was the disk space checked the last time */
-    struct monitored_server* next;              /**< The next server in the list */
-} MXS_MONITORED_SERVER;
+    struct MXS_MONITORED_SERVER* next;              /**< The next server in the list */
+};
+
+#define MAX_MONITOR_USER_LEN     512
+#define MAX_MONITOR_PASSWORD_LEN 512
 
 /**
  * Representation of the running monitor.
  */
-struct mxs_monitor
+struct MXS_MONITOR
 {
     char*                 name;                                 /**< The name of the monitor module */
     char                  user[MAX_MONITOR_USER_LEN];           /*< Monitor username */
@@ -271,7 +262,7 @@ struct mxs_monitor
     int64_t                disk_space_check_interval;       /**< How often should a disk space check be made
                                                              * at most. */
     uint64_t            ticks;                              /**< Number of performed monitoring intervals */
-    struct mxs_monitor* next;                               /**< Next monitor in the linked list */
+    struct MXS_MONITOR* next;                               /**< Next monitor in the linked list */
 };
 
 /**
@@ -427,8 +418,6 @@ bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_spa
 
 // Function for waiting one monitor interval
 void monitor_debug_wait();
-
-MXS_END_DECLS
 
 namespace maxscale
 {

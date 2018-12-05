@@ -44,7 +44,6 @@ static bool                  using_xtrabackup(MXS_MONITORED_SERVER* database, co
 
 GaleraMonitor::GaleraMonitor(MXS_MONITOR* mon)
     : maxscale::MonitorInstanceSimple(mon)
-    , m_id(MXS_MONITOR_DEFAULT_ID)
     , m_disableMasterFailback(0)
     , m_availableWhenDonor(0)
     , m_disableMasterRoleSetting(0)

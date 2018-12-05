@@ -24,7 +24,6 @@
 
 NDBCMonitor::NDBCMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstanceSimple(monitor)
-    , m_id(MXS_MONITOR_DEFAULT_ID)
 {
 }
 

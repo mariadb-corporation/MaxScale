@@ -55,7 +55,6 @@ protected:
     void post_tick();
 
 private:
-    unsigned long m_id;                         /**< Monitor ID */
     int           m_disableMasterFailback;      /**< Monitor flag for Galera Cluster Master failback */
     int           m_availableWhenDonor;         /**< Monitor flag for Galera Cluster Donor availability */
     bool          m_disableMasterRoleSetting;   /**< Monitor flag to disable setting master role */

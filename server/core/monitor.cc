@@ -2928,6 +2928,9 @@ void MonitorInstance::post_run()
 
 bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
 {
+    /** This is both the minimum sleep between two ticks and also the maximum time between early
+     *  wakeup checks. */
+    const int base_interval_ms = 100;
     if (action == Worker::Call::EXECUTE)
     {
         int64_t now = get_time_ms();
@@ -2946,8 +2949,8 @@ bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
         int64_t ms_to_next_call = m_monitor->interval - (now - m_loop_called);
         // ms_to_next_call will be negative, if the run_one_tick() call took
         // longer than one monitor interval.
-        int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= MXS_MON_BASE_INTERVAL_MS)) ?
-            MXS_MON_BASE_INTERVAL_MS : ms_to_next_call;
+        int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
+            base_interval_ms : ms_to_next_call;
 
         delayed_call(delay, &MonitorInstance::call_run_one_tick, this);
     }
