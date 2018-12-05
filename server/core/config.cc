@@ -642,7 +642,7 @@ static void fix_section_name(char* section)
 void fix_object_name(char* name)
 {
     squeeze_whitespace(name);
-    trim(name);
+    mxb::trim(name);
     replace_whitespace(name);
 }
 
@@ -4352,7 +4352,7 @@ int config_parse_server_list(const char* servers, char*** output_array)
      * be trimmed of whitespace. */
     char srv_list_tmp[strlen(servers) + 1];
     strcpy(srv_list_tmp, servers);
-    trim(srv_list_tmp);
+    mxb::trim(srv_list_tmp);
 
     bool error = false;
     int output_ind = 0;
@@ -4796,8 +4796,8 @@ bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* pDisk_space_thresh
             string path = entry.substr(0, j);
             string tail = entry.substr(j + 1);
 
-            mxs::trim(path);
-            mxs::trim(tail);
+            mxb::trim(path);
+            mxb::trim(tail);
 
             if (!path.empty() && !tail.empty())
             {

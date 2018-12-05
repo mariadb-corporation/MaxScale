@@ -23,7 +23,7 @@
 #include <cstdio>
 #include <ctime>
 
-#include <maxbase/string.h>
+#include <maxbase/string.hh>
 
 /**
  * Error logging for the logger itself.

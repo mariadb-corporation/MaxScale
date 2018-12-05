@@ -267,7 +267,7 @@ int avro_client_callback(DCB* dcb, DCB_REASON reason, void* userdata)
  */
 std::pair<std::string, std::string> get_avrofile_and_gtid(std::string file)
 {
-    mxs::ltrim(file);
+    mxb::ltrim(file);
     auto pos = file.find_first_of(' ');
     std::string filename;
     std::string gtid;

@@ -4499,7 +4499,7 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
  */
 static char* get_connection_name(char* command, std::string* pConnection_name)
 {
-    command = trim_leading(command);
+    command = mxb::ltrim(command);
 
     char* to = strcasestr(command, "TO");
 

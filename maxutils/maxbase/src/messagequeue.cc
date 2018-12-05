@@ -19,7 +19,7 @@
 #include <fstream>
 #include <maxbase/assert.h>
 #include <maxbase/log.h>
-#include <maxbase/string.h>
+#include <maxbase/string.hh>
 #include <maxbase/worker.hh>
 
 namespace

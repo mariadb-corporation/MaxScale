@@ -10,6 +10,10 @@ add_executable(test_semaphore test_semaphore.cc)
 target_link_libraries(test_semaphore maxbase pthread rt)
 add_test(test_semaphore test_semaphore)
 
+add_executable(test_mxb_string test_string.cc)
+target_link_libraries(test_mxb_string maxbase)
+add_test(test_semaphore test_semaphore)
+
 add_executable(test_worker test_worker.cc)
 target_link_libraries(test_worker maxbase pthread rt)
 add_test(test_worker test_worker)

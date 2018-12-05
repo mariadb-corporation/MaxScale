@@ -2854,7 +2854,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             char func_name[strlen(f) + 3 + 1];      // strlen(substring) - strlen(substr) from below.
             strcpy(func_name, f);
-            trim(func_name);    // Sometimes the embedded parser leaves leading and trailing whitespace.
+            mxb::trim(func_name);    // Sometimes the embedded parser leaves leading and trailing whitespace.
 
             // Non native functions are surrounded by back-ticks, let's remove them.
             remove_surrounding_back_ticks(func_name);

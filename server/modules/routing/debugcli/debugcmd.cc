@@ -2113,7 +2113,7 @@ int execute_cmd(CLI_SESSION* cli)
     bool in_space = false;
     int nskip = 0;
 
-    args[0] = trim_leading(cli->cmdbuf);
+    args[0] = mxb::ltrim(cli->cmdbuf);
     ptr = args[0];
     lptr = ptr;
     i = 1;

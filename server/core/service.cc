@@ -1667,7 +1667,7 @@ json_t* service_attributes(const SERVICE* service)
     char timebuf[30];
 
     asctime_r(localtime_r(&service->stats.started, &result), timebuf);
-    trim(timebuf);
+    mxb::trim(timebuf);
 
     json_object_set_new(attr, "started", json_string(timebuf));
     json_object_set_new(attr, "total_connections", json_integer(service->stats.n_sessions));

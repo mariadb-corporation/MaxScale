@@ -25,7 +25,7 @@
 #include <maxbase/assert.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/log.h>
-#include <maxbase/string.h>
+#include <maxbase/string.hh>
 
 #define WORKER_ABSENT_ID -1
 

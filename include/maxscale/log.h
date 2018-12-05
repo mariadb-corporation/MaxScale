@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 #include <maxbase/log.h>
-#include <maxbase/string.h>
+#include <maxbase/string.hh>
 
 MXS_BEGIN_DECLS
 

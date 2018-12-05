@@ -459,45 +459,6 @@ bool mxs_mkdir_all(const char* path, int mask)
     return mkdir_all_internal(local_path, (mode_t)mask);
 }
 
-char* trim_leading(char* str)
-{
-    char* ptr = str;
-
-    while (isspace(*ptr))
-    {
-        ptr++;
-    }
-
-    if (ptr != str)
-    {
-        memmove(str, ptr, strlen(ptr) + 1);
-    }
-
-    return str;
-}
-
-char* trim_trailing(char* str)
-{
-    char* ptr = strchr(str, '\0') - 1;
-
-    while (ptr > str && isspace(*ptr))
-    {
-        ptr--;
-    }
-
-    if (isspace(*(ptr + 1)))
-    {
-        *(ptr + 1) = '\0';
-    }
-
-    return str;
-}
-
-char* trim(char* str)
-{
-    return trim_leading(trim_trailing(str));
-}
-
 /**
  * @brief Replace whitespace with hyphens
  *
@@ -1229,42 +1190,4 @@ uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes)
     return ptr + bytes;
 }
 
-namespace
-{
-
-size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
-{
-    std::string* buf = static_cast<std::string*>(userdata);
-
-    if (nmemb > 0)
-    {
-        buf->append(ptr, nmemb);
-    }
-
-    return nmemb;
-}
-
-size_t header_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
-{
-    std::unordered_map<std::string, std::string>* map =
-        static_cast<std::unordered_map<std::string, std::string>*>(userdata);
-
-    if (nmemb > 0)
-    {
-        std::string data(ptr, size* nmemb);
-        auto pos = data.find_first_of(':');
-
-        if (pos != std::string::npos)
-        {
-            std::string key = data.substr(0, pos);
-            std::string value = data.substr(pos + 1);
-            trim(key);
-            trim(value);
-            map->insert(std::make_pair(key, value));
-        }
-    }
-
-    return nmemb * size;
-}
-}
 }

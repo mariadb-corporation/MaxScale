@@ -4445,8 +4445,8 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
     {
         *p = 0;
 
-        *pkey = trim(arg);
-        *pvalue = trim(p + 1);
+        *pkey = mxb::trim(arg);
+        *pvalue = mxb::trim(p + 1);
     }
 
     return p != NULL;

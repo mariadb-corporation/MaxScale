@@ -2278,7 +2278,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 
                 localtime_r(&session_last_event, &tm);
                 asctime_r(&tm, buf);
-                trim(buf);
+                mxb::trim(buf);
                 json_object_set_new(rval, "last_binlog_event_timestamp", json_string(buf));
                 json_object_set_new(rval, "seconds_behind_master", json_integer(seconds_behind));
             }

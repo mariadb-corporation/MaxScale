@@ -11,14 +11,15 @@
  * Public License.
  */
 
-#include <maxbase/string.h>
-
+#include <maxbase/string.hh>
+#include <ctype.h>
 #include <string.h>
 
 namespace
 {
 
 thread_local char errbuf[512];      // Enough for all errors
+
 }
 
 const char* mxb_strerror(int error)
@@ -29,4 +30,48 @@ const char* mxb_strerror(int error)
     strerror_r(error, errbuf, sizeof(errbuf));
     return errbuf;
 #endif
+}
+
+namespace maxbase
+{
+
+char* ltrim(char* str)
+{
+    char* ptr = str;
+
+    while (isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    if (ptr != str)
+    {
+        memmove(str, ptr, strlen(ptr) + 1);
+    }
+
+    return str;
+}
+
+char* rtrim(char* str)
+{
+    char* ptr = strchr(str, '\0') - 1;
+
+    while (ptr > str && isspace(*ptr))
+    {
+        ptr--;
+    }
+
+    if (isspace(*(ptr + 1)))
+    {
+        *(ptr + 1) = '\0';
+    }
+
+    return str;
+}
+
+char* trim(char* str)
+{
+    return ltrim(rtrim(str));
+}
+
 }

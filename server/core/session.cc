@@ -778,7 +778,7 @@ json_t* session_json_data(const Session* session, const char* host)
     char buf[60];
 
     asctime_r(localtime_r(&session->stats.connect, &result), buf);
-    trim(buf);
+    mxb::trim(buf);
 
     json_object_set_new(attr, "connected", json_string(buf));
 

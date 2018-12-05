@@ -117,41 +117,6 @@ void        gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int
 int         gw_getsockerrno(int fd);
 char*       create_hex_sha1_sha1_passwd(char* passwd);
 
-/**
- * Trim leading whitespace from a string.
- *
- * @param str String to trim.
- * @return @c str
- *
- * @note If there is leading whitespace, the string is moved so that
- *       the returned pointer is always the same as the one given as
- *       argument.
- */
-char* trim_leading(char* str);
-
-/**
- * Trim trailing whitespace from a string.
- *
- * @param str String to trim.
- * @return @c str
- *
- * @note The returned pointer is always the same the one given as
- *       argument.
- */
-char* trim_trailing(char* str);
-
-/**
- * Trim leading and trailing whitespace from a string.
- *
- * @param str String to trim.
- * @return @c str
- *
- * @note If there is leading whitespace, the string is moved so that
- *       the returned pointer is always the same the one given as
- *       argument.
- */
-char* trim(char* str);
-
 void  replace_whitespace(char* str);
 char* squeeze_whitespace(char* str);
 bool  strip_escape_chars(char*);

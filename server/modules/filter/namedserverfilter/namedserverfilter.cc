@@ -905,7 +905,7 @@ void RegexHintFilter::set_source_addresses(const std::string& input_host_names,
 
     for (auto host : mxs::strtok(host_names, ","))
     {
-        char* trimmed_host = trim((char*)host.c_str());
+        char* trimmed_host = mxb::trim((char*)host.c_str());
 
         if (!add_source_address(trimmed_host, source_hosts))
         {

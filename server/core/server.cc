@@ -1432,7 +1432,7 @@ static json_t* server_json_attributes(const SERVER* server)
         char timebuf[30];
         time_t tim = server->node_ts;
         asctime_r(localtime_r(&tim, &result), timebuf);
-        trim(timebuf);
+        mxb::trim(timebuf);
 
         json_object_set_new(attr, "last_heartbeat", json_string(timebuf));
     }
