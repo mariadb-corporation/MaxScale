@@ -59,7 +59,8 @@ static int test1()
 {
     SERVER* server;
     int result;
-    char* status;
+    std::string status;
+    using mxs::server_status;
 
     /* Server tests */
     fprintf(stderr, "testserver : creating server called MyServer");
@@ -79,23 +80,14 @@ static int test1()
     mxb_assert_message(server == server_find_by_unique_name("uniquename"), "Should find by unique name.");
     fprintf(stderr, "\t..done\nTesting Status Setting for Server.");
     status = server_status(server);
-    mxb_assert_message(0 == strcmp("Running", status), "Status of Server should be Running by default.");
-    if (NULL != status)
-    {
-        MXS_FREE(status);
-    }
+    mxb_assert_message(status == "Running", "Status of Server should be Running by default.");
     server_set_status_nolock(server, SERVER_MASTER);
     status = server_status(server);
-    mxb_assert_message(0 == strcmp("Master, Running", status), "Should find correct status.");
+    mxb_assert_message(status == "Master, Running", "Should find correct status.");
     server_clear_status_nolock(server, SERVER_MASTER);
-    MXS_FREE(status);
     status = server_status(server);
-    mxb_assert_message(0 == strcmp("Running", status),
+    mxb_assert_message(status == "Running",
                        "Status of Server should be Running after master status cleared.");
-    if (NULL != status)
-    {
-        MXS_FREE(status);
-    }
     fprintf(stderr, "\t..done\nRun Prints for Server and all Servers.");
     printServer(server);
     printAllServers();

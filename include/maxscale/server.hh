@@ -478,7 +478,6 @@ extern int     server_free(SERVER* server);
 extern SERVER* server_find_by_unique_name(const char* name);
 extern int     server_find_by_unique_names(char** server_names, int size, SERVER*** output);
 extern SERVER* server_find(const char* servname, unsigned short port);
-extern char*   server_status(const SERVER*);
 extern void    server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set);
 extern void    server_set_status_nolock(SERVER* server, uint64_t bit);
 extern void    server_clear_status_nolock(SERVER* server, uint64_t bit);
@@ -512,7 +511,7 @@ double server_response_time_average(const SERVER* server);
 
 namespace maxscale
 {
-
+std::string server_status(const SERVER*);
 bool server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
 bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
 }

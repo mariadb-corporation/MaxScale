@@ -500,9 +500,8 @@ void dprintServer(DCB* dcb, const SERVER* srv)
 
     dcb_printf(dcb, "Server %p (%s)\n", server, server->name);
     dcb_printf(dcb, "\tServer:                              %s\n", server->address);
-    char* stat = server_status(server);
-    dcb_printf(dcb, "\tStatus:                              %s\n", stat);
-    MXS_FREE(stat);
+    string stat = mxs::server_status(server);
+    dcb_printf(dcb, "\tStatus:                              %s\n", stat.c_str());
     dcb_printf(dcb, "\tProtocol:                            %s\n", server->protocol);
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
     dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string);
@@ -639,15 +638,14 @@ void dListServers(DCB* dcb)
         {
             if (server->is_active)
             {
-                char* stat = server_status(server);
+                string stat = mxs::server_status(server);
                 dcb_printf(dcb,
                            "%-18s | %-15s | %5d | %11d | %s\n",
                            server->name,
                            server->address,
                            server->port,
                            server->stats.n_current,
-                           stat);
-                MXS_FREE(stat);
+                           stat.c_str());
             }
         }
 
@@ -656,13 +654,12 @@ void dListServers(DCB* dcb)
 }
 
 /**
- * Convert a set of  server status flags to a string, the returned
- * string has been malloc'd and must be free'd by the caller
+ * Convert a set of  server status flags to a string.
  *
  * @param server The server to return the status of
  * @return A string representation of the status flags
  */
-char* server_status(const SERVER* server)
+string mxs::server_status(const SERVER* server)
 {
     mxb_assert(server);
     uint64_t server_status = server->status;
@@ -682,6 +679,7 @@ char* server_status(const SERVER* server)
     // TODO: The following values should be revisited at some point, but since they are printed by
     // the REST API they should not be changed suddenly. Strictly speaking, even the combinations
     // should not change, but this is more dependant on the monitors and have already changed.
+    // Also, system tests compare to these strings so the output must stay constant for now.
     const string maintenance = "Maintenance";
     const string master = "Master";
     const string relay = "Relay Master";
@@ -721,7 +719,7 @@ char* server_status(const SERVER* server)
     concatenate_if(status_is_running(server_status), running);
     concatenate_if(status_is_down(server_status), down);
 
-    return MXS_STRDUP(result.c_str());
+    return result;
 }
 
 /**
@@ -977,10 +975,9 @@ std::unique_ptr<ResultSet> serverGetList()
     {
         if (server_is_active(server))
         {
-            char* stat = server_status(server);
+            string stat = mxs::server_status(server);
             set->add_row({server->name, server->address, std::to_string(server->port),
                           std::to_string(server->stats.n_current), stat});
-            MXS_FREE(stat);
         }
     }
 
@@ -1406,9 +1403,8 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(attr, CN_PARAMETERS, params);
 
     /** Store general information about the server state */
-    char* stat = server_status(server);
-    json_object_set_new(attr, CN_STATE, json_string(stat));
-    MXS_FREE(stat);
+    string stat = mxs::server_status(server);
+    json_object_set_new(attr, CN_STATE, json_string(stat.c_str()));
 
     json_object_set_new(attr, CN_VERSION_STRING, json_string(server->version_string));
 

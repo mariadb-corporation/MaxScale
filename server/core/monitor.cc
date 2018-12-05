@@ -1544,17 +1544,15 @@ static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
 {
     SERVER srv;
     srv.status = ptr->mon_prev_status;
-    char* prev = server_status(&srv);
-    char* next = server_status(ptr->server);
+    string prev = mxs::server_status(&srv);
+    string next = mxs::server_status(ptr->server);
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
                ptr->server->name,
                ptr->server->address,
                ptr->server->port,
                mon_get_event_name(ptr),
-               prev,
-               next);
-    MXS_FREE(prev);
-    MXS_FREE(next);
+               prev.c_str(),
+               next.c_str());
 }
 
 MXS_MONITOR* monitor_server_in_use(const SERVER* server)

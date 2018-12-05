@@ -56,6 +56,7 @@
 
 using maxscale::RoutingWorker;
 using maxbase::Worker;
+using std::string;
 
 // #define DCB_LOG_EVENT_HANDLING
 #if defined (DCB_LOG_EVENT_HANDLING)
@@ -1287,10 +1288,10 @@ void printDCB(DCB* dcb)
     }
     if (dcb->server)
     {
-        if (char* statusname = server_status(dcb->server))
+        string statusname = mxs::server_status(dcb->server);
+        if (!statusname.empty())
         {
-            printf("\tServer status:            %s\n", statusname);
-            MXS_FREE(statusname);
+            printf("\tServer status:            %s\n", statusname.c_str());
         }
     }
     char* rolename = dcb_role_name(dcb);
@@ -1397,11 +1398,10 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
     }
     if (dcb->server)
     {
-        char* statusname = server_status(dcb->server);
-        if (statusname)
+        string statusname = mxs::server_status(dcb->server);
+        if (!statusname.empty())
         {
-            dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
-            MXS_FREE(statusname);
+            dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());
         }
     }
     char* rolename = dcb_role_name(dcb);
@@ -1561,11 +1561,10 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
     }
     if (dcb->server)
     {
-        char* statusname = server_status(dcb->server);
-        if (statusname)
+        string statusname = mxs::server_status(dcb->server);
+        if (!statusname.c_str())
         {
-            dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
-            MXS_FREE(statusname);
+            dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());
         }
     }
     char* rolename = dcb_role_name(dcb);
