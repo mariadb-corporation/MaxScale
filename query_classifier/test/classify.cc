@@ -33,7 +33,7 @@ char* append(char* types, const char* type_name, size_t* lenp)
 
     *lenp += len;
 
-    char* tmp = realloc(types, *lenp);
+    char* tmp = (char*)realloc(types, *lenp);
 
     if (types)
     {
@@ -168,7 +168,7 @@ int test(FILE* input, FILE* expected)
 
         if (strsz + rd >= buffsz)
         {
-            char* tmp = realloc(strbuff, (buffsz * 2) * sizeof(char));
+            char* tmp = (char*)realloc(strbuff, (buffsz * 2) * sizeof(char));
 
             if (tmp == NULL)
             {
@@ -211,7 +211,7 @@ int test(FILE* input, FILE* expected)
             memmove(strbuff, tok + 1, strsz - qlen);
             strsz -= qlen;
             memset(strbuff + strsz, 0, buffsz - strsz);
-            qc_query_type_t type = qc_get_type_mask(buff);
+            uint32_t type = qc_get_type_mask(buff);
             char expbuff[256];
             int expos = 0;
 

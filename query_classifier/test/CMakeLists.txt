@@ -18,7 +18,7 @@ if (BUILD_QC_MYSQLEMBEDDED)
     endif()
   endif()
 
-  add_executable(classify classify.c)
+  add_executable(classify classify.cc)
   target_link_libraries(classify maxscale-common)
 
   add_executable(compare compare.cc testreader.cc)
