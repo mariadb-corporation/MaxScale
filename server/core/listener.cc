@@ -864,15 +864,21 @@ DCB* Listener::accept_one_dcb()
         configure_network_socket(c_sock, client_conn.ss_family);
 
         mxs::Session* session = new(std::nothrow) mxs::Session(m_self);
+
+        if (!session)
+        {
+            MXS_OOM();
+            close(c_sock);
+            return NULL;
+        }
+
         client_dcb = dcb_alloc(DCB::Role::CLIENT, session);
 
-        if (!session || !client_dcb)
+        if (!client_dcb)
         {
-            MXS_ERROR("Failed to create session objects for client connection.");
+            MXS_OOM();
             close(c_sock);
             delete session;
-            dcb_close(client_dcb);
-            return NULL;
         }
         else
         {
@@ -914,7 +920,6 @@ DCB* Listener::accept_one_dcb()
                 && (client_dcb->authenticator_data = m_auth_func.create(m_auth_instance)) == NULL)
             {
                 MXS_ERROR("Failed to create authenticator for client DCB");
-                delete session;
                 dcb_close(client_dcb);
                 return NULL;
             }
@@ -931,7 +936,6 @@ DCB* Listener::accept_one_dcb()
                 // TODO: This is never used as the client connection is not up yet
                 client_dcb->session->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
 
-                delete session;
                 dcb_close(client_dcb);
                 client_dcb = NULL;
             }
