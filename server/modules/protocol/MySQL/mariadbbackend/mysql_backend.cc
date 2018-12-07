@@ -196,7 +196,7 @@ static int gw_create_backend_connection(DCB* backend_dcb,
     switch (rv)
     {
     case 0:
-        mxb_assert(fd > 0);
+        mxb_assert(fd != DCBFD_CLOSED);
         protocol->fd = fd;
         protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
         MXS_DEBUG("Established "
@@ -219,7 +219,7 @@ static int gw_create_backend_connection(DCB* backend_dcb,
          * as it means the calls have been successful but the connection
          * has not yet completed and the calls are non-blocking.
          */
-        mxb_assert(fd > 0);
+        mxb_assert(fd != DCBFD_CLOSED);
         protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
         protocol->fd = fd;
         MXS_DEBUG("Connection "

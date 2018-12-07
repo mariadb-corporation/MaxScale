@@ -515,7 +515,7 @@ int dcb_read(DCB* dcb,
         return dcb_read_SSL(dcb, head);
     }
 
-    if (dcb->fd <= 0)
+    if (dcb->fd == DCBFD_CLOSED)
     {
         MXS_ERROR("Read failed, dcb is closed.");
         return 0;
@@ -677,7 +677,7 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
     int nsingleread = 0, nreadtotal = 0;
     int start_length = gwbuf_length(*head);
 
-    if (dcb->fd <= 0)
+    if (dcb->fd == DCBFD_CLOSED)
     {
         MXS_ERROR("Read failed, dcb is closed.");
         return -1;
@@ -867,7 +867,7 @@ static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
         return false;
     }
 
-    if (dcb->fd <= 0)
+    if (dcb->fd == DCBFD_CLOSED)
     {
         MXS_ERROR("Write failed, dcb is closed.");
         gwbuf_free(queue);
@@ -1172,7 +1172,7 @@ void dcb_final_close(DCB* dcb)
             mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
         }
 
-        if (dcb->fd > 0)
+        if (dcb->fd != DCBFD_CLOSED)
         {
             // TODO: How could we get this far with a dcb->fd <= 0?
 
@@ -1746,7 +1746,7 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
 
     errno = 0;
 
-    if (fd > 0)
+    if (fd != DCBFD_CLOSED)
     {
         written = write(fd, buf, nbytes);
     }
@@ -3142,9 +3142,9 @@ int poll_remove_dcb(DCB* dcb)
      * Only positive fds can be removed from epoll set.
      */
     dcbfd = dcb->fd;
-    mxb_assert(dcbfd > 0 || dcb->role == DCB::Role::INTERNAL);
+    mxb_assert(dcbfd != DCBFD_CLOSED || dcb->role == DCB::Role::INTERNAL);
 
-    if (dcbfd > 0)
+    if (dcbfd != DCBFD_CLOSED)
     {
         rc = -1;
 
