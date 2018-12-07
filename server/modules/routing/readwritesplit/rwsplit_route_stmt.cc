@@ -202,6 +202,15 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
 
     if (not_locked_to_master && is_ps_command(command))
     {
+        if (command == MXS_COM_STMT_CLOSE)
+        {
+            // Remove the command from the PS mapping
+            ss_dassert(TARGET_IS_ALL(route_target));
+            rses->ps_manager.erase(stmt_id);
+            rses->ps_handles.erase(mxs_mysql_extract_ps_id(querybuf));
+            rses->exec_map.erase(stmt_id);
+        }
+
         /** Replace the client statement ID with our internal one only if the
          * target node is not the current master */
         replace_binary_ps_id(querybuf, stmt_id);
@@ -421,6 +430,11 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
         if (it != rses->sescmd_responses.end())
         {
             rses->sescmd_responses.erase(rses->sescmd_responses.begin(), it);
+        }
+        else
+        {
+            // All responses processed
+            rses->sescmd_responses.clear();
         }
     }
     else
