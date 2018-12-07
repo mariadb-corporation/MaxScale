@@ -187,28 +187,29 @@ static void blr_start_master(void* data)
 
     pthread_mutex_unlock(&router->lock);
 
-    // TODO: Fix this
-    DCB* client = dcb_alloc(DCB::Role::INTERNAL, NULL);
-
-    /* Create fake 'client' DCB */
-    if (client == NULL)
-    {
-        MXS_ERROR("failed to create DCB for dummy client");
-        return;
-    }
-    router->client = client;
+    // Create a temporary listener so we can create a session originating from it
+    auto listener = Listener::create(router->service, "binlogrouter_listener", "mariadbclient",
+                                     "127.0.0.1", 9999, "", "", nullptr);
+    router->session = new mxs::Session(listener);
+    Listener::destroy(listener);
+    router->client = dcb_alloc(DCB::Role::INTERNAL, router->session);
 
     /* Fake the client is reading */
-    client->state = DCB_STATE_POLLING;      /* Fake the client is reading */
+    router->client->state = DCB_STATE_POLLING;      /* Fake the client is reading */
+
+    /**
+     * This prevents the actual protocol level closing code from being called that expects
+     * the dcb->protocol pointer to not be NULL.
+     */
+    router->client->func.close = nullptr;
 
     /* Create MySQL Athentication from configured user/passwd */
-    client->data = CreateMySQLAuthData(router->user, router->password, "");
-    // TODO: Fix this
-    client->session = new mxs::Session(nullptr);
-    router->session = client->session;
+    router->client->data = CreateMySQLAuthData(router->user, router->password, "");
+    router->client->user = MXS_STRDUP(router->user);
+    router->session->client_dcb = router->client;
 
     /* Create a session for dummy client DCB */
-    if (router->session == NULL || session_start(router->session))
+    if (router->session == NULL || !session_start(router->session))
     {
         MXS_ERROR("failed to create session for connection to master");
         return;
@@ -218,7 +219,7 @@ static void blr_start_master(void* data)
      * 'client' is the fake DCB that emulates a client session:
      * we need to set the poll.thread.id for the "dummy client"
      */
-    client->session->client_dcb->owner = mxs_rworker_get_current();
+    router->client->owner = mxs_rworker_get_current();
 
     /* Connect to configured master server */
     if ((router->master = dcb_connect(router->service->dbref->server,
