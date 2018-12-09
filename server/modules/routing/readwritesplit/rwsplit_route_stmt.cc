@@ -41,23 +41,27 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
     mxb_assert(target);
     MXB_AT_DEBUG(int nserv = 0);
     /** Each heartbeat is 1/10th of a second */
-    int keepalive = m_config.connection_keepalive * 10;
+    int64_t keepalive = m_config.connection_keepalive * 10;
+    int64_t now = mxs_clock();
 
-    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
+    if (now - m_last_keepalive_check > keepalive)
     {
-        SRWBackend backend = *it;
-
-        if (backend->in_use() && backend != target && !backend->is_waiting_result())
+        for (auto it = m_backends.begin(); it != m_backends.end(); it++)
         {
-            MXB_AT_DEBUG(nserv++);
-            int diff = mxs_clock() - backend->dcb()->last_read;
+            SRWBackend backend = *it;
 
-            if (diff > keepalive)
+            if (backend->in_use() && backend != target && !backend->is_waiting_result())
             {
-                MXS_INFO("Pinging %s, idle for %ld seconds",
-                         backend->name(),
-                         MXS_CLOCK_TO_SEC(diff));
-                modutil_ignorable_ping(backend->dcb());
+                MXB_AT_DEBUG(nserv++);
+                int64_t diff = now - backend->dcb()->last_read;
+
+                if (diff > keepalive)
+                {
+                    MXS_INFO("Pinging %s, idle for %ld seconds",
+                             backend->name(),
+                             MXS_CLOCK_TO_SEC(diff));
+                    modutil_ignorable_ping(backend->dcb());
+                }
             }
         }
     }

@@ -136,6 +136,7 @@ public:
     mxs::SRWBackend     m_target_node;          /**< The currently locked target node */
     mxs::SRWBackend     m_prev_target;          /**< The previous target where a query was sent */
     Config              m_config;               /**< Configuration for this session */
+    int                 m_last_keepalive_check; /**< When the last ping was done */
     int                 m_nbackends;            /**< Number of backend servers (obsolete) */
     DCB*                m_client;               /**< The client DCB */
     uint64_t            m_sescmd_count;         /**< Number of executed session commands */

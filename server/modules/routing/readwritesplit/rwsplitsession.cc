@@ -17,6 +17,7 @@
 
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.h>
+#include <maxscale/clock.h>
 
 using namespace maxscale;
 
@@ -28,11 +29,11 @@ RWSplitSession::RWSplitSession(RWSplit* instance,
     , m_backends(backends)
     , m_current_master(master)
     , m_config(instance->config())
+    , m_last_keepalive_check(mxs_clock())
     , m_nbackends(instance->service()->n_dbref)
     , m_client(session->client_dcb)
     , m_sescmd_count(1)
-    ,                   // Needs to be a positive number to work
-    m_expected_responses(0)
+    , m_expected_responses(0)
     , m_query_queue(NULL)
     , m_router(instance)
     , m_sent_sescmd(0)
