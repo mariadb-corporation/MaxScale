@@ -45,6 +45,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance,
     , m_retry_duration(0)
     , m_is_replay_active(false)
     , m_can_replay_trx(true)
+    , m_server_stats(instance->local_server_stats())
 {
     if (m_config.rw_max_slave_conn_percent)
     {
@@ -84,7 +85,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
 
             for (auto& b : backends)
             {
-                router->server_stats(b->server()).start_session();
+                rses->m_server_stats[b->server()].start_session();
             }
         }
     }
@@ -122,9 +123,9 @@ void RWSplitSession::close()
         }
         backend->response_stat().reset();
 
-        m_router->server_stats(backend->server()).end_session(backend->session_timer().split(),
-                                                              backend->select_timer().total(),
-                                                              backend->num_selects());
+        m_server_stats[backend->server()].end_session(backend->session_timer().split(),
+                                                      backend->select_timer().total(),
+                                                      backend->num_selects());
     }
 }
 
