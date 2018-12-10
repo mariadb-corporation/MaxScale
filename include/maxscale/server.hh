@@ -482,6 +482,7 @@ double server_response_time_average(const SERVER* server);
 
 namespace maxscale
 {
+std::string server_status(uint64_t flags);
 std::string server_status(const SERVER*);
 bool server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
 bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);

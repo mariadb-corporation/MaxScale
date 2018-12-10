@@ -654,16 +654,13 @@ void dListServers(DCB* dcb)
 }
 
 /**
- * Convert a set of  server status flags to a string.
+ * Convert a set of server status flags to a string.
  *
- * @param server The server to return the status of
+ * @param flags Status flags
  * @return A string representation of the status flags
  */
-string mxs::server_status(const SERVER* server)
+string mxs::server_status(uint64_t flags)
 {
-    mxb_assert(server);
-    uint64_t server_status = server->status;
-
     string result;
     string separator;
 
@@ -693,35 +690,46 @@ string mxs::server_status(const SERVER* server)
     const string down = "Down";
 
     // Maintenance is usually set by user so is printed first.
-    concatenate_if(status_is_in_maint(server_status), maintenance);
+    concatenate_if(status_is_in_maint(flags), maintenance);
     // Master cannot be a relay or a slave.
-    if (status_is_master(server_status))
+    if (status_is_master(flags))
     {
         concatenate_if(true, master);
     }
     else
     {
         // Relays are typically slaves as well. The binlog server may be an exception.
-        concatenate_if(status_is_relay(server_status), relay);
-        concatenate_if(status_is_slave(server_status), slave);
+        concatenate_if(status_is_relay(flags), relay);
+        concatenate_if(status_is_slave(flags), slave);
     }
 
     // The following Galera and Cluster bits may be combined with master/slave.
-    concatenate_if(status_is_joined(server_status), synced);
-    concatenate_if(status_is_ndb(server_status), ndb);
+    concatenate_if(status_is_joined(flags), synced);
+    concatenate_if(status_is_ndb(flags), ndb);
     // May be combined with other MariaDB monitor flags.
-    concatenate_if(server_status & SERVER_SLAVE_OF_EXT_MASTER, slave_ext);
+    concatenate_if(flags & SERVER_SLAVE_OF_EXT_MASTER, slave_ext);
 
     // Should this be printed only if server is master?
-    concatenate_if(server_status & SERVER_MASTER_STICKINESS, sticky);
+    concatenate_if(flags & SERVER_MASTER_STICKINESS, sticky);
 
-    concatenate_if(server_status & SERVER_AUTH_ERROR, auth_err);
-    concatenate_if(status_is_running(server_status), running);
-    concatenate_if(status_is_down(server_status), down);
+    concatenate_if(flags & SERVER_AUTH_ERROR, auth_err);
+    concatenate_if(status_is_running(flags), running);
+    concatenate_if(status_is_down(flags), down);
 
     return result;
 }
 
+/**
+ * Convert the current server status flags to a string.
+ *
+ * @param server The server to return the status for
+ * @return A string representation of the status
+ */
+string mxs::server_status(const SERVER* server)
+{
+    mxb_assert(server);
+    return mxs::server_status(server->status);
+}
 /**
  * Set a status bit in the server without locking
  *

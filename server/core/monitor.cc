@@ -1542,17 +1542,12 @@ void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t 
 
 static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
 {
-    SERVER srv;
-    srv.status = ptr->mon_prev_status;
-    string prev = mxs::server_status(&srv);
+    string prev = mxs::server_status(ptr->mon_prev_status);
     string next = mxs::server_status(ptr->server);
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
-               ptr->server->name,
-               ptr->server->address,
-               ptr->server->port,
+               ptr->server->name, ptr->server->address, ptr->server->port,
                mon_get_event_name(ptr),
-               prev.c_str(),
-               next.c_str());
+               prev.c_str(), next.c_str());
 }
 
 MXS_MONITOR* monitor_server_in_use(const SERVER* server)
@@ -2858,12 +2853,9 @@ void MonitorInstanceSimple::tick()
             if (mon_status_changed(pMs) || mon_print_fail_status(pMs))
             {
                 // The current status is still in pMs->pending_status.
-                SERVER server = {};
-                server.status = pMs->pending_status;
                 MXS_DEBUG("Backend server [%s]:%d state : %s",
-                          pMs->server->address,
-                          pMs->server->port,
-                          mxs::server_status(&server).c_str());
+                          pMs->server->address, pMs->server->port,
+                          mxs::server_status(pMs->pending_status).c_str());
             }
 #endif
 
