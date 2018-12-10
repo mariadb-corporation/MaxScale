@@ -2623,12 +2623,11 @@ bool MonitorInstance::should_update_disk_space_status(const MXS_MONITORED_SERVER
 {
     bool should_check = false;
 
-    if (m_monitor->disk_space_check_interval
-        && (m_monitor->disk_space_threshold || pMs->server->disk_space_threshold)
-        && (pMs->disk_space_checked != -1))     // -1 means disabled
+    if ((m_monitor->disk_space_check_interval > 0)
+        && (pMs->disk_space_checked != -1) // -1 means disabled
+        && (m_monitor->disk_space_threshold || pMs->server->have_disk_space_limits()))
     {
         int64_t now = get_time_ms();
-
         if (now - pMs->disk_space_checked > m_monitor->disk_space_check_interval)
         {
             should_check = true;
@@ -2674,21 +2673,21 @@ void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
 
     if (rv == 0)
     {
+        // Server-specific setting takes precedence.
+        MxsDiskSpaceThreshold dst = pMs->server->get_disk_space_limits();
+        if (dst.empty())
+        {
+            dst = *m_monitor->disk_space_threshold;
+        }
+
         bool disk_space_exhausted = false;
-
-        MxsDiskSpaceThreshold* pDst =
-            pMs->server->disk_space_threshold ?
-            pMs->server->disk_space_threshold : m_monitor->disk_space_threshold;
-        mxb_assert(pDst);
-
         int32_t star_max_percentage = -1;
-
         std::set<std::string> checked_paths;
 
-        for (auto i = pDst->begin(); i != pDst->end(); ++i)
+        for (const auto& dst_item : dst)
         {
-            string path = i->first;
-            int32_t max_percentage = i->second;
+            string path = dst_item.first;
+            int32_t max_percentage = dst_item.second;
 
             if (path == "*")
             {

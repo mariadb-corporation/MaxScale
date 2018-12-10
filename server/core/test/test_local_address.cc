@@ -16,6 +16,7 @@
 #include <iostream>
 #include <maxscale/config.hh>
 #include <maxscale/mysql_utils.hh>
+#include "../internal/server.hh"
 
 using namespace std;
 
@@ -78,9 +79,7 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
     MXS_CONFIG* config = config_get_global_options();
     config->local_address = const_cast<char*>(zAddress);
 
-    SERVER server;
-    memset(&server, 0, sizeof(server));
-
+    Server server;
     strcpy(server.address, zHost);
     server.port = 3306;
 

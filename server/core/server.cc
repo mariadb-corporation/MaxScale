@@ -182,7 +182,6 @@ SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->master_id = -1;
     server->master_err_is_logged = false;
     server->warn_ssl_not_enabled = true;
-    server->disk_space_threshold = NULL;
 
     if (*monuser && *monpw)
     {
@@ -236,7 +235,6 @@ void server_free(Server* server)
         MXS_FREE(server->persistent);
     }
 
-    delete server->disk_space_threshold;
     delete server;
 }
 
@@ -1513,29 +1511,12 @@ json_t* server_list_to_json(const char* host)
 
 bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_threshold)
 {
-    bool rv = false;
-
     MxsDiskSpaceThreshold dst;
-
-    rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
-
+    bool rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
     if (rv)
     {
-        if (!server->disk_space_threshold)
-        {
-            server->disk_space_threshold = new(std::nothrow) MxsDiskSpaceThreshold;
-        }
-
-        if (server->disk_space_threshold)
-        {
-            server->disk_space_threshold->swap(dst);
-        }
-        else
-        {
-            rv = false;
-        }
+        server->set_disk_space_limits(dst);
     }
-
     return rv;
 }
 

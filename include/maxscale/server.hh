@@ -103,8 +103,9 @@ static uint64_t server_encode_version(const SERVER_VERSION* server_version)
  * the name of a protocol module that is loaded to implement the protocol
  * between the gateway and the server.
  */
-struct SERVER
+class SERVER
 {
+public:
     // Base settings
     char*          name;                            /**< Server config name */
     char           address[MAX_SERVER_ADDRESS_LEN]; /**< Server hostname/IP-address */
@@ -151,7 +152,31 @@ struct SERVER
                                                  * used
                                                  *   by rwsplit. TODO: Move to rwsplit */
     bool                   warn_ssl_not_enabled;/**< SSL not used for an SSL enabled server */
-    MxsDiskSpaceThreshold* disk_space_threshold;/**< Disk space thresholds */
+
+    virtual ~SERVER()
+    {
+    }
+
+    /**
+     * Check if server has disk space threshold settings.
+     *
+     * @return True if limits exist
+     */
+    virtual bool have_disk_space_limits() const = 0;
+
+    /**
+     * Get a copy of disk space limit settings.
+     *
+     * @return A copy of settings
+     */
+    virtual MxsDiskSpaceThreshold get_disk_space_limits() const = 0;
+
+    /**
+     * Set new disk space limits for the server.
+     *
+     * @param new_limits New limits
+     */
+    virtual void set_disk_space_limits(const MxsDiskSpaceThreshold& new_limits) = 0;
 };
 
 /**

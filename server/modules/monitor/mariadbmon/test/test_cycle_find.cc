@@ -15,12 +15,13 @@
 #include <algorithm>
 #include <iostream>
 #include <numeric>
+#include <set>
 #include <string>
 #include <vector>
 #include <maxbase/log.hh>
 #include <maxbase/maxbase.hh>
 #include <maxscale/alloc.h>
-#include <set>
+#include "../../../../core/internal/server.hh"
 
 using std::string;
 using std::cout;
@@ -155,7 +156,7 @@ void MariaDBMonitor::Test::init_servers(int count)
 
     for (int i = 1; i < count + 1; i++)
     {
-        SERVER* base_server = new SERVER;   // Contents mostly undefined
+        auto base_server = new Server;   // Contents mostly undefined
         string server_name = create_servername(i);
         base_server->name = MXS_STRDUP(server_name.c_str());
 

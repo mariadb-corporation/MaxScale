@@ -36,6 +36,10 @@ public:
     {
     }
 
+    ~Server() override
+    {
+    }
+
     int response_time_num_samples() const
     {
         return m_response_time.num_samples();
@@ -51,10 +55,35 @@ public:
     static void dprintServer(DCB*, const Server*);
     static void dprintPersistentDCBs(DCB*, const Server*);
 
+    bool have_disk_space_limits() const override
+    {
+        std::lock_guard<std::mutex> guard(m_settings.lock);
+        return !m_settings.disk_space_limits.empty();
+    }
+
+    MxsDiskSpaceThreshold get_disk_space_limits() const override
+    {
+        std::lock_guard<std::mutex> guard(m_settings.lock);
+        return m_settings.disk_space_limits;
+    }
+
+    void set_disk_space_limits(const MxsDiskSpaceThreshold& new_limits) override
+    {
+        std::lock_guard<std::mutex> guard(m_settings.lock);
+        m_settings.disk_space_limits = new_limits;
+    }
+
     mutable std::mutex m_lock;
 
 private:
-    maxbase::EMAverage m_response_time;
+    struct Settings
+    {
+        mutable std::mutex lock;                 /**< Protects array-like settings from concurrent access */
+        MxsDiskSpaceThreshold disk_space_limits; /**< Disk space thresholds */
+    };
+
+    maxbase::EMAverage m_response_time;   /**< Response time calculations for this server */
+    Settings m_settings;                  /**< Server settings */
 };
 
 void server_free(Server* server);
