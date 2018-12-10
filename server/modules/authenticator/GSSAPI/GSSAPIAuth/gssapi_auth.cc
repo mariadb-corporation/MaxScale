@@ -25,7 +25,7 @@
 #include <maxscale/sqlite3.h>
 #include <maxscale/users.h>
 
-#include "../gssapi_auth.h"
+#include "../gssapi_auth.hh"
 
 /**
  * MySQL queries for retrieving the list of users

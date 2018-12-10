@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _GSSAPI_AUTH_H
-#define _GSSAPI_AUTH_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -51,5 +49,3 @@ typedef struct gssapi_auth
 void report_error(OM_uint32 major, OM_uint32 minor);
 
 MXS_END_DECLS
-
-#endif

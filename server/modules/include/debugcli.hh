@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _DEBUGCLI_H
-#define _DEBUGCLI_H
 /*
  *
  * Copyright (c) 2016 MariaDB Corporation Ab
@@ -17,17 +15,9 @@
 
 /**
  * @file debugcli.h The debug interface to the gateway
- *
- * @verbatim
- * Revision History
- *
- * Date     Who     Description
- * 18/06/13 Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
 
@@ -64,5 +54,3 @@ typedef struct cli_session
 } CLI_SESSION;
 
 MXS_END_DECLS
-
-#endif

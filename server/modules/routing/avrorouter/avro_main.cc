@@ -38,7 +38,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
-#include <binlog_common.h>
+#include <binlog_common.hh>
 
 #include "avro_converter.hh"
 

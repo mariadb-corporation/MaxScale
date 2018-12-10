@@ -36,7 +36,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/modinfo.h>
-#include "maxscaled.h"
+#include "maxscaled.hh"
 #include <maxscale/maxadmin.h>
 #include <maxscale/alloc.h>
 

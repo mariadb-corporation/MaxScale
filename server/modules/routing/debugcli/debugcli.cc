@@ -26,7 +26,7 @@
 
 #define MXS_MODULE_NAME "debugcli"
 
-#include <debugcli.h>
+#include <debugcli.hh>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

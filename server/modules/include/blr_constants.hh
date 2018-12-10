@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _BLR_DEFINES_H
-#define _BLR_DEFINES_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -16,15 +14,9 @@
 
 /**
  * @file blr_defines.h - Various definitions for binlogrouter
- *
- * @verbatim
- * Revision History
- *
- * 26/04/16 Massimiliano Pinto Added MariaDB 10.0 and 10.1 GTID event flags detection
- * @endverbatim
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 MXS_BEGIN_DECLS
 
@@ -176,5 +168,3 @@ MXS_BEGIN_DECLS
 #define MARIADB_FL_STANDALONE 1
 
 MXS_END_DECLS
-
-#endif

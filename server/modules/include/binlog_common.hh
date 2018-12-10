@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _BINLOG_COMMON_H
-#define _BINLOG_COMMON_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -57,5 +55,3 @@ static inline REP_HEADER construct_header(uint8_t* ptr)
 }
 
 MXS_END_DECLS
-
-#endif /* BINLOG_COMMON_H */

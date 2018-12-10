@@ -12,6 +12,10 @@
  */
 #pragma once
 
+#define MXS_MODULE_NAME "maxrows"
+
+#include <maxscale/ccdefs.hh>
+
 #include <limits.h>
 
 MXS_BEGIN_DECLS

@@ -25,8 +25,8 @@
 #include "avrorouter.hh"
 #include <maxscale/query_classifier.h>
 
-#include <binlog_common.h>
-#include <blr_constants.h>
+#include <binlog_common.hh>
+#include <blr_constants.hh>
 #include <glob.h>
 #include <ini.h>
 #include <stdlib.h>

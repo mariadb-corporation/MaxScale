@@ -15,9 +15,7 @@
  * @file maxrows.c - Result set limit Filter
  */
 
-#define MXS_MODULE_NAME "maxrows"
-
-#include <maxscale/ccdefs.hh>
+#include "maxrows.hh"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -33,8 +31,6 @@
 #include <maxscale/poll.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/query_classifier.h>
-
-#include "maxrows.h"
 
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,

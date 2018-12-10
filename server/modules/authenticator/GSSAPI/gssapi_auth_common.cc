@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "gssapi_auth.h"
+#include "gssapi_auth.hh"
 #include <maxscale/alloc.h>
 
 /**

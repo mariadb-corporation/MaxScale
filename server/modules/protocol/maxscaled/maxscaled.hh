@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALED_H
-#define _MAXSCALED_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -16,15 +14,8 @@
 
 /**
  * @file maxscaled.h The maxscaled protocol module header file
- *
- * @verbatim
- * Revision History
- *
- * Date     Who     Description
- * 13/06/14 Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
+#include <maxscale/ccdefs.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 
@@ -45,5 +36,3 @@ typedef struct maxscaled
 #define MAXSCALED_STATE_DATA   3    /**< User logged in */
 
 MXS_END_DECLS
-
-#endif

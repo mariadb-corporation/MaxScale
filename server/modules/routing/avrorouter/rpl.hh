@@ -21,7 +21,7 @@
 
 #include <maxscale/pcre2.h>
 #include <maxscale/service.hh>
-#include <binlog_common.h>
+#include <binlog_common.hh>
 
 typedef std::vector<uint8_t> Bytes;
 

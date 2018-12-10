@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _TELNETD_H
-#define _TELNETD_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -16,17 +14,9 @@
 
 /**
  * @file telnetd.h The telnetd protocol module header file
- *
- * @verbatim
- * Revision History
- *
- * Date     Who             Description
- * 17/07/13 Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 
@@ -65,5 +55,3 @@ typedef struct telnetd
 #define TELNET_SUPPRESS_GO_AHEAD 3
 
 MXS_END_DECLS
-
-#endif

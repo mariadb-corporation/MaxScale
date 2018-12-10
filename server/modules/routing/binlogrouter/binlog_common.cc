@@ -11,13 +11,13 @@
  * Public License.
  */
 
+#include <binlog_common.hh>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <binlog_common.h>
-#include <blr_constants.h>
+#include <blr_constants.hh>
 #include <maxscale/log.hh>
 
 /**

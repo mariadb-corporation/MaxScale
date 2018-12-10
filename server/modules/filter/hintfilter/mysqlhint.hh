@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MYSQLHINT_H
-#define _MYSQLHINT_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,14 +12,7 @@
  * Public License.
  */
 
-/*
- * Revision History
- *
- * Date         Who             Description
- * 17-07-2014   Mark Riddoch    Initial implementation
- */
-
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/hint.h>
 
 MXS_BEGIN_DECLS
@@ -118,5 +109,3 @@ NAMEDHINTS*  free_named_hint(NAMEDHINTS* named_hint);
 HINTSTACK*   free_hint_stack(HINTSTACK* hint_stack);
 
 MXS_END_DECLS
-
-#endif

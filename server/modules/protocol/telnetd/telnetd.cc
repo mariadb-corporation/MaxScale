@@ -32,7 +32,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/poll.hh>
 #include <maxbase/atomic.h>
-#include <telnetd.h>
+#include <telnetd.hh>
 #include <maxscale/adminusers.h>
 #include <maxscale/modinfo.h>
 

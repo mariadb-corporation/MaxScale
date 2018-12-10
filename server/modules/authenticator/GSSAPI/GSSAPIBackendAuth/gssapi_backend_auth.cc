@@ -20,7 +20,7 @@
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 
-#include "../gssapi_auth.h"
+#include "../gssapi_auth.hh"
 
 /**
  * @file gssapi_backend_auth.c - GSSAPI backend authenticator

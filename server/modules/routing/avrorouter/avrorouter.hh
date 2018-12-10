@@ -14,7 +14,7 @@
 
 #define MXS_MODULE_NAME "avrorouter"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string>
@@ -26,9 +26,9 @@
 #include <maxscale/users.h>
 #include <cdc.hh>
 #include <maxavro.h>
-#include <binlog_common.h>
+#include <binlog_common.hh>
 #include <maxscale/protocol/mysql.hh>
-#include <blr_constants.h>
+#include <blr_constants.hh>
 
 #include "rpl.hh"
 

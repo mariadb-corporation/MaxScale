@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/syslog.h>
-#include <telnetd.h>
+#include <telnetd.hh>
 
 #include <maxbase/atomic.h>
 #include <maxscale/adminusers.h>
@@ -54,7 +54,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 
-#include <debugcli.h>
+#include <debugcli.hh>
 
 #include "../../../core/internal/config.hh"
 #include "../../../core/internal/config_runtime.hh"
