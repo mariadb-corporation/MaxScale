@@ -39,7 +39,7 @@
 #include <maxscale/routingworker.hh>
 
 #include "../dcb.cc"
-#include "test_utils.h"
+#include "test_utils.hh"
 
 /**
  * test1    Allocate a dcb and do lots of other things

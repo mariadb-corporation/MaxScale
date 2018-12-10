@@ -37,7 +37,7 @@
 #include <maxscale/alloc.h>
 
 #include "../internal/service.hh"
-#include "test_utils.h"
+#include "test_utils.hh"
 #include "../config.cc"
 
 /**

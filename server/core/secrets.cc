@@ -24,7 +24,7 @@
 #include <maxscale/random.h>
 #include <maxscale/utils.h>
 
-#include "internal/secrets.h"
+#include "internal/secrets.hh"
 
 /**
  * Generate a random printable character

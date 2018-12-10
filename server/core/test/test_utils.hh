@@ -1,6 +1,4 @@
 #pragma once
-#ifndef TEST_UTILS_H
-#define TEST_UTILS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxbase/maxbase.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
@@ -66,5 +64,3 @@ void init_test_env(char* __attribute((unused)) path = nullptr, uint32_t init_typ
     preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);
     preload_module("mysqlauth", "/server/modules/authenticator/MySQLAuth/", MODULE_AUTHENTICATOR);
 }
-
-#endif

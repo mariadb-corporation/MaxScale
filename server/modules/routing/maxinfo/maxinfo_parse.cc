@@ -24,7 +24,7 @@
  * @endverbatim
  */
 
-#include "maxinfo.h"
+#include "maxinfo.hh"
 
 #include <ctype.h>
 #include <stdio.h>

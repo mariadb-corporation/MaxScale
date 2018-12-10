@@ -26,7 +26,7 @@
 #include <maxscale/random.h>
 #include <maxscale/alloc.h>
 
-#include "internal/secrets.h"
+#include "internal/secrets.hh"
 
 #ifdef HAVE_GLIBC
 struct option options[] =

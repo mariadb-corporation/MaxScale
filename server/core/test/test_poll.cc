@@ -37,7 +37,7 @@
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
 
-#include "test_utils.h"
+#include "test_utils.hh"
 #include "../internal/service.hh"
 #include "../internal/session.hh"
 

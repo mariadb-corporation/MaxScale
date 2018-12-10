@@ -20,7 +20,7 @@
 #include <maxscale/mock/session.hh>
 #include "../cachefilter.hh"
 
-#include "../../../../core/test/test_utils.h"
+#include "../../../../core/test/test_utils.hh"
 
 using namespace std;
 using maxscale::FilterModule;

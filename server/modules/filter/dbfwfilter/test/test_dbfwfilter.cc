@@ -22,7 +22,7 @@
 #include <maxscale/mock/client.hh>
 #include "tempfile.hh"
 
-#include "../../../../core/test/test_utils.h"
+#include "../../../../core/test/test_utils.hh"
 
 using namespace std;
 using maxscale::FilterModule;
