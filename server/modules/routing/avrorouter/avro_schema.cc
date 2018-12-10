@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <unistd.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <sys/stat.h>
 #include <errno.h>
 #include <string.h>

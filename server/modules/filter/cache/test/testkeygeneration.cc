@@ -18,7 +18,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/log.h>
 #include "storagefactory.hh"
 #include "cache.hh"
 #include "cache_storage_api.hh"

@@ -25,7 +25,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/adminusers.h>
-#include <maxscale/log.h>
 #include <maxscale/paths.h>
 #include <maxscale/json_api.h>
 

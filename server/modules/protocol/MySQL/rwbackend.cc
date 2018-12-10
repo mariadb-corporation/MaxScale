@@ -15,7 +15,7 @@
 
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 
 namespace maxscale
 {

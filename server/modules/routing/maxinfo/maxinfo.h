@@ -28,7 +28,7 @@
 
 #define MXS_MODULE_NAME "maxinfo"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
 #include <maxscale/resultset.hh>

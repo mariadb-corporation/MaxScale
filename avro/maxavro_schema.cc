@@ -15,7 +15,7 @@
 #include <jansson.h>
 #include <string.h>
 #include <maxbase/assert.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 
 static const MAXAVRO_SCHEMA_FIELD types[MAXAVRO_TYPE_MAX] =
 {

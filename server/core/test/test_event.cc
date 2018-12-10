@@ -21,7 +21,7 @@
 #include <iostream>
 #include <sstream>
 #include <maxbase/assert.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 
 using namespace maxscale;
 using namespace std;

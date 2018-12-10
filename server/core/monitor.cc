@@ -33,7 +33,6 @@
 #include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
 #include <maxscale/json_api.h>
-#include <maxscale/log.h>
 #include <maxscale/mariadb.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>

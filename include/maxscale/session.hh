@@ -20,7 +20,6 @@
 #include <maxbase/jansson.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.h>
-#include <maxscale/log.h>
 #include <maxscale/utils.hh>
 
 struct DCB;

@@ -13,12 +13,11 @@
 
 #define MXS_MODULE_NAME "GSSAPIAuth"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/log.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/secrets.h>

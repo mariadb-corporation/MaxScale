@@ -39,7 +39,6 @@
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/log.h>
 
 static MAXINFO_TREE* make_tree_node(MAXINFO_OPERATOR, char*, MAXINFO_TREE*, MAXINFO_TREE*);
 void                 maxinfo_free_tree(MAXINFO_TREE*);  // This function is needed by maxinfo.c

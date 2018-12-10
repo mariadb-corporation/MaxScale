@@ -45,7 +45,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/log.h>
 #include <maxscale/limits.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/poll.hh>

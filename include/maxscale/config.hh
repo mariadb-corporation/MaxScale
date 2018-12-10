@@ -16,7 +16,7 @@
  * @file include/maxscale/config.h The configuration handling elements
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <unordered_map>
 #include <string>
@@ -29,7 +29,6 @@ typedef std::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
 #include <time.h>
 
 #include <maxbase/jansson.h>
-#include <maxbase/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/query_classifier.h>

@@ -18,7 +18,7 @@
 
 #define MXS_MODULE_NAME "schemarouter"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <limits>
 #include <list>

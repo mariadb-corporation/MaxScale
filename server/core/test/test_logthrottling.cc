@@ -20,7 +20,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/random.h>
 
 using std::cerr;

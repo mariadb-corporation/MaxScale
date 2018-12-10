@@ -23,7 +23,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.hh>

@@ -14,7 +14,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <stdint.h>
 #include <stddef.h>
 #include <gssapi.h>

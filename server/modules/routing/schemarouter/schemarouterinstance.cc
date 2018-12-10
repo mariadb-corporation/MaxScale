@@ -22,7 +22,6 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
-#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>

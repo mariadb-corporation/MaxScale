@@ -30,7 +30,6 @@
 #include <maxsql/mariadb.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/config.hh>
-#include <maxscale/log.h>
 #include <maxbase/atomic.hh>
 
 /**

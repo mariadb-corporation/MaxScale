@@ -13,14 +13,13 @@
 
 #define MXS_MODULE_NAME "regexfilter"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <string.h>
 #include <stdio.h>
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxscale/config.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>

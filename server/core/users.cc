@@ -22,7 +22,6 @@
 
 #include <maxscale/users.h>
 #include <maxscale/authenticator.h>
-#include <maxscale/log.h>
 #include <maxscale/jansson.hh>
 
 namespace

@@ -39,7 +39,6 @@
 #include <maxscale/session.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/log.h>
 #include <maxscale/ssl.h>
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>

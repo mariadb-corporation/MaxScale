@@ -44,7 +44,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/listener.hh>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>

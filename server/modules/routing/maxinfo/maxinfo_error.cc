@@ -37,7 +37,6 @@
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/log.h>
 
 
 /**

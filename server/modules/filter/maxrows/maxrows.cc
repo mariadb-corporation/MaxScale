@@ -17,7 +17,7 @@
 
 #define MXS_MODULE_NAME "maxrows"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -26,7 +26,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
 #include <maxscale/filter.hh>
-#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>

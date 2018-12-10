@@ -61,7 +61,7 @@
 #include <pthread.h>
 
 #include <maxbase/assert.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/paths.h>

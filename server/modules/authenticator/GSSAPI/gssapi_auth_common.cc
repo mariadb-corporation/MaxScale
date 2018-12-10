@@ -13,7 +13,6 @@
 
 #include "gssapi_auth.h"
 #include <maxscale/alloc.h>
-#include <maxscale/log.h>
 
 /**
  * @brief Report GSSAPI errors

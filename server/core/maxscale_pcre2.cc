@@ -27,7 +27,7 @@
 #include <maxscale/pcre2.h>
 #include <maxbase/assert.h>
 #include <maxscale/alloc.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 
 /**
  * Utility wrapper for PCRE2 library function call pcre2_substitute.

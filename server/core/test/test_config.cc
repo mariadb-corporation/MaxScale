@@ -17,7 +17,7 @@
 #endif
 
 #include <iostream>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include "../config.cc"
 
 using namespace std;

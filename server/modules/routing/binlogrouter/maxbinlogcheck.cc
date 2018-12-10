@@ -28,7 +28,7 @@
 #include <sys/stat.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 
 
 static void printVersion(const char* progname);

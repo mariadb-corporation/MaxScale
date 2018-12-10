@@ -51,7 +51,6 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>

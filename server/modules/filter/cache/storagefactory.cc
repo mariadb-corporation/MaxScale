@@ -18,7 +18,6 @@
 #include <new>
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
-#include <maxscale/log.h>
 #include "cachefilter.hh"
 #include "lrustoragest.hh"
 #include "lrustoragemt.hh"

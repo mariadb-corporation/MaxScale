@@ -16,12 +16,11 @@
  * @file dcb.h  The Descriptor Control Block
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <netinet/in.h>
 #include <maxbase/poll.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/buffer.h>
-#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/protocol.h>
 #include <maxscale/ssl.h>

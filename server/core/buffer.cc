@@ -20,7 +20,6 @@
 #include <maxbase/assert.h>
 #include <maxscale/alloc.h>
 #include <maxscale/hint.h>
-#include <maxscale/log.h>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 

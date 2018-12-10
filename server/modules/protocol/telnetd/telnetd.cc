@@ -13,6 +13,7 @@
 
 #define MXS_MODULE_NAME "telnetd"
 
+#include <maxscale/ccdefs.hh>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -33,7 +34,6 @@
 #include <maxbase/atomic.h>
 #include <telnetd.h>
 #include <maxscale/adminusers.h>
-#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 
 /**

@@ -43,7 +43,6 @@
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/maxscale.h>
-#include <maxscale/log.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/version.h>
 #include <maxscale/resultset.hh>

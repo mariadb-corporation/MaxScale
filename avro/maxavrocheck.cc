@@ -24,7 +24,7 @@
 #include <limits.h>
 #include <getopt.h>
 
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 
 static int verbose = 0;
 static uint64_t seekto = 0;

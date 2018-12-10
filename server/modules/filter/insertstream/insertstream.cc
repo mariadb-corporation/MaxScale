@@ -13,13 +13,12 @@
 
 #define MXS_MODULE_NAME "insertstream"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <strings.h>
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
 #include <maxscale/filter.hh>
-#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>

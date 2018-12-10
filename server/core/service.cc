@@ -42,7 +42,6 @@
 #include <maxscale/paths.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/listener.hh>
-#include <maxscale/log.h>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.h>
 #include <maxscale/resultset.hh>

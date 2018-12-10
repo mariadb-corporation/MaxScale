@@ -30,7 +30,6 @@
 #include <maxscale/paths.h>
 #include <maxscale/ssl.h>
 #include <maxscale/protocol.h>
-#include <maxscale/log.h>
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/service.hh>

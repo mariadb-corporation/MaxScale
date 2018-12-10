@@ -13,6 +13,7 @@
 
 #define MXS_MODULE_NAME "maxscaled"
 
+#include <maxscale/ccdefs.hh>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -34,7 +35,6 @@
 #include <maxscale/poll.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/adminusers.h>
-#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include "maxscaled.h"
 #include <maxscale/maxadmin.h>

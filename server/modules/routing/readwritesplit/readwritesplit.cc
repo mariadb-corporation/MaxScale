@@ -25,7 +25,6 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.h>

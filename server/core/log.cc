@@ -11,14 +11,14 @@
  * Public License.
  */
 
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 
 #include <sys/time.h>
 #include <syslog.h>
 
 #include <cinttypes>
 
-#include <maxbase/log.h>
+#include <maxbase/log.hh>
 #include <maxbase/logger.hh>
 
 #include <maxscale/config.hh>

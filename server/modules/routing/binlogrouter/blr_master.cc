@@ -45,7 +45,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>

@@ -34,7 +34,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/encryption.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/paths.h>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.h>

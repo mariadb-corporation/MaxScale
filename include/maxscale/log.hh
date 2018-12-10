@@ -12,6 +12,7 @@
  */
 #pragma once
 
+// NOTE: Do not include <maxscale/ccefs.hh>, it includes this.
 #include <maxscale/cdefs.h>
 
 #include <assert.h>

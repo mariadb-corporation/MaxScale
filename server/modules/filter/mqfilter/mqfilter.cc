@@ -59,6 +59,7 @@
 
 #define MXS_MODULE_NAME "mqfilter"
 
+#include <maxscale/ccdefs.hh>
 #include <stdio.h>
 #include <fcntl.h>
 #include <maxscale/filter.hh>
@@ -73,7 +74,6 @@
 #include <amqp_tcp_socket.h>
 #include <amqp_ssl_socket.h>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/log.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.hh>
 #include <maxscale/housekeeper.h>

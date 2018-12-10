@@ -19,7 +19,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/config.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/paths.h>

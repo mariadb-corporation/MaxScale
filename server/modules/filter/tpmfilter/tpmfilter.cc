@@ -42,7 +42,7 @@
 
 #define MXS_MODULE_NAME "tpmfilter"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -59,7 +59,6 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/log.h>
 #include <maxscale/server.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/query_classifier.h>

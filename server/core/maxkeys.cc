@@ -27,7 +27,7 @@
 #include <getopt.h>
 #include <stdio.h>
 
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/paths.h>
 #include <maxscale/random.h>
 

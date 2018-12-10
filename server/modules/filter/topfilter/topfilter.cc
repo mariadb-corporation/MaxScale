@@ -34,12 +34,12 @@
 
 #define MXS_MODULE_NAME "topfilter"
 
+#include <maxscale/ccdefs.hh>
 #include <stdio.h>
 #include <fcntl.h>
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/log.h>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>

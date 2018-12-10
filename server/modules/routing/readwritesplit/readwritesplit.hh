@@ -28,7 +28,6 @@
 #include <functional>
 
 #include <maxscale/dcb.hh>
-#include <maxscale/log.h>
 #include <maxscale/queryclassifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>

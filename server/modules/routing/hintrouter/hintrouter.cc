@@ -18,7 +18,6 @@
 #include <vector>
 
 #include <maxbase/atomic.hh>
-#include <maxscale/log.h>
 #include "dcb.hh"
 
 static const MXS_ENUM_VALUE default_action_values[] =

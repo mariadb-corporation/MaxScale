@@ -31,7 +31,7 @@
 #include <getopt.h>
 
 #include <maxscale/paths.h>
-#include <maxscale/log.h>
+#include <maxscale/log.hh>
 #include <maxscale/random.h>
 #include <maxscale/alloc.h>
 
