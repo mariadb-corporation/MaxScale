@@ -33,7 +33,6 @@
 #include <sys/stat.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/log.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>

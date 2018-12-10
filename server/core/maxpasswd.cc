@@ -13,14 +13,6 @@
 
 /**
  * @file maxpasswd.c  - Implementation of pasword encoding
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 24/07/13     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/ccdefs.hh>
@@ -31,7 +23,6 @@
 #include <getopt.h>
 
 #include <maxscale/paths.h>
-#include <maxscale/log.hh>
 #include <maxscale/random.h>
 #include <maxscale/alloc.h>
 

@@ -32,7 +32,6 @@
 #include <maxbase/worker.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/log.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.hh>

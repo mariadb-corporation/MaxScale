@@ -35,9 +35,6 @@
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 
-#include <maxscale/log.hh>
-
-
 /**
  * Initialise the cache for this instanceof the binlog router. As a side
  * effect also determine the binlog file to read and the position to read

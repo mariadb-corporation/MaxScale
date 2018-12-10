@@ -39,7 +39,6 @@
 #include <maxscale/clock.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/log.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/poll.hh>
 #include <maxscale/router.hh>

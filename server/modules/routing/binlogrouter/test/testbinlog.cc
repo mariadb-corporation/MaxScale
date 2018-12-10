@@ -35,7 +35,6 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <time.h>
-#include <maxscale/log.hh>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.hh>

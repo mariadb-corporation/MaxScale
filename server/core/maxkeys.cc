@@ -13,23 +13,13 @@
 
 /**
  * @file maxkeys.c  - Create the random encryption keys for maxscale
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 24/07/13     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
-#include "internal/secrets.h"
-
+#include <maxscale/ccdefs.hh>
 #include <getopt.h>
 #include <stdio.h>
-
-#include <maxscale/log.hh>
 #include <maxscale/paths.h>
 #include <maxscale/random.h>
+#include "internal/secrets.h"
 
 #ifdef HAVE_GLIBC
 struct option options[] =

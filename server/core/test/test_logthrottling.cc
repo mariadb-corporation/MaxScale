@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#include <maxscale/log.hh>
 #include <unistd.h>
 #include <cstdio>
 #include <stdint.h>
@@ -20,7 +21,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
-#include <maxscale/log.hh>
 #include <maxscale/random.h>
 
 using std::cerr;
