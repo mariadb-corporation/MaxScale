@@ -18,8 +18,11 @@
 #include <string.h>
 #include <strings.h>
 
+#include <array>
 #include <iterator>
 #include <mutex>
+#include <functional>
+#include <cctype>
 
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
@@ -1261,11 +1264,54 @@ static inline bool is_next(mxs::Buffer::iterator it, mxs::Buffer::iterator end, 
     return true;
 }
 
+
+// Class for fast char type lookups
+class LUT
+{
+public:
+    LUT(const std::string& values)
+    {
+        for (const auto& a : values)
+        {
+            m_table[(uint8_t)a] = true;
+        }
+    }
+
+    LUT(std::function<bool(uint8_t)> is_type)
+    {
+        for (int i = 0; i <= std::numeric_limits<uint8_t>::max(); i++)
+        {
+            m_table[i] = is_type(i);
+        }
+    }
+
+    inline bool operator()(uint8_t c) const
+    {
+        return m_table[c];
+    }
+
+private:
+    std::array<bool, 256> m_table = {};
+};
+
+// Optimized versions of standard functions that ignore the locale and use a lookup table
+static const LUT is_space(::isspace);
+static const LUT is_digit(::isdigit);
+static const LUT is_alpha(::isalpha);
+static const LUT is_alnum(::isalnum);
+static const LUT is_xdigit(::isxdigit);
+
+// For detection of characters that need special treatment, helps speed up processing of keywords etc.
+static const LUT is_special([](uint8_t c) {
+                                return isdigit(c) || isspace(c) || std::string("\"'`#-/\\").find(
+                                    c) != std::string::npos;
+                            });
+
 static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator it,
                                                            mxs::Buffer::iterator end)
 {
     mxb_assert(it != end);
-    mxb_assert(isdigit(*it));
+    mxb_assert(is_digit(*it));
     std::pair<bool, mxs::Buffer::iterator> rval = std::make_pair(true, it);
     bool is_hex = *it == '0';
     bool allow_hex = false;
@@ -1275,7 +1321,7 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
 
     while (it != end)
     {
-        if (isdigit(*it) || (allow_hex && isxdigit(*it)))
+        if (is_digit(*it) || (allow_hex && is_xdigit(*it)))
         {
             // Digit or hex-digit, skip it
         }
@@ -1295,7 +1341,7 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
                 // Possible scientific notation number
                 auto next_it = std::next(it);
 
-                if (next_it == end || (!isdigit(*next_it) && *next_it != '-'))
+                if (next_it == end || (!is_digit(*next_it) && *next_it != '-'))
                 {
                     rval.first = false;
                     break;
@@ -1312,19 +1358,19 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
                 // Possible decimal number
                 auto next_it = std::next(it);
 
-                if (next_it != end && !isdigit(*next_it))
+                if (next_it != end && !is_digit(*next_it))
                 {
                     /** No number after the period, not a decimal number.
                      * The fractional part of the number is optional in MariaDB. */
                     rval.first = false;
                     break;
                 }
-                mxb_assert(isdigit(*next_it));
+                mxb_assert(is_digit(*next_it));
             }
             else
             {
                 // If we have a non-text character, we treat it as a number
-                rval.first = !isalpha(*it);
+                rval.first = !is_alpha(*it);
                 break;
             }
         }
@@ -1337,18 +1383,18 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
     return rval;
 }
 
-bool is_negation(const std::string& str)
+static inline bool is_negation(const std::string& str)
 {
     bool rval = false;
 
-    if (!str.empty() && str[str.size() - 1] == '-')
+    if (!str.empty() && str.back() == '-')
     {
         // Possibly a negative number
         rval = true;
 
         for (auto it = std::next(str.rbegin()); it != str.rend(); it++)
         {
-            if (!isspace(*it))
+            if (!is_space(*it))
             {
                 /** If we find a previously converted value, we know that it
                  * is not a negation but a subtraction. */
@@ -1361,6 +1407,26 @@ bool is_negation(const std::string& str)
     return rval;
 }
 
+mxs::Buffer::iterator find_char(mxs::Buffer::iterator it, const mxs::Buffer::iterator& end, char c)
+{
+    for (; it != end; ++it)
+    {
+        if (*it == '\\')
+        {
+            if (++it == end)
+            {
+                break;
+            }
+        }
+        else if (*it == c)
+        {
+            return it;
+        }
+    }
+
+    return it;
+}
+
 namespace maxscale
 {
 
@@ -1370,142 +1436,108 @@ std::string get_canonical(GWBUF* querybuf)
     rval.reserve(gwbuf_length(querybuf) - MYSQL_HEADER_LEN + 1);
     mxs::Buffer buf(querybuf);
 
-    enum state
-    {
-        NONE,
-        SINGLE_QUOTE,
-        DOUBLE_QUOTE,
-        BACKTICK,
-        UNTIL_NEWLINE,
-        INLINE_COMMENT
-    } my_state = NONE;
-
     for (auto it = std::next(buf.begin(), MYSQL_HEADER_LEN + 1);    // Skip packet header and command
          it != buf.end(); ++it)
     {
-        if (*it == '\\')
+        if (!is_special(*it))
+        {
+            // Normal character, no special handling required
+            rval += *it;
+        }
+        else if (*it == '\\')
         {
             // Jump over any escaped values
-            rval += *it;
-            it++;
-            rval += *it;
-            continue;
-        }
+            rval += *it++;
 
-        char prev = rval.empty() ? ' ' : rval[rval.size() - 1];
-
-        switch (my_state)
-        {
-        case BACKTICK:
-            rval += *it;
-            if (*it == '`')
+            if (it != buf.end())
             {
-                my_state = NONE;
-            }
-            break;
-
-        case SINGLE_QUOTE:
-            if (*it == '\'')
-            {
-                rval += '?';
-                my_state = NONE;
-            }
-            break;
-
-        case DOUBLE_QUOTE:
-            if (*it == '"')
-            {
-                rval += '?';
-                my_state = NONE;
-            }
-            break;
-
-        case INLINE_COMMENT:
-            if (is_next(it, buf.end(), "*/"))
-            {
-                // Comment end marker, return to normal parsing
-                ++it;
-                my_state = NONE;
-            }
-            break;
-
-        case UNTIL_NEWLINE:
-            if (is_next(it, buf.end(), "\r\n"))
-            {
-                ++it;
-                my_state = NONE;
-            }
-            else if (is_next(it, buf.end(), "\n") || is_next(it, buf.end(), "\r"))
-            {
-                my_state = NONE;
-            }
-            break;
-
-        default:
-            if (isspace(*it))
-            {
-                if (isspace(prev))
-                {
-                    // Repeating space, skip it
-                    continue;
-                }
-                *it = ' ';
-            }
-            else if (is_next(it, buf.end(), "/*"))
-            {
-                auto comment_start = std::next(it, 2);
-                if (comment_start != buf.end()
-                    && *comment_start != '!'
-                    && *comment_start != 'M')
-                {
-                    // Non-executable comment
-                    my_state = INLINE_COMMENT;
-                    continue;
-                }
-            }
-            else if (is_next(it, buf.end(), "# ") || is_next(it, buf.end(), "-- "))
-            {
-                // End-of-line comment, jump to the next line if one exists
-                my_state = UNTIL_NEWLINE;
-                continue;
-            }
-            else if (isdigit(*it) && !isalpha(prev) && !isdigit(prev) && prev != '_')
-            {
-                auto num_end = probe_number(it, buf.end());
-
-                if (num_end.first)
-                {
-                    if (is_negation(rval))
-                    {
-                        // Remove the sign
-                        rval.resize(rval.size() - 1);
-                    }
-                    rval += '?';
-                    it = num_end.second;
-                    continue;
-                }
-            }
-
-            switch (*it)
-            {
-            case '\'':
-                my_state = SINGLE_QUOTE;
-                break;
-
-            case '"':
-                my_state = DOUBLE_QUOTE;
-                break;
-
-            case '`':
-                my_state = BACKTICK;
-
-            /* falls through */
-            default:
                 rval += *it;
+            }
+        }
+        else if (is_space(*it) && (rval.empty() || is_space(rval.back())))
+        {
+            // Repeating space, skip it
+        }
+        else if (*it == '/' && is_next(it, buf.end(), "/*"))
+        {
+            auto comment_start = std::next(it, 2);
+            if (comment_start != buf.end() && *comment_start != '!' && *comment_start != 'M')
+            {
+                // Non-executable comment
+                while (it != buf.end())
+                {
+                    if (is_next(it, buf.end(), "*/"))
+                    {
+                        // Comment end marker, return to normal parsing
+                        ++it;
+                        break;
+                    }
+                    ++it;
+                }
+            }
+            else
+            {
+                // Executable comment, treat it as normal SQL
+                rval += *it;
+            }
+        }
+        else if ((*it == '#' || *it == '-')
+                 && (is_next(it, buf.end(), "# ") || is_next(it, buf.end(), "-- ")))
+        {
+            // End-of-line comment, jump to the next line if one exists
+            while (it != buf.end())
+            {
+                if (*it == '\n')
+                {
+                    break;
+                }
+                else if (*it == '\r')
+                {
+                    if ((is_next(it, buf.end(), "\r\n")))
+                    {
+                        ++it;
+                    }
+                    break;
+                }
+
+                ++it;
+            }
+            if (it == buf.end())
+            {
                 break;
             }
+        }
+        else if (is_digit(*it) && (rval.empty() || (!is_alnum(rval.back()) && rval.back() != '_')))
+        {
+            auto num_end = probe_number(it, buf.end());
 
-            break;
+            if (num_end.first)
+            {
+                if (is_negation(rval))
+                {
+                    // Remove the sign
+                    rval.resize(rval.size() - 1);
+                }
+                rval += '?';
+                it = num_end.second;
+            }
+        }
+        else if (*it == '\'' || *it == '"')
+        {
+            char c = *it;
+            it = find_char(std::next(it), buf.end(), c);
+            rval += '?';
+        }
+        else if (*it == '`')
+        {
+            auto start = it;
+            it = find_char(std::next(it), buf.end(), '`');
+            rval.append(start, it);
+            rval += '`';
+        }
+        else
+        {
+            rval += *it;
         }
     }
 
