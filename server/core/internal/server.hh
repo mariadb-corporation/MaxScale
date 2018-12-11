@@ -31,7 +31,6 @@ std::unique_ptr<ResultSet> serverGetList();
 class Server : public SERVER
 {
 public:
-
     Server()
         : m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
     {
@@ -48,6 +47,9 @@ public:
     }
 
     void response_time_add(double ave, int num_samples);
+    static Server* find_by_unique_name(const std::string& name);
+    static void dprintServer(DCB*, const Server*);
+    static void dprintPersistentDCBs(DCB*, const Server*);
 
     mutable std::mutex m_lock;
 

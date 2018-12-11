@@ -475,8 +475,6 @@ extern void printServer(const SERVER*);
 extern void printAllServers();
 extern void dprintAllServers(DCB*);
 extern void dprintAllServersJson(DCB*);
-extern void dprintServer(DCB*, const SERVER*);
-extern void dprintPersistentDCBs(DCB*, const SERVER*);
 extern void dListServers(DCB*);
 
 int    server_response_time_num_samples(const SERVER* server);

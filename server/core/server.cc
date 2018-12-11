@@ -429,7 +429,7 @@ void dprintAllServers(DCB* dcb)
     {
         if (server->is_active)
         {
-            dprintServer(dcb, server);
+            Server::dprintServer(dcb, server);
         }
     }
 }
@@ -489,14 +489,14 @@ static void cleanup_persistent_connections(const SERVER* server)
  * Designed to be called within a debugger session in order
  * to display all active servers within the gateway
  */
-void dprintServer(DCB* dcb, const SERVER* srv)
+void Server::dprintServer(DCB* dcb, const Server* srv)
 {
     if (!server_is_active(srv))
     {
         return;
     }
 
-    const Server* server = static_cast<const Server*>(srv);
+    const Server* server = srv;
 
     dcb_printf(dcb, "Server %p (%s)\n", server, server->name);
     dcb_printf(dcb, "\tServer:                              %s\n", server->address);
@@ -605,7 +605,7 @@ void dprintServer(DCB* dcb, const SERVER* srv)
  * @param       pdcb    DCB to print results to
  * @param       server  SERVER for which DCBs are to be printed
  */
-void dprintPersistentDCBs(DCB* pdcb, const SERVER* server)
+void Server::dprintPersistentDCBs(DCB* pdcb, const Server* server)
 {
     dcb_printf(pdcb, "Number of persistent DCBs: %d\n", server->stats.n_persistent);
 }
@@ -1594,4 +1594,23 @@ void Server::response_time_add(double ave, int num_samples)
 
     m_response_time.set_sample_max(new_max);
     m_response_time.add(ave, num_samples);
+}
+
+/**
+ * @brief Find a server with the specified name
+ *
+ * @param name Name of the server
+ * @return The server or NULL if not found
+ */
+Server* Server::find_by_unique_name(const string& name)
+{
+    Guard guard(server_lock);
+    for (Server* server : all_servers)
+    {
+        if (server->is_active && name == server->name)
+        {
+            return server;
+        }
+    }
+    return nullptr;
 }

@@ -62,6 +62,7 @@
 #include "../../../core/internal/monitor.hh"
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/session.hh"
+#include "../../../core/internal/server.hh"
 #include "../../../core/internal/filter.hh"
 
 #define MAXARGS 14
@@ -307,7 +308,7 @@ struct subcommand showoptions[] =
         {0               }
     },
     {
-        "persistent", 1, 1, (FN)dprintPersistentDCBs,
+        "persistent", 1, 1, (FN)Server::dprintPersistentDCBs,
         "Show the persistent connection pool of a server",
         "Usage: show persistent SERVER\n"
         "\n"
@@ -324,7 +325,7 @@ struct subcommand showoptions[] =
         {0               }
     },
     {
-        "server", 1, 1, (FN)dprintServer,
+        "server", 1, 1, (FN)Server::dprintServer,
         "Show server details",
         "Usage: show server SERVER\n"
         "\n"
@@ -679,7 +680,7 @@ struct subcommand restartoptions[] =
     {EMPTY_OPTION         }
 };
 
-static void set_server(DCB* dcb, SERVER* server, char* bit);
+static void set_server(DCB* dcb, Server* server, char* bit);
 static void set_pollsleep(DCB* dcb, int);
 static void set_nbpoll(DCB* dcb, int);
 static void set_log_throttling(DCB* dcb, int count, int window_ms, int suppress_ms);
@@ -728,7 +729,7 @@ struct subcommand setoptions[] =
     {EMPTY_OPTION}
 };
 
-static void clear_server(DCB* dcb, SERVER* server, char* bit);
+static void clear_server(DCB* dcb, Server* server, char* bit);
 /**
  * The subcommands of the clear command
  */
@@ -948,19 +949,11 @@ struct subcommand disableoptions[] =
 static void inet_add_user(DCB*, char* user, char* password);
 static void inet_add_admin_user(DCB*, char* user, char* password);
 
-static void cmd_AddServer(DCB* dcb,
-                          SERVER* server,
-                          char*   v1,
-                          char*   v2,
-                          char*   v3,
-                          char*   v4,
-                          char*   v5,
-                          char*   v6,
-                          char*   v7,
-                          char*   v8,
-                          char*   v9,
-                          char*   v10,
-                          char*   v11)
+static void cmd_AddServer(DCB* dcb, Server* server,
+                          char*   v1, char*   v2, char*   v3,
+                          char*   v4, char*   v5, char*   v6,
+                          char*   v7, char*   v8, char*   v9,
+                          char*   v10, char*   v11)
 {
     char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
@@ -1066,19 +1059,11 @@ struct subcommand addoptions[] =
 
 static void telnetdRemoveUser(DCB*, char* user);
 
-static void cmd_RemoveServer(DCB* dcb,
-                             SERVER* server,
-                             char*   v1,
-                             char*   v2,
-                             char*   v3,
-                             char*   v4,
-                             char*   v5,
-                             char*   v6,
-                             char*   v7,
-                             char*   v8,
-                             char*   v9,
-                             char*   v10,
-                             char*   v11)
+static void cmd_RemoveServer(DCB* dcb, Server* server,
+                             char*   v1, char*   v2, char*   v3,
+                             char*   v4, char*   v5, char*   v6,
+                             char*   v7, char*   v8, char*   v9,
+                             char*   v10, char*   v11)
 {
     char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
@@ -1398,7 +1383,7 @@ struct subcommand createoptions[] =
     }
 };
 
-static void destroyServer(DCB* dcb, SERVER* server)
+static void destroyServer(DCB* dcb, Server* server)
 {
     /** Do this so that we don't directly access the server. Currently, the
      * destruction of a server does not free any memory and the server stays
@@ -1495,20 +1480,11 @@ struct subcommand destroyoptions[] =
  * with one function. This could be handled with a variadic function but the
  * required complexity would probably negate any benefits.
  */
-static void alterServer(DCB* dcb,
-                        SERVER* server,
-                        char*   v1,
-                        char*   v2,
-                        char*   v3,
-                        char*   v4,
-                        char*   v5,
-                        char*   v6,
-                        char*   v7,
-                        char*   v8,
-                        char*   v9,
-                        char*   v10,
-                        char*   v11,
-                        char*   v12,
+static void alterServer(DCB* dcb, Server* server,
+                        char*   v1, char*   v2, char*   v3,
+                        char*   v4, char*   v5, char*   v6,
+                        char*   v7, char*   v8, char*   v9,
+                        char*   v10, char*   v11, char*   v12,
                         char*   v13)
 {
     char* values[] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13};
@@ -2008,7 +1984,7 @@ static unsigned long convert_arg(char* arg, int arg_type)
 
     case ARG_TYPE_SERVER:
         fix_object_name(arg);
-        rval = (unsigned long)server_find_by_unique_name(arg);
+        rval = (unsigned long)Server::find_by_unique_name(arg);
         break;
 
     case ARG_TYPE_SESSION:
@@ -2541,7 +2517,7 @@ static void restart_service(DCB* dcb, SERVICE* service)
  * @param server        The server to set the status of
  * @param bit           String representation of the status bit
  */
-static void set_server(DCB* dcb, SERVER* server, char* bit)
+static void set_server(DCB* dcb, Server* server, char* bit)
 {
     unsigned int bitvalue;
 
@@ -2567,7 +2543,7 @@ static void set_server(DCB* dcb, SERVER* server, char* bit)
  * @param server        The server to set the status of
  * @param bit           String representation of the status bit
  */
-static void clear_server(DCB* dcb, SERVER* server, char* bit)
+static void clear_server(DCB* dcb, Server* server, char* bit)
 {
     unsigned int bitvalue;
 
