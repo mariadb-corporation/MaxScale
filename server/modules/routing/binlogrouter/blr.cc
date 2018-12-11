@@ -50,6 +50,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 #include <maxscale/paths.h>
+#include "../../../core/internal/server.hh"
 
 /* The router entry points */
 static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
@@ -810,7 +811,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             {"authenticator", "MySQLBackendAuth"}
         }, config_server_params);
 
-        SERVER* server = server_alloc("binlog_router_master_host", p.params());
+        Server* server = Server::server_alloc("binlog_router_master_host", p.params());
 
         if (server == NULL)
         {

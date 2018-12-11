@@ -32,11 +32,8 @@ class Server : public SERVER
 {
 public:
     Server()
-        : m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
-    {
-    }
-
-    ~Server() override
+        : SERVER()
+        , m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
     {
     }
 
@@ -76,6 +73,20 @@ public:
      * @param dcb Dcb to print to
      */
     void print_to_dcb(DCB* dcb) const;
+
+    /**
+     * @brief Allocate a new server
+     *
+     * This will create a new server that represents a backend server that services
+     * can use. This function will add the server to the running configuration but
+     * will not persist the changes.
+     *
+     * @param name   Unique server name
+     * @param params Parameters for the server
+     *
+     * @return       The newly created server or NULL if an error occurred
+     */
+    static Server* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params);
 
     /**
      * @brief Find a server with the specified name

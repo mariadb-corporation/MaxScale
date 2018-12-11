@@ -40,6 +40,7 @@
 #include <maxscale/utils.hh>
 #include "../../../../core/internal/modules.hh"
 #include "../../../../core/internal/config.hh"
+#include "../../../../core/internal/server.hh"
 
 #include <maxscale/protocol/mysql.hh>
 #include <ini.h>
@@ -142,7 +143,7 @@ int main(int argc, char** argv)
         {"authenticator", "MySQLBackendAuth"}
     }, config_server_params);
 
-    SERVER* server = server_alloc("binlog_router_master_host", p.params());
+    Server* server = Server::server_alloc("binlog_router_master_host", p.params());
     if (server == NULL)
     {
         printf("Failed to allocate 'server' object\n");

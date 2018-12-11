@@ -39,6 +39,7 @@
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/query_classifier.hh"
+#include "internal/server.hh"
 
 typedef std::set<std::string>    StringSet;
 typedef std::vector<std::string> StringVector;
@@ -241,7 +242,7 @@ bool runtime_create_server(const char* name,
                 config_replace_param(&ctx, "authenticator", authenticator);
             }
 
-            SERVER* server = server_alloc(name, ctx.parameters);
+            Server* server = Server::server_alloc(name, ctx.parameters);
 
             if (server && server_serialize(server))
             {

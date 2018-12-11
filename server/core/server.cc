@@ -63,9 +63,6 @@ using maxscale::RoutingWorker;
 using std::string;
 using Guard = std::lock_guard<std::mutex>;
 
-/** The latin1 charset */
-#define SERVER_DEFAULT_CHARSET 0x08
-
 const char CN_MONITORPW[] = "monitorpw";
 const char CN_MONITORUSER[] = "monitoruser";
 const char CN_PERSISTMAXTIME[] = "persistmaxtime";
@@ -81,7 +78,7 @@ static const char WRN_REQUEST_OVERWRITTEN[] = "Previous maintenance request was 
 static void server_parameter_free(SERVER_PARAM* tofree);
 
 
-SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
+Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 {
     const char* monuser = config_get_string(params, CN_MONITORUSER);
     const char* monpw = config_get_string(params, CN_MONITORPW);
@@ -156,32 +153,15 @@ SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->extra_port = config_get_integer(params, CN_EXTRA_PORT);
     server->protocol = my_protocol;
     server->authenticator = my_authenticator;
-    server->monuser[0] = '\0';
-    server->monpw[0] = '\0';
     server->persistpoolmax = config_get_integer(params, CN_PERSISTPOOLMAX);
     server->persistmaxtime = config_get_integer(params, CN_PERSISTMAXTIME);
     server->proxy_protocol = config_get_bool(params, CN_PROXY_PROTOCOL);
-    server->parameters = NULL;
     server->is_active = true;
     server->auth_instance = auth_instance;
     server->server_ssl = ssl;
     server->persistent = persistent;
-    server->charset = SERVER_DEFAULT_CHARSET;
-    memset(&server->stats, 0, sizeof(server->stats));
-    server->persistmax = 0;
     server->last_event = SERVER_UP_EVENT;
-    server->triggered_at = 0;
     server->status = SERVER_RUNNING;
-    server->maint_request = MAINTENANCE_NO_CHANGE;
-    memset(server->version_string, '\0', MAX_SERVER_VERSION_LEN);
-    server->version = 0;
-    server->server_type = SERVER_TYPE_MARIADB;
-    server->node_id = -1;
-    server->rlag = MXS_RLAG_UNDEFINED;
-    server->node_ts = 0;
-    server->master_id = -1;
-    server->master_err_is_logged = false;
-    server->warn_ssl_not_enabled = true;
 
     if (*monuser && *monpw)
     {
@@ -1064,9 +1044,9 @@ void server_set_version_string(SERVER* server, const char* version_string)
     // Strictly speaking, this is not fool-proof as writes may not appear in order to the reader.
     size_t old_len = strlen(server->version_string);
     size_t new_len = strlen(version_string);
-    if (new_len >= MAX_SERVER_VERSION_LEN)
+    if (new_len >= SERVER::MAX_VERSION_LEN)
     {
-        new_len = MAX_SERVER_VERSION_LEN - 1;
+        new_len = SERVER::MAX_VERSION_LEN - 1;
     }
 
     if (new_len < old_len)

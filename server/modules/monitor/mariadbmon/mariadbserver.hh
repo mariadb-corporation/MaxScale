@@ -126,7 +126,7 @@ public:
 
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
      * only written to once. */
-    int m_replication_lag = MXS_RLAG_UNDEFINED;
+    int m_replication_lag = SERVER::RLAG_UNDEFINED;
     /* Copy of same field in monitor object. TODO: pass in struct when adding concurrent updating. */
     bool m_assume_unique_hostnames = true;
     /* Has anything that could affect replication topology changed this iteration?

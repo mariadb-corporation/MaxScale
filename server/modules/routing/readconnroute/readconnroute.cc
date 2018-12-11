@@ -481,7 +481,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
 /** Log routing failure due to closed session */
 static void log_closed_session(mxs_mysql_cmd_t mysql_command, SERVER_REF* ref)
 {
-    char msg[MAX_SERVER_ADDRESS_LEN + 200] = "";    // Extra space for message
+    char msg[SERVER::MAX_ADDRESS_LEN + 200] = "";    // Extra space for message
 
     if (server_is_down(ref->server))
     {

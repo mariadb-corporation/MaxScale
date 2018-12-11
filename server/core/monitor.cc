@@ -1133,9 +1133,8 @@ static void mon_append_node_names(MXS_MONITOR* mon,
     MXS_MONITORED_SERVER* servers = mon->monitored_servers;
 
     const char* separator = "";
-    char arr[MAX_SERVER_MONUSER_LEN
-             + MAX_SERVER_MONPW_LEN
-             + MAX_SERVER_ADDRESS_LEN + 64];    // Some extra space for port and separator
+    // Some extra space for port and separator
+    char arr[SERVER::MAX_MONUSER_LEN + SERVER::MAX_MONPW_LEN + SERVER::MAX_ADDRESS_LEN + 64];
     dest[0] = '\0';
 
     while (servers && len)

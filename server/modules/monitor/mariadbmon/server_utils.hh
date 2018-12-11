@@ -170,29 +170,27 @@ public:
         SLAVE_IO_NO,
     };
 
-    std::string owning_server;                              /* Server name of the owner */
-    bool        seen_connected = false;                     /* Has this slave connection been seen connected,
-                                                             * meaning that the master server id
-                                                             * is correct? */
-    std::string name;                                       /* Slave connection name. Must be unique for
-                                                             * the server.*/
-    int64_t master_server_id = SERVER_ID_UNKNOWN;           /* The master's server_id value. Valid ids are
-                                                             * 32bit unsigned. -1 is unread/error. */
-    std::string        master_host;                         /* Master server host name. */
-    int                master_port = PORT_UNKNOWN;          /* Master server port. */
-    slave_io_running_t slave_io_running = SLAVE_IO_NO;      /* Slave I/O thread running state: * "Yes",
-                                                             * "Connecting" or "No" */
-    bool slave_sql_running = false;                         /* Slave SQL thread running state, true if "Yes"
-                                                             * */
-    GtidList    gtid_io_pos;                                /* Gtid I/O position of the slave thread. */
-    std::string last_error;                                 /* Last IO or SQL error encountered. */
-    int         seconds_behind_master = MXS_RLAG_UNDEFINED; /* How much behind the slave is. */
-    int64_t     received_heartbeats = 0;                    /* How many heartbeats the connection has received
-                                                             * */
+    std::string owning_server;                          /* Server name of the owner */
+    bool        seen_connected = false;                 /* Has this slave connection been seen connected,
+                                                         * meaning that the master server id is correct? */
+    std::string name;                                   /* Slave connection name. Must be unique for
+                                                         * the server.*/
+    int64_t master_server_id = SERVER_ID_UNKNOWN;       /* The master's server_id value. Valid ids are
+                                                         * 32bit unsigned. -1 is unread/error. */
+    std::string        master_host;                     /* Master server host name. */
+    int                master_port = PORT_UNKNOWN;      /* Master server port. */
+    slave_io_running_t slave_io_running = SLAVE_IO_NO;  /* Slave I/O thread running state: * "Yes",
+                                                         * "Connecting" or "No" */
+    bool        slave_sql_running = false;              /* Slave SQL thread running state, true if "Yes" */
+    GtidList    gtid_io_pos;                            /* Gtid I/O position of the slave thread. */
+    std::string last_error;                             /* Last IO or SQL error encountered. */
+    int64_t     received_heartbeats = 0;                /* How many heartbeats the connection has
+                                                         * received */
+
+    int seconds_behind_master = SERVER::RLAG_UNDEFINED;     /* How much behind the slave is. */
 
     /* Time of the latest gtid event or heartbeat the slave connection has received, timed by the monitor. */
     maxbase::Clock::time_point last_data_time = maxbase::Clock::now();
-
 
     std::string to_string() const;
     json_t*     to_json() const;

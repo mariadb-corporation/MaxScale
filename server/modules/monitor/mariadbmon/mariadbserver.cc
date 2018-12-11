@@ -330,7 +330,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 
         auto rlag = result->get_uint(i_seconds_behind_master);
         // If slave connection is stopped, the value given by the backend is null -> -1.
-        new_row.seconds_behind_master = (rlag < 0) ? MXS_RLAG_UNDEFINED :
+        new_row.seconds_behind_master = (rlag < 0) ? SERVER::RLAG_UNDEFINED :
             (rlag > INT_MAX) ? INT_MAX : rlag;
 
         if (all_slaves_status)

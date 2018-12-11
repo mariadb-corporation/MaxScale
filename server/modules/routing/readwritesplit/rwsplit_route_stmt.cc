@@ -551,7 +551,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
  */
 static inline bool rpl_lag_is_ok(RWBackend* backend, int max_rlag)
 {
-    return max_rlag == MXS_RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
+    return max_rlag == SERVER::RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
 }
 
 RWBackend* RWSplitSession::get_hinted_backend(char* name)
@@ -724,7 +724,7 @@ int RWSplitSession::get_max_replication_lag()
 RWBackend* RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t route_target)
 {
     char* named_server = NULL;
-    int rlag_max = MXS_RLAG_UNDEFINED;
+    int rlag_max = SERVER::RLAG_UNDEFINED;
 
     HINT* hint = querybuf->hint;
 
@@ -756,7 +756,7 @@ RWBackend* RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
         hint = hint->next;
     }   /*< while */
 
-    if (rlag_max == MXS_RLAG_UNDEFINED)     /*< no rlag max hint, use config */
+    if (rlag_max == SERVER::RLAG_UNDEFINED)     /*< no rlag max hint, use config */
     {
         rlag_max = get_max_replication_lag();
     }
@@ -861,7 +861,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
                || old_master->dcb()->role == DCB::Role::BACKEND);
     mxb_assert(!curr_master || !curr_master->in_use()
                || curr_master->dcb()->role == DCB::Role::BACKEND);
-    char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100];      // Extra space for error message
+    char errmsg[SERVER::MAX_ADDRESS_LEN * 2 + 100];      // Extra space for error message
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout)
     {
@@ -959,7 +959,7 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
  */
 bool RWSplitSession::handle_master_is_target(RWBackend** dest)
 {
-    RWBackend* target = get_target_backend(BE_MASTER, NULL, MXS_RLAG_UNDEFINED);
+    RWBackend* target = get_target_backend(BE_MASTER, NULL, SERVER::RLAG_UNDEFINED);
     bool succp = true;
 
     if (should_replace_master(target))

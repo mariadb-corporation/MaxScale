@@ -63,6 +63,7 @@
 #include "internal/filter.hh"
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
+#include "internal/server.hh"
 #include "internal/service.hh"
 
 using std::set;
@@ -3717,7 +3718,7 @@ int create_new_server(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    if (SERVER* server = server_alloc(obj->object, obj->parameters))
+    if (Server* server = Server::server_alloc(obj->object, obj->parameters))
     {
         const char* disk_space_threshold = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
         if (disk_space_threshold)

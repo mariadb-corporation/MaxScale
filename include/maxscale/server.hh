@@ -19,12 +19,6 @@
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
 
-#define MAX_SERVER_ADDRESS_LEN 1024
-#define MAX_SERVER_MONUSER_LEN 1024
-#define MAX_SERVER_MONPW_LEN   1024
-#define MAX_SERVER_VERSION_LEN 256
-#define MAX_NUM_SLAVES         128  /**< Maximum number of slaves under a single server*/
-
 /**
  * Server configuration parameters names
  */
@@ -43,9 +37,6 @@ const int MAINTENANCE_ON = 100;
 const int MAINTENANCE_FLAG_NOCHECK = 0;
 const int MAINTENANCE_FLAG_CHECK = -1;
 
-// Default replication lag value
-const int MXS_RLAG_UNDEFINED = -1;
-
 /* Custom server parameters. These can be used by modules for e.g. weighting routing decisions. */
 struct SERVER_PARAM
 {
@@ -58,13 +49,13 @@ struct SERVER_PARAM
 /* Server connection and usage statistics */
 struct SERVER_STATS
 {
-    int      n_connections; /**< Number of connections */
-    int      n_current;     /**< Current connections */
-    int      n_current_ops; /**< Current active operations */
-    int      n_persistent;  /**< Current persistent pool */
-    uint64_t n_new_conn;    /**< Times the current pool was empty */
-    uint64_t n_from_pool;   /**< Times when a connection was available from the pool */
-    uint64_t packets;       /**< Number of packets routed to this server */
+    int      n_connections = 0; /**< Number of connections */
+    int      n_current = 0;     /**< Current connections */
+    int      n_current_ops = 0; /**< Current active operations */
+    int      n_persistent = 0;  /**< Current persistent pool */
+    uint64_t n_new_conn = 0;    /**< Times the current pool was empty */
+    uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
+    uint64_t packets = 0;       /**< Number of packets routed to this server */
 };
 
 /* Server version */
@@ -106,56 +97,63 @@ static uint64_t server_encode_version(const SERVER_VERSION* server_version)
 class SERVER
 {
 public:
-    // Base settings
-    char*          name;                            /**< Server config name */
-    char           address[MAX_SERVER_ADDRESS_LEN]; /**< Server hostname/IP-address */
-    unsigned short port;                            /**< Server port */
-    unsigned short extra_port;                      /**< Server extra_port */
-    char*          protocol;                        /**< Backend protocol module name */
-    char*          authenticator;                   /**< Authenticator module name */
-    // Other settings
-    char monuser[MAX_SERVER_MONUSER_LEN];   /**< Monitor username, overrides monitor setting */
-    char monpw[MAX_SERVER_MONPW_LEN];       /**< Monitor password, overrides monitor setting  */
-    long persistpoolmax;                    /**< Maximum size of persistent connections pool */
-    long persistmaxtime;                    /**< Maximum number of seconds connection can live */
-    bool proxy_protocol;                    /**< Send proxy-protocol header to backends when connecting
-                                             *   routing sessions. */
-    SERVER_PARAM* parameters;               /**< Additional custom parameters which may affect routing
-                                             *   decisions. */
-    // Base variables
-    bool          is_active;        /**< Server is active and has not been "destroyed" */
-    void*         auth_instance;    /**< Authenticator instance data */
-    SSL_LISTENER* server_ssl;       /**< SSL data */
-    DCB**         persistent;       /**< List of unused persistent connections to the server */
-    uint8_t       charset;          /**< Server character set. Read from backend and sent to client. */
-    // Statistics and events
-    SERVER_STATS stats;         /**< The server statistics, e.g. number of connections */
-    int          persistmax;    /**< Maximum pool size actually achieved since startup */
-    int          last_event;    /**< The last event that occurred on this server */
-    int64_t      triggered_at;  /**< Time when the last event was triggered */
-    // Status descriptors. Updated automatically by a monitor or manually by the admin
-    uint64_t status;                                        /**< Current status flag bitmap */
-    int      maint_request;                                 /**< Is admin requesting Maintenance=ON/OFF on the
-                                                             * server? */
-    char          version_string[MAX_SERVER_VERSION_LEN];   /**< Server version string as given by backend */
-    uint64_t      version;                                  /**< Server version numeric representation */
-    server_type_t server_type;                              /**< Server type (MariaDB or MySQL), deduced from
-                                                             * version string */
-    long node_id;                                           /**< Node id, server_id for M/S or local_index for
-                                                             * Galera */
-    int rlag;                                               /**< Replication Lag for Master/Slave replication
-                                                             * */
-    unsigned long node_ts;                                  /**< Last timestamp set from M/S monitor module */
-    long          master_id;                                /**< Master server id of this node */
-    // Misc fields
-    bool master_err_is_logged;                  /**< If node failed, this indicates whether it is logged. Only
-                                                 * used
-                                                 *   by rwsplit. TODO: Move to rwsplit */
-    bool                   warn_ssl_not_enabled;/**< SSL not used for an SSL enabled server */
+    static const int MAX_ADDRESS_LEN = 1024;
+    static const int MAX_MONUSER_LEN = 1024;
+    static const int MAX_MONPW_LEN = 1024;
+    static const int MAX_VERSION_LEN = 256;
+    static const int RLAG_UNDEFINED = -1;   // Default replication lag value
 
-    virtual ~SERVER()
-    {
-    }
+    // Base settings
+    char* name = nullptr;           /**< Server config name */
+    char* protocol = nullptr;       /**< Backend protocol module name */
+    char* authenticator = nullptr;  /**< Authenticator module name */
+
+    char           address[MAX_ADDRESS_LEN] = {'\0'};   /**< Server hostname/IP-address */
+    unsigned short port = 0;                            /**< Server port */
+    unsigned short extra_port = 0;                      /**< Alternative monitor port if normal port fails */
+
+    // Other settings
+    char monuser[MAX_MONUSER_LEN] = {'\0'};     /**< Monitor username, overrides monitor setting */
+    char monpw[MAX_MONPW_LEN] = {'\0'};         /**< Monitor password, overrides monitor setting  */
+    long persistpoolmax = 0;                    /**< Maximum size of persistent connections pool */
+    long persistmaxtime = 0;                    /**< Maximum number of seconds connection can live */
+    bool proxy_protocol = false;                /**< Send proxy-protocol header to backends when connecting
+                                                 *   routing sessions. */
+    SERVER_PARAM* parameters = nullptr;         /**< Additional custom parameters which may affect routing
+                                                 *   decisions. */
+    // Base variables
+    bool          is_active = false;        /**< Server is active and has not been "destroyed" */
+    void*         auth_instance = nullptr;  /**< Authenticator instance data */
+    SSL_LISTENER* server_ssl = nullptr;     /**< SSL data */
+    DCB**         persistent = nullptr;     /**< List of unused persistent connections to the server */
+    uint8_t       charset = DEFAULT_CHARSET;/**< Character set. Read from backend and sent to client. */
+
+    // Statistics and events
+    SERVER_STATS stats;             /**< The server statistics, e.g. number of connections */
+    int          persistmax = 0;    /**< Maximum pool size actually achieved since startup */
+    int          last_event = 0;    /**< The last event that occurred on this server */
+    int64_t      triggered_at = 0;  /**< Time when the last event was triggered */
+
+    // Status descriptors. Updated automatically by a monitor or manually by the admin
+    uint64_t status = 0;                                    /**< Current status flag bitmap */
+    int      maint_request = MAINTENANCE_NO_CHANGE;         /**< Is admin requesting Maintenance=ON/OFF on the
+                                                             * server? */
+    char          version_string[MAX_VERSION_LEN] = {'\0'}; /**< Server version string as given by backend */
+    uint64_t      version = 0;                              /**< Server version numeric representation */
+    server_type_t server_type = SERVER_TYPE_MARIADB;        /**< Server type (MariaDB or MySQL), deduced from
+                                                             * version string */
+
+    long          node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
+    long          master_id = -1;       /**< Master server id of this node */
+    int           rlag = RLAG_UNDEFINED;/**< Replication Lag for Master/Slave replication */
+    unsigned long node_ts = 0;          /**< Last timestamp set from M/S monitor module */
+
+    // Misc fields
+    bool master_err_is_logged = false;  /**< If node failed, this indicates whether it is logged. Only
+                                         * used by rwsplit. TODO: Move to rwsplit */
+    bool warn_ssl_not_enabled = true;   /**< SSL not used for an SSL enabled server */
+
+    virtual ~SERVER() = default;
 
     /**
      * Check if server has disk space threshold settings.
@@ -177,6 +175,13 @@ public:
      * @param new_limits New limits
      */
     virtual void set_disk_space_limits(const MxsDiskSpaceThreshold& new_limits) = 0;
+
+protected:
+    SERVER()
+    {
+    }
+private:
+    static const int DEFAULT_CHARSET = 0x08;    /** The latin1 charset */
 };
 
 /**
@@ -373,20 +378,6 @@ inline bool server_is_disk_space_exhausted(const SERVER* server)
 }
 
 /**
- * @brief Allocate a new server
- *
- * This will create a new server that represents a backend server that services
- * can use. This function will add the server to the running configuration but
- * will not persist the changes.
- *
- * @param name   Unique server name
- * @param params Parameters for the server
- *
- * @return       The newly created server or NULL if an error occurred
- */
-extern SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params);
-
-/**
  * @brief Serialize a server to a file
  *
  * This converts @c server into an INI format file. This allows created servers
@@ -506,6 +497,6 @@ namespace maxscale
 {
 std::string server_status(uint64_t flags);
 std::string server_status(const SERVER*);
-bool server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
-bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
+bool        server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
+bool        server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
 }

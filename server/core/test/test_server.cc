@@ -57,14 +57,13 @@ static mxs::ParamList params(
  */
 static int test1()
 {
-    SERVER* server;
     int result;
     std::string status;
     using mxs::server_status;
 
     /* Server tests */
     fprintf(stderr, "testserver : creating server called MyServer");
-    server = server_alloc("uniquename", params.params());
+    Server* server = Server::server_alloc("uniquename", params.params());
     mxb_assert_message(server, "Allocating the server should not fail");
 
     char buf[120];
@@ -122,7 +121,7 @@ bool test_load_config(const char* input, SERVER* server)
             TEST(strcmp(server->authenticator, config_get_param(param, "authenticator")->value) == 0,
                  "Server authenticators differ");
             TEST(server->port == atoi(config_get_param(param, "port")->value), "Server ports differ");
-            TEST(server_alloc(obj->object, obj->parameters), "Failed to create server from loaded config");
+            TEST(Server::server_alloc(obj->object, obj->parameters), "Failed to create server from loaded config");
             duplicate_context_finish(&dcontext);
             config_context_free(obj);
         }
@@ -138,7 +137,7 @@ bool test_serialize()
     char old_config_name[] = "serialized-server.cnf.old";
     char* persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    SERVER* server = server_alloc(name, params.params());
+    Server* server = Server::server_alloc(name, params.params());
     TEST(server, "Server allocation failed");
 
     /** Make sure the files don't exist */

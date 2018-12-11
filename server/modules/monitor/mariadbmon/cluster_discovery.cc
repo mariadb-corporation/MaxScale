@@ -484,7 +484,7 @@ void MariaDBMonitor::assign_server_roles()
     for (auto server : m_servers)
     {
         server->clear_status(remove_bits);
-        server->m_replication_lag = MXS_RLAG_UNDEFINED;
+        server->m_replication_lag = SERVER::RLAG_UNDEFINED;
     }
 
     // Check the the master node, label it as the [Master] if
@@ -636,8 +636,8 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
                         // leading to the master or a relay.
                         int curr_rlag = slave->m_replication_lag;
                         int new_rlag = sstatus->seconds_behind_master;
-                        if (new_rlag != MXS_RLAG_UNDEFINED
-                            && (curr_rlag == MXS_RLAG_UNDEFINED || new_rlag < curr_rlag))
+                        if (new_rlag != SERVER::RLAG_UNDEFINED
+                            && (curr_rlag == SERVER::RLAG_UNDEFINED || new_rlag < curr_rlag))
                         {
                             slave->m_replication_lag = new_rlag;
                         }
