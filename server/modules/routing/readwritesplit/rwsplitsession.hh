@@ -130,46 +130,6 @@ public:
         return m_qc;
     }
 
-    // TODO: Make member variables private
-    mxs::SRWBackends m_backends;                /**< Mem. management, not for use outside RWSplitSession */
-    mxs::PRWBackends m_raw_backends;            /**< Backend pointers for use in interfaces . */
-    mxs::RWBackend*  m_current_master;          /**< Current master server */
-    mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
-    mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
-    Config           m_config;                  /**< Configuration for this session */
-    int              m_nbackends;               /**< Number of backend servers (obsolete) */
-    DCB*             m_client;                  /**< The client DCB */
-    uint64_t         m_sescmd_count;            /**< Number of executed session commands */
-    int              m_expected_responses;      /**< Number of expected responses to the current
-                                                 * query */
-    GWBUF*                  m_query_queue;      /**< Queued commands waiting to be executed */
-    RWSplit*                m_router;           /**< The router instance */
-    mxs::SessionCommandList m_sescmd_list;      /**< List of executed session commands */
-    ResponseMap             m_sescmd_responses; /**< Response to each session command */
-    SlaveResponseList       m_slave_responses;  /**< Slaves that replied before the master */
-    uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
-    uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
-                                                 * command */
-    ClientHandleMap m_ps_handles;               /**< Client PS handle to internal ID mapping */
-    ExecMap         m_exec_map;                 /**< Map of COM_STMT_EXECUTE statement IDs to
-                                                 * Backends */
-    std::string          m_gtid_pos;            /**< Gtid position for causal read */
-    wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
-    uint32_t             m_next_seq;            /**< Next packet's sequence number */
-    mxs::QueryClassifier m_qc;                  /**< The query classifier. */
-    uint64_t             m_retry_duration;      /**< Total time spent retrying queries */
-    mxs::Buffer          m_current_query;       /**< Current query being executed */
-    Trx                  m_trx;                 /**< Current transaction */
-    bool                 m_is_replay_active;    /**< Whether we are actively replaying a
-                                                 * transaction */
-    bool        m_can_replay_trx;               /**< Whether the transaction can be replayed */
-    Trx         m_replayed_trx;                 /**< The transaction we are replaying */
-    mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction. */
-    Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
-    mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
-
-    otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
-
 private:
     RWSplitSession(RWSplit* instance,
                    MXS_SESSION* session,
@@ -307,6 +267,45 @@ private:
                              mxb::atomic::RELAXED);
         }
     }
+
+    mxs::SRWBackends m_backends;                /**< Mem. management, not for use outside RWSplitSession */
+    mxs::PRWBackends m_raw_backends;            /**< Backend pointers for use in interfaces . */
+    mxs::RWBackend*  m_current_master;          /**< Current master server */
+    mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
+    mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
+    Config           m_config;                  /**< Configuration for this session */
+    int              m_nbackends;               /**< Number of backend servers (obsolete) */
+    DCB*             m_client;                  /**< The client DCB */
+    uint64_t         m_sescmd_count;            /**< Number of executed session commands */
+    int              m_expected_responses;      /**< Number of expected responses to the current
+                                                 * query */
+    GWBUF*                  m_query_queue;      /**< Queued commands waiting to be executed */
+    RWSplit*                m_router;           /**< The router instance */
+    mxs::SessionCommandList m_sescmd_list;      /**< List of executed session commands */
+    ResponseMap             m_sescmd_responses; /**< Response to each session command */
+    SlaveResponseList       m_slave_responses;  /**< Slaves that replied before the master */
+    uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
+    uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
+                                                 * command */
+    ClientHandleMap m_ps_handles;               /**< Client PS handle to internal ID mapping */
+    ExecMap         m_exec_map;                 /**< Map of COM_STMT_EXECUTE statement IDs to
+                                                 * Backends */
+    std::string          m_gtid_pos;            /**< Gtid position for causal read */
+    wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
+    uint32_t             m_next_seq;            /**< Next packet's sequence number */
+    mxs::QueryClassifier m_qc;                  /**< The query classifier. */
+    uint64_t             m_retry_duration;      /**< Total time spent retrying queries */
+    mxs::Buffer          m_current_query;       /**< Current query being executed */
+    Trx                  m_trx;                 /**< Current transaction */
+    bool                 m_is_replay_active;    /**< Whether we are actively replaying a
+                                                 * transaction */
+    bool        m_can_replay_trx;               /**< Whether the transaction can be replayed */
+    Trx         m_replayed_trx;                 /**< The transaction we are replaying */
+    mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction. */
+    Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
+    mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
+
+    otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
 };
 
 /**
