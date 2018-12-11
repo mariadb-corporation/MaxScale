@@ -425,6 +425,7 @@ int main(int argc, char* argv[])
     if (rv == 0)
     {
         init_test_env(nullptr, QC_INIT_SELF);
+        set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/filter/cache/storage/storage_inmemory"));
         preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
 
         rv = run();
