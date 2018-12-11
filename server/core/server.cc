@@ -413,16 +413,9 @@ void printAllServers()
     }
 }
 
-/**
- * Print all servers to a DCB
- *
- * Designed to be called within a debugger session in order
- * to display all active servers within the gateway
- */
-void dprintAllServers(DCB* dcb)
+void Server::dprintAllServers(DCB* dcb)
 {
     Guard guard(server_lock);
-
     for (Server* server : all_servers)
     {
         if (server->is_active)
@@ -432,10 +425,7 @@ void dprintAllServers(DCB* dcb)
     }
 }
 
-/**
- * Print all servers in Json format to a DCB
- */
-void dprintAllServersJson(DCB* dcb)
+void Server::dprintAllServersJson(DCB* dcb)
 {
     json_t* all_servers_json = server_list_to_json("");
     char* dump = json_dumps(all_servers_json, JSON_INDENT(4));
@@ -481,20 +471,18 @@ static void cleanup_persistent_connections(const SERVER* server)
     RoutingWorker::execute_concurrently(task);
 }
 
-/**
- * Print server details to a DCB
- *
- * Designed to be called within a debugger session in order
- * to display all active servers within the gateway
- */
 void Server::dprintServer(DCB* dcb, const Server* srv)
 {
-    if (!server_is_active(srv))
+    srv->print_to_dcb(dcb);
+}
+
+void Server::print_to_dcb(DCB* dcb) const
+{
+    const Server* server = this;
+    if (!server_is_active(server))
     {
         return;
     }
-
-    const Server* server = srv;
 
     dcb_printf(dcb, "Server %p (%s)\n", server, server->name);
     dcb_printf(dcb, "\tServer:                              %s\n", server->address);
@@ -597,22 +585,12 @@ void Server::dprintServer(DCB* dcb, const Server* srv)
     }
 }
 
-/**
- * Diagnostic to print number of DCBs in persistent pool for a server
- *
- * @param       pdcb    DCB to print results to
- * @param       server  SERVER for which DCBs are to be printed
- */
 void Server::dprintPersistentDCBs(DCB* pdcb, const Server* server)
 {
     dcb_printf(pdcb, "Number of persistent DCBs: %d\n", server->stats.n_persistent);
 }
 
-/**
- * List all servers in a tabular form to a DCB
- *
- */
-void dListServers(DCB* dcb)
+void Server::dListServers(DCB* dcb)
 {
     Guard guard(server_lock);
     bool have_servers = std::any_of(all_servers.begin(),
@@ -1585,12 +1563,6 @@ void Server::response_time_add(double ave, int num_samples)
     m_response_time.add(ave, num_samples);
 }
 
-/**
- * @brief Find a server with the specified name
- *
- * @param name Name of the server
- * @return The server or NULL if not found
- */
 Server* Server::find_by_unique_name(const string& name)
 {
     Guard guard(server_lock);

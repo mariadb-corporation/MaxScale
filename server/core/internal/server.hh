@@ -51,9 +51,6 @@ public:
     }
 
     void response_time_add(double ave, int num_samples);
-    static Server* find_by_unique_name(const std::string& name);
-    static void dprintServer(DCB*, const Server*);
-    static void dprintPersistentDCBs(DCB*, const Server*);
 
     bool have_disk_space_limits() const override
     {
@@ -72,6 +69,56 @@ public:
         std::lock_guard<std::mutex> guard(m_settings.lock);
         m_settings.disk_space_limits = new_limits;
     }
+
+    /**
+     * Print server details to a dcb.
+     *
+     * @param dcb Dcb to print to
+     */
+    void print_to_dcb(DCB* dcb) const;
+
+    /**
+     * @brief Find a server with the specified name
+     *
+     * @param name Name of the server
+     * @return The server or NULL if not found
+     */
+    static Server* find_by_unique_name(const std::string& name);
+
+    /**
+     * Print server details to a DCB
+     *
+     * Designed to be called within a debugger session in order
+     * to display all active servers within the gateway
+     */
+    static void dprintServer(DCB*, const Server*);
+
+    /**
+     * Diagnostic to print number of DCBs in persistent pool for a server
+     *
+     * @param       pdcb    DCB to print results to
+     * @param       server  SERVER for which DCBs are to be printed
+     */
+    static void dprintPersistentDCBs(DCB*, const Server*);
+
+    /**
+     * Print all servers to a DCB
+     *
+     * Designed to be called within a debugger session in order
+     * to display all active servers within the gateway
+     */
+    static void dprintAllServers(DCB*);
+
+    /**
+     * Print all servers in Json format to a DCB
+     */
+    static void dprintAllServersJson(DCB*);
+
+    /**
+     * List all servers in a tabular form to a DCB
+     *
+     */
+    static void dListServers(DCB*);
 
     mutable std::mutex m_lock;
 

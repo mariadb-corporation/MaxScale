@@ -498,9 +498,6 @@ extern uint64_t server_get_version(const SERVER* server);
 
 extern void printServer(const SERVER*);
 extern void printAllServers();
-extern void dprintAllServers(DCB*);
-extern void dprintAllServersJson(DCB*);
-extern void dListServers(DCB*);
 
 int    server_response_time_num_samples(const SERVER* server);
 double server_response_time_average(const SERVER* server);

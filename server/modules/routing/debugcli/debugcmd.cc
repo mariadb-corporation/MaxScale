@@ -336,13 +336,13 @@ struct subcommand showoptions[] =
         {ARG_TYPE_SERVER }
     },
     {
-        "servers", 0, 0, (FN)dprintAllServers,
+        "servers", 0, 0, (FN)Server::dprintAllServers,
         "Show all servers",
         "Usage: show servers",
         {0               }
     },
     {
-        "serversjson", 0, 0, (FN)dprintAllServersJson,
+        "serversjson", 0, 0, (FN)Server::dprintAllServersJson,
         "Show all servers in JSON",
         "Usage: show serversjson",
         {0               }
@@ -494,7 +494,7 @@ struct subcommand listoptions[] =
         {0                    }
     },
     {
-        "servers", 0, 0, (FN)dListServers,
+        "servers", 0, 0, (FN)Server::dListServers,
         "List all servers",
         "Usage: list servers",
         {0                    }
