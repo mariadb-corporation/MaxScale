@@ -329,7 +329,7 @@ const MXS_MODULE_PARAM config_listener_params[] =
     {CN_SOCKET,                      MXS_MODULE_PARAM_STRING},
     {CN_AUTHENTICATOR_OPTIONS,       MXS_MODULE_PARAM_STRING,  ""},
     {CN_ADDRESS,                     MXS_MODULE_PARAM_STRING,  "::"},
-    {CN_AUTHENTICATOR,               MXS_MODULE_PARAM_STRING,  "MySQLAuth"},
+    {CN_AUTHENTICATOR,               MXS_MODULE_PARAM_STRING},
     {CN_SSL,                         MXS_MODULE_PARAM_ENUM,    "false",
      MXS_MODULE_OPT_ENUM_UNIQUE,
      ssl_values},
@@ -3884,8 +3884,8 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 
         // These two values being NULL trigger the loading of the default
         // authenticators that are specific to each protocol module
-        char* authenticator = config_get_value(obj->parameters, CN_AUTHENTICATOR);
-        char* authenticator_options = config_get_value(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
+        const char* authenticator = config_get_string(obj->parameters, CN_AUTHENTICATOR);
+        const char* authenticator_options = config_get_string(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
         int net_port = socket ? 0 : atoi(port);
 
         auto listener = Listener::create(service, obj->object, protocol, socket ? socket : address,
