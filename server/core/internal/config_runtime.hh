@@ -20,12 +20,12 @@
 
 #include <maxscale/adminusers.h>
 #include <maxscale/monitor.hh>
-#include <maxscale/server.hh>
 #include <maxscale/service.hh>
 
 #include "service.hh"
 #include "filter.hh"
 
+class Server;
 
 /**
  * @brief Log error to be returned to client
@@ -104,7 +104,7 @@ bool runtime_unlink_server(SERVER* server, const char* target);
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_server(SERVER* server, const char* key, const char* value);
+bool runtime_alter_server(Server* server, const char* key, const char* value);
 
 /**
  * @brief Enable SSL for a server
@@ -281,7 +281,7 @@ SERVER* runtime_create_server_from_json(json_t* json);
  *
  * @return True if the server was successfully modified to represent @c new_json
  */
-bool runtime_alter_server_from_json(SERVER* server, json_t* new_json);
+bool runtime_alter_server_from_json(Server* server, json_t* new_json);
 
 /**
  * @brief Alter server relationships

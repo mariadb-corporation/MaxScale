@@ -39,8 +39,6 @@ const int MAINTENANCE_ON = 100;
 const int MAINTENANCE_FLAG_NOCHECK = 0;
 const int MAINTENANCE_FLAG_CHECK = -1;
 
-struct DCB;
-
 /* Custom server parameters. These can be used by modules for e.g. weighting routing decisions. */
 struct SERVER_PARAM
 {
@@ -119,8 +117,6 @@ public:
     // Other settings
     char monuser[MAX_MONUSER_LEN] = {'\0'};     /**< Monitor username, overrides monitor setting */
     char monpw[MAX_MONPW_LEN] = {'\0'};         /**< Monitor password, overrides monitor setting  */
-    long persistpoolmax = 0;                    /**< Maximum size of persistent connections pool */
-    long persistmaxtime = 0;                    /**< Maximum number of seconds connection can live */
     bool proxy_protocol = false;                /**< Send proxy-protocol header to backends when connecting
                                                  *   routing sessions. */
     SERVER_PARAM* parameters = nullptr;         /**< Additional custom parameters which may affect routing
@@ -129,7 +125,6 @@ public:
     bool          is_active = false;        /**< Server is active and has not been "destroyed" */
     void*         auth_instance = nullptr;  /**< Authenticator instance data */
     SSL_LISTENER* server_ssl = nullptr;     /**< SSL data */
-    DCB**         persistent = nullptr;     /**< List of unused persistent connections to the server */
     uint8_t       charset = DEFAULT_CHARSET;/**< Character set. Read from backend and sent to client. */
 
     // Statistics and events
@@ -179,6 +174,13 @@ public:
      * @param new_limits New limits
      */
     virtual void set_disk_space_limits(const MxsDiskSpaceThreshold& new_limits) = 0;
+
+    /**
+     * Is persistent connection pool enabled.
+     *
+     * @return True if enabled
+     */
+    virtual bool persistent_conns_enabled() const = 0;
 
 protected:
     SERVER()
@@ -478,11 +480,6 @@ extern void    server_transfer_status(SERVER* dest_server, const SERVER* source_
 extern void    server_add_mon_user(SERVER* server, const char* user, const char* passwd);
 extern size_t  server_get_parameter(const SERVER* server, const char* name, char* out, size_t size);
 extern void    server_update_credentials(SERVER* server, const char* user, const char* passwd);
-extern DCB*    server_get_persistent(SERVER* server,
-                                     const char* user,
-                                     const char* ip,
-                                     const char* protocol,
-                                     int id);
 extern void     server_update_address(SERVER* server, const char* address);
 extern void     server_update_port(SERVER* server, unsigned short port);
 extern void     server_update_extra_port(SERVER* server, unsigned short port);

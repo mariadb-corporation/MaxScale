@@ -447,7 +447,7 @@ bool param_is_valid(const MXS_MODULE_PARAM* basic,
            || config_param_is_valid(module, key, value, NULL);
 }
 
-bool runtime_alter_server(SERVER* server, const char* key, const char* value)
+bool runtime_alter_server(Server* server, const char* key, const char* value)
 {
     if (!value[0])
     {
@@ -505,14 +505,14 @@ bool runtime_alter_server(SERVER* server, const char* key, const char* value)
     {
         if (is_valid_integer(value))
         {
-            server->persistpoolmax = atoi(value);
+            server->set_persistpoolmax(atoi(value));
         }
     }
     else if (strcmp(key, CN_PERSISTMAXTIME) == 0)
     {
         if (is_valid_integer(value))
         {
-            server->persistmaxtime = atoi(value);
+            server->set_persistmaxtime(atoi(value));
         }
     }
     else
@@ -1901,7 +1901,7 @@ bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_js
     return rval;
 }
 
-bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
+bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(server_to_json(server, ""));

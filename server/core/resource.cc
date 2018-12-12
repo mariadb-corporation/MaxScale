@@ -23,7 +23,6 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/server.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/config_runtime.hh"
@@ -33,6 +32,7 @@
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/query_classifier.hh"
+#include "internal/server.hh"
 #include "internal/service.hh"
 #include "internal/session.hh"
 
@@ -299,7 +299,7 @@ HttpResponse cb_create_server(const HttpRequest& request)
 
 HttpResponse cb_alter_server(const HttpRequest& request)
 {
-    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    auto server = Server::find_by_unique_name(request.uri_part(1));
     mxb_assert(server && request.get_json());
 
     if (runtime_alter_server_from_json(server, request.get_json()))

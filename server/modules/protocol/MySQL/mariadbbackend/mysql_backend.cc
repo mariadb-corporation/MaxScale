@@ -1234,7 +1234,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
 
             prepare_for_write(dcb, queue);
 
-            if (cmd == MXS_COM_QUIT && dcb->server->persistpoolmax)
+            if (cmd == MXS_COM_QUIT && dcb->server->persistent_conns_enabled())
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
                 gwbuf_free(queue);
@@ -1432,7 +1432,7 @@ static int backend_write_delayqueue(DCB* dcb, GWBUF* buffer)
 
     int rc = 1;
 
-    if (MYSQL_IS_COM_QUIT(((uint8_t*)GWBUF_DATA(buffer))) && dcb->server->persistpoolmax)
+    if (MYSQL_IS_COM_QUIT(((uint8_t*)GWBUF_DATA(buffer))) && dcb->server->persistent_conns_enabled())
     {
         /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
         gwbuf_free(buffer);

@@ -48,6 +48,26 @@ public:
 
     void response_time_add(double ave, int num_samples);
 
+    long persistpoolmax() const
+    {
+        return m_settings.persistpoolmax;
+    }
+
+    void set_persistpoolmax(long persistpoolmax)
+    {
+        m_settings.persistpoolmax = persistpoolmax;
+    }
+
+    long persistmaxtime() const
+    {
+        return m_settings.persistmaxtime;
+    }
+
+    void set_persistmaxtime(long persistmaxtime)
+    {
+        m_settings.persistmaxtime = persistmaxtime;
+    }
+
     bool have_disk_space_limits() const override
     {
         std::lock_guard<std::mutex> guard(m_settings.lock);
@@ -65,6 +85,24 @@ public:
         std::lock_guard<std::mutex> guard(m_settings.lock);
         m_settings.disk_space_limits = new_limits;
     }
+
+    bool persistent_conns_enabled() const override
+    {
+        return m_settings.persistpoolmax > 0;
+    }
+
+    /**
+     * Get a DCB from the persistent connection pool, if possible
+     *
+     * @param user        The name of the user needing the connection
+     * @param ip          Client IP address
+     * @param protocol    The name of the protocol needed for the connection
+     * @param id          Thread ID
+     *
+     * @return A DCB or NULL if no connection is found
+     */
+    DCB* get_persistent_dcb(const std::string& user, const std::string& ip, const std::string& protocol,
+                            int id);
 
     /**
      * Print server details to a dcb.
@@ -131,16 +169,20 @@ public:
     static void dListServers(DCB*);
 
     mutable std::mutex m_lock;
+    DCB**              persistent = nullptr; /**< List of unused persistent connections to the server */
 
 private:
     struct Settings
     {
         mutable std::mutex lock;                 /**< Protects array-like settings from concurrent access */
         MxsDiskSpaceThreshold disk_space_limits; /**< Disk space thresholds */
+
+        long persistpoolmax = 0;                 /**< Maximum size of persistent connections pool */
+        long persistmaxtime = 0;                 /**< Maximum number of seconds connection can live */
     };
+    Settings m_settings;                  /**< Server settings */
 
     maxbase::EMAverage m_response_time;   /**< Response time calculations for this server */
-    Settings m_settings;                  /**< Server settings */
 };
 
 void server_free(Server* server);

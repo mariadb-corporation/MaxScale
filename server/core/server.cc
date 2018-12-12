@@ -153,8 +153,8 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->extra_port = config_get_integer(params, CN_EXTRA_PORT);
     server->protocol = my_protocol;
     server->authenticator = my_authenticator;
-    server->persistpoolmax = config_get_integer(params, CN_PERSISTPOOLMAX);
-    server->persistmaxtime = config_get_integer(params, CN_PERSISTMAXTIME);
+    server->m_settings.persistpoolmax = config_get_integer(params, CN_PERSISTPOOLMAX);
+    server->m_settings.persistmaxtime = config_get_integer(params, CN_PERSISTMAXTIME);
     server->proxy_protocol = config_get_bool(params, CN_PROXY_PROTOCOL);
     server->is_active = true;
     server->auth_instance = auth_instance;
@@ -218,21 +218,10 @@ void server_free(Server* server)
     delete server;
 }
 
-/**
- * Get a DCB from the persistent connection pool, if possible
- *
- * @param server      The server to set the name on
- * @param user        The name of the user needing the connection
- * @param ip          Client IP address
- * @param protocol    The name of the protocol needed for the connection
- * @param id          Thread ID
- *
- * @return A DCB or NULL if no connection is found
- */
-DCB* server_get_persistent(SERVER* server, const char* user, const char* ip, const char* protocol, int id)
+DCB* Server::get_persistent_dcb(const string& user, const string& ip, const string& protocol, int id)
 {
     DCB* dcb, * previous = NULL;
-
+    Server* server = this;
     if (server->persistent[id]
         && dcb_persistent_clean_count(server->persistent[id], id, false)
         && server->persistent[id]   // Check after cleaning
@@ -245,11 +234,11 @@ DCB* server_get_persistent(SERVER* server, const char* user, const char* ip, con
         {
             if (dcb->user
                 && dcb->remote
-                && ip
+                && !ip.empty()
                 && !dcb->dcb_errhandle_called
-                && 0 == strcmp(dcb->user, user)
-                && 0 == strcmp(dcb->remote, ip)
-                && 0 == strcmp(dcb->server->protocol, protocol))
+                && user == dcb->user
+                && ip == dcb->remote
+                && protocol == dcb->server->protocol)
             {
                 if (NULL == previous)
                 {
@@ -420,7 +409,7 @@ void Server::dprintAllServersJson(DCB* dcb)
 class CleanupTask : public Worker::Task
 {
 public:
-    CleanupTask(const SERVER* server)
+    CleanupTask(const Server* server)
         : m_server(server)
     {
     }
@@ -435,7 +424,7 @@ public:
     }
 
 private:
-    const SERVER* m_server;     /**< Server to clean up */
+    const Server* m_server;     /**< Server to clean up */
 };
 
 /**
@@ -445,7 +434,7 @@ private:
  *
  * @param server Server to clean up
  */
-static void cleanup_persistent_connections(const SERVER* server)
+static void cleanup_persistent_connections(const Server* server)
 {
     CleanupTask task(server);
     RoutingWorker::execute_concurrently(task);
@@ -525,14 +514,14 @@ void Server::print_to_dcb(DCB* dcb) const
     }
     dcb_printf(dcb, "\tAdaptive avg. select time:           %s\n", ave_os.str().c_str());
 
-    if (server->persistpoolmax)
+    if (server->m_settings.persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
         cleanup_persistent_connections(server);
         dcb_printf(dcb, "\tPersistent measured pool size:       %d\n", server->stats.n_persistent);
         dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
-        dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);
-        dcb_printf(dcb, "\tPersistent max time (secs):          %ld\n", server->persistmaxtime);
+        dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->m_settings.persistpoolmax);
+        dcb_printf(dcb, "\tPersistent max time (secs):          %ld\n", server->m_settings.persistmaxtime);
         dcb_printf(dcb, "\tConnections taken from pool:         %lu\n", server->stats.n_from_pool);
         double d = (double)server->stats.n_from_pool / (double)(server->stats.n_connections
                                                                 + server->stats.n_from_pool + 1);

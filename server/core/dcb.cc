@@ -46,12 +46,12 @@
 #include <maxscale/listener.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/router.hh>
-#include <maxscale/server.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 
 #include "internal/modules.hh"
+#include "internal/server.hh"
 #include "internal/session.hh"
 
 using maxscale::RoutingWorker;
@@ -307,28 +307,25 @@ static void dcb_stop_polling_and_shutdown(DCB* dcb)
  * If successful the new dcb will be put in
  * epoll set by dcb->func.connect
  *
- * @param server        The server to connect to
+ * @param srv           The server to connect to
  * @param session       The session this connection is being made for
  * @param protocol      The protocol module to use
  * @return              The new allocated dcb or NULL if the DCB was not connected
  */
-DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
+DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
 {
     DCB* dcb;
     MXS_PROTOCOL* funcs;
     int fd;
     int rc;
     const char* user;
-
+    Server* server = static_cast<Server*>(srv);
     user = session_get_user(session);
     if (user && strlen(user))
     {
         MXS_DEBUG("Looking for persistent connection DCB user %s protocol %s", user, protocol);
-        dcb = server_get_persistent(server,
-                                    user,
-                                    session->client_dcb->remote,
-                                    protocol,
-                                    static_cast<RoutingWorker*>(session->client_dcb->owner)->id());
+        dcb = server->get_persistent_dcb(user, session->client_dcb->remote, protocol,
+                                         static_cast<RoutingWorker*>(session->client_dcb->owner)->id());
         if (dcb)
         {
             /**
@@ -1215,17 +1212,18 @@ void dcb_final_close(DCB* dcb)
 static bool dcb_maybe_add_persistent(DCB* dcb)
 {
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
+    Server* server = static_cast<Server*>(dcb->server);
     if (dcb->user != NULL
         && (dcb->func.established == NULL || dcb->func.established(dcb))
         && strlen(dcb->user)
-        && dcb->server
+        && server
         && dcb->session
         && session_valid_for_pool(dcb->session)
-        && dcb->server->persistpoolmax
-        && (dcb->server->status & SERVER_RUNNING)
+        && server->persistpoolmax()
+        && (server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
-        && dcb_persistent_clean_count(dcb, owner->id(), false) < dcb->server->persistpoolmax
-        && mxb::atomic::load(&dcb->server->stats.n_persistent) < dcb->server->persistpoolmax)
+        && dcb_persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax()
+        && mxb::atomic::load(&server->stats.n_persistent) < server->persistpoolmax())
     {
         DCB_CALLBACK* loopcallback;
         MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->user);
@@ -1250,8 +1248,8 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         dcb->delayq = NULL;
         dcb->writeq = NULL;
 
-        dcb->nextpersistent = dcb->server->persistent[owner->id()];
-        dcb->server->persistent[owner->id()] = dcb;
+        dcb->nextpersistent = server->persistent[owner->id()];
+        server->persistent[owner->id()] = dcb;
         mxb::atomic::add(&dcb->server->stats.n_persistent, 1);
         mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
         return true;
@@ -1963,7 +1961,7 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
     int count = 0;
     if (dcb && dcb->server)
     {
-        SERVER* server = dcb->server;
+        Server* server = static_cast<Server*>(dcb->server);
         DCB* previousdcb = NULL;
         DCB* persistentdcb, * nextdcb;
         DCB* disposals = NULL;
@@ -1974,10 +1972,10 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
             nextdcb = persistentdcb->nextpersistent;
             if (cleanall
                 || persistentdcb->dcb_errhandle_called
-                || count >= server->persistpoolmax
+                || count >= server->persistpoolmax()
                 || persistentdcb->server == NULL
                 || !(persistentdcb->server->status & SERVER_RUNNING)
-                || (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime)
+                || (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime())
             {
                 /* Remove from persistent pool */
                 if (previousdcb)
