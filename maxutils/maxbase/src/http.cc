@@ -15,33 +15,13 @@
 #include <algorithm>
 #include <curl/curl.h>
 #include <maxbase/assert.h>
+#include <maxbase/string.hh>
 
 using std::map;
 using std::string;
 
 namespace
 {
-
-// TODO: Remove once trim is in maxbase.
-// trim from beginning (in place)
-inline void ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-        return !std::isspace(ch);
-    }));
-}
-
-// trim from end (in place)
-inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
-
-// trim from both ends (in place)
-inline void trim(std::string &s) {
-    ltrim(s);
-    rtrim(s);
-}
 
 template<class T>
 inline void checked_curl_setopt(CURL* pCurl, CURLoption option, T value)
@@ -84,8 +64,8 @@ size_t header_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
             string key(ptr, i - ptr);
             ++i;
             string value(i, end - i);
-            trim(key);
-            trim(value);
+            mxb::trim(key);
+            mxb::trim(value);
             pHeaders->insert(std::make_pair(key, value));
         }
     }
