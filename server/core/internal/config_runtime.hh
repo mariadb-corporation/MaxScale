@@ -68,7 +68,7 @@ bool runtime_create_server(const char* name,
  * @param server Server to destroy
  * @return True if server was destroyed
  */
-bool runtime_destroy_server(SERVER* server);
+bool runtime_destroy_server(Server* server);
 
 /**
  * @brief Link a server to an object
@@ -81,7 +81,7 @@ bool runtime_destroy_server(SERVER* server);
  * @return True if the object was found and the server was linked to it, false
  * if no object matching @c target was found
  */
-bool runtime_link_server(SERVER* server, const char* target);
+bool runtime_link_server(Server* server, const char* target);
 
 /**
  * @brief Unlink a server from an object
@@ -94,7 +94,7 @@ bool runtime_link_server(SERVER* server, const char* target);
  * @return True if the object was found and the server was unlinked from it, false
  * if no object matching @c target was found
  */
-bool runtime_unlink_server(SERVER* server, const char* target);
+bool runtime_unlink_server(Server* server, const char* target);
 
 /**
  * @brief Alter server parameters
@@ -124,7 +124,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value);
  *
  * @return True if SSL was successfully enabled
  */
-bool runtime_enable_server_ssl(SERVER* server,
+bool runtime_enable_server_ssl(Server* server,
                                const char* key,
                                const char* cert,
                                const char* ca,
@@ -271,7 +271,7 @@ bool runtime_destroy_service(Service* service);
  *
  * @return Created server or NULL on error
  */
-SERVER* runtime_create_server_from_json(json_t* json);
+Server* runtime_create_server_from_json(json_t* json);
 
 /**
  * @brief Alter a server using JSON
@@ -292,7 +292,7 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json);
  *
  * @return True if the relationships were successfully modified
  */
-bool runtime_alter_server_relationships_from_json(SERVER* server, const char* type, json_t* json);
+bool runtime_alter_server_relationships_from_json(Server* server, const char* type, json_t* json);
 
 /**
  * @brief Create a new monitor from JSON

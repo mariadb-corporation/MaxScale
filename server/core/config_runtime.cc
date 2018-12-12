@@ -131,7 +131,7 @@ static std::pair<bool, MXS_CONFIG_PARAMETER*> load_defaults(const char* name,
     return {rval, params};
 }
 
-bool runtime_link_server(SERVER* server, const char* target)
+bool runtime_link_server(Server* server, const char* target)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
 
@@ -175,7 +175,7 @@ bool runtime_link_server(SERVER* server, const char* target)
     return rval;
 }
 
-bool runtime_unlink_server(SERVER* server, const char* target)
+bool runtime_unlink_server(Server* server, const char* target)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
 
@@ -272,7 +272,7 @@ bool runtime_create_server(const char* name,
     return rval;
 }
 
-bool runtime_destroy_server(SERVER* server)
+bool runtime_destroy_server(Server* server)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
@@ -358,7 +358,7 @@ static SSL_LISTENER* create_ssl(const char* name,
     return rval;
 }
 
-bool runtime_enable_server_ssl(SERVER* server,
+bool runtime_enable_server_ssl(Server* server,
                                const char* key,
                                const char* cert,
                                const char* ca,
@@ -1626,7 +1626,7 @@ static bool service_to_filter_relation_is_valid(const std::string& type, const s
     return type == CN_FILTERS && filter_find(value.c_str());
 }
 
-static bool unlink_server_from_objects(SERVER* server, StringSet& relations)
+static bool unlink_server_from_objects(Server* server, StringSet& relations)
 {
     bool rval = true;
 
@@ -1641,7 +1641,7 @@ static bool unlink_server_from_objects(SERVER* server, StringSet& relations)
     return rval;
 }
 
-static bool link_server_to_objects(SERVER* server, StringSet& relations)
+static bool link_server_to_objects(Server* server, StringSet& relations)
 {
     bool rval = true;
 
@@ -1735,7 +1735,7 @@ static bool validate_ssl_json(json_t* params, object_type type)
     return rval;
 }
 
-static bool process_ssl_parameters(SERVER* server, json_t* params)
+static bool process_ssl_parameters(Server* server, json_t* params)
 {
     mxb_assert(server->server_ssl == NULL);
     bool rval = true;
@@ -1785,9 +1785,9 @@ static bool process_ssl_parameters(SERVER* server, json_t* params)
     return rval;
 }
 
-SERVER* runtime_create_server_from_json(json_t* json)
+Server* runtime_create_server_from_json(json_t* json)
 {
-    SERVER* rval = NULL;
+    Server* rval = NULL;
 
     if (is_valid_resource_body(json)
         && server_contains_required_fields(json))
@@ -1812,12 +1812,11 @@ SERVER* runtime_create_server_from_json(json_t* json)
         {
             if (runtime_create_server(name, address, port.c_str(), protocol, authenticator))
             {
-                rval = server_find_by_unique_name(name);
+                rval = Server::find_by_unique_name(name);
                 mxb_assert(rval);
                 json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
 
-                if (!process_ssl_parameters(rval, param)
-                    || !link_server_to_objects(rval, relations))
+                if (!process_ssl_parameters(rval, param) || !link_server_to_objects(rval, relations))
                 {
                     runtime_destroy_server(rval);
                     rval = NULL;
@@ -1833,7 +1832,7 @@ SERVER* runtime_create_server_from_json(json_t* json)
     return rval;
 }
 
-bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_json)
+bool server_to_object_relations(Server* server, json_t* old_json, json_t* new_json)
 {
     if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES) == NULL
         && mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS) == NULL)
@@ -1961,7 +1960,7 @@ static bool is_valid_relationship_body(json_t* json)
     return rval;
 }
 
-bool runtime_alter_server_relationships_from_json(SERVER* server, const char* type, json_t* json)
+bool runtime_alter_server_relationships_from_json(Server* server, const char* type, json_t* json)
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(server_to_json(server, ""));
@@ -2076,7 +2075,7 @@ static bool unlink_object_from_servers(const char* target, StringSet& relations)
 
     for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
     {
-        SERVER* server = server_find_by_unique_name(it->c_str());
+        auto server = Server::find_by_unique_name(*it);
 
         if (!server || !runtime_unlink_server(server, target))
         {
@@ -2094,7 +2093,7 @@ static bool link_object_to_servers(const char* target, StringSet& relations)
 
     for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
     {
-        SERVER* server = server_find_by_unique_name(it->c_str());
+        auto server = Server::find_by_unique_name(*it);
 
         if (!server || !runtime_link_server(server, target))
         {

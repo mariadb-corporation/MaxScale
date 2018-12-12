@@ -312,7 +312,7 @@ HttpResponse cb_alter_server(const HttpRequest& request)
 
 HttpResponse do_alter_server_relationship(const HttpRequest& request, const char* type)
 {
-    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    auto server = Server::find_by_unique_name(request.uri_part(1));
     mxb_assert(server && request.get_json());
 
     if (runtime_alter_server_relationships_from_json(server, type, request.get_json()))
@@ -473,7 +473,7 @@ HttpResponse cb_alter_qc(const HttpRequest& request)
 
 HttpResponse cb_delete_server(const HttpRequest& request)
 {
-    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    auto server = Server::find_by_unique_name(request.uri_part(1).c_str());
     mxb_assert(server);
 
     if (runtime_destroy_server(server))
