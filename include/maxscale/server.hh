@@ -15,9 +15,11 @@
 #include <maxscale/ccdefs.hh>
 
 #include <string>
-#include <maxbase/jansson.h>
-#include <maxscale/config.hh>
-#include <maxscale/dcb.hh>
+#include <maxscale/ssl.h>
+#include <unordered_map>
+
+// A mapping from a path to a percentage, e.g.: "/disk" -> 80.
+typedef std::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
 
 /**
  * Server configuration parameters names
@@ -36,6 +38,8 @@ const int MAINTENANCE_NO_CHANGE = 0;
 const int MAINTENANCE_ON = 100;
 const int MAINTENANCE_FLAG_NOCHECK = 0;
 const int MAINTENANCE_FLAG_CHECK = -1;
+
+struct DCB;
 
 /* Custom server parameters. These can be used by modules for e.g. weighting routing decisions. */
 struct SERVER_PARAM

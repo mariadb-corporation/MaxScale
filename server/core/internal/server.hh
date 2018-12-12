@@ -19,11 +19,10 @@
 #include <maxbase/ccdefs.hh>
 
 #include <mutex>
-
 #include <maxbase/average.hh>
+#include <maxscale/config.hh>
 #include <maxscale/server.hh>
 #include <maxscale/resultset.hh>
-#include <maxscale/routingworker.hh>
 
 std::unique_ptr<ResultSet> serverGetList();
 

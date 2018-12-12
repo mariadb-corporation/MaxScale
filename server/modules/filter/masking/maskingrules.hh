@@ -20,7 +20,7 @@
 
 #include <maxbase/jansson.h>
 #include <maxscale/pcre2.h>
-
+#include <maxscale/queryclassifier.hh>
 #include "mysql.hh"
 
 /**

@@ -20,9 +20,6 @@
 
 #include <unordered_map>
 #include <string>
-// A mapping from a path to a percentage, e.g.: "/disk" -> 80.
-typedef std::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
-
 #include <limits.h>
 #include <openssl/sha.h>
 #include <sys/utsname.h>
@@ -32,6 +29,7 @@ typedef std::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
 #include <maxscale/modinfo.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/query_classifier.h>
+#include <maxscale/server.hh>
 
 class SERVICE;
 
