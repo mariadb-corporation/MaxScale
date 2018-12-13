@@ -1319,16 +1319,16 @@ static void service_calculate_weights(SERVICE* service)
                     " and will be removed in a later version of MaxScale.",
                     weightby);
 
-        char buf[50];   // Enough to hold most numbers
         /** Service has a weighting parameter and at least one server */
         double total {0};
 
         /** Calculate total weight */
         for (SERVER_REF* server = service->dbref; server; server = server->next)
         {
-            if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
+            string buf = server->server->get_custom_parameter(weightby);
+            if (!buf.empty())
             {
-                long w = atol(buf);
+                long w = atol(buf.c_str());
                 if (w > 0)
                 {
                     total += w;
@@ -1348,9 +1348,10 @@ static void service_calculate_weights(SERVICE* service)
             /** Calculate the relative weight of the servers */
             for (SERVER_REF* server = service->dbref; server; server = server->next)
             {
-                if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
+                string buf = server->server->get_custom_parameter(weightby);
+                if (!buf.empty())
                 {
-                    long config_weight = atol(buf);
+                    long config_weight = atol(buf.c_str());
                     if (config_weight <= 0)
                     {
                         MXS_WARNING("Weighting parameter '%s' is set to %ld for server '%s'."

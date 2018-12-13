@@ -548,7 +548,7 @@ HttpResponse cb_all_servers(const HttpRequest& request)
 
 HttpResponse cb_get_server(const HttpRequest& request)
 {
-    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    auto server = Server::find_by_unique_name(request.uri_part(1));
     mxb_assert(server);
     return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
 }

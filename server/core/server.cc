@@ -75,8 +75,6 @@ static const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the ma
                                         "set/cleared manually. Status was not modified.";
 static const char WRN_REQUEST_OVERWRITTEN[] = "Previous maintenance request was not yet read by the monitor "
                                               "and was overwritten.";
-static void server_parameter_free(SERVER_PARAM* tofree);
-
 
 Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 {
@@ -170,7 +168,11 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 
     for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
     {
-        server_set_parameter(server, p->name, p->value);
+        server->m_settings.all_parameters.push_back({p->name, p->value});
+        if (server->is_custom_parameter(p->name))
+        {
+            server->set_parameter(p->name, p->value);
+        }
     }
 
     Guard guard(server_lock);
@@ -202,7 +204,6 @@ void server_free(Server* server)
     MXS_FREE(server->protocol);
     MXS_FREE(server->name);
     MXS_FREE(server->authenticator);
-    server_parameter_free(server->parameters);
 
     if (server->persistent)
     {
@@ -482,20 +483,14 @@ void Server::print_to_dcb(DCB* dcb) const
                    "\tLast Repl Heartbeat:                 %s",
                    asctime_r(localtime_r((time_t*)(&server->node_ts), &result), buf));
     }
-    SERVER_PARAM* param;
-    if ((param = server->parameters))
+
+    if (!server->m_settings.all_parameters.empty())
     {
         dcb_printf(dcb, "\tServer Parameters:\n");
-        while (param)
+        for (const auto& elem : server->m_settings.all_parameters)
         {
-            if (param->active)
-            {
-                dcb_printf(dcb,
-                           "\t                                       %s\t%s\n",
-                           param->name,
-                           param->value);
-            }
-            param = param->next;
+            dcb_printf(dcb, "\t                                       %s\t%s\n",
+                       elem.name.c_str(), elem.value.c_str());
         }
     }
     dcb_printf(dcb, "\tNumber of connections:               %d\n", server->stats.n_connections);
@@ -789,128 +784,37 @@ void server_update_credentials(SERVER* server, const char* user, const char* pas
     }
 }
 
-static SERVER_PARAM* allocate_parameter(const char* name, const char* value)
+void Server::set_parameter(const string& name, const string& value)
 {
-    char* my_name = MXS_STRDUP(name);
-    char* my_value = MXS_STRDUP(value);
-
-    SERVER_PARAM* param = (SERVER_PARAM*)MXS_MALLOC(sizeof(SERVER_PARAM));
-
-    if (!my_name || !my_value || !param)
+    // Set/add the parameter in both containers
+    bool found = false;
+    for (auto& elem : m_settings.all_parameters)
     {
-        MXS_FREE(my_name);
-        MXS_FREE(my_value);
-        MXS_FREE(param);
-        return NULL;
-    }
-
-    param->active = true;
-    param->name = my_name;
-    param->value = my_value;
-
-    return param;
-}
-
-bool server_remove_parameter(SERVER* srv, const char* name)
-{
-    Server* server = static_cast<Server*>(srv);
-    bool rval = false;
-    std::lock_guard<std::mutex> guard(server->m_lock);
-
-    for (SERVER_PARAM* p = server->parameters; p; p = p->next)
-    {
-        if (strcmp(p->name, name) == 0 && p->active)
+        if (name == elem.name)
         {
-            p->active = false;
-            rval = true;
+            found = true;
+            elem.value = value; // Update
             break;
         }
     }
+    if (!found)
+    {
+        m_settings.all_parameters.push_back({name, value});
+    }
+    std::lock_guard<std::mutex> guard(m_settings.lock);
+    m_settings.custom_parameters[name] = value;
+}
 
+string Server::get_custom_parameter(const string& name) const
+{
+    string rval;
+    std::lock_guard<std::mutex> guard(m_settings.lock);
+    auto iter = m_settings.custom_parameters.find(name);
+    if (iter != m_settings.custom_parameters.end())
+    {
+        rval = iter->second;
+    }
     return rval;
-}
-
-void server_set_parameter(SERVER* srv, const char* name, const char* value)
-{
-    Server* server = static_cast<Server*>(srv);
-    SERVER_PARAM* param = allocate_parameter(name, value);
-
-    if (param)
-    {
-        std::lock_guard<std::mutex> guard(server->m_lock);
-
-        // Insert new value
-        param->next = server->parameters;
-        server->parameters = param;
-
-        // Mark old value, if found, as inactive
-        for (SERVER_PARAM* p = server->parameters->next; p; p = p->next)
-        {
-            if (strcmp(p->name, name) == 0 && p->active)
-            {
-                p->active = false;
-                break;
-            }
-        }
-    }
-}
-
-/**
- * Free a list of server parameters
- * @param tofree Parameter list to free
- */
-static void server_parameter_free(SERVER_PARAM* tofree)
-{
-    SERVER_PARAM* param;
-
-    if (tofree)
-    {
-        param = tofree;
-        tofree = tofree->next;
-        MXS_FREE(param->name);
-        MXS_FREE(param->value);
-        MXS_FREE(param);
-    }
-}
-
-/**
- * Same as server_get_parameter but doesn't lock the server
- *
- * @note Should only be called when the server is already locked
- */
-static size_t server_get_parameter_nolock(const SERVER* server, const char* name, char* out, size_t size)
-{
-    size_t len = 0;
-    SERVER_PARAM* param = server->parameters;
-
-    while (param)
-    {
-        if (strcmp(param->name, name) == 0 && param->active)
-        {
-            len = snprintf(out, out ? size : 0, "%s", param->value);
-            break;
-        }
-        param = param->next;
-    }
-
-    return len;
-}
-
-/**
- * Retrieve a parameter value from a server
- *
- * @param server The server we are looking for a parameter of
- * @param name   The name of the parameter we require
- * @param out    Buffer where value is stored, use NULL to check if the parameter exists
- * @param size   Size of @c out, ignored if @c out is NULL
- *
- * @return Length of the parameter value or 0 if parameter was not found
- */
-size_t server_get_parameter(const SERVER* srv, const char* name, char* out, size_t size)
-{
-    const Server* server = static_cast<const Server*>(srv);
-    std::lock_guard<std::mutex> guard(server->m_lock);
-    return server_get_parameter_nolock(server, name, out, size);
 }
 
 /**
@@ -1074,53 +978,59 @@ uint64_t server_get_version(const SERVER* server)
 namespace
 {
 
-// Converts SERVER_PARAM to MXS_CONFIG_PARAM and keeps them in the same order
+// Converts Server::ConfigParam to MXS_CONFIG_PARAM and keeps them in the same order. Required for some
+// functions taking MXS_CONFIG_PARAMs as arguments.
 class ParamAdaptor
 {
 public:
-    ParamAdaptor(SERVER_PARAM* params)
+    ParamAdaptor(const std::vector<Server::ConfigParameter>& parameters)
     {
-        for (auto p = params; p; p = p->next)
+        for (const auto& elem : parameters)
         {
-            if (p->active)
-            {
-                // The current tail of the list
-                auto it = m_params.begin();
+            // Allocate and add new head element.
+            MXS_CONFIG_PARAMETER* new_elem =
+                    static_cast<MXS_CONFIG_PARAMETER*>(MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER)));
+            new_elem->name = MXS_STRDUP(elem.name.c_str());
+            new_elem->value = MXS_STRDUP(elem.value.c_str());
+            new_elem->next = m_params;
+            m_params = new_elem;
+        }
+    }
 
-                // Push the new tail
-                m_params.push_front({p->name, p->value, nullptr});
-
-                if (it != m_params.end())
-                {
-                    // Update the old tail to point to the new tail
-                    it->next = &m_params.front();
-                }
-            }
+    ~ParamAdaptor()
+    {
+        while (m_params)
+        {
+            auto elem = m_params;
+            m_params = elem->next;
+            MXS_FREE(elem->name);
+            MXS_FREE(elem->value);
+            MXS_FREE(elem);
         }
     }
 
     operator MXS_CONFIG_PARAMETER*()
     {
-        // Return the head of the parameter list which is the tail of the internal list
-        return m_params.empty() ? nullptr : &m_params.back();
+        return m_params;
     }
 
 private:
 
     // Holds the temporary configuration objects. Needs to be a list so that
     // inserts into the container won't invalidate the next pointers
-    std::list<MXS_CONFIG_PARAMETER> m_params;
+    MXS_CONFIG_PARAMETER* m_params = nullptr;
 };
 }
 
 /**
  * Creates a server configuration at the location pointed by @c filename
+ * TODO: Move to member
  *
  * @param server Server to serialize into a configuration
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_server_config(const SERVER* server, const char* filename)
+bool Server::create_server_config(const Server* server, const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -1140,36 +1050,24 @@ static bool create_server_config(const SERVER* server, const char* filename)
 
     const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
     dump_param_list(file,
-                    ParamAdaptor(server->parameters),
+                    ParamAdaptor(server->m_settings.all_parameters),
                     {CN_TYPE},
                     config_server_params,
                     mod->parameters);
 
-    std::unordered_set<std::string> known;
-
-    for (auto a : {config_server_params, mod->parameters})
+    // Print custom parameters
+    for (const auto& elem : server->m_settings.custom_parameters)
     {
-        for (int i = 0; a[i].name; i++)
-        {
-            known.insert(a[i].name);
-        }
-    }
-
-    for (auto p = server->parameters; p; p = p->next)
-    {
-        if (known.count(p->name) == 0 && p->active)
-        {
-            dprintf(file, "%s=%s\n", p->name, p->value);
-        }
+        dprintf(file, "%s=%s\n", elem.first.c_str(), elem.second.c_str());
     }
 
     close(file);
-
     return true;
 }
 
-bool server_serialize(const SERVER* server)
+bool Server::serialize() const
 {
+    const Server* server = this;
     bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename,
@@ -1329,7 +1227,8 @@ bool server_is_mxs_service(const SERVER* server)
     return rval;
 }
 
-static json_t* server_json_attributes(const SERVER* server)
+// TODO: member function
+json_t* Server::server_json_attributes(const Server* server)
 {
     /** Resource attributes */
     json_t* attr = json_object();
@@ -1338,18 +1237,18 @@ static json_t* server_json_attributes(const SERVER* server)
     json_t* params = json_object();
 
     const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
-    config_add_module_params_json(ParamAdaptor(server->parameters),
+    config_add_module_params_json(ParamAdaptor(server->m_settings.all_parameters),
                                   {CN_TYPE},
                                   config_server_params,
                                   mod->parameters,
                                   params);
 
     // Add weighting parameters that weren't added by config_add_module_params_json
-    for (SERVER_PARAM* p = server->parameters; p; p = p->next)
+    for (const auto& elem : server->m_settings.custom_parameters)
     {
-        if (!json_object_get(params, p->name))
+        if (!json_object_get(params, elem.first.c_str()))
         {
-            json_object_set_new(params, p->name, json_string(p->value));
+            json_object_set_new(params, elem.first.c_str(), json_string(elem.second.c_str()));
         }
     }
 
@@ -1402,7 +1301,7 @@ static json_t* server_json_attributes(const SERVER* server)
     return attr;
 }
 
-static json_t* server_to_json_data(const SERVER* server, const char* host)
+static json_t* server_to_json_data(const Server* server, const char* host)
 {
     json_t* rval = json_object();
 
@@ -1427,13 +1326,13 @@ static json_t* server_to_json_data(const SERVER* server, const char* host)
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     /** Attributes */
-    json_object_set_new(rval, CN_ATTRIBUTES, server_json_attributes(server));
+    json_object_set_new(rval, CN_ATTRIBUTES, Server::server_json_attributes(server));
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, server->name));
 
     return rval;
 }
 
-json_t* server_to_json(const SERVER* server, const char* host)
+json_t* server_to_json(const Server* server, const char* host)
 {
     string self = MXS_JSON_API_SERVERS;
     self += server->name;
@@ -1543,4 +1442,24 @@ Server* Server::find_by_unique_name(const string& name)
         }
     }
     return nullptr;
+}
+
+bool Server::is_custom_parameter(const string& name) const
+{
+    for (int i = 0; config_server_params[i].name; i++)
+    {
+        if (name == config_server_params[i].name)
+        {
+            return false;
+        }
+    }
+    auto module_params = get_module(protocol, MODULE_PROTOCOL)->parameters;
+    for (int i = 0; module_params[i].name; i++)
+    {
+        if (name == module_params[i].name)
+        {
+            return false;
+        }
+    }
+    return true;
 }

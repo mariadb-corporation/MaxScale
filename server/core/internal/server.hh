@@ -18,6 +18,7 @@
 
 #include <maxbase/ccdefs.hh>
 
+#include <map>
 #include <mutex>
 #include <maxbase/average.hh>
 #include <maxscale/config.hh>
@@ -35,6 +36,12 @@ public:
         , m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
     {
     }
+
+    struct ConfigParameter
+    {
+        std::string name;
+        std::string value;
+    };
 
     int response_time_num_samples() const
     {
@@ -134,6 +141,14 @@ public:
     static Server* find_by_unique_name(const std::string& name);
 
     /**
+     * Test if name is a normal server setting name.
+     *
+     * @param name Name to check
+     * @return True if name is a standard parameter
+     */
+    bool is_custom_parameter(const std::string& name) const;
+
+    /**
      * Print server details to a DCB
      *
      * Designed to be called within a debugger session in order
@@ -168,17 +183,52 @@ public:
      */
     static void dListServers(DCB*);
 
+    static bool create_server_config(const Server* server, const char* filename);
+
+    static json_t* server_json_attributes(const Server* server);
+
+    /**
+     * @brief Set server parameter
+     *
+     * @param server Server to update
+     * @param name   Parameter to set
+     * @param value  Value of parameter
+     */
+    void set_parameter(const std::string& name, const std::string& value);
+
+    std::string get_custom_parameter(const std::string& name) const override;
+
+    /**
+     * @brief Serialize a server to a file
+     *
+     * This converts @c server into an INI format file. This allows created servers
+     * to be persisted to disk. This will replace any existing files with the same
+     * name.
+     *
+     * @return False if the serialization of the server fails, true if it was successful
+     */
+    bool serialize() const;
+
     mutable std::mutex m_lock;
     DCB**              persistent = nullptr; /**< List of unused persistent connections to the server */
 
 private:
     struct Settings
     {
-        mutable std::mutex lock;                 /**< Protects array-like settings from concurrent access */
-        MxsDiskSpaceThreshold disk_space_limits; /**< Disk space thresholds */
+        mutable std::mutex lock; /**< Protects array-like settings from concurrent access */
 
-        long persistpoolmax = 0;                 /**< Maximum size of persistent connections pool */
-        long persistmaxtime = 0;                 /**< Maximum number of seconds connection can live */
+        /** Disk space thresholds. Can be queried from modules at any time so access must be protected
+         *  by mutex. */
+        MxsDiskSpaceThreshold disk_space_limits;
+        /** All config settings in text form. This is only read and written from the admin thread
+         *  so no need for locking. */
+        std::vector<ConfigParameter> all_parameters;
+        /** Additional custom parameters which may affect routing decisions or the monitor module.
+         *  Can be queried from modules at any time so access must be protected by mutex. */
+        std::map<std::string, std::string> custom_parameters;
+
+        long persistpoolmax = 0; /**< Maximum size of persistent connections pool */
+        long persistmaxtime = 0; /**< Maximum number of seconds connection can live */
     };
     Settings m_settings;                  /**< Server settings */
 
@@ -186,3 +236,12 @@ private:
 };
 
 void server_free(Server* server);
+/**
+ * @brief Convert a server to JSON format
+ *
+ * @param server Server to convert
+ * @param host    Hostname of this server
+ *
+ * @return JSON representation of server or NULL if an error occurred
+ */
+json_t* server_to_json(const Server* server, const char* host);

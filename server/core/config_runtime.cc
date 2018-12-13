@@ -244,7 +244,7 @@ bool runtime_create_server(const char* name,
 
             Server* server = Server::server_alloc(name, ctx.parameters);
 
-            if (server && server_serialize(server))
+            if (server && server->serialize())
             {
                 rval = true;
                 MXS_NOTICE("Created server '%s' at %s:%u",
@@ -383,7 +383,7 @@ bool runtime_enable_server_ssl(Server* server,
             atomic_synchronize();
             server->server_ssl = ssl;
 
-            if (server_serialize(server))
+            if (server->serialize())
             {
                 MXS_NOTICE("Enabled SSL for server '%s'", server->name);
                 rval = true;
@@ -476,7 +476,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     }
 
     std::lock_guard<std::mutex> guard(crt_lock);
-    server_set_parameter(server, key, value);
+    server->set_parameter(key, value);
 
     if (strcmp(key, CN_ADDRESS) == 0)
     {
@@ -524,7 +524,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
         service_update_weights();
     }
 
-    server_serialize(server);
+    server->serialize();
     MXS_NOTICE("Updated server '%s': %s=%s", server->name, key, value);
 
     return true;

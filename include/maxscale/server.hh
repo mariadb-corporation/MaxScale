@@ -39,15 +39,6 @@ const int MAINTENANCE_ON = 100;
 const int MAINTENANCE_FLAG_NOCHECK = 0;
 const int MAINTENANCE_FLAG_CHECK = -1;
 
-/* Custom server parameters. These can be used by modules for e.g. weighting routing decisions. */
-struct SERVER_PARAM
-{
-    char*                name;      /**< Parameter name */
-    char*                value;     /**< Parameter value */
-    bool                 active;    /**< Whether the parameter is valid */
-    struct SERVER_PARAM* next;      /**< Next Paramter in the linked list */
-};
-
 /* Server connection and usage statistics */
 struct SERVER_STATS
 {
@@ -119,8 +110,7 @@ public:
     char monpw[MAX_MONPW_LEN] = {'\0'};         /**< Monitor password, overrides monitor setting  */
     bool proxy_protocol = false;                /**< Send proxy-protocol header to backends when connecting
                                                  *   routing sessions. */
-    SERVER_PARAM* parameters = nullptr;         /**< Additional custom parameters which may affect routing
-                                                 *   decisions. */
+
     // Base variables
     bool          is_active = false;        /**< Server is active and has not been "destroyed" */
     void*         auth_instance = nullptr;  /**< Authenticator instance data */
@@ -181,6 +171,14 @@ public:
      * @return True if enabled
      */
     virtual bool persistent_conns_enabled() const = 0;
+
+    /**
+     * Fetch value of custom parameter.
+     *
+     * @param name Parameter name
+     * @return Value of parameter, or empty if not found
+     */
+    virtual std::string get_custom_parameter(const std::string& name) const = 0;
 
 protected:
     SERVER()
@@ -384,18 +382,6 @@ inline bool server_is_disk_space_exhausted(const SERVER* server)
 }
 
 /**
- * @brief Serialize a server to a file
- *
- * This converts @c server into an INI format file. This allows created servers
- * to be persisted to disk. This will replace any existing files with the same
- * name.
- *
- * @param server Server to serialize
- * @return False if the serialization of the server fails, true if it was successful
- */
-bool server_serialize(const SERVER* server);
-
-/**
  * @brief Add a server parameter
  *
  * @param server Server where the parameter is added
@@ -405,40 +391,12 @@ bool server_serialize(const SERVER* server);
 void server_add_parameter(SERVER* server, const char* name, const char* value);
 
 /**
- * @brief Remove a server parameter
- *
- * @param server Server to remove the parameter from
- * @param name The name of the parameter to remove
- * @return True if a parameter was removed
- */
-bool server_remove_parameter(SERVER* server, const char* name);
-
-/**
- * @brief Set server parameter
- *
- * @param server Server to update
- * @param name   Parameter to set
- * @param value  Value of parameter
- */
-void server_set_parameter(SERVER* server, const char* name, const char* value);
-
-/**
  * @brief Check if a server points to a local MaxScale service
  *
  * @param server Server to check
  * @return True if the server points to a local MaxScale service
  */
 bool server_is_mxs_service(const SERVER* server);
-
-/**
- * @brief Convert a server to JSON format
- *
- * @param server Server to convert
- * @param host    Hostname of this server
- *
- * @return JSON representation of server or NULL if an error occurred
- */
-json_t* server_to_json(const SERVER* server, const char* host);
 
 /**
  * @brief Convert all servers into JSON format
@@ -478,7 +436,6 @@ extern void    server_set_status_nolock(SERVER* server, uint64_t bit);
 extern void    server_clear_status_nolock(SERVER* server, uint64_t bit);
 extern void    server_transfer_status(SERVER* dest_server, const SERVER* source_server);
 extern void    server_add_mon_user(SERVER* server, const char* user, const char* passwd);
-extern size_t  server_get_parameter(const SERVER* server, const char* name, char* out, size_t size);
 extern void    server_update_credentials(SERVER* server, const char* user, const char* passwd);
 extern void     server_update_address(SERVER* server, const char* address);
 extern void     server_update_port(SERVER* server, unsigned short port);

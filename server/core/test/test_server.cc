@@ -66,13 +66,12 @@ static int test1()
     Server* server = Server::server_alloc("uniquename", params.params());
     mxb_assert_message(server, "Allocating the server should not fail");
 
-    char buf[120];
     fprintf(stderr, "\t..done\nTest Parameter for Server.");
-    mxb_assert_message(!server_get_parameter(server, "name", buf, sizeof(buf)),
-                       "Parameter should be null when not set");
-    server_set_parameter(server, "name", "value");
-    mxb_assert(server_get_parameter(server, "name", buf, sizeof(buf)));
-    mxb_assert_message(strcmp("value", buf) == 0, "Parameter should be returned correctly");
+    mxb_assert_message(server->get_custom_parameter("name").empty(),
+                       "Parameter should be empty when not set");
+    server->set_parameter("name", "value");
+    std::string buf = server->get_custom_parameter("name");
+    mxb_assert_message(buf == "value", "Parameter should be returned correctly");
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");
     mxb_assert_message(NULL == server_find_by_unique_name("non-existent"),
                        "Should not find non-existent unique name.");
@@ -145,18 +144,18 @@ bool test_serialize()
     unlink(old_config_name);
 
     /** Serialize server to disk */
-    TEST(server_serialize(server), "Failed to synchronize original server");
+    TEST(server->serialize(), "Failed to synchronize original server");
 
     /** Load it again */
     TEST(test_load_config(config_name, server), "Failed to load the serialized server");
 
     /** We should have two identical servers */
-    SERVER* created = server_find_by_unique_name(name);
+    Server* created = Server::find_by_unique_name(name);
 
     rename(config_name, old_config_name);
 
     /** Serialize the loaded server to disk */
-    TEST(server_serialize(created), "Failed to synchronize the copied server");
+    TEST(created->serialize(), "Failed to synchronize the copied server");
 
     /** Check that they serialize to identical files */
     char cmd[1024];

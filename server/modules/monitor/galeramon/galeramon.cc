@@ -375,18 +375,20 @@ MXS_MONITORED_SERVER* GaleraMonitor::get_candidate_master()
         if (!server_is_in_maint(moitor_servers->server)
             && (moitor_servers->pending_status & SERVER_JOINED))
         {
-
-            char buf[50];   // Enough to hold most numbers
-            if (m_use_priority && server_get_parameter(moitor_servers->server, "priority", buf, sizeof(buf)))
+            if (m_use_priority)
             {
-                /** The server has a priority  */
-                if ((currval = atoi(buf)) > 0)
+                std::string buf = moitor_servers->server->get_custom_parameter("priority");
+                if (!buf.empty())
                 {
-                    /** The priority is valid */
-                    if (currval < minval && currval > 0)
+                    /** The server has a priority  */
+                    if ((currval = atoi(buf.c_str())) > 0)
                     {
-                        minval = currval;
-                        candidate_master = moitor_servers;
+                        /** The priority is valid */
+                        if (currval < minval && currval > 0)
+                        {
+                            minval = currval;
+                            candidate_master = moitor_servers;
+                        }
                     }
                 }
             }
@@ -527,7 +529,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
              * the server list will be order by default method.
              */
 
-            if (m_use_priority && server_get_parameter(ptr->server, "priority", NULL, 0))
+            if (m_use_priority && !ptr->server->get_custom_parameter("priority").empty())
             {
                 ignore_priority = false;
             }
@@ -641,10 +643,10 @@ static int compare_node_priority(const void* a, const void* b)
 {
     const MXS_MONITORED_SERVER* s_a = *(MXS_MONITORED_SERVER* const*)a;
     const MXS_MONITORED_SERVER* s_b = *(MXS_MONITORED_SERVER* const*)b;
-    char pri_a[50];
-    char pri_b[50];
-    bool have_a = server_get_parameter(s_a->server, "priority", pri_a, sizeof(pri_a));
-    bool have_b = server_get_parameter(s_b->server, "priority", pri_b, sizeof(pri_b));
+    std::string pri_a = s_a->server->get_custom_parameter("priority");
+    std::string pri_b = s_b->server->get_custom_parameter("priority");
+    bool have_a = !pri_a.empty();
+    bool have_b = !pri_b.empty();
 
     /**
      * Check priority parameter:
@@ -672,8 +674,8 @@ static int compare_node_priority(const void* a, const void* b)
     }
 
     /* The given  priority is valid */
-    int pri_val_a = atoi(pri_a);
-    int pri_val_b = atoi(pri_b);
+    int pri_val_a = atoi(pri_a.c_str());
+    int pri_val_b = atoi(pri_b.c_str());
 
     /* Return a - b in case of issues */
     if ((pri_val_a < INT_MAX && pri_val_a > 0) && !(pri_val_b < INT_MAX && pri_val_b > 0))
