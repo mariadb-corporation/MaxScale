@@ -12,7 +12,10 @@
  */
 
 #include <maxbase/http.hh>
+#include <chrono>
 #include <iostream>
+#include <string>
+#include <vector>
 #include <maxbase/log.hh>
 
 using namespace std;
@@ -22,6 +25,8 @@ namespace
 
 int test_http()
 {
+    cout << __func__ << endl;
+
     int rv = EXIT_FAILURE;
 
     auto res = mxb::http::get("http://www.example.com/");
@@ -42,14 +47,78 @@ int test_http()
     return rv;
 }
 
+int test_multi_http()
+{
+    cout << __func__ << endl;
+
+    int rv = EXIT_SUCCESS;
+
+    vector<string> urls = { "http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz" };
+    vector<bool> expected_successes = { true, true, false };
+    vector<mxb::http::Result> results = mxb::http::get(urls);
+
+    for (size_t i = 0; i < urls.size(); ++i)
+    {
+        const auto& url = urls[i];
+        auto& res = results[i];
+        bool expected_success = expected_successes[i];
+
+        cout << url << " responded with: " << res.code << endl;
+
+        if (expected_success)
+        {
+            if (res.code == 200)
+            {
+                if (res.headers.count("Date"))
+                {
+                    cout << "The date is: " << res.headers["Date"] << endl;
+                }
+                else
+                {
+                    rv = EXIT_FAILURE;
+                }
+            }
+            else
+            {
+                rv = EXIT_FAILURE;
+            }
+        }
+        else
+        {
+            if (res.code != 0)
+            {
+                rv = EXIT_FAILURE;
+            }
+        }
+    }
+
+    return rv;
 }
+
+}
+
+uint64_t time_since_epoch_ms()
+{
+    auto now = std::chrono::system_clock::now();
+    auto duration = now.time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+}
+
 
 int main()
 {
     int rv = EXIT_SUCCESS;
     mxb::Log log;
 
-    rv = test_http();
+    auto start = time_since_epoch_ms();
+    rv += test_http();
+    auto stop = time_since_epoch_ms();
+    cout << "Single: " << stop - start << endl;
+
+    start = time_since_epoch_ms();
+    rv += test_multi_http();
+    stop = time_since_epoch_ms();
+    cout << "Multi: " << stop - start << endl;
 
     return rv;
 }

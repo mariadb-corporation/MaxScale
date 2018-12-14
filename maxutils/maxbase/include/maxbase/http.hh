@@ -16,6 +16,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace maxbase
 {
@@ -31,8 +32,8 @@ enum
 
 struct Config
 {
-    int connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-    int timeout         = DEFAULT_TIMEOUT;
+    int connect_timeout_s = DEFAULT_CONNECT_TIMEOUT;
+    int timeout_s         = DEFAULT_TIMEOUT;
 };
 
 struct Result
@@ -45,7 +46,7 @@ struct Result
 /**
  * Do a HTTP GET, when no user/password is required.
  *
- * @param url     URL to use.
+ * @param url     The URL to GET.
  * @param config  The config to use.
  *
  * @return A @c Result.
@@ -55,9 +56,9 @@ Result get(const std::string& url, const Config& config = Config());
 /**
  * Do a HTTP GET
  *
- * @param url       URL to use.
- * @param user      Username to use, optional.
- * @param password  Password for the user, optional.
+ * @param url       The URL to GET.
+ * @param user      Username to use.
+ * @param password  Password for the user.
  * @param config    The config to use.
  *
  * @return A @c Result.
@@ -66,6 +67,30 @@ Result get(const std::string& url,
            const std::string& user, const std::string& password,
            const Config& config = Config());
 
+/**
+ * Do a HTTP GET, when no user/password is required.
+ *
+ * @param urls    The URLs to GET.
+ * @param config  The config to use.
+ *
+ * @return A @c Result.
+ */
+std::vector<Result> get(const std::vector<std::string>& urls,
+                        const Config& config = Config());
+
+/**
+ * Do a HTTP GET
+ *
+ * @param urls      The URLs to GET.
+ * @param user      Username to use.
+ * @param password  Password for the user.
+ * @param config    The config to use.
+ *
+ * @return Vector of @c Results, as many as there were @c urls.
+ */
+std::vector<Result> get(const std::vector<std::string>& urls,
+                        const std::string& user, const std::string& password,
+                        const Config& config = Config());
 }
 
 }
