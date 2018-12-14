@@ -124,6 +124,35 @@ private:
     MXS_CONFIG_PARAMETER* m_params = nullptr;
 };
 
+/**
+ * Write to char array by first zeroing any extra space. This reduces effects of concurrent reading.
+ *
+ * @param dest Destination buffer. The buffer is assumed to contains at least \0 at the end.
+ * @param dest_size Maximum size of destination buffer, including terminating \0.
+ * @param source Source string. A maximum of @c dest_size - 1 characters are copied.
+ */
+void careful_strcpy(char* dest, size_t dest_size, const std::string& source)
+{
+    // The string may be accessed while we are updating it.
+    // Take some precautions to ensure that the string cannot be completely garbled at any point.
+    // Strictly speaking, this is not fool-proof as writes may not appear in order to the reader.
+    size_t old_len = strlen(dest);
+    size_t new_len = source.length();
+    if (new_len >= dest_size)
+    {
+        new_len = dest_size - 1; // Need space for the \0.
+    }
+
+    if (new_len < old_len)
+    {
+        // If the new string is shorter, zero out the excess data.
+        memset(dest + new_len, 0, old_len - new_len);
+    }
+
+    // No null-byte needs to be set. The array starts out as all zeros and the above memset adds
+    // the necessary null, should the new string be shorter than the old.
+    strncpy(dest, source.c_str(), new_len);
+}
 }
 
 Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
@@ -999,6 +1028,11 @@ void server_set_version_string(SERVER* server, const char* version_string)
     strncpy(server->version_string, version_string, new_len);
 }
 
+void Server::set_version(uint64_t version_num, const std::string& version_str)
+{
+    info.set(version_num, version_str);
+}
+
 /**
  * Set the version of the server.
  *
@@ -1453,4 +1487,27 @@ bool Server::is_custom_parameter(const string& name) const
         }
     }
     return true;
+}
+
+void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
+{
+    /* This only protects against concurrent writing which could result in garbled values. Reads are not
+     * synchronized. Since writing is rare, this is an unlikely issue. Readers should be prepared to
+     * sometimes get inconsistent values. */
+    Guard lock(m_lock);
+
+    uint32_t major, minor, patch;
+    major = version / 10000;
+    minor = (version - major * 10000) / 100;
+    patch = version - major * 10000 - minor * 100;
+    m_version.major = major;
+    m_version.minor = minor;
+    m_version.patch = patch;
+    bool is_mariadb = (strcasestr(version_str.c_str(), "mariadb") != NULL);
+    m_type = is_mariadb ? SERVER_TYPE_MARIADB : SERVER_TYPE_MYSQL;
+}
+
+Server::Version Server::VersionInfo::get() const
+{
+    return m_version;
 }

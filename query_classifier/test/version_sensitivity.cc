@@ -70,8 +70,12 @@ int test()
     string valid_json("SELECT Json_Array(56, 3.1416, 'My name is \"Foo\"', NULL)");
     string invalid_json("SELECT Json_Foo(56, 3.1416, 'My name is \"Foo\"', NULL)");
 
-    SERVER_VERSION sv;
+    auto encode_version = [](const SERVER::Version& sv) -> uint64_t
+    {
+        return sv.major * 10000 + sv.minor * 100 + sv.patch;
+    };
 
+    SERVER::Version sv;
     // pre-Json
     sv.major = 10;
     sv.minor = 0;
@@ -79,7 +83,7 @@ int test()
 
     cout << "Testing pre-Json server." << endl;
 
-    qc_set_server_version(server_encode_version(&sv));
+    qc_set_server_version(encode_version(sv));
 
     if (!test(valid_json, QUERY_TYPE_READ | QUERY_TYPE_WRITE))
     {
@@ -98,7 +102,7 @@ int test()
     sv.minor = 2;
     sv.patch = 3;
 
-    qc_set_server_version(server_encode_version(&sv));
+    qc_set_server_version(encode_version(sv));
 
     if (!test(valid_json, QUERY_TYPE_READ))
     {

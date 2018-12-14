@@ -51,35 +51,12 @@ struct SERVER_STATS
     uint64_t packets = 0;       /**< Number of packets routed to this server */
 };
 
-/* Server version */
-struct SERVER_VERSION
-{
-    uint32_t major;
-    uint32_t minor;
-    uint32_t patch;
-};
-
+// TODO: Add clustrix etc types
 enum server_type_t
 {
     SERVER_TYPE_MARIADB,
     SERVER_TYPE_MYSQL
 };
-
-static inline void server_decode_version(uint64_t version, SERVER_VERSION* server_version)
-{
-    uint32_t major = version / 10000;
-    uint32_t minor = (version - major * 10000) / 100;
-    uint32_t patch = version - major * 10000 - minor * 100;
-
-    server_version->major = major;
-    server_version->minor = minor;
-    server_version->patch = patch;
-}
-
-static uint64_t server_encode_version(const SERVER_VERSION* server_version)
-{
-    return server_version->major * 10000 + server_version->minor * 100 + server_version->patch;
-}
 
 /**
  * The SERVER structure defines a backend server. Each server has a name
@@ -95,6 +72,13 @@ public:
     static const int MAX_MONPW_LEN = 1024;
     static const int MAX_VERSION_LEN = 256;
     static const int RLAG_UNDEFINED = -1;   // Default replication lag value
+
+    struct Version
+    {
+        uint32_t major = 0;
+        uint32_t minor = 0;
+        uint32_t patch = 0;
+    };
 
     // Base settings
     char* name = nullptr;           /**< Server config name */
@@ -179,6 +163,21 @@ public:
      * @return Value of parameter, or empty if not found
      */
     virtual std::string get_custom_parameter(const std::string& name) const = 0;
+
+    /**
+     * Update server version.
+     *
+     * @param version_num New numeric version
+     * @param version_str New version string
+     */
+    virtual void set_version(uint64_t version_num, const std::string& version_str) = 0;
+
+    /**
+     * Get numeric version information. TODO: Rename to "version" once cleanup is done.
+     *
+     * @return Major, minor and patch numbers
+     */
+    virtual Version get_version() const = 0;
 
 protected:
     SERVER()

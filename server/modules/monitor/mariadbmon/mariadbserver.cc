@@ -912,11 +912,10 @@ void MariaDBServer::update_server_version()
         /* Not a binlog server, check version number and supported features. */
         m_srv_type = server_type::NORMAL;
         m_capabilities = Capabilities();
-        SERVER_VERSION decoded = {0, 0, 0};
-        server_decode_version(server_get_version(srv), &decoded);
-        auto major = decoded.major;
-        auto minor = decoded.minor;
-        auto patch = decoded.patch;
+        SERVER::Version info = srv->get_version();
+        auto major = info.major;
+        auto minor = info.minor;
+        auto patch = info.patch;
         // MariaDB/MySQL 5.5 is the oldest supported version. MySQL 6 and later are treated as 5.5.
         if ((major == 5 && minor >= 5) || major > 5)
         {

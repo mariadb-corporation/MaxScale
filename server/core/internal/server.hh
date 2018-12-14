@@ -98,6 +98,13 @@ public:
         return m_settings.persistpoolmax > 0;
     }
 
+    void set_version(uint64_t version_num, const std::string& version_str) override;
+
+    Version get_version() const override
+    {
+        return info.get();
+    }
+
     /**
      * Get a DCB from the persistent connection pool, if possible
      *
@@ -230,8 +237,36 @@ private:
         long persistpoolmax = 0; /**< Maximum size of persistent connections pool */
         long persistmaxtime = 0; /**< Maximum number of seconds connection can live */
     };
-    Settings m_settings;                  /**< Server settings */
 
+    /**
+     * Stores server version info. Encodes/decodes to/from the version number received from the server.
+     * Also stores the version string and parses information from it. */
+    class VersionInfo
+    {
+    public:
+        /**
+         * Read in and decode a numeric version from the server. Deduce server type from string.
+         *
+         * @param version_num Version number from server
+         * @param version_string Version string from server
+         */
+        void set(uint64_t version_num, const std::string& version_string);
+
+        /**
+         * Get version and type info.
+         *
+         * @return Version information
+         */
+        Version get() const;
+
+    private:
+        mutable std::mutex m_lock;    /**< Protects against concurrent writing */
+        Version m_version;
+        server_type_t m_type = SERVER_TYPE_MARIADB;
+    };
+
+    Settings m_settings;                  /**< Server settings */
+    VersionInfo info;                     /**< Server version and type information */
     maxbase::EMAverage m_response_time;   /**< Response time calculations for this server */
 };
 
