@@ -234,12 +234,12 @@ void execute(CURLM* pCurlm,
 
                 if (maxfd == -1)
                 {
-                    rc = select(maxfd + 1,  &fdread, &fdwrite, &fdexcep, &timeout);
+                    struct timeval wait = { 0, 100 * 1000 }; /* 100ms */
+                    rc = select(0, NULL, NULL, NULL, &wait);
                 }
                 else
                 {
-                    struct timeval wait = { 0, 100 * 1000 }; /* 100ms */
-                    rc = select(0, NULL, NULL, NULL, &wait);
+                    rc = select(maxfd + 1,  &fdread, &fdwrite, &fdexcep, &timeout);
                 }
 
                 switch (rc)
