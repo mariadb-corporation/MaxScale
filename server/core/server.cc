@@ -69,12 +69,62 @@ const char CN_PERSISTMAXTIME[] = "persistmaxtime";
 const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
 const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 
-static std::mutex server_lock;
-static std::list<Server*> all_servers;
-static const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the maintenance status can be "
-                                        "set/cleared manually. Status was not modified.";
-static const char WRN_REQUEST_OVERWRITTEN[] = "Previous maintenance request was not yet read by the monitor "
-                                              "and was overwritten.";
+namespace
+{
+
+struct ThisUnit
+{
+    std::mutex ave_write_mutex;     /**< TODO: Move to Server */
+    std::mutex all_servers_lock;    /**< Protects access to all_servers */
+    std::list<Server*> all_servers; /**< Global list of all servers */
+} this_unit;
+
+const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the maintenance status can be "
+                                 "set/cleared manually. Status was not modified.";
+const char WRN_REQUEST_OVERWRITTEN[] = "Previous maintenance request was not yet read by the monitor "
+                                       "and was overwritten.";
+
+// Converts Server::ConfigParam to MXS_CONFIG_PARAM and keeps them in the same order. Required for some
+// functions taking MXS_CONFIG_PARAMs as arguments.
+class ParamAdaptor
+{
+public:
+    ParamAdaptor(const std::vector<Server::ConfigParameter>& parameters)
+    {
+        for (const auto& elem : parameters)
+        {
+            // Allocate and add new head element.
+            MXS_CONFIG_PARAMETER* new_elem =
+                    static_cast<MXS_CONFIG_PARAMETER*>(MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER)));
+            new_elem->name = MXS_STRDUP(elem.name.c_str());
+            new_elem->value = MXS_STRDUP(elem.value.c_str());
+            new_elem->next = m_params;
+            m_params = new_elem;
+        }
+    }
+
+    ~ParamAdaptor()
+    {
+        while (m_params)
+        {
+            auto elem = m_params;
+            m_params = elem->next;
+            MXS_FREE(elem->name);
+            MXS_FREE(elem->value);
+            MXS_FREE(elem);
+        }
+    }
+
+    operator MXS_CONFIG_PARAMETER*()
+    {
+        return m_params;
+    }
+
+private:
+    MXS_CONFIG_PARAMETER* m_params = nullptr;
+};
+
+}
 
 Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 {
@@ -175,9 +225,9 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         }
     }
 
-    Guard guard(server_lock);
+    Guard guard(this_unit.all_servers_lock);
     // This keeps the order of the servers the same as in 2.2
-    all_servers.push_front(server);
+    this_unit.all_servers.push_front(server);
 
     return server;
 }
@@ -194,10 +244,10 @@ void server_free(Server* server)
     mxb_assert(server);
 
     {
-        Guard guard(server_lock);
-        auto it = std::find(all_servers.begin(), all_servers.end(), server);
-        mxb_assert(it != all_servers.end());
-        all_servers.erase(it);
+        Guard guard(this_unit.all_servers_lock);
+        auto it = std::find(this_unit.all_servers.begin(), this_unit.all_servers.end(), server);
+        mxb_assert(it != this_unit.all_servers.end());
+        this_unit.all_servers.erase(it);
     }
 
     /* Clean up session and free the memory */
@@ -271,16 +321,14 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
  */
 SERVER* server_find_by_unique_name(const char* name)
 {
-    Guard guard(server_lock);
-
-    for (Server* server : all_servers)
+    Guard guard(this_unit.all_servers_lock);
+    for (Server* server : this_unit.all_servers)
     {
         if (server->is_active && strcmp(server->name, name) == 0)
         {
             return server;
         }
     }
-
     return nullptr;
 }
 
@@ -334,16 +382,14 @@ int server_find_by_unique_names(char** server_names, int size, SERVER*** output)
  */
 SERVER* server_find(const char* servname, unsigned short port)
 {
-    Guard guard(server_lock);
-
-    for (Server* server : all_servers)
+    Guard guard(this_unit.all_servers_lock);
+    for (Server* server : this_unit.all_servers)
     {
         if (server->is_active && strcmp(server->address, servname) == 0 && server->port == port)
         {
             return server;
         }
     }
-
     return nullptr;
 }
 
@@ -372,9 +418,8 @@ void printServer(const SERVER* server)
  */
 void printAllServers()
 {
-    Guard guard(server_lock);
-
-    for (Server* server : all_servers)
+    Guard guard(this_unit.all_servers_lock);
+    for (Server* server : this_unit.all_servers)
     {
         if (server->is_active)
         {
@@ -385,8 +430,8 @@ void printAllServers()
 
 void Server::dprintAllServers(DCB* dcb)
 {
-    Guard guard(server_lock);
-    for (Server* server : all_servers)
+    Guard guard(this_unit.all_servers_lock);
+    for (Server* server : this_unit.all_servers)
     {
         if (server->is_active)
         {
@@ -556,9 +601,9 @@ void Server::dprintPersistentDCBs(DCB* pdcb, const Server* server)
 
 void Server::dListServers(DCB* dcb)
 {
-    Guard guard(server_lock);
-    bool have_servers = std::any_of(all_servers.begin(),
-                                    all_servers.end(),
+    Guard guard(this_unit.all_servers_lock);
+    bool have_servers = std::any_of(this_unit.all_servers.begin(),
+                                    this_unit.all_servers.end(),
                                     [](Server* s) {
                                         return s->is_active;
                                     });
@@ -574,7 +619,7 @@ void Server::dListServers(DCB* dcb)
                    "Status");
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
 
-        for (Server* server : all_servers)
+        for (Server* server : this_unit.all_servers)
         {
             if (server->is_active)
             {
@@ -826,9 +871,9 @@ std::unique_ptr<ResultSet> serverGetList()
 {
     std::unique_ptr<ResultSet> set =
         ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
-    Guard guard(server_lock);
 
-    for (Server* server : all_servers)
+    Guard guard(this_unit.all_servers_lock);
+    for (Server* server : this_unit.all_servers)
     {
         if (server_is_active(server))
         {
@@ -850,7 +895,7 @@ std::unique_ptr<ResultSet> serverGetList()
  */
 void server_update_address(SERVER* server, const char* address)
 {
-    Guard guard(server_lock);
+    Guard guard(this_unit.all_servers_lock);
 
     if (server && address)
     {
@@ -867,7 +912,7 @@ void server_update_address(SERVER* server, const char* address)
  */
 void server_update_port(SERVER* server, unsigned short port)
 {
-    Guard guard(server_lock);
+    Guard guard(this_unit.all_servers_lock);
 
     if (server && port > 0)
     {
@@ -973,53 +1018,6 @@ void server_set_version(SERVER* server, const char* version_string, uint64_t ver
 uint64_t server_get_version(const SERVER* server)
 {
     return atomic_load_uint64(&server->version);
-}
-
-namespace
-{
-
-// Converts Server::ConfigParam to MXS_CONFIG_PARAM and keeps them in the same order. Required for some
-// functions taking MXS_CONFIG_PARAMs as arguments.
-class ParamAdaptor
-{
-public:
-    ParamAdaptor(const std::vector<Server::ConfigParameter>& parameters)
-    {
-        for (const auto& elem : parameters)
-        {
-            // Allocate and add new head element.
-            MXS_CONFIG_PARAMETER* new_elem =
-                    static_cast<MXS_CONFIG_PARAMETER*>(MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER)));
-            new_elem->name = MXS_STRDUP(elem.name.c_str());
-            new_elem->value = MXS_STRDUP(elem.value.c_str());
-            new_elem->next = m_params;
-            m_params = new_elem;
-        }
-    }
-
-    ~ParamAdaptor()
-    {
-        while (m_params)
-        {
-            auto elem = m_params;
-            m_params = elem->next;
-            MXS_FREE(elem->name);
-            MXS_FREE(elem->value);
-            MXS_FREE(elem);
-        }
-    }
-
-    operator MXS_CONFIG_PARAMETER*()
-    {
-        return m_params;
-    }
-
-private:
-
-    // Holds the temporary configuration objects. Needs to be a list so that
-    // inserts into the container won't invalidate the next pointers
-    MXS_CONFIG_PARAMETER* m_params = nullptr;
-};
 }
 
 /**
@@ -1342,9 +1340,9 @@ json_t* server_to_json(const Server* server, const char* host)
 json_t* server_list_to_json(const char* host)
 {
     json_t* data = json_array();
-    Guard guard(server_lock);
 
-    for (Server* server : all_servers)
+    Guard guard(this_unit.all_servers_lock);
+    for (Server* server : this_unit.all_servers)
     {
         if (server_is_active(server))
         {
@@ -1366,17 +1364,10 @@ bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_thre
     return rv;
 }
 
-namespace
-{
-std::mutex ave_write_mutex;
-}
-
 void server_add_response_average(SERVER* srv, double ave, int num_samples)
 {
     Server* server = static_cast<Server*>(srv);
-
-
-    std::lock_guard<std::mutex> guard(ave_write_mutex);
+    Guard guard(this_unit.ave_write_mutex);
     server->response_time_add(ave, num_samples);
 }
 
@@ -1433,8 +1424,8 @@ void Server::response_time_add(double ave, int num_samples)
 
 Server* Server::find_by_unique_name(const string& name)
 {
-    Guard guard(server_lock);
-    for (Server* server : all_servers)
+    Guard guard(this_unit.all_servers_lock);
+    for (Server* server : this_unit.all_servers)
     {
         if (server->is_active && name == server->name)
         {
