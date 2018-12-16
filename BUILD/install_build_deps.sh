@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Do the real building work. This script is executed on build VM and
 # requires a working installation of CMake.
 
@@ -87,9 +86,29 @@ if [ $? != 0 ] ; then
     wget -q https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
 fi
 sudo tar xzf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
+check_cmake_version_is_greater_than_default()
+{
+  compared_major_version=3
+  compared_minor_version=7
+  compared_patch_version=1
+  IFS='.' declare -a 'arr=($1)'
+  major_version=${arr[0]}
+  minor_version=${arr[1]}
+  patch_version=${arr[2]}
+  unset IFS
+ if [[ $major_version -ne $compared_major_version ]] ; then
+    [[ $major_version -gt $compared_major_version ]] && return 0 || return 1
+ fi
+ if [[ $minor_version -ne $compared_minor_version ]] ; then
+    [[ $minor_version -gt $compared_minor_version ]] && return 0 || return 1
+ fi
+ [[ $patch_version -ge $compared_patch_version ]] && return 0 || return 1
+
+}
 
 cmake_version=`cmake --version | grep "cmake version" | awk '{ print $3 }'`
-if [ "$cmake_version" \< "3.7.1" ] ; then
+check_cmake_version_is_greater_than_default $cmake_version
+if [ $? -gt 0 ] ; then
     echo "cmake does not work! Trying to build from source"
     wget -q https://cmake.org/files/v3.7/cmake-3.7.1.tar.gz --no-check-certificate
     tar xzf cmake-3.7.1.tar.gz
