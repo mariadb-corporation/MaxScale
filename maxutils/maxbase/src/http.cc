@@ -14,11 +14,12 @@
 #include <maxbase/http.hh>
 #include <algorithm>
 #include <array>
+#include <map>
 #include <unordered_map>
+#include <utility>
 #include <curl/curl.h>
 #include <maxbase/assert.h>
 #include <maxbase/string.hh>
-#include <iostream>
 using namespace std;
 
 using std::array;
@@ -127,53 +128,6 @@ CURL* get_easy_curl(const std::string& url,
 
     return pCurl;
 }
-
-}
-
-
-namespace maxbase
-{
-
-namespace http
-{
-
-Result get(const std::string& url, const Config& config)
-{
-    return std::move(get(url, "", "", config));
-}
-
-Result get(const std::string& url, const std::string& user, const std::string& password, const Config& config)
-{
-    Result res;
-    char errbuf[CURL_ERROR_SIZE + 1] = "";
-    CURL* pCurl = get_easy_curl(url, user, password, config, &res, errbuf);
-    mxb_assert(pCurl);
-
-
-    if (curl_easy_perform(pCurl) == CURLE_OK)
-    {
-        long code = 0; // needs to be a long
-        curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
-        res.code = code;
-    }
-    else
-    {
-        res.code = -1;
-        res.body = errbuf;
-    }
-
-    curl_easy_cleanup(pCurl);
-
-    return res;
-}
-
-vector<Result> get(const std::vector<std::string>& urls, const Config& config)
-{
-    return get(urls, "", "", config);
-}
-
-namespace
-{
 
 using Errbuf = array<char, CURL_ERROR_SIZE + 1>;
 
@@ -290,6 +244,11 @@ void execute(CURLM* pCurlm,
                 curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
                 pResult->code = code;
 
+                if ((code == 0) && pResult->body.empty())
+                {
+                    pResult->body = pErrbuf->data();
+                }
+
                 curls.erase(it);
                 curl_multi_remove_handle(pCurlm, pCurl);
                 curl_easy_cleanup(pCurl);
@@ -356,6 +315,347 @@ vector<Result> get_curlm(CURLM* pCurlm,
     return results;
 }
 
+class ErrorImp : public Async::Imp
+{
+public:
+    ErrorImp()
+    {
+    }
+
+    Async::status_t status() const
+    {
+        return Async::ERROR;
+    }
+
+    Async::status_t perform(long timeout_ms)
+    {
+        return Async::ERROR;
+    }
+
+    long wait_no_more_than() const
+    {
+        return 0;
+    }
+
+    const std::vector<Result>& results() const
+    {
+        return m_results;
+    }
+
+private:
+    vector<Result> m_results;
+};
+
+class HttpImp : public Async::Imp
+{
+public:
+    HttpImp()
+        : m_pCurlm(curl_multi_init())
+        , m_status(Async::ERROR)
+        , m_still_running(0)
+        , m_wait_no_more_than(0)
+    {
+        mxb_assert(m_pCurlm);
+        if (!m_pCurlm)
+        {
+            throw std::bad_alloc();
+        }
+    }
+
+    ~HttpImp()
+    {
+        mxb_assert(m_pCurlm);
+
+        for (auto& item : m_curls)
+        {
+            CURL* pCurl = item.first;
+            MXB_AT_DEBUG(CURLMcode rv =) curl_multi_remove_handle(m_pCurlm, pCurl);
+            mxb_assert(rv == CURLM_OK);
+            curl_easy_cleanup(pCurl);
+        }
+
+        CURLMcode code = curl_multi_cleanup(m_pCurlm);
+        if (code != CURLM_OK)
+        {
+            MXB_ERROR("curl_multi_cleanup() failed: %s", curl_multi_strerror(code));
+        }
+    }
+
+    bool initialize(const std::vector<std::string>& urls,
+                    const std::string& user, const std::string& password,
+                    const Config& config)
+    {
+        mxb_assert(m_status == Async::ERROR);
+
+        m_results.reserve(urls.size());
+        m_errbufs.reserve(urls.size());
+
+        size_t i;
+        for (i = 0; i < urls.size(); ++i)
+        {
+            m_results.resize(i + 1);
+            m_errbufs.resize(i + 1);
+
+            CURL* pCurl = get_easy_curl(urls[i], user, password, config, &m_results[i], m_errbufs[i].data());
+
+            if (!pCurl || (curl_multi_add_handle(m_pCurlm, pCurl) != CURLM_OK))
+            {
+                mxb_assert(!true);
+                if (pCurl)
+                {
+                    curl_easy_cleanup(pCurl);
+                }
+                m_results.resize(m_results.size() - 1);
+                break;
+            }
+            else
+            {
+                m_curls.insert(std::make_pair(pCurl, Context(&m_results[i], &m_errbufs[i])));
+            }
+        }
+
+        if (m_results.size() == urls.size())
+        {
+            CURLMcode rv = curl_multi_perform(m_pCurlm, &m_still_running);
+
+            if (rv == CURLM_OK)
+            {
+                if (m_still_running == 0)
+                {
+                    m_status = Async::READY;
+                    m_wait_no_more_than = 0;
+                }
+                else
+                {
+                    update_timeout();
+                    m_status = Async::PENDING;
+                }
+            }
+            else
+            {
+                MXB_ERROR("curl_multi_perform() failed: %s", curl_multi_strerror(rv));
+                m_status = Async::ERROR;
+            }
+        }
+
+        return m_status != Async::ERROR;
+    }
+
+    Async::status_t status() const override
+    {
+        return m_status;
+    }
+
+    Async::status_t perform(long timeout_ms) override
+    {
+        switch (m_status)
+        {
+        case Async::READY:
+            break;
+
+        case Async::ERROR:
+            mxb_assert(!true);
+            break;
+
+        default:
+            {
+                mxb_assert(m_status == Async::PENDING);
+
+                fd_set fdread;
+                fd_set fdwrite;
+                fd_set fdexcep;
+
+                FD_ZERO(&fdread);
+                FD_ZERO(&fdwrite);
+                FD_ZERO(&fdexcep);
+
+                int maxfd;
+                CURLMcode rv_curl = curl_multi_fdset(m_pCurlm, &fdread, &fdwrite, &fdexcep, &maxfd);
+
+                if (rv_curl == CURLM_OK)
+                {
+                    int rv = 0;
+                    if (maxfd != -1)
+                    {
+                        struct timeval timeout = { timeout_ms / 1000, (timeout_ms % 1000) * 1000 };
+                        rv = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
+                    }
+
+                    switch (rv)
+                    {
+                    case -1:
+                        mxb_assert(!true);
+                        MXB_ERROR("select() failed: %s", mxb_strerror(errno));
+                        m_status = Async::ERROR;
+                        break;
+
+                    case 0:
+                    default:
+                        rv_curl = curl_multi_perform(m_pCurlm, &m_still_running);
+                        if (rv_curl == CURLM_OK)
+                        {
+                            if (m_still_running == 0)
+                            {
+                                m_status = Async::READY;
+                            }
+                            else
+                            {
+                                update_timeout();
+                            }
+                        }
+                        else
+                        {
+                            MXB_ERROR("curl_multi_perform() failed: %s", curl_multi_strerror(rv_curl));
+                            m_status = Async::ERROR;
+                        }
+                    }
+                }
+
+                if (m_status == Async::READY)
+                {
+                    mxb_assert(m_still_running == 0);
+                    int nRemaining = 0;
+                    do
+                    {
+                        CURLMsg* pMsg = curl_multi_info_read(m_pCurlm, &nRemaining);
+                        if (pMsg && (pMsg->msg == CURLMSG_DONE))
+                        {
+                            CURL* pCurl = pMsg->easy_handle;
+                            auto it = m_curls.find(pCurl);
+                            mxb_assert(it != m_curls.end());
+
+                            auto& context = it->second;
+                            Result* pResult = context.pResult;
+                            Errbuf* pErrbuf = context.pErrbuf;
+
+                            long code;
+                            curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
+                            pResult->code = code;
+
+                            if ((code == 0) && pResult->body.empty())
+                            {
+                                pResult->body = pErrbuf->data();
+                            }
+
+                            m_curls.erase(it);
+                            curl_multi_remove_handle(m_pCurlm, pCurl);
+                            curl_easy_cleanup(pCurl);
+                        }
+                    }
+                    while (nRemaining != 0);
+                }
+            }
+        }
+
+        return m_status;
+    }
+
+    long wait_no_more_than() const
+    {
+        return m_wait_no_more_than;
+    }
+
+    const std::vector<Result>& results() const
+    {
+        return m_results;
+    }
+
+private:
+    void update_timeout()
+    {
+        curl_multi_timeout(m_pCurlm, &m_wait_no_more_than);
+        if (m_wait_no_more_than < 0)
+        {
+            // No default value, we'll use 100ms as default.
+            m_wait_no_more_than = 100;
+        }
+    }
+
+private:
+    CURLM*                                   m_pCurlm;
+    Async::status_t                          m_status;
+    vector<Result>                           m_results;
+    vector<array<char, CURL_ERROR_SIZE + 1>> m_errbufs;
+    unordered_map<CURL*, Context>            m_curls;
+    int                                      m_still_running;
+    long                                     m_wait_no_more_than;
+};
+
+}
+
+
+namespace maxbase
+{
+
+namespace http
+{
+
+Async::Imp::~Imp()
+{
+}
+
+Async::Async()
+    : m_sImp(std::make_shared<ErrorImp>())
+{
+}
+
+Async get_async(const std::vector<std::string>& urls,
+                const Config& config)
+{
+    return get_async(urls, "", "", config);
+}
+
+Async get_async(const std::vector<std::string>& urls,
+                const std::string& user, const std::string& password,
+                const Config& config)
+{
+    shared_ptr<Async::Imp> sImp;
+    shared_ptr<HttpImp> sHttp_imp = std::make_shared<HttpImp>();
+    if (sHttp_imp->initialize(urls, user, password, config))
+    {
+        sImp = sHttp_imp;
+    }
+    else
+    {
+        sImp = std::make_shared<ErrorImp>();
+    }
+
+    return Async(sImp);
+}
+
+Result get(const std::string& url, const Config& config)
+{
+    return std::move(get(url, "", "", config));
+}
+
+Result get(const std::string& url, const std::string& user, const std::string& password, const Config& config)
+{
+    Result res;
+    char errbuf[CURL_ERROR_SIZE + 1] = "";
+    CURL* pCurl = get_easy_curl(url, user, password, config, &res, errbuf);
+    mxb_assert(pCurl);
+
+
+    if (curl_easy_perform(pCurl) == CURLE_OK)
+    {
+        long code = 0; // needs to be a long
+        curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
+        res.code = code;
+    }
+    else
+    {
+        res.code = -1;
+        res.body = errbuf;
+    }
+
+    curl_easy_cleanup(pCurl);
+
+    return res;
+}
+
+vector<Result> get(const std::vector<std::string>& urls, const Config& config)
+{
+    return get(urls, "", "", config);
 }
 
 vector<Result> get(const std::vector<std::string>& urls,
@@ -379,6 +679,24 @@ vector<Result> get(const std::vector<std::string>& urls,
     }
 
     return results;
+}
+
+const char* to_string(Async::status_t status)
+{
+    switch (status)
+    {
+    case Async::READY:
+        return "READY";
+
+    case Async::PENDING:
+        return "PENDING";
+
+    case Async::ERROR:
+        return "ERROR";
+    }
+
+    mxb_assert(!true);
+    return "Unknown";
 }
 
 }

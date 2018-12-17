@@ -91,7 +91,162 @@ std::vector<Result> get(const std::vector<std::string>& urls,
 std::vector<Result> get(const std::vector<std::string>& urls,
                         const std::string& user, const std::string& password,
                         const Config& config = Config());
-}
+
+/**
+ * @class mxb::http::Async
+ *
+ * Class for performing multiple HTTP GETs concurrently and asynchronously.
+ * The instance should be viewed as a handle to the operation. If it is
+ * copied, both instances refer to the same operation and both instances
+ * can be used for driving the GET. However, an instance can *only* be
+ * used or copied in the thread where it is created.
+ */
+class Async
+{
+public:
+    enum status_t
+    {
+        READY,  // The result is ready.
+        ERROR,  // The operation has failed.
+        PENDING // The operation is pending.
+    };
+
+    class Imp
+    {
+    public:
+        virtual ~Imp();
+        virtual status_t status() const = 0;
+
+        virtual status_t perform(long timeout_ms) = 0;
+
+        virtual long wait_no_more_than() const = 0;
+
+        virtual const std::vector<Result>& results() const = 0;
+    };
+
+    /**
+     * Defalt constructor creates an asynchronous operation whose status is ERROR.
+     */
+    Async();
+
+    /**
+     * Copy constructor; creates an instance that refers to the same operation
+     * the argument refers to.
+     *
+     * @param rhs  An existing @c Async instance.
+     */
+    Async(const Async& rhs)
+        : m_sImp(rhs.m_sImp)
+    {
+    }
+
+    /**
+     * Assigns an asynchronous operation.
+     *
+     * @param rhs  An other @c Async instance.
+     *
+     * @return *this.
+     */
+    Async& operator = (const Async& rhs)
+    {
+        std::shared_ptr<Imp> sImp(rhs.m_sImp);
+        m_sImp.swap(sImp);
+        return *this;
+    }
+
+    /**
+     * Return the status of the operation.
+     *
+     * @return @c READY|ERROR|PENDING
+     */
+    status_t status() const
+    {
+        return m_sImp->status();
+    }
+
+    /**
+     * Performs a step in the operation.
+     *
+     * @param timeout_ms  The maximum timeout for waiting for activity on the
+     *                    underlying socket descriptors.
+     *
+     * @return @c READY|ERROR|PENDING
+     */
+    status_t perform(long timeout_ms = 0)
+    {
+        return m_sImp->perform(timeout_ms);
+    }
+
+    /**
+     * How much time to wait at most, before calling perform() again.
+     *
+     * This value is dependent upon the timeouts that were specified when
+     * the operation was initiated. To ensure that operations are not timed
+     * out, do not wait as long as this function returns but significantly
+     * less.
+     *
+     * @return Maximum time to wait in milliseconds.
+     */
+    long wait_no_more_than() const
+    {
+        return m_sImp->wait_no_more_than();
+    }
+
+    /**
+     * The result of each operation. This function should not be called
+     * before the status is READY.
+     *
+     * @return Vector of results.
+     */
+    const std::vector<Result>& results() const
+    {
+        return m_sImp->results();
+    }
+
+public:
+    Async(const std::shared_ptr<Imp>& sImp)
+        : m_sImp(sImp)
+    {
+    }
+
+private:
+    std::shared_ptr<Imp> m_sImp;
+};
+
+/**
+ * Return human-readable string for a status value.
+ *
+ * @param status  A status value.
+ *
+ * @return The corresponding string.
+ */
+const char* to_string(Async::status_t status);
+
+/**
+ * Do a HTTP GET, asynchronously.
+ *
+ * @param urls      The URLs to GET.
+ * @param config    The config to use.
+ *
+ * @return An Async instance using which the operation can be performed.
+ */
+Async get_async(const std::vector<std::string>& urls,
+                const Config& config = Config());
+
+/**
+ * Do a HTTP GET, asynchronously.
+ *
+ * @param urls      The URLs to GET.
+ * @param user      Username to use.
+ * @param password  Password for the user.
+ * @param config    The config to use.
+ *
+ * @return An Async instance using which the operation can be performed.
+ */
+Async get_async(const std::vector<std::string>& urls,
+                const std::string& user, const std::string& password,
+                const Config& config = Config());
 
 }
 
+}

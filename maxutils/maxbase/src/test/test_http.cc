@@ -15,6 +15,7 @@
 #include <chrono>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
 #include <maxbase/log.hh>
 
@@ -44,18 +45,14 @@ int test_http()
         cout << "error: Exit code not 200 but: " << res.code << endl;
     }
 
-    return rv;
+    return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-int test_multi_http()
+int check_results(const vector<string>& urls,
+                  const vector<bool>& expected_successes,
+                  const vector<mxb::http::Result> results)
 {
-    cout << __func__ << endl;
-
     int rv = EXIT_SUCCESS;
-
-    vector<string> urls = { "http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz" };
-    vector<bool> expected_successes = { true, true, false };
-    vector<mxb::http::Result> results = mxb::http::get(urls);
 
     for (size_t i = 0; i < urls.size(); ++i)
     {
@@ -71,7 +68,7 @@ int test_multi_http()
             {
                 if (res.headers.count("Date"))
                 {
-                    cout << "The date is: " << res.headers["Date"] << endl;
+                    cout << "The date is: " << res.headers.at("Date") << endl;
                 }
                 else
                 {
@@ -95,6 +92,56 @@ int test_multi_http()
     return rv;
 }
 
+int test_multi_http()
+{
+    cout << __func__ << endl;
+
+    vector<string> urls = { "http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz" };
+    vector<bool> expected_successes = { true, true, false };
+    vector<mxb::http::Result> results = mxb::http::get(urls);
+
+    int rv = check_results(urls, expected_successes, results);
+
+    return rv == EXIT_FAILURE ? 1 : 0;
+}
+
+int test_async_http()
+{
+    cout << __func__ << endl;
+
+    int rv = EXIT_FAILURE;
+
+    vector<string> urls = { "http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz" };
+    vector<bool> expected_successes = { true, true, false };
+    mxb::http::Async http = mxb::http::get_async(urls);
+
+    while (http.perform(0) == mxb::http::Async::PENDING)
+    {
+        long ms = http.wait_no_more_than();
+
+        if (ms > 100)
+        {
+            ms = 100;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    }
+
+    if (http.status() == mxb::http::Async::READY)
+    {
+        const vector<mxb::http::Result>& results = http.results();
+
+        rv = check_results(urls, expected_successes, results);
+    }
+    else
+    {
+        cout << "http::Async: " << to_string(http.status()) << endl;
+        rv = EXIT_FAILURE;
+    }
+
+    return rv == EXIT_FAILURE ? 1 : 0;
+}
+
 }
 
 uint64_t time_since_epoch_ms()
@@ -107,18 +154,26 @@ uint64_t time_since_epoch_ms()
 
 int main()
 {
-    int rv = EXIT_SUCCESS;
+    int rv = 0;
     mxb::Log log;
 
-    auto start = time_since_epoch_ms();
+    long start;
+    long stop;
+
+    start = time_since_epoch_ms();
     rv += test_http();
-    auto stop = time_since_epoch_ms();
+    stop = time_since_epoch_ms();
     cout << "Single: " << stop - start << endl;
 
     start = time_since_epoch_ms();
     rv += test_multi_http();
     stop = time_since_epoch_ms();
     cout << "Multi: " << stop - start << endl;
+
+    start = time_since_epoch_ms();
+    rv += test_async_http();
+    stop = time_since_epoch_ms();
+    cout << "Async: " << stop - start << endl;
 
     return rv;
 }
