@@ -33,6 +33,14 @@ using std::vector;
 namespace
 {
 
+static struct THIS_UNIT
+{
+    int nInits;
+} this_unit =
+{
+    0
+};
+
 using namespace mxb;
 using namespace mxb::http;
 
@@ -420,6 +428,38 @@ namespace maxbase
 
 namespace http
 {
+
+bool init()
+{
+    bool rv = true;
+
+    if (this_unit.nInits == 0)
+    {
+        CURLcode code = curl_global_init(CURL_GLOBAL_ALL);
+
+        if (code == CURLE_OK)
+        {
+            this_unit.nInits = 1;
+        }
+        else
+        {
+            MXB_ERROR("Failed to initialize CURL library: %s", curl_easy_strerror(code));
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+void finish()
+{
+    mxb_assert(this_unit.nInits > 0);
+
+    if (--this_unit.nInits == 0)
+    {
+        curl_global_cleanup();
+    }
+}
 
 Async::Imp::~Imp()
 {

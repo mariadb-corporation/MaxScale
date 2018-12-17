@@ -24,6 +24,37 @@ namespace maxbase
 namespace http
 {
 
+/**
+ * Initialize the http library.
+ *
+ * @return True if successful, false otherwise.
+ */
+bool init();
+
+/**
+ * Finalize the http library.
+ */
+void finish();
+
+/**
+ * RAII class for initializing the http functionality.
+ */
+class Init
+{
+public:
+    Init()
+    {
+        if (!mxb::http::init())
+        {
+            throw std::runtime_error("Could not initialize mxb::http.");
+        }
+    }
+    ~Init()
+    {
+        mxb::http::finish();
+    }
+};
+
 enum
 {
     DEFAULT_CONNECT_TIMEOUT = 10, // @see https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html

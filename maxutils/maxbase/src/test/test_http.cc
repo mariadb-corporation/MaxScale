@@ -160,6 +160,8 @@ int main()
     long start;
     long stop;
 
+    mxb::http::Init init;
+
     start = time_since_epoch_ms();
     rv += test_http();
     stop = time_since_epoch_ms();
