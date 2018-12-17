@@ -402,12 +402,12 @@ static int signal_set(int sig, void (* handler)(int));
 
 static void sigfatal_handler(int i)
 {
-    if (fatal_handling)
-    {
-        fprintf(stderr, "Fatal signal %d while backtracing\n", i);
-        _exit(1);
-    }
-    fatal_handling = 1;
+    // The same signal being handled *now* can occur in another thread (and is often likely).
+    // By setting the default handler here we will always get a core, but not necessarily
+    // the backtrace into the log file. This should be overhauled to proper signal handling
+    // (MXS-599).
+    signal_set(i, SIG_DFL);
+
     MXS_CONFIG* cnf = config_get_global_options();
     fprintf(stderr,
             "Fatal: MaxScale " MAXSCALE_VERSION " received fatal signal %d. "
@@ -435,7 +435,6 @@ static void sigfatal_handler(int i)
 
     /* re-raise signal to enforce core dump */
     fprintf(stderr, "\n\nWriting core dump\n");
-    signal_set(i, SIG_DFL);
     raise(i);
 }
 

@@ -149,7 +149,6 @@ public:
     uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
     uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
                                                  * command */
-    ClientHandleMap m_ps_handles;               /**< Client PS handle to internal ID mapping */
     ExecMap         m_exec_map;                 /**< Map of COM_STMT_EXECUTE statement IDs to
                                                  * Backends */
     std::string          m_gtid_pos;            /**< Gtid position for causal read */

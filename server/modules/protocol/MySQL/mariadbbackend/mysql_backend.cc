@@ -694,24 +694,25 @@ static inline bool complete_ps_response(GWBUF* buffer)
 
     if (mxs_mysql_extract_ps_response(buffer, &resp))
     {
-        int expected_eof = 0;
+        int expected_packets = 1;
 
         if (resp.columns > 0)
         {
-            expected_eof++;
+            // Column definition packets plus one for the EOF
+            expected_packets += resp.columns + 1;
         }
 
         if (resp.parameters > 0)
         {
-            expected_eof++;
+            // Parameter definition packets plus one for the EOF
+            expected_packets += resp.parameters + 1;
         }
 
-        bool more;
-        int n_eof = modutil_count_signal_packets(buffer, 0, &more, NULL);
+        int n_packets = modutil_count_packets(buffer);
 
-        MXS_DEBUG("Expecting %u EOF, have %u", n_eof, expected_eof);
+        MXS_DEBUG("Expecting %u packets, have %u", n_packets, expected_packets);
 
-        rval = n_eof == expected_eof;
+        rval = n_packets == expected_packets;
     }
 
     return rval;

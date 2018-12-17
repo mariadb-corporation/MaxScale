@@ -61,6 +61,20 @@ bool qc_mysql_is_ps_command(uint8_t cmd)
            || cmd == MXS_COM_STMT_RESET;
 }
 
+// Copied from mysql_common.cc
+uint32_t qc_mysql_extract_ps_id(GWBUF* buffer)
+{
+    uint32_t rval = 0;
+    uint8_t id[MYSQL_PS_ID_SIZE];
+
+    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
+    {
+        rval = gw_mysql_get_byte4(id);
+    }
+
+    return rval;
+}
+
 bool have_semicolon(const char* ptr, int len)
 {
     for (int i = 0; i < len; i++)
@@ -376,7 +390,8 @@ uint32_t QueryClassifier::ps_get_type(std::string id) const
 
 void QueryClassifier::ps_erase(GWBUF* buffer)
 {
-    return m_sPs_manager->erase(buffer);
+    m_ps_handles.erase(qc_mysql_extract_ps_id(buffer));
+    m_sPs_manager->erase(buffer);
 }
 
 bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
