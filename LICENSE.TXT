@@ -4,7 +4,7 @@ License text copyright (c) 2017 MariaDB Corporation Ab, All Rights Reserved.
 Parameters
 
 Licensor:             MariaDB Corporation Ab
-Licensed Work:        MariaDB MaxScale (TM) v.2.2.
+Licensed Work:        MariaDB MaxScale (TM) v.2.3.
                       The Licensed Work is (c) 2017 MariaDB Corporation Ab
 Additional Use Grant: You may use the Licensed Work when your application
                       uses the Licensed Work with a total of less than three
