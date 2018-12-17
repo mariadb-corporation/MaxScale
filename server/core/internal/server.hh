@@ -102,7 +102,17 @@ public:
 
     Version get_version() const override
     {
-        return info.get();
+        return info.version_num();
+    }
+
+    Type get_type() const override
+    {
+        return info.type();
+    }
+
+    std::string get_version_string() const override
+    {
+        return info.version_string();
     }
 
     /**
@@ -244,25 +254,24 @@ private:
     class VersionInfo
     {
     public:
+
         /**
-         * Read in and decode a numeric version from the server. Deduce server type from string.
+         * Reads in version data. Deduces server type from version string.
          *
          * @param version_num Version number from server
          * @param version_string Version string from server
          */
         void set(uint64_t version_num, const std::string& version_string);
 
-        /**
-         * Get version and type info.
-         *
-         * @return Version information
-         */
-        Version get() const;
+        Version version_num() const;
+        Type type() const;
+        std::string version_string() const;
 
     private:
-        mutable std::mutex m_lock;    /**< Protects against concurrent writing */
-        Version m_version;
-        server_type_t m_type = SERVER_TYPE_MARIADB;
+        mutable std::mutex m_lock;                    /**< Protects against concurrent writing */
+        Version m_version_num;                        /**< Numeric version */
+        Type m_type = Type::MARIADB;                  /**< Server type */
+        char m_version_str[MAX_VERSION_LEN] = {'\0'}; /**< Server version string */
     };
 
     Settings m_settings;                  /**< Server settings */
@@ -271,6 +280,7 @@ private:
 };
 
 void server_free(Server* server);
+
 /**
  * @brief Convert a server to JSON format
  *

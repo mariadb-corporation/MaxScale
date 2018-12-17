@@ -1502,14 +1502,36 @@ void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
     major = version / 10000;
     minor = (version - major * 10000) / 100;
     patch = version - major * 10000 - minor * 100;
-    m_version.major = major;
-    m_version.minor = minor;
-    m_version.patch = patch;
-    bool is_mariadb = (strcasestr(version_str.c_str(), "mariadb") != NULL);
-    m_type = is_mariadb ? SERVER_TYPE_MARIADB : SERVER_TYPE_MYSQL;
+    m_version_num.major = major;
+    m_version_num.minor = minor;
+    m_version_num.patch = patch;
+
+    careful_strcpy(m_version_str, MAX_VERSION_LEN, version_str);
+    if (strcasestr(version_str.c_str(), "clustrix") != NULL)
+    {
+        m_type = Type::CLUSTRIX;
+    }
+    else if (strcasestr(version_str.c_str(), "mariadb") != NULL)
+    {
+        m_type = Type::MARIADB;
+    }
+    else
+    {
+        m_type = Type::MYSQL;
+    }
 }
 
-Server::Version Server::VersionInfo::get() const
+Server::Version Server::VersionInfo::version_num() const
 {
-    return m_version;
+    return m_version_num;
+}
+
+Server::Type Server::VersionInfo::type() const
+{
+    return m_type;
+}
+
+std::string Server::VersionInfo::version_string() const
+{
+    return m_version_str;
 }

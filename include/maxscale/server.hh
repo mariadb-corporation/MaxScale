@@ -73,6 +73,13 @@ public:
     static const int MAX_VERSION_LEN = 256;
     static const int RLAG_UNDEFINED = -1;   // Default replication lag value
 
+    enum class Type
+    {
+        MARIADB,
+        MYSQL,
+        CLUSTRIX
+    };
+
     struct Version
     {
         uint32_t major = 0;
@@ -178,6 +185,20 @@ public:
      * @return Major, minor and patch numbers
      */
     virtual Version get_version() const = 0;
+
+    /**
+     * Get the type of the server.
+     *
+     * @return Server type
+     */
+    virtual Type get_type() const = 0;
+
+    /**
+     * Get version string.
+     *
+     * @return Version string
+     */
+    virtual std::string get_version_string() const = 0;
 
 protected:
     SERVER()
