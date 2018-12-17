@@ -97,7 +97,7 @@ also be specified separately for individual services.
 
 If MaxScale is running as a systemd service, the systemd Watchdog can be
 enabled and MaxScale will behave accordingly. Please see the
-[documentation](Getting-Started/Configuration-Guide.md#systemd-watchdog)
+[documentation](../Getting-Started/Configuration-Guide.md#systemd-watchdog)
 for more details.
 
 By default the watchdog is disabled.
