@@ -103,6 +103,10 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
                 // Any non-zero flag value means that we have an open cursor
                 m_opening_cursor = flags != 0;
             }
+            else if (cmd == MXS_COM_STMT_CLOSE)
+            {
+                m_ps_handles.erase(it);
+            }
             else if (cmd == MXS_COM_STMT_FETCH)
             {
                 // Number of rows to fetch is a 4 byte integer after the ID

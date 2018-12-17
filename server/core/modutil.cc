@@ -1367,6 +1367,7 @@ namespace maxscale
 std::string get_canonical(GWBUF* querybuf)
 {
     std::string rval;
+    rval.reserve(gwbuf_length(querybuf) - MYSQL_HEADER_LEN + 1);
     mxs::Buffer buf(querybuf);
 
     enum state

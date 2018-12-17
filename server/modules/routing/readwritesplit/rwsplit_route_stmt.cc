@@ -412,6 +412,13 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 {
     if (mxs_mysql_is_ps_command(m_qc.current_route_info().command()))
     {
+        if (command == MXS_COM_STMT_CLOSE)
+        {
+            // Remove the command from the PS mapping
+            m_qc.ps_erase(querybuf);
+            m_exec_map.erase(m_qc.current_route_info().stmt_id());
+        }
+
         /**
          * Replace the ID with our internal one, the backends will replace it with their own ID
          * when the packet is being written. We use the internal ID when we store the command
@@ -518,6 +525,11 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         if (it != m_sescmd_responses.end())
         {
             m_sescmd_responses.erase(m_sescmd_responses.begin(), it);
+        }
+        else
+        {
+            // All responses processed
+            m_sescmd_responses.clear();
         }
     }
     else
