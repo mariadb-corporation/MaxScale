@@ -17,3 +17,6 @@
 #include <maxscale/ccdefs.hh>
 #include <maxbase/log.hh>
 
+#define    CLUSTER_MONITOR_INTERVAL_NAME            "cluster_monitor_interval"
+const long DEFAULT_CLUSTER_MONITOR_INTERVAL_VALUE = 60000;
+#define    DEFAULT_CLUSTER_MONITOR_INTERVAL_ZVALUE  "60000"

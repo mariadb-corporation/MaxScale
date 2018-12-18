@@ -41,6 +41,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                       /* Thread init. */
         NULL,                                       /* Thread finish. */
         {
+            {
+                CLUSTER_MONITOR_INTERVAL_NAME,
+                MXS_MODULE_PARAM_COUNT,
+                DEFAULT_CLUSTER_MONITOR_INTERVAL_ZVALUE
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
