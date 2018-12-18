@@ -60,7 +60,8 @@ int check_results(const vector<string>& urls,
         auto& res = results[i];
         bool expected_success = expected_successes[i];
 
-        cout << url << " responded with: " << res.code << endl;
+        cout << url << " responded with: " << res.code
+             << (res.code < 0 ? (", " + res.body) : "") << endl;
 
         if (expected_success)
         {

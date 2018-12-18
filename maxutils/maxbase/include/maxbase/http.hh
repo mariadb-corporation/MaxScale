@@ -69,6 +69,13 @@ struct Config
 
 struct Result
 {
+    enum
+    {
+        ERROR                = -1, // Some non-specific error occurred.
+        COULDNT_RESOLVE_HOST = -2, // The specified host cold not be resolved.
+        OPERATION_TIMEDOUT   = -3  // The operation timed out.
+    };
+
     int                                code = 0; // HTTP response code
     std::string                        body;     // Response body
     std::map<std::string, std::string> headers;  // Headers attached to the response
@@ -79,6 +86,9 @@ struct Result
  *
  * @param url     The URL to GET.
  * @param config  The config to use.
+ *
+ * @note The @c url is assumed to be escaped in case it contain arguments
+ *       that must be escaped.
  *
  * @return A @c Result.
  */
@@ -92,6 +102,9 @@ Result get(const std::string& url, const Config& config = Config());
  * @param password  Password for the user.
  * @param config    The config to use.
  *
+ * @note The @c url is assumed to be escaped in case it contain arguments
+ *       that must be escaped, but @c user and @c pass will always be escaped.
+ *
  * @return A @c Result.
  */
 Result get(const std::string& url,
@@ -103,6 +116,9 @@ Result get(const std::string& url,
  *
  * @param urls    The URLs to GET.
  * @param config  The config to use.
+ *
+ * @note The @c urls are assumed to be escaped in case they contain arguments
+ *       that must be escaped.
  *
  * @return A @c Result.
  */
@@ -116,6 +132,9 @@ std::vector<Result> get(const std::vector<std::string>& urls,
  * @param user      Username to use.
  * @param password  Password for the user.
  * @param config    The config to use.
+ *
+ * @note The @c urls are assumed to be escaped in case they contain arguments
+ *       that must be escaped, but @c user and @c pass will always be escaped.
  *
  * @return Vector of @c Results, as many as there were @c urls.
  */
@@ -259,6 +278,9 @@ const char* to_string(Async::status_t status);
  * @param urls      The URLs to GET.
  * @param config    The config to use.
  *
+ * @note The @c urls are assumed to be escaped in case they contain arguments
+ *       that must be escaped.
+ *
  * @return An Async instance using which the operation can be performed.
  */
 Async get_async(const std::vector<std::string>& urls,
@@ -271,6 +293,9 @@ Async get_async(const std::vector<std::string>& urls,
  * @param user      Username to use.
  * @param password  Password for the user.
  * @param config    The config to use.
+ *
+ * @note The @c urls are assumed to be escaped in case they contains arguments
+ *       that must be escaped, but @c user and @c pass will always be escaped.
  *
  * @return An Async instance using which the operation can be performed.
  */

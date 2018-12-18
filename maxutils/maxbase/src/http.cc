@@ -44,6 +44,24 @@ static struct THIS_UNIT
 using namespace mxb;
 using namespace mxb::http;
 
+int translate_curl_code(CURLcode code)
+{
+    switch (code)
+    {
+    case CURLE_OK:
+        return 0;
+
+    case CURLE_COULDNT_RESOLVE_HOST:
+        return Result::COULDNT_RESOLVE_HOST;
+
+    case CURLE_OPERATION_TIMEDOUT:
+        return Result::OPERATION_TIMEDOUT;
+
+    default:
+        return Result::ERROR;
+    }
+}
+
 template<class T>
 inline int checked_curl_setopt(CURL* pCurl, CURLoption option, T value)
 {
@@ -108,8 +126,8 @@ CURL* get_easy_curl(const std::string& url,
     if (pCurl)
     {
         checked_curl_setopt(pCurl, CURLOPT_NOSIGNAL, 1);
-        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout_s); // For connection phase
-        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout_s);                // For data transfer phase
+        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout_s);// For connection phase
+        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout_s);               // For data transfer phase
         checked_curl_setopt(pCurl, CURLOPT_ERRORBUFFER, pErrbuf);
         checked_curl_setopt(pCurl, CURLOPT_WRITEFUNCTION, write_callback);
         checked_curl_setopt(pCurl, CURLOPT_WRITEDATA, &pRes->body);
@@ -296,10 +314,8 @@ public:
             mxb_assert(!true);
             break;
 
-        default:
+        case Async::PENDING:
             {
-                mxb_assert(m_status == Async::PENDING);
-
                 fd_set fdread;
                 fd_set fdwrite;
                 fd_set fdexcep;
@@ -367,12 +383,15 @@ public:
                             Result* pResult = context.pResult;
                             Errbuf* pErrbuf = context.pErrbuf;
 
-                            long code;
-                            curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
-                            pResult->code = code;
-
-                            if ((code == 0) && pResult->body.empty())
+                            if (pMsg->data.result == CURLE_OK)
                             {
+                                long code;
+                                curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
+                                pResult->code = code;
+                            }
+                            else
+                            {
+                                pResult->code = translate_curl_code(pMsg->data.result);
                                 pResult->body = pErrbuf->data();
                             }
 
@@ -506,15 +525,20 @@ Result get(const std::string& url, const std::string& user, const std::string& p
     CURL* pCurl = get_easy_curl(url, user, password, config, &res, errbuf);
     mxb_assert(pCurl);
 
-    if (curl_easy_perform(pCurl) == CURLE_OK)
+    CURLcode code = curl_easy_perform(pCurl);
+
+    switch (code)
     {
-        long code = 0; // needs to be a long
-        curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
-        res.code = code;
-    }
-    else
-    {
-        res.code = -1;
+    case CURLE_OK:
+        {
+            long code = 0; // needs to be a long
+            curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
+            res.code = code;
+        }
+        break;
+
+    default:
+        res.code = translate_curl_code(code);
         res.body = errbuf;
     }
 
@@ -534,16 +558,18 @@ vector<Result> get(const std::vector<std::string>& urls,
 {
     Async http = get_async(urls, user, password, config);
 
-    while (http.perform() == Async::PENDING)
+    long timeout_ms = (config.connect_timeout_s + config.timeout_s) * 1000;
+    long max_wait_ms = timeout_ms / 10;
+
+    long wait_ms = 10;
+    while (http.perform(wait_ms) == Async::PENDING)
     {
-        long ms = http.wait_no_more_than();
+        wait_ms = http.wait_no_more_than();
 
-        if (ms > 100)
+        if (wait_ms > max_wait_ms)
         {
-            ms = 100;
+            wait_ms = max_wait_ms;
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
     }
 
     vector<Result> results(http.results());
