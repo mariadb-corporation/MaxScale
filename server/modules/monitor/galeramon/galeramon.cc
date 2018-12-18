@@ -127,11 +127,10 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;
     MYSQL_RES* result;
-    char* server_string;
 
     /* get server version string */
-    mxs_mysql_update_server_version(monitored_server->con, monitored_server->server);
-    server_string = monitored_server->server->version_string;
+    mxs_mysql_update_server_version(monitored_server->server, monitored_server->con);
+    auto server_string = monitored_server->server->version_string();
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
     const char* cluster_member =
@@ -150,7 +149,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             MXS_ERROR("Unexpected result for \"%s\". "
                       "Expected 2 columns. MySQL Version: %s",
                       cluster_member,
-                      server_string);
+                      server_string.c_str());
             return;
         }
         GaleraNode info = {};
@@ -193,7 +192,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                 }
                 /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
                 else if (strcmp(row[1], "2") == 0 && m_availableWhenDonor == 1
-                         && using_xtrabackup(monitored_server, server_string))
+                         && using_xtrabackup(monitored_server, server_string.c_str()))
                 {
                     info.joined = 1;
                 }

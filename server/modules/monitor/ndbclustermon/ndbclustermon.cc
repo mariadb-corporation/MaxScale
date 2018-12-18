@@ -47,11 +47,9 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     MYSQL_ROW row;
     MYSQL_RES* result;
     int isjoined = 0;
-    char* server_string;
 
     /* get server version string */
-    mxs_mysql_update_server_version(monitored_server->con, monitored_server->server);
-    server_string = monitored_server->server->version_string;
+    mxs_mysql_update_server_version(monitored_server->server, monitored_server->con);
 
     /* Check if the the SQL node is able to contact one or more data nodes */
     if (mxs_mysql_query(monitored_server->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
@@ -63,7 +61,7 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE "
                       "'Ndb_number_of_ready_data_nodes'\". Expected 2 columns."
                       " MySQL Version: %s",
-                      server_string);
+                      monitored_server->server->version_string().c_str());
             return;
         }
 
@@ -91,7 +89,7 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'Ndb_cluster_node_id'\". "
                       "Expected 2 columns."
                       " MySQL Version: %s",
-                      server_string);
+                      monitored_server->server->version_string().c_str());
             return;
         }
 

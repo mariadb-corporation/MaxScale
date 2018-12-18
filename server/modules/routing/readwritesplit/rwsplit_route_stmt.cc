@@ -1044,8 +1044,8 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER* server, GWBUF* origin)
      **/
 
     GWBUF* rval = origin;
-    const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
-        MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
+    const char* wait_func = (server->type() == SERVER::Type::MARIADB) ? MARIADB_WAIT_GTID_FUNC :
+        MYSQL_WAIT_GTID_FUNC;
     const char* gtid_wait_timeout = m_config.causal_reads_timeout.c_str();
     const char* gtid_position = m_gtid_pos.c_str();
 

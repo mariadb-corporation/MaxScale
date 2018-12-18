@@ -1852,7 +1852,7 @@ uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
 
         if (sref)
         {
-            version = server_get_version(sref->server);
+            version = sref->server->version().total;
         }
     }
     else
@@ -1881,7 +1881,7 @@ uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
                 ++n;
 
                 SERVER* s = sref->server;
-                uint64_t server_version = server_get_version(s);
+                uint64_t server_version = s->version().total;
 
                 if (which == SERVICE_VERSION_MIN)
                 {

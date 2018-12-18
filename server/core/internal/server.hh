@@ -100,17 +100,17 @@ public:
 
     void set_version(uint64_t version_num, const std::string& version_str) override;
 
-    Version get_version() const override
+    Version version() const override
     {
         return info.version_num();
     }
 
-    Type get_type() const override
+    Type type() const override
     {
         return info.type();
     }
 
-    std::string get_version_string() const override
+    std::string version_string() const override
     {
         return info.version_string();
     }

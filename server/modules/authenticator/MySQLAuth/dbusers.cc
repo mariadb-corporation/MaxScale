@@ -37,12 +37,6 @@
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
 
-/** Normal password column name */
-#define MYSQL_PASSWORD "password"
-
-/** MySQL 5.7 password column name */
-#define MYSQL57_PASSWORD "authentication_string"
-
 // Query used with 10.0 or older
 const char* mariadb_users_query_format =
     "SELECT u.user, u.host, d.db, u.select_priv, u.%s "
@@ -170,10 +164,27 @@ static char* get_mariadb_101_users_query(bool include_root)
     return rval;
 }
 
-static char* get_mariadb_users_query(bool include_root, const char* server_version)
+/**
+ * Return the column name of the password hash in the mysql.user table.
+ *
+ * @param version Server version
+ * @return Column name
+ */
+static const char* get_password_column_name(const SERVER::Version& version)
 {
-    const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.") ?
-        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char* rval = "password"; // Usual result, used in MariaDB.
+    auto major = version.major;
+    auto minor = version.minor;
+    if ((major == 5 && minor == 7) || (major == 8 && minor == 0))
+    {
+        rval = "authentication_string";
+    }
+    return rval;
+}
+
+static char* get_mariadb_users_query(bool include_root, const SERVER::Version& version)
+{
+    const char* password = get_password_column_name(version);
     const char* with_root = include_root ? "" : " AND u.user NOT IN ('root')";
 
     size_t n_bytes = snprintf(NULL, 0, mariadb_users_query_format, password, with_root, password, with_root);
@@ -196,16 +207,14 @@ static char* get_clustrix_users_query(bool include_root)
     return rval;
 }
 
-static char* get_users_query(const char* server_version, int version, bool include_root, server_category_t category)
+static char* get_users_query(const SERVER::Version& version, bool include_root, server_category_t category)
 {
     char* rval = nullptr;
 
     switch (category)
     {
     case SERVER_ROLES:
-        rval =
-            version >= 100202 ?
-            get_mariadb_102_users_query(include_root) :
+        rval = version.total >= 100202 ? get_mariadb_102_users_query(include_root) :
             get_mariadb_101_users_query(include_root);
         break;
 
@@ -215,7 +224,7 @@ static char* get_users_query(const char* server_version, int version, bool inclu
 
     case SERVER_NO_ROLES:
         // Either an older MariaDB version or a MySQL variant, use the legacy query
-        rval = get_mariadb_users_query(include_root, server_version);
+        rval = get_mariadb_users_query(include_root, version);
         break;
 
     default:
@@ -764,8 +773,8 @@ static bool check_default_table_permissions(MYSQL* mysql,
     bool rval = true;
 
     const char* format = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
-    const char* query_pw = strstr(server->version_string, "5.7.") ?
-        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char* query_pw = get_password_column_name(server->version());
+
     char query[strlen(format) + strlen(query_pw) + 1];
     sprintf(query, format, query_pw);
 
@@ -890,15 +899,13 @@ static bool check_server_permissions(SERVICE* service,
     mysql_get_character_set_info(mysql, &cs_info);
     server->charset = cs_info.number;
 
-    if (server->version_string[0] == 0)
+    if (server->version().total == 0)
     {
-        mxs_mysql_update_server_version(mysql, server);
+        mxs_mysql_update_server_version(server, mysql);
     }
 
-    bool is_clustrix = (strcasestr(server->version_string, "clustrix") != nullptr);
-
     bool rval = true;
-    if (is_clustrix)
+    if (server->type() == SERVER::Type::CLUSTRIX)
     {
         rval = check_clustrix_table_permissions(mysql, service, server, user);
     }
@@ -992,8 +999,7 @@ static bool get_hostname(DCB* dcb, char* client_hostname, size_t size)
 static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
 {
     bool rval = false;
-
-    if (server->version >= 100101)
+    if (server->version().total >= 100101)
     {
         static bool log_missing_privs = true;
 
@@ -1097,18 +1103,20 @@ bool query_and_process_users(const char* query,
 
 int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, Listener* listener)
 {
-    if (server_ref->server->version_string[0] == 0)
+    SERVER* server = server_ref->server;
+    auto server_version = server->version();
+    if (server_version.total == 0) // No monitor or the monitor hasn't ran yet.
     {
-        mxs_mysql_update_server_version(con, server_ref->server);
+        mxs_mysql_update_server_version(server, con);
+        server_version = server->version();
     }
 
     server_category_t category;
-
-    if (strstr(server_ref->server->version_string, "clustrix") != nullptr)
+    if (server->type() == SERVER::Type::CLUSTRIX)
     {
         category = SERVER_CLUSTRIX;
     }
-    else if (roles_are_available(con, service, server_ref->server))
+    else if (roles_are_available(con, service, server))
     {
         category = SERVER_ROLES;
     }
@@ -1117,10 +1125,7 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
         category = SERVER_NO_ROLES;
     }
 
-    char* query = get_users_query(server_ref->server->version_string,
-                                  server_ref->server->version,
-                                  service->enable_root,
-                                  category);
+    char* query = get_users_query(server_version, service->enable_root, category);
 
     MYSQL_AUTH* instance = (MYSQL_AUTH*)listener->auth_instance();
     sqlite3* handle = get_handle(instance);
@@ -1128,20 +1133,20 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
 
     bool rv = query_and_process_users(query, con, handle, service, &users, category);
 
-    if (!rv && have_mdev13453_problem(con, server_ref->server))
+    if (!rv && have_mdev13453_problem(con, server))
     {
         /**
          * Try to work around MDEV-13453 by using a query without CTEs. Masquerading as
          * a 10.1.10 server makes sure CTEs aren't used.
          */
         MXS_FREE(query);
-        query = get_users_query(server_ref->server->version_string, 100110, service->enable_root, SERVER_ROLES);
+        query = get_users_query(server_version, service->enable_root, SERVER_ROLES);
         rv = query_and_process_users(query, con, handle, service, &users, SERVER_ROLES);
     }
 
     if (!rv)
     {
-        MXS_ERROR("Failed to load users from server '%s': %s", server_ref->server->name, mysql_error(con));
+        MXS_ERROR("Failed to load users from server '%s': %s", server->name, mysql_error(con));
     }
 
     MXS_FREE(query);

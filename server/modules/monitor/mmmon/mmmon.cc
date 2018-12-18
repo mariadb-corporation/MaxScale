@@ -81,15 +81,13 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     int isslave = 0;
     int ismaster = 0;
     unsigned long int server_version = 0;
-    char* server_string;
-
 
     /* get server version from current server */
     server_version = mysql_get_server_version(monitored_server->con);
 
     /* get server version string */
-    mxs_mysql_update_server_version(monitored_server->con, monitored_server->server);
-    server_string = monitored_server->server->version_string;
+    mxs_mysql_update_server_version(monitored_server->server, monitored_server->con);
+    auto server_string = monitored_server->server->version_string();
 
     /* get server_id form current node */
     if (mxs_mysql_query(monitored_server->con, "SELECT @@server_id") == 0
@@ -102,7 +100,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for 'SELECT @@server_id'. Expected 1 column."
                       " MySQL Version: %s",
-                      server_string);
+                      server_string.c_str());
             return;
         }
 
@@ -141,7 +139,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                 mysql_free_result(result);
                 MXS_ERROR("\"SHOW ALL SLAVES STATUS\" returned less than the expected"
                           " amount of columns. Expected 42 columns MySQL Version: %s",
-                          server_string);
+                          server_string.c_str());
                 return;
             }
 
@@ -211,7 +209,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                                   "replication tree cannot be resolved for server %s."
                                   " MySQL Version: %s",
                                   monitored_server->server->name,
-                                  server_string);
+                                  server_string.c_str());
                         monitored_server->log_version_err = false;
                     }
                 }
@@ -220,7 +218,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                     MXS_ERROR("\"SHOW SLAVE STATUS\" "
                               "returned less than the expected amount of columns. "
                               "Expected 40 columns. MySQL Version: %s",
-                              server_string);
+                              server_string.c_str());
                 }
                 return;
             }
@@ -269,7 +267,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW GLOBAL VARIABLES LIKE 'read_only'\". "
                       "Expected 2 columns. MySQL Version: %s",
-                      server_string);
+                      server_string.c_str());
             return;
         }
 

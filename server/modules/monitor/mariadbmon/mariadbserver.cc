@@ -887,20 +887,18 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
 
 void MariaDBServer::update_server_version()
 {
-    m_srv_type = server_type::UNKNOWN;
     auto conn = m_server_base->con;
     auto srv = m_server_base->server;
+    mxs_mysql_update_server_version(srv, conn);
 
-    /* Get server version string, also get/set numeric representation. This function does not query the
-     * server, since the data was obtained when connecting. */
-    mxs_mysql_update_server_version(conn, srv);
-
-    // Check whether this server is a MaxScale Binlog Server.
+    m_srv_type = server_type::UNKNOWN; // TODO: Use type information in SERVER directly
+    auto server_type = srv->type();
     MYSQL_RES* result;
-    if (strcasestr(srv->version_string, "clustrix") != nullptr)
+    if (server_type == SERVER::Type::CLUSTRIX)
     {
         m_srv_type = server_type::CLUSTRIX;
     }
+    // Check whether this server is a MaxScale Binlog Server.
     else if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0
              && (result = mysql_store_result(conn)) != NULL)
     {
@@ -912,7 +910,7 @@ void MariaDBServer::update_server_version()
         /* Not a binlog server, check version number and supported features. */
         m_srv_type = server_type::NORMAL;
         m_capabilities = Capabilities();
-        SERVER::Version info = srv->get_version();
+        SERVER::Version info = srv->version();
         auto major = info.major;
         auto minor = info.minor;
         auto patch = info.patch;
@@ -921,7 +919,7 @@ void MariaDBServer::update_server_version()
         {
             m_capabilities.basic_support = true;
             // For more specific features, at least MariaDB 10.X is needed.
-            if (srv->server_type == SERVER_TYPE_MARIADB && major >= 10)
+            if (server_type == SERVER::Type::MARIADB && major >= 10)
             {
                 // 10.0.2 or 10.1.X or greater than 10
                 if (((minor == 0 && patch >= 2)  || minor >= 1) || major > 10)
@@ -938,7 +936,7 @@ void MariaDBServer::update_server_version()
         else
         {
             MXS_ERROR("MariaDB/MySQL version of '%s' (%s) is less than 5.5, which is not supported. "
-                      "The server is ignored by the monitor.", name(), srv->version_string);
+                      "The server is ignored by the monitor.", name(), srv->version_string().c_str());
         }
     }
 }

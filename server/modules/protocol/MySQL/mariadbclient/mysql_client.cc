@@ -209,14 +209,14 @@ std::string get_version_string(SERVICE* service)
     }
     else
     {
-        uint64_t intver = UINT64_MAX;
-
+        uint64_t smallest_found = UINT64_MAX;
         for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
         {
-            if (ref->server->version && ref->server->version < intver)
+            auto version = ref->server->version();
+            if (version.total > 0 && version.total < smallest_found)
             {
-                rval = ref->server->version_string;
-                intver = ref->server->version;
+                rval = ref->server->version_string();
+                smallest_found = version.total;
             }
         }
     }
@@ -265,7 +265,7 @@ int MySQLSendHandshake(DCB* dcb)
     {
         mysql_server_language = dcb->service->dbref->server->charset;
 
-        if (dcb->service->dbref->server->version >= 100200)
+        if (dcb->service->dbref->server->version().total >= 100200)
         {
             /** The backend servers support the extended capabilities */
             is_maria = true;

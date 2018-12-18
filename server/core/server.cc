@@ -534,7 +534,7 @@ void Server::print_to_dcb(DCB* dcb) const
     dcb_printf(dcb, "\tStatus:                              %s\n", stat.c_str());
     dcb_printf(dcb, "\tProtocol:                            %s\n", server->protocol);
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
-    dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string);
+    dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string().c_str());
     dcb_printf(dcb, "\tNode Id:                             %ld\n", server->node_id);
     dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
     dcb_printf(dcb,
@@ -998,62 +998,9 @@ uint64_t server_map_status(const char* str)
     return 0;
 }
 
-/**
- * Set the version string of the server.
- *
- * @param server          Server to update
- * @param version_string  Version string
- */
-void server_set_version_string(SERVER* server, const char* version_string)
-{
-    // Possible data race. The string may be accessed while we are updating it.
-    // Take some precautions to ensure that the string cannot be completely garbled at any point.
-    // Strictly speaking, this is not fool-proof as writes may not appear in order to the reader.
-    size_t old_len = strlen(server->version_string);
-    size_t new_len = strlen(version_string);
-    if (new_len >= SERVER::MAX_VERSION_LEN)
-    {
-        new_len = SERVER::MAX_VERSION_LEN - 1;
-    }
-
-    if (new_len < old_len)
-    {
-        // If the new string is shorter, we start by nulling out the
-        // excess data.
-        memset(server->version_string + new_len, 0, old_len - new_len);
-    }
-
-    // No null-byte needs to be set. The array starts out as all zeros and the above memset adds
-    // the necessary null, should the new string be shorter than the old.
-    strncpy(server->version_string, version_string, new_len);
-}
-
 void Server::set_version(uint64_t version_num, const std::string& version_str)
 {
     info.set(version_num, version_str);
-}
-
-/**
- * Set the version of the server.
- *
- * @param server         Server to update
- * @param version_string Human readable version string.
- * @param version        Version encoded as MariaDB encodes the version, i.e.:
- *                       version = major * 10000 + minor * 100 + patch
- */
-void server_set_version(SERVER* srv, const char* version_string, uint64_t version)
-{
-    Server* server = static_cast<Server*>(srv);
-    server_set_version_string(server, version_string);
-    atomic_store_uint64(&server->version, version);
-    bool is_mariadb = (strcasestr(version_string, "mariadb") != NULL);
-    server->server_type = is_mariadb ? SERVER_TYPE_MARIADB : SERVER_TYPE_MYSQL;
-    server->set_version(version, version_string);
-}
-
-uint64_t server_get_version(const SERVER* server)
-{
-    return atomic_load_uint64(&server->version);
 }
 
 /**
@@ -1292,7 +1239,7 @@ json_t* Server::server_json_attributes(const Server* server)
     string stat = mxs::server_status(server);
     json_object_set_new(attr, CN_STATE, json_string(stat.c_str()));
 
-    json_object_set_new(attr, CN_VERSION_STRING, json_string(server->version_string));
+    json_object_set_new(attr, CN_VERSION_STRING, json_string(server->version_string().c_str()));
 
     json_object_set_new(attr, "node_id", json_integer(server->node_id));
     json_object_set_new(attr, "master_id", json_integer(server->master_id));
@@ -1498,10 +1445,10 @@ void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
      * sometimes get inconsistent values. */
     Guard lock(m_lock);
 
-    uint32_t major, minor, patch;
-    major = version / 10000;
-    minor = (version - major * 10000) / 100;
-    patch = version - major * 10000 - minor * 100;
+    mxb::atomic::store(&m_version_num.total, version, mxb::atomic::RELAXED);
+    uint32_t major = version / 10000;
+    uint32_t minor = (version - major * 10000) / 100;
+    uint32_t patch = version - major * 10000 - minor * 100;
     m_version_num.major = major;
     m_version_num.minor = minor;
     m_version_num.patch = patch;

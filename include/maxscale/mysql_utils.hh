@@ -118,9 +118,9 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
  * Get server information from connector, store it to server object. This does not query
  * the server as the data has been read while connecting.
  *
- * @param mysql   MySQL handle from which information is read.
- * @param server  Server object to write.
+ * @param dest     Server object to write
+ * @param source   MySQL handle from which information is read
  */
-void mxs_mysql_update_server_version(MYSQL* mysql, SERVER* server);
+void mxs_mysql_update_server_version(SERVER* dest, MYSQL* source);
 
 MXS_END_DECLS

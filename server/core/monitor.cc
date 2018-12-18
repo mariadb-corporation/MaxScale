@@ -2750,11 +2750,11 @@ void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
             pMs->disk_space_checked = -1;
 
             MXS_ERROR("Disk space cannot be checked for %s at %s, because either the "
-                      "version %s is too old, or the DISKS information schema plugin "
+                      "version (%s) is too old, or the DISKS information schema plugin "
                       "has not been installed. Disk space checking has been disabled.",
                       pServer->name,
                       pServer->address,
-                      pServer->version_string);
+                      pServer->version_string().c_str());
         }
         else
         {

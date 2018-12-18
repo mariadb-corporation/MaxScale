@@ -51,13 +51,6 @@ struct SERVER_STATS
     uint64_t packets = 0;       /**< Number of packets routed to this server */
 };
 
-// TODO: Add clustrix etc types
-enum server_type_t
-{
-    SERVER_TYPE_MARIADB,
-    SERVER_TYPE_MYSQL
-};
-
 /**
  * The SERVER structure defines a backend server. Each server has a name
  * or IP address for the server, a port that the server listens on and
@@ -82,9 +75,10 @@ public:
 
     struct Version
     {
-        uint32_t major = 0;
-        uint32_t minor = 0;
-        uint32_t patch = 0;
+        uint64_t total = 0; /**< The version number received from server */
+        uint32_t major = 0; /**< Major version */
+        uint32_t minor = 0; /**< Minor version */
+        uint32_t patch = 0; /**< Patch version */
     };
 
     // Base settings
@@ -118,10 +112,6 @@ public:
     uint64_t status = 0;                                    /**< Current status flag bitmap */
     int      maint_request = MAINTENANCE_NO_CHANGE;         /**< Is admin requesting Maintenance=ON/OFF on the
                                                              * server? */
-    char          version_string[MAX_VERSION_LEN] = {'\0'}; /**< Server version string as given by backend */
-    uint64_t      version = 0;                              /**< Server version numeric representation */
-    server_type_t server_type = SERVER_TYPE_MARIADB;        /**< Server type (MariaDB or MySQL), deduced from
-                                                             * version string */
 
     long          node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
     long          master_id = -1;       /**< Master server id of this node */
@@ -180,25 +170,25 @@ public:
     virtual void set_version(uint64_t version_num, const std::string& version_str) = 0;
 
     /**
-     * Get numeric version information. TODO: Rename to "version" once cleanup is done.
+     * Get numeric version information.
      *
      * @return Major, minor and patch numbers
      */
-    virtual Version get_version() const = 0;
+    virtual Version version() const = 0;
 
     /**
      * Get the type of the server.
      *
      * @return Server type
      */
-    virtual Type get_type() const = 0;
+    virtual Type type() const = 0;
 
     /**
      * Get version string.
      *
      * @return Version string
      */
-    virtual std::string get_version_string() const = 0;
+    virtual std::string version_string() const = 0;
 
 protected:
     SERVER()
@@ -461,9 +451,6 @@ extern void     server_update_address(SERVER* server, const char* address);
 extern void     server_update_port(SERVER* server, unsigned short port);
 extern void     server_update_extra_port(SERVER* server, unsigned short port);
 extern uint64_t server_map_status(const char* str);
-extern void     server_set_version_string(SERVER* server, const char* version_string);
-extern void     server_set_version(SERVER* server, const char* version_string, uint64_t version);
-extern uint64_t server_get_version(const SERVER* server);
 
 extern void printServer(const SERVER*);
 extern void printAllServers();
