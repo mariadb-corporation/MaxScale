@@ -50,8 +50,8 @@ const char* mariadb_users_query_format =
 const char* clustrix_users_query_format =
     "SELECT u.username AS user, u.host, a.dbname AS db, "
     "       IF(a.privileges & 1048576, 'Y', 'N') AS select_priv, u.password "
-    "FROM system.users AS u LEFT JOIN system.user_acl AS a ON (u.user = a. role) "
-    "WHERE u.plugin in ('', 'mysql_native_password')";
+    "FROM system.users AS u LEFT JOIN system.user_acl AS a ON (u.user = a.role) "
+    "WHERE u.plugin IN ('', 'mysql_native_password') %s";
 
 // Used with 10.2 or newer, supports composite roles
 const char* mariadb_102_users_query =
@@ -197,7 +197,18 @@ static char* get_mariadb_users_query(bool include_root, const SERVER::Version& v
 
 static char* get_clustrix_users_query(bool include_root)
 {
-    const char* with_root = include_root ? "" : " AND u.username <> 'root'";
+    const char* with_root;
+
+    if (include_root)
+    {
+        with_root =
+            "UNION ALL "
+            "SELECT 'root' AS user, '127.0.0.1', '*' AS db, 'Y' AS select_priv, '' AS password";
+    }
+    else
+    {
+        with_root = "AND u.username <> 'root'";
+    }
 
     size_t n_bytes = snprintf(NULL, 0, clustrix_users_query_format, with_root);
     char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
