@@ -86,9 +86,9 @@ public:
     char* protocol = nullptr;       /**< Backend protocol module name */
     char* authenticator = nullptr;  /**< Authenticator module name */
 
-    char           address[MAX_ADDRESS_LEN] = {'\0'};   /**< Server hostname/IP-address */
-    unsigned short port = 0;                            /**< Server port */
-    unsigned short extra_port = 0;                      /**< Alternative monitor port if normal port fails */
+    char address[MAX_ADDRESS_LEN] = {'\0'};   /**< Server hostname/IP-address */
+    int  port = -1;                           /**< Server port */
+    int  extra_port = -1;                     /**< Alternative monitor port if normal port fails */
 
     // Other settings
     char monuser[MAX_MONUSER_LEN] = {'\0'};     /**< Monitor username, overrides monitor setting */
@@ -189,6 +189,20 @@ public:
      * @return Version string
      */
     virtual std::string version_string() const = 0;
+
+    /**
+     * Update the server port. TODO: Move this to internal class once blr is gone.
+     *
+     * @param new_port New port. The value is not checked but should generally be 1 -- 65535.
+     */
+    void update_port(int new_port);
+
+    /**
+     * Update the server extra port. TODO: Move this to internal class once blr is gone.
+     *
+     * @param new_port New port. The value is not checked but should generally be 1 -- 65535.
+     */
+    void update_extra_port(int new_port);
 
 protected:
     SERVER()
@@ -440,7 +454,6 @@ void server_add_response_average(SERVER* server, double ave, int num_samples);
 extern int     server_free(SERVER* server);
 extern SERVER* server_find_by_unique_name(const char* name);
 extern int     server_find_by_unique_names(char** server_names, int size, SERVER*** output);
-extern SERVER* server_find(const char* servname, unsigned short port);
 extern void    server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set);
 extern void    server_set_status_nolock(SERVER* server, uint64_t bit);
 extern void    server_clear_status_nolock(SERVER* server, uint64_t bit);
@@ -448,8 +461,6 @@ extern void    server_transfer_status(SERVER* dest_server, const SERVER* source_
 extern void    server_add_mon_user(SERVER* server, const char* user, const char* passwd);
 extern void    server_update_credentials(SERVER* server, const char* user, const char* passwd);
 extern void     server_update_address(SERVER* server, const char* address);
-extern void     server_update_port(SERVER* server, unsigned short port);
-extern void     server_update_extra_port(SERVER* server, unsigned short port);
 extern uint64_t server_map_status(const char* str);
 
 extern void printServer(const SERVER*);

@@ -403,26 +403,6 @@ int server_find_by_unique_names(char** server_names, int size, SERVER*** output)
 }
 
 /**
- * Find an existing server
- *
- * @param       servname        The Server name or address
- * @param       port            The server port
- * @return      The server or NULL if not found
- */
-SERVER* server_find(const char* servname, unsigned short port)
-{
-    Guard guard(this_unit.all_servers_lock);
-    for (Server* server : this_unit.all_servers)
-    {
-        if (server->is_active && strcmp(server->address, servname) == 0 && server->port == port)
-        {
-            return server;
-        }
-    }
-    return nullptr;
-}
-
-/**
  * Print details of an individual server
  *
  * @param server        Server to print
@@ -932,33 +912,14 @@ void server_update_address(SERVER* server, const char* address)
     }
 }
 
-/*
- * Update the port value of a specific server
- *
- * @param server        The server to update
- * @param port          The new port value
- *
- */
-void server_update_port(SERVER* server, unsigned short port)
+void SERVER::update_port(int new_port)
 {
-    Guard guard(this_unit.all_servers_lock);
-
-    if (server && port > 0)
-    {
-        server->port = port;
-    }
+    mxb::atomic::store(&port, new_port, mxb::atomic::RELAXED);
 }
 
-/*
- * Update the extra_port value of a specific server
- *
- * @param server        The server to update
- * @param port          The new extra_port value
- *
- */
-void server_update_extra_port(SERVER* server, unsigned short port)
+void SERVER::update_extra_port(int new_port)
 {
-    mxb::atomic::store(&server->extra_port, port, mxb::atomic::RELAXED);
+    mxb::atomic::store(&extra_port, new_port, mxb::atomic::RELAXED);
 }
 
 static struct

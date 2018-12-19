@@ -324,7 +324,7 @@ SListener service_find_listener(Service* service,
  * @param port The port to check
  * @return True if a MaxScale service uses the port
  */
-bool service_port_is_used(unsigned short port);
+bool service_port_is_used(int port);
 
 /**
  * @brief Check if the service has a listener with a matching name

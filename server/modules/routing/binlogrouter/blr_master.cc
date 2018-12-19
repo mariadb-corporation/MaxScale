@@ -3211,7 +3211,7 @@ void blr_master_set_config(ROUTER_INSTANCE* inst, const ChangeMasterConfig& conf
 
     if (config.port)
     {
-        server_update_port(backend_server, config.port);
+        backend_server->update_port(config.port);
     }
 
     if (!config.user.empty())

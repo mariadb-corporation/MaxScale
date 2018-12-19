@@ -180,7 +180,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
     MYSQL* mysql = mysql_real_connect(con, server->address, user, passwd, NULL, server->port, NULL, 0);
     auto extra_port = mxb::atomic::load(&server->extra_port, mxb::atomic::RELAXED);
 
-    if (!mysql && extra_port)
+    if (!mysql && extra_port > 0)
     {
         mysql = mysql_real_connect(con, server->address, user, passwd, NULL, extra_port, NULL, 0);
         MXS_WARNING("Could not connect with normal port to server '%s', using extra_port", server->name);

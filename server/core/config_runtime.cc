@@ -486,12 +486,12 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     {
         if (long ival = get_positive_int(value))
         {
-            server_update_port(server, ival);
+            server->update_port(ival);
         }
     }
     else if (strcmp(key, CN_EXTRA_PORT) == 0)
     {
-        server_update_extra_port(server, atoi(value));
+        server->update_extra_port(atoi(value));
     }
     else if (strcmp(key, CN_MONITORUSER) == 0)
     {

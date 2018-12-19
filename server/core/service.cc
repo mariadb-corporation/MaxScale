@@ -1552,7 +1552,7 @@ void service_print_users(DCB* dcb, const SERVICE* service)
     }
 }
 
-bool service_port_is_used(unsigned short port)
+bool service_port_is_used(int port)
 {
     bool rval = false;
     LockGuard guard(this_unit.lock);

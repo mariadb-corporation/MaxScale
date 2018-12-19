@@ -4684,7 +4684,7 @@ static int blr_set_master_port(ROUTER_INSTANCE* router, int port)
 {
     if (port > 0)
     {
-        server_update_port(router->service->dbref->server, port);
+        router->service->dbref->server->update_port(port);
 
         MXS_INFO("%s: New MASTER_PORT is [%i]",
                  router->service->name,
@@ -4884,7 +4884,7 @@ static void blr_master_restore_config(ROUTER_INSTANCE* router,
                                       const MasterServerConfig& prev_master)
 {
     server_update_address(router->service->dbref->server, prev_master.host.c_str());
-    server_update_port(router->service->dbref->server, prev_master.port);
+    router->service->dbref->server->update_port(prev_master.port);
 
     router->ssl_enabled = prev_master.ssl_enabled;
     if (!prev_master.ssl_version.empty())
@@ -4904,7 +4904,7 @@ static void blr_master_restore_config(ROUTER_INSTANCE* router,
 static void blr_master_set_empty_config(ROUTER_INSTANCE* router)
 {
     server_update_address(router->service->dbref->server, "none");
-    server_update_port(router->service->dbref->server, (unsigned short)3306);
+    router->service->dbref->server->update_port(3306);
 
     router->current_pos = 4;
     router->binlog_position = 4;
@@ -4926,7 +4926,7 @@ static void blr_master_set_empty_config(ROUTER_INSTANCE* router)
 static void blr_master_apply_config(ROUTER_INSTANCE* router, const MasterServerConfig& prev_master)
 {
     server_update_address(router->service->dbref->server, prev_master.host.c_str());
-    server_update_port(router->service->dbref->server, prev_master.port);
+    router->service->dbref->server->update_port(prev_master.port);
     router->current_pos = prev_master.pos;
     router->binlog_position = prev_master.safe_pos;
     router->current_safe_event = prev_master.safe_pos;
