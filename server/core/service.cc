@@ -920,7 +920,7 @@ void dprintService(DCB* dcb, SERVICE* svc)
                        server->server->address,
                        server->server->port,
                        server->server->protocol,
-                       server->server->name);
+                       server->server->name());
         }
         server = server->next;
     }
@@ -978,11 +978,11 @@ void dListServices(DCB* dcb)
                 {
                     if (first)
                     {
-                        dcb_printf(dcb, "%s", server_ref->server->name);
+                        dcb_printf(dcb, "%s", server_ref->server->name());
                     }
                     else
                     {
-                        dcb_printf(dcb, ", %s", server_ref->server->name);
+                        dcb_printf(dcb, ", %s", server_ref->server->name());
                     }
                     first = false;
                 }
@@ -1363,7 +1363,7 @@ static void service_calculate_weights(SERVICE* service)
                                     " will only be used if no other servers are available.",
                                     weightby,
                                     config_weight,
-                                    server->server->name);
+                                    server->server->name());
                         config_weight = 0;
                     }
                     server->server_weight = config_weight / total;
@@ -1374,7 +1374,7 @@ static void service_calculate_weights(SERVICE* service)
                                 " The runtime weight will be set to 0, and the server"
                                 " will only be used if no other servers are available.",
                                 weightby,
-                                server->server->name);
+                                server->server->name());
                     server->server_weight = 0;
                 }
             }
@@ -1481,7 +1481,7 @@ bool Service::dump_config(const char* filename) const
         {
             if (SERVER_REF_IS_ACTIVE(db))
             {
-                dprintf(file, "%s%s", sep, db->server->name);
+                dprintf(file, "%s%s", sep, db->server->name());
                 sep = ",";
             }
         }
@@ -1709,7 +1709,7 @@ json_t* Service::json_relationships(const char* host) const
         {
             if (SERVER_REF_IS_ACTIVE(ref))
             {
-                mxs_json_add_relation(servers, ref->server->name, CN_SERVERS);
+                mxs_json_add_relation(servers, ref->server->name(), CN_SERVERS);
             }
         }
 

@@ -311,7 +311,7 @@ public:
      */
     inline const char* name() const
     {
-        return m_backend->server->name;
+        return m_backend->server->name();
     }
 
     /**

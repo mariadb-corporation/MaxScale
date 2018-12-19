@@ -150,7 +150,7 @@ bool runtime_link_server(Server* server, const char* target)
         {
             config_runtime_error("Service '%s' already uses server '%s'",
                                  service->name,
-                                 server->name);
+                                 server->name());
         }
     }
     else if (monitor)
@@ -162,14 +162,14 @@ bool runtime_link_server(Server* server, const char* target)
         }
         else
         {
-            config_runtime_error("Server '%s' is already monitored", server->name);
+            config_runtime_error("Server '%s' is already monitored", server->name());
         }
     }
 
     if (rval)
     {
         const char* type = service ? "service" : "monitor";
-        MXS_NOTICE("Added server '%s' to %s '%s'", server->name, type, target);
+        MXS_NOTICE("Added server '%s' to %s '%s'", server->name(), type, target);
     }
 
     return rval;
@@ -199,7 +199,7 @@ bool runtime_unlink_server(Server* server, const char* target)
         }
 
         const char* type = service ? "service" : "monitor";
-        MXS_NOTICE("Removed server '%s' from %s '%s'", server->name, type, target);
+        MXS_NOTICE("Removed server '%s' from %s '%s'", server->name(), type, target);
     }
 
     return rval;
@@ -248,7 +248,7 @@ bool runtime_create_server(const char* name,
             {
                 rval = true;
                 MXS_NOTICE("Created server '%s' at %s:%u",
-                           server->name,
+                           server->name(),
                            server->address,
                            server->port);
             }
@@ -281,8 +281,8 @@ bool runtime_destroy_server(Server* server)
     {
         const char* err = "Cannot destroy server '%s' as it is used by at least "
                           "one service or monitor";
-        config_runtime_error(err, server->name);
-        MXS_ERROR(err, server->name);
+        config_runtime_error(err, server->name());
+        MXS_ERROR(err, server->name());
     }
     else
     {
@@ -291,7 +291,7 @@ bool runtime_destroy_server(Server* server)
                  sizeof(filename),
                  "%s/%s.cnf",
                  get_config_persistdir(),
-                 server->name);
+                 server->name());
 
         if (unlink(filename) == -1)
         {
@@ -307,7 +307,7 @@ bool runtime_destroy_server(Server* server)
                 rval = true;
                 MXS_WARNING("Server '%s' was not created at runtime. Remove the "
                             "server manually from the correct configuration file.",
-                            server->name);
+                            server->name());
             }
         }
         else
@@ -318,7 +318,7 @@ bool runtime_destroy_server(Server* server)
         if (rval)
         {
             MXS_NOTICE("Destroyed server '%s' at %s:%u",
-                       server->name,
+                       server->name(),
                        server->address,
                        server->port);
             server->is_active = false;
@@ -371,7 +371,7 @@ bool runtime_enable_server_ssl(Server* server,
     if (key && cert && ca)
     {
         std::lock_guard<std::mutex> guard(crt_lock);
-        SSL_LISTENER* ssl = create_ssl(server->name, key, cert, ca, version, depth, verify);
+        SSL_LISTENER* ssl = create_ssl(server->name(), key, cert, ca, version, depth, verify);
 
         if (ssl)
         {
@@ -385,7 +385,7 @@ bool runtime_enable_server_ssl(Server* server,
 
             if (server->serialize())
             {
-                MXS_NOTICE("Enabled SSL for server '%s'", server->name);
+                MXS_NOTICE("Enabled SSL for server '%s'", server->name());
                 rval = true;
             }
         }
@@ -525,7 +525,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     }
 
     server->serialize();
-    MXS_NOTICE("Updated server '%s': %s=%s", server->name, key, value);
+    MXS_NOTICE("Updated server '%s': %s=%s", server->name(), key, value);
 
     return true;
 }
@@ -1772,7 +1772,7 @@ static bool process_ssl_parameters(Server* server, json_t* params)
             {
                 config_runtime_error("Failed to initialize SSL for server '%s'. See "
                                      "error log for more details.",
-                                     server->name);
+                                     server->name());
                 rval = false;
             }
         }

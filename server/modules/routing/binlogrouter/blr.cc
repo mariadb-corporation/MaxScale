@@ -1314,7 +1314,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
                    time(0) - router->connect_time,
                    router->stats.n_binlogs_ses);
         MXS_ERROR("Binlog router close session with master server %s",
-                  router->service->dbref->server->name);
+                  router->service->dbref->server->name());
         blr_master_reconnect(router);
         return;
     }

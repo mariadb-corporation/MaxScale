@@ -962,13 +962,13 @@ static void cmd_AddServer(DCB* dcb, Server* server,
     {
         if (runtime_link_server(server, values[i]))
         {
-            dcb_printf(dcb, "Added server '%s' to '%s'\n", server->name, values[i]);
+            dcb_printf(dcb, "Added server '%s' to '%s'\n", server->name(), values[i]);
         }
         else
         {
             dcb_printf(dcb,
                        "Could not add server '%s' to object '%s'. See error log for more details.\n",
-                       server->name,
+                       server->name(),
                        values[i]);
         }
     }
@@ -1072,7 +1072,7 @@ static void cmd_RemoveServer(DCB* dcb, Server* server,
     {
         if (runtime_unlink_server(server, values[i]))
         {
-            dcb_printf(dcb, "Removed server '%s' from '%s'\n", server->name, values[i]);
+            dcb_printf(dcb, "Removed server '%s' from '%s'\n", server->name(), values[i]);
         }
         else
         {
@@ -1388,8 +1388,8 @@ static void destroyServer(DCB* dcb, Server* server)
     /** Do this so that we don't directly access the server. Currently, the
      * destruction of a server does not free any memory and the server stays
      * valid. */
-    char name[strlen(server->name) + 1];
-    strcpy(name, server->name);
+    char name[strlen(server->name()) + 1];
+    strcpy(name, server->name());
 
     if (runtime_destroy_server(server))
     {
@@ -1566,7 +1566,7 @@ static void alterServer(DCB* dcb, Server* server,
                 dcb_printf(dcb,
                            "Enabling SSL for server '%s' failed, see log "
                            "for more details.\n",
-                           server->name);
+                           server->name());
             }
         }
         else

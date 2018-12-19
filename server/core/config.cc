@@ -3727,7 +3727,7 @@ int create_new_server(CONFIG_CONTEXT* obj)
             {
                 MXS_ERROR("Invalid value for '%s' for server %s: %s",
                           CN_DISK_SPACE_THRESHOLD,
-                          server->name,
+                          server->name(),
                           disk_space_threshold);
                 error = true;
             }

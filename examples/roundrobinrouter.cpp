@@ -269,7 +269,7 @@ int RRRouter::route_query(RRRouterSession* rses, GWBUF* querybuf)
         {
             MXS_NOTICE("Routing statement of length %du  to backend '%s'.",
                        gwbuf_length(querybuf),
-                       target->server->name);
+                       target->server->name());
         }
         /* Do not use dcb_write() to output to a dcb. dcb_write() is used only
          * for raw write in the procol modules. */

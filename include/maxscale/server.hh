@@ -82,7 +82,6 @@ public:
     };
 
     // Base settings
-    char* name = nullptr;           /**< Server config name */
     char* protocol = nullptr;       /**< Backend protocol module name */
     char* authenticator = nullptr;  /**< Authenticator module name */
 
@@ -189,6 +188,13 @@ public:
      * @return Version string
      */
     virtual std::string version_string() const = 0;
+
+    /**
+     * Returns the server configuration name. The value is returned as a c-string for printing convenience.
+     *
+     * @return Server name
+     */
+    virtual const char* name() const = 0;
 
     /**
      * Update the server port. TODO: Move this to internal class once blr is gone.

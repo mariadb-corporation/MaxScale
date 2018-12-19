@@ -43,7 +43,7 @@ public:
         if (pPacket)
         {
             SERVER* pServer = dcb.server();
-            HR_DEBUG("Writing packet to %p %s.", dcb.get(), pServer ? pServer->name : "(null)");
+            HR_DEBUG("Writing packet to %p %s.", dcb.get(), pServer ? pserver->name() : "(null)");
             rv = dcb.write(pPacket);
         }
         return rv;
@@ -138,13 +138,13 @@ void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
 
     if (m_surplus_replies == 0)
     {
-        HR_DEBUG("Returning packet from %s.", pServer ? pServer->name : "(null)");
+        HR_DEBUG("Returning packet from %s.", pServer ? pserver->name() : "(null)");
 
         MXS_SESSION_ROUTE_REPLY(pBackend->session, pPacket);
     }
     else
     {
-        HR_DEBUG("Ignoring reply packet from %s.", pServer ? pServer->name : "(null)");
+        HR_DEBUG("Ignoring reply packet from %s.", pServer ? pserver->name() : "(null)");
 
         --m_surplus_replies;
         gwbuf_free(pPacket);
@@ -219,7 +219,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
 
             if (master_ok)
             {
-                HR_DEBUG("Writing packet to master: '%s'.", m_master.server()->name);
+                HR_DEBUG("Writing packet to master: '%s'.", m_master.server()->name());
                 success = m_master.write(pPacket);
                 if (success)
                 {
@@ -247,7 +247,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
             BackendMap::const_iterator iter = m_backends.find(backend_name);
             if (iter != m_backends.end())
             {
-                HR_DEBUG("Writing packet to %s.", iter->second.server()->name);
+                HR_DEBUG("Writing packet to %s.", iter->second.server()->name());
                 success = iter->second.write(pPacket);
                 if (success)
                 {
@@ -319,7 +319,7 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
             Dcb& candidate = m_slaves.at(curr % size);
             if (server_is_slave(candidate.server()))
             {
-                HR_DEBUG("Writing packet to slave: '%s'.", candidate.server()->name);
+                HR_DEBUG("Writing packet to slave: '%s'.", candidate.server()->name());
                 success = candidate.write(pPacket);
                 if (success)
                 {
@@ -347,7 +347,7 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
             for (size_type curr = begin; curr != limit; curr++)
             {
                 Dcb& candidate = m_slaves.at(curr % size);
-                HR_DEBUG("Writing packet to slave: '%s'.", candidate.server()->name);
+                HR_DEBUG("Writing packet to slave: '%s'.", candidate.server()->name());
                 success = candidate.write(pPacket);
                 if (success)
                 {

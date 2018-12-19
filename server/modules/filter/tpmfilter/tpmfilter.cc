@@ -601,7 +601,7 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
                     "%ld%s%s%s%s%s%ld%s%s%s%s\n",
                     timestamp,
                     my_instance->delimiter,
-                    reply->server->name,
+                    reply->server->name(),
                     my_instance->delimiter,
                     my_session->userName,
                     my_instance->delimiter,

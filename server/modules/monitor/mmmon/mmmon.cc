@@ -208,7 +208,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                                   " for versions less than 5.5 does not have master_server_id, "
                                   "replication tree cannot be resolved for server %s."
                                   " MySQL Version: %s",
-                                  monitored_server->server->name,
+                                  monitored_server->server->name(),
                                   server_string.c_str());
                         monitored_server->log_version_err = false;
                     }

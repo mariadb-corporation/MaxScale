@@ -31,8 +31,9 @@ std::unique_ptr<ResultSet> serverGetList();
 class Server : public SERVER
 {
 public:
-    Server()
+    Server(const std::string& name)
         : SERVER()
+        , m_name(name)
         , m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
     {
     }
@@ -115,6 +116,11 @@ public:
         return info.version_string();
     }
 
+    const char* name() const override
+    {
+        return m_name.c_str();
+    }
+
     /**
      * Get a DCB from the persistent connection pool, if possible
      *
@@ -148,6 +154,14 @@ public:
      * @return       The newly created server or NULL if an error occurred
      */
     static Server* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params);
+
+    /**
+     * Creates a server without any configuration. This should be used in unit tests in place of
+     * a default ctor.
+     *
+     * @return A new server
+     */
+    static Server* create_test_server();
 
     /**
      * @brief Find a server with the specified name
@@ -274,6 +288,7 @@ private:
         char m_version_str[MAX_VERSION_LEN] = {'\0'}; /**< Server version string */
     };
 
+    const std::string m_name;             /**< Server config name */
     Settings m_settings;                  /**< Server settings */
     VersionInfo info;                     /**< Server version and type information */
     maxbase::EMAverage m_response_time;   /**< Response time calculations for this server */

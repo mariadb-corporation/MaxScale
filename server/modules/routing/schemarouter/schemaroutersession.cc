@@ -393,7 +393,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             {
                 MXS_INFO("INIT_DB for database '%s' on server '%s'",
                          m_current_db.c_str(),
-                         target->name);
+                         target->name());
                 route_target = TARGET_NAMED_SERVER;
             }
             else
@@ -429,7 +429,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
     DCB* target_dcb = NULL;
 
     if (TARGET_IS_NAMED_SERVER(route_target) && target
-        && get_shard_dcb(&target_dcb, target->name))
+        && get_shard_dcb(&target_dcb, target->name()))
     {
         /** We know where to route this query */
         SSRBackend bref = get_bref_from_dcb(target_dcb);
@@ -530,7 +530,7 @@ void SchemaRouterSession::process_sescmd_response(SSRBackend& bref, GWBUF** ppPa
             mxs_mysql_extract_ps_response(*ppPacket, &resp);
             MXS_INFO("ID: %lu HANDLE: %lu", (unsigned long)id, (unsigned long)resp.id);
             m_shard.add_ps_handle(id, resp.id);
-            MXS_INFO("STMT SERVER: %s", bref->backend()->server->name);
+            MXS_INFO("STMT SERVER: %s", bref->backend()->server->name());
             m_shard.add_statement(id, bref->backend()->server);
             uint8_t* ptr = GWBUF_DATA(*ppPacket) + MYSQL_PS_ID_OFFSET;
             gw_mysql_set_byte4(ptr, id);
@@ -894,7 +894,7 @@ bool SchemaRouterSession::send_shards()
 
     for (const auto& a : pContent)
     {
-        set->add_row({a.first, a.second->name});
+        set->add_row({a.first, a.second->name()});
     }
 
     set->write(m_client);
@@ -953,19 +953,19 @@ bool SchemaRouterSession::handle_default_db()
             SSRBackend backend;
             DCB* dcb = NULL;
 
-            if (get_shard_dcb(&dcb, target->name)
+            if (get_shard_dcb(&dcb, target->name())
                 && (backend = get_bref_from_dcb(dcb)))
             {
                 backend->write(buffer);
                 MXS_DEBUG("USE '%s' sent to %s for session %p",
                           m_connect_db.c_str(),
-                          target->name,
+                          target->name(),
                           m_client->session);
                 rval = true;
             }
             else
             {
-                MXS_INFO("Couldn't find target DCB for '%s'.", target->name);
+                MXS_INFO("Couldn't find target DCB for '%s'.", target->name());
             }
         }
         else
@@ -1031,7 +1031,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
             {
                 (*it)->set_mapped(true);
                 MXS_DEBUG("Received SHOW DATABASES reply from %s for session %p",
-                          (*it)->backend()->server->name,
+                          (*it)->backend()->server->name(),
                           m_client->session);
             }
             else
@@ -1086,7 +1086,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
         {
             mapped = false;
             MXS_DEBUG("Still waiting for reply to SHOW DATABASES from %s for session %p",
-                      (*it)->backend()->server->name,
+                      (*it)->backend()->server->name(),
                       m_client->session);
         }
     }
@@ -1126,7 +1126,7 @@ bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf)
             if (target)
             {
                 dest = db;
-                MXS_INFO("change_current_db: database is on server: '%s'.", target->name);
+                MXS_INFO("change_current_db: database is on server: '%s'.", target->name());
                 succp = true;
             }
         }
@@ -1306,7 +1306,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
         {
             if (m_shard.add_location(data, target))
             {
-                MXS_INFO("<%s, %s>", target->name, data);
+                MXS_INFO("<%s, %s>", target->name(), data);
             }
             else
             {
@@ -1317,8 +1317,8 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
 
                     MXS_ERROR("Table '%s' found on servers '%s' and '%s' for user %s@%s.",
                               data,
-                              target->name,
-                              duplicate->name,
+                              target->name(),
+                              duplicate->name(),
                               m_client->user,
                               m_client->remote);
                 }
@@ -1327,8 +1327,8 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
                     /** In conflict situations, use the preferred server */
                     MXS_INFO("Forcing location of '%s' from '%s' to '%s'",
                              data,
-                             m_shard.get_location(data)->name,
-                             target->name);
+                             m_shard.get_location(data)->name(),
+                             target->name());
                     m_shard.replace_location(data, target);
                 }
             }
@@ -1341,12 +1341,12 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
     {
         n_eof++;
         MXS_INFO("SHOW DATABASES fully received from %s.",
-                 bref->backend()->server->name);
+                 bref->backend()->server->name());
     }
     else
     {
         MXS_INFO("SHOW DATABASES partially received from %s.",
-                 bref->backend()->server->name);
+                 bref->backend()->server->name());
     }
 
     gwbuf_free(buf);
@@ -1402,7 +1402,7 @@ void SchemaRouterSession::query_databases()
             if (!(*it)->write(clone))
             {
                 MXS_ERROR("Failed to write mapping query to '%s'",
-                          (*it)->backend()->server->name);
+                          (*it)->backend()->server->name());
             }
         }
     }
@@ -1441,12 +1441,12 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
     {
         for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
         {
-            char* srvnm = (*it)->backend()->server->name;
+            const char* srvnm = (*it)->backend()->server->name();
 
             if (strcmp(srvnm, (char*)buffer->hint->data) == 0)
             {
                 rval = (*it)->backend()->server;
-                MXS_INFO("Routing hint found (%s)", rval->name);
+                MXS_INFO("Routing hint found (%s)", rval->name());
             }
         }
     }
@@ -1463,7 +1463,7 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
         {
             MXS_INFO("Using active database '%s' on '%s'",
                      m_current_db.c_str(),
-                     rval->name);
+                     rval->name());
         }
     }
     return rval;
@@ -1482,7 +1482,7 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
  *
  * @return True if proper DCB was found, false otherwise.
  */
-bool SchemaRouterSession::get_shard_dcb(DCB** p_dcb, char* name)
+bool SchemaRouterSession::get_shard_dcb(DCB** p_dcb, const char* name)
 {
     bool succp = false;
     mxb_assert(p_dcb != NULL && *(p_dcb) == NULL);
@@ -1496,7 +1496,7 @@ bool SchemaRouterSession::get_shard_dcb(DCB** p_dcb, char* name)
          * the backend state must be RUNNING
          */
         if ((*it)->in_use()
-            && (strncasecmp(name, b->server->name, PATH_MAX) == 0)
+            && (strncasecmp(name, b->server->name(), PATH_MAX) == 0)
             && server_is_usable(b->server))
         {
             *p_dcb = (*it)->dcb();
@@ -1706,15 +1706,15 @@ SERVER* SchemaRouterSession::get_query_target(GWBUF* buffer)
                 {
                     MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
                               "Cross server queries are not supported.",
-                              rval->name,
-                              target->name);
+                              rval->name(),
+                              target->name());
                 }
                 else if (rval == NULL)
                 {
                     rval = target;
                     MXS_INFO("Query targets table '%s' on server '%s'",
                              tables[j],
-                             rval->name);
+                             rval->name());
                 }
             }
         }
@@ -1754,8 +1754,8 @@ SERVER* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_que
                 {
                     MXS_ERROR("Statement targets tables on servers '%s' and '%s'. "
                               "Cross server queries are not supported.",
-                              rval->name,
-                              target->name);
+                              rval->name(),
+                              target->name());
                 }
                 else if (rval == NULL)
                 {
@@ -1767,7 +1767,7 @@ SERVER* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_que
 
         if (rval)
         {
-            MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name);
+            MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name());
             m_shard.add_statement(stmt, rval);
         }
         MXS_FREE(tables);
@@ -1777,7 +1777,7 @@ SERVER* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_que
     {
         char* stmt = qc_get_prepare_name(buffer);
         rval = m_shard.get_statement(stmt);
-        MXS_INFO("Executing named statement %s on server %s", stmt, rval->name);
+        MXS_INFO("Executing named statement %s on server %s", stmt, rval->name());
         MXS_FREE(stmt);
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE))
@@ -1786,7 +1786,7 @@ SERVER* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_que
 
         if ((rval = m_shard.get_statement(stmt)))
         {
-            MXS_INFO("Closing named statement %s on server %s", stmt, rval->name);
+            MXS_INFO("Closing named statement %s on server %s", stmt, rval->name());
             m_shard.remove_statement(stmt);
         }
         MXS_FREE(stmt);
@@ -1801,7 +1801,7 @@ SERVER* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_que
             rval = m_shard.get_location(tables[0]);
             MXS_FREE(tables[i]);
         }
-        rval ? MXS_INFO("Prepare statement on server %s", rval->name) :
+        rval ? MXS_INFO("Prepare statement on server %s", rval->name()) :
         MXS_INFO("Prepared statement targets no mapped tables");
         MXS_FREE(tables);
     }

@@ -997,7 +997,7 @@ static void log_illegal_dcb(DCB* dcb)
     switch (dcb->role)
     {
     case DCB::Role::BACKEND:
-        connected_to = dcb->server->name;
+        connected_to = dcb->server->name();
         break;
 
     case DCB::Role::CLIENT:
@@ -3246,7 +3246,7 @@ json_t* dcb_to_json(DCB* dcb)
     char buf[25];
     snprintf(buf, sizeof(buf), "%p", dcb);
     json_object_set_new(obj, "id", json_string(buf));
-    json_object_set_new(obj, "server", json_string(dcb->server->name));
+    json_object_set_new(obj, "server", json_string(dcb->server->name()));
 
     if (dcb->func.diagnostics_json)
     {

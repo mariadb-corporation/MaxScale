@@ -126,7 +126,7 @@ private:
     /** Helper functions */
     SERVER*    get_shard_target(GWBUF* buffer, uint32_t qtype);
     SSRBackend get_bref_from_dcb(DCB* dcb);
-    bool       get_shard_dcb(DCB** dcb, char* name);
+    bool       get_shard_dcb(DCB** dcb, const char* name);
     bool       have_servers();
     bool       handle_default_db();
     bool       ignore_duplicate_database(const char* data);

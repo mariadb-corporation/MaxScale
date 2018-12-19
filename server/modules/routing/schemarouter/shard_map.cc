@@ -38,7 +38,7 @@ void Shard::add_statement(std::string stmt, SERVER* target)
 
 void Shard::add_statement(uint32_t id, SERVER* target)
 {
-    MXS_DEBUG("ADDING ID: [%u] server: [%s]", id, target->name);
+    MXS_DEBUG("ADDING ID: [%u] server: [%s]", id, target->name());
     m_binary_map[id] = target;
 }
 
@@ -82,11 +82,11 @@ SERVER* Shard::get_location(std::string table)
             {
                 if ((rval && rval != it->second))
                 {
-                    MXS_DEBUG("There are 2 databases with same name on a different servers: '%s' and '%s'. Connecting to '%s'"
-                              ,
-                              rval->name,
-                              it->second->name,
-                              rval->name);
+                    MXS_DEBUG("There are 2 databases with same name on a different servers: '%s' and '%s'. "
+                              "Connecting to '%s'",
+                              rval->name(),
+                              it->second->name(),
+                              rval->name());
                     break;
                 }
                 else

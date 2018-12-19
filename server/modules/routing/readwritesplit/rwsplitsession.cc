@@ -764,7 +764,7 @@ void check_and_log_backend_state(const RWBackend* backend, DCB* problem_dcb)
     else
     {
         const char* remote = problem_dcb->state == DCB_STATE_POLLING
-            && problem_dcb->server ? problem_dcb->server->name : "CLOSED";
+            && problem_dcb->server ? problem_dcb->server->name() : "CLOSED";
 
         MXS_ERROR("DCB connected to '%s' is not in use by the router "
                   "session, not closing it. DCB is in state '%s'",

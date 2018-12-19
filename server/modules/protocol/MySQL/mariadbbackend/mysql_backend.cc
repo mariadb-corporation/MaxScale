@@ -324,7 +324,7 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
 
     MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
               "Msg : %s",
-              dcb->server->name,
+              dcb->server->name(),
               errcode,
               bufstr);
 
@@ -337,7 +337,7 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
                   "Run 'mysqladmin -h %s -P %d flush-hosts' on this "
                   "server before taking this server out of maintenance "
                   "mode.",
-                  dcb->server->name,
+                  dcb->server->name(),
                   dcb->server->address,
                   dcb->server->port);
 
@@ -1211,7 +1211,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
         {
             MXS_ERROR("Unable to write to backend '%s' due to "
                       "%s failure. Server in state %s.",
-                      dcb->server->name,
+                      dcb->server->name(),
                       backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
                       "handshake" : "authentication",
                       mxs::server_status(dcb->server).c_str());
@@ -1941,7 +1941,7 @@ static void gw_send_proxy_protocol_header(DCB* backend_dcb)
     {
         MXS_INFO("Sending proxy-protocol header '%s' to backend %s.",
                  proxy_header,
-                 backend_dcb->server->name);
+                 backend_dcb->server->name());
         if (!dcb_write(backend_dcb, headerbuf))
         {
             gwbuf_free(headerbuf);

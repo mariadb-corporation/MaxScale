@@ -649,7 +649,7 @@ int gssapi_auth_load_users(Listener* listener)
                 if (mxs_mysql_query(mysql, gssapi_users_query))
                 {
                     MXS_ERROR("Failed to query server '%s' for GSSAPI users: %s",
-                              servers->server->name,
+                              servers->server->name(),
                               mysql_error(mysql));
                 }
                 else

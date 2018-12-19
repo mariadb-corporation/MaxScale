@@ -647,7 +647,7 @@ bool MariaDBServer::is_read_only() const
 
 const char* MariaDBServer::name() const
 {
-    return m_server_base->server->name;
+    return m_server_base->server->name();
 }
 
 string MariaDBServer::diagnostics() const

@@ -1541,7 +1541,7 @@ json_t* Session::QueryInfo::as_json() const
 
         long int duration = processed - received;
 
-        json_object_set_new(pResponse, "server", json_string(info.pServer->name));
+        json_object_set_new(pResponse, "server", json_string(info.pServer->name()));
         json_object_set_new(pResponse, "duration", json_integer(duration));
 
         json_array_append_new(pResponses, pResponse);

@@ -177,7 +177,7 @@ static void blr_start_master(void* data)
                   "reached %d maximum number of retries. "
                   "Replication is stopped.",
                   router->service->name,
-                  router->service->dbref->server->name,
+                  router->service->dbref->server->name(),
                   router->retry_limit);
         return;
     }
@@ -246,7 +246,7 @@ static void blr_start_master(void* data)
         MXS_ERROR("%s: failure while connecting to master server '%s', "
                   "retrying in %d seconds",
                   router->service->name,
-                  router->service->dbref->server->name,
+                  router->service->dbref->server->name(),
                   connect_retry);
         return;
     }
@@ -385,7 +385,7 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
                       "reached %d maximum number of retries. "
                       "Replication is stopped.",
                       router->service->name,
-                      router->service->dbref->server->name,
+                      router->service->dbref->server->name(),
                       router->retry_limit);
             return;
         }
@@ -419,7 +419,7 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
         MXS_ERROR("%s: failed to connect to master server '%s', "
                   "retrying in %d seconds",
                   router->service->name,
-                  router->service->dbref->server->name,
+                  router->service->dbref->server->name(),
                   connect_retry);
     }
     else

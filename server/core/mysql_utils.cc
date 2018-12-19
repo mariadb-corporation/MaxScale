@@ -183,7 +183,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
     if (!mysql && extra_port > 0)
     {
         mysql = mysql_real_connect(con, server->address, user, passwd, NULL, extra_port, NULL, 0);
-        MXS_WARNING("Could not connect with normal port to server '%s', using extra_port", server->name);
+        MXS_WARNING("Could not connect with normal port to server '%s', using extra_port", server->name());
     }
 
     if (mysql)
@@ -200,7 +200,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
                 server->warn_ssl_not_enabled = false;
                 MXS_ERROR("An encrypted connection to '%s' could not be created, "
                           "ensure that TLS is enabled on the target server.",
-                          server->name);
+                          server->name());
             }
             // Don't close the connection as it is closed elsewhere, just set to NULL
             mysql = NULL;

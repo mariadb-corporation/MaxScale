@@ -199,16 +199,14 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    Server* server = new(std::nothrow) Server;
-    char* my_name = MXS_STRDUP(name);
+    Server* server = new(std::nothrow) Server(name);
     char* my_protocol = MXS_STRDUP(protocol);
     char* my_authenticator = MXS_STRDUP(authenticator);
     DCB** persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
-    if (!server || !my_name || !my_protocol || !my_authenticator || !persistent)
+    if (!server || !my_protocol || !my_authenticator || !persistent)
     {
         delete server;
-        MXS_FREE(my_name);
         MXS_FREE(persistent);
         MXS_FREE(my_protocol);
         MXS_FREE(my_authenticator);
@@ -225,7 +223,6 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
                     sizeof(server->address));
     }
 
-    server->name = my_name;
     server->port = config_get_integer(params, CN_PORT);
     server->extra_port = config_get_integer(params, CN_EXTRA_PORT);
     server->protocol = my_protocol;
@@ -261,6 +258,12 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     return server;
 }
 
+Server* Server::create_test_server()
+{
+    static int next_id = 1;
+    string name = "TestServer" + std::to_string(next_id++);
+    return new Server(name);
+}
 
 /**
  * Deallocate the specified server
@@ -281,7 +284,6 @@ void server_free(Server* server)
 
     /* Clean up session and free the memory */
     MXS_FREE(server->protocol);
-    MXS_FREE(server->name);
     MXS_FREE(server->authenticator);
 
     if (server->persistent)
@@ -353,7 +355,7 @@ SERVER* server_find_by_unique_name(const char* name)
     Guard guard(this_unit.all_servers_lock);
     for (Server* server : this_unit.all_servers)
     {
-        if (server->is_active && strcmp(server->name, name) == 0)
+        if (server->is_active && strcmp(server->name(), name) == 0)
         {
             return server;
         }
@@ -508,7 +510,7 @@ void Server::print_to_dcb(DCB* dcb) const
         return;
     }
 
-    dcb_printf(dcb, "Server %p (%s)\n", server, server->name);
+    dcb_printf(dcb, "Server %p (%s)\n", server, server->name());
     dcb_printf(dcb, "\tServer:                              %s\n", server->address);
     string stat = mxs::server_status(server);
     dcb_printf(dcb, "\tStatus:                              %s\n", stat.c_str());
@@ -635,7 +637,7 @@ void Server::dListServers(DCB* dcb)
                 string stat = mxs::server_status(server);
                 dcb_printf(dcb,
                            "%-18s | %-15s | %5d | %11d | %s\n",
-                           server->name,
+                           server->name(),
                            server->address,
                            server->port,
                            server->stats.n_current,
@@ -803,7 +805,7 @@ void server_add_mon_user(SERVER* server, const char* user, const char* passwd)
     {
         MXS_WARNING("Truncated monitor user for server '%s', maximum username "
                     "length is %lu characters.",
-                    server->name,
+                    server->name(),
                     sizeof(server->monuser));
     }
 
@@ -812,7 +814,7 @@ void server_add_mon_user(SERVER* server, const char* user, const char* passwd)
     {
         MXS_WARNING("Truncated monitor password for server '%s', maximum password "
                     "length is %lu characters.",
-                    server->name,
+                    server->name(),
                     sizeof(server->monpw));
     }
 }
@@ -887,7 +889,7 @@ std::unique_ptr<ResultSet> serverGetList()
         if (server_is_active(server))
         {
             string stat = mxs::server_status(server);
-            set->add_row({server->name, server->address, std::to_string(server->port),
+            set->add_row({server->name(), server->address, std::to_string(server->port),
                           std::to_string(server->stats.n_current), stat});
         }
     }
@@ -980,14 +982,14 @@ bool Server::create_server_config(const Server* server, const char* filename)
     {
         MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
                   filename,
-                  server->name,
+                  server->name(),
                   errno,
                   mxs_strerror(errno));
         return false;
     }
 
     // TODO: Check for return values on all of the dprintf calls
-    dprintf(file, "[%s]\n", server->name);
+    dprintf(file, "[%s]\n", server->name());
     dprintf(file, "%s=server\n", CN_TYPE);
 
     const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
@@ -1016,7 +1018,7 @@ bool Server::serialize() const
              sizeof(filename),
              "%s/%s.cnf.tmp",
              get_config_persistdir(),
-             server->name);
+             server->name());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -1248,7 +1250,7 @@ static json_t* server_to_json_data(const Server* server, const char* host)
     json_t* rval = json_object();
 
     /** Add resource identifiers */
-    json_object_set_new(rval, CN_ID, json_string(server->name));
+    json_object_set_new(rval, CN_ID, json_string(server->name()));
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVERS));
 
     /** Relationships */
@@ -1269,7 +1271,7 @@ static json_t* server_to_json_data(const Server* server, const char* host)
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     /** Attributes */
     json_object_set_new(rval, CN_ATTRIBUTES, Server::server_json_attributes(server));
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, server->name));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, server->name()));
 
     return rval;
 }
@@ -1277,7 +1279,7 @@ static json_t* server_to_json_data(const Server* server, const char* host)
 json_t* server_to_json(const Server* server, const char* host)
 {
     string self = MXS_JSON_API_SERVERS;
-    self += server->name;
+    self += server->name();
     return mxs_json_resource(host, self.c_str(), server_to_json_data(server, host));
 }
 
@@ -1371,7 +1373,7 @@ Server* Server::find_by_unique_name(const string& name)
     Guard guard(this_unit.all_servers_lock);
     for (Server* server : this_unit.all_servers)
     {
-        if (server->is_active && name == server->name)
+        if (server->is_active && server->m_name == name)
         {
             return server;
         }

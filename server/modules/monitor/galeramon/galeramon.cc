@@ -170,7 +170,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                     if (warn_erange_on_local_index)
                     {
                         MXS_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
-                                    monitored_server->server->name,
+                                    monitored_server->server->name(),
                                     row[1]);
                         warn_erange_on_local_index = false;
                     }
@@ -655,20 +655,20 @@ static int compare_node_priority(const void* a, const void* b)
     if (!have_a && have_b)
     {
         MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                  s_a->server->name);
+                  s_a->server->name());
         return -(INT_MAX - 1);
     }
     else if (have_a && !have_b)
     {
         MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                  s_b->server->name);
+                  s_b->server->name());
         return INT_MAX - 1;
     }
     else if (!have_a && !have_b)
     {
         MXS_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
-                  s_a->server->name,
-                  s_b->server->name);
+                  s_a->server->name(),
+                  s_b->server->name());
         return 0;
     }
 

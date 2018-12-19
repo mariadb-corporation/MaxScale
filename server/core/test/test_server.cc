@@ -112,7 +112,7 @@ bool test_load_config(const char* input, SERVER* server)
             MXS_CONFIG_PARAMETER* param = obj->parameters;
             config_add_defaults(obj, config_server_params);
 
-            TEST(strcmp(obj->object, server->name) == 0, "Server names differ");
+            TEST(strcmp(obj->object, server->name()) == 0, "Server names differ");
             TEST(strcmp(server->address, config_get_param(param, "address")->value) == 0,
                  "Server addresses differ");
             TEST(strcmp(server->protocol, config_get_param(param, "protocol")->value) == 0,

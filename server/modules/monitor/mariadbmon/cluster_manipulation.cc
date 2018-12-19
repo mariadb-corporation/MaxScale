@@ -171,7 +171,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
         else
         {
             PRINT_MXS_JSON_ERROR(output, "%s is not monitored by %s, cannot rejoin.",
-                                 rejoin_cand_srv->name, m_monitor->name);
+                                 rejoin_cand_srv->name(), m_monitor->name);
         }
     }
     else
@@ -204,7 +204,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         MariaDBServer* new_master_cand = get_server(master_server);
         if (new_master_cand == NULL)
         {
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, master_server->name, m_monitor->name);
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, master_server->name(), m_monitor->name);
         }
         else if (!new_master_cand->is_usable())
         {
@@ -608,7 +608,7 @@ bool MariaDBMonitor::start_external_replication(MariaDBServer* new_master, json_
 uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t** output)
 {
     SERVER* master_server = m_master->m_server_base->server;
-    const char* master_name = master_server->name;
+    const char* master_name = master_server->name();
     uint32_t servers_joined = 0;
     if (!joinable_servers.empty())
     {
@@ -1602,7 +1602,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         MariaDBServer* demotion_candidate = get_server(demotion_server);
         if (demotion_candidate == NULL)
         {
-            PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, demotion_server->name, m_monitor->name);
+            PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, demotion_server->name(), m_monitor->name);
         }
         else if (!demotion_candidate->can_be_demoted_switchover(&demotion_msg))
         {
@@ -1646,7 +1646,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
             MariaDBServer* promotion_candidate = get_server(promotion_server);
             if (promotion_candidate == NULL)
             {
-                PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, promotion_server->name, m_monitor->name);
+                PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, promotion_server->name(), m_monitor->name);
             }
             else if (!promotion_candidate->can_be_promoted(op_type, demotion_target, &promotion_msg))
             {

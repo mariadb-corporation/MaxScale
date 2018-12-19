@@ -884,7 +884,7 @@ static bool check_server_permissions(SERVICE* service,
         MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                   " checking authentication user credentials and permissions: %d %s",
                   service->name,
-                  server->name,
+                  server->name(),
                   server->address,
                   server->port,
                   my_errno,
@@ -1146,7 +1146,7 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
 
     if (!rv)
     {
-        MXS_ERROR("Failed to load users from server '%s': %s", server->name, mysql_error(con));
+        MXS_ERROR("Failed to load users from server '%s': %s", server->name(), mysql_error(con));
     }
 
     MXS_FREE(query);

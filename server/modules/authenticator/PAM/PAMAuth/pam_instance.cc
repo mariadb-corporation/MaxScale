@@ -208,7 +208,7 @@ int PamInstance::load_users(SERVICE* service)
                 if (mysql_query(mysql, PAM_USERS_QUERY))
                 {
                     MXS_ERROR("Failed to query server '%s' for PAM users: '%s'.",
-                              servers->server->name,
+                              servers->server->name(),
                               mysql_error(mysql));
                 }
                 else
@@ -319,7 +319,7 @@ bool PamInstance::query_anon_proxy_user(SERVER* server, MYSQL* conn)
     if (mysql_query(conn, ANON_USER_QUERY))
     {
         MXS_ERROR("Failed to query server '%s' for the anonymous PAM user: '%s'.",
-                  server->name,
+                  server->name(),
                   mysql_error(conn));
         success = false;
     }
@@ -346,7 +346,7 @@ bool PamInstance::query_anon_proxy_user(SERVER* server, MYSQL* conn)
             if (mysql_query(conn, ANON_GRANT_QUERY))
             {
                 MXS_ERROR("Failed to query server '%s' for the grants of the anonymous PAM user: '%s'.",
-                          server->name,
+                          server->name(),
                           mysql_error(conn));
                 success = false;
             }

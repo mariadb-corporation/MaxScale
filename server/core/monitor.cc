@@ -370,7 +370,7 @@ bool monitor_add_server(MXS_MONITOR* mon, SERVER* server)
 
     if (monitor_server_in_use(server))
     {
-        MXS_ERROR("Server '%s' is already monitored.", server->name);
+        MXS_ERROR("Server '%s' is already monitored.", server->name());
     }
     else
     {
@@ -779,7 +779,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
                       monitor->name,
-                      mondb->server->name,
+                      mondb->server->name(),
                       mondb->server->address,
                       mondb->server->port,
                       mysql_error(mondb->con));
@@ -1533,7 +1533,7 @@ void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t 
     const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
     auto srv = database->server;
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ? TIMED_OUT : REFUSED,
-              srv->name,
+              srv->name(),
               srv->address,
               srv->port,
               mysql_error(database->con));
@@ -1544,7 +1544,7 @@ static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
     string prev = mxs::server_status(ptr->mon_prev_status);
     string next = mxs::server_status(ptr->server);
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
-               ptr->server->name, ptr->server->address, ptr->server->port,
+               ptr->server->name(), ptr->server->address, ptr->server->port,
                mon_get_event_name(ptr),
                prev.c_str(), next.c_str());
 }
@@ -1603,7 +1603,7 @@ static bool create_monitor_config(const MXS_MONITOR* monitor, const char* filena
             {
                 dprintf(file, ",");
             }
-            dprintf(file, "%s", db->server->name);
+            dprintf(file, "%s", db->server->name());
         }
         dprintf(file, "\n");
     }
@@ -1680,7 +1680,7 @@ void mon_hangup_failed_servers(MXS_MONITOR* monitor)
 void mon_report_query_error(MXS_MONITORED_SERVER* db)
 {
     MXS_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
-              db->server->name,
+              db->server->name(),
               db->server->address,
               db->server->port,
               mysql_error(db->con));
@@ -1831,7 +1831,7 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
 
         for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
         {
-            mxs_json_add_relation(mon_rel, db->server->name, CN_SERVERS);
+            mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
         }
 
         json_object_set_new(rel, CN_SERVERS, mon_rel);
@@ -2009,8 +2009,8 @@ static void store_data(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master, uint8
     for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
     {
         *ptr++ = (char)SVT_SERVER;                              // Value type
-        memcpy(ptr, db->server->name, strlen(db->server->name));// Name of the server
-        ptr += strlen(db->server->name);
+        memcpy(ptr, db->server->name(), strlen(db->server->name()));// Name of the server
+        ptr += strlen(db->server->name());
         *ptr++ = '\0';      // Null-terminate the string
 
         auto status = db->server->status;
@@ -2023,8 +2023,8 @@ static void store_data(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master, uint8
     if (master)
     {
         *ptr++ = (char)SVT_MASTER;
-        memcpy(ptr, master->server->name, strlen(master->server->name));
-        ptr += strlen(master->server->name);
+        memcpy(ptr, master->server->name(), strlen(master->server->name()));
+        ptr += strlen(master->server->name());
         *ptr++ = '\0';      // Null-terminate the string
     }
 
@@ -2097,7 +2097,7 @@ static const char* process_server(MXS_MONITOR* monitor, const char* data, const 
 {
     for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
     {
-        if (strcmp(db->server->name, data) == 0)
+        if (strcmp(db->server->name(), data) == 0)
         {
             const unsigned char* sptr = (unsigned char*)strchr(data, '\0');
             mxb_assert(sptr);
@@ -2128,7 +2128,7 @@ static const char* process_master(MXS_MONITOR* monitor,
     {
         for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
         {
-            if (strcmp(db->server->name, data) == 0)
+            if (strcmp(db->server->name(), data) == 0)
             {
                 *master = db;
                 break;
@@ -2206,13 +2206,13 @@ void store_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master)
     {
         /** Each server is stored as a type byte and a null-terminated string
          * followed by eight byte server status. */
-        size += MMB_LEN_VALUE_TYPE + strlen(db->server->name) + 1 + MMB_LEN_SERVER_STATUS;
+        size += MMB_LEN_VALUE_TYPE + strlen(db->server->name()) + 1 + MMB_LEN_SERVER_STATUS;
     }
 
     if (master)
     {
         /** The master server name is stored as a null terminated string */
-        size += MMB_LEN_VALUE_TYPE + strlen(master->server->name) + 1;
+        size += MMB_LEN_VALUE_TYPE + strlen(master->server->name()) + 1;
     }
 
     /** 4 bytes for file length, 1 byte for schema version and 4 bytes for CRC32 */
@@ -2434,7 +2434,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
             else
             {
                 MXS_WARNING("Server '%s' is not monitored by monitor '%s'.",
-                            servers[i]->name,
+                            servers[i]->name(),
                             mon->name);
             }
         }
@@ -2652,7 +2652,7 @@ bool check_disk_space_exhausted(MXS_MONITORED_SERVER* pMs,
     {
         MXS_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
                   "mounted on the path %s has been used, and the limit it %d%%.",
-                  pMs->server->name,
+                  pMs->server->name(),
                   pMs->server->address,
                   used_percentage,
                   path.c_str(),
@@ -2708,7 +2708,7 @@ void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
                     MXS_WARNING("Disk space threshold specified for %s even though server %s at %s"
                                 "does not have that.",
                                 path.c_str(),
-                                pMs->server->name,
+                                pMs->server->name(),
                                 pMs->server->address);
                 }
             }
@@ -2752,14 +2752,14 @@ void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
             MXS_ERROR("Disk space cannot be checked for %s at %s, because either the "
                       "version (%s) is too old, or the DISKS information schema plugin "
                       "has not been installed. Disk space checking has been disabled.",
-                      pServer->name,
+                      pServer->name(),
                       pServer->address,
                       pServer->version_string().c_str());
         }
         else
         {
             MXS_ERROR("Checking the disk space for %s at %s failed due to: (%d) %s",
-                      pServer->name,
+                      pServer->name(),
                       pServer->address,
                       mysql_errno(pMs->con),
                       mysql_error(pMs->con));

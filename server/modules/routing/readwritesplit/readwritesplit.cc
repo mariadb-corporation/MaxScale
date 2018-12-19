@@ -347,7 +347,7 @@ void RWSplit::diagnostics(DCB* dcb)
         {
             dcb_printf(dcb,
                        "\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
-                       ref->server->name,
+                       ref->server->name(),
                        ref->server_weight * 100,
                        ref->server->stats.n_current,
                        ref->connections,
@@ -368,7 +368,7 @@ void RWSplit::diagnostics(DCB* dcb)
 
             dcb_printf(dcb,
                        "    %10s %10ld %10ld %10ld           %9s %10.02f%% %10ld\n",
-                       s.first->name,
+                       s.first->name(),
                        cs.total_queries,
                        cs.total_read_queries,
                        cs.total_write_queries,
@@ -409,7 +409,7 @@ json_t* RWSplit::diagnostics_json() const
         ServerStats::CurrentStats stats = a.second.current_stats();
 
         json_t* obj = json_object();
-        json_object_set_new(obj, "id", json_string(a.first->name));
+        json_object_set_new(obj, "id", json_string(a.first->name()));
         json_object_set_new(obj, "total", json_integer(stats.total_queries));
         json_object_set_new(obj, "read", json_integer(stats.total_read_queries));
         json_object_set_new(obj, "write", json_integer(stats.total_write_queries));

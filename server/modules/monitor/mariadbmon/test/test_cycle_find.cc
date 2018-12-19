@@ -156,9 +156,7 @@ void MariaDBMonitor::Test::init_servers(int count)
 
     for (int i = 1; i < count + 1; i++)
     {
-        auto base_server = new Server;   // Contents mostly undefined
-        string server_name = create_servername(i);
-        base_server->name = MXS_STRDUP(server_name.c_str());
+        auto base_server = Server::create_test_server();   // Contents mostly undefined
 
         MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER;    // Contents mostly undefined
         mon_server->server = base_server;
@@ -193,7 +191,6 @@ void MariaDBMonitor::Test::clear_servers()
     m_monitor->m_servers_by_id.clear();
     for (MariaDBServer* server : m_monitor->m_servers)
     {
-        MXS_FREE(server->m_server_base->server->name);
         delete server->m_server_base->server;
         delete server->m_server_base;
         delete server;

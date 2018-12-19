@@ -79,7 +79,8 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
     MXS_CONFIG* config = config_get_global_options();
     config->local_address = const_cast<char*>(zAddress);
 
-    Server server;
+    Server* pServer = Server::create_test_server();
+    Server& server = *pServer;
     strcpy(server.address, zHost);
     server.port = 3306;
 
