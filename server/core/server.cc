@@ -199,17 +199,13 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    Server* server = new(std::nothrow) Server(name);
-    char* my_protocol = MXS_STRDUP(protocol);
-    char* my_authenticator = MXS_STRDUP(authenticator);
+    Server* server = new(std::nothrow) Server(name, protocol, authenticator);
     DCB** persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
-    if (!server || !my_protocol || !my_authenticator || !persistent)
+    if (!server || !persistent)
     {
         delete server;
         MXS_FREE(persistent);
-        MXS_FREE(my_protocol);
-        MXS_FREE(my_authenticator);
         SSL_LISTENER_free(ssl);
         return NULL;
     }
@@ -225,8 +221,6 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 
     server->port = config_get_integer(params, CN_PORT);
     server->extra_port = config_get_integer(params, CN_EXTRA_PORT);
-    server->protocol = my_protocol;
-    server->authenticator = my_authenticator;
     server->m_settings.persistpoolmax = config_get_integer(params, CN_PERSISTPOOLMAX);
     server->m_settings.persistmaxtime = config_get_integer(params, CN_PERSISTMAXTIME);
     server->proxy_protocol = config_get_bool(params, CN_PROXY_PROTOCOL);
@@ -283,9 +277,6 @@ void server_free(Server* server)
     }
 
     /* Clean up session and free the memory */
-    MXS_FREE(server->protocol);
-    MXS_FREE(server->authenticator);
-
     if (server->persistent)
     {
         int nthr = config_threadcount();
@@ -320,7 +311,7 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
                 && !dcb->dcb_errhandle_called
                 && user == dcb->user
                 && ip == dcb->remote
-                && protocol == dcb->server->protocol)
+                && protocol == dcb->server->protocol())
             {
                 if (NULL == previous)
                 {
@@ -413,7 +404,7 @@ void printServer(const SERVER* server)
 {
     printf("Server %p\n", server);
     printf("\tServer:                       %s\n", server->address);
-    printf("\tProtocol:             %s\n", server->protocol);
+    printf("\tProtocol:             %s\n", server->protocol().c_str());
     printf("\tPort:                 %d\n", server->port);
     printf("\tTotal connections:    %d\n", server->stats.n_connections);
     printf("\tCurrent connections:  %d\n", server->stats.n_current);
@@ -514,7 +505,7 @@ void Server::print_to_dcb(DCB* dcb) const
     dcb_printf(dcb, "\tServer:                              %s\n", server->address);
     string stat = mxs::server_status(server);
     dcb_printf(dcb, "\tStatus:                              %s\n", stat.c_str());
-    dcb_printf(dcb, "\tProtocol:                            %s\n", server->protocol);
+    dcb_printf(dcb, "\tProtocol:                            %s\n", server->m_settings.protocol.c_str());
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
     dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string().c_str());
     dcb_printf(dcb, "\tNode Id:                             %ld\n", server->node_id);
@@ -992,7 +983,7 @@ bool Server::create_server_config(const Server* server, const char* filename)
     dprintf(file, "[%s]\n", server->name());
     dprintf(file, "%s=server\n", CN_TYPE);
 
-    const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
+    const MXS_MODULE* mod = get_module(server->m_settings.protocol.c_str(), MODULE_PROTOCOL);
     dump_param_list(file,
                     ParamAdaptor(server->m_settings.all_parameters),
                     {CN_TYPE},
@@ -1180,7 +1171,7 @@ json_t* Server::server_json_attributes(const Server* server)
     /** Store server parameters in attributes */
     json_t* params = json_object();
 
-    const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
+    const MXS_MODULE* mod = get_module(server->m_settings.protocol.c_str(), MODULE_PROTOCOL);
     config_add_module_params_json(ParamAdaptor(server->m_settings.all_parameters),
                                   {CN_TYPE},
                                   config_server_params,
@@ -1390,7 +1381,7 @@ bool Server::is_custom_parameter(const string& name) const
             return false;
         }
     }
-    auto module_params = get_module(protocol, MODULE_PROTOCOL)->parameters;
+    auto module_params = get_module(m_settings.protocol.c_str(), MODULE_PROTOCOL)->parameters;
     for (int i = 0; module_params[i].name; i++)
     {
         if (name == module_params[i].name)

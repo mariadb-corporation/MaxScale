@@ -366,9 +366,8 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
         dcb->remote = MXS_STRDUP_A(session->client_dcb->remote);
     }
 
-    const char* authenticator = server->authenticator ?
-        server->authenticator : dcb->func.auth_default ?
-        dcb->func.auth_default() : "NullAuthDeny";
+    const char* authenticator = !server->get_authenticator().empty() ? server->get_authenticator().c_str() :
+        (dcb->func.auth_default ? dcb->func.auth_default() : "NullAuthDeny");
 
     MXS_AUTHENTICATOR* authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator,
                                                                    MODULE_AUTHENTICATOR);

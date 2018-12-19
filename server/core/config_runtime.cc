@@ -455,7 +455,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
         return false;
     }
 
-    const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
+    const MXS_MODULE* mod = get_module(server->protocol().c_str(), MODULE_PROTOCOL);
 
     // As servers allow unknown parameters, we must only validate known parameters
     if (param_is_known(config_server_params, mod->parameters, key)

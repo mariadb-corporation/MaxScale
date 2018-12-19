@@ -82,9 +82,6 @@ public:
     };
 
     // Base settings
-    char* protocol = nullptr;       /**< Backend protocol module name */
-    char* authenticator = nullptr;  /**< Authenticator module name */
-
     char address[MAX_ADDRESS_LEN] = {'\0'};   /**< Server hostname/IP-address */
     int  port = -1;                           /**< Server port */
     int  extra_port = -1;                     /**< Alternative monitor port if normal port fails */
@@ -195,6 +192,13 @@ public:
      * @return Server name
      */
     virtual const char* name() const = 0;
+
+    /**
+     * Get backend protocol module name.
+     *
+     * @return Backend protocol module name of the server
+     */
+    virtual std::string protocol() const = 0;
 
     /**
      * Update the server port. TODO: Move this to internal class once blr is gone.

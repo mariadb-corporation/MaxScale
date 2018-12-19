@@ -919,7 +919,7 @@ void dprintService(DCB* dcb, SERVICE* svc)
                        "\t\t[%s]:%d    Protocol: %s    Name: %s\n",
                        server->server->address,
                        server->server->port,
-                       server->server->protocol,
+                       server->server->protocol().c_str(),
                        server->server->name());
         }
         server = server->next;

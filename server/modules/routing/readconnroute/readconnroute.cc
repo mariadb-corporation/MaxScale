@@ -412,9 +412,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     client_rses->backend = candidate;
 
     /** Open the backend connection */
-    client_rses->backend_dcb = dcb_connect(candidate->server,
-                                           session,
-                                           candidate->server->protocol);
+    client_rses->backend_dcb = dcb_connect(candidate->server, session, candidate->server->protocol().c_str());
 
     if (client_rses->backend_dcb == NULL)
     {

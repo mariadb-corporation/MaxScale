@@ -97,7 +97,7 @@ static int test1()
 
 #define TEST(A, B) do {if (!(A)) {printf(B "\n"); return false;}} while (false)
 
-bool test_load_config(const char* input, SERVER* server)
+bool test_load_config(const char* input, Server* server)
 {
     DUPLICATE_CONTEXT dcontext;
 
@@ -115,9 +115,9 @@ bool test_load_config(const char* input, SERVER* server)
             TEST(strcmp(obj->object, server->name()) == 0, "Server names differ");
             TEST(strcmp(server->address, config_get_param(param, "address")->value) == 0,
                  "Server addresses differ");
-            TEST(strcmp(server->protocol, config_get_param(param, "protocol")->value) == 0,
+            TEST(server->protocol() == config_get_param(param, "protocol")->value,
                  "Server protocols differ");
-            TEST(strcmp(server->authenticator, config_get_param(param, "authenticator")->value) == 0,
+            TEST(server->get_authenticator() == config_get_param(param, "authenticator")->value,
                  "Server authenticators differ");
             TEST(server->port == atoi(config_get_param(param, "port")->value), "Server ports differ");
             TEST(Server::server_alloc(obj->object, obj->parameters), "Failed to create server from loaded config");

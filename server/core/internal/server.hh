@@ -31,11 +31,13 @@ std::unique_ptr<ResultSet> serverGetList();
 class Server : public SERVER
 {
 public:
-    Server(const std::string& name)
+    Server(const std::string& name, const std::string& protocol = "", const std::string& authenticator = "")
         : SERVER()
         , m_name(name)
         , m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
     {
+        m_settings.protocol = protocol;
+        m_settings.authenticator = authenticator;
     }
 
     struct ConfigParameter
@@ -119,6 +121,16 @@ public:
     const char* name() const override
     {
         return m_name.c_str();
+    }
+
+    std::string protocol() const override
+    {
+        return m_settings.protocol;
+    }
+
+    std::string get_authenticator() const
+    {
+        return m_settings.authenticator;
     }
 
     /**
@@ -247,6 +259,9 @@ private:
     struct Settings
     {
         mutable std::mutex lock; /**< Protects array-like settings from concurrent access */
+
+        std::string protocol;      /**< Backend protocol module name */
+        std::string authenticator; /**< Authenticator module name */
 
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */

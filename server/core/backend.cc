@@ -179,7 +179,7 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
     mxb_assert(!in_use());
     bool rval = false;
 
-    if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol)))
+    if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol().c_str())))
     {
         m_closed = false;
         m_state = IN_USE;
