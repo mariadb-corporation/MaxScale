@@ -105,6 +105,7 @@ Module specific documentation.
  - [Galera Monitor](Monitors/Galera-Monitor.md)
  - [ColumnStore Monitor](Monitors/ColumnStore-Monitor.md)
  - [Aurora Monitor](Monitors/Aurora-Monitor.md)
+ - [Clustrix Monitor](Monitors/Clustrix-Monitor.md)
 
 Legacy monitors that have been deprecated.
 
