@@ -83,14 +83,20 @@ int check_results(const vector<string>& urls,
         }
         else
         {
-            if (res.code != 0)
+            switch (res.code)
             {
+            case mxb::http::Result::ERROR:
+            case mxb::http::Result::COULDNT_RESOLVE_HOST:
+            case mxb::http::Result::OPERATION_TIMEDOUT:
+                break;
+
+            default:
                 rv = EXIT_FAILURE;
             }
         }
     }
 
-    return rv;
+    return rv == EXIT_FAILURE ? 1 : 0;
 }
 
 int test_multi_http()
