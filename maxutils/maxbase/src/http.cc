@@ -172,21 +172,22 @@ struct Context
     Errbuf *           pErrbuf;
 };
 
-class ErrorImp : public Async::Imp
+class ReadyImp : public Async::Imp
 {
 public:
-    ErrorImp()
+    ReadyImp(Async::status_t status = Async::READY)
+        : m_status(status)
     {
     }
 
     Async::status_t status() const
     {
-        return Async::ERROR;
+        return m_status;
     }
 
     Async::status_t perform(long timeout_ms)
     {
-        return Async::ERROR;
+        return m_status;
     }
 
     long wait_no_more_than() const
@@ -200,7 +201,8 @@ public:
     }
 
 private:
-    vector<Result> m_results;
+    Async::status_t m_status;
+    vector<Result>  m_results;
 };
 
 class HttpImp : public Async::Imp
@@ -485,7 +487,7 @@ Async::Imp::~Imp()
 }
 
 Async::Async()
-    : m_sImp(std::make_shared<ErrorImp>())
+    : m_sImp(std::make_shared<ReadyImp>())
 {
 }
 
@@ -507,7 +509,7 @@ Async get_async(const std::vector<std::string>& urls,
     }
     else
     {
-        sImp = std::make_shared<ErrorImp>();
+        sImp = std::make_shared<ReadyImp>(Async::ERROR);
     }
 
     return Async(sImp);
