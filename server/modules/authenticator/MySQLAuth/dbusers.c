@@ -160,7 +160,8 @@ static char* get_users_query(const char *server_version, int version, bool inclu
 {
     if (is_mariadb) // 10.1.1 or newer, supports default roles
     {
-        return version >= 100202 ?
+        // Require 10.2.15 due to MDEV-15840 and MDEV-15556
+        return version >= 100215 ?
             get_mariadb_102_users_query(include_root) :
             get_mariadb_users_query(include_root);
     }
