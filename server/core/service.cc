@@ -338,6 +338,10 @@ int serviceStartAllPorts(Service* service)
             {
                 ++listeners;
             }
+            else
+            {
+                return 0;
+            }
         }
 
         if (service->state == SERVICE_STATE_FAILED)

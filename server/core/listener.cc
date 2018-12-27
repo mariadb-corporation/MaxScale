@@ -988,7 +988,7 @@ bool Listener::listen()
         case MXS_AUTH_LOADUSERS_FATAL:
             MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
                       "service is not started.", m_service->name, name());
-            return 0;
+            return false;
 
         case MXS_AUTH_LOADUSERS_ERROR:
             MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
