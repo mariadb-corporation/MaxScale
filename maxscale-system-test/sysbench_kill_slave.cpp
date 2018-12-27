@@ -34,11 +34,11 @@ int main(int argc, char *argv[])
 
     if (Test->smoke)
     {
-        sprintf(&sys1[0], sysbench_prepare1, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0]);
+        sprintf(&sys1[0], SYSBENCH_PREPARE1, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0]);
     }
     else
     {
-        sprintf(&sys1[0], sysbench_prepare, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0]);
+        sprintf(&sys1[0], SYSBENCH_PREPARE, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0]);
     }
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
@@ -64,12 +64,12 @@ int main(int argc, char *argv[])
         }
         if (Test->smoke)
         {
-            sprintf(&sys1[0], sysbench_command1, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0], port[k],
+            sprintf(&sys1[0], SYSBENCH_COMMAND1, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0], port[k],
                     readonly);
         }
         else
         {
-            sprintf(&sys1[0], sysbench_command, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0], port[k],
+            sprintf(&sys1[0], SYSBENCH_COMMAND, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0], port[k],
                     readonly);
         }
         Test->tprintf("Executing sysbench tables\n%s\n", sys1);
