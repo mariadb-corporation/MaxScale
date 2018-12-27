@@ -69,6 +69,11 @@ if [ $res == 0 ] ; then
     cmake .. -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
     make
 
+    echo ${test_set} | grep "NAME#"
+    if [ $? == 0 ] ; then
+        name_test=`echo ${test_set} | sed "s/NAME#//" | sed "s/ //g"`
+    fi
+
     if [ ! -z "${named_test}" ] ; then
         ./${named_test}
     else

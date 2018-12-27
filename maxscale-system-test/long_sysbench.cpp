@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
 
-    sprintf(&sys1[0], sysbench_prepare, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0]);
+    sprintf(&sys1[0], SYSBENCH_PREPARE, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0]);
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
     Test->set_timeout(10000);
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
         readonly = ro_off;
     }
 
-    sprintf(&sys1[0], sysbench_command_long, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0],
+    sprintf(&sys1[0], SYSBENCH_COMMAND_LONG, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0],
             current_port, readonly);
     Test->set_log_copy_interval(300);
     Test->tprintf("Executing sysbench \n%s\n", sys1);
