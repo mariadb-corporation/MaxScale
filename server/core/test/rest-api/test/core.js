@@ -35,5 +35,15 @@ describe("Core Parameters", function() {
         .should.be.fulfilled
     })
 
+    it("will not modify static parameters", function() {
+        return set_value("threads", "1")
+        .should.be.rejected
+    })
+
+    it("does not accept unknown parameters", function() {
+        return set_value("quantum_compute", "yes, please")
+        .should.be.rejected
+    })
+
     after(stopMaxScale)
 });
