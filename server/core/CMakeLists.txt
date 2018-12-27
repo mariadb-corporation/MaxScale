@@ -19,6 +19,7 @@ add_library(maxscale-common SHARED
   listener.cc
   load_utils.cc
   log.cc
+  mainworker.cc
   mariadb.cc
   maxscale_pcre2.cc
   misc.cc
