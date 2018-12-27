@@ -2632,6 +2632,38 @@ static int handle_global_item(const char* name, const char* value)
     return processed ? 1 : 0;
 }
 
+bool config_can_modify_at_runtime(const char* name)
+{
+    for (int i = 0; config_pre_parse_global_params[i]; ++i)
+    {
+        if (strcmp(name, config_pre_parse_global_params[i]) == 0)
+        {
+            return true;
+        }
+    }
+    std::unordered_set<std::string> static_params
+    {
+        CN_USERS_REFRESH_TIME,
+        CN_LOCAL_ADDRESS,
+        CN_ADMIN_ENABLED,
+        CN_ADMIN_SSL_CA_CERT,
+        CN_ADMIN_SSL_CERT,
+        CN_ADMIN_SSL_KEY,
+        CN_ADMIN_HOST,
+        CN_ADMIN_PORT,
+        CN_LOG_THROTTLING,
+        "sql_mode",
+        CN_QUERY_CLASSIFIER_ARGS,
+        CN_QUERY_CLASSIFIER,
+        CN_POLL_SLEEP,
+        CN_NON_BLOCKING_POLLS,
+        CN_THREAD_STACK_SIZE,
+        CN_THREADS
+    };
+
+    return static_params.count(name);
+}
+
 /**
  * Free an SSL structure
  *

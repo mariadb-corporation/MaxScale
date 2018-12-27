@@ -937,6 +937,81 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             MXS_NOTICE("'%s' set to: %lu", CN_WRITEQ_LOW_WATER, size);
         }
     }
+    else if (key == CN_MS_TIMESTAMP)
+    {
+        mxs_log_set_highprecision_enabled(config_truth_value(value));
+        rval = true;
+    }
+    else if (key == CN_SKIP_PERMISSION_CHECKS)
+    {
+        cnf.skip_permission_checks = config_truth_value(value);
+        rval = true;
+    }
+    else if (key == CN_QUERY_RETRIES)
+    {
+        int intval = get_positive_int(value);
+        if (intval)
+        {
+            cnf.query_retries = intval;
+            rval = true;
+        }
+        else
+        {
+            config_runtime_error("Invalid timeout value for '%s': %s", CN_QUERY_RETRIES, value);
+        }
+    }
+    else if (key == CN_QUERY_RETRY_TIMEOUT)
+    {
+        int intval = get_positive_int(value);
+        if (intval)
+        {
+            cnf.query_retry_timeout = intval;
+            rval = true;
+        }
+        else
+        {
+            config_runtime_error("Invalid timeout value for '%s': %s", CN_QUERY_RETRY_TIMEOUT, value);
+        }
+    }
+    else if (key == CN_RETAIN_LAST_STATEMENTS)
+    {
+        int intval = get_positive_int(value);
+        if (intval)
+        {
+            session_set_retain_last_statements(intval);
+            rval = true;
+        }
+        else
+        {
+            config_runtime_error("Invalid value for '%s': %s", CN_RETAIN_LAST_STATEMENTS, value);
+        }
+    }
+    else if (key == CN_DUMP_LAST_STATEMENTS)
+    {
+        rval = true;
+        if (strcmp(value, "on_close") == 0)
+        {
+            session_set_dump_statements(SESSION_DUMP_STATEMENTS_ON_CLOSE);
+        }
+        else if (strcmp(value, "on_error") == 0)
+        {
+            session_set_dump_statements(SESSION_DUMP_STATEMENTS_ON_ERROR);
+        }
+        else if (strcmp(value, "never") == 0)
+        {
+            session_set_dump_statements(SESSION_DUMP_STATEMENTS_NEVER);
+        }
+        else
+        {
+            rval = false;
+            config_runtime_error("%s can have the values 'never', 'on_close' or 'on_error'.",
+                                 CN_DUMP_LAST_STATEMENTS);
+        }
+    }
+    else if (config_can_modify_at_runtime(key.c_str()))
+    {
+        config_runtime_error("Global parameter '%s' cannot be modified at runtime", name);
+    }
     else
     {
         config_runtime_error("Unknown global parameter: %s=%s", name, value);
