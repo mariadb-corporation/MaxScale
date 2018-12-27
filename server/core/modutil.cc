@@ -1383,22 +1383,21 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
     return rval;
 }
 
-static inline bool is_negation(const std::string& str)
+static inline bool is_negation(const std::string& str, int i)
 {
     bool rval = false;
 
-    if (!str.empty() && str.back() == '-')
+    if (i > 0 && str[i - 1] == '-')
     {
         // Possibly a negative number
         rval = true;
-
-        for (auto it = std::next(str.rbegin()); it != str.rend(); it++)
+        for (int j = i - 1; j >= 0; j--)
         {
-            if (!is_space(*it))
+            if (!is_space(str[j]))
             {
                 /** If we find a previously converted value, we know that it
                  * is not a negation but a subtraction. */
-                rval = *it != '?';
+                rval = str[j] != '?';
                 break;
             }
         }
@@ -1433,7 +1432,8 @@ namespace maxscale
 std::string get_canonical(GWBUF* querybuf)
 {
     std::string rval;
-    rval.reserve(gwbuf_length(querybuf) - MYSQL_HEADER_LEN + 1);
+    int i = 0;
+    rval.resize(gwbuf_length(querybuf) - MYSQL_HEADER_LEN + 1);
     mxs::Buffer buf(querybuf);
 
     for (auto it = std::next(buf.begin(), MYSQL_HEADER_LEN + 1);    // Skip packet header and command
@@ -1442,19 +1442,24 @@ std::string get_canonical(GWBUF* querybuf)
         if (!is_special(*it))
         {
             // Normal character, no special handling required
-            rval += *it;
+            rval[i++] = *it;
         }
         else if (*it == '\\')
         {
             // Jump over any escaped values
-            rval += *it++;
+            rval[i++] += *it++;
 
             if (it != buf.end())
             {
-                rval += *it;
+                rval[i++] = *it;
+            }
+            else
+            {
+                // Query that ends with a backslash
+                break;
             }
         }
-        else if (is_space(*it) && (rval.empty() || is_space(rval.back())))
+        else if (is_space(*it) && (i == 0 || is_space(rval[i - 1])))
         {
             // Repeating space, skip it
         }
@@ -1478,7 +1483,7 @@ std::string get_canonical(GWBUF* querybuf)
             else
             {
                 // Executable comment, treat it as normal SQL
-                rval += *it;
+                rval[i++] = *it;
             }
         }
         else if ((*it == '#' || *it == '-')
@@ -1507,18 +1512,18 @@ std::string get_canonical(GWBUF* querybuf)
                 break;
             }
         }
-        else if (is_digit(*it) && (rval.empty() || (!is_alnum(rval.back()) && rval.back() != '_')))
+        else if (is_digit(*it) && (i == 0 || (!is_alnum(rval[i - 1]) && rval[i - 1] != '_')))
         {
             auto num_end = probe_number(it, buf.end());
 
             if (num_end.first)
             {
-                if (is_negation(rval))
+                if (is_negation(rval, i))
                 {
                     // Remove the sign
-                    rval.resize(rval.size() - 1);
+                    i--;
                 }
-                rval += '?';
+                rval[i++] = '?';
                 it = num_end.second;
             }
         }
@@ -1526,20 +1531,24 @@ std::string get_canonical(GWBUF* querybuf)
         {
             char c = *it;
             it = find_char(std::next(it), buf.end(), c);
-            rval += '?';
+            rval[i++] = '?';
         }
         else if (*it == '`')
         {
             auto start = it;
             it = find_char(std::next(it), buf.end(), '`');
-            rval.append(start, it);
-            rval += '`';
+            std::copy(start, it, &rval[i]);
+            i += std::distance(start, it);
+            rval[i++] = '`';
         }
         else
         {
-            rval += *it;
+            rval[i++] = *it;
         }
     }
+
+    // Shrink the buffer so that the internal bookkeeping of std::string remains up to date
+    rval.resize(i);
 
     buf.release();
 
