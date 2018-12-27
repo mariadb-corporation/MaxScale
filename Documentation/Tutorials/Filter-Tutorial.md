@@ -46,7 +46,7 @@ The type is used by the configuration manager within MariaDB MaxScale to determi
 
 When a filter is used within a service in MariaDB MaxScale the entry filters= is added to the service definition in the ini file section for the service. Multiple filters can be defined using a syntax akin to the Linux shell pipe syntax.
 ```
-[Split Service]
+[Split-Service]
 type=service
 router=readwritesplit
 servers=dbserver1,dbserver2,dbserver3,dbserver4

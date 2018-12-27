@@ -128,7 +128,7 @@ query_delimiter=@@@
 filename=/var/logs/tpm/perf.log
 named_pipe=/tmp/tpmfilter
 
-[Product Service]
+[Product-Service]
 type=service
 router=readconnrouter
 servers=server1

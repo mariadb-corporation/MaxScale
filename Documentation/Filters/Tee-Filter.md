@@ -22,7 +22,7 @@ type=filter
 module=tee
 service=DataMart
 
-[Data Service]
+[Data-Service]
 type=service
 router=readconnrouter
 servers=server1
@@ -153,20 +153,20 @@ router=readconnroute
 servers=datamartserver
 user=massi
 password=6628C50E07CCE1F0392EDEEB9D1203F3
-filters=QLA_DataMart
+filters=QLA-DataMart
 
-[QLA_DataMart]
+[QLA-DataMart]
 type=filter
 module=qlafilter
 options=/var/log/DataMart/InsertsLog
 
-[Orders Listener]
+[Orders-Listener]
 type=listener
 service=Orders
 protocol=MariaDBClient
 port=4011
 
-[DataMart Listener]
+[DataMart-Listener]
 type=listener
 service=DataMart
 protocol=MariaDBClient

@@ -177,7 +177,7 @@ Content-type: text/plain
 The new filter needs to be configured in maxscale.cnf.
 
 ```
-[Test Service]
+[Test-Service]
 type=service
 router=readconnroute
 router_options=slave

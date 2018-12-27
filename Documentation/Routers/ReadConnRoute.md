@@ -62,7 +62,7 @@ To configure a read-only service that tolerates master failures, we first
 need to add a new section in to the configuration file.
 
 ```
-[Read Service]
+[Read-Service]
 type=service
 router=readconnroute
 servers=slave1,slave2,slave3

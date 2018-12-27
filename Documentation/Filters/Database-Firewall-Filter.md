@@ -64,7 +64,7 @@ type=filter
 module=dbfwfilter
 rules=/home/user/rules.txt
 
-[Firewalled Routing Service]
+[Firewalled-Routing-Service]
 type=service
 router=readconnrouter
 servers=server1

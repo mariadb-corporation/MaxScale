@@ -27,7 +27,7 @@ max_qps = 500
 throttling_duration = 60000
 ...
 
-[Routing Service]
+[Routing-Service]
 type = service
 filters = Throttle
 ```

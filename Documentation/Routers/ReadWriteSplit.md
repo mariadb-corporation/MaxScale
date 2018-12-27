@@ -136,7 +136,7 @@ In above-mentioned case the user-defined variable would only be updated in the
 master where the query would be routed to due to the `INSERT` statement.
 
 ```
-[Splitter Service]
+[Splitter-Service]
 type=service
 router=readwritesplit
 servers=dbserv1, dbserv2, dbserv3

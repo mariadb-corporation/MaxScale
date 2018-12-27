@@ -19,7 +19,7 @@ The Maxrows filter is easy to configure and to add to any existing service.
 type=filter
 module=maxrows
 
-[MaxRows Routing Service]
+[MaxRows-Routing-Service]
 type=service
 ...
 filters=MaxRows

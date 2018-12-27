@@ -975,7 +975,7 @@ A service is identified by a service name, which is the name of the
 configuration file section and a type parameter of service.
 
 ```
-[Test Service]
+[Test-Service]
 type=service
 ```
 
@@ -1214,7 +1214,7 @@ port=3001
 protocol=MariaDBBackend
 serv_weight=1
 
-[Read Service]
+[Read-Service]
 type=service
 router=readconnroute
 servers=server1,server2
@@ -1284,7 +1284,7 @@ as if the parameter is not defined.
 Example:
 
 ```
-[Test Service]
+[Test-Service]
 connection_timeout=300
 ```
 
@@ -1298,7 +1298,7 @@ connections" error being returned.
 Example:
 
 ```
-[Test Service]
+[Test-Service]
 max_connections=100
 ```
 
@@ -1325,10 +1325,10 @@ as no parsing is needed on MaxScale.
 This is only supported by MariaDB versions 10.3 or newer. Default is false.
 The following Server side config is needed too.
 
-  ```
-  session_track_state_change = ON
-  session_track_transaction_info = CHARACTERISTICS
-  ```
+```
+session_track_state_change = ON
+session_track_transaction_info = CHARACTERISTICS
+```
 
 #### `retain_last_statements`
 
@@ -1342,6 +1342,7 @@ turn it off for a specific service, or just enable it for specific services.
 
 The value of this parameter can be changed at runtime using `maxctrl` and the
 new value will take effect for sessions created thereafter.
+
 ```
 maxctrl alter service MyService retain_last_statements 5
 ```
@@ -1864,7 +1865,7 @@ MariaDB MaxScale will determine this as an encrypted password and automatically 
 it before sending it the database server.
 
 ```
-[Split Service]
+[Split-Service]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -2078,7 +2079,7 @@ configuration update is required as well.
 Example:
 
 ```
-[Galera Listener]
+[Galera-Listener]
 type=listener
 address=192.168.3.33
 port=4408

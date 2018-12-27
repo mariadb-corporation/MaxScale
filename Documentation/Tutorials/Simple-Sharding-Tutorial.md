@@ -44,7 +44,7 @@ port=3306
 The next step is to configure the service which the users connect to. This section defines which router to use, which servers to connect to and the credentials to use. The router we use in this tutorial is the `schemarouter`.
 
 ```
-[Sharded Service]
+[Sharded-Service]
 type=service
 router=schemarouter
 servers=accounts_west,accounts_east
@@ -55,9 +55,9 @@ password=YqztlYGDvZ8tVMe3GUm9XCwQi
 After this we configure a listener for the service. The listener is the actual port the user connects to. We will use the port 4000.
 
 ```
-[Sharded Service Listener]
+[Sharded-Service-Listener]
 type=listener
-service=Sharded Service
+service=Sharded-Service
 protocol=MariaDBClient
 port=4000
 ```
@@ -65,7 +65,7 @@ port=4000
 The final step is to configure a monitor which will monitor the state of the servers. The monitor will notify MariaDB MaxScale if the servers are down. We add the two servers to the monitor, define the credentials to use and we set the monitoring cycle interval.
 
 ```
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mariadbmon
 servers=accounts_west,accounts_east

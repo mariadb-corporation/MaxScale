@@ -11,13 +11,12 @@ The MySQL Cluster Monitor is a monitoring module for MaxScale that monitors a My
 A minimal configuration for a monitor requires a set of servers for monitoring and a username and a password to connect to these servers. The user requires the REPLICATION CLIENT privilege to successfully monitor the state of the servers.
 
 ```
-[MySQL Cluster Monitor]
+[MySQL-Cluster-Monitor]
 type=monitor
 module=ndbclustermon
 servers=server1,server2,server3
 user=myuser
 password=mypwd
-
 ```
 
 ### Common Monitor Parameters

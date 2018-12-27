@@ -17,14 +17,14 @@ type=service
 router=cli
 
 # Unix Domain Socket
-[CLI Unix Listener]
+[CLI-Unix-Listener]
 type=listener
 service=CLI
 protocol=maxscaled
 socket=default
 
 # Internet Socket
-[CLI Inet Listener]
+[CLI-Inet-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

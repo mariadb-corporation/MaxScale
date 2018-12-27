@@ -7,11 +7,11 @@ The **debugcli** router is a special kind of statement based router. Rather than
 The definition of the debug cli service is illustrated below
 
 ```
-[Debug Service]
+[Debug-Service]
 type=service
 router=debugcli
 
-[Debug Listener]
+[Debug-Listener]
 type=listener
 service=Debug Service
 protocol=telnetd

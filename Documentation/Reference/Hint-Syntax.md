@@ -8,7 +8,7 @@ needs to be configured and the filter needs to be applied to the service.
 Here is an example service which has the hint filter configured and applied.
 
 ```
-[Read Service]
+[Read-Service]
 type=service
 router=readconnroute
 router_options=master

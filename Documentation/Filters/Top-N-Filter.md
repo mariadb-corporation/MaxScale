@@ -194,7 +194,7 @@ filebase=/var/logs/top/ControlAppServer
 In the service definition add both filters
 
 ```
-[App Service]
+[App-Service]
 type=service
 router=readconnrouter
 servers=server1

@@ -58,13 +58,13 @@ An example configuration looks as follows:
 type=service
 router=cli
 
-[MaxAdmin Unix Listener]
+[MaxAdmin-Unix-Listener]
 type=listener
 service=MaxAdmin
 protocol=maxscaled
 socket=default
 
-[MaxAdmin Inet Listener]
+[MaxAdmin-Inet-Listener]
 type=listener
 service=MaxAdmin
 protocol=maxscaled

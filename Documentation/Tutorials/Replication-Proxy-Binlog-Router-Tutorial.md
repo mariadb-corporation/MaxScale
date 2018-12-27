@@ -156,7 +156,7 @@ or from a MySQL client. The binlogrouter is administered and configured via SQL
 commands on the listener.
 
 ```
-[Replication Listener]
+[Replication-Listener]
 type=listener
 service=Replication
 protocol=MariaDBClient
@@ -171,7 +171,7 @@ It's also possible to enable client side SSL by adding the required SSL options
 in the listener:
 
 ```
-[Replication SSL Listener]
+[Replication-SSL-Listener]
 type=listener
 service=Replication
 protocol=MariaDBClient

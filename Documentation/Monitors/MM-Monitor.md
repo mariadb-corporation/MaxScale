@@ -15,7 +15,7 @@ and a password to connect to these servers. The user requires the REPLICATION CL
 to successfully monitor the state of the servers.
 
 ```
-[Multi-Master Monitor]
+[Multi-Master-Monitor]
 type=monitor
 module=mmmon
 servers=server1,server2,server3

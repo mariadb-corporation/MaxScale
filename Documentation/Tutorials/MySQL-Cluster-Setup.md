@@ -217,7 +217,7 @@ mysql> select count(1) from test.t1;
 Add these sections into the maxscale.cnf config file:
 
 ```
-[Cluster Service]
+[Cluster-Service]
 type=service
 router=readconnroute
 router_options=ndb
@@ -226,13 +226,13 @@ user=test
 password=test
 version_string=5.5.37-CLUSTER
 
-[Cluster Listener]
+[Cluster-Listener]
 type=listener
-service=Cluster Service
+service=Cluster-Service
 protocol=MariaDBClient
 port=4906
 
-[NDB Cluster Monitor]
+[NDB-Cluster-Monitor]
 type=monitor
 module=ndbclustermon
 servers=server1,server2
@@ -241,7 +241,6 @@ password=monitor
 monitor_interval=8000
 
 [server1]
-
 #SQL node1
 type=server
 address=127.0.0.1

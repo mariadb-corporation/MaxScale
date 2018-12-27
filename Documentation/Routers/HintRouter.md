@@ -70,7 +70,7 @@ servers after session creation.
 A minimal configuration doesn't require any parameters as all settings have
 reasonable defaults.
 ```
-[Routing Service]
+[Routing-Service]
 type=service
 router=hintrouter
 servers=slave1,slave2,slave3
@@ -79,7 +79,7 @@ servers=slave1,slave2,slave3
 If packets should be routed to the master server by default and only a few
 connections are required, the configuration might be as follows.
 ```
-[Routing Service]
+[Routing-Service]
 type=service
 router=hintrouter
 servers=MyMaster, slave1,slave2,slave3,slave4,slave5,slave6,slave7
