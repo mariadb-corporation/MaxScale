@@ -1041,12 +1041,14 @@ void Server::set_version(uint64_t version_num, const std::string& version_str)
  * @param version        Version encoded as MariaDB encodes the version, i.e.:
  *                       version = major * 10000 + minor * 100 + patch
  */
-void server_set_version(SERVER* server, const char* version_string, uint64_t version)
+void server_set_version(SERVER* srv, const char* version_string, uint64_t version)
 {
+    Server* server = static_cast<Server*>(srv);
     server_set_version_string(server, version_string);
     atomic_store_uint64(&server->version, version);
     bool is_mariadb = (strcasestr(version_string, "mariadb") != NULL);
     server->server_type = is_mariadb ? SERVER_TYPE_MARIADB : SERVER_TYPE_MYSQL;
+    server->set_version(version, version_string);
 }
 
 uint64_t server_get_version(const SERVER* server)
