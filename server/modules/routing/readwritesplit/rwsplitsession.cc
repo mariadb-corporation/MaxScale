@@ -68,7 +68,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
          * If sessions without master are allowed, only a slave must be found.
          */
 
-        RWBackend* master;
+        RWBackend* master = nullptr;
 
         auto backend_ptrs = sptr_vec_to_ptr_vec(backends);
 

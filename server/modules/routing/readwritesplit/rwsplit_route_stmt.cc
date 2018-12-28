@@ -195,7 +195,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     uint32_t qtype = info.type_mask();
     route_target_t route_target = info.target();
 
-    RWBackend* target;
+    RWBackend* target = nullptr;
 
     if (TARGET_IS_ALL(route_target))
     {
@@ -568,7 +568,7 @@ static inline bool rpl_lag_is_ok(RWBackend* backend, int max_rlag)
 
 RWBackend* RWSplitSession::get_hinted_backend(char* name)
 {
-    RWBackend* rval;
+    RWBackend* rval = nullptr;
 
     for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
     {
@@ -622,7 +622,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 
 RWBackend* RWSplitSession::get_master_backend()
 {
-    RWBackend* rval;
+    RWBackend* rval = nullptr;
     /** get root master from available servers */
     RWBackend* master = get_root_master(m_raw_backends);
 
@@ -677,7 +677,7 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
         return m_target_node;
     }
 
-    RWBackend* rval;
+    RWBackend* rval = nullptr;
 
     if (name)   /*< Choose backend by name from a hint */
     {
@@ -814,7 +814,7 @@ RWBackend* RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
 RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
 {
     int rlag_max = get_max_replication_lag();
-    RWBackend* target;
+    RWBackend* target = nullptr;
 
     if (cmd == MXS_COM_STMT_FETCH)
     {

@@ -322,7 +322,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 
 RWBackend* get_root_master(const PRWBackends& backends)
 {
-    RWBackend* master;
+    RWBackend* master = nullptr;
     for (auto candidate : backends)
     {
         if (candidate->is_master())
