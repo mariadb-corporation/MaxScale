@@ -1367,7 +1367,7 @@ static int gw_backend_hangup(DCB* dcb)
  */
 static int gw_backend_close(DCB* dcb)
 {
-    mxb_assert(dcb->session);
+    mxb_assert(dcb->session || dcb->persistentstart);
 
     /** Send COM_QUIT to the backend being closed */
     GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
@@ -1376,17 +1376,13 @@ static int gw_backend_close(DCB* dcb)
     /** Free protocol data */
     mysql_protocol_done(dcb);
 
-    MXS_SESSION* session = dcb->session;
-
     /**
      * If session state is SESSION_STATE_STOPPING, start closing client session.
      * Otherwise only this backend connection is closed.
      */
-    if (session->client_dcb
-        && session->state == SESSION_STATE_STOPPING
-        && session->client_dcb->state == DCB_STATE_POLLING)
+    if (dcb->session && dcb->session->state == SESSION_STATE_STOPPING)
     {
-        poll_fake_hangup_event(session->client_dcb);
+        poll_fake_hangup_event(dcb->session->client_dcb);
     }
 
     return 1;
