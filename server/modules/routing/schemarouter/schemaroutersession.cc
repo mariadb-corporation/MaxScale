@@ -1310,7 +1310,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
             }
             else
             {
-                if (!ignore_duplicate_database(data) && strchr(data, '.') != NULL)
+                if (!ignore_duplicate_database(data))
                 {
                     duplicate_found = true;
                     SERVER* duplicate = m_shard.get_location(data);
