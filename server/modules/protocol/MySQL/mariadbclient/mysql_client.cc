@@ -726,7 +726,13 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     int auth_val = MXS_AUTH_FAILED;
     if (dcb->authfunc.extract(dcb, read_buffer))
     {
-        auth_val = dcb->authfunc.authenticate(dcb);
+        auth_val = ssl_authenticate_check_status(dcb);
+
+        if (auth_val == MXS_AUTH_SSL_COMPLETE)
+        {
+            // TLS connection phase complete
+            auth_val = dcb->authfunc.authenticate(dcb);
+        }
     }
     else
     {

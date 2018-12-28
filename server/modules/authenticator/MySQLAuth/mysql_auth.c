@@ -276,9 +276,10 @@ static bool is_localhost_address(struct sockaddr_storage *addr)
 static int
 mysql_auth_authenticate(DCB *dcb)
 {
-    int auth_ret = ssl_authenticate_check_status(dcb);
+    int auth_ret = MXS_AUTH_SSL_COMPLETE;
     MYSQL_session *client_data = (MYSQL_session *)dcb->data;
-    if (auth_ret == MXS_AUTH_SSL_COMPLETE && *client_data->user)
+
+    if (*client_data->user)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
                   client_data->user, client_data->db);
