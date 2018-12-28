@@ -193,6 +193,7 @@ static void blr_start_master(void* data)
     router->session = new mxs::Session(listener);
     Listener::destroy(listener);
     router->client = dcb_alloc(DCB::Role::INTERNAL, router->session);
+    router->client->remote = MXS_STRDUP("127.0.0.1");
 
     /* Fake the client is reading */
     router->client->state = DCB_STATE_POLLING;      /* Fake the client is reading */
