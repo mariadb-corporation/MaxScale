@@ -2,14 +2,14 @@
 #define SYSBENCH_COMMANDS_H
 
 /*const char * SYSBENCH_PREPARE =
-         "sysbench --test=oltp \
+         "sysbench oltp_read_write \
          --oltp-table-size=1000000 --mysql-db=test --mysql-user=skysql --mysql-password=skysql \
          --mysql-port=4006 --mysql-host=%s  prepare";
 
 
 
 const char * SYSBENCH_COMMAND =
-         "sysbench --test=oltp \
+         "sysbench oltp_read_write \
          --mysql-host=%s --mysql-port=%d --mysql-user=skysql --mysql-password=skysql \
          --mysql-db=test --mysql-table-engine=innodb  \
          --num-threads=32 --oltp-table-size=1000000  --oltp-read-only=off \
@@ -17,12 +17,12 @@ const char * SYSBENCH_COMMAND =
          --max-requests=0  --max-time=600 run";*/
 
 const char * SYSBENCH_PREPARE =
-    "%s/sysbench --test=%s/tests/db/oltp.lua \
+                "sysbench oltp_read_write \
                  --oltp-table-size=1000000 --mysql-db=test --mysql-user=skysql --mysql-password=skysql \
                  --mysql-port=4006 --mysql-host=%s --oltp-tables-count=4 prepare";
 
 const char * SYSBENCH_COMMAND =
-    "%s/sysbench --test=%s/tests/db/oltp.lua \
+                "sysbench oltp_read_write \
                  --mysql-host=%s --mysql-port=%d --mysql-user=skysql --mysql-password=skysql \
                  --mysql-db=test --mysql-table-engine=innodb --mysql-ignore-duplicates=on \
                  --num-threads=32 --oltp-table-size=1000000 --oltp-tables-count=2 --oltp-read-only=%s \
@@ -31,12 +31,12 @@ const char * SYSBENCH_COMMAND =
 
 
 const char * SYSBENCH_PREPARE1 =
-    "%s/sysbench --test=%s/tests/db/oltp.lua \
+                "sysbench oltp_read_write \
                  --oltp-table-size=1000 --mysql-db=test --mysql-user=skysql --mysql-password=skysql \
                  --mysql-port=4006 --mysql-host=%s --oltp-tables-count=1 prepare";
 
 const char * SYSBENCH_COMMAND1 =
-    "%s/sysbench --test=%s/tests/db/oltp.lua \
+                 "sysbench oltp_read_write \
                   --mysql-host=%s --mysql-port=%d --mysql-user=skysql --mysql-password=skysql \
                   --mysql-db=test --mysql-table-engine=innodb --mysql-ignore-duplicates=on \
                   --num-threads=32 --oltp-table-size=1000 --oltp-tables-count=1 --oltp-read-only=%s \
@@ -45,7 +45,7 @@ const char * SYSBENCH_COMMAND1 =
 
 
 const char * SYSBENCH_COMMAND_LONG =
-    "%s/sysbench --test=%s/tests/db/oltp.lua \
+               "sysbench oltp_read_write \
                 --mysql-host=%s --mysql-port=%d --mysql-user=skysql --mysql-password=skysql \
                 --mysql-db=test --mysql-table-engine=innodb --mysql-ignore-duplicates=on \
                 --num-threads=32 --oltp-table-size=1000000 --oltp-tables-count=2 --oltp-read-only=%s \
@@ -54,12 +54,12 @@ const char * SYSBENCH_COMMAND_LONG =
 
 
 const char * SYSBENCH_PREPARE_SHORT =
-    "%s/sysbench --test=%s/tests/db/oltp.lua \
+                        "sysbench oltp_read_write \
                          --oltp-table-size=10000 --mysql-db=test --mysql-user=skysql --mysql-password=skysql \
                          --mysql-port=4006 --mysql-host=%s --oltp-tables-count=4 prepare";
 
 const char * SYSBENCH_COMMAND_SHORT =
-    "%s/sysbench --test=%s/tests/db/oltp.lua \
+                       "sysbench oltp_read_write \
                         --mysql-host=%s --mysql-port=%d --mysql-user=skysql --mysql-password=skysql \
                         --mysql-db=test --mysql-table-engine=innodb --mysql-ignore-duplicates=on \
                         --num-threads=32 --oltp-table-size=10000 --oltp-tables-count=2 --oltp-read-only=%s \
