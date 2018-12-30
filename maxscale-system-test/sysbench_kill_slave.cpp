@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
     printf("Dropping sysbanch tables!\n");
     fflush(stdout);
 
+    /*
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest1");
     if (!Test->smoke)
     {
@@ -101,6 +102,8 @@ int main(int argc, char *argv[])
         Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest3");
         Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest4");
     }
+    */
+    global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest");
 
     printf("closing connections to MaxScale!\n");
     fflush(stdout);
