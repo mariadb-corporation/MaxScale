@@ -18,7 +18,7 @@ const char * SYSBENCH_COMMAND =
 
 const char * SYSBENCH_PREPARE =
                 "sysbench oltp_read_write \
-                 --oltp-table-size=1000000 --mysql-db=test --mysql-user=skysql --mysql-password=skysql \
+                 --mysql-db=test --mysql-user=skysql --mysql-password=skysql \
                  --mysql-port=4006 --mysql-host=%s prepare";
 
 const char * SYSBENCH_COMMAND =
@@ -38,7 +38,7 @@ const char * SYSBENCH_COMMAND1 =
                  "sysbench oltp_read_write \
                   --mysql-host=%s --mysql-port=%d --mysql-user=skysql --mysql-password=skysql \
                   --mysql-db=test \
-                  --threads=32 --oltp-read-only=%s \
+                  --threads=32  \
                   --max-requests=0 --report-interval=5 --time=100 run";
 
 
