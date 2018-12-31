@@ -27,7 +27,6 @@ typedef std::set<std::string> StringSet;
  * - KillVMCommand - Command to kill a node (should handle one parameter: IP address of virtual machine to kill)
  * - StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual machine to kill)
  * - GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
- * - SysbenchDir - path to SysBench directory (sysbanch should be >= 0.5)
  * - node_N - Number of Master/Slave setup nodes
  * - node_NNN - IP address of node NNN (NNN - 3 digits node index starting from 000)
  * - node_port_NNN - MariaDB port for node NNN
@@ -116,11 +115,6 @@ public:
      * @brief use_snapshots if TRUE every test is trying to revert snapshot before running the test
      */
     bool use_snapshots;
-
-    /**
-     * @brief SysbenchDir   path to SysBench directory (sysbanch should be >= 0.5)
-     */
-    char sysbench_dir[4096];
 
     /**
      * @brief copy_mariadb_logs copies MariaDB logs from backend

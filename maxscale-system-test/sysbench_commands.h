@@ -28,6 +28,18 @@ const char * SYSBENCH_COMMAND =
                  --threads=32 \
                  --max-requests=0 --report-interval=5 --time=100 run";
 
+const char * SYSBENCH_PREPARE_RO =
+                 "sysbench oltp_read_only \
+                --mysql-db=test --mysql-user=skysql --mysql-password=skysql \
+                --mysql-port=4006 --mysql-host=%s prepare";
+
+const char * SYSBENCH_COMMAND_RO =
+                "sysbench oltp_read_only \
+                --mysql-host=%s --mysql-port=%d --mysql-user=skysql --mysql-password=skysql \
+                --mysql-db=test \
+                --threads=32 \
+                --max-requests=0 --report-interval=5 --time=100 run";
+
 
 const char * SYSBENCH_PREPARE1 =
                 "sysbench oltp_read_write \

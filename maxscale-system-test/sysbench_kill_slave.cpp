@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 
     port[0] = Test->maxscales->rwsplit_port[0];
     port[1] = Test->maxscales->readconn_master_port[0];
-    port[2] = Test->maxscales->readconn_slave_port[0];
+    //port[2] = Test->maxscales->readconn_slave_port[0];
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
 
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     Test->add_result(system(sys1), "Error executing sysbench prepare\n");
 
     Test->set_timeout(2000);
-    for (int k = 0; k < 3; k++)
+    for (int k = 0; k < 2; k++)
     {
         Test->tprintf("Trying test with port %d\n", port[k]);
         pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
