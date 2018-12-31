@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     }
     */
 
-    global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest");
+    Test->global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest");
 
     printf("closing connections to MaxScale!\n");
     fflush(stdout);
