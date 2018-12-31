@@ -220,10 +220,9 @@ std::string get_version_string(SERVICE* service)
     }
 
     // Older applications don't understand versions other than 5 and cause strange problems
-    const char prefix[] = "5.5.5-";
-
-    if (strncmp(rval.c_str(), prefix, sizeof(prefix) - 1) != 0)
+    if (rval[0] != '5')
     {
+        const char prefix[] = "5.5.5-";
         rval = prefix + rval;
     }
 
