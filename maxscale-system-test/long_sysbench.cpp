@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     }
 
     sprintf(&sys1[0], SYSBENCH_COMMAND_LONG, Test->maxscales->IP[0],
-            current_port, readonly);
+            current_port);
     Test->set_log_copy_interval(300);
     Test->tprintf("Executing sysbench \n%s\n", sys1);
     if (system(sys1) != 0)

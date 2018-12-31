@@ -64,13 +64,11 @@ int main(int argc, char *argv[])
         }
         if (Test->smoke)
         {
-            sprintf(&sys1[0], SYSBENCH_COMMAND1, Test->maxscales->IP[0], port[k],
-                    readonly);
+            sprintf(&sys1[0], SYSBENCH_COMMAND1, Test->maxscales->IP[0], port[k]);
         }
         else
         {
-            sprintf(&sys1[0], SYSBENCH_COMMAND, Test->maxscales->IP[0], port[k],
-                    readonly);
+            sprintf(&sys1[0], SYSBENCH_COMMAND, Test->maxscales->IP[0], port[k]);
         }
         Test->tprintf("Executing sysbench tables\n%s\n", sys1);
         if (system(sys1) != 0)

@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
 
     sprintf(&sys1[0], SYSBENCH_COMMAND_SHORT, Test->maxscales->IP[0],
-            Test->maxscales->rwsplit_port[0], "off");
+            Test->maxscales->rwsplit_port[0]);
     Test->set_log_copy_interval(300);
     Test->tprintf("Executing sysbench \n%s\n", sys1);
     if (system(sys1) != 0)
