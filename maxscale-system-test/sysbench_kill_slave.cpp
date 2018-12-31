@@ -45,23 +45,12 @@ int main(int argc, char *argv[])
     Test->set_timeout(5000);
     Test->add_result(system(sys1), "Error executing sysbench prepare\n");
 
-    char *readonly;
-    char *ro_on = (char *) "on";
-    char *ro_off = (char *) "off";
     Test->set_timeout(2000);
     for (int k = 0; k < 3; k++)
     {
         Test->tprintf("Trying test with port %d\n", port[k]);
         pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
 
-        if (port[k] == Test->maxscales->readconn_slave_port[0] )
-        {
-            readonly = ro_on;
-        }
-        else
-        {
-            readonly = ro_off;
-        }
         if (Test->smoke)
         {
             sprintf(&sys1[0], SYSBENCH_COMMAND1, Test->maxscales->IP[0], port[k]);

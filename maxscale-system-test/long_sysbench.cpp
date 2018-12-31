@@ -31,24 +31,11 @@ int main(int argc, char *argv[])
     Test->set_timeout(10000);
     Test->add_result(system(sys1), "Error executing sysbench prepare\n");
 
-    char *readonly;
-    char *ro_on = (char *) "on";
-    char *ro_off = (char *) "off";
-
     Test->stop_timeout();
 
     current_port = port[0];
 
     Test->tprintf("Trying test with port %d\n", current_port);
-
-    if (current_port == Test->maxscales->readconn_slave_port[0] )
-    {
-        readonly = ro_on;
-    }
-    else
-    {
-        readonly = ro_off;
-    }
 
     sprintf(&sys1[0], SYSBENCH_COMMAND_LONG, Test->maxscales->IP[0],
             current_port);
