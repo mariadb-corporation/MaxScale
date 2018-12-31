@@ -190,9 +190,19 @@ static void blr_start_master(void* data)
     // Create a temporary listener so we can create a session originating from it
     auto listener = Listener::create(router->service, "binlogrouter_listener", "mariadbclient",
                                      "127.0.0.1", 9999, "", "", nullptr);
+    mxb_assert(listener);
+
+    // Load users now so that authentication will work for the fake client
+    listener->load_users();
+
     router->session = new mxs::Session(listener);
+    mxb_assert(router->session);
+
+    // Destroy the listener so it's not visible to the user
     Listener::destroy(listener);
+
     router->client = dcb_alloc(DCB::Role::INTERNAL, router->session);
+    mxb_assert(router->client);
     router->client->remote = MXS_STRDUP("127.0.0.1");
 
     /* Fake the client is reading */
@@ -210,7 +220,7 @@ static void blr_start_master(void* data)
     router->session->client_dcb = router->client;
 
     /* Create a session for dummy client DCB */
-    if (router->session == NULL || !session_start(router->session))
+    if (!session_start(router->session))
     {
         MXS_ERROR("failed to create session for connection to master");
         return;
