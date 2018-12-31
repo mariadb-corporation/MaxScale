@@ -431,12 +431,6 @@ void TestConnections::read_env()
 
     //env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
 
-    env = getenv("sysbench_dir");
-    if (env != NULL)
-    {
-        sprintf(sysbench_dir, "%s", env);
-    }
-
     //env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
 
     ssl = false;
