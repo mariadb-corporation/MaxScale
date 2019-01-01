@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Do the real building work. This script is executed on build VM and
 # requires a working installation of CMake.
 
