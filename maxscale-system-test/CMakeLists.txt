@@ -945,6 +945,9 @@ add_test_executable(mxs2417_ignore_persisted_cnf.cpp mxs2417_ignore_persisted_cn
 # MXS-2450: Crash on COM_CHANGE_USER with disable_sescmd_history=true
 add_test_executable(mxs2450_change_user_crash.cpp mxs2450_change_user_crash mxs2450_change_user_crash LABELS REPL_BACKEND)
 
+# PAM authentication
+add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
