@@ -83,6 +83,7 @@ const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the maintenan
                                  "set/cleared manually. Status was not modified.";
 const char WRN_REQUEST_OVERWRITTEN[] = "Previous maintenance request was not yet read by the monitor "
                                        "and was overwritten.";
+const char ERR_TOO_LONG_CONFIG_VALUE[] = "The new value for %s is too long. Maximum length is %i characters.";
 
 // Converts Server::ConfigParam to MXS_CONFIG_PARAM and keeps them in the same order. Required for some
 // functions taking MXS_CONFIG_PARAMs as arguments.
@@ -126,23 +127,24 @@ private:
 
 /**
  * Write to char array by first zeroing any extra space. This reduces effects of concurrent reading.
+ * Concurrent writing should be prevented by the caller.
  *
- * @param dest Destination buffer. The buffer is assumed to contains at least \0 at the end.
- * @param dest_size Maximum size of destination buffer, including terminating \0.
- * @param source Source string. A maximum of @c dest_size - 1 characters are copied.
+ * @param dest Destination buffer. The buffer is assumed to contains at least a \0 at the end.
+ * @param max_len Size of destination buffer - 1. The last element (max_len + 1) is never written to.
+ * @param source Source string. A maximum of @c max_len characters are copied.
  */
-void careful_strcpy(char* dest, size_t dest_size, const std::string& source)
+void careful_strcpy(char* dest, size_t max_len, const std::string& source)
 {
     // The string may be accessed while we are updating it.
     // Take some precautions to ensure that the string cannot be completely garbled at any point.
     // Strictly speaking, this is not fool-proof as writes may not appear in order to the reader.
-    size_t old_len = strlen(dest);
     size_t new_len = source.length();
-    if (new_len >= dest_size)
+    if (new_len > max_len)
     {
-        new_len = dest_size - 1; // Need space for the \0.
+        new_len = max_len;
     }
 
+    size_t old_len = strlen(dest);
     if (new_len < old_len)
     {
         // If the new string is shorter, zero out the excess data.
@@ -233,7 +235,8 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 
     if (*monuser && *monpw)
     {
-        server_add_mon_user(server, monuser, monpw);
+        server->set_monitor_user(monuser);
+        server->set_monitor_password(monpw);
     }
 
     for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
@@ -781,54 +784,44 @@ void server_transfer_status(SERVER* dest_server, const SERVER* source_server)
     dest_server->status = source_server->status;
 }
 
-/**
- * Add a user name and password to use for monitoring the
- * state of the server.
- *
- * @param server        The server to update
- * @param user          The user name to use
- * @param passwd        The password of the user
- */
-void server_add_mon_user(SERVER* server, const char* user, const char* passwd)
+bool Server::set_monitor_user(const string& username)
 {
-    if (user != server->monuser
-        && snprintf(server->monuser, sizeof(server->monuser), "%s", user) > (int)sizeof(server->monuser))
+    bool rval = false;
+    if (username.length() <= MAX_MONUSER_LEN)
     {
-        MXS_WARNING("Truncated monitor user for server '%s', maximum username "
-                    "length is %lu characters.",
-                    server->name(),
-                    sizeof(server->monuser));
+        careful_strcpy(m_settings.monuser, MAX_MONUSER_LEN, username);
+        rval = true;
     }
-
-    if (passwd != server->monpw
-        && snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > (int)sizeof(server->monpw))
+    else
     {
-        MXS_WARNING("Truncated monitor password for server '%s', maximum password "
-                    "length is %lu characters.",
-                    server->name(),
-                    sizeof(server->monpw));
+        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORUSER, MAX_MONUSER_LEN);
     }
+    return rval;
 }
 
-/**
- * Check and update a server definition following a configuration
- * update. Changes will not affect any current connections to this
- * server, however all new connections will use the new settings.
- *
- * If the new settings are different from those already applied to the
- * server then a message will be written to the log.
- *
- * @param server        The server to update
- * @param protocol      The new protocol for the server
- * @param user          The monitor user for the server
- * @param passwd        The password to use for the monitor user
- */
-void server_update_credentials(SERVER* server, const char* user, const char* passwd)
+bool Server::set_monitor_password(const string& password)
 {
-    if (user != NULL && passwd != NULL)
+    bool rval = false;
+    if (password.length() <= MAX_MONPW_LEN)
     {
-        server_add_mon_user(server, user, passwd);
+        careful_strcpy(m_settings.monpw, MAX_MONPW_LEN, password);
+        rval = true;
     }
+    else
+    {
+        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORPW, MAX_MONPW_LEN);
+    }
+    return rval;
+}
+
+string Server::monitor_user() const
+{
+    return m_settings.monuser;
+}
+
+string Server::monitor_password() const
+{
+    return m_settings.monpw;
 }
 
 void Server::set_parameter(const string& name, const string& value)

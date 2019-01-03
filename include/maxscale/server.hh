@@ -61,8 +61,8 @@ class SERVER
 {
 public:
     static const int MAX_ADDRESS_LEN = 1024;
-    static const int MAX_MONUSER_LEN = 1024;
-    static const int MAX_MONPW_LEN = 1024;
+    static const int MAX_MONUSER_LEN = 512;
+    static const int MAX_MONPW_LEN = 512;
     static const int MAX_VERSION_LEN = 256;
     static const int RLAG_UNDEFINED = -1;   // Default replication lag value
 
@@ -87,8 +87,6 @@ public:
     int  extra_port = -1;                     /**< Alternative monitor port if normal port fails */
 
     // Other settings
-    char monuser[MAX_MONUSER_LEN] = {'\0'};     /**< Monitor username, overrides monitor setting */
-    char monpw[MAX_MONPW_LEN] = {'\0'};         /**< Monitor password, overrides monitor setting  */
     bool proxy_protocol = false;                /**< Send proxy-protocol header to backends when connecting
                                                  *   routing sessions. */
 
@@ -468,8 +466,6 @@ extern void    server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_c
 extern void    server_set_status_nolock(SERVER* server, uint64_t bit);
 extern void    server_clear_status_nolock(SERVER* server, uint64_t bit);
 extern void    server_transfer_status(SERVER* dest_server, const SERVER* source_server);
-extern void    server_add_mon_user(SERVER* server, const char* user, const char* passwd);
-extern void    server_update_credentials(SERVER* server, const char* user, const char* passwd);
 extern void     server_update_address(SERVER* server, const char* address);
 extern uint64_t server_map_status(const char* str);
 

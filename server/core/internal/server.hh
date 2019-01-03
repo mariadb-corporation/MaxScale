@@ -252,6 +252,27 @@ public:
      */
     bool serialize() const;
 
+    /**
+     * Update server-specific monitor username. Does not affect existing monitor connections,
+     * only new connections will use the updated username.
+     *
+     * @param username New username. Must not be too long.
+     * @return True, if value was updated
+     */
+    bool set_monitor_user(const std::string& user);
+
+    /**
+     * Update server-specific monitor password. Does not affect existing monitor connections,
+     * only new connections will use the updated password.
+     *
+     * @param password New password. Must not be too long.
+     * @return True, if value was updated
+     */
+    bool set_monitor_password(const std::string& password);
+
+    std::string monitor_user() const;
+    std::string monitor_password() const;
+
     mutable std::mutex m_lock;
     DCB**              persistent = nullptr; /**< List of unused persistent connections to the server */
 
@@ -260,21 +281,26 @@ private:
     {
         mutable std::mutex lock; /**< Protects array-like settings from concurrent access */
 
-        std::string protocol;      /**< Backend protocol module name */
-        std::string authenticator; /**< Authenticator module name */
+        /** All config settings in text form. This is only read and written from the admin thread
+         *  so no need for locking. */
+        std::vector<ConfigParameter> all_parameters;
+
+        std::string protocol;      /**< Backend protocol module name. Does not change so needs no locking. */
+        std::string authenticator; /**< Authenticator module name. Does not change so needs no locking. */
+
+        char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
+        char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */
+
+        long persistpoolmax = 0; /**< Maximum size of persistent connections pool */
+        long persistmaxtime = 0; /**< Maximum number of seconds connection can live */
 
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */
         MxsDiskSpaceThreshold disk_space_limits;
-        /** All config settings in text form. This is only read and written from the admin thread
-         *  so no need for locking. */
-        std::vector<ConfigParameter> all_parameters;
+
         /** Additional custom parameters which may affect routing decisions or the monitor module.
          *  Can be queried from modules at any time so access must be protected by mutex. */
         std::map<std::string, std::string> custom_parameters;
-
-        long persistpoolmax = 0; /**< Maximum size of persistent connections pool */
-        long persistmaxtime = 0; /**< Maximum number of seconds connection can live */
     };
 
     /**
@@ -297,10 +323,10 @@ private:
         std::string version_string() const;
 
     private:
-        mutable std::mutex m_lock;                    /**< Protects against concurrent writing */
-        Version m_version_num;                        /**< Numeric version */
-        Type m_type = Type::MARIADB;                  /**< Server type */
-        char m_version_str[MAX_VERSION_LEN] = {'\0'}; /**< Server version string */
+        mutable std::mutex m_lock;                        /**< Protects against concurrent writing */
+        Version m_version_num;                            /**< Numeric version */
+        Type m_type = Type::MARIADB;                      /**< Server type */
+        char m_version_str[MAX_VERSION_LEN + 1] = {'\0'}; /**< Server version string */
     };
 
     const std::string m_name;             /**< Server config name */

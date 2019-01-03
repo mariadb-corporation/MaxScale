@@ -47,6 +47,7 @@
 #include "internal/externcmd.hh"
 #include "internal/monitor.hh"
 #include "internal/modules.hh"
+#include "internal/server.hh"
 
 /** Schema version, journals must have a matching version */
 #define MMB_SCHEMA_VERSION 2
@@ -1139,7 +1140,8 @@ static void mon_append_node_names(MXS_MONITOR* mon,
 
     while (servers && len)
     {
-        if (status == 0 || servers->server->status & status)
+        Server* server = static_cast<Server*>(servers->server);
+        if (status == 0 || server->status & status)
         {
             if (approach == CREDENTIALS_EXCLUDE)
             {
@@ -1147,32 +1149,28 @@ static void mon_append_node_names(MXS_MONITOR* mon,
                          sizeof(arr),
                          "%s[%s]:%d",
                          separator,
-                         servers->server->address,
-                         servers->server->port);
+                         server->address,
+                         server->port);
             }
             else
             {
-                const char* user;
-                const char* password;
-                if (*servers->server->monuser)
+                string user = mon->user;
+                string password = mon->password;
+                string server_specific_monuser = server->monitor_user();
+                if (!server_specific_monuser.empty())
                 {
-                    user = servers->server->monuser;
-                    password = servers->server->monpw;
-                }
-                else
-                {
-                    user = mon->user;
-                    password = mon->password;
+                    user = server_specific_monuser;
+                    password = server->monitor_password();
                 }
 
                 snprintf(arr,
                          sizeof(arr),
                          "%s%s:%s@[%s]:%d",
                          separator,
-                         user,
-                         password,
-                         servers->server->address,
-                         servers->server->port);
+                         user.c_str(),
+                         password.c_str(),
+                         server->address,
+                         server->port);
             }
 
             separator = ",";
@@ -1468,16 +1466,17 @@ mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_S
     mxs_connect_result_t conn_result = MONITOR_CONN_REFUSED;
     if ((database->con = mysql_init(NULL)))
     {
-        char* uname = mon->user;
-        char* passwd = mon->password;
-
-        if (database->server->monuser[0] && database->server->monpw[0])
+        string uname = mon->user;
+        string passwd = mon->password;
+        Server* server = static_cast<Server*>(database->server); // Clean this up later.
+        string server_specific_monuser = server->monitor_user();
+        if (!server_specific_monuser.empty())
         {
-            uname = database->server->monuser;
-            passwd = database->server->monpw;
+            uname = server_specific_monuser;
+            passwd = server->monitor_password();
         }
 
-        char* dpwd = decrypt_password(passwd);
+        char* dpwd = decrypt_password(passwd.c_str());
 
         mysql_optionsv(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &mon->connect_timeout);
         mysql_optionsv(database->con, MYSQL_OPT_READ_TIMEOUT, (void*) &mon->read_timeout);
@@ -1489,7 +1488,8 @@ mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_S
         for (int i = 0; i < mon->connect_attempts; i++)
         {
             start = time(NULL);
-            bool result = (mxs_mysql_real_connect(database->con, database->server, uname, dpwd) != NULL);
+            bool result = (mxs_mysql_real_connect(database->con, database->server, uname.c_str(), dpwd) !=
+                           NULL);
             end = time(NULL);
 
             if (result)

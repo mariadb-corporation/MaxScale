@@ -495,11 +495,11 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     }
     else if (strcmp(key, CN_MONITORUSER) == 0)
     {
-        server_update_credentials(server, value, server->monpw);
+        server->set_monitor_user(value);
     }
     else if (strcmp(key, CN_MONITORPW) == 0)
     {
-        server_update_credentials(server, server->monuser, value);
+        server->set_monitor_password(value);
     }
     else if (strcmp(key, CN_PERSISTPOOLMAX) == 0)
     {
