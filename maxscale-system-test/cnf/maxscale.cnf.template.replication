@@ -7,7 +7,7 @@ module=mysqlmon
 ###repl51###
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 detect_stale_master=false
 detect_standalone_master=false
@@ -17,8 +17,8 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
-router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
+password=skysql
+slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
 max_slave_connections=1
 
 [Read Connection Router Slave]
@@ -27,7 +27,7 @@ router=readconnroute
 router_options=slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -35,7 +35,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener
