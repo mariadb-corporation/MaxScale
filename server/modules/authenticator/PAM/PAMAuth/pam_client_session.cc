@@ -332,9 +332,9 @@ Buffer PamClientSession::create_auth_change_packet() const
 
 int PamClientSession::authenticate(DCB* dcb)
 {
-    int rval = ssl_authenticate_check_status(dcb);
+    int rval = MXS_AUTH_SSL_COMPLETE;
     MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->data);
-    if (rval == MXS_AUTH_SSL_COMPLETE && *ses->user)
+    if (*ses->user)
     {
         rval = MXS_AUTH_FAILED;
         if (m_state == PAM_AUTH_INIT)
