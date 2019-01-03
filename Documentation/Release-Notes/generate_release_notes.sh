@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd $(dirname $(realpath $0))
+
 major="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_MAJOR'|sed 's/.*=//'`"
 minor="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_MINOR'|sed 's/.*=//'`"
 patch="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_PATCH'|sed 's/.*=//'`"
