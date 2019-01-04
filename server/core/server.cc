@@ -1070,13 +1070,13 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
         else if (bit & SERVER_MAINT)
         {
             // Warn if the previous request hasn't been read.
-            int previous_request = atomic_exchange_int(&server->maint_request, MAINTENANCE_ON);
+            int previous_request = atomic_exchange_int(&server->maint_request, SERVER::MAINTENANCE_ON);
             written = true;
-            if (previous_request != MAINTENANCE_NO_CHANGE)
+            if (previous_request != SERVER::MAINTENANCE_NO_CHANGE)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
-            atomic_store_int(&mon->check_maintenance_flag, MAINTENANCE_FLAG_CHECK);
+            atomic_store_int(&mon->check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
         }
     }
     else
@@ -1117,13 +1117,13 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
         else if (bit & SERVER_MAINT)
         {
             // Warn if the previous request hasn't been read.
-            int previous_request = atomic_exchange_int(&server->maint_request, MAINTENANCE_OFF);
+            int previous_request = atomic_exchange_int(&server->maint_request, SERVER::MAINTENANCE_OFF);
             written = true;
-            if (previous_request != MAINTENANCE_NO_CHANGE)
+            if (previous_request != SERVER::MAINTENANCE_NO_CHANGE)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
-            atomic_store_int(&mon->check_maintenance_flag, MAINTENANCE_FLAG_CHECK);
+            atomic_store_int(&mon->check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
         }
     }
     else

@@ -31,25 +31,83 @@ extern const char CN_PERSISTPOOLMAX[];
 extern const char CN_PROXY_PROTOCOL[];
 
 /**
- * Maintenance mode request constants.
+ * Status bits in the SERVER->status member, which describes the general state of a server. Although the
+ * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
  */
-const int MAINTENANCE_OFF = -100;
-const int MAINTENANCE_NO_CHANGE = 0;
-const int MAINTENANCE_ON = 100;
-const int MAINTENANCE_FLAG_NOCHECK = 0;
-const int MAINTENANCE_FLAG_CHECK = -1;
+// Bits used by most monitors
+#define SERVER_RUNNING    (1 << 0)              /**<< The server is up and running */
+#define SERVER_MAINT      (1 << 1)              /**<< Server is in maintenance mode */
+#define SERVER_AUTH_ERROR (1 << 2)              /**<< Authentication error from monitor */
+#define SERVER_MASTER     (1 << 3)              /**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE      (1 << 4)              /**<< The server is a slave, i.e. can handle reads */
+// Bits used by MariaDB Monitor (mostly)
+#define SERVER_SLAVE_OF_EXT_MASTER (1 << 5)     /**<< Server is slave of a non-monitored master */
+#define SERVER_RELAY               (1 << 6)     /**<< Server is a relay */
+#define SERVER_WAS_MASTER          (1 << 7)     /**<< Server was a master but lost all slaves. */
+// Bits used by other monitors
+#define SERVER_JOINED            (1 << 8)   /**<< The server is joined in a Galera cluster */
+#define SERVER_NDB               (1 << 9)   /**<< The server is part of a MySQL cluster setup */
+#define SERVER_MASTER_STICKINESS (1 << 10)  /**<< Server Master stickiness */
+// Bits providing general information
+#define SERVER_DISK_SPACE_EXHAUSTED (1 << 31)   /**<< The disk space of the server is exhausted */
 
-/* Server connection and usage statistics */
-struct SERVER_STATS
+inline bool status_is_usable(uint64_t status)
 {
-    int      n_connections = 0; /**< Number of connections */
-    int      n_current = 0;     /**< Current connections */
-    int      n_current_ops = 0; /**< Current active operations */
-    int      n_persistent = 0;  /**< Current persistent pool */
-    uint64_t n_new_conn = 0;    /**< Times the current pool was empty */
-    uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
-    uint64_t packets = 0;       /**< Number of packets routed to this server */
-};
+    return (status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING;
+}
+
+inline bool status_is_running(uint64_t status)
+{
+    return status & SERVER_RUNNING;
+}
+
+inline bool status_is_down(uint64_t status)
+{
+    return (status & SERVER_RUNNING) == 0;
+}
+
+inline bool status_is_in_maint(uint64_t status)
+{
+    return status & SERVER_MAINT;
+}
+
+inline bool status_is_master(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_MASTER | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_MASTER);
+}
+
+inline bool status_is_slave(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_SLAVE);
+}
+
+inline bool status_is_relay(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT))    \
+           == (SERVER_RUNNING | SERVER_RELAY);
+}
+
+inline bool status_is_joined(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT))
+           == (SERVER_RUNNING | SERVER_JOINED);
+}
+
+inline bool status_is_ndb(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_NDB | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_NDB);
+}
+
+inline bool status_is_slave_of_ext_master(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER))
+           == (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER);
+}
+
+inline bool status_is_disk_space_exhausted(uint64_t status)
+{
+    return status & SERVER_DISK_SPACE_EXHAUSTED;
+}
 
 /**
  * The SERVER structure defines a backend server. Each server has a name
@@ -66,6 +124,15 @@ public:
     static const int MAX_VERSION_LEN = 256;
     static const int RLAG_UNDEFINED = -1;   // Default replication lag value
 
+    /**
+     * Maintenance mode request constants.
+     */
+    static const int MAINTENANCE_OFF = -100;
+    static const int MAINTENANCE_NO_CHANGE = 0;
+    static const int MAINTENANCE_ON = 100;
+    static const int MAINTENANCE_FLAG_NOCHECK = 0;
+    static const int MAINTENANCE_FLAG_CHECK = -1;
+
     enum class Type
     {
         MARIADB,
@@ -79,6 +146,18 @@ public:
         uint32_t major = 0;     /**< Major version */
         uint32_t minor = 0;     /**< Minor version */
         uint32_t patch = 0;     /**< Patch version */
+    };
+
+    /* Server connection and usage statistics */
+    struct ConnStats
+    {
+        int      n_connections = 0; /**< Number of connections */
+        int      n_current = 0;     /**< Current connections */
+        int      n_current_ops = 0; /**< Current active operations */
+        int      n_persistent = 0;  /**< Current persistent pool */
+        uint64_t n_new_conn = 0;    /**< Times the current pool was empty */
+        uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
+        uint64_t packets = 0;       /**< Number of packets routed to this server */
     };
 
     // Base settings
@@ -97,10 +176,10 @@ public:
     uint8_t       charset = DEFAULT_CHARSET;/**< Character set. Read from backend and sent to client. */
 
     // Statistics and events
-    SERVER_STATS stats;             /**< The server statistics, e.g. number of connections */
-    int          persistmax = 0;    /**< Maximum pool size actually achieved since startup */
-    int          last_event = 0;    /**< The last event that occurred on this server */
-    int64_t      triggered_at = 0;  /**< Time when the last event was triggered */
+    ConnStats stats;            /**< The server statistics, e.g. number of connections */
+    int       persistmax = 0;   /**< Maximum pool size actually achieved since startup */
+    int       last_event = 0;   /**< The last event that occurred on this server */
+    int64_t   triggered_at = 0; /**< Time when the last event was triggered */
 
     // Status descriptors. Updated automatically by a monitor or manually by the admin
     uint64_t status = 0;                            /**< Current status flag bitmap */
@@ -231,32 +310,6 @@ private:
 };
 
 /**
- * Status bits in the SERVER->status member, which describes the general state of a server. Although the
- * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
- */
-// Bits used by most monitors
-#define SERVER_RUNNING    (1 << 0)              /**<< The server is up and running */
-#define SERVER_MAINT      (1 << 1)              /**<< Server is in maintenance mode */
-#define SERVER_AUTH_ERROR (1 << 2)              /**<< Authentication error from monitor */
-#define SERVER_MASTER     (1 << 3)              /**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE      (1 << 4)              /**<< The server is a slave, i.e. can handle reads */
-// Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER (1 << 5)     /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY               (1 << 6)     /**<< Server is a relay */
-#define SERVER_WAS_MASTER          (1 << 7)     /**<< Server was a master but lost all slaves. */
-// Bits used by other monitors
-#define SERVER_JOINED            (1 << 8)   /**<< The server is joined in a Galera cluster */
-#define SERVER_NDB               (1 << 9)   /**<< The server is part of a MySQL cluster setup */
-#define SERVER_MASTER_STICKINESS (1 << 10)  /**<< Server Master stickiness */
-// Bits providing general information
-#define SERVER_DISK_SPACE_EXHAUSTED (1 << 31)   /**<< The disk space of the server is exhausted */
-
-inline bool status_is_usable(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING;
-}
-
-/**
  * Is the server running and not in maintenance?
  *
  * @param server The server
@@ -267,10 +320,7 @@ inline bool server_is_usable(const SERVER* server)
     return status_is_usable(server->status);
 }
 
-inline bool status_is_running(uint64_t status)
-{
-    return status & SERVER_RUNNING;
-}
+
 
 /**
  * Is the server running?
@@ -281,11 +331,6 @@ inline bool status_is_running(uint64_t status)
 inline bool server_is_running(const SERVER* server)
 {
     return status_is_running(server->status);
-}
-
-inline bool status_is_down(uint64_t status)
-{
-    return (status & SERVER_RUNNING) == 0;
 }
 
 /**
@@ -299,11 +344,6 @@ inline bool server_is_down(const SERVER* server)
     return status_is_down(server->status);
 }
 
-inline bool status_is_in_maint(uint64_t status)
-{
-    return status & SERVER_MAINT;
-}
-
 /**
  * Is the server in maintenance mode?
  *
@@ -313,11 +353,6 @@ inline bool status_is_in_maint(uint64_t status)
 inline bool server_is_in_maint(const SERVER* server)
 {
     return status_is_in_maint(server->status);
-}
-
-inline bool status_is_master(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_MASTER | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_MASTER);
 }
 
 /**
@@ -331,11 +366,6 @@ inline bool server_is_master(const SERVER* server)
     return status_is_master(server->status);
 }
 
-inline bool status_is_slave(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_SLAVE);
-}
-
 /**
  * Is the server a slave.
  *
@@ -347,21 +377,9 @@ inline bool server_is_slave(const SERVER* server)
     return status_is_slave(server->status);
 }
 
-inline bool status_is_relay(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT))    \
-           == (SERVER_RUNNING | SERVER_RELAY);
-}
-
 inline bool server_is_relay(const SERVER* server)
 {
     return status_is_relay(server->status);
-}
-
-inline bool status_is_joined(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT))
-           == (SERVER_RUNNING | SERVER_JOINED);
 }
 
 /**
@@ -370,11 +388,6 @@ inline bool status_is_joined(uint64_t status)
 inline bool server_is_joined(const SERVER* server)
 {
     return status_is_joined(server->status);
-}
-
-inline bool status_is_ndb(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_NDB | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_NDB);
 }
 
 /**
@@ -391,20 +404,9 @@ inline bool server_is_in_cluster(const SERVER* server)
             & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED | SERVER_NDB)) != 0;
 }
 
-inline bool status_is_slave_of_ext_master(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER))
-           == (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER);
-}
-
 inline bool server_is_slave_of_ext_master(const SERVER* server)
 {
     return status_is_slave_of_ext_master(server->status);
-}
-
-inline bool status_is_disk_space_exhausted(uint64_t status)
-{
-    return status & SERVER_DISK_SPACE_EXHAUSTED;
 }
 
 inline bool server_is_disk_space_exhausted(const SERVER* server)

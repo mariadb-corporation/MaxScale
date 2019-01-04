@@ -140,7 +140,7 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
     mon->script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
     mon->script = config_get_string(params, CN_SCRIPT);
     mon->events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
-    mon->check_maintenance_flag = MAINTENANCE_FLAG_NOCHECK;
+    mon->check_maintenance_flag = SERVER::MAINTENANCE_FLAG_NOCHECK;
     mon->ticks = 0;
     mon->parameters = NULL;
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
@@ -1696,20 +1696,21 @@ void monitor_check_maintenance_requests(MXS_MONITOR* monitor)
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
      * maintenance flag should be read-written atomically to prevent missing a value. */
-    int flags_changed = atomic_exchange_int(&monitor->check_maintenance_flag, MAINTENANCE_FLAG_NOCHECK);
-    if (flags_changed != MAINTENANCE_FLAG_NOCHECK)
+    int flags_changed = atomic_exchange_int(&monitor->check_maintenance_flag,
+                                            SERVER::MAINTENANCE_FLAG_NOCHECK);
+    if (flags_changed != SERVER::MAINTENANCE_FLAG_NOCHECK)
     {
         MXS_MONITORED_SERVER* ptr = monitor->monitored_servers;
         while (ptr)
         {
             // The only server status bit the admin may change is the [Maintenance] bit.
-            int admin_msg = atomic_exchange_int(&ptr->server->maint_request, MAINTENANCE_NO_CHANGE);
-            if (admin_msg == MAINTENANCE_ON)
+            int admin_msg = atomic_exchange_int(&ptr->server->maint_request, SERVER::MAINTENANCE_NO_CHANGE);
+            if (admin_msg == SERVER::MAINTENANCE_ON)
             {
                 // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
                 server_set_status_nolock(ptr->server, SERVER_MAINT);
             }
-            else if (admin_msg == MAINTENANCE_OFF)
+            else if (admin_msg == SERVER::MAINTENANCE_OFF)
             {
                 server_clear_status_nolock(ptr->server, SERVER_MAINT);
             }
@@ -2927,7 +2928,7 @@ bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
         // Enough time has passed,
         if ((now - m_loop_called > static_cast<int64_t>(m_monitor->interval))
             // or maintenance flag is set,
-            || atomic_load_int(&m_monitor->check_maintenance_flag) == MAINTENANCE_FLAG_CHECK
+            || atomic_load_int(&m_monitor->check_maintenance_flag) == SERVER::MAINTENANCE_FLAG_CHECK
             // or a monitor-specific condition is met.
             || immediate_tick_required())
         {
