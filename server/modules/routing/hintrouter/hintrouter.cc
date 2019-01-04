@@ -87,7 +87,7 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession)
     {
         if (server_ref_is_active(pSref))
         {
-            if (server_is_master(pSref->server))
+            if (pSref->server->is_master())
             {
                 if (!master_ref)
                 {
@@ -98,7 +98,7 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession)
                     MXS_WARNING("Found multiple master servers when creating session.\n");
                 }
             }
-            else if (server_is_slave(pSref->server))
+            else if (pSref->server->is_slave())
             {
                 slave_refs.push_back(pSref);
             }

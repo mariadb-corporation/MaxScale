@@ -1227,7 +1227,7 @@ bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv)
  */
 bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv)
 {
-    return server_is_down(mon_srv->server) && mon_srv->mon_err_count == 0;
+    return mon_srv->server->is_down() && mon_srv->mon_err_count == 0;
 }
 
 static MXS_MONITORED_SERVER* find_parent_node(MXS_MONITORED_SERVER* servers,
@@ -1668,9 +1668,7 @@ void mon_hangup_failed_servers(MXS_MONITOR* monitor)
 {
     for (MXS_MONITORED_SERVER* ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
     {
-        if (mon_status_changed(ptr)
-            && (!(server_is_usable(ptr->server))
-                || !(server_is_in_cluster(ptr->server))))
+        if (mon_status_changed(ptr) && (!(ptr->server->is_usable()) || !(ptr->server->is_in_cluster())))
         {
             dcb_hangup_foreach(ptr->server);
         }
@@ -2782,7 +2780,7 @@ void MonitorInstance::flush_server_status()
 {
     for (MXS_MONITORED_SERVER* pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
     {
-        if (!server_is_in_maint(pMs->server))
+        if (!pMs->server->is_in_maint())
         {
             pMs->server->status = pMs->pending_status;
         }
@@ -2803,7 +2801,7 @@ void MonitorInstanceSimple::tick()
 
     for (MXS_MONITORED_SERVER* pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
     {
-        if (!server_is_in_maint(pMs->server))
+        if (!pMs->server->is_in_maint())
         {
             pMs->mon_prev_status = pMs->server->status;
             pMs->pending_status = pMs->server->status;
@@ -2858,7 +2856,7 @@ void MonitorInstanceSimple::tick()
             }
 #endif
 
-            if (server_is_down(pMs->server))
+            if (pMs->server->is_down())
             {
                 pMs->mon_err_count += 1;
             }

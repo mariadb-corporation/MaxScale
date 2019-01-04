@@ -204,7 +204,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
         {
             bool master_ok = false;
             // The master server should be already known, but may have changed
-            if (m_master.get() && server_is_master(m_master.server()))
+            if (m_master.get() && m_master.server()->is_master())
             {
                 master_ok = true;
             }
@@ -317,7 +317,7 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
         for (size_type curr = begin; curr != limit; curr++)
         {
             Dcb& candidate = m_slaves.at(curr % size);
-            if (server_is_slave(candidate.server()))
+            if (candidate.server()->is_slave())
             {
                 HR_DEBUG("Writing packet to slave: '%s'.", candidate.server()->name());
                 success = candidate.write(pPacket);
@@ -392,7 +392,7 @@ void HintRouterSession::update_connections()
          iter != m_backends.end(); iter++)
     {
         SERVER* server = iter->second.get()->server;
-        if (server_is_master(server))
+        if (server->is_master())
         {
             if (!m_master.get())
             {
@@ -403,7 +403,7 @@ void HintRouterSession::update_connections()
                 MXS_WARNING("Found multiple master servers when updating connections.");
             }
         }
-        else if (server_is_slave(server))
+        else if (server->is_slave())
         {
             m_slaves.push_back(iter->second);
         }

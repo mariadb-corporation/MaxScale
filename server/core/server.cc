@@ -518,7 +518,7 @@ void Server::print_to_dcb(DCB* dcb) const
                mon_get_event_name((mxs_monitor_event_t)server->last_event));
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
-    if (server_is_slave(server) || server_is_relay(server))
+    if (server->is_slave() || server->is_relay())
     {
         if (server->rlag >= 0)
         {
@@ -731,7 +731,7 @@ void server_set_status_nolock(SERVER* server, uint64_t bit)
     server->status |= bit;
 
     /** clear error logged flag before the next failure */
-    if (server_is_master(server))
+    if (server->is_master())
     {
         server->master_err_is_logged = false;
     }

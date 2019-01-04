@@ -214,7 +214,7 @@ SERVER* SchemaRouterSession::resolve_query_target(GWBUF* pPacket,
         /** We either don't know or don't care where this query should go */
         target = get_shard_target(pPacket, type);
 
-        if (target && server_is_usable(target))
+        if (target && target->is_usable())
         {
             route_target = TARGET_NAMED_SERVER;
         }
@@ -241,7 +241,7 @@ SERVER* SchemaRouterSession::resolve_query_target(GWBUF* pPacket,
         for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
         {
             SERVER* server = (*it)->backend()->server;
-            if (server_is_usable(server))
+            if (server->is_usable())
             {
                 route_target = TARGET_NAMED_SERVER;
                 target = server;
@@ -762,7 +762,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
             if (mxs_log_is_priority_enabled(LOG_INFO))
             {
                 MXS_INFO("Route query to %s\t%s:%d",
-                         server_is_master((*it)->backend()->server) ? "master" : "slave",
+                         (*it)->backend()->server->is_master() ? "master" : "slave",
                          (*it)->backend()->server->address,
                          (*it)->backend()->server->port);
             }
@@ -1393,7 +1393,7 @@ void SchemaRouterSession::query_databases()
 
     for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        if ((*it)->in_use() && !(*it)->is_closed() && server_is_usable((*it)->backend()->server))
+        if ((*it)->in_use() && !(*it)->is_closed() && (*it)->backend()->server->is_usable())
         {
             GWBUF* clone = gwbuf_clone(buffer);
             MXS_ABORT_IF_NULL(clone);
@@ -1496,7 +1496,7 @@ bool SchemaRouterSession::get_shard_dcb(DCB** p_dcb, const char* name)
          */
         if ((*it)->in_use()
             && (strncasecmp(name, b->server->name(), PATH_MAX) == 0)
-            && server_is_usable(b->server))
+            && b->server->is_usable())
         {
             *p_dcb = (*it)->dcb();
             succp = true;

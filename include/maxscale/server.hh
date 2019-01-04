@@ -294,11 +294,116 @@ public:
     /**
      * Is the server valid and active? TODO: Rename once "is_active" is moved to internal class.
      *
-     * @return True, if server has not been removed from the runtime configuration.
+     * @return True if server has not been removed from the runtime configuration.
      */
     bool server_is_active() const
     {
         return is_active;
+    }
+
+    /**
+     * Is the server running and not in maintenance?
+     *
+     * @return True if server can be used.
+     */
+    bool is_usable() const
+    {
+        return status_is_usable(status);
+    }
+
+    /**
+     * Is the server running?
+     *
+     * @return True if monitor can connect to the server.
+     */
+    bool is_running() const
+    {
+        return status_is_running(status);
+    }
+
+    /**
+     * Is the server down?
+     *
+     * @return True if monitor cannot connect to the server.
+     */
+    bool is_down() const
+    {
+        return status_is_down(status);
+    }
+
+    /**
+     * Is the server in maintenance mode?
+     *
+     * @return True if server is in maintenance.
+     */
+    bool is_in_maint() const
+    {
+        return status_is_in_maint(status);
+    }
+
+    /**
+     * Is the server a master?
+     *
+     * @return True if server is running and marked as master.
+     */
+    bool is_master() const
+    {
+        return status_is_master(status);
+    }
+
+    /**
+     * Is the server a slave.
+     *
+     * @return True if server is running and marked as slave.
+     */
+    bool is_slave() const
+    {
+        return status_is_slave(status);
+    }
+
+    /**
+     * Is the server a relay slave?
+     *
+     * @return True, if server is a running relay.
+     */
+    bool is_relay() const
+    {
+        return status_is_relay(status);
+    }
+
+    /**
+     * Is the server joined Galera node?
+     *
+     * @return True, if server is running and joined.
+     */
+    bool is_joined() const
+    {
+        return status_is_joined(status);
+    }
+
+    /**
+     * Is the server a SQL node in MySQL Cluster?
+     *
+     * @return True, if server is running and with NDB status.
+     */
+    bool is_ndb() const
+    {
+        return status_is_ndb(status);
+    }
+
+    bool is_in_cluster() const
+    {
+        return (status & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED | SERVER_NDB)) != 0;
+    }
+
+    bool is_slave_of_ext_master() const
+    {
+        return status_is_slave_of_ext_master(status);
+    }
+
+    bool is_low_on_disk_space() const
+    {
+        return status_is_disk_space_exhausted(status);
     }
 
 protected:
@@ -308,111 +413,6 @@ protected:
 private:
     static const int DEFAULT_CHARSET = 0x08;    /** The latin1 charset */
 };
-
-/**
- * Is the server running and not in maintenance?
- *
- * @param server The server
- * @return True, if server can be used.
- */
-inline bool server_is_usable(const SERVER* server)
-{
-    return status_is_usable(server->status);
-}
-
-
-
-/**
- * Is the server running?
- *
- * @param server The server
- * @return True, if monitor can connect to the server.
- */
-inline bool server_is_running(const SERVER* server)
-{
-    return status_is_running(server->status);
-}
-
-/**
- * Is the server down?
- *
- * @param server The server
- * @return True, if monitor cannot connect to the server.
- */
-inline bool server_is_down(const SERVER* server)
-{
-    return status_is_down(server->status);
-}
-
-/**
- * Is the server in maintenance mode?
- *
- * @param server The server
- * @return True, if server is in maintenance.
- */
-inline bool server_is_in_maint(const SERVER* server)
-{
-    return status_is_in_maint(server->status);
-}
-
-/**
- * Is the server a master?
- *
- * @param server The server
- * @return True, if server is running and marked as master.
- */
-inline bool server_is_master(const SERVER* server)
-{
-    return status_is_master(server->status);
-}
-
-/**
- * Is the server a slave.
- *
- * @param server The server
- * @return True if server is running and marked as slave.
- */
-inline bool server_is_slave(const SERVER* server)
-{
-    return status_is_slave(server->status);
-}
-
-inline bool server_is_relay(const SERVER* server)
-{
-    return status_is_relay(server->status);
-}
-
-/**
- * Is the server joined Galera node? The server must be running and joined.
- */
-inline bool server_is_joined(const SERVER* server)
-{
-    return status_is_joined(server->status);
-}
-
-/**
- * Is the server a SQL node in MySQL Cluster? The server must be running and with NDB status
- */
-inline bool server_is_ndb(const SERVER* server)
-{
-    return status_is_ndb(server->status);
-}
-
-inline bool server_is_in_cluster(const SERVER* server)
-{
-    return (server->status
-            & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED | SERVER_NDB)) != 0;
-}
-
-inline bool server_is_slave_of_ext_master(const SERVER* server)
-{
-    return status_is_slave_of_ext_master(server->status);
-}
-
-inline bool server_is_disk_space_exhausted(const SERVER* server)
-{
-    return status_is_disk_space_exhausted(server->status);
-}
 
 /**
  * @brief Add a server parameter

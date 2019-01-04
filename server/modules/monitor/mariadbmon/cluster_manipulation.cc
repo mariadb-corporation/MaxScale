@@ -1276,8 +1276,8 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const M
             // If both have log_slave_updates on ...
             else if (cand_updates && curr_updates)
             {
-                bool cand_disk_ok = !server_is_disk_space_exhausted(candidate->m_server_base->server);
-                bool curr_disk_ok = !server_is_disk_space_exhausted(current_best->m_server_base->server);
+                bool cand_disk_ok = !candidate->m_server_base->server->is_low_on_disk_space();
+                bool curr_disk_ok = !current_best->m_server_base->server->is_low_on_disk_space();
                 // ... prefer a slave without disk space issues.
                 if (cand_disk_ok && !curr_disk_ok)
                 {

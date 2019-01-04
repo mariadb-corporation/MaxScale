@@ -324,7 +324,7 @@ void MMMonitor::post_tick()
 
     for (MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
     {
-        if (!server_is_in_maint(ptr->server))
+        if (!ptr->server->is_in_maint())
         {
             /* If "detect_stale_master" option is On, let's use the previus master */
             if (m_detectStaleMaster && root_master
@@ -375,7 +375,7 @@ MXS_MONITORED_SERVER* MMMonitor::get_current_master()
          * that means SERVER_IS_RUNNING returns 0
          * Let's check only for SERVER_IS_DOWN: server is not running
          */
-        if (server_is_down(ptr->server))
+        if (ptr->server->is_down())
         {
             ptr = ptr->next;
             continue;
@@ -397,7 +397,7 @@ MXS_MONITORED_SERVER* MMMonitor::get_current_master()
     if (m_master != NULL)
     {
         /* If the root master is in MAINT, return NULL */
-        if (server_is_in_maint(m_master->server))
+        if (m_master->server->is_in_maint())
         {
             return NULL;
         }

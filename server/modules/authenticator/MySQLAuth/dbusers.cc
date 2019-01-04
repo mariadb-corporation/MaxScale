@@ -1222,7 +1222,7 @@ static int get_users(Listener* listener, bool skip_local)
     {
         if (!server_ref_is_active(server) || !server->server->server_is_active()
             || (skip_local && server_is_mxs_service(server->server))
-            || !server_is_running(server->server))
+            || !server->server->is_running())
         {
             continue;
         }

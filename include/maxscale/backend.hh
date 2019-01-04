@@ -148,7 +148,7 @@ public:
      */
     inline bool can_connect() const
     {
-        return !has_failed() && server_is_usable(m_backend->server);
+        return !has_failed() && m_backend->server->is_usable();
     }
 
     /**
@@ -266,7 +266,7 @@ public:
      */
     inline bool is_master() const
     {
-        return server_is_master(m_backend->server);
+        return m_backend->server->is_master();
     }
 
     /**
@@ -276,7 +276,7 @@ public:
      */
     inline bool is_slave() const
     {
-        return server_is_slave(m_backend->server);
+        return m_backend->server->is_slave();
     }
 
     /**
@@ -286,7 +286,7 @@ public:
      */
     inline bool is_relay() const
     {
-        return server_is_relay(m_backend->server);
+        return m_backend->server->is_relay();
     }
 
     /**

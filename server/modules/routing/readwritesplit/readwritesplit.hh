@@ -118,10 +118,6 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
 #define CONFIG_MAX_SLAVE_RLAG   -1  /**< not used */
 #define CONFIG_SQL_VARIABLES_IN TYPE_ALL
 
-#define BACKEND_TYPE(b) \
-    (server_is_master((b)->backend_server) ? BE_MASTER      \
-                                           : (server_is_slave((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
-
 #define MARIADB_WAIT_GTID_FUNC "MASTER_GTID_WAIT"
 #define MYSQL_WAIT_GTID_FUNC   "WAIT_FOR_EXECUTED_GTID_SET"
 static const char gtid_wait_stmt[] =
