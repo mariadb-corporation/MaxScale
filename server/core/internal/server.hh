@@ -274,25 +274,25 @@ public:
     std::string monitor_password() const;
 
     mutable std::mutex m_lock;
-    DCB**              persistent = nullptr; /**< List of unused persistent connections to the server */
+    DCB**              persistent = nullptr;/**< List of unused persistent connections to the server */
 
 private:
     struct Settings
     {
-        mutable std::mutex lock; /**< Protects array-like settings from concurrent access */
+        mutable std::mutex lock;    /**< Protects array-like settings from concurrent access */
 
         /** All config settings in text form. This is only read and written from the admin thread
          *  so no need for locking. */
         std::vector<ConfigParameter> all_parameters;
 
-        std::string protocol;      /**< Backend protocol module name. Does not change so needs no locking. */
-        std::string authenticator; /**< Authenticator module name. Does not change so needs no locking. */
+        std::string protocol;       /**< Backend protocol module name. Does not change so needs no locking. */
+        std::string authenticator;  /**< Authenticator module name. Does not change so needs no locking. */
 
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
         char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */
 
-        long persistpoolmax = 0; /**< Maximum size of persistent connections pool */
-        long persistmaxtime = 0; /**< Maximum number of seconds connection can live */
+        long persistpoolmax = 0;    /**< Maximum size of persistent connections pool */
+        long persistmaxtime = 0;    /**< Maximum number of seconds connection can live */
 
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */
@@ -318,21 +318,22 @@ private:
          */
         void set(uint64_t version_num, const std::string& version_string);
 
-        Version version_num() const;
-        Type type() const;
+        Version     version_num() const;
+        Type        type() const;
         std::string version_string() const;
 
     private:
-        mutable std::mutex m_lock;                        /**< Protects against concurrent writing */
-        Version m_version_num;                            /**< Numeric version */
-        Type m_type = Type::MARIADB;                      /**< Server type */
-        char m_version_str[MAX_VERSION_LEN + 1] = {'\0'}; /**< Server version string */
+        mutable std::mutex m_lock;      /**< Protects against concurrent writing */
+
+        Version m_version_num;                              /**< Numeric version */
+        Type    m_type = Type::MARIADB;                     /**< Server type */
+        char    m_version_str[MAX_VERSION_LEN + 1] = {'\0'};/**< Server version string */
     };
 
-    const std::string m_name;             /**< Server config name */
-    Settings m_settings;                  /**< Server settings */
-    VersionInfo info;                     /**< Server version and type information */
-    maxbase::EMAverage m_response_time;   /**< Response time calculations for this server */
+    const std::string  m_name;              /**< Server config name */
+    Settings           m_settings;          /**< Server settings */
+    VersionInfo        info;                /**< Server version and type information */
+    maxbase::EMAverage m_response_time;     /**< Response time calculations for this server */
 };
 
 void server_free(Server* server);

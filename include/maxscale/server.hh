@@ -75,20 +75,20 @@ public:
 
     struct Version
     {
-        uint64_t total = 0; /**< The version number received from server */
-        uint32_t major = 0; /**< Major version */
-        uint32_t minor = 0; /**< Minor version */
-        uint32_t patch = 0; /**< Patch version */
+        uint64_t total = 0;     /**< The version number received from server */
+        uint32_t major = 0;     /**< Major version */
+        uint32_t minor = 0;     /**< Minor version */
+        uint32_t patch = 0;     /**< Patch version */
     };
 
     // Base settings
-    char address[MAX_ADDRESS_LEN] = {'\0'};   /**< Server hostname/IP-address */
-    int  port = -1;                           /**< Server port */
-    int  extra_port = -1;                     /**< Alternative monitor port if normal port fails */
+    char address[MAX_ADDRESS_LEN] = {'\0'};     /**< Server hostname/IP-address */
+    int  port = -1;                             /**< Server port */
+    int  extra_port = -1;                       /**< Alternative monitor port if normal port fails */
 
     // Other settings
-    bool proxy_protocol = false;                /**< Send proxy-protocol header to backends when connecting
-                                                 *   routing sessions. */
+    bool proxy_protocol = false;    /**< Send proxy-protocol header to backends when connecting
+                                     * routing sessions. */
 
     // Base variables
     bool          is_active = false;        /**< Server is active and has not been "destroyed" */
@@ -103,9 +103,9 @@ public:
     int64_t      triggered_at = 0;  /**< Time when the last event was triggered */
 
     // Status descriptors. Updated automatically by a monitor or manually by the admin
-    uint64_t status = 0;                                    /**< Current status flag bitmap */
-    int      maint_request = MAINTENANCE_NO_CHANGE;         /**< Is admin requesting Maintenance=ON/OFF on the
-                                                             * server? */
+    uint64_t status = 0;                            /**< Current status flag bitmap */
+    int      maint_request = MAINTENANCE_NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
+                                                     * server? */
 
     long          node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
     long          master_id = -1;       /**< Master server id of this node */
@@ -458,13 +458,13 @@ bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_thre
  */
 void server_add_response_average(SERVER* server, double ave, int num_samples);
 
-extern int     server_free(SERVER* server);
-extern SERVER* server_find_by_unique_name(const char* name);
-extern int     server_find_by_unique_names(char** server_names, int size, SERVER*** output);
-extern void    server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set);
-extern void    server_set_status_nolock(SERVER* server, uint64_t bit);
-extern void    server_clear_status_nolock(SERVER* server, uint64_t bit);
-extern void    server_transfer_status(SERVER* dest_server, const SERVER* source_server);
+extern int      server_free(SERVER* server);
+extern SERVER*  server_find_by_unique_name(const char* name);
+extern int      server_find_by_unique_names(char** server_names, int size, SERVER*** output);
+extern void     server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set);
+extern void     server_set_status_nolock(SERVER* server, uint64_t bit);
+extern void     server_clear_status_nolock(SERVER* server, uint64_t bit);
+extern void     server_transfer_status(SERVER* dest_server, const SERVER* source_server);
 extern void     server_update_address(SERVER* server, const char* address);
 extern uint64_t server_map_status(const char* str);
 
