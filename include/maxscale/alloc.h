@@ -74,6 +74,6 @@ char* mxs_strndup_a(const char* s, size_t n    /*, const char *caller*/);
  * To be used in circumstances where a memory allocation or other
  * fatal error cannot - currently - be dealt with properly.
  */
-#define MXS_ABORT_IF_FALSE(b) do {if (!b) {abort();}} while (false)
+#define MXS_ABORT_IF_FALSE(b) do {if (!(b)) {abort();}} while (false)
 
 MXS_END_DECLS
