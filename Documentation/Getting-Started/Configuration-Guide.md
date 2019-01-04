@@ -1166,6 +1166,8 @@ _5.5.5-MaxScale-Service_ being sent to the client.
 
 #### `weightby`
 
+**Note:** This parameter has been deprecated in MaxScale 2.3.2.
+
 The weightby parameter is used in conjunction with server parameters in order to
 control the load balancing applied in the router in use by the service. This
 allows varying weights to be applied to each server to create a non-uniform
