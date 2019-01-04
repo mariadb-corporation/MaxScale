@@ -10,13 +10,13 @@
 typedef void * FUNC(void * ptr);
 
 FUNC query_thread;
-//void *prepared_stmt_thread(void *ptr );
+FUNC prepared_stmt_thread;
 FUNC transaction_thread;
 FUNC short_session_thread;
 
 TestConnections * Test;
-const int threads_num = 16;
-const int threads_type_num = 2;
+const int threads_num = 4;
+const int threads_type_num = 3;
 
 typedef struct
 {
@@ -36,12 +36,12 @@ int main(int argc, char *argv[])
     pthread_t thread_id[threads_type_num][threads_num];
     FUNC * thread[threads_type_num];
     thread[0] = query_thread;
-    //thread[1] = prepared_stmt;
-    thread[1] = transaction_thread;
-    thread[2] = short_session_thread;
+    thread[1] = prepared_stmt_thread;
+    thread[2] = transaction_thread;
+    //thread[3] = short_session_thread;
 
-    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 300;");
-    Test->repl->execute_query_all_nodes((char *) "set global max_connect_errors = 100000;");
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 300000;");
+    Test->repl->execute_query_all_nodes((char *) "set global max_connect_errors = 10000000;");
 
 
     Test->maxscales->connect_rwsplit(0);
@@ -66,9 +66,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->set_log_copy_interval(300);
+    Test->set_log_copy_interval(100);
 
-    sleep(600);
+    sleep(900);
 
     Test->tprintf("Stopping threads\n");
 
@@ -92,10 +92,11 @@ int main(int argc, char *argv[])
 
 void *query_thread(void *ptr )
 {
+    MYSQL * conn;
     t_data * data = (t_data *) ptr;
     while (!data->exit_flag)
     {
-        MYSQL * conn = open_conn_db_timeout(Test->maxscales->rwsplit_port[0],
+        conn = open_conn_db_timeout(Test->maxscales->rwsplit_port[0],
                 Test->maxscales->IP[0],
                 (char *) "test",
                 Test->maxscales->user_name,
@@ -110,10 +111,11 @@ void *query_thread(void *ptr )
 
 void *transaction_thread(void *ptr )
 {
+    MYSQL * conn;
     t_data * data = (t_data *) ptr;
     while (!data->exit_flag)
     {
-        MYSQL * conn = open_conn_db_timeout(Test->maxscales->rwsplit_port[0],
+        conn = open_conn_db_timeout(Test->maxscales->rwsplit_port[0],
                 Test->maxscales->IP[0],
                 (char *) "test",
                 Test->maxscales->user_name,
@@ -138,16 +140,44 @@ void *transaction_thread(void *ptr )
 
 void *short_session_thread(void *ptr )
 {
+    MYSQL * conn;
     t_data * data = (t_data *) ptr;
     while (!data->exit_flag)
     {
-        MYSQL * conn = open_conn_db_timeout(Test->maxscales->rwsplit_port[0],
+        conn = open_conn_db_timeout(Test->maxscales->rwsplit_port[0],
                 Test->maxscales->IP[0],
                 (char *) "test",
                 Test->maxscales->user_name,
                 Test->maxscales->password,
                 20,
                 Test->ssl);
+        mysql_close(conn);
+    }
+    return NULL;
+}
+
+
+void *prepared_stmt_thread(void *ptr )
+{
+    MYSQL * conn;
+    t_data * data = (t_data *) ptr;
+    while (!data->exit_flag)
+    {
+        conn = open_conn_db_timeout(Test->maxscales->rwsplit_port[0],
+                Test->maxscales->IP[0],
+                (char *) "test",
+                Test->maxscales->user_name,
+                Test->maxscales->password,
+                20,
+                Test->ssl);
+        Test->try_query(conn, "PREPARE stmt FROM 'SELECT * FROM t1 WHERE fl=@x;';");
+        Test->try_query(conn, "SET @x = 3;");
+        Test->try_query(conn, "EXECUTE stmt");
+        Test->try_query(conn, "SET @x = 4;");
+        Test->try_query(conn, "EXECUTE stmt");
+        Test->try_query(conn, "SET @x = 400;");
+        Test->try_query(conn, "EXECUTE stmt");
+
         mysql_close(conn);
     }
     return NULL;
