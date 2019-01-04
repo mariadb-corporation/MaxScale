@@ -892,9 +892,9 @@ void MariaDBServer::update_server_version()
     mxs_mysql_update_server_version(srv, conn);
 
     m_srv_type = server_type::UNKNOWN; // TODO: Use type information in SERVER directly
-    auto server_type = srv->type();
+    auto base_server_type = srv->type();
     MYSQL_RES* result;
-    if (server_type == SERVER::Type::CLUSTRIX)
+    if (base_server_type == SERVER::Type::CLUSTRIX)
     {
         m_srv_type = server_type::CLUSTRIX;
     }
@@ -919,7 +919,7 @@ void MariaDBServer::update_server_version()
         {
             m_capabilities.basic_support = true;
             // For more specific features, at least MariaDB 10.X is needed.
-            if (server_type == SERVER::Type::MARIADB && major >= 10)
+            if (base_server_type == SERVER::Type::MARIADB && major >= 10)
             {
                 // 10.0.2 or 10.1.X or greater than 10
                 if (((minor == 0 && patch >= 2)  || minor >= 1) || major > 10)
