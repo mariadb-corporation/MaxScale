@@ -499,7 +499,7 @@ void Server::dprintServer(DCB* dcb, const Server* srv)
 void Server::print_to_dcb(DCB* dcb) const
 {
     const Server* server = this;
-    if (!server_is_active(server))
+    if (!server->server_is_active())
     {
         return;
     }
@@ -870,7 +870,7 @@ std::unique_ptr<ResultSet> serverGetList()
     Guard guard(this_unit.all_servers_lock);
     for (Server* server : this_unit.all_servers)
     {
-        if (server_is_active(server))
+        if (server->server_is_active())
         {
             string stat = mxs::server_status(server);
             set->add_row({server->name(), server->address, std::to_string(server->port),
@@ -1274,7 +1274,7 @@ json_t* server_list_to_json(const char* host)
     Guard guard(this_unit.all_servers_lock);
     for (Server* server : this_unit.all_servers)
     {
-        if (server_is_active(server))
+        if (server->server_is_active())
         {
             json_array_append_new(data, server_to_json_data(server, host));
         }

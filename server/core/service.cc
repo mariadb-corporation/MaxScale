@@ -913,7 +913,7 @@ void dprintService(DCB* dcb, SERVICE* svc)
     dcb_printf(dcb, "\tBackend databases:\n");
     while (server)
     {
-        if (SERVER_REF_IS_ACTIVE(server))
+        if (server_ref_is_active(server))
         {
             dcb_printf(dcb,
                        "\t\t[%s]:%d    Protocol: %s    Name: %s\n",
@@ -974,7 +974,7 @@ void dListServices(DCB* dcb)
             bool first = true;
             while (server_ref)
             {
-                if (SERVER_REF_IS_ACTIVE(server_ref))
+                if (server_ref_is_active(server_ref))
                 {
                     if (first)
                     {
@@ -1479,7 +1479,7 @@ bool Service::dump_config(const char* filename) const
 
         for (SERVER_REF* db = dbref; db; db = db->next)
         {
-            if (SERVER_REF_IS_ACTIVE(db))
+            if (server_ref_is_active(db))
             {
                 dprintf(file, "%s%s", sep, db->server->name());
                 sep = ",";
@@ -1617,7 +1617,7 @@ static inline bool have_active_servers(const SERVICE* service)
 {
     for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
     {
-        if (SERVER_REF_IS_ACTIVE(ref))
+        if (server_ref_is_active(ref))
         {
             return true;
         }
@@ -1707,7 +1707,7 @@ json_t* Service::json_relationships(const char* host) const
 
         for (SERVER_REF* ref = dbref; ref; ref = ref->next)
         {
-            if (SERVER_REF_IS_ACTIVE(ref))
+            if (server_ref_is_active(ref))
             {
                 mxs_json_add_relation(servers, ref->server->name(), CN_SERVERS);
             }
@@ -1813,7 +1813,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
 
         for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
         {
-            if (ref->server == server && SERVER_REF_IS_ACTIVE(ref))
+            if (ref->server == server && server_ref_is_active(ref))
             {
                 names.push_back(service->name);
             }

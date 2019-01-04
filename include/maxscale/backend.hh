@@ -236,7 +236,7 @@ public:
      */
     inline bool is_active() const
     {
-        return SERVER_REF_IS_ACTIVE(m_backend);
+        return server_ref_is_active(m_backend);
     }
 
     /**

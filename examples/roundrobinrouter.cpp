@@ -193,7 +193,7 @@ RRRouterSession* RRRouter::create_session(MXS_SESSION* session)
         SERVER_REF* sref;
         for (sref = m_service->dbref; sref != NULL; sref = sref->next)
         {
-            if (SERVER_REF_IS_ACTIVE(sref) && (backends.size() < m_max_backends))
+            if (server_ref_is_active(sref) && (backends.size() < m_max_backends))
             {
                 /* Connect to server */
                 DCB* conn = dcb_connect(sref->server, session, sref->server->protocol().c_str());

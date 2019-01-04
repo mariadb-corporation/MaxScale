@@ -85,7 +85,7 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession)
     /* Go through the server references, find master and slaves */
     for (SERVER_REF* pSref = pSession->service->dbref; pSref; pSref = pSref->next)
     {
-        if (SERVER_REF_IS_ACTIVE(pSref))
+        if (server_ref_is_active(pSref))
         {
             if (server_is_master(pSref->server))
             {

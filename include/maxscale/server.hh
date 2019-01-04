@@ -212,6 +212,16 @@ public:
      */
     void update_extra_port(int new_port);
 
+    /**
+     * Is the server valid and active? TODO: Rename once "is_active" is moved to internal class.
+     *
+     * @return True, if server has not been removed from the runtime configuration.
+     */
+    bool server_is_active() const
+    {
+        return is_active;
+    }
+
 protected:
     SERVER()
     {
@@ -240,17 +250,6 @@ private:
 #define SERVER_MASTER_STICKINESS (1 << 10)  /**<< Server Master stickiness */
 // Bits providing general information
 #define SERVER_DISK_SPACE_EXHAUSTED (1 << 31)   /**<< The disk space of the server is exhausted */
-
-/**
- * Is the server valid and active?
- *
- * @param server The server
- * @return True, if server has not been removed from the runtime configuration.
- */
-inline bool server_is_active(const SERVER* server)
-{
-    return server->is_active;
-}
 
 inline bool status_is_usable(uint64_t status)
 {

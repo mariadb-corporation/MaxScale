@@ -1220,7 +1220,7 @@ static int get_users(Listener* listener, bool skip_local)
 
     for (server = service->dbref; !maxscale_is_shutting_down() && server; server = server->next)
     {
-        if (!SERVER_REF_IS_ACTIVE(server) || !server_is_active(server->server)
+        if (!server_ref_is_active(server) || !server->server->server_is_active()
             || (skip_local && server_is_mxs_service(server->server))
             || !server_is_running(server->server))
         {

@@ -636,7 +636,7 @@ int gssapi_auth_load_users(Listener* listener)
 
         for (SERVER_REF* servers = listener->service()->dbref; servers; servers = servers->next)
         {
-            if (!SERVER_REF_IS_ACTIVE(servers) || !server_is_active(servers->server))
+            if (!server_ref_is_active(servers) || !servers->server->server_is_active())
             {
                 continue;
             }

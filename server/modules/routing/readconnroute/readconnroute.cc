@@ -315,7 +315,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
      */
     for (SERVER_REF* ref = inst->service->dbref; ref; ref = ref->next)
     {
-        if (!SERVER_REF_IS_ACTIVE(ref) || server_is_in_maint(ref->server))
+        if (!server_ref_is_active(ref) || server_is_in_maint(ref->server))
         {
             continue;
         }
