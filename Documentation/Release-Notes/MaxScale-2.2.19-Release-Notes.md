@@ -14,6 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-2234](https://jira.mariadb.org/browse/MXS-2234) Add extra info to log when MaxScale loads persisted configuration files
 * [MXS-2232](https://jira.mariadb.org/browse/MXS-2232) version_string prefix 5.5.5- is always added
 * [MXS-2231](https://jira.mariadb.org/browse/MXS-2231) Kerberos together with ssl doesn't work
+* [MXS-2048](https://jira.mariadb.org/browse/MXS-2048) Rewrite dbfwfilter module command documentation
 
 ## Known Issues and Limitations
 
