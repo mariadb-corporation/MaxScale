@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxbase/worker.hh>
+#include <maxscale/housekeeper.h>
 
 namespace maxscale
 {
@@ -41,10 +42,34 @@ public:
      */
     static MainWorker& get();
 
+    void add_task(const char* zName, TASKFN func, void* pData, int frequency);
+    void remove_task(const char* zName);
+
 private:
     bool pre_run() override;
     void post_run() override;
     void epoll_tick() override;
+
+    struct Task
+    {
+    public:
+        Task(const char* zName, TASKFN func, void* pData)
+            : name(zName)
+            , func(func)
+            , pData(pData)
+            , id(0)
+        {
+        };
+
+        std::string name;
+        TASKFN      func;
+        void*       pData;
+        uint32_t    id;
+    };
+
+    bool call_task(Worker::Call::action_t action, Task* pTask);
+
+    std::map<std::string, Task> m_tasks_by_name;
 };
 
 }
