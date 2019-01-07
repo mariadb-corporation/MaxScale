@@ -287,17 +287,16 @@ public:
     static int get_current_id();
 
     /**
-     * Starts all routing workers but the main worker (the one running in
-     * the main thread).
+     * Starts all routing workers.
      *
-     * @return True, if all secondary workers could be started.
+     * @return True, if all workers could be started.
      */
-    static bool start_threaded_workers();
+    static bool start_workers();
 
     /**
-     * Waits for all threaded workers.
+     * Waits for all routing workers.
      */
-    static void join_threaded_workers();
+    static void join_workers();
 
     /**
      * Deprecated

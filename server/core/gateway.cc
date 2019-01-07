@@ -2231,7 +2231,7 @@ int main(int argc, char** argv)
     /*<
      * Start the routing workers running in their own thread.
      */
-    if (!RoutingWorker::start_threaded_workers())
+    if (!RoutingWorker::start_workers())
     {
         const char* logerr = "Failed to start routing workers.";
         print_log_n_stderr(true, true, logerr, logerr, 0);
@@ -2279,8 +2279,6 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    worker->start();
-
     main_worker->run();
 
     /** Stop administrative interface */
@@ -2297,11 +2295,10 @@ int main(int argc, char** argv)
      */
     hkfinish();
 
-    worker->join();
     /*<
      * Wait for worker threads to exit.
      */
-    RoutingWorker::join_threaded_workers();
+    RoutingWorker::join_workers();
 
     MXS_NOTICE("All workers have shut down.");
 

@@ -476,26 +476,21 @@ int RoutingWorker::get_current_id()
 }
 
 // static
-bool RoutingWorker::start_threaded_workers()
+bool RoutingWorker::start_workers()
 {
     bool rv = true;
 
     for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; ++i)
     {
-        // The main RoutingWorker will run in the main thread, so
-        // we exclude that.
-        if (i != this_unit.id_main_worker)
-        {
-            RoutingWorker* pWorker = this_unit.ppWorkers[i];
-            mxb_assert(pWorker);
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        mxb_assert(pWorker);
 
-            if (!pWorker->start())
-            {
-                MXS_ALERT("Could not start routing worker %d of %d.", i, config_threadcount());
-                rv = false;
-                // At startup, so we don't even try to clean up.
-                break;
-            }
+        if (!pWorker->start())
+        {
+            MXS_ALERT("Could not start routing worker %d of %d.", i, config_threadcount());
+            rv = false;
+            // At startup, so we don't even try to clean up.
+            break;
         }
     }
 
@@ -503,17 +498,14 @@ bool RoutingWorker::start_threaded_workers()
 }
 
 // static
-void RoutingWorker::join_threaded_workers()
+void RoutingWorker::join_workers()
 {
     for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; i++)
     {
-        if (i != this_unit.id_main_worker)
-        {
-            RoutingWorker* pWorker = this_unit.ppWorkers[i];
-            mxb_assert(pWorker);
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        mxb_assert(pWorker);
 
-            pWorker->join();
-        }
+        pWorker->join();
     }
 }
 
