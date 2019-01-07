@@ -73,9 +73,9 @@ static int test1()
     std::string buf = server->get_custom_parameter("name");
     mxb_assert_message(buf == "value", "Parameter should be returned correctly");
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");
-    mxb_assert_message(NULL == server_find_by_unique_name("non-existent"),
+    mxb_assert_message(NULL == Server::find_by_unique_name("non-existent"),
                        "Should not find non-existent unique name.");
-    mxb_assert_message(server == server_find_by_unique_name("uniquename"), "Should find by unique name.");
+    mxb_assert_message(server == Server::find_by_unique_name("uniquename"), "Should find by unique name.");
     fprintf(stderr, "\t..done\nTesting Status Setting for Server.");
     status = server_status(server);
     mxb_assert_message(status == "Running", "Status of Server should be Running by default.");
@@ -87,8 +87,8 @@ static int test1()
     mxb_assert_message(status == "Running",
                        "Status of Server should be Running after master status cleared.");
     fprintf(stderr, "\t..done\nRun Prints for Server and all Servers.");
-    printServer(server);
-    printAllServers();
+    server->printServer();
+    Server::printAllServers();
     fprintf(stderr, "\t..done\nFreeing Server.");
     server_free((Server*)server);
     fprintf(stderr, "\t..done\n");

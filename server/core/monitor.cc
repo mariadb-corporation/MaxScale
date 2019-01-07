@@ -151,7 +151,7 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
     for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
     {
         fix_object_name(s);
-        monitor_add_server(mon, server_find_by_unique_name(s.c_str()));
+        monitor_add_server(mon, Server::find_by_unique_name(s));
     }
 
     monitor_add_user(mon, config_get_string(params, CN_USER), config_get_string(params, CN_PASSWORD));

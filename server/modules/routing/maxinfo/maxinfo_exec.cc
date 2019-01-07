@@ -315,7 +315,7 @@ static void exec_flush(DCB* dcb, MAXINFO_TREE* tree)
  */
 void exec_set_server(DCB* dcb, MAXINFO_TREE* tree)
 {
-    SERVER* server = server_find_by_unique_name(tree->value);
+    auto server = Server::find_by_unique_name(tree->value);
     char errmsg[120];
 
     if (server)
@@ -402,7 +402,7 @@ static void exec_set(DCB* dcb, MAXINFO_TREE* tree)
  */
 void exec_clear_server(DCB* dcb, MAXINFO_TREE* tree)
 {
-    SERVER* server = server_find_by_unique_name(tree->value);
+    auto server = Server::find_by_unique_name(tree->value);
     char errmsg[120];
 
     if (server)

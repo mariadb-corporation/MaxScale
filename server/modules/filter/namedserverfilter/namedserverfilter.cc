@@ -490,7 +490,7 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
     {
         /* The string contains a server list, all must be valid servers */
         SERVER** servers;
-        int found = server_find_by_unique_names(names_arr, n_names, &servers);
+        int found = SERVER::server_find_by_unique_names(names_arr, n_names, &servers);
 
         if (found != n_names)
         {
@@ -522,7 +522,7 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
     else if (n_names == 1)
     {
         /* The string is either a server name or a special reserved id */
-        if (server_find_by_unique_name(names_arr[0]))
+        if (SERVER::find_by_unique_name(names_arr[0]))
         {
             m_targets.push_back(names_arr[0]);
         }

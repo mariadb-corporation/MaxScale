@@ -90,7 +90,7 @@ public:
         return m_settings.disk_space_limits;
     }
 
-    void set_disk_space_limits(const MxsDiskSpaceThreshold& new_limits) override
+    void set_disk_space_limits(const MxsDiskSpaceThreshold& new_limits)
     {
         std::lock_guard<std::mutex> guard(m_settings.lock);
         m_settings.disk_space_limits = new_limits;
@@ -226,6 +226,14 @@ public:
      */
     static void dListServers(DCB*);
 
+    /**
+     * Convert all servers into JSON format
+     *
+     * @param host    Hostname of this server
+     * @return JSON array of servers or NULL if an error occurred
+     */
+    static json_t* server_list_to_json(const char* host);
+
     static bool create_server_config(const Server* server, const char* filename);
 
     static json_t* server_json_attributes(const Server* server);
@@ -272,6 +280,29 @@ public:
 
     std::string monitor_user() const;
     std::string monitor_password() const;
+
+    /**
+     * @brief Set the disk space threshold of the server
+     *
+     * @param server                The server.
+     * @param disk_space_threshold  The disk space threshold as specified in the config file.
+     *
+     * @return True, if the provided string is valid and the threshold could be set.
+     */
+    bool server_set_disk_space_threshold(const char* disk_space_threshold);
+
+    /**
+     * Print all servers
+     *
+     * Designed to be called within a debugger session in order
+     * to display all active servers within the gateway
+     */
+    static void printAllServers();
+
+    /**
+     * Print details of an individual server
+     */
+    void printServer();
 
     mutable std::mutex m_lock;
     DCB**              persistent = nullptr;/**< List of unused persistent connections to the server */

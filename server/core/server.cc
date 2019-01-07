@@ -338,18 +338,17 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
     return NULL;
 }
 
-/**
- * @brief Find a server with the specified name
- *
- * @param name Name of the server
- * @return The server or NULL if not found
- */
-SERVER* server_find_by_unique_name(const char* name)
+SERVER* SERVER::find_by_unique_name(const string& name)
+{
+    return Server::find_by_unique_name(name);
+}
+
+Server* Server::find_by_unique_name(const string& name)
 {
     Guard guard(this_unit.all_servers_lock);
     for (Server* server : this_unit.all_servers)
     {
-        if (server->is_active && strcmp(server->name(), name) == 0)
+        if (server->is_active && server->m_name == name)
         {
             return server;
         }
@@ -357,20 +356,7 @@ SERVER* server_find_by_unique_name(const char* name)
     return nullptr;
 }
 
-/**
- * Find several servers with the names specified in an array with a given size.
- * The returned array (but not the elements) should be freed by the caller.
- * If no valid server names were found or in case of error, nothing is written
- * to the output parameter.
- *
- * @param servers An array of server names
- * @param size Number of elements in the input server names array, equal to output
- * size if any servers are found.
- * @param output Where to save the output. Contains null elements for invalid server
- * names. If all were invalid, the output is left untouched.
- * @return Number of valid server names found
- */
-int server_find_by_unique_names(char** server_names, int size, SERVER*** output)
+int SERVER::server_find_by_unique_names(char** server_names, int size, SERVER*** output)
 {
     mxb_assert(server_names && (size > 0));
 
@@ -383,7 +369,7 @@ int server_find_by_unique_names(char** server_names, int size, SERVER*** output)
     int found = 0;
     for (int i = 0; i < size; i++)
     {
-        results[i] = server_find_by_unique_name(server_names[i]);
+        results[i] = Server::find_by_unique_name(server_names[i]);
         found += (results[i]) ? 1 : 0;
     }
 
@@ -398,37 +384,26 @@ int server_find_by_unique_names(char** server_names, int size, SERVER*** output)
     return found;
 }
 
-/**
- * Print details of an individual server
- *
- * @param server        Server to print
- */
-void printServer(const SERVER* server)
+void Server::printServer()
 {
-    printf("Server %p\n", server);
-    printf("\tServer:                       %s\n", server->address);
-    printf("\tProtocol:             %s\n", server->protocol().c_str());
-    printf("\tPort:                 %d\n", server->port);
-    printf("\tTotal connections:    %d\n", server->stats.n_connections);
-    printf("\tCurrent connections:  %d\n", server->stats.n_current);
-    printf("\tPersistent connections:       %d\n", server->stats.n_persistent);
-    printf("\tPersistent actual max:        %d\n", server->persistmax);
+    printf("Server %p\n", this);
+    printf("\tServer:                       %s\n", address);
+    printf("\tProtocol:                     %s\n", m_settings.protocol.c_str());
+    printf("\tPort:                         %d\n", port);
+    printf("\tTotal connections:            %d\n", stats.n_connections);
+    printf("\tCurrent connections:          %d\n", stats.n_current);
+    printf("\tPersistent connections:       %d\n", stats.n_persistent);
+    printf("\tPersistent actual max:        %d\n", persistmax);
 }
 
-/**
- * Print all servers
- *
- * Designed to be called within a debugger session in order
- * to display all active servers within the gateway
- */
-void printAllServers()
+void Server::printAllServers()
 {
     Guard guard(this_unit.all_servers_lock);
     for (Server* server : this_unit.all_servers)
     {
-        if (server->is_active)
+        if (server->server_is_active())
         {
-            printServer(server);
+            server->printServer();
         }
     }
 }
@@ -447,7 +422,7 @@ void Server::dprintAllServers(DCB* dcb)
 
 void Server::dprintAllServersJson(DCB* dcb)
 {
-    json_t* all_servers_json = server_list_to_json("");
+    json_t* all_servers_json = Server::server_list_to_json("");
     char* dump = json_dumps(all_servers_json, JSON_INDENT(4));
     dcb_printf(dcb, "%s", dump);
     MXS_FREE(dump);
@@ -1136,17 +1111,17 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
     return written;
 }
 
-bool server_is_mxs_service(const SERVER* server)
+bool SERVER::is_mxs_service()
 {
     bool rval = false;
 
     /** Do a coarse check for local server pointing to a MaxScale service */
-    if (strcmp(server->address, "127.0.0.1") == 0
-        || strcmp(server->address, "::1") == 0
-        || strcmp(server->address, "localhost") == 0
-        || strcmp(server->address, "localhost.localdomain") == 0)
+    if (strcmp(address, "127.0.0.1") == 0
+        || strcmp(address, "::1") == 0
+        || strcmp(address, "localhost") == 0
+        || strcmp(address, "localhost.localdomain") == 0)
     {
-        if (service_port_is_used(server->port))
+        if (service_port_is_used(port))
         {
             rval = true;
         }
@@ -1267,7 +1242,7 @@ json_t* server_to_json(const Server* server, const char* host)
     return mxs_json_resource(host, self.c_str(), server_to_json_data(server, host));
 }
 
-json_t* server_list_to_json(const char* host)
+json_t* Server::server_list_to_json(const char* host)
 {
     json_t* data = json_array();
 
@@ -1283,13 +1258,13 @@ json_t* server_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 
-bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_threshold)
+bool Server::server_set_disk_space_threshold(const char* disk_space_threshold)
 {
     MxsDiskSpaceThreshold dst;
     bool rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
     if (rv)
     {
-        server->set_disk_space_limits(dst);
+        set_disk_space_limits(dst);
     }
     return rv;
 }
@@ -1350,19 +1325,6 @@ void Server::response_time_add(double ave, int num_samples)
 
     m_response_time.set_sample_max(new_max);
     m_response_time.add(ave, num_samples);
-}
-
-Server* Server::find_by_unique_name(const string& name)
-{
-    Guard guard(this_unit.all_servers_lock);
-    for (Server* server : this_unit.all_servers)
-    {
-        if (server->is_active && server->m_name == name)
-        {
-            return server;
-        }
-    }
-    return nullptr;
 }
 
 bool Server::is_custom_parameter(const string& name) const

@@ -1235,7 +1235,7 @@ static void createServer(DCB* dcb,
 {
     pthread_mutex_lock(&server_mod_lock);
 
-    if (server_find_by_unique_name(name) == NULL)
+    if (Server::find_by_unique_name(name) == NULL)
     {
         if (runtime_create_server(name, address, port, protocol, authenticator))
         {

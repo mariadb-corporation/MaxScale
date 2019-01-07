@@ -950,7 +950,7 @@ bool check_service_permissions(SERVICE* service)
 
     for (SERVER_REF* server = service->dbref; server; server = server->next)
     {
-        if (server_is_mxs_service(server->server)
+        if (server->server->is_mxs_service()
             || check_server_permissions(service, server->server, user, dpasswd))
         {
             rval = true;
@@ -1221,7 +1221,7 @@ static int get_users(Listener* listener, bool skip_local)
     for (server = service->dbref; !maxscale_is_shutting_down() && server; server = server->next)
     {
         if (!server_ref_is_active(server) || !server->server->server_is_active()
-            || (skip_local && server_is_mxs_service(server->server))
+            || (skip_local && server->server->is_mxs_service())
             || !server->server->is_running())
         {
             continue;

@@ -1797,7 +1797,7 @@ SERVICE* config_get_service(const MXS_CONFIG_PARAMETER* params, const char* key)
 SERVER* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key)
 {
     const char* value = config_get_value_string(params, key);
-    return server_find_by_unique_name(value);
+    return Server::find_by_unique_name(value);
 }
 
 int config_get_server_list(const MXS_CONFIG_PARAMETER* params,
@@ -1811,7 +1811,7 @@ int config_get_server_list(const MXS_CONFIG_PARAMETER* params,
     if (n_names > 0)
     {
         SERVER** servers;
-        found = server_find_by_unique_names(server_names, n_names, &servers);
+        found = SERVER::server_find_by_unique_names(server_names, n_names, &servers);
         for (int i = 0; i < n_names; i++)
         {
             MXS_FREE(server_names[i]);
@@ -3673,7 +3673,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
         {
             fix_object_name(a);
 
-            if (SERVER* s = server_find_by_unique_name(a.c_str()))
+            if (auto s = Server::find_by_unique_name(a))
             {
                 serviceAddBackend(service, s);
             }
@@ -3760,7 +3760,7 @@ int create_new_server(CONFIG_CONTEXT* obj)
         const char* disk_space_threshold = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
         if (disk_space_threshold)
         {
-            if (!server_set_disk_space_threshold(server, disk_space_threshold))
+            if (!server->server_set_disk_space_threshold(disk_space_threshold))
             {
                 MXS_ERROR("Invalid value for '%s' for server %s: %s",
                           CN_DISK_SPACE_THRESHOLD,
@@ -3795,7 +3795,7 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
     for (auto& s : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
     {
         fix_object_name(s);
-        SERVER* server = server_find_by_unique_name(s.c_str());
+        auto server = Server::find_by_unique_name(s);
 
         if (!server)
         {

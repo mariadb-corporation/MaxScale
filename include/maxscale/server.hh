@@ -213,13 +213,6 @@ public:
     virtual MxsDiskSpaceThreshold get_disk_space_limits() const = 0;
 
     /**
-     * Set new disk space limits for the server.
-     *
-     * @param new_limits New limits
-     */
-    virtual void set_disk_space_limits(const MxsDiskSpaceThreshold& new_limits) = 0;
-
-    /**
      * Is persistent connection pool enabled.
      *
      * @return True if enabled
@@ -290,6 +283,14 @@ public:
      * @param new_port New port. The value is not checked but should generally be 1 -- 65535.
      */
     void update_extra_port(int new_port);
+
+    /**
+     * @brief Check if a server points to a local MaxScale service
+     *
+     * @param server Server to check
+     * @return True if the server points to a local MaxScale service
+     */
+    bool is_mxs_service();
 
     /**
      * Is the server valid and active? TODO: Rename once "is_active" is moved to internal class.
@@ -406,6 +407,29 @@ public:
         return status_is_disk_space_exhausted(status);
     }
 
+    /**
+     * Find a server with the specified name.
+     *
+     * @param name Name of the server
+     * @return The server or NULL if not found
+     */
+    static SERVER* find_by_unique_name(const std::string& name);
+
+    /**
+     * Find several servers with the names specified in an array with a given size.
+     * The returned array (but not the elements) should be freed by the caller.
+     * If no valid server names were found or in case of error, nothing is written
+     * to the output parameter.
+     *
+     * @param servers An array of server names
+     * @param size Number of elements in the input server names array, equal to output
+     * size if any servers are found.
+     * @param output Where to save the output. Contains null elements for invalid server
+     * names. If all were invalid, the output is left untouched.
+     * @return Number of valid server names found
+     */
+    static int server_find_by_unique_names(char** server_names, int size, SERVER*** output);
+
 protected:
     SERVER()
     {
@@ -413,42 +437,6 @@ protected:
 private:
     static const int DEFAULT_CHARSET = 0x08;    /** The latin1 charset */
 };
-
-/**
- * @brief Add a server parameter
- *
- * @param server Server where the parameter is added
- * @param name Parameter name
- * @param value Parameter value
- */
-void server_add_parameter(SERVER* server, const char* name, const char* value);
-
-/**
- * @brief Check if a server points to a local MaxScale service
- *
- * @param server Server to check
- * @return True if the server points to a local MaxScale service
- */
-bool server_is_mxs_service(const SERVER* server);
-
-/**
- * @brief Convert all servers into JSON format
- *
- * @param host    Hostname of this server
- *
- * @return JSON array of servers or NULL if an error occurred
- */
-json_t* server_list_to_json(const char* host);
-
-/**
- * @brief Set the disk space threshold of the server
- *
- * @param server                The server.
- * @param disk_space_threshold  The disk space threshold as specified in the config file.
- *
- * @return True, if the provided string is valid and the threshold could be set.
- */
-bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_threshold);
 
 /**
  * @brief Add a response average to the server response average.
@@ -461,17 +449,12 @@ bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_thre
 void server_add_response_average(SERVER* server, double ave, int num_samples);
 
 extern int      server_free(SERVER* server);
-extern SERVER*  server_find_by_unique_name(const char* name);
-extern int      server_find_by_unique_names(char** server_names, int size, SERVER*** output);
 extern void     server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set);
 extern void     server_set_status_nolock(SERVER* server, uint64_t bit);
 extern void     server_clear_status_nolock(SERVER* server, uint64_t bit);
 extern void     server_transfer_status(SERVER* dest_server, const SERVER* source_server);
 extern void     server_update_address(SERVER* server, const char* address);
 extern uint64_t server_map_status(const char* str);
-
-extern void printServer(const SERVER*);
-extern void printAllServers();
 
 int    server_response_time_num_samples(const SERVER* server);
 double server_response_time_average(const SERVER* server);

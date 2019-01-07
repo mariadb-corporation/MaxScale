@@ -214,7 +214,7 @@ bool runtime_create_server(const char* name,
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
-    if (server_find_by_unique_name(name) == NULL)
+    if (Server::find_by_unique_name(name) == NULL)
     {
         if (protocol == NULL)
         {
@@ -2061,7 +2061,7 @@ bool runtime_alter_server_relationships_from_json(Server* server, const char* ty
 
 static bool object_relation_is_valid(const std::string& type, const std::string& value)
 {
-    return type == CN_SERVERS && server_find_by_unique_name(value.c_str());
+    return type == CN_SERVERS && Server::find_by_unique_name(value);
 }
 
 static bool filter_relation_is_valid(const std::string& type, const std::string& value)

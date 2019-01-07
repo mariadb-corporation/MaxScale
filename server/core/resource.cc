@@ -123,7 +123,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
     if (path[0] == ':')
     {
         if ((path == ":service" && service_find(target.c_str()))
-            || (path == ":server" && server_find_by_unique_name(target.c_str()))
+            || (path == ":server" && Server::find_by_unique_name(target))
             || (path == ":filter" && filter_find(target.c_str()))
             || (path == ":monitor" && monitor_find(target.c_str()))
             || (path == ":module" && get_module(target.c_str(), NULL))
@@ -543,7 +543,7 @@ HttpResponse cb_delete_filter(const HttpRequest& request)
 }
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
+    return HttpResponse(MHD_HTTP_OK, Server::server_list_to_json(request.host()));
 }
 
 HttpResponse cb_get_server(const HttpRequest& request)
@@ -766,7 +766,7 @@ HttpResponse cb_delete_user(const HttpRequest& request)
 
 HttpResponse cb_set_server(const HttpRequest& request)
 {
-    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    SERVER* server = Server::find_by_unique_name(request.uri_part(1));
     int opt = server_map_status(request.get_option(CN_STATE).c_str());
 
     if (opt)
@@ -790,7 +790,7 @@ HttpResponse cb_set_server(const HttpRequest& request)
 
 HttpResponse cb_clear_server(const HttpRequest& request)
 {
-    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    SERVER* server = Server::find_by_unique_name(request.uri_part(1));
     int opt = server_map_status(request.get_option(CN_STATE).c_str());
 
     if (opt)
