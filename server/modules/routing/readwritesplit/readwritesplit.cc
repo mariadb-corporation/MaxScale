@@ -228,6 +228,13 @@ RWSplit* RWSplit::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
+    if (config.master_reconnection && config.disable_sescmd_history)
+    {
+        MXS_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
+                  "Master reconnection cannot be done without session command history.");
+        return NULL;
+    }
+
     return new(std::nothrow) RWSplit(service, config);
 }
 
