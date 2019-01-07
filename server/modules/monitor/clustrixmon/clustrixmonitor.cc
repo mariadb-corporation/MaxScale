@@ -52,7 +52,7 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     return true;
 }
 
-void ClustrixMonitor::pre_tick()
+void ClustrixMonitor::pre_loop()
 {
     m_http = mxb::http::get_async(m_health_urls);
 

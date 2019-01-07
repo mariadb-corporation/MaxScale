@@ -50,7 +50,7 @@ public:
 private:
     ClustrixMonitor(MXS_MONITOR* pMonitor);
 
-    void pre_tick();
+    void pre_loop() override;
 
     void tick();
 

@@ -35,7 +35,7 @@ For a list of optional parameters that all monitors support, read the
 
 ## Clustrix Monitor optional parameters
 
-These are optional parameters specific to the Galera Monitor.
+These are optional parameters specific to the Clustrix Monitor.
 
 ### `cluster_monitor_interval`
 
