@@ -51,6 +51,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
+#include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
@@ -150,6 +151,7 @@ static bool log_to_shm_configured = false;
 static volatile sig_atomic_t last_signal = 0;
 static bool unload_modules_at_exit = true;
 static std::string redirect_output_to;
+static maxscale::MainWorker* main_worker = nullptr;
 
 static int   cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static int   write_pid_file();  /* write MaxScale pidfile */
@@ -351,6 +353,11 @@ static void sigterm_handler(int i)
 
     if (n_shutdowns == 1)
     {
+        if (main_worker)
+        {
+            main_worker->shutdown();
+        }
+
         if (!daemon_mode)
         {
             if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
@@ -372,6 +379,11 @@ static void sigint_handler(int i)
 
     if (n_shutdowns == 1)
     {
+        if (main_worker)
+        {
+            main_worker->shutdown();
+        }
+
         if (!daemon_mode)
         {
             if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
@@ -2059,6 +2071,7 @@ int main(int argc, char** argv)
     }
 
     // Initialize the housekeeper
+    main_worker = new maxscale::MainWorker;
     if (!hkinit())
     {
         const char* logerr = "Failed to initialize housekeeper";
@@ -2266,10 +2279,9 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    /*<
-     * Run worker 0 in the main thread.
-     */
-    worker->run();
+    worker->start();
+
+    main_worker->run();
 
     /** Stop administrative interface */
     mxs_admin_shutdown();
@@ -2285,6 +2297,7 @@ int main(int argc, char** argv)
      */
     hkfinish();
 
+    worker->join();
     /*<
      * Wait for worker threads to exit.
      */
@@ -2346,6 +2359,9 @@ return_main:
     }
 
     config_finish();
+
+    delete main_worker;
+    main_worker = nullptr;
 
     return rc;
 }   /*< End of main */
