@@ -1541,8 +1541,8 @@ void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t 
 
 static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
 {
-    string prev = mxs::server_status(ptr->mon_prev_status);
-    string next = mxs::server_status(ptr->server);
+    string prev = SERVER::status_to_string(ptr->mon_prev_status);
+    string next = ptr->server->status_string();
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
                ptr->server->name(), ptr->server->address, ptr->server->port,
                mon_get_event_name(ptr),
@@ -1706,11 +1706,11 @@ void monitor_check_maintenance_requests(MXS_MONITOR* monitor)
             if (admin_msg == SERVER::MAINTENANCE_ON)
             {
                 // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
-                server_set_status_nolock(ptr->server, SERVER_MAINT);
+                ptr->server->set_status(SERVER_MAINT);
             }
             else if (admin_msg == SERVER::MAINTENANCE_OFF)
             {
-                server_clear_status_nolock(ptr->server, SERVER_MAINT);
+                ptr->server->clear_status(SERVER_MAINT);
             }
             ptr = ptr->next;
         }
@@ -2104,7 +2104,7 @@ static const char* process_server(MXS_MONITOR* monitor, const char* data, const 
 
             uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
             db->mon_prev_status = status;
-            server_set_status_nolock(db->server, status);
+            db->server->set_status(status);
             monitor_set_pending_status(db, status);
             break;
         }
@@ -2852,7 +2852,7 @@ void MonitorInstanceSimple::tick()
                 // The current status is still in pMs->pending_status.
                 MXS_DEBUG("Backend server [%s]:%d state : %s",
                           pMs->server->address, pMs->server->port,
-                          mxs::server_status(pMs->pending_status).c_str());
+                          SERVER::status_to_string(pMs->pending_status).c_str());
             }
 #endif
 

@@ -1295,7 +1295,7 @@ void printDCB(DCB* dcb)
     }
     if (dcb->server)
     {
-        string statusname = mxs::server_status(dcb->server);
+        string statusname = dcb->server->status_string();
         if (!statusname.empty())
         {
             printf("\tServer status:            %s\n", statusname.c_str());
@@ -1405,7 +1405,7 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
     }
     if (dcb->server)
     {
-        string statusname = mxs::server_status(dcb->server);
+        string statusname = dcb->server->status_string();
         if (!statusname.empty())
         {
             dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());
@@ -1568,7 +1568,7 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
     }
     if (dcb->server)
     {
-        string statusname = mxs::server_status(dcb->server);
+        string statusname = dcb->server->status_string();
         if (!statusname.c_str())
         {
             dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());

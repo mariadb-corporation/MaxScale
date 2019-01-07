@@ -2521,7 +2521,7 @@ static void set_server(DCB* dcb, Server* server, char* bit)
 {
     unsigned int bitvalue;
 
-    if ((bitvalue = server_map_status(bit)) != 0)
+    if ((bitvalue = SERVER::status_from_string(bit)) != 0)
     {
         std::string errmsg;
         if (!mxs::server_set_status(server, bitvalue, &errmsg))
@@ -2547,7 +2547,7 @@ static void clear_server(DCB* dcb, Server* server, char* bit)
 {
     unsigned int bitvalue;
 
-    if ((bitvalue = server_map_status(bit)) != 0)
+    if ((bitvalue = SERVER::status_from_string(bit)) != 0)
     {
         std::string errmsg;
         if (!mxs::server_clear_status(server, bitvalue, &errmsg))

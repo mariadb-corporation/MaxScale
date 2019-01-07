@@ -262,13 +262,7 @@ Server* Server::create_test_server()
     return new Server(name);
 }
 
-/**
- * Deallocate the specified server
- *
- * @param server        The service to deallocate
- * @return Returns true if the server was freed
- */
-void server_free(Server* server)
+void Server::server_free(Server* server)
 {
     mxb_assert(server);
 
@@ -481,7 +475,7 @@ void Server::print_to_dcb(DCB* dcb) const
 
     dcb_printf(dcb, "Server %p (%s)\n", server, server->name());
     dcb_printf(dcb, "\tServer:                              %s\n", server->address);
-    string stat = mxs::server_status(server);
+    string stat = status_string();
     dcb_printf(dcb, "\tStatus:                              %s\n", stat.c_str());
     dcb_printf(dcb, "\tProtocol:                            %s\n", server->m_settings.protocol.c_str());
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
@@ -603,7 +597,7 @@ void Server::dListServers(DCB* dcb)
         {
             if (server->is_active)
             {
-                string stat = mxs::server_status(server);
+                string stat = server->status_string();
                 dcb_printf(dcb,
                            "%-18s | %-15s | %5d | %11d | %s\n",
                            server->name(),
@@ -618,13 +612,7 @@ void Server::dListServers(DCB* dcb)
     }
 }
 
-/**
- * Convert a set of server status flags to a string.
- *
- * @param flags Status flags
- * @return A string representation of the status flags
- */
-string mxs::server_status(uint64_t flags)
+string SERVER::status_to_string(uint64_t flags)
 {
     string result;
     string separator;
@@ -684,79 +672,25 @@ string mxs::server_status(uint64_t flags)
     return result;
 }
 
-/**
- * Convert the current server status flags to a string.
- *
- * @param server The server to return the status for
- * @return A string representation of the status
- */
-string mxs::server_status(const SERVER* server)
+string SERVER::status_string() const
 {
-    mxb_assert(server);
-    return mxs::server_status(server->status);
+    return status_to_string(status);
 }
-/**
- * Set a status bit in the server without locking
- *
- * @param server        The server to update
- * @param bit           The bit to set for the server
- */
-void server_set_status_nolock(SERVER* server, uint64_t bit)
+
+void SERVER::set_status(uint64_t bit)
 {
-    server->status |= bit;
+    status |= bit;
 
     /** clear error logged flag before the next failure */
-    if (server->is_master())
+    if (is_master())
     {
-        server->master_err_is_logged = false;
+        master_err_is_logged = false;
     }
 }
 
-/**
- * Clears and sets specified bits.
- *
- * @attention This function does no locking
- *
- * @param server         The server to update
- * @param bits_to_clear  The bits to clear for the server.
- * @param bits_to_set    The bits to set for the server.
- */
-void server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set)
+void SERVER::clear_status(uint64_t bit)
 {
-    /** clear error logged flag before the next failure */
-    if ((bits_to_set & SERVER_MASTER) && ((server->status & SERVER_MASTER) == 0))
-    {
-        server->master_err_is_logged = false;
-    }
-
-    if ((server->status & bits_to_clear) != bits_to_set)
-    {
-        server->status = (server->status & ~bits_to_clear) | bits_to_set;
-    }
-}
-
-/**
- * Clear a status bit in the server without locking
- *
- * @param server        The server to update
- * @param bit           The bit to clear for the server
- */
-void server_clear_status_nolock(SERVER* server, uint64_t bit)
-{
-    server->status &= ~bit;
-}
-
-/**
- * Transfer status bitstring from one server to another
- *
- * @attention This function does no locking
- *
- * @param dest_server       The server to be updated
- * @param source_server         The server to provide the new bit string
- */
-void server_transfer_status(SERVER* dest_server, const SERVER* source_server)
-{
-    dest_server->status = source_server->status;
+    status &= ~bit;
 }
 
 bool Server::set_monitor_user(const string& username)
@@ -847,7 +781,7 @@ std::unique_ptr<ResultSet> serverGetList()
     {
         if (server->server_is_active())
         {
-            string stat = mxs::server_status(server);
+            string stat = server->status_string();
             set->add_row({server->name(), server->address, std::to_string(server->port),
                           std::to_string(server->stats.n_current), stat});
         }
@@ -883,34 +817,26 @@ void SERVER::update_extra_port(int new_port)
     mxb::atomic::store(&extra_port, new_port, mxb::atomic::RELAXED);
 }
 
-static struct
+uint64_t SERVER::status_from_string(const char* str)
 {
-    const char* str;
-    uint64_t    bit;
-} ServerBits[] =
-{
-    {"running",     SERVER_RUNNING   },
-    {"master",      SERVER_MASTER    },
-    {"slave",       SERVER_SLAVE     },
-    {"synced",      SERVER_JOINED    },
-    {"ndb",         SERVER_NDB       },
-    {"maintenance", SERVER_MAINT     },
-    {"maint",       SERVER_MAINT     },
-    {"stale",       SERVER_WAS_MASTER},
-    {NULL,          0                }
-};
+    static struct
+    {
+        const char* str;
+        uint64_t    bit;
+    } ServerBits[] =
+    {
+        {"running",     SERVER_RUNNING   },
+        {"master",      SERVER_MASTER    },
+        {"slave",       SERVER_SLAVE     },
+        {"synced",      SERVER_JOINED    },
+        {"ndb",         SERVER_NDB       },
+        {"maintenance", SERVER_MAINT     },
+        {"maint",       SERVER_MAINT     },
+        {"stale",       SERVER_WAS_MASTER},
+        {NULL,          0                }
+    };
 
-/**
- * Map the server status bit
- *
- * @param str   String representation
- * @return bit value or 0 on error
- */
-uint64_t server_map_status(const char* str)
-{
-    int i;
-
-    for (i = 0; ServerBits[i].str; i++)
+    for (int i = 0; ServerBits[i].str; i++)
     {
         if (!strcasecmp(str, ServerBits[i].str))
         {
@@ -1011,29 +937,17 @@ bool Server::serialize() const
     return rval;
 }
 
-/**
- * Set a status bit in the server under a lock. This ensures synchronization
- * with the server monitor thread. Calling this inside the monitor will likely
- * cause a deadlock. If the server is monitored, only set the pending bit.
- *
- * @param server        The server to update
- * @param bit           The bit to set for the server
- */
 bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    Server* server = static_cast<Server*>(srv);
     bool written = false;
     /* First check if the server is monitored. This isn't done under a lock
      * but the race condition cannot cause significant harm. Monitors are never
      * freed so the pointer stays valid. */
-    MXS_MONITOR* mon = monitor_server_in_use(server);
-    std::lock_guard<std::mutex> guard(server->m_lock);
-
+    MXS_MONITOR* mon = monitor_server_in_use(srv);
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
         /* This server is monitored, in which case modifying any other status bit than Maintenance is
-         * disallowed. Maintenance is set/cleared using a special variable which the monitor reads when
-         * starting the next update cycle. Also set a flag so the next loop happens sooner. */
+         * disallowed. */
         if (bit & ~SERVER_MAINT)
         {
             MXS_ERROR(ERR_CANNOT_MODIFY);
@@ -1044,43 +958,36 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
         }
         else if (bit & SERVER_MAINT)
         {
-            // Warn if the previous request hasn't been read.
-            int previous_request = atomic_exchange_int(&server->maint_request, SERVER::MAINTENANCE_ON);
+            /* Maintenance is set/cleared using a special variable which the monitor reads when
+             * starting the next update cycle. */
+            int previous_request = atomic_exchange_int(&srv->maint_request, SERVER::MAINTENANCE_ON);
             written = true;
+            // Warn if the previous request hasn't been read.
             if (previous_request != SERVER::MAINTENANCE_NO_CHANGE)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
+            // Also set a flag so the next loop happens sooner.
             atomic_store_int(&mon->check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
         }
     }
     else
     {
         /* Set the bit directly */
-        server_set_status_nolock(server, bit);
+        srv->set_status(bit);
         written = true;
     }
 
     return written;
 }
-/**
- * Clear a status bit in the server under a lock. This ensures synchronization
- * with the server monitor thread. Calling this inside the monitor will likely
- * cause a deadlock. If the server is monitored, only clear the pending bit.
- *
- * @param server        The server to update
- * @param bit           The bit to clear for the server
- */
+
 bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    Server* server = static_cast<Server*>(srv);
+    // See server_set_status().
     bool written = false;
-    MXS_MONITOR* mon = monitor_server_in_use(server);
-    std::lock_guard<std::mutex> guard(server->m_lock);
-
+    MXS_MONITOR* mon = monitor_server_in_use(srv);
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
-        // See server_set_status().
         if (bit & ~SERVER_MAINT)
         {
             MXS_ERROR(ERR_CANNOT_MODIFY);
@@ -1092,7 +999,7 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
         else if (bit & SERVER_MAINT)
         {
             // Warn if the previous request hasn't been read.
-            int previous_request = atomic_exchange_int(&server->maint_request, SERVER::MAINTENANCE_OFF);
+            int previous_request = atomic_exchange_int(&srv->maint_request, SERVER::MAINTENANCE_OFF);
             written = true;
             if (previous_request != SERVER::MAINTENANCE_NO_CHANGE)
             {
@@ -1104,7 +1011,7 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
     else
     {
         /* Clear bit directly */
-        server_clear_status_nolock(server, bit);
+        srv->clear_status(bit);
         written = true;
     }
 
@@ -1158,7 +1065,7 @@ json_t* Server::server_json_attributes(const Server* server)
     json_object_set_new(attr, CN_PARAMETERS, params);
 
     /** Store general information about the server state */
-    string stat = mxs::server_status(server);
+    string stat = server->status_string();
     json_object_set_new(attr, CN_STATE, json_string(stat.c_str()));
 
     json_object_set_new(attr, CN_VERSION_STRING, json_string(server->version_string().c_str()));
@@ -1258,7 +1165,7 @@ json_t* Server::server_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 
-bool Server::server_set_disk_space_threshold(const char* disk_space_threshold)
+bool Server::set_disk_space_threshold(const char* disk_space_threshold)
 {
     MxsDiskSpaceThreshold dst;
     bool rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);

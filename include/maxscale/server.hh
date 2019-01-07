@@ -287,7 +287,6 @@ public:
     /**
      * @brief Check if a server points to a local MaxScale service
      *
-     * @param server Server to check
      * @return True if the server points to a local MaxScale service
      */
     bool is_mxs_service();
@@ -430,6 +429,44 @@ public:
      */
     static int server_find_by_unique_names(char** server_names, int size, SERVER*** output);
 
+    /**
+     * Convert the current server status flags to a string.
+     *
+     * @param server The server to return the status for
+     * @return A string representation of the status
+     */
+    std::string status_string() const;
+
+    /**
+     * Convert a set of server status flags to a string.
+     *
+     * @param flags Status flags
+     * @return A string representation of the status flags
+     */
+    static std::string status_to_string(uint64_t flags);
+
+    /**
+     * Convert a status string to a status bit. Only converts one status element.
+     *
+     * @param str   String representation
+     * @return bit value or 0 on error
+     */
+    static uint64_t status_from_string(const char* str);
+
+    /**
+     * Set a status bit in the server without locking
+     *
+     * @param bit           The bit to set for the server
+     */
+    void set_status(uint64_t bit);
+
+    /**
+     * Clear a status bit in the server without locking
+     *
+     * @param bit           The bit to clear for the server
+     */
+    void clear_status(uint64_t bit);
+
 protected:
     SERVER()
     {
@@ -448,21 +485,31 @@ private:
  */
 void server_add_response_average(SERVER* server, double ave, int num_samples);
 
-extern int      server_free(SERVER* server);
-extern void     server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set);
-extern void     server_set_status_nolock(SERVER* server, uint64_t bit);
-extern void     server_clear_status_nolock(SERVER* server, uint64_t bit);
-extern void     server_transfer_status(SERVER* dest_server, const SERVER* source_server);
 extern void     server_update_address(SERVER* server, const char* address);
-extern uint64_t server_map_status(const char* str);
 
 int    server_response_time_num_samples(const SERVER* server);
 double server_response_time_average(const SERVER* server);
 
 namespace maxscale
 {
-std::string server_status(uint64_t flags);
-std::string server_status(const SERVER*);
-bool        server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
-bool        server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
+
+/**
+ * Set a status bit in the server. This should not be called from within a monitor. If the server is
+ * monitored, only set the pending bit.
+ *
+ * @param bit           The bit to set for the server
+ * @param errmsg_out    Error output
+ */
+bool server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
+
+/**
+ * Clear a status bit in the server under a lock. This ensures synchronization
+ * with the server monitor thread. Calling this inside the monitor will likely
+ * cause a deadlock. If the server is monitored, only clear the pending bit.
+ *
+ * @param bit           The bit to clear for the server
+ * @param errmsg_out    Error output
+ */
+bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
+
 }

@@ -341,7 +341,7 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
                   dcb->server->address,
                   dcb->server->port);
 
-        mxs::server_set_status(dcb->server, SERVER_MAINT, NULL);
+        mxs::server_set_status(dcb->server, SERVER_MAINT);
     }
     else if (errcode == ER_ACCESS_DENIED_ERROR
              || errcode == ER_DBACCESS_DENIED_ERROR
@@ -1214,7 +1214,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
                       dcb->server->name(),
                       backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
                       "handshake" : "authentication",
-                      mxs::server_status(dcb->server).c_str());
+                      dcb->server->status_string().c_str());
         }
 
         gwbuf_free(queue);

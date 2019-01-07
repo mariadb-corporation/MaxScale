@@ -320,7 +320,7 @@ void exec_set_server(DCB* dcb, MAXINFO_TREE* tree)
 
     if (server)
     {
-        int status = server_map_status(tree->right->value);
+        int status = SERVER::status_from_string(tree->right->value);
         if (status != 0)
         {
             std::string errmsgs;
@@ -407,7 +407,7 @@ void exec_clear_server(DCB* dcb, MAXINFO_TREE* tree)
 
     if (server)
     {
-        int status = server_map_status(tree->right->value);
+        int status = SERVER::status_from_string(tree->right->value);
         if (status != 0)
         {
             std::string errmsgs;

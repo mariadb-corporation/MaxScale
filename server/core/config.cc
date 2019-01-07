@@ -3760,7 +3760,7 @@ int create_new_server(CONFIG_CONTEXT* obj)
         const char* disk_space_threshold = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
         if (disk_space_threshold)
         {
-            if (!server->server_set_disk_space_threshold(disk_space_threshold))
+            if (!server->set_disk_space_threshold(disk_space_threshold))
             {
                 MXS_ERROR("Invalid value for '%s' for server %s: %s",
                           CN_DISK_SPACE_THRESHOLD,

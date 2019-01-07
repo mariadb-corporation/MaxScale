@@ -273,7 +273,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
                      b->server->stats.n_current,
                      b->server->address,
                      b->server->port,
-                     mxs::server_status(b->server).c_str());
+                     b->server->status_string().c_str());
             break;
 
         case LEAST_ROUTER_CONNECTIONS:
@@ -281,7 +281,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
                      b->connections,
                      b->server->address,
                      b->server->port,
-                     mxs::server_status(b->server).c_str());
+                     b->server->status_string().c_str());
             break;
 
         case LEAST_CURRENT_OPERATIONS:
@@ -289,7 +289,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
                      b->server->stats.n_current_ops,
                      b->server->address,
                      b->server->port,
-                     mxs::server_status(b->server).c_str());
+                     b->server->status_string().c_str());
             break;
 
         case LEAST_BEHIND_MASTER:
@@ -297,7 +297,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
                      b->server->rlag,
                      b->server->address,
                      b->server->port,
-                     mxs::server_status(b->server).c_str());
+                     b->server->status_string().c_str());
             break;
 
         case ADAPTIVE_ROUTING:
@@ -309,7 +309,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
                          os.str().c_str(),
                          b->server->address,
                          b->server->port,
-                         mxs::server_status(b->server).c_str());
+                         b->server->status_string().c_str());
             }
             break;
 

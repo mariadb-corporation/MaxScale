@@ -176,6 +176,14 @@ public:
     static Server* create_test_server();
 
     /**
+     * Deallocate the specified server
+     *
+     * @param server        The server to deallocate
+     * @return Returns true if the server was freed
+     */
+    static void server_free(Server* server);
+
+    /**
      * @brief Find a server with the specified name
      *
      * @param name Name of the server
@@ -289,7 +297,7 @@ public:
      *
      * @return True, if the provided string is valid and the threshold could be set.
      */
-    bool server_set_disk_space_threshold(const char* disk_space_threshold);
+    bool set_disk_space_threshold(const char* disk_space_threshold);
 
     /**
      * Print all servers
@@ -366,8 +374,6 @@ private:
     VersionInfo        info;                /**< Server version and type information */
     maxbase::EMAverage m_response_time;     /**< Response time calculations for this server */
 };
-
-void server_free(Server* server);
 
 /**
  * @brief Convert a server to JSON format
