@@ -17,6 +17,7 @@
 
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
+#include <maxscale/clock.h>
 
 using namespace maxscale;
 
@@ -29,11 +30,11 @@ RWSplitSession::RWSplitSession(RWSplit* instance,
     , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
     , m_current_master(master)
     , m_config(instance->config())
+    , m_last_keepalive_check(mxs_clock())
     , m_nbackends(instance->service()->n_dbref)
     , m_client(session->client_dcb)
     , m_sescmd_count(1)
-    ,                   // Needs to be a positive number to work
-    m_expected_responses(0)
+    , m_expected_responses(0)
     , m_query_queue(NULL)
     , m_router(instance)
     , m_sent_sescmd(0)
@@ -45,6 +46,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance,
     , m_retry_duration(0)
     , m_is_replay_active(false)
     , m_can_replay_trx(true)
+    , m_server_stats(instance->local_server_stats())
 {
     if (m_config.rw_max_slave_conn_percent)
     {
@@ -86,7 +88,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
 
             for (auto& b : backends)
             {
-                router->server_stats(b->server()).start_session();
+                rses->m_server_stats[b->server()].start_session();
             }
         }
     }
@@ -124,9 +126,9 @@ void RWSplitSession::close()
         }
         backend->response_stat().reset();
 
-        m_router->server_stats(backend->server()).end_session(backend->session_timer().split(),
-                                                              backend->select_timer().total(),
-                                                              backend->num_selects());
+        m_server_stats[backend->server()].end_session(backend->session_timer().split(),
+                                                      backend->select_timer().total(),
+                                                      backend->num_selects());
     }
 }
 

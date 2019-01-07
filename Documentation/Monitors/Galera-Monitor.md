@@ -19,7 +19,7 @@ and a username and a password to connect to these servers. The user requires the
 REPLICATION CLIENT privilege to successfully monitor the state of the servers.
 
 ```
-[Galera Monitor]
+[Galera-Monitor]
 type=monitor
 module=galeramon
 servers=server1,server2,server3

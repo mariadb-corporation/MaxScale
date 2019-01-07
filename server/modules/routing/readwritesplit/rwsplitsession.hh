@@ -274,6 +274,7 @@ private:
     mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
     mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
     Config           m_config;                  /**< Configuration for this session */
+    int              m_last_keepalive_check;    /**< When the last ping was done */
     int              m_nbackends;               /**< Number of backend servers (obsolete) */
     DCB*             m_client;                  /**< The client DCB */
     uint64_t         m_sescmd_count;            /**< Number of executed session commands */
@@ -305,6 +306,10 @@ private:
     mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
 
     otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
+
+    SrvStatMap& m_server_stats;     /**< The server stats local to this thread, cached in the session object.
+                                     * This avoids the lookup involved in getting the worker-local value from
+                                     * the worker's container.*/
 };
 
 /**

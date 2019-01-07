@@ -819,7 +819,7 @@ Here is a monitor configuration that only triggers the script when a master
 or a slave server goes down.
 
 ```
-[Database Monitor]
+[Database-Monitor]
 type=monitor
 module=mariadbmon
 servers=server1,server2

@@ -39,7 +39,7 @@ logging_object=my1
 logging_schema=test
 logging_source_user=maxtest
 
-[RabbitMQ Service]
+[RabbitMQ-Service]
 type=service
 router=readconnrouter
 servers=server1

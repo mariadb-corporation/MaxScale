@@ -94,7 +94,7 @@ module for those servers. This module will detect if connectivity to the servers
 is lost and notify MariaDB MaxScale of the changed server states.
 
 ```
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mariadbmon
 servers=production-1, archive-1
@@ -129,7 +129,7 @@ router=readconnroute
 servers=archive-1
 user=maxuser
 password=maxpwd
-filters=MQ Filter
+filters=MQ-Filter
 ```
 
 The `filters` parameters for the services refer to the filters we will be creating next.
@@ -142,13 +142,13 @@ use the `archive-1` server. Both services user the `maxuser` user with the `maxp
 Next we will configure the listeners for these two services.
 
 ```
-[Production Listener]
+[Production-Listener]
 type=listener
 service=Production
 protocol=MariaDBClient
 port=4000
 
-[Archive Listener]
+[Archive-Listener]
 type=listener
 service=Archive
 protocol=MariaDBClient
@@ -180,7 +180,7 @@ After the Tee filter is configured, we will configure the Mqfilter to communicat
 the RabbitMQ server we've set up.
 
 ```
-[MQ Filter]
+[MQ-Filter]
 type=filter
 module=mqfilter
 hostname=192.168.0.201
@@ -201,13 +201,13 @@ in the `mxs-queue-1` queue.
 The last thing to add is the administration interface.
 
 ```
-[MaxAdmin Service]
+[MaxAdmin-Service]
 type=service
 router=cli
 
-[MaxAdmin Listener]
+[MaxAdmin-Listener]
 type=listener
-service=MaxAdmin Service
+service=MaxAdmin-Service
 protocol=maxscaled
 socket=default
 ```
@@ -233,7 +233,7 @@ port=3000
 protocol=MariaDBBackend
 
 # MySQL server monitor
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mariadbmon
 servers=production-1, archive-1
@@ -257,16 +257,16 @@ router=readconnroute
 servers=archive-1
 user=maxuser
 password=maxpwd
-filters=MQ Filter
+filters=MQ-Filter
 
 # Listeners for the services
-[Production Listener]
+[Production-Listener]
 type=listener
 service=Production
 protocol=MariaDBClient
 port=4000
 
-[Archive Listener]
+[Archive-Listener]
 type=listener
 service=Archive
 protocol=MariaDBClient
@@ -282,7 +282,7 @@ match=\(insert\)\|\(update\)\|\(delete\)
 
 # Mqfilter to log the canonical versions of the archive
 # server queries to a RabbitMQ broker
-[MQ Filter]
+[MQ-Filter]
 type=filter
 module=mqfilter
 hostname=192.168.0.201
@@ -294,13 +294,13 @@ queue=msg-queue-1
 key=MaxScale
 
 # Administration interface setup
-[MaxAdmin Service]
+[MaxAdmin-Service]
 type=service
 router=cli
 
-[MaxAdmin Listener]
+[MaxAdmin-Listener]
 type=listener
-service=MaxAdmin Service
+service=MaxAdmin-Service
 protocol=maxscaled
 socket=default
 ```

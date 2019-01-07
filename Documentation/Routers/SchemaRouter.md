@@ -55,7 +55,7 @@ configuration in the next chapter.
 Here is an example configuration of the schemarouter:
 
 ```
-[Shard Router]
+[Shard-Router]
 type=service
 router=schemarouter
 servers=server1,server2
@@ -125,7 +125,7 @@ defined as parameters. The values defined in _router_options_ will have priority
 over the parameters.
 
 ```
-[Shard Router]
+[Shard-Router]
 type=service
 router=schemarouter
 servers=server1,server2

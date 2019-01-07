@@ -41,23 +41,25 @@ void RWSplitSession::handle_connection_keepalive(RWBackend* target)
     mxb_assert(target);
     MXB_AT_DEBUG(int nserv = 0);
     /** Each heartbeat is 1/10th of a second */
-    int keepalive = m_config.connection_keepalive * 10;
+    int64_t keepalive = m_config.connection_keepalive * 10;
+    int64_t now = mxs_clock();
 
-    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
+    if (now - m_last_keepalive_check > keepalive)
     {
-        RWBackend* backend = *it;
-
-        if (backend->in_use() && backend != target && !backend->is_waiting_result())
+        for (const auto& backend : m_raw_backends)
         {
-            MXB_AT_DEBUG(nserv++);
-            int diff = mxs_clock() - backend->dcb()->last_read;
-
-            if (diff > keepalive)
+            if (backend->in_use() && backend != target && !backend->is_waiting_result())
             {
-                MXS_INFO("Pinging %s, idle for %ld seconds",
-                         backend->name(),
-                         MXS_CLOCK_TO_SEC(diff));
-                modutil_ignorable_ping(backend->dcb());
+                MXB_AT_DEBUG(nserv++);
+                int64_t diff = now - backend->dcb()->last_read;
+
+                if (diff > keepalive)
+                {
+                    MXS_INFO("Pinging %s, idle for %ld seconds",
+                             backend->name(),
+                             MXS_CLOCK_TO_SEC(diff));
+                    modutil_ignorable_ping(backend->dcb());
+                }
             }
         }
     }
@@ -473,8 +475,8 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             {
                 nsucc += 1;
                 mxb::atomic::add(&backend->server()->stats.packets, 1, mxb::atomic::RELAXED);
-                m_router->server_stats(backend->server()).total++;
-                m_router->server_stats(backend->server()).read++;
+                m_server_stats[backend->server()].total++;
+                m_server_stats[backend->server()].read++;
 
                 if (expecting_response)
                 {
@@ -849,7 +851,7 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     if (target)
     {
         mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
-        m_router->server_stats(target->server()).read++;
+        m_server_stats[target->server()].read++;
         mxb_assert(target->in_use() || target->can_connect());
     }
     else
@@ -986,7 +988,7 @@ bool RWSplitSession::handle_master_is_target(RWBackend** dest)
     if (target && target == m_current_master)
     {
         mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
-        m_router->server_stats(target->server()).write++;
+        m_server_stats[target->server()].write++;
     }
     else
     {
@@ -1166,7 +1168,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
 
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
         mxb::atomic::add(&target->server()->stats.packets, 1, mxb::atomic::RELAXED);
-        m_router->server_stats(target->server()).total++;
+        m_server_stats[target->server()].total++;
 
         if (!m_qc.large_query() && response == mxs::Backend::EXPECT_RESPONSE)
         {

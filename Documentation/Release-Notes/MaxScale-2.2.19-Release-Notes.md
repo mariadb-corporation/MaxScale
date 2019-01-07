@@ -1,26 +1,20 @@
-#!/bin/bash
+# MariaDB MaxScale 2.2.19 Release Notes
 
-cd $(dirname $(realpath $0))
+Release 2.2.19 is a GA release.
 
-major="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_MAJOR'|sed 's/.*=//'`"
-minor="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_MINOR'|sed 's/.*=//'`"
-patch="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_PATCH'|sed 's/.*=//'`"
-maturity="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_MATURITY'|sed 's/.*=//'`"
-
-VERSION="${major}.${minor}.${patch}"
-
-cat <<EOF > MaxScale-$VERSION-Release-Notes.md
-# MariaDB MaxScale ${VERSION} Release Notes
-
-Release ${VERSION} is a ${maturity} release.
-
-This document describes the changes in release ${VERSION}, when compared to the
+This document describes the changes in release 2.2.19, when compared to the
 previous release in the same series.
 
 For any problems you encounter, please consider submitting a bug
 report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
-`../list_fixed.sh ${VERSION}`
+## Bug fixes
+
+* [MXS-2238](https://jira.mariadb.org/browse/MXS-2238) MaxScale fails to send large CDC schemas
+* [MXS-2234](https://jira.mariadb.org/browse/MXS-2234) Add extra info to log when MaxScale loads persisted configuration files
+* [MXS-2232](https://jira.mariadb.org/browse/MXS-2232) version_string prefix 5.5.5- is always added
+* [MXS-2231](https://jira.mariadb.org/browse/MXS-2231) Kerberos together with ssl doesn't work
+* [MXS-2048](https://jira.mariadb.org/browse/MXS-2048) Rewrite dbfwfilter module command documentation
 
 ## Known Issues and Limitations
 
@@ -37,8 +31,7 @@ Packages can be downloaded [here](https://mariadb.com/downloads/mariadb-tx/maxsc
 
 The source code of MaxScale is tagged at GitHub with a tag, which is identical
 with the version of MaxScale. For instance, the tag of version X.Y.Z of MaxScale
-is \`maxscale-X.Y.Z\`. Further, the default branch is always the latest GA version
+is `maxscale-X.Y.Z`. Further, the default branch is always the latest GA version
 of MaxScale.
 
 The source code is available [here](https://github.com/mariadb-corporation/MaxScale).
-EOF

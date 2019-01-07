@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
     if (conn.connect(argv[5]))
     {
-        CDC::Row row;
+        CDC::SRow row;
 
         while ((row = conn.read()))
         {

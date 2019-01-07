@@ -64,7 +64,7 @@ type=filter
 module=dbfwfilter
 rules=/home/user/rules.txt
 
-[Firewalled Routing Service]
+[Firewalled-Routing-Service]
 type=service
 router=readconnrouter
 servers=server1
@@ -419,16 +419,18 @@ details about module commands.
 
 The dbfwfilter supports the following module commands.
 
-### `dbfwfilter::rules/reload [FILE]`
+### `rules/reload FILTER [FILE]`
 
 Load a new rule file or reload the current rules. New rules are only taken into
 use if they are successfully loaded and in cases where loading of the rules
-fail, the old rules remain in use. The _FILE_ argument is an optional path to a
-rule file and if it is not defined, the current rule file is used.
+fail, the old rules remain in use. The _FILTER_ parameter is the filter instance
+whose rules are reloaded. The _FILE_ argument is an optional path to a rule file
+and if it is not defined, the current rule file is used.
 
-### `dbfwfilter::rules`
+### `rules FILTER`
 
-Shows the current statistics of the rules.
+Shows the current statistics of the rules. The _FILTER_ parameter is the filter
+instance to inspect.
 
 ## Use Cases
 

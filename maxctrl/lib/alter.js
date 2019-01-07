@@ -37,7 +37,13 @@ const maxscale_params = [
     'auth_write_timeout',
     'admin_auth',
     'admin_log_auth_failures',
-    'passive'
+    'passive',
+    'ms_timestamp',
+    'skip_permission_checks',
+    'query_retries',
+    'query_retry_timeout',
+    'retain_last_statements',
+    'dump_last_statements'
 ]
 
 function setFilters(host, argv){

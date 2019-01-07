@@ -261,7 +261,7 @@ public:
     const Config& config() const;
     Stats&        stats();
     const Stats&  stats() const;
-    ServerStats&  server_stats(SERVER* server);
+    SrvStatMap&   local_server_stats();
     SrvStatMap    all_server_stats() const;
 
     int  max_slave_count() const;

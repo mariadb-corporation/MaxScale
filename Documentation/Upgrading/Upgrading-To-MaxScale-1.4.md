@@ -39,7 +39,7 @@ the listener which is associated with that service.
 Here is an example of an old style configuration.
 
 ```
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -51,9 +51,9 @@ ssl_key=/home/user/certs/server-key.pem
 ssl_ca_cert=/home/user/certs/ca.pem
 ssl_version=TLSv12
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=3306
 ```
@@ -61,16 +61,16 @@ port=3306
 And here is the new, 1.4 compatible configuration style.
 
 ```
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=jdoe
 passwd=BD26E4139A15280CA882264AA1551C70
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=3306
 ssl=required

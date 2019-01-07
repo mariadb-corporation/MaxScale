@@ -214,7 +214,8 @@ static char* get_users_query(const SERVER::Version& version, bool include_root, 
     switch (category)
     {
     case SERVER_ROLES:
-        rval = version.total >= 100202 ? get_mariadb_102_users_query(include_root) :
+        // Require 10.2.15 due to MDEV-15840 and MDEV-15556
+        rval = version.total >= 100215 ? get_mariadb_102_users_query(include_root) :
             get_mariadb_101_users_query(include_root);
         break;
 

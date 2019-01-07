@@ -227,3 +227,12 @@ void dump_param_list(int file,
                      const std::unordered_set<std::string>& ignored,
                      const MXS_MODULE_PARAM* common_params,
                      const MXS_MODULE_PARAM* module_params);
+
+/**
+ * Check whether a parameter can be modified at runtime
+ *
+ * @param name Name of the parameter
+ *
+ * @return True if the parameter can be modified at runtime
+ */
+bool config_can_modify_at_runtime(const char* name);

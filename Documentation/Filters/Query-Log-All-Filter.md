@@ -184,7 +184,7 @@ match=SELECT.*from.*PRODUCTS .*
 exclude=WHERE.*PRODUCT_ID.*
 filebase=/var/logs/qla/SelectProducts
 
-[Product Service]
+[Product-Service]
 type=service
 router=readconnrouter
 servers=server1

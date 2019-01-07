@@ -41,6 +41,6 @@ MXS_BEGIN_DECLS
  * To be used in circumstances where a memory allocation or other
  * fatal error cannot - currently - be dealt with properly.
  */
-#define MXS_ABORT_IF_FALSE(b) do {if (!b) {abort();}} while (false)
+#define MXS_ABORT_IF_FALSE(b) do {if (!(b)) {abort();}} while (false)
 
 MXS_END_DECLS

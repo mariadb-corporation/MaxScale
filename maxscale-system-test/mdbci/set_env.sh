@@ -74,7 +74,9 @@ export maxscale_IP=$maxscale_network
 export maxscale_access_user=$maxscale_whoami
 
 # Sysbench directory (should be sysbench >= 0.5)
-export sysbench_dir=${sysbench_dir:-"$HOME/sysbench_deb7/sysbench/"}
+sb=`which sysbench`
+export sysbench_dir=$(dirname ${sb})
+#export sysbench_dir=${sysbench_dir:-""}
 
 export ssl=true
 

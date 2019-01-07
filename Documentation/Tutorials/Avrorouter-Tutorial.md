@@ -73,7 +73,7 @@ port=4001
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

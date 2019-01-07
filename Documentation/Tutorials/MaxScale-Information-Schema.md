@@ -44,7 +44,7 @@ security the password can be encrypted as explained
 [here](../Getting-Started/Configuration-Guide.md#encrypting-passwords).
 
 ```
-[MaxInfo Listener]
+[MaxInfo-Listener]
 type=listener
 service=MaxInfo
 protocol=MariaDBClient
@@ -55,7 +55,7 @@ To listen with the HTTP protocol and hence return JSON documents a section
 as shown below is required.
 
 ```
-[MaxInfo JSON Listener]
+[MaxInfo-JSON-Listener]
 type=listener
 service=MaxInfo
 protocol=HTTPD
@@ -72,7 +72,7 @@ allows the access to the maxinfo data to be limited to the localhost by
 adding an address=localhost parameter in the configuration file.
 
 ```
-[MaxInfo Listener]
+[MaxInfo-Listener]
 type=listener
 service=MaxInfo
 protocol=MariaDBClient

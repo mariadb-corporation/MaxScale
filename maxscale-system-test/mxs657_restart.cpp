@@ -6,7 +6,6 @@
 
 
 #include "testconnections.h"
-#include "sysbench_commands.h"
 #include "sql_t1.h"
 #include "get_com_select_insert.h"
 

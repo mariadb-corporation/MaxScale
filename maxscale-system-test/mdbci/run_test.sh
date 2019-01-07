@@ -70,6 +70,11 @@ if [ $res == 0 ] ; then
     cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
     cd maxscale-system-test
     make
+set -x
+    echo ${test_set} | grep "NAME#"
+    if [ $? == 0 ] ; then
+        named_test=`echo ${test_set} | sed "s/NAME#//" | sed "s/ //g"`
+    fi
 
     if [ ! -z "${named_test}" ] ; then
         ./${named_test}

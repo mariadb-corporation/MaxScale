@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 
-#include <map>
+#include <unordered_map>
 
 #include <maxscale/server.hh>
 #include <maxbase/average.hh>
@@ -59,5 +59,5 @@ private:
     maxbase::CumulativeAverage m_num_ave_session_selects;
 };
 
-using SrvStatMap = std::map<SERVER*, ServerStats>;
+using SrvStatMap = std::unordered_map<SERVER*, ServerStats>;
 }

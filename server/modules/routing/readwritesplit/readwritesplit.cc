@@ -106,9 +106,9 @@ const Stats& RWSplit::stats() const
     return m_stats;
 }
 
-ServerStats& RWSplit::server_stats(SERVER* server)
+SrvStatMap& RWSplit::local_server_stats()
 {
-    return (*m_server_stats)[server];
+    return *m_server_stats;
 }
 
 maxscale::SrvStatMap RWSplit::all_server_stats() const
