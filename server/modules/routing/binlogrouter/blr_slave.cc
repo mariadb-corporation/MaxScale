@@ -4655,7 +4655,7 @@ static int blr_set_master_hostname(ROUTER_INSTANCE* router, const char* hostname
     {
         mxb_assert((*hostname != '\'') && (*hostname != '"'));
 
-        server_update_address(router->service->dbref->server, hostname);
+        router->service->dbref->server->server_update_address(hostname);
 
         MXS_INFO("%s: New MASTER_HOST is [%s]",
                  router->service->name,
@@ -4883,7 +4883,7 @@ static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* c
 static void blr_master_restore_config(ROUTER_INSTANCE* router,
                                       const MasterServerConfig& prev_master)
 {
-    server_update_address(router->service->dbref->server, prev_master.host.c_str());
+    router->service->dbref->server->server_update_address(prev_master.host);
     router->service->dbref->server->update_port(prev_master.port);
 
     router->ssl_enabled = prev_master.ssl_enabled;
@@ -4903,7 +4903,7 @@ static void blr_master_restore_config(ROUTER_INSTANCE* router,
  */
 static void blr_master_set_empty_config(ROUTER_INSTANCE* router)
 {
-    server_update_address(router->service->dbref->server, "none");
+    router->service->dbref->server->server_update_address("none");
     router->service->dbref->server->update_port(3306);
 
     router->current_pos = 4;
@@ -4925,7 +4925,7 @@ static void blr_master_set_empty_config(ROUTER_INSTANCE* router)
  */
 static void blr_master_apply_config(ROUTER_INSTANCE* router, const MasterServerConfig& prev_master)
 {
-    server_update_address(router->service->dbref->server, prev_master.host.c_str());
+    router->service->dbref->server->server_update_address(prev_master.host);
     router->service->dbref->server->update_port(prev_master.port);
     router->current_pos = prev_master.pos;
     router->binlog_position = prev_master.safe_pos;

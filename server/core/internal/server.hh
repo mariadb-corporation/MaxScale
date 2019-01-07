@@ -312,8 +312,7 @@ public:
      */
     void printServer();
 
-    mutable std::mutex m_lock;
-    DCB**              persistent = nullptr;/**< List of unused persistent connections to the server */
+    DCB** persistent = nullptr;/**< List of unused persistent connections to the server */
 
 private:
     struct Settings

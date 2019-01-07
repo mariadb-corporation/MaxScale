@@ -480,7 +480,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
 
     if (strcmp(key, CN_ADDRESS) == 0)
     {
-        server_update_address(server, value);
+        server->server_update_address(value);
     }
     else if (strcmp(key, CN_PORT) == 0)
     {

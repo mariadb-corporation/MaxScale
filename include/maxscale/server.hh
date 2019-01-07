@@ -161,7 +161,7 @@ public:
     };
 
     // Base settings
-    char address[MAX_ADDRESS_LEN] = {'\0'};     /**< Server hostname/IP-address */
+    char address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server hostname/IP-address */
     int  port = -1;                             /**< Server port */
     int  extra_port = -1;                       /**< Alternative monitor port if normal port fails */
 
@@ -269,6 +269,13 @@ public:
      * @return Backend protocol module name of the server
      */
     virtual std::string protocol() const = 0;
+
+    /*
+     * Update server address. TODO: Move this to internal class once blr is gone.
+     *
+     * @param address       The new address
+     */
+    bool server_update_address(const std::string& address);
 
     /**
      * Update the server port. TODO: Move this to internal class once blr is gone.
@@ -484,8 +491,6 @@ private:
  *
  */
 void server_add_response_average(SERVER* server, double ave, int num_samples);
-
-extern void     server_update_address(SERVER* server, const char* address);
 
 int    server_response_time_num_samples(const SERVER* server);
 double server_response_time_average(const SERVER* server);

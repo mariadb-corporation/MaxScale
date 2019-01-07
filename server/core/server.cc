@@ -790,21 +790,19 @@ std::unique_ptr<ResultSet> serverGetList()
     return set;
 }
 
-/*
- * Update the address value of a specific server
- *
- * @param server        The server to update
- * @param address       The new address
- *
- */
-void server_update_address(SERVER* server, const char* address)
+bool SERVER::server_update_address(const string& new_address)
 {
-    Guard guard(this_unit.all_servers_lock);
-
-    if (server && address)
+    bool rval = false;
+    if (new_address.length() <= MAX_ADDRESS_LEN)
     {
-        strcpy(server->address, address);
+        careful_strcpy(address, MAX_ADDRESS_LEN, new_address);
+        rval = true;
     }
+    else
+    {
+        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_ADDRESS, MAX_ADDRESS_LEN);
+    }
+    return rval;
 }
 
 void SERVER::update_port(int new_port)
