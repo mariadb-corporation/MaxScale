@@ -366,14 +366,24 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
         dcb->remote = MXS_STRDUP_A(session->client_dcb->remote);
     }
 
-    const char* authenticator = !server->get_authenticator().empty() ? server->get_authenticator().c_str() :
-        (dcb->func.auth_default ? dcb->func.auth_default() : "NullAuthDeny");
+    string authenticator = server->get_authenticator();
+    if (authenticator.empty())
+    {
+        if (dcb->func.auth_default)
+        {
+            authenticator = dcb->func.auth_default();
+        }
+        else
+        {
+            authenticator = "NullAuthDeny";
+        }
+    }
 
-    MXS_AUTHENTICATOR* authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator,
+    MXS_AUTHENTICATOR* authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator.c_str(),
                                                                    MODULE_AUTHENTICATOR);
     if (authfuncs == NULL)
     {
-        MXS_ERROR("Failed to load authenticator module '%s'", authenticator);
+        MXS_ERROR("Failed to load authenticator module '%s'", authenticator.c_str());
         dcb_free_all_memory(dcb);
         return NULL;
     }
