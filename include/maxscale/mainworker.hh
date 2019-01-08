@@ -45,6 +45,9 @@ public:
     void add_task(const char* zName, TASKFN func, void* pData, int frequency);
     void remove_task(const char* zName);
 
+    void show_tasks(DCB* pDcb) const;
+    json_t* tasks_to_json(const char* zhost) const;
+
 private:
     bool pre_run() override;
     void post_run() override;
@@ -53,10 +56,12 @@ private:
     struct Task
     {
     public:
-        Task(const char* zName, TASKFN func, void* pData)
+        Task(const char* zName, TASKFN func, void* pData, int frequency)
             : name(zName)
             , func(func)
             , pData(pData)
+            , frequency(frequency)
+            , nextdue(time(0) + frequency)
             , id(0)
         {
         };
@@ -64,6 +69,8 @@ private:
         std::string name;
         TASKFN      func;
         void*       pData;
+        int         frequency;
+        time_t      nextdue;
         uint32_t    id;
     };
 
