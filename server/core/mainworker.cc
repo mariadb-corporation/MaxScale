@@ -20,7 +20,8 @@ namespace
 
 static struct ThisUnit
 {
-    maxscale::MainWorker* pThis;
+    maxscale::MainWorker* pCurrent_main;
+    int64_t               clock_ticks;
 } this_unit;
 
 }
@@ -30,24 +31,26 @@ namespace maxscale
 
 MainWorker::MainWorker()
 {
-    mxb_assert(!this_unit.pThis);
+    mxb_assert(!this_unit.pCurrent_main);
 
-    this_unit.pThis = this;
+    this_unit.pCurrent_main = this;
+
+    delayed_call(100, &MainWorker::inc_ticks);
 }
 
 MainWorker::~MainWorker()
 {
-    mxb_assert(this_unit.pThis);
+    mxb_assert(this_unit.pCurrent_main);
 
-    this_unit.pThis = nullptr;
+    this_unit.pCurrent_main = nullptr;
 }
 
 //static
 MainWorker& MainWorker::get()
 {
-    mxb_assert(this_unit.pThis);
+    mxb_assert(this_unit.pCurrent_main);
 
-    return *this_unit.pThis;
+    return *this_unit.pCurrent_main;
 }
 
 void MainWorker::add_task(const char* zName, TASKFN func, void* pData, int frequency)
@@ -144,6 +147,12 @@ json_t* MainWorker::tasks_to_json(const char* zHost) const
     return pResult;
 }
 
+//static
+int64_t MainWorker::ticks()
+{
+    return mxb::atomic::load(&this_unit.clock_ticks, mxb::atomic::RELAXED);
+}
+
 bool MainWorker::pre_run()
 {
     return true;
@@ -183,6 +192,17 @@ bool MainWorker::call_task(Worker::Call::action_t action, MainWorker::Task* pTas
     }
 
     return call_again;
+}
+
+//static
+bool MainWorker::inc_ticks(Worker::Call::action_t action)
+{
+    if (action == Worker::Call::EXECUTE)
+    {
+        mxb::atomic::add(&this_unit.clock_ticks, 1, mxb::atomic::RELAXED);
+    }
+
+    return true;
 }
 
 }

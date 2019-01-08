@@ -48,6 +48,8 @@ public:
     void show_tasks(DCB* pDcb) const;
     json_t* tasks_to_json(const char* zhost) const;
 
+    static int64_t ticks();
+
 private:
     bool pre_run() override;
     void post_run() override;
@@ -75,6 +77,7 @@ private:
     };
 
     bool call_task(Worker::Call::action_t action, Task* pTask);
+    static bool inc_ticks(Worker::Call::action_t action);
 
     std::map<std::string, Task> m_tasks_by_name;
 };
