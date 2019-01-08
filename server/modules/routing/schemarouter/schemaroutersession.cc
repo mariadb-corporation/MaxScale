@@ -1393,8 +1393,7 @@ void SchemaRouterSession::query_databases()
 
     for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        if ((*it)->in_use() && !(*it)->is_closed()
-            & server_is_usable((*it)->backend()->server))
+        if ((*it)->in_use() && !(*it)->is_closed() && server_is_usable((*it)->backend()->server))
         {
             GWBUF* clone = gwbuf_clone(buffer);
             MXS_ABORT_IF_NULL(clone);
