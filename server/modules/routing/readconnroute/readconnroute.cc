@@ -32,42 +32,6 @@
  * and the "slave" option will limit connections to routers that are marked
  * as slaves. If neither option is specified the router will connect to either
  * masters or slaves.
- *
- * @verbatim
- * Revision History
- *
- * Date     Who     Description
- * 14/06/2013   Mark Riddoch        Initial implementation
- * 25/06/2013   Mark Riddoch        Addition of checks for current server state
- * 26/06/2013   Mark Riddoch        Use server with least connections since
- *                  startup if the number of current
- *                  connections is the same for two servers
- *                  Addition of master and slave options
- * 27/06/2013   Vilho Raatikka      Added skygw_log_write command as an example
- *                  and necessary headers.
- * 17/07/2013   Massimiliano Pinto  Added clientReply routine:
- *                  called by backend server to send data to client
- *                  Included maxscale/protocol/mysql.h
- *                  with macros and MySQL commands with MYSQL_ prefix
- *                  avoiding any conflict with the standard ones
- *                  in mysql.h
- * 22/07/2013   Mark Riddoch        Addition of joined router option for Galera
- *                  clusters
- * 31/07/2013   Massimiliano Pinto  Added a check for candidate server, if NULL return
- * 12/08/2013   Mark Riddoch        Log unsupported router options
- * 04/09/2013   Massimiliano Pinto  Added client NULL check in clientReply
- * 22/10/2013   Massimiliano Pinto  errorReply called from backend, for client error reply
- *                  or take different actions such as open a new backend connection
- * 20/02/2014   Massimiliano Pinto  If router_options=slave, route traffic to master if no slaves available
- * 06/03/2014   Massimiliano Pinto  Server connection counter is now updated in closeSession
- * 24/06/2014   Massimiliano Pinto  New rules for selecting the Master server
- * 27/06/2014   Mark Riddoch        Addition of server weighting
- * 11/06/2015   Martin Brampton         Remove decrement n_current (moved to dcb.c)
- * 09/09/2015   Martin Brampton         Modify error handler
- * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
- * 09/11/2015   Martin Brampton         Modified routeQuery - must free "queue" regardless of outcome
- *
- * @endverbatim
  */
 
 #include "readconnroute.hh"
@@ -135,7 +99,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         clientReply,
         handleError,
         getCapabilities,
-        NULL,
+        nullptr,
         configureInstance
     };
 
@@ -148,10 +112,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V2.0.0",
         RCAP_TYPE_RUNTIME_CONFIG,
         &MyObject,
-        NULL,   /* Process init. */
-        NULL,   /* Process finish. */
-        NULL,   /* Thread init. */
-        NULL,   /* Thread finish. */
+        nullptr,    /* Process init. */
+        nullptr,    /* Process finish. */
+        nullptr,    /* Thread init. */
+        nullptr,    /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
         }
@@ -162,10 +126,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
 static inline void free_readconn_instance(ReadConn* router)
 {
-    if (router)
-    {
-        MXS_FREE(router);
-    }
+    delete router;
 }
 
 static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params)
@@ -239,7 +200,7 @@ static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params
  */
 static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
-    ReadConn* inst = static_cast<ReadConn*>(MXS_CALLOC(1, sizeof(ReadConn)));
+    ReadConn* inst = new(std::nothrow) ReadConn;
 
     if (inst)
     {
@@ -247,14 +208,14 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         inst->service = service;
         inst->bitmask_and_bitvalue = 0;
 
-        if (!configureInstance((MXS_ROUTER*)inst, params))
+        if (!configureInstance(static_cast<MXS_ROUTER*>(inst), params))
         {
             free_readconn_instance(inst);
             inst = nullptr;
         }
     }
 
-    return (MXS_ROUTER*)inst;
+    return static_cast<MXS_ROUTER*>(inst);
 }
 
 /**
@@ -266,10 +227,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
  */
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
 {
-    ReadConn* inst = (ReadConn*) instance;
-    ReadConnSession* client_rses;
-    SERVER_REF* candidate = NULL;
-    SERVER_REF* master_host = NULL;
+    ReadConn* inst = static_cast<ReadConn*>(instance);
 
     MXS_DEBUG("%lu [newSession] new router session with session "
               "%p, and inst %p.",
@@ -277,11 +235,11 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
               session,
               inst);
 
-    client_rses = (ReadConnSession*) MXS_CALLOC(1, sizeof(ReadConnSession));
+    ReadConnSession* client_rses = new(std::nothrow) ReadConnSession;
 
-    if (client_rses == NULL)
+    if (!client_rses)
     {
-        return NULL;
+        return nullptr;
     }
 
     client_rses->client_dcb = session->client_dcb;
@@ -293,13 +251,14 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     /**
      * Find the Master host from available servers
      */
-    master_host = get_root_master(inst->service->dbref);
+    SERVER_REF* master_host = get_root_master(inst->service->dbref);
 
     /**
      * Find a backend server to connect to. This is the extent of the
      * load balancing algorithm we need to implement for this simple
      * connection router.
      */
+    SERVER_REF* candidate = nullptr;
 
     /*
      * Loop over all the servers and find any that have fewer connections
@@ -348,15 +307,15 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
             }
             else if (client_rses->bitvalue == SERVER_MASTER)
             {
-                /* Master_host is NULL, no master server.  If requested router_option is 'master'
-                 * candidate will be NULL.
+                /* Master_host is nullptr, no master server.  If requested router_option is 'master'
+                 * candidate will be nullptr.
                  */
-                candidate = NULL;
+                candidate = nullptr;
                 break;
             }
 
             /* If no candidate set, set first running server as our initial candidate server */
-            if (candidate == NULL)
+            if (!candidate)
             {
                 candidate = ref;
             }
@@ -401,7 +360,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
             MXS_ERROR("Failed to create new routing session. Couldn't find eligible"
                       " candidate server. Freeing allocated resources.");
             MXS_FREE(client_rses);
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -414,11 +373,11 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     /** Open the backend connection */
     client_rses->backend_dcb = dcb_connect(candidate->server, session, candidate->server->protocol().c_str());
 
-    if (client_rses->backend_dcb == NULL)
+    if (!client_rses->backend_dcb)
     {
         /** The failure is reported in dcb_connect() */
-        MXS_FREE(client_rses);
-        return NULL;
+        delete client_rses;
+        return nullptr;
     }
 
     mxb::atomic::add(&candidate->connections, 1, mxb::atomic::RELAXED);
@@ -429,7 +388,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
              candidate->server->name(),
              candidate->connections);
 
-    return reinterpret_cast<MXS_ROUTER_SESSION*>(client_rses);
+    return static_cast<MXS_ROUTER_SESSION*>(client_rses);
 }
 
 /**
@@ -451,15 +410,15 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
  */
 static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_ses)
 {
-    ReadConn* router = (ReadConn*) router_instance;
-    ReadConnSession* router_cli_ses = (ReadConnSession*) router_client_ses;
+    ReadConn* router = static_cast<ReadConn*>(router_instance);
+    ReadConnSession* router_cli_ses = static_cast<ReadConnSession*>(router_client_ses);
 
     MXB_AT_DEBUG(int prev_val = ) mxb::atomic::add(&router_cli_ses->backend->connections,
                                                    -1,
                                                    mxb::atomic::RELAXED);
     mxb_assert(prev_val > 0);
 
-    MXS_FREE(router_cli_ses);
+    delete router_cli_ses;
 }
 
 /**
@@ -471,7 +430,7 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
  */
 static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
 {
-    ReadConnSession* router_cli_ses = (ReadConnSession*) router_session;
+    ReadConnSession* router_cli_ses = static_cast<ReadConnSession*>(router_session);
     mxb_assert(router_cli_ses->backend_dcb);
     dcb_close(router_cli_ses->backend_dcb);
 }
@@ -552,10 +511,10 @@ static inline bool connection_is_valid(ReadConn* inst, ReadConnSession* router_c
  */
 static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue)
 {
-    ReadConn* inst = (ReadConn*) instance;
-    ReadConnSession* router_cli_ses = (ReadConnSession*) router_session;
+    ReadConn* inst = static_cast<ReadConn*>(instance);
+    ReadConnSession* router_cli_ses = static_cast<ReadConnSession*>(router_session);
     int rc = 0;
-    MySQLProtocol* proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(router_cli_ses->client_dcb->protocol);
     mxs_mysql_cmd_t mysql_command = proto->current_command;
 
     mxb::atomic::add(&inst->stats.n_queries, 1, mxb::atomic::RELAXED);
@@ -565,7 +524,7 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
 
     DCB* backend_dcb = router_cli_ses->backend_dcb;
     mxb_assert(backend_dcb);
-    char* trc = NULL;
+    char* trc = nullptr;
 
     if (!connection_is_valid(inst, router_cli_ses))
     {
@@ -578,7 +537,7 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
     {
     case MXS_COM_CHANGE_USER:
         rc = backend_dcb->func.auth(backend_dcb,
-                                    NULL,
+                                    nullptr,
                                     backend_dcb->session,
                                     queue);
         break;
@@ -612,7 +571,7 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
  */
 static void diagnostics(MXS_ROUTER* router, DCB* dcb)
 {
-    ReadConn* router_inst = (ReadConn*) router;
+    ReadConn* router_inst = static_cast<ReadConn*>(router);
     const char* weightby = serviceGetWeightingParameter(router_inst->service);
 
     dcb_printf(dcb,
@@ -651,7 +610,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
  */
 static json_t* diagnostics_json(const MXS_ROUTER* router)
 {
-    ReadConn* router_inst = (ReadConn*)router;
+    const ReadConn* router_inst = static_cast<const ReadConn*>(router);
     json_t* rval = json_object();
 
     json_object_set_new(rval, "connections", json_integer(router_inst->stats.n_sessions));
@@ -683,7 +642,7 @@ static void clientReply(MXS_ROUTER* instance,
                         GWBUF* queue,
                         DCB*   backend_dcb)
 {
-    mxb_assert(backend_dcb->session->client_dcb != NULL);
+    mxb_assert(backend_dcb->session->client_dcb);
     MXS_SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 
@@ -734,13 +693,13 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
 
 static SERVER_REF* get_root_master(SERVER_REF* servers)
 {
-    SERVER_REF* master_host = NULL;
+    SERVER_REF* master_host = nullptr;
     for (SERVER_REF* ref = servers; ref; ref = ref->next)
     {
         if (ref->active && ref->server->is_master())
         {
             // No master found yet or this one has better weight.
-            if (master_host == NULL || ref->server_weight > master_host->server_weight)
+            if (!master_host || ref->server_weight > master_host->server_weight)
             {
                 master_host = ref;
             }
