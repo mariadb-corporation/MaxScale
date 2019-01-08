@@ -24,8 +24,6 @@
 #include <maxscale/server.hh>
 #include <maxscale/resultset.hh>
 
-std::unique_ptr<ResultSet> serverGetList();
-
 // Private server implementation
 class Server : public SERVER
 {
@@ -298,6 +296,16 @@ public:
      */
     void printServer();
 
+    static std::unique_ptr<ResultSet> getList();
+
+    /**
+     * @brief Convert a server to JSON format
+     *
+     * @param host Hostname of this server as given in request
+     * @return JSON representation of server or NULL if an error occurred
+     */
+    json_t* to_json(const char* host);
+
     DCB** persistent = nullptr;/**< List of unused persistent connections to the server */
 
 private:
@@ -358,13 +366,3 @@ private:
     Settings           m_settings;          /**< Server settings */
     VersionInfo        info;                /**< Server version and type information */
 };
-
-/**
- * @brief Convert a server to JSON format
- *
- * @param server Server to convert
- * @param host    Hostname of this server
- *
- * @return JSON representation of server or NULL if an error occurred
- */
-json_t* server_to_json(const Server* server, const char* host);

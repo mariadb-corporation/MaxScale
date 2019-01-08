@@ -25,11 +25,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <string>
 #include <list>
 #include <mutex>
 #include <sstream>
-#include <mutex>
+#include <string>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/stopwatch.hh>
@@ -47,7 +46,6 @@
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/maxscale.h>
-#include <maxscale/server.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/monitor.hh"
@@ -770,7 +768,7 @@ string Server::get_custom_parameter(const string& name) const
  *
  * @return A Result set
  */
-std::unique_ptr<ResultSet> serverGetList()
+std::unique_ptr<ResultSet> Server::getList()
 {
     std::unique_ptr<ResultSet> set =
         ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
@@ -1139,11 +1137,11 @@ static json_t* server_to_json_data(const Server* server, const char* host)
     return rval;
 }
 
-json_t* server_to_json(const Server* server, const char* host)
+json_t* Server::to_json(const char* host)
 {
     string self = MXS_JSON_API_SERVERS;
-    self += server->name();
-    return mxs_json_resource(host, self.c_str(), server_to_json_data(server, host));
+    self += name();
+    return mxs_json_resource(host, self.c_str(), server_to_json_data(this, host));
 }
 
 json_t* Server::server_list_to_json(const char* host)

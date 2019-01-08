@@ -164,7 +164,7 @@ static void exec_show_clients(DCB* dcb, MAXINFO_TREE* tree)
  */
 static void exec_show_servers(DCB* dcb, MAXINFO_TREE* tree)
 {
-    serverGetList()->write(dcb);
+    Server::getList()->write(dcb);
 }
 
 /**

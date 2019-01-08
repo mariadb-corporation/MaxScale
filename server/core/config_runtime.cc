@@ -1978,7 +1978,7 @@ bool server_to_object_relations(Server* server, json_t* old_json, json_t* new_js
 bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 {
     bool rval = false;
-    std::unique_ptr<json_t> old_json(server_to_json(server, ""));
+    std::unique_ptr<json_t> old_json(server->to_json(""));
     mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json)
@@ -2038,7 +2038,7 @@ static bool is_valid_relationship_body(json_t* json)
 bool runtime_alter_server_relationships_from_json(Server* server, const char* type, json_t* json)
 {
     bool rval = false;
-    std::unique_ptr<json_t> old_json(server_to_json(server, ""));
+    std::unique_ptr<json_t> old_json(server->to_json(""));
     mxb_assert(old_json.get());
 
     if (is_valid_relationship_body(json))

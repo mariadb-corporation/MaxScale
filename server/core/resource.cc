@@ -550,7 +550,7 @@ HttpResponse cb_get_server(const HttpRequest& request)
 {
     auto server = Server::find_by_unique_name(request.uri_part(1));
     mxb_assert(server);
-    return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
+    return HttpResponse(MHD_HTTP_OK, server->to_json(request.host()));
 }
 
 HttpResponse cb_all_services(const HttpRequest& request)
