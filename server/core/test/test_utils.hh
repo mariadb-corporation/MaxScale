@@ -57,7 +57,6 @@ void init_test_env(char* __attribute((unused)) path = nullptr, uint32_t init_typ
     poll_init();
     maxbase::init();
     maxscale::RoutingWorker::init();
-    hkinit();
     set_libdir(MXS_STRDUP(old_libdir.c_str()));
 
     preload_module("mariadbclient", "server/modules/protocol/MySQL/mariadbclient/", MODULE_PROTOCOL);

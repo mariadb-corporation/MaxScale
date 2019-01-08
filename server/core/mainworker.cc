@@ -206,3 +206,33 @@ bool MainWorker::inc_ticks(Worker::Call::action_t action)
 }
 
 }
+
+extern "C"
+{
+
+void hktask_add(const char* zName, TASKFN func, void* pData, int frequency)
+{
+    mxs::MainWorker::get().add_task(zName, func, pData, frequency);
+}
+
+void hktask_remove(const char* zName)
+{
+    mxs::MainWorker::get().remove_task(zName);
+}
+
+void hkshow_tasks(DCB* pDcb)
+{
+    mxs::MainWorker::get().show_tasks(pDcb);
+}
+
+json_t* hk_tasks_json(const char* zHost)
+{
+    return mxs::MainWorker::get().tasks_to_json(zHost);
+}
+
+int64_t mxs_clock()
+{
+    return mxs::MainWorker::ticks();
+}
+
+}

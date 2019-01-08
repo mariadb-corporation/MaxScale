@@ -2072,13 +2072,6 @@ int main(int argc, char** argv)
 
     // Initialize the housekeeper
     main_worker = new maxscale::MainWorker;
-    if (!hkinit())
-    {
-        const char* logerr = "Failed to initialize housekeeper";
-        print_log_n_stderr(true, true, logerr, logerr, 0);
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
 
     if (!qc_setup(&cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
     {
@@ -2203,15 +2196,6 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    // Start the housekeeper thread
-    if (!hkstart())
-    {
-        const char* logerr = "Failed to start housekeeper thread.";
-        print_log_n_stderr(true, true, logerr, logerr, 0);
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
     /** Start all monitors */
     monitor_start_all();
 
@@ -2289,11 +2273,6 @@ int main(int argc, char** argv)
 
     /*< Destroy all monitors */
     monitor_destroy_all();
-
-    /*<
-     * Wait for the housekeeper to finish.
-     */
-    hkfinish();
 
     /*<
      * Wait for worker threads to exit.

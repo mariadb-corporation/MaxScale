@@ -12,7 +12,6 @@ add_library(maxscale-common SHARED
   externcmd.cc
   filter.cc
   hint.cc
-  housekeeper.cc
   httprequest.cc
   httpresponse.cc
   json_api.cc

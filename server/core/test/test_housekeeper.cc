@@ -15,6 +15,7 @@
 #include <iostream>
 #include <maxbase/log.hh>
 #include <maxscale/housekeeper.h>
+#include <maxscale/mainworker.hh>
 #include "test_utils.hh"
 
 using namespace std;
@@ -92,23 +93,13 @@ int main(int argc, char** argv)
 
     init_test_env();
 
-    if (hkinit())
-    {
-        if (hkstart())
-        {
-            rc = test();
-        }
-        else
-        {
-            cerr << "Could not start the housekeeper." << endl;
-        }
+    maxscale::MainWorker mw;
+    mw.start();
 
-        hkfinish();
-    }
-    else
-    {
-        cerr << "Could not initialize the housekeeper." << endl;
-    }
+    rc = test();
+
+    mw.shutdown();
+    mw.join();
 
     return rc;
 }

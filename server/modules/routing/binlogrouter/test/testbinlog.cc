@@ -32,11 +32,12 @@
 #include <maxscale/server.hh>
 #include <maxscale/router.hh>
 #include <maxbase/atomic.h>
+#include <maxbase/maxbase.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/housekeeper.h>
 #include <time.h>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
+#include <maxscale/mainworker.hh>
 #include <maxscale/utils.hh>
 #include "../../../../core/internal/modules.hh"
 #include "../../../../core/internal/config.hh"
@@ -105,8 +106,10 @@ int main(int argc, char** argv)
     set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
     load_module("qc_sqlite", MODULE_QUERY_CLASSIFIER);
 
+    maxbase::MaxBase initer;
+    maxscale::MainWorker mw;
+    mw.start();
     qc_init(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
-    hkinit();
 
     CONFIG_CONTEXT ctx {(char*)""};
     config_add_defaults(&ctx, get_module("binlogrouter", MODULE_ROUTER)->parameters);
@@ -909,6 +912,8 @@ int main(int argc, char** argv)
     MXS_FREE(inst->password);
     MXS_FREE(inst->fileroot);
     MXS_FREE(inst);
+    mw.shutdown();
+    mw.join();
     return 0;
 }
 
