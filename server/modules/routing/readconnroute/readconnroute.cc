@@ -36,22 +36,8 @@
 
 #include "readconnroute.hh"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <string>
-#include <vector>
-#include <maxscale/alloc.h>
-#include <maxscale/server.hh>
-#include <maxscale/router.hh>
-#include <maxbase/atomic.hh>
-#include <maxscale/dcb.hh>
-#include <maxscale/modinfo.h>
-#include <maxscale/log.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/utils.hh>
 
 /**
  * The module entry point routine. It is this routine that
@@ -95,10 +81,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The Master server
  */
-static SERVER_REF* get_root_master(SERVER_REF* servers)
+SERVER_REF* ReadConn::get_root_master()
 {
     SERVER_REF* master_host = nullptr;
-    for (SERVER_REF* ref = servers; ref; ref = ref->next)
+    for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
     {
         if (ref->active && ref->server->is_master())
         {
@@ -114,7 +100,6 @@ static SERVER_REF* get_root_master(SERVER_REF* servers)
 
 bool ReadConn::configure(MXS_CONFIG_PARAMETER* params)
 {
-    ReadConn* inst = this;
     uint64_t bitmask = 0;
     uint64_t bitvalue = 0;
     bool ok = true;
@@ -166,7 +151,7 @@ bool ReadConn::configure(MXS_CONFIG_PARAMETER* params)
     if (ok)
     {
         uint64_t mask = bitmask | (bitvalue << 32);
-        atomic_store_uint64(&inst->bitmask_and_bitvalue, mask);
+        atomic_store_uint64(&m_bitmask_and_bitvalue, mask);
     }
 
     return ok;
@@ -178,15 +163,7 @@ ReadConn::ReadConn(SERVICE* service)
 {
 }
 
-/**
- * Create an instance of the router for a particular service
- * within the gateway.
- *
- * @param service   The service this router is being create for
- * @param options   An array of options for this query router
- *
- * @return The instance data for this new instance
- */
+// static
 ReadConn* ReadConn::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
     ReadConn* inst = new(std::nothrow) ReadConn(service);
@@ -203,45 +180,36 @@ ReadConn* ReadConn::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 ReadConnSession::ReadConnSession(ReadConn* inst, MXS_SESSION* session, SERVER_REF* backend, DCB* dcb,
                                  uint32_t bitmask, uint32_t bitvalue)
     : mxs::RouterSession(session)
-    , instance(inst)
-    , backend(backend)
-    , backend_dcb(dcb)
-    , client_dcb(session->client_dcb)
-    , bitmask(bitmask)
-    , bitvalue(bitvalue)
+    , m_instance(inst)
+    , m_backend(backend)
+    , m_dcb(dcb)
+    , m_client_dcb(session->client_dcb)
+    , m_bitmask(bitmask)
+    , m_bitvalue(bitvalue)
 {
 }
 
 ReadConnSession::~ReadConnSession()
 {
-    mxb::atomic::add(&backend->connections, -1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&m_backend->connections, -1, mxb::atomic::RELAXED);
 }
 
 void ReadConnSession::close()
 {
-    mxb_assert(backend_dcb);
-    dcb_close(backend_dcb);
+    mxb_assert(m_dcb);
+    dcb_close(m_dcb);
 }
 
-/**
- * Associate a new session with this instance of the router.
- *
- * @param instance  The router instance data
- * @param session   The session itself
- * @return Session specific data for this session
- */
 ReadConnSession* ReadConn::newSession(MXS_SESSION* session)
 {
-    ReadConn* inst = this;
-
-    uint64_t mask = atomic_load_uint64(&inst->bitmask_and_bitvalue);
+    uint64_t mask = atomic_load_uint64(&m_bitmask_and_bitvalue);
     uint32_t bitmask = mask;
     uint32_t bitvalue = mask >> 32;
 
     /**
      * Find the Master host from available servers
      */
-    SERVER_REF* master_host = get_root_master(inst->m_pService->dbref);
+    SERVER_REF* master_host = get_root_master();
 
     /**
      * Find a backend server to connect to. This is the extent of the
@@ -262,7 +230,7 @@ ReadConnSession* ReadConn::newSession(MXS_SESSION* session)
      * become the new candidate. This has the effect of spreading the
      * connections over different servers during periods of very low load.
      */
-    for (SERVER_REF* ref = inst->m_pService->dbref; ref; ref = ref->next)
+    for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
     {
         if (!server_ref_is_active(ref) || ref->server->is_in_maint())
         {
@@ -361,7 +329,7 @@ ReadConnSession* ReadConn::newSession(MXS_SESSION* session)
         return nullptr;
     }
 
-    ReadConnSession* client_rses = new(std::nothrow) ReadConnSession(inst, session, candidate, backend_dcb,
+    ReadConnSession* client_rses = new(std::nothrow) ReadConnSession(this, session, candidate, backend_dcb,
                                                                      bitmask, bitvalue);
 
     if (!client_rses)
@@ -371,7 +339,7 @@ ReadConnSession* ReadConn::newSession(MXS_SESSION* session)
 
     mxb::atomic::add(&candidate->connections, 1, mxb::atomic::RELAXED);
 
-    inst->stats.n_sessions++;
+    m_stats.n_sessions++;
 
     MXS_INFO("New session for server %s. Connections : %d",
              candidate->server->name(),
@@ -409,24 +377,23 @@ static void log_closed_session(mxs_mysql_cmd_t mysql_command, SERVER_REF* ref)
  *
  * @return True if the backend connection is still valid
  */
-bool ReadConn::connection_is_valid(ReadConnSession* router_cli_ses)
+bool ReadConnSession::connection_is_valid() const
 {
     bool rval = false;
 
-    // inst->bitvalue and router_cli_ses->bitvalue are different, if we had
+    // m_instance->bitvalue and m_bitvalue are different, if we had
     // 'router_options=slave' in the configuration file and there was only
     // the sole master available at session creation time.
 
-    if (router_cli_ses->backend->server->is_usable()
-        && (router_cli_ses->backend->server->status & router_cli_ses->bitmask & router_cli_ses->bitvalue))
+    if (m_backend->server->is_usable() && (m_backend->server->status & m_bitmask & m_bitvalue))
     {
         // Note the use of '==' and not '|'. We must use the former to exclude a
         // 'router_options=slave' that uses the master due to no slave having been
         // available at session creation time. Its bitvalue is (SERVER_MASTER | SERVER_SLAVE).
-        if ((router_cli_ses->bitvalue == SERVER_MASTER) && router_cli_ses->backend->active)
+        if (m_bitvalue == SERVER_MASTER && m_backend->active)
         {
             // If we're using an active master server, verify that it is still a master
-            rval = router_cli_ses->backend == get_root_master(m_pService->dbref);
+            rval = m_backend == m_instance->get_root_master();
         }
         else
         {
@@ -444,35 +411,24 @@ bool ReadConn::connection_is_valid(ReadConnSession* router_cli_ses)
     return rval;
 }
 
-/**
- * We have data from the client, we must route it to the backend.
- * This is simply a case of sending it to the connection that was
- * chosen when we started the client session.
- *
- * @param queue         The queue of data buffers to route
- *
- * @return if succeed 1, otherwise 0
- */
 int ReadConnSession::routeQuery(GWBUF* queue)
 {
-    ReadConn* inst = instance;
-    ReadConnSession* router_cli_ses = this;
     int rc = 0;
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(router_cli_ses->client_dcb->protocol);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(m_client_dcb->protocol);
     mxs_mysql_cmd_t mysql_command = proto->current_command;
 
-    mxb::atomic::add(&inst->stats.n_queries, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&m_instance->stats().n_queries, 1, mxb::atomic::RELAXED);
 
     // Due to the streaming nature of readconnroute, this is not accurate
-    mxb::atomic::add(&router_cli_ses->backend->server->stats.packets, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&m_backend->server->stats.packets, 1, mxb::atomic::RELAXED);
 
-    DCB* backend_dcb = router_cli_ses->backend_dcb;
+    DCB* backend_dcb = m_dcb;
     mxb_assert(backend_dcb);
     char* trc = nullptr;
 
-    if (!inst->connection_is_valid(router_cli_ses))
+    if (!connection_is_valid())
     {
-        log_closed_session(mysql_command, router_cli_ses->backend);
+        log_closed_session(mysql_command, m_backend);
         gwbuf_free(queue);
         return rc;
     }
@@ -507,26 +463,19 @@ int ReadConnSession::routeQuery(GWBUF* queue)
     return rc;
 }
 
-/**
- * Display router diagnostics
- *
- * @param instance  Instance of the router
- * @param dcb       DCB to send diagnostics to
- */
 void ReadConn::diagnostics(DCB* dcb)
 {
-    ReadConn* router_inst = this;
-    const char* weightby = serviceGetWeightingParameter(router_inst->m_pService);
+    const char* weightby = serviceGetWeightingParameter(m_pService);
 
     dcb_printf(dcb,
                "\tNumber of router sessions:    %d\n",
-               router_inst->stats.n_sessions);
+               m_stats.n_sessions);
     dcb_printf(dcb,
                "\tCurrent no. of router sessions:	%d\n",
-               router_inst->m_pService->stats.n_current);
+               m_pService->stats.n_current);
     dcb_printf(dcb,
                "\tNumber of queries forwarded:      %d\n",
-               router_inst->stats.n_queries);
+               m_stats.n_queries);
     if (*weightby)
     {
         dcb_printf(dcb,
@@ -535,7 +484,7 @@ void ReadConn::diagnostics(DCB* dcb)
                    weightby);
         dcb_printf(dcb,
                    "\t\tServer               Target %% Connections\n");
-        for (SERVER_REF* ref = router_inst->m_pService->dbref; ref; ref = ref->next)
+        for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
         {
             dcb_printf(dcb,
                        "\t\t%-20s %3.1f%%     %d\n",
@@ -546,22 +495,15 @@ void ReadConn::diagnostics(DCB* dcb)
     }
 }
 
-/**
- * Display router diagnostics
- *
- * @param instance  Instance of the router
- * @param dcb       DCB to send diagnostics to
- */
 json_t* ReadConn::diagnostics_json() const
 {
-    const ReadConn* router_inst = this;
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "connections", json_integer(router_inst->stats.n_sessions));
-    json_object_set_new(rval, "current_connections", json_integer(router_inst->m_pService->stats.n_current));
-    json_object_set_new(rval, "queries", json_integer(router_inst->stats.n_queries));
+    json_object_set_new(rval, "connections", json_integer(m_stats.n_sessions));
+    json_object_set_new(rval, "current_connections", json_integer(m_pService->stats.n_current));
+    json_object_set_new(rval, "queries", json_integer(m_stats.n_queries));
 
-    const char* weightby = serviceGetWeightingParameter(router_inst->m_pService);
+    const char* weightby = serviceGetWeightingParameter(m_pService);
 
     if (*weightby)
     {
