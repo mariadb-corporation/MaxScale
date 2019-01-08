@@ -2110,10 +2110,10 @@ expr(A) ::= expr(X) BITAND|BITOR|LSHIFT|RSHIFT(OP) expr(Y).
 expr(A) ::= expr(X) PLUS|MINUS(OP) expr(Y).
                                         {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
 %ifdef MAXSCALE
-expr(A) ::= INTERVAL INTEGER(X) id. {
+expr(A) ::= INTERVAL expr(X) id. {
   // Here we could check that id is one of MICROSECOND, SECOND, MINUTE
   // HOUR, DAY, WEEK, etc.
-  spanExpr(&A, pParse, @X, &X);
+  A=X; // We simply ignore 'INTERVAL'
 }
 %endif
 expr(A) ::= expr(X) STAR|SLASH|REM(OP) expr(Y).
