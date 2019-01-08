@@ -14,9 +14,11 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <mutex>
 #include <string>
-#include <maxscale/ssl.h>
 #include <unordered_map>
+#include <maxbase/average.hh>
+#include <maxscale/ssl.h>
 
 // A mapping from a path to a percentage, e.g.: "/disk" -> 80.
 typedef std::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
@@ -474,26 +476,34 @@ public:
      */
     void clear_status(uint64_t bit);
 
+    int response_time_num_samples() const
+    {
+        return m_response_time.num_samples();
+    }
+
+    double response_time_average() const
+    {
+        return m_response_time.average();
+    }
+
+    /**
+     * Add a response time measurement to the global server value.
+     *
+     * @param ave The value to add
+     * @param num_samples The weight of the new value, that is, the number of measurement points it represents
+     */
+    void response_time_add(double ave, int num_samples);
+
 protected:
     SERVER()
+    : m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
     {
     }
 private:
-    static const int DEFAULT_CHARSET = 0x08;    /** The latin1 charset */
+    static const int   DEFAULT_CHARSET = 0x08;   /**< The latin1 charset */
+    maxbase::EMAverage m_response_time;          /**< Response time calculations for this server */
+    std::mutex         m_average_write_mutex;    /**< Protects response time from concurrent writing */
 };
-
-/**
- * @brief Add a response average to the server response average.
- *
- * @param server      The server.
- * @param ave         Average.
- * @param num_samples Number of samples the average consists of.
- *
- */
-void server_add_response_average(SERVER* server, double ave, int num_samples);
-
-int    server_response_time_num_samples(const SERVER* server);
-double server_response_time_average(const SERVER* server);
 
 namespace maxscale
 {

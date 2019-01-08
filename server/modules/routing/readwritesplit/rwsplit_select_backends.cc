@@ -129,7 +129,7 @@ PRWBackends::iterator backend_cmp_response_time(PRWBackends& sBackends)
     for (int i = 0; i < SZ; ++i)
     {
         SERVER_REF* server = (*sBackends[i]).backend();
-        double ave = server_response_time_average(server->server);
+        double ave = server->server->response_time_average();
 
         if (ave == 0)
         {
@@ -302,7 +302,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 
         case ADAPTIVE_ROUTING:
             {
-                maxbase::Duration response_ave(server_response_time_average(b->server));
+                maxbase::Duration response_ave(b->server->response_time_average());
                 std::ostringstream os;
                 os << response_ave;
                 MXS_INFO("adaptive avg. select time: %s from \t[%s]:%d %s",

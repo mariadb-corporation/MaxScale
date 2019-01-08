@@ -120,9 +120,7 @@ void RWSplitSession::close()
 
         if (stat.make_valid())
         {
-            server_add_response_average(backend->server(),
-                                        stat.average().secs(),
-                                        stat.num_samples());
+            backend->server()->response_time_add(stat.average().secs(), stat.num_samples());
         }
         backend->response_stat().reset();
 
@@ -637,11 +635,9 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         ResponseStat& stat = backend->response_stat();
         stat.query_ended();
         if (stat.is_valid() && (stat.sync_time_reached()
-                                || server_response_time_num_samples(backend->server()) == 0))
+                                || backend->server()->response_time_num_samples() == 0))
         {
-            server_add_response_average(backend->server(),
-                                        stat.average().secs(),
-                                        stat.num_samples());
+            backend->server()->response_time_add(stat.average().secs(), stat.num_samples());
             stat.reset();
         }
 

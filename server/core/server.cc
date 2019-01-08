@@ -74,7 +74,6 @@ namespace
 
 struct ThisUnit
 {
-    std::mutex ave_write_mutex;     /**< TODO: Move to Server */
     std::mutex all_servers_lock;    /**< Protects access to all_servers */
     std::list<Server*> all_servers; /**< Global list of all servers */
 } this_unit;
@@ -517,9 +516,9 @@ void Server::print_to_dcb(DCB* dcb) const
     dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats.n_current_ops);
     dcb_printf(dcb, "\tNumber of routed packets:            %lu\n", server->stats.packets);
     std::ostringstream ave_os;
-    if (server_response_time_num_samples(server))
+    if (response_time_num_samples())
     {
-        maxbase::Duration dur(server_response_time_average(server));
+        maxbase::Duration dur(response_time_average());
         ave_os << dur;
     }
     else
@@ -1101,7 +1100,7 @@ json_t* Server::server_json_attributes(const Server* server)
     json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
     json_object_set_new(stats, "routed_packets", json_integer(server->stats.packets));
 
-    maxbase::Duration response_ave(server_response_time_average(server));
+    maxbase::Duration response_ave(server->response_time_average());
     json_object_set_new(stats, "adaptive_avg_select_time", json_string(to_string(response_ave).c_str()));
 
     json_object_set_new(attr, "statistics", stats);
@@ -1174,38 +1173,20 @@ bool Server::set_disk_space_threshold(const char* disk_space_threshold)
     return rv;
 }
 
-void server_add_response_average(SERVER* srv, double ave, int num_samples)
+void SERVER::response_time_add(double ave, int num_samples)
 {
-    Server* server = static_cast<Server*>(srv);
-    Guard guard(this_unit.ave_write_mutex);
-    server->response_time_add(ave, num_samples);
-}
-
-int server_response_time_num_samples(const SERVER* srv)
-{
-    const Server* server = static_cast<const Server*>(srv);
-    return server->response_time_num_samples();
-}
-
-double server_response_time_average(const SERVER* srv)
-{
-    const Server* server = static_cast<const Server*>(srv);
-    return server->response_time_average();
-}
-
-/** Apply backend average and adjust sample_max, which determines the weight of a new average
- *  applied to EMAverage.
- *  Sample max is raised if the server is fast, aggresively lowered if the incoming average is clearly
- *  lower than the EMA, else just lowered a bit. The normal increase and decrease, drifting, of the max
- *  is done to follow the speed of a server. The important part is the lowering of max, to allow for a
- *  server that is speeding up to be adjusted and used.
- *
- *  Three new magic numbers to replace the sample max magic number...
- *
- */
-void Server::response_time_add(double ave, int num_samples)
-{
+    /**
+     * Apply backend average and adjust sample_max, which determines the weight of a new average
+     * applied to EMAverage.
+     *
+     * Sample max is raised if the server is fast, aggressively lowered if the incoming average is clearly
+     * lower than the EMA, else just lowered a bit. The normal increase and decrease, drifting, of the max
+     * is done to follow the speed of a server. The important part is the lowering of max, to allow for a
+     * server that is speeding up to be adjusted and used.
+     *
+     * Three new magic numbers to replace the sample max magic number... */
     constexpr double drift {1.1};
+    Guard guard(m_average_write_mutex);
     int current_max = m_response_time.sample_max();
     int new_max {0};
 

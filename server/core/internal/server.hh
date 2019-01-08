@@ -20,7 +20,6 @@
 
 #include <map>
 #include <mutex>
-#include <maxbase/average.hh>
 #include <maxscale/config.hh>
 #include <maxscale/server.hh>
 #include <maxscale/resultset.hh>
@@ -34,7 +33,6 @@ public:
     Server(const std::string& name, const std::string& protocol = "", const std::string& authenticator = "")
         : SERVER()
         , m_name(name)
-        , m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
     {
         m_settings.protocol = protocol;
         m_settings.authenticator = authenticator;
@@ -45,18 +43,6 @@ public:
         std::string name;
         std::string value;
     };
-
-    int response_time_num_samples() const
-    {
-        return m_response_time.num_samples();
-    }
-
-    double response_time_average() const
-    {
-        return m_response_time.average();
-    }
-
-    void response_time_add(double ave, int num_samples);
 
     long persistpoolmax() const
     {
@@ -371,7 +357,6 @@ private:
     const std::string  m_name;              /**< Server config name */
     Settings           m_settings;          /**< Server settings */
     VersionInfo        info;                /**< Server version and type information */
-    maxbase::EMAverage m_response_time;     /**< Response time calculations for this server */
 };
 
 /**
