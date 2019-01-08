@@ -187,25 +187,124 @@ static const char* BUILTIN_FUNCTIONS[] =
 
     // Geometry Properties
     // https://mariadb.com/kb/en/mariadb/geometry-properties/
-    // TODO
+    "boundary",
+    "dimension",
+    "envelope",
+    "geometryn",
+    "geometrytype",
+    "isclosed",
+    "isempty",
+    "isring",
+    "issimple",
+    "numgeometries",
+    "srid",
+    "st_boundary",
+    "st_dimension",
+    "st_envelope",
+    "st_geometryn",
+    "st_geometrytype",
+    "st_isclosed",
+    "st_isempty",
+    "st_isring",
+    "st_issimple",
+    "st_numgeometries",
+    "st_relate",
+    "st_srid",
 
     // Geometry Relations
-    // TODO
+    // https://mariadb.com/kb/en/library/geometry-relations/
+    "contains",
+    "crosses",
+    "disjoint",
+    "equals",
+    "intersects",
+    "overlaps",
+    "st_contains",
+    "st_crosses",
+    "st_difference",
+    "st_disjoint",
+    "st_distance",
+    "st_equals",
+    "st_intersects",
+    "st_length",
+    "st_overlaps",
+    "st_touches",
+    "st_within",
+    "touches",
+    "within",
 
     // LineString Properties
-    // TODO
+    // https://mariadb.com/kb/en/library/linestring-properties/
+    "endpoint",
+    "glength",
+    "numpoints",
+    "pointn",
+    "startpoint",
+    "st_endpoint",
+    "st_numpoints",
+    "st_pointn",
+    "st_startpoint",
 
     // MBR
-    // TODO
+    // https://mariadb.com/kb/en/library/mbr-minimum-bounding-rectangle/
+    "mbrcontains",
+    "mbrdisjoint",
+    "mbrequal",
+    "mbrintersects",
+    "mbroverlaps",
+    "mbrtouches",
+    "mbrwithin",
 
-    // Point Propertoes
-    // TODO
+    // Point Properties
+    // https://mariadb.com/kb/en/library/point-properties/
+    "st_x",
+    "st_y",
+    "x",
+    "y",
 
     // Polygon Properties
-    // TODO
+    // https://mariadb.com/kb/en/library/polygon-properties/
+    "area",
+    "centroid",
+    "exteriorring",
+    "interiorringn",
+    "numinteriorrings",
+    "st_area",
+    "st_centroid",
+    "st_exteriorring",
+    "st_interiorringn",
+    "st_numinteriorrings",
 
     // WKB
-    // TODO
+    // https://mariadb.com/kb/en/library/wkb/
+    "asbinary",
+    "aswkb",
+    "mlinefromwkb",
+    "mpointfromwkb",
+    "mpolyfromwkb",
+    "geomcollfromwkb",
+    "geometrycollectionfromwkb",
+    "geometryfromwkb",
+    "geomfromwkb",
+    "linefromwkb",
+    "linestringfromwkb",
+    "multilinestringfromwkb",
+    "multipointfromwkb",
+    "multipolygonfromwkb",
+    "pointfromwkb",
+    "polyfromwkb",
+    "polygonfromwkb",
+    "st_asbinary",
+    "st_aswkb",
+    "st_geomcollfromwkb",
+    "st_geometrycollectionfromwkb",
+    "st_geometryfromwkb",
+    "st_geomfromwkb",
+    "st_linefromwkb",
+    "st_linestringfromwkb",
+    "st_pointfromwkb",
+    "st_polyfromwkb",
+    "st_polygonfromwkb",
 
     // WKT
     // https://mariadb.com/kb/en/mariadb/wkt/
