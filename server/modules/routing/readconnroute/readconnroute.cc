@@ -160,7 +160,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-static inline void free_readconn_instance(ROUTER_INSTANCE* router)
+static inline void free_readconn_instance(ReadConn* router)
 {
     if (router)
     {
@@ -170,7 +170,7 @@ static inline void free_readconn_instance(ROUTER_INSTANCE* router)
 
 static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params)
 {
-    ROUTER_INSTANCE* inst = static_cast<ROUTER_INSTANCE*>(instance);
+    ReadConn* inst = static_cast<ReadConn*>(instance);
     uint64_t bitmask = 0;
     uint64_t bitvalue = 0;
     bool ok = true;
@@ -239,7 +239,7 @@ static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params
  */
 static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
-    ROUTER_INSTANCE* inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)));
+    ReadConn* inst = static_cast<ReadConn*>(MXS_CALLOC(1, sizeof(ReadConn)));
 
     if (inst)
     {
@@ -266,8 +266,8 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
  */
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
 {
-    ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*) instance;
-    ROUTER_CLIENT_SES* client_rses;
+    ReadConn* inst = (ReadConn*) instance;
+    ReadConnSession* client_rses;
     SERVER_REF* candidate = NULL;
     SERVER_REF* master_host = NULL;
 
@@ -277,7 +277,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
               session,
               inst);
 
-    client_rses = (ROUTER_CLIENT_SES*) MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
+    client_rses = (ReadConnSession*) MXS_CALLOC(1, sizeof(ReadConnSession));
 
     if (client_rses == NULL)
     {
@@ -451,8 +451,8 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
  */
 static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_ses)
 {
-    ROUTER_INSTANCE* router = (ROUTER_INSTANCE*) router_instance;
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_client_ses;
+    ReadConn* router = (ReadConn*) router_instance;
+    ReadConnSession* router_cli_ses = (ReadConnSession*) router_client_ses;
 
     MXB_AT_DEBUG(int prev_val = ) mxb::atomic::add(&router_cli_ses->backend->connections,
                                                    -1,
@@ -471,7 +471,7 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
  */
 static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
 {
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
+    ReadConnSession* router_cli_ses = (ReadConnSession*) router_session;
     mxb_assert(router_cli_ses->backend_dcb);
     dcb_close(router_cli_ses->backend_dcb);
 }
@@ -479,7 +479,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
 /** Log routing failure due to closed session */
 static void log_closed_session(mxs_mysql_cmd_t mysql_command, SERVER_REF* ref)
 {
-    char msg[SERVER::MAX_ADDRESS_LEN + 200] = "";    // Extra space for message
+    char msg[SERVER::MAX_ADDRESS_LEN + 200] = "";   // Extra space for message
 
     if (ref->server->is_down())
     {
@@ -505,7 +505,7 @@ static void log_closed_session(mxs_mysql_cmd_t mysql_command, SERVER_REF* ref)
  *
  * @return True if the backend connection is still valid
  */
-static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* router_cli_ses)
+static inline bool connection_is_valid(ReadConn* inst, ReadConnSession* router_cli_ses)
 {
     bool rval = false;
 
@@ -552,8 +552,8 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
  */
 static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue)
 {
-    ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*) instance;
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
+    ReadConn* inst = (ReadConn*) instance;
+    ReadConnSession* router_cli_ses = (ReadConnSession*) router_session;
     int rc = 0;
     MySQLProtocol* proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
     mxs_mysql_cmd_t mysql_command = proto->current_command;
@@ -612,7 +612,7 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
  */
 static void diagnostics(MXS_ROUTER* router, DCB* dcb)
 {
-    ROUTER_INSTANCE* router_inst = (ROUTER_INSTANCE*) router;
+    ReadConn* router_inst = (ReadConn*) router;
     const char* weightby = serviceGetWeightingParameter(router_inst->service);
 
     dcb_printf(dcb,
@@ -651,7 +651,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
  */
 static json_t* diagnostics_json(const MXS_ROUTER* router)
 {
-    ROUTER_INSTANCE* router_inst = (ROUTER_INSTANCE*)router;
+    ReadConn* router_inst = (ReadConn*)router;
     json_t* rval = json_object();
 
     json_object_set_new(rval, "connections", json_integer(router_inst->stats.n_sessions));

@@ -26,7 +26,7 @@
 /**
  * The client session structure used within this router.
  */
-struct ROUTER_CLIENT_SES : MXS_ROUTER_SESSION
+struct ReadConnSession : MXS_ROUTER_SESSION
 {
     SERVER_REF* backend;    /*< Backend used by the client session */
     DCB*        backend_dcb;/*< DCB Connection to the backend      */
@@ -38,7 +38,7 @@ struct ROUTER_CLIENT_SES : MXS_ROUTER_SESSION
 /**
  * The statistics for this router instance
  */
-struct ROUTER_STATS
+struct Stats
 {
     int n_sessions;     /*< Number sessions created     */
     int n_queries;      /*< Number of queries forwarded */
@@ -47,9 +47,9 @@ struct ROUTER_STATS
 /**
  * The per instance data for the router.
  */
-struct ROUTER_INSTANCE : public MXS_ROUTER
+struct ReadConn : public MXS_ROUTER
 {
-    SERVICE*     service;               /*< Pointer to the service using this router */
-    uint64_t     bitmask_and_bitvalue;  /*< Lower 32-bits for bitmask and upper for bitvalue */
-    ROUTER_STATS stats;                 /*< Statistics for this router               */
+    SERVICE* service;               /*< Pointer to the service using this router */
+    uint64_t bitmask_and_bitvalue;  /*< Lower 32-bits for bitmask and upper for bitvalue */
+    Stats    stats;                 /*< Statistics for this router               */
 };
