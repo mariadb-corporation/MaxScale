@@ -15,6 +15,7 @@
 
 #include <time.h>
 
+#include <maxscale/mainworker.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/maxscale.hh"
@@ -50,6 +51,11 @@ int maxscale_shutdown()
 
     if (n == 0)
     {
+        if (mxs::MainWorker::created())
+        {
+            mxs::MainWorker::get().shutdown();
+        }
+
         mxs::RoutingWorker::shutdown_all();
     }
 

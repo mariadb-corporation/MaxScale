@@ -151,7 +151,6 @@ static bool log_to_shm_configured = false;
 static volatile sig_atomic_t last_signal = 0;
 static bool unload_modules_at_exit = true;
 static std::string redirect_output_to;
-static maxscale::MainWorker* main_worker = nullptr;
 
 static int   cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static int   write_pid_file();  /* write MaxScale pidfile */
@@ -353,11 +352,6 @@ static void sigterm_handler(int i)
 
     if (n_shutdowns == 1)
     {
-        if (main_worker)
-        {
-            main_worker->shutdown();
-        }
-
         if (!daemon_mode)
         {
             if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
@@ -379,11 +373,6 @@ static void sigint_handler(int i)
 
     if (n_shutdowns == 1)
     {
-        if (main_worker)
-        {
-            main_worker->shutdown();
-        }
-
         if (!daemon_mode)
         {
             if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
@@ -1422,6 +1411,7 @@ int main(int argc, char** argv)
     mxb::Worker* worker;
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
+    maxscale::MainWorker* main_worker = nullptr;
 
     /**
      * The following lambda function is executed as the first event on the main worker. This is what starts
@@ -1441,9 +1431,7 @@ int main(int argc, char** argv)
                 const char* logerr = "Failed to start all MaxScale services. Exiting.";
                 print_log_n_stderr(true, true, logerr, logerr, 0);
                 rc = MAXSCALE_NOSERVICES;
-                RoutingWorker::shutdown_all();
-                mxb_assert(main_worker);
-                main_worker->shutdown();
+                maxscale_shutdown();
             }
             else if (daemon_mode)
             {

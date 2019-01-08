@@ -36,7 +36,16 @@ public:
     ~MainWorker();
 
     /**
-     * Return the main worker.
+     * Does the main worker exist. It is only at startup and shutdown that this
+     * function may return false. When MaxScale is running normally, it will
+     * always return true.
+     *
+     * @return True, if the main worker has been created, false otherwise.
+     */
+    static bool created();
+
+    /**
+     * Returns the main worker.
      *
      * @return The main worker.
      */

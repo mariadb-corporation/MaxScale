@@ -46,6 +46,12 @@ MainWorker::~MainWorker()
 }
 
 //static
+bool MainWorker::created()
+{
+    return this_unit.pCurrent_main ? true : false;
+}
+
+//static
 MainWorker& MainWorker::get()
 {
     mxb_assert(this_unit.pCurrent_main);
