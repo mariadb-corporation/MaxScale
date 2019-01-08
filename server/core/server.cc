@@ -11,11 +11,6 @@
  * Public License.
  */
 
-/**
- * @file server.c  - A representation of a backend server within the gateway.
- *
- */
-
 #include "internal/server.hh"
 
 #include <stdio.h>
@@ -25,12 +20,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <list>
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <maxbase/atomic.hh>
+#include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
 
 #include <maxscale/config.hh>
@@ -70,11 +66,47 @@ const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 namespace
 {
 
-struct ThisUnit
+class ThisUnit
 {
-    std::mutex all_servers_lock;    /**< Protects access to all_servers */
-    std::list<Server*> all_servers; /**< Global list of all servers */
-} this_unit;
+public:
+
+    /**
+     * Call a function on every server in the global server list.
+     *
+     * @param apply The function to apply. If the function returns false, iteration is discontinued.
+     */
+    void foreach_server(std::function<bool(Server*)> apply)
+    {
+        Guard guard(m_all_servers_lock);
+        for (Server* server : m_all_servers)
+        {
+            if (!apply(server))
+            {
+                break;
+            }
+        }
+    }
+
+    void insert_front(Server* server)
+    {
+        Guard guard(m_all_servers_lock);
+        m_all_servers.insert(m_all_servers.begin(), server);
+    }
+
+    void erase(Server* server)
+    {
+        Guard guard(m_all_servers_lock);
+        auto it = std::find(m_all_servers.begin(), m_all_servers.end(), server);
+        mxb_assert(it != m_all_servers.end());
+        m_all_servers.erase(it);
+    }
+
+private:
+    std::mutex           m_all_servers_lock;    /**< Protects access to array */
+    std::vector<Server*> m_all_servers;         /**< Global list of servers, in configuration file order */
+};
+
+ThisUnit this_unit;
 
 const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the maintenance status can be "
                                  "set/cleared manually. Status was not modified.";
@@ -152,6 +184,7 @@ void careful_strcpy(char* dest, size_t max_len, const std::string& source)
     // the necessary null, should the new string be shorter than the old.
     strncpy(dest, source.c_str(), new_len);
 }
+
 }
 
 Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
@@ -245,10 +278,8 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         }
     }
 
-    Guard guard(this_unit.all_servers_lock);
     // This keeps the order of the servers the same as in 2.2
-    this_unit.all_servers.push_front(server);
-
+    this_unit.insert_front(server);
     return server;
 }
 
@@ -262,13 +293,7 @@ Server* Server::create_test_server()
 void Server::server_free(Server* server)
 {
     mxb_assert(server);
-
-    {
-        Guard guard(this_unit.all_servers_lock);
-        auto it = std::find(this_unit.all_servers.begin(), this_unit.all_servers.end(), server);
-        mxb_assert(it != this_unit.all_servers.end());
-        this_unit.all_servers.erase(it);
-    }
+    this_unit.erase(server);
 
     /* Clean up session and free the memory */
     if (server->persistent)
@@ -336,15 +361,17 @@ SERVER* SERVER::find_by_unique_name(const string& name)
 
 Server* Server::find_by_unique_name(const string& name)
 {
-    Guard guard(this_unit.all_servers_lock);
-    for (Server* server : this_unit.all_servers)
-    {
+    Server* rval = nullptr;
+    this_unit.foreach_server([&rval, name](Server* server) {
         if (server->is_active && server->m_name == name)
         {
-            return server;
+            rval = server;
+            return false;
         }
+        return true;
     }
-    return nullptr;
+    );
+    return rval;
 }
 
 int SERVER::server_find_by_unique_names(char** server_names, int size, SERVER*** output)
@@ -389,26 +416,24 @@ void Server::printServer()
 
 void Server::printAllServers()
 {
-    Guard guard(this_unit.all_servers_lock);
-    for (Server* server : this_unit.all_servers)
-    {
+    this_unit.foreach_server([](Server* server) {
         if (server->server_is_active())
         {
             server->printServer();
         }
-    }
+        return true;
+    });
 }
 
 void Server::dprintAllServers(DCB* dcb)
 {
-    Guard guard(this_unit.all_servers_lock);
-    for (Server* server : this_unit.all_servers)
-    {
+    this_unit.foreach_server([dcb](Server* server) {
         if (server->is_active)
         {
             Server::dprintServer(dcb, server);
         }
-    }
+        return true;
+    });
 }
 
 void Server::dprintAllServersJson(DCB* dcb)
@@ -572,40 +597,33 @@ void Server::dprintPersistentDCBs(DCB* pdcb, const Server* server)
 
 void Server::dListServers(DCB* dcb)
 {
-    Guard guard(this_unit.all_servers_lock);
-    bool have_servers = std::any_of(this_unit.all_servers.begin(),
-                                    this_unit.all_servers.end(),
-                                    [](Server* s) {
-                                        return s->is_active;
-                                    });
+    const string horizontalLine =
+    "-------------------+-----------------+-------+-------------+--------------------\n";
+    string message;
+    // Estimate the likely size of the string. Should be enough for 5 servers.
+    message.reserve((4 + 5) * horizontalLine.length());
+    message += "Servers.\n" + horizontalLine;
+    message += mxb::string_printf("%-18s | %-15s | Port  | Connections | %-20s\n",
+                                  "Server", "Address", "Status");
+    message += horizontalLine;
+
+    bool have_servers = false;
+    this_unit.foreach_server([&message, &have_servers](Server* server) {
+        if (server->server_is_active())
+        {
+            have_servers = true;
+            string stat = server->status_string();
+            message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
+                                          server->name(), server->address, server->port,
+                                          server->stats.n_current, stat.c_str());
+        }
+        return true;
+    });
 
     if (have_servers)
     {
-        dcb_printf(dcb, "Servers.\n");
-        dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
-        dcb_printf(dcb,
-                   "%-18s | %-15s | Port  | Connections | %-20s\n",
-                   "Server",
-                   "Address",
-                   "Status");
-        dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
-
-        for (Server* server : this_unit.all_servers)
-        {
-            if (server->is_active)
-            {
-                string stat = server->status_string();
-                dcb_printf(dcb,
-                           "%-18s | %-15s | %5d | %11d | %s\n",
-                           server->name(),
-                           server->address,
-                           server->port,
-                           server->stats.n_current,
-                           stat.c_str());
-            }
-        }
-
-        dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
+        message += horizontalLine;
+        dcb_printf(dcb, "%s", message.c_str());
     }
 }
 
@@ -771,18 +789,17 @@ string Server::get_custom_parameter(const string& name) const
 std::unique_ptr<ResultSet> Server::getList()
 {
     std::unique_ptr<ResultSet> set =
-        ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
+            ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
 
-    Guard guard(this_unit.all_servers_lock);
-    for (Server* server : this_unit.all_servers)
-    {
+    this_unit.foreach_server([&set](Server* server) {
         if (server->server_is_active())
         {
             string stat = server->status_string();
             set->add_row({server->name(), server->address, std::to_string(server->port),
                           std::to_string(server->stats.n_current), stat});
         }
-    }
+        return true;
+    });
 
     return set;
 }
@@ -1147,16 +1164,13 @@ json_t* Server::to_json(const char* host)
 json_t* Server::server_list_to_json(const char* host)
 {
     json_t* data = json_array();
-
-    Guard guard(this_unit.all_servers_lock);
-    for (Server* server : this_unit.all_servers)
-    {
+    this_unit.foreach_server([data, host](Server* server) {
         if (server->server_is_active())
         {
             json_array_append_new(data, server_to_json_data(server, host));
         }
-    }
-
+        return true;
+    });
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 
