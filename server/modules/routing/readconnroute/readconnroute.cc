@@ -59,7 +59,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A connection based router to load balance based on connections",
         "V2.0.0",
         RCAP_TYPE_RUNTIME_CONFIG,
-        &ReadConn::s_object,
+        &RCR::s_object,
         nullptr,    /* Process init. */
         nullptr,    /* Process finish. */
         nullptr,    /* Thread init. */
@@ -81,7 +81,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The Master server
  */
-SERVER_REF* ReadConn::get_root_master()
+SERVER_REF* RCR::get_root_master()
 {
     SERVER_REF* master_host = nullptr;
     for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
@@ -98,7 +98,7 @@ SERVER_REF* ReadConn::get_root_master()
     return master_host;
 }
 
-bool ReadConn::configure(MXS_CONFIG_PARAMETER* params)
+bool RCR::configure(MXS_CONFIG_PARAMETER* params)
 {
     uint64_t bitmask = 0;
     uint64_t bitvalue = 0;
@@ -158,15 +158,15 @@ bool ReadConn::configure(MXS_CONFIG_PARAMETER* params)
 }
 
 
-ReadConn::ReadConn(SERVICE* service)
-    : mxs::Router<ReadConn, ReadConnSession>(service)
+RCR::RCR(SERVICE* service)
+    : mxs::Router<RCR, RCRSession>(service)
 {
 }
 
 // static
-ReadConn* ReadConn::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
+RCR* RCR::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
-    ReadConn* inst = new(std::nothrow) ReadConn(service);
+    RCR* inst = new(std::nothrow) RCR(service);
 
     if (inst && !inst->configure(params))
     {
@@ -177,8 +177,8 @@ ReadConn* ReadConn::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
     return inst;
 }
 
-ReadConnSession::ReadConnSession(ReadConn* inst, MXS_SESSION* session, SERVER_REF* backend, DCB* dcb,
-                                 uint32_t bitmask, uint32_t bitvalue)
+RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, SERVER_REF* backend, DCB* dcb,
+                       uint32_t bitmask, uint32_t bitvalue)
     : mxs::RouterSession(session)
     , m_instance(inst)
     , m_backend(backend)
@@ -189,18 +189,18 @@ ReadConnSession::ReadConnSession(ReadConn* inst, MXS_SESSION* session, SERVER_RE
 {
 }
 
-ReadConnSession::~ReadConnSession()
+RCRSession::~RCRSession()
 {
     mxb::atomic::add(&m_backend->connections, -1, mxb::atomic::RELAXED);
 }
 
-void ReadConnSession::close()
+void RCRSession::close()
 {
     mxb_assert(m_dcb);
     dcb_close(m_dcb);
 }
 
-ReadConnSession* ReadConn::newSession(MXS_SESSION* session)
+RCRSession* RCR::newSession(MXS_SESSION* session)
 {
     uint64_t mask = atomic_load_uint64(&m_bitmask_and_bitvalue);
     uint32_t bitmask = mask;
@@ -329,8 +329,8 @@ ReadConnSession* ReadConn::newSession(MXS_SESSION* session)
         return nullptr;
     }
 
-    ReadConnSession* client_rses = new(std::nothrow) ReadConnSession(this, session, candidate, backend_dcb,
-                                                                     bitmask, bitvalue);
+    RCRSession* client_rses = new(std::nothrow) RCRSession(this, session, candidate, backend_dcb,
+                                                           bitmask, bitvalue);
 
     if (!client_rses)
     {
@@ -377,7 +377,7 @@ static void log_closed_session(mxs_mysql_cmd_t mysql_command, SERVER_REF* ref)
  *
  * @return True if the backend connection is still valid
  */
-bool ReadConnSession::connection_is_valid() const
+bool RCRSession::connection_is_valid() const
 {
     bool rval = false;
 
@@ -411,7 +411,7 @@ bool ReadConnSession::connection_is_valid() const
     return rval;
 }
 
-int ReadConnSession::routeQuery(GWBUF* queue)
+int RCRSession::routeQuery(GWBUF* queue)
 {
     int rc = 0;
     MySQLProtocol* proto = static_cast<MySQLProtocol*>(m_client_dcb->protocol);
@@ -463,7 +463,7 @@ int ReadConnSession::routeQuery(GWBUF* queue)
     return rc;
 }
 
-void ReadConn::diagnostics(DCB* dcb)
+void RCR::diagnostics(DCB* dcb)
 {
     const char* weightby = serviceGetWeightingParameter(m_pService);
 
@@ -495,7 +495,7 @@ void ReadConn::diagnostics(DCB* dcb)
     }
 }
 
-json_t* ReadConn::diagnostics_json() const
+json_t* RCR::diagnostics_json() const
 {
     json_t* rval = json_object();
 
@@ -521,7 +521,7 @@ json_t* ReadConn::diagnostics_json() const
  * @param       backend_dcb     The backend DCB
  * @param       queue           The GWBUF with reply data
  */
-void ReadConnSession::clientReply(GWBUF* queue, DCB* backend_dcb)
+void RCRSession::clientReply(GWBUF* queue, DCB* backend_dcb)
 {
     mxb_assert(backend_dcb->session->client_dcb);
     MXS_SESSION_ROUTE_REPLY(backend_dcb->session, queue);
@@ -537,7 +537,7 @@ void ReadConnSession::clientReply(GWBUF* queue, DCB* backend_dcb)
  * @param       action      The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
  * @param   succp       Result of action: true if router can continue
  */
-void ReadConnSession::handleError(GWBUF* errbuf, DCB* problem_dcb, mxs_error_action_t action, bool* succp)
+void RCRSession::handleError(GWBUF* errbuf, DCB* problem_dcb, mxs_error_action_t action, bool* succp)
 
 {
     mxb_assert(problem_dcb->role == DCB::Role::BACKEND);
@@ -549,7 +549,7 @@ void ReadConnSession::handleError(GWBUF* errbuf, DCB* problem_dcb, mxs_error_act
     *succp = false;
 }
 
-uint64_t ReadConn::getCapabilities()
+uint64_t RCR::getCapabilities()
 {
     return RCAP_TYPE_RUNTIME_CONFIG;
 }

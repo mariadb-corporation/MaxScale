@@ -21,17 +21,17 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/router.hh>
 
-class ReadConn;
+class RCR;
 
 /**
  * The client session structure used within this router.
  */
-class ReadConnSession : public mxs::RouterSession
+class RCRSession : public mxs::RouterSession
 {
 public:
-    ReadConnSession(ReadConn* inst, MXS_SESSION* session, SERVER_REF* backend, DCB* dcb,
-                    uint32_t bitmask, uint32_t bitvalue);
-    ~ReadConnSession();
+    RCRSession(RCR* inst, MXS_SESSION* session, SERVER_REF* backend, DCB* dcb,
+               uint32_t bitmask, uint32_t bitvalue);
+    ~RCRSession();
 
     /**
      * Route data from client to the backend.
@@ -69,7 +69,7 @@ public:
                      bool* pSuccess);
 
 private:
-    ReadConn*   m_instance;     /**< Router instance */
+    RCR*        m_instance;     /**< Router instance */
     SERVER_REF* m_backend;      /**< Backend used by the client session */
     DCB*        m_dcb;          /**< DCB Connection to the backend      */
     DCB*        m_client_dcb;   /**< Client DCB */
@@ -91,7 +91,7 @@ struct Stats
 /**
  * The per instance data for the router.
  */
-class ReadConn : public mxs::Router<ReadConn, ReadConnSession>
+class RCR : public mxs::Router<RCR, RCRSession>
 {
 public:
     /**
@@ -102,7 +102,7 @@ public:
      *
      * @return The new instance or nullptr on error
      */
-    static ReadConn* create(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+    static RCR* create(SERVICE* service, MXS_CONFIG_PARAMETER* params);
 
     /**
      * Create a new session for this router instance
@@ -111,7 +111,7 @@ public:
      *
      * @return Router session or nullptr on error
      */
-    ReadConnSession* newSession(MXS_SESSION* pSession);
+    RCRSession* newSession(MXS_SESSION* pSession);
 
     /**
      * Display router diagnostics
@@ -161,7 +161,7 @@ public:
     }
 
 private:
-    ReadConn(SERVICE* service);
+    RCR(SERVICE* service);
 
     uint64_t m_bitmask_and_bitvalue = 0;    /**< Lower 32-bits for bitmask and upper for bitvalue */
     Stats    m_stats;                       /**< Statistics for this router               */
