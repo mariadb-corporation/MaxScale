@@ -118,3 +118,6 @@ SET STATEMENT max_statement_time=30 FOR UPDATE tbl SET a = 42;
 
 # MXS-2242
 SELECT X(coordinates), Y(coordinates), ST_X(coordinates), ST_Y(coordinates) FROM data;
+
+# MXS-2248
+SELECT curdate() + interval '60' day;
