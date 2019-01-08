@@ -1442,6 +1442,8 @@ int main(int argc, char** argv)
                 print_log_n_stderr(true, true, logerr, logerr, 0);
                 rc = MAXSCALE_NOSERVICES;
                 RoutingWorker::shutdown_all();
+                mxb_assert(main_worker);
+                main_worker->shutdown();
             }
             else if (daemon_mode)
             {
