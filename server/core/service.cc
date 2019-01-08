@@ -40,7 +40,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/paths.h>
-#include <maxscale/housekeeper.h>
 #include <maxscale/listener.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.h>
@@ -79,7 +78,7 @@ static struct
     std::vector<Service*> services;
 } this_unit;
 
-static bool service_internal_restart(void* data);
+static bool service_internal_restart(mxb::Worker::Call::action_t action, Service* service);
 static void service_calculate_weights(SERVICE* service);
 
 Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
@@ -357,18 +356,14 @@ int serviceStartAllPorts(Service* service)
         {
             /** Service failed to start any ports. Try again later. */
             service->stats.n_failed_starts++;
-            char taskname[strlen(service->name) + strlen("_start_retry_")
-                          + (int) ceil(log10(INT_MAX)) + 1];
             int retry_after = MXS_MIN(service->stats.n_failed_starts * 10, service->max_retry_interval);
-            snprintf(taskname,
-                     sizeof(taskname),
-                     "%s_start_retry_%d",
-                     service->name,
-                     service->stats.n_failed_starts);
-            hktask_add(taskname, service_internal_restart, service, retry_after);
             MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
                        service->name,
                        retry_after);
+
+            mxb::Worker* worker = mxb::Worker::get_current();
+            mxb_assert(worker);
+            worker->delayed_call(retry_after * 1000, service_internal_restart, service);
 
             /** This will prevent MaxScale from shutting down if service start is retried later */
             listeners = 1;
@@ -1279,15 +1274,12 @@ std::unique_ptr<ResultSet> serviceGetList()
  * Function called by the housekeeper thread to retry starting of a service
  * @param data Service to restart
  */
-static bool service_internal_restart(void* data)
+static bool service_internal_restart(mxb::Worker::Call::action_t action, Service* service)
 {
-    auto func = [=]() {
-        Service* service = static_cast<Service*>(data);
+    if (action == mxb::Worker::Call::EXECUTE)
+    {
         serviceStartAllPorts(service);
-    };
-
-    auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-    worker->execute(func, nullptr, mxs::RoutingWorker::EXECUTE_AUTO);
+    }
 
     return false;
 }
