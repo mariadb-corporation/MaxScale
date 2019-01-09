@@ -257,7 +257,7 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->m_settings.persistmaxtime = config_get_integer(params, CN_PERSISTMAXTIME);
     server->proxy_protocol = config_get_bool(params, CN_PROXY_PROTOCOL);
     server->is_active = true;
-    server->auth_instance = auth_instance;
+    server->m_auth_instance = auth_instance;
     server->server_ssl = ssl;
     server->persistent = persistent;
     server->last_event = SERVER_UP_EVENT;
@@ -860,7 +860,7 @@ uint64_t SERVER::status_from_string(const char* str)
 
 void Server::set_version(uint64_t version_num, const std::string& version_str)
 {
-    info.set(version_num, version_str);
+    m_info.set(version_num, version_str);
 }
 
 /**

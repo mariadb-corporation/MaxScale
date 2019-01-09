@@ -89,17 +89,17 @@ public:
 
     Version version() const override
     {
-        return info.version_num();
+        return m_info.version_num();
     }
 
     Type type() const override
     {
-        return info.type();
+        return m_info.type();
     }
 
     std::string version_string() const override
     {
-        return info.version_string();
+        return m_info.version_string();
     }
 
     const char* name() const override
@@ -306,7 +306,12 @@ public:
      */
     json_t* to_json(const char* host);
 
-    DCB** persistent = nullptr;/**< List of unused persistent connections to the server */
+    void* auth_instance()
+    {
+        return m_auth_instance;
+    }
+
+    DCB** persistent = nullptr;     /**< List of unused persistent connections to the server */
 
 private:
     struct Settings
@@ -364,5 +369,7 @@ private:
 
     const std::string  m_name;              /**< Server config name */
     Settings           m_settings;          /**< Server settings */
-    VersionInfo        info;                /**< Server version and type information */
+    VersionInfo        m_info;                /**< Server version and type information */
+
+    void* m_auth_instance = nullptr;  /**< Authenticator instance data */
 };

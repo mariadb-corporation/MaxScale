@@ -440,17 +440,21 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
      */
 
     /** Allocate DCB specific authentication data */
-    if (dcb->authfunc.create
-        && (dcb->authenticator_data = dcb->authfunc.create(dcb->server->auth_instance)) == NULL)
+    auto auth_create = dcb->authfunc.create;
+    if (auth_create)
     {
-        MXS_ERROR("Failed to create authenticator for backend DCB.");
-        close(dcb->fd);
-        dcb->fd = DCBFD_CLOSED;
-        // Remove the inc ref that was done in session_link_backend_dcb().
-        session_unlink_backend_dcb(dcb->session, dcb);
-        dcb->session = NULL;
-        dcb_free_all_memory(dcb);
-        return NULL;
+        Server* server = static_cast<Server*>(dcb->server);
+        if ((dcb->authenticator_data = auth_create(server->auth_instance())) == NULL)
+        {
+            MXS_ERROR("Failed to create authenticator for backend DCB.");
+            close(dcb->fd);
+            dcb->fd = DCBFD_CLOSED;
+            // Remove the inc ref that was done in session_link_backend_dcb().
+            session_unlink_backend_dcb(dcb->session, dcb);
+            dcb->session = NULL;
+            dcb_free_all_memory(dcb);
+            return NULL;
+        }
     }
 
     /**

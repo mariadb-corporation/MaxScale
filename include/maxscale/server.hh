@@ -173,7 +173,6 @@ public:
 
     // Base variables
     bool          is_active = false;        /**< Server is active and has not been "destroyed" */
-    void*         auth_instance = nullptr;  /**< Authenticator instance data */
     SSL_LISTENER* server_ssl = nullptr;     /**< SSL data */
     uint8_t       charset = DEFAULT_CHARSET;/**< Character set. Read from backend and sent to client. */
 
