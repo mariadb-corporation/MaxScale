@@ -355,6 +355,11 @@ void Worker::get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal)
     *pnTotal = atomic_load_uint64(&m_nTotal_descriptors);
 }
 
+Worker::RandomEngine& Worker::random_engine()
+{
+    return m_random_engine;
+}
+
 bool Worker::add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 {
     bool rv = true;

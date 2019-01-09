@@ -29,6 +29,7 @@
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.h>
 #include <maxbase/workertask.hh>
+#include <maxbase/random.hh>
 
 namespace maxbase
 {
@@ -248,11 +249,12 @@ class Worker : public MXB_WORKER
     Worker& operator=(const Worker&) = delete;
 
 public:
-    typedef WORKER_STATISTICS    STATISTICS;
-    typedef WorkerTask           Task;
-    typedef WorkerDisposableTask DisposableTask;
-    typedef WorkerLoad           Load;
-    typedef WorkerTimer          Timer;
+    using STATISTICS     = WORKER_STATISTICS;
+    using Task           = WorkerTask;
+    using DisposableTask = WorkerDisposableTask;
+    using Load           = WorkerLoad;
+    using Timer          = WorkerTimer;
+    using RandomEngine   = maxbase::XorShiftRandom;
 
     /**
      * A delegating timer that delegates the timer tick handling
@@ -368,6 +370,11 @@ public:
      * @param pnTotal    On output the total number of descriptors.
      */
     void get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal);
+
+    /**
+     * Return the random engine of this worker.
+     */
+    RandomEngine& random_engine();
 
     /**
      * Add a file descriptor to the epoll instance of the worker.
@@ -958,6 +965,7 @@ private:
     PrivateTimer*      m_pTimer;                /*< The worker's own timer. */
     DelayedCallsByTime m_sorted_calls;          /*< Current delayed calls sorted by time. */
     DelayedCallsById   m_calls;                 /*< Current delayed calls indexed by id. */
+    RandomEngine       m_random_engine;         /*< Random engine for this worker (this thread). */
 
     int32_t m_next_delayed_call_id;     /*< The next delayed call id. */
 };

@@ -28,15 +28,6 @@
 
 using namespace maxscale;
 
-// TODO, there should be a utility with the most common used random cases.
-// FYI: rand() is about twice as fast as the below toss.
-static std::mt19937 random_engine;
-static std::uniform_real_distribution<> zero_to_one(0.0, 1.0);
-double toss()
-{
-    return zero_to_one(random_engine);
-}
-
 /**
  * The functions that implement back end selection for the read write
  * split router. All of these functions are internal to that router and
@@ -161,7 +152,8 @@ PRWBackends::iterator backend_cmp_response_time(PRWBackends& sBackends)
     }
 
     // Find the winner, role the ball:
-    double ball = toss();
+    double ball = maxbase::Worker::get_current()->random_engine().zero_to_one_exclusive();
+
     double slot_walk {0};
     int winner {0};
 
