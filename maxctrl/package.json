@@ -18,8 +18,9 @@
   "license": "SEE LICENSE IN ../LICENSE.TXT",
   "dependencies": {
     "cli-table": "^0.3.1",
-    "inquirer": "^6.1.0",
-    "lodash": "^4.17.4",
+    "globby": "^8.0.2",
+    "inquirer": "^6.2.1",
+    "lodash": "^4.17.11",
     "lodash-getpath": "^0.2.4",
     "readline-sync": "^1.4.9",
     "request": "^2.88.0",
