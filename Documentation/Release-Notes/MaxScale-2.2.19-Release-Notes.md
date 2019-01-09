@@ -10,6 +10,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-2248](https://jira.mariadb.org/browse/MXS-2248) INSERT sent to all nodes
 * [MXS-2242](https://jira.mariadb.org/browse/MXS-2242) MaxScale does not recognize builtin read-only functions
 * [MXS-2238](https://jira.mariadb.org/browse/MXS-2238) MaxScale fails to send large CDC schemas
 * [MXS-2234](https://jira.mariadb.org/browse/MXS-2234) Add extra info to log when MaxScale loads persisted configuration files
