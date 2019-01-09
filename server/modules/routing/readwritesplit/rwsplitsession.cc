@@ -877,6 +877,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
     {
     case ERRACT_NEW_CONNECTION:
         {
+            std::string errmsg;
             bool can_continue = false;
 
             if (m_current_master && m_current_master->in_use() && m_current_master == backend)
@@ -896,6 +897,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                      * can't be sure whether it was executed or not. In this
                      * case the safest thing to do is to close the client
                      * connection. */
+                    errmsg += " Lost connection to master server while connection was idle.";
                     if (m_config.master_failure_mode != RW_FAIL_INSTANTLY)
                     {
                         can_continue = true;
@@ -906,6 +908,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     // We were expecting a response but we aren't going to get one
                     mxb_assert(m_expected_responses > 0);
                     m_expected_responses--;
+                    errmsg += " Lost connection to master server while waiting for a result.";
 
                     if (can_retry_query())
                     {
@@ -925,6 +928,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                 if (session_trx_is_active(session) && m_otrx_state == OTRX_INACTIVE)
                 {
                     can_continue = start_trx_replay();
+                    errmsg += " A transaction is active and cannot be replayed.";
                 }
 
                 if (!can_continue)
@@ -939,7 +943,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     }
                     else
                     {
-                        MXS_ERROR("Lost connection to the master server, closing session.");
+                        MXS_ERROR("Lost connection to the master server, closing session.%s", errmsg.c_str());
                     }
                 }
 
