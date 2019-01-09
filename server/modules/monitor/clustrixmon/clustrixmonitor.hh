@@ -15,6 +15,7 @@
 #include "clustrixmon.hh"
 #include <maxscale/monitor.hh>
 #include <maxbase/http.hh>
+#include "clustrixnodeinfo.hh"
 
 class ClustrixMonitor : public maxscale::MonitorInstance
 {
@@ -43,6 +44,8 @@ public:
         long m_cluster_monitor_interval;
     };
 
+    ~ClustrixMonitor();
+
     static ClustrixMonitor* create(MXS_MONITOR* pMonitor);
 
     bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
@@ -51,15 +54,30 @@ private:
     ClustrixMonitor(MXS_MONITOR* pMonitor);
 
     void pre_loop() override;
+    void post_loop() override;
 
     void tick();
 
+    void fetch_cluster_nodes();
+    void fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms);
+    void refresh_cluster_nodes();
+
+    void make_health_check();
     void initiate_delayed_http_check();
     bool check_http(Call::action_t action);
 
+    static long now()
+    {
+        return mxb::WorkerLoad::get_time_ms();
+    }
+
 private:
-    Config                   m_config;
-    mxb::http::Async         m_http;
-    std::vector<std::string> m_health_urls;
-    uint32_t                 m_delayed_http_check_id;
+    Config                        m_config;
+    std::vector<std::string>      m_config_servers;
+    std::vector<ClustrixNodeInfo> m_node_infos;
+    std::vector<std::string>      m_health_urls;
+    mxb::http::Async              m_http;
+    uint32_t                      m_delayed_http_check_id { 0 };
+    long                          m_last_cluster_check    { 0 };
+    MXS_MONITORED_SERVER*         m_pMonitored_server     { nullptr };
 };
