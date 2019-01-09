@@ -27,10 +27,11 @@
 #include <stdbool.h>
 #include <errmsg.h>
 
+#include <maxbase/atomic.hh>
+#include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/config.hh>
-#include <maxbase/atomic.hh>
 
 /**
  * @brief Calculate the length of a length-encoded integer in bytes
@@ -357,4 +358,26 @@ void mxs_mysql_update_server_version(SERVER* dest, MYSQL* source)
     unsigned long version_num = mysql_get_server_version(source);
     mxb_assert(version_string != NULL && version_num != 0);
     dest->set_version(version_num, version_string);
+}
+
+namespace maxscale
+{
+
+std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
+                                                std::string* errmsg_out)
+{
+    using mxq::QueryResult;
+    std::unique_ptr<QueryResult> rval;
+    MYSQL_RES* result = NULL;
+    if (mxs_mysql_query(conn, query.c_str()) == 0 && (result = mysql_store_result(conn)) != NULL)
+    {
+        rval = std::unique_ptr<QueryResult>(new QueryResult(result));
+    }
+    else if (errmsg_out)
+    {
+        *errmsg_out = mxb::string_printf("Query '%s' failed: '%s'.", query.c_str(), mysql_error(conn));
+    }
+    return rval;
+}
+
 }

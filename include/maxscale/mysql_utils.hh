@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <stdlib.h>
 #include <stdint.h>
+#include <maxsql/mariadb.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 
@@ -122,5 +123,22 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
  * @param source   MySQL handle from which information is read
  */
 void mxs_mysql_update_server_version(SERVER* dest, MYSQL* source);
+
+namespace maxscale
+{
+
+/**
+ * Execute a query which returns data. The results are returned as a unique pointer to a QueryResult
+ * object. The column names of the results are assumed unique.
+ *
+ * @param conn Server connection
+ * @param query The query
+ * @param errmsg_out Where to store an error message if query fails. Can be null.
+ * @return Pointer to query results, or an empty pointer on failure
+ */
+std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
+                                                std::string* errmsg_out = NULL);
+
+}
 
 MXS_END_DECLS

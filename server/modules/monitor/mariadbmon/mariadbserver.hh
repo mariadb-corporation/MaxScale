@@ -15,11 +15,11 @@
 #include <functional>
 #include <string>
 #include <memory>
-#include <maxscale/monitor.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxsql/mariadb.hh>
+#include <maxscale/monitor.hh>
 #include "server_utils.hh"
 
-class QueryResult;
 class MariaDBServer;
 // Server pointer array
 typedef std::vector<MariaDBServer*> ServerArray;
@@ -187,7 +187,7 @@ public:
      * @param errmsg_out Where to store an error message if query fails. Can be null.
      * @return Pointer to query results, or an empty pointer on failure
      */
-    std::unique_ptr<QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL);
+    std::unique_ptr<mxq::QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL);
 
     /**
      * execute_cmd_ex with query retry ON.

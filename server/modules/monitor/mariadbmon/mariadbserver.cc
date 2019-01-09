@@ -22,11 +22,11 @@
 #include <maxsql/mariadb.hh>
 #include <maxscale/mysql_utils.hh>
 
-
 using std::string;
 using maxbase::string_printf;
 using maxbase::Duration;
 using maxbase::StopWatch;
+using maxsql::QueryResult;
 
 class MariaDBServer::EventInfo
 {
@@ -82,18 +82,7 @@ uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn)
 
 std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, std::string* errmsg_out)
 {
-    auto conn = m_server_base->con;
-    std::unique_ptr<QueryResult> rval;
-    MYSQL_RES* result = NULL;
-    if (mxs_mysql_query(conn, query.c_str()) == 0 && (result = mysql_store_result(conn)) != NULL)
-    {
-        rval = std::unique_ptr<QueryResult>(new QueryResult(result));
-    }
-    else if (errmsg_out)
-    {
-        *errmsg_out = string_printf("Query '%s' failed: '%s'.", query.c_str(), mysql_error(conn));
-    }
-    return rval;
+    return maxscale::execute_query(m_server_base->con, query, errmsg_out);
 }
 
 /**

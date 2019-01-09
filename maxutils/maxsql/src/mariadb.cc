@@ -13,8 +13,11 @@
 #include <maxsql/mariadb.hh>
 #include <time.h>
 #include <errmsg.h>
+#include <string>
+#include <string.h>
 #include <maxbase/assert.h>
 
+using std::string;
 
 namespace
 {
@@ -84,4 +87,95 @@ bool mysql_get_log_statements()
 {
     return this_unit.log_statements;
 }
+
+QueryResult::QueryResult(MYSQL_RES* resultset)
+    : m_resultset(resultset)
+{
+    mxb_assert(m_resultset);
+    auto columns = mysql_num_fields(m_resultset);
+    MYSQL_FIELD* field_info = mysql_fetch_fields(m_resultset);
+    for (int64_t column_index = 0; column_index < columns; column_index++)
+    {
+        string key(field_info[column_index].name);
+        // TODO: Think of a way to handle duplicate names nicely. Currently this should only be used
+        // for known queries.
+        mxb_assert(m_col_indexes.count(key) == 0);
+        m_col_indexes[key] = column_index;
+    }
+}
+
+QueryResult::~QueryResult()
+{
+    mxb_assert(m_resultset);
+    mysql_free_result(m_resultset);
+}
+
+bool QueryResult::next_row()
+{
+    m_rowdata = mysql_fetch_row(m_resultset);
+    if (m_rowdata)
+    {
+        m_current_row_ind++;
+        return true;
+    }
+    else
+    {
+        m_current_row_ind = -1;
+        return false;
+    }
+}
+
+int64_t QueryResult::get_current_row_index() const
+{
+    return m_current_row_ind;
+}
+
+int64_t QueryResult::get_col_count() const
+{
+    return mysql_num_fields(m_resultset);
+}
+
+int64_t QueryResult::get_row_count() const
+{
+    return mysql_num_rows(m_resultset);
+}
+
+int64_t QueryResult::get_col_index(const string& col_name) const
+{
+    auto iter = m_col_indexes.find(col_name);
+    return (iter != m_col_indexes.end()) ? iter->second : -1;
+}
+
+string QueryResult::get_string(int64_t column_ind) const
+{
+    mxb_assert(column_ind < get_col_count() && column_ind >= 0 && m_rowdata);
+    char* data = m_rowdata[column_ind];
+    return data ? data : "";
+}
+
+int64_t QueryResult::get_uint(int64_t column_ind) const
+{
+    mxb_assert(column_ind < get_col_count() && column_ind >= 0 && m_rowdata);
+    char* data = m_rowdata[column_ind];
+    int64_t rval = -1;
+    if (data && *data)
+    {
+        errno = 0;      // strtoll sets this
+        char* endptr = NULL;
+        auto parsed = strtoll(data, &endptr, 10);
+        if (parsed >= 0 && errno == 0 && *endptr == '\0')
+        {
+            rval = parsed;
+        }
+    }
+    return rval;
+}
+
+bool QueryResult::get_bool(int64_t column_ind) const
+{
+    mxb_assert(column_ind < get_col_count() && column_ind >= 0 && m_rowdata);
+    char* data = m_rowdata[column_ind];
+    return data ? (strcmp(data, "Y") == 0 || strcmp(data, "1") == 0) : false;
+}
+
 }
