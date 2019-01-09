@@ -213,6 +213,7 @@ install_file(server/maxscale.cnf.template core)
 install_file(server/maxscale_binlogserver_template.cnf core)
 install_program(script/create_grants core)
 install_file(script/create_roles.sql core)
+install_script(script/maxscale_generate_support_info.py core)
 
 # Install the template into /etc
 if(WITH_MAXSCALE_CNF AND (NOT TARGET_COMPONENT OR "core" STREQUAL "${TARGET_COMPONENT}"))
