@@ -51,6 +51,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
+#include <maxscale/modutil.hh>
 
 #include "binlogfilter.hh"
 #include "binlogfiltersession.hh"
@@ -380,33 +381,30 @@ static bool should_skip(const BinlogConfig& config, const std::string& str)
 
 static bool should_skip_query(const BinlogConfig& config, const std::string& sql, const std::string& db = "")
 {
-    uint32_t pktlen = sql.size() + 1;   // Payload and command byte
-    GWBUF* buf = gwbuf_alloc(MYSQL_HEADER_LEN + pktlen);
-    uint8_t* data = GWBUF_DATA(buf);
-
-    data[0] = pktlen;
-    data[1] = pktlen >> 8;
-    data[2] = pktlen >> 16;
-    data[3] = 0;
-    data[4] = (uint8_t)MXS_COM_QUERY;
-    strcpy((char*)&data[5], sql.c_str());
-
+    GWBUF* buf = modutil_create_query(sql.c_str());
     bool rval = false;
     int n = 0;
-    char** names = qc_get_table_names(buf, &n, true);
 
-    for (int i = 0; i < n; i++)
+    if (qc_get_trx_type_mask(buf) == 0)
     {
-        std::string name = strchr(names[i], '.') ? names[i] : db + "." + names[i];
+        // Not a transaction management related command
 
-        if (should_skip(config, name))
+        char** names = qc_get_table_names(buf, &n, true);
+
+        for (int i = 0; i < n; i++)
         {
-            rval = true;
-            break;
+            std::string name = strchr(names[i], '.') ? names[i] : db + "." + names[i];
+
+            if (should_skip(config, name))
+            {
+                rval = true;
+                break;
+            }
         }
+
+        qc_free_table_names(names, n);
     }
 
-    qc_free_table_names(names, n);
     gwbuf_free(buf);
     return rval;
 }
@@ -796,13 +794,6 @@ bool BinlogFilterSession::checkStatement(const uint8_t* event, const uint32_t ev
 
     std::string db((char*)event + static_size + var_block_len, db_name_len);
     std::string sql((char*)event + static_size + var_block_len + db_name_len + 1, statement_len);
-    std::string lower_sql;
-    std::transform(sql.begin(), sql.end(), std::back_inserter(lower_sql), tolower);
-
-    if (lower_sql.find("commit") != std::string::npos)
-    {
-        return false;
-    }
 
     m_skip = should_skip_query(m_filter.getConfig(), sql, db);
     MXS_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
