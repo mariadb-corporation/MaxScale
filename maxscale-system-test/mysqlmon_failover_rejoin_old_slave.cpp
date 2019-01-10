@@ -152,7 +152,7 @@ void run(TestConnections& test)
     cout << "\nStopping master." << endl;
     test.repl->stop_node(0);
 
-    test.maxscales->wait_for_monitor();
+    test.maxscales->wait_for_monitor(2);
 
     // server1 (previous master) was taken down, so its state should be /Down/.
     // server2 should have been made into master, and server4 should still be down.
@@ -164,7 +164,7 @@ void run(TestConnections& test)
     cout << "\nBringing up slave " << N - 1 << endl;
     test.repl->start_node(N - 1, (char*)"");
 
-    test.maxscales->wait_for_monitor();
+    test.maxscales->wait_for_monitor(2);
 
     // server1 should still be down, server2 still master, and server3 still
     // a slave. server4 was brought up, so it should have been rejoined and
