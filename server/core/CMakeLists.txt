@@ -81,6 +81,10 @@ if (HAVE_LIBDL)
   target_link_libraries(maxscale-common dl)
 endif()
 
+# Using initial-exec instead of the default global-dynamic tls-model
+# reduces the cost of using thread-local variables in dynamic libraries.
+target_compile_options(maxscale-common PUBLIC "-ftls-model=initial-exec")
+
 add_dependencies(maxscale-common pcre2 connector-c libmicrohttpd jansson maxbase)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 install_module(maxscale-common core)
