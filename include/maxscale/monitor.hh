@@ -22,6 +22,7 @@
 #include <openssl/sha.h>
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.hh>
+#include <maxbase/iterator.hh>
 #include <maxbase/jansson.h>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
@@ -214,6 +215,21 @@ struct MXS_MONITORED_SERVER
     int64_t                  disk_space_checked;/**< When was the disk space checked the last time */
     struct MXS_MONITORED_SERVER* next;              /**< The next server in the list */
 };
+
+namespace std
+{
+
+inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> begin(MXS_MONITORED_SERVER& monitored_server)
+{
+    return mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER>(monitored_server);
+}
+
+inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> end(MXS_MONITORED_SERVER& monitored_server)
+{
+    return mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER>();
+}
+
+}
 
 #define MAX_MONITOR_USER_LEN     512
 #define MAX_MONITOR_PASSWORD_LEN 512
