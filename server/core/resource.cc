@@ -692,7 +692,8 @@ HttpResponse cb_thread(const HttpRequest& request)
 
 HttpResponse cb_tasks(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, hk_tasks_json(request.host()));
+    auto host = request.host();
+    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(host, MXS_JSON_API_TASKS, hk_tasks_json(host)));
 }
 
 HttpResponse cb_all_modules(const HttpRequest& request)
