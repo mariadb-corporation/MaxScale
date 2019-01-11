@@ -76,7 +76,6 @@ struct RegexSession
     pthread_mutex_t lock;
     int             no_change;      /* No. of unchanged requests */
     int             replacements;   /* No. of changed requests */
-    int             active;         /* Is filter active */
     pcre2_match_data* match_data;   /*< Matching data used by the compiled regex */
 };
 
@@ -240,6 +239,22 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
     return (MXS_FILTER*) my_instance;
 }
 
+bool matching_connection(RegexInstance* my_instance, MXS_SESSION* session)
+{
+    bool rval = true;
+
+    if (my_instance->source && strcmp(session_get_remote(session), my_instance->source) != 0)
+    {
+        rval = false;
+    }
+    else if (my_instance->user &&  strcmp(session_get_user(session), my_instance->user) != 0)
+    {
+        rval = false;
+    }
+
+    return rval;
+}
+
 /**
  * Associate a new session with this instance of the filter.
  *
@@ -250,41 +265,18 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
     RegexInstance* my_instance = (RegexInstance*) instance;
-    RegexSession* my_session;
-    const char* remote, * user;
-    pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(my_instance->re, NULL);
+    RegexSession* my_session = static_cast<RegexSession*>(MXS_CALLOC(1, sizeof(RegexSession)));
 
-    if (!match_data)
-    {
-        MXS_OOM();
-        return NULL;
-    }
-
-    if ((my_session = static_cast<RegexSession*>(MXS_CALLOC(1, sizeof(RegexSession)))) != NULL)
+    if (my_session)
     {
         my_session->no_change = 0;
         my_session->replacements = 0;
-        my_session->active = 1;
-        my_session->match_data = match_data;
+        my_session->match_data = nullptr;
 
-        if (my_instance->source && (remote = session_get_remote(session)))
+        if (matching_connection(my_instance, session))
         {
-            if (strcmp(remote, my_instance->source))
-            {
-                my_session->active = 0;
-            }
+            my_session->match_data = pcre2_match_data_create_from_pattern(my_instance->re, NULL);
         }
-
-        if (my_instance->user && (user = session_get_user(session))
-            && strcmp(user, my_instance->user))
-        {
-            my_session->active = 0;
-        }
-
-    }
-    else
-    {
-        pcre2_match_data_free(match_data);
     }
 
     return (MXS_FILTER_SESSION*)my_session;
@@ -344,7 +336,7 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
     RegexSession* my_session = (RegexSession*) session;
     char* sql, * newsql;
 
-    if (my_session->active && modutil_is_SQL(queue))
+    if (my_session->match_data && modutil_is_SQL(queue))
     {
         if ((sql = modutil_get_SQL(queue)) != NULL)
         {
