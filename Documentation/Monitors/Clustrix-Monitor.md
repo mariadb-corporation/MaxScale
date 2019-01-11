@@ -28,6 +28,20 @@ password=mypwd
 
 ```
 
+### Grants
+
+Note that the monitor user _must_ have `SELECT` grant on the following tables:
+
+   * `system.nodeinfo`
+   * `system.membership`
+
+You can give the necessary grants using the following commands:
+```
+    grant select on system.membership to 'myuser'@'%';
+    grant select on system.nodeinfo to 'myuser'@'%';
+```
+The user name must be changed to the one actually being used.
+
 ## Common Monitor Parameters
 
 For a list of optional parameters that all monitors support, read the
