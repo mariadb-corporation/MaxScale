@@ -446,7 +446,7 @@ protected:
  * {
  * public:
  *      // This creates a new filter instance
- *      static MyFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
+ *      static MyFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
  *
  *      // This creates a new session for a filter instance
  *      MyFilterSession* newSession(MXS_SESSION* pSession);
