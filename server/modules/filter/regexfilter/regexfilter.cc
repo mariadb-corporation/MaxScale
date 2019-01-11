@@ -63,7 +63,6 @@ struct RegexInstance
     char*             match;        /*< Regular expression to match */
     char*             replace;      /*< Replacement text */
     pcre2_code*       re;           /*< Compiled regex text */
-    pcre2_match_data* match_data;   /*< Matching data used by the compiled regex */
     FILE*             logfile;      /*< Log file */
     bool              log_trace;    /*< Whether messages should be printed to tracelog */
 };
@@ -78,6 +77,7 @@ struct RegexSession
     int             no_change;      /* No. of unchanged requests */
     int             replacements;   /* No. of changed requests */
     int             active;         /* Is filter active */
+    pcre2_match_data* match_data;   /*< Matching data used by the compiled regex */
 };
 
 void log_match(RegexInstance* inst, char* re, char* old, char* newsql);
@@ -183,11 +183,6 @@ void free_instance(RegexInstance* instance)
             pcre2_code_free(instance->re);
         }
 
-        if (instance->match_data)
-        {
-            pcre2_match_data_free(instance->match_data);
-        }
-
         MXS_FREE(instance->match);
         MXS_FREE(instance->replace);
         MXS_FREE(instance->source);
@@ -233,32 +228,10 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
             fflush(my_instance->logfile);
         }
 
-        int errnumber;
-        PCRE2_SIZE erroffset;
         int cflags = config_get_enum(params, "options", option_values);
 
-        if ((my_instance->re = pcre2_compile((PCRE2_SPTR) my_instance->match,
-                                             PCRE2_ZERO_TERMINATED,
-                                             cflags,
-                                             &errnumber,
-                                             &erroffset,
-                                             NULL)) == NULL)
+        if (!(my_instance->re = config_get_compiled_regex(params, "match", cflags, nullptr)))
         {
-            char errbuffer[1024];
-            pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) &errbuffer, sizeof(errbuffer));
-            MXS_ERROR("Compiling regular expression '%s' failed at %lu: %s",
-                      my_instance->match,
-                      erroffset,
-                      errbuffer);
-            free_instance(my_instance);
-            return NULL;
-        }
-
-        if ((my_instance->match_data =
-                 pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
-        {
-            MXS_ERROR("Failure to create PCRE2 matching data. "
-                      "This is most likely caused by a lack of available memory.");
             free_instance(my_instance);
             return NULL;
         }
@@ -279,14 +252,22 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
     RegexInstance* my_instance = (RegexInstance*) instance;
     RegexSession* my_session;
     const char* remote, * user;
+    pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(my_instance->re, NULL);
+
+    if (!match_data)
+    {
+        MXS_OOM();
+        return NULL;
+    }
 
     if ((my_session = static_cast<RegexSession*>(MXS_CALLOC(1, sizeof(RegexSession)))) != NULL)
     {
         my_session->no_change = 0;
         my_session->replacements = 0;
         my_session->active = 1;
-        if (my_instance->source
-            && (remote = session_get_remote(session)) != NULL)
+        my_session->match_data = match_data;
+
+        if (my_instance->source && (remote = session_get_remote(session)))
         {
             if (strcmp(remote, my_instance->source))
             {
@@ -299,6 +280,11 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
         {
             my_session->active = 0;
         }
+
+    }
+    else
+    {
+        pcre2_match_data_free(match_data);
     }
 
     return (MXS_FILTER_SESSION*)my_session;
@@ -323,7 +309,9 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
  */
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
-    MXS_FREE(session);
+    RegexSession* my_session = (RegexSession*)session;
+    pcre2_match_data_free(my_session->match_data);
+    MXS_FREE(my_session);
     return;
 }
 
@@ -362,7 +350,7 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
         {
             newsql = regex_replace(sql,
                                    my_instance->re,
-                                   my_instance->match_data,
+                                   my_session->match_data,
                                    my_instance->replace);
             if (newsql)
             {
