@@ -854,7 +854,7 @@ throtting is enabled. By default, traffic throttling is disabled.
 #### `writeq_low_water`
 
 Low water mark for network write buffer. Once the traffic throttling is enabled,
-it will only be disabled when the write queue is below `writeq_high_water`. The
+it will only be disabled when the write queue is below `writeq_low_water`. The
 parameter accepts size type values. The minimum allowed size is 512
 bytes. `writeq_high_water` must always be greater than `writeq_low_water`.
 
