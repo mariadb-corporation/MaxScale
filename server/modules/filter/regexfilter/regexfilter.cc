@@ -26,7 +26,6 @@
 
 /**
  * @file regexfilter.c - a very simple regular expression rewrite filter.
- * @verbatim
  *
  * A simple regular expression query rewrite filter.
  * Two parameters should be defined in the filter configuration
@@ -35,10 +34,6 @@
  * Two optional parameters
  *      source=<source address to limit filter>
  *      user=<username to limit filter>
- *
- * Date         Who             Description
- * 19/06/2014   Mark Riddoch    Addition of source and user parameters
- * @endverbatim
  */
 
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
@@ -61,7 +56,7 @@ static char* regex_replace(const char* sql,
 /**
  * Instance structure
  */
-typedef struct
+struct RegexInstance
 {
     char*             source;       /*< Source address to restrict matches */
     char*             user;         /*< User name to restrict matches */
@@ -71,22 +66,22 @@ typedef struct
     pcre2_match_data* match_data;   /*< Matching data used by the compiled regex */
     FILE*             logfile;      /*< Log file */
     bool              log_trace;    /*< Whether messages should be printed to tracelog */
-} REGEX_INSTANCE;
+};
 
 /**
  * The session structure for this regex filter
  */
-typedef struct
+struct RegexSession
 {
     MXS_DOWNSTREAM  down;   /* The downstream filter */
     pthread_mutex_t lock;
     int             no_change;      /* No. of unchanged requests */
     int             replacements;   /* No. of changed requests */
     int             active;         /* Is filter active */
-} REGEX_SESSION;
+};
 
-void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* newsql);
-void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
+void log_match(RegexInstance* inst, char* re, char* old, char* newsql);
+void log_nomatch(RegexInstance* inst, char* re, char* old);
 
 static const MXS_ENUM_VALUE option_values[] =
 {
@@ -179,7 +174,7 @@ extern "C"
  * Free a regexfilter instance.
  * @param instance instance to free
  */
-void free_instance(REGEX_INSTANCE* instance)
+void free_instance(RegexInstance* instance)
 {
     if (instance)
     {
@@ -213,7 +208,7 @@ void free_instance(REGEX_INSTANCE* instance)
  */
 static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    REGEX_INSTANCE* my_instance = static_cast<REGEX_INSTANCE*>(MXS_CALLOC(1, sizeof(REGEX_INSTANCE)));
+    RegexInstance* my_instance = static_cast<RegexInstance*>(MXS_CALLOC(1, sizeof(RegexInstance)));
 
     if (my_instance)
     {
@@ -281,11 +276,11 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    REGEX_INSTANCE* my_instance = (REGEX_INSTANCE*) instance;
-    REGEX_SESSION* my_session;
+    RegexInstance* my_instance = (RegexInstance*) instance;
+    RegexSession* my_session;
     const char* remote, * user;
 
-    if ((my_session = static_cast<REGEX_SESSION*>(MXS_CALLOC(1, sizeof(REGEX_SESSION)))) != NULL)
+    if ((my_session = static_cast<RegexSession*>(MXS_CALLOC(1, sizeof(RegexSession)))) != NULL)
     {
         my_session->no_change = 0;
         my_session->replacements = 0;
@@ -341,7 +336,7 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
  */
 static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
 {
-    REGEX_SESSION* my_session = (REGEX_SESSION*) session;
+    RegexSession* my_session = (RegexSession*) session;
     my_session->down = *downstream;
 }
 
@@ -357,8 +352,8 @@ static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS
  */
 static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
-    REGEX_INSTANCE* my_instance = (REGEX_INSTANCE*) instance;
-    REGEX_SESSION* my_session = (REGEX_SESSION*) session;
+    RegexInstance* my_instance = (RegexInstance*) instance;
+    RegexSession* my_session = (RegexSession*) session;
     char* sql, * newsql;
 
     if (my_session->active && modutil_is_SQL(queue))
@@ -407,8 +402,8 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
  */
 static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
 {
-    REGEX_INSTANCE* my_instance = (REGEX_INSTANCE*) instance;
-    REGEX_SESSION* my_session = (REGEX_SESSION*) fsession;
+    RegexInstance* my_instance = (RegexInstance*) instance;
+    RegexSession* my_session = (RegexSession*) fsession;
 
     dcb_printf(dcb,
                "\t\tSearch and replace:            s/%s/%s/\n",
@@ -449,8 +444,8 @@ static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* 
  */
 static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
-    REGEX_INSTANCE* my_instance = (REGEX_INSTANCE*)instance;
-    REGEX_SESSION* my_session = (REGEX_SESSION*)fsession;
+    RegexInstance* my_instance = (RegexInstance*)instance;
+    RegexSession* my_session = (RegexSession*)fsession;
 
     json_t* rval = json_object();
 
@@ -532,7 +527,7 @@ static char* regex_replace(const char* sql, pcre2_code* re, pcre2_match_data* ma
  * @param old Old SQL statement
  * @param new New SQL statement
  */
-void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* newsql)
+void log_match(RegexInstance* inst, char* re, char* old, char* newsql)
 {
     if (inst->logfile)
     {
@@ -551,7 +546,7 @@ void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* newsql)
  * @param re Regular expression
  * @param old SQL statement
  */
-void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old)
+void log_nomatch(RegexInstance* inst, char* re, char* old)
 {
     if (inst->logfile)
     {
