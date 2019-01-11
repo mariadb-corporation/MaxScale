@@ -27,7 +27,7 @@
 
 #define MXS_MODULE_NAME "CDCPlainAuth"
 
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <cdc.hh>

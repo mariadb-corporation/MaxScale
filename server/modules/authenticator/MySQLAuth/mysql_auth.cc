@@ -28,7 +28,7 @@
 #include "mysql_auth.hh"
 
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/event.hh>
 #include <maxscale/poll.hh>

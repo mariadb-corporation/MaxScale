@@ -25,7 +25,7 @@
 #define MXS_MODULE_NAME "MySQLBackendAuth"
 
 #include <maxscale/alloc.h>
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>

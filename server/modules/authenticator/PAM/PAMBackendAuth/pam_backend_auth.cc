@@ -13,7 +13,7 @@
 
 #include "pam_backend_auth.hh"
 
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/server.hh>
 #include "pam_backend_session.hh"
 #include "../pam_auth_common.hh"

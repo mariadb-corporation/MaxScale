@@ -29,7 +29,7 @@
 
 #define MXS_MODULE_NAME "NullAuthAllow"
 
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.h>

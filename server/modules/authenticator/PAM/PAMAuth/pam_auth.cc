@@ -13,7 +13,7 @@
 #include "pam_auth.hh"
 
 #include <string>
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/users.h>
 
 #include "pam_instance.hh"

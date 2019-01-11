@@ -33,7 +33,7 @@
 #include <maxscale/protocol.h>
 #include <maxscale/router.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/monitor.hh>
 #include <maxscale/query_classifier.h>
 

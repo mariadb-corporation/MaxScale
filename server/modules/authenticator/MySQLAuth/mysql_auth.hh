@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>

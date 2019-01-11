@@ -21,7 +21,7 @@
 #include <unordered_map>
 
 #include <maxscale/users.h>
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/jansson.hh>
 
 namespace

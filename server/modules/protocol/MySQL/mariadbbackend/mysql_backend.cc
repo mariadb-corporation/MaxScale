@@ -487,7 +487,7 @@ static int gw_read_backend_event(DCB* dcb)
               dcb,
               dcb->fd,
               proto->protocol_auth_state,
-              STRPROTOCOLSTATE(proto->protocol_auth_state));
+              mxs::to_string(proto->protocol_auth_state));
 
     int rc = 0;
     if (proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
@@ -1125,7 +1125,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
         {
             MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
                      STRDCBSTATE(dcb->state),
-                     STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
+                     mxs::to_string(backend_protocol->protocol_auth_state));
             gwbuf_free(queue);
             return 0;
         }
@@ -1230,7 +1230,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
                       dcb,
                       dcb->fd,
-                      STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
+                      mxs::to_string(backend_protocol->protocol_auth_state));
 
             prepare_for_write(dcb, queue);
 
@@ -1260,7 +1260,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
             MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
                       dcb,
                       dcb->fd,
-                      STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
+                      mxs::to_string(backend_protocol->protocol_auth_state));
 
             /** Store data until authentication is complete */
             prepare_for_write(dcb, queue);

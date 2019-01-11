@@ -25,7 +25,7 @@
 #include <vector>
 
 #include <maxscale/alloc.h>
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>

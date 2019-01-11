@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/alloc.h>
 
@@ -100,4 +100,46 @@ const char* get_default_authenticator(const char* protocol)
     }
 
     return rval;
+}
+
+namespace maxscale
+{
+
+const char* to_string(mxs_auth_state_t state)
+{
+    const char* rval = "UNKNOWN AUTH STATE";
+    switch (state)
+    {
+    case MXS_AUTH_STATE_INIT:
+        rval = "MXS_AUTH_STATE_INIT";
+        break;
+    case MXS_AUTH_STATE_PENDING_CONNECT:
+        rval = "MXS_AUTH_STATE_PENDING_CONNECT";
+        break;
+    case MXS_AUTH_STATE_CONNECTED:
+        rval = "MXS_AUTH_STATE_CONNECTED";
+        break;
+    case MXS_AUTH_STATE_MESSAGE_READ:
+        rval = "MXS_AUTH_STATE_MESSAGE_READ";
+        break;
+    case MXS_AUTH_STATE_RESPONSE_SENT:
+        rval = "MXS_AUTH_STATE_RESPONSE_SENT";
+        break;
+    case MXS_AUTH_STATE_FAILED:
+        rval = "MXS_AUTH_STATE_FAILED";
+        break;
+    case MXS_AUTH_STATE_HANDSHAKE_FAILED:
+        rval = "MXS_AUTH_STATE_HANDSHAKE_FAILED";
+        break;
+    case MXS_AUTH_STATE_COMPLETE:
+        rval = "MXS_AUTH_STATE_COMPLETE";
+        break;
+    default:
+        mxb_assert(!true);
+        break;
+    }
+
+    return rval;
+}
+
 }

@@ -19,7 +19,7 @@
 #include <maxscale/ccdefs.hh>
 #include <netinet/in.h>
 #include <maxbase/poll.h>
-#include <maxscale/authenticator.h>
+#include <maxscale/authenticator.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/protocol.h>
