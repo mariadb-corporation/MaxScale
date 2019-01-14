@@ -23,11 +23,14 @@ public:
     ClustrixNodeInfo(int id,
                      const std::string& ip,
                      int mysql_port,
-                     int health_port)
+                     int health_port,
+                     int health_check_threshold)
         : m_id(id)
         , m_ip(ip)
         , m_mysql_port(mysql_port)
         , m_health_port(health_port)
+        , m_health_check_threshold(health_check_threshold)
+        , m_nRunning(m_health_check_threshold)
     {
     }
 
@@ -53,12 +56,22 @@ public:
 
     bool is_running() const
     {
-	return m_is_running;
+	return m_nRunning > 0;
     }
 
     void set_running(bool running)
     {
-	m_is_running = running;
+        if (running)
+        {
+            m_nRunning = m_health_check_threshold;
+        }
+        else
+        {
+            if (m_nRunning > 0)
+            {
+                --m_nRunning;
+            }
+        }
     }
 
     std::string to_string() const
@@ -78,7 +91,8 @@ private:
     std::string m_ip;
     int         m_mysql_port;
     int         m_health_port;
-    bool        m_is_running   { true }; // Assume running, until proven otherwise.
+    int         m_health_check_threshold;
+    int         m_nRunning;
 };
 
 inline std::ostream& operator << (std::ostream& out, const ClustrixNodeInfo& x)

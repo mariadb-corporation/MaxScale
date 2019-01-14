@@ -60,3 +60,12 @@ be lowered as that may have an adverse effect on the Cluster itself.
 ```
 cluster_monitor_interval=120000
 ```
+
+### `health_check_threshold`
+
+Defines how many times the health check may fail before the monitor
+considers a particular node to be down. The default value is 2.
+
+```
+health_check_threshold=3
+```

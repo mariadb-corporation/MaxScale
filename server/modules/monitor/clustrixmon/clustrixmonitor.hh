@@ -27,6 +27,7 @@ public:
     public:
         Config()
             : m_cluster_monitor_interval(DEFAULT_CLUSTER_MONITOR_INTERVAL_VALUE)
+            , m_health_check_threshold(DEFAULT_HEALTH_CHECK_THRESHOLD_VALUE)
         {
         };
 
@@ -40,8 +41,19 @@ public:
             m_cluster_monitor_interval = l;
         }
 
+        long health_check_threshold() const
+        {
+            return m_health_check_threshold;
+        }
+
+        void set_health_check_threshold(long l)
+        {
+            m_health_check_threshold = l;
+        }
+
     private:
         long m_cluster_monitor_interval;
+        long m_health_check_threshold;
     };
 
     ~ClustrixMonitor();

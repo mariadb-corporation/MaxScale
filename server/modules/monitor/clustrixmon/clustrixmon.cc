@@ -46,6 +46,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_PARAM_COUNT,
                 DEFAULT_CLUSTER_MONITOR_INTERVAL_ZVALUE
             },
+            {
+                HEALTH_CHECK_THRESHOLD_NAME,
+                MXS_MODULE_PARAM_COUNT,
+                DEFAULT_HEALTH_CHECK_THRESHOLD_ZVALUE
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };

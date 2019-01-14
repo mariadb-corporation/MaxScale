@@ -49,8 +49,10 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     }
 
     m_health_urls.clear();
+    m_node_infos.clear();
 
     m_config.set_cluster_monitor_interval(config_get_integer(pParams, CLUSTER_MONITOR_INTERVAL_NAME));
+    m_config.set_health_check_threshold(config_get_integer(pParams, HEALTH_CHECK_THRESHOLD_NAME));
 
     refresh_cluster_nodes();
 
@@ -179,8 +181,9 @@ void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
                     string ip = row[1];
                     int mysql_port = row[2] ? atoi(row[2]) : DEFAULT_MYSQL_PORT;
                     int health_port = row[3] ? atoi(row[3]) : DEFAULT_HEALTH_PORT;
+                    int health_check_threshold = m_config.health_check_threshold();
 
-                    node_infos.emplace_back(id, ip, mysql_port, health_port);
+                    node_infos.emplace_back(id, ip, mysql_port, health_port, health_check_threshold);
 
                     string health_url = "http://" + ip + ":" + std::to_string(health_port);
                     health_urls.push_back(health_url);

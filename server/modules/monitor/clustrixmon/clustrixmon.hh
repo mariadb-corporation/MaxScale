@@ -20,3 +20,7 @@
 #define    CLUSTER_MONITOR_INTERVAL_NAME            "cluster_monitor_interval"
 const long DEFAULT_CLUSTER_MONITOR_INTERVAL_VALUE = 60000;
 #define    DEFAULT_CLUSTER_MONITOR_INTERVAL_ZVALUE  "60000"
+
+#define    HEALTH_CHECK_THRESHOLD_NAME            "health_check_threshold"
+const long DEFAULT_HEALTH_CHECK_THRESHOLD_VALUE = 2;
+#define    DEFAULT_HEALTH_CHECK_THRESHOLD_ZVALUE  "2"
