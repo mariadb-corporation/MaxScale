@@ -943,7 +943,10 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     }
                     else
                     {
-                        MXS_ERROR("Lost connection to the master server, closing session.%s", errmsg.c_str());
+                        int64_t idle = mxs_clock() - backend->dcb()->last_read;
+                        MXS_ERROR("Lost connection to the master server, closing session.%s "
+                                  "Connection has been idle for %.1f seconds. Error caused by: %s",
+                                  errmsg.c_str(), (float)idle / 10.f, extract_error(errmsgbuf).c_str());
                     }
                 }
 

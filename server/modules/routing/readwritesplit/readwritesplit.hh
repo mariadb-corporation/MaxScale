@@ -424,3 +424,12 @@ SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
 void close_all_connections(mxs::SRWBackendList& backends);
+
+/**
+ * Utility function for extracting error messages from buffers
+ *
+ * @param buffer Buffer containing an error
+ *
+ * @return String representation of the error
+ */
+std::string extract_error(GWBUF* buffer);

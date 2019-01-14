@@ -1465,7 +1465,8 @@ static int backend_write_delayqueue(DCB* dcb, GWBUF* buffer)
 
     if (rc == 0)
     {
-        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION,
+                        "Lost connection to backend server while writing delay queue.");
     }
 
     return rc;

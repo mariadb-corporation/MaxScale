@@ -29,7 +29,7 @@ using namespace maxscale;
  */
 
 
-static std::string extract_error(GWBUF* buffer)
+std::string extract_error(GWBUF* buffer)
 {
     std::string rval;
 
