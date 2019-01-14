@@ -502,14 +502,22 @@ Async get_async(const std::vector<std::string>& urls,
                 const Config& config)
 {
     shared_ptr<Async::Imp> sImp;
-    shared_ptr<HttpImp> sHttp_imp = std::make_shared<HttpImp>();
-    if (sHttp_imp->initialize(urls, user, password, config))
+
+    if (urls.empty())
     {
-        sImp = sHttp_imp;
+        sImp = std::make_shared<ReadyImp>(Async::READY);
     }
     else
     {
-        sImp = std::make_shared<ReadyImp>(Async::ERROR);
+        shared_ptr<HttpImp> sHttp_imp = std::make_shared<HttpImp>();
+        if (sHttp_imp->initialize(urls, user, password, config))
+        {
+            sImp = sHttp_imp;
+        }
+        else
+        {
+            sImp = std::make_shared<ReadyImp>(Async::ERROR);
+        }
     }
 
     return Async(sImp);
