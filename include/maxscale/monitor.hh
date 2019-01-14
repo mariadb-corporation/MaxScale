@@ -297,8 +297,30 @@ extern const char CN_SCRIPT_TIMEOUT[];
 
 bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 
-void monitor_clear_pending_status(MXS_MONITORED_SERVER* ptr, uint64_t bit);
-void monitor_set_pending_status(MXS_MONITORED_SERVER* ptr, uint64_t bit);
+/**
+ * Store the current server status to the previous and pending status
+ * fields of the monitored server.
+ *
+ * @param mserver  The monitored server to update
+ */
+void monitor_stash_current_status(MXS_MONITORED_SERVER* ptr);
+
+/**
+ * Clear pending status bits in the monitor server
+ *
+ * @param mserver  The monitored server to update
+ * @param bit      The bits to clear for the server
+ */
+void monitor_clear_pending_status(MXS_MONITORED_SERVER* mserver, uint64_t bit);
+
+/**
+ * Set pending status bits in the monitor server
+ *
+ * @param mserver  The monitored server to update
+ * @param bit      The bits to set for the server
+ */
+void monitor_set_pending_status(MXS_MONITORED_SERVER* mserver, uint64_t bit);
+
 void monitor_check_maintenance_requests(MXS_MONITOR* monitor);
 
 bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv);

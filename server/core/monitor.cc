@@ -931,23 +931,17 @@ void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* valu
     pthread_mutex_unlock(&monitor->lock);
 }
 
-/**
- * Set pending status bits in the monitor server
- *
- * @param server        The server to update
- * @param bit           The bits to set for the server
- */
+void monitor_stash_current_status(MXS_MONITORED_SERVER* ptr)
+{
+    ptr->mon_prev_status = ptr->server->status;
+    ptr->pending_status = ptr->server->status;
+}
+
 void monitor_set_pending_status(MXS_MONITORED_SERVER* ptr, uint64_t bit)
 {
     ptr->pending_status |= bit;
 }
 
-/**
- * Clear pending status bits in the monitor server
- *
- * @param server        The server to update
- * @param bit           The bits to clear for the server
- */
 void monitor_clear_pending_status(MXS_MONITORED_SERVER* ptr, uint64_t bit)
 {
     ptr->pending_status &= ~bit;
