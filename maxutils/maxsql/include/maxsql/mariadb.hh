@@ -117,26 +117,95 @@ public:
     std::string get_string(int64_t column_ind) const;
 
     /**
-     * Read a non-negative integer value from the current row and given column.
+     * Read an integer value from the current row and given column.
      *
      * @param column_ind Column index
-     * @return Value as integer. 0 or greater indicates success, -1 is returned if the data
-     * could not be parsed or the result was negative.
+     * @return Value as integer. If the data could not be parsed an error flag is set.
      */
-    int64_t get_uint(int64_t column_ind) const;
+    int64_t get_int(int64_t column_ind) const;
 
     /**
-     * Read a boolean value from the current row and given column.
+     * Check if field is null.
      *
      * @param column_ind Column index
-     * @return Value as boolean. Returns true if the text is either 'Y' or '1'.
+     * @return True if null
+     */
+    bool field_is_null(int64_t column_ind) const;
+
+    /**
+     * Read a boolean-like value from the current row and given column. The function expects the field to
+     * be either 1 or 0, any other value is an error.
+     *
+     * @param column_ind Column index
+     * @return Value as boolean. Returns true if the field contains '1'.
      */
     bool get_bool(int64_t column_ind) const;
 
+    /**
+     * Has a parsing error occurred during current row?
+     *
+     * @return True if parsing failed.
+     */
+    bool error() const;
+
+    /**
+     * Return error string.
+     *
+     * @return Error string
+     */
+    std::string error_string() const;
+
 private:
-    MYSQL_RES*                               m_resultset = NULL;    // Underlying result set, freed at dtor.
-    std::unordered_map<std::string, int64_t> m_col_indexes;         // Map of column name -> index
-    MYSQL_ROW                                m_rowdata = NULL;      // Data for current row
-    int64_t                                  m_current_row_ind = -1;// Index of current row
+
+    class ConversionError
+    {
+    public:
+
+        /**
+         * Is error set?
+         *
+         * @return True if set
+         */
+        bool error() const;
+
+        /**
+         * Set an error describing an invalid conversion. The error is only set if the error is
+         * currently empty.
+         *
+         * @param field_value The value of the accessed field
+         * @param target_type Conversion target datatype
+         */
+        void set_value_error(const std::string& field_value, const std::string& target_type);
+
+        /**
+         * Set an error describing a conversion from a null value. The error is only set if the error is
+         * currently empty.
+         *
+         * @param target_type Conversion target datatype
+         */
+        void set_null_value_error(const std::string& target_type);
+
+        /**
+         * Print error information to string.
+         *
+         * @return Error description, or empty if no error
+         */
+        std::string to_string() const;
+
+    private:
+        bool        m_field_was_null = false;   /**< Was the converted field null? */
+        std::string m_field_value;              /**< The value in the field if it was not null */
+        std::string m_target_type;              /**< The conversion target type */
+    };
+
+    int64_t parse_integer(int64_t column_ind, const std::string& target_type) const;
+    void    set_error(int64_t column_ind, const std::string& target_type) const;
+
+    MYSQL_RES* m_resultset = nullptr;   /**< Underlying result set, freed at dtor */
+    MYSQL_ROW  m_rowdata = nullptr;     /**< Data for current row */
+    int64_t    m_current_row_ind = -1;  /**< Index of current row */
+
+    mutable ConversionError                  m_error;       /**< Error information */
+    std::unordered_map<std::string, int64_t> m_col_indexes; /**< Map of column name -> index */
 };
 }

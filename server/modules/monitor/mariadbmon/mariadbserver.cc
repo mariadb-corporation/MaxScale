@@ -302,12 +302,13 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     }
 
     SlaveStatusArray slave_status_new;
+    bool parse_error = false;
     while (result->next_row())
     {
         SlaveStatus new_row;
         new_row.owning_server = name();
         new_row.master_host = result->get_string(i_master_host);
-        new_row.master_port = result->get_uint(i_master_port);
+        new_row.master_port = result->get_int(i_master_port);
         string last_io_error = result->get_string(i_last_io_error);
         string last_sql_error = result->get_string(i_last_sql_error);
         new_row.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
@@ -315,17 +316,24 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         new_row.slave_io_running =
             SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
         new_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
-        new_row.master_server_id = result->get_uint(i_master_server_id);
+        new_row.master_server_id = result->get_int(i_master_server_id);
 
-        auto rlag = result->get_uint(i_seconds_behind_master);
-        // If slave connection is stopped, the value given by the backend is null -> -1.
-        new_row.seconds_behind_master = (rlag < 0) ? SERVER::RLAG_UNDEFINED :
-            (rlag > INT_MAX) ? INT_MAX : rlag;
+        // If slave connection is stopped, the value given by the backend is null.
+        if (result->field_is_null(i_seconds_behind_master))
+        {
+            new_row.seconds_behind_master = SERVER::RLAG_UNDEFINED;
+        }
+        else
+        {
+            // Seconds_Behind_Master is actually uint64, but it will take a long time until it goes over
+            // int64 limit.
+            new_row.seconds_behind_master = result->get_int(i_seconds_behind_master);
+        }
 
         if (all_slaves_status)
         {
             new_row.name = result->get_string(i_connection_name);
-            new_row.received_heartbeats = result->get_uint(i_slave_rec_hbs);
+            new_row.received_heartbeats = result->get_int(i_slave_rec_hbs);
 
             string using_gtid = result->get_string(i_using_gtid);
             string gtid_io_pos = result->get_string(i_gtid_io_pos);
@@ -333,6 +341,14 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             {
                 new_row.gtid_io_pos = GtidList::from_string(gtid_io_pos);
             }
+        }
+
+        // If parsing fails, discard all query results.
+        if (result->error())
+        {
+            parse_error = true;
+            MXB_ERROR("Query '%s' returned invalid data: %s", query.c_str(), result->error_string().c_str());
+            break;
         }
 
         // Before adding this row to the SlaveStatus array, compare the row to the one from the previous
@@ -370,16 +386,20 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         slave_status_new.push_back(new_row);
     }
 
-    // Compare the previous array to the new one.
-    if (!sstatus_array_topology_equal(slave_status_new))
+    if (!parse_error)
     {
-        m_topology_changed = true;
+        // Compare the previous array to the new one.
+        if (!sstatus_array_topology_equal(slave_status_new))
+        {
+            m_topology_changed = true;
+        }
+
+        // Always write to m_slave_status. Even if the new status is equal by topology,
+        // gtid:s etc may have changed.
+        m_slave_status = std::move(slave_status_new);
     }
 
-    // Always write to m_slave_status. Even if the new status is equal by topology,
-    // gtid:s etc may have changed.
-    m_slave_status = std::move(slave_status_new);
-    return true;
+    return !parse_error;
 }
 
 bool MariaDBServer::update_gtids(string* errmsg_out)
@@ -454,42 +474,49 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
     int i_domain = 2;
     bool rval = false;
     auto result = execute_query(query, errmsg_out);
-    if (result.get() != NULL && result->next_row())
+    if (result != nullptr)
     {
-        rval = true;
-        int64_t server_id_parsed = result->get_uint(i_id);
-        if (server_id_parsed < 0)   // This is very unlikely, requiring an error in server or connector.
+        if (!result->next_row())
         {
-            server_id_parsed = SERVER_ID_UNKNOWN;
-            rval = false;
-        }
-        if (server_id_parsed != m_server_id)
-        {
-            m_server_id = server_id_parsed;
-            m_topology_changed = true;
-        }
-        m_server_base->server->node_id = server_id_parsed;
-
-        bool read_only_parsed = result->get_bool(i_ro);
-        if (read_only_parsed != m_read_only)
-        {
-            m_read_only = read_only_parsed;
-            m_topology_changed = true;
-        }
-
-        if (use_gtid)
-        {
-            int64_t domain_id_parsed = result->get_uint(i_domain);
-            if (domain_id_parsed < 0)   // Same here.
-            {
-                domain_id_parsed = GTID_DOMAIN_UNKNOWN;
-                rval = false;
-            }
-            m_gtid_domain_id = domain_id_parsed;
+            // This should not really happen, means that server is buggy.
+            *errmsg_out = string_printf("Query '%s' did not return any rows.", query.c_str());
         }
         else
         {
-            m_gtid_domain_id = GTID_DOMAIN_UNKNOWN;
+            int64_t server_id_parsed = result->get_int(i_id);
+            bool read_only_parsed = result->get_bool(i_ro);
+            int64_t domain_id_parsed = GTID_DOMAIN_UNKNOWN;
+            if (use_gtid)
+            {
+                domain_id_parsed = result->get_int(i_domain);
+            }
+
+            if (result->error())
+            {
+                // This is unlikely as well.
+                *errmsg_out = string_printf("Query '%s' returned invalid data: %s",
+                                            query.c_str(), result->error_string().c_str());
+            }
+            else
+            {
+                // All values parsed and within expected limits.
+                rval = true;
+                if (server_id_parsed != m_server_id)
+                {
+                    m_server_id = server_id_parsed;
+                    m_topology_changed = true;
+                }
+                m_server_base->server->node_id = server_id_parsed;
+
+                if (read_only_parsed != m_read_only)
+                {
+                    m_read_only = read_only_parsed;
+                    m_topology_changed = true;
+                }
+
+                m_gtid_domain_id = domain_id_parsed;
+            }
+
         }
     }
     return rval;
