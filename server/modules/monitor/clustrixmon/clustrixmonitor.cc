@@ -42,12 +42,6 @@ ClustrixMonitor* ClustrixMonitor::create(MXS_MONITOR* pMonitor)
 
 bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
-    if (!m_monitor->monitored_servers)
-    {
-        MXS_WARNING("No servers specified, cannot start monitor.");
-        return false;
-    }
-
     m_health_urls.clear();
     m_node_infos.clear();
 
@@ -92,37 +86,9 @@ void ClustrixMonitor::tick()
 	break;
 
     case http::Async::READY:
-	{
-	    auto b = std::begin(*m_monitor->monitored_servers);
-	    auto e = std::end(*m_monitor->monitored_servers);
-
-	    for_each(b, e,
-		     [this](MXS_MONITORED_SERVER& ms) {
-                         monitor_stash_current_status(&ms);
-
-			 auto it = find_if(m_node_infos.begin(), m_node_infos.end(),
-					   [&ms](const ClustrixNodeInfo& info) -> bool {
-					       return ms.server->address == info.ip();
-					   });
-
-			 if (it != m_node_infos.end())
-			 {
-			     if (it->is_running())
-			     {
-			         monitor_set_pending_status(&ms, SERVER_RUNNING);
-			     }
-			     else
-			     {
-			         monitor_clear_pending_status(&ms, SERVER_RUNNING);
-			     }
-			 }
-			 else
-			 {
-			     monitor_clear_pending_status(&ms, SERVER_RUNNING);
-			 }
-
-		     });
-
+        if (m_monitor->monitored_servers)
+        {
+            update_server_statuses();
 	    make_health_check();
 	}
 	break;
@@ -232,10 +198,45 @@ void ClustrixMonitor::refresh_cluster_nodes()
             fetch_cluster_nodes();
         }
     }
-    else
+    else if (m_monitor->monitored_servers)
     {
         fetch_cluster_nodes();
     }
+}
+
+void ClustrixMonitor::update_server_statuses()
+{
+    mxb_assert(m_monitor->monitored_servers);
+
+    auto b = std::begin(*m_monitor->monitored_servers);
+    auto e = std::end(*m_monitor->monitored_servers);
+
+    for_each(b, e,
+             [this](MXS_MONITORED_SERVER& ms) {
+                 monitor_stash_current_status(&ms);
+
+                 auto it = find_if(m_node_infos.begin(), m_node_infos.end(),
+                                   [&ms](const ClustrixNodeInfo& info) -> bool {
+                                       return ms.server->address == info.ip();
+                                   });
+
+                 if (it != m_node_infos.end())
+                 {
+                     if (it->is_running())
+                     {
+                         monitor_set_pending_status(&ms, SERVER_RUNNING);
+                     }
+                     else
+                     {
+                         monitor_clear_pending_status(&ms, SERVER_RUNNING);
+                     }
+                 }
+                 else
+                 {
+                     monitor_clear_pending_status(&ms, SERVER_RUNNING);
+                 }
+
+             });
 }
 
 void ClustrixMonitor::make_health_check()

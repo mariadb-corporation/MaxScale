@@ -73,6 +73,7 @@ private:
     void fetch_cluster_nodes();
     void fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms);
     void refresh_cluster_nodes();
+    void update_server_statuses();
 
     void make_health_check();
     void initiate_delayed_http_check();
