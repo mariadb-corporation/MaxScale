@@ -32,7 +32,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/utils.h>
 
 #include "builtin_functions.h"

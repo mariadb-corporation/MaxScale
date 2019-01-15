@@ -23,7 +23,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 
 using std::string;
 

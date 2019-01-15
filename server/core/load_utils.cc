@@ -35,7 +35,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/monitor.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 
 #include "internal/modules.hh"
 #include "internal/config.hh"

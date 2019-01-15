@@ -1473,7 +1473,7 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
     std::unique_ptr<GWBUF> sBuffer(modutil_create_query(statement.c_str()));
     GWBUF* pBuffer = sBuffer.get();
 
-    qc_parse_result result = qc_parse(pBuffer, QC_COLLECT_ALL);
+    qc_parse_result_t result = qc_parse(pBuffer, QC_COLLECT_ALL);
 
     json_object_set_new(pParams, CN_PARSE_RESULT, json_string(qc_result_to_string(result)));
 

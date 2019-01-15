@@ -12,38 +12,36 @@
  */
 #pragma once
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxbase/jansson.h>
-#include <maxscale/buffer.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/buffer.hh>
 
 #define MXS_QUERY_CLASSIFIER_VERSION {3, 0, 0}
 
 /**
  * qc_init_kind_t specifies what kind of initialization should be performed.
  */
-typedef enum qc_init_kind
+enum qc_init_kind_t
 {
     QC_INIT_SELF   = 0x01,  /*< Initialize/finalize the query classifier itself. */
     QC_INIT_PLUGIN = 0x02,  /*< Initialize/finalize the plugin. */
     QC_INIT_BOTH   = 0x03
-} qc_init_kind_t;
+};
 
 /**
  * qc_sql_mode_t specifies what should be assumed of the statements
  * that will be parsed.
  */
-typedef enum qc_sql_mode
+enum qc_sql_mode_t
 {
     QC_SQL_MODE_DEFAULT,    /*< Assume the statements are MariaDB SQL. */
     QC_SQL_MODE_ORACLE      /*< Assume the statements are PL/SQL. */
-} qc_sql_mode_t;
+};
 
 /**
  * @c qc_collect_info_t specifies what information should be collected during parsing.
  */
-typedef enum qc_collect_info
+enum qc_collect_info_t
 {
     QC_COLLECT_ESSENTIALS = 0x00,   /*< Collect only the base minimum. */
     QC_COLLECT_TABLES     = 0x01,   /*< Collect table names. */
@@ -52,14 +50,14 @@ typedef enum qc_collect_info
     QC_COLLECT_FUNCTIONS  = 0x08,   /*< Collect function information. */
 
     QC_COLLECT_ALL = (QC_COLLECT_TABLES | QC_COLLECT_DATABASES | QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS)
-} qc_collect_info_t;
+};
 /**
  * qc_query_type_t defines bits that provide information about a
  * particular statement.
  *
  * Note that more than one bit may be set for a single statement.
  */
-typedef enum qc_query_type
+enum qc_query_type_t
 {
     QUERY_TYPE_UNKNOWN       = 0x000000,    /*< Initial value, can't be tested bitwisely */
     QUERY_TYPE_LOCAL_READ    = 0x000001,    /*< Read non-database data, execute in MaxScale:any */
@@ -87,12 +85,12 @@ typedef enum qc_query_type
     QUERY_TYPE_SHOW_DATABASES     = 0x200000,   /*< Show list of databases */
     QUERY_TYPE_SHOW_TABLES        = 0x400000,   /*< Show list of tables */
     QUERY_TYPE_DEALLOC_PREPARE    = 0x1000000   /*< Dealloc named prepare stmt:all */
-} qc_query_type_t;
+};
 
 /**
  * qc_query_op_t defines the operations a particular statement can perform.
  */
-typedef enum qc_query_op
+enum qc_query_op_t
 {
     QUERY_OP_UNDEFINED = 0,
 
@@ -113,56 +111,56 @@ typedef enum qc_query_op
     QUERY_OP_SHOW,
     QUERY_OP_TRUNCATE,
     QUERY_OP_UPDATE,
-} qc_query_op_t;
+};
 
 /**
  * qc_parse_result_t defines the possible outcomes when a statement is parsed.
  */
-typedef enum qc_parse_result
+enum qc_parse_result_t
 {
     QC_QUERY_INVALID          = 0,  /*< The query was not recognized or could not be parsed. */
     QC_QUERY_TOKENIZED        = 1,  /*< The query was classified based on tokens; incompletely classified. */
     QC_QUERY_PARTIALLY_PARSED = 2,  /*< The query was only partially parsed; incompletely classified. */
     QC_QUERY_PARSED           = 3   /*< The query was fully parsed; completely classified. */
-} qc_parse_result_t;
+};
 
 /**
  * QC_FIELD_INFO contains information about a field used in a statement.
  */
-typedef struct qc_field_info
+struct QC_FIELD_INFO
 {
     char* database; /** Present if the field is of the form "a.b.c", NULL otherwise. */
     char* table;    /** Present if the field is of the form "a.b", NULL otherwise. */
     char* column;   /** Always present. */
-} QC_FIELD_INFO;
+};
 
 /**
  * QC_FUNCTION_INFO contains information about a function used in a statement.
  */
-typedef struct qc_function_info
+struct QC_FUNCTION_INFO
 {
     char*          name;    /** Name of function. */
     QC_FIELD_INFO* fields;  /** What fields the function accesses. */
     uint32_t       n_fields;/** The number of fields in @c fields. */
-} QC_FUNCTION_INFO;
+};
 
 /**
  * Each API function returns @c QC_RESULT_OK if the actual parsing process
  * succeeded, and some error code otherwise.
  */
-typedef enum qc_result
+enum qc_result_t
 {
     QC_RESULT_OK,
     QC_RESULT_ERROR
-} qc_result_t;
+};
 
 /**
  * QC_STMT_INFO is an opaque type where the query classifier stores
  * information about a statement.
  */
-typedef struct qc_stmt_info
+struct QC_STMT_INFO
 {
-} QC_STMT_INFO;
+};
 
 /**
  * QUERY_CLASSIFIER defines the object a query classifier plugin must
@@ -171,7 +169,7 @@ typedef struct qc_stmt_info
  * To a user of the query classifier functionality, it can in general
  * be ignored.
  */
-typedef struct query_classifier
+struct QUERY_CLASSIFIER
 {
     /**
      * Called once to setup the query classifier
@@ -431,27 +429,27 @@ typedef struct query_classifier
      * @param info  The info to be closed.
      */
     void (* qc_info_close)(QC_STMT_INFO* info);
-} QUERY_CLASSIFIER;
+};
 
 /**
  * QC_CACHE_PROPERTIES specifies the limits of the query classification cache.
  */
-typedef struct QC_CACHE_PROPERTIES
+struct QC_CACHE_PROPERTIES
 {
     int64_t max_size;   /** The maximum size of the cache. */
-} QC_CACHE_PROPERTIES;
+};
 
 /**
  * QC_CACHE_STATS provides statistics of the cache.
  */
-typedef struct QC_CACHE_STATS
+struct QC_CACHE_STATS
 {
     int64_t size;       /** The current size of the cache. */
     int64_t inserts;    /** The number of inserts. */
     int64_t hits;       /** The number of hits. */
     int64_t misses;     /** The number of misses. */
     int64_t evictions;  /** The number of evictions. */
-} QC_CACHE_STATS;
+};
 
 /**
  * Loads and sets up the default query classifier.
@@ -941,5 +939,3 @@ json_t* qc_get_cache_stats_as_json();
  * @return The corresponding string.
  */
 const char* qc_result_to_string(qc_parse_result_t result);
-
-MXS_END_DECLS

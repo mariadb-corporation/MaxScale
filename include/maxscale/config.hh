@@ -28,7 +28,7 @@
 #include <maxbase/jansson.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/server.hh>
 
 class SERVICE;

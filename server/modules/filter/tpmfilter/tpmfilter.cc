@@ -61,7 +61,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/server.hh>
 #include <maxbase/atomic.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 
 /* The maximum size for query statements in a transaction (64MB) */
 static size_t sql_size_limit = 64 * 1024 * 1024;

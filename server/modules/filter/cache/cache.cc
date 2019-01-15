@@ -20,7 +20,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/paths.h>
 #include "storagefactory.hh"
 #include "storage.hh"

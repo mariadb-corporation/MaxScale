@@ -21,7 +21,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/resultset.hh>
 
 namespace schemarouter

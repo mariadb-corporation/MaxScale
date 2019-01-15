@@ -30,7 +30,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,

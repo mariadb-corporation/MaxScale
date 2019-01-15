@@ -16,7 +16,7 @@
 #include <iostream>
 #include <maxscale/log.hh>
 #include <maxscale/paths.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mysql.hh>
 
 using namespace std;

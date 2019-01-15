@@ -15,7 +15,7 @@
 #include <maxbase/maxbase.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/paths.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 
 #define MYSQL_HEADER_LEN 4
 

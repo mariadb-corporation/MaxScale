@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/jansson.hh>
 
 MXS_BEGIN_DECLS

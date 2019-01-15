@@ -24,7 +24,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/log.hh>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include "../../server/modules/protocol/MySQL/mariadbclient/setsqlmodeparser.hh"
 #include "testreader.hh"
 using std::cerr;

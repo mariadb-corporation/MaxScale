@@ -19,7 +19,7 @@
 #include <maxscale/maxscale_test.h>
 #include <maxscale/log.hh>
 #include <maxscale/config.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
 #include <maxscale/routingworker.hh>

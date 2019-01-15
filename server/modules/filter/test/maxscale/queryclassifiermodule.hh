@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include "module.hh"
 
 namespace maxscale

@@ -23,7 +23,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 
 /**
  * @file datastream.c - Streaming of bulk inserts

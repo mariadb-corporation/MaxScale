@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.h>
 #include <mysql.h>
 #include <unistd.h>

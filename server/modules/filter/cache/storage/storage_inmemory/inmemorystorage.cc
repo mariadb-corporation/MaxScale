@@ -15,7 +15,7 @@
 #include "inmemorystorage.hh"
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include "inmemorystoragest.hh"
 #include "inmemorystoragemt.hh"
 

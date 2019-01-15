@@ -62,7 +62,7 @@
 
 #include <maxbase/assert.h>
 #include <maxscale/log.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>

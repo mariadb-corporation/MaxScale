@@ -17,7 +17,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include "storage.hh"
 
 namespace

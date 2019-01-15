@@ -31,7 +31,7 @@
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>

@@ -21,7 +21,7 @@
 #include <iostream>
 #include <string>
 
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>

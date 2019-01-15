@@ -25,7 +25,7 @@
 #include <maxbase/worker.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 
 MXS_BEGIN_DECLS

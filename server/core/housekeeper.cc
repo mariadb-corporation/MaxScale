@@ -26,7 +26,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/json_api.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/query_classifier.hh>
 
 /**
  * @file housekeeper.cc  Provide a mechanism to run periodic tasks
