@@ -13,6 +13,7 @@
 
 #include "clustrixmonitor.hh"
 #include <algorithm>
+#include "../../../core/internal/config_runtime.hh"
 
 namespace http = mxb::http;
 using namespace std;
@@ -149,10 +150,26 @@ void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
                     int health_port = row[3] ? atoi(row[3]) : DEFAULT_HEALTH_PORT;
                     int health_check_threshold = m_config.health_check_threshold();
 
-                    node_infos.emplace_back(id, ip, mysql_port, health_port, health_check_threshold);
+                    string name = "Clustrix-Server-" + std::to_string(id);
 
-                    string health_url = "http://" + ip + ":" + std::to_string(health_port);
-                    health_urls.push_back(health_url);
+                    if (SERVER::find_by_unique_name(name) ||
+			runtime_create_server(name.c_str(),
+                                              ip.c_str(),
+                                              std::to_string(mysql_port).c_str(),
+                                              "mariadbbackend",
+                                              "mysqlbackendauth",
+                                              false))
+		      {
+                        node_infos.emplace_back(id, ip, mysql_port, health_port, health_check_threshold);
+
+                        string health_url = "http://" + ip + ":" + std::to_string(health_port);
+                        health_urls.push_back(health_url);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Could not create server %s at %s:%d.",
+                                  name.c_str(), ip.c_str(), mysql_port);
+                    }
                 }
                 else
                 {

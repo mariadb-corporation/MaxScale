@@ -57,7 +57,8 @@ bool runtime_create_server(const char* name,
                            const char* address,
                            const char* port,
                            const char* protocol,
-                           const char* authenticator);
+                           const char* authenticator,
+                           bool        serialize = true);
 
 /**
  * @brief Destroy a server

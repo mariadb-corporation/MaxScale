@@ -209,7 +209,8 @@ bool runtime_create_server(const char* name,
                            const char* address,
                            const char* port,
                            const char* protocol,
-                           const char* authenticator)
+                           const char* authenticator,
+                           bool        serialize)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
@@ -244,7 +245,7 @@ bool runtime_create_server(const char* name,
 
             Server* server = Server::server_alloc(name, ctx.parameters);
 
-            if (server && server->serialize())
+            if (server && (!serialize || server->serialize()))
             {
                 rval = true;
                 MXS_NOTICE("Created server '%s' at %s:%u",
