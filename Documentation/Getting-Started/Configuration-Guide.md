@@ -1096,6 +1096,12 @@ default. To enable them, define the timeout in seconds in the service's
 configuration section. A value of zero is interpreted as no timeout, the same
 as if the parameter is not defined.
 
+**Warning:** If a connection is idle for longer than the configured connection
+timeout, it will be forcefully disconnected and a warning will be logged in the
+MaxScale log file. If you are performing long-running maintenance operations
+(e.g. `ALTER TABLE`) either do them with a direct connection to the server or
+set `connection_timeout` to zero before executing them.
+
 Example:
 
 ```
