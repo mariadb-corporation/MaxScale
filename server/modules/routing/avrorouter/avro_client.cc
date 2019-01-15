@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <maxavro.h>
+#include <maxavro.hh>
 #include <fstream>
 #include <sstream>
 #include <maxscale/service.hh>

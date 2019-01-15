@@ -17,9 +17,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <jansson.h>
-#include <maxscale/buffer.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/buffer.hh>
 
 /** File magic and sync marker sizes block sizes */
 #define AVRO_MAGIC_SIZE  4
@@ -155,5 +153,3 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file);
 /** File error functions */
 enum maxavro_error maxavro_get_error(MAXAVRO_FILE* file);
 const char*        maxavro_get_error_string(MAXAVRO_FILE* file);
-
-MXS_END_DECLS

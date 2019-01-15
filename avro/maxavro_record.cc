@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include "maxavro_internal.h"
+#include "maxavro_internal.hh"
 #include <string.h>
 #include <maxbase/assert.h>
 #include <maxscale/log.hh>

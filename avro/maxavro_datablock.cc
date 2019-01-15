@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxavro.h"
+#include "maxavro.hh"
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>

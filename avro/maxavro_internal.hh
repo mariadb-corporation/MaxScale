@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "maxavro.h"
-#include <maxscale/alloc.h>
+#include "maxavro.hh"
+#include <maxbase/alloc.h>
 
 /**
  * Private header for maxavro

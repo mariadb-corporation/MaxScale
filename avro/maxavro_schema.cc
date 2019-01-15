@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxavro_internal.h"
+#include "maxavro_internal.hh"
 #include <jansson.h>
 #include <string.h>
 #include <maxbase/assert.h>
