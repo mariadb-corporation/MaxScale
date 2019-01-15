@@ -13,6 +13,7 @@
 #pragma once
 
 #include "clustrixmon.hh"
+#include <map>
 #include <maxscale/monitor.hh>
 #include <maxbase/http.hh>
 #include "clustrixnodeinfo.hh"
@@ -85,12 +86,12 @@ private:
     }
 
 private:
-    Config                        m_config;
-    std::vector<std::string>      m_config_servers;
-    std::vector<ClustrixNodeInfo> m_node_infos;
-    std::vector<std::string>      m_health_urls;
-    mxb::http::Async              m_http;
-    uint32_t                      m_delayed_http_check_id { 0 };
-    long                          m_last_cluster_check    { 0 };
-    MXS_MONITORED_SERVER*         m_pMonitored_server     { nullptr };
+    Config                          m_config;
+    std::vector<std::string>        m_config_servers;
+    std::map<int, ClustrixNodeInfo> m_node_infos;
+    std::vector<std::string>        m_health_urls;
+    mxb::http::Async                m_http;
+    uint32_t                        m_delayed_http_check_id { 0 };
+    long                            m_last_cluster_check    { 0 };
+    MXS_MONITORED_SERVER*           m_pMonitored_server     { nullptr };
 };

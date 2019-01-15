@@ -13,6 +13,7 @@
 
 #include "clustrixmonitor.hh"
 #include <algorithm>
+#include <set>
 #include "../../../core/internal/config_runtime.hh"
 
 namespace http = mxb::http;
@@ -135,10 +136,13 @@ void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
         {
             mxb_assert(mysql_field_count(ms.con) == 4);
 
-            vector<ClustrixNodeInfo> node_infos;
-            vector<string> health_urls;
-
             MYSQL_ROW row;
+
+            set<int> nids;
+            for_each(m_node_infos.begin(), m_node_infos.end(),
+                     [&nids](const pair<int, ClustrixNodeInfo>& element) {
+                         nids.insert(element.first);
+                     });
 
             while ((row = mysql_fetch_row(pResult)) != nullptr)
             {
@@ -150,37 +154,70 @@ void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
                     int health_port = row[3] ? atoi(row[3]) : DEFAULT_HEALTH_PORT;
                     int health_check_threshold = m_config.health_check_threshold();
 
-                    string name = "Clustrix-Server-" + std::to_string(id);
+                    string name = "@Clustrix-Server-" + std::to_string(id);
 
-                    if (SERVER::find_by_unique_name(name) ||
-			runtime_create_server(name.c_str(),
-                                              ip.c_str(),
-                                              std::to_string(mysql_port).c_str(),
-                                              "mariadbbackend",
-                                              "mysqlbackendauth",
-                                              false))
-		      {
-                        node_infos.emplace_back(id, ip, mysql_port, health_port, health_check_threshold);
+                    auto it = m_node_infos.find(id);
 
-                        string health_url = "http://" + ip + ":" + std::to_string(health_port);
-                        health_urls.push_back(health_url);
+                    if (it == m_node_infos.end())
+                    {
+                        mxb_assert(!SERVER::find_by_unique_name(name));
+
+			if (runtime_create_server(name.c_str(),
+                                                  ip.c_str(),
+                                                  std::to_string(mysql_port).c_str(),
+                                                  "mariadbbackend",
+                                                  "mysqlbackendauth",
+                                                  false))
+                        {
+                            SERVER* pServer = SERVER::find_by_unique_name(name);
+                            mxb_assert(pServer);
+
+                            ClustrixNodeInfo info(id, ip, mysql_port, health_port, health_check_threshold, pServer);
+
+                            m_node_infos.insert(make_pair(id, info));
+                        }
+                        else
+                        {
+                            MXS_ERROR("Could not create server %s at %s:%d.",
+                                      name.c_str(), ip.c_str(), mysql_port);
+                        }
                     }
                     else
                     {
-                        MXS_ERROR("Could not create server %s at %s:%d.",
-                                  name.c_str(), ip.c_str(), mysql_port);
+                        mxb_assert(SERVER::find_by_unique_name(name));
+
+                        auto it = nids.find(id);
+                        mxb_assert(it != nids.end());
+                        nids.erase(it);
                     }
                 }
                 else
                 {
-                    MXS_WARNING("Either nodeid and/or iface_ip is missing, "
-                                "ignoring node.");
+                    MXS_WARNING("Either nodeid and/or iface_ip is missing, ignoring node.");
                 }
             }
 
             mysql_free_result(pResult);
 
-            m_node_infos.swap(node_infos);
+	    for_each(nids.begin(), nids.end(),
+		     [this](int nid) {
+		       auto it = m_node_infos.find(nid);
+		       mxb_assert(it != m_node_infos.end());
+
+		       ClustrixNodeInfo& info = it->second;
+		       info.deactivate_server();
+		       m_node_infos.erase(it);
+		     });
+
+            vector<string> health_urls;
+            for_each(m_node_infos.begin(), m_node_infos.end(),
+                     [&health_urls](const pair<int, ClustrixNodeInfo>& element) {
+                         const ClustrixNodeInfo& info = element.second;
+                         string url = "http://" + info.ip() + ":" + std::to_string(info.health_port());
+
+                         health_urls.push_back(url);
+                     });
+
             m_health_urls.swap(health_urls);
 
             m_last_cluster_check = now();
@@ -233,13 +270,16 @@ void ClustrixMonitor::update_server_statuses()
                  monitor_stash_current_status(&ms);
 
                  auto it = find_if(m_node_infos.begin(), m_node_infos.end(),
-                                   [&ms](const ClustrixNodeInfo& info) -> bool {
+                                   [&ms](const std::pair<int,ClustrixNodeInfo>& element) -> bool {
+                                       const ClustrixNodeInfo& info = element.second;
                                        return ms.server->address == info.ip();
                                    });
 
                  if (it != m_node_infos.end())
                  {
-                     if (it->is_running())
+                     const ClustrixNodeInfo& info = it->second;
+
+                     if (info.is_running())
                      {
                          monitor_set_pending_status(&ms, SERVER_RUNNING);
                      }
@@ -310,21 +350,23 @@ bool ClustrixMonitor::check_http(Call::action_t action)
             {
                 const vector<http::Result>& results = m_http.results();
 
-                for (size_t i = 0; i < results.size(); ++i)
-                {
-                    const auto& result = results[i];
+                auto it = m_node_infos.begin();
 
-                    bool running = false;
+                for_each(results.begin(), results.end(),
+                         [&it](const http::Result& result) {
+                             bool running = false;
 
-                    if (result.code == 200)
-                    {
-		        running = true;
-                    }
+                             if (result.code == 200)
+                             {
+                                 running = true;
+                             }
 
-		    auto& node_info = m_node_infos[i];
+                             auto& node_info = it->second;
 
-		    node_info.set_running(running);
-                }
+                             node_info.set_running(running);
+
+                             ++it;
+                         });
             }
             break;
 
