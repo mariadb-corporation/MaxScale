@@ -22,7 +22,7 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/protocol.h>
+#include <maxscale/protocol.hh>
 #include <maxscale/ssl.hh>
 
 #include <memory>

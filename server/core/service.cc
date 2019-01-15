@@ -42,7 +42,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/listener.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/protocol.h>
+#include <maxscale/protocol.hh>
 #include <maxscale/resultset.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>

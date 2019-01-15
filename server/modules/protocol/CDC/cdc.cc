@@ -36,7 +36,7 @@
 #include <cdc.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/protocol.h>
+#include <maxscale/protocol.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/poll.hh>
 

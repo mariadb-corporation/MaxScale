@@ -13,7 +13,7 @@
 #pragma once
 
 /**
- * @file protocol.h
+ * @file protocol.hh
  *
  * The protocol module interface definition.
  */
@@ -21,18 +21,17 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxbase/jansson.h>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 
-MXS_BEGIN_DECLS
 
 struct DCB;
-struct SERVER;
+class SERVER;
 struct MXS_SESSION;
 
 /**
  * Protocol module API
  */
-typedef struct mxs_protocol
+struct MXS_PROTOCOL
 {
     /**
      * EPOLLIN handler, used to read available data from network socket
@@ -106,7 +105,7 @@ typedef struct mxs_protocol
      *
      * @return The opened file descriptor or DCBFD_CLOSED on error
      */
-    int32_t (* connect)(DCB* dcb, struct SERVER* server, MXS_SESSION* session);
+    int32_t (* connect)(DCB* dcb, SERVER* server, MXS_SESSION* session);
 
     /**
      * Free protocol data allocated in the connect handler
@@ -131,7 +130,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (* auth)(DCB* dcb, struct SERVER* server, MXS_SESSION* session, GWBUF* buffer);
+    int32_t (* auth)(DCB* dcb, SERVER* server, MXS_SESSION* session, GWBUF* buffer);
 
     /**
      * Returns the name of the default authenticator module for this protocol
@@ -169,7 +168,7 @@ typedef struct mxs_protocol
      * @return JSON representation of the DCB
      */
     json_t* (*diagnostics_json)(DCB * dcb);
-} MXS_PROTOCOL;
+};
 
 /**
  * The MXS_PROTOCOL version data. The following should be updated whenever
@@ -186,9 +185,7 @@ typedef struct mxs_protocol
  * @note The values of the capabilities here *must* be between 0x010000000000
  *       and 0x800000000000, that is, bits 40 to 47.
  */
-typedef enum protocol_capability
+enum protocol_capability_t
 {
     PCAP_TYPE_NONE = 0x0    // TODO: remove once protocol capabilities are defined
-} protocol_capability_t;
-
-MXS_END_DECLS
+};

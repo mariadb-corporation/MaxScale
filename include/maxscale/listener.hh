@@ -20,7 +20,7 @@
 #include <vector>
 
 #include <maxbase/jansson.h>
-#include <maxscale/protocol.h>
+#include <maxscale/protocol.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/service.hh>
 #include <maxscale/routingworker.hh>

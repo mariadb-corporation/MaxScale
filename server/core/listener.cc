@@ -29,7 +29,7 @@
 
 #include <maxscale/paths.h>
 #include <maxscale/ssl.hh>
-#include <maxscale/protocol.h>
+#include <maxscale/protocol.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/service.hh>

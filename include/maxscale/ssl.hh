@@ -19,7 +19,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/protocol.h>
+#include <maxscale/protocol.hh>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>

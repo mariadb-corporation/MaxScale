@@ -19,7 +19,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/protocol.h>
+#include <maxscale/protocol.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
