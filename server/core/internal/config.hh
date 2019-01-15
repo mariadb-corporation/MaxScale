@@ -23,7 +23,7 @@
 #include <unordered_set>
 
 #include <maxbase/jansson.h>
-#include <maxscale/ssl.h>
+#include <maxscale/ssl.hh>
 
 #define DEFAULT_NBPOLLS             3       /**< Default number of non block polls before we block */
 #define DEFAULT_POLLSLEEP           1000    /**< Default poll wait time (milliseconds) */

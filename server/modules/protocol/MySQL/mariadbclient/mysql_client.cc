@@ -35,7 +35,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
-#include <maxscale/ssl.h>
+#include <maxscale/ssl.hh>
 #include <maxscale/utils.h>
 
 #include "setparser.hh"

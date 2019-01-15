@@ -21,7 +21,7 @@
 
 #include <maxbase/jansson.h>
 #include <maxscale/protocol.h>
-#include <maxscale/ssl.h>
+#include <maxscale/ssl.hh>
 #include <maxscale/service.hh>
 #include <maxscale/routingworker.hh>
 

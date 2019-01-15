@@ -28,7 +28,7 @@
 #include <string>
 
 #include <maxscale/paths.h>
-#include <maxscale/ssl.h>
+#include <maxscale/ssl.hh>
 #include <maxscale/protocol.h>
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>

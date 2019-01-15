@@ -13,23 +13,21 @@
 #pragma once
 
 /**
- * @file ssl.h
+ * @file ssl.hh
  *
  * The SSL definitions for MaxScale
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/protocol.h>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/dh.h>
 
-MXS_BEGIN_DECLS
-
 struct DCB;
 
-typedef enum ssl_method_type
+enum ssl_method_type_t
 {
 #ifndef OPENSSL_1_1
     SERVICE_TLS10,
@@ -42,7 +40,7 @@ typedef enum ssl_method_type
     SERVICE_TLS_MAX,
     SERVICE_SSL_TLS_MAX,
     SERVICE_SSL_UNKNOWN
-} ssl_method_type_t;
+};
 
 /**
  * Return codes for SSL authentication checks
@@ -55,23 +53,23 @@ typedef enum ssl_method_type
  * The ssl_listener structure is used to aggregate the SSL configuration items
  * and data for a particular listener
  */
-typedef struct ssl_listener
+struct SSL_LISTENER
 {
     SSL_CTX*    ctx;
-    SSL_METHOD* method;                     /*<  SSLv3 or TLS1.0/1.1/1.2 methods
-                                             * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html
-                                             **/
-    int               ssl_cert_verify_depth;/*< SSL certificate verification depth */
-    ssl_method_type_t ssl_method_type;      /*< Which of the SSLv3 or TLS1.0/1.1/1.2 methods to use */
-    char*             ssl_cert;             /*< SSL certificate */
-    char*             ssl_key;              /*< SSL private key */
-    char*             ssl_ca_cert;          /*< SSL CA certificate */
-    bool              ssl_init_done;        /*< If SSL has already been initialized for this service
-                                             * */
-    bool ssl_verify_peer_certificate;       /*< Enable peer certificate verification */
-    struct ssl_listener
-    * next;             /*< Next SSL configuration, currently used to store obsolete configurations */
-} SSL_LISTENER;
+    SSL_METHOD* method;     /**<  SSLv3 or TLS1.0/1.1/1.2 methods
+                             * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
+
+    int               ssl_cert_verify_depth;/**< SSL certificate verification depth */
+    ssl_method_type_t ssl_method_type;      /**< Which of the SSLv3 or TLS1.0/1.1/1.2 methods to use */
+
+    char* ssl_cert;                     /**< SSL certificate */
+    char* ssl_key;                      /**< SSL private key */
+    char* ssl_ca_cert;                  /**< SSL CA certificate */
+    bool  ssl_init_done;                /**< If SSL has already been initialized for this service */
+    bool  ssl_verify_peer_certificate;  /**< Enable peer certificate verification */
+
+    SSL_LISTENER* next;     /**< Next SSL configuration, currently used to store obsolete configurations */
+};
 
 int               ssl_authenticate_client(DCB* dcb, bool is_capable);
 bool              ssl_is_connection_healthy(DCB* dcb);
@@ -95,5 +93,3 @@ int ssl_authenticate_check_status(DCB* dcb);
 
 // TODO: Move this to an internal ssl.h header
 void write_ssl_config(int fd, SSL_LISTENER* ssl);
-
-MXS_END_DECLS

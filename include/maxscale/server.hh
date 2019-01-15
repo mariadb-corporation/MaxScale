@@ -18,7 +18,7 @@
 #include <string>
 #include <unordered_map>
 #include <maxbase/average.hh>
-#include <maxscale/ssl.h>
+#include <maxscale/ssl.hh>
 
 // A mapping from a path to a percentage, e.g.: "/disk" -> 80.
 typedef std::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;

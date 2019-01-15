@@ -23,7 +23,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/protocol.h>
-#include <maxscale/ssl.h>
+#include <maxscale/ssl.hh>
 
 #include <memory>
 
