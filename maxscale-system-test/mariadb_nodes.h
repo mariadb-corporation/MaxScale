@@ -154,6 +154,14 @@ public:
     int connect(const std::string& db = "test");
 
     /**
+     * Get a Connection to a node
+     */
+    Connection get_connection(int i, const std::string& db = "test")
+    {
+        return Connection(IP[i], port[i], user_name, password, db, ssl);
+    }
+
+    /**
      * Repeatedly try to connect with one second sleep in between attempts
      *
      * @return True on success

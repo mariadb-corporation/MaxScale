@@ -167,6 +167,20 @@ int main(int argc, char *argv[])
         }
     }
 
+
+    /**
+     * MXS-2252: Proxy Protocol not displaying originating IP address in SHOW PROCESSLIST
+     * https://jira.mariadb.org/browse/MXS-2252
+     */
+    Connection direct = test.repl->get_connection(0);
+    Connection rwsplit = test.maxscales->rwsplit(0);
+    direct.connect();
+    rwsplit.connect();
+    auto d = direct.field("SELECT USER()");
+    auto r = rwsplit.field("SELECT USER()");
+    test.tprintf("Direct: %s Readwritesplit: %s", d.c_str(), r.c_str());
+    test.expect(d == r, "Both connections should return the same user: %s != %s", d.c_str(), r.c_str());
+
     if (server_proxy_setting)
     {
         // Restore server settings.
