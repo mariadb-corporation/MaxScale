@@ -390,8 +390,18 @@ uint32_t QueryClassifier::ps_get_type(std::string id) const
 
 void QueryClassifier::ps_erase(GWBUF* buffer)
 {
-    m_ps_handles.erase(qc_mysql_extract_ps_id(buffer));
-    m_sPs_manager->erase(buffer);
+    if (qc_mysql_is_ps_command(mxs_mysql_get_command(buffer)))
+    {
+        // Erase the type of the statement stored with the internal ID
+        m_sPs_manager->erase(ps_id_internal_get(buffer));
+        // ... and then erase the external to internal ID mapping
+        m_ps_handles.erase(qc_mysql_extract_ps_id(buffer));
+    }
+    else
+    {
+        // Not a PS command, we don't need the ID mapping
+        m_sPs_manager->erase(buffer);
+    }
 }
 
 bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const

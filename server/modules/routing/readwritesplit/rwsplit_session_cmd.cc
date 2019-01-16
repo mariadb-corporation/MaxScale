@@ -29,19 +29,24 @@ using namespace maxscale;
  */
 
 
-static std::string extract_error(GWBUF* buffer)
+std::string extract_error(GWBUF* buffer)
 {
     std::string rval;
 
     if (MYSQL_IS_ERROR_PACKET(((uint8_t*)GWBUF_DATA(buffer))))
     {
-        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer));
+        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
         char replybuf[replylen];
         gwbuf_copy_data(buffer, 0, sizeof(replybuf), (uint8_t*)replybuf);
         std::string err;
         std::string msg;
-        err.append(replybuf + 8, 5);
-        msg.append(replybuf + 13, replylen - 4 - 5);
+
+        /**
+         * The payload starts with a one byte command followed by a two byte error code, a six byte state and
+         * a human-readable string that spans the rest of the packet.
+         */
+        err.append(replybuf + MYSQL_HEADER_LEN + 3, 6);
+        msg.append(replybuf + MYSQL_HEADER_LEN + 3 + 6, replylen - MYSQL_HEADER_LEN - 3 - 6);
         rval = err + ": " + msg;
     }
 

@@ -46,6 +46,7 @@ int main(int argc, char** argv)
     test.add_result(strcmp(buffer, server_id[0]), "Expected server_id '%s', got '%s'", server_id[0], buffer);
 
     mysql_stmt_close(stmt);
+
     stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
 
     // Execute read, should return a slave server ID
@@ -65,6 +66,9 @@ int main(int argc, char** argv)
     mysql_stmt_close(stmt);
 
     test.maxscales->close_maxscale_connections(0);
+
+    // MXS-2266: COM_STMT_CLOSE causes a warning to be logged
+    test.log_excludes(0, "Closing unknown prepared statement");
 
     return test.global_result;
 }
