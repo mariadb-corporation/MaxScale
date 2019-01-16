@@ -451,6 +451,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     }
     else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
     {
+        mxb_assert(!mxs_mysql_is_ps_command(m_qc.current_route_info().command()));
         m_qc.ps_erase(querybuf);
     }
 
