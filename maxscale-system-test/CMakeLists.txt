@@ -455,7 +455,7 @@ add_test_executable(mxs359_read_only.cpp mxs359_read_only mxs359_read_only LABEL
 # Test master_failure_mode=error_on_write and master replacement
 add_test_executable(mxs359_error_on_write.cpp mxs359_error_on_write mxs359_error_on_write LABELS readwritesplit REPL_BACKEND)
 
-# Binary protocol prepared statement tests
+# Binary protocol prepared statement tests (also tests MXS-2266)
 add_test_executable(binary_ps.cpp binary_ps replication LABELS readwritesplit LIGHT REPL_BACKEND)
 add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
