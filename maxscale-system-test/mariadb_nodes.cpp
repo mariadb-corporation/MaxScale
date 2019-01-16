@@ -456,93 +456,60 @@ int Mariadb_nodes::start_replication()
 int Galera_nodes::start_galera()
 {
     bool old_verbose = verbose;
-    char str[1024];
-    char sys1[1024];
     int local_result = 0;
     local_result += stop_nodes();
 
-    // Remove the grastate.dat file
-    ssh_node(0, "rm -f /var/lib/mysql/grastate.dat", true);
+    std::stringstream ss;
+
+    for (int i = 0; i < N; i++)
+    {
+        ss << (i == 0 ? "" : ",") << IP_private[i];
+    }
+
+    auto gcomm = ss.str();
+
+    for (int i = 0; i < N; i++)
+    {
+        // Remove the grastate.dat file
+        ssh_node(i, "rm -f /var/lib/mysql/grastate.dat", true);
+
+        ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
+        ssh_node_f(i, true, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", gcomm.c_str());
+        ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
+
+        ssh_node_f(i,
+                   true,
+                   "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
+                   "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
+                   IP[i]);
+    }
 
     printf("Starting new Galera cluster\n");
     fflush(stdout);
 
-    ssh_node(0, "echo [mysqld] > cluster_address.cnf", false);
-    ssh_node(0, "echo wsrep_cluster_address=gcomm:// >>  cluster_address.cnf", false);
-    ssh_node(0, "cp cluster_address.cnf /etc/my.cnf.d/", true);
+    // Start the first node that also starts a new cluster
+    ssh_node_f(0, true, "galera_new_cluster");
 
-    ssh_node_f(0,
-               true,
-               "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
-               "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
-               IP[0]);
-
-
-    if (start_node(0, (char*) " --wsrep-cluster-address=gcomm://") != 0)
+    for (int i = 0; i < N; i++)
     {
-        cout << "Failed to start first node, trying to prepare it again" << endl;
-        cout << "---------- BEGIN LOGS ----------" << endl;
-        verbose = true;
-        ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
-        cout << "----------- END LOGS -----------" << endl;
-        prepare_server(0);
-        local_result += start_node(0, (char*) " --wsrep-cluster-address=gcomm://");
+        if (start_node(i, "") != 0)
+        {
+            cout << "Failed to start node" << i << endl;
+            cout << "---------- BEGIN LOGS ----------" << endl;
+            verbose = true;
+            ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
+            cout << "----------- END LOGS -----------" << endl;
+        }
     }
 
+    char str[1024];
     sprintf(str, "%s/create_user_galera.sh", test_dir);
     copy_to_node_legacy(str, "~/", 0);
 
-    sprintf(str,
-            "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
-            user_name,
-            password,
-            socket_cmd[0]);
-    ssh_node(0, str, false);
-
-    std::vector<std::thread> threads;
-    std::mutex lock;
-
-    for (int i = 1; i < N; i++)
-    {
-        auto func = [&, i]() {
-                printf("Starting node %d\n", i);
-                fflush(stdout);
-                ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
-                sprintf(str, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", IP_private[0]);
-                ssh_node(i, str, true);
-                ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
-                ssh_node_f(i,
-                           true,
-                           "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
-                           "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
-                           IP[i]);
-
-                sprintf(&sys1[0], " --wsrep-cluster-address=gcomm://%s", IP_private[0]);
-                if (this->verbose)
-                {
-                    printf("%s\n", sys1);
-                    fflush(stdout);
-                }
-                fflush(stdout);
-
-                if (start_node(i, sys1))
-                {
-                    std::lock_guard<std::mutex> guard(lock);
-                    cout << "Failed to start node " << i << endl;
-                    cout << "---------- BEGIN LOGS ----------" << endl;
-                    verbose = true;
-                    ssh_node_f(i, true, "sudo journalctl -u mariadb | tail -n 50");
-                    cout << "----------- END LOGS -----------" << endl;
-                    local_result++;
-                }
-            };
-        threads.emplace_back(func);
-    }
-
-    for (auto& a : threads)
-    {
-        a.join();
-    }
+    ssh_node_f(0, false, "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
+               user_name,
+               password,
+               socket_cmd[0]);
 
     local_result += robust_connect(5) ? 0 : 1;
     local_result += execute_query(nodes[0], "%s", create_repl_user);
