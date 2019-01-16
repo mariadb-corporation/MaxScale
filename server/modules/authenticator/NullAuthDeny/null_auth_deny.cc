@@ -32,7 +32,7 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/users.h>
 
 static bool null_auth_set_protocol_data(DCB* dcb, GWBUF* buf);

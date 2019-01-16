@@ -19,7 +19,7 @@
 #include <jansson.h>
 #include <memory>
 #include <vector>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
 #include <maxscale/pcre2.h>
 

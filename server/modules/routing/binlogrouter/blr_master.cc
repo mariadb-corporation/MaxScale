@@ -42,7 +42,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/protocol/mysql.hh>

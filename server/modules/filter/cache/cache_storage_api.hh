@@ -21,7 +21,7 @@
 #include <functional>
 #include <string>
 
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/protocol/mysql.hh>
 
 typedef enum cache_result_bits

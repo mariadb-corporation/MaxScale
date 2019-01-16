@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <string>
 #include <string.h>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 
 

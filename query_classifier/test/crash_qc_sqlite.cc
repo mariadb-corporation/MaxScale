@@ -13,7 +13,7 @@
 
 #include <stdio.h>
 #include <maxbase/maxbase.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.hh>
 

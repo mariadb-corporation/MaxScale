@@ -16,7 +16,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <maxscale/query_classifier.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <mysql.h>
 #include <unistd.h>
 #include <maxscale/paths.h>

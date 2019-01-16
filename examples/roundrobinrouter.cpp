@@ -40,7 +40,7 @@
 #include <iterator>
 
 #include <maxscale/alloc.h>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modulecmd.hh>

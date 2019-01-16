@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
 #include "cache.hh"
 #include "cachefilter.hh"

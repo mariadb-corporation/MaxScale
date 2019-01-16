@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 
 #include <errno.h>
 #include <stdlib.h>

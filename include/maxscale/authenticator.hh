@@ -23,7 +23,7 @@
 class Listener;
 class SERVER;
 struct DCB;
-typedef struct gwbuf GWBUF;
+struct GWBUF;
 struct json_t;
 struct MXS_SESSION;
 

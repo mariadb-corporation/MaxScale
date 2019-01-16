@@ -17,7 +17,7 @@
 
 #include <strings.h>
 #include <maxscale/alloc.h>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>

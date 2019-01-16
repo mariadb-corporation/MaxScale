@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <iostream>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/paths.h>
 
 using namespace std;

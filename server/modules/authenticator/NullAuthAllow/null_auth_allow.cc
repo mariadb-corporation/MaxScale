@@ -32,7 +32,7 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/users.h>
 
 /** MXS-1026: Without MySQL protocol data structures, the NullAuth authenticator will crash. */

@@ -16,7 +16,7 @@
 #include <algorithm>
 
 #include <maxscale/alloc.h>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.hh>
 

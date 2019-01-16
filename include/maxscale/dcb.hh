@@ -20,7 +20,7 @@
 #include <netinet/in.h>
 #include <maxbase/poll.h>
 #include <maxscale/authenticator.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/protocol.hh>
 #include <maxscale/ssl.hh>

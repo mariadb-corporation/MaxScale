@@ -17,7 +17,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.hh>
 

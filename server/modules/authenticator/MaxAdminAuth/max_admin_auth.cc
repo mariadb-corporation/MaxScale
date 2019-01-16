@@ -32,7 +32,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/adminusers.h>
 #include <maxscale/users.h>
 

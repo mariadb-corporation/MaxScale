@@ -35,7 +35,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 
 /**
  * test1    Allocate a service and do lots of other things

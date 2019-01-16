@@ -27,7 +27,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/utils.h>
 #include <maxscale/jansson.hh>
 

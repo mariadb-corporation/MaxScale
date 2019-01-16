@@ -20,7 +20,7 @@
 #include <string.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol.hh>
