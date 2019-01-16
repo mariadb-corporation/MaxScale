@@ -19,6 +19,7 @@
 #include <string.h>
 #include <strings.h>
 
+#include <maxbase/atomic.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/modutil.h>
@@ -591,6 +592,38 @@ SRWBackend RWSplitSession::get_hinted_backend(char* name)
     return rval;
 }
 
+/**
+ * Change server replication lag state and log warning when state changes.
+ *
+ * @param backend Affected server
+ * @param new_state New replication lag state
+ * @param max_rlag Maximum allowed lag. Used for the log message.
+ */
+static void change_rlag_state(SRWBackend& backend, RLAG_STATE new_state, int max_rlag)
+{
+    mxb_assert(new_state == RLAG_BELOW_LIMIT || new_state == RLAG_ABOVE_LIMIT);
+    namespace atom = maxbase::atomic;
+    auto srv = backend->server();
+    auto old_state = atom::load(&srv->rlag_state, atom::RELAXED);
+    if (new_state != old_state)
+    {
+        atom::store(&srv->rlag_state, new_state, atom::RELAXED);
+        // State has just changed, log warning. Don't log catchup if old state was RLAG_NONE.
+        if (new_state == RLAG_ABOVE_LIMIT)
+        {
+            MXS_WARNING("Replication lag of '%s' is %is, which is above the configured limit %is. "
+                        "'%s' is excluded from query routing.",
+                        srv->name, srv->rlag, max_rlag, srv->name);
+        }
+        else if (old_state == RLAG_ABOVE_LIMIT)
+        {
+            MXS_WARNING("Replication lag of '%s' is %is, which is below the allowed limit %is. "
+                        "'%s' is returned to query routing.",
+                        srv->name, srv->rlag, max_rlag, srv->name);
+        }
+    }
+}
+
 SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
 {
     // create a list of useable backends (includes masters, function name is a bit off),
@@ -607,14 +640,25 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
             && counts.second < m_router->max_slave_count();
 
         bool master_or_slave = backend->is_master() || backend->is_slave();
-        bool is_useable = backend->in_use() || can_take_slave_into_use;
-        bool not_a_slacker = rpl_lag_is_ok(backend, max_rlag);
+        bool is_usable = backend->in_use() || can_take_slave_into_use;
+        bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
 
-        bool server_is_candidate = master_or_slave && is_useable && not_a_slacker;
-
-        if (server_is_candidate)
+        if (master_or_slave && is_usable)
         {
-            candidates.push_back(&backend);
+            if (rlag_ok)
+            {
+                candidates.push_back(&backend);
+                if (max_rlag > 0)
+                {
+                    // Replication lag discrimination is on and the server passed.
+                    change_rlag_state(backend, RLAG_BELOW_LIMIT, max_rlag);
+                }
+            }
+            else
+            {
+                // The server is otherwise usable except it's lagging too much.
+                change_rlag_state(backend, RLAG_ABOVE_LIMIT, max_rlag);
+            }
         }
     }
 

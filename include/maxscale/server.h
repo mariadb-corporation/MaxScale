@@ -94,6 +94,13 @@ typedef enum
     SERVER_TYPE_MYSQL
 } server_type_t;
 
+typedef enum
+{
+    RLAG_NONE,
+    RLAG_BELOW_LIMIT,
+    RLAG_ABOVE_LIMIT
+} RLAG_STATE;
+
 static inline void server_decode_version(uint64_t version, SERVER_VERSION* server_version)
 {
     uint32_t major = version / 10000;
@@ -159,11 +166,13 @@ typedef struct server
                                                              * */
     unsigned long node_ts;                                  /**< Last timestamp set from M/S monitor module */
     long          master_id;                                /**< Master server id of this node */
+
     // Misc fields
-    bool master_err_is_logged;                  /**< If node failed, this indicates whether it is logged. Only
-                                                 * used
-                                                 *   by rwsplit. TODO: Move to rwsplit */
-    bool                   warn_ssl_not_enabled;/**< SSL not used for an SSL enabled server */
+    bool master_err_is_logged;    /**< If node failed, this indicates whether it is logged. Only used
+                                   *   by rwsplit. TODO: Move to rwsplit */
+    bool warn_ssl_not_enabled;    /**< SSL not used for an SSL enabled server */
+    RLAG_STATE rlag_state;        /**< Is replication lag above or under limit? Used by rwsplit. */
+
     MxsDiskSpaceThreshold* disk_space_threshold;/**< Disk space thresholds */
 } SERVER;
 

@@ -183,6 +183,7 @@ SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->master_id = -1;
     server->master_err_is_logged = false;
     server->warn_ssl_not_enabled = true;
+    server->rlag_state = RLAG_NONE;
     server->disk_space_threshold = NULL;
 
     if (*monuser && *monpw)
