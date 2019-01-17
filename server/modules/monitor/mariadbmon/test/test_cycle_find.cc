@@ -156,11 +156,9 @@ void MariaDBMonitor::Test::init_servers(int count)
 
     for (int i = 1; i < count + 1; i++)
     {
-        auto base_server = Server::create_test_server();   // Contents mostly undefined
-
-        MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER;    // Contents mostly undefined
-        mon_server->server = base_server;
-
+        // Server contents mostly undefined
+        auto base_server = Server::create_test_server();
+        MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER(base_server);
         MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_use_hostnames);
 
         if (m_use_hostnames)

@@ -29,7 +29,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/protocol/mysql.hh>
 
-struct MXS_MONITOR;
+class MXS_MONITOR;
 
 /**
  * An opaque type representing a monitor instance.
@@ -78,7 +78,7 @@ struct MXS_MONITOR_API
      * @return Pointer to the monitor specific data. Will be stored
      *         in @c monitor->handle.
      */
-    MXS_MONITOR_INSTANCE*(*createInstance)(MXS_MONITOR * monitor);
+    MXS_MONITOR_INSTANCE* (* createInstance)(MXS_MONITOR* monitor);
 
     /**
      * @brief Destroy the monitor.
@@ -133,7 +133,7 @@ struct MXS_MONITOR_API
      *
      * @see jansson.h
      */
-    json_t* (*diagnostics_json)(const MXS_MONITOR_INSTANCE * monitor);
+    json_t* (* diagnostics_json)(const MXS_MONITOR_INSTANCE* monitor);
 };
 
 /**
@@ -204,16 +204,20 @@ enum mxs_monitor_event_t
 /**
  * The linked list of servers that are being monitored by the monitor module.
  */
-struct MXS_MONITORED_SERVER
+class MXS_MONITORED_SERVER
 {
-    SERVER*                  server;/**< The server being monitored */
-    MYSQL*                   con;   /**< The MySQL connection */
-    bool                     log_version_err;
-    int                      mon_err_count;
-    uint64_t                 mon_prev_status;   /**< Status before starting the current monitor loop */
-    uint64_t                 pending_status;    /**< Status during current monitor loop */
-    int64_t                  disk_space_checked;/**< When was the disk space checked the last time */
-    struct MXS_MONITORED_SERVER* next;              /**< The next server in the list */
+public:
+    MXS_MONITORED_SERVER(SERVER* server);
+
+    SERVER*  server = nullptr;      /**< The server being monitored */
+    MYSQL*   con = nullptr;         /**< The MySQL connection */
+    bool     log_version_err = true;
+    int      mon_err_count = 0;
+    uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
+    uint64_t pending_status = 0;        /**< Status during current monitor loop */
+    int64_t  disk_space_checked = 0;    /**< When was the disk space checked the last time */
+
+    MXS_MONITORED_SERVER* next = nullptr; /**< The next server in the list */
 };
 
 namespace std
@@ -237,48 +241,48 @@ inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> end(MXS_MONITORED_SER
 /**
  * Representation of the running monitor.
  */
-struct MXS_MONITOR
+class MXS_MONITOR
 {
-    char*                 name;                                 /**< The name of the monitor module */
-    char                  user[MAX_MONITOR_USER_LEN];           /*< Monitor username */
-    char                  password[MAX_MONITOR_PASSWORD_LEN];   /*< Monitor password */
-    pthread_mutex_t       lock;
-    MXS_CONFIG_PARAMETER* parameters;                       /*< configuration parameters */
-    MXS_MONITORED_SERVER* monitored_servers;                /*< List of servers the monitor monitors */
-    monitor_state_t       state;                            /**< The state of the monitor. This should ONLY be
-                                                             * written to by the admin
-                                                             *   thread. */
-    int connect_timeout;                                    /**< Connect timeout in seconds for
-                                                             * mysql_real_connect */
-    int connect_attempts;                                   /**< How many times a connection is attempted */
-    int read_timeout;                                       /**< Timeout in seconds to read from the server.
-                                                             *   There are retries and the total effective
-                                                             * timeout
-                                                             *   value is three times the option value.
-                                                             */
-    int write_timeout;                                      /**< Timeout in seconds for each attempt to write
-                                                             * to the server.
-                                                             * There are retries and the total effective
-                                                             * timeout value is
-                                                             * two times the option value.
-                                                             */
-    MXS_MONITOR_API*      api;                              /**< The monitor api */
-    char*                 module_name;                      /**< Name of the monitor module */
-    MXS_MONITOR_INSTANCE* instance;                         /**< Instance returned from startMonitor */
-    size_t                interval;                         /**< The monitor interval */
-    int                   check_maintenance_flag;           /**< Set when admin requests a maintenance status
-                                                             * change. */
-    bool                   active;                          /**< True if monitor is active */
-    time_t                 journal_max_age;                 /**< Maximum age of journal file */
-    uint32_t               script_timeout;                  /**< Timeout in seconds for the monitor scripts */
-    const char*            script;                          /**< Launchable script. */
-    uint64_t               events;                          /**< Enabled monitor events. */
-    uint8_t                journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
-    MxsDiskSpaceThreshold* disk_space_threshold;            /**< Disk space thresholds */
-    int64_t                disk_space_check_interval;       /**< How often should a disk space check be made
-                                                             * at most. */
-    uint64_t            ticks;                              /**< Number of performed monitoring intervals */
-    struct MXS_MONITOR* next;                               /**< Next monitor in the linked list */
+public:
+    char* name;                     /**< Monitor instance name */
+    char* module_name;              /**< Name of the monitor module */
+
+    MXS_MONITOR_API*      api;      /**< The monitor api */
+    MXS_MONITOR_INSTANCE* instance; /**< Instance returned from startMonitor */
+    MXS_MONITOR*          next;     /**< Next monitor in the linked list */
+
+    bool            active;     /**< True if monitor is active */
+    pthread_mutex_t lock;
+    monitor_state_t state;      /**< The state of the monitor. This should ONLY be written to by the
+                                 *   admin thread. */
+
+    int      check_maintenance_flag;            /**< Set when admin requests a maintenance status change. */
+    uint64_t ticks;                             /**< Number of performed monitoring intervals */
+    uint8_t  journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */
+
+    MXS_CONFIG_PARAMETER* parameters;       /**< Configuration parameters */
+    MXS_MONITORED_SERVER* monitored_servers;/**< List of servers the monitor monitors */
+
+    char user[MAX_MONITOR_USER_LEN];            /**< Monitor username */
+    char password[MAX_MONITOR_PASSWORD_LEN];    /**< Monitor password */
+
+    int connect_timeout;    /**< Connect timeout in seconds for mysql_real_connect */
+    int connect_attempts;   /**< How many times a connection is attempted */
+    int read_timeout;       /**< Timeout in seconds to read from the server. There are retries
+                             *   and the total effective timeout value is three times the option value. */
+    int write_timeout;      /**< Timeout in seconds for each attempt to write to the server.
+                             *   There are retries and the total effective timeout value is two times
+                             *   the option value. */
+
+    size_t      interval;           /**< The monitor interval */
+    time_t      journal_max_age;    /**< Maximum age of journal file */
+    uint32_t    script_timeout;     /**< Timeout in seconds for the monitor scripts */
+    const char* script;             /**< Launchable script. */
+    uint64_t    events;             /**< Enabled monitor events. */
+
+    MxsDiskSpaceThreshold* disk_space_threshold;        /**< Disk space thresholds */
+    int64_t                disk_space_check_interval;   /**< How often should a disk space check be made
+                                                         *   at most. */
 };
 
 /**

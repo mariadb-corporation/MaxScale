@@ -115,11 +115,11 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
 
     char* my_name = MXS_STRDUP(name);
     char* my_module = MXS_STRDUP(module);
-    MXS_MONITOR* mon = (MXS_MONITOR*)MXS_MALLOC(sizeof(MXS_MONITOR));
+    MXS_MONITOR* mon = new (std::nothrow) MXS_MONITOR();
 
     if (!mon || !my_module || !my_name)
     {
-        MXS_FREE(mon);
+        delete mon;
         MXS_FREE(my_name);
         MXS_FREE(my_module);
         return NULL;
@@ -189,7 +189,7 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
     }
     else
     {
-        MXS_FREE(mon);
+        delete mon;
         mon = NULL;
         MXS_FREE(my_module);
         MXS_FREE(my_name);
@@ -234,7 +234,7 @@ void monitor_destroy(MXS_MONITOR* mon)
     monitor_server_free_all(mon->monitored_servers);
     MXS_FREE(mon->name);
     MXS_FREE(mon->module_name);
-    MXS_FREE(mon);
+    delete mon;
 }
 
 void monitor_destroy_all()
@@ -376,22 +376,8 @@ bool monitor_add_server(MXS_MONITOR* mon, SERVER* server)
     else
     {
         rval = true;
-        MXS_MONITORED_SERVER* db = (MXS_MONITORED_SERVER*)MXS_MALLOC(sizeof(MXS_MONITORED_SERVER));
+        MXS_MONITORED_SERVER* db = new (std::nothrow) MXS_MONITORED_SERVER(server);
         MXS_ABORT_IF_NULL(db);
-
-        db->server = server;
-        db->con = NULL;
-        db->next = NULL;
-        db->mon_err_count = 0;
-        db->log_version_err = true;
-        // Pretend disk space was just checked.
-        db->disk_space_checked = maxscale::MonitorInstance::get_time_ms();
-
-
-        /** Server status is uninitialized */
-        db->mon_prev_status = -1;
-        /* pending status is updated by get_replication_tree */
-        db->pending_status = 0;
 
         monitor_state_t old_state = mon->state;
 
@@ -434,7 +420,7 @@ static void monitor_server_free(MXS_MONITORED_SERVER* tofree)
         {
             mysql_close(tofree->con);
         }
-        MXS_FREE(tofree);
+        delete tofree;
     }
 }
 
@@ -2959,4 +2945,10 @@ bool MonitorInstance::immediate_tick_required() const
 {
     return false;
 }
+}
+
+MXS_MONITORED_SERVER::MXS_MONITORED_SERVER(SERVER* server)
+    : server(server)
+    , disk_space_checked(maxscale::MonitorInstance::get_time_ms()) // Pretend disk space was just checked.
+{
 }
