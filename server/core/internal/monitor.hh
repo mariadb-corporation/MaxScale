@@ -79,9 +79,7 @@ static const MXS_ENUM_VALUE mxs_monitor_event_enum_values[] =
 
 std::unique_ptr<ResultSet> monitor_get_list();
 
-MXS_BEGIN_DECLS
-
-MXS_MONITOR* monitor_create(const char*, const char*, MXS_CONFIG_PARAMETER* params);
+MXS_MONITOR* monitor_create(const std::string& name, const std::string& module, MXS_CONFIG_PARAMETER* params);
 void         monitor_destroy(MXS_MONITOR*);
 
 void monitor_start(MXS_MONITOR*, const MXS_CONFIG_PARAMETER*);
@@ -169,5 +167,3 @@ int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const cha
  * @return Return value of the executed script or -1 on error.
  */
 int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
-
-MXS_END_DECLS

@@ -100,38 +100,26 @@ static uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER 
  * Create a new monitor, load the associated module for the monitor
  * and start execution on the monitor.
  *
- * @param name          The name of the monitor module to load
- * @param module        The module to load
- * @return      The newly created monitor
+ * @param name          The configuration name of the monitor
+ * @param module        The module name to load
+ * @return              The newly created monitor, or NULL on error
  */
-MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
+MXS_MONITOR* monitor_create(const string& name, const string& module, MXS_CONFIG_PARAMETER* params)
 {
-    MXS_MONITOR_API* api = (MXS_MONITOR_API*)load_module(module, MODULE_MONITOR);
-
-    if (api == NULL)
+    MXS_MONITOR_API* api = (MXS_MONITOR_API*)load_module(module.c_str(), MODULE_MONITOR);
+    if (!api)
     {
-        MXS_ERROR("Unable to load monitor module '%s'.", name);
+        MXS_ERROR("Unable to load library file for monitor '%s'.", name.c_str());
         return NULL;
     }
 
-    char* my_name = MXS_STRDUP(name);
-    char* my_module = MXS_STRDUP(module);
-    MXS_MONITOR* mon = new (std::nothrow) MXS_MONITOR();
-
-    if (!mon || !my_module || !my_name)
+    MXS_MONITOR* mon = new(std::nothrow) MXS_MONITOR(name, module, api);
+    if (!mon)
     {
-        delete mon;
-        MXS_FREE(my_name);
-        MXS_FREE(my_module);
         return NULL;
     }
 
     mon->api = api;
-    mon->active = true;
-    mon->state = MONITOR_STATE_STOPPED;
-    mon->name = my_name;
-    mon->module_name = my_module;
-    mon->monitored_servers = NULL;
     mon->read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
     mon->write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
     mon->connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
@@ -141,11 +129,6 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
     mon->script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
     mon->script = config_get_string(params, CN_SCRIPT);
     mon->events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
-    mon->check_maintenance_flag = SERVER::MAINTENANCE_FLAG_NOCHECK;
-    mon->ticks = 0;
-    mon->parameters = NULL;
-    memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
-    mon->disk_space_threshold = NULL;
     mon->disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
 
     for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
@@ -170,13 +153,13 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
     if (!error)
     {
         // Store module, used when the monitor is serialized
-        monitor_set_parameter(mon, CN_MODULE, module);
+        monitor_set_parameter(mon, CN_MODULE, module.c_str());
         monitor_add_parameters(mon, params);
 
         if ((mon->instance = mon->api->createInstance(mon)) == NULL)
         {
             MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
-                      name, module);
+                      name.c_str(), module.c_str());
             error = true;
         }
     }
@@ -191,10 +174,17 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
     {
         delete mon;
         mon = NULL;
-        MXS_FREE(my_module);
-        MXS_FREE(my_name);
     }
     return mon;
+}
+
+MXS_MONITOR::MXS_MONITOR(const string& name, const string& module, MXS_MONITOR_API* api)
+    : module_name(module)
+    , api(api)
+{
+    // The strdup is required until name is an std::string.
+    this->name = MXS_STRDUP_A(name.c_str());
+    memset(journal_hash, 0, sizeof(journal_hash));
 }
 
 /**
@@ -233,7 +223,6 @@ void monitor_destroy(MXS_MONITOR* mon)
     config_parameter_free(mon->parameters);
     monitor_server_free_all(mon->monitored_servers);
     MXS_FREE(mon->name);
-    MXS_FREE(mon->module_name);
     delete mon;
 }
 
@@ -631,7 +620,7 @@ MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module)
 
     for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
     {
-        if (strcmp(ptr->name, name) == 0 && strcmp(ptr->module_name, module) == 0)
+        if (strcmp(ptr->name, name) == 0 && (ptr->module_name == module))
         {
             mxb_assert(!ptr->active);
             ptr->active = true;
@@ -1571,7 +1560,7 @@ static bool create_monitor_config(const MXS_MONITOR* monitor, const char* filena
             dprintf(file, "\n");
         }
 
-        const MXS_MODULE* mod = get_module(monitor->module_name, NULL);
+        const MXS_MODULE* mod = get_module(monitor->module_name.c_str(), NULL);
         mxb_assert(mod);
 
         dump_param_list(file,
@@ -1746,7 +1735,7 @@ static const char* monitor_state_to_string(monitor_state_t state)
 json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
 {
     json_t* rval = json_object();
-    const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
+    const MXS_MODULE* mod = get_module(monitor->module_name.c_str(), MODULE_MONITOR);
     config_add_module_params_json(monitor->parameters,
                                   {CN_TYPE, CN_MODULE, CN_SERVERS},
                                   config_monitor_params,
@@ -1766,7 +1755,7 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
         json_object_set_new(rval, CN_ID, json_string(monitor->name));
         json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
 
-        json_object_set_new(attr, CN_MODULE, json_string(monitor->module_name));
+        json_object_set_new(attr, CN_MODULE, json_string(monitor->module_name.c_str()));
         json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
         json_object_set_new(attr, CN_TICKS, json_integer(monitor->ticks));
 

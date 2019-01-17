@@ -561,7 +561,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
 bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value)
 {
     mxb_assert(monitor->state == MONITOR_STATE_STOPPED);
-    const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
+    const MXS_MODULE* mod = get_module(monitor->module_name.c_str(), MODULE_MONITOR);
 
     if (!validate_param(config_monitor_params, mod->parameters, key, value))
     {

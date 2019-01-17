@@ -329,7 +329,7 @@ static bool process_argument(const MODULECMD* cmd,
         case MODULECMD_ARG_MONITOR:
             if ((arg->value.monitor = monitor_find((char*)value)))
             {
-                const char* eff_name = mxs_module_get_effective_name(arg->value.monitor->module_name);
+                const char* eff_name = mxs_module_get_effective_name(arg->value.monitor->module_name.c_str());
                 if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_MONITOR;

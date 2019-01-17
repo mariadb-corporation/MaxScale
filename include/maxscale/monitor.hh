@@ -218,7 +218,7 @@ public:
     uint64_t pending_status = 0;        /**< Status during current monitor loop */
     int64_t  disk_space_checked = 0;    /**< When was the disk space checked the last time */
 
-    MXS_MONITORED_SERVER* next = nullptr; /**< The next server in the list */
+    MXS_MONITORED_SERVER* next = nullptr;   /**< The next server in the list */
 };
 
 namespace std
@@ -245,24 +245,28 @@ inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> end(MXS_MONITORED_SER
 class MXS_MONITOR
 {
 public:
-    char* name;                     /**< Monitor instance name */
-    char* module_name;              /**< Name of the monitor module */
+    MXS_MONITOR(const std::string& name, const std::string& module, MXS_MONITOR_API* api);
+
+    char*             name;         /**< Monitor instance name */
+    const std::string module_name;  /**< Name of the monitor module */
 
     MXS_MONITOR_API*      api;      /**< The monitor api */
     MXS_MONITOR_INSTANCE* instance; /**< Instance returned from startMonitor */
     MXS_MONITOR*          next;     /**< Next monitor in the linked list */
     mutable std::mutex    lock;
 
-    bool            active;     /**< True if monitor is active */
-    monitor_state_t state;      /**< The state of the monitor. This should ONLY be written to by the
-                                 *   admin thread. */
+    bool active = true;     /**< True if monitor exists and has not been "destroyed". */
 
-    int      check_maintenance_flag;            /**< Set when admin requests a maintenance status change. */
-    uint64_t ticks;                             /**< Number of performed monitoring intervals */
+    /** The state of the monitor. This should ONLY be written to by the admin thread. */
+    monitor_state_t state = MONITOR_STATE_STOPPED;
+    /** Set when admin requests a maintenance status change. */
+    int check_maintenance_flag = SERVER::MAINTENANCE_FLAG_NOCHECK;
+
+    uint64_t ticks = 0;                         /**< Number of performed monitoring intervals */
     uint8_t  journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */
 
-    MXS_CONFIG_PARAMETER* parameters;       /**< Configuration parameters */
-    MXS_MONITORED_SERVER* monitored_servers;/**< List of servers the monitor monitors */
+    MXS_CONFIG_PARAMETER* parameters = nullptr;         /**< Configuration parameters */
+    MXS_MONITORED_SERVER* monitored_servers = nullptr;  /**< List of servers the monitor monitors */
 
     char user[MAX_MONITOR_USER_LEN];            /**< Monitor username */
     char password[MAX_MONITOR_PASSWORD_LEN];    /**< Monitor password */
@@ -281,9 +285,9 @@ public:
     const char* script;             /**< Launchable script. */
     uint64_t    events;             /**< Enabled monitor events. */
 
-    MxsDiskSpaceThreshold* disk_space_threshold;        /**< Disk space thresholds */
-    int64_t                disk_space_check_interval;   /**< How often should a disk space check be made
-                                                         *   at most. */
+    MxsDiskSpaceThreshold* disk_space_threshold = NULL;     /**< Disk space thresholds */
+    int64_t                disk_space_check_interval = -1;  /**< How often should a disk space check be made
+                                                             *   at most. */
 };
 
 /**
