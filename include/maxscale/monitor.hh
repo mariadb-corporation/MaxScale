@@ -19,6 +19,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <atomic>
+#include <mutex>
 #include <openssl/sha.h>
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.hh>
@@ -250,9 +251,9 @@ public:
     MXS_MONITOR_API*      api;      /**< The monitor api */
     MXS_MONITOR_INSTANCE* instance; /**< Instance returned from startMonitor */
     MXS_MONITOR*          next;     /**< Next monitor in the linked list */
+    mutable std::mutex    lock;
 
     bool            active;     /**< True if monitor is active */
-    pthread_mutex_t lock;
     monitor_state_t state;      /**< The state of the monitor. This should ONLY be written to by the
                                  *   admin thread. */
 

@@ -68,6 +68,7 @@ enum stored_value_type
 
 using std::string;
 using std::set;
+using Guard = std::lock_guard<std::mutex>;
 
 const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
 const char CN_BACKEND_CONNECT_TIMEOUT[] = "backend_connect_timeout";
@@ -146,7 +147,6 @@ MXS_MONITOR* monitor_create(const char* name, const char* module, MXS_CONFIG_PAR
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
     mon->disk_space_threshold = NULL;
     mon->disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
-    pthread_mutex_init(&mon->lock, NULL);
 
     for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
     {
@@ -259,7 +259,7 @@ void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
 {
     if (monitor)
     {
-        pthread_mutex_lock(&monitor->lock);
+        Guard guard(monitor->lock);
 
         // Only start the monitor if it's stopped.
         if (monitor->state == MONITOR_STATE_STOPPED)
@@ -279,8 +279,6 @@ void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
                 MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
             }
         }
-
-        pthread_mutex_unlock(&monitor->lock);
     }
 }
 
@@ -312,7 +310,7 @@ void monitor_stop(MXS_MONITOR* monitor)
 {
     if (monitor)
     {
-        pthread_mutex_lock(&monitor->lock);
+        Guard guard(monitor->lock);
 
         /** Only stop the monitor if it is running */
         if (monitor->state == MONITOR_STATE_RUNNING)
@@ -330,8 +328,6 @@ void monitor_stop(MXS_MONITOR* monitor)
                 db = db->next;
             }
         }
-
-        pthread_mutex_unlock(&monitor->lock);
     }
 }
 
@@ -386,22 +382,22 @@ bool monitor_add_server(MXS_MONITOR* mon, SERVER* server)
             monitor_stop(mon);
         }
 
-        pthread_mutex_lock(&mon->lock);
-
-        if (mon->monitored_servers == NULL)
         {
-            mon->monitored_servers = db;
-        }
-        else
-        {
-            MXS_MONITORED_SERVER* ptr = mon->monitored_servers;
-            while (ptr->next != NULL)
+            Guard guard(mon->lock);
+            if (mon->monitored_servers == NULL)
             {
-                ptr = ptr->next;
+                mon->monitored_servers = db;
             }
-            ptr->next = db;
+            else
+            {
+                MXS_MONITORED_SERVER* ptr = mon->monitored_servers;
+                while (ptr->next != NULL)
+                {
+                    ptr = ptr->next;
+                }
+                ptr->next = db;
+            }
         }
-        pthread_mutex_unlock(&mon->lock);
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
@@ -453,30 +449,29 @@ void monitor_remove_server(MXS_MONITOR* mon, SERVER* server)
         monitor_stop(mon);
     }
 
-    pthread_mutex_lock(&mon->lock);
-
     MXS_MONITORED_SERVER* ptr = mon->monitored_servers;
-
-    if (ptr && ptr->server == server)
     {
-        mon->monitored_servers = mon->monitored_servers->next;
-    }
-    else
-    {
-        MXS_MONITORED_SERVER* prev = ptr;
+        Guard guard(mon->lock);
 
-        while (ptr)
+        if (ptr && ptr->server == server)
         {
-            if (ptr->server == server)
+            mon->monitored_servers = mon->monitored_servers->next;
+        }
+        else
+        {
+            MXS_MONITORED_SERVER* prev = ptr;
+            while (ptr)
             {
-                prev->next = ptr->next;
-                break;
+                if (ptr->server == server)
+                {
+                    prev->next = ptr->next;
+                    break;
+                }
+                prev = ptr;
+                ptr = ptr->next;
             }
-            prev = ptr;
-            ptr = ptr->next;
         }
     }
-    pthread_mutex_unlock(&mon->lock);
 
     if (ptr)
     {
@@ -833,8 +828,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
  */
 void monitor_add_parameters(MXS_MONITOR* monitor, MXS_CONFIG_PARAMETER* params)
 {
-    pthread_mutex_lock(&monitor->lock);
-
+    Guard guard(monitor->lock);
     while (params)
     {
         MXS_CONFIG_PARAMETER* old = config_get_param(monitor->parameters, params->name);
@@ -853,8 +847,6 @@ void monitor_add_parameters(MXS_MONITOR* monitor, MXS_CONFIG_PARAMETER* params)
 
         params = params->next;
     }
-
-    pthread_mutex_unlock(&monitor->lock);
 }
 
 void monitor_set_parameter(MXS_MONITOR* monitor, const char* key, const char* value)
@@ -870,8 +862,7 @@ bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key)
 {
     MXS_CONFIG_PARAMETER* prev = NULL;
     bool rval = false;
-
-    pthread_mutex_lock(&monitor->lock);
+    Guard guard(monitor->lock);
 
     for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
     {
@@ -895,15 +886,12 @@ bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key)
         prev = p;
     }
 
-    pthread_mutex_unlock(&monitor->lock);
-
     return rval;
 }
 
 void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* value)
 {
-    pthread_mutex_lock(&monitor->lock);
-
+    Guard guard(monitor->lock);
     for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
     {
         if (strcmp(p->name, key) == 0)
@@ -913,8 +901,6 @@ void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* valu
             break;
         }
     }
-
-    pthread_mutex_unlock(&monitor->lock);
 }
 
 void monitor_stash_current_status(MXS_MONITORED_SERVER* ptr)
@@ -1536,8 +1522,7 @@ MXS_MONITOR* monitor_server_in_use(const SERVER* server)
 
     for (MXS_MONITOR* mon = allMonitors; mon && !rval; mon = mon->next)
     {
-        pthread_mutex_lock(&mon->lock);
-
+        Guard guard(mon->lock);
         if (mon->active)
         {
             for (MXS_MONITORED_SERVER* db = mon->monitored_servers; db && !rval; db = db->next)
@@ -1548,8 +1533,6 @@ MXS_MONITOR* monitor_server_in_use(const SERVER* server)
                 }
             }
         }
-
-        pthread_mutex_unlock(&mon->lock);
     }
 
     return rval;
@@ -1569,36 +1552,36 @@ static bool create_monitor_config(const MXS_MONITOR* monitor, const char* filena
         return false;
     }
 
-    pthread_mutex_lock((pthread_mutex_t*)&monitor->lock);
-
-    dprintf(file, "[%s]\n", monitor->name);
-    dprintf(file, "%s=monitor\n", CN_TYPE);
-
-    if (monitor->monitored_servers)
     {
-        dprintf(file, "%s=", CN_SERVERS);
-        for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+        Guard guard(monitor->lock);
+        dprintf(file, "[%s]\n", monitor->name);
+        dprintf(file, "%s=monitor\n", CN_TYPE);
+
+        if (monitor->monitored_servers)
         {
-            if (db != monitor->monitored_servers)
+            dprintf(file, "%s=", CN_SERVERS);
+            for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
             {
-                dprintf(file, ",");
+                if (db != monitor->monitored_servers)
+                {
+                    dprintf(file, ",");
+                }
+                dprintf(file, "%s", db->server->name());
             }
-            dprintf(file, "%s", db->server->name());
+            dprintf(file, "\n");
         }
-        dprintf(file, "\n");
+
+        const MXS_MODULE* mod = get_module(monitor->module_name, NULL);
+        mxb_assert(mod);
+
+        dump_param_list(file,
+                        monitor->parameters,
+                        {CN_TYPE, CN_SERVERS},
+                        config_monitor_params,
+                        mod->parameters);
     }
 
-    const MXS_MODULE* mod = get_module(monitor->module_name, NULL);
-    mxb_assert(mod);
-
-    dump_param_list(file,
-                    monitor->parameters,
-                    {CN_TYPE, CN_SERVERS},
-                    config_monitor_params,
-                    mod->parameters);
-    pthread_mutex_unlock((pthread_mutex_t*)&monitor->lock);
     close(file);
-
     return true;
 }
 
@@ -1775,53 +1758,46 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
 json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
 {
     json_t* rval = json_object();
-
-    pthread_mutex_lock((pthread_mutex_t*)&monitor->lock);
-
-    json_object_set_new(rval, CN_ID, json_string(monitor->name));
-    json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
-
     json_t* attr = json_object();
-
-    json_object_set_new(attr, CN_MODULE, json_string(monitor->module_name));
-    json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
-    json_object_set_new(attr, CN_TICKS, json_integer(monitor->ticks));
-
-    /** Monitor parameters */
-    json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
-
-    if (monitor->instance && monitor->api->diagnostics_json
-        && monitor->state == MONITOR_STATE_RUNNING)
-    {
-        json_t* diag = monitor->api->diagnostics_json(monitor->instance);
-
-        if (diag)
-        {
-            json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
-        }
-    }
-
     json_t* rel = json_object();
 
-
-    if (monitor->monitored_servers)
     {
-        json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
+        Guard guard(monitor->lock);
+        json_object_set_new(rval, CN_ID, json_string(monitor->name));
+        json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
 
-        for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+        json_object_set_new(attr, CN_MODULE, json_string(monitor->module_name));
+        json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
+        json_object_set_new(attr, CN_TICKS, json_integer(monitor->ticks));
+
+        /** Monitor parameters */
+        json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
+
+        if (monitor->instance && monitor->api->diagnostics_json
+            && monitor->state == MONITOR_STATE_RUNNING)
         {
-            mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
+            json_t* diag = monitor->api->diagnostics_json(monitor->instance);
+
+            if (diag)
+            {
+                json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
+            }
         }
 
-        json_object_set_new(rel, CN_SERVERS, mon_rel);
+        if (monitor->monitored_servers)
+        {
+            json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
+            for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+            {
+                mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
+            }
+            json_object_set_new(rel, CN_SERVERS, mon_rel);
+        }
     }
-
-    pthread_mutex_unlock((pthread_mutex_t*)&monitor->lock);
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->name));
-
     return rval;
 }
 
@@ -1863,8 +1839,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
     {
-        pthread_mutex_lock(&mon->lock);
-
+        Guard guard(mon->lock);
         if (mon->active)
         {
             for (MXS_MONITORED_SERVER* db = mon->monitored_servers; db; db = db->next)
@@ -1876,8 +1851,6 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
                 }
             }
         }
-
-        pthread_mutex_unlock(&mon->lock);
     }
 
     guard.unlock();
