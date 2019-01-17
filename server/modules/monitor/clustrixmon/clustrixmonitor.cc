@@ -45,7 +45,7 @@ ClustrixMonitor* ClustrixMonitor::create(MXS_MONITOR* pMonitor)
 bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
     m_health_urls.clear();
-    m_node_infos.clear();
+    m_nodes.clear();
 
     m_config.set_cluster_monitor_interval(config_get_integer(pParams, CLUSTER_MONITOR_INTERVAL_NAME));
     m_config.set_health_check_threshold(config_get_integer(pParams, HEALTH_CHECK_THRESHOLD_NAME));
@@ -97,7 +97,7 @@ void ClustrixMonitor::tick()
     }
 }
 
-void ClustrixMonitor::fetch_cluster_nodes()
+void ClustrixMonitor::update_cluster_nodes()
 {
     auto b = begin(*(m_monitor->monitored_servers));
     auto e = end(*(m_monitor->monitored_servers));
@@ -112,7 +112,7 @@ void ClustrixMonitor::fetch_cluster_nodes()
     if (it != e)
     {
         MXS_MONITORED_SERVER& ms = *it;
-        fetch_cluster_nodes_from(ms);
+        update_cluster_nodes(ms);
 
         m_pMonitored_server = &ms;
     }
@@ -122,9 +122,13 @@ void ClustrixMonitor::fetch_cluster_nodes()
     }
 }
 
-void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
+void ClustrixMonitor::update_cluster_nodes(MXS_MONITORED_SERVER& ms)
 {
     mxb_assert(ms.con);
+
+    map<int, ClustrixMembership> memberships;
+
+    check_cluster_membership(ms, &memberships);
 
     const char ZQUERY[] = "SELECT nodeid, iface_ip, mysql_port, healthmon_port FROM system.nodeinfo";
 
@@ -136,14 +140,13 @@ void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
         {
             mxb_assert(mysql_field_count(ms.con) == 4);
 
-            MYSQL_ROW row;
-
             set<int> nids;
-            for_each(m_node_infos.begin(), m_node_infos.end(),
-                     [&nids](const pair<int, ClustrixNodeInfo>& element) {
+            for_each(m_nodes.begin(), m_nodes.end(),
+                     [&nids](const pair<int, ClustrixNode>& element) {
                          nids.insert(element.first);
                      });
 
+            MYSQL_ROW row;
             while ((row = mysql_fetch_row(pResult)) != nullptr)
             {
                 if (row[0] && row[1])
@@ -152,14 +155,39 @@ void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
                     string ip = row[1];
                     int mysql_port = row[2] ? atoi(row[2]) : DEFAULT_MYSQL_PORT;
                     int health_port = row[3] ? atoi(row[3]) : DEFAULT_HEALTH_PORT;
-                    int health_check_threshold = m_config.health_check_threshold();
 
                     string name = "@Clustrix-Server-" + std::to_string(id);
 
-                    auto it = m_node_infos.find(id);
+                    auto nit = m_nodes.find(id);
+                    auto mit = memberships.find(id);
 
-                    if (it == m_node_infos.end())
+                    if (nit != m_nodes.end())
                     {
+                        // Existing node.
+                        mxb_assert(SERVER::find_by_unique_name(name));
+
+                        ClustrixNode& node = nit->second;
+
+                        if (node.ip() != ip)
+                        {
+                            node.set_ip(ip);
+                        }
+
+                        if (node.mysql_port() != mysql_port)
+                        {
+                            node.set_mysql_port(mysql_port);
+                        }
+
+                        if (node.health_port() != health_port)
+                        {
+                            node.set_health_port(health_port);
+                        }
+
+                        nids.erase(id);
+                    }
+                    else if (mit != memberships.end())
+                    {
+                        // New node.
                         mxb_assert(!SERVER::find_by_unique_name(name));
 
 			if (runtime_create_server(name.c_str(),
@@ -172,23 +200,28 @@ void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
                             SERVER* pServer = SERVER::find_by_unique_name(name);
                             mxb_assert(pServer);
 
-                            ClustrixNodeInfo info(id, ip, mysql_port, health_port, health_check_threshold, pServer);
+                            const ClustrixMembership& membership = mit->second;
+                            int health_check_threshold = m_config.health_check_threshold();
 
-                            m_node_infos.insert(make_pair(id, info));
+                            ClustrixNode node(membership, ip, mysql_port, health_port, health_check_threshold, pServer);
+
+                            m_nodes.insert(make_pair(id, node));
                         }
                         else
                         {
                             MXS_ERROR("Could not create server %s at %s:%d.",
                                       name.c_str(), ip.c_str(), mysql_port);
                         }
+
+                        memberships.erase(mit);
                     }
                     else
                     {
-                        mxb_assert(SERVER::find_by_unique_name(name));
+                        // Node found in system.node_info but not in system.membership
+                        MXS_ERROR("Node %d at %s:%d,%d found in system.node_info "
+                                  "but not in system.membership.",
+                                  id, ip.c_str(), mysql_port, health_port);
 
-                        auto it = nids.find(id);
-                        mxb_assert(it != nids.end());
-                        nids.erase(it);
                     }
                 }
                 else
@@ -201,19 +234,18 @@ void ClustrixMonitor::fetch_cluster_nodes_from(MXS_MONITORED_SERVER& ms)
 
 	    for_each(nids.begin(), nids.end(),
 		     [this](int nid) {
-		       auto it = m_node_infos.find(nid);
-		       mxb_assert(it != m_node_infos.end());
+		       auto it = m_nodes.find(nid);
+		       mxb_assert(it != m_nodes.end());
 
-		       ClustrixNodeInfo& info = it->second;
-		       info.deactivate_server();
-		       m_node_infos.erase(it);
+		       ClustrixNode& node = it->second;
+                       node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
 		     });
 
             vector<string> health_urls;
-            for_each(m_node_infos.begin(), m_node_infos.end(),
-                     [&health_urls](const pair<int, ClustrixNodeInfo>& element) {
-                         const ClustrixNodeInfo& info = element.second;
-                         string url = "http://" + info.ip() + ":" + std::to_string(info.health_port());
+            for_each(m_nodes.begin(), m_nodes.end(),
+                     [&health_urls](const pair<int, ClustrixNode>& element) {
+                         const ClustrixNode& node = element.second;
+                         string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
 
                          health_urls.push_back(url);
                      });
@@ -242,20 +274,111 @@ void ClustrixMonitor::refresh_cluster_nodes()
 
         if (mon_connection_is_ok(rv))
         {
-            fetch_cluster_nodes_from(*m_pMonitored_server);
+            update_cluster_nodes(*m_pMonitored_server);
         }
         else
         {
             mysql_close(m_pMonitored_server->con);
             m_pMonitored_server->con = nullptr;
 
-            fetch_cluster_nodes();
+            update_cluster_nodes();
         }
     }
     else if (m_monitor->monitored_servers)
     {
-        fetch_cluster_nodes();
+        update_cluster_nodes();
     }
+}
+
+bool ClustrixMonitor::check_cluster_membership(MXS_MONITORED_SERVER& ms,
+                                               std::map<int, ClustrixMembership>* pMemberships)
+{
+    mxb_assert(ms.con);
+    mxb_assert(pMemberships);
+
+    bool rv = false;
+
+    const char ZQUERY[] = "SELECT nid, status, instance, substate FROM system.membership";
+
+    if (mysql_query(ms.con, ZQUERY) == 0)
+    {
+        MYSQL_RES* pResult = mysql_store_result(ms.con);
+
+        if (pResult)
+        {
+            mxb_assert(mysql_field_count(ms.con) == 4);
+
+            set<int> nids;
+            for_each(m_nodes.begin(), m_nodes.end(),
+                     [&nids](const pair<int, ClustrixNode>& element) {
+                         nids.insert(element.first);
+                     });
+
+            MYSQL_ROW row;
+            while ((row = mysql_fetch_row(pResult)) != nullptr)
+            {
+                if (row[0])
+                {
+                    int nid = atoi(row[0]);
+                    string status = row[1] ? row[1] : "unknown";
+                    int instance = row[2] ? atoi(row[2]) : -1;
+                    string substate = row[3] ? row[3] : "unknown";
+
+                    auto it = m_nodes.find(nid);
+
+                    if (it != m_nodes.end())
+                    {
+                        ClustrixNode& node = it->second;
+
+                        node.update(Clustrix::status_from_string(status),
+                                    Clustrix::substate_from_string(substate),
+                                    instance);
+
+                        nids.erase(node.id());
+                    }
+                    else
+                    {
+                        ClustrixMembership membership(nid,
+                                                      Clustrix::status_from_string(status),
+                                                      Clustrix::substate_from_string(substate),
+                                                      instance);
+
+                        pMemberships->insert(make_pair(nid, membership));
+                    }
+                }
+                else
+                {
+                    MXS_WARNING("No node id returned in row for '%s'.", ZQUERY);
+                }
+            }
+
+            mysql_free_result(pResult);
+
+            // Deactivate all servers that are no longer members.
+	    for_each(nids.begin(), nids.end(),
+		     [this](int nid) {
+		       auto it = m_nodes.find(nid);
+		       mxb_assert(it != m_nodes.end());
+
+		       ClustrixNode& node = it->second;
+		       node.deactivate_server();
+		       m_nodes.erase(it);
+		     });
+
+            rv = true;
+        }
+        else
+        {
+            MXS_WARNING("No result returned for '%s'.", ZQUERY);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not execute '%s' on %s: %s",
+		  ZQUERY, ms.server->address, mysql_error(ms.con));
+    }
+
+    return rv;
 }
 
 void ClustrixMonitor::update_server_statuses()
@@ -269,15 +392,15 @@ void ClustrixMonitor::update_server_statuses()
              [this](MXS_MONITORED_SERVER& ms) {
                  monitor_stash_current_status(&ms);
 
-                 auto it = find_if(m_node_infos.begin(), m_node_infos.end(),
-                                   [&ms](const std::pair<int,ClustrixNodeInfo>& element) -> bool {
-                                       const ClustrixNodeInfo& info = element.second;
+                 auto it = find_if(m_nodes.begin(), m_nodes.end(),
+                                   [&ms](const std::pair<int,ClustrixNode>& element) -> bool {
+                                       const ClustrixNode& info = element.second;
                                        return ms.server->address == info.ip();
                                    });
 
-                 if (it != m_node_infos.end())
+                 if (it != m_nodes.end())
                  {
-                     const ClustrixNodeInfo& info = it->second;
+                     const ClustrixNode& info = it->second;
 
                      if (info.is_running())
                      {
@@ -350,7 +473,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
             {
                 const vector<http::Result>& results = m_http.results();
 
-                auto it = m_node_infos.begin();
+                auto it = m_nodes.begin();
 
                 for_each(results.begin(), results.end(),
                          [&it](const http::Result& result) {

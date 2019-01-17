@@ -1,4 +1,5 @@
 add_library(clustrixmon SHARED
+  clustrix.cc
   clustrixmon.cc
   clustrixmonitor.cc
   )
