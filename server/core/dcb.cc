@@ -3086,8 +3086,8 @@ int poll_add_dcb(DCB* dcb)
         }
         else
         {
-            // Round-robin the client connection worker assignment
-            owner = RoutingWorker::pick_worker();
+            // Assign to current worker
+            owner = RoutingWorker::get_current();
         }
 
         new_state = DCB_STATE_POLLING;

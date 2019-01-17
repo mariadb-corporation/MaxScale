@@ -1399,44 +1399,40 @@ int gw_MySQLAccept(DCB* client_dcb)
 static void gw_process_one_new_client(DCB* client_dcb)
 {
     /**
-     * Set new descriptor to event set. At the same time,
-     * change state to DCB_STATE_POLLING so that
-     * thread which wakes up sees correct state.
+     * The worker who owns the DCB is chosen here, before any epoll events for it can be processed.
+     * This guarantees that the first event for the DCB is processed only after the following
+     * task has been processed by the owning thread.
      */
-    if (poll_add_dcb(client_dcb) == -1)
-    {
-        /* Send a custom error as MySQL command reply */
-        mysql_send_custom_error(client_dcb,
-                                1,
-                                0,
-                                "MaxScale encountered system limit while "
-                                "attempting to register on an epoll instance.");
+    mxs::RoutingWorker* worker = mxs::RoutingWorker::pick_worker();
 
-        /** close client_dcb */
-        dcb_close(client_dcb);
+    worker->execute([=]() {
+                        client_dcb->protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
+                        MXS_ABORT_IF_NULL(client_dcb->protocol);
 
-        /** Previous state is recovered in poll_add_dcb. */
-        MXS_ERROR("Failed to add dcb %p for fd %d to epoll set.",
-                  client_dcb,
-                  client_dcb->fd);
-        return;
-    }
-    else
-    {
-        // Move the rest of the initialization process to the owning worker
-        mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(client_dcb->owner);
+                        /**
+                         * Set new descriptor to event set. At the same time,
+                         * change state to DCB_STATE_POLLING so that
+                         * thread which wakes up sees correct state.
+                         */
+                        if (poll_add_dcb(client_dcb) == -1)
+                        {
+                            /* Send a custom error as MySQL command reply */
+                            mysql_send_custom_error(client_dcb, 1, 0,
+                                                    "MaxScale encountered system limit while "
+                                                    "attempting to register on an epoll instance.");
 
-        worker->execute([=]() {
-                            client_dcb->protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
-                            MXS_ABORT_IF_NULL(client_dcb->protocol);
+                            /** close client_dcb */
+                            dcb_close(client_dcb);
+
+                            /** Previous state is recovered in poll_add_dcb. */
+                            MXS_ERROR("Failed to add dcb %p for fd %d to epoll set.",
+                                      client_dcb, client_dcb->fd);
+                        }
+                        else
+                        {
                             MySQLSendHandshake(client_dcb);
-                        }, mxs::RoutingWorker::EXECUTE_AUTO);
-
-        MXS_DEBUG("Added dcb %p for fd %d to epoll set.",
-                  client_dcb,
-                  client_dcb->fd);
-    }
-    return;
+                        }
+                    }, mxs::RoutingWorker::EXECUTE_AUTO);
 }
 
 static int gw_error_client_event(DCB* dcb)
