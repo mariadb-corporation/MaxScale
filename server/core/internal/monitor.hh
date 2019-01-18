@@ -79,8 +79,42 @@ static const MXS_ENUM_VALUE mxs_monitor_event_enum_values[] =
 
 std::unique_ptr<ResultSet> monitor_get_list();
 
-MXS_MONITOR* monitor_create(const std::string& name, const std::string& module, MXS_CONFIG_PARAMETER* params);
-void         monitor_destroy(MXS_MONITOR*);
+/**
+ * This class contains internal monitor management functions that should not be exposed in the public
+ * monitor class. It's a friend of MXS_MONITOR.
+ */
+class MonitorManager
+{
+public:
+
+    /**
+     * Creates a new monitor. Loads the module, calls constructor and configure, and adds monitor to the
+     * global list.
+     *
+     * @param name          The configuration name of the monitor
+     * @param module        The module name to load
+     * @return              The newly created monitor, or NULL on error
+     */
+    static MXS_MONITOR* create_monitor(const std::string& name, const std::string& module,
+                                       MXS_CONFIG_PARAMETER* params);
+
+    /**
+     * @brief Destroys all monitors. At this point all monitors should
+     *        have been stopped.
+     *
+     * @attn Must only be called in single-thread context at system shutdown.
+     */
+    static void destroy_all_monitors();
+
+    /**
+     * Free a monitor, first stop the monitor and then remove the monitor from
+     * the chain of monitors and free the memory.
+     *
+     * @param mon   The monitor to free
+     */
+    static void destroy_monitor(MXS_MONITOR*);
+};
+
 
 void monitor_start(MXS_MONITOR*, const MXS_CONFIG_PARAMETER*);
 void monitor_stop(MXS_MONITOR*);
@@ -98,14 +132,6 @@ void monitor_deactivate(MXS_MONITOR* monitor);
 void monitor_stop_all();
 void monitor_start_all();
 
-/**
- * @brief Destroys all monitors. At this point all monitors should
- *        have been stopped.
- *
- * @attn Must only be called in single-thread context at system shutdown.
- */
-void monitor_destroy_all();
-
 MXS_MONITOR* monitor_find(const char*);
 MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module);
 
@@ -117,7 +143,7 @@ void monitor_list(DCB*);
 bool monitor_add_server(MXS_MONITOR* mon, SERVER* server);
 void monitor_remove_server(MXS_MONITOR* mon, SERVER* server);
 void monitor_add_user(MXS_MONITOR*, const char*, const char*);
-void monitor_add_parameters(MXS_MONITOR* monitor, MXS_CONFIG_PARAMETER* params);
+void monitor_add_parameters(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params);
 bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key);
 void monitor_set_parameter(MXS_MONITOR* monitor, const char* key, const char* value);
 

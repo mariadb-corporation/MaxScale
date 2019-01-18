@@ -2262,7 +2262,7 @@ int main(int argc, char** argv)
     monitor_stop_all();
 
     /*< Destroy all monitors */
-    monitor_destroy_all();
+    MonitorManager::destroy_all_monitors();
 
     /*<
      * Wait for worker threads to exit.

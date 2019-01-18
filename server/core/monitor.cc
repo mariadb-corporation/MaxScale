@@ -96,15 +96,8 @@ static uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED 
 static uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
     | SERVER_JOINED | SERVER_NDB;
 
-/**
- * Create a new monitor, load the associated module for the monitor
- * and start execution on the monitor.
- *
- * @param name          The configuration name of the monitor
- * @param module        The module name to load
- * @return              The newly created monitor, or NULL on error
- */
-MXS_MONITOR* monitor_create(const string& name, const string& module, MXS_CONFIG_PARAMETER* params)
+MXS_MONITOR* MonitorManager::create_monitor(const string& name, const string& module,
+                                            MXS_CONFIG_PARAMETER* params)
 {
     MXS_MONITOR_API* api = (MXS_MONITOR_API*)load_module(module.c_str(), MODULE_MONITOR);
     if (!api)
@@ -119,43 +112,9 @@ MXS_MONITOR* monitor_create(const string& name, const string& module, MXS_CONFIG
         return NULL;
     }
 
-    mon->api = api;
-    mon->read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
-    mon->write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
-    mon->connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
-    mon->connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
-    mon->interval = config_get_integer(params, CN_MONITOR_INTERVAL);
-    mon->journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
-    mon->script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
-    mon->script = config_get_string(params, CN_SCRIPT);
-    mon->events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
-    mon->disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
-
-    for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
-    {
-        fix_object_name(s);
-        monitor_add_server(mon, Server::find_by_unique_name(s));
-    }
-
-    monitor_add_user(mon, config_get_string(params, CN_USER), config_get_string(params, CN_PASSWORD));
-
-    /* The previous config values were normal types and were checked before this function
-     * to be correct. The following is a complicated type and needs to be checked now. */
-    bool error = false;
-    const char* threshold_string = config_get_string(params, CN_DISK_SPACE_THRESHOLD);
-    if (!monitor_set_disk_space_threshold(mon, threshold_string))
-    {
-        MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                  CN_DISK_SPACE_THRESHOLD, mon->name, threshold_string);
-        error = true;
-    }
-
+    bool error = !mon->configure(params);
     if (!error)
     {
-        // Store module, used when the monitor is serialized
-        monitor_set_parameter(mon, CN_MODULE, module.c_str());
-        monitor_add_parameters(mon, params);
-
         if ((mon->instance = mon->api->createInstance(mon)) == NULL)
         {
             MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
@@ -187,13 +146,48 @@ MXS_MONITOR::MXS_MONITOR(const string& name, const string& module, MXS_MONITOR_A
     memset(journal_hash, 0, sizeof(journal_hash));
 }
 
-/**
- * Free a monitor, first stop the monitor and then remove the monitor from
- * the chain of monitors and free the memory.
- *
- * @param mon   The monitor to free
- */
-void monitor_destroy(MXS_MONITOR* mon)
+bool MXS_MONITOR::configure(const MXS_CONFIG_PARAMETER* params)
+{
+    read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
+    write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
+    connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
+    connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
+    interval = config_get_integer(params, CN_MONITOR_INTERVAL);
+    journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
+    script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
+    script = config_get_string(params, CN_SCRIPT);
+    events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
+    disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
+    monitor_add_user(this, config_get_string(params, CN_USER), config_get_string(params, CN_PASSWORD));
+
+    for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
+    {
+        fix_object_name(s);
+        monitor_add_server(this, Server::find_by_unique_name(s));
+    }
+
+    /* The previous config values were normal types and were checked by the config manager
+     * to be correct. The following is a complicated type and needs to be checked separately. */
+    bool error = false;
+    const char* threshold_string = config_get_string(params, CN_DISK_SPACE_THRESHOLD);
+    if (!monitor_set_disk_space_threshold(this, threshold_string))
+    {
+                MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
+                          CN_DISK_SPACE_THRESHOLD, name, threshold_string);
+        error = true;
+    }
+
+    if (!error)
+    {
+        // Store module name into parameter storage.
+        monitor_set_parameter(this, CN_MODULE, module_name.c_str());
+        // Add all config settings to text-mode storage. Needed for serialization.
+        monitor_add_parameters(this, params);
+    }
+    return !error;
+}
+
+void MonitorManager::destroy_monitor(MXS_MONITOR* mon)
 {
     MXS_MONITOR* ptr;
 
@@ -219,14 +213,18 @@ void monitor_destroy(MXS_MONITOR* mon)
     guard.unlock();
 
     mon->api->destroyInstance(mon->instance);
-    delete mon->disk_space_threshold;
-    config_parameter_free(mon->parameters);
-    monitor_server_free_all(mon->monitored_servers);
-    MXS_FREE(mon->name);
     delete mon;
 }
 
-void monitor_destroy_all()
+MXS_MONITOR::~MXS_MONITOR()
+{
+    delete disk_space_threshold;
+    config_parameter_free(parameters);
+    monitor_server_free_all(monitored_servers);
+    MXS_FREE(name);
+}
+
+void MonitorManager::destroy_all_monitors()
 {
     // monitor_destroy() grabs 'monLock', so it cannot be grabbed here
     // without additional changes. But this function should only be
@@ -235,7 +233,7 @@ void monitor_destroy_all()
     while (allMonitors)
     {
         MXS_MONITOR* monitor = allMonitors;
-        monitor_destroy(monitor);
+        destroy_monitor(monitor);
     }
 }
 
@@ -815,7 +813,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
  * @param monitor Monitor
  * @param params Config parameters
  */
-void monitor_add_parameters(MXS_MONITOR* monitor, MXS_CONFIG_PARAMETER* params)
+void monitor_add_parameters(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
 {
     Guard guard(monitor->lock);
     while (params)

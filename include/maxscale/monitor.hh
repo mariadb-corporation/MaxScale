@@ -246,6 +246,7 @@ class MXS_MONITOR
 {
 public:
     MXS_MONITOR(const std::string& name, const std::string& module, MXS_MONITOR_API* api);
+    ~MXS_MONITOR();
 
     char*             name;         /**< Monitor instance name */
     const std::string module_name;  /**< Name of the monitor module */
@@ -288,6 +289,16 @@ public:
     MxsDiskSpaceThreshold* disk_space_threshold = NULL;     /**< Disk space thresholds */
     int64_t                disk_space_check_interval = -1;  /**< How often should a disk space check be made
                                                              *   at most. */
+private:
+    friend class MonitorManager;
+
+    /**
+     * Configure base class. Called by monitor creation code.
+     *
+     * @param params Config parameters
+     * @return True on success
+     */
+    bool configure(const MXS_CONFIG_PARAMETER* params);
 };
 
 /**

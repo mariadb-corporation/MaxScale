@@ -1195,7 +1195,7 @@ bool runtime_create_monitor(const char* name, const char* module)
 
             if (ok)
             {
-                if ((monitor = monitor_create(name, module, params)) == NULL)
+                if ((monitor = MonitorManager::create_monitor(name, module, params)) == NULL)
                 {
                     config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
                 }
