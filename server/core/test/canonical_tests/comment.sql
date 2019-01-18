@@ -9,3 +9,7 @@ SELECT 1 /*! +1 */;
 SELECT 1 /*!50101 +1 */;
 SELECT 2 /*M! +1 */;
 SELECT 2 /*M!50101 +1 */;
+SELECT 2 /* 
+SELECT 2 /*
+SELECT 2 /*/
+SELECT 2 /**/

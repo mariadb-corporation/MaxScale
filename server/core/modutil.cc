@@ -1466,7 +1466,11 @@ std::string get_canonical(GWBUF* querybuf)
         else if (*it == '/' && is_next(it, buf.end(), "/*"))
         {
             auto comment_start = std::next(it, 2);
-            if (comment_start != buf.end() && *comment_start != '!' && *comment_start != 'M')
+            if (comment_start == buf.end())
+            {
+                break;
+            }
+            else if (*comment_start != '!' && *comment_start != 'M')
             {
                 // Non-executable comment
                 while (it != buf.end())
@@ -1478,6 +1482,11 @@ std::string get_canonical(GWBUF* querybuf)
                         break;
                     }
                     ++it;
+                }
+
+                if (it == buf.end())
+                {
+                    break;
                 }
             }
             else
@@ -1507,6 +1516,7 @@ std::string get_canonical(GWBUF* querybuf)
 
                 ++it;
             }
+
             if (it == buf.end())
             {
                 break;
@@ -1545,6 +1555,8 @@ std::string get_canonical(GWBUF* querybuf)
         {
             rval[i++] = *it;
         }
+
+        mxb_assert(it != buf.end());
     }
 
     // Shrink the buffer so that the internal bookkeeping of std::string remains up to date
