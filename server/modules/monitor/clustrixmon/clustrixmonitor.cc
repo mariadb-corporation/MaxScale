@@ -97,6 +97,76 @@ void ClustrixMonitor::tick()
     }
 }
 
+namespace
+{
+
+bool is_part_of_the_quorum(const MXS_MONITORED_SERVER& ms)
+{
+    bool rv = false;
+
+    const char ZQUERY_TEMPLATE[] =
+        "SELECT ms.status FROM system.membership AS ms INNER JOIN system.nodeinfo AS ni "
+        "ON ni.nodeid = ms.nid WHERE ni.iface_ip = '%s'";
+
+    const char* zAddress = ms.server->address;
+    char zQuery[sizeof(ZQUERY_TEMPLATE) + strlen(zAddress)];
+
+    sprintf(zQuery, ZQUERY_TEMPLATE, zAddress);
+
+    if (mysql_query(ms.con, zQuery) == 0)
+    {
+        MYSQL_RES* pResult = mysql_store_result(ms.con);
+
+        if (pResult)
+        {
+            mxb_assert(mysql_field_count(ms.con) == 1);
+
+            MYSQL_ROW row;
+            while ((row = mysql_fetch_row(pResult)) != nullptr)
+            {
+                if (row[0])
+                {
+                    Clustrix::Status status = Clustrix::status_from_string(row[0]);
+
+                    switch (status)
+                    {
+                    case Clustrix::Status::QUORUM:
+                        rv = true;
+                        break;
+
+                    case Clustrix::Status::STATIC:
+                        MXS_NOTICE("Node %s is not part of the quorum, switching to "
+                                   "other node for monitoring.", zAddress);
+                        break;
+
+                    case Clustrix::Status::UNKNOWN:
+                        MXS_WARNING("Do not know how to interpret '%s'. Assuming node %s "
+                                    "is not part of the quorum.", row[0], zAddress);
+                    }
+                }
+                else
+                {
+                    MXS_WARNING("No status returned for '%s' on %s.", zQuery, zAddress);
+                }
+            }
+
+            mysql_free_result(pResult);
+        }
+        else
+        {
+            MXS_WARNING("No result returned for '%s' on %s.", zQuery, zAddress);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not execute '%s' on %s: %s", zQuery, zAddress, mysql_error(ms.con));
+    }
+
+    return rv;
+}
+
+}
+
 void ClustrixMonitor::update_cluster_nodes()
 {
     auto b = begin(*(m_monitor->monitored_servers));
@@ -106,15 +176,34 @@ void ClustrixMonitor::update_cluster_nodes()
                       [this](MXS_MONITORED_SERVER& ms) -> bool {
                           mxs_connect_result_t rv = mon_ping_or_connect_to_db(m_monitor, &ms);
 
-                          return mon_connection_is_ok(rv) ? true : false;
+                          bool usable = false;
+
+                          if (mon_connection_is_ok(rv) && is_part_of_the_quorum(ms))
+                          {
+                              usable = true;
+                          }
+
+                          return usable;
                       });
 
     if (it != e)
     {
         MXS_MONITORED_SERVER& ms = *it;
-        update_cluster_nodes(ms);
+
+        if (!m_pMonitored_server)
+        {
+            MXS_NOTICE("Monitoring Clustrix cluster state using node %s.", ms.server->address);
+        }
+        else if (m_pMonitored_server != &ms)
+        {
+            MXS_NOTICE("Monitoring Clustrix cluster state using %s (used to be %s).",
+                       ms.server->address, m_pMonitored_server->server->address);
+        }
 
         m_pMonitored_server = &ms;
+
+        update_cluster_nodes(*m_pMonitored_server);
+
     }
     else
     {
@@ -256,7 +345,7 @@ void ClustrixMonitor::update_cluster_nodes(MXS_MONITORED_SERVER& ms)
         }
         else
         {
-            MXS_WARNING("No result returned for '%s'.", ZQUERY);
+            MXS_WARNING("No result returned for '%s' on %s.", ZQUERY, ms.server->address);
         }
     }
     else
