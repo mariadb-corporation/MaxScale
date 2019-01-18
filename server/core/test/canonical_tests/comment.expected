@@ -9,3 +9,7 @@ SELECT ? /*! +? */;
 SELECT ? /*!? +? */;
 SELECT ? /*M! +? */;
 SELECT ? /*M!? +? */;
+SELECT ?
+SELECT ?
+SELECT ?
+SELECT ?
