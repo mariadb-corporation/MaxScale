@@ -1540,13 +1540,19 @@ std::string get_canonical(GWBUF* querybuf)
         else if (*it == '\'' || *it == '"')
         {
             char c = *it;
-            it = find_char(std::next(it), buf.end(), c);
+            if ((it = find_char(std::next(it), buf.end(), c)) == buf.end())
+            {
+                break;
+            }
             rval[i++] = '?';
         }
         else if (*it == '`')
         {
             auto start = it;
-            it = find_char(std::next(it), buf.end(), '`');
+            if ((it = find_char(std::next(it), buf.end(), '`')) == buf.end())
+            {
+                break;
+            }
             std::copy(start, it, &rval[i]);
             i += std::distance(start, it);
             rval[i++] = '`';
