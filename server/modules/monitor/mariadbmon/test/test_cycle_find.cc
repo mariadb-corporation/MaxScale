@@ -90,7 +90,7 @@ int main()
 }
 
 MariaDBMonitor::Test::Test(bool use_hostnames)
-    : m_monitor(new MariaDBMonitor(NULL))
+    : m_monitor(new MariaDBMonitor())
     , m_use_hostnames(use_hostnames)
 {
 }

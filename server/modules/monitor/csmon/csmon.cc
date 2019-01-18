@@ -71,9 +71,7 @@ int get_cs_version(MXS_MONITORED_SERVER* srv)
 }
 }
 
-CsMonitor::CsMonitor(MXS_MONITOR* monitor)
-    : maxscale::MonitorInstanceSimple(monitor)
-    , m_primary(config_get_server(monitor->parameters, "primary"))
+CsMonitor::CsMonitor()
 {
 }
 
@@ -82,9 +80,9 @@ CsMonitor::~CsMonitor()
 }
 
 // static
-CsMonitor* CsMonitor::create(MXS_MONITOR* monitor)
+CsMonitor* CsMonitor::create()
 {
-    return new CsMonitor(monitor);
+    return new CsMonitor();
 }
 
 bool CsMonitor::has_sufficient_permissions() const
@@ -114,6 +112,12 @@ void CsMonitor::update_server_status(MXS_MONITORED_SERVER* srv)
     }
 
     monitor_set_pending_status(srv, status);
+}
+
+bool CsMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
+{
+    m_primary = config_get_server(pParams, "primary");
+    return true;
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()

@@ -51,7 +51,7 @@ public:
      * @param monitor Generic monitor data
      * @return MariaDBMonitor instance
      */
-    static MariaDBMonitor* create(MXS_MONITOR* monitor);
+    static MariaDBMonitor* create();
 
     ~MariaDBMonitor();
 
@@ -236,7 +236,7 @@ private:
                                                  * gtid:s? */
 
     // Base methods
-    MariaDBMonitor(MXS_MONITOR* monitor_base);
+    MariaDBMonitor();
     bool configure(const MXS_CONFIG_PARAMETER* params);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     void reset_server_info();

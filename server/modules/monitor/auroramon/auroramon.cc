@@ -25,8 +25,7 @@
 #include <maxscale/mysql_utils.hh>
 
 
-AuroraMonitor::AuroraMonitor(MXS_MONITOR* monitor)
-    : maxscale::MonitorInstanceSimple(monitor)
+AuroraMonitor::AuroraMonitor()
 {
 }
 
@@ -35,9 +34,9 @@ AuroraMonitor::~AuroraMonitor()
 }
 
 // static
-AuroraMonitor* AuroraMonitor::create(MXS_MONITOR* monitor)
+AuroraMonitor* AuroraMonitor::create()
 {
-    return new AuroraMonitor(monitor);
+    return new AuroraMonitor();
 }
 
 bool AuroraMonitor::has_sufficient_permissions() const

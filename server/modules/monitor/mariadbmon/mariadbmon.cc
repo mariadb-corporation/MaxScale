@@ -59,8 +59,7 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 static const char DIAG_ERROR[] = "Internal error, could not print diagnostics. "
                                  "Check log for more information.";
 
-MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
-    : maxscale::MonitorInstance(monitor)
+MariaDBMonitor::MariaDBMonitor()
 {
 }
 
@@ -173,9 +172,9 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
     return rval;
 }
 
-MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR* monitor)
+MariaDBMonitor* MariaDBMonitor::create()
 {
-    return new MariaDBMonitor(monitor);
+    return new MariaDBMonitor();
 }
 
 /**
@@ -845,7 +844,7 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
     else
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
-        auto handle = static_cast<MariaDBMonitor*>(mon->instance);
+        auto handle = static_cast<MariaDBMonitor*>(mon);
         SERVER* promotion_server = (args->argc >= 2) ? args->argv[1].value.server : NULL;
         SERVER* demotion_server = (args->argc == 3) ? args->argv[2].value.server : NULL;
         rval = handle->run_manual_switchover(promotion_server, demotion_server, error_out);
@@ -873,7 +872,7 @@ bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
     else
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
-        auto handle = static_cast<MariaDBMonitor*>(mon->instance);
+        auto handle = static_cast<MariaDBMonitor*>(mon);
         rv = handle->run_manual_failover(output);
     }
     return rv;
@@ -901,7 +900,7 @@ bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
         SERVER* server = args->argv[1].value.server;
-        auto handle = static_cast<MariaDBMonitor*>(mon->instance);
+        auto handle = static_cast<MariaDBMonitor*>(mon);
         rv = handle->run_manual_rejoin(server, output);
     }
     return rv;
@@ -923,7 +922,7 @@ bool handle_manual_reset_replication(const MODULECMD_ARG* args, json_t** output)
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
         SERVER* server = args->argv[1].value.server;
-        auto handle = static_cast<MariaDBMonitor*>(mon->instance);
+        auto handle = static_cast<MariaDBMonitor*>(mon);
         rv = handle->run_manual_reset_replication(server, output);
     }
     return rv;

@@ -43,7 +43,7 @@ public:
     GaleraMonitor& operator=(const GaleraMonitor&) = delete;
 
     ~GaleraMonitor();
-    static GaleraMonitor* create(MXS_MONITOR* monitor);
+    static GaleraMonitor* create();
     void                  diagnostics(DCB* dcb) const;
     json_t*               diagnostics_json() const;
 
@@ -68,7 +68,7 @@ private:
     NodeMap     m_info;                         /**< Contains Galera Cluster variables of all nodes */
     int         m_cluster_size;                 /**< How many nodes in the cluster */
 
-    GaleraMonitor(MXS_MONITOR* monitor);
+    GaleraMonitor();
 
     bool detect_cluster_size(const int n_nodes,
                              const char* candidate_uuid,

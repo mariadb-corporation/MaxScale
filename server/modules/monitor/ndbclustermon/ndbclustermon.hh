@@ -26,12 +26,12 @@ public:
     NDBCMonitor& operator=(const NDBCMonitor&) = delete;
 
     ~NDBCMonitor();
-    static NDBCMonitor* create(MXS_MONITOR* monitor);
+    static NDBCMonitor* create();
 
 protected:
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
 private:
-    NDBCMonitor(MXS_MONITOR* monitor);
+    NDBCMonitor();
 };

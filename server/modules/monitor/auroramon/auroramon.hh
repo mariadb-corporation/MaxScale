@@ -26,12 +26,12 @@ public:
     AuroraMonitor& operator=(const AuroraMonitor&) = delete;
 
     ~AuroraMonitor();
-    static AuroraMonitor* create(MXS_MONITOR* monitor);
+    static AuroraMonitor* create();
 
 protected:
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
 private:
-    AuroraMonitor(MXS_MONITOR* monitor);
+    AuroraMonitor();
 };

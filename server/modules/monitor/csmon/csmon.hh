@@ -22,14 +22,15 @@ public:
     CsMonitor& operator=(const CsMonitor&) = delete;
 
     ~CsMonitor();
-    static CsMonitor* create(MXS_MONITOR* monitor);
+    static CsMonitor* create();
 
 protected:
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
 private:
-    CsMonitor(MXS_MONITOR* monitor);
+    CsMonitor();
+    bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
 
     SERVER* m_primary;
 };

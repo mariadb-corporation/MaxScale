@@ -24,13 +24,13 @@
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.hh>
 #include <maxbase/iterator.hh>
-#include <maxbase/jansson.h>
 #include <maxscale/config.hh>
-#include <maxscale/dcb.hh>
 #include <maxscale/server.hh>
 #include <maxscale/protocol/mysql.hh>
 
 class MXS_MONITOR;
+struct DCB;
+struct json_t;
 
 /**
  * An opaque type representing a monitor instance.
@@ -67,19 +67,13 @@ struct MXS_MONITOR_API
     /**
      * @brief Create the monitor.
      *
-     * This entry point is called once when MaxScale is started, for
-     * creating the monitor.
+     * This entry point is called once when MaxScale is started, for creating the monitor.
+     * If the function fails, MaxScale will not start. The returned object must inherit from
+     * the abstract base monitor class and implement the missing methods.
      *
-     * If the function fails, MaxScale will not start. That is, it
-     * should fail only for fatal reasons such as not being able to
-     * create vital resources.
-     *
-     * @param monitor  The monitor object.
-     *
-     * @return Pointer to the monitor specific data. Will be stored
-     *         in @c monitor->handle.
+     * @return Monitor object
      */
-    MXS_MONITOR_INSTANCE* (* createInstance)(MXS_MONITOR* monitor);
+    MXS_MONITOR* (* createInstance)();
 
     /**
      * @brief Destroy the monitor.
@@ -245,14 +239,17 @@ inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> end(MXS_MONITORED_SER
 class MXS_MONITOR
 {
 public:
-    MXS_MONITOR(const std::string& name, const std::string& module, MXS_MONITOR_API* api);
-    ~MXS_MONITOR();
+    MXS_MONITOR();
+    virtual ~MXS_MONITOR();
+    virtual bool configure(const MXS_CONFIG_PARAMETER* params) = 0;
+    virtual bool start(const MXS_CONFIG_PARAMETER* params) = 0;
+    virtual void stop() = 0;
+    virtual void diagnostics(DCB* dcb) const = 0;
+    virtual json_t* diagnostics_json() const = 0;
 
     char*             name;         /**< Monitor instance name */
-    const std::string module_name;  /**< Name of the monitor module */
+    std::string       module_name;  /**< Name of the monitor module */
 
-    MXS_MONITOR_API*      api;      /**< The monitor api */
-    MXS_MONITOR_INSTANCE* instance; /**< Instance returned from startMonitor */
     MXS_MONITOR*          next;     /**< Next monitor in the linked list */
     mutable std::mutex    lock;
 
@@ -289,6 +286,7 @@ public:
     MxsDiskSpaceThreshold* disk_space_threshold = NULL;     /**< Disk space thresholds */
     int64_t                disk_space_check_interval = -1;  /**< How often should a disk space check be made
                                                              *   at most. */
+
 private:
     friend class MonitorManager;
 
@@ -298,7 +296,7 @@ private:
      * @param params Config parameters
      * @return True on success
      */
-    bool configure(const MXS_CONFIG_PARAMETER* params);
+    bool configure_base(const MXS_CONFIG_PARAMETER* params);
 };
 
 /**
@@ -481,6 +479,7 @@ namespace maxscale
 {
 
 class MonitorInstance : public MXS_MONITOR_INSTANCE
+                      , public MXS_MONITOR
                       , protected maxbase::Worker
 {
 public:
@@ -576,7 +575,7 @@ public:
     static int64_t get_time_ms();
 
 protected:
-    MonitorInstance(MXS_MONITOR* pMonitor);
+    MonitorInstance();
 
     /**
      * @brief Should the monitor shut down?
@@ -700,8 +699,7 @@ public:
     MonitorInstanceSimple& operator=(const MonitorInstanceSimple&) = delete;
 
 protected:
-    MonitorInstanceSimple(MXS_MONITOR* pMonitor)
-        : MonitorInstance(pMonitor)
+    MonitorInstanceSimple()
     {
     }
 
@@ -759,10 +757,10 @@ public:
     MonitorApi(const MonitorApi&) = delete;
     MonitorApi& operator=(const MonitorApi&) = delete;
 
-    static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR* pMonitor)
+    static MXS_MONITOR* createInstance()
     {
         MonitorInstance* pInstance = NULL;
-        MXS_EXCEPTION_GUARD(pInstance = MonitorInstance::create(pMonitor));
+        MXS_EXCEPTION_GUARD(pInstance = MonitorInstance::create());
         return pInstance;
     }
 

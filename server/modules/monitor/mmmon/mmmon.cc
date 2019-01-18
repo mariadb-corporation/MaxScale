@@ -34,9 +34,8 @@
 static void detectStaleMaster(void*, int);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 
-MMMonitor::MMMonitor(MXS_MONITOR* monitor)
-    : maxscale::MonitorInstanceSimple(monitor)
-    , m_detectStaleMaster(false)
+MMMonitor::MMMonitor()
+    : m_detectStaleMaster(false)
 {
 }
 
@@ -45,9 +44,9 @@ MMMonitor::~MMMonitor()
 }
 
 // static
-MMMonitor* MMMonitor::create(MXS_MONITOR* monitor)
+MMMonitor* MMMonitor::create()
 {
-    return new MMMonitor(monitor);
+    return new MMMonitor();
 }
 
 void MMMonitor::diagnostics(DCB* dcb) const

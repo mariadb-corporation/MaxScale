@@ -26,8 +26,7 @@
 #include <mysqld_error.h>
 
 
-GRMon::GRMon(MXS_MONITOR* monitor)
-    : MonitorInstanceSimple(monitor)
+GRMon::GRMon()
 {
 }
 
@@ -35,9 +34,9 @@ GRMon::~GRMon()
 {
 }
 
-GRMon* GRMon::create(MXS_MONITOR* monitor)
+GRMon* GRMon::create()
 {
-    return new GRMon(monitor);
+    return new GRMon();
 }
 
 bool GRMon::has_sufficient_permissions() const

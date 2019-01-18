@@ -106,24 +106,19 @@ MXS_MONITOR* MonitorManager::create_monitor(const string& name, const string& mo
         return NULL;
     }
 
-    MXS_MONITOR* mon = new(std::nothrow) MXS_MONITOR(name, module, api);
+    MXS_MONITOR* mon = api->createInstance();
     if (!mon)
     {
+        MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
+                  name.c_str(), module.c_str());
         return NULL;
     }
 
-    bool error = !mon->configure(params);
-    if (!error)
-    {
-        if ((mon->instance = mon->api->createInstance(mon)) == NULL)
-        {
-            MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
-                      name.c_str(), module.c_str());
-            error = true;
-        }
-    }
+    // These initializations are kept outside the constructor to keep it simple.
+    mon->name = MXS_STRDUP_A(name.c_str());
+    mon->module_name = module;
 
-    if (!error)
+    if (mon->configure_base(params)) // TODO: Move derived class configure() here
     {
         std::lock_guard<std::mutex> guard(monLock);
         mon->next = allMonitors;
@@ -137,16 +132,12 @@ MXS_MONITOR* MonitorManager::create_monitor(const string& name, const string& mo
     return mon;
 }
 
-MXS_MONITOR::MXS_MONITOR(const string& name, const string& module, MXS_MONITOR_API* api)
-    : module_name(module)
-    , api(api)
+MXS_MONITOR::MXS_MONITOR()
 {
-    // The strdup is required until name is an std::string.
-    this->name = MXS_STRDUP_A(name.c_str());
     memset(journal_hash, 0, sizeof(journal_hash));
 }
 
-bool MXS_MONITOR::configure(const MXS_CONFIG_PARAMETER* params)
+bool MXS_MONITOR::configure_base(const MXS_CONFIG_PARAMETER* params)
 {
     read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
     write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
@@ -211,8 +202,6 @@ void MonitorManager::destroy_monitor(MXS_MONITOR* mon)
     }
 
     guard.unlock();
-
-    mon->api->destroyInstance(mon->instance);
     delete mon;
 }
 
@@ -257,7 +246,7 @@ void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
                 remove_server_journal(monitor);
             }
 
-            if ((*monitor->api->startMonitor)(monitor->instance, params))
+            if (monitor->start(params))
             {
                 monitor->state = MONITOR_STATE_RUNNING;
             }
@@ -303,7 +292,7 @@ void monitor_stop(MXS_MONITOR* monitor)
         if (monitor->state == MONITOR_STATE_RUNNING)
         {
             monitor->state = MONITOR_STATE_STOPPING;
-            monitor->api->stopMonitor(monitor->instance);
+            monitor->stop();
             monitor->state = MONITOR_STATE_STOPPED;
 
             MXS_MONITORED_SERVER* db = monitor->monitored_servers;
@@ -538,20 +527,13 @@ void monitor_show(DCB* dcb, MXS_MONITOR* monitor)
 
     dcb_printf(dcb, "\n");
 
-    if (monitor->instance)
+    if (monitor->state == MONITOR_STATE_RUNNING)
     {
-        if (monitor->api->diagnostics && monitor->state == MONITOR_STATE_RUNNING)
-        {
-            monitor->api->diagnostics(monitor->instance, dcb);
-        }
-        else
-        {
-            dcb_printf(dcb, " (no diagnostics)\n");
-        }
+        monitor->diagnostics(dcb);
     }
     else
     {
-        dcb_printf(dcb, " Monitor failed\n");
+        dcb_printf(dcb, " (no diagnostics)\n");
     }
     dcb_printf(dcb, "\n");
 }
@@ -1760,11 +1742,9 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
         /** Monitor parameters */
         json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
 
-        if (monitor->instance && monitor->api->diagnostics_json
-            && monitor->state == MONITOR_STATE_RUNNING)
+        if (monitor->state == MONITOR_STATE_RUNNING)
         {
-            json_t* diag = monitor->api->diagnostics_json(monitor->instance);
-
+            json_t* diag = monitor->diagnostics_json();
             if (diag)
             {
                 json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
@@ -2449,8 +2429,8 @@ void monitor_debug_wait()
 namespace maxscale
 {
 
-MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
-    : m_monitor(pMonitor)
+MonitorInstance::MonitorInstance()
+    : m_monitor(this)
     , m_master(NULL)
     , m_thread_running(false)
     , m_shutdown(0)

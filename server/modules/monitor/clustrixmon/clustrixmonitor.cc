@@ -27,8 +27,7 @@ const int DEFAULT_HEALTH_PORT = 3581;
 
 }
 
-ClustrixMonitor::ClustrixMonitor(MXS_MONITOR* pMonitor)
-    : maxscale::MonitorInstance(pMonitor)
+ClustrixMonitor::ClustrixMonitor()
 {
 }
 
@@ -37,9 +36,9 @@ ClustrixMonitor::~ClustrixMonitor()
 }
 
 //static
-ClustrixMonitor* ClustrixMonitor::create(MXS_MONITOR* pMonitor)
+ClustrixMonitor* ClustrixMonitor::create()
 {
-    return new ClustrixMonitor(pMonitor);
+    return new ClustrixMonitor();
 }
 
 bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)

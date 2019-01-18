@@ -22,8 +22,7 @@
 #include <maxscale/mysql_utils.hh>
 
 
-NDBCMonitor::NDBCMonitor(MXS_MONITOR* monitor)
-    : maxscale::MonitorInstanceSimple(monitor)
+NDBCMonitor::NDBCMonitor()
 {
 }
 
@@ -32,9 +31,9 @@ NDBCMonitor::~NDBCMonitor()
 }
 
 // static
-NDBCMonitor* NDBCMonitor::create(MXS_MONITOR* monitor)
+NDBCMonitor* NDBCMonitor::create()
 {
-    return new NDBCMonitor(monitor);
+    return new NDBCMonitor();
 }
 
 bool NDBCMonitor::has_sufficient_permissions() const
