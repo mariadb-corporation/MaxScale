@@ -182,6 +182,11 @@ void ClustrixMonitor::update_cluster_nodes()
                           {
                               usable = true;
                           }
+                          else if (ms.con)
+                          {
+                              mysql_close(ms.con);
+                              ms.con = nullptr;
+                          }
 
                           return usable;
                       });
@@ -201,13 +206,15 @@ void ClustrixMonitor::update_cluster_nodes()
         }
 
         m_pMonitored_server = &ms;
+        mxb_assert(m_pMonitored_server->con);
 
         update_cluster_nodes(*m_pMonitored_server);
 
     }
     else
     {
-        MXS_ERROR("Could not connect to any server.");
+        MXS_ERROR("Could not connect to any server or no server that could "
+                  "be connected to was part of the quorum.");
     }
 }
 
@@ -363,14 +370,17 @@ void ClustrixMonitor::refresh_cluster_nodes()
     {
         mxs_connect_result_t rv = mon_ping_or_connect_to_db(m_monitor, m_pMonitored_server);
 
-        if (mon_connection_is_ok(rv))
+        if (mon_connection_is_ok(rv) && is_part_of_the_quorum(*m_pMonitored_server))
         {
             update_cluster_nodes(*m_pMonitored_server);
         }
         else
         {
-            mysql_close(m_pMonitored_server->con);
-            m_pMonitored_server->con = nullptr;
+            if (m_pMonitored_server->con)
+            {
+                mysql_close(m_pMonitored_server->con);
+                m_pMonitored_server->con = nullptr;
+            }
 
             update_cluster_nodes();
         }
