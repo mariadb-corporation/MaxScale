@@ -1375,55 +1375,45 @@ int monitor_launch_script(Monitor* mon, MXS_MONITORED_SERVER* ptr, const char* s
     return rv;
 }
 
-/**
- * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.
- * This will always leave a valid database handle in the database->con pointer, allowing the user to call
- * MySQL C API functions to find out the reason of the failure.
- *
- * @param mon Monitor
- * @param database Monitored database
- * @return Connection status.
- */
-mxs_connect_result_t mon_ping_or_connect_to_db(Monitor* mon, MXS_MONITORED_SERVER* database)
+mxs_connect_result_t mon_ping_or_connect_to_db(const Monitor& mon, SERVER& server, MYSQL** ppCon)
 {
-    if (database->con)
+    if (*ppCon)
     {
         /** Return if the connection is OK */
-        if (mysql_ping(database->con) == 0)
+        if (mysql_ping(*ppCon) == 0)
         {
             return MONITOR_CONN_EXISTING_OK;
         }
         /** Otherwise close the handle. */
-        mysql_close(database->con);
+        mysql_close(*ppCon);
     }
 
     mxs_connect_result_t conn_result = MONITOR_CONN_REFUSED;
-    if ((database->con = mysql_init(NULL)))
+    if ((*ppCon = mysql_init(NULL)))
     {
-        string uname = mon->user;
-        string passwd = mon->password;
-        Server* server = static_cast<Server*>(database->server); // Clean this up later.
-        string server_specific_monuser = server->monitor_user();
+        string uname = mon.user;
+        string passwd = mon.password;
+        const Server& s = static_cast<const Server&>(server); // Clean this up later.
+        string server_specific_monuser = s.monitor_user();
         if (!server_specific_monuser.empty())
         {
             uname = server_specific_monuser;
-            passwd = server->monitor_password();
+            passwd = s.monitor_password();
         }
 
         char* dpwd = decrypt_password(passwd.c_str());
 
-        mysql_optionsv(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &mon->connect_timeout);
-        mysql_optionsv(database->con, MYSQL_OPT_READ_TIMEOUT, (void*) &mon->read_timeout);
-        mysql_optionsv(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void*) &mon->write_timeout);
-        mysql_optionsv(database->con, MYSQL_PLUGIN_DIR, get_connector_plugindir());
+        mysql_optionsv(*ppCon, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &mon.connect_timeout);
+        mysql_optionsv(*ppCon, MYSQL_OPT_READ_TIMEOUT, (void*) &mon.read_timeout);
+        mysql_optionsv(*ppCon, MYSQL_OPT_WRITE_TIMEOUT, (void*) &mon.write_timeout);
+        mysql_optionsv(*ppCon, MYSQL_PLUGIN_DIR, get_connector_plugindir());
 
         time_t start = 0;
         time_t end = 0;
-        for (int i = 0; i < mon->connect_attempts; i++)
+        for (int i = 0; i < mon.connect_attempts; i++)
         {
             start = time(NULL);
-            bool result = (mxs_mysql_real_connect(database->con, database->server, uname.c_str(), dpwd) !=
-                           NULL);
+            bool result = (mxs_mysql_real_connect(*ppCon, &server, uname.c_str(), dpwd) != NULL);
             end = time(NULL);
 
             if (result)
@@ -1433,7 +1423,7 @@ mxs_connect_result_t mon_ping_or_connect_to_db(Monitor* mon, MXS_MONITORED_SERVE
             }
         }
 
-        if (conn_result == MONITOR_CONN_REFUSED && (int)difftime(end, start) >= mon->connect_timeout)
+        if (conn_result == MONITOR_CONN_REFUSED && (int)difftime(end, start) >= mon.connect_timeout)
         {
             conn_result = MONITOR_CONN_TIMEOUT;
         }
@@ -1441,6 +1431,15 @@ mxs_connect_result_t mon_ping_or_connect_to_db(Monitor* mon, MXS_MONITORED_SERVE
     }
 
     return conn_result;
+}
+
+mxs_connect_result_t mon_ping_or_connect_to_db(Monitor* mon, MXS_MONITORED_SERVER* database)
+{
+    mxb_assert(mon);
+    mxb_assert(database);
+    mxb_assert(database->server);
+
+    return mon_ping_or_connect_to_db(*mon, *database->server, &database->con);
 }
 
 /**
