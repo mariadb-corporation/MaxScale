@@ -256,6 +256,31 @@ ResponseStat& RWBackend::response_stat()
     return m_response_stat;
 }
 
+void RWBackend::change_rlag_state(SERVER::RLagState new_state, int max_rlag)
+{
+    mxb_assert(new_state == SERVER::RLagState::BELOW_LIMIT || new_state == SERVER::RLagState::ABOVE_LIMIT);
+    namespace atom = maxbase::atomic;
+    auto srv = server();
+    auto old_state = atom::load(&srv->rlag_state, atom::RELAXED);
+    if (new_state != old_state)
+    {
+        atom::store(&srv->rlag_state, new_state, atom::RELAXED);
+        // State has just changed, log warning. Don't log catchup if old state was RLAG_NONE.
+        if (new_state == SERVER::RLagState::ABOVE_LIMIT)
+        {
+            MXS_WARNING("Replication lag of '%s' is %is, which is above the configured limit %is. "
+                        "'%s' is excluded from query routing.",
+                        srv->name(), srv->rlag, max_rlag, srv->name());
+        }
+        else if (old_state == SERVER::RLagState::ABOVE_LIMIT)
+        {
+            MXS_WARNING("Replication lag of '%s' is %is, which is below the configured limit %is. "
+                        "'%s' is returned to query routing.",
+                        srv->name(), srv->rlag, max_rlag, srv->name());
+        }
+    }
+}
+
 mxs::SRWBackends RWBackend::from_servers(SERVER_REF* servers)
 {
     SRWBackends backends;

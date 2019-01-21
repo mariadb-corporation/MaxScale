@@ -605,14 +605,25 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
             && counts.second < m_router->max_slave_count();
 
         bool master_or_slave = backend->is_master() || backend->is_slave();
-        bool is_useable = backend->in_use() || can_take_slave_into_use;
-        bool not_a_slacker = rpl_lag_is_ok(backend, max_rlag);
+        bool is_usable = backend->in_use() || can_take_slave_into_use;
+        bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
 
-        bool server_is_candidate = master_or_slave && is_useable && not_a_slacker;
-
-        if (server_is_candidate)
+        if (master_or_slave && is_usable)
         {
-            candidates.push_back(backend);
+            if (rlag_ok)
+            {
+                candidates.push_back(backend);
+                if (max_rlag > 0)
+                {
+                    // Replication lag discrimination is on and the server passed.
+                    backend->change_rlag_state(SERVER::RLagState::BELOW_LIMIT, max_rlag);
+                }
+            }
+            else
+            {
+                // The server is otherwise usable except it's lagging too much.
+                backend->change_rlag_state(SERVER::RLagState::ABOVE_LIMIT, max_rlag);
+            }
         }
     }
 

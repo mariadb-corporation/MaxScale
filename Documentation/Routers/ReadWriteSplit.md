@@ -109,12 +109,14 @@ This feature is disabled by default.
 
 	max_slave_replication_lag=<allowed lag in seconds>
 
-This applies to Master/Slave replication with MySQL monitor and
-`detect_replication_lag=1` options set. max_slave_replication_lag must be
-greater than the monitor interval.
-
-This option only affects Master-Slave clusters. Galera clusters do not have a
-concept of slave lag even if the application of write sets might have lag.
+The Readwritesplit-router does not detect the replication lag itself. A monitor
+such as the MariaDB-monitor for a Master/Slave-cluster is required. This option
+only affects Master-Slave clusters. Galera clusters do not have a concept of
+slave lag even if the application of write sets might have lag. When a server is
+disqualified from routing because of replication lag, a warning is logged. Similarly,
+when the server has caught up enough to be a valid routing target, another warning
+is logged. These messages are only logged when a query is being routed and the
+replication state changes.
 
 ### `use_sql_variables_in`
 

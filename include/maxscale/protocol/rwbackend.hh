@@ -134,6 +134,15 @@ public:
 
     // Controlled by the session
     ResponseStat& response_stat();
+
+    /**
+     * Change server replication lag state and log warning when state changes.
+     *
+     * @param new_state New replication lag state
+     * @param max_rlag Maximum allowed lag. Used for the log message.
+     */
+    void change_rlag_state(SERVER::RLagState new_state, int max_rlag);
+
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles;      /**< Internal ID to backend PS handle mapping */

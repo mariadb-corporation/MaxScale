@@ -142,6 +142,13 @@ public:
         CLUSTRIX
     };
 
+    enum class RLagState
+    {
+        NONE,
+        BELOW_LIMIT,
+        ABOVE_LIMIT
+    };
+
     struct Version
     {
         uint64_t total = 0;     /**< The version number received from server */
@@ -193,9 +200,10 @@ public:
     unsigned long node_ts = 0;          /**< Last timestamp set from M/S monitor module */
 
     // Misc fields
-    bool master_err_is_logged = false;  /**< If node failed, this indicates whether it is logged. Only
-                                         * used by rwsplit. TODO: Move to rwsplit */
-    bool warn_ssl_not_enabled = true;   /**< SSL not used for an SSL enabled server */
+    bool master_err_is_logged = false;      /**< If node failed, this indicates whether it is logged. Only
+                                             * used by rwsplit. TODO: Move to rwsplit */
+    bool warn_ssl_not_enabled = true;       /**< SSL not used for an SSL enabled server */
+    RLagState rlag_state = RLagState::NONE; /**< Is replication lag above or under limit? Used by rwsplit. */
 
     virtual ~SERVER() = default;
 
