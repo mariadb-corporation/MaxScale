@@ -230,10 +230,11 @@ void ClustrixMonitor::update_cluster_nodes(MXS_MONITORED_SERVER& ms)
             mxb_assert(mysql_field_count(ms.con) == 4);
 
             set<int> nids;
-            for_each(m_nodes.begin(), m_nodes.end(),
-                     [&nids](const pair<int, ClustrixNode>& element) {
-                         nids.insert(element.first);
-                     });
+            for (const auto& element : m_nodes)
+            {
+                const ClustrixNode& node = element.second;
+                nids.insert(node.id());
+            }
 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(pResult)) != nullptr)
@@ -292,7 +293,8 @@ void ClustrixMonitor::update_cluster_nodes(MXS_MONITORED_SERVER& ms)
                             const ClustrixMembership& membership = mit->second;
                             int health_check_threshold = m_config.health_check_threshold();
 
-                            ClustrixNode node(membership, ip, mysql_port, health_port, health_check_threshold, pServer);
+                            ClustrixNode node(membership, ip, mysql_port, health_port,
+                                              health_check_threshold, pServer);
 
                             m_nodes.insert(make_pair(id, node));
                         }
@@ -321,23 +323,23 @@ void ClustrixMonitor::update_cluster_nodes(MXS_MONITORED_SERVER& ms)
 
             mysql_free_result(pResult);
 
-	    for_each(nids.begin(), nids.end(),
-		     [this](int nid) {
-		       auto it = m_nodes.find(nid);
-		       mxb_assert(it != m_nodes.end());
+            for (const auto nid : nids)
+            {
+                auto it = m_nodes.find(nid);
+                mxb_assert(it != m_nodes.end());
 
-		       ClustrixNode& node = it->second;
-                       node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
-		     });
+                ClustrixNode& node = it->second;
+                node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
+            }
 
             vector<string> health_urls;
-            for_each(m_nodes.begin(), m_nodes.end(),
-                     [&health_urls](const pair<int, ClustrixNode>& element) {
-                         const ClustrixNode& node = element.second;
-                         string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
+            for (const auto& element : m_nodes)
+            {
+                const ClustrixNode& node = element.second;
+                string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
 
-                         health_urls.push_back(url);
-                     });
+                health_urls.push_back(url);
+            }
 
             m_health_urls.swap(health_urls);
 
@@ -398,10 +400,11 @@ bool ClustrixMonitor::check_cluster_membership(MXS_MONITORED_SERVER& ms,
             mxb_assert(mysql_field_count(ms.con) == 4);
 
             set<int> nids;
-            for_each(m_nodes.begin(), m_nodes.end(),
-                     [&nids](const pair<int, ClustrixNode>& element) {
-                         nids.insert(element.first);
-                     });
+            for (const auto& element : m_nodes)
+            {
+                const ClustrixNode& node = element.second;
+                nids.insert(node.id());
+            }
 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(pResult)) != nullptr)
@@ -444,15 +447,15 @@ bool ClustrixMonitor::check_cluster_membership(MXS_MONITORED_SERVER& ms,
             mysql_free_result(pResult);
 
             // Deactivate all servers that are no longer members.
-	    for_each(nids.begin(), nids.end(),
-		     [this](int nid) {
-		       auto it = m_nodes.find(nid);
-		       mxb_assert(it != m_nodes.end());
+            for (const auto nid : nids)
+            {
+                auto it = m_nodes.find(nid);
+                mxb_assert(it != m_nodes.end());
 
-		       ClustrixNode& node = it->second;
-		       node.deactivate_server();
-		       m_nodes.erase(it);
-		     });
+                ClustrixNode& node = it->second;
+                node.deactivate_server();
+                m_nodes.erase(it);
+            }
 
             rv = true;
         }
