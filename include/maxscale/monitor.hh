@@ -33,31 +33,11 @@ struct DCB;
 struct json_t;
 
 /**
- * An opaque type representing a monitor instance.
- */
-struct MXS_MONITOR_INSTANCE
-{
-};
-
-/**
  * @verbatim
  * The "module object" structure for a backend monitor module
  *
  * Monitor modules monitor the backend databases that MaxScale connects to.
  * The information provided by a monitor is used in routing decisions.
- *
- * The entry points are:
- *      startMonitor    Called by main to start the monitor
- *      stopMonitor     Called by main to shut down and destroy a monitor
- *      diagnostics     Called for diagnostic output
- *
- * startMonitor is called to start the monitoring process, it is called on the
- * MaxScale main thread and is responsible for creating a thread for the monitor
- * itself to run on. This should use the entry points defined in the thread.h
- * header file rather than make direct calls to the operating system threading
- * libraries. The return from startMonitor is a pointer that will be passed to
- * all other monitor API calls.
- *
  * @endverbatim
  *
  * @see load_module
@@ -74,68 +54,13 @@ struct MXS_MONITOR_API
      * @return Monitor object
      */
     MXS_MONITOR* (* createInstance)();
-
-    /**
-     * @brief Destroy the monitor.
-     *
-     * This entry point is called once when MaxScale is shutting down, iff
-     * the earlier call to @c initMonitor returned on object. The monitor should
-     * perform all needed cleanup.
-     *
-     * @param monitor  The monitor object.
-     */
-    void (* destroyInstance)(MXS_MONITOR_INSTANCE* monitor);
-
-    /**
-     * @brief Start the monitor
-     *
-     * This entry point is called when the monitor is started. If the monitor
-     * requires polling of the servers, it should create a separate monitoring
-     * thread.
-     *
-     * @param monitor The monitor object
-     * @param params  Parameters for this monitor
-     *
-     * @return True, if the monitor could be started, false otherwise.
-     */
-    bool (* startMonitor)(MXS_MONITOR_INSTANCE* monitor,
-                          const MXS_CONFIG_PARAMETER* params);
-
-    /**
-     * @brief Stop the monitor
-     *
-     * This entry point is called when the monitor is stopped. If the monitor
-     * uses a polling thread, the thread should be stopped.
-     *
-     * @param monitor The monitor object
-     */
-    void (* stopMonitor)(MXS_MONITOR_INSTANCE* monitor);
-
-    /**
-     * @brief Write diagnostic information to a DCB.
-     *
-     * @param monitor  The monitor object.
-     * @param dcb      The dcb to write to.
-     */
-    void (* diagnostics)(const MXS_MONITOR_INSTANCE* monitor, DCB* dcb);
-
-    /**
-     * @brief Return diagnostic information about the monitor
-     *
-     * @param monitor  The monitor object.
-     *
-     * @return A JSON object representing the state of the monitor
-     *
-     * @see jansson.h
-     */
-    json_t* (* diagnostics_json)(const MXS_MONITOR_INSTANCE* monitor);
 };
 
 /**
  * The monitor API version number. Any change to the monitor module API
  * must change these versions using the rules defined in modinfo.h
  */
-#define MXS_MONITOR_VERSION {4, 0, 0}
+#define MXS_MONITOR_VERSION {5, 0, 0}
 
 /**
  * Specifies capabilities specific for monitor.
@@ -242,9 +167,35 @@ public:
     MXS_MONITOR();
     virtual ~MXS_MONITOR();
     virtual bool configure(const MXS_CONFIG_PARAMETER* params) = 0;
+
+    /**
+     * Starts the monitor. If the monitor requires polling of the servers, it should create
+     * a separate monitoring thread.
+     *
+     * @param params  Parameters for this monitor
+     *
+     * @return True, if the monitor could be started, false otherwise.
+     */
     virtual bool start(const MXS_CONFIG_PARAMETER* params) = 0;
+
+    /**
+     * Stops the monitor. If the monitor uses a polling thread, the thread should be stopped.
+     */
     virtual void stop() = 0;
+
+    /**
+     * Write diagnostic information to a DCB.
+     *
+     * @param dcb      The dcb to write to.
+     */
     virtual void diagnostics(DCB* dcb) const = 0;
+
+    /**
+     * Return diagnostic information about the monitor
+     *
+     * @return A JSON object representing the state of the monitor
+     * @see jansson.h
+     */
     virtual json_t* diagnostics_json() const = 0;
 
     char*             name;         /**< Monitor instance name */
@@ -478,8 +429,7 @@ void monitor_debug_wait();
 namespace maxscale
 {
 
-class MonitorInstance : public MXS_MONITOR_INSTANCE
-                      , public MXS_MONITOR
+class MonitorInstance : public MXS_MONITOR
                       , protected maxbase::Worker
 {
 public:
@@ -764,36 +714,6 @@ public:
         return pInstance;
     }
 
-    static void destroyInstance(MXS_MONITOR_INSTANCE* pInstance)
-    {
-        MXS_EXCEPTION_GUARD(delete static_cast<MonitorInstance*>(pInstance));
-    }
-
-    static bool startMonitor(MXS_MONITOR_INSTANCE* pInstance,
-                             const MXS_CONFIG_PARAMETER* pParams)
-    {
-        bool started = false;
-        MXS_EXCEPTION_GUARD(started = static_cast<MonitorInstance*>(pInstance)->start(pParams));
-        return started;
-    }
-
-    static void stopMonitor(MXS_MONITOR_INSTANCE* pInstance)
-    {
-        MXS_EXCEPTION_GUARD(static_cast<MonitorInstance*>(pInstance)->stop());
-    }
-
-    static void diagnostics(const MXS_MONITOR_INSTANCE* pInstance, DCB* pDcb)
-    {
-        MXS_EXCEPTION_GUARD(static_cast<const MonitorInstance*>(pInstance)->diagnostics(pDcb));
-    }
-
-    static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE* pInstance)
-    {
-        json_t* pJson = NULL;
-        MXS_EXCEPTION_GUARD(pJson = static_cast<const MonitorInstance*>(pInstance)->diagnostics_json());
-        return pJson;
-    }
-
     static MXS_MONITOR_API s_api;
 };
 
@@ -801,10 +721,5 @@ template<class MonitorInstance>
 MXS_MONITOR_API MonitorApi<MonitorInstance>::s_api =
 {
     &MonitorApi<MonitorInstance>::createInstance,
-    &MonitorApi<MonitorInstance>::destroyInstance,
-    &MonitorApi<MonitorInstance>::startMonitor,
-    &MonitorApi<MonitorInstance>::stopMonitor,
-    &MonitorApi<MonitorInstance>::diagnostics,
-    &MonitorApi<MonitorInstance>::diagnostics_json,
 };
 }
