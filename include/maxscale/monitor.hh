@@ -28,7 +28,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/protocol/mysql.hh>
 
-class MXS_MONITOR;
+class Monitor;
 struct DCB;
 struct json_t;
 
@@ -53,7 +53,7 @@ struct MXS_MONITOR_API
      *
      * @return Monitor object
      */
-    MXS_MONITOR* (* createInstance)();
+    Monitor* (* createInstance)();
 };
 
 /**
@@ -161,11 +161,11 @@ inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> end(MXS_MONITORED_SER
 /**
  * Representation of the running monitor.
  */
-class MXS_MONITOR
+class Monitor
 {
 public:
-    MXS_MONITOR();
-    virtual ~MXS_MONITOR();
+    Monitor();
+    virtual ~Monitor();
     virtual bool configure(const MXS_CONFIG_PARAMETER* params) = 0;
 
     /**
@@ -200,8 +200,8 @@ public:
 
     char*             name;         /**< Monitor instance name */
     std::string       module_name;  /**< Name of the monitor module */
+    Monitor*          next;         /**< Next monitor in the linked list */
 
-    MXS_MONITOR*          next;     /**< Next monitor in the linked list */
     mutable std::mutex    lock;
 
     bool active = true;     /**< True if monitor exists and has not been "destroyed". */
@@ -264,7 +264,7 @@ extern const char CN_MONITOR_INTERVAL[];
 extern const char CN_SCRIPT[];
 extern const char CN_SCRIPT_TIMEOUT[];
 
-bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
+bool check_monitor_permissions(Monitor* monitor, const char* query);
 
 /**
  * Store the current server status to the previous and pending status
@@ -290,12 +290,12 @@ void monitor_clear_pending_status(MXS_MONITORED_SERVER* mserver, uint64_t bit);
  */
 void monitor_set_pending_status(MXS_MONITORED_SERVER* mserver, uint64_t bit);
 
-void monitor_check_maintenance_requests(MXS_MONITOR* monitor);
+void monitor_check_maintenance_requests(Monitor* monitor);
 
 bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv);
 bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv);
 
-mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_SERVER* database);
+mxs_connect_result_t mon_ping_or_connect_to_db(Monitor* mon, MXS_MONITORED_SERVER* database);
 bool                 mon_connection_is_ok(mxs_connect_result_t connect_result);
 void                 mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval);
 const char*          mon_get_event_name(mxs_monitor_event_t event);
@@ -313,7 +313,7 @@ const char*          mon_get_event_name(mxs_monitor_event_t event);
  * @param key     Parameter name to alter
  * @param value   New value for the parameter
  */
-void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* value);
+void mon_alter_parameter(Monitor* monitor, const char* key, const char* value);
 
 /**
  * @brief Handle state change events
@@ -325,7 +325,7 @@ void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* valu
  * @param script Script to execute or NULL for no script
  * @param events Enabled events
  */
-void mon_process_state_changes(MXS_MONITOR* monitor, const char* script, uint64_t events);
+void mon_process_state_changes(Monitor* monitor, const char* script, uint64_t events);
 
 /**
  * @brief Hangup connections to failed servers
@@ -334,7 +334,7 @@ void mon_process_state_changes(MXS_MONITOR* monitor, const char* script, uint64_
  *
  * @param monitor Monitor object
  */
-void mon_hangup_failed_servers(MXS_MONITOR* monitor);
+void mon_hangup_failed_servers(Monitor* monitor);
 
 /**
  * @brief Report query errors
@@ -351,7 +351,7 @@ void mon_report_query_error(MXS_MONITORED_SERVER* db);
  *
  * @return JSON representation of the monitor
  */
-json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host);
+json_t* monitor_to_json(const Monitor* monitor, const char* host);
 
 /**
  * @brief Convert all monitors to JSON
@@ -378,7 +378,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host);
  * @param monitor Monitor to journal
  * @param master  The current master server or NULL if no master exists
  */
-void store_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master);
+void store_server_journal(Monitor* monitor, MXS_MONITORED_SERVER* master);
 
 /**
  * @brief Load a journal of server states
@@ -386,7 +386,7 @@ void store_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master);
  * @param monitor Monitor where journal is loaded
  * @param master  Set to point to the current master
  */
-void load_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER** master);
+void load_server_journal(Monitor* monitor, MXS_MONITORED_SERVER** master);
 
 /**
  * Find the monitored server representing the server.
@@ -395,7 +395,7 @@ void load_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER** master);
  * @param search_server Server to search for
  * @return Found monitored server or NULL if not found
  */
-MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* search_server);
+MXS_MONITORED_SERVER* mon_get_monitored_server(const Monitor* mon, SERVER* search_server);
 
 /**
  * Get an array of monitored servers. If a server defined in the config setting is not monitored by
@@ -410,7 +410,7 @@ MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* s
  */
 int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
                            const char* key,
-                           const MXS_MONITOR* mon,
+                           const Monitor* mon,
                            MXS_MONITORED_SERVER*** monitored_array_out);
 
 /**
@@ -421,7 +421,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
  *
  * @return True, if the provided string is valid and the threshold could be set.
  */
-bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_space_threshold);
+bool monitor_set_disk_space_threshold(Monitor* monitor, const char* disk_space_threshold);
 
 // Function for waiting one monitor interval
 void monitor_debug_wait();
@@ -429,14 +429,14 @@ void monitor_debug_wait();
 namespace maxscale
 {
 
-class MonitorInstance : public MXS_MONITOR
-                      , protected maxbase::Worker
+class MonitorWorker : public Monitor
+                    , protected maxbase::Worker
 {
 public:
-    MonitorInstance(const MonitorInstance&) = delete;
-    MonitorInstance& operator=(const MonitorInstance&) = delete;
+    MonitorWorker(const MonitorWorker&) = delete;
+    MonitorWorker& operator=(const MonitorWorker&) = delete;
 
-    virtual ~MonitorInstance();
+    virtual ~MonitorWorker();
 
     /**
      * @brief Current state of the monitor.
@@ -525,7 +525,7 @@ public:
     static int64_t get_time_ms();
 
 protected:
-    MonitorInstance();
+    MonitorWorker();
 
     /**
      * @brief Should the monitor shut down?
@@ -625,7 +625,7 @@ protected:
      */
     virtual bool immediate_tick_required() const;
 
-    MXS_MONITOR*          m_monitor;    /**< The generic monitor structure. */
+    Monitor*              m_monitor;    /**< The generic monitor structure. */
     MXS_MONITORED_SERVER* m_master;     /**< Master server */
 
 private:
@@ -642,14 +642,14 @@ private:
     void run_one_tick();
 };
 
-class MonitorInstanceSimple : public MonitorInstance
+class MonitorWorkerSimple : public MonitorWorker
 {
 public:
-    MonitorInstanceSimple(const MonitorInstanceSimple&) = delete;
-    MonitorInstanceSimple& operator=(const MonitorInstanceSimple&) = delete;
+    MonitorWorkerSimple(const MonitorWorkerSimple&) = delete;
+    MonitorWorkerSimple& operator=(const MonitorWorkerSimple&) = delete;
 
 protected:
-    MonitorInstanceSimple()
+    MonitorWorkerSimple()
     {
     }
 
@@ -707,7 +707,7 @@ public:
     MonitorApi(const MonitorApi&) = delete;
     MonitorApi& operator=(const MonitorApi&) = delete;
 
-    static MXS_MONITOR* createInstance()
+    static Monitor* createInstance()
     {
         MonitorInstance* pInstance = NULL;
         MXS_EXCEPTION_GUARD(pInstance = MonitorInstance::create());

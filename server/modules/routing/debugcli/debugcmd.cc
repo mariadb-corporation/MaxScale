@@ -532,7 +532,7 @@ static void shutdown_server()
 }
 
 static void shutdown_service(DCB* dcb, SERVICE* service);
-static void shutdown_monitor(DCB* dcb, MXS_MONITOR* monitor);
+static void shutdown_monitor(DCB* dcb, Monitor* monitor);
 
 static void shutdown_listener(DCB* dcb, SERVICE* service, const char* name)
 {
@@ -625,7 +625,7 @@ struct subcommand syncoptions[] =
 };
 
 static void restart_service(DCB* dcb, SERVICE* service);
-static void restart_monitor(DCB* dcb, MXS_MONITOR* monitor);
+static void restart_monitor(DCB* dcb, Monitor* monitor);
 
 static void restart_listener(DCB* dcb, SERVICE* service, const char* name)
 {
@@ -1414,7 +1414,7 @@ static void destroyListener(DCB* dcb, SERVICE* service, const char* name)
 }
 
 
-static void destroyMonitor(DCB* dcb, MXS_MONITOR* monitor)
+static void destroyMonitor(DCB* dcb, Monitor* monitor)
 {
     char name[strlen(monitor->name) + 1];
     strcpy(name, monitor->name);
@@ -1579,7 +1579,7 @@ static void alterServer(DCB* dcb, Server* server,
 }
 
 static void alterMonitor(DCB* dcb,
-                         MXS_MONITOR* monitor,
+                         Monitor* monitor,
                          char* v1,
                          char* v2,
                          char* v3,
@@ -2714,7 +2714,7 @@ static void show_qc_all(DCB* dcb)
  * @param dcb   The DCB to use to print messages
  * @param monitor       The monitor to shutdown
  */
-static void shutdown_monitor(DCB* dcb, MXS_MONITOR* monitor)
+static void shutdown_monitor(DCB* dcb, Monitor* monitor)
 {
     monitor_stop(monitor);
 }
@@ -2725,7 +2725,7 @@ static void shutdown_monitor(DCB* dcb, MXS_MONITOR* monitor)
  * @param dcb   The DCB to use to print messages
  * @param monitor       The monitor to restart
  */
-static void restart_monitor(DCB* dcb, MXS_MONITOR* monitor)
+static void restart_monitor(DCB* dcb, Monitor* monitor)
 {
     monitor_start(monitor, monitor->parameters);
 }

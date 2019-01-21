@@ -56,7 +56,7 @@ void MMMonitor::diagnostics(DCB* dcb) const
 
 json_t* MMMonitor::diagnostics_json() const
 {
-    json_t* rval = MonitorInstance::diagnostics_json();
+    json_t* rval = MonitorWorker::diagnostics_json();
     json_object_set_new(rval, "detect_stale_master", json_boolean(m_detectStaleMaster));
     return rval;
 }
@@ -363,7 +363,7 @@ void MMMonitor::post_tick()
 
 MXS_MONITORED_SERVER* MMMonitor::get_current_master()
 {
-    MXS_MONITOR* mon = m_monitor;
+    Monitor* mon = m_monitor;
     MXS_MONITORED_SERVER* ptr;
 
     ptr = mon->monitored_servers;

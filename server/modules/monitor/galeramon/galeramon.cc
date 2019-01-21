@@ -85,7 +85,7 @@ void GaleraMonitor::diagnostics(DCB* dcb) const
 
 json_t* GaleraMonitor::diagnostics_json() const
 {
-    json_t* rval = MonitorInstance::diagnostics_json();
+    json_t* rval = MonitorWorker::diagnostics_json();
     json_object_set_new(rval, "disable_master_failback", json_boolean(m_disableMasterFailback));
     json_object_set_new(rval, "disable_master_role_setting", json_boolean(m_disableMasterRoleSetting));
     json_object_set_new(rval, "root_node_as_master", json_boolean(m_root_node_as_master));

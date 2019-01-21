@@ -320,7 +320,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
 
 json_t* MariaDBMonitor::to_json() const
 {
-    json_t* rval = MonitorInstance::diagnostics_json();
+    json_t* rval = MonitorWorker::diagnostics_json();
     json_object_set_new(rval, "master", m_master == NULL ? json_null() : json_string(m_master->name()));
     json_object_set_new(rval,
                         "master_gtid_domain_id",
@@ -407,7 +407,7 @@ void MariaDBMonitor::pre_loop()
 {
     // MonitorInstance reads the journal and has the last known master in its m_master member variable.
     // Write the corresponding MariaDBServer into the class-specific m_master variable.
-    auto journal_master = MonitorInstance::m_master;
+    auto journal_master = MonitorWorker::m_master;
     if (journal_master)
     {
         // This is somewhat questionable, as the journal only contains status bits but no actual topology
@@ -496,12 +496,12 @@ void MariaDBMonitor::tick()
     // Before exiting, we need to store the current master into the m_master
     // member variable of MonitorInstance so that the right server will be
     // stored to the journal.
-    MonitorInstance::m_master = m_master ? m_master->m_server_base : NULL;
+    MonitorWorker::m_master = m_master ? m_master->m_server_base : NULL;
 }
 
 void MariaDBMonitor::process_state_changes()
 {
-    MonitorInstance::process_state_changes();
+    MonitorWorker::process_state_changes();
 
     m_cluster_modified = false;
     // Check for manual commands
@@ -843,7 +843,7 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
     }
     else
     {
-        MXS_MONITOR* mon = args->argv[0].value.monitor;
+        Monitor* mon = args->argv[0].value.monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon);
         SERVER* promotion_server = (args->argc >= 2) ? args->argv[1].value.server : NULL;
         SERVER* demotion_server = (args->argc == 3) ? args->argv[2].value.server : NULL;
@@ -871,7 +871,7 @@ bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
     }
     else
     {
-        MXS_MONITOR* mon = args->argv[0].value.monitor;
+        Monitor* mon = args->argv[0].value.monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon);
         rv = handle->run_manual_failover(output);
     }
@@ -898,7 +898,7 @@ bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
     }
     else
     {
-        MXS_MONITOR* mon = args->argv[0].value.monitor;
+        Monitor* mon = args->argv[0].value.monitor;
         SERVER* server = args->argv[1].value.server;
         auto handle = static_cast<MariaDBMonitor*>(mon);
         rv = handle->run_manual_rejoin(server, output);
@@ -920,7 +920,7 @@ bool handle_manual_reset_replication(const MODULECMD_ARG* args, json_t** output)
     }
     else
     {
-        MXS_MONITOR* mon = args->argv[0].value.monitor;
+        Monitor* mon = args->argv[0].value.monitor;
         SERVER* server = args->argv[1].value.server;
         auto handle = static_cast<MariaDBMonitor*>(mon);
         rv = handle->run_manual_reset_replication(server, output);

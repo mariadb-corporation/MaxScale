@@ -3832,7 +3832,7 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
         return 1;
     }
 
-    MXS_MONITOR* monitor = MonitorManager::create_monitor(obj->object, module, obj->parameters);
+    Monitor* monitor = MonitorManager::create_monitor(obj->object, module, obj->parameters);
     if (monitor == NULL)
     {
         MXS_ERROR("Failed to create monitor '%s'.", obj->object);

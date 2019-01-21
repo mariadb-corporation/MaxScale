@@ -95,8 +95,8 @@ public:
      * @param module        The module name to load
      * @return              The newly created monitor, or NULL on error
      */
-    static MXS_MONITOR* create_monitor(const std::string& name, const std::string& module,
-                                       MXS_CONFIG_PARAMETER* params);
+    static Monitor* create_monitor(const std::string& name, const std::string& module,
+                                   MXS_CONFIG_PARAMETER* params);
 
     /**
      * @brief Destroys all monitors. At this point all monitors should
@@ -112,12 +112,12 @@ public:
      *
      * @param mon   The monitor to free
      */
-    static void destroy_monitor(MXS_MONITOR*);
+    static void destroy_monitor(Monitor*);
 };
 
 
-void monitor_start(MXS_MONITOR*, const MXS_CONFIG_PARAMETER*);
-void monitor_stop(MXS_MONITOR*);
+void monitor_start(Monitor*, const MXS_CONFIG_PARAMETER*);
+void monitor_stop(Monitor*);
 
 /**
  * @brief Mark monitor as deactivated
@@ -127,30 +127,30 @@ void monitor_stop(MXS_MONITOR*);
  *
  * @param monitor
  */
-void monitor_deactivate(MXS_MONITOR* monitor);
+void monitor_deactivate(Monitor* monitor);
 
 void monitor_stop_all();
 void monitor_start_all();
 
-MXS_MONITOR* monitor_find(const char*);
-MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module);
+Monitor* monitor_find(const char*);
+Monitor* monitor_repurpose_destroyed(const char* name, const char* module);
 
-void monitor_show(DCB*, MXS_MONITOR*);
+void monitor_show(DCB*, Monitor*);
 void monitor_show_all(DCB*);
 
 void monitor_list(DCB*);
 
-bool monitor_add_server(MXS_MONITOR* mon, SERVER* server);
-void monitor_remove_server(MXS_MONITOR* mon, SERVER* server);
-void monitor_add_user(MXS_MONITOR*, const char*, const char*);
-void monitor_add_parameters(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params);
-bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key);
-void monitor_set_parameter(MXS_MONITOR* monitor, const char* key, const char* value);
+bool monitor_add_server(Monitor* mon, SERVER* server);
+void monitor_remove_server(Monitor* mon, SERVER* server);
+void monitor_add_user(Monitor*, const char*, const char*);
+void monitor_add_parameters(Monitor* monitor, const MXS_CONFIG_PARAMETER* params);
+bool monitor_remove_parameter(Monitor* monitor, const char* key);
+void monitor_set_parameter(Monitor* monitor, const char* key, const char* value);
 
-void monitor_set_interval(MXS_MONITOR*, unsigned long);
-bool monitor_set_network_timeout(MXS_MONITOR*, int, int, const char*);
-void monitor_set_journal_max_age(MXS_MONITOR* mon, time_t value);
-void monitor_set_script_timeout(MXS_MONITOR* mon, uint32_t value);
+void monitor_set_interval(Monitor*, unsigned long);
+bool monitor_set_network_timeout(Monitor*, int, int, const char*);
+void monitor_set_journal_max_age(Monitor* mon, time_t value);
+void monitor_set_script_timeout(Monitor* mon, uint32_t value);
 
 /**
  * @brief Serialize a monitor to a file
@@ -160,14 +160,14 @@ void monitor_set_script_timeout(MXS_MONITOR* mon, uint32_t value);
  * @param monitor Monitor to serialize
  * @return True if serialization was successful
  */
-bool monitor_serialize(const MXS_MONITOR* monitor);
+bool monitor_serialize(const Monitor* monitor);
 
 /**
  * Check if a server is being monitored and return the monitor.
  * @param server Server that is queried
  * @return The monitor watching this server, or NULL if not monitored
  */
-MXS_MONITOR* monitor_server_in_use(const SERVER* server);
+Monitor* monitor_server_in_use(const SERVER* server);
 
 /**
  * Launch a script
@@ -179,7 +179,7 @@ MXS_MONITOR* monitor_server_in_use(const SERVER* server);
  *
  * @return Return value of the executed script or -1 on error
  */
-int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout);
+int monitor_launch_script(Monitor* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout);
 
 /**
  * Launch a command
@@ -192,4 +192,4 @@ int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const cha
  *
  * @return Return value of the executed script or -1 on error.
  */
-int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
+int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);

@@ -19,7 +19,7 @@
 #include "clustrixmembership.hh"
 #include "clustrixnode.hh"
 
-class ClustrixMonitor : public maxscale::MonitorInstance
+class ClustrixMonitor : public maxscale::MonitorWorker
 {
     ClustrixMonitor(const ClustrixMonitor&) = delete;
     ClustrixMonitor& operator=(const ClustrixMonitor&) = delete;

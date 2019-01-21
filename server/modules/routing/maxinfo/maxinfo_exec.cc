@@ -503,7 +503,7 @@ void exec_shutdown_monitor(DCB* dcb, MAXINFO_TREE* tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        MXS_MONITOR* monitor = monitor_find(tree->value);
+        Monitor* monitor = monitor_find(tree->value);
         if (monitor)
         {
             monitor_stop(monitor);
@@ -612,7 +612,7 @@ void exec_restart_monitor(DCB* dcb, MAXINFO_TREE* tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        MXS_MONITOR* monitor = monitor_find(tree->value);
+        Monitor* monitor = monitor_find(tree->value);
         if (monitor)
         {
             monitor_start(monitor, monitor->parameters);

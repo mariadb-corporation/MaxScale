@@ -137,7 +137,7 @@ bool runtime_link_server(Server* server, const char* target)
 
     bool rval = false;
     Service* service = service_internal_find(target);
-    MXS_MONITOR* monitor = service ? NULL : monitor_find(target);
+    Monitor* monitor = service ? NULL : monitor_find(target);
 
     if (service)
     {
@@ -181,7 +181,7 @@ bool runtime_unlink_server(Server* server, const char* target)
 
     bool rval = false;
     Service* service = service_internal_find(target);
-    MXS_MONITOR* monitor = service ? NULL : monitor_find(target);
+    Monitor* monitor = service ? NULL : monitor_find(target);
 
     if (service || monitor)
     {
@@ -558,7 +558,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     return rval;
 }
 
-bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value)
+bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
 {
     mxb_assert(monitor->state == MONITOR_STATE_STOPPED);
     const MXS_MODULE* mod = get_module(monitor->module_name.c_str(), MODULE_MONITOR);
@@ -663,7 +663,7 @@ bool do_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value)
     return success;
 }
 
-bool runtime_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value)
+bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
 {
     // If the monitor is already stopped, don't stop/start it.
     bool was_running = (monitor->state == MONITOR_STATE_RUNNING);
@@ -1181,7 +1181,7 @@ bool runtime_create_monitor(const char* name, const char* module)
     if (monitor_find(name) == NULL)
     {
 
-        MXS_MONITOR* monitor = monitor_repurpose_destroyed(name, module);
+        Monitor* monitor = monitor_repurpose_destroyed(name, module);
 
         if (monitor)
         {
@@ -1363,7 +1363,7 @@ bool runtime_destroy_service(Service* service)
     return rval;
 }
 
-bool runtime_destroy_monitor(MXS_MONITOR* monitor)
+bool runtime_destroy_monitor(Monitor* monitor)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -2200,9 +2200,9 @@ static bool validate_monitor_json(json_t* json)
     return rval;
 }
 
-MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
+Monitor* runtime_create_monitor_from_json(json_t* json)
 {
-    MXS_MONITOR* rval = NULL;
+    Monitor* rval = NULL;
 
     if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {object_to_server})
         && validate_monitor_json(json))
@@ -2358,7 +2358,7 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     return rval;
 }
 
-bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
+bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));
@@ -2416,7 +2416,7 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
     return rval;
 }
 
-bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t* json)
+bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, json_t* json)
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));

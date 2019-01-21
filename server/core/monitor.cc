@@ -81,12 +81,12 @@ const char CN_MONITOR_INTERVAL[] = "monitor_interval";
 const char CN_SCRIPT[] = "script";
 const char CN_SCRIPT_TIMEOUT[] = "script_timeout";
 
-static MXS_MONITOR* allMonitors = NULL;
+static Monitor* allMonitors = NULL;
 static std::mutex monLock;
 
 static void        monitor_server_free_all(MXS_MONITORED_SERVER* servers);
-static void        remove_server_journal(MXS_MONITOR* monitor);
-static bool        journal_is_stale(MXS_MONITOR* monitor, time_t max_age);
+static void        remove_server_journal(Monitor* monitor);
+static bool        journal_is_stale(Monitor* monitor, time_t max_age);
 static const char* monitor_state_to_string(monitor_state_t state);
 
 /** Server type specific bits */
@@ -96,7 +96,7 @@ static uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED 
 static uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
     | SERVER_JOINED | SERVER_NDB;
 
-MXS_MONITOR* MonitorManager::create_monitor(const string& name, const string& module,
+Monitor* MonitorManager::create_monitor(const string& name, const string& module,
                                             MXS_CONFIG_PARAMETER* params)
 {
     MXS_MONITOR_API* api = (MXS_MONITOR_API*)load_module(module.c_str(), MODULE_MONITOR);
@@ -106,7 +106,7 @@ MXS_MONITOR* MonitorManager::create_monitor(const string& name, const string& mo
         return NULL;
     }
 
-    MXS_MONITOR* mon = api->createInstance();
+    Monitor* mon = api->createInstance();
     if (!mon)
     {
         MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
@@ -132,12 +132,12 @@ MXS_MONITOR* MonitorManager::create_monitor(const string& name, const string& mo
     return mon;
 }
 
-MXS_MONITOR::MXS_MONITOR()
+Monitor::Monitor()
 {
     memset(journal_hash, 0, sizeof(journal_hash));
 }
 
-bool MXS_MONITOR::configure_base(const MXS_CONFIG_PARAMETER* params)
+bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
 {
     read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
     write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
@@ -178,9 +178,9 @@ bool MXS_MONITOR::configure_base(const MXS_CONFIG_PARAMETER* params)
     return !error;
 }
 
-void MonitorManager::destroy_monitor(MXS_MONITOR* mon)
+void MonitorManager::destroy_monitor(Monitor* mon)
 {
-    MXS_MONITOR* ptr;
+    Monitor* ptr;
 
     std::unique_lock<std::mutex> guard(monLock);
 
@@ -205,7 +205,7 @@ void MonitorManager::destroy_monitor(MXS_MONITOR* mon)
     delete mon;
 }
 
-MXS_MONITOR::~MXS_MONITOR()
+Monitor::~Monitor()
 {
     delete disk_space_threshold;
     config_parameter_free(parameters);
@@ -221,7 +221,7 @@ void MonitorManager::destroy_all_monitors()
 
     while (allMonitors)
     {
-        MXS_MONITOR* monitor = allMonitors;
+        Monitor* monitor = allMonitors;
         destroy_monitor(monitor);
     }
 }
@@ -231,7 +231,7 @@ void MonitorManager::destroy_all_monitors()
  *
  * @param monitor The Monitor that should be started
  */
-void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
+void monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
 {
     if (monitor)
     {
@@ -263,7 +263,7 @@ void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
  */
 void monitor_start_all()
 {
-    MXS_MONITOR* ptr;
+    Monitor* ptr;
     std::lock_guard<std::mutex> guard(monLock);
 
     ptr = allMonitors;
@@ -282,7 +282,7 @@ void monitor_start_all()
  *
  * @param monitor       The monitor to stop
  */
-void monitor_stop(MXS_MONITOR* monitor)
+void monitor_stop(Monitor* monitor)
 {
     if (monitor)
     {
@@ -307,7 +307,7 @@ void monitor_stop(MXS_MONITOR* monitor)
     }
 }
 
-void monitor_deactivate(MXS_MONITOR* monitor)
+void monitor_deactivate(Monitor* monitor)
 {
     std::lock_guard<std::mutex> guard(monLock);
     monitor->active = false;
@@ -320,7 +320,7 @@ void monitor_stop_all()
 {
     std::lock_guard<std::mutex> guard(monLock);
 
-    for (MXS_MONITOR* monitor = allMonitors; monitor; monitor = monitor->next)
+    for (Monitor* monitor = allMonitors; monitor; monitor = monitor->next)
     {
         if (monitor->active)
         {
@@ -336,7 +336,7 @@ void monitor_stop_all()
  * @param mon           The Monitor instance
  * @param server        The Server to add to the monitoring
  */
-bool monitor_add_server(MXS_MONITOR* mon, SERVER* server)
+bool monitor_add_server(Monitor* mon, SERVER* server)
 {
     mxb_assert(mon && server);
     bool rval = false;
@@ -416,7 +416,7 @@ static void monitor_server_free_all(MXS_MONITORED_SERVER* servers)
  * @param mon           The Monitor instance
  * @param server        The Server to remove
  */
-void monitor_remove_server(MXS_MONITOR* mon, SERVER* server)
+void monitor_remove_server(Monitor* mon, SERVER* server)
 {
     monitor_state_t old_state = mon->state;
 
@@ -468,7 +468,7 @@ void monitor_remove_server(MXS_MONITOR* mon, SERVER* server)
  * @param user          The default username to use when connecting
  * @param passwd        The default password associated to the default user.
  */
-void monitor_add_user(MXS_MONITOR* mon, const char* user, const char* passwd)
+void monitor_add_user(Monitor* mon, const char* user, const char* passwd)
 {
     if (user != mon->user)
     {
@@ -490,7 +490,7 @@ void monitor_show_all(DCB* dcb)
 {
     std::lock_guard<std::mutex> guard(monLock);
 
-    for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
+    for (Monitor* ptr = allMonitors; ptr; ptr = ptr->next)
     {
         if (ptr->active)
         {
@@ -504,7 +504,7 @@ void monitor_show_all(DCB* dcb)
  *
  * @param dcb   DCB for printing output
  */
-void monitor_show(DCB* dcb, MXS_MONITOR* monitor)
+void monitor_show(DCB* dcb, Monitor* monitor)
 {
     dcb_printf(dcb, "Monitor:                %p\n", monitor);
     dcb_printf(dcb, "Name:                   %s\n", monitor->name);
@@ -545,7 +545,7 @@ void monitor_show(DCB* dcb, MXS_MONITOR* monitor)
  */
 void monitor_list(DCB* dcb)
 {
-    MXS_MONITOR* ptr;
+    Monitor* ptr;
 
     std::lock_guard<std::mutex> guard(monLock);
     ptr = allMonitors;
@@ -573,11 +573,11 @@ void monitor_list(DCB* dcb)
  * @param       name    The name of the monitor
  * @return      Pointer to the monitor or NULL
  */
-MXS_MONITOR* monitor_find(const char* name)
+Monitor* monitor_find(const char* name)
 {
     std::lock_guard<std::mutex> guard(monLock);
 
-    for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
+    for (Monitor* ptr = allMonitors; ptr; ptr = ptr->next)
     {
         if (!strcmp(ptr->name, name) && ptr->active)
         {
@@ -593,12 +593,12 @@ MXS_MONITOR* monitor_find(const char* name)
  * @param name The name of the monitor
  * @return  Pointer to the destroyed monitor or NULL if monitor is not found
  */
-MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module)
+Monitor* monitor_repurpose_destroyed(const char* name, const char* module)
 {
-    MXS_MONITOR* rval = NULL;
+    Monitor* rval = NULL;
     std::lock_guard<std::mutex> guard(monLock);
 
-    for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
+    for (Monitor* ptr = allMonitors; ptr; ptr = ptr->next)
     {
         if (strcmp(ptr->name, name) == 0 && (ptr->module_name == module))
         {
@@ -617,7 +617,7 @@ MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module)
  * @param mon           The monitor instance
  * @param interval      The sampling interval in milliseconds
  */
-void monitor_set_interval(MXS_MONITOR* mon, unsigned long interval)
+void monitor_set_interval(Monitor* mon, unsigned long interval)
 {
     mon->interval = interval;
 }
@@ -628,12 +628,12 @@ void monitor_set_interval(MXS_MONITOR* mon, unsigned long interval)
  * @param mon           The monitor instance
  * @param interval      The journal age in seconds
  */
-void monitor_set_journal_max_age(MXS_MONITOR* mon, time_t value)
+void monitor_set_journal_max_age(Monitor* mon, time_t value)
 {
     mon->journal_max_age = value;
 }
 
-void monitor_set_script_timeout(MXS_MONITOR* mon, uint32_t value)
+void monitor_set_script_timeout(Monitor* mon, uint32_t value)
 {
     mon->script_timeout = value;
 }
@@ -645,7 +645,7 @@ void monitor_set_script_timeout(MXS_MONITOR* mon, uint32_t value)
  * @param type          The timeout handling type
  * @param value         The timeout to set
  */
-bool monitor_set_network_timeout(MXS_MONITOR* mon, int type, int value, const char* key)
+bool monitor_set_network_timeout(Monitor* mon, int type, int value, const char* key)
 {
     bool rval = true;
 
@@ -694,7 +694,7 @@ std::unique_ptr<ResultSet> monitor_get_list()
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
     std::lock_guard<std::mutex> guard(monLock);
 
-    for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
+    for (Monitor* ptr = allMonitors; ptr; ptr = ptr->next)
     {
         const char* state = ptr->state & MONITOR_STATE_RUNNING ? "Running" : "Stopped";
         set->add_row({ptr->name, state});
@@ -710,7 +710,7 @@ std::unique_ptr<ResultSet> monitor_get_list()
  * @param query Query to execute
  * @return True on success, false if monitor credentials lack permissions
  */
-bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
+bool check_monitor_permissions(Monitor* monitor, const char* query)
 {
     if (monitor->monitored_servers == NULL      // No servers to check
         || config_get_global_options()->skip_permission_checks)
@@ -795,7 +795,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
  * @param monitor Monitor
  * @param params Config parameters
  */
-void monitor_add_parameters(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
+void monitor_add_parameters(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
 {
     Guard guard(monitor->lock);
     while (params)
@@ -818,7 +818,7 @@ void monitor_add_parameters(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* pa
     }
 }
 
-void monitor_set_parameter(MXS_MONITOR* monitor, const char* key, const char* value)
+void monitor_set_parameter(Monitor* monitor, const char* key, const char* value)
 {
     monitor_remove_parameter(monitor, key);
     MXS_CONFIG_PARAMETER p = {};
@@ -827,7 +827,7 @@ void monitor_set_parameter(MXS_MONITOR* monitor, const char* key, const char* va
     monitor_add_parameters(monitor, &p);
 }
 
-bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key)
+bool monitor_remove_parameter(Monitor* monitor, const char* key)
 {
     MXS_CONFIG_PARAMETER* prev = NULL;
     bool rval = false;
@@ -858,7 +858,7 @@ bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key)
     return rval;
 }
 
-void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* value)
+void mon_alter_parameter(Monitor* monitor, const char* key, const char* value)
 {
     Guard guard(monitor->lock);
     for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
@@ -1060,7 +1060,7 @@ enum credentials_approach_t
  * @param len Length of @c dest
  * @param approach Whether credentials should be included or not.
  */
-static void mon_append_node_names(MXS_MONITOR* mon,
+static void mon_append_node_names(Monitor* mon,
                                   char* dest,
                                   int   len,
                                   int   status,
@@ -1212,7 +1212,7 @@ static std::string child_nodes(MXS_MONITORED_SERVER* servers,
     return ss.str();
 }
 
-int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
+int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
 {
     if (externcmd_matches(cmd, "$INITIATOR"))
     {
@@ -1354,7 +1354,7 @@ int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCM
     return rv;
 }
 
-int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout)
+int monitor_launch_script(Monitor* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout)
 {
     char arg[strlen(script) + 1];
     strcpy(arg, script);
@@ -1385,7 +1385,7 @@ int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const cha
  * @param database Monitored database
  * @return Connection status.
  */
-mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_SERVER* database)
+mxs_connect_result_t mon_ping_or_connect_to_db(Monitor* mon, MXS_MONITORED_SERVER* database)
 {
     if (database->con)
     {
@@ -1484,12 +1484,12 @@ static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
                prev.c_str(), next.c_str());
 }
 
-MXS_MONITOR* monitor_server_in_use(const SERVER* server)
+Monitor* monitor_server_in_use(const SERVER* server)
 {
-    MXS_MONITOR* rval = NULL;
+    Monitor* rval = NULL;
     std::lock_guard<std::mutex> guard(monLock);
 
-    for (MXS_MONITOR* mon = allMonitors; mon && !rval; mon = mon->next)
+    for (Monitor* mon = allMonitors; mon && !rval; mon = mon->next)
     {
         Guard guard(mon->lock);
         if (mon->active)
@@ -1507,7 +1507,7 @@ MXS_MONITOR* monitor_server_in_use(const SERVER* server)
     return rval;
 }
 
-static bool create_monitor_config(const MXS_MONITOR* monitor, const char* filename)
+static bool create_monitor_config(const Monitor* monitor, const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -1554,7 +1554,7 @@ static bool create_monitor_config(const MXS_MONITOR* monitor, const char* filena
     return true;
 }
 
-bool monitor_serialize(const MXS_MONITOR* monitor)
+bool monitor_serialize(const Monitor* monitor)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -1596,7 +1596,7 @@ bool monitor_serialize(const MXS_MONITOR* monitor)
     return rval;
 }
 
-void mon_hangup_failed_servers(MXS_MONITOR* monitor)
+void mon_hangup_failed_servers(Monitor* monitor)
 {
     for (MXS_MONITORED_SERVER* ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
     {
@@ -1622,7 +1622,7 @@ void mon_report_query_error(MXS_MONITORED_SERVER* db)
  *
  * @param monitor The target monitor
  */
-void monitor_check_maintenance_requests(MXS_MONITOR* monitor)
+void monitor_check_maintenance_requests(Monitor* monitor)
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
      * maintenance flag should be read-written atomically to prevent missing a value. */
@@ -1649,7 +1649,7 @@ void monitor_check_maintenance_requests(MXS_MONITOR* monitor)
     }
 }
 
-void mon_process_state_changes(MXS_MONITOR* monitor, const char* script, uint64_t events)
+void mon_process_state_changes(Monitor* monitor, const char* script, uint64_t events)
 {
     bool master_down = false;
     bool master_up = false;
@@ -1712,7 +1712,7 @@ static const char* monitor_state_to_string(monitor_state_t state)
     }
 }
 
-json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
+json_t* monitor_parameters_to_json(const Monitor* monitor)
 {
     json_t* rval = json_object();
     const MXS_MODULE* mod = get_module(monitor->module_name.c_str(), MODULE_MONITOR);
@@ -1724,7 +1724,7 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
     return rval;
 }
 
-json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
+json_t* monitor_json_data(const Monitor* monitor, const char* host)
 {
     json_t* rval = json_object();
     json_t* attr = json_object();
@@ -1768,7 +1768,7 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
     return rval;
 }
 
-json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
+json_t* monitor_to_json(const Monitor* monitor, const char* host)
 {
     string self = MXS_JSON_API_MONITORS;
     self += monitor->name;
@@ -1781,7 +1781,7 @@ json_t* monitor_list_to_json(const char* host)
 
     std::unique_lock<std::mutex> guard(monLock);
 
-    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    for (Monitor* mon = allMonitors; mon; mon = mon->next)
     {
         if (mon->active)
         {
@@ -1804,7 +1804,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
     std::vector<std::string> names;
     std::unique_lock<std::mutex> guard(monLock);
 
-    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    for (Monitor* mon = allMonitors; mon; mon = mon->next)
     {
         Guard guard(mon->lock);
         if (mon->active)
@@ -1847,7 +1847,7 @@ static const char journal_template[] = "%s/%s/%s";
  * @param src File to rename
  * @return True if file was successfully renamed
  */
-static bool rename_tmp_file(MXS_MONITOR* monitor, const char* src)
+static bool rename_tmp_file(Monitor* monitor, const char* src)
 {
     bool rval = true;
     char dest[PATH_MAX + 1];
@@ -1873,7 +1873,7 @@ static bool rename_tmp_file(MXS_MONITOR* monitor, const char* src)
  * @param path Output where the path is stored
  * @return Opened file or NULL on error
  */
-static FILE* open_tmp_file(MXS_MONITOR* monitor, char* path)
+static FILE* open_tmp_file(Monitor* monitor, char* path)
 {
     int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name, "");
     int max_bytes = PATH_MAX - (int)sizeof(journal_name);
@@ -1913,7 +1913,7 @@ static FILE* open_tmp_file(MXS_MONITOR* monitor, char* path)
  *             PATH_MAX bytes long
  * @param size Size of @c data
  */
-static void store_data(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master, uint8_t* data, uint32_t size)
+static void store_data(Monitor* monitor, MXS_MONITORED_SERVER* master, uint8_t* data, uint32_t size)
 {
     uint8_t* ptr = data;
 
@@ -1956,7 +1956,7 @@ static void store_data(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master, uint8
     mxb_assert(ptr - data == size + MMB_LEN_BYTES);
 }
 
-static int get_data_file_path(MXS_MONITOR* monitor, char* path)
+static int get_data_file_path(Monitor* monitor, char* path)
 {
     int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name, journal_name);
     return rv;
@@ -1969,7 +1969,7 @@ static int get_data_file_path(MXS_MONITOR* monitor, char* path)
  * @param path Output where path is stored
  * @return Opened file or NULL on error
  */
-static FILE* open_data_file(MXS_MONITOR* monitor, char* path)
+static FILE* open_data_file(Monitor* monitor, char* path)
 {
     FILE* rval = NULL;
     int nbytes = get_data_file_path(monitor, path);
@@ -2012,7 +2012,7 @@ static bool has_null_terminator(const char* data, const char* end)
 /**
  * Process a generic server
  */
-static const char* process_server(MXS_MONITOR* monitor, const char* data, const char* end)
+static const char* process_server(Monitor* monitor, const char* data, const char* end)
 {
     for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
     {
@@ -2038,7 +2038,7 @@ static const char* process_server(MXS_MONITOR* monitor, const char* data, const 
 /**
  * Process a master
  */
-static const char* process_master(MXS_MONITOR* monitor,
+static const char* process_master(Monitor* monitor,
                                   MXS_MONITORED_SERVER** master,
                                   const char* data,
                                   const char* end)
@@ -2074,7 +2074,7 @@ static bool check_crc32(const uint8_t* data, uint32_t size, const uint8_t* crc_p
 /**
  * Process the stored journal data
  */
-static bool process_data_file(MXS_MONITOR* monitor,
+static bool process_data_file(Monitor* monitor,
                               MXS_MONITORED_SERVER** master,
                               const char* data,
                               const char* crc_ptr)
@@ -2116,7 +2116,7 @@ static bool process_data_file(MXS_MONITOR* monitor,
     return true;
 }
 
-void store_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master)
+void store_server_journal(Monitor* monitor, MXS_MONITORED_SERVER* master)
 {
     /** Calculate how much memory we need to allocate */
     uint32_t size = MMB_LEN_SCHEMA_VERSION + MMB_LEN_CRC32;
@@ -2180,7 +2180,7 @@ void store_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* master)
     MXS_FREE(data);
 }
 
-void load_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER** master)
+void load_server_journal(Monitor* monitor, MXS_MONITORED_SERVER** master)
 {
     char path[PATH_MAX];
     FILE* file = open_data_file(monitor, path);
@@ -2264,7 +2264,7 @@ void load_server_journal(MXS_MONITOR* monitor, MXS_MONITORED_SERVER** master)
     }
 }
 
-static void remove_server_journal(MXS_MONITOR* monitor)
+static void remove_server_journal(Monitor* monitor)
 {
     char path[PATH_MAX];
 
@@ -2278,7 +2278,7 @@ static void remove_server_journal(MXS_MONITOR* monitor)
     }
 }
 
-static bool journal_is_stale(MXS_MONITOR* monitor, time_t max_age)
+static bool journal_is_stale(Monitor* monitor, time_t max_age)
 {
     bool is_stale = true;
     char path[PATH_MAX];
@@ -2316,7 +2316,7 @@ static bool journal_is_stale(MXS_MONITOR* monitor, time_t max_age)
     return is_stale;
 }
 
-MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* search_server)
+MXS_MONITORED_SERVER* mon_get_monitored_server(const Monitor* mon, SERVER* search_server)
 {
     mxb_assert(mon && search_server);
     for (MXS_MONITORED_SERVER* iter = mon->monitored_servers; iter != NULL; iter = iter->next)
@@ -2331,7 +2331,7 @@ MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* s
 
 int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
                            const char* key,
-                           const MXS_MONITOR* mon,
+                           const Monitor* mon,
                            MXS_MONITORED_SERVER*** monitored_servers_out)
 {
     mxb_assert(monitored_servers_out != NULL && *monitored_servers_out == NULL);
@@ -2374,7 +2374,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
     return found;
 }
 
-bool monitor_set_disk_space_threshold(MXS_MONITOR* monitor, const char* disk_space_threshold)
+bool monitor_set_disk_space_threshold(Monitor* monitor, const char* disk_space_threshold)
 {
     mxb_assert(monitor->state == MONITOR_STATE_STOPPED);
     MxsDiskSpaceThreshold dst;
@@ -2402,16 +2402,16 @@ void monitor_debug_wait()
 {
     using namespace std::chrono;
     std::lock_guard<std::mutex> guard(monLock);
-    std::map<MXS_MONITOR*, uint64_t> ticks;
+    std::map<Monitor*, uint64_t> ticks;
 
     // Get tick values for all monitors
-    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    for (Monitor* mon = allMonitors; mon; mon = mon->next)
     {
         ticks[mon] = mxb::atomic::load(&mon->ticks);
     }
 
     // Wait for all running monitors to advance at least one tick
-    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    for (Monitor* mon = allMonitors; mon; mon = mon->next)
     {
         if (mon->state == MONITOR_STATE_RUNNING)
         {
@@ -2429,7 +2429,7 @@ void monitor_debug_wait()
 namespace maxscale
 {
 
-MonitorInstance::MonitorInstance()
+MonitorWorker::MonitorWorker()
     : m_monitor(this)
     , m_master(NULL)
     , m_thread_running(false)
@@ -2439,17 +2439,17 @@ MonitorInstance::MonitorInstance()
 {
 }
 
-MonitorInstance::~MonitorInstance()
+MonitorWorker::~MonitorWorker()
 {
 }
 
-monitor_state_t MonitorInstance::monitor_state() const
+monitor_state_t MonitorWorker::monitor_state() const
 {
     static_assert(sizeof(monitor_state_t) == 4, "Unexpected size for enum");
     return (monitor_state_t)atomic_load_uint32((uint32_t*)(&m_monitor->state));
 }
 
-void MonitorInstance::stop()
+void MonitorWorker::stop()
 {
     // This should only be called by monitor_stop(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.
@@ -2464,16 +2464,16 @@ void MonitorInstance::stop()
     m_thread_running.store(false, std::memory_order_release);
 }
 
-void MonitorInstance::diagnostics(DCB* pDcb) const
+void MonitorWorker::diagnostics(DCB* pDcb) const
 {
 }
 
-json_t* MonitorInstance::diagnostics_json() const
+json_t* MonitorWorker::diagnostics_json() const
 {
     return json_object();
 }
 
-bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
+bool MonitorWorker::start(const MXS_CONFIG_PARAMETER* pParams)
 {
     // This should only be called by monitor_start(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.
@@ -2527,7 +2527,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 }
 
 // static
-int64_t MonitorInstance::get_time_ms()
+int64_t MonitorWorker::get_time_ms()
 {
     timespec t;
 
@@ -2537,7 +2537,7 @@ int64_t MonitorInstance::get_time_ms()
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
 }
 
-bool MonitorInstance::should_update_disk_space_status(const MXS_MONITORED_SERVER* pMs) const
+bool MonitorWorker::should_update_disk_space_status(const MXS_MONITORED_SERVER* pMs) const
 {
     bool should_check = false;
 
@@ -2583,7 +2583,7 @@ bool check_disk_space_exhausted(MXS_MONITORED_SERVER* pMs,
 }
 }
 
-void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
+void MonitorWorker::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
 {
     std::map<std::string, disk::SizesAndName> info;
 
@@ -2686,17 +2686,17 @@ void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
     }
 }
 
-bool MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
+bool MonitorWorker::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
     return true;
 }
 
-bool MonitorInstance::has_sufficient_permissions() const
+bool MonitorWorker::has_sufficient_permissions() const
 {
     return true;
 }
 
-void MonitorInstance::flush_server_status()
+void MonitorWorker::flush_server_status()
 {
     for (MXS_MONITORED_SERVER* pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
     {
@@ -2707,15 +2707,15 @@ void MonitorInstance::flush_server_status()
     }
 }
 
-void MonitorInstanceSimple::pre_tick()
+void MonitorWorkerSimple::pre_tick()
 {
 }
 
-void MonitorInstanceSimple::post_tick()
+void MonitorWorkerSimple::post_tick()
 {
 }
 
-void MonitorInstanceSimple::tick()
+void MonitorWorkerSimple::tick()
 {
     pre_tick();
 
@@ -2790,20 +2790,20 @@ void MonitorInstanceSimple::tick()
     post_tick();
 }
 
-void MonitorInstance::pre_loop()
+void MonitorWorker::pre_loop()
 {
 }
 
-void MonitorInstance::post_loop()
+void MonitorWorker::post_loop()
 {
 }
 
-void MonitorInstance::process_state_changes()
+void MonitorWorker::process_state_changes()
 {
     mon_process_state_changes(m_monitor, m_monitor->script, m_monitor->events);
 }
 
-bool MonitorInstance::pre_run()
+bool MonitorWorker::pre_run()
 {
     bool rv = false;
 
@@ -2816,7 +2816,7 @@ bool MonitorInstance::pre_run()
 
         load_server_journal(m_monitor, &m_master);
         pre_loop();
-        delayed_call(1, &MonitorInstance::call_run_one_tick, this);
+        delayed_call(1, &MonitorWorker::call_run_one_tick, this);
     }
     else
     {
@@ -2828,14 +2828,14 @@ bool MonitorInstance::pre_run()
     return rv;
 }
 
-void MonitorInstance::post_run()
+void MonitorWorker::post_run()
 {
     post_loop();
 
     mysql_thread_end();
 }
 
-bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
+bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
 {
     /** This is both the minimum sleep between two ticks and also the maximum time between early
      *  wakeup checks. */
@@ -2861,12 +2861,12 @@ bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
         int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
             base_interval_ms : ms_to_next_call;
 
-        delayed_call(delay, &MonitorInstance::call_run_one_tick, this);
+        delayed_call(delay, &MonitorWorker::call_run_one_tick, this);
     }
     return false;
 }
 
-void MonitorInstance::run_one_tick()
+void MonitorWorker::run_one_tick()
 {
     monitor_check_maintenance_requests(m_monitor);
 
@@ -2881,7 +2881,7 @@ void MonitorInstance::run_one_tick()
     store_server_journal(m_monitor, m_master);
 }
 
-bool MonitorInstance::immediate_tick_required() const
+bool MonitorWorker::immediate_tick_required() const
 {
     return false;
 }
@@ -2889,6 +2889,6 @@ bool MonitorInstance::immediate_tick_required() const
 
 MXS_MONITORED_SERVER::MXS_MONITORED_SERVER(SERVER* server)
     : server(server)
-    , disk_space_checked(maxscale::MonitorInstance::get_time_ms()) // Pretend disk space was just checked.
+    , disk_space_checked(maxscale::MonitorWorker::get_time_ms()) // Pretend disk space was just checked.
 {
 }

@@ -259,14 +259,14 @@ private:
 
 HttpResponse cb_stop_monitor(const HttpRequest& request)
 {
-    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
     monitor_stop(monitor);
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
 HttpResponse cb_start_monitor(const HttpRequest& request)
 {
-    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
     monitor_start(monitor, monitor->parameters);
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
@@ -384,7 +384,7 @@ HttpResponse cb_create_service_listener(const HttpRequest& request)
 
 HttpResponse cb_alter_monitor(const HttpRequest& request)
 {
-    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
     mxb_assert(monitor && request.get_json());
 
     if (runtime_alter_monitor_from_json(monitor, request.get_json()))
@@ -397,7 +397,7 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
 
 HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
 {
-    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
     mxb_assert(monitor && request.get_json());
 
     if (runtime_alter_monitor_relationships_from_json(monitor, request.get_json()))
@@ -486,7 +486,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
 
 HttpResponse cb_delete_monitor(const HttpRequest& request)
 {
-    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
     mxb_assert(monitor);
 
     if (runtime_destroy_monitor(monitor))
@@ -607,7 +607,7 @@ HttpResponse cb_all_monitors(const HttpRequest& request)
 
 HttpResponse cb_get_monitor(const HttpRequest& request)
 {
-    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
     mxb_assert(monitor);
     return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
 }

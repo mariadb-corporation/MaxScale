@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/monitor.hh>
 
-class CsMonitor : public maxscale::MonitorInstanceSimple
+class CsMonitor : public maxscale::MonitorWorkerSimple
 {
 public:
     CsMonitor(const CsMonitor&) = delete;

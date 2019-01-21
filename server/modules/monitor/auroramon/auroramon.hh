@@ -19,7 +19,7 @@
  * @file auroramon.hh - The Aurora monitor
  */
 
-class AuroraMonitor : public maxscale::MonitorInstanceSimple
+class AuroraMonitor : public maxscale::MonitorWorkerSimple
 {
 public:
     AuroraMonitor(const AuroraMonitor&) = delete;

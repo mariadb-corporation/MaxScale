@@ -19,7 +19,7 @@
  * @file grmon.hh A MySQL Group Replication cluster monitor
  */
 
-class GRMon : public maxscale::MonitorInstanceSimple
+class GRMon : public maxscale::MonitorWorkerSimple
 {
 public:
     GRMon(const GRMon&) = delete;

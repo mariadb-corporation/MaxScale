@@ -19,7 +19,7 @@
  * @file mmmon.hh - The Multi-Master monitor
  */
 
-class MMMonitor : public maxscale::MonitorInstanceSimple
+class MMMonitor : public maxscale::MonitorWorkerSimple
 {
 public:
     MMMonitor(const MMMonitor&) = delete;
