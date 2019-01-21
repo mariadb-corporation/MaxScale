@@ -26,7 +26,8 @@
 #include <mysqld_error.h>
 
 
-GRMon::GRMon()
+GRMon::GRMon(const std::string& name, const std::string& module)
+    : MonitorWorkerSimple(name, module)
 {
 }
 
@@ -34,9 +35,9 @@ GRMon::~GRMon()
 {
 }
 
-GRMon* GRMon::create()
+GRMon* GRMon::create(const std::string& name, const std::string& module)
 {
-    return new GRMon();
+    return new GRMon(name, module);
 }
 
 bool GRMon::has_sufficient_permissions() const

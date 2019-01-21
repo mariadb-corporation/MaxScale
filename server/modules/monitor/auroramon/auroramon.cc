@@ -25,7 +25,8 @@
 #include <maxscale/mysql_utils.hh>
 
 
-AuroraMonitor::AuroraMonitor()
+AuroraMonitor::AuroraMonitor(const std::string& name, const std::string& module)
+    : MonitorWorkerSimple(name, module)
 {
 }
 
@@ -34,9 +35,9 @@ AuroraMonitor::~AuroraMonitor()
 }
 
 // static
-AuroraMonitor* AuroraMonitor::create()
+AuroraMonitor* AuroraMonitor::create(const std::string& name, const std::string& module)
 {
-    return new AuroraMonitor();
+    return new AuroraMonitor(name, module);
 }
 
 bool AuroraMonitor::has_sufficient_permissions() const

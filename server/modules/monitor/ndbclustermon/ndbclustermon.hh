@@ -26,12 +26,12 @@ public:
     NDBCMonitor& operator=(const NDBCMonitor&) = delete;
 
     ~NDBCMonitor();
-    static NDBCMonitor* create();
+    static NDBCMonitor* create(const std::string& name, const std::string& module);
 
 protected:
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
 private:
-    NDBCMonitor();
+    NDBCMonitor(const std::string& name, const std::string& module);
 };

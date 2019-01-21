@@ -48,10 +48,11 @@ public:
     /**
      * Create the monitor instance and return the instance data.
      *
-     * @param monitor Generic monitor data
+     * @param name Monitor config name
+     * @param module Module name
      * @return MariaDBMonitor instance
      */
-    static MariaDBMonitor* create();
+    static MariaDBMonitor* create(const std::string& name, const std::string& module);
 
     ~MariaDBMonitor();
 
@@ -236,7 +237,7 @@ private:
                                                  * gtid:s? */
 
     // Base methods
-    MariaDBMonitor();
+    MariaDBMonitor(const std::string& name, const std::string& module);
     bool configure(const MXS_CONFIG_PARAMETER* params);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     void reset_server_info();

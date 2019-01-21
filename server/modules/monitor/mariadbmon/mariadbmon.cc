@@ -59,7 +59,8 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 static const char DIAG_ERROR[] = "Internal error, could not print diagnostics. "
                                  "Check log for more information.";
 
-MariaDBMonitor::MariaDBMonitor()
+MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
+    : MonitorWorker(name, module)
 {
 }
 
@@ -172,9 +173,9 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
     return rval;
 }
 
-MariaDBMonitor* MariaDBMonitor::create()
+MariaDBMonitor* MariaDBMonitor::create(const string& name, const string& module)
 {
-    return new MariaDBMonitor();
+    return new MariaDBMonitor(name, module);
 }
 
 /**

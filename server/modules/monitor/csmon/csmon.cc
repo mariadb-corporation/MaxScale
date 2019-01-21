@@ -71,7 +71,8 @@ int get_cs_version(MXS_MONITORED_SERVER* srv)
 }
 }
 
-CsMonitor::CsMonitor()
+CsMonitor::CsMonitor(const std::string& name, const std::string& module)
+    : MonitorWorkerSimple(name, module)
 {
 }
 
@@ -80,9 +81,9 @@ CsMonitor::~CsMonitor()
 }
 
 // static
-CsMonitor* CsMonitor::create()
+CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
 {
-    return new CsMonitor();
+    return new CsMonitor(name, module);
 }
 
 bool CsMonitor::has_sufficient_permissions() const

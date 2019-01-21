@@ -106,17 +106,13 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
         return NULL;
     }
 
-    Monitor* mon = api->createInstance();
+    Monitor* mon = api->createInstance(name, module);
     if (!mon)
     {
         MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
                   name.c_str(), module.c_str());
         return NULL;
     }
-
-    // These initializations are kept outside the constructor to keep it simple.
-    mon->name = MXS_STRDUP_A(name.c_str());
-    mon->module_name = module;
 
     if (mon->configure_base(params)) // TODO: Move derived class configure() here
     {
@@ -132,7 +128,9 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
     return mon;
 }
 
-Monitor::Monitor()
+Monitor::Monitor(const string& name, const string& module)
+    : name(MXS_STRDUP_A(name.c_str()))
+    , module_name(module)
 {
     memset(journal_hash, 0, sizeof(journal_hash));
 }
@@ -210,7 +208,7 @@ Monitor::~Monitor()
     delete disk_space_threshold;
     config_parameter_free(parameters);
     monitor_server_free_all(monitored_servers);
-    MXS_FREE(name);
+    MXS_FREE((const_cast<char*>(name)));
 }
 
 void MonitorManager::destroy_all_monitors()
@@ -2429,8 +2427,9 @@ void monitor_debug_wait()
 namespace maxscale
 {
 
-MonitorWorker::MonitorWorker()
-    : m_monitor(this)
+MonitorWorker::MonitorWorker(const string& name, const string& module)
+    : Monitor(name, module)
+    , m_monitor(this)
     , m_master(NULL)
     , m_thread_running(false)
     , m_shutdown(0)

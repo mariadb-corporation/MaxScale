@@ -42,8 +42,9 @@ static int                   compare_node_index(const void*, const void*);
 static int                   compare_node_priority(const void*, const void*);
 static bool                  using_xtrabackup(MXS_MONITORED_SERVER* database, const char* server_string);
 
-GaleraMonitor::GaleraMonitor()
-    : m_disableMasterFailback(0)
+GaleraMonitor::GaleraMonitor(const std::string& name, const std::string& module)
+    : MonitorWorkerSimple(name, module)
+    , m_disableMasterFailback(0)
     , m_availableWhenDonor(0)
     , m_disableMasterRoleSetting(0)
     , m_root_node_as_master(false)
@@ -59,9 +60,9 @@ GaleraMonitor::~GaleraMonitor()
 }
 
 // static
-GaleraMonitor* GaleraMonitor::create()
+GaleraMonitor* GaleraMonitor::create(const std::string& name, const std::string& module)
 {
-    return new GaleraMonitor();
+    return new GaleraMonitor(name, module);
 }
 
 void GaleraMonitor::diagnostics(DCB* dcb) const

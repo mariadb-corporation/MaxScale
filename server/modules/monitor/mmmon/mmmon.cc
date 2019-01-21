@@ -34,8 +34,9 @@
 static void detectStaleMaster(void*, int);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 
-MMMonitor::MMMonitor()
-    : m_detectStaleMaster(false)
+MMMonitor::MMMonitor(const std::string& name, const std::string& module)
+    : MonitorWorkerSimple(name, module)
+    , m_detectStaleMaster(false)
 {
 }
 
@@ -44,9 +45,9 @@ MMMonitor::~MMMonitor()
 }
 
 // static
-MMMonitor* MMMonitor::create()
+MMMonitor* MMMonitor::create(const std::string& name, const std::string& module)
 {
-    return new MMMonitor();
+    return new MMMonitor(name, module);
 }
 
 void MMMonitor::diagnostics(DCB* dcb) const

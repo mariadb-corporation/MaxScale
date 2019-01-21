@@ -60,12 +60,12 @@ public:
 
     ~ClustrixMonitor();
 
-    static ClustrixMonitor* create();
+    static ClustrixMonitor* create(const std::string& name, const std::string& module);
 
     bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
 
 private:
-    ClustrixMonitor();
+    ClustrixMonitor(const std::string& name, const std::string& module);
 
     void pre_loop() override;
     void post_loop() override;

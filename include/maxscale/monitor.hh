@@ -51,9 +51,11 @@ struct MXS_MONITOR_API
      * If the function fails, MaxScale will not start. The returned object must inherit from
      * the abstract base monitor class and implement the missing methods.
      *
+     * @param name Configuration name of the monitor
+     * @param module Module name of the monitor
      * @return Monitor object
      */
-    Monitor* (* createInstance)();
+    Monitor* (* createInstance)(const std::string& name, const std::string& module);
 };
 
 /**
@@ -164,7 +166,7 @@ inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> end(MXS_MONITORED_SER
 class Monitor
 {
 public:
-    Monitor();
+    Monitor(const std::string& name, const std::string& module);
     virtual ~Monitor();
     virtual bool configure(const MXS_CONFIG_PARAMETER* params) = 0;
 
@@ -198,8 +200,8 @@ public:
      */
     virtual json_t* diagnostics_json() const = 0;
 
-    char*             name;         /**< Monitor instance name */
-    std::string       module_name;  /**< Name of the monitor module */
+    const char* const name;         /**< Monitor instance name. TODO: change to string */
+    const std::string module_name;  /**< Name of the monitor module */
     Monitor*          next;         /**< Next monitor in the linked list */
 
     mutable std::mutex    lock;
@@ -429,6 +431,9 @@ void monitor_debug_wait();
 namespace maxscale
 {
 
+/**
+ * An abstract class which helps implement a monitor based on a maxbase::Worker thread.
+ */
 class MonitorWorker : public Monitor
                     , protected maxbase::Worker
 {
@@ -525,7 +530,7 @@ public:
     static int64_t get_time_ms();
 
 protected:
-    MonitorWorker();
+    MonitorWorker(const std::string& name, const std::string& module);
 
     /**
      * @brief Should the monitor shut down?
@@ -649,7 +654,8 @@ public:
     MonitorWorkerSimple& operator=(const MonitorWorkerSimple&) = delete;
 
 protected:
-    MonitorWorkerSimple()
+    MonitorWorkerSimple(const std::string& name, const std::string& module)
+        : MonitorWorker(name, module)
     {
     }
 
@@ -707,10 +713,10 @@ public:
     MonitorApi(const MonitorApi&) = delete;
     MonitorApi& operator=(const MonitorApi&) = delete;
 
-    static Monitor* createInstance()
+    static Monitor* createInstance(const std::string& name, const std::string& module)
     {
         MonitorInstance* pInstance = NULL;
-        MXS_EXCEPTION_GUARD(pInstance = MonitorInstance::create());
+        MXS_EXCEPTION_GUARD(pInstance = MonitorInstance::create(name, module));
         return pInstance;
     }
 

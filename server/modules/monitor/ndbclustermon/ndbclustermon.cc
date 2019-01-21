@@ -22,7 +22,8 @@
 #include <maxscale/mysql_utils.hh>
 
 
-NDBCMonitor::NDBCMonitor()
+NDBCMonitor::NDBCMonitor(const std::string& name, const std::string& module)
+    : MonitorWorkerSimple(name, module)
 {
 }
 
@@ -31,9 +32,9 @@ NDBCMonitor::~NDBCMonitor()
 }
 
 // static
-NDBCMonitor* NDBCMonitor::create()
+NDBCMonitor* NDBCMonitor::create(const std::string& name, const std::string& module)
 {
-    return new NDBCMonitor();
+    return new NDBCMonitor(name, module);
 }
 
 bool NDBCMonitor::has_sufficient_permissions() const

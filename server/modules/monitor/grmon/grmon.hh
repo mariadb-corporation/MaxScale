@@ -26,12 +26,12 @@ public:
     GRMon& operator&(const GRMon&) = delete;
 
     ~GRMon();
-    static GRMon* create();
+    static GRMon* create(const std::string& name, const std::string& module);
 
 protected:
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
 private:
-    GRMon();
+    GRMon(const std::string& name, const std::string& module);
 };
