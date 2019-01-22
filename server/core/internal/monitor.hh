@@ -105,14 +105,6 @@ public:
      * @attn Must only be called in single-thread context at system shutdown.
      */
     static void destroy_all_monitors();
-
-    /**
-     * Free a monitor, first stop the monitor and then remove the monitor from
-     * the chain of monitors and free the memory.
-     *
-     * @param mon   The monitor to free
-     */
-    static void destroy_monitor(Monitor*);
 };
 
 

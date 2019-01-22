@@ -200,13 +200,12 @@ public:
      */
     virtual json_t* diagnostics_json() const = 0;
 
-    const char* const name;         /**< Monitor instance name. TODO: change to string */
-    const std::string module_name;  /**< Name of the monitor module */
-    Monitor*          next;         /**< Next monitor in the linked list */
+    const char* const name;          /**< Monitor instance name. TODO: change to string */
+    const std::string module_name;   /**< Name of the monitor module */
+    bool              active = true; /**< True if monitor exists and has not been "destroyed". */
 
-    mutable std::mutex    lock;
+    mutable std::mutex lock;
 
-    bool active = true;     /**< True if monitor exists and has not been "destroyed". */
 
     /** The state of the monitor. This should ONLY be written to by the admin thread. */
     monitor_state_t state = MONITOR_STATE_STOPPED;
