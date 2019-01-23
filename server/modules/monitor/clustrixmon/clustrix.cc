@@ -154,7 +154,7 @@ bool Clustrix::is_part_of_the_quorum(const SERVER& server, MYSQL* pCon)
     return rv;
 }
 
-bool Clustrix::ping_or_connect_to_hub(const MXS_MONITOR& mon, SERVER& server, MYSQL** ppCon)
+bool Clustrix::ping_or_connect_to_hub(const Monitor& mon, SERVER& server, MYSQL** ppCon)
 {
     bool connected = false;
 

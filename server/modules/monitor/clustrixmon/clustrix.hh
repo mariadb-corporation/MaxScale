@@ -77,7 +77,7 @@ inline bool is_part_of_the_quorum(MXS_MONITORED_SERVER& ms)
  *
  * @note Upon return @c *ppCon will be non-NULL.
  */
-bool ping_or_connect_to_hub(const MXS_MONITOR& mon, SERVER& server, MYSQL** ppCon);
+bool ping_or_connect_to_hub(const Monitor& mon, SERVER& server, MYSQL** ppCon);
 
 /**
  * Ping or create connection to server and check whether it can be used
@@ -88,7 +88,7 @@ bool ping_or_connect_to_hub(const MXS_MONITOR& mon, SERVER& server, MYSQL** ppCo
  *
  * @return True, if the server can be used as hub, false otherwise.
  */
-inline bool ping_or_connect_to_hub(const MXS_MONITOR& mon, MXS_MONITORED_SERVER& ms)
+inline bool ping_or_connect_to_hub(const Monitor& mon, MXS_MONITORED_SERVER& ms)
 {
     return ping_or_connect_to_hub(mon, *ms.server, &ms.con);
 }

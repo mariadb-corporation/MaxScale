@@ -160,7 +160,7 @@ public:
         m_pServer->is_active = false;
     }
 
-    bool can_be_used_as_hub(const MXS_MONITOR& mon);
+    bool can_be_used_as_hub(const Monitor& mon);
 
     SERVER* server() const
     {

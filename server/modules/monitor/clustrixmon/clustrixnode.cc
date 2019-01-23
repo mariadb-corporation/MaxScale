@@ -14,7 +14,7 @@
 #include "clustrixnode.hh"
 #include "clustrix.hh"
 
-bool ClustrixNode::can_be_used_as_hub(const MXS_MONITOR& mon)
+bool ClustrixNode::can_be_used_as_hub(const Monitor& mon)
 {
     mxb_assert(m_pServer);
 

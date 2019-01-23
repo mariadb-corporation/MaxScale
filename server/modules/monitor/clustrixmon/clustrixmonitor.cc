@@ -115,7 +115,7 @@ void ClustrixMonitor::choose_hub()
         auto& element = *it;
         ClustrixNode& node = element.second;
 
-        if (node.can_be_used_as_hub(*m_monitor))
+        if (node.can_be_used_as_hub(*this))
         {
             pHub_con = node.release_connection();
             pHub_server = node.server();
@@ -129,8 +129,8 @@ void ClustrixMonitor::choose_hub()
         // If that fails, then we check the bootstrap servers, but only if
         // it was not checked above.
 
-        auto b = begin(*(m_monitor->monitored_servers));
-        auto e = end(*(m_monitor->monitored_servers));
+        auto b = begin(*(this->monitored_servers));
+        auto e = end(*(this->monitored_servers));
 
         for (auto it = b; !pHub_con && (it != e); ++it)
         {
@@ -138,7 +138,7 @@ void ClustrixMonitor::choose_hub()
 
             if (ips.find(ms.server->address) == ips.end())
             {
-                if (Clustrix::ping_or_connect_to_hub(*m_monitor, ms))
+                if (Clustrix::ping_or_connect_to_hub(*this, ms))
                 {
                     pHub_con = ms.con;
                     pHub_server = ms.server;
@@ -342,7 +342,7 @@ void ClustrixMonitor::check_hub()
     mxb_assert(m_pHub_con);
     mxb_assert(m_pHub_server);
 
-    if (!Clustrix::ping_or_connect_to_hub(*m_monitor, *m_pHub_server, &m_pHub_con))
+    if (!Clustrix::ping_or_connect_to_hub(*this, *m_pHub_server, &m_pHub_con))
     {
         mysql_close(m_pHub_con);
         m_pHub_con = nullptr;
@@ -444,10 +444,10 @@ bool ClustrixMonitor::check_cluster_membership(std::map<int, ClustrixMembership>
 
 void ClustrixMonitor::update_server_statuses()
 {
-    mxb_assert(m_monitor->monitored_servers);
+    mxb_assert(this->monitored_servers);
 
-    auto b = std::begin(*m_monitor->monitored_servers);
-    auto e = std::end(*m_monitor->monitored_servers);
+    auto b = std::begin(*this->monitored_servers);
+    auto e = std::end(*this->monitored_servers);
 
     for_each(b, e,
              [this](MXS_MONITORED_SERVER& ms) {
@@ -506,7 +506,7 @@ void ClustrixMonitor::initiate_delayed_http_check()
 {
     mxb_assert(m_delayed_http_check_id == 0);
 
-    long max_delay_ms = m_monitor->interval / 10;
+    long max_delay_ms = this->interval / 10;
 
     long ms = m_http.wait_no_more_than();
 
