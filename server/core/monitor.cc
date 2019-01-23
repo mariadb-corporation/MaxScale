@@ -192,7 +192,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
     connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
     connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
-    interval = config_get_integer(params, CN_MONITOR_INTERVAL);
+    m_settings.interval = config_get_integer(params, CN_MONITOR_INTERVAL);
     journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
     script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
     script = config_get_string(params, CN_SCRIPT);
@@ -516,11 +516,17 @@ void monitor_show_all(DCB* dcb)
  */
 void monitor_show(DCB* dcb, Monitor* monitor)
 {
+    monitor->show(dcb);
+}
+
+void Monitor::show(DCB* dcb)
+{
+    Monitor* monitor = this;
     dcb_printf(dcb, "Monitor:                %p\n", monitor);
     dcb_printf(dcb, "Name:                   %s\n", monitor->name);
     dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(monitor->state));
     dcb_printf(dcb, "Times monitored:        %lu\n", monitor->ticks);
-    dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", monitor->interval);
+    dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", monitor->m_settings.interval);
     dcb_printf(dcb, "Connect Timeout:        %i seconds\n", monitor->connect_timeout);
     dcb_printf(dcb, "Read Timeout:           %i seconds\n", monitor->read_timeout);
     dcb_printf(dcb, "Write Timeout:          %i seconds\n", monitor->write_timeout);
@@ -616,12 +622,11 @@ Monitor* monitor_repurpose_destroyed(const char* name, const char* module)
 /**
  * Set the monitor sampling interval.
  *
- * @param mon           The monitor instance
- * @param interval      The sampling interval in milliseconds
+ * @param interval The sampling interval in milliseconds
  */
-void monitor_set_interval(Monitor* mon, unsigned long interval)
+void Monitor::set_interval(int64_t interval)
 {
-    mon->interval = interval;
+    m_settings.interval = interval;
 }
 
 /**
@@ -2470,7 +2475,7 @@ bool MonitorWorker::start(const MXS_CONFIG_PARAMETER* pParams)
 
         if (configure(pParams))
         {
-            m_loop_called = get_time_ms() - m_monitor->interval; // Next tick should happen immediately.
+            m_loop_called = get_time_ms() - m_settings.interval; // Next tick should happen immediately.
             if (!Worker::start())
             {
                 MXS_ERROR("Failed to start worker for monitor '%s'.", m_monitor->name);
@@ -2812,7 +2817,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
     {
         int64_t now = get_time_ms();
         // Enough time has passed,
-        if ((now - m_loop_called > static_cast<int64_t>(m_monitor->interval))
+        if ((now - m_loop_called > m_settings.interval)
             // or maintenance flag is set,
             || atomic_load_int(&m_monitor->check_maintenance_flag) == SERVER::MAINTENANCE_FLAG_CHECK
             // or a monitor-specific condition is met.
@@ -2823,7 +2828,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
             now = get_time_ms();
         }
 
-        int64_t ms_to_next_call = m_monitor->interval - (now - m_loop_called);
+        int64_t ms_to_next_call = m_settings.interval - (now - m_loop_called);
         // ms_to_next_call will be negative, if the run_one_tick() call took
         // longer than one monitor interval.
         int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?

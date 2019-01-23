@@ -598,7 +598,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     {
         if (auto ival = get_positive_int(value))
         {
-            monitor_set_interval(monitor, ival);
+            monitor->set_interval(ival);
         }
     }
     else if (strcmp(key, CN_BACKEND_CONNECT_TIMEOUT) == 0)

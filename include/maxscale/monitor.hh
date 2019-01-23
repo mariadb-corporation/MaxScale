@@ -208,6 +208,10 @@ public:
      */
     bool set_disk_space_threshold(const std::string& dst_setting);
 
+    void set_interval(int64_t interval);
+
+    void show(DCB* dcb);
+
     const char* const name;          /**< Monitor instance name. TODO: change to string */
     const std::string module_name;   /**< Name of the monitor module */
     bool              active = true; /**< True if monitor exists and has not been "destroyed". */
@@ -237,7 +241,6 @@ public:
                              *   There are retries and the total effective timeout value is two times
                              *   the option value. */
 
-    size_t      interval;           /**< The monitor interval */
     time_t      journal_max_age;    /**< Maximum age of journal file */
     uint32_t    script_timeout;     /**< Timeout in seconds for the monitor scripts */
     const char* script;             /**< Launchable script. */
@@ -261,6 +264,8 @@ protected:
     class Settings
     {
     public:
+        int64_t interval {0};    /**< Monitor interval in milliseconds */
+
         SERVER::DiskSpaceLimits  disk_space_limits;     /**< Disk space thresholds */
         /**
          * How often should a disk space check be made at most, in milliseconds. Negative values imply
