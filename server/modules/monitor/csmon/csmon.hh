@@ -25,7 +25,7 @@ public:
     static CsMonitor* create(const std::string& name, const std::string& module);
 
 protected:
-    bool has_sufficient_permissions() const;
+    bool has_sufficient_permissions();
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
 private:

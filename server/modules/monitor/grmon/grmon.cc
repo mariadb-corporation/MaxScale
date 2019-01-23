@@ -40,7 +40,7 @@ GRMon* GRMon::create(const std::string& name, const std::string& module)
     return new GRMon(name, module);
 }
 
-bool GRMon::has_sufficient_permissions() const
+bool GRMon::has_sufficient_permissions()
 {
     return true;
 }

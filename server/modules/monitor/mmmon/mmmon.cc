@@ -69,9 +69,9 @@ bool MMMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     return true;
 }
 
-bool MMMonitor::has_sufficient_permissions() const
+bool MMMonitor::has_sufficient_permissions()
 {
-    return check_monitor_permissions(m_monitor, "SHOW SLAVE STATUS");
+    return test_permissions("SHOW SLAVE STATUS");
 }
 
 void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)

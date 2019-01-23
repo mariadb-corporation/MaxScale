@@ -118,9 +118,9 @@ bool GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     return true;
 }
 
-bool GaleraMonitor::has_sufficient_permissions() const
+bool GaleraMonitor::has_sufficient_permissions()
 {
-    return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'wsrep_local_state'");
+    return test_permissions("SHOW STATUS LIKE 'wsrep_local_state'");
 }
 
 void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)

@@ -86,9 +86,9 @@ CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
     return new CsMonitor(name, module);
 }
 
-bool CsMonitor::has_sufficient_permissions() const
+bool CsMonitor::has_sufficient_permissions()
 {
-    return check_monitor_permissions(m_monitor, alive_query);
+    return test_permissions(alive_query);
 }
 
 void CsMonitor::update_server_status(MXS_MONITORED_SERVER* srv)

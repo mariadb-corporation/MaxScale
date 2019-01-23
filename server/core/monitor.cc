@@ -702,15 +702,9 @@ std::unique_ptr<ResultSet> monitor_get_list()
     return set;
 }
 
-/**
- * @brief Check if the monitor user has all required permissions to operate properly.
- *
- * @param service Monitor to inspect
- * @param query Query to execute
- * @return True on success, false if monitor credentials lack permissions
- */
-bool check_monitor_permissions(Monitor* monitor, const char* query)
+bool Monitor::test_permissions(const string& query)
 {
+    auto monitor = this;
     if (monitor->monitored_servers == NULL      // No servers to check
         || config_get_global_options()->skip_permission_checks)
     {
@@ -719,7 +713,6 @@ bool check_monitor_permissions(Monitor* monitor, const char* query)
 
     char* user = monitor->user;
     char* dpasswd = decrypt_password(monitor->password);
-    MXS_CONFIG* cnf = config_get_global_options();
     bool rval = false;
 
     for (MXS_MONITORED_SERVER* mondb = monitor->monitored_servers; mondb; mondb = mondb->next)
@@ -745,7 +738,7 @@ bool check_monitor_permissions(Monitor* monitor, const char* query)
                 break;
             }
         }
-        else if (mxs_mysql_query(mondb->con, query) != 0)
+        else if (mxs_mysql_query(mondb->con, query.c_str()) != 0)
         {
             switch (mysql_errno(mondb->con))
             {
@@ -763,10 +756,7 @@ bool check_monitor_permissions(Monitor* monitor, const char* query)
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      monitor->name,
-                      query,
-                      user,
-                      mysql_error(mondb->con));
+                      monitor->name, query.c_str(), user, mysql_error(mondb->con));
         }
         else
         {
@@ -2669,7 +2659,7 @@ bool MonitorWorker::configure(const MXS_CONFIG_PARAMETER* pParams)
     return true;
 }
 
-bool MonitorWorker::has_sufficient_permissions() const
+bool MonitorWorker::has_sufficient_permissions()
 {
     return true;
 }

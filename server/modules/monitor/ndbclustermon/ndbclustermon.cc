@@ -37,9 +37,9 @@ NDBCMonitor* NDBCMonitor::create(const std::string& name, const std::string& mod
     return new NDBCMonitor(name, module);
 }
 
-bool NDBCMonitor::has_sufficient_permissions() const
+bool NDBCMonitor::has_sufficient_permissions()
 {
-    return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'");
+    return test_permissions("SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'");
 }
 
 void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)

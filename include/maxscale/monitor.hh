@@ -244,6 +244,16 @@ public:
     uint64_t    events;             /**< Enabled monitor events. */
 
 protected:
+
+    /**
+     * Check if the monitor user can execute a query. The query should be such that it only succeeds if
+     * the monitor user has all required permissions. Servers which are down are skipped.
+     *
+     * @param query Query to test with
+     * @return True on success, false if monitor credentials lack permissions
+     */
+    bool test_permissions(const std::string& query);
+
     /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
@@ -285,8 +295,6 @@ extern const char CN_JOURNAL_MAX_AGE[];
 extern const char CN_MONITOR_INTERVAL[];
 extern const char CN_SCRIPT[];
 extern const char CN_SCRIPT_TIMEOUT[];
-
-bool check_monitor_permissions(Monitor* monitor, const char* query);
 
 /**
  * Store the current server status to the previous and pending status
@@ -614,7 +622,7 @@ protected:
      *
      * @return True, if the monitor user has sufficient rights, false otherwise.
      */
-    virtual bool has_sufficient_permissions() const;
+    virtual bool has_sufficient_permissions();
 
     /**
      * @brief Flush pending server status to each server.

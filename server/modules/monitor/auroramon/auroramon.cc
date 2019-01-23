@@ -40,12 +40,10 @@ AuroraMonitor* AuroraMonitor::create(const std::string& name, const std::string&
     return new AuroraMonitor(name, module);
 }
 
-bool AuroraMonitor::has_sufficient_permissions() const
+bool AuroraMonitor::has_sufficient_permissions()
 {
-    return check_monitor_permissions(m_monitor,
-                                     "SELECT @@aurora_server_id, server_id FROM "
-                                     "information_schema.replica_host_status "
-                                     "WHERE session_id = 'MASTER_SESSION_ID'");
+    return test_permissions("SELECT @@aurora_server_id, server_id FROM "
+                            "information_schema.replica_host_status WHERE session_id = 'MASTER_SESSION_ID'");
 }
 
 /**
