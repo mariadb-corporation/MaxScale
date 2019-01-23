@@ -47,6 +47,30 @@ auth            required        pam_unix.so
 account         required        pam_unix.so
 ```
 
+## Anonymous user mapping
+
+The MaxScale PAM authenticator supports a limited version of
+[user mapping](https://mariadb.com/kb/en/library/user-and-group-mapping-with-pam/).
+Anonymous mapping is enabled in MaxScale if the following user exists:
+- Empty username and wildcard host (`''@'%'`)
+- `plugin = 'pam'`
+- Proxy grant is on (The query `SHOW GRANTS FOR ''@'%';` returns `GRANT PROXY ON ...`
+
+When the authenticator detects such a user, anonymous account mapping is enabled.
+To verify this, search the MaxScale log for "Anonymous PAM user with proxy grant
+found. User account mapping enabled." When mapping is on, the PAM authenticator
+does not require client accounts to exist in the `mysql.user`-table received from
+the backend. It will simply authenticate the client to the local machine with
+the username and password supplied. The PAM service used for authentication is
+read from the `authentication_string`-field of the anonymous user. If authentication
+was successful, MaxScale then uses the username and password to log to the backends.
+
+Anonymous mapping is only attempted if the client username is not found in the
+`mysql.user`-table as explained in [Configuration](#configuration). This means,
+that if a user is found and the authentication fails, anonymous authentication
+is not attempted even when it could use a different PAM service with a different
+outcome.
+
 ## Implementation details and limitations
 
 The PAM general authentication scheme is difficult for a proxy such as MaxScale.
