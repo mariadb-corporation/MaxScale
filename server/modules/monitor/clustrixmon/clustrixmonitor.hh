@@ -70,12 +70,14 @@ private:
     void pre_loop() override;
     void post_loop() override;
 
-    void tick();
+    void tick() override;
 
-    void update_cluster_nodes();
-    void update_cluster_nodes(MXS_MONITORED_SERVER& ms);
-    void refresh_cluster_nodes();
-    bool check_cluster_membership(MXS_MONITORED_SERVER& ms, std::map<int, ClustrixMembership>* pMemberships);
+    void check_hub_and_refresh_nodes();
+    void check_hub();
+    void choose_hub();
+    void refresh_nodes();
+    bool check_cluster_membership(std::map<int, ClustrixMembership>* pMemberships);
+
     void update_server_statuses();
 
     void make_health_check();
@@ -94,5 +96,6 @@ private:
     mxb::http::Async            m_http;
     uint32_t                    m_delayed_http_check_id { 0 };
     long                        m_last_cluster_check    { 0 };
-    MXS_MONITORED_SERVER*       m_pMonitored_server     { nullptr };
+    SERVER*                     m_pHub_server           { nullptr };
+    MYSQL*                      m_pHub_con              { nullptr };
 };

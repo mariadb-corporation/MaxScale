@@ -17,6 +17,7 @@
 #include <sstream>
 #include <string>
 #include "clustrix.hh"
+#include "clustrixmembership.hh"
 
 class ClustrixNode
 {
@@ -49,7 +50,16 @@ public:
         , m_health_check_threshold(health_check_threshold)
         , m_nRunning(m_health_check_threshold)
         , m_pServer(pServer)
+        , m_pCon(nullptr)
     {
+    }
+
+    ~ClustrixNode()
+    {
+        if (m_pCon)
+        {
+            mysql_close(m_pCon);
+        }
     }
 
     int id() const
@@ -150,6 +160,25 @@ public:
         m_pServer->is_active = false;
     }
 
+    bool can_be_used_as_hub(const MXS_MONITOR& mon);
+
+    SERVER* server() const
+    {
+        return m_pServer;
+    }
+
+    MYSQL* connection() const
+    {
+        return m_pCon;
+    }
+
+    MYSQL* release_connection()
+    {
+        MYSQL* pCon = m_pCon;
+        m_pCon = nullptr;
+        return pCon;
+    }
+
     std::string to_string() const
     {
         std::stringstream ss;
@@ -173,6 +202,7 @@ private:
     int                m_health_check_threshold { DEFAULT_HEALTH_CHECK_THRESHOLD_VALUE };
     int                m_nRunning               { 0 };
     SERVER*            m_pServer                { nullptr };
+    MYSQL*             m_pCon                   { nullptr };
 };
 
 inline std::ostream& operator << (std::ostream& out, const ClustrixNode& x)
