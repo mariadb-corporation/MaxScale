@@ -88,6 +88,13 @@ def main(argv):
         print(format_str.format(file_name))
         output_file.writestr(file_name, contents)
 
+    # Run some commands to gather general system info.
+    contents = get_system_info()
+    if len(contents) > 0:
+        file_name = "system_info.txt"
+        print(format_str.format(file_name))
+        output_file.writestr(file_name, contents)
+
     output_file.close()
 
 
@@ -195,6 +202,30 @@ def read_core_file():
                 core_file_contents += gdb_command + "\n\n" + gdb_output_bytes.decode("utf-8")
 
     return core_file_contents
+
+
+def get_system_info():
+    commands = ["cat /etc/os-release", "lscpu", "cat /proc/meminfo"]
+    total_output = ""
+    for command in commands:
+        try:
+            output_bytes = subprocess.check_output(command, shell=True, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            # If a command fails, try the next one. It may work.
+            message = "Error gathering system info: command \"{}\" returned {}".format(
+                command, e.returncode)
+            total_output += command + "\n" + message + "\n"
+            print(message)
+        except IOError as e:
+            message = "Error gathering system info: command \"{}\" could not be ran: {}".format(
+                command, e.strerror)
+            total_output += command + "\n" + message + "\n"
+            print(message)
+        else:
+            if len(output_bytes) > 0:
+                total_output += command + "\n" + output_bytes.decode("utf-8") + "\n"
+
+    return total_output
 
 
 if __name__ == "__main__":
