@@ -1,10 +1,10 @@
 # MaxScale documentation:
-# https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22/
+# https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-23/
 
 # Global parameters
 #
 # Complete list of configuration options:
-# https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-mariadb-maxscale-configuration-usage-scenarios/
+# https://mariadb.com/kb/en/mariadb-maxscale-23-mariadb-maxscale-configuration-usage-scenarios/
 
 [maxscale]
 threads=auto
@@ -25,7 +25,7 @@ protocol=MariaDBBackend
 #
 # This will keep MaxScale aware of the state of the servers.
 # MariaDB Monitor documentation:
-# https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-mariadb-monitor/
+# https://mariadb.com/kb/en/mariadb-maxscale-23-mariadb-monitor/
 
 [MariaDB-Monitor]
 type=monitor
@@ -42,7 +42,7 @@ monitor_interval=2000
 #
 
 # ReadConnRoute documentation:
-# https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-readconnroute/
+# https://mariadb.com/kb/en/mariadb-maxscale-23-readconnroute/
 
 [Read-Only-Service]
 type=service
@@ -53,7 +53,7 @@ password=mypwd
 router_options=slave
 
 # ReadWriteSplit documentation:
-# https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-readwritesplit/
+# https://mariadb.com/kb/en/mariadb-maxscale-23-readwritesplit/
 
 [Read-Write-Service]
 type=service
@@ -64,7 +64,7 @@ password=mypwd
 
 # This service enables the use of the MaxAdmin interface
 # MaxScale administration guide:
-# https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-maxadmin-admin-interface/
+# https://mariadb.com/kb/en/mariadb-maxscale-23-maxadmin-admin-interface/
 
 [MaxAdmin-Service]
 type=service
