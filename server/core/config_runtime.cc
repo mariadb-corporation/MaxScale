@@ -648,7 +648,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     }
     else if (strcmp(key, CN_DISK_SPACE_THRESHOLD) == 0)
     {
-        success = monitor_set_disk_space_threshold(monitor, value);
+        success = monitor->set_disk_space_threshold(value);
     }
     else
     {

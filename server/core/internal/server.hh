@@ -68,13 +68,13 @@ public:
         return !m_settings.disk_space_limits.empty();
     }
 
-    MxsDiskSpaceThreshold get_disk_space_limits() const override
+    DiskSpaceLimits get_disk_space_limits() const override
     {
         std::lock_guard<std::mutex> guard(m_settings.lock);
         return m_settings.disk_space_limits;
     }
 
-    void set_disk_space_limits(const MxsDiskSpaceThreshold& new_limits)
+    void set_disk_space_limits(const DiskSpaceLimits& new_limits)
     {
         std::lock_guard<std::mutex> guard(m_settings.lock);
         m_settings.disk_space_limits = new_limits;
@@ -333,7 +333,7 @@ private:
 
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */
-        MxsDiskSpaceThreshold disk_space_limits;
+        DiskSpaceLimits disk_space_limits;
 
         /** Additional custom parameters which may affect routing decisions or the monitor module.
          *  Can be queried from modules at any time so access must be protected by mutex. */

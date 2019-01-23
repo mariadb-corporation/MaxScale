@@ -598,7 +598,7 @@ bool config_set_writeq_low_water(uint32_t size);
  * @return True, if @ config_value was valid, false otherwise.
  *
  */
-bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* disk_space_threshold,
+bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* disk_space_threshold,
                                        const char* config_value);
 
 

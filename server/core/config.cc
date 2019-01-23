@@ -4803,7 +4803,7 @@ bool get_suffixed_size(const char* value, uint64_t* dest)
     return rval;
 }
 
-bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* pDisk_space_threshold,
+bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* pDisk_space_threshold,
                                        const char* zDisk_space_threshold)
 {
     mxb_assert(pDisk_space_threshold);
@@ -4813,7 +4813,7 @@ bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* pDisk_space_thresh
 
     using namespace std;
 
-    MxsDiskSpaceThreshold disk_space_threshold;
+    SERVER::DiskSpaceLimits disk_space_threshold;
     string s(zDisk_space_threshold);
 
     // Somewhat simplified, this is what we expect: [^:]+:[:digit:]+(,[^:]+:[:digit:]+)*

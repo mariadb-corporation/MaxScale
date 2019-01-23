@@ -20,9 +20,6 @@
 #include <maxbase/average.hh>
 #include <maxscale/ssl.hh>
 
-// A mapping from a path to a percentage, e.g.: "/disk" -> 80.
-typedef std::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
-
 /**
  * Server configuration parameters names
  */
@@ -135,6 +132,9 @@ public:
     static const int MAINTENANCE_FLAG_NOCHECK = 0;
     static const int MAINTENANCE_FLAG_CHECK = -1;
 
+    // A mapping from a path to a percentage, e.g.: "/disk" -> 80.
+    typedef std::unordered_map<std::string, int32_t> DiskSpaceLimits;
+
     enum class Type
     {
         MARIADB,
@@ -219,7 +219,7 @@ public:
      *
      * @return A copy of settings
      */
-    virtual MxsDiskSpaceThreshold get_disk_space_limits() const = 0;
+    virtual DiskSpaceLimits get_disk_space_limits() const = 0;
 
     /**
      * Is persistent connection pool enabled.

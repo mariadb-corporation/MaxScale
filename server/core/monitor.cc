@@ -197,7 +197,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
     script = config_get_string(params, CN_SCRIPT);
     events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
-    disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
+    m_settings.disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
     monitor_add_user(this, config_get_string(params, CN_USER), config_get_string(params, CN_PASSWORD));
 
     for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
@@ -210,7 +210,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
      * to be correct. The following is a complicated type and needs to be checked separately. */
     bool error = false;
     const char* threshold_string = config_get_string(params, CN_DISK_SPACE_THRESHOLD);
-    if (!monitor_set_disk_space_threshold(this, threshold_string))
+    if (!set_disk_space_threshold(threshold_string))
     {
                 MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
                           CN_DISK_SPACE_THRESHOLD, name, threshold_string);
@@ -229,7 +229,6 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
 
 Monitor::~Monitor()
 {
-    delete disk_space_threshold;
     config_parameter_free(parameters);
     monitor_server_free_all(monitored_servers);
     MXS_FREE((const_cast<char*>(name)));
@@ -2362,26 +2361,14 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
     return found;
 }
 
-bool monitor_set_disk_space_threshold(Monitor* monitor, const char* disk_space_threshold)
+bool Monitor::set_disk_space_threshold(const string& dst_setting)
 {
-    mxb_assert(monitor->state == MONITOR_STATE_STOPPED);
-    MxsDiskSpaceThreshold dst;
-    bool rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
+    mxb_assert(state == MONITOR_STATE_STOPPED);
+    SERVER::DiskSpaceLimits new_dst;
+    bool rv = config_parse_disk_space_threshold(&new_dst, dst_setting.c_str());
     if (rv)
     {
-        if (!monitor->disk_space_threshold)
-        {
-            monitor->disk_space_threshold = new(std::nothrow) MxsDiskSpaceThreshold;
-        }
-
-        if (monitor->disk_space_threshold)
-        {
-            monitor->disk_space_threshold->swap(dst);
-        }
-        else
-        {
-            rv = false;
-        }
+        m_settings.disk_space_limits = new_dst;
     }
     return rv;
 }
@@ -2533,12 +2520,12 @@ bool MonitorWorker::should_update_disk_space_status(const MXS_MONITORED_SERVER* 
 {
     bool should_check = false;
 
-    if ((m_monitor->disk_space_check_interval > 0)
+    if ((m_settings.disk_space_check_interval > 0)
         && (pMs->disk_space_checked != -1) // -1 means disabled
-        && (m_monitor->disk_space_threshold || pMs->server->have_disk_space_limits()))
+        && (!m_settings.disk_space_limits.empty() || pMs->server->have_disk_space_limits()))
     {
         int64_t now = get_time_ms();
-        if (now - pMs->disk_space_checked > m_monitor->disk_space_check_interval)
+        if (now - pMs->disk_space_checked > m_settings.disk_space_check_interval)
         {
             should_check = true;
         }
@@ -2584,10 +2571,10 @@ void MonitorWorker::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
     if (rv == 0)
     {
         // Server-specific setting takes precedence.
-        MxsDiskSpaceThreshold dst = pMs->server->get_disk_space_limits();
+        auto dst = pMs->server->get_disk_space_limits();
         if (dst.empty())
         {
-            dst = *m_monitor->disk_space_threshold;
+            dst = m_settings.disk_space_limits;
         }
 
         bool disk_space_exhausted = false;

@@ -200,6 +200,14 @@ public:
      */
     virtual json_t* diagnostics_json() const = 0;
 
+    /**
+     * Set disk space threshold setting.
+     *
+     * @param dst_setting  The disk space threshold as specified in the config file.
+     * @return True, if the provided string is valid and the threshold could be set.
+     */
+    bool set_disk_space_threshold(const std::string& dst_setting);
+
     const char* const name;          /**< Monitor instance name. TODO: change to string */
     const std::string module_name;   /**< Name of the monitor module */
     bool              active = true; /**< True if monitor exists and has not been "destroyed". */
@@ -235,9 +243,22 @@ public:
     const char* script;             /**< Launchable script. */
     uint64_t    events;             /**< Enabled monitor events. */
 
-    MxsDiskSpaceThreshold* disk_space_threshold = NULL;     /**< Disk space thresholds */
-    int64_t                disk_space_check_interval = -1;  /**< How often should a disk space check be made
-                                                             *   at most. */
+protected:
+    /**
+     * Contains monitor base class settings. Since monitors are stopped before a setting change,
+     * the items cannot be modified while a monitor is running. No locking required.
+     */
+    class Settings
+    {
+    public:
+        SERVER::DiskSpaceLimits  disk_space_limits;     /**< Disk space thresholds */
+        /**
+         * How often should a disk space check be made at most, in milliseconds. Negative values imply
+         * disabling. */
+        int64_t disk_space_check_interval = -1;
+    };
+
+    Settings m_settings;
 
 private:
     friend class MonitorManager;
@@ -413,16 +434,6 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
                            const char* key,
                            const Monitor* mon,
                            MXS_MONITORED_SERVER*** monitored_array_out);
-
-/**
- * @brief Set the disk space threshold of a monitor
- *
- * @param server                The monitor.
- * @param disk_space_threshold  The disk space threshold as specified in the config file.
- *
- * @return True, if the provided string is valid and the threshold could be set.
- */
-bool monitor_set_disk_space_threshold(Monitor* monitor, const char* disk_space_threshold);
 
 // Function for waiting one monitor interval
 void monitor_debug_wait();
