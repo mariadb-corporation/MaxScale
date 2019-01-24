@@ -1,7 +1,7 @@
 [maxscale]
 threads=###threads###
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 monitor_interval=10000
@@ -33,9 +33,9 @@ filebase=/tmp/QueryLog
 [duplicate]
 type=filter
 module=tee
-service=RW Split2
+service=RW-Split2
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -48,7 +48,7 @@ password=skysql
 filters=typo|qla|regex|hints|regex|hints
 enable_root_user=1
 
-[RW Split2]
+[RW-Split2]
 type=service
 router=readwritesplit
 servers=server1,server2
@@ -57,7 +57,7 @@ use_sql_variables_in=all
 user=skysql
 password=skysql
 
-[Read Connection Router]
+[Read-Connection-Router]
 type=service
 router=readconnroute
 router_options=master
@@ -70,31 +70,31 @@ filters=duplicate
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled
 socket=default
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
-[RW Split Listener2]
+[RW-Split-Listener2]
 type=listener
-service=RW Split2
+service=RW-Split2
 protocol=MySQLClient
 port=4012
 
-[Read Connection Listener]
+[Read-Connection-Listener]
 type=listener
-service=Read Connection Router
+service=Read-Connection-Router
 protocol=MySQLClient
 port=4008
 
-[Read Connection Router Slave]
+[Read-Connection-Router Slave]
 type=service
 router=readconnroute
 router_options= slave
@@ -102,9 +102,9 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[Read Connection Listener Slave]
+[Read-Connection-Listener Slave]
 type=listener
-service=Read Connection Router Slave
+service=Read-Connection-Router Slave
 protocol=MySQLClient
 port=4009
 

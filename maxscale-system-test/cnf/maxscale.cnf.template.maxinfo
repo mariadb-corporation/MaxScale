@@ -7,19 +7,19 @@ router=maxinfo
 user=maxuser
 password=maxpwd
 
-[Maxinfo SQL Listener]
+[Maxinfo-SQL-Listener]
 type=listener
 service=maxinfo
 protocol=MySQLClient
 port=4000
 
-[Maxinfo HTTP Listener]
+[Maxinfo-HTTP-Listener]
 type=listener
 service=maxinfo
 protocol=HTTPD
 port=8080
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
@@ -27,7 +27,7 @@ user=maxuser
 password=maxpwd
 monitor_interval=10000
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router= readwritesplit
 servers=server1,server2,server3,server4
@@ -36,7 +36,7 @@ password=skysql
 slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
 max_slave_connections=1
 
-[Read Connection Router Slave]
+[Read-Connection-Router-Slave]
 type=service
 router=readconnroute
 router_options= slave
@@ -44,7 +44,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[Read Connection Router Master]
+[Read-Connection-Router-Master]
 type=service
 router=readconnroute
 router_options=master
@@ -52,21 +52,21 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
-[Read Connection Listener Slave]
+[Read-Connection-Listener-Slave]
 type=listener
-service=Read Connection Router Slave
+service=Read-Connection-Router-Slave
 protocol=MySQLClient
 port=4009
 
-[Read Connection Listener Master]
+[Read-Connection-Listener-Master]
 type=listener
-service=Read Connection Router Master
+service=Read-Connection-Router-Master
 protocol=MySQLClient
 port=4008
 
@@ -74,7 +74,7 @@ port=4008
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

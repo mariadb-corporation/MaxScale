@@ -9,7 +9,7 @@ module=regexfilter
 match=SELECT [1-5]*
 replace=SELECT 0
 
-[Read Connection Router 1]
+[Read-Connection-Router-1]
 type=service
 router=readconnroute
 servers=server1,server2,server3,server4
@@ -17,9 +17,9 @@ user=maxskysql
 password=skysql
 filters=regex1
 
-[Read Connection Listener 1]
+[Read-Connection-Listener-1]
 type=listener
-service=Read Connection Router 1
+service=Read-Connection-Router-1
 protocol=MySQLClient
 port=4006
 
@@ -31,7 +31,7 @@ match=SELECT [1-5]*
 replace=SELECT 0
 user=bad_username
 
-[Read Connection Router 2]
+[Read-Connection-Router-2]
 type=service
 router=readconnroute
 router_options=slave
@@ -40,9 +40,9 @@ user=maxskysql
 password=skysql
 filters=regex2
 
-[Read Connection Listener 2]
+[Read-Connection-Listener-2]
 type=listener
-service=Read Connection Router 2
+service=Read-Connection-Router-2
 protocol=MySQLClient
 port=4008
 
@@ -54,7 +54,7 @@ match=SELECT [1-5]*
 replace=SELECT 0
 source=127.0.0.1
 
-[Read Connection Router 3]
+[Read-Connection-Router-3]
 type=service
 router=readconnroute
 router_options=master
@@ -63,13 +63,13 @@ user=maxskysql
 password=skysql
 filters=regex3
 
-[Read Connection Listener 3]
+[Read-Connection-Listener-3]
 type=listener
-service=Read Connection Router 3
+service=Read-Connection-Router-3
 protocol=MySQLClient
 port=4009
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers= server1,server2,server3,server4
@@ -105,7 +105,7 @@ protocol=MySQLBackend
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

@@ -4,7 +4,7 @@ log_warning=1
 
 # Monitors
 
-[Aurora Monitor]
+[Aurora-Monitor]
 type=monitor
 module=auroramon
 servers=server1,server2,server3,server4
@@ -14,7 +14,7 @@ monitor_interval=1000
 
 # Services
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -27,15 +27,15 @@ router=cli
 
 # Listeners
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled
 socket=default
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 

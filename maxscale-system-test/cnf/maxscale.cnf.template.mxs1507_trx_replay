@@ -4,7 +4,7 @@ log_info=1
 query_retries=5
 query_retry_timeout=20
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
@@ -12,7 +12,7 @@ user=maxskysql
 password=skysql
 monitor_interval=1000
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -21,9 +21,9 @@ password=skysql
 transaction_replay=true
 transaction_replay_max_size=200
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
@@ -31,7 +31,7 @@ port=4006
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

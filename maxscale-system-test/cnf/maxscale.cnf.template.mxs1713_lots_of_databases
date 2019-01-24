@@ -1,23 +1,23 @@
 [maxscale]
 threads=###threads###
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers=server1
 user=maxskysql
 password=skysql
 
-[Sharding router]
+[Sharding-router]
 type=service
 router=schemarouter
 servers=server1
 user=maxskysql
 password=skysql
 
-[Sharding Listener]
+[Sharding-Listener]
 type=listener
-service=Sharding router
+service=Sharding-router
 protocol=MySQLClient
 port=4006
 
@@ -25,7 +25,7 @@ port=4006
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

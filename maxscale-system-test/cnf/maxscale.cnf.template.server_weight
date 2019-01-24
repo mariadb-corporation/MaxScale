@@ -1,14 +1,14 @@
 [maxscale]
 threads=###threads###
 
-[Mariadb Monitor]
+[Mariadb-Monitor]
 type=monitor
 module=mariadbmon
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -18,7 +18,7 @@ max_slave_connections=1
 user=maxskysql
 password=skysql
 
-[Read Connection Router]
+[Read-Connection-Router]
 type=service
 router=readconnroute
 router_options=running
@@ -27,15 +27,15 @@ weightby=serversize
 user=maxskysql
 password=skysql
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
-[Read Connection Listener]
+[Read-Connection-Listener]
 type=listener
-service=Read Connection Router
+service=Read-Connection-Router
 protocol=MySQLClient
 port=4008
 
@@ -43,7 +43,7 @@ port=4008
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

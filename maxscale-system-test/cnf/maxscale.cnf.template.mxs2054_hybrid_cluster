@@ -29,7 +29,7 @@ port=###node_server_port_4###
 protocol=MySQLBackend
 weight=0
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 # Note that server3 and server4 are not monitored
@@ -46,7 +46,7 @@ target03=server3
 match04=test[.]t4
 target04=server4
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -55,9 +55,9 @@ password=skysql
 filters=hybridizer
 weightby=weight
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
@@ -65,7 +65,7 @@ port=4006
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

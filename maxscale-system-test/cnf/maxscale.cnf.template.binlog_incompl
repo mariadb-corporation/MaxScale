@@ -13,7 +13,7 @@ version_string=5.6.15-log
 
 
 #
-[Binlog Listener]
+[Binlog-Listener]
 type=listener
 service=Binlog_Service
 protocol=MySQLClient
@@ -23,7 +23,7 @@ port=5306
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

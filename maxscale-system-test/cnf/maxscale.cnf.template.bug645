@@ -2,7 +2,7 @@
 threads=###threads###
 log_warning=1
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers= server1, server2,server3  ,server4
@@ -42,7 +42,7 @@ service=RW_Split
 protocol=MySQLClient
 port=4016
 
-[Read Connection Router Slave]
+[Read-Connection-Router-Slave]
 type=service
 router=readconnroute
 router_options= slave
@@ -50,7 +50,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[Read Connection Router Master]
+[Read-Connection-Router-Master]
 type=service
 router=readconnroute
 router_options=master
@@ -58,15 +58,15 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[Read Connection Listener Slave]
+[Read-Connection-Listener-Slave]
 type=listener
-service=Read Connection Router Slave
+service=Read-Connection-Router-Slave
 protocol=MySQLClient
 port=4009
 
-[Read Connection Listener Master]
+[Read-Connection-Listener-Master]
 type=listener
-service=Read Connection Router Master
+service=Read-Connection-Router-Master
 protocol=MySQLClient
 port=4008
 
@@ -74,7 +74,7 @@ port=4008
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

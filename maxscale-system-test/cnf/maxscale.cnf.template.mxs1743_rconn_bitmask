@@ -1,7 +1,7 @@
 [maxscale]
 threads=###threads###
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers=server1,server2
@@ -9,7 +9,7 @@ user=maxskysql
 password=skysql
 monitor_interval=1000
 
-[Read Connection Router Master]
+[Read-Connection-Router-Master]
 type=service
 router=readconnroute
 router_options=master,slave
@@ -17,9 +17,9 @@ servers=server1,server2
 user=maxskysql
 password=skysql
 
-[Read Connection Listener Master]
+[Read-Connection-Listener-Master]
 type=listener
-service=Read Connection Router Master
+service=Read-Connection-Router-Master
 protocol=MySQLClient
 port=4008
 
@@ -27,7 +27,7 @@ port=4008
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

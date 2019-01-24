@@ -9,7 +9,7 @@ password=skysql
 version_string=5.6.15-log
 router_options=server_id=3,user=repl,password=repl,longburst=500,heartbeat=30,binlogdir=/var/lib/maxscale/Binlog_Service,mariadb10_master_gtid=on,mariadb10_slave_gtid=on,transaction_safety=on,mariadb10-compatibility=1
 
-[Binlog Listener]
+[Binlog-Listener]
 type=listener
 service=Binlog_Service
 protocol=MySQLClient
@@ -19,7 +19,7 @@ port=5306
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

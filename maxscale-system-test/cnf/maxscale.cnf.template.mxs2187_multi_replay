@@ -2,7 +2,7 @@
 threads=###threads###
 log_info=1
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
@@ -14,7 +14,7 @@ auto_rejoin=true
 failcount=1
 master_failure_timeout=1
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -23,9 +23,9 @@ password=skysql
 transaction_replay=true
 delayed_retry_timeout=30
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 

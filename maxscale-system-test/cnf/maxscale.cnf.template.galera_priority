@@ -4,7 +4,7 @@ log_warning=1
 log_info=1
 log_notice=1
 
-[Galera Monitor]
+[Galera-Monitor]
 type=monitor
 module=galeramon
 servers=server1,server2,server3,server4
@@ -14,16 +14,16 @@ use_priority=true
 monitor_interval=1000
 root_node_as_master=false
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
@@ -59,7 +59,7 @@ priority=3
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

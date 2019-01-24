@@ -4,7 +4,7 @@ log_warning=1
 
 # Monitors
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers= server1, server2,server3  ,server4
@@ -15,7 +15,7 @@ detect_stale_master=false
 
 # Services
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -39,16 +39,16 @@ mode=learn
 
 # Listeners
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled
 #address=localhost
 socket=default
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 socket=/tmp/rwsplit.sock

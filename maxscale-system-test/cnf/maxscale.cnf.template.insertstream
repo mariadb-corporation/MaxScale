@@ -1,7 +1,7 @@
 [maxscale]
 threads=###threads###
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers=server1
@@ -13,7 +13,7 @@ monitor_interval=1000
 type=filter
 module=insertstream
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readconnroute
 servers=server1
@@ -21,9 +21,9 @@ user=maxskysql
 password=skysql
 filters=insertstream
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
@@ -31,7 +31,7 @@ port=4006
 type=service
 router=cli
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled

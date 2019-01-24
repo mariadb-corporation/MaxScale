@@ -7,7 +7,7 @@ address=###node_server_IP_1###
 port=###node_server_port_1###
 protocol=MySQLBackend
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers=server1
