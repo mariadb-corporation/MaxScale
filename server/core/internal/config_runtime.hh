@@ -51,6 +51,8 @@ void config_runtime_error(const char* fmt, ...) mxs_attribute((format (printf, 1
  * @param port          Network port
  * @param protocol      Protocol module name
  * @param authenticator Authenticator module name
+ * @param external      If true, the name will be validated and the created server
+ *                      serialized.
  * @return True on success, false if an error occurred
  */
 bool runtime_create_server(const char* name,
@@ -58,7 +60,7 @@ bool runtime_create_server(const char* name,
                            const char* port,
                            const char* protocol,
                            const char* authenticator,
-                           bool        serialize = true);
+                           bool        external = true);
 
 /**
  * @brief Destroy a server

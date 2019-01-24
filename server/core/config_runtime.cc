@@ -210,59 +210,68 @@ bool runtime_create_server(const char* name,
                            const char* port,
                            const char* protocol,
                            const char* authenticator,
-                           bool        serialize)
+                           bool        external)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (Server::find_by_unique_name(name) == NULL)
     {
-        if (protocol == NULL)
+        std::string reason;
+        if (!external || config_is_valid_name(name, &reason))
         {
-            protocol = "mariadbbackend";
-        }
-
-        CONFIG_CONTEXT ctx {(char*)""};
-        bool ok;
-        tie(ok, ctx.parameters) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
-
-        if (ok)
-        {
-            config_replace_param(&ctx, CN_PROTOCOL, protocol);
-
-            if (address)
+            if (protocol == NULL)
             {
-                config_replace_param(&ctx, "address", address);
-            }
-            if (port)
-            {
-                config_replace_param(&ctx, "port", port);
-            }
-            if (authenticator)
-            {
-                config_replace_param(&ctx, "authenticator", authenticator);
+                protocol = "mariadbbackend";
             }
 
-            Server* server = Server::server_alloc(name, ctx.parameters);
+            CONFIG_CONTEXT ctx {(char*)""};
+            bool ok;
+            tie(ok, ctx.parameters) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
 
-            if (server && (!serialize || server->serialize()))
+            if (ok)
             {
-                rval = true;
-                MXS_NOTICE("Created server '%s' at %s:%u",
-                           server->name(),
-                           server->address,
-                           server->port);
+                config_replace_param(&ctx, CN_PROTOCOL, protocol);
+
+                if (address)
+                {
+                    config_replace_param(&ctx, "address", address);
+                }
+                if (port)
+                {
+                    config_replace_param(&ctx, "port", port);
+                }
+                if (authenticator)
+                {
+                    config_replace_param(&ctx, "authenticator", authenticator);
+                }
+
+                Server* server = Server::server_alloc(name, ctx.parameters);
+
+                if (server && (!external || server->serialize()))
+                {
+                    rval = true;
+                    MXS_NOTICE("Created server '%s' at %s:%u",
+                               server->name(),
+                               server->address,
+                               server->port);
+                }
+                else
+                {
+                    config_runtime_error("Failed to create server '%s', see error log for more details",
+                                         name);
+                }
+
+                config_parameter_free(ctx.parameters);
             }
             else
             {
-                config_runtime_error("Failed to create server '%s', see error log for more details", name);
+                config_runtime_error("Server creation failed when loading protocol module '%s'", protocol);
             }
-
-            config_parameter_free(ctx.parameters);
         }
         else
         {
-            config_runtime_error("Server creation failed when loading protocol module '%s'", protocol);
+            config_runtime_error("%s", reason.c_str());
         }
     }
     else
@@ -1071,6 +1080,7 @@ bool runtime_create_listener(Service* service,
     bool rval = false;
 
     std::lock_guard<std::mutex> guard(crt_lock);
+    std::string reason;
 
     if (listener_find(name))
     {
@@ -1080,7 +1090,7 @@ bool runtime_create_listener(Service* service,
     {
         config_runtime_error("Listener '%s' already listens on [%s]:%u", l->name(), addr, u_port);
     }
-    else
+    else if (config_is_valid_name(name, &reason))
     {
         SSL_LISTENER* ssl = NULL;
 
@@ -1125,6 +1135,10 @@ bool runtime_create_listener(Service* service,
                 config_runtime_error("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
             }
         }
+    }
+    else
+    {
+        config_runtime_error("%s", reason.c_str());
     }
 
     return rval;
@@ -1180,14 +1194,14 @@ bool runtime_create_monitor(const char* name, const char* module)
 
     if (monitor_find(name) == NULL)
     {
-
         Monitor* monitor = monitor_repurpose_destroyed(name, module);
+        std::string reason;
 
         if (monitor)
         {
             MXS_DEBUG("Repurposed monitor '%s'", name);
         }
-        else
+        else if (config_is_valid_name(name, &reason))
         {
             MXS_CONFIG_PARAMETER* params;
             bool ok;
@@ -1202,6 +1216,10 @@ bool runtime_create_monitor(const char* name, const char* module)
 
                 config_parameter_free(params);
             }
+        }
+        else
+        {
+            config_runtime_error("%s", reason.c_str());
         }
 
         if (monitor)
@@ -1239,17 +1257,26 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
 
         if (ok)
         {
-            for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
-            {
-                config_replace_param(&ctx, p->name, p->value);
-            }
+            std::string reason;
 
-            if (!(filter = filter_alloc(name, module, ctx.parameters)))
+            if (config_is_valid_name(name, &reason))
             {
-                config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
-            }
+                for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+                {
+                    config_replace_param(&ctx, p->name, p->value);
+                }
 
-            config_parameter_free(ctx.parameters);
+                if (!(filter = filter_alloc(name, module, ctx.parameters)))
+                {
+                    config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
+                }
+
+                config_parameter_free(ctx.parameters);
+            }
+            else
+            {
+                config_runtime_error("%s", reason.c_str());
+            }
         }
 
         if (filter)
@@ -1308,17 +1335,25 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
 
         if (ok)
         {
-            for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+            std::string reason;
+            if (config_is_valid_name(name, &reason))
             {
-                config_replace_param(&ctx, p->name, p->value);
-            }
+                for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+                {
+                    config_replace_param(&ctx, p->name, p->value);
+                }
 
-            if ((service = service_alloc(name, router, ctx.parameters)) == NULL)
+                if ((service = service_alloc(name, router, ctx.parameters)) == NULL)
+                {
+                    config_runtime_error("Could not create service '%s' with module '%s'", name, router);
+                }
+
+                config_parameter_free(ctx.parameters);
+            }
+            else
             {
-                config_runtime_error("Could not create service '%s' with module '%s'", name, router);
+                config_runtime_error("%s", reason.c_str());
             }
-
-            config_parameter_free(ctx.parameters);
         }
 
         if (service)
