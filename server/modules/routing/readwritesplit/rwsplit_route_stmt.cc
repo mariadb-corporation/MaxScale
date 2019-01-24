@@ -834,10 +834,21 @@ SRWBackend RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
     {
         if (TARGET_IS_NAMED_SERVER(route_target))
         {
-            MXS_INFO("Was supposed to route to named server "
-                     "%s but couldn't find the server in a "
-                     "suitable state.",
-                     named_server);
+            char* status = nullptr;
+
+            for (const auto& a : m_backends)
+            {
+                if (strcmp(a->server()->name, named_server) == 0)
+                {
+                    status = server_status(a->server());
+                    break;
+                }
+            }
+
+            MXS_INFO("Was supposed to route to named server %s but couldn't find the server in a "
+                     "suitable state. Server state: %s", named_server,
+                     status ? status : "Could not find server");
+            MXS_FREE(status);
         }
         else if (TARGET_IS_RLAG_MAX(route_target))
         {
