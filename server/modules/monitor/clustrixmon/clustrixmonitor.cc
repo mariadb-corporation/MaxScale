@@ -129,12 +129,9 @@ void ClustrixMonitor::choose_hub()
         // If that fails, then we check the bootstrap servers, but only if
         // it was not checked above.
 
-        auto b = begin(*(this->monitored_servers));
-        auto e = end(*(this->monitored_servers));
-
-        for (auto it = b; !pHub_con && (it != e); ++it)
+        for (auto it = m_servers.begin(); !pHub_con && (it != m_servers.end()); ++it)
         {
-            MXS_MONITORED_SERVER& ms = *it;
+            MXS_MONITORED_SERVER& ms = **it;
 
             if (ips.find(ms.server->address) == ips.end())
             {
@@ -444,40 +441,36 @@ bool ClustrixMonitor::check_cluster_membership(std::map<int, ClustrixMembership>
 
 void ClustrixMonitor::update_server_statuses()
 {
-    mxb_assert(this->monitored_servers);
+    mxb_assert(!m_servers.empty());
 
-    auto b = std::begin(*this->monitored_servers);
-    auto e = std::end(*this->monitored_servers);
+    for (auto ms : m_servers)
+    {
+        monitor_stash_current_status(ms);
 
-    for_each(b, e,
-             [this](MXS_MONITORED_SERVER& ms) {
-                 monitor_stash_current_status(&ms);
+        auto it = find_if(m_nodes.begin(), m_nodes.end(),
+                          [ms](const std::pair<int,ClustrixNode>& element) -> bool {
+                              const ClustrixNode& info = element.second;
+                              return ms->server->address == info.ip();
+                          });
 
-                 auto it = find_if(m_nodes.begin(), m_nodes.end(),
-                                   [&ms](const std::pair<int,ClustrixNode>& element) -> bool {
-                                       const ClustrixNode& info = element.second;
-                                       return ms.server->address == info.ip();
-                                   });
+        if (it != m_nodes.end())
+        {
+            const ClustrixNode& info = it->second;
 
-                 if (it != m_nodes.end())
-                 {
-                     const ClustrixNode& info = it->second;
-
-                     if (info.is_running())
-                     {
-                         monitor_set_pending_status(&ms, SERVER_RUNNING);
-                     }
-                     else
-                     {
-                         monitor_clear_pending_status(&ms, SERVER_RUNNING);
-                     }
-                 }
-                 else
-                 {
-                     monitor_clear_pending_status(&ms, SERVER_RUNNING);
-                 }
-
-             });
+            if (info.is_running())
+            {
+                monitor_set_pending_status(ms, SERVER_RUNNING);
+            }
+            else
+            {
+                monitor_clear_pending_status(ms, SERVER_RUNNING);
+            }
+        }
+        else
+        {
+            monitor_clear_pending_status(ms, SERVER_RUNNING);
+        }
+    }
 }
 
 void ClustrixMonitor::make_health_check()

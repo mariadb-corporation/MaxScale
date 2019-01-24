@@ -1422,9 +1422,9 @@ bool runtime_destroy_monitor(Monitor* monitor)
     {
         monitor_stop(monitor);
 
-        while (monitor->monitored_servers)
+        while (!monitor->m_servers.empty())
         {
-            monitor_remove_server(monitor, monitor->monitored_servers->server);
+            monitor_remove_server(monitor, monitor->m_servers[0]->server);
         }
         monitor_deactivate(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->name);

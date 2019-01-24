@@ -138,24 +138,7 @@ public:
     uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
     uint64_t pending_status = 0;        /**< Status during current monitor loop */
     int64_t  disk_space_checked = 0;    /**< When was the disk space checked the last time */
-
-    MXS_MONITORED_SERVER* next = nullptr;   /**< The next server in the list */
 };
-
-namespace std
-{
-
-inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> begin(MXS_MONITORED_SERVER& monitored_server)
-{
-    return mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER>(monitored_server);
-}
-
-inline mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER> end(MXS_MONITORED_SERVER& monitored_server)
-{
-    return mxb::intrusive_slist_iterator<MXS_MONITORED_SERVER>();
-}
-
-}
 
 #define MAX_MONITOR_USER_LEN     512
 #define MAX_MONITOR_PASSWORD_LEN 512
@@ -228,7 +211,7 @@ public:
     uint8_t  journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */
 
     MXS_CONFIG_PARAMETER* parameters = nullptr;         /**< Configuration parameters */
-    MXS_MONITORED_SERVER* monitored_servers = nullptr;  /**< List of servers the monitor monitors */
+    std::vector<MXS_MONITORED_SERVER*> m_servers;       /**< Monitored servers */
 
     char user[MAX_MONITOR_USER_LEN];            /**< Monitor username */
     char password[MAX_MONITOR_PASSWORD_LEN];    /**< Monitor password */

@@ -137,7 +137,7 @@ ThisUnit this_unit;
 
 }
 
-static void        monitor_server_free_all(MXS_MONITORED_SERVER* servers);
+static void        monitor_server_free_all(std::vector<MXS_MONITORED_SERVER*>& servers);
 static void        remove_server_journal(Monitor* monitor);
 static bool        journal_is_stale(Monitor* monitor, time_t max_age);
 static const char* monitor_state_to_string(monitor_state_t state);
@@ -230,7 +230,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
 Monitor::~Monitor()
 {
     config_parameter_free(parameters);
-    monitor_server_free_all(monitored_servers);
+    monitor_server_free_all(m_servers);
     MXS_FREE((const_cast<char*>(name)));
 }
 
@@ -308,13 +308,11 @@ void monitor_stop(Monitor* monitor)
             monitor->stop();
             monitor->state = MONITOR_STATE_STOPPED;
 
-            MXS_MONITORED_SERVER* db = monitor->monitored_servers;
-            while (db)
+            for (auto db : monitor->m_servers)
             {
                 // TODO: Create a generic entry point for this or move it inside stopMonitor
                 mysql_close(db->con);
                 db->con = NULL;
-                db = db->next;
             }
         }
     }
@@ -372,19 +370,7 @@ bool monitor_add_server(Monitor* mon, SERVER* server)
 
         {
             Guard guard(mon->lock);
-            if (mon->monitored_servers == NULL)
-            {
-                mon->monitored_servers = db;
-            }
-            else
-            {
-                MXS_MONITORED_SERVER* ptr = mon->monitored_servers;
-                while (ptr->next != NULL)
-                {
-                    ptr = ptr->next;
-                }
-                ptr->next = db;
-            }
+            mon->m_servers.push_back(db);
         }
 
         if (old_state == MONITOR_STATE_RUNNING)
@@ -412,14 +398,13 @@ static void monitor_server_free(MXS_MONITORED_SERVER* tofree)
  * Free monitor server list
  * @param servers Servers to free
  */
-static void monitor_server_free_all(MXS_MONITORED_SERVER* servers)
+static void monitor_server_free_all(std::vector<MXS_MONITORED_SERVER*>& servers)
 {
-    while (servers)
+    for (auto server : servers)
     {
-        MXS_MONITORED_SERVER* tofree = servers;
-        servers = servers->next;
-        monitor_server_free(tofree);
+        monitor_server_free(server);
     }
+    servers.clear();
 }
 
 /**
@@ -437,26 +422,16 @@ void monitor_remove_server(Monitor* mon, SERVER* server)
         monitor_stop(mon);
     }
 
-    MXS_MONITORED_SERVER* ptr = mon->monitored_servers;
+    MXS_MONITORED_SERVER* ptr = nullptr;
     {
         Guard guard(mon->lock);
-
-        if (ptr && ptr->server == server)
+        for (auto iter = mon->m_servers.begin(); iter != mon->m_servers.end(); ++iter)
         {
-            mon->monitored_servers = mon->monitored_servers->next;
-        }
-        else
-        {
-            MXS_MONITORED_SERVER* prev = ptr;
-            while (ptr)
+            if ((*iter)->server == server)
             {
-                if (ptr->server == server)
-                {
-                    prev->next = ptr->next;
-                    break;
-                }
-                prev = ptr;
-                ptr = ptr->next;
+                ptr = *iter;
+                mon->m_servers.erase(iter);
+                break;
             }
         }
     }
@@ -535,7 +510,7 @@ void Monitor::show(DCB* dcb)
 
     const char* sep = "";
 
-    for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
     {
         dcb_printf(dcb, "%s[%s]:%d", sep, db->server->address, db->server->port);
         sep = ", ";
@@ -710,8 +685,7 @@ std::unique_ptr<ResultSet> monitor_get_list()
 bool Monitor::test_permissions(const string& query)
 {
     auto monitor = this;
-    if (monitor->monitored_servers == NULL      // No servers to check
-        || config_get_global_options()->skip_permission_checks)
+    if (monitor->m_servers.empty() || config_get_global_options()->skip_permission_checks)
     {
         return true;
     }
@@ -720,7 +694,7 @@ bool Monitor::test_permissions(const string& query)
     char* dpasswd = decrypt_password(monitor->password);
     bool rval = false;
 
-    for (MXS_MONITORED_SERVER* mondb = monitor->monitored_servers; mondb; mondb = mondb->next)
+    for (MXS_MONITORED_SERVER* mondb : monitor->m_servers)
     {
         if (!mon_connection_is_ok(mon_ping_or_connect_to_db(monitor, mondb)))
         {
@@ -1060,16 +1034,14 @@ static void mon_append_node_names(Monitor* mon,
                                   int   status,
                                   credentials_approach_t approach = CREDENTIALS_EXCLUDE)
 {
-    MXS_MONITORED_SERVER* servers = mon->monitored_servers;
-
     const char* separator = "";
     // Some extra space for port and separator
     char arr[SERVER::MAX_MONUSER_LEN + SERVER::MAX_MONPW_LEN + SERVER::MAX_ADDRESS_LEN + 64];
     dest[0] = '\0';
 
-    while (servers && len)
+    for (auto iter = mon->m_servers.begin(); iter != mon->m_servers.end() && len; ++iter)
     {
-        Server* server = static_cast<Server*>(servers->server);
+        Server* server = static_cast<Server*>((*iter)->server);
         if (status == 0 || server->status & status)
         {
             if (approach == CREDENTIALS_EXCLUDE)
@@ -1111,7 +1083,6 @@ static void mon_append_node_names(Monitor* mon,
                 len -= arrlen;
             }
         }
-        servers = servers->next;
     }
 }
 
@@ -1159,14 +1130,14 @@ bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv)
     return mon_srv->server->is_down() && mon_srv->mon_err_count == 0;
 }
 
-static MXS_MONITORED_SERVER* find_parent_node(MXS_MONITORED_SERVER* servers,
+static MXS_MONITORED_SERVER* find_parent_node(const std::vector<MXS_MONITORED_SERVER*>& servers,
                                               MXS_MONITORED_SERVER* target)
 {
     MXS_MONITORED_SERVER* rval = NULL;
 
     if (target->server->master_id > 0)
     {
-        for (MXS_MONITORED_SERVER* node = servers; node; node = node->next)
+        for (MXS_MONITORED_SERVER* node : servers)
         {
             if (node->server->node_id == target->server->master_id)
             {
@@ -1179,7 +1150,7 @@ static MXS_MONITORED_SERVER* find_parent_node(MXS_MONITORED_SERVER* servers,
     return rval;
 }
 
-static std::string child_nodes(MXS_MONITORED_SERVER* servers,
+static std::string child_nodes(const std::vector<MXS_MONITORED_SERVER*>& servers,
                                MXS_MONITORED_SERVER* parent)
 {
     std::stringstream ss;
@@ -1188,7 +1159,7 @@ static std::string child_nodes(MXS_MONITORED_SERVER* servers,
     {
         bool have_content = false;
 
-        for (MXS_MONITORED_SERVER* node = servers; node; node = node->next)
+        for (MXS_MONITORED_SERVER* node : servers)
         {
             if (node->server->master_id == parent->server->node_id)
             {
@@ -1218,7 +1189,7 @@ int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* c
     if (externcmd_matches(cmd, "$PARENT"))
     {
         std::stringstream ss;
-        MXS_MONITORED_SERVER* parent = find_parent_node(mon->monitored_servers, ptr);
+        MXS_MONITORED_SERVER* parent = find_parent_node(mon->m_servers, ptr);
 
         if (parent)
         {
@@ -1229,7 +1200,7 @@ int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* c
 
     if (externcmd_matches(cmd, "$CHILDREN"))
     {
-        externcmd_substitute_arg(cmd, "[$]CHILDREN", child_nodes(mon->monitored_servers, ptr).c_str());
+        externcmd_substitute_arg(cmd, "[$]CHILDREN", child_nodes(mon->m_servers, ptr).c_str());
     }
 
     if (externcmd_matches(cmd, "$EVENT"))
@@ -1484,7 +1455,7 @@ Monitor* monitor_server_in_use(const SERVER* server)
         Guard guard(monitor->lock);
         if (monitor->active)
         {
-            for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+            for (MXS_MONITORED_SERVER* db : monitor->m_servers)
             {
                 if (db->server == server)
                 {
@@ -1517,12 +1488,12 @@ static bool create_monitor_config(const Monitor* monitor, const char* filename)
         dprintf(file, "[%s]\n", monitor->name);
         dprintf(file, "%s=monitor\n", CN_TYPE);
 
-        if (monitor->monitored_servers)
+        if (!monitor->m_servers.empty())
         {
             dprintf(file, "%s=", CN_SERVERS);
-            for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+            for (MXS_MONITORED_SERVER* db : monitor->m_servers)
             {
-                if (db != monitor->monitored_servers)
+                if (db != monitor->m_servers[0])
                 {
                     dprintf(file, ",");
                 }
@@ -1589,7 +1560,7 @@ bool monitor_serialize(const Monitor* monitor)
 
 void mon_hangup_failed_servers(Monitor* monitor)
 {
-    for (MXS_MONITORED_SERVER* ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
+    for (MXS_MONITORED_SERVER* ptr : monitor->m_servers)
     {
         if (mon_status_changed(ptr) && (!(ptr->server->is_usable()) || !(ptr->server->is_in_cluster())))
         {
@@ -1621,8 +1592,7 @@ void monitor_check_maintenance_requests(Monitor* monitor)
                                             SERVER::MAINTENANCE_FLAG_NOCHECK);
     if (flags_changed != SERVER::MAINTENANCE_FLAG_NOCHECK)
     {
-        MXS_MONITORED_SERVER* ptr = monitor->monitored_servers;
-        while (ptr)
+        for (auto ptr : monitor->m_servers)
         {
             // The only server status bit the admin may change is the [Maintenance] bit.
             int admin_msg = atomic_exchange_int(&ptr->server->maint_request, SERVER::MAINTENANCE_NO_CHANGE);
@@ -1635,7 +1605,6 @@ void monitor_check_maintenance_requests(Monitor* monitor)
             {
                 ptr->server->clear_status(SERVER_MAINT);
             }
-            ptr = ptr->next;
         }
     }
 }
@@ -1645,7 +1614,7 @@ void mon_process_state_changes(Monitor* monitor, const char* script, uint64_t ev
     bool master_down = false;
     bool master_up = false;
 
-    for (MXS_MONITORED_SERVER* ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
+    for (MXS_MONITORED_SERVER* ptr : monitor->m_servers)
     {
         if (mon_status_changed(ptr))
         {
@@ -1742,10 +1711,10 @@ json_t* monitor_json_data(const Monitor* monitor, const char* host)
             }
         }
 
-        if (monitor->monitored_servers)
+        if (!monitor->m_servers.empty())
         {
             json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
-            for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+            for (MXS_MONITORED_SERVER* db : monitor->m_servers)
             {
                 mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
             }
@@ -1792,7 +1761,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
         Guard guard(mon->lock);
         if (mon->active)
         {
-            for (MXS_MONITORED_SERVER* db = mon->monitored_servers; db; db = db->next)
+            for (MXS_MONITORED_SERVER* db : mon->m_servers)
             {
                 if (db->server == server)
                 {
@@ -1906,7 +1875,7 @@ static void store_data(Monitor* monitor, MXS_MONITORED_SERVER* master, uint8_t* 
     *ptr++ = MMB_SCHEMA_VERSION;
 
     /** Store the states of all servers */
-    for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
     {
         *ptr++ = (char)SVT_SERVER;                              // Value type
         memcpy(ptr, db->server->name(), strlen(db->server->name()));// Name of the server
@@ -1995,7 +1964,7 @@ static bool has_null_terminator(const char* data, const char* end)
  */
 static const char* process_server(Monitor* monitor, const char* data, const char* end)
 {
-    for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
     {
         if (strcmp(db->server->name(), data) == 0)
         {
@@ -2026,7 +1995,7 @@ static const char* process_master(Monitor* monitor,
 {
     if (master)
     {
-        for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+        for (MXS_MONITORED_SERVER* db : monitor->m_servers)
         {
             if (strcmp(db->server->name(), data) == 0)
             {
@@ -2102,7 +2071,7 @@ void store_server_journal(Monitor* monitor, MXS_MONITORED_SERVER* master)
     /** Calculate how much memory we need to allocate */
     uint32_t size = MMB_LEN_SCHEMA_VERSION + MMB_LEN_CRC32;
 
-    for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
+    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
     {
         /** Each server is stored as a type byte and a null-terminated string
          * followed by eight byte server status. */
@@ -2300,7 +2269,7 @@ static bool journal_is_stale(Monitor* monitor, time_t max_age)
 MXS_MONITORED_SERVER* mon_get_monitored_server(const Monitor* mon, SERVER* search_server)
 {
     mxb_assert(mon && search_server);
-    for (MXS_MONITORED_SERVER* iter = mon->monitored_servers; iter != NULL; iter = iter->next)
+    for (MXS_MONITORED_SERVER* iter : mon->m_servers)
     {
         if (iter->server == search_server)
         {
@@ -2671,7 +2640,7 @@ bool MonitorWorker::has_sufficient_permissions()
 
 void MonitorWorker::flush_server_status()
 {
-    for (MXS_MONITORED_SERVER* pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
+    for (MXS_MONITORED_SERVER* pMs : m_servers)
     {
         if (!pMs->server->is_in_maint())
         {
@@ -2692,7 +2661,7 @@ void MonitorWorkerSimple::tick()
 {
     pre_tick();
 
-    for (MXS_MONITORED_SERVER* pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
+    for (MXS_MONITORED_SERVER* pMs : m_servers)
     {
         if (!pMs->server->is_in_maint())
         {

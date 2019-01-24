@@ -78,7 +78,7 @@ void MariaDBMonitor::reset_server_info()
     clear_server_info();
 
     // Next, initialize the data.
-    for (auto mon_server = m_monitor->monitored_servers; mon_server; mon_server = mon_server->next)
+    for (auto mon_server : Monitor::m_servers)
     {
         m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_assume_unique_hostnames));
     }
@@ -433,8 +433,9 @@ void MariaDBMonitor::tick()
 {
     /* Update MXS_MONITORED_SERVER->pending_status. This is where the monitor loop writes it's findings.
      * Also, backup current status so that it can be compared to any deduced state. */
-    for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+    for (auto srv : m_servers)
     {
+        auto mon_srv = srv->m_server_base;
         auto status = mon_srv->server->status;
         mon_srv->pending_status = status;
         mon_srv->mon_prev_status = status;

@@ -322,7 +322,7 @@ void MMMonitor::post_tick()
 
     /* Update server status from monitor pending status on that server*/
 
-    for (MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
+    for (MXS_MONITORED_SERVER* ptr : m_servers)
     {
         if (!ptr->server->is_in_maint())
         {
@@ -367,9 +367,7 @@ MXS_MONITORED_SERVER* MMMonitor::get_current_master()
     Monitor* mon = m_monitor;
     MXS_MONITORED_SERVER* ptr;
 
-    ptr = mon->monitored_servers;
-
-    while (ptr)
+    for (auto ptr : m_servers)
     {
         /* The server could be in SERVER_IN_MAINT
          * that means SERVER_IS_RUNNING returns 0
@@ -377,7 +375,6 @@ MXS_MONITORED_SERVER* MMMonitor::get_current_master()
          */
         if (ptr->server->is_down())
         {
-            ptr = ptr->next;
             continue;
         }
 
@@ -385,8 +382,6 @@ MXS_MONITORED_SERVER* MMMonitor::get_current_master()
         {
             m_master = ptr;
         }
-
-        ptr = ptr->next;
     }
 
 

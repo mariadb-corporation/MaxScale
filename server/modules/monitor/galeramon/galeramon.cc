@@ -251,9 +251,7 @@ void GaleraMonitor::post_tick()
 
     m_master = set_cluster_master(m_master, candidate_master, m_disableMasterFailback);
 
-    MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers;
-
-    while (ptr)
+    for (auto ptr : m_servers)
     {
         const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
         if ((ptr->pending_status & SERVER_JOINED) && !m_disableMasterRoleSetting)
@@ -288,7 +286,6 @@ void GaleraMonitor::post_tick()
             monitor_clear_pending_status(ptr, repl_bits);
             monitor_set_pending_status(ptr, 0);
         }
-        ptr = ptr->next;
     }
 
     if (is_cluster == 0 && m_log_no_members)
@@ -363,13 +360,12 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER* database, const char* server_
  */
 MXS_MONITORED_SERVER* GaleraMonitor::get_candidate_master()
 {
-    MXS_MONITORED_SERVER* moitor_servers = m_monitor->monitored_servers;
     MXS_MONITORED_SERVER* candidate_master = NULL;
     long min_id = -1;
     int minval = INT_MAX;
     int currval;
     /* set min_id to the lowest value of moitor_servers->server->node_id */
-    while (moitor_servers)
+    for (auto moitor_servers : m_servers)
     {
         if (!moitor_servers->server->is_in_maint()
             && (moitor_servers->pending_status & SERVER_JOINED))
@@ -402,7 +398,6 @@ MXS_MONITORED_SERVER* GaleraMonitor::get_candidate_master()
                 }
             }
         }
-        moitor_servers = moitor_servers->next;
     }
 
     if (!m_use_priority && !m_disableMasterFailback
@@ -513,10 +508,8 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 
     strcpy(donor_list, DONOR_LIST_SET_VAR);
 
-    ptr = m_monitor->monitored_servers;
-
     /* Create an array of slave nodes */
-    while (ptr)
+    for (auto ptr : m_servers)
     {
         if ((ptr->pending_status & SERVER_JOINED) && (ptr->pending_status & SERVER_SLAVE))
         {
@@ -533,7 +526,6 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
                 ignore_priority = false;
             }
         }
-        ptr = ptr->next;
     }
 
     /* Set order type */
