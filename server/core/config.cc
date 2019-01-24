@@ -751,6 +751,23 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
     strcpy(fixed_section, section);
     fix_section_name(fixed_section);
 
+    string reason;
+    if (!config_is_valid_name(fixed_section, &reason))
+    {
+        /* A set that holds all the section names that are invalid. As the configuration file
+         * is parsed multiple times, we need to do this to prevent the same complaint from
+         * being logged multiple times.
+         */
+        static std::set<string> warned_invalid_names;
+
+        if (warned_invalid_names.find(reason) == warned_invalid_names.end())
+        {
+            MXS_ERROR("%s", reason.c_str());
+            warned_invalid_names.insert(reason);
+        }
+        return 0;
+    }
+
     /*
      * If we already have some parameters for the object
      * add the parameters to that object. If not create
@@ -5037,4 +5054,41 @@ std::string closest_matching_parameter(const std::string& str,
     }
 
     return rval;
+}
+
+bool config_is_valid_name(const char* zName, std::string* pReason)
+{
+    bool is_valid = true;
+
+    for (const char* z = zName; is_valid && *z; z++)
+    {
+        if (isspace(*z))
+        {
+            is_valid = false;
+
+            if (pReason)
+            {
+                *pReason = "The name '";
+                *pReason += zName;
+                *pReason += "' contains whitespace.";
+            }
+        }
+    }
+
+    if (is_valid)
+    {
+        if (strncmp(zName, "@@", 2) == 0)
+        {
+            is_valid = false;
+
+            if (pReason)
+            {
+                *pReason = "The name '";
+                *pReason += zName;
+                *pReason += "' starts with '@@', which is a prefix reserved for MaxScale.";
+            }
+        }
+    }
+
+    return is_valid;
 }

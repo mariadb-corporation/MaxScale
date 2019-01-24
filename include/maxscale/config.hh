@@ -601,6 +601,22 @@ bool config_set_writeq_low_water(uint32_t size);
 bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* disk_space_threshold,
                                        const char* config_value);
 
+/**
+ * @brief Check whether section/object name is valid.
+ *
+ * @param name     The name to be checked.
+ * @param reason   If non-null, will in case the name is not valid contain
+ *                 the reason when the function returns.
+ *
+ * @return True, if the name is valid, false otherwise.
+ */
+bool config_is_valid_name(const char* name, std::string* reason = nullptr);
+
+inline bool config_is_valid_name(const std::string& name, std::string* reason = nullptr)
+{
+    return config_is_valid_name(name.c_str());
+}
+
 
 namespace maxscale
 {
