@@ -23,6 +23,7 @@ const char* bad_configs[] =
     "mxs1731_empty_param",
 // passwd is still supported
 //    "old_passwd",
+    "no_use_of_reserved_names",
     NULL
 };
 
