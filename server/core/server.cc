@@ -646,6 +646,7 @@ string SERVER::status_to_string(uint64_t flags)
     // should not change, but this is more dependant on the monitors and have already changed.
     // Also, system tests compare to these strings so the output must stay constant for now.
     const string maintenance = "Maintenance";
+    const string being_drained = "Being Drained";
     const string master = "Master";
     const string relay = "Relay Master";
     const string slave = "Slave";
@@ -657,8 +658,18 @@ string SERVER::status_to_string(uint64_t flags)
     const string running = "Running";
     const string down = "Down";
 
-    // Maintenance is usually set by user so is printed first.
-    concatenate_if(status_is_in_maint(flags), maintenance);
+    // Maintenance/Being Drained is usually set by user so is printed first.
+    // Being Drained in the presence of Maintenance has no effect, so we only
+    // print either one of those, with Maintenance taking precedence.
+    if (status_is_in_maint(flags))
+    {
+        concatenate_if(true, maintenance);
+    }
+    else if (status_is_being_drained(flags))
+    {
+        concatenate_if(true, being_drained);
+    }
+
     // Master cannot be a relay or a slave.
     if (status_is_master(flags))
     {
@@ -837,15 +848,16 @@ uint64_t SERVER::status_from_string(const char* str)
         uint64_t    bit;
     } ServerBits[] =
     {
-        {"running",     SERVER_RUNNING   },
-        {"master",      SERVER_MASTER    },
-        {"slave",       SERVER_SLAVE     },
-        {"synced",      SERVER_JOINED    },
-        {"ndb",         SERVER_NDB       },
-        {"maintenance", SERVER_MAINT     },
-        {"maint",       SERVER_MAINT     },
-        {"stale",       SERVER_WAS_MASTER},
-        {NULL,          0                }
+        {"running",     SERVER_RUNNING      },
+        {"master",      SERVER_MASTER       },
+        {"slave",       SERVER_SLAVE        },
+        {"synced",      SERVER_JOINED       },
+        {"ndb",         SERVER_NDB          },
+        {"maintenance", SERVER_MAINT        },
+        {"maint",       SERVER_MAINT        },
+        {"stale",       SERVER_WAS_MASTER   },
+        {"drain",       SERVER_BEING_DRAINED},
+        {NULL,          0                   }
     };
 
     for (int i = 0; ServerBits[i].str; i++)
@@ -960,7 +972,7 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
     {
         /* This server is monitored, in which case modifying any other status bit than Maintenance is
          * disallowed. */
-        if (bit & ~SERVER_MAINT)
+        if (bit & ~(SERVER_MAINT | SERVER_BEING_DRAINED))
         {
             MXS_ERROR(ERR_CANNOT_MODIFY);
             if (errmsg_out)
@@ -982,6 +994,12 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
             // Also set a flag so the next loop happens sooner.
             atomic_store_int(&mon->m_check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
         }
+        else
+        {
+            // TODO: This should be set the same way the maintenance bit is set.
+            srv->set_status(bit);
+            written = true;
+        }
     }
     else
     {
@@ -1000,7 +1018,7 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
     Monitor* mon = monitor_server_in_use(srv);
     if (mon && mon->m_state == MONITOR_STATE_RUNNING)
     {
-        if (bit & ~SERVER_MAINT)
+        if (bit & ~(SERVER_MAINT | SERVER_BEING_DRAINED))
         {
             MXS_ERROR(ERR_CANNOT_MODIFY);
             if (errmsg_out)
@@ -1018,6 +1036,12 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
             atomic_store_int(&mon->m_check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
+        }
+        else
+        {
+            // TODO: This should be set the same way the maintenance bit is set.
+            srv->clear_status(bit);
+            written = true;
         }
     }
     else
