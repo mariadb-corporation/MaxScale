@@ -86,7 +86,7 @@ SERVER_REF* RCR::get_root_master()
     SERVER_REF* master_host = nullptr;
     for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
     {
-        if (ref->active && ref->server->is_master())
+        if (server_ref_is_active(ref) && ref->server->is_master() && ref->server->is_connectable())
         {
             // No master found yet or this one has better weight.
             if (!master_host || ref->server_weight > master_host->server_weight)
@@ -232,13 +232,15 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
      */
     for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
     {
-        if (!server_ref_is_active(ref) || ref->server->is_in_maint())
+        if (!server_ref_is_active(ref) || !ref->server->is_connectable())
         {
             continue;
         }
 
+        mxb_assert(ref->server->is_usable());
+
         /* Check server status bits against bitvalue from router_options */
-        if (ref && ref->server->is_usable() && (ref->server->status & bitmask & bitvalue))
+        if (ref && (ref->server->status & bitmask & bitvalue))
         {
             if (master_host)
             {
