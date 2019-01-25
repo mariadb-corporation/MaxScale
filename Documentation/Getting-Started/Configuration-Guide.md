@@ -5,6 +5,7 @@ Table of Contents
 
 * [Introduction](#introduction)
 * [Glossary](#glossary)
+* [Administration](#administration)
 * [Configuration](#configuration)
    * [Special Parameter Types](#special-parameter-types)
       * [Sizes](#sizes)
@@ -162,6 +163,40 @@ connection failover | When a connection currently being used between MariaDB Max
 backend database    | A term used to refer to a database that sits behind MariaDB MaxScale and is accessed by applications via MariaDB MaxScale.
 filter              | A module that can be placed between the client and the MariaDB MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
 REST API | HTTP administrative interface
+
+## Administration
+
+The administation of MaxScale can be divided in two parts:
+
+* Writing the MaxScale configuration file, which is described in the following
+  [section](#configuration).
+* Performing runtime modifications using [MaxCtrl](../Reference/MaxCtrl.md)
+  or [MaxAdmin](../Reference/MaxAdmin.md).
+
+For detailed information about _MaxAdmin_ and _MaxCtrl_ please refer to the
+specific documentation referred to above. In the following it will only be
+explained how MaxAdmin and MaxCtrl relate to each other, as far as user
+credentials go.
+
+MaxAdmin can connect to MaxScale either using Unix (domain) sockets or
+TCP/IP sockets. In the former case, the user is identified using her
+Linux credentials and by default `root` can access.
+
+MaxCtrl can only connect using TCP/IP sockets. When connecting with
+MaxCtrl or with MaxAdmin using TCP/IP sockets, the user and password
+must be provided and are checked against a separate user credentials
+database. By default, that database contains the user `admin` whose
+password is `mariadb`.
+
+Note that the database is shared between MaxAdmin and MaxCtrl, that is,
+if a user is deleted via MaxAdmin, then it will also no longer be possible
+to use that user with MaxCtrl. Similarly, a user created using MaxAdmin
+or MaxCtrl can be used with either MaxAdmin or MaxCtrl.
+
+Note that if MaxAdmin (when used over a TCP/IP socket) or MaxCtrl are
+invoked without explicitly providing a user and password then they will
+by default use `admin` and `mariadb`. That means that when the default
+user is removed, the credentials must always be provded.
 
 ## Configuration
 
