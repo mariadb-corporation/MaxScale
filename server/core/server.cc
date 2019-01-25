@@ -956,7 +956,7 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
      * but the race condition cannot cause significant harm. Monitors are never
      * freed so the pointer stays valid. */
     Monitor* mon = monitor_server_in_use(srv);
-    if (mon && mon->state == MONITOR_STATE_RUNNING)
+    if (mon && mon->m_state == MONITOR_STATE_RUNNING)
     {
         /* This server is monitored, in which case modifying any other status bit than Maintenance is
          * disallowed. */
@@ -980,7 +980,7 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
             // Also set a flag so the next loop happens sooner.
-            atomic_store_int(&mon->check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
+            atomic_store_int(&mon->m_check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
         }
     }
     else
@@ -998,7 +998,7 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
     // See server_set_status().
     bool written = false;
     Monitor* mon = monitor_server_in_use(srv);
-    if (mon && mon->state == MONITOR_STATE_RUNNING)
+    if (mon && mon->m_state == MONITOR_STATE_RUNNING)
     {
         if (bit & ~SERVER_MAINT)
         {
@@ -1017,7 +1017,7 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
-            atomic_store_int(&mon->check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
+            atomic_store_int(&mon->m_check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
         }
     }
     else

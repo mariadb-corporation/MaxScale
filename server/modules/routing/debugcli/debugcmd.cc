@@ -1416,8 +1416,8 @@ static void destroyListener(DCB* dcb, SERVICE* service, const char* name)
 
 static void destroyMonitor(DCB* dcb, Monitor* monitor)
 {
-    char name[strlen(monitor->name) + 1];
-    strcpy(name, monitor->name);
+    char name[strlen(monitor->m_name) + 1];
+    strcpy(name, monitor->m_name);
 
     if (runtime_destroy_monitor(monitor))
     {

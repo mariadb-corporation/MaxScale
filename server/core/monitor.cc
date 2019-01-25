@@ -180,10 +180,10 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
 }
 
 Monitor::Monitor(const string& name, const string& module)
-    : name(MXS_STRDUP_A(name.c_str()))
-    , module_name(module)
+    : m_name(MXS_STRDUP_A(name.c_str()))
+    , m_module(module)
 {
-    memset(journal_hash, 0, sizeof(journal_hash));
+    memset(m_journal_hash, 0, sizeof(m_journal_hash));
 }
 
 bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
@@ -213,14 +213,14 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     if (!set_disk_space_threshold(threshold_string))
     {
                 MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                          CN_DISK_SPACE_THRESHOLD, name, threshold_string);
+                          CN_DISK_SPACE_THRESHOLD, m_name, threshold_string);
         error = true;
     }
 
     if (!error)
     {
         // Store module name into parameter storage.
-        monitor_set_parameter(this, CN_MODULE, module_name.c_str());
+        monitor_set_parameter(this, CN_MODULE, m_module.c_str());
         // Add all config settings to text-mode storage. Needed for serialization.
         monitor_add_parameters(this, params);
     }
@@ -231,7 +231,7 @@ Monitor::~Monitor()
 {
     config_parameter_free(parameters);
     monitor_server_free_all(m_servers);
-    MXS_FREE((const_cast<char*>(name)));
+    MXS_FREE((const_cast<char*>(m_name)));
 }
 
 void MonitorManager::destroy_all_monitors()
@@ -239,7 +239,7 @@ void MonitorManager::destroy_all_monitors()
     auto monitors = this_unit.clear();
     for (auto monitor : monitors)
     {
-        mxb_assert(monitor->state == MONITOR_STATE_STOPPED);
+        mxb_assert(monitor->m_state == MONITOR_STATE_STOPPED);
         delete monitor;
     }
 }
@@ -253,24 +253,24 @@ void monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
 {
     if (monitor)
     {
-        Guard guard(monitor->lock);
+        Guard guard(monitor->m_lock);
 
         // Only start the monitor if it's stopped.
-        if (monitor->state == MONITOR_STATE_STOPPED)
+        if (monitor->m_state == MONITOR_STATE_STOPPED)
         {
             if (journal_is_stale(monitor, monitor->journal_max_age))
             {
-                MXS_WARNING("Removing stale journal file for monitor '%s'.", monitor->name);
+                MXS_WARNING("Removing stale journal file for monitor '%s'.", monitor->m_name);
                 remove_server_journal(monitor);
             }
 
             if (monitor->start(params))
             {
-                monitor->state = MONITOR_STATE_RUNNING;
+                monitor->m_state = MONITOR_STATE_RUNNING;
             }
             else
             {
-                MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
+                MXS_ERROR("Failed to start monitor '%s'.", monitor->m_name);
             }
         }
     }
@@ -282,7 +282,7 @@ void monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
 void monitor_start_all()
 {
     this_unit.foreach_monitor([](Monitor* monitor) {
-        if (monitor->active)
+        if (monitor->m_active)
         {
             monitor_start(monitor, monitor->parameters);
         }
@@ -299,14 +299,14 @@ void monitor_stop(Monitor* monitor)
 {
     if (monitor)
     {
-        Guard guard(monitor->lock);
+        Guard guard(monitor->m_lock);
 
         /** Only stop the monitor if it is running */
-        if (monitor->state == MONITOR_STATE_RUNNING)
+        if (monitor->m_state == MONITOR_STATE_RUNNING)
         {
-            monitor->state = MONITOR_STATE_STOPPING;
+            monitor->m_state = MONITOR_STATE_STOPPING;
             monitor->stop();
-            monitor->state = MONITOR_STATE_STOPPED;
+            monitor->m_state = MONITOR_STATE_STOPPED;
 
             for (auto db : monitor->m_servers)
             {
@@ -321,7 +321,7 @@ void monitor_stop(Monitor* monitor)
 void monitor_deactivate(Monitor* monitor)
 {
     this_unit.run_behind_lock([monitor](){
-        monitor->active = false;
+        monitor->m_active = false;
     });
 }
 
@@ -331,7 +331,7 @@ void monitor_deactivate(Monitor* monitor)
 void monitor_stop_all()
 {
     this_unit.foreach_monitor([](Monitor* monitor) {
-        if (monitor->active)
+        if (monitor->m_active)
         {
             monitor_stop(monitor);
         }
@@ -361,7 +361,7 @@ bool monitor_add_server(Monitor* mon, SERVER* server)
         MXS_MONITORED_SERVER* db = new (std::nothrow) MXS_MONITORED_SERVER(server);
         MXS_ABORT_IF_NULL(db);
 
-        monitor_state_t old_state = mon->state;
+        monitor_state_t old_state = mon->m_state;
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
@@ -369,7 +369,7 @@ bool monitor_add_server(Monitor* mon, SERVER* server)
         }
 
         {
-            Guard guard(mon->lock);
+            Guard guard(mon->m_lock);
             mon->m_servers.push_back(db);
         }
 
@@ -415,7 +415,7 @@ static void monitor_server_free_all(std::vector<MXS_MONITORED_SERVER*>& servers)
  */
 void monitor_remove_server(Monitor* mon, SERVER* server)
 {
-    monitor_state_t old_state = mon->state;
+    monitor_state_t old_state = mon->m_state;
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
@@ -424,7 +424,7 @@ void monitor_remove_server(Monitor* mon, SERVER* server)
 
     MXS_MONITORED_SERVER* ptr = nullptr;
     {
-        Guard guard(mon->lock);
+        Guard guard(mon->m_lock);
         for (auto iter = mon->m_servers.begin(); iter != mon->m_servers.end(); ++iter)
         {
             if ((*iter)->server == server)
@@ -476,7 +476,7 @@ void monitor_add_user(Monitor* mon, const char* user, const char* passwd)
 void monitor_show_all(DCB* dcb)
 {
     this_unit.foreach_monitor([dcb](Monitor* monitor) {
-        if (monitor->active)
+        if (monitor->m_active)
         {
             monitor_show(dcb, monitor);
         }
@@ -498,10 +498,10 @@ void Monitor::show(DCB* dcb)
 {
     Monitor* monitor = this;
     dcb_printf(dcb, "Monitor:                %p\n", monitor);
-    dcb_printf(dcb, "Name:                   %s\n", monitor->name);
-    dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(monitor->state));
-    dcb_printf(dcb, "Times monitored:        %lu\n", monitor->ticks);
-    dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", monitor->m_settings.interval);
+    dcb_printf(dcb, "Name:                   %s\n", m_name);
+    dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(m_state));
+    dcb_printf(dcb, "Times monitored:        %lu\n", m_ticks);
+    dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
     dcb_printf(dcb, "Connect Timeout:        %i seconds\n", monitor->connect_timeout);
     dcb_printf(dcb, "Read Timeout:           %i seconds\n", monitor->read_timeout);
     dcb_printf(dcb, "Write Timeout:          %i seconds\n", monitor->write_timeout);
@@ -518,7 +518,7 @@ void Monitor::show(DCB* dcb)
 
     dcb_printf(dcb, "\n");
 
-    if (monitor->state == MONITOR_STATE_RUNNING)
+    if (m_state == MONITOR_STATE_RUNNING)
     {
         monitor->diagnostics(dcb);
     }
@@ -541,12 +541,12 @@ void monitor_list(DCB* dcb)
     dcb_printf(dcb, "---------------------+---------------------\n");
 
     this_unit.foreach_monitor([dcb](Monitor* ptr){
-        if (ptr->active)
+        if (ptr->m_active)
         {
             dcb_printf(dcb,
                        "%-20s | %s\n",
-                       ptr->name,
-                       ptr->state & MONITOR_STATE_RUNNING ?
+                       ptr->m_name,
+                       ptr->m_state & MONITOR_STATE_RUNNING ?
                        "Running" : "Stopped");
         }
         return true;
@@ -565,7 +565,7 @@ Monitor* monitor_find(const char* name)
 {
     Monitor* rval = nullptr;
     this_unit.foreach_monitor([&rval, name](Monitor* ptr) {
-        if (!strcmp(ptr->name, name) && ptr->active)
+        if (!strcmp(ptr->m_name, name) && ptr->m_active)
         {
             rval = ptr;
         }
@@ -583,10 +583,10 @@ Monitor* monitor_repurpose_destroyed(const char* name, const char* module)
 {
     Monitor* rval = NULL;
     this_unit.foreach_monitor([&rval, name, module](Monitor* monitor) {
-        if (strcmp(monitor->name, name) == 0 && (monitor->module_name == module))
+        if (strcmp(monitor->m_name, name) == 0 && (monitor->m_module == module))
         {
-            mxb_assert(!monitor->active);
-            monitor->active = true;
+            mxb_assert(!monitor->m_active);
+            monitor->m_active = true;
             rval = monitor;
         }
         return (rval == nullptr);
@@ -660,7 +660,7 @@ bool monitor_set_network_timeout(Monitor* mon, int type, int value, const char* 
     }
     else
     {
-        MXS_ERROR("Value '%s' for monitor '%s' is not a positive integer: %d", key, mon->name, value);
+        MXS_ERROR("Value '%s' for monitor '%s' is not a positive integer: %d", key, mon->m_name, value);
         rval = false;
     }
     return rval;
@@ -675,8 +675,8 @@ std::unique_ptr<ResultSet> monitor_get_list()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
     this_unit.foreach_monitor([&set](Monitor* ptr) {
-        const char* state = ptr->state & MONITOR_STATE_RUNNING ? "Running" : "Stopped";
-        set->add_row({ptr->name, state});
+        const char* state = ptr->m_state & MONITOR_STATE_RUNNING ? "Running" : "Stopped";
+        set->add_row({ptr->m_name, state});
         return true;
     });
     return set;
@@ -700,7 +700,7 @@ bool Monitor::test_permissions(const string& query)
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
-                      monitor->name,
+                      monitor->m_name,
                       mondb->server->name(),
                       mondb->server->address,
                       mondb->server->port,
@@ -735,7 +735,7 @@ bool Monitor::test_permissions(const string& query)
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      monitor->name, query.c_str(), user, mysql_error(mondb->con));
+                      monitor->m_name, query.c_str(), user, mysql_error(mondb->con));
         }
         else
         {
@@ -744,7 +744,7 @@ bool Monitor::test_permissions(const string& query)
             if (res == NULL)
             {
                 MXS_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
-                          monitor->name,
+                          monitor->m_name,
                           mysql_error(mondb->con));
             }
             else
@@ -765,7 +765,7 @@ bool Monitor::test_permissions(const string& query)
  */
 void monitor_add_parameters(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
 {
-    Guard guard(monitor->lock);
+    Guard guard(monitor->m_lock);
     while (params)
     {
         MXS_CONFIG_PARAMETER* old = config_get_param(monitor->parameters, params->name);
@@ -799,7 +799,7 @@ bool monitor_remove_parameter(Monitor* monitor, const char* key)
 {
     MXS_CONFIG_PARAMETER* prev = NULL;
     bool rval = false;
-    Guard guard(monitor->lock);
+    Guard guard(monitor->m_lock);
 
     for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
     {
@@ -828,7 +828,7 @@ bool monitor_remove_parameter(Monitor* monitor, const char* key)
 
 void mon_alter_parameter(Monitor* monitor, const char* key, const char* value)
 {
-    Guard guard(monitor->lock);
+    Guard guard(monitor->m_lock);
     for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
     {
         if (strcmp(p->name, key) == 0)
@@ -1452,8 +1452,8 @@ Monitor* monitor_server_in_use(const SERVER* server)
 {
     Monitor* rval = nullptr;
     this_unit.foreach_monitor([&rval, server](Monitor* monitor) {
-        Guard guard(monitor->lock);
-        if (monitor->active)
+        Guard guard(monitor->m_lock);
+        if (monitor->m_active)
         {
             for (MXS_MONITORED_SERVER* db : monitor->m_servers)
             {
@@ -1477,15 +1477,15 @@ static bool create_monitor_config(const Monitor* monitor, const char* filename)
     {
         MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
                   filename,
-                  monitor->name,
+                  monitor->m_name,
                   errno,
                   mxs_strerror(errno));
         return false;
     }
 
     {
-        Guard guard(monitor->lock);
-        dprintf(file, "[%s]\n", monitor->name);
+        Guard guard(monitor->m_lock);
+        dprintf(file, "[%s]\n", monitor->m_name);
         dprintf(file, "%s=monitor\n", CN_TYPE);
 
         if (!monitor->m_servers.empty())
@@ -1502,7 +1502,7 @@ static bool create_monitor_config(const Monitor* monitor, const char* filename)
             dprintf(file, "\n");
         }
 
-        const MXS_MODULE* mod = get_module(monitor->module_name.c_str(), NULL);
+        const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
         mxb_assert(mod);
 
         dump_param_list(file,
@@ -1524,7 +1524,7 @@ bool monitor_serialize(const Monitor* monitor)
              sizeof(filename),
              "%s/%s.cnf.tmp",
              get_config_persistdir(),
-             monitor->name);
+             monitor->m_name);
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -1588,7 +1588,7 @@ void monitor_check_maintenance_requests(Monitor* monitor)
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
      * maintenance flag should be read-written atomically to prevent missing a value. */
-    int flags_changed = atomic_exchange_int(&monitor->check_maintenance_flag,
+    int flags_changed = atomic_exchange_int(&monitor->m_check_maintenance_flag,
                                             SERVER::MAINTENANCE_FLAG_NOCHECK);
     if (flags_changed != SERVER::MAINTENANCE_FLAG_NOCHECK)
     {
@@ -1675,7 +1675,7 @@ static const char* monitor_state_to_string(monitor_state_t state)
 json_t* monitor_parameters_to_json(const Monitor* monitor)
 {
     json_t* rval = json_object();
-    const MXS_MODULE* mod = get_module(monitor->module_name.c_str(), MODULE_MONITOR);
+    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
     config_add_module_params_json(monitor->parameters,
                                   {CN_TYPE, CN_MODULE, CN_SERVERS},
                                   config_monitor_params,
@@ -1691,18 +1691,18 @@ json_t* monitor_json_data(const Monitor* monitor, const char* host)
     json_t* rel = json_object();
 
     {
-        Guard guard(monitor->lock);
-        json_object_set_new(rval, CN_ID, json_string(monitor->name));
+        Guard guard(monitor->m_lock);
+        json_object_set_new(rval, CN_ID, json_string(monitor->m_name));
         json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
 
-        json_object_set_new(attr, CN_MODULE, json_string(monitor->module_name.c_str()));
-        json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
-        json_object_set_new(attr, CN_TICKS, json_integer(monitor->ticks));
+        json_object_set_new(attr, CN_MODULE, json_string(monitor->m_module.c_str()));
+        json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->m_state)));
+        json_object_set_new(attr, CN_TICKS, json_integer(monitor->m_ticks));
 
         /** Monitor parameters */
         json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
 
-        if (monitor->state == MONITOR_STATE_RUNNING)
+        if (monitor->m_state == MONITOR_STATE_RUNNING)
         {
             json_t* diag = monitor->diagnostics_json();
             if (diag)
@@ -1724,14 +1724,14 @@ json_t* monitor_json_data(const Monitor* monitor, const char* host)
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->name));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->m_name));
     return rval;
 }
 
 json_t* monitor_to_json(const Monitor* monitor, const char* host)
 {
     string self = MXS_JSON_API_MONITORS;
-    self += monitor->name;
+    self += monitor->m_name;
     return mxs_json_resource(host, self.c_str(), monitor_json_data(monitor, host));
 }
 
@@ -1739,7 +1739,7 @@ json_t* monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();
     this_unit.foreach_monitor([rval, host](Monitor* mon) {
-        if (mon->active)
+        if (mon->m_active)
         {
             json_t* json = monitor_json_data(mon, host);
 
@@ -1758,14 +1758,14 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 {
     std::vector<std::string> names;
     this_unit.foreach_monitor([&names, server](Monitor* mon) {
-        Guard guard(mon->lock);
-        if (mon->active)
+        Guard guard(mon->m_lock);
+        if (mon->m_active)
         {
             for (MXS_MONITORED_SERVER* db : mon->m_servers)
             {
                 if (db->server == server)
                 {
-                    names.push_back(mon->name);
+                    names.push_back(mon->m_name);
                     break;
                 }
             }
@@ -1801,7 +1801,7 @@ static bool rename_tmp_file(Monitor* monitor, const char* src)
 {
     bool rval = true;
     char dest[PATH_MAX + 1];
-    snprintf(dest, sizeof(dest), journal_template, get_datadir(), monitor->name, journal_name);
+    snprintf(dest, sizeof(dest), journal_template, get_datadir(), monitor->m_name, journal_name);
 
     if (rename(src, dest) == -1)
     {
@@ -1825,7 +1825,7 @@ static bool rename_tmp_file(Monitor* monitor, const char* src)
  */
 static FILE* open_tmp_file(Monitor* monitor, char* path)
 {
-    int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name, "");
+    int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->m_name, "");
     int max_bytes = PATH_MAX - (int)sizeof(journal_name);
     FILE* rval = NULL;
 
@@ -1908,7 +1908,7 @@ static void store_data(Monitor* monitor, MXS_MONITORED_SERVER* master, uint8_t* 
 
 static int get_data_file_path(Monitor* monitor, char* path)
 {
-    int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name, journal_name);
+    int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->m_name, journal_name);
     return rv;
 }
 
@@ -2099,7 +2099,7 @@ void store_server_journal(Monitor* monitor, MXS_MONITORED_SERVER* master)
         uint8_t hash[SHA_DIGEST_LENGTH];
         SHA1(data, size, hash);
 
-        if (memcmp(monitor->journal_hash, hash, sizeof(hash)) != 0)
+        if (memcmp(monitor->m_journal_hash, hash, sizeof(hash)) != 0)
         {
             FILE* file = open_tmp_file(monitor, path);
 
@@ -2114,7 +2114,7 @@ void store_server_journal(Monitor* monitor, MXS_MONITORED_SERVER* master)
                     }
                     else
                     {
-                        memcpy(monitor->journal_hash, hash, sizeof(hash));
+                        memcpy(monitor->m_journal_hash, hash, sizeof(hash));
                     }
                 }
                 else
@@ -2304,7 +2304,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
             {
                 MXS_WARNING("Server '%s' is not monitored by monitor '%s'.",
                             servers[i]->name(),
-                            mon->name);
+                            mon->m_name);
             }
         }
         MXS_FREE(servers);
@@ -2326,7 +2326,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
 
 bool Monitor::set_disk_space_threshold(const string& dst_setting)
 {
-    mxb_assert(state == MONITOR_STATE_STOPPED);
+    mxb_assert(m_state == MONITOR_STATE_STOPPED);
     SERVER::DiskSpaceLimits new_dst;
     bool rv = config_parse_disk_space_threshold(&new_dst, dst_setting.c_str());
     if (rv)
@@ -2343,13 +2343,13 @@ void monitor_debug_wait()
 
     // Get tick values for all monitors
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
-        ticks[mon] = mxb::atomic::load(&mon->ticks);
+        ticks[mon] = mxb::atomic::load(&mon->m_ticks);
         return true;
     });
 
     // Wait for all running monitors to advance at least one tick.
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
-        if (mon->state == MONITOR_STATE_RUNNING)
+        if (mon->m_state == MONITOR_STATE_RUNNING)
         {
             auto start = steady_clock::now();
             // A monitor may have been added in between the two foreach-calls (not if config changes are
@@ -2357,7 +2357,7 @@ void monitor_debug_wait()
             if (ticks.count(mon) > 0)
             {
                 auto tick = ticks[mon];
-                while (mxb::atomic::load(&mon->ticks) == tick && (steady_clock::now() - start < seconds(60)))
+                while (mxb::atomic::load(&mon->m_ticks) == tick && (steady_clock::now() - start < seconds(60)))
                 {
                     std::this_thread::sleep_for(milliseconds(100));
                 }
@@ -2387,8 +2387,7 @@ MonitorWorker::~MonitorWorker()
 
 monitor_state_t MonitorWorker::monitor_state() const
 {
-    static_assert(sizeof(monitor_state_t) == 4, "Unexpected size for enum");
-    return (monitor_state_t)atomic_load_uint32((uint32_t*)(&m_monitor->state));
+    return __atomic_load_n(&(Monitor::m_state), __ATOMIC_RELAXED); // TODO: Convert enum to atomic
 }
 
 void MonitorWorker::stop()
@@ -2447,7 +2446,7 @@ bool MonitorWorker::start(const MXS_CONFIG_PARAMETER* pParams)
             m_loop_called = get_time_ms() - m_settings.interval; // Next tick should happen immediately.
             if (!Worker::start())
             {
-                MXS_ERROR("Failed to start worker for monitor '%s'.", m_monitor->name);
+                MXS_ERROR("Failed to start worker for monitor '%s'.", m_name);
             }
             else
             {
@@ -2762,8 +2761,7 @@ bool MonitorWorker::pre_run()
     }
     else
     {
-        MXS_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.",
-                  m_monitor->name);
+        MXS_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.", m_name);
         m_semaphore.post();
     }
 
@@ -2788,7 +2786,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
         // Enough time has passed,
         if ((now - m_loop_called > m_settings.interval)
             // or maintenance flag is set,
-            || atomic_load_int(&m_monitor->check_maintenance_flag) == SERVER::MAINTENANCE_FLAG_CHECK
+            || atomic_load_int(&m_check_maintenance_flag) == SERVER::MAINTENANCE_FLAG_CHECK
             // or a monitor-specific condition is met.
             || immediate_tick_required())
         {
@@ -2813,7 +2811,7 @@ void MonitorWorker::run_one_tick()
     monitor_check_maintenance_requests(m_monitor);
 
     tick();
-    mxb::atomic::add(&m_monitor->ticks, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&m_ticks, 1, mxb::atomic::RELAXED);
 
     flush_server_status();
 

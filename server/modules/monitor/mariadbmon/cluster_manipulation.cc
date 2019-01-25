@@ -171,14 +171,14 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
         else
         {
             PRINT_MXS_JSON_ERROR(output, "%s is not monitored by %s, cannot rejoin.",
-                                 rejoin_cand_srv->name(), m_monitor->name);
+                                 rejoin_cand_srv->name(), m_name);
         }
     }
     else
     {
         const char BAD_CLUSTER[] = "The server cluster of monitor %s is not in a valid state for joining. "
                                    "Either it has no master or its gtid domain is unknown.";
-        PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_monitor->name);
+        PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_name);
     }
 
     return rval;
@@ -204,7 +204,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         MariaDBServer* new_master_cand = get_server(master_server);
         if (new_master_cand == NULL)
         {
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, master_server->name(), m_monitor->name);
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, master_server->name(), m_name);
         }
         else if (!new_master_cand->is_usable())
         {
@@ -1523,9 +1523,8 @@ void MariaDBMonitor::check_cluster_operations_support()
             "Automatic failover/switchover has been disabled. They should only be enabled "
             "after the above issues have been resolved.";
         string p1 = string_printf(PROBLEMS, all_reasons.c_str());
-        string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, m_monitor->name);
-        string p3 = string_printf(RE_ENABLE_FMT, "switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE,
-                                  m_monitor->name);
+        string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, m_name);
+        string p3 = string_printf(RE_ENABLE_FMT, "switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE, m_name);
         string total_msg = p1 + " " + p2 + " " + p3;
         MXS_ERROR("%s", total_msg.c_str());
 
@@ -1602,7 +1601,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         MariaDBServer* demotion_candidate = get_server(demotion_server);
         if (demotion_candidate == NULL)
         {
-            PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, demotion_server->name(), m_monitor->name);
+            PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, demotion_server->name(), m_name);
         }
         else if (!demotion_candidate->can_be_demoted_switchover(&demotion_msg))
         {
@@ -1646,7 +1645,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
             MariaDBServer* promotion_candidate = get_server(promotion_server);
             if (promotion_candidate == NULL)
             {
-                PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, promotion_server->name(), m_monitor->name);
+                PRINT_ERROR_IF(log_mode, error_out, NO_SERVER, promotion_server->name(), m_name);
             }
             else if (!promotion_candidate->can_be_promoted(op_type, demotion_target, &promotion_msg))
             {
@@ -1785,7 +1784,7 @@ void MariaDBMonitor::report_and_disable(const string& operation, const string& s
     string p1 = string_printf("Automatic %s failed, disabling automatic %s.",
                               operation.c_str(),
                               operation.c_str());
-    string p2 = string_printf(RE_ENABLE_FMT, operation.c_str(), setting_name.c_str(), m_monitor->name);
+    string p2 = string_printf(RE_ENABLE_FMT, operation.c_str(), setting_name.c_str(), m_name);
     string error_msg = p1 + " " + p2;
     MXS_ERROR("%s", error_msg.c_str());
     *setting_var = false;

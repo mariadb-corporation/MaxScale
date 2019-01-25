@@ -195,20 +195,19 @@ public:
 
     void show(DCB* dcb);
 
-    const char* const name;          /**< Monitor instance name. TODO: change to string */
-    const std::string module_name;   /**< Name of the monitor module */
-    bool              active = true; /**< True if monitor exists and has not been "destroyed". */
+    const char* const m_name;           /**< Monitor instance name. TODO: change to string */
+    const std::string m_module;         /**< Name of the monitor module */
+    bool              m_active {true};  /**< True if monitor exists and has not been "destroyed". */
 
-    mutable std::mutex lock;
-
+    mutable std::mutex m_lock;
 
     /** The state of the monitor. This should ONLY be written to by the admin thread. */
-    monitor_state_t state = MONITOR_STATE_STOPPED;
+    monitor_state_t m_state {MONITOR_STATE_STOPPED};
     /** Set when admin requests a maintenance status change. */
-    int check_maintenance_flag = SERVER::MAINTENANCE_FLAG_NOCHECK;
+    int m_check_maintenance_flag {SERVER::MAINTENANCE_FLAG_NOCHECK};
 
-    uint64_t ticks = 0;                         /**< Number of performed monitoring intervals */
-    uint8_t  journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */
+    uint64_t m_ticks {0};                         /**< Number of performed monitoring intervals */
+    uint8_t  m_journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */
 
     MXS_CONFIG_PARAMETER* parameters = nullptr;         /**< Configuration parameters */
     std::vector<MXS_MONITORED_SERVER*> m_servers;       /**< Monitored servers */

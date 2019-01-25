@@ -205,7 +205,7 @@ void ClustrixMonitor::refresh_nodes()
 
                         // '@@' ensures no clash with user created servers.
                         // Monitor name ensures no clash with other Clustrix monitor instances.
-                        string name = string("@@") + this->name + ":server-" + std::to_string(id);
+                        string name = string("@@") + m_name + ":server-" + std::to_string(id);
 
                         auto nit = m_nodes.find(id);
                         auto mit = memberships.find(id);
