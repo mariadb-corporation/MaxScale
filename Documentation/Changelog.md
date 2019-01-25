@@ -3,6 +3,7 @@
 ## MariaDB MaxScale 2.4
 
 * Names starting with `@@` are reserved for use by MaxScale.
+* Names can no longer contain whitespace.
 
 For more details, please refer to:
 

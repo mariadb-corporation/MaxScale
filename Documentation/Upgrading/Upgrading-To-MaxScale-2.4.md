@@ -22,3 +22,25 @@ Those files are:
 * The main configuration file; typically `/etc/maxscale.cnf`.
 * All nested configuration files; typically `/etc/maxscale.cnf.d/*`.
 * All dynamic configuration files; typically `/var/lib/maxscale/maxscale.cnd.d/*`.
+
+Further, whitespace in section names that was deprecated in MaxScale 2.2
+will now be rejected, which will cause the startup of MaxScale to fail.
+
+To prevent that, section names like
+```
+[My Server]
+...
+
+[My Service]
+...
+servers=My Server
+```
+must be changed, for instance, to
+```
+[MyServer]
+...
+
+[MyService]
+...
+servers=MyServer
+```

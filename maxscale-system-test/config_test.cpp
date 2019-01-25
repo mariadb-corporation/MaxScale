@@ -24,6 +24,7 @@ const char* bad_configs[] =
 // passwd is still supported
 //    "old_passwd",
     "no_use_of_reserved_names",
+    "no_spaces_in_section_names",
     NULL
 };
 

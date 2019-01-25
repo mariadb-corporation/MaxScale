@@ -16,6 +16,9 @@ Section and object names starting with `@@` are now reserved for
 use by MaxScale itself. If any such names are encountered in
 configuration files, then MaxScale will not start.
 
+Whitespace in section names that was deprecated in 2.2 will now be
+rejected and cause the startup of MaxScale to fail.
+
 ## Dropped Features
 
 ## New Features

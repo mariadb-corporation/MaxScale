@@ -244,6 +244,11 @@ not supported.
 some_parameter=123
 ```
 
+### Names
+
+Section names may not contain whitespace and must not start with the characters
+`@@`, but otherwise there are no restrictions.
+
 ### Special Parameter Types
 
 #### Sizes

@@ -616,34 +616,9 @@ CONFIG_CONTEXT* config_context_create(const char* section)
     return ctx;
 }
 
-/** A set that holds all the section names that contain whitespace */
-static std::set<string> warned_whitespace;
-
-static void fix_section_name(char* section)
-{
-    for (char* s = section; *s; s++)
-    {
-        if (isspace(*s))
-        {
-            if (warned_whitespace.find(section) == warned_whitespace.end())
-            {
-                warned_whitespace.insert(section);
-                MXS_WARNING("Whitespace in object names is deprecated, "
-                            "converting to hyphens: %s",
-                            section);
-            }
-            break;
-        }
-    }
-
-    fix_object_name(section);
-}
-
 void fix_object_name(char* name)
 {
-    squeeze_whitespace(name);
     mxb::trim(name);
-    replace_whitespace(name);
 }
 
 void fix_object_name(std::string& name)
@@ -747,12 +722,8 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
         return 0;
     }
 
-    char fixed_section[strlen(section) + 1];
-    strcpy(fixed_section, section);
-    fix_section_name(fixed_section);
-
     string reason;
-    if (!config_is_valid_name(fixed_section, &reason))
+    if (!config_is_valid_name(section, &reason))
     {
         /* A set that holds all the section names that are invalid. As the configuration file
          * is parsed multiple times, we need to do this to prevent the same complaint from
@@ -773,14 +744,14 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
      * add the parameters to that object. If not create
      * a new object.
      */
-    while (ptr && strcmp(ptr->object, fixed_section) != 0)
+    while (ptr && strcmp(ptr->object, section) != 0)
     {
         ptr = ptr->next;
     }
 
     if (!ptr)
     {
-        if ((ptr = config_context_create(fixed_section)) == NULL)
+        if ((ptr = config_context_create(section)) == NULL)
         {
             return 0;
         }
