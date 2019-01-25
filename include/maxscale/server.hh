@@ -34,21 +34,26 @@ extern const char CN_PROXY_PROTOCOL[];
  * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
  */
 // Bits used by most monitors
-#define SERVER_RUNNING    (1 << 0)              /**<< The server is up and running */
-#define SERVER_MAINT      (1 << 1)              /**<< Server is in maintenance mode */
-#define SERVER_AUTH_ERROR (1 << 2)              /**<< Authentication error from monitor */
-#define SERVER_MASTER     (1 << 3)              /**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE      (1 << 4)              /**<< The server is a slave, i.e. can handle reads */
+#define SERVER_RUNNING              (1 << 0)   /**<< The server is up and running */
+#define SERVER_MAINT                (1 << 1)   /**<< Server is in maintenance mode */
+#define SERVER_AUTH_ERROR           (1 << 2)   /**<< Authentication error from monitor */
+#define SERVER_MASTER               (1 << 3)   /**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE                (1 << 4)   /**<< The server is a slave, i.e. can handle reads */
+#define SERVER_BEING_DRAINED        (1 << 5)   /**<< The server is being drained, i.e. no new connection should be created. */
+#define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)   /**<< The disk space of the server is exhausted */
 // Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER (1 << 5)     /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY               (1 << 6)     /**<< Server is a relay */
-#define SERVER_WAS_MASTER          (1 << 7)     /**<< Server was a master but lost all slaves. */
+#define SERVER_SLAVE_OF_EXT_MASTER  (1 << 16)  /**<< Server is slave of a non-monitored master */
+#define SERVER_RELAY                (1 << 17)  /**<< Server is a relay */
+#define SERVER_WAS_MASTER           (1 << 18)  /**<< Server was a master but lost all slaves. */
 // Bits used by other monitors
-#define SERVER_JOINED            (1 << 8)   /**<< The server is joined in a Galera cluster */
-#define SERVER_NDB               (1 << 9)   /**<< The server is part of a MySQL cluster setup */
-#define SERVER_MASTER_STICKINESS (1 << 10)  /**<< Server Master stickiness */
-// Bits providing general information
-#define SERVER_DISK_SPACE_EXHAUSTED (1 << 31)   /**<< The disk space of the server is exhausted */
+#define SERVER_JOINED               (1 << 19)  /**<< The server is joined in a Galera cluster */
+#define SERVER_NDB                  (1 << 20)  /**<< The server is part of a MySQL cluster setup */
+#define SERVER_MASTER_STICKINESS    (1 << 21)  /**<< Server Master stickiness */
+
+inline bool status_is_connectable(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_MAINT | SERVER_BEING_DRAINED)) == SERVER_RUNNING;
+}
 
 inline bool status_is_usable(uint64_t status)
 {
@@ -70,6 +75,11 @@ inline bool status_is_in_maint(uint64_t status)
     return status & SERVER_MAINT;
 }
 
+inline bool status_is_being_drained(uint64_t status)
+{
+    return status & SERVER_BEING_DRAINED;
+}
+
 inline bool status_is_master(uint64_t status)
 {
     return (status & (SERVER_RUNNING | SERVER_MASTER | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_MASTER);
@@ -82,14 +92,12 @@ inline bool status_is_slave(uint64_t status)
 
 inline bool status_is_relay(uint64_t status)
 {
-    return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT))    \
-           == (SERVER_RUNNING | SERVER_RELAY);
+    return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_RELAY);
 }
 
 inline bool status_is_joined(uint64_t status)
 {
-    return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT))
-           == (SERVER_RUNNING | SERVER_JOINED);
+    return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_JOINED);
 }
 
 inline bool status_is_ndb(uint64_t status)
@@ -318,6 +326,16 @@ public:
     }
 
     /**
+     * Is the server running and can be connected to?
+     *
+     * @return True if the server can be connected to.
+     */
+    bool is_connectable() const
+    {
+        return status_is_connectable(status);
+    }
+
+    /**
      * Is the server running and not in maintenance?
      *
      * @return True if server can be used.
@@ -355,6 +373,16 @@ public:
     bool is_in_maint() const
     {
         return status_is_in_maint(status);
+    }
+
+    /**
+     * Is the server being drained?
+     *
+     * @return True if server is being drained.
+     */
+    bool is_being_drained() const
+    {
+        return status_is_being_drained(status);
     }
 
     /**
