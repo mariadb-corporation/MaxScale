@@ -127,7 +127,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
     {
         SERVER_REF* b = (*it)->backend();
 
-        if (b->server->is_usable())
+        if (b->server->is_connectable())
         {
             servers_found += 1;
 
@@ -187,7 +187,7 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
 
     for (SERVER_REF* ref = m_service->dbref; ref; ref = ref->next)
     {
-        if (ref->active)
+        if (server_ref_is_active(ref))
         {
             backends.push_back(SSRBackend(new SRBackend(ref)));
         }
