@@ -1595,7 +1595,7 @@ void monitor_check_maintenance_requests(Monitor* monitor)
         for (auto ptr : monitor->m_servers)
         {
             // The only server status bit the admin may change is the [Maintenance] bit.
-            int admin_msg = atomic_exchange_int(&ptr->server->maint_request, SERVER::MAINTENANCE_NO_CHANGE);
+            int admin_msg = atomic_exchange_int(&ptr->maint_request, SERVER::MAINTENANCE_NO_CHANGE);
             if (admin_msg == SERVER::MAINTENANCE_ON)
             {
                 // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
@@ -2339,14 +2339,14 @@ bool Monitor::set_disk_space_threshold(const string& dst_setting)
 namespace
 {
 
-bool is_monitored_server(MXS_MONITORED_SERVER* pMs, SERVER* pServer)
+MXS_MONITORED_SERVER* get_monitored_server(MXS_MONITORED_SERVER* pMs, SERVER* pServer)
 {
     while (pMs && (pMs->server != pServer))
     {
         pMs = pMs->next;
     }
 
-    return pMs != nullptr;
+    return pMs;
 }
 
 const char ERR_CANNOT_MODIFY[] =
@@ -2358,7 +2358,15 @@ const char WRN_REQUEST_OVERWRITTEN[] =
 
 bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    mxb_assert(is_monitored_server(this->monitored_servers, srv));
+    MXS_MONITORED_SERVER* msrv = get_monitored_server(this->monitored_servers, srv);
+    mxb_assert(msrv);
+
+    if (!msrv)
+    {
+        MXS_ERROR("Monitor %s requested to set status of server %s that it does not monitor.",
+                  this->name, srv->address);
+        return false;
+    }
 
     bool written = false;
 
@@ -2378,7 +2386,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
         {
             /* Maintenance is set/cleared using a special variable which the monitor reads when
              * starting the next update cycle. */
-            int previous_request = atomic_exchange_int(&srv->maint_request, SERVER::MAINTENANCE_ON);
+            int previous_request = atomic_exchange_int(&msrv->maint_request, SERVER::MAINTENANCE_ON);
             written = true;
             // Warn if the previous request hasn't been read.
             if (previous_request != SERVER::MAINTENANCE_NO_CHANGE)
@@ -2407,7 +2415,15 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 
 bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    mxb_assert(is_monitored_server(this->monitored_servers, srv));
+    MXS_MONITORED_SERVER* msrv = get_monitored_server(this->monitored_servers, srv);
+    mxb_assert(msrv);
+
+    if (!msrv)
+    {
+        MXS_ERROR("Monitor %s requested to clear status of server %s that it does not monitor.",
+                  this->name, srv->address);
+        return false;
+    }
 
     bool written = false;
 
@@ -2424,7 +2440,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
         else if (bit & SERVER_MAINT)
         {
             // Warn if the previous request hasn't been read.
-            int previous_request = atomic_exchange_int(&srv->maint_request, SERVER::MAINTENANCE_OFF);
+            int previous_request = atomic_exchange_int(&msrv->maint_request, SERVER::MAINTENANCE_OFF);
             written = true;
             if (previous_request != SERVER::MAINTENANCE_NO_CHANGE)
             {

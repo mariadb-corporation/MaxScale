@@ -138,6 +138,8 @@ public:
     uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
     uint64_t pending_status = 0;        /**< Status during current monitor loop */
     int64_t  disk_space_checked = 0;    /**< When was the disk space checked the last time */
+    int      maint_request = SERVER::MAINTENANCE_NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
+                                                             * server? */
 };
 
 #define MAX_MONITOR_USER_LEN     512

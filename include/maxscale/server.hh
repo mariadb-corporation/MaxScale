@@ -199,8 +199,6 @@ public:
 
     // Status descriptors. Updated automatically by a monitor or manually by the admin
     uint64_t status = 0;                            /**< Current status flag bitmap */
-    int      maint_request = MAINTENANCE_NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
-                                                     * server? */
 
     long          node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
     long          master_id = -1;       /**< Master server id of this node */
