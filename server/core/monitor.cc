@@ -194,9 +194,9 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     m_settings.conn_settings.connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
     m_settings.interval = config_get_integer(params, CN_MONITOR_INTERVAL);
     journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
-    script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
-    script = config_get_string(params, CN_SCRIPT);
-    events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
+    m_settings.script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
+    m_settings.script = config_get_string(params, CN_SCRIPT);
+    m_settings.events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
     m_settings.disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
     m_settings.conn_settings.username = config_get_string(params, CN_USER);
     m_settings.conn_settings.password = config_get_string(params, CN_PASSWORD);
@@ -605,9 +605,9 @@ void monitor_set_journal_max_age(Monitor* mon, time_t value)
     mon->journal_max_age = value;
 }
 
-void monitor_set_script_timeout(Monitor* mon, uint32_t value)
+void Monitor::set_script_timeout(int value)
 {
-    mon->script_timeout = value;
+    m_settings.script_timeout = value;
 }
 
 bool Monitor::set_network_timeout(int type, int value, const char* key)
@@ -1142,7 +1142,7 @@ static std::string child_nodes(const std::vector<MXS_MONITORED_SERVER*>& servers
     return ss.str();
 }
 
-int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
+int Monitor::launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
 {
     if (externcmd_matches(cmd, "$INITIATOR"))
     {
@@ -1154,7 +1154,7 @@ int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* c
     if (externcmd_matches(cmd, "$PARENT"))
     {
         std::stringstream ss;
-        MXS_MONITORED_SERVER* parent = find_parent_node(mon->m_servers, ptr);
+        MXS_MONITORED_SERVER* parent = find_parent_node(m_servers, ptr);
 
         if (parent)
         {
@@ -1165,7 +1165,7 @@ int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* c
 
     if (externcmd_matches(cmd, "$CHILDREN"))
     {
-        externcmd_substitute_arg(cmd, "[$]CHILDREN", child_nodes(mon->m_servers, ptr).c_str());
+        externcmd_substitute_arg(cmd, "[$]CHILDREN", child_nodes(m_servers, ptr).c_str());
     }
 
     if (externcmd_matches(cmd, "$EVENT"))
@@ -1178,37 +1178,37 @@ int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* c
     if (externcmd_matches(cmd, "$CREDENTIALS"))
     {
         // We provide the credentials for _all_ servers.
-        mon->append_node_names(nodelist, sizeof(nodelist), 0, CREDENTIALS_INCLUDE);
+        append_node_names(nodelist, sizeof(nodelist), 0, CREDENTIALS_INCLUDE);
         externcmd_substitute_arg(cmd, "[$]CREDENTIALS", nodelist);
     }
 
     if (externcmd_matches(cmd, "$NODELIST"))
     {
-        mon->append_node_names(nodelist, sizeof(nodelist), SERVER_RUNNING);
+        append_node_names(nodelist, sizeof(nodelist), SERVER_RUNNING);
         externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$LIST"))
     {
-        mon->append_node_names(nodelist, sizeof(nodelist), 0);
+        append_node_names(nodelist, sizeof(nodelist), 0);
         externcmd_substitute_arg(cmd, "[$]LIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$MASTERLIST"))
     {
-        mon->append_node_names(nodelist, sizeof(nodelist), SERVER_MASTER);
+        append_node_names(nodelist, sizeof(nodelist), SERVER_MASTER);
         externcmd_substitute_arg(cmd, "[$]MASTERLIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$SLAVELIST"))
     {
-        mon->append_node_names(nodelist, sizeof(nodelist), SERVER_SLAVE);
+        append_node_names(nodelist, sizeof(nodelist), SERVER_SLAVE);
         externcmd_substitute_arg(cmd, "[$]SLAVELIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$SYNCEDLIST"))
     {
-        mon->append_node_names(nodelist, sizeof(nodelist), SERVER_JOINED);
+        append_node_names(nodelist, sizeof(nodelist), SERVER_JOINED);
         externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
     }
 
@@ -1284,12 +1284,13 @@ int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* c
     return rv;
 }
 
-int monitor_launch_script(Monitor* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout)
+int Monitor::launch_script(MXS_MONITORED_SERVER* ptr)
 {
+    const char* script = m_settings.script.c_str();
     char arg[strlen(script) + 1];
     strcpy(arg, script);
 
-    EXTERNCMD* cmd = externcmd_allocate(arg, timeout);
+    EXTERNCMD* cmd = externcmd_allocate(arg, m_settings.script_timeout);
 
     if (cmd == NULL)
     {
@@ -1299,7 +1300,7 @@ int monitor_launch_script(Monitor* mon, MXS_MONITORED_SERVER* ptr, const char* s
         return -1;
     }
 
-    int rv = monitor_launch_command(mon, ptr, cmd);
+    int rv = launch_command(ptr, cmd);
 
     externcmd_free(cmd);
 
@@ -1590,12 +1591,12 @@ void monitor_check_maintenance_requests(Monitor* monitor)
     }
 }
 
-void mon_process_state_changes(Monitor* monitor, const char* script, uint64_t events)
+void Monitor::detect_handle_state_changes()
 {
     bool master_down = false;
     bool master_up = false;
 
-    for (MXS_MONITORED_SERVER* ptr : monitor->m_servers)
+    for (MXS_MONITORED_SERVER* ptr : m_servers)
     {
         if (mon_status_changed(ptr))
         {
@@ -1621,9 +1622,9 @@ void mon_process_state_changes(Monitor* monitor, const char* script, uint64_t ev
                 master_up = true;
             }
 
-            if (script && *script && (events & event))
+            if (!m_settings.script.empty() && (event & m_settings.events))
             {
-                monitor_launch_script(monitor, ptr, script, monitor->script_timeout);
+                launch_script(ptr);
             }
         }
     }
@@ -2855,7 +2856,7 @@ void MonitorWorker::post_loop()
 
 void MonitorWorker::process_state_changes()
 {
-    mon_process_state_changes(m_monitor, m_monitor->script, m_monitor->events);
+    detect_handle_state_changes();
 }
 
 bool MonitorWorker::pre_run()

@@ -31,6 +31,7 @@
 class Monitor;
 struct DCB;
 struct json_t;
+struct EXTERNCMD;
 
 /**
  * @verbatim
@@ -285,6 +286,8 @@ public:
      */
     void set_password(const std::string& passwd);
 
+    void set_script_timeout(int value);
+
     /**
      * Create a list of running servers
      *
@@ -315,9 +318,6 @@ public:
     std::vector<MXS_MONITORED_SERVER*> m_servers;       /**< Monitored servers */
 
     time_t      journal_max_age;    /**< Maximum age of journal file */
-    uint32_t    script_timeout;     /**< Timeout in seconds for the monitor scripts */
-    const char* script;             /**< Launchable script. */
-    uint64_t    events;             /**< Enabled monitor events. */
 
 protected:
 
@@ -331,13 +331,24 @@ protected:
     bool test_permissions(const std::string& query);
 
     /**
+     * Detect and handle state change events. This function should be called by all monitors at the end
+     * of each monitoring cycle. The function logs state changes and executes the monitor script on
+     * servers whose status changed.
+     */
+    void detect_handle_state_changes();
+
+    /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
      */
     class Settings
     {
     public:
-        int64_t interval {0};    /**< Monitor interval in milliseconds */
+        int64_t     interval {0};        /**< Monitor interval in milliseconds */
+
+        std::string script;              /**< Script triggered by events */
+        int         script_timeout {0};  /**< Timeout in seconds for the monitor scripts */
+        uint64_t    events {0};          /**< Bitfield of events which trigger the script */
 
         SERVER::DiskSpaceLimits  disk_space_limits;     /**< Disk space thresholds */
         /**
@@ -360,6 +371,26 @@ private:
      * @return True on success
      */
     bool configure_base(const MXS_CONFIG_PARAMETER* params);
+
+    /**
+     * Launch a script
+     *
+     * @param ptr     The server which has changed state
+     * @return Return value of the executed script or -1 on error
+     */
+    int launch_script(MXS_MONITORED_SERVER* ptr);
+
+    /**
+     * Launch a command
+     *
+     * @param ptr  The server which has changed state
+     * @param cmd  The command to execute.
+     *
+     * @note All default script variables will be replaced.
+     *
+     * @return Return value of the executed script or -1 on error.
+     */
+    int launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
 };
 
 /**
@@ -437,18 +468,6 @@ const char*          mon_get_event_name(mxs_monitor_event_t event);
  * @param value   New value for the parameter
  */
 void mon_alter_parameter(Monitor* monitor, const char* key, const char* value);
-
-/**
- * @brief Handle state change events
- *
- * This function should be called by all monitors at the end of each monitoring
- * cycle. This will log state changes and execute any scripts that should be executed.
- *
- * @param monitor Monitor object
- * @param script Script to execute or NULL for no script
- * @param events Enabled events
- */
-void mon_process_state_changes(Monitor* monitor, const char* script, uint64_t events);
 
 /**
  * @brief Hangup connections to failed servers
@@ -728,7 +747,8 @@ protected:
     /**
      * @brief Called after tick returns
      *
-     * The default implementation will call @mon_process_state_changes.
+     * The default implementation will call @Monitor::detect_state_changes. Overriding functions
+     * should do the same before proceeding with their own processing.
      */
     virtual void process_state_changes();
 

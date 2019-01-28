@@ -139,7 +139,6 @@ bool monitor_remove_parameter(Monitor* monitor, const char* key);
 void monitor_set_parameter(Monitor* monitor, const char* key, const char* value);
 
 void monitor_set_journal_max_age(Monitor* mon, time_t value);
-void monitor_set_script_timeout(Monitor* mon, uint32_t value);
 
 /**
  * @brief Serialize a monitor to a file
@@ -157,28 +156,3 @@ bool monitor_serialize(const Monitor* monitor);
  * @return The monitor watching this server, or NULL if not monitored
  */
 Monitor* monitor_server_in_use(const SERVER* server);
-
-/**
- * Launch a script
- *
- * @param mon     Owning monitor
- * @param ptr     The server which has changed state
- * @param script  Script to execute
- * @param timeout Timeout in seconds for the script
- *
- * @return Return value of the executed script or -1 on error
- */
-int monitor_launch_script(Monitor* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout);
-
-/**
- * Launch a command
- *
- * @param mon  Owning monitor
- * @param ptr  The server which has changed state
- * @param cmd  The command to execute.
- *
- * @note All default script variables will be replaced.
- *
- * @return Return value of the executed script or -1 on error.
- */
-int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);

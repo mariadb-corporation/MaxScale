@@ -109,7 +109,7 @@ public:
 protected:
     void pre_loop();
     void tick();
-    void process_state_changes();
+    void process_state_changes() override;
 
 private:
     // Some methods need a log on/off setting.

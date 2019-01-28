@@ -640,7 +640,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     {
         if (auto ival = get_positive_int(value))
         {
-            monitor_set_script_timeout(monitor, ival);
+            monitor->set_script_timeout(ival);
         }
     }
     else if (strcmp(key, CN_DISK_SPACE_THRESHOLD) == 0)
