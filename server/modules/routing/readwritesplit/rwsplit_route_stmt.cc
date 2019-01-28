@@ -729,7 +729,6 @@ SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
 
     if (name)   /*< Choose backend by name from a hint */
     {
-        mxb_assert(btype != BE_MASTER);
         btype = BE_SLAVE;
         rval = get_hinted_backend(name);
     }
