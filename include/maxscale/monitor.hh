@@ -134,9 +134,11 @@ public:
     /**
      * Maintenance mode request constants.
      */
-    static const int SERVER_NO_CHANGE = 0;
-    static const int SERVER_MAINT_OFF = 1;
-    static const int SERVER_MAINT_ON  = 2;
+    static const int SERVER_NO_CHANGE         = 0;
+    static const int SERVER_MAINT_OFF         = 1;
+    static const int SERVER_MAINT_ON          = 2;
+    static const int SERVER_BEING_DRAINED_OFF = 3;
+    static const int SERVER_BEING_DRAINED_ON  = 4;
 
     SERVER*  server = nullptr;      /**< The server being monitored */
     MYSQL*   con = nullptr;         /**< The MySQL connection */

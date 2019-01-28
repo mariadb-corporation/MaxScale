@@ -1588,8 +1588,7 @@ void monitor_check_maintenance_requests(Monitor* monitor)
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
      * maintenance flag should be read-written atomically to prevent missing a value. */
-    int flags_changed = atomic_exchange_int(&monitor->check_status_flag,
-                                            Monitor::STATUS_FLAG_NOCHECK);
+    int flags_changed = atomic_exchange_int(&monitor->check_status_flag, Monitor::STATUS_FLAG_NOCHECK);
     if (flags_changed != Monitor::STATUS_FLAG_NOCHECK)
     {
         for (auto ptr : monitor->m_servers)
@@ -1597,14 +1596,31 @@ void monitor_check_maintenance_requests(Monitor* monitor)
             // The only server status bit the admin may change is the [Maintenance] bit.
             int admin_msg = atomic_exchange_int(&ptr->status_request,
                                                 MXS_MONITORED_SERVER::SERVER_NO_CHANGE);
-            if (admin_msg == MXS_MONITORED_SERVER::SERVER_MAINT_ON)
+
+            switch (admin_msg)
             {
+            case MXS_MONITORED_SERVER::SERVER_MAINT_ON:
                 // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
                 ptr->server->set_status(SERVER_MAINT);
-            }
-            else if (admin_msg == MXS_MONITORED_SERVER::SERVER_MAINT_OFF)
-            {
+                break;
+
+            case MXS_MONITORED_SERVER::SERVER_MAINT_OFF:
                 ptr->server->clear_status(SERVER_MAINT);
+                break;
+
+            case MXS_MONITORED_SERVER::SERVER_BEING_DRAINED_ON:
+                ptr->server->set_status(SERVER_BEING_DRAINED);
+                break;
+
+            case MXS_MONITORED_SERVER::SERVER_BEING_DRAINED_OFF:
+                ptr->server->clear_status(SERVER_BEING_DRAINED);
+                break;
+
+            case MXS_MONITORED_SERVER::SERVER_NO_CHANGE:
+                break;
+
+            default:
+                mxb_assert(!true);
             }
         }
     }
@@ -2383,12 +2399,23 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
                 *errmsg_out = ERR_CANNOT_MODIFY;
             }
         }
-        else if (bit & SERVER_MAINT)
+        else
         {
-            /* Maintenance is set/cleared using a special variable which the monitor reads when
-             * starting the next update cycle. */
-            int previous_request = atomic_exchange_int(&msrv->status_request,
-                                                       MXS_MONITORED_SERVER::SERVER_MAINT_ON);
+            /* Maintenance and being-drained are set/cleared using a special variable which the
+             * monitor reads when starting the next update cycle. */
+
+            int request;
+            if (bit & SERVER_MAINT)
+            {
+                request = MXS_MONITORED_SERVER::SERVER_MAINT_ON;
+            }
+            else
+            {
+                mxb_assert(bit & SERVER_BEING_DRAINED);
+                request = MXS_MONITORED_SERVER::SERVER_BEING_DRAINED_ON;
+            }
+
+            int previous_request = atomic_exchange_int(&msrv->status_request, request);
             written = true;
             // Warn if the previous request hasn't been read.
             if (previous_request != MXS_MONITORED_SERVER::SERVER_NO_CHANGE)
@@ -2397,12 +2424,6 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
             }
             // Also set a flag so the next loop happens sooner.
             atomic_store_int(&this->check_status_flag, Monitor::STATUS_FLAG_CHECK);
-        }
-        else
-        {
-            // TODO: This should be set the same way the maintenance bit is set.
-            srv->set_status(bit);
-            written = true;
         }
     }
     else
@@ -2439,23 +2460,28 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
                 *errmsg_out = ERR_CANNOT_MODIFY;
             }
         }
-        else if (bit & SERVER_MAINT)
+        else
         {
-            // Warn if the previous request hasn't been read.
-            int previous_request = atomic_exchange_int(&msrv->status_request,
-                                                       MXS_MONITORED_SERVER::SERVER_MAINT_OFF);
+            int request;
+            if (bit & SERVER_MAINT)
+            {
+                request = MXS_MONITORED_SERVER::SERVER_MAINT_OFF;
+            }
+            else
+            {
+                mxb_assert(bit & SERVER_BEING_DRAINED);
+                request = MXS_MONITORED_SERVER::SERVER_BEING_DRAINED_OFF;
+            }
+
+            int previous_request = atomic_exchange_int(&msrv->status_request, request);
             written = true;
+            // Warn if the previous request hasn't been read.
             if (previous_request != MXS_MONITORED_SERVER::SERVER_NO_CHANGE)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
+            // Also set a flag so the next loop happens sooner.
             atomic_store_int(&this->check_status_flag, Monitor::STATUS_FLAG_CHECK);
-        }
-        else
-        {
-            // TODO: This should be set the same way the maintenance bit is set.
-            srv->clear_status(bit);
-            written = true;
         }
     }
     else
