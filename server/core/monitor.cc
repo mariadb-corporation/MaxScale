@@ -1588,21 +1588,21 @@ void monitor_check_maintenance_requests(Monitor* monitor)
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
      * maintenance flag should be read-written atomically to prevent missing a value. */
-    int flags_changed = atomic_exchange_int(&monitor->check_maintenance_flag,
-                                            Monitor::MAINTENANCE_FLAG_NOCHECK);
-    if (flags_changed != Monitor::MAINTENANCE_FLAG_NOCHECK)
+    int flags_changed = atomic_exchange_int(&monitor->check_status_flag,
+                                            Monitor::STATUS_FLAG_NOCHECK);
+    if (flags_changed != Monitor::STATUS_FLAG_NOCHECK)
     {
         for (auto ptr : monitor->m_servers)
         {
             // The only server status bit the admin may change is the [Maintenance] bit.
-            int admin_msg = atomic_exchange_int(&ptr->maint_request,
-                                                MXS_MONITORED_SERVER::MAINTENANCE_NO_CHANGE);
-            if (admin_msg == MXS_MONITORED_SERVER::MAINTENANCE_ON)
+            int admin_msg = atomic_exchange_int(&ptr->status_request,
+                                                MXS_MONITORED_SERVER::SERVER_NO_CHANGE);
+            if (admin_msg == MXS_MONITORED_SERVER::SERVER_MAINT_ON)
             {
                 // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
                 ptr->server->set_status(SERVER_MAINT);
             }
-            else if (admin_msg == MXS_MONITORED_SERVER::MAINTENANCE_OFF)
+            else if (admin_msg == MXS_MONITORED_SERVER::SERVER_MAINT_OFF)
             {
                 ptr->server->clear_status(SERVER_MAINT);
             }
@@ -2387,16 +2387,16 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
         {
             /* Maintenance is set/cleared using a special variable which the monitor reads when
              * starting the next update cycle. */
-            int previous_request = atomic_exchange_int(&msrv->maint_request,
-                                                       MXS_MONITORED_SERVER::MAINTENANCE_ON);
+            int previous_request = atomic_exchange_int(&msrv->status_request,
+                                                       MXS_MONITORED_SERVER::SERVER_MAINT_ON);
             written = true;
             // Warn if the previous request hasn't been read.
-            if (previous_request != MXS_MONITORED_SERVER::MAINTENANCE_NO_CHANGE)
+            if (previous_request != MXS_MONITORED_SERVER::SERVER_NO_CHANGE)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
             // Also set a flag so the next loop happens sooner.
-            atomic_store_int(&this->check_maintenance_flag, Monitor::MAINTENANCE_FLAG_CHECK);
+            atomic_store_int(&this->check_status_flag, Monitor::STATUS_FLAG_CHECK);
         }
         else
         {
@@ -2442,14 +2442,14 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
         else if (bit & SERVER_MAINT)
         {
             // Warn if the previous request hasn't been read.
-            int previous_request = atomic_exchange_int(&msrv->maint_request,
-                                                       MXS_MONITORED_SERVER::MAINTENANCE_OFF);
+            int previous_request = atomic_exchange_int(&msrv->status_request,
+                                                       MXS_MONITORED_SERVER::SERVER_MAINT_OFF);
             written = true;
-            if (previous_request != MXS_MONITORED_SERVER::MAINTENANCE_NO_CHANGE)
+            if (previous_request != MXS_MONITORED_SERVER::SERVER_NO_CHANGE)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
-            atomic_store_int(&this->check_maintenance_flag, Monitor::MAINTENANCE_FLAG_CHECK);
+            atomic_store_int(&this->check_status_flag, Monitor::STATUS_FLAG_CHECK);
         }
         else
         {
@@ -2920,7 +2920,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
         // Enough time has passed,
         if ((now - m_loop_called > m_settings.interval)
             // or maintenance flag is set,
-            || atomic_load_int(&this->check_maintenance_flag) == Monitor::MAINTENANCE_FLAG_CHECK
+            || atomic_load_int(&this->check_status_flag) == Monitor::STATUS_FLAG_CHECK
             // or a monitor-specific condition is met.
             || immediate_tick_required())
         {
