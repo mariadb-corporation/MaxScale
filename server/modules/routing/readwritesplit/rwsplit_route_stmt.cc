@@ -556,8 +556,16 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     }
     else
     {
-        MXS_ERROR("Could not route session command: %s", attempted_write ? "Write to all backends failed" :
-                  "All connections have failed");
+        std::string status;
+        for (const auto& a : m_backends)
+        {
+            status += "\n";
+            status += a->get_verbose_status();
+        }
+
+        MXS_ERROR("Could not route session command: %s. Connection information: %s",
+                  attempted_write ? "Write to all backends failed" : "All connections have failed",
+                  status.c_str());
     }
 
     return nsucc;
@@ -1057,6 +1065,7 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
             if (m_current_master && m_current_master->in_use())
             {
                 m_current_master->close();
+                m_current_master->set_close_reason("The original master is not available");
             }
         }
         else if (!m_config.delayed_retry

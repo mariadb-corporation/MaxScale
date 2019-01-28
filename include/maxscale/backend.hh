@@ -330,6 +330,23 @@ public:
     int64_t                       num_selects() const;
     const maxbase::StopWatch&     session_timer() const;
     const maxbase::IntervalTimer& select_timer() const;
+
+    /**
+     * Get verbose status description
+     *
+     * @return A verbose description of the backend's status
+     */
+    std::string get_verbose_status() const;
+
+    /**
+     * Add explanation message to latest close reason
+     *
+     * The message is printed in get_verbose_status() if the backend is closed.
+     *
+     * @param reason The human-readable message
+     */
+    void set_close_reason(const std::string& reason);
+
 private:
     /**
      * Internal state of the backend
@@ -355,8 +372,13 @@ private:
      */
     void set_state(backend_state state);
 
+    // Stringification function
+    static std::string to_string(backend_state state);
 
     bool               m_closed;            /**< True if a connection has been opened and closed */
+    time_t             m_closed_at;         /**< Timestamp when the backend was last closed */
+    std::string        m_close_reason;      /**< Why the backend was closed */
+    time_t             m_opened_at;         /**< Timestamp when the backend was last opened */
     SERVER_REF*        m_backend;           /**< Backend server */
     DCB*               m_dcb;               /**< Backend DCB */
     mxs::Buffer        m_pending_cmd;       /**< Pending commands */

@@ -78,6 +78,7 @@ static void discard_if_response_differs(SRWBackend backend,
                     STRPACKETTYPE(cmd),
                     query.empty() ? "<no query>" : query.c_str());
         backend->close(mxs::Backend::CLOSE_FATAL);
+        backend->set_close_reason("Invalid response to: " + query);
     }
 }
 

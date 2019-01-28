@@ -951,6 +951,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                 }
 
                 backend->close();
+                backend->set_close_reason("Master connection failed: " + extract_error(errmsgbuf));
             }
             else
             {
@@ -964,6 +965,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     // Try to replay the transaction on another node
                     can_continue = start_trx_replay();
                     backend->close();
+                    backend->set_close_reason("Read-only trx failed: " + extract_error(errmsgbuf));
 
                     if (!can_continue)
                     {
@@ -984,6 +986,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     m_otrx_state = OTRX_INACTIVE;
                     can_continue = start_trx_replay();
                     backend->close();
+                    backend->set_close_reason("Optimistic trx failed: " + extract_error(errmsgbuf));
                 }
                 else
                 {
@@ -1073,6 +1076,7 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
      * is closed, it's possible that the routing logic will pick the failed
      * server as the target. */
     backend->close();
+    backend->set_close_reason("Slave connection failed: " + extract_error(errmsg));
 
     if (route_stored)
     {
