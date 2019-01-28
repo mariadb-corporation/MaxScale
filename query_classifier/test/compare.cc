@@ -154,7 +154,7 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
 {
     bool loaded = false;
     size_t len = strlen(name);
-    char libdir[len + 1];
+    char libdir[len + 3 + 1]; // Extra for ../
 
     sprintf(libdir, "../%s", name);
 
