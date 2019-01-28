@@ -915,6 +915,9 @@ add_test_executable(mxs2111_auth_string.cpp mxs2111_auth_string replication LABE
 # MXS-2115: Automatic version_string detection
 add_test_executable(mxs2115_version_string.cpp mxs2115_version_string replication LABELS REPL_BACKEND)
 
+# MXS-2295: COM_CHANGE_USER does not clear out session command history
+add_test_executable(mxs2295_change_user_loop.cpp mxs2295_change_user_loop mxs2295_change_user_loop LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################

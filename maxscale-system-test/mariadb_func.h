@@ -334,6 +334,16 @@ public:
         return mysql_error(m_conn);
     }
 
+    bool change_user(std::string user, std::string pw, std::string db = "test")
+    {
+        return mysql_change_user(m_conn, user.c_str(), pw.c_str(), db.c_str()) == 0;
+    }
+
+    bool reset_connection()
+    {
+        return change_user(m_user, m_pw, m_db);
+    }
+
 private:
     std::string m_host;
     int         m_port;
