@@ -588,11 +588,11 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     bool success = true;
     if (strcmp(key, CN_USER) == 0)
     {
-        monitor_add_user(monitor, value, monitor->password);
+        monitor->set_user(value);
     }
     else if (strcmp(key, CN_PASSWORD) == 0)
     {
-        monitor_add_user(monitor, monitor->user, value);
+        monitor->set_password(value);
     }
     else if (strcmp(key, CN_MONITOR_INTERVAL) == 0)
     {
@@ -605,40 +605,28 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     {
         if (auto ival = get_positive_int(value))
         {
-            monitor_set_network_timeout(monitor,
-                                        MONITOR_CONNECT_TIMEOUT,
-                                        ival,
-                                        CN_BACKEND_CONNECT_TIMEOUT);
+            monitor->set_network_timeout(MONITOR_CONNECT_TIMEOUT, ival, CN_BACKEND_CONNECT_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_WRITE_TIMEOUT) == 0)
     {
         if (auto ival = get_positive_int(value))
         {
-            monitor_set_network_timeout(monitor,
-                                        MONITOR_WRITE_TIMEOUT,
-                                        ival,
-                                        CN_BACKEND_WRITE_TIMEOUT);
+            monitor->set_network_timeout(MONITOR_WRITE_TIMEOUT, ival, CN_BACKEND_WRITE_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_READ_TIMEOUT) == 0)
     {
         if (auto ival = get_positive_int(value))
         {
-            monitor_set_network_timeout(monitor,
-                                        MONITOR_READ_TIMEOUT,
-                                        ival,
-                                        CN_BACKEND_READ_TIMEOUT);
+            monitor->set_network_timeout(MONITOR_READ_TIMEOUT, ival, CN_BACKEND_READ_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_CONNECT_ATTEMPTS) == 0)
     {
         if (auto ival = get_positive_int(value))
         {
-            monitor_set_network_timeout(monitor,
-                                        MONITOR_CONNECT_ATTEMPTS,
-                                        ival,
-                                        CN_BACKEND_CONNECT_ATTEMPTS);
+            monitor->set_network_timeout(MONITOR_CONNECT_ATTEMPTS, ival, CN_BACKEND_CONNECT_ATTEMPTS);
         }
     }
     else if (strcmp(key, CN_JOURNAL_MAX_AGE) == 0)

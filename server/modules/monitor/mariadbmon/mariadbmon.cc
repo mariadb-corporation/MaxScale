@@ -157,8 +157,8 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
     if (repl_user.empty() && repl_pw.empty())
     {
         // No replication credentials defined, use monitor credentials
-        repl_user = m_monitor->user;
-        repl_pw = m_monitor->password;
+        repl_user = m_settings.conn_settings.username;
+        repl_pw = m_settings.conn_settings.password;
     }
 
     if (!repl_user.empty() && !repl_pw.empty())
@@ -345,7 +345,7 @@ json_t* MariaDBMonitor::to_json() const
 void MariaDBMonitor::update_server(MariaDBServer* server)
 {
     MXS_MONITORED_SERVER* mon_srv = server->m_server_base;
-    mxs_connect_result_t conn_status = mon_ping_or_connect_to_db(m_monitor, mon_srv);
+    mxs_connect_result_t conn_status = mon_srv->ping_or_connect(m_settings.conn_settings);
     MYSQL* conn = mon_srv->con;     // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 
     if (mon_connection_is_ok(conn_status))

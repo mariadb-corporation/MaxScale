@@ -123,12 +123,33 @@ enum mxs_monitor_event_t
     NEW_NDB_EVENT     = (1 << 21),  /**< new_ndb */
 };
 
+enum credentials_approach_t
+{
+    CREDENTIALS_INCLUDE,
+    CREDENTIALS_EXCLUDE,
+};
+
 /**
  * The linked list of servers that are being monitored by the monitor module.
  */
 class MXS_MONITORED_SERVER
 {
 public:
+    class ConnectionSettings
+    {
+    public:
+        std::string username;       /**< Monitor username */
+        std::string password;       /**< Monitor password */
+        int connect_timeout {1};    /**< Connect timeout in seconds for mysql_real_connect */
+        int write_timeout {1};      /**< Timeout in seconds for each attempt to write to the server.
+                                     *   There are retries and the total effective timeout value is two
+                                     *   times the option value. */
+        int read_timeout {1};       /**< Timeout in seconds to read from the server. There are retries
+                                     *   and the total effective timeout value is three times the
+                                     *   option value. */
+        int connect_attempts {1};   /**< How many times a connection is attempted */
+    };
+
     MXS_MONITORED_SERVER(SERVER* server);
 
     /**
@@ -139,6 +160,16 @@ public:
     static const int MAINT_ON          = 2;
     static const int BEING_DRAINED_OFF = 3;
     static const int BEING_DRAINED_ON  = 4;
+
+    /**
+     * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.
+     * This will always leave a valid database handle in the database->con pointer, allowing the user to call
+     * MySQL C API functions to find out the reason of the failure.
+     *
+     * @param settings Connection settings
+     * @return Connection status.
+     */
+    mxs_connect_result_t ping_or_connect(const ConnectionSettings& settings);
 
     SERVER*  server = nullptr;      /**< The server being monitored */
     MYSQL*   con = nullptr;         /**< The MySQL connection */
@@ -231,6 +262,39 @@ public:
      */
     bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
 
+    /**
+     * Set Monitor timeouts for connect/read/write
+     *
+     * @param type          The timeout handling type
+     * @param value         The timeout to set
+     * @param key           Timeout setting name
+     */
+    bool set_network_timeout(int, int, const char*);
+
+    /**
+     * Set username used to connect to backends.
+     *
+     * @param user The default username to use when connecting
+     */
+    void set_user(const std::string& user);
+
+    /**
+     * Set password used to connect to backends.
+     *
+     * @param passwd The password in encrypted form
+     */
+    void set_password(const std::string& passwd);
+
+    /**
+     * Create a list of running servers
+     *
+     * @param dest Destination where the string is appended, must be null terminated
+     * @param len Length of @c dest
+     * @param approach Whether credentials should be included or not.
+     */
+    void append_node_names(char* dest, int len, int status,
+                           credentials_approach_t approach = CREDENTIALS_EXCLUDE);
+
     void show(DCB* dcb);
 
     const char* const m_name;           /**< Monitor instance name. TODO: change to string */
@@ -249,17 +313,6 @@ public:
 
     MXS_CONFIG_PARAMETER* parameters = nullptr;         /**< Configuration parameters */
     std::vector<MXS_MONITORED_SERVER*> m_servers;       /**< Monitored servers */
-
-    char user[MAX_MONITOR_USER_LEN];            /**< Monitor username */
-    char password[MAX_MONITOR_PASSWORD_LEN];    /**< Monitor password */
-
-    int connect_timeout;    /**< Connect timeout in seconds for mysql_real_connect */
-    int connect_attempts;   /**< How many times a connection is attempted */
-    int read_timeout;       /**< Timeout in seconds to read from the server. There are retries
-                             *   and the total effective timeout value is three times the option value. */
-    int write_timeout;      /**< Timeout in seconds for each attempt to write to the server.
-                             *   There are retries and the total effective timeout value is two times
-                             *   the option value. */
 
     time_t      journal_max_age;    /**< Maximum age of journal file */
     uint32_t    script_timeout;     /**< Timeout in seconds for the monitor scripts */
@@ -291,6 +344,8 @@ protected:
          * How often should a disk space check be made at most, in milliseconds. Negative values imply
          * disabling. */
         int64_t disk_space_check_interval = -1;
+
+        MXS_MONITORED_SERVER::ConnectionSettings conn_settings;
     };
 
     Settings m_settings;
@@ -355,24 +410,14 @@ bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv);
  * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
  * to call MySQL C API functions to find out the reason of the failure.
  *
- * @param mon      A monitor.
- * @param pServer  A server.
- * @param ppCon    Address of pointer to a MYSQL instance. The instance should either be
- *                 valid or NULL.
+ * @param sett        Connection settings
+ * @param pServer     A server
+ * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
+ *                    valid or NULL.
  * @return Connection status.
  */
-mxs_connect_result_t mon_ping_or_connect_to_db(const Monitor& mon, SERVER& server, MYSQL** ppCon);
-
-/**
- * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.
- * This will always leave a valid database handle in the database->con pointer, allowing the user to call
- * MySQL C API functions to find out the reason of the failure.
- *
- * @param mon Monitor
- * @param database Monitored database
- * @return Connection status.
- */
-mxs_connect_result_t mon_ping_or_connect_to_db(Monitor* mon, MXS_MONITORED_SERVER* database);
+mxs_connect_result_t mon_ping_or_connect_to_db(const MXS_MONITORED_SERVER::ConnectionSettings& sett,
+                                               SERVER& server, MYSQL** ppConn);
 
 bool                 mon_connection_is_ok(mxs_connect_result_t connect_result);
 void                 mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval);

@@ -160,7 +160,7 @@ public:
         m_pServer->is_active = false;
     }
 
-    bool can_be_used_as_hub(const Monitor& mon);
+    bool can_be_used_as_hub(const MXS_MONITORED_SERVER::ConnectionSettings& sett);
 
     SERVER* server() const
     {

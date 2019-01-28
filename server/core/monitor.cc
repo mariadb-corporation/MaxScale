@@ -188,17 +188,18 @@ Monitor::Monitor(const string& name, const string& module)
 
 bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
 {
-    read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
-    write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
-    connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
-    connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
+    m_settings.conn_settings.read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
+    m_settings.conn_settings.write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
+    m_settings.conn_settings.connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
+    m_settings.conn_settings.connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
     m_settings.interval = config_get_integer(params, CN_MONITOR_INTERVAL);
     journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
     script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
     script = config_get_string(params, CN_SCRIPT);
     events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
     m_settings.disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
-    monitor_add_user(this, config_get_string(params, CN_USER), config_get_string(params, CN_PASSWORD));
+    m_settings.conn_settings.username = config_get_string(params, CN_USER);
+    m_settings.conn_settings.password = config_get_string(params, CN_PASSWORD);
 
     for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
     {
@@ -447,25 +448,14 @@ void monitor_remove_server(Monitor* mon, SERVER* server)
     }
 }
 
-/**
- * Add a default user to the monitor. This user is used to connect to the
- * monitored databases but may be overriden on a per server basis.
- *
- * @param mon           The monitor instance
- * @param user          The default username to use when connecting
- * @param passwd        The default password associated to the default user.
- */
-void monitor_add_user(Monitor* mon, const char* user, const char* passwd)
+void Monitor::set_user(const string& user)
 {
-    if (user != mon->user)
-    {
-        snprintf(mon->user, sizeof(mon->user), "%s", user);
-    }
+    m_settings.conn_settings.username = user;
+}
 
-    if (passwd != mon->password)
-    {
-        snprintf(mon->password, sizeof(mon->password), "%s", passwd);
-    }
+void Monitor::set_password(const string& passwd)
+{
+    m_settings.conn_settings.password = passwd;
 }
 
 /**
@@ -502,10 +492,10 @@ void Monitor::show(DCB* dcb)
     dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(m_state));
     dcb_printf(dcb, "Times monitored:        %lu\n", m_ticks);
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
-    dcb_printf(dcb, "Connect Timeout:        %i seconds\n", monitor->connect_timeout);
-    dcb_printf(dcb, "Read Timeout:           %i seconds\n", monitor->read_timeout);
-    dcb_printf(dcb, "Write Timeout:          %i seconds\n", monitor->write_timeout);
-    dcb_printf(dcb, "Connect attempts:       %i \n", monitor->connect_attempts);
+    dcb_printf(dcb, "Connect Timeout:        %i seconds\n", m_settings.conn_settings.connect_timeout);
+    dcb_printf(dcb, "Read Timeout:           %i seconds\n", m_settings.conn_settings.read_timeout);
+    dcb_printf(dcb, "Write Timeout:          %i seconds\n", m_settings.conn_settings.write_timeout);
+    dcb_printf(dcb, "Connect attempts:       %i \n", m_settings.conn_settings.connect_attempts);
     dcb_printf(dcb, "Monitored servers:      ");
 
     const char* sep = "";
@@ -620,14 +610,7 @@ void monitor_set_script_timeout(Monitor* mon, uint32_t value)
     mon->script_timeout = value;
 }
 
-/**
- * Set Monitor timeouts for connect/read/write
- *
- * @param mon           The monitor instance
- * @param type          The timeout handling type
- * @param value         The timeout to set
- */
-bool monitor_set_network_timeout(Monitor* mon, int type, int value, const char* key)
+bool Monitor::set_network_timeout(int type, int value, const char* key)
 {
     bool rval = true;
 
@@ -636,19 +619,19 @@ bool monitor_set_network_timeout(Monitor* mon, int type, int value, const char* 
         switch (type)
         {
         case MONITOR_CONNECT_TIMEOUT:
-            mon->connect_timeout = value;
+            m_settings.conn_settings.connect_timeout = value;
             break;
 
         case MONITOR_READ_TIMEOUT:
-            mon->read_timeout = value;
+            m_settings.conn_settings.read_timeout = value;
             break;
 
         case MONITOR_WRITE_TIMEOUT:
-            mon->write_timeout = value;
+            m_settings.conn_settings.write_timeout = value;
             break;
 
         case MONITOR_CONNECT_ATTEMPTS:
-            mon->connect_attempts = value;
+            m_settings.conn_settings.connect_attempts = value;
             break;
 
         default:
@@ -660,7 +643,7 @@ bool monitor_set_network_timeout(Monitor* mon, int type, int value, const char* 
     }
     else
     {
-        MXS_ERROR("Value '%s' for monitor '%s' is not a positive integer: %d", key, mon->m_name, value);
+        MXS_ERROR("Value '%s' for monitor '%s' is not a positive integer: %d", key, m_name, value);
         rval = false;
     }
     return rval;
@@ -690,13 +673,12 @@ bool Monitor::test_permissions(const string& query)
         return true;
     }
 
-    char* user = monitor->user;
-    char* dpasswd = decrypt_password(monitor->password);
+    char* dpasswd = decrypt_password(m_settings.conn_settings.password.c_str());
     bool rval = false;
 
     for (MXS_MONITORED_SERVER* mondb : monitor->m_servers)
     {
-        if (!mon_connection_is_ok(mon_ping_or_connect_to_db(monitor, mondb)))
+        if (!mon_connection_is_ok(mondb->ping_or_connect(m_settings.conn_settings)))
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
@@ -735,7 +717,8 @@ bool Monitor::test_permissions(const string& query)
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      monitor->m_name, query.c_str(), user, mysql_error(mondb->con));
+                      m_name, query.c_str(), m_settings.conn_settings.username.c_str(),
+                      mysql_error(mondb->con));
         }
         else
         {
@@ -1014,32 +997,14 @@ static const char* mon_get_event_name(MXS_MONITORED_SERVER* node)
     return mon_get_event_name((mxs_monitor_event_t)node->server->last_event);
 }
 
-enum credentials_approach_t
-{
-    CREDENTIALS_INCLUDE,
-    CREDENTIALS_EXCLUDE,
-};
-
-/**
- * Create a list of running servers
- *
- * @param mon The monitor
- * @param dest Destination where the string is appended, must be null terminated
- * @param len Length of @c dest
- * @param approach Whether credentials should be included or not.
- */
-static void mon_append_node_names(Monitor* mon,
-                                  char* dest,
-                                  int   len,
-                                  int   status,
-                                  credentials_approach_t approach = CREDENTIALS_EXCLUDE)
+void Monitor::append_node_names(char* dest, int len, int status, credentials_approach_t approach)
 {
     const char* separator = "";
     // Some extra space for port and separator
     char arr[SERVER::MAX_MONUSER_LEN + SERVER::MAX_MONPW_LEN + SERVER::MAX_ADDRESS_LEN + 64];
     dest[0] = '\0';
 
-    for (auto iter = mon->m_servers.begin(); iter != mon->m_servers.end() && len; ++iter)
+    for (auto iter = m_servers.begin(); iter != m_servers.end() && len; ++iter)
     {
         Server* server = static_cast<Server*>((*iter)->server);
         if (status == 0 || server->status & status)
@@ -1055,8 +1020,8 @@ static void mon_append_node_names(Monitor* mon,
             }
             else
             {
-                string user = mon->user;
-                string password = mon->password;
+                string user = m_settings.conn_settings.username;
+                string password = m_settings.conn_settings.password;
                 string server_specific_monuser = server->monitor_user();
                 if (!server_specific_monuser.empty())
                 {
@@ -1213,37 +1178,37 @@ int monitor_launch_command(Monitor* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* c
     if (externcmd_matches(cmd, "$CREDENTIALS"))
     {
         // We provide the credentials for _all_ servers.
-        mon_append_node_names(mon, nodelist, sizeof(nodelist), 0, CREDENTIALS_INCLUDE);
+        mon->append_node_names(nodelist, sizeof(nodelist), 0, CREDENTIALS_INCLUDE);
         externcmd_substitute_arg(cmd, "[$]CREDENTIALS", nodelist);
     }
 
     if (externcmd_matches(cmd, "$NODELIST"))
     {
-        mon_append_node_names(mon, nodelist, sizeof(nodelist), SERVER_RUNNING);
+        mon->append_node_names(nodelist, sizeof(nodelist), SERVER_RUNNING);
         externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$LIST"))
     {
-        mon_append_node_names(mon, nodelist, sizeof(nodelist), 0);
+        mon->append_node_names(nodelist, sizeof(nodelist), 0);
         externcmd_substitute_arg(cmd, "[$]LIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$MASTERLIST"))
     {
-        mon_append_node_names(mon, nodelist, sizeof(nodelist), SERVER_MASTER);
+        mon->append_node_names(nodelist, sizeof(nodelist), SERVER_MASTER);
         externcmd_substitute_arg(cmd, "[$]MASTERLIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$SLAVELIST"))
     {
-        mon_append_node_names(mon, nodelist, sizeof(nodelist), SERVER_SLAVE);
+        mon->append_node_names(nodelist, sizeof(nodelist), SERVER_SLAVE);
         externcmd_substitute_arg(cmd, "[$]SLAVELIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$SYNCEDLIST"))
     {
-        mon_append_node_names(mon, nodelist, sizeof(nodelist), SERVER_JOINED);
+        mon->append_node_names(nodelist, sizeof(nodelist), SERVER_JOINED);
         externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
     }
 
@@ -1341,45 +1306,47 @@ int monitor_launch_script(Monitor* mon, MXS_MONITORED_SERVER* ptr, const char* s
     return rv;
 }
 
-mxs_connect_result_t mon_ping_or_connect_to_db(const Monitor& mon, SERVER& server, MYSQL** ppCon)
+mxs_connect_result_t mon_ping_or_connect_to_db(const MXS_MONITORED_SERVER::ConnectionSettings& sett,
+                                               SERVER& server, MYSQL** ppConn)
 {
-    if (*ppCon)
+    mxb_assert(ppConn);
+    auto pConn = *ppConn;
+    if (pConn)
     {
         /** Return if the connection is OK */
-        if (mysql_ping(*ppCon) == 0)
+        if (mysql_ping(pConn) == 0)
         {
             return MONITOR_CONN_EXISTING_OK;
         }
         /** Otherwise close the handle. */
-        mysql_close(*ppCon);
+        mysql_close(pConn);
     }
 
     mxs_connect_result_t conn_result = MONITOR_CONN_REFUSED;
-    if ((*ppCon = mysql_init(NULL)))
+    if ((pConn = mysql_init(NULL)) != nullptr)
     {
-        string uname = mon.user;
-        string passwd = mon.password;
-        const Server& s = static_cast<const Server&>(server); // Clean this up later.
-        string server_specific_monuser = s.monitor_user();
+        string uname = sett.username;
+        string passwd = sett.password;
+        const Server& srv = static_cast<const Server&>(server); // Clean this up later.
+        string server_specific_monuser = srv.monitor_user();
         if (!server_specific_monuser.empty())
         {
             uname = server_specific_monuser;
-            passwd = s.monitor_password();
+            passwd = srv.monitor_password();
         }
-
         char* dpwd = decrypt_password(passwd.c_str());
 
-        mysql_optionsv(*ppCon, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &mon.connect_timeout);
-        mysql_optionsv(*ppCon, MYSQL_OPT_READ_TIMEOUT, (void*) &mon.read_timeout);
-        mysql_optionsv(*ppCon, MYSQL_OPT_WRITE_TIMEOUT, (void*) &mon.write_timeout);
-        mysql_optionsv(*ppCon, MYSQL_PLUGIN_DIR, get_connector_plugindir());
+        mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
+        mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
+        mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
+        mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, get_connector_plugindir());
 
         time_t start = 0;
         time_t end = 0;
-        for (int i = 0; i < mon.connect_attempts; i++)
+        for (int i = 0; i < sett.connect_attempts; i++)
         {
             start = time(NULL);
-            bool result = (mxs_mysql_real_connect(*ppCon, &server, uname.c_str(), dpwd) != NULL);
+            bool result = (mxs_mysql_real_connect(pConn, &server, uname.c_str(), dpwd) != NULL);
             end = time(NULL);
 
             if (result)
@@ -1389,23 +1356,20 @@ mxs_connect_result_t mon_ping_or_connect_to_db(const Monitor& mon, SERVER& serve
             }
         }
 
-        if (conn_result == MONITOR_CONN_REFUSED && (int)difftime(end, start) >= mon.connect_timeout)
+        if (conn_result == MONITOR_CONN_REFUSED && difftime(end, start) >= sett.connect_timeout)
         {
             conn_result = MONITOR_CONN_TIMEOUT;
         }
         MXS_FREE(dpwd);
     }
 
+    *ppConn = pConn;
     return conn_result;
 }
 
-mxs_connect_result_t mon_ping_or_connect_to_db(Monitor* mon, MXS_MONITORED_SERVER* database)
+mxs_connect_result_t MXS_MONITORED_SERVER::ping_or_connect(const ConnectionSettings& settings)
 {
-    mxb_assert(mon);
-    mxb_assert(database);
-    mxb_assert(database->server);
-
-    return mon_ping_or_connect_to_db(*mon, *database->server, &database->con);
+    return mon_ping_or_connect_to_db(settings, *server, &con);
 }
 
 /**
@@ -2817,7 +2781,7 @@ void MonitorWorkerSimple::tick()
             pMs->mon_prev_status = pMs->server->status;
             pMs->pending_status = pMs->server->status;
 
-            mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, pMs);
+            mxs_connect_result_t rval = pMs->ping_or_connect(m_settings.conn_settings);
 
             if (mon_connection_is_ok(rval))
             {

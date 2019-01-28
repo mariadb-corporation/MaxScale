@@ -14,11 +14,10 @@
 #include "clustrixnode.hh"
 #include "clustrix.hh"
 
-bool ClustrixNode::can_be_used_as_hub(const Monitor& mon)
+bool ClustrixNode::can_be_used_as_hub(const MXS_MONITORED_SERVER::ConnectionSettings& sett)
 {
     mxb_assert(m_pServer);
-
-    bool rv = Clustrix::ping_or_connect_to_hub(mon, *m_pServer, &m_pCon);
+    bool rv = Clustrix::ping_or_connect_to_hub(sett, *m_pServer, &m_pCon);
 
     if (!rv)
     {
