@@ -4,6 +4,7 @@
 
 * Names starting with `@@` are reserved for use by MaxScale.
 * Names can no longer contain whitespace.
+* Servers can now be drained.
 
 For more details, please refer to:
 
