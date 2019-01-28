@@ -139,7 +139,6 @@ ThisUnit this_unit;
 
 static void        monitor_server_free_all(std::vector<MXS_MONITORED_SERVER*>& servers);
 static void        remove_server_journal(Monitor* monitor);
-static bool        journal_is_stale(Monitor* monitor, time_t max_age);
 static const char* monitor_state_to_string(monitor_state_t state);
 
 /** Server type specific bits */
@@ -193,7 +192,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     m_settings.conn_settings.connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
     m_settings.conn_settings.connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
     m_settings.interval = config_get_integer(params, CN_MONITOR_INTERVAL);
-    journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
+    m_settings.journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
     m_settings.script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
     m_settings.script = config_get_string(params, CN_SCRIPT);
     m_settings.events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
@@ -250,7 +249,7 @@ void MonitorManager::destroy_all_monitors()
  *
  * @param monitor The Monitor that should be started
  */
-void monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
+void MonitorManager::monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
 {
     if (monitor)
     {
@@ -259,7 +258,7 @@ void monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
         // Only start the monitor if it's stopped.
         if (monitor->m_state == MONITOR_STATE_STOPPED)
         {
-            if (journal_is_stale(monitor, monitor->journal_max_age))
+            if (monitor->journal_is_stale())
             {
                 MXS_WARNING("Removing stale journal file for monitor '%s'.", monitor->m_name);
                 remove_server_journal(monitor);
@@ -285,7 +284,7 @@ void monitor_start_all()
     this_unit.foreach_monitor([](Monitor* monitor) {
         if (monitor->m_active)
         {
-            monitor_start(monitor, monitor->parameters);
+            MonitorManager::monitor_start(monitor, monitor->parameters);
         }
         return true;
     });
@@ -376,7 +375,7 @@ bool monitor_add_server(Monitor* mon, SERVER* server)
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
-            monitor_start(mon, mon->parameters);
+            MonitorManager::monitor_start(mon, mon->parameters);
         }
     }
 
@@ -444,7 +443,7 @@ void monitor_remove_server(Monitor* mon, SERVER* server)
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
-        monitor_start(mon, mon->parameters);
+        MonitorManager::monitor_start(mon, mon->parameters);
     }
 }
 
@@ -597,12 +596,11 @@ void Monitor::set_interval(int64_t interval)
 /**
  * Set the maximum age of the monitor journal
  *
- * @param mon           The monitor instance
  * @param interval      The journal age in seconds
  */
-void monitor_set_journal_max_age(Monitor* mon, time_t value)
+void Monitor::monitor_set_journal_max_age(time_t value)
 {
-    mon->journal_max_age = value;
+    m_settings.journal_max_age = value;
 }
 
 void Monitor::set_script_timeout(int value)
@@ -2210,12 +2208,12 @@ static void remove_server_journal(Monitor* monitor)
     }
 }
 
-static bool journal_is_stale(Monitor* monitor, time_t max_age)
+bool Monitor::journal_is_stale()
 {
     bool is_stale = true;
     char path[PATH_MAX];
-
-    if (get_data_file_path(monitor, path) < PATH_MAX)
+    auto max_age = m_settings.journal_max_age;
+    if (get_data_file_path(this, path) < PATH_MAX)
     {
         struct stat st;
 

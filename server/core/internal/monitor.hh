@@ -105,10 +105,12 @@ public:
      * @attn Must only be called in single-thread context at system shutdown.
      */
     static void destroy_all_monitors();
+
+    static void monitor_start(Monitor*, const MXS_CONFIG_PARAMETER*);
 };
 
 
-void monitor_start(Monitor*, const MXS_CONFIG_PARAMETER*);
+
 void monitor_stop(Monitor*);
 
 /**

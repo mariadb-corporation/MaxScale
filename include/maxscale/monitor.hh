@@ -288,6 +288,8 @@ public:
 
     void set_script_timeout(int value);
 
+    void monitor_set_journal_max_age(time_t value);
+
     /**
      * Create a list of running servers
      *
@@ -316,8 +318,6 @@ public:
 
     MXS_CONFIG_PARAMETER* parameters = nullptr;         /**< Configuration parameters */
     std::vector<MXS_MONITORED_SERVER*> m_servers;       /**< Monitored servers */
-
-    time_t      journal_max_age;    /**< Maximum age of journal file */
 
 protected:
 
@@ -349,6 +349,8 @@ protected:
         std::string script;              /**< Script triggered by events */
         int         script_timeout {0};  /**< Timeout in seconds for the monitor scripts */
         uint64_t    events {0};          /**< Bitfield of events which trigger the script */
+
+        time_t      journal_max_age {0}; /**< Maximum age of journal file */
 
         SERVER::DiskSpaceLimits  disk_space_limits;     /**< Disk space thresholds */
         /**
@@ -391,6 +393,8 @@ private:
      * @return Return value of the executed script or -1 on error.
      */
     int launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
+
+    bool journal_is_stale();
 };
 
 /**

@@ -267,7 +267,7 @@ HttpResponse cb_stop_monitor(const HttpRequest& request)
 HttpResponse cb_start_monitor(const HttpRequest& request)
 {
     Monitor* monitor = monitor_find(request.uri_part(1).c_str());
-    monitor_start(monitor, monitor->parameters);
+    MonitorManager::monitor_start(monitor, monitor->parameters);
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 

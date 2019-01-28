@@ -633,7 +633,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     {
         if (auto ival = get_positive_int(value))
         {
-            monitor_set_journal_max_age(monitor, ival);
+            monitor->monitor_set_journal_max_age(ival);
         }
     }
     else if (strcmp(key, CN_SCRIPT_TIMEOUT) == 0)
@@ -675,7 +675,7 @@ bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
     }
     if (was_running)
     {
-        monitor_start(monitor, monitor->parameters);
+        MonitorManager::monitor_start(monitor, monitor->parameters);
     }
     return success;
 }
@@ -2245,7 +2245,7 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
             }
             else
             {
-                monitor_start(rval, rval->parameters);
+                MonitorManager::monitor_start(rval, rval->parameters);
             }
         }
     }
@@ -2431,7 +2431,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 
             if (restart)
             {
-                monitor_start(monitor, monitor->parameters);
+                MonitorManager::monitor_start(monitor, monitor->parameters);
             }
         }
     }
