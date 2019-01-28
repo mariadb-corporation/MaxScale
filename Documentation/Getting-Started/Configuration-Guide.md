@@ -700,12 +700,6 @@ provided by this module is used by MariaDB MaxScale when deciding where a
 particular statement should be sent. The default query classifier is
 _qc_sqlite_.
 
-#### `query_classifier_args`
-
-Arguments for the query classifier. What arguments are accepted depends on the
-particular query classifier being used. The default query classifier -
-_qc_sqlite_ - supports the following arguments:
-
 #### `query_classifier_cache_size`
 
 Specifies the maximum size of the query classifier cache. The default limit is
@@ -732,6 +726,12 @@ Note that MaxScale uses a separate cache for each worker thread. To obtain the
 amount of memory available for each thread, divide the cache size with the value
 of `threads`. If statements are evicted from the cache (visible in the
 diagnostic output), consider increasing the cache size.
+
+#### `query_classifier_args`
+
+Arguments for the query classifier. What arguments are accepted depends on the
+particular query classifier being used. The default query classifier -
+_qc_sqlite_ - supports the following arguments:
 
 ##### `log_unrecognized_statements`
 
