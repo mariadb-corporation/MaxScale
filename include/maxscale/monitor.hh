@@ -131,6 +131,13 @@ class MXS_MONITORED_SERVER
 public:
     MXS_MONITORED_SERVER(SERVER* server);
 
+    /**
+     * Maintenance mode request constants.
+     */
+    static const int MAINTENANCE_OFF = -100;
+    static const int MAINTENANCE_NO_CHANGE = 0;
+    static const int MAINTENANCE_ON = 100;
+
     SERVER*  server = nullptr;      /**< The server being monitored */
     MYSQL*   con = nullptr;         /**< The MySQL connection */
     bool     log_version_err = true;
@@ -138,8 +145,8 @@ public:
     uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
     uint64_t pending_status = 0;        /**< Status during current monitor loop */
     int64_t  disk_space_checked = 0;    /**< When was the disk space checked the last time */
-    int      maint_request = SERVER::MAINTENANCE_NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
-                                                             * server? */
+    int      maint_request = MAINTENANCE_NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
+                                                     * server? */
 };
 
 #define MAX_MONITOR_USER_LEN     512
@@ -154,6 +161,9 @@ public:
     Monitor(const std::string& name, const std::string& module);
     virtual ~Monitor();
     virtual bool configure(const MXS_CONFIG_PARAMETER* params) = 0;
+
+    static const int MAINTENANCE_FLAG_NOCHECK = 0;
+    static const int MAINTENANCE_FLAG_CHECK = -1;
 
     /**
      * Starts the monitor. If the monitor requires polling of the servers, it should create
@@ -230,7 +240,7 @@ public:
     /** The state of the monitor. This should ONLY be written to by the admin thread. */
     monitor_state_t m_state {MONITOR_STATE_STOPPED};
     /** Set when admin requests a maintenance status change. */
-    int m_check_maintenance_flag {SERVER::MAINTENANCE_FLAG_NOCHECK};
+    int check_maintenance_flag = MAINTENANCE_FLAG_NOCHECK;
 
     uint64_t m_ticks {0};                         /**< Number of performed monitoring intervals */
     uint8_t  m_journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */

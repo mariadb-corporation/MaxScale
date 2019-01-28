@@ -131,15 +131,6 @@ public:
     static const int MAX_VERSION_LEN = 256;
     static const int RLAG_UNDEFINED = -1;   // Default replication lag value
 
-    /**
-     * Maintenance mode request constants.
-     */
-    static const int MAINTENANCE_OFF = -100;
-    static const int MAINTENANCE_NO_CHANGE = 0;
-    static const int MAINTENANCE_ON = 100;
-    static const int MAINTENANCE_FLAG_NOCHECK = 0;
-    static const int MAINTENANCE_FLAG_CHECK = -1;
-
     // A mapping from a path to a percentage, e.g.: "/disk" -> 80.
     typedef std::unordered_map<std::string, int32_t> DiskSpaceLimits;
 
