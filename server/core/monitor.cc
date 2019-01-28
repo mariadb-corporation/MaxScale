@@ -1595,28 +1595,28 @@ void monitor_check_maintenance_requests(Monitor* monitor)
         {
             // The only server status bit the admin may change is the [Maintenance] bit.
             int admin_msg = atomic_exchange_int(&ptr->status_request,
-                                                MXS_MONITORED_SERVER::SERVER_NO_CHANGE);
+                                                MXS_MONITORED_SERVER::NO_CHANGE);
 
             switch (admin_msg)
             {
-            case MXS_MONITORED_SERVER::SERVER_MAINT_ON:
+            case MXS_MONITORED_SERVER::MAINT_ON:
                 // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
                 ptr->server->set_status(SERVER_MAINT);
                 break;
 
-            case MXS_MONITORED_SERVER::SERVER_MAINT_OFF:
+            case MXS_MONITORED_SERVER::MAINT_OFF:
                 ptr->server->clear_status(SERVER_MAINT);
                 break;
 
-            case MXS_MONITORED_SERVER::SERVER_BEING_DRAINED_ON:
+            case MXS_MONITORED_SERVER::BEING_DRAINED_ON:
                 ptr->server->set_status(SERVER_BEING_DRAINED);
                 break;
 
-            case MXS_MONITORED_SERVER::SERVER_BEING_DRAINED_OFF:
+            case MXS_MONITORED_SERVER::BEING_DRAINED_OFF:
                 ptr->server->clear_status(SERVER_BEING_DRAINED);
                 break;
 
-            case MXS_MONITORED_SERVER::SERVER_NO_CHANGE:
+            case MXS_MONITORED_SERVER::NO_CHANGE:
                 break;
 
             default:
@@ -2407,18 +2407,18 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
             int request;
             if (bit & SERVER_MAINT)
             {
-                request = MXS_MONITORED_SERVER::SERVER_MAINT_ON;
+                request = MXS_MONITORED_SERVER::MAINT_ON;
             }
             else
             {
                 mxb_assert(bit & SERVER_BEING_DRAINED);
-                request = MXS_MONITORED_SERVER::SERVER_BEING_DRAINED_ON;
+                request = MXS_MONITORED_SERVER::BEING_DRAINED_ON;
             }
 
             int previous_request = atomic_exchange_int(&msrv->status_request, request);
             written = true;
             // Warn if the previous request hasn't been read.
-            if (previous_request != MXS_MONITORED_SERVER::SERVER_NO_CHANGE)
+            if (previous_request != MXS_MONITORED_SERVER::NO_CHANGE)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
@@ -2465,18 +2465,18 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
             int request;
             if (bit & SERVER_MAINT)
             {
-                request = MXS_MONITORED_SERVER::SERVER_MAINT_OFF;
+                request = MXS_MONITORED_SERVER::MAINT_OFF;
             }
             else
             {
                 mxb_assert(bit & SERVER_BEING_DRAINED);
-                request = MXS_MONITORED_SERVER::SERVER_BEING_DRAINED_OFF;
+                request = MXS_MONITORED_SERVER::BEING_DRAINED_OFF;
             }
 
             int previous_request = atomic_exchange_int(&msrv->status_request, request);
             written = true;
             // Warn if the previous request hasn't been read.
-            if (previous_request != MXS_MONITORED_SERVER::SERVER_NO_CHANGE)
+            if (previous_request != MXS_MONITORED_SERVER::NO_CHANGE)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }

@@ -134,11 +134,11 @@ public:
     /**
      * Maintenance mode request constants.
      */
-    static const int SERVER_NO_CHANGE         = 0;
-    static const int SERVER_MAINT_OFF         = 1;
-    static const int SERVER_MAINT_ON          = 2;
-    static const int SERVER_BEING_DRAINED_OFF = 3;
-    static const int SERVER_BEING_DRAINED_ON  = 4;
+    static const int NO_CHANGE         = 0;
+    static const int MAINT_OFF         = 1;
+    static const int MAINT_ON          = 2;
+    static const int BEING_DRAINED_OFF = 3;
+    static const int BEING_DRAINED_ON  = 4;
 
     SERVER*  server = nullptr;      /**< The server being monitored */
     MYSQL*   con = nullptr;         /**< The MySQL connection */
@@ -147,8 +147,8 @@ public:
     uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
     uint64_t pending_status = 0;        /**< Status during current monitor loop */
     int64_t  disk_space_checked = 0;    /**< When was the disk space checked the last time */
-    int      status_request = SERVER_NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
-                                                 * server? */
+    int      status_request = NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
+                                          * server? */
 };
 
 #define MAX_MONITOR_USER_LEN     512
