@@ -124,7 +124,19 @@ int main(int argc, char *argv[])
 
     Test->stop_timeout();
 
-    sleep(3600 * 3);
+    char * env = getenv("long_test_time");
+    int test_time = 0;
+    if (env != NULL)
+    {
+        sscanf(env, "%d", &test_time);
+    }
+    if (test_time <= 0)
+    {
+        test_time = 3600;
+        Test->tprintf("´long_test_time´ variable is not defined, set test_time to %d\n", test_time);
+    }
+    Test->tprintf("´test_time´ is %d\n", test_time);
+    sleep(test_time);
 
     Test->set_timeout(180);
 

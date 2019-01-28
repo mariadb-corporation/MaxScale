@@ -72,10 +72,14 @@ set -x
     echo ${test_set} | grep "NAME#"
     if [ $? == 0 ] ; then
         named_test=`echo ${test_set} | sed "s/NAME#//" | sed "s/ //g"`
+        echo ${named_test} | grep "\./"
+        if [ $? != 0 ] ; then
+            named_test="./"${named_test}
+        fi
     fi
 
     if [ ! -z "${named_test}" ] ; then
-        ./${named_test}
+        ${named_test}
     else
         ./check_backend
         if [ $? != 0 ]; then
