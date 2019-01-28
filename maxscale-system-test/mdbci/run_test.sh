@@ -71,7 +71,7 @@ if [ $res == 0 ] ; then
 set -x
     echo ${test_set} | grep "NAME#"
     if [ $? == 0 ] ; then
-        named_test=`echo ${test_set} | sed "s/NAME#//" | sed "s/ //g"`
+        named_test=`echo ${test_set} | sed "s/NAME#//"`
         echo ${named_test} | grep "\./"
         if [ $? != 0 ] ; then
             named_test="./"${named_test}
