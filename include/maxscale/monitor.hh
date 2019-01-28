@@ -193,6 +193,30 @@ public:
 
     void set_interval(int64_t interval);
 
+    /**
+     * Set status of monitored server.
+     *
+     * @param srv   Server, must be monitored by this monitor.
+     * @param bit   The server status bit to be sent.
+     * @errmsg_out  If the setting of the bit fails, on return the human readable
+     *              reason why it could not be set.
+     *
+     * @return True, if the bit could be set.
+     */
+    bool set_server_status(SERVER* srv, int bit, std::string* errmsg_out);
+
+    /**
+     * Clear status of monitored server.
+     *
+     * @param srv   Server, must be monitored by this monitor.
+     * @param bit   The server status bit to be cleared.
+     * @errmsg_out  If the clearing of the bit fails, on return the human readable
+     *              reason why it could not be cleared.
+     *
+     * @return True, if the bit could be cleared.
+     */
+    bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
+
     void show(DCB* dcb);
 
     const char* const m_name;           /**< Monitor instance name. TODO: change to string */

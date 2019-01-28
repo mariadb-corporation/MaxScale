@@ -108,10 +108,6 @@ private:
 
 ThisUnit this_unit;
 
-const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the maintenance status can be "
-                                 "set/cleared manually. Status was not modified.";
-const char WRN_REQUEST_OVERWRITTEN[] = "Previous maintenance request was not yet read by the monitor "
-                                       "and was overwritten.";
 const char ERR_TOO_LONG_CONFIG_VALUE[] = "The new value for %s is too long. Maximum length is %i characters.";
 
 // Converts Server::ConfigParam to MXS_CONFIG_PARAM and keeps them in the same order. Required for some
@@ -968,38 +964,9 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
      * but the race condition cannot cause significant harm. Monitors are never
      * freed so the pointer stays valid. */
     Monitor* mon = monitor_server_in_use(srv);
-    if (mon && mon->m_state == MONITOR_STATE_RUNNING)
+    if (mon)
     {
-        /* This server is monitored, in which case modifying any other status bit than Maintenance is
-         * disallowed. */
-        if (bit & ~(SERVER_MAINT | SERVER_BEING_DRAINED))
-        {
-            MXS_ERROR(ERR_CANNOT_MODIFY);
-            if (errmsg_out)
-            {
-                *errmsg_out = ERR_CANNOT_MODIFY;
-            }
-        }
-        else if (bit & SERVER_MAINT)
-        {
-            /* Maintenance is set/cleared using a special variable which the monitor reads when
-             * starting the next update cycle. */
-            int previous_request = atomic_exchange_int(&srv->maint_request, SERVER::MAINTENANCE_ON);
-            written = true;
-            // Warn if the previous request hasn't been read.
-            if (previous_request != SERVER::MAINTENANCE_NO_CHANGE)
-            {
-                MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
-            }
-            // Also set a flag so the next loop happens sooner.
-            atomic_store_int(&mon->m_check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
-        }
-        else
-        {
-            // TODO: This should be set the same way the maintenance bit is set.
-            srv->set_status(bit);
-            written = true;
-        }
+        written = mon->set_server_status(srv, bit, errmsg_out);
     }
     else
     {
@@ -1016,33 +983,9 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
     // See server_set_status().
     bool written = false;
     Monitor* mon = monitor_server_in_use(srv);
-    if (mon && mon->m_state == MONITOR_STATE_RUNNING)
+    if (mon)
     {
-        if (bit & ~(SERVER_MAINT | SERVER_BEING_DRAINED))
-        {
-            MXS_ERROR(ERR_CANNOT_MODIFY);
-            if (errmsg_out)
-            {
-                *errmsg_out = ERR_CANNOT_MODIFY;
-            }
-        }
-        else if (bit & SERVER_MAINT)
-        {
-            // Warn if the previous request hasn't been read.
-            int previous_request = atomic_exchange_int(&srv->maint_request, SERVER::MAINTENANCE_OFF);
-            written = true;
-            if (previous_request != SERVER::MAINTENANCE_NO_CHANGE)
-            {
-                MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
-            }
-            atomic_store_int(&mon->m_check_maintenance_flag, SERVER::MAINTENANCE_FLAG_CHECK);
-        }
-        else
-        {
-            // TODO: This should be set the same way the maintenance bit is set.
-            srv->clear_status(bit);
-            written = true;
-        }
+        written = mon->clear_server_status(srv, bit, errmsg_out);
     }
     else
     {
