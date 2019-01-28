@@ -86,7 +86,7 @@ SERVER_REF* RCR::get_root_master()
     SERVER_REF* master_host = nullptr;
     for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
     {
-        if (server_ref_is_active(ref) && ref->server->is_master() && ref->server->is_connectable())
+        if (server_ref_is_active(ref) && ref->server->is_master())
         {
             // No master found yet or this one has better weight.
             if (!master_host || ref->server_weight > master_host->server_weight)
@@ -211,6 +211,8 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
      */
     SERVER_REF* master_host = get_root_master();
 
+    bool connectable_master = master_host ? master_host->server->is_connectable() : false;
+
     /**
      * Find a backend server to connect to. This is the extent of the
      * load balancing algorithm we need to implement for this simple
@@ -242,7 +244,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
         /* Check server status bits against bitvalue from router_options */
         if (ref && (ref->server->status & bitmask & bitvalue))
         {
-            if (master_host)
+            if (master_host && connectable_master)
             {
                 if (ref == master_host
                     && (bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
@@ -299,7 +301,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
      */
     if (!candidate)
     {
-        if (master_host)
+        if (master_host && connectable_master)
         {
             candidate = master_host;
             // Even if we had 'router_options=slave' in the configuration file, we
@@ -316,10 +318,23 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
         }
         else
         {
-            MXS_ERROR("Failed to create new routing session. Couldn't find eligible"
-                      " candidate server. Freeing allocated resources.");
+            if (!master_host)
+            {
+                MXS_ERROR("Failed to create new routing session. Couldn't find eligible"
+                          " candidate server. Freeing allocated resources.");
+            }
+            else
+            {
+                mxb_assert(!connectable_master);
+                MXS_ERROR("The only possible candidate server (%s) is being drained "
+                          "and thus cannot be used.", master_host->server->address);
+            }
             return nullptr;
         }
+    }
+    else
+    {
+        mxb_assert(candidate->server->is_connectable());
     }
 
     /** Open the backend connection */
