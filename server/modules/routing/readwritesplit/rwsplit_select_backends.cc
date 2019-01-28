@@ -374,9 +374,18 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
     RWBackend* master = get_root_master(backends);
     const Config& cnf {config()};
 
-    if (!master && cnf.master_failure_mode == RW_FAIL_INSTANTLY)
+    if ((!master || !master->can_connect()) && cnf.master_failure_mode == RW_FAIL_INSTANTLY)
     {
-        MXS_ERROR("Couldn't find suitable Master from %lu candidates.", backends.size());
+        if (!master)
+        {
+            MXS_ERROR("Couldn't find suitable Master from %lu candidates.", backends.size());
+        }
+        else
+        {
+            MXS_ERROR("Master exists (%s), but it is being drained and cannot be used.",
+                      master->server()->address);
+        }
+
         return false;
     }
 
