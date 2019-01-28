@@ -299,8 +299,11 @@ typedef enum
     MXS_COM_STMT_RESET          = 26,
     MXS_COM_SET_OPTION          = 27,
     MXS_COM_STMT_FETCH          = 28,
+    MXS_COM_DAEMON              = 29,
+    MXS_COM_UNSUPPORTED         = 30,
+    MXS_COM_RESET_CONNECTION    = 31,
     MXS_COM_STMT_BULK_EXECUTE   = 0xfa,
-    MXS_COM_DAEMON,
+    MXS_COM_MULTI               = 0xfe,
     MXS_COM_END
 } mxs_mysql_cmd_t;
 

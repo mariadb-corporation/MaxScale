@@ -161,5 +161,18 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
             gwbuf_free(*ppPacket);
             *ppPacket = NULL;
         }
+
+        if (m_expected_responses == 0
+            && (command == MXS_COM_CHANGE_USER || command == MXS_COM_RESET_CONNECTION))
+        {
+            // This is the last session command to finish that resets the session state, reset the history
+            MXS_INFO("Resetting session command history (length: %lu)", m_sescmd_list.size());
+            m_sescmd_list.clear();
+            m_sescmd_responses.clear();
+            m_slave_responses.clear();
+            m_recv_sescmd = 0;
+            m_sent_sescmd = 0;
+            m_sescmd_count = 1;
+        }
     }
 }
