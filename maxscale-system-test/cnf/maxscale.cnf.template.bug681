@@ -29,11 +29,11 @@ password=skysql
 
 [Read-Connection-Listener-Slave]
 type=listener
-service=Read-Connection-Router Slave
+service=Read-Connection-Router-Slave
 protocol=MySQLClient
 port=4009
 
-[Read-Connection-Router Slave]
+[Read-Connection-Router-Slave]
 type=service
 router=readconnroute
 router_options=slave

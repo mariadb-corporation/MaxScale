@@ -9,7 +9,7 @@ servers= server1, server2,server3  ,server4
 user=maxskysql
 password= skysql
 
-[MySQL-Monitor 1]
+[MySQL-Monitor-1]
 type=monitor
 module=galeramon
 servers= server1, server2,server3  ,server4

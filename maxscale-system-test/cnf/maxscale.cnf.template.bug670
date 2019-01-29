@@ -94,7 +94,7 @@ service=Read-Connection-Router
 protocol=MySQLClient
 port=4008
 
-[Read-Connection-Router Slave]
+[Read-Connection-Router-Slave]
 type=service
 router=readconnroute
 router_options= slave
@@ -102,9 +102,9 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[Read-Connection-Listener Slave]
+[Read-Connection-Listener-Slave]
 type=listener
-service=Read-Connection-Router Slave
+service=Read-Connection-Router-Slave
 protocol=MySQLClient
 port=4009
 

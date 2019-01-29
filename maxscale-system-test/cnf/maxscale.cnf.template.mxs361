@@ -64,7 +64,7 @@ protocol=maxscaled
 #address=localhost
 socket=default
 
-[RW-Split-Router Galera]
+[RW-Split-Router-Galera]
 type=service
 router= readwritesplit
 servers=gserver1,gserver2,gserver3,gserver4
@@ -72,9 +72,9 @@ user=maxskysql
 password=skysql
 slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
-[RW-Split-Listener Galera]
+[RW-Split-Listener-Galera]
 type=listener
-service=RW-Split-Router Galera
+service=RW-Split-Router-Galera
 protocol=MySQLClient
 port=4016
 
