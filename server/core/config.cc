@@ -1229,6 +1229,10 @@ bool config_load_global(const char* filename)
                     "cache. To enable it, add '%s' to the configuration file.",
                     CN_QUERY_CLASSIFIER_CACHE_SIZE);
     }
+    else if (gateway.qc_cache_properties.max_size == 0)
+    {
+        MXS_NOTICE("Query classifier cache is disabled");
+    }
     else
     {
         MXS_NOTICE("Using up to %s of memory for query classifier cache",
