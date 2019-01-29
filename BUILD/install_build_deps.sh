@@ -18,6 +18,11 @@ then
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev
 
+  # One of these will work, older systems use libsystemd-daemon-dev
+  sudo apt-get install -y libsystemd-dev || \
+      sudo apt-get install -y libsystemd-daemon-dev
+
+
   ## separatelibgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
@@ -68,8 +73,13 @@ else
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel
 
+
     # Attempt to install libasan, it'll only work on CentOS 7
     sudo yum install -y --nogpgcheck libasan
+
+
+    # Attempt to install systemd-devel, doesn't work on CentOS 6
+    sudo yum install -y systemd-devel
 
     cat /etc/redhat-release | grep "release 5"
     if [ $? == 0 ]
