@@ -2716,7 +2716,7 @@ static void show_qc_all(DCB* dcb)
  */
 static void shutdown_monitor(DCB* dcb, Monitor* monitor)
 {
-    monitor_stop(monitor);
+    MonitorManager::monitor_stop(monitor);
 }
 
 /**
@@ -2727,7 +2727,7 @@ static void shutdown_monitor(DCB* dcb, Monitor* monitor)
  */
 static void restart_monitor(DCB* dcb, Monitor* monitor)
 {
-    MonitorManager::monitor_start(monitor, &monitor->parameters);
+    MonitorManager::monitor_start(monitor);
 }
 
 /**

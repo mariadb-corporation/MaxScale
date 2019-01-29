@@ -187,6 +187,11 @@ MariaDBMonitor* MariaDBMonitor::create(const string& name, const string& module)
  */
 bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
+    if (!MonitorWorker::configure(params))
+    {
+        return false;
+    }
+
     m_detect_stale_master = params->get_bool("detect_stale_master");
     m_detect_stale_slave = params->get_bool("detect_stale_slave");
     m_ignore_external_masters = params->get_bool("ignore_external_masters");

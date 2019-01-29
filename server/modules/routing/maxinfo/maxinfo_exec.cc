@@ -506,7 +506,7 @@ void exec_shutdown_monitor(DCB* dcb, MAXINFO_TREE* tree)
         Monitor* monitor = monitor_find(tree->value);
         if (monitor)
         {
-            monitor_stop(monitor);
+            MonitorManager::monitor_stop(monitor);
             maxinfo_send_ok(dcb);
         }
         else
@@ -615,7 +615,7 @@ void exec_restart_monitor(DCB* dcb, MAXINFO_TREE* tree)
         Monitor* monitor = monitor_find(tree->value);
         if (monitor)
         {
-            MonitorManager::monitor_start(monitor, &monitor->parameters);
+            MonitorManager::monitor_start(monitor);
             maxinfo_send_ok(dcb);
         }
         else

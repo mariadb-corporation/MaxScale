@@ -238,7 +238,7 @@ private:
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
-    bool configure(const MXS_CONFIG_PARAMETER* params);
+    bool configure(const MXS_CONFIG_PARAMETER* params) override;
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     void reset_server_info();
     void clear_server_info();

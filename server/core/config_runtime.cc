@@ -131,6 +131,78 @@ static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
     return {rval, params};
 }
 
+bool runtime_add_server(Monitor* mon, Server* server)
+{
+    using std::string;
+    mxb_assert(mon && server);
+    bool rval = false;
+
+    if (monitor_server_in_use(server))
+    {
+        MXS_ERROR("Server '%s' is already monitored.", server->name());
+    }
+    else
+    {
+        // To keep monitor modifications straightforward, all changes should go through the same
+        // alter_monitor function. As the function accepts key-value combinations (so that they are easily
+        // serialized), construct the value here.
+        string serverlist = mon->parameters.get_string(CN_SERVERS);
+        if (serverlist.empty())
+        {
+            // Unusual.
+            serverlist += server->name();
+        }
+        else
+        {
+            serverlist += string(", ") + server->name();
+        }
+        rval = runtime_alter_monitor(mon, CN_SERVERS, serverlist.c_str());
+    }
+    return rval;
+}
+
+bool runtime_remove_server(Monitor* mon, Server* server)
+{
+    using std::string;
+    mxb_assert(mon && server);
+    bool rval = false;
+
+    if (monitor_server_in_use(server) != mon)
+    {
+        MXS_ERROR("Server '%s' is not monitored by '%s'.", server->name(), mon->m_name);
+    }
+    else
+    {
+        // Construct the new list. The removed value could be anywhere.
+        string serverlist = mon->parameters.get_string(CN_SERVERS);
+        auto names = config_break_list_string(serverlist);
+        bool found = false;
+        for (auto iter = names.begin(); iter != names.end(); ++iter)
+        {
+            if (*iter == server->name())
+            {
+                found = true;
+                names.erase(iter);
+                break;
+            }
+        }
+
+        if (found)
+        {
+            // Rebuild the string.
+            string new_list;
+            string separator;
+            for (auto name : names)
+            {
+                new_list += separator + name;
+                separator = ", ";
+            }
+            rval = runtime_alter_monitor(mon, CN_SERVERS, new_list.c_str());
+        }
+    }
+    return rval;
+}
+
 bool runtime_link_server(Server* server, const char* target)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
@@ -165,7 +237,7 @@ bool runtime_link_server(Server* server, const char* target)
     }
     else if (monitor)
     {
-        if (MonitorManager::add_server(monitor, server))
+        if (runtime_add_server(monitor, server))
         {
             monitor_serialize(monitor);
             rval = true;
@@ -213,7 +285,7 @@ bool runtime_unlink_server(Server* server, const char* target)
         }
         else if (monitor)
         {
-            MonitorManager::remove_server(monitor, server);
+            runtime_remove_server(monitor, server);
             monitor_serialize(monitor);
             rval = true;
         }
@@ -597,85 +669,23 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     {
         return false;
     }
-    else if (strcmp(key, "servers") == 0)
-    {
-        config_runtime_error("Parameter '%s' cannot be altered via this method", key);
-        return false;
-    }
 
-    std::lock_guard<std::mutex> guard(crt_lock);
-    monitor->parameters.set(key, value);
-    bool success = true;
-    if (strcmp(key, CN_USER) == 0)
-    {
-        monitor->set_user(value);
-    }
-    else if (strcmp(key, CN_PASSWORD) == 0)
-    {
-        monitor->set_password(value);
-    }
-    else if (strcmp(key, CN_MONITOR_INTERVAL) == 0)
-    {
-        if (auto ival = get_positive_int(value))
-        {
-            monitor->set_interval(ival);
-        }
-    }
-    else if (strcmp(key, CN_BACKEND_CONNECT_TIMEOUT) == 0)
-    {
-        if (auto ival = get_positive_int(value))
-        {
-            monitor->set_network_timeout(MONITOR_CONNECT_TIMEOUT, ival, CN_BACKEND_CONNECT_TIMEOUT);
-        }
-    }
-    else if (strcmp(key, CN_BACKEND_WRITE_TIMEOUT) == 0)
-    {
-        if (auto ival = get_positive_int(value))
-        {
-            monitor->set_network_timeout(MONITOR_WRITE_TIMEOUT, ival, CN_BACKEND_WRITE_TIMEOUT);
-        }
-    }
-    else if (strcmp(key, CN_BACKEND_READ_TIMEOUT) == 0)
-    {
-        if (auto ival = get_positive_int(value))
-        {
-            monitor->set_network_timeout(MONITOR_READ_TIMEOUT, ival, CN_BACKEND_READ_TIMEOUT);
-        }
-    }
-    else if (strcmp(key, CN_BACKEND_CONNECT_ATTEMPTS) == 0)
-    {
-        if (auto ival = get_positive_int(value))
-        {
-            monitor->set_network_timeout(MONITOR_CONNECT_ATTEMPTS, ival, CN_BACKEND_CONNECT_ATTEMPTS);
-        }
-    }
-    else if (strcmp(key, CN_JOURNAL_MAX_AGE) == 0)
-    {
-        if (auto ival = get_positive_int(value))
-        {
-            monitor->monitor_set_journal_max_age(ival);
-        }
-    }
-    else if (strcmp(key, CN_SCRIPT_TIMEOUT) == 0)
-    {
-        if (auto ival = get_positive_int(value))
-        {
-            monitor->set_script_timeout(ival);
-        }
-    }
-    else if (strcmp(key, CN_DISK_SPACE_THRESHOLD) == 0)
-    {
-        success = monitor->set_disk_space_threshold(value);
-    }
-    else
-    {
-        // This should be a module specific parameter
-        mxb_assert(config_param_is_valid(mod->parameters, key, value, NULL));
-    }
+    // Backup monitor parameters in case configure fails.
+    MXS_CONFIG_PARAMETER originals = monitor->parameters;
+    MXS_CONFIG_PARAMETER modified = monitor->parameters;
 
+    modified.set(key, value);
+    bool success = monitor->configure(&modified);
     if (success)
     {
         MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->m_name, key, value);
+    }
+    else
+    {
+        // Configure failed, restore original configs. This should not fail.
+        // TODO: add a flag to monitor which prevents startup if config is wrong.
+        MXB_AT_DEBUG(bool check =) monitor->configure(&originals);
+        mxb_assert(check);
     }
     return success;
 }
@@ -686,7 +696,7 @@ bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
     bool was_running = (monitor->state() == MONITOR_STATE_RUNNING);
     if (was_running)
     {
-        monitor_stop(monitor);
+        MonitorManager::monitor_stop(monitor);
     }
     bool success = do_alter_monitor(monitor, key, value);
     if (success)
@@ -695,7 +705,7 @@ bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
     }
     if (was_running)
     {
-        MonitorManager::monitor_start(monitor, &monitor->parameters);
+        MonitorManager::monitor_start(monitor);
     }
     return success;
 }
@@ -1422,7 +1432,7 @@ bool runtime_destroy_monitor(Monitor* monitor)
 
     if (rval)
     {
-        monitor_stop(monitor);
+        MonitorManager::monitor_stop(monitor);
 
         while (!monitor->m_servers.empty())
         {
@@ -2258,7 +2268,7 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
             }
             else
             {
-                MonitorManager::monitor_start(rval, &rval->parameters);
+                MonitorManager::monitor_start(rval);
             }
         }
     }
@@ -2392,14 +2402,15 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
 
 bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 {
-    bool rval = false;
+    bool success = false;
+
     std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));
     mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json)
         && object_to_server_relations(monitor->m_name, old_json.get(), new_json))
     {
-        rval = true;
+        success = true;
         bool changed = false;
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
@@ -2409,7 +2420,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
         if (parameters)
         {
             bool restart = (monitor->state() != MONITOR_STATE_STOPPED);
-            monitor_stop(monitor);
+            MonitorManager::monitor_stop(monitor);
             const char* key;
             json_t* value;
 
@@ -2428,24 +2439,24 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
                 }
                 else
                 {
-                    rval = false;
+                    success = false;
                     break;
                 }
             }
 
-            if (rval && changed)
+            if (success && changed)
             {
                 monitor_serialize(monitor);
             }
 
             if (restart)
             {
-                MonitorManager::monitor_start(monitor, &monitor->parameters);
+                MonitorManager::monitor_start(monitor);
             }
         }
     }
 
-    return rval;
+    return success;
 }
 
 bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, json_t* json)

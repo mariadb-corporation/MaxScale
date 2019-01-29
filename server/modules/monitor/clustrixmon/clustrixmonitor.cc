@@ -55,6 +55,11 @@ ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& modul
 
 bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
+    if (!MonitorWorker::configure(pParams))
+    {
+        return false;
+    }
+
     m_health_urls.clear();
     m_nodes.clear();
 

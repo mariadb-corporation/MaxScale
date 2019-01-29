@@ -167,7 +167,7 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
         return NULL;
     }
 
-    if (mon->configure_base(params)) // TODO: Move derived class configure() here
+    if (mon->configure(params))
     {
         this_unit.insert_front(mon);
     }
@@ -198,7 +198,7 @@ void Monitor::stop()
     }
 }
 
-bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
+bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
     m_settings.conn_settings.read_timeout = params->get_integer(CN_BACKEND_READ_TIMEOUT);
     m_settings.conn_settings.write_timeout = params->get_integer(CN_BACKEND_WRITE_TIMEOUT);
@@ -214,11 +214,19 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     m_settings.conn_settings.password = params->get_string(CN_PASSWORD);
 
     // The monitor serverlist has already been checked to be valid. Empty value is ok too.
+    // First, remove all servers.
+
     auto servers_temp = params->get_server_list(CN_SERVERS);
+    while (!m_servers.empty())
+    {
+        SERVER* remove = m_servers.front()->server;
+        remove_server(remove);
+    }
+
     for (auto elem : servers_temp)
     {
         // This function checks if server is already monitored. TODO: This should be a config error.
-        Monitor::add_server(this, elem);
+        add_server(elem);
     }
 
     /* The previous config values were normal types and were checked by the config manager
@@ -258,12 +266,7 @@ void MonitorManager::destroy_all_monitors()
     }
 }
 
-/**
- * Start an individual monitor that has previously been stopped.
- *
- * @param monitor The Monitor that should be started
- */
-void MonitorManager::monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
+void MonitorManager::monitor_start(Monitor* monitor)
 {
     mxb_assert(monitor);
 
@@ -272,11 +275,16 @@ void MonitorManager::monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER*
     // Only start the monitor if it's stopped.
     if (monitor->state() == MONITOR_STATE_STOPPED)
     {
-        if (!monitor->start(params))
+        if (!monitor->start())
         {
             MXS_ERROR("Failed to start monitor '%s'.", monitor->m_name);
         }
     }
+}
+
+bool MonitorManager::add_server(Monitor* mon, SERVER* server)
+{
+    return false;
 }
 
 void MonitorManager::populate_services()
@@ -295,18 +303,13 @@ void monitor_start_all()
     this_unit.foreach_monitor([](Monitor* monitor) {
         if (monitor->m_active)
         {
-            MonitorManager::monitor_start(monitor, &monitor->parameters);
+            MonitorManager::monitor_start(monitor);
         }
         return true;
     });
 }
 
-/**
- * Stop a given monitor
- *
- * @param monitor       The monitor to stop
- */
-void monitor_stop(Monitor* monitor)
+void MonitorManager::monitor_stop(Monitor* monitor)
 {
     mxb_assert(monitor);
 
@@ -334,7 +337,7 @@ void monitor_stop_all()
     this_unit.foreach_monitor([](Monitor* monitor) {
         if (monitor->m_active)
         {
-            monitor_stop(monitor);
+            MonitorManager::monitor_stop(monitor);
         }
         return true;
     });
@@ -358,14 +361,14 @@ bool Monitor::add_server(Monitor* mon, SERVER* server)
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
-            monitor_stop(mon);
+            MonitorManager::monitor_stop(mon);
         }
 
         mon->add_server(server);
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
-            MonitorManager::monitor_start(mon, &mon->parameters);
+            MonitorManager::monitor_start(mon);
         }
     }
 
@@ -446,14 +449,14 @@ void Monitor::remove_server(Monitor* mon, SERVER* server)
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
-        monitor_stop(mon);
+        MonitorManager::monitor_stop(mon);
     }
 
     mon->remove_server(server);
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
-        MonitorManager::monitor_start(mon, &mon->parameters);
+        MonitorManager::monitor_start(mon);
     }
 }
 
@@ -2498,7 +2501,7 @@ json_t* MonitorWorker::diagnostics_json() const
     return json_object();
 }
 
-bool MonitorWorker::start(const MXS_CONFIG_PARAMETER* pParams)
+bool MonitorWorker::start()
 {
     // This should only be called by monitor_start(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.
@@ -2530,27 +2533,23 @@ bool MonitorWorker::start(const MXS_CONFIG_PARAMETER* pParams)
     if (m_checked)
     {
         m_master = NULL;
-
-        if (configure(pParams))
+        m_loop_called = get_time_ms() - m_settings.interval; // Next tick should happen immediately.
+        if (!Worker::start())
         {
-            m_loop_called = get_time_ms() - m_settings.interval; // Next tick should happen immediately.
-            if (!Worker::start())
-            {
-                MXS_ERROR("Failed to start worker for monitor '%s'.", m_name);
-            }
-            else
-            {
-                // Ok, so the thread started. Let's wait until we can be certain the
-                // state has been updated.
-                m_semaphore.wait();
+            MXS_ERROR("Failed to start worker for monitor '%s'.", m_name);
+        }
+        else
+        {
+            // Ok, so the thread started. Let's wait until we can be certain the
+            // state has been updated.
+            m_semaphore.wait();
 
-                started = m_thread_running.load(std::memory_order_acquire);
-                if (!started)
-                {
-                    // Ok, so the initialization failed and the thread will exit.
-                    // We need to wait on it so that the thread resources will not leak.
-                    Worker::join();
-                }
+            started = m_thread_running.load(std::memory_order_acquire);
+            if (!started)
+            {
+                // Ok, so the initialization failed and the thread will exit.
+                // We need to wait on it so that the thread resources will not leak.
+                Worker::join();
             }
         }
     }
@@ -2719,7 +2718,7 @@ void MonitorWorker::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
 
 bool MonitorWorker::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
-    return true;
+    return Monitor::configure(pParams);
 }
 
 bool MonitorWorker::has_sufficient_permissions()

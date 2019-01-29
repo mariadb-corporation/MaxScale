@@ -104,6 +104,11 @@ json_t* GaleraMonitor::diagnostics_json() const
 
 bool GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
+    if (!MonitorWorkerSimple::configure(params))
+    {
+        return false;
+    }
+
     m_disableMasterFailback = params->get_bool("disable_master_failback");
     m_availableWhenDonor = params->get_bool("available_when_donor");
     m_disableMasterRoleSetting = params->get_bool("disable_master_role_setting");

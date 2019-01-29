@@ -193,7 +193,6 @@ class Monitor
 public:
     Monitor(const std::string& name, const std::string& module);
     virtual ~Monitor();
-    virtual bool configure(const MXS_CONFIG_PARAMETER* params) = 0;
 
     static const int STATUS_FLAG_NOCHECK = 0;
     static const int STATUS_FLAG_CHECK   = -1;
@@ -201,14 +200,13 @@ public:
     virtual monitor_state_t state() const = 0;
 
     /**
-     * Starts the monitor. If the monitor requires polling of the servers, it should create
-     * a separate monitoring thread.
-     *
-     * @param params  Parameters for this monitor
+     * Configure the monitor. Called by monitor creation and altering code. Any inheriting classes
+     * should override this with their own configuration processing function. The overriding function
+     * should first call the configure() of its immediate base class, similar to constructors.
      *
      * @return True, if the monitor could be started, false otherwise.
      */
-    virtual bool start(const MXS_CONFIG_PARAMETER* params) = 0;
+    virtual bool configure(const MXS_CONFIG_PARAMETER* params);
 
     /**
      * Stops the monitor.
@@ -394,20 +392,18 @@ protected:
     Settings m_settings;
 
 private:
-    void add_server(SERVER* server);
-
-    void remove_server(SERVER* server);
-
-private:
     friend class MonitorManager;
 
+    void add_server(SERVER* server);
+    void remove_server(SERVER* server);
+
     /**
-     * Configure base class. Called by monitor creation code.
+     * Starts the monitor. If the monitor requires polling of the servers, it should create
+     * a separate monitoring thread.
      *
-     * @param params Config parameters
-     * @return True on success
+     * @return True, if the monitor could be started, false otherwise.
      */
-    bool configure_base(const MXS_CONFIG_PARAMETER* params);
+    virtual bool start() = 0;
 
     /**
      * Launch a script
@@ -653,7 +649,6 @@ public:
      *
      * - Calls @c has_sufficient_permissions(), if it has not been done earlier.
      * - Updates the 'script' and 'events' configuration paramameters.
-     * - Calls @c configure().
      * - Starts the monitor thread.
      *
      * - Once the monitor thread starts, it will
@@ -668,11 +663,9 @@ public:
      *     - Sleep until time for next @c tick().
      *   - Call @c post_loop().
      *
-     * @param param  The parameters of the monitor.
-     *
      * @return True, if the monitor started, false otherwise.
      */
-    bool start(const MXS_CONFIG_PARAMETER* params) final;
+    bool start() final;
 
     /**
      * @brief Write diagnostics
@@ -747,7 +740,7 @@ protected:
      *
      * @note If false is returned, then the monitor will not be started.
      */
-    virtual bool configure(const MXS_CONFIG_PARAMETER* pParams);
+    bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
 
     /**
      * @brief Check whether the monitor has sufficient rights

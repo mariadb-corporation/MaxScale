@@ -423,7 +423,7 @@ public:
      *
      * @return True if the thread could be started, false otherwise.
      */
-    bool start();
+    virtual bool start();
 
     /**
      * Waits for the worker to finish.

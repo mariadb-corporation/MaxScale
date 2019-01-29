@@ -106,27 +106,32 @@ public:
      */
     static void destroy_all_monitors();
 
-    static void monitor_start(Monitor*, const MXS_CONFIG_PARAMETER*);
+    static void monitor_start(Monitor*);
 
     /**
      * @brief Populate services with the servers of the monitors.
      */
     static void populate_services();
 
-    static bool add_server(Monitor* mon, SERVER* server)
-    {
-        return Monitor::add_server(mon, server);
-    }
+    static bool add_server(Monitor* mon, SERVER* server);
+
 
     static void remove_server(Monitor* mon, SERVER* server)
     {
         Monitor::remove_server(mon, server);
     }
+
+    /**
+     * Stop a given monitor
+     *
+     * @param monitor The monitor to stop
+     */
+    static void monitor_stop(Monitor*);
 };
 
 
 
-void monitor_stop(Monitor*);
+
 
 /**
  * @brief Mark monitor as deactivated
