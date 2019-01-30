@@ -936,6 +936,18 @@ std::string Mariadb_nodes::get_server_id_str(int index)
     return ss.str();
 }
 
+std::vector<int> Mariadb_nodes::get_all_server_ids()
+{
+    std::vector<int> rval;
+
+    for (int i = 0; i < N; i++)
+    {
+        rval.push_back(get_server_id(i));
+    }
+
+    return rval;
+}
+
 bool do_flush_hosts(MYSQL* conn)
 {
     int local_result = 0;
