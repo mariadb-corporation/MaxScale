@@ -64,6 +64,9 @@ public:
 
     bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
 
+    bool softfail(SERVER* pServer, json_t** ppError);
+    bool unsoftfail(SERVER* pServer, json_t** ppError);
+
 private:
     ClustrixMonitor(const std::string& name, const std::string& module);
 

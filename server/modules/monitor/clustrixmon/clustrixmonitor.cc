@@ -55,6 +55,18 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     return true;
 }
 
+bool ClustrixMonitor::softfail(SERVER* pServer, json_t** ppError)
+{
+    MXS_NOTICE("Should softfail %s.", pServer->address);
+    return true;
+}
+
+bool ClustrixMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
+{
+    MXS_NOTICE("Should unsoftfail %s.", pServer->address);
+    return true;
+}
+
 void ClustrixMonitor::pre_loop()
 {
     make_health_check();
