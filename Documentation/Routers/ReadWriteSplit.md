@@ -5,44 +5,7 @@ and its intended use case scenarios. It also displays all router configuration
 parameters with their descriptions. A list of current limitations of the module
 is included and use examples are provided.
 
-Table of Contents
-=================
-
-
-* [Overview](#overview)
-* [Configuration](#configuration)
-* [Parameters](#parameters)
-   * [max_slave_connections](#max_slave_connections)
-   * [max_slave_replication_lag](#max_slave_replication_lag)
-   * [use_sql_variables_in](#use_sql_variables_in)
-   * [connection_keepalive](#connection_keepalive)
-   * [master_reconnection](#master_reconnection)
-   * [slave_selection_criteria](#slave_selection_criteria)
-      * [Server Weights and slave_selection_criteria](#server-weights-and-slave_selection_criteria)
-      * [Interaction Between slave_selection_criteria and max_slave_connections](#interaction-between-slave_selection_criteria-and-max_slave_connections)
-   * [max_sescmd_history](#max_sescmd_history)
-   * [disable_sescmd_history](#disable_sescmd_history)
-   * [prune_sescmd_history](#prune_sescmd_history)
-   * [master_accept_reads](#master_accept_reads)
-   * [strict_multi_stmt](#strict_multi_stmt)
-   * [strict_sp_calls](#strict_sp_calls)
-   * [master_failure_mode](#master_failure_mode)
-   * [retry_failed_reads](#retry_failed_reads)
-   * [delayed_retry](#delayed_retry)
-   * [delayed_retry_timeout](#delayed_retry_timeout)
-   * [transaction_replay](#transaction_replay)
-   * [transaction_replay_max_size](#transaction_replay_max_size)
-   * [optimistic_trx](#optimistic_trx)
-   * [causal_reads](#causal_reads)
-   * [causal_reads_timeout](#causal_reads_timeout)
-* [Routing hints](#routing-hints)
-* [Limitations](#limitations)
-* [Legacy Configuration](#legacy-configuration)
-* [Examples](#examples)
-* [Readwritesplit routing decisions](#readwritesplit-routing-decisions)
-   * [Routing to Master](#routing-to-master)
-   * [Routing to Slaves](#routing-to-slaves)
-   * [Routing to every session backend](#routing-to-every-session-backend)
+[TOC]
 
 ## Overview
 
