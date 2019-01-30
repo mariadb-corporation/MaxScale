@@ -87,6 +87,20 @@ private:
     void initiate_delayed_http_check();
     bool check_http(Call::action_t action);
 
+    bool perform_softfail(SERVER* pServer, json_t** ppError);
+    bool perform_unsoftfail(SERVER* pServer, json_t** ppError);
+
+    enum class Operation
+    {
+        SOFTFAIL,
+        UNSOFTFAIL,
+    };
+
+    bool perform_operation(Operation operation,
+                           SERVER* pServer,
+                           json_t** ppError);
+
+
     static long now()
     {
         return mxb::WorkerLoad::get_time_ms();

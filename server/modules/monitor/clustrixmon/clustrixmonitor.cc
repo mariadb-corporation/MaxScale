@@ -14,10 +14,20 @@
 #include "clustrixmonitor.hh"
 #include <algorithm>
 #include <set>
+#include <maxscale/json_api.h>
 #include "../../../core/internal/config_runtime.hh"
 
 namespace http = mxb::http;
 using namespace std;
+
+#define LOG_JSON_ERROR(ppJson, format, ...) \
+    do { \
+        MXS_ERROR(format, ##__VA_ARGS__); \
+        if (ppJson) \
+        { \
+            *ppJson = mxs_json_error_append(*ppJson, format, ##__VA_ARGS__); \
+        } \
+    } while (false)
 
 namespace
 {
@@ -57,13 +67,45 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 
 bool ClustrixMonitor::softfail(SERVER* pServer, json_t** ppError)
 {
-    MXS_NOTICE("Should softfail %s.", pServer->address);
+    bool rv = false;
+
+    if (is_running())
+    {
+        call([this, pServer, ppError, &rv]() {
+                rv = perform_softfail(pServer, ppError);
+            },
+            EXECUTE_QUEUED);
+    }
+    else
+    {
+        LOG_JSON_ERROR(ppError,
+                       "%s: The monitor is not running and hence "
+                       "SOFTFAIL cannot be performed for %s.",
+                       m_name, pServer->address);
+    }
+
     return true;
 }
 
 bool ClustrixMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
 {
-    MXS_NOTICE("Should unsoftfail %s.", pServer->address);
+    bool rv = false;
+
+    if (is_running())
+    {
+        call([this, pServer, ppError, &rv]() {
+                rv = perform_unsoftfail(pServer, ppError);
+            },
+            EXECUTE_QUEUED);
+    }
+    else
+    {
+        LOG_JSON_ERROR(ppError,
+                       "%s: The monitor is not running and hence "
+                       "UNSOFTFAIL cannot be performed for %s.",
+                       m_name, pServer->address);
+    }
+
     return true;
 }
 
@@ -217,7 +259,7 @@ void ClustrixMonitor::refresh_nodes()
 
                         // '@@' ensures no clash with user created servers.
                         // Monitor name ensures no clash with other Clustrix monitor instances.
-                        string name = string("@@") + m_name + ":server-" + std::to_string(id);
+                        string name = string("@@") + m_name + ":node-" + std::to_string(id);
 
                         auto nit = m_nodes.find(id);
                         auto mit = memberships.find(id);
@@ -565,4 +607,94 @@ bool ClustrixMonitor::check_http(Call::action_t action)
     }
 
     return false;
+}
+
+bool ClustrixMonitor::perform_softfail(SERVER* pServer, json_t** ppError)
+{
+    return perform_operation(Operation::SOFTFAIL, pServer, ppError);
+}
+
+bool ClustrixMonitor::perform_unsoftfail(SERVER* pServer, json_t** ppError)
+{
+    return perform_operation(Operation::UNSOFTFAIL, pServer, ppError);
+}
+
+bool ClustrixMonitor::perform_operation(Operation operation,
+                                        SERVER* pServer,
+                                        json_t** ppError)
+{
+    bool performed = false;
+
+    const char ZSOFTFAIL[] = "SOFTFAIL";
+    const char ZUNSOFTFAIL[] = "UNSOFTFAIL";
+
+    const char* zOperation = (operation == Operation::SOFTFAIL) ? ZSOFTFAIL : ZUNSOFTFAIL;
+
+    if (!m_pHub_con)
+    {
+        check_hub_and_refresh_nodes();
+    }
+
+    if (m_pHub_con)
+    {
+        auto it = find_if(m_nodes.begin(), m_nodes.end(),
+                          [pServer] (const std::pair<int, ClustrixNode>& element) {
+                              return element.second.server() == pServer;
+                          });
+
+        if (it != m_nodes.end())
+        {
+            ClustrixNode& node = it->second;
+
+            const char ZQUERY_FORMAT[] = "ALTER CLUSTER %s %d";
+
+            int id = node.id();
+            char zQuery[sizeof(ZQUERY_FORMAT) + sizeof(ZUNSOFTFAIL) + UINTLEN(id)]; // ZUNSOFTFAIL is longer
+
+            sprintf(zQuery, ZQUERY_FORMAT, zOperation, id);
+
+            if (mysql_query(m_pHub_con, zQuery) == 0)
+            {
+                MXS_NOTICE("Clustrix monitor %s performed %s on node %d (%s).",
+                           m_name, zOperation, id, pServer->address);
+
+                if (operation == Operation::SOFTFAIL)
+                {
+                    MXS_NOTICE("%s: Turning on 'Being Drained' on server %s.",
+                               m_name, pServer->address);
+                    pServer->set_status(SERVER_BEING_DRAINED);
+                }
+                else
+                {
+                    mxb_assert(operation == Operation::UNSOFTFAIL);
+
+                    MXS_NOTICE("%s: Turning off 'Being Drained' on server %s.",
+                               m_name, pServer->address);
+                    pServer->clear_status(SERVER_BEING_DRAINED);
+                }
+            }
+            else
+            {
+                LOG_JSON_ERROR(ppError,
+                               "%s: The execution of '%s' failed: %s",
+                               m_name, zQuery, mysql_error(m_pHub_con));
+            }
+        }
+        else
+        {
+            LOG_JSON_ERROR(ppError,
+                           "%s: The server %s is not being monitored, "
+                           "cannot perform %s.",
+                           m_name, pServer->address, zOperation);
+        }
+    }
+    else
+    {
+        LOG_JSON_ERROR(ppError,
+                       "%s: Could not could not connect to any Clustrix node, "
+                       "cannot perform %s of %s.",
+                       m_name, zOperation, pServer->address);
+    }
+
+    return performed;
 }

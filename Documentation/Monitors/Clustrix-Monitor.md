@@ -28,6 +28,26 @@ password=mypwd
 
 ```
 
+## Dynamic Servers
+
+The server objects the Clustrix monitor creates for each detected
+Clustrix node will be named like
+```
+@@<name-of-clustrix-monitor>:node-<id>
+```
+where `<name-of-clustrix-monitor>` is the name of the Clustrix monitor
+instance, as defined in the MaxScale configuration file, and `<id>` is the
+id of the Clustrix node.
+
+For instance, with the Clustrix monitor defined as above and a Clustrix
+cluster consisting of 3 nodes whose ids are `1`, `2` and `3` respectively,
+the names of the created server objects will be:
+```
+@@TheClustrixMonitor:node-1
+@@TheClustrixMonitor:node-2
+@@TheClustrixMonitor:node-3
+```
+
 ### Grants
 
 Note that the monitor user _must_ have `SELECT` grant on the following tables:
@@ -37,8 +57,13 @@ Note that the monitor user _must_ have `SELECT` grant on the following tables:
 
 You can give the necessary grants using the following commands:
 ```
-    grant select on system.membership to 'myuser'@'%';
-    grant select on system.nodeinfo to 'myuser'@'%';
+    GRANT SELECT ON system.membership TO 'myuser'@'%';
+    GRANT SELECT ON system.nodeinfo TO 'myuser'@'%';
+```
+Further, if you want be able to _softfail_ and _unsoftfail_a node via MaxScale,
+then the monitor user must have `SUPER` privileges, which can be granted like:
+```
+    GRANT SUPER ON *.* TO 'myuser'@'%';
 ```
 The user name must be changed to the one actually being used.
 
@@ -69,3 +94,45 @@ considers a particular node to be down. The default value is 2.
 ```
 health_check_threshold=3
 ```
+
+## Commands
+
+The Clustrix monitor supports the following module commands.
+
+### `softfail`
+
+With the `softfail` module command, a node can be _softfailed_ via
+MaxScale. The command requires as argument the name of the Clustrix
+monitor instance (as defined in the configuration file) and the name
+of the node to be softfailed.
+
+For instance, with a configuration file like
+```
+[TheClustrixMonitor]
+type=monitor
+module=clustrixmon
+...
+```
+then the node whose server name is `@@TheClustrixMonitor:node-1` can
+be softfailed like
+```
+$ maxctrl call command clustrixmon softfail TheClustrixMonitor @@TheClustrixMonitor:node-1
+```
+If a node is successfully softfailed, then the status of the corresponding
+MaxScale server object will be set to `Being Drained`, which will prevent
+new connections from being created to the node.
+
+### `unsoftfail`
+
+With the `unsoftfail` module command, a node can be _unsoftfailed_ via
+MaxScale. The command requires as argument the name of the Clustrix
+monitor instance (as defined in the configuration file) and the name
+of the node to be unsoftfailed.
+
+With a setup similar to the `softfail` case, a node can be unsoftfailed
+like:
+```
+$ maxctrl call command clustrixmon unsoftfail TheClustrixMonitor @@TheClustrixMonitor:node-1
+```
+If a node is successfully softfailed, then a `Being Drained` status of
+the corresponding MaxScale server object will be cleared.
