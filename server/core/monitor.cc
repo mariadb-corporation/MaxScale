@@ -2356,16 +2356,6 @@ bool Monitor::set_disk_space_threshold(const string& dst_setting)
 namespace
 {
 
-MXS_MONITORED_SERVER* get_monitored_server(MXS_MONITORED_SERVER* pMs, SERVER* pServer)
-{
-    while (pMs && (pMs->server != pServer))
-    {
-        pMs = pMs->next;
-    }
-
-    return pMs;
-}
-
 const char ERR_CANNOT_MODIFY[] =
     "The server is monitored, so only the maintenance status can be "
     "set/cleared manually. Status was not modified.";
@@ -2375,19 +2365,19 @@ const char WRN_REQUEST_OVERWRITTEN[] =
 
 bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    MXS_MONITORED_SERVER* msrv = get_monitored_server(this->monitored_servers, srv);
+    MXS_MONITORED_SERVER* msrv = mon_get_monitored_server(this, srv);
     mxb_assert(msrv);
 
     if (!msrv)
     {
         MXS_ERROR("Monitor %s requested to set status of server %s that it does not monitor.",
-                  this->name, srv->address);
+                  m_name, srv->address);
         return false;
     }
 
     bool written = false;
 
-    if (this->state == MONITOR_STATE_RUNNING)
+    if (m_state == MONITOR_STATE_RUNNING)
     {
         /* This server is monitored, in which case modifying any other status bit than Maintenance is
          * disallowed. */
@@ -2438,19 +2428,19 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 
 bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    MXS_MONITORED_SERVER* msrv = get_monitored_server(this->monitored_servers, srv);
+    MXS_MONITORED_SERVER* msrv = mon_get_monitored_server(this, srv);
     mxb_assert(msrv);
 
     if (!msrv)
     {
         MXS_ERROR("Monitor %s requested to clear status of server %s that it does not monitor.",
-                  this->name, srv->address);
+                  m_name, srv->address);
         return false;
     }
 
     bool written = false;
 
-    if (this->state == MONITOR_STATE_RUNNING)
+    if (m_state == MONITOR_STATE_RUNNING)
     {
         if (bit & ~(SERVER_MAINT | SERVER_BEING_DRAINED))
         {
