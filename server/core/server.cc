@@ -370,32 +370,15 @@ Server* Server::find_by_unique_name(const string& name)
     return rval;
 }
 
-int SERVER::server_find_by_unique_names(char** server_names, int size, SERVER*** output)
+std::vector<SERVER*> SERVER::server_find_by_unique_names(const std::vector<string>& server_names)
 {
-    mxb_assert(server_names && (size > 0));
-
-    SERVER** results = (SERVER**)MXS_CALLOC(size, sizeof(SERVER*));
-    if (!results)
+    std::vector<SERVER*> rval;
+    rval.reserve(server_names.size());
+    for (auto elem : server_names)
     {
-        return 0;
+        rval.push_back(Server::find_by_unique_name(elem));
     }
-
-    int found = 0;
-    for (int i = 0; i < size; i++)
-    {
-        results[i] = Server::find_by_unique_name(server_names[i]);
-        found += (results[i]) ? 1 : 0;
-    }
-
-    if (found)
-    {
-        *output = results;
-    }
-    else
-    {
-        MXS_FREE(results);
-    }
-    return found;
+    return rval;
 }
 
 void Server::printServer()

@@ -149,7 +149,7 @@ static uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER 
     | SERVER_JOINED | SERVER_NDB;
 
 Monitor* MonitorManager::create_monitor(const string& name, const string& module,
-                                            MXS_CONFIG_PARAMETER* params)
+                                        MXS_CONFIG_PARAMETER* params)
 {
     MXS_MONITOR_API* api = (MXS_MONITOR_API*)load_module(module.c_str(), MODULE_MONITOR);
     if (!api)
@@ -200,10 +200,12 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     m_settings.conn_settings.username = config_get_string(params, CN_USER);
     m_settings.conn_settings.password = config_get_string(params, CN_PASSWORD);
 
-    for (auto& s : mxs::strtok(config_get_string(params, CN_SERVERS), ","))
+    // The monitor serverlist has already been checked to be valid. Empty value is ok too.
+    auto servers_temp = config_get_server_list(params, CN_SERVERS);
+    for (auto elem : servers_temp)
     {
-        fix_object_name(s);
-        monitor_add_server(this, Server::find_by_unique_name(s));
+        // This function checks if server is already monitored. TODO: This should be a config error.
+        monitor_add_server(this, elem);
     }
 
     /* The previous config values were normal types and were checked by the config manager
@@ -2259,49 +2261,48 @@ MXS_MONITORED_SERVER* mon_get_monitored_server(const Monitor* mon, SERVER* searc
     return NULL;
 }
 
-int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
-                           const char* key,
-                           const Monitor* mon,
-                           MXS_MONITORED_SERVER*** monitored_servers_out)
+std::vector<MXS_MONITORED_SERVER*> mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
+                                                          const char* key, const Monitor* mon,
+                                                          bool* error_out)
 {
-    mxb_assert(monitored_servers_out != NULL && *monitored_servers_out == NULL);
-    SERVER** servers = NULL;
-    int servers_size = config_get_server_list(params, key, &servers);
-    int found = 0;
-    // All servers in the array must be monitored by the given monitor.
-    if (servers_size > 0)
+    std::vector<MXS_MONITORED_SERVER*> monitored_array;
+    // Check that value exists.
+    if (*config_get_string(params, key) == '\0')
     {
-        MXS_MONITORED_SERVER** monitored_array =
-            (MXS_MONITORED_SERVER**)MXS_CALLOC(servers_size, sizeof(MXS_MONITORED_SERVER*));
-        for (int i = 0; i < servers_size; i++)
+        return monitored_array;
+    }
+
+    string name_error;
+    auto servers = config_get_server_list(params, key, &name_error);
+    if (!servers.empty())
+    {
+        // All servers in the array must be monitored by the given monitor.
+        for (auto elem : servers)
         {
-            MXS_MONITORED_SERVER* mon_serv = mon_get_monitored_server(mon, servers[i]);
-            if (mon_serv != NULL)
+            MXS_MONITORED_SERVER* mon_serv = mon_get_monitored_server(mon, elem);
+            if (mon_serv)
             {
-                monitored_array[found++] = mon_serv;
+                monitored_array.push_back(mon_serv);
             }
             else
             {
-                MXS_WARNING("Server '%s' is not monitored by monitor '%s'.",
-                            servers[i]->name(),
-                            mon->m_name);
+                MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), mon->m_name);
+                *error_out = true;
             }
         }
-        MXS_FREE(servers);
 
-        mxb_assert(found <= servers_size);
-        if (found == 0)
+        if (monitored_array.size() < servers.size())
         {
-            MXS_FREE(monitored_array);
-            monitored_array = NULL;
+            monitored_array.clear();
         }
-        else if (found < servers_size)
-        {
-            monitored_array = (MXS_MONITORED_SERVER**)MXS_REALLOC(monitored_array, found);
-        }
-        *monitored_servers_out = monitored_array;
     }
-    return found;
+    else
+    {
+        MXS_ERROR("Serverlist setting '%s' contains invalid server name '%s'.", key, name_error.c_str());
+        *error_out = true;
+    }
+
+    return monitored_array;
 }
 
 bool Monitor::set_disk_space_threshold(const string& dst_setting)

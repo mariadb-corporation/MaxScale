@@ -545,19 +545,17 @@ MXS_MONITORED_SERVER* mon_get_monitored_server(const Monitor* mon, SERVER* searc
 
 /**
  * Get an array of monitored servers. If a server defined in the config setting is not monitored by
- * the given monitor, that server is ignored and not inserted into the output array.
+ * the given monitor, the returned array will be empty.
  *
  * @param params Config parameters
  * @param key Setting name
  * @param mon Monitor which should monitor the servers
- * @param monitored_servers_out Where to save output array. The caller should free the array, but not the
- * elements. The output must contain NULL before calling this function.
- * @return Output array size.
+ * @param error_out Set to true if an error occurs
+ * @return Output array
  */
-int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
-                           const char* key,
-                           const Monitor* mon,
-                           MXS_MONITORED_SERVER*** monitored_array_out);
+std::vector<MXS_MONITORED_SERVER*> mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
+                                                          const char* key, const Monitor* mon,
+                                                          bool* error_out);
 
 // Function for waiting one monitor interval
 void monitor_debug_wait();

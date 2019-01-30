@@ -24,6 +24,7 @@
 #include <openssl/sha.h>
 #include <sys/utsname.h>
 #include <time.h>
+#include <vector>
 
 #include <maxbase/jansson.h>
 #include <maxscale/modinfo.h>
@@ -433,20 +434,20 @@ SERVICE* config_get_service(const MXS_CONFIG_PARAMETER* params, const char* key)
  *
  * @return Pointer to configured server
  */
-struct SERVER* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key);
+SERVER* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
- * @brief Get an array of servers. The caller should free the produced array,
- * but not the array elements.
+ * Get a serverlist value. The returned list is empty if even a partial error occurs.
  *
  * @param params List of configuration parameters
  * @param key Parameter name
- * @param output Where to save the output
- * @return How many servers were found, equal to output array size
+ * @param name_error_out If a server name was not found, it is written here. Only the first such name
+ * is written.
+ * @return Found servers. If even one server name was invalid, the array will be empty.
  */
-int config_get_server_list(const MXS_CONFIG_PARAMETER* params,
-                           const char* key,
-                           struct SERVER*** output);
+std::vector<SERVER*>
+config_get_server_list(const MXS_CONFIG_PARAMETER* params, const char* key,
+                       std::string* name_error_out = nullptr);
 
 /**
  * Get a compiled regular expression and the ovector size of the pattern. The
@@ -488,22 +489,14 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
                                  uint32_t options,
                                  uint32_t* out_ovec_size,
                                  pcre2_code** out_codes[]);
+
 /**
- * Parse a list of server names and write the results in an array of strings
- * with one server name in each. The output array and its elements should be
- * deallocated by the caller. The server names are not checked to be actual
- * configured servers.
+ * Break a comma-separated list into a string array. Removes whitespace from list items.
  *
- * The output array may contain more elements than the the value returned, but these
- * extra elements are null and in the end of the array. If no server names were
- * parsed or if an error occurs, nothing is written to the output parameter.
- *
- * @param servers A list of server names
- * @param output_array Where to save the output
- * @return How many servers were found and set into the array. 0 on error or if
- * none were found.
+ * @param list_string A list of items
+ * @return The array
  */
-int config_parse_server_list(const char* servers, char*** output_array);
+std::vector<std::string> config_break_list_string(const char* list_string);
 
 /**
  * @brief Get copy of parameter value if it is defined

@@ -360,7 +360,7 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING, NULL,MXS_MODULE_OPT_REQUIRED },
     {"passwd",                     MXS_MODULE_PARAM_STRING},
 
-    {CN_SERVERS,                   MXS_MODULE_PARAM_STRING},
+    {CN_SERVERS,                   MXS_MODULE_PARAM_SERVERLIST},
     {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_COUNT,  "2000"},
     {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_COUNT,  "3"},
     {CN_BACKEND_READ_TIMEOUT,      MXS_MODULE_PARAM_COUNT,  "1"},
@@ -1814,46 +1814,26 @@ SERVER* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key)
     return Server::find_by_unique_name(value);
 }
 
-int config_get_server_list(const MXS_CONFIG_PARAMETER* params,
-                           const char* key,
-                           SERVER***   output)
+std::vector<SERVER*> config_get_server_list(const MXS_CONFIG_PARAMETER* params, const char* key,
+                                            string* name_error_out)
 {
-    const char* value = config_get_value_string(params, key);
-    char** server_names = NULL;
-    int found = 0;
-    const int n_names = config_parse_server_list(value, &server_names);
-    if (n_names > 0)
+    const char* names_list = config_get_value_string(params, key);
+    auto server_names = config_break_list_string(names_list);
+    std::vector<SERVER*> server_arr = SERVER::server_find_by_unique_names(server_names);
+    for (size_t i = 0; i < server_arr.size(); i++)
     {
-        SERVER** servers;
-        found = SERVER::server_find_by_unique_names(server_names, n_names, &servers);
-        for (int i = 0; i < n_names; i++)
+        if (server_arr[i] == nullptr)
         {
-            MXS_FREE(server_names[i]);
-        }
-        MXS_FREE(server_names);
-
-        if (found)
-        {
-            /* Fill in the result array */
-            SERVER** result = (SERVER**)MXS_CALLOC(found, sizeof(SERVER*));
-            if (result)
+            if (name_error_out)
             {
-                int res_ind = 0;
-                for (int i = 0; i < n_names; i++)
-                {
-                    if (servers[i])
-                    {
-                        result[res_ind] = servers[i];
-                        res_ind++;
-                    }
-                }
-                *output = result;
-                mxb_assert(found == res_ind);
+                *name_error_out = server_names[i];
             }
-            MXS_FREE(servers);
+            // If even one server name was not found, the parameter is in error.
+            server_arr.clear();
+            break;
         }
     }
-    return found;
+    return server_arr;
 }
 
 char* config_copy_string(const MXS_CONFIG_PARAMETER* params, const char* key)
@@ -3830,25 +3810,28 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
 {
     bool err = false;
 
-    // TODO: Use server list parameter type for this
-    for (auto& s : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+    MXS_CONFIG_PARAMETER* params = obj->parameters;
+    // The config loader has already checked that the server list is mostly ok. However, it cannot
+    // check that the server names in the list actually ended up generated.
+    if (config_get_param(params, CN_SERVERS))
     {
-        fix_object_name(s);
-        auto server = Server::find_by_unique_name(s);
-
-        if (!server)
+        string name_not_found;
+        auto servers = config_get_server_list(params, CN_SERVERS, &name_not_found);
+        if (servers.empty())
         {
-            MXS_ERROR("Unable to find server '%s' that is configured in "
-                      "the monitor '%s'.",
-                      s.c_str(),
-                      obj->object);
             err = true;
+            mxb_assert(!name_not_found.empty());
+            MXS_ERROR("Unable to find server '%s' that is configured in monitor '%s'.",
+                      name_not_found.c_str(), obj->object);
         }
-        else if (monitored_servers.insert(s.c_str()).second == false)
+        for (auto server : servers)
         {
-            MXS_WARNING("Multiple monitors are monitoring server [%s]. "
-                        "This will cause undefined behavior.",
-                        s.c_str());
+            mxb_assert(server);
+            if (monitored_servers.insert(server->name()).second == false)
+            {
+                MXS_WARNING("Multiple monitors are monitoring server [%s]. "
+                            "This will cause undefined behavior.", server->name());
+            }
         }
     }
 
@@ -4369,22 +4352,19 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
             case MXS_MODULE_PARAM_SERVERLIST:
                 if (context)
                 {
-                    valid = true;
-                    char** server_names = NULL;
-                    int n_serv = config_parse_server_list(value, &server_names);
-                    if (n_serv > 0)
+                    auto server_names = config_break_list_string(value);
+                    if (!server_names.empty())
                     {
+                        valid = true;
                         /* Check that every server name in the list is found in the config. */
-                        for (int i = 0; i < n_serv; i++)
+                        for (auto elem : server_names)
                         {
-                            if (valid
-                                && !config_contains_type(context, server_names[i], CN_SERVER))
+                            if (!config_contains_type(context, elem.c_str(), CN_SERVER))
                             {
                                 valid = false;
+                                break;
                             }
-                            MXS_FREE(server_names[i]);
                         }
-                        MXS_FREE(server_names);
                     }
                     break;
                 }
@@ -4405,74 +4385,17 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
     return valid;
 }
 
-int config_parse_server_list(const char* servers, char*** output_array)
+std::vector<string> config_break_list_string(const char* list_string)
 {
-    mxb_assert(servers);
-
-    /* First, check the string for the maximum amount of servers it
-     * might contain by counting the commas. */
-    int out_arr_size = 1;
-    const char* pos = servers;
-    while ((pos = strchr(pos, ',')) != NULL)
+    mxb_assert(list_string);
+    string copy = list_string;
+    /* Parse the elements from the list. They are separated by ',' and are trimmed of whitespace. */
+    std::vector<string> tokenized = mxs::strtok(copy, ",");
+    for (auto& elem : tokenized)
     {
-        pos++;
-        out_arr_size++;
+        fix_object_name(elem);
     }
-    char** results = (char**)MXS_CALLOC(out_arr_size, sizeof(char*));
-    if (!results)
-    {
-        return 0;
-    }
-
-    /* Parse the server names from the list. They are separated by ',' and will
-     * be trimmed of whitespace. */
-    char srv_list_tmp[strlen(servers) + 1];
-    strcpy(srv_list_tmp, servers);
-    mxb::trim(srv_list_tmp);
-
-    bool error = false;
-    int output_ind = 0;
-    char* lasts;
-    char* s = strtok_r(srv_list_tmp, ",", &lasts);
-    while (s)
-    {
-        char srv_name_tmp[strlen(s) + 1];
-        strcpy(srv_name_tmp, s);
-        fix_object_name(srv_name_tmp);
-
-        if (strlen(srv_name_tmp) > 0)
-        {
-            results[output_ind] = MXS_STRDUP(srv_name_tmp);
-            if (!results[output_ind])
-            {
-                error = true;
-                break;
-            }
-            output_ind++;
-        }
-        s = strtok_r(NULL, ",", &lasts);
-    }
-
-    if (error)
-    {
-        int i = 0;
-        while (results[i])
-        {
-            MXS_FREE(results[i]);
-            i++;
-        }
-        output_ind = 0;
-    }
-
-    if (output_ind == 0)
-    {
-        MXS_FREE(results);
-    }
-    else
-    {
-        *output_array = results;
-    }
-    return output_ind;
+    return tokenized;
 }
 
 json_t* config_maxscale_to_json(const char* host)

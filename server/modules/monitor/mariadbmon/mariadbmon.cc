@@ -210,15 +210,21 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_handle_event_scheduler = config_get_bool(params, CN_HANDLE_EVENTS);
 
     m_excluded_servers.clear();
-    MXS_MONITORED_SERVER** excluded_array = NULL;
-    int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, m_monitor, &excluded_array);
-    for (int i = 0; i < n_excluded; i++)
-    {
-        m_excluded_servers.push_back(get_server(excluded_array[i]));
-    }
-    MXS_FREE(excluded_array);
-
     bool settings_ok = true;
+    bool list_error = false;
+    auto excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, m_monitor, &list_error);
+    if (list_error)
+    {
+        settings_ok = false;
+    }
+    else
+    {
+        for (auto elem : excluded)
+        {
+            m_excluded_servers.push_back(get_server(elem));
+        }
+    }
+
     if (!check_sql_files())
     {
         settings_ok = false;

@@ -468,6 +468,7 @@ json_t* RegexHintFilter::diagnostics_json() const
  * list. Server names are verified to be valid servers.
  *
  * @param server_names The list of servers as read from the config file
+ * @param legacy_mode Using legacy mode for backwards compatibility?
  * @return How many were found
  */
 int RegexToServers::add_servers(const std::string& server_names, bool legacy_mode)
@@ -480,63 +481,48 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
     }
 
     /* Have to parse the server list here instead of in config loader, since the list
-     * may contain special placeholder strings.
-     */
+     * may contain special placeholder strings. */
     bool error = false;
-    char** names_arr = NULL;
-    const int n_names = config_parse_server_list(server_names.c_str(), &names_arr);
-
-    if (n_names > 1)
+    auto names_arr = config_break_list_string(server_names.c_str());
+    if (names_arr.size() > 1)
     {
-        /* The string contains a server list, all must be valid servers */
-        SERVER** servers;
-        int found = SERVER::server_find_by_unique_names(names_arr, n_names, &servers);
-
-        if (found != n_names)
+        /* The string contains a server list. Check that all names are valid. */
+        auto servers = SERVER::server_find_by_unique_names(names_arr);
+        for (size_t i = 0; i < servers.size(); i++)
         {
-            error = true;
-
-            for (int i = 0; i < n_names; i++)
+            if (servers[i] == nullptr)
             {
-                /* servers is valid only if found > 0 */
-                if (!found || !servers[i])
-                {
-                    MXS_ERROR("'%s' is not a valid server name.", names_arr[i]);
-                }
+                error = true;
+                MXS_ERROR("'%s' is not a valid server name.", names_arr[i].c_str());
             }
-        }
-
-        if (found)
-        {
-            MXS_FREE(servers);
         }
 
         if (!error)
         {
-            for (int i = 0; i < n_names; i++)
+            for (auto elem : names_arr)
             {
-                m_targets.push_back(names_arr[i]);
+                m_targets.push_back(elem);
             }
         }
     }
-    else if (n_names == 1)
+    else if (names_arr.size() == 1)
     {
         /* The string is either a server name or a special reserved id */
         if (SERVER::find_by_unique_name(names_arr[0]))
         {
             m_targets.push_back(names_arr[0]);
         }
-        else if (strcmp(names_arr[0], "->master") == 0)
+        else if (names_arr[0] == "->master")
         {
             m_targets.push_back(names_arr[0]);
             m_htype = HINT_ROUTE_TO_MASTER;
         }
-        else if (strcmp(names_arr[0], "->slave") == 0)
+        else if (names_arr[0] == "->slave")
         {
             m_targets.push_back(names_arr[0]);
             m_htype = HINT_ROUTE_TO_SLAVE;
         }
-        else if (strcmp(names_arr[0], "->all") == 0)
+        else if (names_arr[0] == "->all")
         {
             m_targets.push_back(names_arr[0]);
             m_htype = HINT_ROUTE_TO_ALL;
@@ -551,12 +537,7 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
         error = true;
     }
 
-    for (int i = 0; i < n_names; i++)
-    {
-        MXS_FREE(names_arr[i]);
-    }
-    MXS_FREE(names_arr);
-    return error ? 0 : n_names;
+    return error ? 0 : names_arr.size();
 }
 
 bool RegexHintFilter::regex_compile_and_add(int pcre_ops,

@@ -448,19 +448,14 @@ public:
     static SERVER* find_by_unique_name(const std::string& name);
 
     /**
-     * Find several servers with the names specified in an array with a given size.
-     * The returned array (but not the elements) should be freed by the caller.
-     * If no valid server names were found or in case of error, nothing is written
-     * to the output parameter.
+     * Find several servers with the names specified in an array. The returned array is equal in size
+     * to the server_names-array. If any server name was not found, then the corresponding element
+     * will be NULL.
      *
-     * @param servers An array of server names
-     * @param size Number of elements in the input server names array, equal to output
-     * size if any servers are found.
-     * @param output Where to save the output. Contains null elements for invalid server
-     * names. If all were invalid, the output is left untouched.
-     * @return Number of valid server names found
+     * @param server_names An array of server names
+     * @return Array of servers
      */
-    static int server_find_by_unique_names(char** server_names, int size, SERVER*** output);
+    static std::vector<SERVER*> server_find_by_unique_names(const std::vector<std::string>& server_names);
 
     /**
      * Convert the current server status flags to a string.
