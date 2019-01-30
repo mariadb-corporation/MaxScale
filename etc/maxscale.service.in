@@ -10,7 +10,7 @@ LimitCORE=infinity
 # Make sure /var/run/maxscale exists
 PermissionsStartOnly=true
 ExecStartPre=/usr/bin/install -d @MAXSCALE_VARDIR@/run/maxscale -o maxscale -g maxscale
-ExecStartPost=prlimit -p $(pidof maxscale) --core=unlimited
+ExecStartPost=/bin/sh -c 'prlimit -p $(pidof maxscale) --core=unlimited'
 
 PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 
