@@ -166,12 +166,12 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('users', 'List created network users', function(yargs) {
-            return yargs.epilog('List the users that can be used to connect to the MaxScale REST API.')
+        .command('users', 'List created users', function(yargs) {
+            return yargs.epilog('List network the users that can be used to connect to the MaxScale REST API as well as enabled local accounts.')
                 .usage('Usage: list users')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'users/inet',[
+                return getCollection(host, 'users',[
                     {'Name':'id'},
                     {'Type':'type'},
                     {'Privileges':'attributes.account'},
