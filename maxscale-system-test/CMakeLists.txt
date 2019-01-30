@@ -14,11 +14,6 @@
 #     BREAKS_GALERA
 set(CTEST_BUILD_NAME "${BUILDNAME}")
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -ggdb -Wall -Wextra -Werror -Wno-format-overflow -Wno-unused-function -Wno-unused-parameter -Werror=format-security")
-set(CMAKE_CXX_FLAGS_DEBUG "-std=c++11 -ggdb -Wall -Werror -Wno-format-overflow -Wno-unused-function")
-set(CMAKE_CXX_FLAGS_RELEASE "-std=c++11 -ggdb -Wall -Werror -Wno-format-overflow -Wno-unused-function")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-std=c++11 -ggdb -Wall -Werror -Wno-format-overflow -Wno-unused-function")
-
 # utilities.cmake contains all helper functions and extra tools
 include(utilities.cmake)
 
