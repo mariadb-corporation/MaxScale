@@ -910,6 +910,9 @@ add_test_executable(mxs2111_auth_string.cpp mxs2111_auth_string replication LABE
 # MXS-2115: Automatic version_string detection
 add_test_executable(mxs2115_version_string.cpp mxs2115_version_string replication LABELS REPL_BACKEND)
 
+# MXS-2273: Introduce server state BEING_DRAINED
+add_test_executable(mxs2273_being_drained.cpp mxs2273_being_drained mxs2273_being_drained LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
