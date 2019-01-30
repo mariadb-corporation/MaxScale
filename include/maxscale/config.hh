@@ -215,31 +215,56 @@ extern const char CN_LOG_AUGMENTATION[];
 extern const char CN_LOG_TO_SHM[];
 
 /**
- * The config parameter
+ * Config parameter container. Typically includes all parameters of a single configuration file section
+ * such as a server or filter.
  */
-typedef struct config_parameter
+class MXS_CONFIG_PARAMETER
 {
+public:
+
+    /**
+     * Get value of key as string.
+     *
+     * @param key Parameter name
+     * @return Parameter value. Empty string if key not found.
+     */
+    std::string get_string(const std::string& key) const;
+
+    /**
+     * Get value of key as c-string. The pointer is valid as long as the underlying configuration
+     * is not changed.
+     *
+     * @param key Parameter name
+     * @return Parameter value. Empty string if key not found.
+     */
+    const char* get_c_str(const std::string& key) const;
+
+    int64_t get_integer(const std::string& key) const;
+
+    int64_t get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const;
+
     char*                    name;          /**< The name of the parameter */
     char*                    value;         /**< The value of the parameter */
-    struct config_parameter* next;          /**< Next pointer in the linked list */
-} MXS_CONFIG_PARAMETER;
+    MXS_CONFIG_PARAMETER*    next;          /**< Next pointer in the linked list */
+};
 
 /**
  * The config context structure, used to build the configuration
  * data during the parse process
  */
-typedef struct config_context
+class CONFIG_CONTEXT
 {
+public:
     char*                  object;          /**< The name of the object being configured */
     MXS_CONFIG_PARAMETER*  parameters;      /**< The list of parameter values */
     bool                   was_persisted;   /**< True if this object was persisted */
-    struct config_context* next;            /**< Next pointer in the linked list */
-} CONFIG_CONTEXT;
+    CONFIG_CONTEXT*        next;            /**< Next pointer in the linked list */
+};
 
 /**
  * The gateway global configuration data
  */
-typedef struct
+struct MXS_CONFIG
 {
     bool    config_check;                               /**< Only check config */
     int     n_threads;                                  /**< Number of polling threads */
@@ -287,7 +312,7 @@ typedef struct
     char             peer_user[MAX_ADMIN_HOST_LEN];     /**< Username for maxscale-to-maxscale traffic */
     char             peer_password[MAX_ADMIN_HOST_LEN]; /**< Password for maxscale-to-maxscale traffic */
     mxb_log_target_t log_target;                        /**< Log type */
-} MXS_CONFIG;
+};
 
 /**
  * @brief Get global MaxScale configuration

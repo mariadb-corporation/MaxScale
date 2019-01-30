@@ -1900,6 +1900,26 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
     return rval;
 }
 
+string MXS_CONFIG_PARAMETER::get_string(const std::string& key) const
+{
+    return get_c_str(key);
+}
+
+const char* MXS_CONFIG_PARAMETER::get_c_str(const std::string& key) const
+{
+    return config_get_string(this, key.c_str());
+}
+
+int64_t MXS_CONFIG_PARAMETER::get_integer(const std::string& key) const
+{
+    return config_get_integer(this, key.c_str());
+}
+
+int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
+{
+    return config_get_enum(this, key.c_str(), enum_mapping);
+}
+
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
 {
     MXS_CONFIG_PARAMETER* p2 = (MXS_CONFIG_PARAMETER*)MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER));
