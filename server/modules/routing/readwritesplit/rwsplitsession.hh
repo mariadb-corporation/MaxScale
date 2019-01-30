@@ -182,6 +182,7 @@ private:
     void process_sescmd_response(mxs::SRWBackend& backend, GWBUF** ppPacket);
     void compress_history(mxs::SSessionCommand& sescmd);
 
+    void prune_to_position(uint64_t pos);
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
     bool route_single_stmt(GWBUF* querybuf);

@@ -393,6 +393,23 @@ void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type
     }
 }
 
+void RWSplitSession::prune_to_position(uint64_t pos)
+{
+    /** Prune all completed responses before a certain position */
+    ResponseMap::iterator it = m_sescmd_responses.lower_bound(pos);
+
+    if (it != m_sescmd_responses.end())
+    {
+        // Found newer responses that were returned after this position
+        m_sescmd_responses.erase(m_sescmd_responses.begin(), it);
+    }
+    else
+    {
+        // All responses are older than the requested position
+        m_sescmd_responses.clear();
+    }
+}
+
 /**
  * Execute in backends used by current router session.
  * Save session variable commands to router session property
@@ -522,20 +539,17 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         m_sescmd_list.clear();
     }
 
+    if (m_config.prune_sescmd_history && !m_sescmd_list.empty()
+        && m_sescmd_list.size() + 1 >= m_config.max_sescmd_history)
+    {
+        // Close to the history limit, remove the oldest command
+        prune_to_position(m_sescmd_list.front()->get_position());
+        m_sescmd_list.pop_front();
+    }
+
     if (m_config.disable_sescmd_history)
     {
-        /** Prune stored responses */
-        ResponseMap::iterator it = m_sescmd_responses.lower_bound(lowest_pos);
-
-        if (it != m_sescmd_responses.end())
-        {
-            m_sescmd_responses.erase(m_sescmd_responses.begin(), it);
-        }
-        else
-        {
-            // All responses processed
-            m_sescmd_responses.clear();
-        }
+        prune_to_position(lowest_pos);
     }
     else
     {
