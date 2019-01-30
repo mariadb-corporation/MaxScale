@@ -21,10 +21,13 @@ namespace maxbase
 
 static inline void default_stacktrace_handler(const char* symbol, const char* command)
 {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
     write(STDOUT_FILENO, symbol, strlen(symbol));
     write(STDOUT_FILENO, ": ", 2);
     write(STDOUT_FILENO, command, strlen(command));
     write(STDOUT_FILENO, "\n", 1);
+#pragma GCC diagnostic pop
 }
 
 void dump_stacktrace(void (* handler)(const char* symbol, const char* command) = default_stacktrace_handler);

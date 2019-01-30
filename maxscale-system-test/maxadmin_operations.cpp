@@ -118,12 +118,21 @@ int authMaxScale(int so, char* user, char* password)
     {
         return 0;
     }
-    write(so, user, strlen(user));
+    int len;
+    len = strlen(user);
+    if (write(so, user, len) != len)
+    {
+        return 0;
+    }
     if (read(so, buf, 8) != 8)
     {
         return 0;
     }
-    write(so, password, strlen(password));
+    len = strlen(password);
+    if (write(so, password, len) != len)
+    {
+        return 0;
+    }
     if (read(so, buf, 6) != 6)
     {
         return 0;

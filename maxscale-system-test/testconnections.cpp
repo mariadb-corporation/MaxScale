@@ -55,6 +55,18 @@ static void signal_set(int sig, void (* handler)(int))
     while (errno == EINTR);
 }
 
+static int call_system(const char* command)
+{
+    int rv = system(command);
+
+    if (rv == -1)
+    {
+        printf("error: Could not execute '%s'.\n", command);
+    }
+
+    return rv;
+}
+
 void sigfatal_handler(int i)
 {
     dump_stacktrace();
@@ -175,7 +187,10 @@ TestConnections::TestConnections(int argc, char* argv[])
             break;
 
         case 'q':
-            freopen("/dev/null", "w", stdout);
+            if (!freopen("/dev/null", "w", stdout))
+            {
+                printf("warning: Could not redirect stdout to /dev/null.\n");
+            }
             break;
 
         case 'h':
@@ -381,7 +396,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     char str[1024];
     sprintf(str, "mkdir -p LOGS/%s", test_name);
-    system(str);
+    call_system(str);
 
     timeout = 999999999;
     set_log_copy_interval(999999999);
@@ -711,7 +726,7 @@ void TestConnections::process_template(int m, const char* template_name, const c
     ss << str;
 
     ss << template_file << " > maxscale.cnf";
-    system(ss.str().c_str());
+    call_system(ss.str().c_str());
 
     maxscales->copy_to_node_legacy("maxscale.cnf", dest, m);
     // The config will now be in ~/maxscale.cnf and is moved into /etc before restarting maxscale
@@ -752,7 +767,7 @@ void TestConnections::init_maxscale(int m)
         sprintf(dtr, "%s/certs/", maxscales->access_homedir[m]);
         maxscales->copy_to_node_legacy(str, dtr, m);
         sprintf(str, "cp %s/ssl-cert/* .", test_dir);
-        system(str);
+        call_system(str);
         maxscales->ssh_node_f(m, true, "chmod -R a+rx %s;", maxscales->access_homedir[m]);
     }
 
@@ -812,7 +827,7 @@ int TestConnections::copy_all_logs()
 
     char str[PATH_MAX + 1];
     sprintf(str, "mkdir -p LOGS/%s", test_name);
-    system(str);
+    call_system(str);
 
     std::vector<std::thread> threads;
 
@@ -853,7 +868,7 @@ int TestConnections::copy_maxscale_logs(double timestamp)
     {
         sprintf(log_dir_i, "%s/%03d", log_dir, i);
         sprintf(sys, "mkdir -p %s", log_dir_i);
-        system(sys);
+        call_system(sys);
         if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
         {
             int rc = maxscales->ssh_node_f(i, true,
@@ -2042,14 +2057,14 @@ int TestConnections::take_snapshot(char* snapshot_name)
 {
     char str[4096];
     sprintf(str, "%s %s", take_snapshot_command, snapshot_name);
-    return system(str);
+    return call_system(str);
 }
 
 int TestConnections::revert_snapshot(char* snapshot_name)
 {
     char str[4096];
     sprintf(str, "%s %s", revert_snapshot_command, snapshot_name);
-    return system(str);
+    return call_system(str);
 }
 
 bool TestConnections::test_bad_config(int m, const char* config)
