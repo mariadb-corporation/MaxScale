@@ -139,7 +139,7 @@ public:
     int                 m_last_keepalive_check; /**< When the last ping was done */
     int                 m_nbackends;            /**< Number of backend servers (obsolete) */
     DCB*                m_client;               /**< The client DCB */
-    uint64_t            m_sescmd_count;         /**< Number of executed session commands */
+    uint64_t            m_sescmd_count;         /**< Number of executed session commands (starts from 1) */
     int                 m_expected_responses;   /**< Number of expected responses to the current
                                                  * query */
     GWBUF*                  m_query_queue;      /**< Queued commands waiting to be executed */

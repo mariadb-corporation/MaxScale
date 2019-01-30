@@ -165,14 +165,28 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
         if (m_expected_responses == 0
             && (command == MXS_COM_CHANGE_USER || command == MXS_COM_RESET_CONNECTION))
         {
+            mxb_assert_message(m_slave_responses.empty(), "All responses should've been processed");
             // This is the last session command to finish that resets the session state, reset the history
             MXS_INFO("Resetting session command history (length: %lu)", m_sescmd_list.size());
+
+            /**
+             * Since new connections need to perform the COM_CHANGE_USER, pop it off the list along
+             * with the expected response to it.
+             */
+            SSessionCommand latest = m_sescmd_list.back();
+            cmd = m_sescmd_responses[latest->get_position()];
+
             m_sescmd_list.clear();
             m_sescmd_responses.clear();
-            m_slave_responses.clear();
-            m_recv_sescmd = 0;
-            m_sent_sescmd = 0;
-            m_sescmd_count = 1;
+
+            // Push the response back as the first executed session command
+            m_sescmd_list.push_back(latest);
+            m_sescmd_responses[latest->get_position()] = cmd;
+
+            // Adjust counters to match the number of stored session commands
+            m_recv_sescmd = 1;
+            m_sent_sescmd = 1;
+            m_sescmd_count = 2;
         }
     }
 }
