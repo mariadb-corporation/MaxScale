@@ -155,8 +155,8 @@ int test_add_parameter()
     config_add_defaults(&ctx, params);
 
     /** Test default values */
-    TEST(config_get_integer(ctx.parameters, "p1") == -123);
-    TEST(config_get_integer(ctx.parameters, "p2") == 123);
+    TEST(ctx.parameters->get_integer("p1") == -123);
+    TEST(ctx.parameters->get_integer("p2") == 123);
     TEST(config_get_bool(ctx.parameters, "p3") == true);
     TEST(strcmp(config_get_string(ctx.parameters, "p4"), "default") == 0);
     TEST(config_get_enum(ctx.parameters, "p5", enum_values) == 1);
@@ -177,8 +177,8 @@ int test_add_parameter()
 
     config_add_defaults(&ctx, params);
 
-    TEST(config_get_integer(ctx.parameters, "p1") == -321);
-    TEST(config_get_integer(ctx.parameters, "p2") == 321);
+    TEST(ctx.parameters->get_integer("p1") == -321);
+    TEST(ctx.parameters->get_integer("p2") == 321);
     TEST(config_get_param(ctx.parameters, "p3") && config_get_bool(ctx.parameters, "p3") == false);
     TEST(strcmp(config_get_string(ctx.parameters, "p4"), "strange") == 0);
     int val = config_get_enum(ctx.parameters, "p5", enum_values);

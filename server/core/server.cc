@@ -247,10 +247,10 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
                     sizeof(server->address));
     }
 
-    server->port = config_get_integer(params, CN_PORT);
-    server->extra_port = config_get_integer(params, CN_EXTRA_PORT);
-    server->m_settings.persistpoolmax = config_get_integer(params, CN_PERSISTPOOLMAX);
-    server->m_settings.persistmaxtime = config_get_integer(params, CN_PERSISTMAXTIME);
+    server->port = params->get_integer(CN_PORT);
+    server->extra_port = params->get_integer(CN_EXTRA_PORT);
+    server->m_settings.persistpoolmax = params->get_integer(CN_PERSISTPOOLMAX);
+    server->m_settings.persistmaxtime = params->get_integer(CN_PERSISTMAXTIME);
     server->proxy_protocol = config_get_bool(params, CN_PROXY_PROTOCOL);
     server->is_active = true;
     server->m_auth_instance = auth_instance;

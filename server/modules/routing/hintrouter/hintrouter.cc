@@ -64,7 +64,7 @@ HintRouter* HintRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
                                                           DEFAULT_ACTION,
                                                           default_action_values);
     string default_server(config_get_string(params, DEFAULT_SERVER));
-    int max_slaves = config_get_integer(params, MAX_SLAVES);
+    int max_slaves = params->get_integer(MAX_SLAVES);
     return new HintRouter(pService, default_action, default_server, max_slaves);
 }
 

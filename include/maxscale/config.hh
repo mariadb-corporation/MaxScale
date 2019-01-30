@@ -239,6 +239,13 @@ public:
      */
     const char* get_c_str(const std::string& key) const;
 
+    /**
+     * Get an integer value. Should be used for both MXS_MODULE_PARAM_INT and MXS_MODULE_PARAM_COUNT
+     * parameter types.
+     *
+     * @param key Parameter name
+     * @return Parameter parsed to integer. 0 if key was not found.
+     */
     int64_t get_integer(const std::string& key) const;
 
     int64_t get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const;
@@ -370,18 +377,6 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
  * @return The value as a boolean or false if none was found
  */
 bool config_get_bool(const MXS_CONFIG_PARAMETER* params, const char* key);
-
-/**
- * @brief Get an integer value
- *
- * This is used for both MXS_MODULE_PARAM_INT and MXS_MODULE_PARAM_COUNT.
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- *
- * @return The integer value of the parameter or 0 if no parameter was found
- */
-int config_get_integer(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get a size in bytes

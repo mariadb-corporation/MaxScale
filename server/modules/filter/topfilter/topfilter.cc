@@ -212,7 +212,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
     if (my_instance)
     {
         my_instance->sessions = 0;
-        my_instance->topN = config_get_integer(params, "count");
+        my_instance->topN = params->get_integer("count");
         my_instance->match = config_copy_string(params, "match");
         my_instance->exclude = config_copy_string(params, "exclude");
         my_instance->source = config_copy_string(params, "source");

@@ -47,8 +47,8 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     m_health_urls.clear();
     m_nodes.clear();
 
-    m_config.set_cluster_monitor_interval(config_get_integer(pParams, CLUSTER_MONITOR_INTERVAL_NAME));
-    m_config.set_health_check_threshold(config_get_integer(pParams, HEALTH_CHECK_THRESHOLD_NAME));
+    m_config.set_cluster_monitor_interval(pParams->get_integer(CLUSTER_MONITOR_INTERVAL_NAME));
+    m_config.set_health_check_threshold(pParams->get_integer(HEALTH_CHECK_THRESHOLD_NAME));
 
     check_hub_and_refresh_nodes();
 

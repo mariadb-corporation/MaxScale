@@ -89,8 +89,8 @@ public:
         CCRFilter* new_instance = new(std::nothrow) CCRFilter;
         if (new_instance)
         {
-            new_instance->m_count = config_get_integer(params, "count");
-            new_instance->m_time = config_get_integer(params, "time");
+            new_instance->m_count = params->get_integer("count");
+            new_instance->m_time = params->get_integer("time");
             new_instance->m_match = config_get_string(params, PARAM_MATCH);
             new_instance->m_nomatch = config_get_string(params, PARAM_IGNORE);
 

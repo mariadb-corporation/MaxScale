@@ -163,7 +163,7 @@ RRRouter::RRRouter(SERVICE* service)
     RR_DEBUG("Creating instance.");
     /* Read options specific to round robin router. */
     MXS_CONFIG_PARAMETER* params = service->svc_config_param;
-    m_max_backends = config_get_integer(params, MAX_BACKENDS);
+    m_max_backends = params->get_integer(MAX_BACKENDS);
     m_write_server = config_get_server(params, WRITE_BACKEND);
     m_print_on_routing = config_get_bool(params, PRINT_ON_ROUTING);
     m_example_enum = config_get_enum(params, DUMMY, enum_example);

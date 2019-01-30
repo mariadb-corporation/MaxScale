@@ -583,7 +583,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         my_instance->conn_stat = AMQP_STATUS_OK;
         my_instance->rconn_intv = 1;
 
-        my_instance->port = config_get_integer(params, "port");
+        my_instance->port = params->get_integer("port");
         my_instance->trgtype =
             static_cast<log_trigger_t>(config_get_enum(params, "logging_trigger", trigger_values));
         my_instance->log_all = config_get_bool(params, "logging_log_all");

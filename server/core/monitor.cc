@@ -187,16 +187,16 @@ Monitor::Monitor(const string& name, const string& module)
 
 bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
 {
-    m_settings.conn_settings.read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
-    m_settings.conn_settings.write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
-    m_settings.conn_settings.connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
-    m_settings.conn_settings.connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
-    m_settings.interval = config_get_integer(params, CN_MONITOR_INTERVAL);
-    m_settings.journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
-    m_settings.script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
+    m_settings.conn_settings.read_timeout = params->get_integer(CN_BACKEND_READ_TIMEOUT);
+    m_settings.conn_settings.write_timeout = params->get_integer(CN_BACKEND_WRITE_TIMEOUT);
+    m_settings.conn_settings.connect_timeout = params->get_integer(CN_BACKEND_CONNECT_TIMEOUT);
+    m_settings.conn_settings.connect_attempts = params->get_integer(CN_BACKEND_CONNECT_ATTEMPTS);
+    m_settings.interval = params->get_integer(CN_MONITOR_INTERVAL);
+    m_settings.journal_max_age = params->get_integer(CN_JOURNAL_MAX_AGE);
+    m_settings.script_timeout = params->get_integer(CN_SCRIPT_TIMEOUT);
     m_settings.script = config_get_string(params, CN_SCRIPT);
     m_settings.events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
-    m_settings.disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
+    m_settings.disk_space_check_interval = params->get_integer(CN_DISK_SPACE_CHECK_INTERVAL);
     m_settings.conn_settings.username = config_get_string(params, CN_USER);
     m_settings.conn_settings.password = config_get_string(params, CN_PASSWORD);
 

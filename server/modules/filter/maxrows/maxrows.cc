@@ -233,15 +233,14 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
     if (cinstance)
     {
         cinstance->name = name;
-        cinstance->config.max_resultset_rows = config_get_integer(params,
-                                                                  "max_resultset_rows");
+        cinstance->config.max_resultset_rows = params->get_integer("max_resultset_rows");
         cinstance->config.max_resultset_size = config_get_size(params,
                                                                "max_resultset_size");
         cinstance->config.m_return =
             static_cast<maxrows_return_mode>(config_get_enum(params,
                                                              "max_resultset_return",
                                                              return_option_values));
-        cinstance->config.debug = config_get_integer(params, "debug");
+        cinstance->config.debug = params->get_integer("debug");
     }
 
     return (MXS_FILTER*)cinstance;

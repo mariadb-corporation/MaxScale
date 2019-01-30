@@ -135,9 +135,9 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
     , current_pos(4)
     , binlog_fd(-1)
     , trx_count(0)
-    , trx_target(config_get_integer(params, "group_trx"))
+    , trx_target(params->get_integer("group_trx"))
     , row_count(0)
-    , row_target(config_get_integer(params, "group_rows"))
+    , row_target(params->get_integer("group_rows"))
     , task_handle(0)
     , handler(service, handler, config_get_compiled_regex(params, "match", 0, NULL),
               config_get_compiled_regex(params, "exclude", 0, NULL))
@@ -152,7 +152,7 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
              sizeof(filename),
              BINLOG_NAMEFMT,
              filestem.c_str(),
-             config_get_integer(params, "start_index"));
+             static_cast<int>(params->get_integer("start_index")));
     binlog_name = filename;
 
     MXS_NOTICE("Reading MySQL binlog files from %s", binlogdir.c_str());

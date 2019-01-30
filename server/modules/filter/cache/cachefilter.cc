@@ -345,13 +345,13 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& c
 {
     bool error = false;
 
-    config.debug = config_get_integer(ppParams, "debug");
-    config.hard_ttl = config_get_integer(ppParams, "hard_ttl");
-    config.soft_ttl = config_get_integer(ppParams, "soft_ttl");
+    config.debug = ppParams->get_integer("debug");
+    config.hard_ttl = ppParams->get_integer("hard_ttl");
+    config.soft_ttl = ppParams->get_integer("soft_ttl");
     config.max_size = config_get_size(ppParams, "max_size");
-    config.max_count = config_get_integer(ppParams, "max_count");
+    config.max_count = ppParams->get_integer("max_count");
     config.storage = MXS_STRDUP(config_get_string(ppParams, "storage"));
-    config.max_resultset_rows = config_get_integer(ppParams, "max_resultset_rows");
+    config.max_resultset_rows = ppParams->get_integer("max_resultset_rows");
     config.max_resultset_size = config_get_size(ppParams, "max_resultset_size");
     config.thread_model = static_cast<cache_thread_model_t>(config_get_enum(ppParams,
                                                                             "cached_data",

@@ -1728,12 +1728,6 @@ bool config_get_bool(const MXS_CONFIG_PARAMETER* params, const char* key)
     return *value ? config_truth_value(value) : false;
 }
 
-int config_get_integer(const MXS_CONFIG_PARAMETER* params, const char* key)
-{
-    const char* value = config_get_value_string(params, key);
-    return *value ? strtol(value, NULL, 10) : 0;
-}
-
 uint64_t config_get_size(const MXS_CONFIG_PARAMETER* params, const char* key)
 {
     const char* value = config_get_value_string(params, key);
@@ -1912,7 +1906,8 @@ const char* MXS_CONFIG_PARAMETER::get_c_str(const std::string& key) const
 
 int64_t MXS_CONFIG_PARAMETER::get_integer(const std::string& key) const
 {
-    return config_get_integer(this, key.c_str());
+    string value = get_string(key);
+    return value.empty() ? 0 : strtoll(value.c_str(), NULL, 10);
 }
 
 int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
@@ -2754,7 +2749,7 @@ bool config_create_ssl(const char* name,
 
         ssl->ssl_method_type = (ssl_method_type_t)ssl_version;
         ssl->ssl_init_done = false;
-        ssl->ssl_cert_verify_depth = config_get_integer(params, CN_SSL_CERT_VERIFY_DEPTH);
+        ssl->ssl_cert_verify_depth = params->get_integer(CN_SSL_CERT_VERIFY_DEPTH);
         ssl->ssl_verify_peer_certificate = config_get_bool(params, CN_SSL_VERIFY_PEER_CERTIFICATE);
 
         listener_set_certificates(ssl, ssl_cert, ssl_key, ssl_ca_cert);

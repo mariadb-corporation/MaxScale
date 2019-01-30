@@ -339,29 +339,29 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     strcpy(inst->binlog_name, "");
     strcpy(inst->prevbinlog, "");
 
-    inst->initbinlog = config_get_integer(params, "file");
+    inst->initbinlog = params->get_integer("file");
 
-    inst->short_burst = config_get_integer(params, "shortburst");
-    inst->long_burst = config_get_integer(params, "longburst");
+    inst->short_burst = params->get_integer("shortburst");
+    inst->long_burst = params->get_integer("longburst");
     inst->burst_size = config_get_size(params, "burstsize");
     inst->binlogdir = config_copy_string(params, "binlogdir");
-    inst->heartbeat = config_get_integer(params, "heartbeat");
-    inst->retry_interval = config_get_integer(params, "connect_retry");
-    inst->retry_limit = config_get_integer(params, "master_retry_count");
-    inst->ssl_cert_verification_depth = config_get_integer(params, "ssl_cert_verification_depth");
+    inst->heartbeat = params->get_integer("heartbeat");
+    inst->retry_interval = params->get_integer("connect_retry");
+    inst->retry_limit = params->get_integer("master_retry_count");
+    inst->ssl_cert_verification_depth = params->get_integer("ssl_cert_verification_depth");
     inst->mariadb10_compat = config_get_bool(params, "mariadb10-compatibility");
     inst->maxwell_compat = config_get_bool(params, "maxwell-compatibility");
     inst->trx_safe = config_get_bool(params, "transaction_safety");
     inst->fileroot = config_copy_string(params, "filestem");
 
     /* Server id */
-    inst->serverid = config_get_integer(params, "server_id");
+    inst->serverid = params->get_integer("server_id");
 
     /* Identity options */
     inst->set_master_version = config_copy_string(params, "master_version");
     inst->set_master_hostname = config_copy_string(params, "master_hostname");
     inst->set_slave_hostname = config_copy_string(params, "slave_hostname");
-    inst->masterid = config_get_integer(params, "master_id");
+    inst->masterid = params->get_integer("master_id");
     inst->set_master_server_id = inst->masterid != 0;
     inst->master_uuid = config_copy_string(params, "master_uuid");
     inst->set_master_uuid = inst->master_uuid != NULL;
