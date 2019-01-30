@@ -1291,6 +1291,34 @@ const MXS_MODULE* get_module(CONFIG_CONTEXT* obj, const char* param_name, const 
     return module ? get_module(module, module_type) : NULL;
 }
 
+const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
+{
+    std::string type = config_get_string(obj->parameters, CN_TYPE);
+
+    if (type == CN_SERVICE && !config_get_param(obj->parameters, CN_ROUTER))
+    {
+        return CN_ROUTER;
+    }
+    else if (type == CN_LISTENER && !config_get_param(obj->parameters, CN_PROTOCOL))
+    {
+        return CN_PROTOCOL;
+    }
+    else if (type == CN_SERVER && !config_get_param(obj->parameters, CN_PROTOCOL))
+    {
+        return CN_PROTOCOL;
+    }
+    else if (type == CN_MONITOR && !config_get_param(obj->parameters, CN_MODULE))
+    {
+        return CN_MODULE;
+    }
+    else if (type == CN_FILTER && !config_get_param(obj->parameters, CN_MODULE))
+    {
+        return CN_MODULE;
+    }
+
+    return nullptr;
+}
+
 std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const CONFIG_CONTEXT* obj)
 {
     std::string type = config_get_string(obj->parameters, CN_TYPE);
@@ -3040,6 +3068,15 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
         if (!valid_object_type(type))
         {
             MXS_ERROR("Unknown module type for object '%s': %s", obj->object, type.c_str());
+            rval = false;
+            continue;
+        }
+
+        const char* no_module_defined = get_missing_module_parameter_name(obj);
+
+        if (no_module_defined)
+        {
+            MXS_ERROR("'%s' is missing the required parameter '%s'", obj->object, no_module_defined);
             rval = false;
             continue;
         }
