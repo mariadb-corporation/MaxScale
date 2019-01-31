@@ -20,11 +20,6 @@
 #include <syslog.h>
 #include <unistd.h>
 
-#include <maxbase/log.h>
-#include <maxbase/string.hh>
-
-MXS_BEGIN_DECLS
-
 #if !defined (MXS_MODULE_NAME)
 #define MXS_MODULE_NAME NULL
 #endif
@@ -32,6 +27,11 @@ MXS_BEGIN_DECLS
 #if !defined (MXB_MODULE_NAME)
 #define MXB_MODULE_NAME MXS_MODULE_NAME
 #endif
+
+#include <maxbase/log.h>
+#include <maxbase/string.hh>
+
+MXS_BEGIN_DECLS
 
 typedef mxb_log_target_t mxs_log_target_t;
 #define MXS_LOG_TARGET_DEFAULT MXB_LOG_TARGET_DEFAULT
