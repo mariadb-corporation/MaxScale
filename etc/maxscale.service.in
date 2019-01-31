@@ -5,12 +5,11 @@ After=network.target
 [Service]
 Type=forking
 Restart=on-abort
-LimitCORE=infinity
+@SERVICE_FILE_DEBUG_OPTIONS@
 
 # Make sure /var/run/maxscale exists
 PermissionsStartOnly=true
 ExecStartPre=/usr/bin/install -d @MAXSCALE_VARDIR@/run/maxscale -o maxscale -g maxscale
-ExecStartPost=/bin/sh -c 'prlimit -p $(pidof maxscale) --core=unlimited'
 
 PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 

@@ -25,6 +25,15 @@ else()
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale.conf @ONLY)
+
+# The systemd service file
+if (CMAKE_BUILD_TYPE MATCHES "(D|d)(E|e)(B|b)(U|u)(G|g)")
+  # Options enabled only in debug builds (a literal multi-line string)
+  set(SERVICE_FILE_DEBUG_OPTIONS
+    "LimitCORE=infinity
+ExecStartPost=/bin/sh -c 'prlimit -p $(pidof maxscale) --core=unlimited'")
+endif()
+
 configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.service.in ${CMAKE_BINARY_DIR}/maxscale.service @ONLY)
 
 if(PACKAGE)
