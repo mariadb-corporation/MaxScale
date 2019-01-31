@@ -157,7 +157,7 @@ struct Config
         , delayed_retry(params->get_bool("delayed_retry"))
         , delayed_retry_timeout(params->get_integer("delayed_retry_timeout"))
         , transaction_replay(params->get_bool("transaction_replay"))
-        , trx_max_size(config_get_size(params, "transaction_replay_max_size"))
+        , trx_max_size(params->get_size("transaction_replay_max_size"))
         , optimistic_trx(params->get_bool("optimistic_trx"))
     {
         if (causal_reads)

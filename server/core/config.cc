@@ -1760,11 +1760,11 @@ bool MXS_CONFIG_PARAMETER::get_bool(const std::string& key) const
     return param_value.empty() ? false : config_truth_value(param_value.c_str());
 }
 
-uint64_t config_get_size(const MXS_CONFIG_PARAMETER* params, const char* key)
+uint64_t MXS_CONFIG_PARAMETER::get_size(const std::string& key) const
 {
-    const char* value = config_get_value_string(params, key);
-    uint64_t intval;
-    MXB_AT_DEBUG(bool rval = ) get_suffixed_size(value, &intval);
+    string param_value = get_string(key);
+    uint64_t intval = 0;
+    MXB_AT_DEBUG(bool rval = ) get_suffixed_size(param_value.c_str(), &intval);
     mxb_assert(rval);
     return intval;
 }

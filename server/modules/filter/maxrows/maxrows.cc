@@ -234,8 +234,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
     {
         cinstance->name = name;
         cinstance->config.max_resultset_rows = params->get_integer("max_resultset_rows");
-        cinstance->config.max_resultset_size = config_get_size(params,
-                                                               "max_resultset_size");
+        cinstance->config.max_resultset_size = params->get_size("max_resultset_size");
         cinstance->config.m_return =
             static_cast<maxrows_return_mode>(params->get_enum("max_resultset_return",
                                                               return_option_values));

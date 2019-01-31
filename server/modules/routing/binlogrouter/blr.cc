@@ -343,7 +343,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
 
     inst->short_burst = params->get_integer("shortburst");
     inst->long_burst = params->get_integer("longburst");
-    inst->burst_size = config_get_size(params, "burstsize");
+    inst->burst_size = params->get_size("burstsize");
     inst->binlogdir = config_copy_string(params, "binlogdir");
     inst->heartbeat = params->get_integer("heartbeat");
     inst->retry_interval = params->get_integer("connect_retry");

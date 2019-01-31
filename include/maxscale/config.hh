@@ -274,6 +274,20 @@ public:
      */
     bool get_bool(const std::string& key) const;
 
+    /**
+     * @brief Get a size in bytes
+     *
+     * The value can have either one of the IEC binary prefixes or SI prefixes as
+     * a suffix. For example, the value 1Ki will be converted to 1024 bytes whereas
+     * 1k will be converted to 1000 bytes. Supported SI suffix values are k, m, g and t
+     * in both lower and upper case. Supported IEC binary suffix values are
+     * Ki, Mi, Gi and Ti both in upper and lower case.
+     *
+     * @param key Parameter name
+     * @return Number of bytes or 0 if no parameter was found
+     */
+    uint64_t get_size(const std::string& key) const;
+
     char*                    name;          /**< The name of the parameter */
     char*                    value;         /**< The value of the parameter */
     MXS_CONFIG_PARAMETER*    next;          /**< Next pointer in the linked list */
@@ -387,22 +401,6 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                            const char* key,
                            const char* value,
                            const CONFIG_CONTEXT* context);
-
-/**
- * @brief Get a size in bytes
- *
- * The value can have either one of the IEC binary prefixes or SI prefixes as
- * a suffix. For example, the value 1Ki will be converted to 1024 bytes whereas
- * 1k will be converted to 1000 bytes. Supported SI suffix values are k, m, g and t
- * in both lower and upper case. Supported IEC binary suffix values are
- * Ki, Mi, Gi and Ti both in upper and lower case.
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- *
- * @return Number of bytes or 0 if no parameter was found
- */
-uint64_t config_get_size(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get a string value
