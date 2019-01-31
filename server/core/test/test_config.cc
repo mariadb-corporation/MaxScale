@@ -159,7 +159,7 @@ int test_add_parameter()
     TEST(ctx.parameters->get_integer("p2") == 123);
     TEST(config_get_bool(ctx.parameters, "p3") == true);
     TEST(strcmp(config_get_string(ctx.parameters, "p4"), "default") == 0);
-    TEST(config_get_enum(ctx.parameters, "p5", enum_values) == 1);
+    TEST(ctx.parameters->get_enum("p5", enum_values) == 1);
     TEST(strcmp(config_get_string(ctx.parameters, "p6"), "/tmp") == 0);
     TEST(strcmp(config_get_string(ctx.parameters, "p7"), "my-service") == 0);
 
@@ -181,7 +181,7 @@ int test_add_parameter()
     TEST(ctx.parameters->get_integer("p2") == 321);
     TEST(config_get_param(ctx.parameters, "p3") && config_get_bool(ctx.parameters, "p3") == false);
     TEST(strcmp(config_get_string(ctx.parameters, "p4"), "strange") == 0);
-    int val = config_get_enum(ctx.parameters, "p5", enum_values);
+    int val = ctx.parameters->get_enum("p5", enum_values);
     TEST(val == 5);
     TEST(strcmp(config_get_string(ctx.parameters, "p6"), "/dev/null") == 0);
     TEST(strcmp(config_get_string(ctx.parameters, "p7"), "some-service") == 0);

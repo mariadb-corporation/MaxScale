@@ -134,15 +134,12 @@ struct Config
 {
     Config(MXS_CONFIG_PARAMETER* params)
         : slave_selection_criteria(
-            (select_criteria_t)config_get_enum(
-                params, "slave_selection_criteria", slave_selection_criteria_values))
+            (select_criteria_t)params->get_enum("slave_selection_criteria", slave_selection_criteria_values))
         , backend_select_fct(get_backend_select_function(slave_selection_criteria))
         , use_sql_variables_in(
-            (mxs_target_t)config_get_enum(
-                params, "use_sql_variables_in", use_sql_variables_in_values))
+            (mxs_target_t)params->get_enum("use_sql_variables_in", use_sql_variables_in_values))
         , master_failure_mode(
-            (enum failure_mode)config_get_enum(
-                params, "master_failure_mode", master_failure_mode_values))
+            (enum failure_mode)params->get_enum("master_failure_mode", master_failure_mode_values))
         , max_sescmd_history(params->get_integer("max_sescmd_history"))
         , disable_sescmd_history(config_get_bool(params, "disable_sescmd_history"))
         , master_accept_reads(config_get_bool(params, "master_accept_reads"))

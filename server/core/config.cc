@@ -1742,11 +1742,11 @@ const char* config_get_string(const MXS_CONFIG_PARAMETER* params, const char* ke
     return config_get_value_string(params, key);
 }
 
-int config_get_enum(const MXS_CONFIG_PARAMETER* params, const char* key, const MXS_ENUM_VALUE* enum_values)
+int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
 {
-    const char* value = config_get_value_string(params, key);
-    char tmp_val[strlen(value) + 1];
-    strcpy(tmp_val, value);
+    string param_value = get_string(key);
+    char tmp_val[param_value.length() + 1];
+    strcpy(tmp_val, param_value.c_str());
 
     int rv = 0;
     bool found = false;
@@ -1756,12 +1756,12 @@ int config_get_enum(const MXS_CONFIG_PARAMETER* params, const char* key, const M
 
     while (tok)
     {
-        for (int i = 0; enum_values[i].name; i++)
+        for (int i = 0; enum_mapping[i].name; i++)
         {
-            if (strcmp(enum_values[i].name, tok) == 0)
+            if (strcmp(enum_mapping[i].name, tok) == 0)
             {
                 found = true;
-                rv |= enum_values[i].enum_value;
+                rv |= enum_mapping[i].enum_value;
             }
         }
         tok = strtok_r(NULL, delim, &endptr);
@@ -1908,11 +1908,6 @@ int64_t MXS_CONFIG_PARAMETER::get_integer(const std::string& key) const
 {
     string value = get_string(key);
     return value.empty() ? 0 : strtoll(value.c_str(), NULL, 10);
-}
-
-int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
-{
-    return config_get_enum(this, key.c_str(), enum_mapping);
 }
 
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
@@ -2697,7 +2692,7 @@ bool config_create_ssl(const char* name,
     SSL_LISTENER* ssl = NULL;
 
     // The enum values convert to bool
-    int value = config_get_enum(params, CN_SSL, ssl_values);
+    int value = params->get_enum(CN_SSL, ssl_values);
     mxb_assert(value != -1);
 
     if (value)
@@ -2745,7 +2740,7 @@ bool config_create_ssl(const char* name,
         ssl = (SSL_LISTENER*)MXS_CALLOC(1, sizeof(SSL_LISTENER));
         MXS_ABORT_IF_NULL(ssl);
 
-        int ssl_version = config_get_enum(params, CN_SSL_VERSION, ssl_version_values);
+        int ssl_version = params->get_enum(CN_SSL_VERSION, ssl_version_values);
 
         ssl->ssl_method_type = (ssl_method_type_t)ssl_version;
         ssl->ssl_init_done = false;

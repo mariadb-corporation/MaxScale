@@ -353,15 +353,12 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& c
     config.storage = MXS_STRDUP(config_get_string(ppParams, "storage"));
     config.max_resultset_rows = ppParams->get_integer("max_resultset_rows");
     config.max_resultset_size = config_get_size(ppParams, "max_resultset_size");
-    config.thread_model = static_cast<cache_thread_model_t>(config_get_enum(ppParams,
-                                                                            "cached_data",
-                                                                            parameter_cached_data_values));
-    config.selects = static_cast<cache_selects_t>(config_get_enum(ppParams,
-                                                                  "selects",
-                                                                  parameter_selects_values));
-    config.cache_in_trxs = static_cast<cache_in_trxs_t>(config_get_enum(ppParams,
-                                                                        "cache_in_transactions",
-                                                                        parameter_cache_in_trxs_values));
+    config.thread_model = static_cast<cache_thread_model_t>(ppParams->get_enum("cached_data",
+                                                                               parameter_cached_data_values));
+    config.selects = static_cast<cache_selects_t>(ppParams->get_enum("selects",
+                                                                     parameter_selects_values));
+    config.cache_in_trxs = static_cast<cache_in_trxs_t>(ppParams->get_enum("cache_in_transactions",
+                                                                           parameter_cache_in_trxs_values));
     config.enabled = config_get_bool(ppParams, "enabled");
 
     if (!config.storage)

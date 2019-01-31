@@ -257,7 +257,7 @@ RegexHintFilter* RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER*
         set_source_addresses(source, source_addresses, source_hostnames);
     }
 
-    int pcre_ops = config_get_enum(params, "options", option_values);
+    int pcre_ops = params->get_enum("options", option_values);
 
     std::string match_val_legacy(config_get_string(params, MATCH_STR));
     std::string server_val_legacy(config_get_string(params, SERVER_STR));

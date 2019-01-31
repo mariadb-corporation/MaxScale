@@ -219,7 +219,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         my_instance->user = config_copy_string(params, "user");
         my_instance->filebase = MXS_STRDUP_A(config_get_string(params, "filebase"));
 
-        int cflags = config_get_enum(params, "options", option_values);
+        int cflags = params->get_enum("options", option_values);
         bool error = false;
 
         if (my_instance->match

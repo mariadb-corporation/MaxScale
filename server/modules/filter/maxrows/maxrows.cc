@@ -237,9 +237,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         cinstance->config.max_resultset_size = config_get_size(params,
                                                                "max_resultset_size");
         cinstance->config.m_return =
-            static_cast<maxrows_return_mode>(config_get_enum(params,
-                                                             "max_resultset_return",
-                                                             return_option_values));
+            static_cast<maxrows_return_mode>(params->get_enum("max_resultset_return",
+                                                              return_option_values));
         cinstance->config.debug = params->get_integer("debug");
     }
 

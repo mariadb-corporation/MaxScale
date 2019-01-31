@@ -227,7 +227,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
             fflush(my_instance->logfile);
         }
 
-        int cflags = config_get_enum(params, "options", option_values);
+        int cflags = params->get_enum("options", option_values);
 
         if (!(my_instance->re = config_get_compiled_regex(params, "match", cflags, nullptr)))
         {

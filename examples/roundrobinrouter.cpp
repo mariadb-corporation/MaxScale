@@ -166,7 +166,7 @@ RRRouter::RRRouter(SERVICE* service)
     m_max_backends = params->get_integer(MAX_BACKENDS);
     m_write_server = config_get_server(params, WRITE_BACKEND);
     m_print_on_routing = config_get_bool(params, PRINT_ON_ROUTING);
-    m_example_enum = config_get_enum(params, DUMMY, enum_example);
+    m_example_enum = params->get_enum(DUMMY, enum_example);
 
     RR_DEBUG("Settings read:");
     RR_DEBUG("'%s': %d", MAX_BACKENDS, m_max_backends);

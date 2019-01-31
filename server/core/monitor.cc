@@ -195,7 +195,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     m_settings.journal_max_age = params->get_integer(CN_JOURNAL_MAX_AGE);
     m_settings.script_timeout = params->get_integer(CN_SCRIPT_TIMEOUT);
     m_settings.script = config_get_string(params, CN_SCRIPT);
-    m_settings.events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
+    m_settings.events = params->get_enum(CN_EVENTS, mxs_monitor_event_enum_values);
     m_settings.disk_space_check_interval = params->get_integer(CN_DISK_SPACE_CHECK_INTERVAL);
     m_settings.conn_settings.username = config_get_string(params, CN_USER);
     m_settings.conn_settings.password = config_get_string(params, CN_PASSWORD);

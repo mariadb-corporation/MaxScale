@@ -129,7 +129,7 @@ NullFilter* NullFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
     NullFilter* pFilter = NULL;
 
-    uint64_t capabilities = config_get_enum(pParams, CAPABILITIES_PARAM, capability_values);
+    uint64_t capabilities = pParams->get_enum(CAPABILITIES_PARAM, capability_values);
 
     return new NullFilter(zName, capabilities);
 }

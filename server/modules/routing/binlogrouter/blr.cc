@@ -381,9 +381,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
 
     /* Binlog encryption */
     inst->encryption.enabled = config_get_bool(params, "encrypt_binlog");
-    inst->encryption.encryption_algorithm = config_get_enum(params,
-                                                            "encryption_algorithm",
-                                                            enc_algo_values);
+    inst->encryption.encryption_algorithm = params->get_enum("encryption_algorithm", enc_algo_values);
     inst->encryption.key_management_filename = config_copy_string(params,
                                                                   "encryption_key_file");
 

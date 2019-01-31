@@ -61,9 +61,8 @@ static bool conversion_task_ctl(Avro* inst, bool start);
 MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
     uint64_t block_size = config_get_size(service->svc_config_param, "block_size");
-    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(config_get_enum(service->svc_config_param,
-                                                                                 "codec",
-                                                                                 codec_values));
+    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(
+            service->svc_config_param->get_enum("codec", codec_values));
     std::string avrodir = config_get_string(service->svc_config_param, "avrodir");
     SRowEventHandler handler(new AvroConverter(avrodir, block_size, codec));
 

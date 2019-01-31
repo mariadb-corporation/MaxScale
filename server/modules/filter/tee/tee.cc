@@ -67,7 +67,7 @@ Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
     SERVICE* service = config_get_service(params, "service");
     const char* source = config_get_string(params, "source");
     const char* user = config_get_string(params, "user");
-    uint32_t cflags = config_get_enum(params, "options", option_values);
+    uint32_t cflags = params->get_enum("options", option_values);
     pcre2_code* match = config_get_compiled_regex(params, "match", cflags, NULL);
     pcre2_code* exclude = config_get_compiled_regex(params, "exclude", cflags, NULL);
     const char* match_str = config_get_string(params, "match");

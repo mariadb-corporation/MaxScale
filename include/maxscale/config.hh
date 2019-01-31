@@ -248,6 +248,17 @@ public:
      */
     int64_t get_integer(const std::string& key) const;
 
+    /**
+     * Get a enumeration value.
+     *
+     * @param key Parameter name
+     * @param enum_mapping Enum string->integer mapping
+     * @return The enumeration value converted to an int or -1 if the parameter was not found
+     *
+     * @note The enumeration values should not use -1 so that an undefined parameter is
+     * detected. If -1 is used, config_get_param() should be used to detect whether
+     * the parameter exists
+     */
     int64_t get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const;
 
     char*                    name;          /**< The name of the parameter */
@@ -403,23 +414,6 @@ uint64_t config_get_size(const MXS_CONFIG_PARAMETER* params, const char* key);
  * @return The raw string value or an empty string if no parameter was found
  */
 const char* config_get_string(const MXS_CONFIG_PARAMETER* params, const char* key);
-
-/**
- * @brief Get a enumeration value
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- * @param values All possible enumeration values
- *
- * @return The enumeration value converted to an int or -1 if the parameter was not found
- *
- * @note The enumeration values should not use -1 so that an undefined parameter is
- * detected. If -1 is used, config_get_param() should be used to detect whether
- * the parameter exists
- */
-int config_get_enum(const MXS_CONFIG_PARAMETER* params,
-                    const char* key,
-                    const MXS_ENUM_VALUE* values);
 
 /**
  * @brief Get a service value

@@ -94,7 +94,7 @@ public:
             new_instance->m_match = config_get_string(params, PARAM_MATCH);
             new_instance->m_nomatch = config_get_string(params, PARAM_IGNORE);
 
-            int cflags = config_get_enum(params, "options", option_values);
+            int cflags = params->get_enum("options", option_values);
             const char* keys[] = {PARAM_MATCH, PARAM_IGNORE};
             pcre2_code** code_arr[] = {&new_instance->re, &new_instance->nore};
             if (!config_get_compiled_regexes(params, keys, sizeof(keys) / sizeof(char*),
