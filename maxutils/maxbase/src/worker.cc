@@ -414,7 +414,8 @@ bool Worker::execute(Task* pTask, mxb::Semaphore* pSem, enum execute_mode_t mode
     // No logging here, function must be signal safe.
     bool rval = true;
 
-    if (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this)
+    if ((mode == Worker::EXECUTE_DIRECT)
+        || (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this))
     {
         pTask->execute(*this);
 
@@ -447,7 +448,8 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
 
     pTask->inc_ref();
 
-    if (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this)
+    if ((mode == Worker::EXECUTE_DIRECT)
+        || (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this))
     {
         pTask->execute(*this);
         pTask->dec_ref();

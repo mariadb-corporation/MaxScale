@@ -306,8 +306,9 @@ public:
 
     enum execute_mode_t
     {
-        EXECUTE_AUTO,   /**< Execute tasks immediately */
-        EXECUTE_QUEUED  /**< Only queue tasks for execution */
+        EXECUTE_DIRECT, /**< Always execute directly using the calling thread/worker. */
+        EXECUTE_QUEUED, /**< Always execute via the event loop using this thread/worker. */
+        EXECUTE_AUTO,   /**< If calling thread/worker is this worker, call directly otherwise queued. */
     };
 
     struct Call
