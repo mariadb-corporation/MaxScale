@@ -1754,10 +1754,10 @@ MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char*
     return NULL;
 }
 
-bool config_get_bool(const MXS_CONFIG_PARAMETER* params, const char* key)
+bool MXS_CONFIG_PARAMETER::get_bool(const std::string& key) const
 {
-    const char* value = config_get_value_string(params, key);
-    return *value ? config_truth_value(value) : false;
+    string param_value = get_string(key);
+    return param_value.empty() ? false : config_truth_value(param_value.c_str());
 }
 
 uint64_t config_get_size(const MXS_CONFIG_PARAMETER* params, const char* key)
@@ -2757,7 +2757,7 @@ bool config_create_ssl(const char* name,
         ssl->ssl_method_type = (ssl_method_type_t)ssl_version;
         ssl->ssl_init_done = false;
         ssl->ssl_cert_verify_depth = params->get_integer(CN_SSL_CERT_VERIFY_DEPTH);
-        ssl->ssl_verify_peer_certificate = config_get_bool(params, CN_SSL_VERIFY_PEER_CERTIFICATE);
+        ssl->ssl_verify_peer_certificate = params->get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE);
 
         listener_set_certificates(ssl, ssl_cert, ssl_key, ssl_ca_cert);
 

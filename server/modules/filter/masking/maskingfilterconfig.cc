@@ -113,5 +113,5 @@ MaskingFilterConfig::warn_type_mismatch_t MaskingFilterConfig::get_warn_type_mis
 // static
 bool MaskingFilterConfig::get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams)
 {
-    return config_get_bool(pParams, prevent_function_usage_name);
+    return pParams->get_bool(prevent_function_usage_name);
 }

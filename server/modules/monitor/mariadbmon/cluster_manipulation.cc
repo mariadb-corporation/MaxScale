@@ -64,7 +64,7 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
         {
             string msg = string_printf(SWITCHOVER_FAIL,
                                        op->demotion.target->name(), op->promotion.target->name());
-            bool failover_setting = config_get_bool(m_monitor->parameters, CN_AUTO_FAILOVER);
+            bool failover_setting = parameters->get_bool(CN_AUTO_FAILOVER);
             if (failover_setting)
             {
                 disable_setting(CN_AUTO_FAILOVER);

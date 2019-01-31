@@ -262,6 +262,18 @@ public:
      */
     int64_t get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const;
 
+    /**
+     * @brief Get a boolean value
+     *
+     * The existence of the parameter should be checked with config_get_param() before
+     * calling this function to determine whether the return value represents an existing
+     * value or a missing value.
+     *
+     * @param key Parameter name
+     * @return The value as a boolean or false if none was found
+     */
+    bool get_bool(const std::string& key) const;
+
     char*                    name;          /**< The name of the parameter */
     char*                    value;         /**< The value of the parameter */
     MXS_CONFIG_PARAMETER*    next;          /**< Next pointer in the linked list */
@@ -375,20 +387,6 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                            const char* key,
                            const char* value,
                            const CONFIG_CONTEXT* context);
-
-/**
- * @brief Get a boolean value
- *
- * The existence of the parameter should be checked with config_get_param() before
- * calling this function to determine whether the return value represents an existing
- * value or a missing value.
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- *
- * @return The value as a boolean or false if none was found
- */
-bool config_get_bool(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get a size in bytes

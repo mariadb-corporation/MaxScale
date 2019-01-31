@@ -64,7 +64,7 @@ json_t* MMMonitor::diagnostics_json() const
 
 bool MMMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    m_detectStaleMaster = config_get_bool(params, "detect_stale_master");
+    m_detectStaleMaster = params->get_bool("detect_stale_master");
 
     return true;
 }

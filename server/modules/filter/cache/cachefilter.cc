@@ -359,7 +359,7 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& c
                                                                      parameter_selects_values));
     config.cache_in_trxs = static_cast<cache_in_trxs_t>(ppParams->get_enum("cache_in_transactions",
                                                                            parameter_cache_in_trxs_values));
-    config.enabled = config_get_bool(ppParams, "enabled");
+    config.enabled = ppParams->get_bool("enabled");
 
     if (!config.storage)
     {

@@ -187,15 +187,15 @@ Service::Service(const std::string& service_name,
     snprintf(version_string, sizeof(version_string), "%s", m_version_string.c_str());
 
     max_retry_interval = params->get_integer(CN_MAX_RETRY_INTERVAL);
-    users_from_all = config_get_bool(params, CN_AUTH_ALL_SERVERS);
-    localhost_match_wildcard_host = config_get_bool(params, CN_LOCALHOST_MATCH_WILDCARD_HOST);
-    retry_start = config_get_bool(params, CN_RETRY_ON_FAILURE);
-    enable_root = config_get_bool(params, CN_ENABLE_ROOT_USER);
+    users_from_all = params->get_bool(CN_AUTH_ALL_SERVERS);
+    localhost_match_wildcard_host = params->get_bool(CN_LOCALHOST_MATCH_WILDCARD_HOST);
+    retry_start = params->get_bool(CN_RETRY_ON_FAILURE);
+    enable_root = params->get_bool(CN_ENABLE_ROOT_USER);
     conn_idle_timeout = params->get_integer(CN_CONNECTION_TIMEOUT);
     max_connections = params->get_integer(CN_MAX_CONNECTIONS);
-    log_auth_warnings = config_get_bool(params, CN_LOG_AUTH_WARNINGS);
-    strip_db_esc = config_get_bool(params, CN_STRIP_DB_ESC);
-    session_track_trx_state = config_get_bool(params, CN_SESSION_TRACK_TRX_STATE);
+    log_auth_warnings = params->get_bool(CN_LOG_AUTH_WARNINGS);
+    strip_db_esc = params->get_bool(CN_STRIP_DB_ESC);
+    session_track_trx_state = params->get_bool(CN_SESSION_TRACK_TRX_STATE);
 
     if (config_get_param(params, CN_RETAIN_LAST_STATEMENTS))
     {

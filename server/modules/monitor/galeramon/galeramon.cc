@@ -104,12 +104,12 @@ json_t* GaleraMonitor::diagnostics_json() const
 
 bool GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    m_disableMasterFailback = config_get_bool(params, "disable_master_failback");
-    m_availableWhenDonor = config_get_bool(params, "available_when_donor");
-    m_disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
-    m_root_node_as_master = config_get_bool(params, "root_node_as_master");
-    m_use_priority = config_get_bool(params, "use_priority");
-    m_set_donor_nodes = config_get_bool(params, "set_donor_nodes");
+    m_disableMasterFailback = params->get_bool("disable_master_failback");
+    m_availableWhenDonor = params->get_bool("available_when_donor");
+    m_disableMasterRoleSetting = params->get_bool("disable_master_role_setting");
+    m_root_node_as_master = params->get_bool("root_node_as_master");
+    m_use_priority = params->get_bool("use_priority");
+    m_set_donor_nodes = params->get_bool("set_donor_nodes");
     m_log_no_members = true;
 
     /* Reset all data in the hashtable */

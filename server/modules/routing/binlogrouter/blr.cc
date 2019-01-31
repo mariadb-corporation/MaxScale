@@ -349,9 +349,9 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     inst->retry_interval = params->get_integer("connect_retry");
     inst->retry_limit = params->get_integer("master_retry_count");
     inst->ssl_cert_verification_depth = params->get_integer("ssl_cert_verification_depth");
-    inst->mariadb10_compat = config_get_bool(params, "mariadb10-compatibility");
-    inst->maxwell_compat = config_get_bool(params, "maxwell-compatibility");
-    inst->trx_safe = config_get_bool(params, "transaction_safety");
+    inst->mariadb10_compat = params->get_bool("mariadb10-compatibility");
+    inst->maxwell_compat = params->get_bool("maxwell-compatibility");
+    inst->trx_safe = params->get_bool("transaction_safety");
     inst->fileroot = config_copy_string(params, "filestem");
 
     /* Server id */
@@ -367,20 +367,20 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     inst->set_master_uuid = inst->master_uuid != NULL;
 
     /* Slave Heartbeat */
-    inst->send_slave_heartbeat = config_get_bool(params, "send_slave_heartbeat");
+    inst->send_slave_heartbeat = params->get_bool("send_slave_heartbeat");
 
     /* Semi-Sync support */
-    inst->request_semi_sync = config_get_bool(params, "semisync");
+    inst->request_semi_sync = params->get_bool("semisync");
     inst->master_semi_sync = 0;
 
     /* Enable MariaDB GTID tracking for slaves if MariaDB 10 compat is set */
     inst->mariadb10_gtid = inst->mariadb10_compat;
 
     /* Enable MariaDB GTID registration to master */
-    inst->mariadb10_master_gtid = config_get_bool(params, "mariadb10_master_gtid");
+    inst->mariadb10_master_gtid = params->get_bool("mariadb10_master_gtid");
 
     /* Binlog encryption */
-    inst->encryption.enabled = config_get_bool(params, "encrypt_binlog");
+    inst->encryption.enabled = params->get_bool("encrypt_binlog");
     inst->encryption.encryption_algorithm = params->get_enum("encryption_algorithm", enc_algo_values);
     inst->encryption.key_management_filename = config_copy_string(params,
                                                                   "encryption_key_file");

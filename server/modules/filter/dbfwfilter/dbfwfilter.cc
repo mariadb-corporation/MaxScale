@@ -1202,12 +1202,12 @@ Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
     , m_filename(config_get_string(params, "rules"))
     , m_version(atomic_add(&global_version, 1))
 {
-    if (config_get_bool(params, "log_match"))
+    if (params->get_bool("log_match"))
     {
         m_log_match |= FW_LOG_MATCH;
     }
 
-    if (config_get_bool(params, "log_no_match"))
+    if (params->get_bool("log_no_match"))
     {
         m_log_match |= FW_LOG_NO_MATCH;
     }

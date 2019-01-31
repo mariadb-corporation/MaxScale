@@ -210,7 +210,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         my_instance->replace = MXS_STRDUP_A(config_get_string(params, "replace"));
         my_instance->source = config_copy_string(params, "source");
         my_instance->user = config_copy_string(params, "user");
-        my_instance->log_trace = config_get_bool(params, "log_trace");
+        my_instance->log_trace = params->get_bool("log_trace");
 
         const char* logfile = config_get_string(params, "log_file");
 
