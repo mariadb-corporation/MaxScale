@@ -64,7 +64,7 @@ Tee::Tee(SERVICE* service,
  */
 Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    SERVICE* service = config_get_service(params, "service");
+    SERVICE* service = params->get_service("service");
     const char* source = config_get_string(params, "source");
     const char* user = config_get_string(params, "user");
     uint32_t cflags = params->get_enum("options", option_values);

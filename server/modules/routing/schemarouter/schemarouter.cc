@@ -24,7 +24,7 @@ Config::Config(MXS_CONFIG_PARAMETER* conf)
     , debug(conf->get_bool("debug"))
     , ignore_regex(config_get_compiled_regex(conf, "ignore_databases_regex", 0, NULL))
     , ignore_match_data(ignore_regex ? pcre2_match_data_create_from_pattern(ignore_regex, NULL) : NULL)
-    , preferred_server(config_get_server(conf, "preferred_server"))
+    , preferred_server(conf->get_server("preferred_server"))
 {
     ignored_dbs.insert("mysql");
     ignored_dbs.insert("information_schema");

@@ -117,7 +117,7 @@ void CsMonitor::update_server_status(MXS_MONITORED_SERVER* srv)
 
 bool CsMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
-    m_primary = config_get_server(pParams, "primary");
+    m_primary = pParams->get_server("primary");
     return true;
 }
 

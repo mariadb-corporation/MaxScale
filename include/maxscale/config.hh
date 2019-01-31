@@ -288,6 +288,22 @@ public:
      */
     uint64_t get_size(const std::string& key) const;
 
+    /**
+     * @brief Get a service value
+     *
+     * @param key Parameter name
+     * @return Pointer to configured service
+     */
+    SERVICE* get_service(const std::string& key) const;
+
+    /**
+     * @brief Get a server value
+     *
+     * @param key Parameter name
+     * @return Pointer to configured server
+     */
+    SERVER* get_server(const std::string& key) const;
+
     char*                    name;          /**< The name of the parameter */
     char*                    value;         /**< The value of the parameter */
     MXS_CONFIG_PARAMETER*    next;          /**< Next pointer in the linked list */
@@ -413,27 +429,8 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
 const char* config_get_string(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
- * @brief Get a service value
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- *
- * @return Pointer to configured service
- */
-SERVICE* config_get_service(const MXS_CONFIG_PARAMETER* params, const char* key);
-
-/**
- * @brief Get a server value
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- *
- * @return Pointer to configured server
- */
-SERVER* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key);
-
-/**
- * Get a serverlist value. The returned list is empty if even a partial error occurs.
+ * @brief Get an array of servers. The caller should free the produced array,
+ * but not the array elements.
  *
  * @param params List of configuration parameters
  * @param key Parameter name

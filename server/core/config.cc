@@ -1802,16 +1802,16 @@ int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VA
     return found ? rv : -1;
 }
 
-SERVICE* config_get_service(const MXS_CONFIG_PARAMETER* params, const char* key)
+SERVICE* MXS_CONFIG_PARAMETER::get_service(const std::string& key) const
 {
-    const char* value = config_get_value_string(params, key);
-    return service_find(value);
+    string param_value = get_string(key);
+    return service_find(param_value.c_str());
 }
 
-SERVER* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key)
+SERVER* MXS_CONFIG_PARAMETER::get_server(const std::string& key) const
 {
-    const char* value = config_get_value_string(params, key);
-    return Server::find_by_unique_name(value);
+    string param_value = get_string(key);
+    return Server::find_by_unique_name(param_value.c_str());
 }
 
 std::vector<SERVER*> config_get_server_list(const MXS_CONFIG_PARAMETER* params, const char* key,
@@ -3911,7 +3911,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
     else
     {
         const char* address = config_get_string(obj->parameters, CN_ADDRESS);
-        Service* service = static_cast<Service*>(config_get_service(obj->parameters, CN_SERVICE));
+        Service* service = static_cast<Service*>(obj->parameters->get_service(CN_SERVICE));
         mxb_assert(service);
 
         // Remove this once maxadmin is removed
