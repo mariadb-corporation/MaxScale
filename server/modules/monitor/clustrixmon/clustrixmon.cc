@@ -61,7 +61,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         {
             MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            "Monitor name (from configuration file"
+            "Monitor name (from configuration file)"
         },
         {
             MODULECMD_ARG_SERVER, "Node to be softfailed."
@@ -76,7 +76,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         {
             MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            "Monitor name (from configuration file"
+            "Monitor name (from configuration file)"
         },
         {
             MODULECMD_ARG_SERVER, "Node to be unsoftfailed."

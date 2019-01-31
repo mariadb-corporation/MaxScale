@@ -135,11 +135,11 @@ void ClustrixMonitor::tick()
     switch (m_http.status())
     {
     case http::Async::PENDING:
-        MXS_WARNING("Health check round had not completed when next tick arrived.");
+        MXS_WARNING("%s: Health check round had not completed when next tick arrived.", m_name);
         break;
 
     case http::Async::ERROR:
-        MXS_WARNING("Health check round ended with general error.");
+        MXS_WARNING("%s: Health check round ended with general error.", m_name);
 	make_health_check();
 	break;
 
@@ -206,8 +206,8 @@ void ClustrixMonitor::choose_hub()
 
     if (pHub_con)
     {
-        MXS_NOTICE("Monitoring Clustrix cluster state using node %s:%d.",
-                   pHub_server->address, pHub_server->port);
+        MXS_NOTICE("%s: Monitoring Clustrix cluster state using node %s:%d.",
+                   m_name, pHub_server->address, pHub_server->port);
 
         m_pHub_con = pHub_con;
         m_pHub_server = pHub_server;
@@ -217,8 +217,8 @@ void ClustrixMonitor::choose_hub()
     }
     else
     {
-        MXS_ERROR("Could not connect to any server or no server that could "
-                  "be connected to was part of the quorum.");
+        MXS_ERROR("%s: Could not connect to any server or no server that could "
+                  "be connected to was part of the quorum.", m_name);
     }
 }
 
@@ -313,8 +313,8 @@ void ClustrixMonitor::refresh_nodes()
                             }
                             else
                             {
-                                MXS_ERROR("Could not create server %s at %s:%d.",
-                                          name.c_str(), ip.c_str(), mysql_port);
+                                MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                                          m_name, name.c_str(), ip.c_str(), mysql_port);
                             }
 
                             memberships.erase(mit);
@@ -322,14 +322,15 @@ void ClustrixMonitor::refresh_nodes()
                         else
                         {
                             // Node found in system.node_info but not in system.membership
-                            MXS_ERROR("Node %d at %s:%d,%d found in system.node_info "
+                            MXS_ERROR("%s: Node %d at %s:%d,%d found in system.node_info "
                                       "but not in system.membership.",
-                                      id, ip.c_str(), mysql_port, health_port);
+                                      m_name, id, ip.c_str(), mysql_port, health_port);
                         }
                     }
                     else
                     {
-                        MXS_WARNING("Either nodeid and/or iface_ip is missing, ignoring node.");
+                        MXS_WARNING("%s: Either nodeid and/or iface_ip is missing, ignoring node.",
+                                    m_name);
                     }
                 }
 
@@ -359,13 +360,14 @@ void ClustrixMonitor::refresh_nodes()
             }
             else
             {
-                MXS_WARNING("No result returned for '%s' on %s.", ZQUERY, m_pHub_server->address);
+                MXS_WARNING("%s: No result returned for '%s' on %s.",
+                            m_name, ZQUERY, m_pHub_server->address);
             }
         }
         else
         {
-            MXS_ERROR("Could not execute '%s' on %s: %s",
-                      ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
+            MXS_ERROR("%s: Could not execute '%s' on %s: %s",
+                      m_name, ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
         }
     }
 }
@@ -460,7 +462,8 @@ bool ClustrixMonitor::check_cluster_membership(std::map<int, ClustrixMembership>
                 }
                 else
                 {
-                    MXS_WARNING("No node id returned in row for '%s'.", ZQUERY);
+                    MXS_WARNING("%s: No node id returned in row for '%s'.",
+                                m_name, ZQUERY);
                 }
             }
 
@@ -481,13 +484,13 @@ bool ClustrixMonitor::check_cluster_membership(std::map<int, ClustrixMembership>
         }
         else
         {
-            MXS_WARNING("No result returned for '%s'.", ZQUERY);
+            MXS_WARNING("%s: No result returned for '%s'.", m_name, ZQUERY);
         }
     }
     else
     {
-        MXS_ERROR("Could not execute '%s' on %s: %s",
-		  ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
+        MXS_ERROR("%s: Could not execute '%s' on %s: %s",
+		  m_name, ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
     }
 
     return rv;
@@ -540,11 +543,11 @@ void ClustrixMonitor::make_health_check()
 	break;
 
     case http::Async::ERROR:
-	MXS_ERROR("Could not initiate health check.");
+	MXS_ERROR("%s: Could not initiate health check.", m_name);
 	break;
 
     case http::Async::READY:
-	MXS_NOTICE("Health check available immediately.");
+	MXS_INFO("%s: Health check available immediately.", m_name);
 	break;
     }
 }
@@ -602,7 +605,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
             break;
 
         case http::Async::ERROR:
-            MXS_ERROR("Health check waiting ended with general error.");
+            MXS_ERROR("%s: Health check waiting ended with general error.", m_name);
         }
     }
 
@@ -655,7 +658,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
 
             if (mysql_query(m_pHub_con, zQuery) == 0)
             {
-                MXS_NOTICE("Clustrix monitor %s performed %s on node %d (%s).",
+                MXS_NOTICE("%s: %s performed on node %d (%s).",
                            m_name, zOperation, id, pServer->address);
 
                 if (operation == Operation::SOFTFAIL)

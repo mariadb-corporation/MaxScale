@@ -42,26 +42,28 @@ std::string to_string(SubState sub_state);
 /**
  * Is a particular Clustrix node part of the quorum.
  *
+ * @param zName   The name of the Clustrix monitor instance.
  * @param server  The server object of a Clustrix node.
  * @param pCon    Valid MYSQL handle to the server.
  *
  * @return True, if the node is part of the quorum, false otherwise.
  */
-bool is_part_of_the_quorum(const SERVER& server, MYSQL* pCon);
+bool is_part_of_the_quorum(const char* zName, const SERVER& server, MYSQL* pCon);
 
 /**
  * Is a particular Clustrix node part of the quorum.
  *
- * @param ms    The monitored server object of a Clustrix node.
+ * @param zName   The name of the Clustrix monitor instance.
+ * @param ms      The monitored server object of a Clustrix node.
  *
  * @return True, if the node is part of the quorum, false otherwise.
  */
-inline bool is_part_of_the_quorum(MXS_MONITORED_SERVER& ms)
+inline bool is_part_of_the_quorum(const char* zName, MXS_MONITORED_SERVER& ms)
 {
     mxb_assert(ms.server);
     mxb_assert(ms.con);
 
-    return is_part_of_the_quorum(*ms.server, ms.con);
+    return is_part_of_the_quorum(zName, *ms.server, ms.con);
 }
 
 /**
