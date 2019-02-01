@@ -62,7 +62,7 @@ You can give the necessary grants using the following commands:
     GRANT SELECT ON system.nodeinfo TO 'myuser'@'%';
     GRANT SELECT ON system.softfailed_nodes TO 'myuser'@'%';
 ```
-Further, if you want be able to _softfail_ and _unsoftfail_a node via MaxScale,
+Further, if you want be able to _softfail_ and _unsoftfail_ a node via MaxScale,
 then the monitor user must have `SUPER` privileges, which can be granted like:
 ```
     GRANT SUPER ON *.* TO 'myuser'@'%';
