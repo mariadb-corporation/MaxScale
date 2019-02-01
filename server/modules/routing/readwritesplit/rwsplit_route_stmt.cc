@@ -341,8 +341,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         else
         {
             MXS_ERROR("Could not find valid server for target type %s, closing "
-                      "connection.",
-                      STRTARGET(route_target));
+                      "connection.", route_target_to_string(route_target));
         }
     }
 
@@ -388,6 +387,23 @@ void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type
         {
             backend->continue_session_command(gwbuf_clone(querybuf));
         }
+    }
+}
+
+void RWSplitSession::prune_to_position(uint64_t pos)
+{
+    /** Prune all completed responses before a certain position */
+    ResponseMap::iterator it = m_sescmd_responses.lower_bound(pos);
+
+    if (it != m_sescmd_responses.end())
+    {
+        // Found newer responses that were returned after this position
+        m_sescmd_responses.erase(m_sescmd_responses.begin(), it);
+    }
+    else
+    {
+        // All responses are older than the requested position
+        m_sescmd_responses.clear();
     }
 }
 
@@ -498,7 +514,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         }
     }
 
-    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= m_config.max_sescmd_history)
+    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() > m_config.max_sescmd_history)
     {
         static bool warn_history_exceeded = true;
         if (warn_history_exceeded)
@@ -520,20 +536,17 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         m_sescmd_list.clear();
     }
 
+    if (m_config.prune_sescmd_history && !m_sescmd_list.empty()
+        && m_sescmd_list.size() + 1 > m_config.max_sescmd_history)
+    {
+        // Close to the history limit, remove the oldest command
+        prune_to_position(m_sescmd_list.front()->get_position());
+        m_sescmd_list.pop_front();
+    }
+
     if (m_config.disable_sescmd_history)
     {
-        /** Prune stored responses */
-        ResponseMap::iterator it = m_sescmd_responses.lower_bound(lowest_pos);
-
-        if (it != m_sescmd_responses.end())
-        {
-            m_sescmd_responses.erase(m_sescmd_responses.begin(), it);
-        }
-        else
-        {
-            // All responses processed
-            m_sescmd_responses.clear();
-        }
+        prune_to_position(lowest_pos);
     }
     else
     {
@@ -554,8 +567,16 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     }
     else
     {
-        MXS_ERROR("Could not route session command: %s", attempted_write ? "Write to all backends failed" :
-                  "All connections have failed");
+        std::string status;
+        for (const auto& a : m_backends)
+        {
+            status += "\n";
+            status += a->get_verbose_status();
+        }
+
+        MXS_ERROR("Could not route session command: %s. Connection information: %s",
+                  attempted_write ? "Write to all backends failed" : "All connections have failed",
+                  status.c_str());
     }
 
     return nsucc;
@@ -695,7 +716,6 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
 
     if (name)   /*< Choose backend by name from a hint */
     {
-        mxb_assert(btype != BE_MASTER);
         btype = BE_SLAVE;
         rval = get_hinted_backend(name);
     }
@@ -800,10 +820,19 @@ RWBackend* RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
     {
         if (TARGET_IS_NAMED_SERVER(route_target))
         {
-            MXS_INFO("Was supposed to route to named server "
-                     "%s but couldn't find the server in a "
-                     "suitable state.",
-                     named_server);
+            std::string status = "Could not find server";
+
+            for (const auto& a : m_backends)
+            {
+                if (strcmp(a->server()->name(), named_server) == 0)
+                {
+                    status = a->server()->status_string();
+                    break;
+                }
+            }
+
+            MXS_INFO("Was supposed to route to named server %s but couldn't find the server in a "
+                     "suitable state. Server state: %s", named_server, status.c_str());
         }
         else if (TARGET_IS_RLAG_MAX(route_target))
         {
@@ -1013,6 +1042,7 @@ bool RWSplitSession::handle_master_is_target(RWBackend** dest)
             if (m_current_master && m_current_master->in_use())
             {
                 m_current_master->close();
+                m_current_master->set_close_reason("The original master is not available");
             }
         }
         else if (!m_config.delayed_retry

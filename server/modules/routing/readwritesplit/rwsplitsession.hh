@@ -139,6 +139,7 @@ private:
     void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket);
     void compress_history(mxs::SSessionCommand& sescmd);
 
+    void prune_to_position(uint64_t pos);
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
     bool route_single_stmt(GWBUF* querybuf);
@@ -277,7 +278,7 @@ private:
     int              m_last_keepalive_check;    /**< When the last ping was done */
     int              m_nbackends;               /**< Number of backend servers (obsolete) */
     DCB*             m_client;                  /**< The client DCB */
-    uint64_t         m_sescmd_count;            /**< Number of executed session commands */
+    uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
     int              m_expected_responses;      /**< Number of expected responses to the current
                                                  * query */
     GWBUF*                  m_query_queue;      /**< Queued commands waiting to be executed */
@@ -322,22 +323,35 @@ private:
  */
 uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer);
 
-#define STRTARGET(t) \
-    (t == TARGET_ALL ? "TARGET_ALL"                 \
-                     : (t == TARGET_MASTER ? "TARGET_MASTER"          \
-                                           : (t == TARGET_SLAVE ? "TARGET_SLAVE"           \
-                                                                : (t \
-                                                                   == TARGET_NAMED_SERVER   \
-                                                                   ? "TARGET_NAMED_SERVER"   \
-                                                                   : (t \
-                                                                      == \
-                                                                      TARGET_RLAG_MAX   \
-                                                                      ? "TARGET_RLAG_MAX"   \
-                                                                      : ( \
-                                                                          t \
-                                                                          == \
-                                                                          TARGET_UNDEFINED \
-                                                                          ? \
-                                                                          "TARGET_UNDEFINED"   \
-                                                                          : \
-                                                                          "Unknown target value"))))))
+static inline const char* route_target_to_string(route_target_t target)
+{
+    if (TARGET_IS_MASTER(target))
+    {
+        return "TARGET_MASTER";
+    }
+    else if (TARGET_IS_SLAVE(target))
+    {
+        return "TARGET_SLAVE";
+    }
+    else if (TARGET_IS_NAMED_SERVER(target))
+    {
+        return "TARGET_NAMED_SERVER";
+    }
+    else if (TARGET_IS_ALL(target))
+    {
+        return "TARGET_ALL";
+    }
+    else if (TARGET_IS_RLAG_MAX(target))
+    {
+        return "TARGET_RLAG_MAX";
+    }
+    else if (TARGET_IS_LAST_USED(target))
+    {
+        return "TARGET_LAST_USED";
+    }
+    else
+    {
+        mxb_assert(!true);
+        return "Unknown target value";
+    }
+}

@@ -913,6 +913,12 @@ add_test_executable(mxs2115_version_string.cpp mxs2115_version_string replicatio
 # MXS-2273: Introduce server state BEING_DRAINED
 add_test_executable(mxs2273_being_drained.cpp mxs2273_being_drained mxs2273_being_drained LABELS REPL_BACKEND)
 
+# MXS-2295: COM_CHANGE_USER does not clear out session command history
+add_test_executable(mxs2295_change_user_loop.cpp mxs2295_change_user_loop mxs2295_change_user_loop LABELS REPL_BACKEND)
+
+# MXS-2300: Prune session command history
+add_test_executable(mxs2300_history_pruning.cpp mxs2300_history_pruning mxs2300_history_pruning LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################

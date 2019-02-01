@@ -196,7 +196,7 @@ int main(int argc, char** argv)
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'"),
             },
             {
-                bind(err, "SELECT 7"),
+                bind(err, "SELECT 8"),
                 bind(err, "COMMIT"),
             },
             {
@@ -252,9 +252,9 @@ int main(int argc, char** argv)
 
         // Block and unblock the master
         test.repl->block_node(0);
-        test.maxscales->wait_for_monitor();
+        test.maxscales->wait_for_monitor(2);
         test.repl->unblock_node(0);
-        test.maxscales->wait_for_monitor();
+        test.maxscales->wait_for_monitor(2);
 
         for (auto& f : a.post)
         {

@@ -273,6 +273,9 @@ void RWSplit::diagnostics(DCB* dcb)
                "\tstrict_sp_calls:           %s\n",
                cnf.strict_sp_calls ? "true" : "false");
     dcb_printf(dcb,
+               "\tprune_sescmd_history:    %s\n",
+               cnf.prune_sescmd_history ? "true" : "false");
+    dcb_printf(dcb,
                "\tdisable_sescmd_history:    %s\n",
                cnf.disable_sescmd_history ? "true" : "false");
     dcb_printf(dcb,
@@ -503,6 +506,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {"max_slave_replication_lag",  MXS_MODULE_PARAM_INT,     "-1"           },
             {"max_slave_connections",      MXS_MODULE_PARAM_STRING,  MAX_SLAVE_COUNT},
             {"retry_failed_reads",         MXS_MODULE_PARAM_BOOL,    "true"         },
+            {"prune_sescmd_history",       MXS_MODULE_PARAM_BOOL,    "false"        },
             {"disable_sescmd_history",     MXS_MODULE_PARAM_BOOL,    "false"        },
             {"max_sescmd_history",         MXS_MODULE_PARAM_COUNT,   "50"           },
             {"strict_multi_stmt",          MXS_MODULE_PARAM_BOOL,    "false"        },

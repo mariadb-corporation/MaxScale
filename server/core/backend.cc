@@ -17,12 +17,15 @@
 
 #include <maxbase/atomic.hh>
 
+#include <maxscale/alloc.h>
 #include <maxscale/protocol/mysql.hh>
 
 using namespace maxscale;
 
 Backend::Backend(SERVER_REF* ref)
     : m_closed(false)
+    , m_closed_at(0)
+    , m_opened_at(0)
     , m_backend(ref)
     , m_dcb(NULL)
     , m_state(0)
@@ -49,6 +52,7 @@ void Backend::close(close_type type)
     if (!m_closed)
     {
         m_closed = true;
+        m_closed_at = time(NULL);
 
         if (in_use())
         {
@@ -182,6 +186,8 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
     if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol().c_str())))
     {
         m_closed = false;
+        m_closed_at = 0;
+        m_opened_at = time(NULL);
         m_state = IN_USE;
         mxb::atomic::add(&m_backend->connections, 1, mxb::atomic::RELAXED);
         rval = true;
@@ -284,4 +290,74 @@ void Backend::select_ended()
 int64_t Backend::num_selects() const
 {
     return m_num_selects;
+}
+
+void Backend::set_close_reason(const std::string& reason)
+{
+    m_close_reason = reason;
+}
+
+std::string Backend::get_verbose_status() const
+{
+    std::stringstream ss;
+    char closed_at[30] = "not closed";
+    char opened_at[30] = "not opened";
+
+    if (m_closed_at)
+    {
+        mxb_assert(m_closed);
+        ctime_r(&m_closed_at, closed_at);
+        char* nl = strrchr(closed_at, '\n');
+        mxb_assert(nl);
+        *nl = '\0';
+    }
+
+    if (m_opened_at)
+    {
+        ctime_r(&m_opened_at, opened_at);
+        char* nl = strrchr(opened_at, '\n');
+        mxb_assert(nl);
+        *nl = '\0';
+    }
+
+    ss << "name: [" << name() << "] "
+       << "status: [" << m_backend->server->status_string() << "] "
+       << "state: [" << to_string((backend_state)m_state) << "] "
+       << "last opened at: [" << opened_at << "] "
+       << "last closed at: [" << closed_at << "] "
+       << "last close reason: [" << m_close_reason << "] "
+       << "num sescmd: [" << m_session_commands.size() << "]";
+
+    return ss.str();
+}
+
+std::string Backend::to_string(backend_state state)
+{
+    std::string rval;
+
+    if (state == 0)
+    {
+        rval = "NOT_IN_USE";
+    }
+    else
+    {
+        if (state & IN_USE)
+        {
+            rval += "IN_USE";
+        }
+
+        if (state & WAITING_RESULT)
+        {
+            rval += rval.empty() ? "" : "|";
+            rval += "WAITING_RESULT";
+        }
+
+        if (state & FATAL_FAILURE)
+        {
+            rval += rval.empty() ? "" : "|";
+            rval += "FATAL_FAILURE";
+        }
+    }
+
+    return rval;
 }

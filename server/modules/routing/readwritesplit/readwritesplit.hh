@@ -141,6 +141,7 @@ struct Config
         , master_failure_mode(
             (enum failure_mode)params->get_enum("master_failure_mode", master_failure_mode_values))
         , max_sescmd_history(params->get_integer("max_sescmd_history"))
+        , prune_sescmd_history(config_get_bool(params, "prune_sescmd_history"))
         , disable_sescmd_history(config_get_bool(params, "disable_sescmd_history"))
         , master_accept_reads(config_get_bool(params, "master_accept_reads"))
         , strict_multi_stmt(config_get_bool(params, "strict_multi_stmt"))
@@ -195,6 +196,7 @@ struct Config
                                          * master or all nodes */
     failure_mode master_failure_mode;   /**< Master server failure handling mode */
     uint64_t     max_sescmd_history;    /**< Maximum amount of session commands to store */
+    bool         prune_sescmd_history;  /**< Prune session command history */
     bool         disable_sescmd_history;/**< Disable session command history */
     bool         master_accept_reads;   /**< Use master for reads */
     bool         strict_multi_stmt;     /**< Force non-multistatement queries to be routed to

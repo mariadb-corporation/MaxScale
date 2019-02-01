@@ -29,13 +29,15 @@ protocol=MariaDBBackend
 authenticator=PAMBackendAuth
 ```
 
-The client PAM authenticator will fetch user entries with `plugin='pam'` from
-the `mysql.user` table. The entries should also have a PAM service name set in
-the `authetication_string` column. The matching PAM service in the operating
-system PAM config will be used for authenticating a user. If the
-`authetication_string` for an entry is empty, a fallback service (e.g. `other`)
-is used. If a username@host has multiple matching entries, they will all be
-attempted until authentication succeeds or all fail.
+The PAM authenticator fetches user entries with `plugin='pam'` from
+the `mysql.user` table of a backend. The user accounts also need to have either
+the global SELECT-privilege or a database or a table-level privilege. The PAM
+service name of a user is read from the `authetication_string`-column. The
+matching PAM service in the operating system PAM config is used for
+authenticating the user. If the `authetication_string` for a user is empty,
+the fallback service `mysql` is used. If a username@host-combination matches
+multiple rows, they will all be attempted until authentication succeeds or all
+services fail.
 
 PAM service configuration is out of the scope of this document, see
 [The Linux-PAM System Administrators' Guide

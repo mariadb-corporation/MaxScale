@@ -201,8 +201,6 @@ int main(int argc, char* argv[])
     test.maxscales->wait_for_monitor(2);
     auto maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
-    mysql_close(maxconn);
-
     test.maxscales->wait_for_monitor(1);
 
     check_status(test, "server1", mm_master_states);
@@ -214,6 +212,10 @@ int main(int argc, char* argv[])
     check_group(test, "server3", 1);
     check_group(test, "server4", 0);
     check_rlag(test, "server4", 1, max_rlag);
+    // Need to send a read query so that rwsplit detects replication lag.
+    test.try_query(maxconn, "SHOW DATABASES;");
+    mysql_close(maxconn);
+    test.log_includes(0, "is excluded from query routing.");
 
     test.tprintf("Test 2 - Set nodes 0 and 1 into read-only mode");
 
@@ -328,7 +330,6 @@ int main(int argc, char* argv[])
     test.maxscales->wait_for_monitor(1);
     maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
-    mysql_close(maxconn);
     test.maxscales->wait_for_monitor(1);
 
     check_status(test, "server1", slave_states);
@@ -349,6 +350,10 @@ int main(int argc, char* argv[])
 
     check_status(test, "server1", slave_states);
     check_rlag(test, "server1", 0, 0);
+    // Rwsplit should detects that replication lag is 0.
+    test.try_query(maxconn, "SHOW DATABASES;");
+    mysql_close(maxconn);
+    test.log_includes(0, "is returned to query routing.");
 
     // Test over, reset topology.
     const char reset_with_name[] = "STOP SLAVE '%s'; RESET SLAVE '%s' ALL;";

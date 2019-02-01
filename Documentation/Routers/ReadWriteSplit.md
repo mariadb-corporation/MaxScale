@@ -5,43 +5,7 @@ and its intended use case scenarios. It also displays all router configuration
 parameters with their descriptions. A list of current limitations of the module
 is included and use examples are provided.
 
-Table of Contents
-=================
-
-
-* [Overview](#overview)
-* [Configuration](#configuration)
-* [Parameters](#parameters)
-   * [max_slave_connections](#max_slave_connections)
-   * [max_slave_replication_lag](#max_slave_replication_lag)
-   * [use_sql_variables_in](#use_sql_variables_in)
-   * [connection_keepalive](#connection_keepalive)
-   * [master_reconnection](#master_reconnection)
-   * [slave_selection_criteria](#slave_selection_criteria)
-      * [Server Weights and slave_selection_criteria](#server-weights-and-slave_selection_criteria)
-      * [Interaction Between slave_selection_criteria and max_slave_connections](#interaction-between-slave_selection_criteria-and-max_slave_connections)
-   * [max_sescmd_history](#max_sescmd_history)
-   * [disable_sescmd_history](#disable_sescmd_history)
-   * [master_accept_reads](#master_accept_reads)
-   * [strict_multi_stmt](#strict_multi_stmt)
-   * [strict_sp_calls](#strict_sp_calls)
-   * [master_failure_mode](#master_failure_mode)
-   * [retry_failed_reads](#retry_failed_reads)
-   * [delayed_retry](#delayed_retry)
-   * [delayed_retry_timeout](#delayed_retry_timeout)
-   * [transaction_replay](#transaction_replay)
-   * [transaction_replay_max_size](#transaction_replay_max_size)
-   * [optimistic_trx](#optimistic_trx)
-   * [causal_reads](#causal_reads)
-   * [causal_reads_timeout](#causal_reads_timeout)
-* [Routing hints](#routing-hints)
-* [Limitations](#limitations)
-* [Legacy Configuration](#legacy-configuration)
-* [Examples](#examples)
-* [Readwritesplit routing decisions](#readwritesplit-routing-decisions)
-   * [Routing to Master](#routing-to-master)
-   * [Routing to Slaves](#routing-to-slaves)
-   * [Routing to every session backend](#routing-to-every-session-backend)
+[TOC]
 
 ## Overview
 
@@ -317,6 +281,38 @@ default of 50 session commands after which the history is disabled.
 # Disable the session command history
 disable_sescmd_history=true
 ```
+
+### `prune_sescmd_history`
+
+This option prunes the session command history when it exceeds the value
+configured in `max_sescmd_history`. When this option is enabled, only a set
+number of statements are stored in the history. This limits the per-session
+memory use while still allowing safe reconnections. This parameter was added in
+MaxScale 2.3.4 and is disabled by default.
+
+This parameter is intended to be used with pooled connections that remain in use
+for a very long time. Most connection pool implementations do not reset the
+session state and instead re-initialize it with new values. This causes the
+session command history to grow at roughly a constant rate for the lifetime of
+the pooled connection.
+
+Each client-side session that uses a pooled connection only executes a finite
+amount of session commands. By retaining a shorter history that encompasses all
+session commands the individual clients execute, the session state of a pooled
+connection can be accurately recreated on another server.
+
+If the session command history pruning is enabled, there is a theoretical
+possibility that upon server reconnection the session states of the connections
+are inconsistent. This can only happen if the length of the stored history is
+shorter than the list of relevant statements that affect the session state. In
+practice the default value of 50 session commands is a fairly reasonable value
+and the risk of inconsistent session state is relatively low.
+
+In case the default history length is too short for safe pruning, set the value
+of `max_sescmd_history` to the total number of commands that affect the session
+state plus a safety margin of 10. The safety margin reserves some extra space
+for new commands that might be executed due to changes in the client side
+application.
 
 ### `master_accept_reads`
 
