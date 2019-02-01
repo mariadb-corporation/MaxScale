@@ -5,6 +5,7 @@ After=network.target
 [Service]
 Type=forking
 Restart=on-abort
+@SERVICE_FILE_DEBUG_OPTIONS@
 
 # Make sure /var/run/maxscale exists
 PermissionsStartOnly=true

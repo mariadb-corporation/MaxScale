@@ -2,31 +2,55 @@
 
 ## Pre-release Checklist
 
-* Create new release notes and add all fixed bugs, use a previous one as a template
+* Make sure all bugs that have been fixed are also closed on Jira and have the
+  correct fixVersion
+
+For major releases:
+
+* Create new release notes and add all fixed bugs, use a previous one as a
+  template
+
+For bug fix releases:
+
+* Run the `Documentation/Release-Notes/generate_release_notes.sh` script to
+  auto-generate release notes
+
+Finally:
+
 * Add link to release notes and document major changes in Changelog.md
 
 ## 1. Tag
 
-Release builds are always made using a tag. However, the used
-tag is a _tentative_ tag, to ensure that there never is a need
-to _move_ any tag, should the release have to be modified after
-it has been tagged. All that is needed is to create a new
-tentative tag.
+Release builds are always made using a tag and a separate branch. However, the
+used tag is a _tentative_ tag, to ensure that there never is a need to _move_
+any tag, should the release have to be modified after it has been tagged. All
+that is needed is to create a new tentative tag.
 
-The source for release `x.y.z` is tagged with `maxscale-x.y.z-ttN`
-where `N` is 1 for the first attempt and incremented in case the
-`x.y.z` source still needs to be modified and the release rebuilt.
+The source for release `x.y.z` is tagged with `maxscale-x.y.z-ttN` where `N` is
+1 for the first attempt and incremented in case the `x.y.z` source still needs
+to be modified and the release rebuilt.
 
-The final tag `maxscale-x.y.z` is created _after_ the packages have
-been published and we are certain they will not be rebuilt, without
-also the version number being changed.
+The final tag `maxscale-x.y.z` is created _after_ the packages have been
+published and we are certain they will not be rebuilt, without also the version
+number being changed.
 
-So, ensure that the `maxscale-x.y.z-ttN` has been created and pushed
-to the repository.
+To create the tag and the branch from the main _x.y_ branch:
 
 ```
+git checkout x.y
+git checkout -b x.y.z
+git tag maxscale-x.y.z-ttN
+git push -u origin x.y.z
 git push origin refs/tags/maxscale-x.y.z-ttN
 ```
+
+**A note on fixing bugs while doing a release:**
+
+A separate branch is used to guarantee that no commits are added once the
+release proceedings have started. If any fixes to code or documentation need to
+be done, do them on the _x.y.z_ branch. If a fix has been made, create a new tag
+by incrementing the `-ttN` suffix by one and push both the branch and the new
+tag to the repo.
 
 **NOTE** The tentative suffix - `-ttN` - is **only** used when
 specifying the tag for the build, it must **not** be present in
@@ -34,26 +58,22 @@ any other names or paths.
 
 ## 2. Build and upgrade test
 
-The Jenkins
-[build_for_release](http://127.0.0.1:8089/job/build_for_release/)
-job should be used for building the packages.
-
-Note that the above will not work unless you have set up an
-ssh tunnel to Jenkins:
-```
-$ ssh -f -N -L 8089:127.0.0.1:8089 vagrant@max-tst-01.mariadb.com
-```
+The BuildBot [build_for_release](https://maxscale-ci.mariadb.com/#/builders/38)
+job should be used for building the packages. Use your GitHub account to log in
+to actually see the job. Click the blue _Build for release_ button in the top
+right corner to start it.
 
 ### Parameters to define
 
-#### `scm_source`
+#### `branch`
 
 This is the tag that is used to build the release.
 
 ```
 refs/tags/maxscale-x.y.z-ttN
 ```
-#### `version_number`
+
+#### `The version number of this release in x.y.z format`
 
 The version number of this release in x.y.z format. This will create two packages; maxscale-x.y.z-release and maxscale-x.y.z-debug.
 
@@ -61,37 +81,14 @@ The version number of this release in x.y.z format. This will create two package
 x.y.z
 ```
 
-#### `old_target`
+#### `Old target`
 
-The previous released version, used by upgrade tests.
+The previous released version, used by upgrade tests. Set it to the previous
+release e.g. for 2.2.19 set it to 2.2.18. For GA releases, set it to the latest
+release of the previous major release e.g. for 2.3.0 set it to 2.2.19.
 
 ```
 x.y.z
-```
-
-### 1.4.x build
-
-Use the [build_all](http://127.0.0.1:8089/job/build_all/) job.
-
-For `1.4` builds the default values of the following parameters
-should be changed:
-
-#### use_mariadbd
-
-```
-yes
-```
-
-#### cnf_file
-
-```
-maxscale.cnf.minimum.1.4.4
-```
-
-#### maxadmin_command
-
-```
-maxadmin -pmariadb show services
 ```
 
 ## 3. Copying to code.mariadb.com
@@ -163,18 +160,6 @@ and remove the tentative tag(s)
 ```bash
 git tag -d maxscale-x.y.z-ttN
 git push origin :refs/tags/maxscale-x.y.z-ttN
-```
-
-## 6. Create the branch
-
-Release `x.y.z` is typically developed in the branch `x.y`.
-Once `x.y.z` has been released, the branch `x.y.z` also needs
-to be created.
-
-```bash
-git checkout maxscale-x.y.z
-git checkout -b x.y.z
-git push origin x.y.z
 ```
 
 ## 7. Update the release date

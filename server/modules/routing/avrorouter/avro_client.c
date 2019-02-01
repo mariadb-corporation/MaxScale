@@ -853,15 +853,15 @@ GWBUF* read_avro_json_schema(const char *avrofile, const char* dir)
                     nread--;
                 }
 
-                buffer[nread++] = '\n';
-
-                GWBUF * newbuf = gwbuf_alloc_and_load(nread, buffer);
+                GWBUF* newbuf = gwbuf_alloc_and_load(nread, buffer);
 
                 if (newbuf)
                 {
                     rval = gwbuf_append(rval, newbuf);
                 }
             }
+
+            rval = gwbuf_append(rval, gwbuf_alloc_and_load(1, "\n"));
 
             fclose(file);
         }

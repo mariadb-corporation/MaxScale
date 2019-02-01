@@ -220,10 +220,9 @@ std::string get_version_string(SERVICE* service)
     }
 
     // Older applications don't understand versions other than 5 and cause strange problems
-    const char prefix[] = "5.5.5-";
-
-    if (strncmp(rval.c_str(), prefix, sizeof(prefix) - 1) != 0)
+    if (rval[0] != '5')
     {
+        const char prefix[] = "5.5.5-";
         rval = prefix + rval;
     }
 
@@ -726,7 +725,13 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     int auth_val = MXS_AUTH_FAILED;
     if (dcb->authfunc.extract(dcb, read_buffer))
     {
-        auth_val = dcb->authfunc.authenticate(dcb);
+        auth_val = ssl_authenticate_check_status(dcb);
+
+        if (auth_val == MXS_AUTH_SSL_COMPLETE)
+        {
+            // TLS connection phase complete
+            auth_val = dcb->authfunc.authenticate(dcb);
+        }
     }
     else
     {

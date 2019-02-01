@@ -135,23 +135,27 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying use usr1 to execute query: RW Split\n");
     Test->add_result(
         Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4006", false),
+                             "echo select User,Host from mysql.user | mysql --ssl -uusr1 -h maxscale.maxscale.test -P 4006", false),
         "Error executing query against RW Split\n");
     Test->tprintf("Trying use usr1 to execute query: Read Connection Master\n");
     Test->add_result(
         Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4008", false),
+                             "echo select User,Host from mysql.user | mysql --ssl -uusr1 -h maxscale.maxscale.test -P 4008", false),
         "Error executing query against Read Connection Master\n");
     Test->tprintf("Trying use usr1 to execute query: Read Connection Slave\n");
     Test->add_result(
         Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4009", false),
+                             "echo select User,Host from mysql.user | mysql --ssl -uusr1 -h maxscale.maxscale.test -P 4009", false),
         "Error executing query against Read Connection Slave\n");
 
     for (int i = 0; i < Test->repl->N; i++)
     {
         Test->repl->ssh_node(i, "sudo rm -f /etc/my.cnf.d/kerb.cnf", true);
     }
+
+    Test->repl->connect();
+    Test->try_query(Test->repl->nodes[0], "DROP USER usr1");
+    Test->repl->disconnect();
 
     int rval = Test->global_result;
     delete Test;
