@@ -156,15 +156,17 @@ bool Clustrix::is_part_of_the_quorum(const char* zName, const SERVER& server, MY
     return rv;
 }
 
-bool Clustrix::ping_or_connect_to_hub(const MXS_MONITORED_SERVER::ConnectionSettings& sett, SERVER& server,
+bool Clustrix::ping_or_connect_to_hub(const char* zName,
+                                      const MXS_MONITORED_SERVER::ConnectionSettings& settings,
+                                      SERVER& server,
                                       MYSQL** ppCon)
 {
     bool connected = false;
-    mxs_connect_result_t rv = mon_ping_or_connect_to_db(sett, server, ppCon);
+    mxs_connect_result_t rv = mon_ping_or_connect_to_db(settings, server, ppCon);
 
     if (mon_connection_is_ok(rv))
     {
-        if (Clustrix::is_part_of_the_quorum(mon.m_name, server, *ppCon))
+        if (Clustrix::is_part_of_the_quorum(zName, server, *ppCon))
         {
             connected = true;
         }
@@ -172,7 +174,7 @@ bool Clustrix::ping_or_connect_to_hub(const MXS_MONITORED_SERVER::ConnectionSett
     else
     {
         MXS_ERROR("%s: Could either not ping or create connection to %s:%d: %s",
-                  mon.m_name, server.address, server.port, mysql_error(*ppCon));
+                  zName, server.address, server.port, mysql_error(*ppCon));
     }
 
     return connected;

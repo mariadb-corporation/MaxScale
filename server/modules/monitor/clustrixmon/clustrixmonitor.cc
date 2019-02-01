@@ -169,7 +169,7 @@ void ClustrixMonitor::choose_hub()
         auto& element = *it;
         ClustrixNode& node = element.second;
 
-        if (node.can_be_used_as_hub(m_settings.conn_settings))
+        if (node.can_be_used_as_hub(m_name, m_settings.conn_settings))
         {
             pHub_con = node.release_connection();
             pHub_server = node.server();
@@ -189,7 +189,7 @@ void ClustrixMonitor::choose_hub()
 
             if (ips.find(ms.server->address) == ips.end())
             {
-                if (Clustrix::ping_or_connect_to_hub(m_settings.conn_settings, ms))
+                if (Clustrix::ping_or_connect_to_hub(m_name, m_settings.conn_settings, ms))
                 {
                     pHub_con = ms.con;
                     pHub_server = ms.server;
@@ -395,7 +395,7 @@ void ClustrixMonitor::check_hub()
     mxb_assert(m_pHub_con);
     mxb_assert(m_pHub_server);
 
-    if (!Clustrix::ping_or_connect_to_hub(m_settings.conn_settings, *m_pHub_server, &m_pHub_con))
+    if (!Clustrix::ping_or_connect_to_hub(m_name, m_settings.conn_settings, *m_pHub_server, &m_pHub_con))
     {
         mysql_close(m_pHub_con);
         m_pHub_con = nullptr;

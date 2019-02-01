@@ -70,30 +70,36 @@ inline bool is_part_of_the_quorum(const char* zName, MXS_MONITORED_SERVER& ms)
  * Ping or create connection to server and check whether it can be used
  * as hub.
  *
- * @param sett    Connection settings
- * @param server  Server object referring to a Clustrix node.
- * @param ppCon   Address of pointer to MYSQL object referring to @server
- *                (@c *ppCon may also be NULL).
+ * @param zName     The name of the Clustrix monitor instance.
+ * @param settings  Connection settings
+ * @param server    Server object referring to a Clustrix node.
+ * @param ppCon     Address of pointer to MYSQL object referring to @server
+ *                  (@c *ppCon may also be NULL).
  *
  * @return True, if the server can be used as hub, false otherwise.
  *
  * @note Upon return @c *ppCon will be non-NULL.
  */
-bool ping_or_connect_to_hub(const MXS_MONITORED_SERVER::ConnectionSettings& sett, SERVER& server,
+bool ping_or_connect_to_hub(const char* zName,
+                            const MXS_MONITORED_SERVER::ConnectionSettings& settings,
+                            SERVER& server,
                             MYSQL** ppCon);
 
 /**
  * Ping or create connection to server and check whether it can be used
  * as hub.
  *
- * @param ms   Monitored server object referring to a Clustrix node.
- * @param sett Connection settings
+ * @param zName     The name of the Clustrix monitor instance.
+ * @param settings  Connection settings
+ * @param ms        The monitored server.
+ *
  * @return True, if the server can be used as hub, false otherwise.
  */
-inline bool ping_or_connect_to_hub(const MXS_MONITORED_SERVER::ConnectionSettings& sett,
+inline bool ping_or_connect_to_hub(const char* zName,
+                                   const MXS_MONITORED_SERVER::ConnectionSettings& settings,
                                    MXS_MONITORED_SERVER& ms)
 {
-    return ping_or_connect_to_hub(sett, *ms.server, &ms.con);
+    return ping_or_connect_to_hub(zName, settings, *ms.server, &ms.con);
 }
 
 }

@@ -160,7 +160,8 @@ public:
         m_pServer->is_active = false;
     }
 
-    bool can_be_used_as_hub(const MXS_MONITORED_SERVER::ConnectionSettings& sett);
+    bool can_be_used_as_hub(const char* zName,
+                            const MXS_MONITORED_SERVER::ConnectionSettings& settings);
 
     SERVER* server() const
     {
