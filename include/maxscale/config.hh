@@ -318,6 +318,14 @@ public:
      */
     SERVER* get_server(const std::string& key) const;
 
+    /**
+     * Check if a key exists.
+     *
+     * @param key Parameter name
+     * @return True if key was found
+     */
+    bool contains(const std::string& key) const;
+
     char*                    name;          /**< The name of the parameter */
     char*                    value;         /**< The value of the parameter */
     MXS_CONFIG_PARAMETER*    next;          /**< Next pointer in the linked list */
@@ -395,15 +403,6 @@ struct MXS_CONFIG
  * @return The global configuration
  */
 MXS_CONFIG* config_get_global_options();
-
-/**
- * @brief Get a configuration parameter
- *
- * @param params List of parameters
- * @param name Name of parameter to get
- * @return The parameter or NULL if the parameter was not found
- */
-MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name);
 
 /**
  * @brief Helper function for checking SSL parameters

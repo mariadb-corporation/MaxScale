@@ -760,7 +760,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
         cntxt->next = ptr;
     }
 
-    if (config_get_param(ptr->parameters, name))
+    if (ptr->parameters->contains(name))
     {
         /** The values in the persisted configurations are updated versions of
          * the ones in the main configuration file.  */
@@ -1283,27 +1283,18 @@ const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
 {
     std::string type = obj->parameters->get_string(CN_TYPE);
 
-    if (type == CN_SERVICE && !config_get_param(obj->parameters, CN_ROUTER))
+    if (type == CN_SERVICE && !obj->parameters->contains(CN_ROUTER))
     {
         return CN_ROUTER;
     }
-    else if (type == CN_LISTENER && !config_get_param(obj->parameters, CN_PROTOCOL))
+    else if ((type == CN_LISTENER || type == CN_SERVER) && !obj->parameters->contains(CN_PROTOCOL))
     {
         return CN_PROTOCOL;
     }
-    else if (type == CN_SERVER && !config_get_param(obj->parameters, CN_PROTOCOL))
-    {
-        return CN_PROTOCOL;
-    }
-    else if (type == CN_MONITOR && !config_get_param(obj->parameters, CN_MODULE))
+    else if ((type == CN_MONITOR || type == CN_FILTER) && !obj->parameters->contains(CN_MODULE))
     {
         return CN_MODULE;
     }
-    else if (type == CN_FILTER && !config_get_param(obj->parameters, CN_MODULE))
-    {
-        return CN_MODULE;
-    }
-
     return nullptr;
 }
 
@@ -1709,7 +1700,7 @@ void do_passwd_deprecation(CONFIG_CONTEXT* obj)
 {
     if (auto p = config_get_param(obj->parameters, "passwd"))
     {
-        if (config_get_param(obj->parameters, CN_PASSWORD))
+        if (obj->parameters->contains(CN_PASSWORD))
         {
             MXS_WARNING("Both 'password' and 'passwd' specified. Using value of '%s'.", CN_PASSWORD);
         }
@@ -1812,6 +1803,20 @@ SERVER* MXS_CONFIG_PARAMETER::get_server(const std::string& key) const
 {
     string param_value = get_string(key);
     return Server::find_by_unique_name(param_value.c_str());
+}
+
+bool MXS_CONFIG_PARAMETER::contains(const string& key) const
+{
+    auto params = this;
+    while (params)
+    {
+        if (params->name == key)
+        {
+            return true;
+        }
+        params = params->next;
+    }
+    return false;
 }
 
 std::vector<SERVER*> config_get_server_list(const MXS_CONFIG_PARAMETER* params, const char* key,
@@ -1973,7 +1978,7 @@ void config_context_free(CONFIG_CONTEXT* context)
 
 bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    mxb_assert(config_get_param(obj->parameters, key) == NULL);
+    mxb_assert(!obj->parameters->contains(key));
     bool rval = false;
     char* my_key = MXS_STRDUP(key);
     char* my_value = MXS_STRDUP(value);
@@ -2877,8 +2882,7 @@ static bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
     {
         for (int i = 0; mod_params[i].name; i++)
         {
-            if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED)
-                && config_get_param(params, mod_params[i].name) == NULL)
+            if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) && !params->contains(mod_params[i].name))
             {
                 MXS_ERROR("Mandatory parameter '%s' is not defined for '%s'.",
                           mod_params[i].name,
@@ -3571,8 +3575,7 @@ void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params)
     {
         for (int i = 0; params[i].name; i++)
         {
-            if (params[i].default_value
-                && config_get_param(ctx->parameters, params[i].name) == NULL)
+            if (params[i].default_value && !ctx->parameters->contains(params[i].name))
             {
                 bool rv = config_add_param(ctx, params[i].name, params[i].default_value);
                 MXS_ABORT_IF_FALSE(rv);
@@ -3810,7 +3813,7 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
     MXS_CONFIG_PARAMETER* params = obj->parameters;
     // The config loader has already checked that the server list is mostly ok. However, it cannot
     // check that the server names in the list actually ended up generated.
-    if (config_get_param(params, CN_SERVERS))
+    if (params->contains(CN_SERVERS))
     {
         string name_not_found;
         auto servers = config_get_server_list(params, CN_SERVERS, &name_not_found);
@@ -3991,12 +3994,11 @@ int create_new_filter(CONFIG_CONTEXT* obj)
 bool config_have_required_ssl_params(CONFIG_CONTEXT* obj)
 {
     MXS_CONFIG_PARAMETER* param = obj->parameters;
-
-    return config_get_param(param, CN_SSL)
-           && config_get_param(param, CN_SSL_KEY)
-           && config_get_param(param, CN_SSL_CERT)
-           && config_get_param(param, CN_SSL_CA_CERT)
-           && strcmp(config_get_value_string(param, CN_SSL), CN_REQUIRED) == 0;
+    return param->contains(CN_SSL)
+           && param->contains(CN_SSL_KEY)
+           && param->contains(CN_SSL_CERT)
+           && param->contains(CN_SSL_CA_CERT)
+           && (param->get_string(CN_SSL) == CN_REQUIRED);
 }
 
 bool config_is_ssl_parameter(const char* key)

@@ -236,3 +236,12 @@ void dump_param_list(int file,
  * @return True if the parameter can be modified at runtime
  */
 bool config_can_modify_at_runtime(const char* name);
+
+/**
+ * @brief Get a configuration parameter
+ *
+ * @param params List of parameters
+ * @param name Name of parameter to get
+ * @return The parameter or NULL if the parameter was not found
+ */
+MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name);

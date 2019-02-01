@@ -94,11 +94,11 @@ void Avro::read_source_service_options(SERVICE* source)
 Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
 {
     SERVICE* source_service = NULL;
-    MXS_CONFIG_PARAMETER* param = config_get_param(service->svc_config_param, "source");
+    std::string source_name = service->svc_config_param->get_string("source");
 
-    if (param)
+    if (!source_name.empty())
     {
-        SERVICE* source = service_find(param->value);
+        SERVICE* source = service_find(source_name.c_str());
         mxb_assert(source);
 
         if (source)
@@ -119,7 +119,7 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
         }
         else
         {
-            MXS_ERROR("Service '%s' not found.", param->value);
+            MXS_ERROR("Service '%s' not found.", source_name.c_str());
             return NULL;
         }
     }

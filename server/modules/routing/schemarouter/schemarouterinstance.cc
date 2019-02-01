@@ -53,7 +53,7 @@ SchemaRouter::~SchemaRouter()
 
 SchemaRouter* SchemaRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {
-    if ((config_get_param(params, "auth_all_servers")) == NULL)
+    if (!params->contains("auth_all_servers"))
     {
         MXS_NOTICE("Authentication data is fetched from all servers. To disable this "
                    "add 'auth_all_servers=0' to the service.");

@@ -31,9 +31,10 @@ Config::Config(MXS_CONFIG_PARAMETER* conf)
     ignored_dbs.insert("performance_schema");
 
     // TODO: Don't process this in the router
-    if (MXS_CONFIG_PARAMETER* p = config_get_param(conf, "ignore_databases"))
+    std::string ignored_dbs_str = conf->get_string("ignore_databases");
+    if (!ignored_dbs_str.empty())
     {
-        for (const auto& a : mxs::strtok(p->value, ", \t"))
+        for (const auto& a : mxs::strtok(ignored_dbs_str, ", \t"))
         {
             ignored_dbs.insert(a);
         }

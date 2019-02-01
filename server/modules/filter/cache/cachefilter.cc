@@ -377,11 +377,10 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& c
 
     config.rules = ppParams->get_c_str_copy("rules");
 
-    const MXS_CONFIG_PARAMETER* pParam = config_get_param(ppParams, "storage_options");
-
-    if (pParam)
+    string storage_options = ppParams->get_string("storage_options");
+    if (!storage_options.empty())
     {
-        config.storage_options = MXS_STRDUP(pParam->value);
+        config.storage_options = MXS_STRDUP(storage_options.c_str());
 
         if (config.storage_options)
         {

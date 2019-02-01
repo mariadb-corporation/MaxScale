@@ -179,7 +179,7 @@ int test_add_parameter()
 
     TEST(ctx.parameters->get_integer("p1") == -321);
     TEST(ctx.parameters->get_integer("p2") == 321);
-    TEST(config_get_param(ctx.parameters, "p3") && ctx.parameters->get_bool("p3") == false);
+    TEST(ctx.parameters->contains("p3") && ctx.parameters->get_bool("p3") == false);
     TEST(ctx.parameters->get_string("p4") == "strange");
     int val = ctx.parameters->get_enum("p5", enum_values);
     TEST(val == 5);

@@ -197,7 +197,7 @@ Service::Service(const std::string& service_name,
     strip_db_esc = params->get_bool(CN_STRIP_DB_ESC);
     session_track_trx_state = params->get_bool(CN_SESSION_TRACK_TRX_STATE);
 
-    if (config_get_param(params, CN_RETAIN_LAST_STATEMENTS))
+    if (params->contains(CN_RETAIN_LAST_STATEMENTS))
     {
         retain_last_statements = params->get_integer(CN_RETAIN_LAST_STATEMENTS);
     }

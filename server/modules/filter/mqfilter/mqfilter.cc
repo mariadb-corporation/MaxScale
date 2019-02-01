@@ -618,32 +618,32 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
             MXS_ABORT_IF_NULL(my_instance->obj_trg);
         }
 
-        MXS_CONFIG_PARAMETER* p = config_get_param(params, "logging_source_user");
+        std::string value = params->get_string("logging_source_user");
 
-        if (p && my_instance->src_trg)
+        if (!value.empty() && my_instance->src_trg)
         {
-            my_instance->src_trg->user = parse_optstr(p->value, ",", &my_instance->src_trg->usize);
+            my_instance->src_trg->user = parse_optstr(value.c_str(), ",", &my_instance->src_trg->usize);
         }
 
-        p = config_get_param(params, "logging_source_host");
+        value = params->get_string("logging_source_host");
 
-        if (p && my_instance->src_trg)
+        if (!value.empty() && my_instance->src_trg)
         {
-            my_instance->src_trg->host = parse_optstr(p->value, ",", &my_instance->src_trg->hsize);
+            my_instance->src_trg->host = parse_optstr(value.c_str(), ",", &my_instance->src_trg->hsize);
         }
 
-        p = config_get_param(params, "logging_schema");
+        value = params->get_string("logging_schema");
 
-        if (p && my_instance->shm_trg)
+        if (!value.empty() && my_instance->shm_trg)
         {
-            my_instance->shm_trg->objects = parse_optstr(p->value, ",", &my_instance->shm_trg->size);
+            my_instance->shm_trg->objects = parse_optstr(value.c_str(), ",", &my_instance->shm_trg->size);
         }
 
-        p = config_get_param(params, "logging_object");
+        value = params->get_string("logging_object");
 
-        if (p && my_instance->obj_trg)
+        if (!value.empty() && my_instance->obj_trg)
         {
-            my_instance->obj_trg->objects = parse_optstr(p->value, ",", &my_instance->obj_trg->size);
+            my_instance->obj_trg->objects = parse_optstr(value.c_str(), ",", &my_instance->obj_trg->size);
         }
 
         my_instance->use_ssl = my_instance->ssl_client_cert

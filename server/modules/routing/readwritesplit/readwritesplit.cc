@@ -191,11 +191,11 @@ bool RWSplit::have_enough_servers() const
     return succp;
 }
 
-static void log_router_options_not_supported(SERVICE* service, MXS_CONFIG_PARAMETER* p)
+static void log_router_options_not_supported(SERVICE* service, std::string router_opts)
 {
     std::stringstream ss;
 
-    for (const auto& a : mxs::strtok(p->value, ", \t"))
+    for (const auto& a : mxs::strtok(router_opts, ", \t"))
     {
         ss << a << "\n";
     }
@@ -214,9 +214,10 @@ static void log_router_options_not_supported(SERVICE* service, MXS_CONFIG_PARAME
 
 RWSplit* RWSplit::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
-    if (MXS_CONFIG_PARAMETER* p = config_get_param(params, CN_ROUTER_OPTIONS))
+
+    if (params->contains(CN_ROUTER_OPTIONS))
     {
-        log_router_options_not_supported(service, p);
+        log_router_options_not_supported(service, params->get_string(CN_ROUTER_OPTIONS));
         return NULL;
     }
 
