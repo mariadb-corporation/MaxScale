@@ -653,17 +653,30 @@ void avro_load_metadata_from_schemas(Avro* router)
         for (int i = files.gl_pathc - 1; i > -1; i--)
         {
             char* dbstart = strrchr(files.gl_pathv[i], '/');
-            mxb_assert(dbstart);
+
+            if (!dbstart)
+            {
+                continue;
+            }
+
             dbstart++;
 
             char* tablestart = strchr(dbstart, '.');
-            mxb_assert(tablestart);
+
+            if (!tablestart)
+            {
+                continue;
+            }
 
             snprintf(db, sizeof(db), "%.*s", (int)(tablestart - dbstart), dbstart);
             tablestart++;
 
             char* versionstart = strchr(tablestart, '.');
-            mxb_assert(versionstart);
+
+            if (!versionstart)
+            {
+                continue;
+            }
 
             snprintf(table, sizeof(table), "%.*s", (int)(versionstart - tablestart), tablestart);
             versionstart++;
