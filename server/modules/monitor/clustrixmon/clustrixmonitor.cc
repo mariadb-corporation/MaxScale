@@ -609,25 +609,35 @@ bool ClustrixMonitor::check_http(Call::action_t action)
 
         case http::Async::READY:
             {
+                // There are as many results as there are nodes,
+                // and the results are in node order.
                 const vector<http::Result>& results = m_http.results();
+                mxb_assert(results.size() == m_nodes.size());
 
                 auto it = m_nodes.begin();
 
-                for_each(results.begin(), results.end(),
-                         [&it](const http::Result& result) {
-                             bool running = false;
+                for (const auto& result : results)
+                {
+                    bool running = (result.code == 200); // HTTP OK
 
-                             if (result.code == 200)
-                             {
-                                 running = true;
-                             }
+                    ClustrixNode& node = it->second;
 
-                             auto& node_info = it->second;
+                    node.set_running(running);
 
-                             node_info.set_running(running);
+                    if (!running)
+                    {
+                        // We have to explicitly check whether the node is to be
+                        // considered down, as the value of `health_check_threshold`
+                        // defines how quickly a node should be considered down.
+                        if (!node.is_running())
+                        {
+                            // Ok, the node is down. Trigger a cluster check at next tick.
+                            m_last_cluster_check = 0;
+                        }
+                    }
 
-                             ++it;
-                         });
+                    ++it;
+                }
             }
             break;
 
