@@ -230,7 +230,9 @@ void ClustrixMonitor::refresh_nodes()
 
     if (check_cluster_membership(&memberships))
     {
-        const char ZQUERY[] = "SELECT nodeid, iface_ip, mysql_port, healthmon_port FROM system.nodeinfo";
+        const char ZQUERY[] =
+            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid FROM system.nodeinfo AS ni "
+            "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
 
         if (mysql_query(m_pHub_con, ZQUERY) == 0)
         {
@@ -238,7 +240,7 @@ void ClustrixMonitor::refresh_nodes()
 
             if (pResult)
             {
-                mxb_assert(mysql_field_count(m_pHub_con) == 4);
+                mxb_assert(mysql_field_count(m_pHub_con) == 5);
 
                 set<int> nids;
                 for (const auto& element : m_nodes)
@@ -256,6 +258,7 @@ void ClustrixMonitor::refresh_nodes()
                         string ip = row[1];
                         int mysql_port = row[2] ? atoi(row[2]) : DEFAULT_MYSQL_PORT;
                         int health_port = row[3] ? atoi(row[3]) : DEFAULT_HEALTH_PORT;
+                        bool softfailed = row[4] ? true : false;
 
                         // '@@' ensures no clash with user created servers.
                         // Monitor name ensures no clash with other Clustrix monitor instances.
@@ -286,6 +289,23 @@ void ClustrixMonitor::refresh_nodes()
                                 node.set_health_port(health_port);
                             }
 
+                            bool is_being_drained = node.server()->is_being_drained();
+
+                            if (softfailed && !is_being_drained)
+                            {
+                                MXS_NOTICE("%s: Node %d (%s) has been SOFTFAILed. Turning ON 'Being Drained'.",
+                                           m_name, node.id(), node.server()->address);
+
+                                node.server()->set_status(SERVER_BEING_DRAINED);
+                            }
+                            else if (!softfailed && is_being_drained)
+                            {
+                                MXS_NOTICE("%s: Node %d (%s) is no longer being SOFTFAILed. Turning OFF 'Being Drained'.",
+                                           m_name, node.id(), node.server()->address);
+
+                                node.server()->clear_status(SERVER_BEING_DRAINED);
+                            }
+
                             nids.erase(id);
                         }
                         else if (mit != memberships.end())
@@ -302,6 +322,11 @@ void ClustrixMonitor::refresh_nodes()
                             {
                                 SERVER* pServer = SERVER::find_by_unique_name(name);
                                 mxb_assert(pServer);
+
+                                if (softfailed)
+                                {
+                                    pServer->set_status(SERVER_BEING_DRAINED);
+                                }
 
                                 const ClustrixMembership& membership = mit->second;
                                 int health_check_threshold = m_config.health_check_threshold();
@@ -336,6 +361,8 @@ void ClustrixMonitor::refresh_nodes()
 
                 mysql_free_result(pResult);
 
+                // Any nodes that were not found are not available, so their
+                // state must be set accordingly.
                 for (const auto nid : nids)
                 {
                     auto it = m_nodes.find(nid);
