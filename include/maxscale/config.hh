@@ -232,15 +232,6 @@ public:
     std::string get_string(const std::string& key) const;
 
     /**
-     * Get value of key as c-string. The pointer is valid as long as the underlying configuration
-     * is not changed.
-     *
-     * @param key Parameter name
-     * @return Parameter value. Empty string if key not found.
-     */
-    const char* get_c_str(const std::string& key) const;
-
-    /**
      * @brief Get copy of parameter value if it is defined
      *
      * If a parameter with the name of @c key is defined in @c params, a copy of the
@@ -430,16 +421,6 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                            const char* key,
                            const char* value,
                            const CONFIG_CONTEXT* context);
-
-/**
- * @brief Get a string value
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- *
- * @return The raw string value or an empty string if no parameter was found
- */
-const char* config_get_string(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get an array of servers. The caller should free the produced array,

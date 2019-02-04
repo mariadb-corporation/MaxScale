@@ -223,7 +223,7 @@ RWSplit* RWSplit::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 
     Config config(params);
 
-    if (!handle_max_slaves(config, config_get_string(params, "max_slave_connections")))
+    if (!handle_max_slaves(config, params->get_string("max_slave_connections").c_str()))
     {
         return NULL;
     }
@@ -447,7 +447,7 @@ bool RWSplit::configure(MXS_CONFIG_PARAMETER* params)
     bool rval = false;
     Config cnf(params);
 
-    if (handle_max_slaves(cnf, config_get_string(params, "max_slave_connections")))
+    if (handle_max_slaves(cnf, params->get_string("max_slave_connections").c_str()))
     {
         m_config.assign(cnf);
         rval = true;

@@ -1910,11 +1910,6 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
 
 string MXS_CONFIG_PARAMETER::get_string(const std::string& key) const
 {
-    return get_c_str(key);
-}
-
-const char* MXS_CONFIG_PARAMETER::get_c_str(const std::string& key) const
-{
     return config_get_string(this, key.c_str());
 }
 

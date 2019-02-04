@@ -212,13 +212,13 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         my_instance->user = params->get_c_str_copy("user");
         my_instance->log_trace = params->get_bool("log_trace");
 
-        const char* logfile = config_get_string(params, "log_file");
+        std::string logfile = params->get_string("log_file");
 
-        if (*logfile)
+        if (!logfile.empty())
         {
-            if ((my_instance->logfile = fopen(logfile, "a")) == NULL)
+            if ((my_instance->logfile = fopen(logfile.c_str(), "a")) == NULL)
             {
-                MXS_ERROR("Failed to open file '%s'.", logfile);
+                MXS_ERROR("Failed to open file '%s'.", logfile.c_str());
                 free_instance(my_instance);
                 return NULL;
             }

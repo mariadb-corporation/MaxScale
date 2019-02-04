@@ -65,21 +65,17 @@ Tee::Tee(SERVICE* service,
 Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
 {
     SERVICE* service = params->get_service("service");
-    const char* source = config_get_string(params, "source");
-    const char* user = config_get_string(params, "user");
     uint32_t cflags = params->get_enum("options", option_values);
     pcre2_code* match = config_get_compiled_regex(params, "match", cflags, NULL);
     pcre2_code* exclude = config_get_compiled_regex(params, "exclude", cflags, NULL);
-    const char* match_str = config_get_string(params, "match");
-    const char* exclude_str = config_get_string(params, "exclude");
 
     Tee* my_instance = new(std::nothrow) Tee(service,
-                                             source,
-                                             user,
+                                             params->get_string("source"),
+                                             params->get_string("user"),
                                              match,
-                                             match_str,
+                                             params->get_string("match"),
                                              exclude,
-                                             exclude_str);
+                                             params->get_string("exclude"));
 
     if (my_instance == NULL)
     {

@@ -245,3 +245,13 @@ bool config_can_modify_at_runtime(const char* name);
  * @return The parameter or NULL if the parameter was not found
  */
 MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name);
+
+/**
+ * @brief Get a string value
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return The raw string value or an empty string if no parameter was found
+ */
+const char* config_get_string(const MXS_CONFIG_PARAMETER* params, const char* key);

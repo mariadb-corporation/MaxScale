@@ -250,9 +250,9 @@ RegexHintFilter* RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER*
     SourceHostVector source_addresses;
     StringVector source_hostnames;
 
-    const char* source = config_get_string(params, "source");
+    std::string source = params->get_string("source");
 
-    if (*source)
+    if (!source.empty())
     {
         set_source_addresses(source, source_addresses, source_hostnames);
     }
