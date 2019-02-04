@@ -427,6 +427,8 @@ bool Connection::read_schema()
         {
             m_error = "Failed to parse JSON: ";
             m_error += err.text;
+            m_error += ". Data received so far: ";
+            m_error += row;
         }
     }
 
