@@ -430,7 +430,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         }
     }
 
-    std::vector<std::string> options = mxs::strtok(config_get_string(params, "router_options"), ", \t");
+    std::vector<std::string> options = mxs::strtok(params->get_string("router_options"), ", \t");
 
     /*
      * Process the options.

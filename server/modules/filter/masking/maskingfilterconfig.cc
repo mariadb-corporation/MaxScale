@@ -99,7 +99,7 @@ MaskingFilterConfig::large_payload_t MaskingFilterConfig::get_large_payload(
 // static
 std::string MaskingFilterConfig::get_rules(const MXS_CONFIG_PARAMETER* pParams)
 {
-    return config_get_string(pParams, rules_name);
+    return pParams->get_string(rules_name);
 }
 
 // static

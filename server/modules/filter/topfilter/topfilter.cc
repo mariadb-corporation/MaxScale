@@ -217,7 +217,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         my_instance->exclude = params->get_c_str_copy("exclude");
         my_instance->source = params->get_c_str_copy("source");
         my_instance->user = params->get_c_str_copy("user");
-        my_instance->filebase = MXS_STRDUP_A(config_get_string(params, "filebase"));
+        my_instance->filebase = params->get_c_str_copy("filebase");
 
         int cflags = params->get_enum("options", option_values);
         bool error = false;

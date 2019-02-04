@@ -91,8 +91,8 @@ public:
         {
             new_instance->m_count = params->get_integer("count");
             new_instance->m_time = params->get_integer("time");
-            new_instance->m_match = config_get_string(params, PARAM_MATCH);
-            new_instance->m_nomatch = config_get_string(params, PARAM_IGNORE);
+            new_instance->m_match = params->get_string(PARAM_MATCH);
+            new_instance->m_nomatch = params->get_string(PARAM_IGNORE);
 
             int cflags = params->get_enum("options", option_values);
             const char* keys[] = {PARAM_MATCH, PARAM_IGNORE};

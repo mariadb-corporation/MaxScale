@@ -1199,7 +1199,7 @@ int global_version = 1;
 Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
     : m_action((enum fw_actions)params->get_enum("action", action_values))
     , m_log_match(0)
-    , m_filename(config_get_string(params, "rules"))
+    , m_filename(params->get_string("rules"))
     , m_version(atomic_add(&global_version, 1))
 {
     if (params->get_bool("log_match"))
@@ -1222,7 +1222,7 @@ Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
     Dbfw* rval = NULL;
     RuleList rules;
     UserMap users;
-    std::string file = config_get_string(pParams, "rules");
+    std::string file = pParams->get_string("rules");
 
     if (process_rule_file(file, &rules, &users))
     {

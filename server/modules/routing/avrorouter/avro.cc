@@ -75,7 +75,7 @@ void Avro::read_source_service_options(SERVICE* source)
         }
     }
 
-    for (const auto& opt : mxs::strtok(config_get_string(params, "router_options"), ", \t"))
+    for (const auto& opt : mxs::strtok(params->get_string("router_options"), ", \t"))
     {
         auto kv = mxs::strtok(opt, "=");
 
@@ -129,9 +129,9 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
 
 Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler)
     : service(service)
-    , filestem(config_get_string(params, "filestem"))
-    , binlogdir(config_get_string(params, "binlogdir"))
-    , avrodir(config_get_string(params, "avrodir"))
+    , filestem(params->get_string("filestem"))
+    , binlogdir(params->get_string("binlogdir"))
+    , avrodir(params->get_string("avrodir"))
     , current_pos(4)
     , binlog_fd(-1)
     , trx_count(0)

@@ -259,8 +259,8 @@ RegexHintFilter* RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER*
 
     int pcre_ops = params->get_enum("options", option_values);
 
-    std::string match_val_legacy(config_get_string(params, MATCH_STR));
-    std::string server_val_legacy(config_get_string(params, SERVER_STR));
+    std::string match_val_legacy = params->get_string(MATCH_STR);
+    std::string server_val_legacy = params->get_string(SERVER_STR);
     const bool legacy_mode = (match_val_legacy.length() || server_val_legacy.length());
 
     if (legacy_mode && (!match_val_legacy.length() || !server_val_legacy.length()))
@@ -313,7 +313,7 @@ RegexHintFilter* RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER*
     else
     {
         RegexHintFilter* instance = NULL;
-        std::string user(config_get_string(params, "user"));
+        std::string user = params->get_string("user");
         MXS_EXCEPTION_GUARD(instance =
                                 new RegexHintFilter(user,
                                                     source_addresses,
@@ -630,22 +630,22 @@ void RegexHintFilter::form_regex_server_mapping(MXS_CONFIG_PARAMETER* params,
      * only done once. */
     for (unsigned int i = 0; i < param_names_match_indexed.size(); i++)
     {
-        const char* param_name_match = param_names_match_indexed[i].c_str();
-        const char* param_name_target = param_names_target_indexed[i].c_str();
-        std::string match(config_get_string(params, param_name_match));
-        std::string target(config_get_string(params, param_name_target));
+        std::string param_name_match = param_names_match_indexed[i];
+        std::string param_name_target = param_names_target_indexed[i];
+        std::string match = params->get_string(param_name_match);
+        std::string target = params->get_string(param_name_target);
 
         /* Check that both the regex and server config parameters are found */
         if (match.length() < 1 || target.length() < 1)
         {
             if (match.length() > 0)
             {
-                MXS_ERROR("No server defined for regex setting '%s'.", param_name_match);
+                MXS_ERROR("No server defined for regex setting '%s'.", param_name_match.c_str());
                 error = true;
             }
             else if (target.length() > 0)
             {
-                MXS_ERROR("No regex defined for server setting '%s'.", param_name_target);
+                MXS_ERROR("No regex defined for server setting '%s'.", param_name_target.c_str());
                 error = true;
             }
             continue;

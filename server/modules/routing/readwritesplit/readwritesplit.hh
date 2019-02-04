@@ -152,7 +152,7 @@ struct Config
         , rw_max_slave_conn_percent(0)
         , max_slave_connections(0)
         , causal_reads(params->get_bool("causal_reads"))
-        , causal_reads_timeout(config_get_string(params, "causal_reads_timeout"))
+        , causal_reads_timeout(params->get_string("causal_reads_timeout"))
         , master_reconnection(params->get_bool("master_reconnection"))
         , delayed_retry(params->get_bool("delayed_retry"))
         , delayed_retry_timeout(params->get_integer("delayed_retry_timeout"))

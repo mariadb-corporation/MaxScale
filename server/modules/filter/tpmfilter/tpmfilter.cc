@@ -224,11 +224,11 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
     {
         my_instance->sessions = 0;
         my_instance->log_enabled = false;
-        my_instance->filename = MXS_STRDUP_A(config_get_string(params, "filename"));
-        my_instance->delimiter = MXS_STRDUP_A(config_get_string(params, "delimiter"));
-        my_instance->query_delimiter = MXS_STRDUP_A(config_get_string(params, "query_delimiter"));
+        my_instance->filename = params->get_c_str_copy("filename");
+        my_instance->delimiter = params->get_c_str_copy("delimiter");
+        my_instance->query_delimiter = params->get_c_str_copy("query_delimiter");
         my_instance->query_delimiter_size = strlen(my_instance->query_delimiter);
-        my_instance->named_pipe = MXS_STRDUP_A(config_get_string(params, "named_pipe"));
+        my_instance->named_pipe = params->get_c_str_copy("named_pipe");
         my_instance->source = params->get_c_str_copy("source");
         my_instance->user = params->get_c_str_copy("user");
 

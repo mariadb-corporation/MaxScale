@@ -63,7 +63,7 @@ MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
     uint64_t block_size = service->svc_config_param->get_size("block_size");
     mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(
             service->svc_config_param->get_enum("codec", codec_values));
-    std::string avrodir = config_get_string(service->svc_config_param, "avrodir");
+    std::string avrodir = service->svc_config_param->get_string("avrodir");
     SRowEventHandler handler(new AvroConverter(avrodir, block_size, codec));
 
     Avro* router = Avro::create(service, handler);

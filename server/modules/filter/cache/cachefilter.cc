@@ -350,7 +350,7 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& c
     config.soft_ttl = ppParams->get_integer("soft_ttl");
     config.max_size = ppParams->get_size("max_size");
     config.max_count = ppParams->get_integer("max_count");
-    config.storage = MXS_STRDUP(config_get_string(ppParams, "storage"));
+    config.storage = ppParams->get_c_str_copy("storage");
     config.max_resultset_rows = ppParams->get_integer("max_resultset_rows");
     config.max_resultset_size = ppParams->get_size("max_resultset_size");
     config.thread_model = static_cast<cache_thread_model_t>(ppParams->get_enum("cached_data",

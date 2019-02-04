@@ -62,7 +62,7 @@ CommentFilter::~CommentFilter()
 // static
 CommentFilter* CommentFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
-    return new CommentFilter(config_get_string(pParams, CN_INJECT));
+    return new CommentFilter(pParams->get_string(CN_INJECT));
 }
 
 CommentFilterSession* CommentFilter::newSession(MXS_SESSION* pSession)

@@ -151,8 +151,8 @@ MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
 {
     bool rval = false;
-    string repl_user = config_get_string(params, CN_REPLICATION_USER);
-    string repl_pw = config_get_string(params, CN_REPLICATION_PASSWORD);
+    string repl_user = params->get_string(CN_REPLICATION_USER);
+    string repl_pw = params->get_string(CN_REPLICATION_PASSWORD);
 
     if (repl_user.empty() && repl_pw.empty())
     {
@@ -203,8 +203,8 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
     m_verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
     m_master_failure_timeout = params->get_integer(CN_MASTER_FAILURE_TIMEOUT);
-    m_promote_sql_file = config_get_string(params, CN_PROMOTION_SQL_FILE);
-    m_demote_sql_file = config_get_string(params, CN_DEMOTION_SQL_FILE);
+    m_promote_sql_file = params->get_string(CN_PROMOTION_SQL_FILE);
+    m_demote_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
     m_switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
     m_maintenance_on_low_disk_space = params->get_bool(CN_MAINTENANCE_ON_LOW_DISK_SPACE);
     m_handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);

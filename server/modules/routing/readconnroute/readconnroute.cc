@@ -104,7 +104,7 @@ bool RCR::configure(MXS_CONFIG_PARAMETER* params)
     uint64_t bitvalue = 0;
     bool ok = true;
 
-    for (const auto& opt : mxs::strtok(config_get_string(params, "router_options"), ", \t"))
+    for (const auto& opt : mxs::strtok(params->get_string("router_options"), ", \t"))
     {
         if (!strcasecmp(opt.c_str(), "master"))
         {
