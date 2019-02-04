@@ -79,7 +79,7 @@ set -x
     fi
 
     if [ ! -z "${named_test}" ] ; then
-        ${named_test}
+        eval ${named_test}
     else
         ./check_backend
         if [ $? != 0 ]; then
