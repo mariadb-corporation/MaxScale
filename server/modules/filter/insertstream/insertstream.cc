@@ -175,8 +175,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
 
     if ((my_instance = static_cast<DS_INSTANCE*>(MXS_CALLOC(1, sizeof(DS_INSTANCE)))) != NULL)
     {
-        my_instance->source = config_copy_string(params, "source");
-        my_instance->user = config_copy_string(params, "user");
+        my_instance->source = params->get_c_str_copy("source");
+        my_instance->user = params->get_c_str_copy("user");
     }
 
     return (MXS_FILTER*) my_instance;

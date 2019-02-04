@@ -241,6 +241,20 @@ public:
     const char* get_c_str(const std::string& key) const;
 
     /**
+     * @brief Get copy of parameter value if it is defined
+     *
+     * If a parameter with the name of @c key is defined in @c params, a copy of the
+     * value of that parameter is returned. The caller must free the returned string.
+     *
+     * @param key Parameter name
+     * @return Pointer to copy of value or NULL if the parameter was not found
+     *
+     * @note The use of this function should be avoided after startup as the function
+     * will abort the process if memory allocation fails.
+     */
+    char* get_c_str_copy(const std::string& key) const;
+
+    /**
      * Get an integer value. Should be used for both MXS_MODULE_PARAM_INT and MXS_MODULE_PARAM_COUNT
      * parameter types.
      *
@@ -490,22 +504,6 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
  * @return The array
  */
 std::vector<std::string> config_break_list_string(const char* list_string);
-
-/**
- * @brief Get copy of parameter value if it is defined
- *
- * If a parameter with the name of @c key is defined in @c params, a copy of the
- * value of that parameter is returned. The caller must free the returned string.
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- *
- * @return Pointer to copy of value or NULL if the parameter was not found
- *
- * @note The use of this function should be avoided after startup as the function
- * will abort the process if memory allocation fails.
- */
-char* config_copy_string(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Convert string truth value

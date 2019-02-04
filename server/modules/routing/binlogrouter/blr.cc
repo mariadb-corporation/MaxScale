@@ -344,7 +344,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     inst->short_burst = params->get_integer("shortburst");
     inst->long_burst = params->get_integer("longburst");
     inst->burst_size = params->get_size("burstsize");
-    inst->binlogdir = config_copy_string(params, "binlogdir");
+    inst->binlogdir = params->get_c_str_copy("binlogdir");
     inst->heartbeat = params->get_integer("heartbeat");
     inst->retry_interval = params->get_integer("connect_retry");
     inst->retry_limit = params->get_integer("master_retry_count");
@@ -352,18 +352,18 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     inst->mariadb10_compat = params->get_bool("mariadb10-compatibility");
     inst->maxwell_compat = params->get_bool("maxwell-compatibility");
     inst->trx_safe = params->get_bool("transaction_safety");
-    inst->fileroot = config_copy_string(params, "filestem");
+    inst->fileroot = params->get_c_str_copy("filestem");
 
     /* Server id */
     inst->serverid = params->get_integer("server_id");
 
     /* Identity options */
-    inst->set_master_version = config_copy_string(params, "master_version");
-    inst->set_master_hostname = config_copy_string(params, "master_hostname");
-    inst->set_slave_hostname = config_copy_string(params, "slave_hostname");
+    inst->set_master_version = params->get_c_str_copy("master_version");
+    inst->set_master_hostname = params->get_c_str_copy("master_hostname");
+    inst->set_slave_hostname = params->get_c_str_copy("slave_hostname");
     inst->masterid = params->get_integer("master_id");
     inst->set_master_server_id = inst->masterid != 0;
-    inst->master_uuid = config_copy_string(params, "master_uuid");
+    inst->master_uuid = params->get_c_str_copy("master_uuid");
     inst->set_master_uuid = inst->master_uuid != NULL;
 
     /* Slave Heartbeat */
@@ -382,14 +382,13 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     /* Binlog encryption */
     inst->encryption.enabled = params->get_bool("encrypt_binlog");
     inst->encryption.encryption_algorithm = params->get_enum("encryption_algorithm", enc_algo_values);
-    inst->encryption.key_management_filename = config_copy_string(params,
-                                                                  "encryption_key_file");
+    inst->encryption.key_management_filename = params->get_c_str_copy("encryption_key_file");
 
     /* Encryption CTX */
     inst->encryption_ctx = NULL;
 
     /* Set router uuid */
-    inst->uuid = config_copy_string(params, "uuid");
+    inst->uuid = params->get_c_str_copy("uuid");
 
     /* Set Flat storage of binlog files as default */
     inst->storage_type = BLR_BINLOG_STORAGE_FLAT;

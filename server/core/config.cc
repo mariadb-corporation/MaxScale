@@ -1281,7 +1281,7 @@ const MXS_MODULE* get_module(CONFIG_CONTEXT* obj, const char* param_name, const 
 
 const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
 {
-    std::string type = config_get_string(obj->parameters, CN_TYPE);
+    std::string type = obj->parameters->get_string(CN_TYPE);
 
     if (type == CN_SERVICE && !config_get_param(obj->parameters, CN_ROUTER))
     {
@@ -1309,7 +1309,7 @@ const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
 
 std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const CONFIG_CONTEXT* obj)
 {
-    std::string type = config_get_string(obj->parameters, CN_TYPE);
+    std::string type = obj->parameters->get_string(CN_TYPE);
 
     if (type == CN_SERVICE)
     {
@@ -1394,18 +1394,18 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
                 if (p[i].type == MXS_MODULE_PARAM_SERVICE
                     || p[i].type == MXS_MODULE_PARAM_SERVER)
                 {
-                    std::string v = config_get_string(obj->parameters, p[i].name);
+                    std::string v = obj->parameters->get_string(p[i].name);
                     rval.insert(name_to_object(objects, obj, v));
                 }
             }
         }
     }
 
-    std::string type = config_get_string(obj->parameters, CN_TYPE);
+    std::string type = obj->parameters->get_string(CN_TYPE);
 
     if (type == CN_SERVICE && config_get_value(obj->parameters, CN_FILTERS))
     {
-        for (std::string name : mxs::strtok(config_get_string(obj->parameters, CN_FILTERS), "|"))
+        for (std::string name : mxs::strtok(obj->parameters->get_string(CN_FILTERS), "|"))
         {
             rval.insert(name_to_object(objects, obj, name));
         }
@@ -1413,7 +1413,7 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
 
     if ((type == CN_MONITOR || type == CN_SERVICE) && config_get_value(obj->parameters, CN_SERVERS))
     {
-        for (std::string name : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+        for (std::string name : mxs::strtok(obj->parameters->get_string(CN_SERVERS), ","))
         {
             rval.insert(name_to_object(objects, obj, name));
         }
@@ -1641,7 +1641,7 @@ static bool process_config_context(CONFIG_CONTEXT* context)
      */
     for (CONFIG_CONTEXT* obj : objects)
     {
-        std::string type = config_get_string(obj->parameters, CN_TYPE);
+        std::string type = obj->parameters->get_string(CN_TYPE);
         mxb_assert(!type.empty());
 
         if (type == CN_SERVER)
@@ -1663,7 +1663,7 @@ static bool process_config_context(CONFIG_CONTEXT* context)
      */
     for (CONFIG_CONTEXT* obj : objects)
     {
-        std::string type = config_get_string(obj->parameters, CN_TYPE);
+        std::string type = obj->parameters->get_string(CN_TYPE);
         mxb_assert(!type.empty());
 
         if (type == CN_SERVICE)
@@ -1836,17 +1836,14 @@ std::vector<SERVER*> config_get_server_list(const MXS_CONFIG_PARAMETER* params, 
     return server_arr;
 }
 
-char* config_copy_string(const MXS_CONFIG_PARAMETER* params, const char* key)
+char* MXS_CONFIG_PARAMETER::get_c_str_copy(const string& key) const
 {
-    const char* value = config_get_value_string(params, key);
-
+    string value = get_string(key);
     char* rval = NULL;
-
-    if (*value)
+    if (!value.empty())
     {
-        rval = MXS_STRDUP_A(value);
+        rval = MXS_STRDUP_A(value.c_str());
     }
-
     return rval;
 }
 
@@ -3041,7 +3038,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             continue;
         }
 
-        std::string type = config_get_string(obj->parameters, CN_TYPE);
+        std::string type = obj->parameters->get_string(CN_TYPE);
 
         if (!valid_object_type(type))
         {
@@ -3688,7 +3685,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
     {
         int error_count = 0;
 
-        for (auto& a : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+        for (auto& a : mxs::strtok(obj->parameters->get_string(CN_SERVERS), ","))
         {
             fix_object_name(a);
 

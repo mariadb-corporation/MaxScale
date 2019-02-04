@@ -229,8 +229,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         my_instance->query_delimiter = MXS_STRDUP_A(config_get_string(params, "query_delimiter"));
         my_instance->query_delimiter_size = strlen(my_instance->query_delimiter);
         my_instance->named_pipe = MXS_STRDUP_A(config_get_string(params, "named_pipe"));
-        my_instance->source = config_copy_string(params, "source");
-        my_instance->user = config_copy_string(params, "user");
+        my_instance->source = params->get_c_str_copy("source");
+        my_instance->user = params->get_c_str_copy("user");
 
         bool error = false;
 

@@ -158,10 +158,10 @@ int test_add_parameter()
     TEST(ctx.parameters->get_integer("p1") == -123);
     TEST(ctx.parameters->get_integer("p2") == 123);
     TEST(ctx.parameters->get_bool("p3") == true);
-    TEST(strcmp(config_get_string(ctx.parameters, "p4"), "default") == 0);
+    TEST(ctx.parameters->get_string("p4") == "default");
     TEST(ctx.parameters->get_enum("p5", enum_values) == 1);
-    TEST(strcmp(config_get_string(ctx.parameters, "p6"), "/tmp") == 0);
-    TEST(strcmp(config_get_string(ctx.parameters, "p7"), "my-service") == 0);
+    TEST(ctx.parameters->get_string("p6") == "/tmp");
+    TEST(ctx.parameters->get_string("p7") == "my-service");
 
     config_parameter_free(ctx.parameters);
     ctx.parameters = NULL;
@@ -180,11 +180,11 @@ int test_add_parameter()
     TEST(ctx.parameters->get_integer("p1") == -321);
     TEST(ctx.parameters->get_integer("p2") == 321);
     TEST(config_get_param(ctx.parameters, "p3") && ctx.parameters->get_bool("p3") == false);
-    TEST(strcmp(config_get_string(ctx.parameters, "p4"), "strange") == 0);
+    TEST(ctx.parameters->get_string("p4") == "strange");
     int val = ctx.parameters->get_enum("p5", enum_values);
     TEST(val == 5);
-    TEST(strcmp(config_get_string(ctx.parameters, "p6"), "/dev/null") == 0);
-    TEST(strcmp(config_get_string(ctx.parameters, "p7"), "some-service") == 0);
+    TEST(ctx.parameters->get_string("p6") == "/dev/null");
+    TEST(ctx.parameters->get_string("p7") == "some-service");
     config_parameter_free(ctx.parameters);
     config_parameter_free(svc1.parameters);
     config_parameter_free(svc2.parameters);

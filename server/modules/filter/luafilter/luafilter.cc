@@ -262,8 +262,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         return NULL;
     }
 
-    my_instance->global_script = config_copy_string(params, "global_script");
-    my_instance->session_script = config_copy_string(params, "session_script");
+    my_instance->global_script = params->get_c_str_copy("global_script");
+    my_instance->session_script = params->get_c_str_copy("session_script");
     my_instance->global_lua_state = nullptr;
 
     if (my_instance->global_script)

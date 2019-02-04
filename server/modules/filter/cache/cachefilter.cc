@@ -375,7 +375,7 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& c
         error = true;
     }
 
-    config.rules = config_copy_string(ppParams, "rules");
+    config.rules = ppParams->get_c_str_copy("rules");
 
     const MXS_CONFIG_PARAMETER* pParam = config_get_param(ppParams, "storage_options");
 

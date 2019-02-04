@@ -194,11 +194,11 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     m_settings.interval = params->get_integer(CN_MONITOR_INTERVAL);
     m_settings.journal_max_age = params->get_integer(CN_JOURNAL_MAX_AGE);
     m_settings.script_timeout = params->get_integer(CN_SCRIPT_TIMEOUT);
-    m_settings.script = config_get_string(params, CN_SCRIPT);
+    m_settings.script = params->get_string(CN_SCRIPT);
     m_settings.events = params->get_enum(CN_EVENTS, mxs_monitor_event_enum_values);
     m_settings.disk_space_check_interval = params->get_integer(CN_DISK_SPACE_CHECK_INTERVAL);
-    m_settings.conn_settings.username = config_get_string(params, CN_USER);
-    m_settings.conn_settings.password = config_get_string(params, CN_PASSWORD);
+    m_settings.conn_settings.username = params->get_string(CN_USER);
+    m_settings.conn_settings.password = params->get_string(CN_PASSWORD);
 
     // The monitor serverlist has already been checked to be valid. Empty value is ok too.
     auto servers_temp = config_get_server_list(params, CN_SERVERS);

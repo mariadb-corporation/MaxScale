@@ -133,7 +133,7 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
 
 static std::string get_version_string(MXS_CONFIG_PARAMETER* params)
 {
-    std::string version_string = config_get_string(params, CN_VERSION_STRING);
+    std::string version_string = params->get_string(CN_VERSION_STRING);
 
     if (!version_string.empty() && version_string[0] != '5')
     {
@@ -153,9 +153,9 @@ Service::Service(const std::string& service_name,
                  MXS_CONFIG_PARAMETER* params)
     : m_name(service_name)
     , m_router_name(router_name)
-    , m_user(config_get_string(params, CN_USER))
-    , m_password(config_get_string(params, CN_PASSWORD))
-    , m_weightby(config_get_string(params, CN_WEIGHTBY))
+    , m_user(params->get_string(CN_USER))
+    , m_password(params->get_string(CN_PASSWORD))
+    , m_weightby(params->get_string(CN_WEIGHTBY))
     , m_version_string(get_version_string(params))
     , m_rate_limits(config_threadcount())
     , m_wkey(mxs_rworker_create_key())

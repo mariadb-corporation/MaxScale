@@ -595,10 +595,10 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         my_instance->exchange = MXS_STRDUP_A(config_get_string(params, "exchange"));
         my_instance->key = MXS_STRDUP_A(config_get_string(params, "key"));
         my_instance->exchange_type = MXS_STRDUP_A(config_get_string(params, "exchange_type"));
-        my_instance->queue = config_copy_string(params, "queue");
-        my_instance->ssl_client_cert = config_copy_string(params, "ssl_client_certificate");
-        my_instance->ssl_client_key = config_copy_string(params, "ssl_client_key");
-        my_instance->ssl_CA_cert = config_copy_string(params, "ssl_CA_cert");
+        my_instance->queue = params->get_c_str_copy("queue");
+        my_instance->ssl_client_cert = params->get_c_str_copy("ssl_client_certificate");
+        my_instance->ssl_client_key = params->get_c_str_copy("ssl_client_key");
+        my_instance->ssl_CA_cert = params->get_c_str_copy("ssl_CA_cert");
 
         if (my_instance->trgtype & TRG_SOURCE)
         {
