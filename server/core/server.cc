@@ -155,7 +155,7 @@ private:
  * Concurrent writing should be prevented by the caller.
  *
  * @param dest Destination buffer. The buffer is assumed to contains at least a \0 at the end.
- * @param max_len Size of destination buffer - 1. The last element (max_len + 1) is never written to.
+ * @param max_len Size of destination buffer - 1. The last element (max_len) is never written to.
  * @param source Source string. A maximum of @c max_len characters are copied.
  */
 void careful_strcpy(char* dest, size_t max_len, const std::string& source)
@@ -185,37 +185,42 @@ void careful_strcpy(char* dest, size_t max_len, const std::string& source)
 
 Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    const char* monuser = config_get_string(params, CN_MONITORUSER);
-    const char* monpw = config_get_string(params, CN_MONITORPW);
+    auto monuser = params->get_string(CN_MONITORUSER);
+    auto monpw = params->get_string(CN_MONITORPW);
 
-    if ((*monuser != '\0') != (*monpw != '\0'))
+    const char one_defined_err[] = "'%s is defined for server '%s', '%s' must also be defined.";
+    if (!monuser.empty() && monpw.empty())
     {
-        MXS_ERROR("Both '%s' and '%s' need to be defined for server '%s'",
-                  CN_MONITORUSER,
-                  CN_MONITORPW,
-                  name);
+        MXS_ERROR(one_defined_err, CN_MONITORUSER, name, CN_MONITORPW);
+        return NULL;
+    }
+    else if (monuser.empty() && !monpw.empty())
+    {
+        MXS_ERROR(one_defined_err, CN_MONITORPW, name, CN_MONITORUSER);
         return NULL;
     }
 
-    const char* protocol = config_get_string(params, CN_PROTOCOL);
-    const char* authenticator = config_get_string(params, CN_AUTHENTICATOR);
+    auto protocol = params->get_string(CN_PROTOCOL);
+    auto authenticator = params->get_string(CN_AUTHENTICATOR);
 
-    if (!authenticator[0] && !(authenticator = get_default_authenticator(protocol)))
+    if (authenticator.empty())
     {
-        MXS_ERROR("No authenticator defined for server '%s' and no default "
-                  "authenticator for protocol '%s'.",
-                  name,
-                  protocol);
-        return NULL;
+        authenticator = get_default_authenticator(protocol.c_str());
+        if (authenticator.empty())
+        {
+            MXS_ERROR("No authenticator defined for server '%s' and no default "
+                      "authenticator for protocol '%s'.",
+                      name, protocol.c_str());
+            return NULL;
+        }
     }
 
     void* auth_instance = NULL;
     // Backend authenticators do not have options.
-    if (!authenticator_init(&auth_instance, authenticator, NULL))
+    if (!authenticator_init(&auth_instance, authenticator.c_str(), NULL))
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for server '%s' ",
-                  authenticator,
-                  name);
+                  authenticator.c_str(), name);
         return NULL;
     }
 
@@ -238,13 +243,12 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    const char* address = config_get_string(params, CN_ADDRESS);
-
-    if (snprintf(server->address, sizeof(server->address), "%s", address) > (int)sizeof(server->address))
+    auto address = params->get_string(CN_ADDRESS);
+    careful_strcpy(server->address, MAX_ADDRESS_LEN, address.c_str());
+    if (address.length() > MAX_ADDRESS_LEN)
     {
-        MXS_WARNING("Truncated server address '%s' to the maximum size of %lu characters.",
-                    address,
-                    sizeof(server->address));
+        MXS_WARNING("Truncated server address '%s' to the maximum size of %i characters.",
+                    address.c_str(), MAX_ADDRESS_LEN);
     }
 
     server->port = params->get_integer(CN_PORT);
@@ -259,8 +263,9 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->last_event = SERVER_UP_EVENT;
     server->status = SERVER_RUNNING;
 
-    if (*monuser && *monpw)
+    if (!monuser.empty())
     {
+        mxb_assert(!monpw.empty());
         server->set_monitor_user(monuser);
         server->set_monitor_password(monpw);
     }
