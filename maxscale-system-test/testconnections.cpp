@@ -723,9 +723,16 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
     int local_result = 0;
     char * mariadb_log;
     FILE * f;
-    int i;
+    int i, j;
     int exit_code;
     char str[4096];
+
+    const int log_retrive_command_num = 3;
+    const char * log_retrive_command[log_retrive_command_num] = {
+        "cat /var/lib/mysql/*.err",
+        "cat /var/log/syslog | grep mysql",
+        "cat /var/log/messages | grep mysql"
+    };
 
     if (repl == NULL) return local_result;
 
@@ -735,20 +742,23 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
     {
         if (strcmp(repl->IP[i], "127.0.0.1") != 0) // Do not copy MariaDB logs in case of local backend
         {
-            mariadb_log = repl->ssh_node_output(i, (char *) "cat /var/lib/mysql/*.err", true, &exit_code);
-            sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
-            f = fopen(str, "w");
-            if (f != NULL)
+            for (j = 0; j < log_retrive_command_num; j++)
             {
-                fwrite(mariadb_log, sizeof(char), strlen(mariadb_log), f);
-                fclose(f);
+                mariadb_log = repl->ssh_node_output(i, log_retrive_command[j], true, &exit_code);
+                sprintf(str, "LOGS/%s/%s%d_mariadb_log_%d", test_name, prefix, i, j);
+                f = fopen(str, "w");
+                if (f != NULL)
+                {
+                    fwrite(mariadb_log, sizeof(char), strlen(mariadb_log), f);
+                    fclose(f);
+                }
+                else
+                {
+                    printf("Error writing MariaDB log");
+                    local_result = 1;
+                }
+                free(mariadb_log);
             }
-            else
-            {
-                printf("Error writing MariaDB log");
-                local_result = 1;
-            }
-            free(mariadb_log);
         }
     }
     return local_result;
