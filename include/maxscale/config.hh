@@ -483,7 +483,7 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
  * @param list_string A list of items
  * @return The array
  */
-std::vector<std::string> config_break_list_string(const char* list_string);
+std::vector<std::string> config_break_list_string(const std::string& list_string);
 
 /**
  * @brief Convert string truth value

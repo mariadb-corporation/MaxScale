@@ -211,11 +211,11 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     /* The previous config values were normal types and were checked by the config manager
      * to be correct. The following is a complicated type and needs to be checked separately. */
     bool error = false;
-    const char* threshold_string = config_get_string(params, CN_DISK_SPACE_THRESHOLD);
+    auto threshold_string = params->get_string(CN_DISK_SPACE_THRESHOLD);
     if (!set_disk_space_threshold(threshold_string))
     {
-                MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                          CN_DISK_SPACE_THRESHOLD, m_name, threshold_string);
+        MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
+                  CN_DISK_SPACE_THRESHOLD, m_name, threshold_string.c_str());
         error = true;
     }
 
@@ -2267,7 +2267,7 @@ std::vector<MXS_MONITORED_SERVER*> mon_config_get_servers(const MXS_CONFIG_PARAM
 {
     std::vector<MXS_MONITORED_SERVER*> monitored_array;
     // Check that value exists.
-    if (*config_get_string(params, key) == '\0')
+    if (!params->contains(key))
     {
         return monitored_array;
     }

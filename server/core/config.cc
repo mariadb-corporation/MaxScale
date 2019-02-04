@@ -1304,28 +1304,28 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
 
     if (type == CN_SERVICE)
     {
-        const char* name = config_get_string(obj->parameters, CN_ROUTER);
-        return {config_service_params, get_module(name, MODULE_ROUTER)};
+        auto name = obj->parameters->get_string(CN_ROUTER);
+        return {config_service_params, get_module(name.c_str(), MODULE_ROUTER)};
     }
     else if (type == CN_LISTENER)
     {
-        const char* name = config_get_string(obj->parameters, CN_PROTOCOL);
-        return {config_listener_params, get_module(name, MODULE_PROTOCOL)};
+        auto name = obj->parameters->get_string(CN_PROTOCOL);
+        return {config_listener_params, get_module(name.c_str(), MODULE_PROTOCOL)};
     }
     else if (type == CN_SERVER)
     {
-        const char* name = config_get_string(obj->parameters, CN_PROTOCOL);
-        return {config_server_params, get_module(name, MODULE_PROTOCOL)};
+        auto name = obj->parameters->get_string(CN_PROTOCOL);
+        return {config_server_params, get_module(name.c_str(), MODULE_PROTOCOL)};
     }
     else if (type == CN_MONITOR)
     {
-        const char* name = config_get_string(obj->parameters, CN_MODULE);
-        return {config_monitor_params, get_module(name, MODULE_MONITOR)};
+        auto name = obj->parameters->get_string(CN_MODULE);
+        return {config_monitor_params, get_module(name.c_str(), MODULE_MONITOR)};
     }
     else if (type == CN_FILTER)
     {
-        const char* name = config_get_string(obj->parameters, CN_MODULE);
-        return {config_filter_params, get_module(name, MODULE_FILTER)};
+        auto name = obj->parameters->get_string(CN_MODULE);
+        return {config_filter_params, get_module(name.c_str(), MODULE_FILTER)};
     }
 
     mxb_assert(!true);
@@ -1710,27 +1710,6 @@ void do_passwd_deprecation(CONFIG_CONTEXT* obj)
     }
 }
 
-/**
- * Get the value of a config parameter as a string
- *
- * @param params        The linked list of config parameters
- * @param name          The parameter to return
- * @return the parameter value or null string if not found
- */
-static const char* config_get_value_string(const MXS_CONFIG_PARAMETER* params, const char* name)
-{
-    while (params)
-    {
-        if (!strcmp(params->name, name))
-        {
-            return (const char*)params->value;
-        }
-
-        params = params->next;
-    }
-    return "";
-}
-
 MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name)
 {
     while (params)
@@ -1758,11 +1737,6 @@ uint64_t MXS_CONFIG_PARAMETER::get_size(const std::string& key) const
     MXB_AT_DEBUG(bool rval = ) get_suffixed_size(param_value.c_str(), &intval);
     mxb_assert(rval);
     return intval;
-}
-
-const char* config_get_string(const MXS_CONFIG_PARAMETER* params, const char* key)
-{
-    return config_get_value_string(params, key);
 }
 
 int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
@@ -1822,7 +1796,7 @@ bool MXS_CONFIG_PARAMETER::contains(const string& key) const
 std::vector<SERVER*> config_get_server_list(const MXS_CONFIG_PARAMETER* params, const char* key,
                                             string* name_error_out)
 {
-    const char* names_list = config_get_value_string(params, key);
+    auto names_list = params->get_string(key);
     auto server_names = config_break_list_string(names_list);
     std::vector<SERVER*> server_arr = SERVER::server_find_by_unique_names(server_names);
     for (size_t i = 0; i < server_arr.size(); i++)
@@ -1857,14 +1831,14 @@ pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER* params,
                                       uint32_t options,
                                       uint32_t* output_ovec_size)
 {
-    const char* regex_string = config_get_string(params, key);
+    auto regex_string = params->get_string(key);
     pcre2_code* code = NULL;
 
-    if (*regex_string)
+    if (!regex_string.empty())
     {
         uint32_t jit_available = 0;
         pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
-        code = compile_regex_string(regex_string, jit_available, options, output_ovec_size);
+        code = compile_regex_string(regex_string.c_str(), jit_available, options, output_ovec_size);
     }
 
     return code;
@@ -1896,7 +1870,7 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
         }
         /* config_get_compiled_regex() returns null also if the config setting
          * didn't exist. Check that before setting error state. */
-        else if (*(config_get_value_string(params, keys[i])))
+        else if (params->contains(keys[i]))
         {
             rval = false;
         }
@@ -1910,7 +1884,16 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
 
 string MXS_CONFIG_PARAMETER::get_string(const std::string& key) const
 {
-    return config_get_string(this, key.c_str());
+    auto params = this;
+    while (params)
+    {
+        if (params->name == key)
+        {
+            return params->value;
+        }
+        params = params->next;
+    }
+    return "";
 }
 
 int64_t MXS_CONFIG_PARAMETER::get_integer(const std::string& key) const
@@ -3655,12 +3638,12 @@ void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
  */
 int create_new_service(CONFIG_CONTEXT* obj)
 {
-    const char* router = config_get_string(obj->parameters, CN_ROUTER);
-    mxb_assert(*router);
+    auto router = obj->parameters->get_string(CN_ROUTER);
+    mxb_assert(!router.empty());
 
     char* user = config_get_value(obj->parameters, CN_USER);
     char* auth = config_get_value(obj->parameters, CN_PASSWORD);
-    const MXS_MODULE* module = get_module(router, MODULE_ROUTER);
+    const MXS_MODULE* module = get_module(router.c_str(), MODULE_ROUTER);
     mxb_assert(module);
 
     if ((!user || !auth)
@@ -3677,7 +3660,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
     config_add_defaults(obj, config_service_params);
     config_add_defaults(obj, module->parameters);
 
-    Service* service = service_alloc(obj->object, router, obj->parameters);
+    Service* service = service_alloc(obj->object, router.c_str(), obj->parameters);
 
     if (service)
     {
@@ -3756,16 +3739,16 @@ int create_new_server(CONFIG_CONTEXT* obj)
 
     config_add_defaults(obj, config_server_params);
 
-    const char* module = config_get_string(obj->parameters, CN_PROTOCOL);
-    mxb_assert(module);
+    auto module = obj->parameters->get_string(CN_PROTOCOL);
+    mxb_assert(!module.empty());
 
-    if (const MXS_MODULE* mod = get_module(module, MODULE_PROTOCOL))
+    if (const MXS_MODULE* mod = get_module(module.c_str(), MODULE_PROTOCOL))
     {
         config_add_defaults(obj, mod->parameters);
     }
     else
     {
-        MXS_ERROR("Unable to load protocol module '%s'.", module);
+        MXS_ERROR("Unable to load protocol module '%s'.", module.c_str());
         return 1;
     }
 
@@ -3835,17 +3818,17 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
         return 1;
     }
 
-    const char* module = config_get_string(obj->parameters, CN_MODULE);
-    mxb_assert(module);
+    auto module = obj->parameters->get_string(CN_MODULE);
+    mxb_assert(!module.empty());
 
-    if (const MXS_MODULE* mod = get_module(module, MODULE_MONITOR))
+    if (const MXS_MODULE* mod = get_module(module.c_str(), MODULE_MONITOR))
     {
         config_add_defaults(obj, config_monitor_params);
         config_add_defaults(obj, mod->parameters);
     }
     else
     {
-        MXS_ERROR("Unable to load monitor module '%s'.", module);
+        MXS_ERROR("Unable to load monitor module '%s'.", module.c_str());
         return 1;
     }
 
@@ -3870,17 +3853,17 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
  */
 int create_new_listener(CONFIG_CONTEXT* obj)
 {
-    const char* protocol = config_get_string(obj->parameters, CN_PROTOCOL);
-    mxb_assert(*protocol);
+    auto protocol = obj->parameters->get_string(CN_PROTOCOL);
+    mxb_assert(!protocol.empty());
 
-    if (const MXS_MODULE* mod = get_module(protocol, MODULE_PROTOCOL))
+    if (const MXS_MODULE* mod = get_module(protocol.c_str(), MODULE_PROTOCOL))
     {
         config_add_defaults(obj, config_listener_params);
         config_add_defaults(obj, mod->parameters);
     }
     else
     {
-        MXS_ERROR("Unable to load protocol module '%s'.", protocol);
+        MXS_ERROR("Unable to load protocol module '%s'.", protocol.c_str());
         return 1;
     }
 
@@ -3905,12 +3888,12 @@ int create_new_listener(CONFIG_CONTEXT* obj)
     }
     else
     {
-        const char* address = config_get_string(obj->parameters, CN_ADDRESS);
+        auto address = obj->parameters->get_string(CN_ADDRESS);
         Service* service = static_cast<Service*>(obj->parameters->get_service(CN_SERVICE));
         mxb_assert(service);
 
         // Remove this once maxadmin is removed
-        if (strcasecmp(protocol, "maxscaled") == 0 && socket
+        if (strcasecmp(protocol.c_str(), "maxscaled") == 0 && socket
             && strcmp(socket, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG) == 0)
         {
             socket = MAXADMIN_DEFAULT_SOCKET;
@@ -3929,7 +3912,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
             return 1;
         }
 
-        const char* protocol = config_get_string(obj->parameters, CN_PROTOCOL);
+        auto protocol = obj->parameters->get_string(CN_PROTOCOL);
         SSL_LISTENER* ssl_info = NULL;
 
         if (!config_create_ssl(obj->object, obj->parameters, true, &ssl_info))
@@ -3939,8 +3922,8 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 
         // These two values being NULL trigger the loading of the default
         // authenticators that are specific to each protocol module
-        const char* authenticator = config_get_string(obj->parameters, CN_AUTHENTICATOR);
-        const char* authenticator_options = config_get_string(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
+        auto authenticator = obj->parameters->get_string(CN_AUTHENTICATOR);
+        auto authenticator_options = obj->parameters->get_string(CN_AUTHENTICATOR_OPTIONS);
         int net_port = socket ? 0 : atoi(port);
 
         auto listener = Listener::create(service, obj->object, protocol, socket ? socket : address,
@@ -4112,8 +4095,7 @@ static bool config_contains_type(const CONFIG_CONTEXT* ctx, const char* name, co
 {
     while (ctx)
     {
-        if (strcmp(ctx->object, name) == 0
-            && strcmp(type, config_get_value_string(ctx->parameters, CN_TYPE)) == 0)
+        if (strcmp(ctx->object, name) == 0 && type == ctx->parameters->get_string(CN_TYPE))
         {
             return true;
         }
@@ -4379,9 +4361,9 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
     return valid;
 }
 
-std::vector<string> config_break_list_string(const char* list_string)
+std::vector<string> config_break_list_string(const string& list_string)
 {
-    mxb_assert(list_string);
+    mxb_assert(!list_string.empty());
     string copy = list_string;
     /* Parse the elements from the list. They are separated by ',' and are trimmed of whitespace. */
     std::vector<string> tokenized = mxs::strtok(copy, ",");
