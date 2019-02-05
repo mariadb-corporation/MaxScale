@@ -65,6 +65,11 @@ For information about common service parameters, refer to the
 
 The source for the binary logs. This is an optional parameter.
 
+**Note:** If the `source` parameter is defined the values for `binlogdir` and
+  `filestem` are only read from the source service. This means that the
+  parameters defined for the avrorouter are ignored and the ones in the
+  binlogrouter are used.
+
 The value of this parameter should be the name of a Binlog Server service.
 The _filestem_ and _binlogdir_ parameters of this service will be read from
 the router_options and they will be used as the source for the binary logs. This
