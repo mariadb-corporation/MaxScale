@@ -146,23 +146,98 @@ possible usage scenarios. MariaDB MaxScale is designed with flexibility in mind,
 and consists of an event processing core with various support functions and
 plugin modules that tailor the behavior of the program.
 
-## Glossary
+## Concepts
+
+### Glossary
 
 Word | Description
 --------------------|----------------------------------------------------
-service             | A service represents a set of databases with a specific access mechanism that is offered to clients of MariaDB MaxScale. The access mechanism defines the algorithm that MariaDB MaxScale will use to direct particular requests to the individual databases.
-server              | A server represents an individual database server to which a client can be connected via MariaDB MaxScale.
-router              | A router is a module within MariaDB MaxScale that will route client requests to the various database servers which MariaDB MaxScale provides a service interface to.
 connection routing  | Connection routing is a method of handling requests in which MariaDB MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.
 statement routing   | Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.
-protocol            | A protocol is a module of software that is used to communicate with another software entity within the system. MariaDB MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.
 module              | A module is a separate code entity that may be loaded dynamically into MariaDB MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.
-monitor             | A monitor is a module that can be executed within MariaDB MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MariaDB MaxScale.
-listener            | A listener is the network endpoint that is used to listen for connections to MariaDB MaxScale from the client applications. A listener is associated to a single service, however, a service may have many listeners.
 connection failover | When a connection currently being used between MariaDB MaxScale and the database server fails a replacement will be automatically created to another server by MariaDB MaxScale without client intervention
 backend database    | A term used to refer to a database that sits behind MariaDB MaxScale and is accessed by applications via MariaDB MaxScale.
-filter              | A module that can be placed between the client and the MariaDB MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
 REST API | HTTP administrative interface
+
+### Objects
+
+#### Server
+A server represents an individual database server to which a client can be
+connected via MariaDB MaxScale. The status of a server varies during the lifetime
+of the server and typically the status is updated by some monitor. However, it
+is also possible to update the status of a server manually.
+
+Status | Description
+-------|------------
+Running       | The server is running.
+Master        | The server is the master.
+Slave         | The server is a slave.
+Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenace mode, no connections will be created to it and existing connections will be closed.
+Slave of External Master | The server is a slave of a master that is not being monitored.
+
+#### Protocol
+A protocol module is responsible for the low-level communication between
+MaxScale and either clients of MaxScale or servers exposed by MaxScale.
+The most commonly used protocol modules are `mariadbclient` and
+`mariadbbackend`.
+
+Protocol modules do not have sections of their own in the MaxScale
+configuration file, but are referred to from _servers_ and _listeners_.
+
+#### Monitor
+A monitor module is capable of monitoring the state of a particular kind
+of cluster and making that state available to the routers of MaxScale.
+
+Examples of monitor modules are `mariadbmon` that is capable of monitoring
+a regular master-slave cluster and in addition of performing both _switchover_
+and _failover_, `galeramon` that is capable of monitoring a Galera cluster,
+and `csmon` that is capable of monitoring a Columnstore cluster.
+
+Monitor modules have sections of their own in the MaxScale configuration
+file.
+
+#### Filter
+A filter module resides in front of routers in the request processing chain
+of MaxScale. That is, a filter will see a request before it reaches the router
+and before a response is sent back to the client. This allows filters to
+reject, handle, alter or log information about a request.
+
+Examples of filters are `dbfwfilter` that is a configurable firewall, `cache`
+that provides query caching according to rules, `regexfilter` that can rewrite
+requests according to regular expressions, and `qlafilter` that logs
+information about requests.
+
+Filters have sections of their own in the MaxScale configuration file that are
+referred to from _services_.
+
+#### Router
+A router module is capable of routing requests to backend servers according to
+the characteristics of a request and/or the algorithm the router
+implements. Examples of routers are `readconnroute` that provides _connection
+routing_, that is, the server is chosen according to specified rules when the
+session is created and all requests are subsequently routed to that server,
+and `readwritesplit` that provides _statement routing_, that is, each
+individual request is routed to the most appropriate server.
+
+Routers do not have sections of their own in the MaxScale configuration file,
+but are referred to from _services_.
+
+#### Service
+A service abstracts a set of databases and makes them appear as a single one
+to the client. Depending on what router (e.g. `readconnroute` or
+`readwritesplit`) the service uses, the servers are used in some particular
+way. If the service uses filters, then all requests will be pre-processed in
+some way before they reach the router.
+
+Services have sections of their own in the MaxScale configuration file.
+
+#### Listener
+A listener defines a port MaxScale listens on. Connection requests arriving on
+that port will be forwarded to the service the listener is associated with. A
+listener may be associated with a single service, but several listeners may be
+associated with the same service.
+
+Listeners have sections of their own in the MaxScale configuration file.
 
 ## Administration
 
