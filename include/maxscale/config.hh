@@ -345,6 +345,8 @@ public:
      */
     static void remove(MXS_CONFIG_PARAMETER** ppParams, const std::string& key);
 
+    static void free_all(MXS_CONFIG_PARAMETER** ppParams);
+
     char*                    name {nullptr};          /**< The name of the parameter */
     char*                    value {nullptr};         /**< The value of the parameter */
     MXS_CONFIG_PARAMETER*    next {nullptr};          /**< Next pointer in the linked list */

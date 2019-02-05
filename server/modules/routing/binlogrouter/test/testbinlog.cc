@@ -133,7 +133,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    config_parameter_free(ctx.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
 
     // Declared in config.cc and needs to be removed if/when blr is refactored
     extern const MXS_MODULE_PARAM config_server_params[];

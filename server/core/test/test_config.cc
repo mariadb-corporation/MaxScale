@@ -116,7 +116,7 @@ int test_validity()
     TEST(!config_param_is_valid(params, "p8", "d", &ctx));
     TEST(!config_param_is_valid(params, "p8", "a,d", &ctx));
     TEST(!config_param_is_valid(params, "p8", "a,b,c,d", &ctx));
-    config_parameter_free(svc.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&svc.parameters);
     return 0;
 }
 
@@ -163,7 +163,7 @@ int test_add_parameter()
     TEST(ctx.parameters->get_string("p6") == "/tmp");
     TEST(ctx.parameters->get_string("p7") == "my-service");
 
-    config_parameter_free(ctx.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
     ctx.parameters = NULL;
 
     /** Test custom parameters overriding default values */
@@ -185,9 +185,9 @@ int test_add_parameter()
     TEST(val == 5);
     TEST(ctx.parameters->get_string("p6") == "/dev/null");
     TEST(ctx.parameters->get_string("p7") == "some-service");
-    config_parameter_free(ctx.parameters);
-    config_parameter_free(svc1.parameters);
-    config_parameter_free(svc2.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&svc1.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&svc2.parameters);
     return 0;
 }
 
@@ -208,14 +208,14 @@ int test_required_parameters()
     config_add_defaults(&ctx, params);
     TEST(!missing_required_parameters(params, ctx.parameters, "test"));
 
-    config_parameter_free(ctx.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
     ctx.parameters = NULL;
 
     config_add_param(&ctx, "p1", "1");
     config_add_param(&ctx, "p2", "1");
     config_add_param(&ctx, "p3", "1");
     TEST(!missing_required_parameters(params, ctx.parameters, "test"));
-    config_parameter_free(ctx.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
     return 0;
 }
 

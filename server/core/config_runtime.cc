@@ -262,7 +262,7 @@ bool runtime_create_server(const char* name,
                                          name);
                 }
 
-                config_parameter_free(ctx.parameters);
+                MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
             }
             else
             {
@@ -1201,7 +1201,7 @@ bool runtime_create_monitor(const char* name, const char* module)
                     config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
                 }
 
-                config_parameter_free(params);
+                MXS_CONFIG_PARAMETER::free_all(&params);
             }
         }
         else
@@ -1258,7 +1258,7 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
                     config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
                 }
 
-                config_parameter_free(ctx.parameters);
+                MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
             }
             else
             {
@@ -1335,7 +1335,7 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
                     config_runtime_error("Could not create service '%s' with module '%s'", name, router);
                 }
 
-                config_parameter_free(ctx.parameters);
+                MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
             }
             else
             {
@@ -2264,7 +2264,7 @@ bool runtime_create_filter_from_json(json_t* json)
 
         rval = runtime_create_filter(name, module, params);
 
-        config_parameter_free(params);
+        MXS_CONFIG_PARAMETER::free_all(&params);
     }
 
     return rval;
@@ -2298,7 +2298,7 @@ Service* runtime_create_service_from_json(json_t* json)
             }
         }
 
-        config_parameter_free(params);
+        MXS_CONFIG_PARAMETER::free_all(&params);
     }
 
     return rval;

@@ -231,7 +231,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
 
 Monitor::~Monitor()
 {
-    config_parameter_free(parameters);
+    MXS_CONFIG_PARAMETER::free_all(&parameters);
     monitor_server_free_all(m_servers);
     MXS_FREE((const_cast<char*>(m_name)));
 }
@@ -739,34 +739,6 @@ bool Monitor::test_permissions(const string& query)
 
     MXS_FREE(dpasswd);
     return rval;
-}
-
-/**
- * Add parameters to the monitor
- * @param monitor Monitor
- * @param params Config parameters
- */
-void monitor_add_parameters(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
-{
-    Guard guard(monitor->m_lock);
-    while (params)
-    {
-        MXS_CONFIG_PARAMETER* old = config_get_param(monitor->parameters, params->name);
-
-        if (old)
-        {
-            MXS_FREE(old->value);
-            old->value = MXS_STRDUP_A(params->value);
-        }
-        else
-        {
-            MXS_CONFIG_PARAMETER* clone = config_clone_param(params);
-            clone->next = monitor->parameters;
-            monitor->parameters = clone;
-        }
-
-        params = params->next;
-    }
 }
 
 void monitor_stash_current_status(MXS_MONITORED_SERVER* ptr)

@@ -1908,35 +1908,11 @@ int64_t MXS_CONFIG_PARAMETER::get_integer(const std::string& key) const
     return value.empty() ? 0 : strtoll(value.c_str(), NULL, 10);
 }
 
-MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
-{
-    auto p2 = new MXS_CONFIG_PARAMETER;
-    p2->name = MXS_STRDUP_A(param->name);
-    p2->value = MXS_STRDUP_A(param->value);
-    p2->next = nullptr;
-
-    return p2;
-}
-
 void config_free_one_param(MXS_CONFIG_PARAMETER* p1)
 {
     if (p1)
     {
         delete p1;
-    }
-}
-
-/**
- * Free a configuration parameter
- * @param p1 Parameter to free
- */
-void config_parameter_free(MXS_CONFIG_PARAMETER* p1)
-{
-    while (p1)
-    {
-        MXS_CONFIG_PARAMETER* tmp = p1;
-        p1 = p1->next;
-        config_free_one_param(tmp);
     }
 }
 
@@ -1947,7 +1923,7 @@ void config_context_free(CONFIG_CONTEXT* context)
     while (context)
     {
         obj = context->next;
-        config_parameter_free(context->parameters);
+        MXS_CONFIG_PARAMETER::free_all(&context->parameters);
         MXS_FREE(context->object);
         MXS_FREE(context);
         context = obj;
@@ -1957,27 +1933,8 @@ void config_context_free(CONFIG_CONTEXT* context)
 bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
     mxb_assert(!obj->parameters->contains(key));
-    bool rval = false;
-    char* my_key = MXS_STRDUP(key);
-    char* my_value = MXS_STRDUP(value);
-    auto param = new MXS_CONFIG_PARAMETER;
-
-    if (my_key && my_value)
-    {
-        param->name = my_key;
-        param->value = my_value;
-        param->next = obj->parameters;
-        obj->parameters = param;
-        rval = true;
-    }
-    else
-    {
-        MXS_FREE(my_key);
-        MXS_FREE(my_value);
-        delete param;
-    }
-
-    return rval;
+    MXS_CONFIG_PARAMETER::set(&obj->parameters, key, value);
+    return true;
 }
 
 bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
@@ -2085,6 +2042,19 @@ void MXS_CONFIG_PARAMETER::remove(MXS_CONFIG_PARAMETER** ppParams, const string&
     }
 }
 
+void MXS_CONFIG_PARAMETER::free_all(MXS_CONFIG_PARAMETER** ppParams)
+{
+    mxb_assert(ppParams);
+    auto pParam = *ppParams;
+    while (pParam)
+    {
+        auto temp = pParam;
+        pParam = pParam->next;
+        delete temp;
+    }
+    *ppParams = nullptr;
+}
+
 MXS_CONFIG_PARAMETER* MXS_CONFIG_PARAMETER::find(const std::string& key)
 {
     auto param = this;
@@ -2101,40 +2071,13 @@ MXS_CONFIG_PARAMETER* MXS_CONFIG_PARAMETER::find(const std::string& key)
 
 bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    if (MXS_CONFIG_PARAMETER* param = config_get_param(obj->parameters, key))
-    {
-        MXS_FREE(param->value);
-        param->value = MXS_STRDUP(value);
-    }
-    else
-    {
-        config_add_param(obj, key, value);
-    }
-
+    MXS_CONFIG_PARAMETER::set(&obj->parameters, key, value);
     return true;
 }
 
 void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
 {
-    if (obj->parameters && strcmp(obj->parameters->name, name) == 0)
-    {
-        MXS_CONFIG_PARAMETER* tmp = obj->parameters;
-        obj->parameters = obj->parameters->next;
-        config_free_one_param(tmp);
-    }
-    else
-    {
-        for (MXS_CONFIG_PARAMETER* p = obj->parameters; p && p->next; p = p->next)
-        {
-            if (strcmp(p->next->name, name) == 0)
-            {
-                MXS_CONFIG_PARAMETER* tmp = p->next;
-                p->next = tmp->next;
-                config_free_one_param(tmp);
-                break;
-            }
-        }
-    }
+    MXS_CONFIG_PARAMETER::remove(&obj->parameters, name);
 }
 
 /**
@@ -4931,7 +4874,7 @@ ParamList::ParamList(std::initializer_list<std::pair<const char*, const char*>> 
 
 ParamList::~ParamList()
 {
-    config_parameter_free(m_ctx.parameters);
+    MXS_CONFIG_PARAMETER::free_all(&m_ctx.parameters);
 }
 
 MXS_CONFIG_PARAMETER* ParamList::params()

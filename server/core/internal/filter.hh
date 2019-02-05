@@ -46,7 +46,6 @@ struct FilterDef : public MXS_FILTER_DEF
 
 typedef std::shared_ptr<FilterDef> SFilterDef;
 
-void            filter_add_parameter(SFilterDef& filter_def, const char* name, const char* value);
 SFilterDef      filter_alloc(const char* name, const char* module, MXS_CONFIG_PARAMETER* params);
 MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter_def, MXS_SESSION* session, MXS_DOWNSTREAM* downstream);
 void            filter_free(const SFilterDef& filter);

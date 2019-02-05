@@ -246,7 +246,7 @@ Service::~Service()
         MXS_FREE(tmp);
     }
 
-    config_parameter_free(svc_config_param);
+    MXS_CONFIG_PARAMETER::free_all(&svc_config_param);
 }
 
 void service_free(Service* service)
@@ -1122,13 +1122,7 @@ int service_refresh_users(SERVICE* svc)
 
 void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param)
 {
-    while (param)
-    {
-        MXS_CONFIG_PARAMETER* new_param = config_clone_param(param);
-        new_param->next = service->svc_config_param;
-        service->svc_config_param = new_param;
-        param = param->next;
-    }
+    MXS_CONFIG_PARAMETER::set_multiple(&service->svc_config_param, param);
 }
 
 void service_add_parameter(Service* service, const char* key, const char* value)
@@ -1141,52 +1135,12 @@ void service_add_parameter(Service* service, const char* key, const char* value)
 
 void service_remove_parameter(Service* service, const char* key)
 {
-    if (MXS_CONFIG_PARAMETER* params = service->svc_config_param)
-    {
-        MXS_CONFIG_PARAMETER* to_free = NULL;
-
-        if (strcasecmp(params->name, key) == 0)
-        {
-            service->svc_config_param = params->next;
-            to_free = params;
-        }
-        else
-        {
-            while (MXS_CONFIG_PARAMETER* p = params->next)
-            {
-                if (strcasecmp(p->name, key) == 0)
-                {
-                    params->next = p->next;
-                    to_free = p;
-                    break;
-                }
-
-                params = p;
-            }
-        }
-
-        if (to_free)
-        {
-            // Set next pointer to null to prevent freeing of other parameters
-            to_free->next = NULL;
-            config_parameter_free(to_free);
-        }
-    }
+    MXS_CONFIG_PARAMETER::remove(&service->svc_config_param, key);
 }
 
 void service_replace_parameter(Service* service, const char* key, const char* value)
 {
-    for (MXS_CONFIG_PARAMETER* p = service->svc_config_param; p; p = p->next)
-    {
-        if (strcasecmp(p->name, key) == 0)
-        {
-            MXS_FREE(p->value);
-            p->value = MXS_STRDUP_A(value);
-            return;
-        }
-    }
-
-    service_add_parameter(service, key, value);
+    MXS_CONFIG_PARAMETER::set(&service->svc_config_param, key, value);
 }
 
 /**

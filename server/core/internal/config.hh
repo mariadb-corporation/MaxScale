@@ -75,10 +75,8 @@ void config_set_global_defaults();
 void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params);
 
 char*                 config_clean_string_list(const char* str);
-MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param);
 bool                  config_load(const char*);
 bool                  config_load_global(const char* filename);
-void                  config_parameter_free(MXS_CONFIG_PARAMETER* p1);
 
 /**
  * @brief Creates an empty configuration context

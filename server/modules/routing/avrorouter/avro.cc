@@ -62,18 +62,9 @@ using namespace maxscale;
 void Avro::read_source_service_options(SERVICE* source)
 {
     MXS_CONFIG_PARAMETER* params = source->svc_config_param;
-
-    for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
-    {
-        if (strcmp(p->name, "binlogdir") == 0)
-        {
-            binlogdir = p->value;
-        }
-        else if (strcmp(p->name, "filestem") == 0)
-        {
-            filestem = p->value;
-        }
-    }
+    binlogdir = params->get_string("binlogdir");
+    filestem = params->get_string("filestem");
+    mxb_assert(!binlogdir.empty() && !filestem.empty());
 
     for (const auto& opt : mxs::strtok(params->get_string("router_options"), ", \t"))
     {

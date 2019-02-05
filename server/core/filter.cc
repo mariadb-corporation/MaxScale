@@ -59,7 +59,7 @@ static struct
  */
 static void filter_free_parameters(FilterDef* filter)
 {
-    config_parameter_free(filter->parameters);
+    MXS_CONFIG_PARAMETER::free_all(&filter->parameters);
 }
 
 /**
@@ -296,24 +296,6 @@ void dListFilters(DCB* dcb)
         dcb_printf(dcb,
                    "--------------------+-----------------+----------------------------------------\n\n");
     }
-}
-
-/**
- * Add a router parameter to a service
- *
- * @param filter        The filter to add the parameter to
- * @param name          The parameter name
- * @param value         The parameter value
- */
-void filter_add_parameter(SFilterDef& filter, const char* name, const char* value)
-{
-    mxb_assert(filter);
-    CONFIG_CONTEXT ctx = {};
-    ctx.object = (char*)"";
-
-    config_add_param(&ctx, name, value);
-    ctx.parameters->next = filter->parameters;
-    filter->parameters = ctx.parameters;
 }
 
 /**
