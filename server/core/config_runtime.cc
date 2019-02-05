@@ -583,8 +583,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     }
 
     std::lock_guard<std::mutex> guard(crt_lock);
-
-    monitor_set_parameter(monitor, key, value);
+    MXS_CONFIG_PARAMETER::set(&monitor->parameters, key, value);
     bool success = true;
     if (strcmp(key, CN_USER) == 0)
     {

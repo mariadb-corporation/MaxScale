@@ -459,21 +459,6 @@ void                 mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_c
 const char*          mon_get_event_name(mxs_monitor_event_t event);
 
 /**
- * Alter monitor parameters
- *
- * The monitor parameters should not be altered while the monitor is
- * running. To alter a parameter from outside a monitor module, stop the monitor,
- * do the alteration and then restart the monitor. The monitor "owns" the parameters
- * as long as it is running so if the monitor needs to change its own parameters,
- * it can do it without stopping itself.
- *
- * @param monitor Monitor whose parameter is altered
- * @param key     Parameter name to alter
- * @param value   New value for the parameter
- */
-void mon_alter_parameter(Monitor* monitor, const char* key, const char* value);
-
-/**
  * @brief Hangup connections to failed servers
  *
  * Injects hangup events for DCB that are connected to servers that are down.

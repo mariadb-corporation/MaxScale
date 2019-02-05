@@ -698,15 +698,7 @@ void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
  */
 void MariaDBMonitor::disable_setting(const std::string& setting)
 {
-    Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
-
-    worker->execute([=]() {
-                        MXS_CONFIG_PARAMETER p = {};
-                        p.name = const_cast<char*>(setting.c_str());
-                        p.value = const_cast<char*>("false");
-                        monitor_add_parameters(m_monitor, &p);
-                    },
-                    EXECUTE_AUTO);
+    MXS_CONFIG_PARAMETER::set(&parameters, setting, "false");
 }
 
 /**

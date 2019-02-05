@@ -222,9 +222,9 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     if (!error)
     {
         // Store module name into parameter storage.
-        monitor_set_parameter(this, CN_MODULE, m_module.c_str());
+        MXS_CONFIG_PARAMETER::set(&parameters, CN_MODULE, m_module);
         // Add all config settings to text-mode storage. Needed for serialization.
-        monitor_add_parameters(this, params);
+        MXS_CONFIG_PARAMETER::set_multiple(&parameters, params);
     }
     return !error;
 }
@@ -766,60 +766,6 @@ void monitor_add_parameters(Monitor* monitor, const MXS_CONFIG_PARAMETER* params
         }
 
         params = params->next;
-    }
-}
-
-void monitor_set_parameter(Monitor* monitor, const char* key, const char* value)
-{
-    monitor_remove_parameter(monitor, key);
-    MXS_CONFIG_PARAMETER p = {};
-    p.name = const_cast<char*>(key);
-    p.value = const_cast<char*>(value);
-    monitor_add_parameters(monitor, &p);
-}
-
-bool monitor_remove_parameter(Monitor* monitor, const char* key)
-{
-    MXS_CONFIG_PARAMETER* prev = NULL;
-    bool rval = false;
-    Guard guard(monitor->m_lock);
-
-    for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
-    {
-        if (strcmp(p->name, key) == 0)
-        {
-            if (p == monitor->parameters)
-            {
-                monitor->parameters = monitor->parameters->next;
-            }
-            else
-            {
-                prev->next = p->next;
-            }
-
-            p->next = NULL;
-            config_parameter_free(p);
-            rval = true;
-            break;
-        }
-
-        prev = p;
-    }
-
-    return rval;
-}
-
-void mon_alter_parameter(Monitor* monitor, const char* key, const char* value)
-{
-    Guard guard(monitor->m_lock);
-    for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
-    {
-        if (strcmp(p->name, key) == 0)
-        {
-            MXS_FREE(p->value);
-            p->value = MXS_STRDUP_A(value);
-            break;
-        }
     }
 }
 

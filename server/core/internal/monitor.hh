@@ -137,8 +137,6 @@ void monitor_list(DCB*);
 bool monitor_add_server(Monitor* mon, SERVER* server);
 void monitor_remove_server(Monitor* mon, SERVER* server);
 void monitor_add_parameters(Monitor* monitor, const MXS_CONFIG_PARAMETER* params);
-bool monitor_remove_parameter(Monitor* monitor, const char* key);
-void monitor_set_parameter(Monitor* monitor, const char* key, const char* value);
 
 void monitor_set_journal_max_age(Monitor* mon, time_t value);
 

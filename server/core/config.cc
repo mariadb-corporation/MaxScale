@@ -1882,6 +1882,12 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
     return rval;
 }
 
+MXS_CONFIG_PARAMETER::~MXS_CONFIG_PARAMETER()
+{
+    MXS_FREE(name);
+    MXS_FREE(value);
+}
+
 string MXS_CONFIG_PARAMETER::get_string(const std::string& key) const
 {
     auto params = this;
@@ -1904,14 +1910,10 @@ int64_t MXS_CONFIG_PARAMETER::get_integer(const std::string& key) const
 
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
 {
-    MXS_CONFIG_PARAMETER* p2 = (MXS_CONFIG_PARAMETER*)MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER));
-
-    if (p2)
-    {
-        p2->name = MXS_STRDUP_A(param->name);
-        p2->value = MXS_STRDUP_A(param->value);
-        p2->next = NULL;
-    }
+    auto p2 = new MXS_CONFIG_PARAMETER;
+    p2->name = MXS_STRDUP_A(param->name);
+    p2->value = MXS_STRDUP_A(param->value);
+    p2->next = nullptr;
 
     return p2;
 }
@@ -1920,9 +1922,7 @@ void config_free_one_param(MXS_CONFIG_PARAMETER* p1)
 {
     if (p1)
     {
-        MXS_FREE(p1->name);
-        MXS_FREE(p1->value);
-        MXS_FREE(p1);
+        delete p1;
     }
 }
 
@@ -1960,9 +1960,9 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
     bool rval = false;
     char* my_key = MXS_STRDUP(key);
     char* my_value = MXS_STRDUP(value);
-    MXS_CONFIG_PARAMETER* param = (MXS_CONFIG_PARAMETER*)MXS_MALLOC(sizeof(*param));
+    auto param = new MXS_CONFIG_PARAMETER;
 
-    if (my_key && my_value && param)
+    if (my_key && my_value)
     {
         param->name = my_key;
         param->value = my_value;
@@ -1974,7 +1974,7 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
     {
         MXS_FREE(my_key);
         MXS_FREE(my_value);
-        MXS_FREE(param);
+        delete param;
     }
 
     return rval;
@@ -2002,6 +2002,101 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
     }
 
     return rval;
+}
+
+void MXS_CONFIG_PARAMETER::set(MXS_CONFIG_PARAMETER** ppParams, const string& key, const string& value)
+{
+    mxb_assert(ppParams);
+    char* new_value = MXS_STRDUP(value.c_str());
+    if (*ppParams == nullptr)
+    {
+        // This is the first parameter.
+        auto new_param = new MXS_CONFIG_PARAMETER();
+        new_param->name = MXS_STRDUP(key.c_str());
+        new_param->value = new_value;
+        new_param->next = nullptr;
+        *ppParams = new_param;
+        return;
+    }
+
+    MXS_CONFIG_PARAMETER* pParam = *ppParams;
+    auto param = pParam->find(key);
+    if (param)
+    {
+        MXS_FREE(param->value);
+        param->value = new_value;
+    }
+    else
+    {
+        auto new_param = new MXS_CONFIG_PARAMETER();
+        new_param->name = MXS_STRDUP(key.c_str());
+        new_param->value = new_value;
+        new_param->next = nullptr;
+        // Iterate to the last parameter in the linked list.
+        auto last_param = pParam;
+        while (last_param->next)
+        {
+            last_param = last_param->next;
+        }
+        last_param->next = new_param;
+    }
+}
+
+void MXS_CONFIG_PARAMETER::set_multiple(MXS_CONFIG_PARAMETER** destination, const MXS_CONFIG_PARAMETER* source)
+{
+    auto param = source;
+    while (param)
+    {
+        set(destination, param->name, param->value);
+        param = param->next;
+    }
+}
+
+void MXS_CONFIG_PARAMETER::remove(MXS_CONFIG_PARAMETER** ppParams, const string& key)
+{
+    mxb_assert(ppParams);
+    MXS_CONFIG_PARAMETER* current = *ppParams;
+    if (current)
+    {
+        // Handle special case.
+        if (current->name == key)
+        {
+            *ppParams = current->next;
+            delete current;
+        }
+        else
+        {
+            MXS_CONFIG_PARAMETER* next = current->next;
+            while (next)
+            {
+                if (next->name == key)
+                {
+                    current->next = next->next;
+                    delete next;
+                    break;
+                }
+                else
+                {
+                    current = next;
+                    next = next->next;
+                }
+            }
+        }
+    }
+}
+
+MXS_CONFIG_PARAMETER* MXS_CONFIG_PARAMETER::find(const std::string& key)
+{
+    auto param = this;
+    while (param)
+    {
+        if (param->name == key)
+        {
+            return param;
+        }
+        param = param->next;
+    }
+    return param;
 }
 
 bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value)

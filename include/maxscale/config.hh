@@ -222,6 +222,7 @@ extern const char CN_LOG_TO_SHM[];
 class MXS_CONFIG_PARAMETER
 {
 public:
+    ~MXS_CONFIG_PARAMETER();
 
     /**
      * Get value of key as string.
@@ -317,9 +318,42 @@ public:
      */
     bool contains(const std::string& key) const;
 
-    char*                    name;          /**< The name of the parameter */
-    char*                    value;         /**< The value of the parameter */
-    MXS_CONFIG_PARAMETER*    next;          /**< Next pointer in the linked list */
+    /**
+     * Set a key-value combination. If the key doesn't exist, it is added. The function is static
+     * to handle the special case of params being empty. This is needed until the config management
+     * has been properly refactored.
+     *
+     * @param ppParams Double pointer to the parameters structure to edit
+     * @param key Parameter key
+     * @param value Value to set
+     */
+    static void set(MXS_CONFIG_PARAMETER** ppParams, const std::string& key, const std::string& value);
+
+    /**
+     * Copy all key-value pairs from a set to this container. If a key doesn't exist, it is added.
+     *
+     * @param destination Destination of the copied parameters
+     * @param source Parameters to copy
+     */
+    static void set_multiple(MXS_CONFIG_PARAMETER** destination, const MXS_CONFIG_PARAMETER* source);
+
+    /**
+     * Remove a key-value pair from the container.
+     *
+     * @param ppParams Parameters container
+     * @param key Key to remove
+     */
+    static void remove(MXS_CONFIG_PARAMETER** ppParams, const std::string& key);
+
+    char*                    name {nullptr};          /**< The name of the parameter */
+    char*                    value {nullptr};         /**< The value of the parameter */
+    MXS_CONFIG_PARAMETER*    next {nullptr};          /**< Next pointer in the linked list */
+
+private:
+    /**
+     * TODO: Remove this once using STL container.
+     */
+    MXS_CONFIG_PARAMETER* find(const std::string& key);
 };
 
 /**
