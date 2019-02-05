@@ -107,6 +107,7 @@ static const char* datetime_types[] =
 static const char* datetime_values[] =
 {
     "'2018-01-01 11:11:11'",
+    "'0-00-00 00:00:00'",
     "NULL",
     NULL
 };
@@ -120,6 +121,7 @@ static const char* date_types[] =
 static const char* date_values[] =
 {
     "'2018-01-01'",
+    "'0-00-00'",
     "NULL",
     NULL
 };
