@@ -38,6 +38,7 @@ Status | Description
 Running       | The server is running.
 Master        | The server is the master.
 Slave         | The server is a slave.
+Being Drained | The server is being drained. Existing connections can continue to be used, but no new connections will be created to the server. Typically this status bit is turned on manually using _maxctrl_, but a monitor may also turn it on.
 Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenace mode, no connections will be created to it and existing connections will be closed.
 Slave of External Master | The server is a slave of a master that is not being monitored.
 
@@ -57,7 +58,8 @@ of cluster and making that state available to the routers of MaxScale.
 Examples of monitor modules are `mariadbmon` that is capable of monitoring
 a regular master-slave cluster and in addition of performing both _switchover_
 and _failover_, `galeramon` that is capable of monitoring a Galera cluster,
-and `csmon` that is capable of monitoring a Columnstore cluster.
+`csmon` that is capable of monitoring a Columnstore cluster and `clustrixmon`
+that is capable of monitoring a Clustrix cluster.
 
 Monitor modules have sections of their own in the MaxScale configuration
 file.
