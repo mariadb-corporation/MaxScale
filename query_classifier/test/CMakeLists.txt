@@ -17,24 +17,26 @@ if (BUILD_QC_MYSQLEMBEDDED)
 	  file(COPY ${ERRMSG} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     endif()
   endif()
+endif()
 
-  add_executable(classify classify.c)
-  target_link_libraries(classify maxscale-common)
+add_executable(classify classify.c)
+target_link_libraries(classify maxscale-common)
 
-  add_executable(compare compare.cc testreader.cc)
-  target_link_libraries(compare maxscale-common)
+add_executable(compare compare.cc testreader.cc)
+target_link_libraries(compare maxscale-common)
 
-  add_executable(qc_cache qc_cache.cc)
-  target_link_libraries(qc_cache maxscale-common)
+add_executable(qc_cache qc_cache.cc)
+target_link_libraries(qc_cache maxscale-common)
 
-  add_executable(version_sensitivity version_sensitivity.cc)
-  target_link_libraries(version_sensitivity maxscale-common)
+add_executable(version_sensitivity version_sensitivity.cc)
+target_link_libraries(version_sensitivity maxscale-common)
 
-  add_executable(crash_qc_sqlite crash_qc_sqlite.cc)
-  target_link_libraries(crash_qc_sqlite maxscale-common)
+add_executable(crash_qc_sqlite crash_qc_sqlite.cc)
+target_link_libraries(crash_qc_sqlite maxscale-common)
 
-  add_test(TestQC_Crash_qcsqlite crash_qc_sqlite)
+add_test(TestQC_Crash_qcsqlite crash_qc_sqlite)
 
+if (BUILD_QC_MYSQLEMBEDDED)
   # TestQC_MySQLEmbedded excluded, classify is now solely used for verifying the
   # functionality of qc_sqlite.
   #add_test(TestQC_MySQLEmbedded classify qc_mysqlembedded ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
