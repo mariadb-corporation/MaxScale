@@ -92,29 +92,29 @@ public:
      */
     static QlaInstance* create(const std::string name, MXS_CONFIG_PARAMETER* params);
 
-    std::string name;   /* Filter definition name */
+    const std::string m_name;   /* Filter definition name */
 
-    uint32_t log_mode_flags;        /* Log file mode settings */
-    uint32_t log_file_data_flags;   /* What data is saved to the files */
+    uint32_t    m_log_mode_flags;        /* Log file mode settings */
+    uint32_t    m_log_file_data_flags;   /* What data is saved to the files */
+    std::string m_filebase;              /* The filename base */
+    std::string m_unified_filename;      /* Filename of the unified log file */
 
-    std::string filebase;           /* The filename base */
-    std::string unified_filename;   /* Filename of the unified log file */
-    FILE*       unified_fp;         /* Unified log file. The pointer needs to be shared here
-                                     * to avoid garbled printing. */
-    bool        flush_writes;       /* Flush log file after every write? */
-    bool        append;             /* Open files in append-mode? */
-    std::string query_newline;      /* Character(s) used to replace a newline within a query */
-    std::string separator;          /*  Character(s) used to separate elements */
-    bool        write_warning_given;/* Avoid repeatedly printing some errors/warnings. */
+    FILE*       m_unified_fp;         /* Unified log file. The pointer needs to be shared here
+                                       * to avoid garbled printing. */
+    bool        m_flush_writes;       /* Flush log file after every write? */
+    bool        m_append;             /* Open files in append-mode? */
+    std::string m_query_newline;      /* Character(s) used to replace a newline within a query */
+    std::string m_separator;          /*  Character(s) used to separate elements */
+    bool        m_write_warning_given;/* Avoid repeatedly printing some errors/warnings. */
 
-    std::string user_name;  /* The user name to filter on */
-    std::string source;     /* The source of the client connection to filter on */
+    std::string m_user_name;  /* The user name to filter on */
+    std::string m_source;     /* The source of the client connection to filter on */
 
-    std::string match;      /* Optional text to match against */
-    std::string exclude;    /* Optional text to match against for exclusion */
-    pcre2_code* re_match;   /* Compiled regex text */
-    pcre2_code* re_exclude; /* Compiled regex nomatch text */
-    uint32_t    ovec_size;  /* PCRE2 match data ovector size */
+    std::string m_match;      /* Optional text to match against */
+    std::string m_exclude;    /* Optional text to match against for exclusion */
+    pcre2_code* m_re_match;   /* Compiled regex text */
+    pcre2_code* m_re_exclude; /* Compiled regex nomatch text */
+    uint32_t    m_ovec_size;  /* PCRE2 match data ovector size */
 
 private:
     FILE* open_log_file(uint32_t, const char*);
@@ -128,13 +128,31 @@ public:
     QlaFilterSession& operator=(const QlaFilterSession&);
     QlaFilterSession(const char* user, const char* remote, bool ses_active,
                      pcre2_match_data* mdata, const std::string& ses_filename, FILE* ses_file,
-                     size_t ses_id, const char* service);
+                     size_t ses_id, const char* service, QlaInstance& instance);
     ~QlaFilterSession();
+
+    /**
+     * Route a query.
+     *
+     * @param query
+     * @return 0 on success
+     */
+    int routeQuery(GWBUF* query);
+
+    /**
+     * Route a reply from backend. Required for measuring and printing query execution time.
+     *
+     * @param reply Reply from server
+     * @return 0 on success
+     */
+    int clientReply(GWBUF* reply);
 
     /**
      * Close a session with the filter. Close the file descriptor and reset event info.
      */
     void close();
+
+    QlaInstance&      m_instance;
 
     const char*       m_user;       /* Client username */
     const char*       m_remote;     /* Client address */
@@ -148,4 +166,8 @@ public:
 
     MXS_UPSTREAM   up;
     MXS_DOWNSTREAM down;
+
+    void write_log_entries(const char* date_string, const char* query, int querylen, int elapsed_ms);
+    int write_log_entry(FILE* logfile, uint32_t data_flags, const char* time_string,
+                            const char* sql_string, size_t sql_str_len, int elapsed_ms);
 };
