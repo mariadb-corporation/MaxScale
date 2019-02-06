@@ -93,6 +93,7 @@ const char CN_AUTH_WRITE_TIMEOUT[] = "auth_write_timeout";
 const char CN_AUTO[] = "auto";
 const char CN_CACHE_SIZE[] = "cache_size";
 const char CN_CLASSIFY[] = "classify";
+const char CN_CLUSTER[] = "cluster";
 const char CN_CONNECTION_TIMEOUT[] = "connection_timeout";
 const char CN_DATA[] = "data";
 const char CN_DEFAULT[] = "default";
@@ -314,6 +315,7 @@ const MXS_MODULE_PARAM config_service_params[] =
     {CN_RETRY_ON_FAILURE,              MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_SESSION_TRACK_TRX_STATE,       MXS_MODULE_PARAM_BOOL,   "false"},
     {CN_RETAIN_LAST_STATEMENTS,        MXS_MODULE_PARAM_COUNT,  "0"},
+    {CN_CLUSTER,                       MXS_MODULE_PARAM_STRING},
     {NULL}
 };
 
@@ -1400,6 +1402,11 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
         {
             rval.insert(name_to_object(objects, obj, name));
         }
+    }
+
+    if (type == CN_SERVICE && config_get_value(obj->parameters, CN_CLUSTER))
+    {
+        rval.insert(name_to_object(objects, obj, config_get_string(obj->parameters, CN_CLUSTER)));
     }
 
     if ((type == CN_MONITOR || type == CN_SERVICE) && config_get_value(obj->parameters, CN_SERVERS))
@@ -3679,6 +3686,16 @@ int create_new_service(CONFIG_CONTEXT* obj)
     auto router = obj->parameters->get_string(CN_ROUTER);
     mxb_assert(!router.empty());
 
+    const string servers = obj->parameters->get_string(CN_SERVERS);
+    const string cluster = obj->parameters->get_string(CN_CLUSTER);
+
+    if (!servers.empty() && !cluster.empty())
+    {
+        MXS_ERROR("Service '%s' is configured with both 'servers' and 'cluster'. "
+                  "Only one or the other is allowed.", obj->object);
+        return 1;
+    }
+
     char* user = config_get_value(obj->parameters, CN_USER);
     char* auth = config_get_value(obj->parameters, CN_PASSWORD);
     const MXS_MODULE* module = get_module(router.c_str(), MODULE_ROUTER);
@@ -3704,21 +3721,24 @@ int create_new_service(CONFIG_CONTEXT* obj)
     {
         int error_count = 0;
 
-        for (auto& a : mxs::strtok(obj->parameters->get_string(CN_SERVERS), ","))
+        if (!servers.empty())
         {
-            fix_object_name(a);
+            for (auto& a : mxs::strtok(servers, ","))
+            {
+                fix_object_name(a);
 
-            if (auto s = Server::find_by_unique_name(a))
-            {
-                serviceAddBackend(service, s);
-            }
-            else
-            {
-                MXS_ERROR("Unable to find server '%s' that is configured as part "
-                          "of service '%s'.",
-                          a.c_str(),
-                          obj->object);
-                error_count++;
+                if (auto s = Server::find_by_unique_name(a))
+                {
+                    serviceAddBackend(service, s);
+                }
+                else
+                {
+                    MXS_ERROR("Unable to find server '%s' that is configured as part "
+                              "of service '%s'.",
+                              a.c_str(),
+                              obj->object);
+                    error_count++;
+                }
             }
         }
 
@@ -3728,6 +3748,22 @@ int create_new_service(CONFIG_CONTEXT* obj)
 
             if (!service->set_filters(flist))
             {
+                error_count++;
+            }
+        }
+
+        if (!cluster.empty())
+        {
+            Monitor* pMonitor = monitor_find(cluster.c_str());
+
+            if (pMonitor)
+            {
+                service->m_monitor = pMonitor;
+            }
+            else
+            {
+                MXS_ERROR("Unable to find monitor '%s' that defines the cluster used by "
+                          "service '%s'.", cluster.c_str(), obj->object);
                 error_count++;
             }
         }

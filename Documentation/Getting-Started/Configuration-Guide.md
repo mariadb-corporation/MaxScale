@@ -1030,6 +1030,20 @@ in the name section of a block with a type parameter of server (see below).
 servers=server1,server2,server3
 ```
 
+*NOTE* The `servers` parameter is mutually exclusive with the `cluster` parameter.
+
+#### `cluster`
+
+The servers the service uses are defined by the monitor specified as value
+of this configuration parameter.
+
+```
+cluster=TheMonitor
+
+```
+
+*NOTE* The `clusters` parameter is mutually exclusive with the `servers` parameter.
+
 #### `user`
 
 The user parameter, along with the password parameter are used to define the

@@ -21,6 +21,8 @@
 
 #include "filter.hh"
 
+class Monitor;
+
 /**
  * @file service.h - MaxScale internal service functions
  */
@@ -102,6 +104,9 @@ public:
 
     // TODO: Make these private
     mutable std::mutex lock;
+
+    // TODO: Make this private.
+    Monitor*    m_monitor { nullptr }; /**< A possibly associated monitor */
 
 private:
     FilterList  m_filters;          /**< Ordered list of filters */
@@ -398,6 +403,14 @@ json_t* service_relations_to_server(const SERVER* server, const char* host);
  * @return Array of service links
  */
 json_t* service_relations_to_filter(const SFilterDef& filter, const char* host);
+
+/**
+ * @brief Add server to all services associated with a monitor
+ *
+ * @param monitor  A monitor.
+ * @param server   A server.
+ */
+void service_add_server(Monitor* pMonitor, SERVER* pServer);
 
 std::unique_ptr<ResultSet> serviceGetList(void);
 std::unique_ptr<ResultSet> serviceGetListenerList(void);

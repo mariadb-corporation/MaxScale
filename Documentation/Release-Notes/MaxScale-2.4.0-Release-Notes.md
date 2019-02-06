@@ -63,6 +63,19 @@ being drained is the master, then it will not be possible to connect
 unless `master_failure_mode` has been set to something else but the
 default `fail_instantly`.
 
+### Cluster
+
+The servers a service uses can now be specified using the `cluster`
+parameter of the service.
+```
+[TheService]
+...
+cluster=TheMonitor
+```
+In this case, the servers of the service will be defined by the
+referred to monitor. Note that the parameters `servers` and `cluster`
+are mutually exclusive.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.4.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.4.0)

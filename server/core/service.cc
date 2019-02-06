@@ -148,6 +148,19 @@ static std::string get_version_string(MXS_CONFIG_PARAMETER* params)
     return version_string;
 }
 
+void service_add_server(Monitor* pMonitor, SERVER* pServer)
+{
+    LockGuard guard(this_unit.lock);
+
+    for (Service* pService : this_unit.services)
+    {
+        if (pService->m_monitor == pMonitor)
+        {
+            serviceAddBackend(pService, pServer);
+        }
+    }
+}
+
 Service::Service(const std::string& service_name,
                  const std::string& router_name,
                  MXS_CONFIG_PARAMETER* params)
