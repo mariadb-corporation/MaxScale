@@ -131,7 +131,9 @@ HINT* hint_parser(HINT_SESSION* session, GWBUF* request)
     int len, residual, state;
     int found, escape, quoted, squoted;
     HINT* rval = NULL;
-    char* pname, * lvalue, * hintname = NULL;
+    char* pname = nullptr;
+    char* lvalue = nullptr;
+    char* hintname = nullptr;
     GWBUF* buf;
     HINT_TOKEN* tok;
     HINT_MODE mode = HM_EXECUTE;
