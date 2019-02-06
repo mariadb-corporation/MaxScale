@@ -65,6 +65,11 @@ For information about common service parameters, refer to the
 
 The source for the binary logs. This is an optional parameter.
 
+**Note:** If the `source` parameter is defined the values for `binlogdir` and
+  `filestem` are only read from the source service. This means that the
+  parameters defined for the avrorouter are ignored and the ones in the
+  binlogrouter are used.
+
 The value of this parameter should be the name of a Binlog Server service.
 The _filestem_ and _binlogdir_ parameters of this service will be read from
 the router_options and they will be used as the source for the binary logs. This
@@ -305,6 +310,47 @@ and a short usage description of the client program.
 If the CREATE TABLE statements for the tables aren't present in the current
 binary logs, the schema files must be generated with a schema file
 generator. There are currently two methods to generate the .avsc schema files.
+
+### Simple Schema Generator
+
+The `cdc_one_schema.py` generates a schema file for a single table by reading a
+tab separated list of field and type names from the standard input. This is the
+recommended schema generation tool as it does not directly communicate with the
+database thus making it more flexible.
+
+The only requirement to run the script is that a Python interpreter is
+installed.
+
+To use this script, pipe the output of the `mysql` command line into the
+`cdc_one_schema.py` script:
+
+```
+mysql -ss -u <user> -p -h <host> -P <port> -e 'DESCRIBE `<database>`.`<table>`'|./cdc_one_schema.py <database> <table>
+```
+
+Replace the `<user>`, `<host>`, `<port>`, `<database>` and `<table>` with
+appropriate values and run the command. Note that the `-ss` parameter is
+mandatory as that will generate the tab separated output instead of the default
+pretty-printed output.
+
+An .avsc file named after the database and table name will be generated in the
+current working directory. Copy this file to the location pointed by the
+`avrodir` parameter of the avrorouter.
+
+Alternatively, you can also copy the output of the `mysql` command to a file and
+feed it into the script if you cannot execute the SQL command directly:
+
+```
+# On the database server
+mysql -ss -u <user> -p -h <host> -P <port> -e 'DESCRIBE `<database>`.`<table>`' > schema.tsv
+# On the MaxScale server
+./cdc_one_schema.py <database> <table> < schema.tsv
+```
+
+If you want to use a specific Python interpreter instead of the one found in the
+search path, you can modify the first line of the script from `#!/usr/bin/env
+python` to `#!/path/to/python` where `/path/to/python` is the absolute path to
+the Python interpreter (both Python 2 and Python 3 can be used).
 
 ### Python Schema Generator
 

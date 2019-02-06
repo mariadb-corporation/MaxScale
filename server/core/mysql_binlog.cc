@@ -374,7 +374,16 @@ static void unpack_datetime2(uint8_t* ptr, uint8_t decimals, struct tm* dest)
 static void unpack_timestamp(uint8_t* ptr, uint8_t decimals, struct tm* dest)
 {
     time_t t = unpack4(ptr);
-    localtime_r(&t, dest);
+
+    if (t == 0)
+    {
+        // Use GMT date to detect zero date timestamps
+        gmtime_r(&t, dest);
+    }
+    else
+    {
+        localtime_r(&t, dest);
+    }
 }
 
 #define unpack3(data) (data[2] + (data[1] << 8) + (data[0] << 16))
@@ -574,6 +583,13 @@ size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, uint8_t* metadata, int 
     return temporal_field_size(type, metadata, length);
 }
 
+static bool is_zero_date(struct tm* tm)
+{
+    // Detects 1970-01-01 00:00:00
+    return tm->tm_sec == 0 && tm->tm_min == 0 && tm->tm_hour == 0
+        && tm->tm_mday == 1 && tm->tm_mon == 0 && tm->tm_year == 70;
+}
+
 void format_temporal_value(char* str, size_t size, uint8_t type, struct tm* tm)
 {
     const char* format = "";
@@ -605,7 +621,15 @@ void format_temporal_value(char* str, size_t size, uint8_t type, struct tm* tm)
         mxb_assert(false);
         break;
     }
-    strftime(str, size, format, tm);
+
+    if ((type == TABLE_COL_TYPE_TIMESTAMP || type == TABLE_COL_TYPE_TIMESTAMP2) && is_zero_date(tm))
+    {
+        strcpy(str, "0-00-00 00:00:00");
+    }
+    else
+    {
+        strftime(str, size, format, tm);
+    }
 }
 
 /**

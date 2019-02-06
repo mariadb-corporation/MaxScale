@@ -99,15 +99,27 @@ static const char* datetime_types[] =
     "DATETIME(4)",
     "DATETIME(5)",
     "DATETIME(6)",
-    // TODO: Fix test setup to use same timezone
-    // "TIMESTAMP",
     NULL
 };
 
 static const char* datetime_values[] =
 {
     "'2018-01-01 11:11:11'",
+    "'0-00-00 00:00:00'",
     "NULL",
+    NULL
+};
+
+static const char* timestamp_types[] =
+{
+    "TIMESTAMP",
+    NULL
+};
+
+static const char* timestamp_values[] =
+{
+    "'2018-01-01 11:11:11'",
+    "'0-00-00 00:00:00'",
     NULL
 };
 
@@ -120,6 +132,7 @@ static const char* date_types[] =
 static const char* date_values[] =
 {
     "'2018-01-01'",
+    "'0-00-00'",
     "NULL",
     NULL
 };
@@ -154,6 +167,7 @@ struct
     {string_types, string_values},
     {binary_types, binary_values},
     {datetime_types, datetime_values},
+    {timestamp_types, timestamp_values},
     {date_types, date_values},
     {time_types, time_values},
     {0, 0}
