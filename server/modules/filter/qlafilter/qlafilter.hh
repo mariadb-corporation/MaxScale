@@ -24,6 +24,8 @@
 /* Date string buffer size */
 #define QLA_DATE_BUFFER_SIZE 20
 
+class QlaFilterSession;
+
 /**
  * Helper struct for holding data before it's written to file.
  */
@@ -64,13 +66,31 @@ public:
  * To this base a session number is attached such that each session will
  * have a unique name.
  */
-class QlaInstance
+class QlaInstance : public MXS_FILTER
 {
 public:
     QlaInstance(const QlaInstance&) = delete;
     QlaInstance& operator=(const QlaInstance&) = delete;
-    QlaInstance(const char* name, MXS_CONFIG_PARAMETER* params);
+
+    QlaInstance(const std::string& name, MXS_CONFIG_PARAMETER* params);
     ~QlaInstance();
+
+    /**
+     * Associate a new session with this instance of the filter. Creates a session-specific logfile.
+     *
+     * @param session   The generic session
+     * @return          Router session on null on error
+     */
+    QlaFilterSession* newSession(MXS_SESSION* session);
+
+    /**
+     * Create an instance of the filter for a particular service within MaxScale.
+     *
+     * @param name      The name of the instance (as defined in the config file)
+     * @param params    The array of name/value pair parameters for the filter
+     * @return          The new filter instance, or NULL on error
+     */
+    static QlaInstance* create(const std::string name, MXS_CONFIG_PARAMETER* params);
 
     std::string name;   /* Filter definition name */
 
@@ -95,10 +115,13 @@ public:
     pcre2_code* re_match;   /* Compiled regex text */
     pcre2_code* re_exclude; /* Compiled regex nomatch text */
     uint32_t    ovec_size;  /* PCRE2 match data ovector size */
+
+private:
+    FILE* open_log_file(uint32_t, const char*);
 };
 
 /* The session structure for this QLA filter. */
-class QlaFilterSession
+class QlaFilterSession : public MXS_FILTER_SESSION
 {
 public:
     QlaFilterSession(const QlaFilterSession&);
@@ -107,6 +130,11 @@ public:
                      pcre2_match_data* mdata, const std::string& ses_filename, FILE* ses_file,
                      size_t ses_id, const char* service);
     ~QlaFilterSession();
+
+    /**
+     * Close a session with the filter. Close the file descriptor and reset event info.
+     */
+    void close();
 
     const char*       m_user;       /* Client username */
     const char*       m_remote;     /* Client address */

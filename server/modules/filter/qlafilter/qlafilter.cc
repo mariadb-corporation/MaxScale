@@ -47,9 +47,6 @@
 
 using std::string;
 
-class QlaFilterSession;
-class QlaInstance;
-
 /* Log file save mode flags */
 #define CONFIG_FILE_SESSION (1 << 0)    // Default value, session specific files
 #define CONFIG_FILE_UNIFIED (1 << 1)    // One file shared by all sessions
@@ -82,24 +79,11 @@ enum log_options
 };
 
 /* The filter entry points */
-static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
-static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                setDownstream(MXS_FILTER* instance,
-                                         MXS_FILTER_SESSION* fsession,
-                                         MXS_DOWNSTREAM* downstream);
-static void setUpstream(MXS_FILTER* instance,
-                        MXS_FILTER_SESSION* session,
-                        MXS_UPSTREAM* upstream);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
-static uint64_t getCapabilities(MXS_FILTER* instance);
 
-
-static FILE* open_log_file(QlaInstance*, uint32_t, const char*);
 static int write_log_entry(FILE*, QlaInstance*, QlaFilterSession*, uint32_t,
                            const char*, const char*, size_t, int);
 static bool cb_log(const MODULECMD_ARG* argv, json_t** output);
@@ -130,7 +114,7 @@ static const MXS_ENUM_VALUE log_data_values[] =
     {NULL}
 };
 
-QlaInstance::QlaInstance(const char* name, MXS_CONFIG_PARAMETER* params)
+QlaInstance::QlaInstance(const string& name, MXS_CONFIG_PARAMETER* params)
     : name(name)
     , log_mode_flags(params->get_enum(PARAM_LOG_TYPE, log_type_values))
     , log_file_data_flags(params->get_enum(PARAM_LOG_DATA, log_data_values))
@@ -183,16 +167,17 @@ QlaFilterSession::~QlaFilterSession()
     mxb_assert(m_logfile == NULL && m_event_data.has_message == false);
 }
 
-/**
- * Create an instance of the filter for a particular service within MaxScale.
- *
- * @param name      The name of the instance (as defined in the config file)
- * @param options   The options for this filter
- * @param params    The array of name/value pair parameters for the filter
- *
- * @return The new filter instance, or NULL on error
- */
-static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
+void QlaFilterSession::close()
+{
+    if (m_active && m_logfile)
+    {
+        fclose(m_logfile);
+        m_logfile = nullptr;
+    }
+    m_event_data.clear();
+}
+
+QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
     QlaInstance* my_instance = NULL;
@@ -223,9 +208,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
             {
                 string unified_filename = my_instance->filebase + ".unified";
                 // Open the file. It is only closed at program exit.
-                FILE* unified_fp = open_log_file(my_instance,
-                                                 my_instance->log_file_data_flags,
-                                                 unified_filename.c_str());
+                FILE* unified_fp = my_instance->open_log_file(my_instance->log_file_data_flags,
+                                                              unified_filename.c_str());
                 if (unified_fp != NULL)
                 {
                     my_instance->unified_filename = unified_filename;
@@ -257,19 +241,10 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
         pcre2_code_free(re_exclude);
     }
 
-    return (MXS_FILTER*) my_instance;
+    return my_instance;
 }
 
-/**
- * Associate a new session with this instance of the filter.
- *
- * Create the file to log to and open it.
- *
- * @param instance  The filter instance data
- * @param session   The session itself
- * @return Session specific data for this session
- */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session)
 {
     // Need the following values before session constructor
     const char* remote = session_get_remote(session);
@@ -278,21 +253,19 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
     bool ses_active = true;
     string filename;
     FILE* session_file = NULL;
-    // ---------------------------------------------------
 
-    QlaInstance* my_instance = (QlaInstance*) instance;
     bool error = false;
 
     mxb_assert(userName && remote);
-    if ((!my_instance->source.empty() && remote && my_instance->source != remote)
-        || (!my_instance->user_name.empty() && userName && my_instance->user_name != userName))
+    if ((!this->source.empty() && remote && this->source != remote)
+        || (!this->user_name.empty() && userName && this->user_name != userName))
     {
         ses_active = false;
     }
 
-    if (my_instance->ovec_size > 0)
+    if (this->ovec_size > 0)
     {
-        mdata = pcre2_match_data_create(my_instance->ovec_size, NULL);
+        mdata = pcre2_match_data_create(this->ovec_size, NULL);
         if (mdata == NULL)
         {
             // Can this happen? Would require pcre2 to fail completely.
@@ -302,16 +275,16 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
     }
 
     // Only open the session file if the corresponding mode setting is used
-    if (!error && ses_active && my_instance->log_mode_flags & CONFIG_FILE_SESSION)
+    if (!error && ses_active && this->log_mode_flags & CONFIG_FILE_SESSION)
     {
         std::stringstream filename_helper;
-        filename_helper << my_instance->filebase << "." << session->ses_id;
+        filename_helper << this->filebase << "." << session->ses_id;
         filename = filename_helper.str();
 
         // Session numbers are not printed to session files
-        uint32_t data_flags = (my_instance->log_file_data_flags & ~LOG_DATA_SESSION);
+        uint32_t data_flags = (this->log_file_data_flags & ~LOG_DATA_SESSION);
 
-        session_file = open_log_file(my_instance, data_flags, filename.c_str());
+        session_file = open_log_file(data_flags, filename.c_str());
         if (session_file == NULL)
         {
             MXS_ERROR("Opening output file for qla-filter failed due to %d, %s",
@@ -346,67 +319,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
             fclose(session_file);
         }
     }
-    return (MXS_FILTER_SESSION*)my_session;
-}
-
-/**
- * Close a session with the filter, this is the mechanism
- * by which a filter may cleanup data structure etc.
- * In the case of the QLA filter we simple close the file descriptor.
- *
- * @param instance  The filter instance data
- * @param session   The session being closed
- */
-static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-
-    if (my_session->m_active && my_session->m_logfile)
-    {
-        fclose(my_session->m_logfile);
-        my_session->m_logfile = NULL;
-    }
-    my_session->m_event_data.clear();
-}
-
-/**
- * Free the memory associated with the session
- *
- * @param instance  The filter instance
- * @param session   The filter session
- */
-static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-    delete my_session;
-}
-
-/**
- * Set the downstream filter or router to which queries will be
- * passed from this filter.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param downstream    The downstream filter or router.
- */
-static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-    my_session->down = *downstream;
-}
-
-/**
- * Set the upstream filter or router to which queries will be
- * passed from this filter.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param upstream  The upstream filter or router.
- */
-static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-    my_session->up = *upstream;
+    return my_session;
 }
 
 /**
@@ -674,16 +587,6 @@ static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESS
 }
 
 /**
- * Capability routine.
- *
- * @return The capabilities of the filter.
- */
-static uint64_t getCapabilities(MXS_FILTER* instance)
-{
-    return RCAP_TYPE_NONE;
-}
-
-/**
  * Open the log file and print a header if appropriate.
  *
  * @param   instance    The filter instance
@@ -691,8 +594,9 @@ static uint64_t getCapabilities(MXS_FILTER* instance)
  * @param   filename    Target file path
  * @return  A valid file on success, null otherwise.
  */
-static FILE* open_log_file(QlaInstance* instance, uint32_t data_flags, const char* filename)
+FILE* QlaInstance::open_log_file(uint32_t data_flags, const char* filename)
 {
+    auto instance = this;
     bool file_existed = false;
     FILE* fp = NULL;
     if (instance->append == false)
@@ -973,6 +877,51 @@ static bool cb_log(const MODULECMD_ARG* argv, json_t** output)
     }
 
     return rval;
+}
+
+namespace
+{
+
+MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
+{
+    return QlaInstance::create(name, params);
+}
+
+MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+{
+    auto my_instance = static_cast<QlaInstance*>(instance);
+    return my_instance->newSession(session);
+}
+
+void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
+{
+    auto my_session = static_cast<QlaFilterSession*>(session);
+    my_session->close();
+}
+
+void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
+{
+    QlaFilterSession* my_session = (QlaFilterSession*) session;
+    delete my_session;
+}
+
+void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
+{
+    QlaFilterSession* my_session = (QlaFilterSession*) session;
+    my_session->down = *downstream;
+}
+
+void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
+{
+    QlaFilterSession* my_session = (QlaFilterSession*) session;
+    my_session->up = *upstream;
+}
+
+uint64_t getCapabilities(MXS_FILTER* instance)
+{
+    return RCAP_TYPE_NONE;
+}
+
 }
 
 /**
