@@ -141,16 +141,26 @@ bool runtime_link_server(Server* server, const char* target)
 
     if (service)
     {
-        if (serviceAddBackend(service, server))
+        if (!service->uses_cluster())
         {
-            service_serialize(service);
-            rval = true;
+            if (serviceAddBackend(service, server))
+            {
+                service_serialize(service);
+                rval = true;
+            }
+            else
+            {
+                config_runtime_error("Service '%s' already uses server '%s'",
+                                     service->name,
+                                     server->name());
+            }
         }
         else
         {
-            config_runtime_error("Service '%s' already uses server '%s'",
+            config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
+                                 "Servers cannot explicitly be added to the service.",
                                  service->name,
-                                 server->name());
+                                 service->m_monitor->m_name);
         }
     }
     else if (monitor)
@@ -185,21 +195,34 @@ bool runtime_unlink_server(Server* server, const char* target)
 
     if (service || monitor)
     {
-        rval = true;
-
         if (service)
         {
-            serviceRemoveBackend(service, server);
-            service_serialize(service);
+            if (!service->uses_cluster())
+            {
+                serviceRemoveBackend(service, server);
+                service_serialize(service);
+                rval = true;
+            }
+            else
+            {
+                config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
+                                     "Servers cannot explicitly be removed from the service.",
+                                     service->name,
+                                     service->m_monitor->m_name);
+            }
         }
         else if (monitor)
         {
             monitor_remove_server(monitor, server);
             monitor_serialize(monitor);
+            rval = true;
         }
 
-        const char* type = service ? "service" : "monitor";
-        MXS_NOTICE("Removed server '%s' from %s '%s'", server->name(), type, target);
+        if (rval)
+        {
+            const char* type = service ? "service" : "monitor";
+            MXS_NOTICE("Removed server '%s' from %s '%s'", server->name(), type, target);
+        }
     }
 
     return rval;

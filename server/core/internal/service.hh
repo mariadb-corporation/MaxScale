@@ -108,6 +108,11 @@ public:
     // TODO: Make this private.
     Monitor*    m_monitor { nullptr }; /**< A possibly associated monitor */
 
+    bool uses_cluster() const
+    {
+        return m_monitor != nullptr;
+    }
+
 private:
     FilterList  m_filters;          /**< Ordered list of filters */
     std::string m_name;             /**< Name of the service */
