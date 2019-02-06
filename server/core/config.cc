@@ -1692,7 +1692,11 @@ static bool process_config_context(CONFIG_CONTEXT* context)
         }
     }
 
-    if (error_count)
+    if (error_count == 0)
+    {
+        MonitorManager::populate_services();
+    }
+    else
     {
         MXS_ERROR("%d errors were encountered while processing the configuration "
                   "file '%s'.",

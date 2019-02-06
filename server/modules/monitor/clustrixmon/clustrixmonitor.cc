@@ -16,6 +16,7 @@
 #include <set>
 #include <maxscale/json_api.h>
 #include "../../../core/internal/config_runtime.hh"
+#include "../../../core/internal/service.hh"
 
 namespace http = mxb::http;
 using namespace std;
@@ -63,6 +64,15 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     check_hub_and_refresh_nodes();
 
     return true;
+}
+
+void ClustrixMonitor::populate_services()
+{
+    mxb_assert(Monitor::m_state == MONITOR_STATE_STOPPED);
+
+    // The servers that the Clustrix monitor has been configured with are
+    // only used for bootstrapping and services will not be populated
+    // with them.
 }
 
 bool ClustrixMonitor::softfail(SERVER* pServer, json_t** ppError)
@@ -335,6 +345,10 @@ void ClustrixMonitor::refresh_nodes()
                                                   health_check_threshold, pServer);
 
                                 m_nodes.insert(make_pair(id, node));
+
+                                // New server, so it needs to be added to all services that
+                                // use this monitor for defining its cluster of servers.
+                                service_add_server(this, pServer);
                             }
                             else
                             {

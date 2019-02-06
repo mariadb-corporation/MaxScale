@@ -48,6 +48,7 @@
 #include "internal/monitor.hh"
 #include "internal/modules.hh"
 #include "internal/server.hh"
+#include "internal/service.hh"
 
 /** Schema version, journals must have a matching version */
 #define MMB_SCHEMA_VERSION 2
@@ -276,6 +277,14 @@ void MonitorManager::monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER*
             }
         }
     }
+}
+
+void MonitorManager::populate_services()
+{
+    this_unit.foreach_monitor([](Monitor* pMonitor) -> bool {
+            pMonitor->populate_services();
+            return true;
+        });
 }
 
 /**
@@ -2364,8 +2373,16 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
     }
 
     return written;
+}
 
+void Monitor::populate_services()
+{
+    mxb_assert(m_state == MONITOR_STATE_STOPPED);
 
+    for (MXS_MONITORED_SERVER* pMs : m_servers)
+    {
+        service_add_server(this, pMs->server);
+    }
 }
 
 void monitor_debug_wait()

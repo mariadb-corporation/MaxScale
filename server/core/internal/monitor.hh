@@ -107,6 +107,11 @@ public:
     static void destroy_all_monitors();
 
     static void monitor_start(Monitor*, const MXS_CONFIG_PARAMETER*);
+
+    /**
+     * @brief Populate services with the servers of the monitors.
+     */
+    static void populate_services();
 };
 
 

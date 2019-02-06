@@ -64,6 +64,8 @@ public:
 
     bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
 
+    void populate_services() override;
+
     bool softfail(SERVER* pServer, json_t** ppError);
     bool unsoftfail(SERVER* pServer, json_t** ppError);
 

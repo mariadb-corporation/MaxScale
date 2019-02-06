@@ -394,6 +394,11 @@ private:
      */
     int launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
 
+    /**
+     * Populate services with the servers of the monitor.
+     */
+    virtual void populate_services();
+
     bool journal_is_stale();
 };
 
