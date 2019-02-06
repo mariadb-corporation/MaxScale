@@ -21,9 +21,8 @@
  * in a single GWBUF.
  */
 
-#define MXS_MODULE_NAME "qlafilter"
 
-#include <maxscale/ccdefs.hh>
+#include "qlafilter.hh"
 
 #include <cmath>
 #include <errno.h>
@@ -39,10 +38,8 @@
 
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
-#include <maxscale/filter.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/pcre2.h>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/modulecmd.hh>
@@ -52,9 +49,6 @@ using std::string;
 
 class QlaFilterSession;
 class QlaInstance;
-
-/* Date string buffer size */
-#define QLA_DATE_BUFFER_SIZE 20
 
 /* Log file save mode flags */
 #define CONFIG_FILE_SESSION (1 << 0)    // Default value, session specific files
@@ -136,94 +130,6 @@ static const MXS_ENUM_VALUE log_data_values[] =
     {NULL}
 };
 
-/**
- * Helper struct for holding data before it's written to file.
- */
-class LogEventData
-{
-private:
-    LogEventData(const LogEventData&);
-    LogEventData& operator=(const LogEventData&);
-
-public:
-    LogEventData()
-        : has_message(false)
-        , query_clone(NULL)
-        , begin_time(
-    {
-        0, 0
-    })
-    {
-    }
-
-    ~LogEventData()
-    {
-        mxb_assert(query_clone == NULL);
-    }
-
-    /**
-     * Resets event data.
-     *
-     * @param event Event to reset
-     */
-    void clear()
-    {
-        has_message = false;
-        gwbuf_free(query_clone);
-        query_clone = NULL;
-        query_date[0] = '\0';
-        begin_time = {0, 0};
-    }
-
-    bool     has_message;                       // Does message data exist?
-    GWBUF*   query_clone;                       // Clone of the query buffer.
-    char     query_date[QLA_DATE_BUFFER_SIZE];  // Text representation of date.
-    timespec begin_time;                        // Timer value at the moment of receiving query.
-};
-
-/**
- * A instance structure, the assumption is that the option passed
- * to the filter is simply a base for the filename to which the queries
- * are logged.
- *
- * To this base a session number is attached such that each session will
- * have a unique name.
- */
-class QlaInstance
-{
-private:
-    QlaInstance(const QlaInstance&);
-    QlaInstance& operator=(const QlaInstance&);
-
-public:
-    QlaInstance(const char* name, MXS_CONFIG_PARAMETER* params);
-    ~QlaInstance();
-
-    string name;    /* Filter definition name */
-
-    uint32_t log_mode_flags;        /* Log file mode settings */
-    uint32_t log_file_data_flags;   /* What data is saved to the files */
-
-    string filebase;            /* The filename base */
-    string unified_filename;    /* Filename of the unified log file */
-    FILE*  unified_fp;          /* Unified log file. The pointer needs to be shared here
-                                 * to avoid garbled printing. */
-    bool   flush_writes;        /* Flush log file after every write? */
-    bool   append;              /* Open files in append-mode? */
-    string query_newline;       /* Character(s) used to replace a newline within a query */
-    string separator;           /*  Character(s) used to separate elements */
-    bool   write_warning_given; /* Avoid repeatedly printing some errors/warnings. */
-
-    string user_name;   /* The user name to filter on */
-    string source;      /* The source of the client connection to filter on */
-
-    string      match;      /* Optional text to match against */
-    string      exclude;    /* Optional text to match against for exclusion */
-    pcre2_code* re_match;   /* Compiled regex text */
-    pcre2_code* re_exclude; /* Compiled regex nomatch text */
-    uint32_t    ovec_size;  /* PCRE2 match data ovector size */
-};
-
 QlaInstance::QlaInstance(const char* name, MXS_CONFIG_PARAMETER* params)
     : name(name)
     , log_mode_flags(params->get_enum(PARAM_LOG_TYPE, log_type_values))
@@ -255,46 +161,10 @@ QlaInstance::~QlaInstance()
     }
 }
 
-/* The session structure for this QLA filter. */
-class QlaFilterSession
-{
-private:
-    QlaFilterSession(const QlaFilterSession&);
-    QlaFilterSession& operator=(const QlaFilterSession&);
-
-public:
-    QlaFilterSession(const char* user,
-                     const char* remote,
-                     bool ses_active,
-                     pcre2_match_data* mdata,
-                     const string& ses_filename,
-                     FILE* ses_file,
-                     size_t ses_id,
-                     const char* service);
-    ~QlaFilterSession();
-
-    const char*       m_user;       /* Client username */
-    const char*       m_remote;     /* Client address */
-    bool              m_active;     /* Is session active? */
-    pcre2_match_data* m_mdata;      /* Regex match data */
-    string            m_filename;   /* The session-specific log file name */
-    FILE*             m_logfile;    /* The session-specific log file */
-    size_t            m_ses_id;     /* The session this filter session serves. */
-    const char*       m_service;    /* The service name this filter is attached to. */
-    LogEventData      m_event_data; /* Information about the latest event, used if logging execution time. */
-
-    MXS_UPSTREAM   up;
-    MXS_DOWNSTREAM down;
-};
-
-QlaFilterSession::QlaFilterSession(const char* user,
-                                   const char* remote,
-                                   bool ses_active,
+QlaFilterSession::QlaFilterSession(const char* user, const char* remote, bool ses_active,
                                    pcre2_match_data* mdata,
-                                   const string& ses_filename,
-                                   FILE* ses_file,
-                                   size_t ses_id,
-                                   const char* service)
+                                   const string& ses_filename, FILE* ses_file,
+                                   size_t ses_id, const char* service)
     : m_user(user)
     , m_remote(remote)
     , m_active(ses_active)
@@ -312,143 +182,6 @@ QlaFilterSession::~QlaFilterSession()
     // File should be closed and event data freed by now
     mxb_assert(m_logfile == NULL && m_event_data.has_message == false);
 }
-
-MXS_BEGIN_DECLS
-
-/**
- * The module entry point routine.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    modulecmd_arg_type_t args[] =
-    {
-        {
-            MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            "Filter to read logs from"
-        },
-        {
-            MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
-            "Start reading from this line"
-        },
-        {
-            MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
-            "Stop reading at this line (exclusive)"
-        }
-    };
-
-    modulecmd_register_command(MXS_MODULE_NAME,
-                               "log",
-                               MODULECMD_TYPE_PASSIVE,
-                               cb_log,
-                               3,
-                               args,
-                               "Show unified log file as a JSON array");
-
-    static MXS_FILTER_OBJECT MyObject =
-    {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        setDownstream,
-        setUpstream,
-        routeQuery,
-        clientReply,
-        diagnostic,
-        diagnostic_json,
-        getCapabilities,
-        NULL,   // No destroyInstance
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_GA,
-        MXS_FILTER_VERSION,
-        "A simple query logging filter",
-        "V1.1.1",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
-        &MyObject,
-        NULL,   /* Process init. */
-        NULL,   /* Process finish. */
-        NULL,   /* Thread init. */
-        NULL,   /* Thread finish. */
-        {
-            {
-                PARAM_MATCH,
-                MXS_MODULE_PARAM_REGEX
-            },
-            {
-                PARAM_EXCLUDE,
-                MXS_MODULE_PARAM_REGEX
-            },
-            {
-                PARAM_USER,
-                MXS_MODULE_PARAM_STRING
-            },
-            {
-                PARAM_SOURCE,
-                MXS_MODULE_PARAM_STRING
-            },
-            {
-                PARAM_FILEBASE,
-                MXS_MODULE_PARAM_STRING,
-                NULL,
-                MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                PARAM_OPTIONS,
-                MXS_MODULE_PARAM_ENUM,
-                "ignorecase",
-                MXS_MODULE_OPT_NONE,
-                option_values
-            },
-            {
-                PARAM_LOG_TYPE,
-                MXS_MODULE_PARAM_ENUM,
-                "session",
-                MXS_MODULE_OPT_NONE,
-                log_type_values
-            },
-            {
-                PARAM_LOG_DATA,
-                MXS_MODULE_PARAM_ENUM,
-                LOG_DATA_DEFAULT,
-                MXS_MODULE_OPT_NONE,
-                log_data_values
-            },
-            {
-                PARAM_NEWLINE,
-                MXS_MODULE_PARAM_QUOTEDSTRING,
-                "\" \"",
-                MXS_MODULE_OPT_NONE
-            },
-            {
-                PARAM_SEPARATOR,
-                MXS_MODULE_PARAM_QUOTEDSTRING,
-                ",",
-                MXS_MODULE_OPT_NONE
-            },
-            {
-                PARAM_FLUSH,
-                MXS_MODULE_PARAM_BOOL,
-                "false"
-            },
-            {
-                PARAM_APPEND,
-                MXS_MODULE_PARAM_BOOL,
-                "false"
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
-
-MXS_END_DECLS
 
 /**
  * Create an instance of the filter for a particular service within MaxScale.
@@ -1240,4 +973,109 @@ static bool cb_log(const MODULECMD_ARG* argv, json_t** output)
     }
 
     return rval;
+}
+
+/**
+ * The module entry point routine.
+ *
+ * @return The module object
+ */
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
+{
+    modulecmd_arg_type_t args[] =
+    {
+        {
+            MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            "Filter to read logs from"
+        },
+        {
+            MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
+            "Start reading from this line"
+        },
+        {
+            MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
+            "Stop reading at this line (exclusive)"
+        }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "log", MODULECMD_TYPE_PASSIVE,
+                               cb_log, 3, args,
+                               "Show unified log file as a JSON array");
+
+    static MXS_FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        diagnostic_json,
+        getCapabilities,
+        NULL,               // No destroyInstance
+    };
+
+    static const char description[] = "A simple query logging filter";
+    uint64_t capabilities = RCAP_TYPE_CONTIGUOUS_INPUT;
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_GA,
+        MXS_FILTER_VERSION,
+        description,
+        "V1.1.1",
+        capabilities,
+        &MyObject,
+        NULL,                   /* Process init. */
+        NULL,                   /* Process finish. */
+        NULL,                   /* Thread init. */
+        NULL,                   /* Thread finish. */
+        {
+            {
+                PARAM_MATCH,    MXS_MODULE_PARAM_REGEX
+            },
+            {
+                PARAM_EXCLUDE,  MXS_MODULE_PARAM_REGEX
+            },
+            {
+                PARAM_USER,     MXS_MODULE_PARAM_STRING
+            },
+            {
+                PARAM_SOURCE,   MXS_MODULE_PARAM_STRING
+            },
+            {
+                PARAM_FILEBASE, MXS_MODULE_PARAM_STRING,        NULL,             MXS_MODULE_OPT_REQUIRED
+            },
+            {
+                PARAM_OPTIONS,  MXS_MODULE_PARAM_ENUM,          "ignorecase",     MXS_MODULE_OPT_NONE,
+                option_values
+            },
+            {
+                PARAM_LOG_TYPE, MXS_MODULE_PARAM_ENUM,          "session",        MXS_MODULE_OPT_NONE,
+                log_type_values
+            },
+            {
+                PARAM_LOG_DATA, MXS_MODULE_PARAM_ENUM,          LOG_DATA_DEFAULT, MXS_MODULE_OPT_NONE,
+                log_data_values
+            },
+            {
+                PARAM_NEWLINE,  MXS_MODULE_PARAM_QUOTEDSTRING,  "\" \"",          MXS_MODULE_OPT_NONE
+            },
+            {
+                PARAM_SEPARATOR,MXS_MODULE_PARAM_QUOTEDSTRING,  ",",              MXS_MODULE_OPT_NONE
+            },
+            {
+                PARAM_FLUSH,    MXS_MODULE_PARAM_BOOL,          "false"
+            },
+            {
+                PARAM_APPEND,   MXS_MODULE_PARAM_BOOL,          "false"
+            },
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+
+    return &info;
 }
