@@ -3063,17 +3063,17 @@ void blr_handle_fake_gtid_list(ROUTER_INSTANCE* router,
 static bool blr_handle_missing_files(ROUTER_INSTANCE* router,
                                      char* new_file)
 {
-    char* fptr;
+    char* fptr = strrchr(new_file, '.');
     uint32_t new_fseqno;
     uint32_t curr_fseqno;
     char buf[BLRM_BINLOG_NAME_STR_LEN];
     char bigbuf[PATH_MAX + 1];
 
-    if (*new_file
-        && (fptr = strrchr(new_file, '.')) == NULL)
+    if (fptr == NULL)
     {
         return false;
     }
+
     if (router->fileroot)
     {
         MXS_FREE(router->fileroot);

@@ -420,7 +420,7 @@ public:
     static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession)
     {
         RouterType* pRouter = static_cast<RouterType*>(pInstance);
-        RouterSessionType* pRouter_session;
+        RouterSessionType* pRouter_session = nullptr;
 
         MXS_EXCEPTION_GUARD(pRouter_session = pRouter->newSession(pSession));
 

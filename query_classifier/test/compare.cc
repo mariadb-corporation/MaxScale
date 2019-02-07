@@ -20,7 +20,6 @@
 #include <set>
 #include <string>
 #include <sstream>
-#include <my_config.h>
 #include <maxscale/paths.h>
 #include <maxscale/log.hh>
 #include <maxscale/protocol/mysql.hh>
@@ -48,10 +47,11 @@ namespace
 {
 
 char USAGE[] =
-    "usage: compare [-r count] [-d] [-1 classfier1] [-2 classifier2] "
+    "usage: compare [-r count] [-d] [-0 classifier] [-1 classfier1] [-2 classifier2] "
     "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-s statement]|[file]]\n\n"
     "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
     "-d    don't stop after first failed query\n"
+    "-0    sanity check mode, compares the statement twice with the same classifier\n"
     "-1    the first classifier, default 'qc_mysqlembedded'\n"
     "-2    the second classifier, default 'qc_sqlite'\n"
     "-A    arguments for the first classifier\n"
@@ -172,17 +172,22 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
 
 QUERY_CLASSIFIER* get_classifier(const char* zName, qc_sql_mode_t sql_mode, const char* zArgs)
 {
-    QUERY_CLASSIFIER* pClassifier = load_classifier(zName);
+    QUERY_CLASSIFIER* pClassifier = nullptr;
 
-    if (pClassifier)
+    if (zName)
     {
-        if (pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK
-            || pClassifier->qc_process_init() != QC_RESULT_OK
-            || pClassifier->qc_thread_init() != QC_RESULT_OK)
+        pClassifier = load_classifier(zName);
+
+        if (pClassifier)
         {
-            cerr << "error: Could not setup or init classifier " << zName << "." << endl;
-            qc_unload(pClassifier);
-            pClassifier = 0;
+            if (pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK
+                || pClassifier->qc_process_init() != QC_RESULT_OK
+                || pClassifier->qc_thread_init() != QC_RESULT_OK)
+            {
+                cerr << "error: Could not setup or init classifier " << zName << "." << endl;
+                qc_unload(pClassifier);
+                pClassifier = 0;
+            }
         }
     }
 
@@ -209,21 +214,18 @@ bool get_classifiers(qc_sql_mode_t sql_mode,
     bool rc = false;
 
     QUERY_CLASSIFIER* pClassifier1 = get_classifier(zName1, sql_mode, zArgs1);
+    QUERY_CLASSIFIER* pClassifier2 = get_classifier(zName2, sql_mode, zArgs2);
 
-    if (pClassifier1)
+    if ((!zName1 || pClassifier1) && (!zName2 || pClassifier2))
     {
-        QUERY_CLASSIFIER* pClassifier2 = get_classifier(zName2, sql_mode, zArgs2);
-
-        if (pClassifier2)
-        {
-            *ppClassifier1 = pClassifier1;
-            *ppClassifier2 = pClassifier2;
-            rc = true;
-        }
-        else
-        {
-            put_classifier(pClassifier1);
-        }
+        *ppClassifier1 = pClassifier1;
+        *ppClassifier2 = pClassifier2;
+        rc = true;
+    }
+    else
+    {
+        put_classifier(pClassifier1);
+        put_classifier(pClassifier2);
     }
 
     return rc;
@@ -1494,11 +1496,12 @@ int main(int argc, char* argv[])
 #endif
     const char* zStatement = NULL;
     qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
+    bool solo = false;
 
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:C:m:s:SR")) != -1)
+    while ((c = getopt(argc, argv, "r:d0:1:2:v:A:B:C:m:s:SR")) != -1)
     {
         switch (c)
         {
@@ -1508,6 +1511,12 @@ int main(int argc, char* argv[])
 
         case 'v':
             v = atoi(optarg);
+            break;
+
+        case '0':
+            zClassifier1 = optarg;
+            zClassifier2 = nullptr;
+            solo = true;
             break;
 
         case '1':
@@ -1601,6 +1610,11 @@ int main(int argc, char* argv[])
                     size_t round = 0;
                     bool terminate = false;
 
+                    if (solo)
+                    {
+                        pClassifier2 = pClassifier1;
+                    }
+
                     pClassifier1->qc_set_server_version(version);
                     pClassifier2->qc_set_server_version(version);
 
@@ -1648,6 +1662,11 @@ int main(int argc, char* argv[])
                         }
                     }
                     while (!terminate && ((rounds == 0) || (round < rounds)));
+
+                    if (solo)
+                    {
+                        pClassifier2 = nullptr;
+                    }
 
                     put_classifiers(pClassifier1, pClassifier2);
 

@@ -122,7 +122,7 @@ int test(StorageFactory& factory, istream& in)
 int main(int argc, char* argv[])
 {
     int rv = EXIT_FAILURE;
-    StorageFactory* pFactory;
+    StorageFactory* pFactory = nullptr;
     if ((argc == 2) || (argc == 3))
     {
         char* libdir = MXS_STRDUP("../../../../../query_classifier/qc_sqlite/");

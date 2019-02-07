@@ -57,7 +57,8 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
     bool rval = false;
     json_error_t err;
     err.text[0] = '\0';
-    json_t* obj, * arr;
+    json_t* obj;
+    json_t* arr = nullptr;
 
     if ((obj = json_load_file(filename, 0, &err)) && (arr = json_object_get(obj, "fields")))
     {

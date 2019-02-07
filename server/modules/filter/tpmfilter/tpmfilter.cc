@@ -739,7 +739,7 @@ static void destroyInstance(MXS_FILTER* instance)
 
 static void checkNamedPipe(TPM_INSTANCE* inst)
 {
-    int ret;
+    int ret = 0;
     char buffer[2];
     char buf[4096];
     char* named_pipe = inst->named_pipe;
