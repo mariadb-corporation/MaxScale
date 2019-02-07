@@ -3363,7 +3363,7 @@ extern "C"
     // 'unsigned int' and not 'uint32_t' because 'uint32_t' is unknown in sqlite3 context.
     extern void maxscale_set_type_mask(unsigned int type_mask);
 
-    extern void maxscaleComment();
+    extern int  maxscaleComment();
     extern int  maxscaleKeyword(int token);
     extern int  maxscaleTranslateKeyword(int token);
 }
@@ -4191,14 +4191,18 @@ void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
     QC_EXCEPTION_GUARD(pInfo->maxscaleCreateSequence(pParse, pDatabase, pTable));
 }
 
-void maxscaleComment()
+int maxscaleComment()
 {
     QC_TRACE();
 
     QcSqliteInfo* pInfo = this_thread.pInfo;
     mxb_assert(pInfo);
 
-    QC_EXCEPTION_GUARD(pInfo->maxscaleComment());
+    int rc = 0;
+
+    QC_EXCEPTION_GUARD(rc = pInfo->maxscaleComment());
+
+    return rc;
 }
 
 void maxscaleDeclare(Parse* pParse)
