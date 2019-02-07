@@ -384,6 +384,8 @@ bool monitor_add_server(Monitor* mon, SERVER* server)
             mon->m_servers.push_back(db);
         }
 
+        service_add_server(mon, server);
+
         if (old_state == MONITOR_STATE_RUNNING)
         {
             MonitorManager::monitor_start(mon, mon->parameters);
@@ -450,6 +452,8 @@ void monitor_remove_server(Monitor* mon, SERVER* server)
     if (ptr)
     {
         monitor_server_free(ptr);
+
+        service_remove_server(mon, server);
     }
 
     if (old_state == MONITOR_STATE_RUNNING)

@@ -417,5 +417,13 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const char* host);
  */
 void service_add_server(Monitor* pMonitor, SERVER* pServer);
 
+/**
+ * @brief Remove server from all services associated with a monitor
+ *
+ * @param monitor  A monitor.
+ * @param server   A server.
+ */
+void service_remove_server(Monitor* pMonitor, SERVER* pServer);
+
 std::unique_ptr<ResultSet> serviceGetList(void);
 std::unique_ptr<ResultSet> serviceGetListenerList(void);
