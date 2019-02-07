@@ -92,6 +92,19 @@ public:
      */
     static QlaInstance* create(const std::string name, MXS_CONFIG_PARAMETER* params);
 
+    /**
+     * Read contents of unified log file and save to json object.
+     *
+     * @param start First line to output
+     * @param end Last line to output
+     * @param output Where to save read lines
+     * @return True if file was opened
+     */
+    bool read_to_json(int start, int end, json_t** output) const;
+
+    void diagnostics(DCB* dcb) const;
+    json_t* diagnostics_json() const;
+
     const std::string m_name;   /* Filter definition name */
 
     std::string m_unified_filename;      /* Filename of the unified log file */

@@ -80,12 +80,6 @@ enum log_options
     LOG_DATA_REPLY_TIME = (1 << 5),
 };
 
-/* The filter entry points */
-static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
-static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
-
-static bool cb_log(const MODULECMD_ARG* argv, json_t** output);
-
 static const MXS_ENUM_VALUE option_values[] =
 {
     {"ignorecase", PCRE2_CASELESS},
@@ -315,6 +309,100 @@ QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session)
     return my_session;
 }
 
+bool QlaInstance::read_to_json(int start, int end, json_t** output) const
+{
+    bool rval = false;
+    if (m_settings.log_mode_flags & CONFIG_FILE_UNIFIED)
+    {
+        mxb_assert(m_unified_fp && !m_unified_filename.empty());
+        std::ifstream file(m_unified_filename);
+
+        if (file)
+        {
+            json_t* arr = json_array();
+            // TODO: Add integer type to modulecmd
+            int current = 0;
+
+            /** Skip lines we don't want */
+            for (std::string line; current < start && std::getline(file, line); current++)
+            {
+            }
+
+            /** Read lines until either EOF or line count is reached */
+            for (std::string line; std::getline(file, line) && (current < end || end == 0); current++)
+            {
+                json_array_append_new(arr, json_string(line.c_str()));
+            }
+
+            *output = arr;
+            rval = true;
+        }
+        else
+        {
+            *output = mxs_json_error("Failed to open file '%s'", m_unified_filename.c_str());
+        }
+    }
+    else
+    {
+        *output = mxs_json_error("Filter '%s' does not have unified log file enabled", m_name.c_str());
+    }
+    return rval;
+}
+
+void QlaInstance::diagnostics(DCB* dcb) const
+{
+    using mxb::string_printf;
+    string output;
+    if (!m_settings.source.empty())
+    {
+        output = string_printf("\t\tLimit logging to connections from  %s\n", m_settings.source.c_str());
+    }
+    if (!m_settings.user_name.empty())
+    {
+        output += string_printf("\t\tLimit logging to user      %s\n", m_settings.user_name.c_str());
+    }
+    if (!m_settings.match.empty())
+    {
+        output += string_printf("\t\tInclude queries that match     %s\n", m_settings.match.c_str());
+    }
+    if (!m_settings.exclude.empty())
+    {
+         output += string_printf("\t\tExclude queries that match     %s\n", m_settings.exclude.c_str());
+    }
+
+    output += string_printf("\t\tColumn separator     %s\n", m_settings.separator.c_str());
+    output += string_printf("\t\tNewline replacement     %s\n", m_settings.query_newline.c_str());
+    dcb_printf(dcb, "%s", output.c_str());
+}
+
+json_t* QlaInstance::diagnostics_json() const
+{
+    json_t* rval = json_object();
+    if (!m_settings.source.empty())
+    {
+        json_object_set_new(rval, PARAM_SOURCE, json_string(m_settings.source.c_str()));
+    }
+
+    if (!m_settings.user_name.empty())
+    {
+        json_object_set_new(rval, PARAM_USER, json_string(m_settings.user_name.c_str()));
+    }
+
+    if (!m_settings.match.empty())
+    {
+        json_object_set_new(rval, PARAM_MATCH, json_string(m_settings.match.c_str()));
+    }
+
+    if (!m_settings.exclude.empty())
+    {
+        json_object_set_new(rval, PARAM_EXCLUDE, json_string(m_settings.exclude.c_str()));
+    }
+    json_object_set_new(rval, PARAM_SEPARATOR, json_string(m_settings.separator.c_str()));
+    json_object_set_new(rval, PARAM_NEWLINE, json_string(m_settings.query_newline.c_str()));
+
+    return rval;
+}
+
 /**
  * Write QLA log entry/entries to disk
  *
@@ -439,107 +527,6 @@ int QlaFilterSession::clientReply(GWBUF* queue)
         event.clear();
     }
     return up.clientReply(up.instance, up.session, queue);
-}
-
-/**
- * Diagnostics routine
- *
- * If fsession is NULL then print diagnostics on the filter
- * instance as a whole, otherwise print diagnostics for the
- * particular session.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
- * @param   dcb         The DCB for diagnostic output
- */
-static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
-{
-    QlaInstance* my_instance = (QlaInstance*) instance;
-    QlaFilterSession* my_session = (QlaFilterSession*) fsession;
-
-    if (my_session)
-    {
-        dcb_printf(dcb,
-                   "\t\tLogging to file            %s.\n",
-                   my_session->m_filename.c_str());
-    }
-    if (!my_instance->m_settings.source.empty())
-    {
-        dcb_printf(dcb,
-                   "\t\tLimit logging to connections from  %s\n",
-                   my_instance->m_settings.source.c_str());
-    }
-    if (!my_instance->m_settings.user_name.empty())
-    {
-        dcb_printf(dcb,
-                   "\t\tLimit logging to user      %s\n",
-                   my_instance->m_settings.user_name.c_str());
-    }
-    if (!my_instance->m_settings.match.empty())
-    {
-        dcb_printf(dcb,
-                   "\t\tInclude queries that match     %s\n",
-                   my_instance->m_settings.match.c_str());
-    }
-    if (!my_instance->m_settings.exclude.empty())
-    {
-        dcb_printf(dcb,
-                   "\t\tExclude queries that match     %s\n",
-                   my_instance->m_settings.exclude.c_str());
-    }
-    dcb_printf(dcb,
-               "\t\tColumn separator     %s\n",
-               my_instance->m_settings.separator.c_str());
-    dcb_printf(dcb,
-               "\t\tNewline replacement     %s\n",
-               my_instance->m_settings.query_newline.c_str());
-}
-
-/**
- * Diagnostics routine
- *
- * If fsession is NULL then print diagnostics on the filter
- * instance as a whole, otherwise print diagnostics for the
- * particular session.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
- */
-static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
-{
-    QlaInstance* my_instance = (QlaInstance*)instance;
-    QlaFilterSession* my_session = (QlaFilterSession*)fsession;
-
-    json_t* rval = json_object();
-
-    if (my_session)
-    {
-        json_object_set_new(rval, "session_filename", json_string(my_session->m_filename.c_str()));
-    }
-
-    if (!my_instance->m_settings.source.empty())
-    {
-        json_object_set_new(rval, PARAM_SOURCE, json_string(my_instance->m_settings.source.c_str()));
-    }
-
-    if (!my_instance->m_settings.user_name.empty())
-    {
-        json_object_set_new(rval, PARAM_USER, json_string(my_instance->m_settings.user_name.c_str()));
-    }
-
-    if (!my_instance->m_settings.match.empty())
-    {
-        json_object_set_new(rval, PARAM_MATCH, json_string(my_instance->m_settings.match.c_str()));
-    }
-
-    if (!my_instance->m_settings.exclude.empty())
-    {
-        json_object_set_new(rval, PARAM_EXCLUDE, json_string(my_instance->m_settings.exclude.c_str()));
-    }
-    json_object_set_new(rval, PARAM_SEPARATOR, json_string(my_instance->m_settings.separator.c_str()));
-    json_object_set_new(rval, PARAM_NEWLINE, json_string(my_instance->m_settings.query_newline.c_str()));
-
-    return rval;
 }
 
 /**
@@ -776,57 +763,6 @@ int QlaFilterSession::write_log_entry(FILE* logfile, uint32_t data_flags, const 
     }
 }
 
-static bool cb_log(const MODULECMD_ARG* argv, json_t** output)
-{
-    mxb_assert(argv->argc > 0);
-    mxb_assert(argv->argv[0].type.type == MODULECMD_ARG_FILTER);
-
-    MXS_FILTER_DEF* filter = argv[0].argv->value.filter;
-    QlaInstance* instance = reinterpret_cast<QlaInstance*>(filter_def_get_instance(filter));
-    bool rval = false;
-
-    if (instance->m_settings.log_mode_flags & CONFIG_FILE_UNIFIED)
-    {
-        mxb_assert(instance->m_unified_fp && !instance->m_unified_filename.empty());
-        std::ifstream file(instance->m_unified_filename);
-
-        if (file)
-        {
-            json_t* arr = json_array();
-            // TODO: Add integer type to modulecmd
-            int start = argv->argc > 1 ? atoi(argv->argv[1].value.string) : 0;
-            int end = argv->argc > 2 ? atoi(argv->argv[2].value.string) : 0;
-            int current = 0;
-
-            /** Skip lines we don't want */
-            for (std::string line; current < start && std::getline(file, line); current++)
-            {
-            }
-
-            /** Read lines until either EOF or line count is reached */
-            for (std::string line; std::getline(file, line) && (current < end || end == 0); current++)
-            {
-                json_array_append_new(arr, json_string(line.c_str()));
-            }
-
-            *output = arr;
-            rval = true;
-        }
-        else
-        {
-            *output = mxs_json_error("Failed to open file '%s'",
-                                     instance->m_unified_filename.c_str());
-        }
-    }
-    else
-    {
-        *output = mxs_json_error("Filter '%s' does not have unified log file enabled",
-                                 filter_def_get_name(filter));
-    }
-
-    return rval;
-}
-
 namespace
 {
 
@@ -880,6 +816,52 @@ int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
     QlaFilterSession* my_session = (QlaFilterSession*) session;
     return my_session->clientReply(queue);
+}
+
+void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
+{
+    auto my_session = static_cast<QlaFilterSession*>(fsession);
+    if (my_session)
+    {
+        dcb_printf(dcb,
+                   "\t\tLogging to file            %s.\n",
+                   my_session->m_filename.c_str());
+    }
+    else
+    {
+        auto my_instance = static_cast<QlaInstance*>(instance);
+        my_instance->diagnostics(dcb);
+
+    }
+}
+
+json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
+{
+    auto my_session = static_cast<const QlaFilterSession*>(fsession);
+    if (my_session)
+    {
+        json_t* rval = json_object();
+        json_object_set_new(rval, "session_filename", json_string(my_session->m_filename.c_str()));
+        return rval;
+    }
+    else
+    {
+        auto my_instance = static_cast<const QlaInstance*>(instance);
+        return my_instance->diagnostics_json();
+    }
+}
+
+bool cb_log(const MODULECMD_ARG* argv, json_t** output)
+{
+    mxb_assert(argv->argc > 0);
+    mxb_assert(argv->argv[0].type.type == MODULECMD_ARG_FILTER);
+
+    MXS_FILTER_DEF* filter = argv[0].argv->value.filter;
+    QlaInstance* instance = reinterpret_cast<QlaInstance*>(filter_def_get_instance(filter));
+    int start = argv->argc > 1 ? atoi(argv->argv[1].value.string) : 0;
+    int end = argv->argc > 2 ? atoi(argv->argv[2].value.string) : 0;
+
+    return instance->read_to_json(start, end, output);
 }
 
 }
