@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 #include <sstream>
 #include <sys/time.h>
@@ -38,6 +39,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
+#include <maxbase/format.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/service.hh>
@@ -112,22 +114,22 @@ static const MXS_ENUM_VALUE log_data_values[] =
 
 QlaInstance::QlaInstance(const string& name, MXS_CONFIG_PARAMETER* params)
     : m_name(name)
-    , m_log_mode_flags(params->get_enum(PARAM_LOG_TYPE, log_type_values))
-    , m_log_file_data_flags(params->get_enum(PARAM_LOG_DATA, log_data_values))
-    , m_filebase(params->get_string(PARAM_FILEBASE))
-    , m_unified_fp(NULL)
-    , m_flush_writes(params->get_bool(PARAM_FLUSH))
-    , m_append(params->get_bool(PARAM_APPEND))
-    , m_query_newline(params->get_string(PARAM_NEWLINE))
-    , m_separator(params->get_string(PARAM_SEPARATOR))
-    , m_write_warning_given(false)
-    , m_user_name(params->get_string(PARAM_USER))
-    , m_source(params->get_string(PARAM_SOURCE))
-    , m_match(params->get_string(PARAM_MATCH))
-    , m_exclude(params->get_string(PARAM_EXCLUDE))
-    , m_re_match(NULL)
-    , m_re_exclude(NULL)
-    , m_ovec_size(0)
+    , m_settings(params)
+{
+}
+
+QlaInstance::Settings::Settings(MXS_CONFIG_PARAMETER* params)
+    : log_mode_flags(params->get_enum(PARAM_LOG_TYPE, log_type_values))
+    , log_file_data_flags(params->get_enum(PARAM_LOG_DATA, log_data_values))
+    , filebase(params->get_string(PARAM_FILEBASE))
+    , flush_writes(params->get_bool(PARAM_FLUSH))
+    , append(params->get_bool(PARAM_APPEND))
+    , query_newline(params->get_string(PARAM_NEWLINE))
+    , separator(params->get_string(PARAM_SEPARATOR))
+    , user_name(params->get_string(PARAM_USER))
+    , source(params->get_string(PARAM_SOURCE))
+    , match(params->get_string(PARAM_MATCH))
+    , exclude(params->get_string(PARAM_EXCLUDE))
 {
 }
 
@@ -201,11 +203,11 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
             my_instance->m_re_exclude = re_exclude;
             my_instance->m_ovec_size = ovec_size;
             // Try to open the unified log file
-            if (my_instance->m_log_mode_flags & CONFIG_FILE_UNIFIED)
+            if (my_instance->m_settings.log_mode_flags & CONFIG_FILE_UNIFIED)
             {
-                string unified_filename = my_instance->m_filebase + ".unified";
+                string unified_filename = my_instance->m_settings.filebase + ".unified";
                 // Open the file. It is only closed at program exit.
-                FILE* unified_fp = my_instance->open_log_file(my_instance->m_log_file_data_flags,
+                FILE* unified_fp = my_instance->open_log_file(my_instance->m_settings.log_file_data_flags,
                                                               unified_filename.c_str());
                 if (unified_fp != NULL)
                 {
@@ -254,8 +256,8 @@ QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session)
     bool error = false;
 
     mxb_assert(userName && remote);
-    if ((!m_source.empty() && remote && m_source != remote)
-        || (!m_user_name.empty() && userName && m_user_name != userName))
+    if ((!m_settings.source.empty() && remote && m_settings.source != remote)
+        || (!m_settings.user_name.empty() && userName && m_settings.user_name != userName))
     {
         ses_active = false;
     }
@@ -272,14 +274,12 @@ QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session)
     }
 
     // Only open the session file if the corresponding mode setting is used
-    if (!error && ses_active && m_log_mode_flags & CONFIG_FILE_SESSION)
+    if (!error && ses_active && m_settings.log_mode_flags & CONFIG_FILE_SESSION)
     {
-        std::stringstream filename_helper;
-        filename_helper << m_filebase << "." << session->ses_id;
-        filename = filename_helper.str();
+        filename = mxb::string_printf("%s.%" PRIu64, m_settings.filebase.c_str(), session->ses_id);
 
         // Session numbers are not printed to session files
-        uint32_t data_flags = (m_log_file_data_flags & ~LOG_DATA_SESSION);
+        uint32_t data_flags = (m_settings.log_file_data_flags & ~LOG_DATA_SESSION);
 
         session_file = open_log_file(data_flags, filename.c_str());
         if (session_file == NULL)
@@ -329,11 +329,11 @@ void QlaFilterSession::write_log_entries(const char* date_string, const char* qu
                                          int elapsed_ms)
 {
     bool write_error = false;
-    if (m_instance.m_log_mode_flags & CONFIG_FILE_SESSION)
+    if (m_instance.m_settings.log_mode_flags & CONFIG_FILE_SESSION)
     {
         // In this case there is no need to write the session
         // number into the files.
-        uint32_t data_flags = (m_instance.m_log_file_data_flags & ~LOG_DATA_SESSION);
+        uint32_t data_flags = (m_instance.m_settings.log_file_data_flags & ~LOG_DATA_SESSION);
         if (write_log_entry(m_logfile,
                             data_flags,
                             date_string,
@@ -344,9 +344,9 @@ void QlaFilterSession::write_log_entries(const char* date_string, const char* qu
             write_error = true;
         }
     }
-    if (m_instance.m_log_mode_flags & CONFIG_FILE_UNIFIED)
+    if (m_instance.m_settings.log_mode_flags & CONFIG_FILE_UNIFIED)
     {
-        uint32_t data_flags = m_instance.m_log_file_data_flags;
+        uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         if (write_log_entry(m_instance.m_unified_fp,
                             data_flags,
                             date_string,
@@ -376,7 +376,7 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
                                          query, query_len,
                                          MXS_MODULE_NAME))
     {
-        const uint32_t data_flags = m_instance.m_log_file_data_flags;
+        const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         LogEventData& event = m_event_data;
         if (data_flags & LOG_DATA_DATE)
         {
@@ -419,7 +419,7 @@ int QlaFilterSession::clientReply(GWBUF* queue)
     LogEventData& event = m_event_data;
     if (event.has_message)
     {
-        const uint32_t data_flags = m_instance.m_log_file_data_flags;
+        const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         mxb_assert(data_flags & LOG_DATA_REPLY_TIME);
 
         char* query = NULL;
@@ -463,36 +463,36 @@ static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* 
                    "\t\tLogging to file            %s.\n",
                    my_session->m_filename.c_str());
     }
-    if (!my_instance->m_source.empty())
+    if (!my_instance->m_settings.source.empty())
     {
         dcb_printf(dcb,
                    "\t\tLimit logging to connections from  %s\n",
-                   my_instance->m_source.c_str());
+                   my_instance->m_settings.source.c_str());
     }
-    if (!my_instance->m_user_name.empty())
+    if (!my_instance->m_settings.user_name.empty())
     {
         dcb_printf(dcb,
                    "\t\tLimit logging to user      %s\n",
-                   my_instance->m_user_name.c_str());
+                   my_instance->m_settings.user_name.c_str());
     }
-    if (!my_instance->m_match.empty())
+    if (!my_instance->m_settings.match.empty())
     {
         dcb_printf(dcb,
                    "\t\tInclude queries that match     %s\n",
-                   my_instance->m_match.c_str());
+                   my_instance->m_settings.match.c_str());
     }
-    if (!my_instance->m_exclude.empty())
+    if (!my_instance->m_settings.exclude.empty())
     {
         dcb_printf(dcb,
                    "\t\tExclude queries that match     %s\n",
-                   my_instance->m_exclude.c_str());
+                   my_instance->m_settings.exclude.c_str());
     }
     dcb_printf(dcb,
                "\t\tColumn separator     %s\n",
-               my_instance->m_separator.c_str());
+               my_instance->m_settings.separator.c_str());
     dcb_printf(dcb,
                "\t\tNewline replacement     %s\n",
-               my_instance->m_query_newline.c_str());
+               my_instance->m_settings.query_newline.c_str());
 }
 
 /**
@@ -517,27 +517,27 @@ static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESS
         json_object_set_new(rval, "session_filename", json_string(my_session->m_filename.c_str()));
     }
 
-    if (!my_instance->m_source.empty())
+    if (!my_instance->m_settings.source.empty())
     {
-        json_object_set_new(rval, PARAM_SOURCE, json_string(my_instance->m_source.c_str()));
+        json_object_set_new(rval, PARAM_SOURCE, json_string(my_instance->m_settings.source.c_str()));
     }
 
-    if (!my_instance->m_user_name.empty())
+    if (!my_instance->m_settings.user_name.empty())
     {
-        json_object_set_new(rval, PARAM_USER, json_string(my_instance->m_user_name.c_str()));
+        json_object_set_new(rval, PARAM_USER, json_string(my_instance->m_settings.user_name.c_str()));
     }
 
-    if (!my_instance->m_match.empty())
+    if (!my_instance->m_settings.match.empty())
     {
-        json_object_set_new(rval, PARAM_MATCH, json_string(my_instance->m_match.c_str()));
+        json_object_set_new(rval, PARAM_MATCH, json_string(my_instance->m_settings.match.c_str()));
     }
 
-    if (!my_instance->m_exclude.empty())
+    if (!my_instance->m_settings.exclude.empty())
     {
-        json_object_set_new(rval, PARAM_EXCLUDE, json_string(my_instance->m_exclude.c_str()));
+        json_object_set_new(rval, PARAM_EXCLUDE, json_string(my_instance->m_settings.exclude.c_str()));
     }
-    json_object_set_new(rval, PARAM_SEPARATOR, json_string(my_instance->m_separator.c_str()));
-    json_object_set_new(rval, PARAM_NEWLINE, json_string(my_instance->m_query_newline.c_str()));
+    json_object_set_new(rval, PARAM_SEPARATOR, json_string(my_instance->m_settings.separator.c_str()));
+    json_object_set_new(rval, PARAM_NEWLINE, json_string(my_instance->m_settings.query_newline.c_str()));
 
     return rval;
 }
@@ -545,17 +545,15 @@ static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESS
 /**
  * Open the log file and print a header if appropriate.
  *
- * @param   instance    The filter instance
  * @param   data_flags  Data save settings flags
  * @param   filename    Target file path
  * @return  A valid file on success, null otherwise.
  */
 FILE* QlaInstance::open_log_file(uint32_t data_flags, const char* filename)
 {
-    auto instance = this;
     bool file_existed = false;
     FILE* fp = NULL;
-    if (instance->m_append == false)
+    if (m_settings.append == false)
     {
         // Just open the file (possibly overwriting) and then print header.
         fp = fopen(filename, "w");
@@ -591,7 +589,7 @@ FILE* QlaInstance::open_log_file(uint32_t data_flags, const char* filename)
 
         std::stringstream header;
         string curr_sep;    // Use empty string as the first separator
-        const string& real_sep = instance->m_separator;
+        const string& real_sep = m_settings.separator;
 
         if (data_flags & LOG_DATA_SERVICE)
         {
@@ -627,7 +625,7 @@ FILE* QlaInstance::open_log_file(uint32_t data_flags, const char* filename)
         // Finally, write the log header.
         int written = fprintf(fp, "%s", header.str().c_str());
 
-        if ((written <= 0) || ((instance->m_flush_writes) && (fflush(fp) < 0)))
+        if ((written <= 0) || ((m_settings.flush_writes) && (fflush(fp) < 0)))
         {
             // Weird error, file opened but a write failed. Best to stop.
             fclose(fp);
@@ -715,7 +713,7 @@ int QlaFilterSession::write_log_entry(FILE* logfile, uint32_t data_flags, const 
      * simultaneously, so we have to first print to a string. */
     std::stringstream output;
     string curr_sep;    // Use empty string as the first separator
-    const string& real_sep = m_instance.m_separator;
+    const string& real_sep = m_instance.m_settings.separator;
 
     if (data_flags & LOG_DATA_SERVICE)
     {
@@ -745,10 +743,10 @@ int QlaFilterSession::write_log_entry(FILE* logfile, uint32_t data_flags, const 
     if (data_flags & LOG_DATA_QUERY)
     {
         output << curr_sep;
-        if (!m_instance.m_query_newline.empty())
+        if (!m_instance.m_settings.query_newline.empty())
         {
             print_string_replace_newlines(sql_string, sql_str_len,
-                                          m_instance.m_query_newline.c_str(),
+                                          m_instance.m_settings.query_newline.c_str(),
                                           &output);
         }
         else
@@ -762,7 +760,7 @@ int QlaFilterSession::write_log_entry(FILE* logfile, uint32_t data_flags, const 
     // Finally, write the log event.
     int written = fprintf(logfile, "%s", output.str().c_str());
 
-    if ((!m_instance.m_flush_writes) || (written <= 0))
+    if ((!m_instance.m_settings.flush_writes) || (written <= 0))
     {
         return written;
     }
@@ -787,7 +785,7 @@ static bool cb_log(const MODULECMD_ARG* argv, json_t** output)
     QlaInstance* instance = reinterpret_cast<QlaInstance*>(filter_def_get_instance(filter));
     bool rval = false;
 
-    if (instance->m_log_mode_flags & CONFIG_FILE_UNIFIED)
+    if (instance->m_settings.log_mode_flags & CONFIG_FILE_UNIFIED)
     {
         mxb_assert(instance->m_unified_fp && !instance->m_unified_filename.empty());
         std::ifstream file(instance->m_unified_filename);

@@ -94,27 +94,35 @@ public:
 
     const std::string m_name;   /* Filter definition name */
 
-    uint32_t    m_log_mode_flags;        /* Log file mode settings */
-    uint32_t    m_log_file_data_flags;   /* What data is saved to the files */
-    std::string m_filebase;              /* The filename base */
     std::string m_unified_filename;      /* Filename of the unified log file */
+    FILE*       m_unified_fp {nullptr};  /* Unified log file. The pointer needs to be shared here
+                                          * to avoid garbled printing. */
 
-    FILE*       m_unified_fp;         /* Unified log file. The pointer needs to be shared here
-                                       * to avoid garbled printing. */
-    bool        m_flush_writes;       /* Flush log file after every write? */
-    bool        m_append;             /* Open files in append-mode? */
-    std::string m_query_newline;      /* Character(s) used to replace a newline within a query */
-    std::string m_separator;          /*  Character(s) used to separate elements */
-    bool        m_write_warning_given;/* Avoid repeatedly printing some errors/warnings. */
+    pcre2_code* m_re_match {nullptr};    /* Compiled regex text */
+    pcre2_code* m_re_exclude {nullptr};  /* Compiled regex nomatch text */
+    uint32_t    m_ovec_size {0};         /* PCRE2 match data ovector size */
 
-    std::string m_user_name;  /* The user name to filter on */
-    std::string m_source;     /* The source of the client connection to filter on */
+    bool        m_write_warning_given {false}; /* Avoid repeatedly printing some errors/warnings. */
 
-    std::string m_match;      /* Optional text to match against */
-    std::string m_exclude;    /* Optional text to match against for exclusion */
-    pcre2_code* m_re_match;   /* Compiled regex text */
-    pcre2_code* m_re_exclude; /* Compiled regex nomatch text */
-    uint32_t    m_ovec_size;  /* PCRE2 match data ovector size */
+    class Settings
+    {
+    public:
+        Settings(MXS_CONFIG_PARAMETER* params);
+
+        uint32_t    log_mode_flags {0};        /* Log file mode settings */
+        uint32_t    log_file_data_flags {0};   /* What data is saved to the files */
+        std::string filebase;                  /* The filename base */
+        bool        flush_writes {false};      /* Flush log file after every write? */
+        bool        append {false};            /* Open files in append-mode? */
+        std::string query_newline;             /* Character(s) used to replace a newline within a query */
+        std::string separator;                 /*  Character(s) used to separate elements */
+        std::string user_name;                 /* The user name to filter on */
+        std::string source;                    /* The source of the client connection to filter on */
+        std::string match;                     /* Optional text to match against */
+        std::string exclude;                   /* Optional text to match against for exclusion */
+    };
+
+    Settings m_settings;
 
 private:
     FILE* open_log_file(uint32_t, const char*);
