@@ -260,14 +260,20 @@ private:
 HttpResponse cb_stop_monitor(const HttpRequest& request)
 {
     Monitor* monitor = monitor_find(request.uri_part(1).c_str());
-    monitor_stop(monitor);
+    if (monitor)
+    {
+        monitor_stop(monitor);
+    }
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
 HttpResponse cb_start_monitor(const HttpRequest& request)
 {
     Monitor* monitor = monitor_find(request.uri_part(1).c_str());
-    MonitorManager::monitor_start(monitor, monitor->parameters);
+    if (monitor)
+    {
+        MonitorManager::monitor_start(monitor, monitor->parameters);
+    }
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 

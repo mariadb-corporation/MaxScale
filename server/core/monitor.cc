@@ -254,21 +254,20 @@ void MonitorManager::destroy_all_monitors()
  */
 void MonitorManager::monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER* params)
 {
-    if (monitor)
-    {
-        Guard guard(monitor->m_lock);
+    mxb_assert(monitor);
 
-        // Only start the monitor if it's stopped.
-        if (monitor->m_state == MONITOR_STATE_STOPPED)
+    Guard guard(monitor->m_lock);
+
+    // Only start the monitor if it's stopped.
+    if (monitor->m_state == MONITOR_STATE_STOPPED)
+    {
+        if (monitor->start(params))
         {
-            if (monitor->start(params))
-            {
-                monitor->m_state = MONITOR_STATE_RUNNING;
-            }
-            else
-            {
-                MXS_ERROR("Failed to start monitor '%s'.", monitor->m_name);
-            }
+            monitor->m_state = MONITOR_STATE_RUNNING;
+        }
+        else
+        {
+            MXS_ERROR("Failed to start monitor '%s'.", monitor->m_name);
         }
     }
 }
@@ -302,23 +301,22 @@ void monitor_start_all()
  */
 void monitor_stop(Monitor* monitor)
 {
-    if (monitor)
+    mxb_assert(monitor);
+
+    Guard guard(monitor->m_lock);
+
+    /** Only stop the monitor if it is running */
+    if (monitor->m_state == MONITOR_STATE_RUNNING)
     {
-        Guard guard(monitor->m_lock);
+        monitor->m_state = MONITOR_STATE_STOPPING;
+        monitor->stop();
+        monitor->m_state = MONITOR_STATE_STOPPED;
 
-        /** Only stop the monitor if it is running */
-        if (monitor->m_state == MONITOR_STATE_RUNNING)
+        for (auto db : monitor->m_servers)
         {
-            monitor->m_state = MONITOR_STATE_STOPPING;
-            monitor->stop();
-            monitor->m_state = MONITOR_STATE_STOPPED;
-
-            for (auto db : monitor->m_servers)
-            {
-                // TODO: Create a generic entry point for this or move it inside stopMonitor
-                mysql_close(db->con);
-                db->con = NULL;
-            }
+            // TODO: Create a generic entry point for this or move it inside stopMonitor
+            mysql_close(db->con);
+            db->con = NULL;
         }
     }
 }
