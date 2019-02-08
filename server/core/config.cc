@@ -4401,7 +4401,6 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
 
 std::vector<string> config_break_list_string(const string& list_string)
 {
-    mxb_assert(!list_string.empty());
     string copy = list_string;
     /* Parse the elements from the list. They are separated by ',' and are trimmed of whitespace. */
     std::vector<string> tokenized = mxs::strtok(copy, ",");
