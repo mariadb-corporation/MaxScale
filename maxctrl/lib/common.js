@@ -245,7 +245,7 @@ module.exports = function() {
             base = 'https://'
         }
 
-        return base + argv.u + ':' + argv.p + '@' + host + '/v1/' + endpoint
+        return base + host + '/v1/' + endpoint
     }
 
     this.OK = function() {
@@ -283,6 +283,7 @@ module.exports = function() {
     this.doAsyncRequest = function(host, resource, cb, obj) {
         args = obj || {}
         args.uri = getUri(host, this.argv.secure, resource)
+        args.auth = {user: argv.u, pass: argv.p}
         args.json = true
         args.timeout = this.argv.timeout
         setTlsCerts(args)
