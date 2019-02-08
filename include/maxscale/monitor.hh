@@ -81,9 +81,8 @@ enum monitor_capability_t
 // Monitor state enum
 enum monitor_state_t
 {
+    MONITOR_STATE_STOPPED,
     MONITOR_STATE_RUNNING,
-    MONITOR_STATE_STOPPING,
-    MONITOR_STATE_STOPPED
 };
 
 /* Return type of mon_ping_or_connect_to_db(). */

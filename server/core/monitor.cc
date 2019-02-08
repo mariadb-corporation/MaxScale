@@ -320,7 +320,6 @@ void monitor_stop(Monitor* monitor)
     /** Only stop the monitor if it is running */
     if (monitor->m_state == MONITOR_STATE_RUNNING)
     {
-        monitor->m_state = MONITOR_STATE_STOPPING;
         monitor->stop();
         monitor->m_state = MONITOR_STATE_STOPPED;
     }
@@ -1612,9 +1611,6 @@ static const char* monitor_state_to_string(monitor_state_t state)
     case MONITOR_STATE_RUNNING:
         return "Running";
 
-    case MONITOR_STATE_STOPPING:
-        return "Stopping";
-
     case MONITOR_STATE_STOPPED:
         return "Stopped";
 
@@ -2489,7 +2485,7 @@ void MonitorWorker::do_stop()
     mxb_assert(mxs_rworker_get_current() == NULL
                || mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     mxb_assert(Worker::state() != Worker::STOPPED);
-    mxb_assert(monitor_state() == MONITOR_STATE_STOPPING);
+    mxb_assert(monitor_state() != MONITOR_STATE_STOPPED);
     mxb_assert(m_thread_running.load() == true);
 
     Worker::shutdown();
