@@ -112,6 +112,16 @@ public:
      * @brief Populate services with the servers of the monitors.
      */
     static void populate_services();
+
+    static bool add_server(Monitor* mon, SERVER* server)
+    {
+        return Monitor::add_server(mon, server);
+    }
+
+    static void remove_server(Monitor* mon, SERVER* server)
+    {
+        Monitor::remove_server(mon, server);
+    }
 };
 
 
@@ -138,9 +148,6 @@ void monitor_show(DCB*, Monitor*);
 void monitor_show_all(DCB*);
 
 void monitor_list(DCB*);
-
-bool monitor_add_server(Monitor* mon, SERVER* server);
-void monitor_remove_server(Monitor* mon, SERVER* server);
 
 void monitor_set_journal_max_age(Monitor* mon, time_t value);
 

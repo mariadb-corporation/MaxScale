@@ -165,7 +165,7 @@ bool runtime_link_server(Server* server, const char* target)
     }
     else if (monitor)
     {
-        if (monitor_add_server(monitor, server))
+        if (MonitorManager::add_server(monitor, server))
         {
             monitor_serialize(monitor);
             rval = true;
@@ -213,7 +213,7 @@ bool runtime_unlink_server(Server* server, const char* target)
         }
         else if (monitor)
         {
-            monitor_remove_server(monitor, server);
+            MonitorManager::remove_server(monitor, server);
             monitor_serialize(monitor);
             rval = true;
         }
@@ -1434,7 +1434,7 @@ bool runtime_destroy_monitor(Monitor* monitor)
 
         while (!monitor->m_servers.empty())
         {
-            monitor_remove_server(monitor, monitor->m_servers[0]->server);
+            MonitorManager::remove_server(monitor, monitor->m_servers[0]->server);
         }
         monitor_deactivate(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->m_name);

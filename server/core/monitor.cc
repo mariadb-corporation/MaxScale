@@ -206,7 +206,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     for (auto elem : servers_temp)
     {
         // This function checks if server is already monitored. TODO: This should be a config error.
-        monitor_add_server(this, elem);
+        Monitor::add_server(this, elem);
     }
 
     /* The previous config values were normal types and were checked by the config manager
@@ -350,14 +350,8 @@ void monitor_stop_all()
     });
 }
 
-/**
- * Add a server to a monitor. Simply register the server that needs to be
- * monitored to the running monitor module.
- *
- * @param mon           The Monitor instance
- * @param server        The Server to add to the monitoring
- */
-bool monitor_add_server(Monitor* mon, SERVER* server)
+//static
+bool Monitor::add_server(Monitor* mon, SERVER* server)
 {
     mxb_assert(mon && server);
     bool rval = false;
@@ -369,8 +363,6 @@ bool monitor_add_server(Monitor* mon, SERVER* server)
     else
     {
         rval = true;
-        MXS_MONITORED_SERVER* db = new (std::nothrow) MXS_MONITORED_SERVER(server);
-        MXS_ABORT_IF_NULL(db);
 
         monitor_state_t old_state = mon->m_state;
 
@@ -379,12 +371,7 @@ bool monitor_add_server(Monitor* mon, SERVER* server)
             monitor_stop(mon);
         }
 
-        {
-            Guard guard(mon->m_lock);
-            mon->m_servers.push_back(db);
-        }
-
-        service_add_server(mon, server);
+        mon->add_server(server);
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
@@ -393,6 +380,42 @@ bool monitor_add_server(Monitor* mon, SERVER* server)
     }
 
     return rval;
+}
+
+/**
+ * @brief Add a server to the monitor.
+ *
+ * It is assumed that the monitor is currently not running and that the
+ * server is not currently being monitored.
+ *
+ * @param server  A server.
+ */
+void Monitor::add_server(SERVER* server)
+{
+    mxb_assert(m_state != MONITOR_STATE_RUNNING);
+    mxb_assert(!monitor_server_in_use(server));
+
+    MXS_MONITORED_SERVER* db = new (std::nothrow) MXS_MONITORED_SERVER(server);
+    MXS_ABORT_IF_NULL(db);
+
+    using Guard = std::unique_lock<std::mutex>;
+    Guard guard(m_lock);
+
+    m_servers.push_back(db);
+
+    guard.unlock();
+
+    server_added(server);
+}
+
+void Monitor::server_added(SERVER* server)
+{
+    service_add_server(this, server);
+}
+
+void Monitor::server_removed(SERVER* server)
+{
+    service_remove_server(this, server);
 }
 
 static void monitor_server_free(MXS_MONITORED_SERVER* tofree)
@@ -426,7 +449,8 @@ static void monitor_server_free_all(std::vector<MXS_MONITORED_SERVER*>& servers)
  * @param mon           The Monitor instance
  * @param server        The Server to remove
  */
-void monitor_remove_server(Monitor* mon, SERVER* server)
+//static
+void Monitor::remove_server(Monitor* mon, SERVER* server)
 {
     monitor_state_t old_state = mon->m_state;
 
@@ -435,31 +459,49 @@ void monitor_remove_server(Monitor* mon, SERVER* server)
         monitor_stop(mon);
     }
 
-    MXS_MONITORED_SERVER* ptr = nullptr;
-    {
-        Guard guard(mon->m_lock);
-        for (auto iter = mon->m_servers.begin(); iter != mon->m_servers.end(); ++iter)
-        {
-            if ((*iter)->server == server)
-            {
-                ptr = *iter;
-                mon->m_servers.erase(iter);
-                break;
-            }
-        }
-    }
-
-    if (ptr)
-    {
-        monitor_server_free(ptr);
-
-        service_remove_server(mon, server);
-    }
+    mon->remove_server(server);
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
         MonitorManager::monitor_start(mon, mon->parameters);
     }
+}
+
+/**
+ * @brief Remove a server from the monitor.
+ *
+ * It is assumed that the monitor is currently not running.
+ *
+ * @param server  A server
+ */
+void Monitor::remove_server(SERVER* server)
+{
+    mxb_assert(m_state != MONITOR_STATE_RUNNING);
+
+    MXS_MONITORED_SERVER* ptr = nullptr;
+
+    using Guard = std::unique_lock<std::mutex>;
+    Guard guard(m_lock);
+
+    for (auto it = m_servers.begin(); it != m_servers.end(); ++it)
+    {
+        if ((*it)->server == server)
+        {
+            ptr = *it;
+            m_servers.erase(it);
+            break;
+        }
+    }
+
+    guard.unlock();
+
+    if (ptr)
+    {
+        monitor_server_free(ptr);
+
+        server_removed(server);
+    }
+
 }
 
 void Monitor::set_user(const string& user)

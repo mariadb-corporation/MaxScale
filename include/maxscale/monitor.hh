@@ -338,6 +338,26 @@ protected:
     void detect_handle_state_changes();
 
     /**
+     * @brief Called when a server has been added to the monitor.
+     *
+     * The default implementation will add the server to associated
+     * services.
+     *
+     * @param server  A server.
+     */
+    virtual void server_added(SERVER* server);
+
+    /**
+     * @brief Called when a server has been removed from the monitor.
+     *
+     * The default implementation will remove the server from associated
+     * services.
+     *
+     * @param server  A server.
+     */
+    virtual void server_removed(SERVER* server);
+
+    /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
      */
@@ -362,6 +382,11 @@ protected:
     };
 
     Settings m_settings;
+
+private:
+    void add_server(SERVER* server);
+
+    void remove_server(SERVER* server);
 
 private:
     friend class MonitorManager;
@@ -395,7 +420,34 @@ private:
     int launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
 
     /**
-     * Populate services with the servers of the monitor.
+     * @brief Add a server to a monitor.
+     *
+     * Add a server to a monitor, provided the server is not currently
+     * being monitored by any monitor. Before adding the server to the
+     * monitor, the monitor is stopped if it is running and after the
+     * addition it is restarted if it was running.
+     *
+     * @param monitor  A monitor.
+     * @param server   A server.
+     *
+     * @return True, if the monitor was added, false otherwise.
+     */
+    static bool add_server(Monitor* mon, SERVER* server);
+
+    /**
+     * @brief Remove a server from a monitor.
+     *
+     * If the server is being monitored by the server, remove it.
+     * Before removing, the monitor is stopped if it is running and after
+     * the removal it is restarted if it was running.
+     *
+     * @param monitor  A monitor.
+     * @param server   A server.
+     */
+    static void remove_server(Monitor* mon, SERVER* server);
+
+    /**
+     * @brief The monitor should populate associated services.
      */
     virtual void populate_services();
 

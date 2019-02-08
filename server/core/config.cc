@@ -1406,7 +1406,7 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
 
     if (type == CN_SERVICE && config_get_value(obj->parameters, CN_CLUSTER))
     {
-        rval.insert(name_to_object(objects, obj, config_get_string(obj->parameters, CN_CLUSTER)));
+        rval.insert(name_to_object(objects, obj, obj->parameters->get_string(CN_CLUSTER)));
     }
 
     if ((type == CN_MONITOR || type == CN_SERVICE) && config_get_value(obj->parameters, CN_SERVERS))

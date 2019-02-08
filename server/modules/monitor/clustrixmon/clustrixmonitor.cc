@@ -119,6 +119,18 @@ bool ClustrixMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
     return true;
 }
 
+void ClustrixMonitor::server_added(SERVER* pServer)
+{
+    // The servers explicitly added to the Cluster monitor are only used
+    // as bootstrap servers, so they are not added to any services.
+}
+
+void ClustrixMonitor::server_removed(SERVER* pServer)
+{
+    // @see server_added(), no action is needed.
+}
+
+
 void ClustrixMonitor::pre_loop()
 {
     make_health_check();
