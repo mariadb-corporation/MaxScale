@@ -113,8 +113,7 @@ QlaInstance::QlaInstance(const string& name, MXS_CONFIG_PARAMETER* params)
 }
 
 QlaInstance::Settings::Settings(MXS_CONFIG_PARAMETER* params)
-    : log_mode_flags(params->get_enum(PARAM_LOG_TYPE, log_type_values))
-    , log_file_data_flags(params->get_enum(PARAM_LOG_DATA, log_data_values))
+    : log_file_data_flags(params->get_enum(PARAM_LOG_DATA, log_data_values))
     , filebase(params->get_string(PARAM_FILEBASE))
     , flush_writes(params->get_bool(PARAM_FLUSH))
     , append(params->get_bool(PARAM_APPEND))
@@ -125,6 +124,9 @@ QlaInstance::Settings::Settings(MXS_CONFIG_PARAMETER* params)
     , match(params->get_string(PARAM_MATCH))
     , exclude(params->get_string(PARAM_EXCLUDE))
 {
+    auto log_file_types = params->get_enum(PARAM_LOG_TYPE, log_type_values);
+    write_session_log = (log_file_types & CONFIG_FILE_SESSION);
+    write_unified_log = (log_file_types & CONFIG_FILE_UNIFIED);
 }
 
 QlaInstance::~QlaInstance()
@@ -137,19 +139,12 @@ QlaInstance::~QlaInstance()
     }
 }
 
-QlaFilterSession::QlaFilterSession(const char* user, const char* remote, bool ses_active,
-                                   pcre2_match_data* mdata,
-                                   const string& ses_filename, FILE* ses_file,
-                                   size_t ses_id, const char* service, QlaInstance& instance)
+QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session)
     : m_instance(instance)
-    , m_user(user)
-    , m_remote(remote)
-    , m_active(ses_active)
-    , m_mdata(mdata)
-    , m_filename(ses_filename)
-    , m_logfile(ses_file)
-    , m_ses_id(ses_id)
-    , m_service(service)
+    , m_user(session_get_user(session))
+    , m_remote(session_get_remote(session))
+    , m_service(session->service->name)
+    , m_ses_id(session->ses_id)
 {
 }
 
@@ -162,7 +157,7 @@ QlaFilterSession::~QlaFilterSession()
 
 void QlaFilterSession::close()
 {
-    if (m_active && m_logfile)
+    if (m_logfile)
     {
         fclose(m_logfile);
         m_logfile = nullptr;
@@ -197,7 +192,7 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
             my_instance->m_re_exclude = re_exclude;
             my_instance->m_ovec_size = ovec_size;
             // Try to open the unified log file
-            if (my_instance->m_settings.log_mode_flags & CONFIG_FILE_UNIFIED)
+            if (my_instance->m_settings.write_unified_log)
             {
                 string unified_filename = my_instance->m_settings.filebase + ".unified";
                 // Open the file. It is only closed at program exit.
@@ -239,80 +234,68 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
 
 QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session)
 {
-    // Need the following values before session constructor
-    const char* remote = session_get_remote(session);
-    const char* userName = session_get_user(session);
-    pcre2_match_data* mdata = NULL;
-    bool ses_active = true;
-    string filename;
-    FILE* session_file = NULL;
-
-    bool error = false;
-
-    mxb_assert(userName && remote);
-    if ((!m_settings.source.empty() && remote && m_settings.source != remote)
-        || (!m_settings.user_name.empty() && userName && m_settings.user_name != userName))
+    auto my_session = new (std::nothrow) QlaFilterSession(*this, session);
+    if (my_session)
     {
-        ses_active = false;
-    }
-
-    if (m_ovec_size > 0)
-    {
-        mdata = pcre2_match_data_create(m_ovec_size, NULL);
-        if (mdata == NULL)
+        if (!my_session->prepare())
         {
-            // Can this happen? Would require pcre2 to fail completely.
-            MXS_ERROR("pcre2_match_data_create returned NULL.");
-            error = true;
-        }
-    }
-
-    // Only open the session file if the corresponding mode setting is used
-    if (!error && ses_active && m_settings.log_mode_flags & CONFIG_FILE_SESSION)
-    {
-        filename = mxb::string_printf("%s.%" PRIu64, m_settings.filebase.c_str(), session->ses_id);
-
-        // Session numbers are not printed to session files
-        uint32_t data_flags = (m_settings.log_file_data_flags & ~LOG_DATA_SESSION);
-
-        session_file = open_log_file(data_flags, filename.c_str());
-        if (session_file == NULL)
-        {
-            MXS_ERROR("Opening output file for qla-filter failed due to %d, %s",
-                      errno,
-                      mxs_strerror(errno));
-            error = true;
-        }
-    }
-
-    QlaFilterSession* my_session = NULL;
-    if (!error)
-    {
-        my_session = new(std::nothrow) QlaFilterSession(userName, remote, ses_active, mdata,
-                                                        filename, session_file,
-                                                        session->ses_id, session->service->name,
-                                                        *this);
-        if (my_session == NULL)
-        {
-            error = true;
-        }
-    }
-
-    if (error)
-    {
-        pcre2_match_data_free(mdata);
-        if (session_file)
-        {
-            fclose(session_file);
+            my_session->close();
+            delete my_session;
+            my_session = nullptr;
         }
     }
     return my_session;
 }
 
+bool QlaFilterSession::prepare()
+{
+    const auto& settings = m_instance.m_settings;
+    bool hostname_ok = settings.source.empty() || (m_remote == settings.source);
+    bool username_ok = settings.user_name.empty() || (m_user == settings.user_name);
+    m_active = hostname_ok && username_ok;
+
+    bool error = false;
+
+    if (m_active)
+    {
+        auto ovec_size = m_instance.m_ovec_size;
+        if (ovec_size > 0)
+        {
+            m_mdata = pcre2_match_data_create(ovec_size, NULL);
+            if (!m_mdata)
+            {
+                MXS_ERROR("pcre2_match_data_create returned NULL.");
+                error = true;
+            }
+        }
+
+        // Only open the session file if the corresponding mode setting is used.
+        if (!error && settings.write_session_log)
+        {
+            string filename = mxb::string_printf("%s.%" PRIu64, settings.filebase.c_str(), m_ses_id);
+            // Session numbers are not printed to session files.
+            uint32_t data_flags = (settings.log_file_data_flags & ~LOG_DATA_SESSION);
+
+            m_logfile = m_instance.open_log_file(data_flags, filename.c_str());
+            if (m_logfile)
+            {
+                m_filename = filename;
+            }
+            else
+            {
+                MXS_ERROR("Opening output file %s' for qla-filter failed due to %d, %s",
+                          filename.c_str(), errno, mxs_strerror(errno));
+                error = true;
+            }
+        }
+    }
+    return !error;
+}
+
 bool QlaInstance::read_to_json(int start, int end, json_t** output) const
 {
     bool rval = false;
-    if (m_settings.log_mode_flags & CONFIG_FILE_UNIFIED)
+    if (m_settings.write_unified_log)
     {
         mxb_assert(m_unified_fp && !m_unified_filename.empty());
         std::ifstream file(m_unified_filename);
@@ -417,7 +400,7 @@ void QlaFilterSession::write_log_entries(const char* date_string, const char* qu
                                          int elapsed_ms)
 {
     bool write_error = false;
-    if (m_instance.m_settings.log_mode_flags & CONFIG_FILE_SESSION)
+    if (m_instance.m_settings.write_session_log)
     {
         // In this case there is no need to write the session
         // number into the files.
@@ -432,7 +415,7 @@ void QlaFilterSession::write_log_entries(const char* date_string, const char* qu
             write_error = true;
         }
     }
-    if (m_instance.m_settings.log_mode_flags & CONFIG_FILE_UNIFIED)
+    if (m_instance.m_settings.write_unified_log)
     {
         uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         if (write_log_entry(m_instance.m_unified_fp,

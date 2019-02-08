@@ -104,6 +104,7 @@ public:
 
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
+    FILE* open_log_file(uint32_t, const char*);
 
     const std::string m_name;   /* Filter definition name */
 
@@ -122,7 +123,8 @@ public:
     public:
         Settings(MXS_CONFIG_PARAMETER* params);
 
-        uint32_t    log_mode_flags {0};        /* Log file mode settings */
+        bool        write_unified_log {false};
+        bool        write_session_log {false};
         uint32_t    log_file_data_flags {0};   /* What data is saved to the files */
         std::string filebase;                  /* The filename base */
         bool        flush_writes {false};      /* Flush log file after every write? */
@@ -136,9 +138,6 @@ public:
     };
 
     Settings m_settings;
-
-private:
-    FILE* open_log_file(uint32_t, const char*);
 };
 
 /* The session structure for this QLA filter. */
@@ -147,10 +146,15 @@ class QlaFilterSession : public MXS_FILTER_SESSION
 public:
     QlaFilterSession(const QlaFilterSession&);
     QlaFilterSession& operator=(const QlaFilterSession&);
-    QlaFilterSession(const char* user, const char* remote, bool ses_active,
-                     pcre2_match_data* mdata, const std::string& ses_filename, FILE* ses_file,
-                     size_t ses_id, const char* service, QlaInstance& instance);
+    QlaFilterSession(QlaInstance& instance, MXS_SESSION* session);
     ~QlaFilterSession();
+
+    /**
+     * Prepares a session for routing. Checks if username and/or host match and opens the log file.
+     *
+     * @return True on success. If false is returned, the session should be closed and deleted.
+     */
+    bool prepare();
 
     /**
      * Route a query.
@@ -175,14 +179,17 @@ public:
 
     QlaInstance&      m_instance;
 
-    const char*       m_user;       /* Client username */
-    const char*       m_remote;     /* Client address */
-    bool              m_active;     /* Is session active? */
-    pcre2_match_data* m_mdata;      /* Regex match data */
-    std::string       m_filename;   /* The session-specific log file name */
-    FILE*             m_logfile;    /* The session-specific log file */
-    size_t            m_ses_id;     /* The session this filter session serves. */
-    const char*       m_service;    /* The service name this filter is attached to. */
+    const std::string m_user;         /* Client username */
+    const std::string m_remote;       /* Client address */
+    const std::string m_service;      /* The service name this filter is attached to. */
+    const uint64_t    m_ses_id {0};   /* The session this filter session serves. */
+
+    bool              m_active {false};     /* Is session active? */
+    pcre2_match_data* m_mdata {nullptr};    /* Regex match data */
+
+    std::string       m_filename;           /* The session-specific log file name */
+    FILE*             m_logfile {nullptr};  /* The session-specific log file */
+
     LogEventData      m_event_data; /* Information about the latest event, used if logging execution time. */
 
     MXS_UPSTREAM   up;
