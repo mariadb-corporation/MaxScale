@@ -254,7 +254,7 @@ void MonitorManager::destroy_all_monitors()
     auto monitors = this_unit.clear();
     for (auto monitor : monitors)
     {
-        mxb_assert(monitor->m_state == MONITOR_STATE_STOPPED);
+        mxb_assert(monitor->state() == MONITOR_STATE_STOPPED);
         delete monitor;
     }
 }
@@ -271,13 +271,9 @@ void MonitorManager::monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER*
     Guard guard(monitor->m_lock);
 
     // Only start the monitor if it's stopped.
-    if (monitor->m_state == MONITOR_STATE_STOPPED)
+    if (monitor->state() == MONITOR_STATE_STOPPED)
     {
-        if (monitor->start(params))
-        {
-            monitor->m_state = MONITOR_STATE_RUNNING;
-        }
-        else
+        if (!monitor->start(params))
         {
             MXS_ERROR("Failed to start monitor '%s'.", monitor->m_name);
         }
@@ -318,10 +314,9 @@ void monitor_stop(Monitor* monitor)
     Guard guard(monitor->m_lock);
 
     /** Only stop the monitor if it is running */
-    if (monitor->m_state == MONITOR_STATE_RUNNING)
+    if (monitor->state() == MONITOR_STATE_RUNNING)
     {
         monitor->stop();
-        monitor->m_state = MONITOR_STATE_STOPPED;
     }
 }
 
@@ -360,7 +355,7 @@ bool Monitor::add_server(Monitor* mon, SERVER* server)
     {
         rval = true;
 
-        monitor_state_t old_state = mon->m_state;
+        monitor_state_t old_state = mon->state();
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
@@ -388,7 +383,7 @@ bool Monitor::add_server(Monitor* mon, SERVER* server)
  */
 void Monitor::add_server(SERVER* server)
 {
-    mxb_assert(m_state != MONITOR_STATE_RUNNING);
+    mxb_assert(state() != MONITOR_STATE_RUNNING);
     mxb_assert(!monitor_server_in_use(server));
 
     MXS_MONITORED_SERVER* db = new (std::nothrow) MXS_MONITORED_SERVER(server);
@@ -448,7 +443,7 @@ static void monitor_server_free_all(std::vector<MXS_MONITORED_SERVER*>& servers)
 //static
 void Monitor::remove_server(Monitor* mon, SERVER* server)
 {
-    monitor_state_t old_state = mon->m_state;
+    monitor_state_t old_state = mon->state();
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
@@ -472,7 +467,7 @@ void Monitor::remove_server(Monitor* mon, SERVER* server)
  */
 void Monitor::remove_server(SERVER* server)
 {
-    mxb_assert(m_state != MONITOR_STATE_RUNNING);
+    mxb_assert(state() != MONITOR_STATE_RUNNING);
 
     MXS_MONITORED_SERVER* ptr = nullptr;
 
@@ -541,7 +536,7 @@ void Monitor::show(DCB* dcb)
     Monitor* monitor = this;
     dcb_printf(dcb, "Monitor:                %p\n", monitor);
     dcb_printf(dcb, "Name:                   %s\n", m_name);
-    dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(m_state));
+    dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(state()));
     dcb_printf(dcb, "Times monitored:        %lu\n", m_ticks);
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
     dcb_printf(dcb, "Connect Timeout:        %i seconds\n", m_settings.conn_settings.connect_timeout);
@@ -560,7 +555,7 @@ void Monitor::show(DCB* dcb)
 
     dcb_printf(dcb, "\n");
 
-    if (m_state == MONITOR_STATE_RUNNING)
+    if (state() == MONITOR_STATE_RUNNING)
     {
         monitor->diagnostics(dcb);
     }
@@ -588,7 +583,7 @@ void monitor_list(DCB* dcb)
             dcb_printf(dcb,
                        "%-20s | %s\n",
                        ptr->m_name,
-                       ptr->m_state & MONITOR_STATE_RUNNING ?
+                       ptr->state() == MONITOR_STATE_RUNNING ?
                        "Running" : "Stopped");
         }
         return true;
@@ -709,7 +704,7 @@ std::unique_ptr<ResultSet> monitor_get_list()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
     this_unit.foreach_monitor([&set](Monitor* ptr) {
-        const char* state = ptr->m_state & MONITOR_STATE_RUNNING ? "Running" : "Stopped";
+        const char* state = ptr->state() == MONITOR_STATE_RUNNING ? "Running" : "Stopped";
         set->add_row({ptr->m_name, state});
         return true;
     });
@@ -1644,13 +1639,13 @@ json_t* monitor_json_data(const Monitor* monitor, const char* host)
         json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
 
         json_object_set_new(attr, CN_MODULE, json_string(monitor->m_module.c_str()));
-        json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->m_state)));
+        json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state())));
         json_object_set_new(attr, CN_TICKS, json_integer(monitor->m_ticks));
 
         /** Monitor parameters */
         json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
 
-        if (monitor->m_state == MONITOR_STATE_RUNNING)
+        if (monitor->state() == MONITOR_STATE_RUNNING)
         {
             json_t* diag = monitor->diagnostics_json();
             if (diag)
@@ -2273,7 +2268,7 @@ std::vector<MXS_MONITORED_SERVER*> mon_config_get_servers(const MXS_CONFIG_PARAM
 
 bool Monitor::set_disk_space_threshold(const string& dst_setting)
 {
-    mxb_assert(m_state == MONITOR_STATE_STOPPED);
+    mxb_assert(state() == MONITOR_STATE_STOPPED);
     SERVER::DiskSpaceLimits new_dst;
     bool rv = config_parse_disk_space_threshold(&new_dst, dst_setting.c_str());
     if (rv)
@@ -2307,7 +2302,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 
     bool written = false;
 
-    if (m_state == MONITOR_STATE_RUNNING)
+    if (state() == MONITOR_STATE_RUNNING)
     {
         /* This server is monitored, in which case modifying any other status bit than Maintenance is
          * disallowed. */
@@ -2370,7 +2365,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 
     bool written = false;
 
-    if (m_state == MONITOR_STATE_RUNNING)
+    if (state() == MONITOR_STATE_RUNNING)
     {
         if (bit & ~(SERVER_MAINT | SERVER_BEING_DRAINED))
         {
@@ -2416,7 +2411,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 
 void Monitor::populate_services()
 {
-    mxb_assert(m_state == MONITOR_STATE_STOPPED);
+    mxb_assert(state() == MONITOR_STATE_STOPPED);
 
     for (MXS_MONITORED_SERVER* pMs : m_servers)
     {
@@ -2437,7 +2432,7 @@ void monitor_debug_wait()
 
     // Wait for all running monitors to advance at least one tick.
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
-        if (mon->m_state == MONITOR_STATE_RUNNING)
+            if (mon->state() == MONITOR_STATE_RUNNING)
         {
             auto start = steady_clock::now();
             // A monitor may have been added in between the two foreach-calls (not if config changes are
@@ -2473,9 +2468,11 @@ MonitorWorker::~MonitorWorker()
 {
 }
 
-monitor_state_t MonitorWorker::monitor_state() const
+monitor_state_t MonitorWorker::state() const
 {
-    return __atomic_load_n(&(Monitor::m_state), __ATOMIC_RELAXED); // TODO: Convert enum to atomic
+    bool running = (Worker::state() != Worker::STOPPED);
+
+    return running ? MONITOR_STATE_RUNNING : MONITOR_STATE_STOPPED;
 }
 
 void MonitorWorker::do_stop()
@@ -2485,7 +2482,7 @@ void MonitorWorker::do_stop()
     mxb_assert(mxs_rworker_get_current() == NULL
                || mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     mxb_assert(Worker::state() != Worker::STOPPED);
-    mxb_assert(monitor_state() != MONITOR_STATE_STOPPED);
+    mxb_assert(state() != MONITOR_STATE_STOPPED);
     mxb_assert(m_thread_running.load() == true);
 
     Worker::shutdown();
@@ -2509,7 +2506,7 @@ bool MonitorWorker::start(const MXS_CONFIG_PARAMETER* pParams)
     mxb_assert(mxs_rworker_get_current() == NULL
                || mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     mxb_assert(Worker::state() == Worker::STOPPED);
-    mxb_assert(monitor_state() == MONITOR_STATE_STOPPED);
+    mxb_assert(state() == MONITOR_STATE_STOPPED);
     mxb_assert(m_thread_running.load() == false);
 
     if (journal_is_stale())

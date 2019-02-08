@@ -592,7 +592,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
 
 bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
 {
-    mxb_assert(monitor->m_state == MONITOR_STATE_STOPPED);
+    mxb_assert(monitor->state() == MONITOR_STATE_STOPPED);
     const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
 
     if (!validate_param(config_monitor_params, mod->parameters, key, value))
@@ -685,7 +685,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
 bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
 {
     // If the monitor is already stopped, don't stop/start it.
-    bool was_running = (monitor->m_state == MONITOR_STATE_RUNNING);
+    bool was_running = (monitor->state() == MONITOR_STATE_RUNNING);
     if (was_running)
     {
         monitor_stop(monitor);
@@ -2421,7 +2421,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 
         if (parameters)
         {
-            bool restart = monitor->m_state != MONITOR_STATE_STOPPED;
+            bool restart = (monitor->state() != MONITOR_STATE_STOPPED);
             monitor_stop(monitor);
             const char* key;
             json_t* value;

@@ -198,6 +198,8 @@ public:
     static const int STATUS_FLAG_NOCHECK = 0;
     static const int STATUS_FLAG_CHECK   = -1;
 
+    virtual monitor_state_t state() const = 0;
+
     /**
      * Starts the monitor. If the monitor requires polling of the servers, it should create
      * a separate monitoring thread.
@@ -307,8 +309,6 @@ public:
 
     mutable std::mutex m_lock;
 
-    /** The state of the monitor. This should ONLY be written to by the admin thread. */
-    monitor_state_t m_state {MONITOR_STATE_STOPPED};
     /** Set when admin requests a maintenance status change. */
     int check_status_flag = STATUS_FLAG_NOCHECK;
 
@@ -632,10 +632,9 @@ public:
      * trusted. The state should only be read in the admin thread or operations launched by the admin thread.
      *
      * @return @c MONITOR_STATE_RUNNING if the monitor is running,
-     *         @c MONITOR_STATE_STOPPING if the monitor is stopping, and
      *         @c MONITOR_STATE_STOPPED if the monitor is stopped.
      */
-    monitor_state_t monitor_state() const;
+    monitor_state_t state() const override final;
 
     /**
      * @brief Find out whether the monitor is running.
@@ -646,7 +645,7 @@ public:
      */
     bool is_running() const
     {
-        return monitor_state() == MONITOR_STATE_RUNNING;
+        return state() == MONITOR_STATE_RUNNING;
     }
 
     /**
