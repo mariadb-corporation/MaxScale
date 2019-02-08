@@ -261,12 +261,6 @@ void MonitorManager::monitor_start(Monitor* monitor, const MXS_CONFIG_PARAMETER*
         // Only start the monitor if it's stopped.
         if (monitor->m_state == MONITOR_STATE_STOPPED)
         {
-            if (monitor->journal_is_stale())
-            {
-                MXS_WARNING("Removing stale journal file for monitor '%s'.", monitor->m_name);
-                remove_server_journal(monitor);
-            }
-
             if (monitor->start(params))
             {
                 monitor->m_state = MONITOR_STATE_RUNNING;
@@ -1861,7 +1855,7 @@ static void store_data(Monitor* monitor, MXS_MONITORED_SERVER* master, uint8_t* 
     mxb_assert(ptr - data == size + MMB_LEN_BYTES);
 }
 
-static int get_data_file_path(Monitor* monitor, char* path)
+static int get_data_file_path(const Monitor* monitor, char* path)
 {
     int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->m_name, journal_name);
     return rv;
@@ -2183,7 +2177,7 @@ static void remove_server_journal(Monitor* monitor)
     }
 }
 
-bool Monitor::journal_is_stale()
+bool Monitor::journal_is_stale() const
 {
     bool is_stale = true;
     char path[PATH_MAX];
@@ -2518,6 +2512,12 @@ bool MonitorWorker::start(const MXS_CONFIG_PARAMETER* pParams)
     mxb_assert(Worker::state() == Worker::STOPPED);
     mxb_assert(monitor_state() == MONITOR_STATE_STOPPED);
     mxb_assert(m_thread_running.load() == false);
+
+    if (journal_is_stale())
+    {
+        MXS_WARNING("Removing stale journal file for monitor '%s'.", m_name);
+        remove_server_journal(this);
+    }
 
     if (!m_checked)
     {

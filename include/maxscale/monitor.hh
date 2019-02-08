@@ -338,6 +338,13 @@ protected:
     void detect_handle_state_changes();
 
     /**
+     * Is the journal stale?
+     *
+     * @return True, if the journal is stale, false otherwise.
+     */
+    bool journal_is_stale() const;
+
+    /**
      * @brief Called when a server has been added to the monitor.
      *
      * The default implementation will add the server to associated
@@ -450,8 +457,6 @@ private:
      * @brief The monitor should populate associated services.
      */
     virtual void populate_services();
-
-    bool journal_is_stale();
 };
 
 /**
