@@ -22,14 +22,16 @@ int main(int argc, char *argv[])
 
     create_t1(Test->maxscales->conn_rwsplit[0]);
 
-    for (int i = 0; i < 30; i++)
+    Test->tprintf("Doing reads for 30 seconds");
+    time_t start = time(NULL);
+
+    while (time(NULL) - start < 30)
     {
-        Test->tprintf("Trying query %d\n", i);
         Test->set_timeout(10);
         Test->try_query(Test->maxscales->conn_rwsplit[0], "SELECT 1");
-        sleep(1);
     }
 
+    Test->tprintf("Doing one write");
     Test->try_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO t1 VALUES (1, 1)");
 
     Test->check_maxscale_alive(0);
