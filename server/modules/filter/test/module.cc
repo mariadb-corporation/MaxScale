@@ -39,14 +39,14 @@ Module::ConfigParameters::ConfigParameters(const MXS_MODULE_PARAM* pParams)
         {
             if (this->name == NULL)
             {
-                this->name = MXS_STRDUP(const_cast<char*>(pParams->name));
-                this->value = MXS_STRDUP(const_cast<char*>(pParams->default_value));
+                this->name = MXS_STRDUP(pParams->name);
+                this->value = MXS_STRDUP(pParams->default_value);
             }
             else
             {
                 MXS_CONFIG_PARAMETER* pNext = new MXS_CONFIG_PARAMETER;
-                pNext->name = MXS_STRDUP(const_cast<char*>(pParams->name));
-                pNext->value = MXS_STRDUP(const_cast<char*>(pParams->default_value));
+                pNext->name = MXS_STRDUP(pParams->name);
+                pNext->value = MXS_STRDUP(pParams->default_value);
                 pNext->next = NULL;
 
                 pCurrent->next = pNext;
@@ -93,7 +93,7 @@ void Module::ConfigParameters::set_value(const char* zName, const std::string& v
 
         pParam = new MXS_CONFIG_PARAMETER;
         m_values.push_back(zName);
-        pParam->name = MXS_STRDUP(const_cast<char*>(m_values.back().c_str()));
+        pParam->name = MXS_STRDUP(m_values.back().c_str());
         pParam->value = NULL;
         pParam->next = NULL;
 
@@ -102,7 +102,7 @@ void Module::ConfigParameters::set_value(const char* zName, const std::string& v
 
     m_values.push_back(value);
 
-    pParam->value = MXS_STRDUP(const_cast<char*>(m_values.back().c_str()));
+    pParam->value = MXS_STRDUP(m_values.back().c_str());
 }
 
 const MXS_CONFIG_PARAMETER* Module::ConfigParameters::get_param(const char* zName) const
