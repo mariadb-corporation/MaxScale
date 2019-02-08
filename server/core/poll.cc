@@ -152,20 +152,12 @@ void dShowThreads(DCB* dcb)
             state = "Stopped";
             break;
 
-        case Worker::IDLE:
-            state = "Idle";
-            break;
-
         case Worker::POLLING:
             state = "Polling";
             break;
 
         case Worker::PROCESSING:
             state = "Processing";
-            break;
-
-        case Worker::ZPROCESSING:
-            state = "Collecting";
             break;
 
         default:

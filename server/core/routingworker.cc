@@ -625,8 +625,6 @@ void RoutingWorker::epoll_tick()
 {
     dcb_process_idle_sessions(m_id);
 
-    m_state = ZPROCESSING;
-
     delete_zombies();
 
     check_systemd_watchdog();

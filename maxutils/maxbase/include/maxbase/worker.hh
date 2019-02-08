@@ -298,10 +298,8 @@ public:
     enum state_t
     {
         STOPPED,
-        IDLE,
         POLLING,
         PROCESSING,
-        ZPROCESSING
     };
 
     enum execute_mode_t

@@ -535,7 +535,7 @@ void Worker::run(mxb::Semaphore* pSem)
 
     if (pre_run())
     {
-        m_state = IDLE;
+        m_state = PROCESSING;
 
         if (pSem)
         {
@@ -886,8 +886,6 @@ void Worker::poll_waitevents()
         }
 
         epoll_tick();
-
-        m_state = IDLE;
     }   /*< while(1) */
 }
 
