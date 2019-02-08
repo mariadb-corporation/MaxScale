@@ -186,6 +186,18 @@ Monitor::Monitor(const string& name, const string& module)
     memset(m_journal_hash, 0, sizeof(m_journal_hash));
 }
 
+void Monitor::stop()
+{
+    do_stop();
+
+    for (auto db : m_servers)
+    {
+        // TODO: Should be db->close().
+        mysql_close(db->con);
+        db->con = NULL;
+    }
+}
+
 bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
 {
     m_settings.conn_settings.read_timeout = params->get_integer(CN_BACKEND_READ_TIMEOUT);
@@ -311,13 +323,6 @@ void monitor_stop(Monitor* monitor)
         monitor->m_state = MONITOR_STATE_STOPPING;
         monitor->stop();
         monitor->m_state = MONITOR_STATE_STOPPED;
-
-        for (auto db : monitor->m_servers)
-        {
-            // TODO: Create a generic entry point for this or move it inside stopMonitor
-            mysql_close(db->con);
-            db->con = NULL;
-        }
     }
 }
 
@@ -2477,7 +2482,7 @@ monitor_state_t MonitorWorker::monitor_state() const
     return __atomic_load_n(&(Monitor::m_state), __ATOMIC_RELAXED); // TODO: Convert enum to atomic
 }
 
-void MonitorWorker::stop()
+void MonitorWorker::do_stop()
 {
     // This should only be called by monitor_stop(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.

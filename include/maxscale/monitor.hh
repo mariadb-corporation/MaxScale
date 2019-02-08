@@ -210,9 +210,9 @@ public:
     virtual bool start(const MXS_CONFIG_PARAMETER* params) = 0;
 
     /**
-     * Stops the monitor. If the monitor uses a polling thread, the thread should be stopped.
+     * Stops the monitor.
      */
-    virtual void stop() = 0;
+    void stop();
 
     /**
      * Write diagnostic information to a DCB.
@@ -320,6 +320,10 @@ public:
     std::vector<MXS_MONITORED_SERVER*> m_servers;       /**< Monitored servers */
 
 protected:
+    /**
+     * Stop the monitor. If the monitor uses a polling thread, the thread should be stopped.
+     */
+    virtual void do_stop() = 0;
 
     /**
      * Check if the monitor user can execute a query. The query should be such that it only succeeds if
@@ -670,14 +674,7 @@ public:
      *
      * @return True, if the monitor started, false otherwise.
      */
-    bool start(const MXS_CONFIG_PARAMETER* params);
-
-    /**
-     * @brief Stops the monitor.
-     *
-     * When the function returns, the monitor has stopped.
-     */
-    void stop();
+    bool start(const MXS_CONFIG_PARAMETER* params) final;
 
     /**
      * @brief Write diagnostics
@@ -710,6 +707,8 @@ public:
 
 protected:
     MonitorWorker(const std::string& name, const std::string& module);
+
+    void do_stop() final;
 
     /**
      * @brief Should the monitor shut down?
