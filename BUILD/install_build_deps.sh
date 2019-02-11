@@ -199,8 +199,9 @@ avro_dir=`echo "$avro_filename" | sed "s/.tar.gz//"`
 tar -axf $avro_filename
 mkdir $avro_dir/build
 pushd $avro_dir/build
-# The -DSNAPPY_FOUND=N is used to prevent the library from linking against libsnappy (MaxScale doesn't link against it)
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC -DSNAPPY_FOUND=N
+# Make sure the library isn't linked against snappy
+sed -i 's/find_package(Snappy)//' ../lang/c/CMakeLists.txt
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC
 make
 sudo make install
 popd
