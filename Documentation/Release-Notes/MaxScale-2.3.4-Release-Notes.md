@@ -16,6 +16,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 * [MXS-2322](https://jira.mariadb.org/browse/MXS-2322) Null characters in passwords break maxctrl
 * [MXS-2315](https://jira.mariadb.org/browse/MXS-2315) std::regex_error exception on csmon startup
+* [MXS-2311](https://jira.mariadb.org/browse/MXS-2311) connection_keepalive and error : (4852) Unexpected internal state: received response 0x00 from server
 * [MXS-2310](https://jira.mariadb.org/browse/MXS-2310) Cannot create .avsc files if no database connection
 * [MXS-2305](https://jira.mariadb.org/browse/MXS-2305) UNIX users are not shown in `maxctrl list users`
 * [MXS-2303](https://jira.mariadb.org/browse/MXS-2303) Missing server parameters log wrong error
@@ -26,6 +27,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-2265](https://jira.mariadb.org/browse/MXS-2265) Timestamp value '0000-00-00 00:00:00' conversion issue
 * [MXS-2237](https://jira.mariadb.org/browse/MXS-2237) server status labels are not documented
 * [MXS-2038](https://jira.mariadb.org/browse/MXS-2038) debug assert at rwsplit_route_stmt.cc:469 failed: btype != BE_MASTER
+* [MXS-1757](https://jira.mariadb.org/browse/MXS-1757) Problem while linking  libavrorouter.so
 
 ## Known Issues and Limitations
 
