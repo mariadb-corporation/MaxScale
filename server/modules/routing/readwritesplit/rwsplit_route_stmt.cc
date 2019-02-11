@@ -517,7 +517,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         }
     }
 
-    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() > m_config.max_sescmd_history)
+    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= m_config.max_sescmd_history)
     {
         static bool warn_history_exceeded = true;
         if (warn_history_exceeded)
@@ -540,7 +540,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     }
 
     if (m_config.prune_sescmd_history && !m_sescmd_list.empty()
-        && m_sescmd_list.size() + 1 > m_config.max_sescmd_history)
+        && m_sescmd_list.size() + 1 >= m_config.max_sescmd_history)
     {
         // Close to the history limit, remove the oldest command
         prune_to_position(m_sescmd_list.front()->get_position());
