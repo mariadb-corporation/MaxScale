@@ -21,43 +21,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/pcre2.h>
 
-
-/* Date string buffer size */
-#define QLA_DATE_BUFFER_SIZE 20
-
 class QlaFilterSession;
-
-/**
- * Helper struct for holding data before it's written to file.
- */
-class LogEventData
-{
-public:
-    LogEventData(const LogEventData&) = delete;
-    LogEventData& operator=(const LogEventData&) = default;
-    LogEventData() = default;
-
-    ~LogEventData()
-    {
-        mxb_assert(query_clone == NULL);
-    }
-
-    /**
-     * Resets event data.
-     *
-     * @param event Event to reset
-     */
-    void clear()
-    {
-        gwbuf_free(query_clone);
-        *this = LogEventData();
-    }
-
-    bool     has_message {false};               // Does message data exist?
-    GWBUF*   query_clone {nullptr};             // Clone of the query buffer.
-    char     query_date[QLA_DATE_BUFFER_SIZE];  // Text representation of date.
-    timespec begin_time {0, 0};                 // Timer value at the moment of receiving query.
-};
 
 /**
  * A instance structure, the assumption is that the option passed
@@ -75,6 +39,18 @@ public:
 
     QlaInstance(const std::string& name, MXS_CONFIG_PARAMETER* params);
     ~QlaInstance();
+
+    /* Log file save mode flags. */
+    static const int64_t LOG_FILE_SESSION = (1 << 0); /**< Default value, session specific files */
+    static const int64_t LOG_FILE_UNIFIED = (1 << 1); /**< One file shared by all sessions */
+
+    /* Flags for controlling extra log entry contents */
+    static const int64_t LOG_DATA_SERVICE    = (1 << 0);
+    static const int64_t LOG_DATA_SESSION    = (1 << 1);
+    static const int64_t LOG_DATA_DATE       = (1 << 2);
+    static const int64_t LOG_DATA_USER       = (1 << 3);
+    static const int64_t LOG_DATA_QUERY      = (1 << 4);
+    static const int64_t LOG_DATA_REPLY_TIME = (1 << 5);
 
     /**
      * Associate a new session with this instance of the filter. Creates a session-specific logfile.
@@ -106,18 +82,10 @@ public:
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
-    /**
-     * Open the log file and print a header if appropriate.
-     *
-     * @param   data_flags  Data save settings flags
-     * @param   fname       Target file path
-     * @return  A valid file on success, null otherwise.
-     */
-    FILE* open_log_file(uint32_t data_flags, const std::string& fname);
-
     std::string generate_log_header(uint64_t data_flags) const;
 
-    bool write_to_logfile(FILE** ppFile, const std::string& contents);
+    FILE* open_session_log_file(const std::string& filename) const;
+    bool write_to_logfile(FILE* fp, const std::string& contents) const;
 
     class Settings
     {
@@ -152,14 +120,18 @@ public:
 
     uint64_t    m_session_data_flags {0};      /* What data is printed to session files */
     bool        m_write_warning_given {false}; /* Avoid repeatedly printing some errors/warnings. */
+
+private:
+    bool open_unified_logfile();
+    FILE* open_log_file(uint64_t data_flags, const std::string& filename) const;
 };
 
 /* The session structure for this QLA filter. */
 class QlaFilterSession : public MXS_FILTER_SESSION
 {
 public:
-    QlaFilterSession(const QlaFilterSession&);
-    QlaFilterSession& operator=(const QlaFilterSession&);
+    QlaFilterSession(const QlaFilterSession&) = delete;
+    QlaFilterSession& operator=(const QlaFilterSession&) = delete;
     QlaFilterSession(QlaInstance& instance, MXS_SESSION* session);
     ~QlaFilterSession();
 
@@ -209,9 +181,44 @@ private:
     FILE*             m_logfile {nullptr};   /* The session-specific log file */
     mxb::StopWatch    m_file_check_timer;    /* When was file checked for rotation */
 
+    /**
+    * Helper struct for holding data before it's written to file.
+    */
+    class LogEventData
+    {
+    public:
+        LogEventData(const LogEventData&) = delete;
+        LogEventData& operator=(const LogEventData&) = default;
+        LogEventData() = default;
+
+        ~LogEventData()
+        {
+            mxb_assert(query_clone == NULL);
+        }
+
+        /* Date string buffer size */
+        static const int DATE_BUF_SIZE = 20;
+
+        /**
+         * Resets event data.
+         *
+         * @param event Event to reset
+         */
+        void clear()
+        {
+            gwbuf_free(query_clone);
+            *this = LogEventData();
+        }
+
+        bool     has_message {false};               // Does message data exist?
+        GWBUF*   query_clone {nullptr};             // Clone of the query buffer.
+        char     query_date[DATE_BUF_SIZE] {'\0'};  // Text representation of date.
+        timespec begin_time {0, 0};                 // Timer value at the moment of receiving query.
+    };
+
     LogEventData      m_event_data; /* Information about the latest event, used if logging execution time. */
 
-    void check_session_log_rotation(const std::string& filename, FILE** ppFile);
+    void check_session_log_rotation();
     void write_log_entries(const char* date_string, const char* query, int querylen, int elapsed_ms);
     bool write_log_entry(FILE* logfile, uint32_t data_flags, const char* time_string,
                             const char* sql_string, size_t sql_str_len, int elapsed_ms);

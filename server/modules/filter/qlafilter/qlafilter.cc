@@ -49,38 +49,28 @@
 
 using std::string;
 
-/* Log file save mode flags */
-#define CONFIG_FILE_SESSION (1 << 0)    // Default value, session specific files
-#define CONFIG_FILE_UNIFIED (1 << 1)    // One file shared by all sessions
-
 /* Default values for logged data */
 #define LOG_DATA_DEFAULT "date,user,query"
 
-static const char PARAM_MATCH[] = "match";
-static const char PARAM_EXCLUDE[] = "exclude";
-static const char PARAM_USER[] = "user";
-static const char PARAM_SOURCE[] = "source";
-static const char PARAM_FILEBASE[] = "filebase";
-static const char PARAM_OPTIONS[] = "options";
-static const char PARAM_LOG_TYPE[] = "log_type";
-static const char PARAM_LOG_DATA[] = "log_data";
-static const char PARAM_FLUSH[] = "flush";
-static const char PARAM_APPEND[] = "append";
-static const char PARAM_NEWLINE[] = "newline_replacement";
-static const char PARAM_SEPARATOR[] = "separator";
-
-/* Flags for controlling extra log entry contents */
-enum log_options
+namespace
 {
-    LOG_DATA_SERVICE    = (1 << 0),
-    LOG_DATA_SESSION    = (1 << 1),
-    LOG_DATA_DATE       = (1 << 2),
-    LOG_DATA_USER       = (1 << 3),
-    LOG_DATA_QUERY      = (1 << 4),
-    LOG_DATA_REPLY_TIME = (1 << 5),
-};
 
-static const MXS_ENUM_VALUE option_values[] =
+const char HEADER_ERROR[] = "Failed to print header to file %s. Error %i: '%s'.";
+
+const char PARAM_MATCH[] = "match";
+const char PARAM_EXCLUDE[] = "exclude";
+const char PARAM_USER[] = "user";
+const char PARAM_SOURCE[] = "source";
+const char PARAM_FILEBASE[] = "filebase";
+const char PARAM_OPTIONS[] = "options";
+const char PARAM_LOG_TYPE[] = "log_type";
+const char PARAM_LOG_DATA[] = "log_data";
+const char PARAM_FLUSH[] = "flush";
+const char PARAM_APPEND[] = "append";
+const char PARAM_NEWLINE[] = "newline_replacement";
+const char PARAM_SEPARATOR[] = "separator";
+
+const MXS_ENUM_VALUE option_values[] =
 {
     {"ignorecase", PCRE2_CASELESS},
     {"case",       0             },
@@ -88,23 +78,79 @@ static const MXS_ENUM_VALUE option_values[] =
     {NULL}
 };
 
-static const MXS_ENUM_VALUE log_type_values[] =
+const MXS_ENUM_VALUE log_type_values[] =
 {
-    {"session", CONFIG_FILE_SESSION},
-    {"unified", CONFIG_FILE_UNIFIED},
+    {"session", QlaInstance::LOG_FILE_SESSION},
+    {"unified", QlaInstance::LOG_FILE_UNIFIED},
     {NULL}
 };
 
-static const MXS_ENUM_VALUE log_data_values[] =
+const MXS_ENUM_VALUE log_data_values[] =
 {
-    {"service",    LOG_DATA_SERVICE   },
-    {"session",    LOG_DATA_SESSION   },
-    {"date",       LOG_DATA_DATE      },
-    {"user",       LOG_DATA_USER      },
-    {"query",      LOG_DATA_QUERY     },
-    {"reply_time", LOG_DATA_REPLY_TIME},
+    {"service",    QlaInstance::LOG_DATA_SERVICE   },
+    {"session",    QlaInstance::LOG_DATA_SESSION   },
+    {"date",       QlaInstance::LOG_DATA_DATE      },
+    {"user",       QlaInstance::LOG_DATA_USER      },
+    {"query",      QlaInstance::LOG_DATA_QUERY     },
+    {"reply_time", QlaInstance::LOG_DATA_REPLY_TIME},
     {NULL}
 };
+
+/**
+ * Open a file if it doesn't exist.
+ *
+ * @param filename Filename
+ * @param ppFile Double pointer to old file. The file can be null.
+ * @return True if new file was opened successfully. False, if file already existed or if new file
+ * could not be opened. If false is returned, the caller should check that the file object exists.
+ */
+bool check_replace_file(const string& filename, FILE** ppFile)
+{
+    auto zfilename = filename.c_str();
+    const char retry_later[] = "Logging to file is disabled. The operation will be retried later.";
+
+    bool newfile = false;
+    // Check if file exists and create it if not.
+    int fd = open(zfilename, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+    if (fd < 0)
+    {
+        // EEXIST is the expected error code.
+        if (errno != EEXIST)
+        {
+            MXS_ERROR("Could not open log file '%s'. open() failed with error code %i: '%s'. %s",
+                      zfilename, errno, mxs_strerror(errno), retry_later);
+            // Do not close the existing file in this case since it was not touched. Likely though,
+            // writing to it will fail.
+        }
+        // Otherwise the file already exists and the existing file stream should be valid.
+    }
+    else
+    {
+        MXS_INFO("Log file '%s' recreated.", zfilename);
+        // File was created. Close the original file stream since it's pointing to a moved file.
+        auto fp = *ppFile;
+        if (fp)
+        {
+            fclose(fp);
+        }
+        fp = fdopen(fd, "w");
+        if (fp)
+        {
+            newfile = true;
+        }
+        else
+        {
+            MXS_ERROR("Could not convert file descriptor of '%s' to stream. fdopen() "
+                      "failed with error code %i: '%s'. %s",
+                      filename.c_str(), errno, mxs_strerror(errno), retry_later);
+            ::close(fd);
+        }
+        *ppFile = fp;
+    }
+    return newfile;
+}
+
+}
 
 QlaInstance::QlaInstance(const string& name, MXS_CONFIG_PARAMETER* params)
     : m_settings(params)
@@ -126,8 +172,8 @@ QlaInstance::Settings::Settings(MXS_CONFIG_PARAMETER* params)
     , exclude(params->get_string(PARAM_EXCLUDE))
 {
     auto log_file_types = params->get_enum(PARAM_LOG_TYPE, log_type_values);
-    write_session_log = (log_file_types & CONFIG_FILE_SESSION);
-    write_unified_log = (log_file_types & CONFIG_FILE_UNIFIED);
+    write_session_log = (log_file_types & LOG_FILE_SESSION);
+    write_unified_log = (log_file_types & LOG_FILE_UNIFIED);
 }
 
 QlaInstance::~QlaInstance()
@@ -195,22 +241,13 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
             // Try to open the unified log file
             if (my_instance->m_settings.write_unified_log)
             {
-                string unified_filename = my_instance->m_settings.filebase + ".unified";
+                my_instance->m_unified_filename = my_instance->m_settings.filebase + ".unified";
                 // Open the file. It is only closed at program exit.
-                FILE* unified_fp = my_instance->open_log_file(my_instance->m_settings.log_file_data_flags,
-                                                              unified_filename.c_str());
-                if (unified_fp != NULL)
+                if (!my_instance->open_unified_logfile())
                 {
-                    my_instance->m_unified_filename = unified_filename;
-                    my_instance->m_unified_fp = unified_fp;
-                }
-                else
-                {
-                    MXS_ERROR("Opening output file for qla-filter failed due to %d, %s",
-                              errno,
-                              mxs_strerror(errno));
                     delete my_instance;
                     my_instance = NULL;
+                    error = true;
                 }
             }
         }
@@ -273,17 +310,10 @@ bool QlaFilterSession::prepare()
         // Only open the session file if the corresponding mode setting is used.
         if (!error && settings.write_session_log)
         {
-            string filename = mxb::string_printf("%s.%" PRIu64, settings.filebase.c_str(), m_ses_id);
-
-            m_logfile = m_instance.open_log_file(m_instance.m_session_data_flags, filename.c_str());
-            if (m_logfile)
+            m_filename = mxb::string_printf("%s.%" PRIu64, settings.filebase.c_str(), m_ses_id);
+            m_logfile = m_instance.open_session_log_file(m_filename);
+            if (!m_logfile)
             {
-                m_filename = filename;
-            }
-            else
-            {
-                MXS_ERROR("Opening output file %s' for qla-filter failed due to %d, %s",
-                          filename.c_str(), errno, mxs_strerror(errno));
                 error = true;
             }
         }
@@ -385,45 +415,20 @@ json_t* QlaInstance::diagnostics_json() const
     return rval;
 }
 
-void QlaFilterSession::check_session_log_rotation(const string& filename, FILE** ppFile)
+void QlaFilterSession::check_session_log_rotation()
 {
-    auto pFile = *ppFile;
-    const char retry_later[] = "Logging to file is disabled. The operation will be retried later.";
-    // Check if file exists and create it if not.
-    int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-    if (fd < 0)
+    if (check_replace_file(m_filename, &m_logfile))
     {
-        // EEXIST is the expected error code.
-        if (errno != EEXIST)
+        // New file created, print the log header.
+        string header = m_instance.generate_log_header(m_instance.m_session_data_flags);
+        if (!m_instance.write_to_logfile(m_logfile, header))
         {
-            MXS_ERROR("Could not open log file '%s'. open() failed with error code %i: '%s'. %s",
-                      filename.c_str(), errno, mxs_strerror(errno), retry_later);
-            fclose(pFile);
-            pFile = nullptr;
-        }
-        // Otherwise the file already exists and the existing file stream should be valid.
-    }
-    else
-    {
-        MXS_INFO("Log file '%s' recreated.", filename.c_str());
-        // File was created. Close the original file stream since it's pointing to a moved file.
-        fclose(pFile);
-        pFile = fdopen(fd, "w");
-        if (pFile)
-        {
-            // Print the log header.
-            string header = m_instance.generate_log_header(m_instance.m_session_data_flags);
-            m_instance.write_to_logfile(&pFile, header);
-        }
-        else
-        {
-            MXS_ERROR("Could not convert file descriptor of '%s' to stream. fdopen() "
-                      "failed with error code %i: '%s'. %s",
-                      filename.c_str(), errno, mxs_strerror(errno), retry_later);
-            ::close(fd);
+            MXS_ERROR(HEADER_ERROR, m_filename.c_str(), errno, mxs_strerror(errno));
+            fclose(m_logfile);
+            m_logfile = nullptr;
         }
     }
-    *ppFile = pFile;
+    // Either the old file existed or file creation failed.
 }
 
 /**
@@ -445,7 +450,7 @@ void QlaFilterSession::write_log_entries(const char* date_string, const char* qu
     {
         if (m_file_check_timer.split().secs() > check_interval)
         {
-            check_session_log_rotation(m_filename, &m_logfile);
+            check_session_log_rotation();
             m_file_check_timer.restart();
         }
         // In this case there is no need to write the session number into the files.
@@ -486,17 +491,17 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
     {
         const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         LogEventData& event = m_event_data;
-        if (data_flags & LOG_DATA_DATE)
+        if (data_flags & QlaInstance::LOG_DATA_DATE)
         {
             // Print current date to a buffer. Use the buffer in the event data struct even if execution time
             // is not needed.
             const time_t utc_seconds = time(NULL);
             tm local_time;
             localtime_r(&utc_seconds, &local_time);
-            strftime(event.query_date, QLA_DATE_BUFFER_SIZE, "%F %T", &local_time);
+            strftime(event.query_date, LogEventData::DATE_BUF_SIZE, "%F %T", &local_time);
         }
 
-        if (data_flags & LOG_DATA_REPLY_TIME)
+        if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
         {
             // Have to measure reply time from server. Save query data for printing during clientReply.
             // If old event data exists, it is erased. This only happens if client sends a query before
@@ -506,7 +511,7 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
                 event.clear();
             }
             clock_gettime(CLOCK_MONOTONIC, &event.begin_time);
-            if (data_flags & LOG_DATA_QUERY)
+            if (data_flags & QlaInstance::LOG_DATA_QUERY)
             {
                 event.query_clone = gwbuf_clone(queue);
             }
@@ -528,11 +533,11 @@ int QlaFilterSession::clientReply(GWBUF* queue)
     if (event.has_message)
     {
         const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
-        mxb_assert(data_flags & LOG_DATA_REPLY_TIME);
+        mxb_assert(data_flags & QlaInstance::LOG_DATA_REPLY_TIME);
 
         char* query = NULL;
         int query_len = 0;
-        if (data_flags & LOG_DATA_QUERY)
+        if (data_flags & QlaInstance::LOG_DATA_QUERY)
         {
             modutil_extract_SQL(event.query_clone, &query, &query_len);
         }
@@ -549,41 +554,64 @@ int QlaFilterSession::clientReply(GWBUF* queue)
     return up.clientReply(up.instance, up.session, queue);
 }
 
-FILE* QlaInstance::open_log_file(uint32_t data_flags, const string& fname)
+FILE* QlaInstance::open_session_log_file(const string& filename) const
 {
-    auto filename = fname.c_str();
+    return open_log_file(m_session_data_flags, filename);
+}
+
+bool QlaInstance::open_unified_logfile()
+{
+    mxb_assert(!m_unified_fp);
+    m_unified_fp = open_log_file(m_settings.log_file_data_flags, m_unified_filename);
+    return m_unified_fp != nullptr;
+}
+
+/**
+ * Open a log file for writing and print a header if file did not exist.
+ *
+ * @param   data_flags  Data save settings flags
+ * @param   filename    Target file path
+ * @return  A valid file on success, null otherwise.
+ */
+FILE* QlaInstance::open_log_file(uint64_t data_flags, const string& filename) const
+{
+    auto zfilename = filename.c_str();
     bool file_existed = false;
     FILE* fp = NULL;
     if (m_settings.append == false)
     {
         // Just open the file (possibly overwriting) and then print header.
-        fp = fopen(filename, "w");
+        fp = fopen(zfilename, "w");
     }
     else
     {
         /**
          *  Using fopen() with 'a+' means we will always write to the end but can read
-         *  anywhere. Depending on the "append"-setting the file has been
-         *  opened in different modes, which should be considered if file handling
-         *  changes later (e.g. rewinding).
+         *  anywhere.
          */
-        if ((fp = fopen(filename, "a+")) != NULL)
+        if ((fp = fopen(zfilename, "a+")) != NULL)
         {
             // Check to see if file already has contents
             fseek(fp, 0, SEEK_END);
-            if (ftell(fp) > 0)      // Any errors in ftell cause overwriting
+            if (ftell(fp) > 0)
             {
                 file_existed = true;
             }
         }
     }
 
-    if (fp && !file_existed && data_flags != 0)
+    if (!fp)
+    {
+        MXS_ERROR("Failed to open file '%s'. Error %i: '%s'.", zfilename, errno, mxs_strerror(errno));
+    }
+    else if (!file_existed && data_flags != 0)
     {
         string header = generate_log_header(data_flags);
-        if (!write_to_logfile(&fp, header))
+        if (!write_to_logfile(fp, header))
         {
-            MXS_ERROR("Failed to print header to file %s.", filename);
+            MXS_ERROR(HEADER_ERROR, zfilename, errno, mxs_strerror(errno));
+            fclose(fp);
+            fp = nullptr;
         }
     }
     return fp;
@@ -636,27 +664,19 @@ string QlaInstance::generate_log_header(uint64_t data_flags) const
     return header.str();
 }
 
-bool QlaInstance::write_to_logfile(FILE** ppLogFile, const std::string& contents)
+bool QlaInstance::write_to_logfile(FILE* fp, const std::string& contents) const
 {
     bool error = false;
-    auto pFile = *ppLogFile;
-    int written = fprintf(pFile, "%s", contents.c_str());
+    int written = fprintf(fp, "%s", contents.c_str());
     if (written < 0)
     {
         error = true;
     }
-    else if (m_settings.flush_writes && (fflush(pFile) != 0))
+    else if (m_settings.flush_writes && (fflush(fp) != 0))
     {
         error = true;
     }
 
-    // Writing or flushing failed. Close file.
-    if (error)
-    {
-        fclose(pFile);
-        pFile = nullptr;
-        *ppLogFile = pFile;
-    }
     return !error;
 }
 
@@ -739,32 +759,32 @@ bool QlaFilterSession::write_log_entry(FILE* logfile, uint32_t data_flags, const
     string curr_sep;    // Use empty string as the first separator
     const string& real_sep = m_instance.m_settings.separator;
 
-    if (data_flags & LOG_DATA_SERVICE)
+    if (data_flags & QlaInstance::LOG_DATA_SERVICE)
     {
         output << m_service;
         curr_sep = real_sep;
     }
-    if (data_flags & LOG_DATA_SESSION)
+    if (data_flags & QlaInstance::LOG_DATA_SESSION)
     {
         output << curr_sep << m_ses_id;
         curr_sep = real_sep;
     }
-    if (data_flags & LOG_DATA_DATE)
+    if (data_flags & QlaInstance::LOG_DATA_DATE)
     {
         output << curr_sep << time_string;
         curr_sep = real_sep;
     }
-    if (data_flags & LOG_DATA_USER)
+    if (data_flags & QlaInstance::LOG_DATA_USER)
     {
         output << curr_sep << m_user << "@" << m_remote;
         curr_sep = real_sep;
     }
-    if (data_flags & LOG_DATA_REPLY_TIME)
+    if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
     {
         output << curr_sep << elapsed_ms;
         curr_sep = real_sep;
     }
-    if (data_flags & LOG_DATA_QUERY)
+    if (data_flags & QlaInstance::LOG_DATA_QUERY)
     {
         output << curr_sep;
         if (!m_instance.m_settings.query_newline.empty())
@@ -781,7 +801,7 @@ bool QlaFilterSession::write_log_entry(FILE* logfile, uint32_t data_flags, const
     }
     output << "\n";
 
-    return m_instance.write_to_logfile(&logfile, output.str());
+    return m_instance.write_to_logfile(logfile, output.str());
 }
 
 namespace
