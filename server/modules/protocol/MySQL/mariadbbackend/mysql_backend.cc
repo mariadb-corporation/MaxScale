@@ -901,7 +901,7 @@ static int gw_read_and_write(DCB* dcb)
     if (proto->ignore_replies > 0)
     {
         /** The reply to a COM_CHANGE_USER is in packet */
-        GWBUF* query = proto->stored_query;
+        GWBUF* query = modutil_get_next_MySQL_packet(&proto->stored_query);
         proto->stored_query = NULL;
         proto->ignore_replies--;
         mxb_assert(proto->ignore_replies >= 0);
