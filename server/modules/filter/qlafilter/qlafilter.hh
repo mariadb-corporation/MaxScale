@@ -16,6 +16,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <string>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/config.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/pcre2.h>
@@ -104,19 +105,19 @@ public:
 
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
-    FILE* open_log_file(uint32_t, const char*);
 
-    const std::string m_name;   /* Filter definition name */
+    /**
+     * Open the log file and print a header if appropriate.
+     *
+     * @param   data_flags  Data save settings flags
+     * @param   fname       Target file path
+     * @return  A valid file on success, null otherwise.
+     */
+    FILE* open_log_file(uint32_t data_flags, const std::string& fname);
 
-    std::string m_unified_filename;      /* Filename of the unified log file */
-    FILE*       m_unified_fp {nullptr};  /* Unified log file. The pointer needs to be shared here
-                                          * to avoid garbled printing. */
+    std::string generate_log_header(uint64_t data_flags) const;
 
-    pcre2_code* m_re_match {nullptr};    /* Compiled regex text */
-    pcre2_code* m_re_exclude {nullptr};  /* Compiled regex nomatch text */
-    uint32_t    m_ovec_size {0};         /* PCRE2 match data ovector size */
-
-    bool        m_write_warning_given {false}; /* Avoid repeatedly printing some errors/warnings. */
+    bool write_to_logfile(FILE** ppFile, const std::string& contents);
 
     class Settings
     {
@@ -138,6 +139,19 @@ public:
     };
 
     Settings m_settings;
+
+    const std::string m_name;   /* Filter definition name */
+
+    std::string m_unified_filename;      /* Filename of the unified log file */
+    FILE*       m_unified_fp {nullptr};  /* Unified log file. The pointer needs to be shared here
+                                          * to avoid garbled printing. */
+
+    pcre2_code* m_re_match {nullptr};    /* Compiled regex text */
+    pcre2_code* m_re_exclude {nullptr};  /* Compiled regex nomatch text */
+    uint32_t    m_ovec_size {0};         /* PCRE2 match data ovector size */
+
+    uint64_t    m_session_data_flags {0};      /* What data is printed to session files */
+    bool        m_write_warning_given {false}; /* Avoid repeatedly printing some errors/warnings. */
 };
 
 /* The session structure for this QLA filter. */
@@ -178,7 +192,12 @@ public:
     void close();
 
     QlaInstance&      m_instance;
+    std::string       m_filename;           /* The session-specific log file name */
 
+    MXS_UPSTREAM   up;
+    MXS_DOWNSTREAM down;
+
+private:
     const std::string m_user;         /* Client username */
     const std::string m_remote;       /* Client address */
     const std::string m_service;      /* The service name this filter is attached to. */
@@ -187,15 +206,13 @@ public:
     bool              m_active {false};     /* Is session active? */
     pcre2_match_data* m_mdata {nullptr};    /* Regex match data */
 
-    std::string       m_filename;           /* The session-specific log file name */
-    FILE*             m_logfile {nullptr};  /* The session-specific log file */
+    FILE*             m_logfile {nullptr};   /* The session-specific log file */
+    mxb::StopWatch    m_file_check_timer;    /* When was file checked for rotation */
 
     LogEventData      m_event_data; /* Information about the latest event, used if logging execution time. */
 
-    MXS_UPSTREAM   up;
-    MXS_DOWNSTREAM down;
-
+    void check_session_log_rotation(const std::string& filename, FILE** ppFile);
     void write_log_entries(const char* date_string, const char* query, int querylen, int elapsed_ms);
-    int write_log_entry(FILE* logfile, uint32_t data_flags, const char* time_string,
+    bool write_log_entry(FILE* logfile, uint32_t data_flags, const char* time_string,
                             const char* sql_string, size_t sql_str_len, int elapsed_ms);
 };
