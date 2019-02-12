@@ -6,6 +6,7 @@
 * Names can no longer contain whitespace.
 * Servers can now be drained.
 * The servers of a service can now be defined using a monitor.
+* Durations can now be specified as hours, minutes, seconds or milliseconds.
 
 For more details, please refer to:
 

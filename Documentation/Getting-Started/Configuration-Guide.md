@@ -219,6 +219,28 @@ max_size=1000000M
 max_size=1000G
 max_size=1T
 ```
+
+#### Durations
+
+A number denoting a duration can be suffixed by one of the case-insensitive
+suffixes `h`, `m`, `s` and `ms`, for specifying durations in hours, minutes,
+seconds and milliseconds, respectively.
+
+For instance, the following entries
+```
+soft_ttl=1h
+soft_ttl=60m
+soft_ttl=3600s
+soft_ttl=3600000ms
+```
+are equivalent.
+
+Note that if an explicit unit is not specified, then it is specific to the
+configuration parameter whether the duration is interpreted as seconds or
+milliseconds.
+
+_Not_ providing an explicit unit has been deprecated in MaxScale 2.4.
+
 #### Regular Expressions
 
 When a regular expression (regex) parameter is accepted, the pattern string

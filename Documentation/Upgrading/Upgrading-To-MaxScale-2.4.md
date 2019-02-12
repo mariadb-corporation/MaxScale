@@ -44,3 +44,16 @@ must be changed, for instance, to
 ...
 servers=MyServer
 ```
+
+## Durations
+
+Durations can now be specified using one of the suffixes `h`, `m`, `s`
+and `ms` for specifying durations in hours, minutes, seconds and
+milliseconds, respectively.
+
+_Not_ providing an explicit unit has been deprecated in MaxScale 2.4,
+so it is adviseable to add suffixes to durations. For instance,
+```
+some_param=60s
+some_param=60000ms
+```

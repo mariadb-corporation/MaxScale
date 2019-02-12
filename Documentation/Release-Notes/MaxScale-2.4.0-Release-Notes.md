@@ -76,6 +76,18 @@ In this case, the servers of the service will be defined by the
 referred to monitor. Note that the parameters `servers` and `cluster`
 are mutually exclusive.
 
+### Durations
+
+In the MaxScale configuration file, durations can now be suffixed with
+`h`, `m`, `s` or `ms` to indicate that the duration is specified as
+hours, minutes, seconds or milliseconds.
+
+Please see the
+[configuration guide](../Getting-Started/Configuration-Guide.md#durations)
+for details.
+
+_Not_ providing an explicit unit has been deprecated in MaxScale 2.4.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.4.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.4.0)
