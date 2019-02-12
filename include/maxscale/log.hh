@@ -51,9 +51,24 @@ typedef MXB_LOG_THROTTLING MXS_LOG_THROTTLING;
  */
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target);
 
+/**
+ * Close and reopen MaxScale log files. Also increments a global rotation counter which modules
+ * can read to see if they should rotate their own logs.
+ *
+ * @return True if MaxScale internal logs were rotated. If false is returned, the rotation counter is not
+ * incremented.
+ */
+bool mxs_log_rotate();
+
+/**
+ * Get the value of the log rotation counter. The counter is incremented when user requests a log rotation.
+ *
+ * @return Counter value
+ */
+int mxs_get_log_rotation_count();
+
 #define mxs_log_finish  mxb_log_finish
 #define mxs_log_message mxb_log_message
-#define mxs_log_rotate  mxb_log_rotate
 
 #define mxs_log_get_throttling            mxb_log_get_throttling
 #define mxs_log_is_priority_enabled       mxb_log_is_priority_enabled

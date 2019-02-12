@@ -99,14 +99,6 @@ const MXS_ENUM_VALUE log_data_values[] =
 void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
                                    const char* rep_newline, std::stringstream* output);
 
-/**
- * Open a file if it doesn't exist.
- *
- * @param filename Filename
- * @param ppFile Double pointer to old file. The file can be null.
- * @return True if new file was opened successfully. False, if file already existed or if new file
- * could not be opened. If false is returned, the caller should check that the file object exists.
- */
 bool check_replace_file(const string& filename, FILE** ppFile);
 
 }
@@ -115,6 +107,7 @@ QlaInstance::QlaInstance(const string& name, MXS_CONFIG_PARAMETER* params)
     : m_settings(params)
     , m_name(name)
     , m_session_data_flags(m_settings.log_file_data_flags & ~LOG_DATA_SESSION)
+    , m_rotation_count(mxs_get_log_rotation_count())
 {
 }
 
@@ -151,6 +144,7 @@ QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session)
     , m_remote(session_get_remote(session))
     , m_service(session->service->name())
     , m_ses_id(session->ses_id)
+    , m_rotation_count(mxs_get_log_rotation_count())
 {
 }
 
@@ -374,20 +368,27 @@ json_t* QlaInstance::diagnostics_json() const
     return rval;
 }
 
-void QlaFilterSession::check_session_log_rotation()
+void QlaInstance::check_reopen_file(const string& filename, uint64_t data_flags, FILE** ppFile) const
 {
-    if (check_replace_file(m_filename, &m_logfile))
+    if (check_replace_file(filename, ppFile))
     {
+        auto fp = *ppFile;
         // New file created, print the log header.
-        string header = m_instance.generate_log_header(m_instance.m_session_data_flags);
-        if (!m_instance.write_to_logfile(m_logfile, header))
+        string header = generate_log_header(data_flags);
+        if (!write_to_logfile(fp, header))
         {
-            MXS_ERROR(HEADER_ERROR, m_filename.c_str(), errno, mxs_strerror(errno));
-            fclose(m_logfile);
-            m_logfile = nullptr;
+            MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxs_strerror(errno));
+            fclose(fp);
+            fp = nullptr;
+            *ppFile = fp;
         }
     }
     // Either the old file existed or file creation failed.
+}
+
+void QlaInstance::check_reopen_session_file(const std::string& filename, FILE** ppFile) const
+{
+    check_reopen_file(filename, m_session_data_flags, ppFile);
 }
 
 /**
@@ -397,13 +398,13 @@ void QlaFilterSession::check_session_log_rotation()
  */
 void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 {
-    const int check_interval = 60; // Check log rotation once per minute.
     if (m_instance.m_settings.write_session_log)
     {
-        if (m_file_check_timer.split().secs() > check_interval)
+        int global_rot_count = mxs_get_log_rotation_count();
+        if (global_rot_count > m_rotation_count)
         {
-            check_session_log_rotation();
-            m_file_check_timer.restart();
+            m_rotation_count = global_rot_count;
+            m_instance.check_reopen_session_file(m_filename, &m_logfile);
         }
 
         if (m_logfile)
@@ -703,7 +704,13 @@ void QlaFilterSession::write_session_log_entry(const string& entry)
 void QlaInstance::write_unified_log_entry(const string& entry)
 {
     std::lock_guard<std::mutex> guard(m_file_lock);
-    // TODO: Handle log rotation here.
+    int global_rot_count = mxs_get_log_rotation_count();
+    if (global_rot_count > m_rotation_count)
+    {
+        m_rotation_count = global_rot_count;
+        check_reopen_file(m_unified_filename, m_settings.log_file_data_flags, &m_unified_fp);
+    }
+
     if (m_unified_fp)
     {
         if (!write_to_logfile(m_unified_fp, entry))
@@ -773,6 +780,14 @@ void print_string_replace_newlines(const char* sql_string,
     }
 }
 
+/**
+ * Open a file if it doesn't exist.
+ *
+ * @param filename Filename
+ * @param ppFile Double pointer to old file. The file can be null.
+ * @return True if new file was opened successfully. False, if file already existed or if new file
+ * could not be opened. If false is returned, the caller should check that the file object exists.
+ */
 bool check_replace_file(const string& filename, FILE** ppFile)
 {
     auto zfilename = filename.c_str();

@@ -86,6 +86,7 @@ public:
     std::string generate_log_header(uint64_t data_flags) const;
 
     FILE* open_session_log_file(const std::string& filename) const;
+    void check_reopen_session_file(const std::string& filename, FILE** ppFile) const;
     void write_unified_log_entry(const std::string& contents);
     bool write_to_logfile(FILE* fp, const std::string& contents) const;
 
@@ -121,10 +122,12 @@ public:
 private:
     bool open_unified_logfile();
     FILE* open_log_file(uint64_t data_flags, const std::string& filename) const;
+    void check_reopen_file(const std::string& filename, uint64_t data_flags, FILE** ppFile) const;
 
     std::mutex  m_file_lock;                  /* Protects access to the unified log file */
     std::string m_unified_filename;           /* Filename of the unified log file */
     FILE*       m_unified_fp {nullptr};       /* Unified log file. */
+    int         m_rotation_count {0};         /* Log rotation counter */
     bool        m_write_error_logged {false}; /* Avoid repeatedly printing some errors/warnings. */
 
 };
@@ -183,7 +186,7 @@ private:
     pcre2_match_data* m_mdata {nullptr};    /* Regex match data */
 
     FILE*             m_logfile {nullptr};          /* The session-specific log file */
-    mxb::StopWatch    m_file_check_timer;           /* When was file checked for rotation */
+    int               m_rotation_count {0};         /* Log rotation counter */
     bool              m_write_error_logged {false}; /* Has write error been logged */
 
     /**
@@ -223,7 +226,6 @@ private:
 
     LogEventData      m_event_data; /* Information about the latest event, used if logging execution time. */
 
-    void check_session_log_rotation();
     void write_log_entries(const LogEventElems& elems);
     void write_session_log_entry(const std::string& entry);
     std::string generate_log_entry(uint64_t data_flags, const LogEventElems& elems) const;

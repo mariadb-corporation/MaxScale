@@ -16,6 +16,7 @@
 #include <sys/time.h>
 #include <syslog.h>
 
+#include <atomic>
 #include <cinttypes>
 
 #include <maxbase/log.hh>
@@ -27,6 +28,12 @@
 
 namespace
 {
+
+struct ThisUnit
+{
+    std::atomic<int> rotation_count {0};
+};
+ThisUnit this_unit;
 
 const char* LOGFILE_NAME = "maxscale.log";
 
@@ -128,4 +135,19 @@ json_t* mxs_logs_to_json(const char* host)
     json_object_set_new(data, CN_TYPE, json_string("logs"));
 
     return mxs_json_resource(host, MXS_JSON_API_LOGS, data);
+}
+
+bool mxs_log_rotate()
+{
+    bool rotated = mxb_log_rotate();
+    if (rotated)
+    {
+        this_unit.rotation_count.fetch_add(1, std::memory_order_relaxed);
+    }
+    return rotated;
+}
+
+int mxs_get_log_rotation_count()
+{
+    return this_unit.rotation_count.load(std::memory_order_relaxed);
 }
