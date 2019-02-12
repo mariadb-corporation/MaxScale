@@ -215,6 +215,31 @@ extern const char CN_MAXLOG[];
 extern const char CN_LOG_AUGMENTATION[];
 extern const char CN_LOG_TO_SHM[];
 
+namespace maxscale
+{
+
+namespace config
+{
+
+enum DurationInterpretation
+{
+    INTERPRET_AS_SECONDS,
+    INTERPRET_AS_MILLISECONDS
+};
+
+enum DurationUnit
+{
+    DURATION_IN_HOURS,
+    DURATION_IN_MINUTES,
+    DURATION_IN_SECONDS,
+    DURATION_IN_MILLISECONDS,
+    DURATION_IN_DEFAULT
+};
+
+}
+
+}
+
 /**
  * Config parameter container. Typically includes all parameters of a single configuration file section
  * such as a server or filter.
@@ -293,6 +318,19 @@ public:
      * @return Number of bytes or 0 if no parameter was found
      */
     uint64_t get_size(const std::string& key) const;
+
+    /**
+     * @brief Get a duration.
+     *
+     * Should be used for MXS_MODULE_PARAM_DURATION parameter types.
+     *
+     * @param key             Parameter name.
+     * @param interpretation  How a value NOT having a unit suffix should be interpreted.
+     *
+     * @return Duration in milliseconds; 0 if the parameter is not found.
+     */
+    std::chrono::milliseconds get_duration(const std::string& key,
+                                           mxs::config::DurationInterpretation interpretation) const;
 
     /**
      * @brief Get a service value

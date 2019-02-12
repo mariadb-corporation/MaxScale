@@ -219,6 +219,25 @@ bool is_normal_server_parameter(const char* param);
  */
 bool get_suffixed_size(const char* value, uint64_t* dest);
 
+/**
+ * Converts a string into a duration, intepreting in a case-insensitive manner
+ * an 'h'-suffix to indicate hours, an 'm'-suffix to indicate minutes, an
+ * 's'-suffix to indicate seconds and an 'ms'-suffix to indicate milliseconds.
+ *
+ * @param zValue          A numerical string, possibly suffixed by 'h', 'm',
+ *                        's' or 'ms'.
+ * @param interpretation  How a value lacking a specific suffix should be interpreted.
+ * @param pDuration       Pointer, if non-NULL, where the result is stored.
+ * @param pUnit           Pointer, if non-NULL, where the detected unit is stored.
+ *
+ * @return True on success, false on invalid input in which case @c pUnit and
+ *         @c pDuration will not be modified.
+ */
+bool get_suffixed_duration(const char* zValue,
+                           mxs::config::DurationInterpretation interpretation,
+                           std::chrono::milliseconds* pDuration,
+                           mxs::config::DurationUnit* pUnit = nullptr);
+
 // Dump a parameter list into a file as `key=value` pairs
 void dump_param_list(int file,
                      MXS_CONFIG_PARAMETER* list,

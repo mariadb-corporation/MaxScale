@@ -35,14 +35,15 @@ int test_validity()
 
     MXS_MODULE_PARAM params[] =
     {
-        {"p1", MXS_MODULE_PARAM_INT,     "-123"                  },
-        {"p2", MXS_MODULE_PARAM_COUNT,   "123"                   },
-        {"p3", MXS_MODULE_PARAM_BOOL,    "true"                  },
-        {"p4", MXS_MODULE_PARAM_STRING,  "default"               },
-        {"p5", MXS_MODULE_PARAM_ENUM,    "a", MXS_MODULE_OPT_NONE, enum_values},
-        {"p6", MXS_MODULE_PARAM_PATH,    "/tmp", MXS_MODULE_OPT_PATH_F_OK},
-        {"p7", MXS_MODULE_PARAM_SERVICE, "my-service"            },
-        {"p8", MXS_MODULE_PARAM_ENUM,    "a", MXS_MODULE_OPT_ENUM_UNIQUE, enum_values},
+        {"p1", MXS_MODULE_PARAM_INT,      "-123"                  },
+        {"p2", MXS_MODULE_PARAM_COUNT,    "123"                   },
+        {"p3", MXS_MODULE_PARAM_BOOL,     "true"                  },
+        {"p4", MXS_MODULE_PARAM_STRING,   "default"               },
+        {"p5", MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_NONE, enum_values},
+        {"p6", MXS_MODULE_PARAM_PATH,     "/tmp", MXS_MODULE_OPT_PATH_F_OK},
+        {"p7", MXS_MODULE_PARAM_SERVICE,  "my-service"            },
+        {"p8", MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_ENUM_UNIQUE, enum_values},
+        {"p9", MXS_MODULE_PARAM_DURATION, "4711s"                 },
         {MXS_END_MODULE_PARAMS}
     };
 
@@ -95,6 +96,18 @@ int test_validity()
     /** Path parameter */
     TEST(config_param_is_valid(params, "p6", "/tmp", &ctx));
     TEST(!config_param_is_valid(params, "p6", "This is not a valid path", &ctx));
+
+    /** Duration parameter */
+    TEST(config_param_is_valid(params, "p9", "4711", &ctx));
+    TEST(config_param_is_valid(params, "p9", "4711h", &ctx));
+    TEST(config_param_is_valid(params, "p9", "4711m", &ctx));
+    TEST(config_param_is_valid(params, "p9", "4711s", &ctx));
+    TEST(config_param_is_valid(params, "p9", "4711ms", &ctx));
+    TEST(config_param_is_valid(params, "p9", "4711H", &ctx));
+    TEST(config_param_is_valid(params, "p9", "4711M", &ctx));
+    TEST(config_param_is_valid(params, "p9", "4711S", &ctx));
+    TEST(config_param_is_valid(params, "p9", "4711MS", &ctx));
+    TEST(!config_param_is_valid(params, "p9", "4711q", &ctx));
 
     /** Service parameter */
     CONFIG_CONTEXT svc = {};

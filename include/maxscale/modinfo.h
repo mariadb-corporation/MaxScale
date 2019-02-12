@@ -85,7 +85,8 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_SERVICE,       /**< Service name */
     MXS_MODULE_PARAM_SERVER,        /**< Server name */
     MXS_MODULE_PARAM_SERVERLIST,    /**< List of server names, separated by ',' */
-    MXS_MODULE_PARAM_REGEX          /**< A regex string enclosed in '/' */
+    MXS_MODULE_PARAM_REGEX,         /**< A regex string enclosed in '/' */
+    MXS_MODULE_PARAM_DURATION,      /**< Duration in milliseconds */
 };
 
 /** Maximum and minimum values for integer types */
