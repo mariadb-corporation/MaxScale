@@ -22,6 +22,7 @@
 #include <maxscale/pcre2.h>
 
 class QlaFilterSession;
+struct LogEventElems;
 
 /**
  * A instance structure, the assumption is that the option passed
@@ -85,6 +86,7 @@ public:
     std::string generate_log_header(uint64_t data_flags) const;
 
     FILE* open_session_log_file(const std::string& filename) const;
+    void write_unified_log_entry(const std::string& contents);
     bool write_to_logfile(FILE* fp, const std::string& contents) const;
 
     class Settings
@@ -110,20 +112,21 @@ public:
 
     const std::string m_name;   /* Filter definition name */
 
-    std::string m_unified_filename;      /* Filename of the unified log file */
-    FILE*       m_unified_fp {nullptr};  /* Unified log file. The pointer needs to be shared here
-                                          * to avoid garbled printing. */
-
     pcre2_code* m_re_match {nullptr};    /* Compiled regex text */
     pcre2_code* m_re_exclude {nullptr};  /* Compiled regex nomatch text */
     uint32_t    m_ovec_size {0};         /* PCRE2 match data ovector size */
 
     uint64_t    m_session_data_flags {0};      /* What data is printed to session files */
-    bool        m_write_warning_given {false}; /* Avoid repeatedly printing some errors/warnings. */
 
 private:
     bool open_unified_logfile();
     FILE* open_log_file(uint64_t data_flags, const std::string& filename) const;
+
+    std::mutex  m_file_lock;                  /* Protects access to the unified log file */
+    std::string m_unified_filename;           /* Filename of the unified log file */
+    FILE*       m_unified_fp {nullptr};       /* Unified log file. */
+    bool        m_write_error_logged {false}; /* Avoid repeatedly printing some errors/warnings. */
+
 };
 
 /* The session structure for this QLA filter. */
@@ -163,13 +166,14 @@ public:
      */
     void close();
 
-    QlaInstance&      m_instance;
-    std::string       m_filename;           /* The session-specific log file name */
-
     MXS_UPSTREAM   up;
     MXS_DOWNSTREAM down;
 
+    std::string       m_filename;     /* The session-specific log file name */
+
 private:
+    QlaInstance&      m_instance;
+
     const std::string m_user;         /* Client username */
     const std::string m_remote;       /* Client address */
     const std::string m_service;      /* The service name this filter is attached to. */
@@ -178,8 +182,9 @@ private:
     bool              m_active {false};     /* Is session active? */
     pcre2_match_data* m_mdata {nullptr};    /* Regex match data */
 
-    FILE*             m_logfile {nullptr};   /* The session-specific log file */
-    mxb::StopWatch    m_file_check_timer;    /* When was file checked for rotation */
+    FILE*             m_logfile {nullptr};          /* The session-specific log file */
+    mxb::StopWatch    m_file_check_timer;           /* When was file checked for rotation */
+    bool              m_write_error_logged {false}; /* Has write error been logged */
 
     /**
     * Helper struct for holding data before it's written to file.
@@ -219,7 +224,26 @@ private:
     LogEventData      m_event_data; /* Information about the latest event, used if logging execution time. */
 
     void check_session_log_rotation();
-    void write_log_entries(const char* date_string, const char* query, int querylen, int elapsed_ms);
-    bool write_log_entry(FILE* logfile, uint32_t data_flags, const char* time_string,
-                            const char* sql_string, size_t sql_str_len, int elapsed_ms);
+    void write_log_entries(const LogEventElems& elems);
+    void write_session_log_entry(const std::string& entry);
+    std::string generate_log_entry(uint64_t data_flags, const LogEventElems& elems) const;
+};
+
+/**
+ * Helper struct for passing some log entry info around. Other entry elements are fields of the
+ * filter session. Fields are pointers to avoid unnecessary copies.
+ */
+struct LogEventElems
+{
+    const char* date_string {nullptr}; /**< Formatted date */
+    const char* query {nullptr};       /**< Query. Not necessarily 0-terminated */
+    int         querylen {0};          /**< Length of query */
+    int         elapsed_ms {0};        /**< Processing time on backend */
+
+    LogEventElems(const char* date_string, const char* query, int querylen, int elapsed_ms = -1)
+    : date_string(date_string)
+    , query(query)
+    , querylen(querylen)
+    , elapsed_ms(elapsed_ms)
+    {}
 };

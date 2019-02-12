@@ -96,6 +96,9 @@ const MXS_ENUM_VALUE log_data_values[] =
     {NULL}
 };
 
+void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
+                                   const char* rep_newline, std::stringstream* output);
+
 /**
  * Open a file if it doesn't exist.
  *
@@ -104,51 +107,7 @@ const MXS_ENUM_VALUE log_data_values[] =
  * @return True if new file was opened successfully. False, if file already existed or if new file
  * could not be opened. If false is returned, the caller should check that the file object exists.
  */
-bool check_replace_file(const string& filename, FILE** ppFile)
-{
-    auto zfilename = filename.c_str();
-    const char retry_later[] = "Logging to file is disabled. The operation will be retried later.";
-
-    bool newfile = false;
-    // Check if file exists and create it if not.
-    int fd = open(zfilename, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-    if (fd < 0)
-    {
-        // EEXIST is the expected error code.
-        if (errno != EEXIST)
-        {
-            MXS_ERROR("Could not open log file '%s'. open() failed with error code %i: '%s'. %s",
-                      zfilename, errno, mxs_strerror(errno), retry_later);
-            // Do not close the existing file in this case since it was not touched. Likely though,
-            // writing to it will fail.
-        }
-        // Otherwise the file already exists and the existing file stream should be valid.
-    }
-    else
-    {
-        MXS_INFO("Log file '%s' recreated.", zfilename);
-        // File was created. Close the original file stream since it's pointing to a moved file.
-        auto fp = *ppFile;
-        if (fp)
-        {
-            fclose(fp);
-        }
-        fp = fdopen(fd, "w");
-        if (fp)
-        {
-            newfile = true;
-        }
-        else
-        {
-            MXS_ERROR("Could not convert file descriptor of '%s' to stream. fdopen() "
-                      "failed with error code %i: '%s'. %s",
-                      filename.c_str(), errno, mxs_strerror(errno), retry_later);
-            ::close(fd);
-        }
-        *ppFile = fp;
-    }
-    return newfile;
-}
+bool check_replace_file(const string& filename, FILE** ppFile);
 
 }
 
@@ -434,18 +393,11 @@ void QlaFilterSession::check_session_log_rotation()
 /**
  * Write QLA log entry/entries to disk
  *
- * @param my_instance Filter instance
- * @param my_session Filter session
- * @param date_string Date string
- * @param query Query string, not 0-terminated
- * @param querylen Query string length
- * @param elapsed_ms Query execution time, in milliseconds
+ * @params elems Log entry contents
  */
-void QlaFilterSession::write_log_entries(const char* date_string, const char* query, int querylen,
-                                         int elapsed_ms)
+void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 {
     const int check_interval = 60; // Check log rotation once per minute.
-    bool write_error = false;
     if (m_instance.m_settings.write_session_log)
     {
         if (m_file_check_timer.split().secs() > check_interval)
@@ -453,28 +405,18 @@ void QlaFilterSession::write_log_entries(const char* date_string, const char* qu
             check_session_log_rotation();
             m_file_check_timer.restart();
         }
-        // In this case there is no need to write the session number into the files.
-        if (!write_log_entry(m_logfile, m_instance.m_session_data_flags,
-                             date_string, query, querylen, elapsed_ms))
+
+        if (m_logfile)
         {
-            write_error = true;
+            string entry = generate_log_entry(m_instance.m_session_data_flags, elems);
+            write_session_log_entry(entry);
         }
     }
 
     if (m_instance.m_settings.write_unified_log)
     {
-        uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
-        if (!write_log_entry(m_instance.m_unified_fp, data_flags,
-                             date_string, query, querylen, elapsed_ms))
-        {
-            write_error = true;
-        }
-    }
-    if (write_error && !m_instance.m_write_warning_given)
-    {
-        MXS_ERROR("qla-filter '%s': Log file write failed. Suppressing further similar warnings.",
-                  m_instance.m_name.c_str());
-        m_instance.m_write_warning_given = true;
+        string entry = generate_log_entry(m_instance.m_settings.log_file_data_flags, elems);
+        m_instance.write_unified_log_entry(entry);
     }
 }
 
@@ -520,7 +462,8 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
         else
         {
             // If execution times are not logged, write the log entry now.
-            write_log_entries(event.query_date, query, query_len, -1);
+            LogEventElems elems(event.query_date, query, query_len);
+            write_log_entries(elems);
         }
     }
     /* Pass the query downstream */
@@ -535,11 +478,11 @@ int QlaFilterSession::clientReply(GWBUF* queue)
         const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         mxb_assert(data_flags & QlaInstance::LOG_DATA_REPLY_TIME);
 
-        char* query = NULL;
-        int query_len = 0;
+        char* sql = nullptr;
+        int sql_len = 0;
         if (data_flags & QlaInstance::LOG_DATA_QUERY)
         {
-            modutil_extract_SQL(event.query_clone, &query, &query_len);
+            modutil_extract_SQL(event.query_clone, &sql, &sql_len);
         }
 
         // Calculate elapsed time in milliseconds.
@@ -548,7 +491,8 @@ int QlaFilterSession::clientReply(GWBUF* queue)
         double elapsed_ms = 1E3 * (now.tv_sec - event.begin_time.tv_sec)
             + (now.tv_nsec - event.begin_time.tv_nsec) / (double)1E6;
 
-        write_log_entries(event.query_date, query, query_len, std::floor(elapsed_ms + 0.5));
+        LogEventElems elems(event.query_date, sql, sql_len, std::floor(elapsed_ms + 0.5));
+        write_log_entries(elems);
         event.clear();
     }
     return up.clientReply(up.instance, up.session, queue);
@@ -664,6 +608,58 @@ string QlaInstance::generate_log_header(uint64_t data_flags) const
     return header.str();
 }
 
+string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventElems& elems) const
+{
+    /* Printing to the file in parts would likely cause garbled printing if several threads write
+     * simultaneously, so we have to first print to a string. */
+    std::stringstream output;
+    string curr_sep;    // Use empty string as the first separator
+    const string& real_sep = m_instance.m_settings.separator;
+
+    if (data_flags & QlaInstance::LOG_DATA_SERVICE)
+    {
+        output << m_service;
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_SESSION)
+    {
+        output << curr_sep << m_ses_id;
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_DATE)
+    {
+        output << curr_sep << elems.date_string;
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_USER)
+    {
+        output << curr_sep << m_user << "@" << m_remote;
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
+    {
+        output << curr_sep << elems.elapsed_ms;
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_QUERY)
+    {
+        output << curr_sep;
+        if (!m_instance.m_settings.query_newline.empty())
+        {
+            print_string_replace_newlines(elems.query, elems.querylen,
+                                          m_instance.m_settings.query_newline.c_str(),
+                                          &output);
+        }
+        else
+        {
+            // The newline replacement is an empty string so print the query as is
+            output.write(elems.query, elems.querylen);
+        }
+    }
+    output << "\n";
+    return output.str();
+}
+
 bool QlaInstance::write_to_logfile(FILE* fp, const std::string& contents) const
 {
     bool error = false;
@@ -680,10 +676,55 @@ bool QlaInstance::write_to_logfile(FILE* fp, const std::string& contents) const
     return !error;
 }
 
-static void print_string_replace_newlines(const char* sql_string,
-                                          size_t sql_str_len,
-                                          const char* rep_newline,
-                                          std::stringstream* output)
+/**
+ * Write an entry to the session log file.
+ *
+ * @param   entry  Log entry contents
+ */
+void QlaFilterSession::write_session_log_entry(const string& entry)
+{
+    mxb_assert(m_logfile != NULL);
+    if (!m_instance.write_to_logfile(m_logfile, entry))
+    {
+        if (!m_write_error_logged)
+        {
+            MXS_ERROR("Failed to write to session log file '%s'. Suppressing further similar warnings.",
+                      m_filename.c_str());
+            m_write_error_logged = true;
+        }
+    }
+}
+
+/**
+ * Write an entry to the shared log file.
+ *
+ * @param   entry  Log entry contents
+ */
+void QlaInstance::write_unified_log_entry(const string& entry)
+{
+    std::lock_guard<std::mutex> guard(m_file_lock);
+    // TODO: Handle log rotation here.
+    if (m_unified_fp)
+    {
+        if (!write_to_logfile(m_unified_fp, entry))
+        {
+            if (!m_write_error_logged)
+            {
+                MXS_ERROR("Failed to write to unified log file '%s'. Suppressing further similar warnings.",
+                          m_unified_filename.c_str());
+                m_write_error_logged = true;
+            }
+        }
+    }
+}
+
+namespace
+{
+
+void print_string_replace_newlines(const char* sql_string,
+                                   size_t sql_str_len,
+                                   const char* rep_newline,
+                                   std::stringstream* output)
 {
     mxb_assert(output);
     size_t line_begin = 0;
@@ -732,80 +773,51 @@ static void print_string_replace_newlines(const char* sql_string,
     }
 }
 
-/**
- * Write an entry to the log file.
- *
- * @param   logfile       Target file
- * @param   data_flags    Controls what to write
- * @param   time_string   Date entry
- * @param   sql_string    SQL-query, *not* NULL terminated
- * @param   sql_str_len   Length of SQL-string
- * @param   elapsed_ms    Query execution time, in milliseconds
- * @return  The number of characters written, or a negative value on failure
- */
-bool QlaFilterSession::write_log_entry(FILE* logfile, uint32_t data_flags, const char* time_string,
-                                      const char* sql_string, size_t sql_str_len, int elapsed_ms)
+bool check_replace_file(const string& filename, FILE** ppFile)
 {
-    mxb_assert(logfile != NULL);
-    if (data_flags == 0)
-    {
-        // Nothing to print
-        return 0;
-    }
+    auto zfilename = filename.c_str();
+    const char retry_later[] = "Logging to file is disabled. The operation will be retried later.";
 
-    /* Printing to the file in parts would likely cause garbled printing if several threads write
-     * simultaneously, so we have to first print to a string. */
-    std::stringstream output;
-    string curr_sep;    // Use empty string as the first separator
-    const string& real_sep = m_instance.m_settings.separator;
-
-    if (data_flags & QlaInstance::LOG_DATA_SERVICE)
+    bool newfile = false;
+    // Check if file exists and create it if not.
+    int fd = open(zfilename, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+    if (fd < 0)
     {
-        output << m_service;
-        curr_sep = real_sep;
-    }
-    if (data_flags & QlaInstance::LOG_DATA_SESSION)
-    {
-        output << curr_sep << m_ses_id;
-        curr_sep = real_sep;
-    }
-    if (data_flags & QlaInstance::LOG_DATA_DATE)
-    {
-        output << curr_sep << time_string;
-        curr_sep = real_sep;
-    }
-    if (data_flags & QlaInstance::LOG_DATA_USER)
-    {
-        output << curr_sep << m_user << "@" << m_remote;
-        curr_sep = real_sep;
-    }
-    if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
-    {
-        output << curr_sep << elapsed_ms;
-        curr_sep = real_sep;
-    }
-    if (data_flags & QlaInstance::LOG_DATA_QUERY)
-    {
-        output << curr_sep;
-        if (!m_instance.m_settings.query_newline.empty())
+        // EEXIST is the expected error code.
+        if (errno != EEXIST)
         {
-            print_string_replace_newlines(sql_string, sql_str_len,
-                                          m_instance.m_settings.query_newline.c_str(),
-                                          &output);
+            MXS_ERROR("Could not open log file '%s'. open() failed with error code %i: '%s'. %s",
+                      zfilename, errno, mxs_strerror(errno), retry_later);
+            // Do not close the existing file in this case since it was not touched. Likely though,
+            // writing to it will fail.
+        }
+        // Otherwise the file already exists and the existing file stream should be valid.
+    }
+    else
+    {
+        MXS_INFO("Log file '%s' recreated.", zfilename);
+        // File was created. Close the original file stream since it's pointing to a moved file.
+        auto fp = *ppFile;
+        if (fp)
+        {
+            fclose(fp);
+        }
+        fp = fdopen(fd, "w");
+        if (fp)
+        {
+            newfile = true;
         }
         else
         {
-            // The newline replacement is an empty string so print the query as is
-            output.write(sql_string, sql_str_len);      // non-null-terminated string
+            MXS_ERROR("Could not convert file descriptor of '%s' to stream. fdopen() "
+                      "failed with error code %i: '%s'. %s",
+                      filename.c_str(), errno, mxs_strerror(errno), retry_later);
+            ::close(fd);
         }
+        *ppFile = fp;
     }
-    output << "\n";
-
-    return m_instance.write_to_logfile(logfile, output.str());
+    return newfile;
 }
-
-namespace
-{
 
 MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
