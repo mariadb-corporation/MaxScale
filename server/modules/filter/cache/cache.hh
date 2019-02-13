@@ -56,10 +56,10 @@ typedef enum cache_selects
 #define CACHE_ZDEFAULT_MAX_RESULTSET_ROWS "0"
 // Bytes
 #define CACHE_ZDEFAULT_MAX_RESULTSET_SIZE "0"
-// Seconds
-#define CACHE_ZDEFAULT_HARD_TTL "0"
-// Seconds
-#define CACHE_ZDEFAULT_SOFT_TTL "0"
+// Duration
+#define CACHE_ZDEFAULT_HARD_TTL "0s"
+// Duration
+#define CACHE_ZDEFAULT_SOFT_TTL "0s"
 // Integer value
 #define CACHE_ZDEFAULT_DEBUG "0"
 // Positive integer
@@ -207,6 +207,14 @@ public:
      * See @Storage::del_value
      */
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
+
+    /**
+     * Returns the monotonic time, expressed in milliseconds, since an
+     * unspecified starting point.
+     *
+     * @return The time.
+     */
+    static uint64_t time_ms();
 
 protected:
     Cache(const std::string& name,

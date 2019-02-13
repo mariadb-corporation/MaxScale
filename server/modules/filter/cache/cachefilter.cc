@@ -191,12 +191,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 "hard_ttl",
-                MXS_MODULE_PARAM_COUNT,
+                MXS_MODULE_PARAM_DURATION,
                 CACHE_ZDEFAULT_HARD_TTL
             },
             {
                 "soft_ttl",
-                MXS_MODULE_PARAM_COUNT,
+                MXS_MODULE_PARAM_DURATION,
                 CACHE_ZDEFAULT_SOFT_TTL
             },
             {
@@ -346,8 +346,8 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& c
     bool error = false;
 
     config.debug = ppParams->get_integer("debug");
-    config.hard_ttl = ppParams->get_integer("hard_ttl");
-    config.soft_ttl = ppParams->get_integer("soft_ttl");
+    config.hard_ttl = ppParams->get_duration("hard_ttl", mxs::config::INTERPRET_AS_SECONDS).count();
+    config.soft_ttl = ppParams->get_duration("soft_ttl",  mxs::config::INTERPRET_AS_SECONDS).count();
     config.max_size = ppParams->get_size("max_size");
     config.max_count = ppParams->get_integer("max_count");
     config.storage = ppParams->get_c_str_copy("storage");

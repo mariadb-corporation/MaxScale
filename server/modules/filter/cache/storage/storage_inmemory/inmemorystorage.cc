@@ -16,6 +16,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.hh>
+#include "../../cache.hh"
 #include "inmemorystoragest.hh"
 #include "inmemorystoragemt.hh"
 
@@ -31,6 +32,7 @@ const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 #if INMEMORY_KEY_LENGTH > CACHE_KEY_MAXLEN
 #error storage_inmemory key is too long.
 #endif
+
 }
 
 InMemoryStorage::InMemoryStorage(const string& name, const CACHE_STORAGE_CONFIG& config)
@@ -162,7 +164,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
 
         Entry& entry = i->second;
 
-        uint32_t now = time(NULL);
+        int64_t now = Cache::time_ms();
 
         bool is_hard_stale = hard_ttl == 0 ? false : (now - entry.time > hard_ttl);
         bool is_soft_stale = soft_ttl == 0 ? false : (now - entry.time > soft_ttl);
@@ -251,7 +253,7 @@ cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF& 
     const uint8_t* pData = GWBUF_DATA(&value);
 
     copy(pData, pData + size, pEntry->value.begin());
-    pEntry->time = time(NULL);
+    pEntry->time = Cache::time_ms();
 
     return CACHE_RESULT_OK;
 }

@@ -5,53 +5,7 @@ This filter was introduced in MariaDB MaxScale 2.1.
 Table of Contents
 =================
 
-* [Overview](#overview)
-* [Limitations](#limitations)
-   * [Invalidation](#invalidation)
-   * [Prepared Statements](#prepared-statements)
-   * [Security](#security)
-* [Configuration](#configuration)
-   * [Filter Parameters](#filter-parameters)
-      * [storage](#storage)
-      * [storage_options](#storage_options)
-      * [hard_ttl](#hard_ttl)
-      * [soft_ttl](#soft_ttl)
-      * [max_resultset_rows](#max_resultset_rows)
-      * [max_resultset_size](#max_resultset_size)
-      * [max_count](#max_count)
-      * [max_size](#max_size)
-      * [rules](#rules)
-      * [cached_data](#cached_data)
-      * [selects](#selects)
-      * [cache_inside_transactions](#cache_inside_transactions)
-      * [debug](#debug)
-      * [enabled](#enabled)
-   * [Runtime Configuration](#runtime-configuration)
-      * [@maxscale.cache.populate](#maxscalecachepopulate)
-      * [@maxscale.cache.use](#maxscalecacheuse)
-      * [@maxscale.cache.soft_ttl](#maxscalecachesoft_ttl)
-      * [@maxscale.cache.hard_ttl](#maxscalecachehard_ttl)
-      * [Client Driven Caching](#client-driven-caching)
-* [Rules](#rules-1)
-   * [When to Store](#when-to-store)
-      * [Qualified Names](#qualified-names)
-      * [Implication of the <em>default</em> database](#implication-of-the-default-database)
-      * [Regexp Matching](#regexp-matching)
-      * [Examples](#examples)
-   * [When to Use](#when-to-use)
-      * [Examples](#examples-1)
-* [Security](#security-1)
-* [Storage](#storage-1)
-   * [storage_inmemory](#storage_inmemory)
-   * [storage_rocksdb](#storage_rocksdb)
-   * [Parameters](#parameters)
-      * [cache_directory](#cache_directory)
-      * [collect_statistics](#collect_statistics)
-* [Example](#example)
-   * [Configuration](#configuration-1)
-   * [cache_rules.json](#cache_rulesjson)
-* [Performance](#performance)
-   * [Summary](#summary)
+[TOC]
 
 ## Overview
 
@@ -173,14 +127,19 @@ storage_options=storage_specific_option1=value1,storage_specific_option2=value2
 
 #### `hard_ttl`
 
-_Hard time to live_; the maximum amount of time - in seconds - the cached
+_Hard time to live_; the maximum amount of time the cached
 result is used before it is discarded and the result is fetched from the
 backend (and cached). See also `soft_ttl` below.
 
 ```
-hard_ttl=60
+hard_ttl=60s
 ```
-The default value is `0`, which means no limit.
+The default value is `0s`, which means no limit.
+
+The duration can be specified as explained
+[here](Getting-Started/Configuration-Guide.md#durations).
+If no explicit unit has been specified, the value is interpreted as seconds
+in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
 
 #### `soft_ttl`
 
@@ -194,10 +153,15 @@ from the backend. That is, as long as `soft_ttl` but not `hard_ttl` has passed,
 even if several clients request the same value at the same time, there will be
 just one request to the backend.
 ```
-soft_ttl=60
+soft_ttl=60s
 ```
 The default value is `0`, which means no limit. If the value of `soft_ttl` is
 larger than `hard_ttl` it will be adjusted down to the same value.
+
+The duration can be specifed as explained
+[here](Getting-Started/Configuration-Guide.md#durations).
+If no explicit unit has been specified, the value is interpreted as seconds
+in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
 
 #### `max_resultset_rows`
 

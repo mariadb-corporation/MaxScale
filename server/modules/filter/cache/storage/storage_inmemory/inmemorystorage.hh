@@ -73,8 +73,8 @@ private:
         {
         }
 
-        uint32_t time;
-        Value    value;
+        int64_t time;
+        Value   value;
     };
 
     struct Stats

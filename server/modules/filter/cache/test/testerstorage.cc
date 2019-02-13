@@ -18,6 +18,24 @@
 
 using namespace std;
 
+namespace
+{
+
+unsigned int millisleep(unsigned int milliseconds)
+{
+    unsigned int seconds = milliseconds / 1000;
+    milliseconds -= (seconds * 1000);
+
+    timespec req = { seconds, milliseconds * 1000000 };
+    timespec rem = { 0, 0 };
+
+    nanosleep(&req, &rem);
+
+    return rem.tv_sec * 1000 + rem.tv_nsec / 1000000;
+}
+
+}
+
 //
 // class TesterStorage::HitTask
 //
@@ -276,8 +294,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items)
     out() << "ST" << endl;
 
     config.thread_model = CACHE_THREAD_MODEL_ST;
-    config.hard_ttl = 6;
-    config.soft_ttl = 3;
+    config.hard_ttl = 6000;
+    config.soft_ttl = 3000;
 
     Storage* pStorage;
 
@@ -293,8 +311,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items)
     out() << "MT" << endl;
 
     config.thread_model = CACHE_THREAD_MODEL_MT;
-    config.hard_ttl = 6;
-    config.soft_ttl = 3;
+    config.hard_ttl = 6000;
+    config.soft_ttl = 3000;
 
     int rv2 = EXIT_FAILURE;
     pStorage = get_storage(config);
@@ -342,8 +360,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
         else
         {
             // Let's stay just below the soft_ttl value.
-            sleep(soft_ttl - 1);
-            slept += soft_ttl - 1;
+            millisleep(soft_ttl - 1000);
+            slept += soft_ttl - 1000;
 
             GWBUF* pValue;
 
@@ -359,8 +377,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
             gwbuf_free(pValue);
 
-            sleep(2);   // Expected to get us passed the soft ttl.
-            slept += 2;
+            millisleep(2000);   // Expected to get us passed the soft ttl.
+            slept += 2000;
 
             pValue = NULL;
             result = storage.get_value(cache_item.first, 0, &pValue);
@@ -385,8 +403,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
             gwbuf_free(pValue);
 
-            sleep(hard_ttl - slept + 1);    // Expected to get us passed the hard ttl.
-            slept += hard_ttl - slept + 1;
+            millisleep(hard_ttl - slept + 1000);    // Expected to get us passed the hard ttl.
+            slept += hard_ttl - slept + 1000;
 
             pValue = NULL;
             result = storage.get_value(cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);

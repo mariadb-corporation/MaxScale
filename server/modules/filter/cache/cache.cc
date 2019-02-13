@@ -209,3 +209,20 @@ json_t* Cache::do_get_info(uint32_t what) const
 
     return pInfo;
 }
+
+
+//static
+uint64_t Cache::time_ms()
+{
+    timespec t;
+
+    int rv = clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    if (rv != 0)
+    {
+        mxb_assert(errno == EINVAL); // CLOCK_MONOTONIC_COARSE not supported.
+        rv = clock_gettime(CLOCK_MONOTONIC, &t);
+        mxb_assert(rv == 0);
+    }
+
+    return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
+}
