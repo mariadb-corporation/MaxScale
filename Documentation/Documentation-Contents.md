@@ -85,6 +85,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Maxrows Filter](Filters/Maxrows.md)
  - [Named Server Filter](Filters/Named-Server-Filter.md)
  - [Query Log All](Filters/Query-Log-All-Filter.md)
+ - [Hint Filter](Filters/Hintfilter.md)
  - [RabbitMQ Filter](Filters/RabbitMQ-Filter.md)
  - [Regex Filter](Filters/Regex-Filter.md)
  - [Tee Filter](Filters/Tee-Filter.md)
