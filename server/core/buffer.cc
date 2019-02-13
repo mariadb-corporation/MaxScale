@@ -180,6 +180,7 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
     rval->end = buf->end;
     rval->gwbuf_type = buf->gwbuf_type;
     rval->tail = rval;
+    rval->hint = hint_dup(buf->hint);
     rval->next = NULL;
 
     return rval;
