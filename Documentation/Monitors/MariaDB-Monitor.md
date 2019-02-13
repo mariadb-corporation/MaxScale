@@ -332,34 +332,34 @@ following:
 
 1. Select the most up-to-date slave of the old master to be the new master. The
 selection criteria is as follows in descending priority:
-   1. gtid_IO_pos (latest event in relay log)
-   2. gtid_current_pos (most processed events)
-   3. log_slave_updates is on
-   4. disk space is not low
+      1. gtid_IO_pos (latest event in relay log)
+      2. gtid_current_pos (most processed events)
+      3. log_slave_updates is on
+      4. disk space is not low
 2. If the new master has unprocessed relay log items, cancel and try again
 later.
 3. Prepare the new master:
-   1. Remove the slave connection the new master used to replicate from the old
+      1. Remove the slave connection the new master used to replicate from the old
 master.
-   2. Disable the *read\_only*-flag.
-   3. Enable scheduled server events (if event handling is on).
-   4. Run the commands in `promotion_sql_file`.
-   5. Start replication from external master if one existed.
+      2. Disable the *read\_only*-flag.
+      3. Enable scheduled server events (if event handling is on).
+      4. Run the commands in `promotion_sql_file`.
+      5. Start replication from external master if one existed.
 4. Redirect all other slaves to replicate from the new master:
-   1. STOP SLAVE and RESET SLAVE
-   2. CHANGE MASTER TO
-   3. START SLAVE
+      1. STOP SLAVE and RESET SLAVE
+      2. CHANGE MASTER TO
+      3. START SLAVE
 5. Check that all slaves are replicating.
 
 **Switchover** swaps a running master with a running slave. It does the
 following:
 
 1. Prepare the old master for demotion:
-   1. Stop any external replication.
-   2. Enable the *read\_only*-flag to stop writes.
-   3. Disable scheduled server events (if event handling is on).
-   4. Run the commands in `demotion_sql_file`.
-   5. Flush the binary log (FLUSH LOGS) so that all events are on disk.
+      1. Stop any external replication.
+      2. Enable the *read\_only*-flag to stop writes.
+      3. Disable scheduled server events (if event handling is on).
+      4. Run the commands in `demotion_sql_file`.
+      5. Flush the binary log (FLUSH LOGS) so that all events are on disk.
 2. Wait for the new master to catch up with the old master.
 3. Promote new master and redirect slaves as in failover steps 3 and 4. Also
 redirect the demoted old master.
@@ -383,15 +383,15 @@ cluster are out of sync while the actual data is known to be in sync. The
 operation  proceeds as follows:
 
 1. Reset gtid:s and delete binary logs on all servers:
-   1. Stop (STOP SLAVE) and delete (RESET SLAVE ALL) all slave connections.
-   2. Enable the *read\_only*-flag.
-   3. Disable scheduled server events (if event handling is on).
-   3. Delete binary logs (RESET MASTER).
-   4. Set the sequence number of *gtid\_slave\_pos* to zero. This also affects
+      1. Stop (STOP SLAVE) and delete (RESET SLAVE ALL) all slave connections.
+      2. Enable the *read\_only*-flag.
+      3. Disable scheduled server events (if event handling is on).
+      3. Delete binary logs (RESET MASTER).
+      4. Set the sequence number of *gtid\_slave\_pos* to zero. This also affects
  *gtid\_current\_pos*.
 2. Prepare new master:
-   1. Disable the *read\_only*-flag.
-   2. Enable scheduled server events (if event handling is on).
+      1. Disable the *read\_only*-flag.
+      2. Enable scheduled server events (if event handling is on).
 3. Direct other servers to replicate from the new master as in the other
 operations.
 
