@@ -36,16 +36,23 @@ PamInstance* PamInstance::create(char** options)
     const string pam_db_name = DEFAULT_PAM_DATABASE_NAME;
     /** The table name where we store the users */
     const string pam_table_name = DEFAULT_PAM_TABLE_NAME;
+    /** Deletion statement for the in-memory table */
+    const string drop_sql = string("DROP TABLE IF EXISTS ") + pam_table_name + ";";
     /** CREATE TABLE statement for the in-memory table */
-    const string create_sql = string("CREATE TABLE IF NOT EXISTS ") + pam_table_name
-        + " (" + FIELD_USER + " varchar(255), " + FIELD_HOST + " varchar(255), "
-        + FIELD_DB + " varchar(255), " + FIELD_ANYDB + " boolean, "
-        + FIELD_AUTHSTR + " text);";
+    const string create_sql = string("CREATE TABLE ") + pam_table_name
+        + " (" + FIELD_USER + " varchar(255), "
+        + FIELD_HOST + " varchar(255), "
+        + FIELD_DB + " varchar(255), "
+        + FIELD_ANYDB + " boolean, "
+        + FIELD_AUTHSTR + " text, "
+        + FIELD_PROXY + " boolean);";
+
     if (sqlite3_threadsafe() == 0)
     {
         MXS_WARNING("SQLite3 was compiled with thread safety off. May cause "
                     "corruption of in-memory database.");
     }
+
     bool error = false;
     /* This handle may be used from multiple threads, set full mutex. */
     sqlite3* dbhandle = NULL;
@@ -58,9 +65,15 @@ PamInstance* PamInstance::create(char** options)
     }
 
     char* err;
+    if (!error && sqlite3_exec(dbhandle, drop_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to drop table: '%s'", err);
+        sqlite3_free(err);
+        error = true;
+    }
     if (!error && sqlite3_exec(dbhandle, create_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
     {
-        MXS_ERROR("Failed to create database: '%s'", err);
+        MXS_ERROR("Failed to create table: '%s'", err);
         sqlite3_free(err);
         error = true;
     }
@@ -96,12 +109,10 @@ PamInstance::PamInstance(sqlite3* dbhandle, const string& dbname, const string& 
  * @param db     Database
  * @param anydb  Global access to databases
  * @param pam_service The PAM service used
+ * @param proxy  Is the user anonymous with a proxy grant
  */
-void PamInstance::add_pam_user(const char* user,
-                               const char* host,
-                               const char* db,
-                               bool anydb,
-                               const char* pam_service)
+void PamInstance::add_pam_user(const char* user, const char* host, const char* db, bool anydb,
+                               const char* pam_service, bool proxy)
 {
     /**
      * The insert query template which adds users to the pam_users table.
@@ -110,7 +121,7 @@ void PamInstance::add_pam_user(const char* user,
      * no quotes around them. The quotes for strings are added in this function.
      */
     const string insert_sql_template =
-        "INSERT INTO " + m_tablename + " VALUES ('%s', '%s', %s, '%s', %s)";
+        "INSERT INTO " + m_tablename + " VALUES ('%s', '%s', %s, '%s', %s, '%s')";
 
     /** Used for NULL value creation in the INSERT query */
     const char NULL_TOKEN[] = "NULL";
@@ -141,17 +152,28 @@ void PamInstance::add_pam_user(const char* user,
     char insert_sql[len + 1];
     sprintf(insert_sql,
             insert_sql_template.c_str(),
-            user,
-            host,
-            db_str.c_str(),
-            anydb ? "1" : "0",
-            service_str.c_str());
+            user, host,
+            db_str.c_str(), anydb ? "1" : "0",
+            service_str.c_str(),
+            proxy ? "1" : "0");
 
     char* err;
     if (sqlite3_exec(m_dbhandle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to insert user: %s", err);
         sqlite3_free(err);
+    }
+    else
+    {
+        if (proxy)
+        {
+            MXS_INFO("Added anonymous PAM user ''@'%s' with proxy grants using service %s.",
+                     host, service_str.c_str());
+        }
+        else
+        {
+            MXS_INFO("Added normal PAM user '%s'@'%s' using service %s.", user, host, service_str.c_str());
+        }
     }
 }
 
@@ -209,8 +231,7 @@ int PamInstance::load_users(SERVICE* service)
                 if (mysql_query(mysql, PAM_USERS_QUERY))
                 {
                     MXS_ERROR("Failed to query server '%s' for PAM users: '%s'.",
-                              servers->server->name,
-                              mysql_error(mysql));
+                              servers->server->name, mysql_error(mysql));
                 }
                 else
                 {
@@ -219,23 +240,20 @@ int PamInstance::load_users(SERVICE* service)
                     if (res)
                     {
                         mxb_assert(mysql_num_fields(res) == PAM_USERS_QUERY_NUM_FIELDS);
-                        MXS_NOTICE("Loaded %llu users for service %s.",
-                                   mysql_num_rows(res),
-                                   service->name);
                         MYSQL_ROW row;
                         while ((row = mysql_fetch_row(res)))
                         {
-                            add_pam_user(row[0],
-                                         row[1],
-                                         row[2],
-                                         row[3] && strcasecmp(row[3], "Y") == 0,
-                                         row[4]);
+                            add_pam_user(row[0], row[1], // user, host
+                                         row[2], row[3] && strcasecmp(row[3], "Y") == 0, // db, anydb
+                                         row[4], // pam service
+                                         false); // not a proxy
                         }
                         mysql_free_result(res);
-                        if (query_anon_proxy_user(servers->server, mysql))
-                        {
-                            rval = MXS_AUTH_LOADUSERS_OK;
-                        }
+                    }
+
+                    if (fetch_anon_proxy_users(servers->server, mysql))
+                    {
+                        rval = MXS_AUTH_LOADUSERS_OK;
                     }
                 }
                 mysql_close(mysql);
@@ -306,63 +324,68 @@ json_t* PamInstance::diagnostic_json()
     return rval;
 }
 
-bool PamInstance::query_anon_proxy_user(SERVER* server, MYSQL* conn)
+bool PamInstance::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
 {
     bool success = true;
-    bool anon_user_found = false;
-    string anon_pam_service;
-    const char ANON_USER_QUERY[] = "SELECT authentication_string FROM mysql.user WHERE "
-                                   "(plugin = 'pam' AND user = '' AND host = '%');";
-    const char ANON_GRANT_QUERY[] = "SHOW GRANTS FOR ''@'%';";
+    const char ANON_USER_QUERY[] = "SELECT host,authentication_string FROM mysql.user WHERE "
+                                   "(plugin = 'pam' AND user = '');";
+
     const char GRANT_PROXY[] = "GRANT PROXY ON";
 
     // Query for the anonymous user which is used with group mappings
     if (mysql_query(conn, ANON_USER_QUERY))
     {
-        MXS_ERROR("Failed to query server '%s' for the anonymous PAM user: '%s'.",
-                  server->name,
-                  mysql_error(conn));
+        MXS_ERROR("Failed to query server '%s' for anonymous PAM users: '%s'.",
+                  server->name, mysql_error(conn));
         success = false;
     }
     else
     {
+        // Temporary storage of host,authentication_string for anonymous pam users.
+        std::vector<std::pair<string, string>> anon_users_info;
         MYSQL_RES* res = mysql_store_result(conn);
         if (res)
         {
-            MYSQL_ROW row = mysql_fetch_row(res);
-            if (row)
+            MYSQL_ROW row;
+            while ((row = mysql_fetch_row(res)))
             {
-                anon_user_found = true;
-                if (row[0])
-                {
-                    anon_pam_service = row[0];
-                }
+                string host = row[0] ? row[0] : "";
+                string auth_str = row[1] ? row[1] : "";
+                anon_users_info.push_back(std::make_pair(host, auth_str));
             }
             mysql_free_result(res);
         }
 
-        if (anon_user_found)
+        if (!anon_users_info.empty())
         {
-            // Check that the anon user has a proxy grant
-            if (mysql_query(conn, ANON_GRANT_QUERY))
+             MXS_INFO("Found %lu anonymous PAM user(s). Checking them for proxy grants.",
+                      anon_users_info.size());
+        }
+
+        for (const auto& elem : anon_users_info)
+        {
+            string query =  "SHOW GRANTS FOR ''@'" + elem.first + "';";
+            // Check that the anon user has a proxy grant.
+            if (mysql_query(conn, query.c_str()))
             {
-                MXS_ERROR("Failed to query server '%s' for the grants of the anonymous PAM user: '%s'.",
-                          server->name,
-                          mysql_error(conn));
+                MXS_ERROR("Failed to query server '%s' for grants of anonymous PAM user ''@'%s': '%s'.",
+                          server->name, elem.first.c_str(), mysql_error(conn));
                 success = false;
             }
             else
             {
                 if ((res = mysql_store_result(conn)))
                 {
+                    // The user may have multiple proxy grants, but is only added once.
                     MYSQL_ROW row;
                     while ((row = mysql_fetch_row(res)))
                     {
                         if (row[0] && strncmp(row[0], GRANT_PROXY, sizeof(GRANT_PROXY) - 1) == 0)
                         {
-                            MXS_NOTICE("Anonymous PAM user with proxy grant found. User account mapping "
-                                       "enabled.");
-                            add_pam_user("", "%", NULL, false, anon_pam_service.c_str());
+                            add_pam_user("", elem.first.c_str(), // user, host
+                                         NULL, false, // Unused
+                                         elem.second.c_str(), true); // service, proxy
+                            break;
                         }
                     }
                     mysql_free_result(res);

@@ -33,13 +33,10 @@ public:
     const std::string m_tablename;  /**< The table where users are stored */
 private:
     PamInstance(sqlite3* dbhandle, const std::string& m_dbname, const std::string& tablename);
-    void add_pam_user(const char* user,
-                      const char* host,
-                      const char* db,
-                      bool anydb,
-                      const char* pam_service);
+    void add_pam_user(const char* user, const char* host, const char* db, bool anydb,
+                      const char* pam_service, bool proxy);
     void delete_old_users();
-    bool query_anon_proxy_user(SERVER* server, MYSQL* conn);
+    bool fetch_anon_proxy_users(SERVER* server, MYSQL* conn);
 
     sqlite3* const m_dbhandle;      /**< SQLite3 database handle */
 };

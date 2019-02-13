@@ -257,36 +257,61 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
  * @param session MySQL session
  * @param services_out Output for services
  */
-void PamClientSession::get_pam_user_services(const DCB* dcb,
-                                             const MYSQL_session* session,
+void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
                                              StringVector* services_out)
 {
-    string services_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename
-        + " WHERE " + FIELD_USER + " = '" + session->user + "' AND '" + dcb->remote
-        + "' LIKE " + FIELD_HOST + " AND (" + FIELD_ANYDB + " = '1' OR '" + session->db
-        + "' = '' OR '" + session->db + "' LIKE " + FIELD_DB
-        + ") ORDER BY authentication_string;";
+    string services_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename + " WHERE "
+        + FIELD_USER + " = '" + session->user + "'"
+        + " AND '" + dcb->remote + "' LIKE " + FIELD_HOST
+        + " AND (" + FIELD_ANYDB + " = '1' OR '" + session->db + "' = '' OR '"
+        + session->db + "' LIKE " + FIELD_DB + ")"
+        + " AND " + FIELD_PROXY + " = '0' ORDER BY authentication_string;";
     MXS_DEBUG("PAM services search sql: '%s'.", services_query.c_str());
+
     char* err;
     if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb, services_out, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to execute query: '%s'", err);
         sqlite3_free(err);
     }
-    MXS_DEBUG("User '%s' matched %lu rows in %s db.",
-              session->user,
-              services_out->size(),
-              m_instance.m_tablename.c_str());
 
-    if (services_out->empty())
+    auto word_entry = [](size_t num) -> const char* {
+        return (num == 1) ? "entry" : "entries";
+    };
+
+    if (!services_out->empty())
     {
-        // No service found for user with correct username & password. Check if anonymous user exists.
+        auto num_services = services_out->size();
+        MXS_INFO("Found %lu valid PAM user %s for '%s'@'%s'.",
+                 num_services, word_entry(num_services), session->user, dcb->remote);
+    }
+    else
+    {
+        // No service found for user with correct username & host.
+        // Check if a matching anonymous user exists.
         const string anon_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename
-            + " WHERE " + FIELD_USER + " = '' AND " + FIELD_HOST + " = '%';";
+            + " WHERE " + FIELD_USER + " = ''"
+            + " AND '" + dcb->remote + "' LIKE " + FIELD_HOST +
+            + " AND " + FIELD_PROXY + " = '1' ORDER BY authentication_string;";
+        MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
+
         if (sqlite3_exec(m_dbhandle, anon_query.c_str(), user_services_cb, services_out, &err) != SQLITE_OK)
         {
             MXS_ERROR("Failed to execute query: '%s'", err);
             sqlite3_free(err);
+        }
+        else
+        {
+            auto num_services = services_out->size();
+            if (num_services == 0)
+            {
+                MXS_INFO("Found no PAM user entries for '%s'@'%s'.", session->user, dcb->remote);
+            }
+            else
+            {
+                MXS_INFO("Found %lu matching anonymous PAM user %s for '%s'@'%s'.",
+                         num_services, word_entry(num_services), session->user, dcb->remote);
+            }
         }
     }
 }

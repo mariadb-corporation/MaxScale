@@ -32,4 +32,5 @@ extern const string FIELD_HOST;
 extern const string FIELD_DB;
 extern const string FIELD_ANYDB;
 extern const string FIELD_AUTHSTR;
+extern const string FIELD_PROXY;
 extern const int NUM_FIELDS;

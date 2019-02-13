@@ -26,7 +26,8 @@ const string FIELD_HOST = "host";
 const string FIELD_DB = "db";
 const string FIELD_ANYDB = "anydb";
 const string FIELD_AUTHSTR = "authentication_string";
-const int NUM_FIELDS = 5;
+const string FIELD_PROXY = "proxy_grant";
+const int NUM_FIELDS = 6;
 
 /**
  * Initialize PAM authenticator
