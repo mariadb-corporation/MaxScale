@@ -919,7 +919,10 @@ add_test_executable(mxs2115_version_string.cpp mxs2115_version_string replicatio
 add_test_executable(mxs2295_change_user_loop.cpp mxs2295_change_user_loop mxs2295_change_user_loop LABELS REPL_BACKEND)
 
 # MXS-2300: Prune session command history
-add_test_executable(mxs2300_history_pruning.cpp mxs2300_history_pruning mxs2300_history_pruning LABELS REPL_BACKEND)
+add_test_executable(mxs2300_history_pruning.cpp mxs2300_history_pruning mxs2300_history_pruning LABELS readwritesplit REPL_BACKEND)
+
+# MXS-2326: Routing hints aren't cloned in gwbuf_clone
+add_test_executable(mxs2326_hint_clone.cpp mxs2326_hint_clone mxs2326_hint_clone LABELS readwritesplit REPL_BACKEND)
 
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
