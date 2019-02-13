@@ -1,6 +1,8 @@
 /**
  * @file long_test.cpp Run different load for long long execution (long load test)
  *
+ * time to execute test is defined by 'long_test_time' environmental variable
+ * e.g. 'long_test_time=3600 ./long_test'
  */
 
 
@@ -164,7 +166,8 @@ void *query_thread(void *ptr )
 {
     MYSQL * conn;
     t_data * data = (t_data *) ptr;
-    int i = 0;
+    int inserts_until_optimize = 100000;
+    int tn = 0;
     conn = open_conn_db_timeout(port,
             IP,
             (char *) "test",
@@ -176,8 +179,15 @@ void *query_thread(void *ptr )
     {
 
         Test->try_query(conn, data->sql);
-        i++;
-
+        if (tn >= inserts_until_optimize)
+        {
+            tn = 0;
+            Test->tprintf("Removing everything from table in the queries thread");
+            Test->try_query(conn, (char *) "DELETE FROM t1");
+            Test->tprintf("Optimizing table in the queries thread");
+            Test->try_query(conn, (char *) "OPTIMIZE TABLE t1");
+        }
+        tn++;
     }
     mysql_close(conn);
     return NULL;
@@ -208,6 +218,8 @@ void *read_thread(void *ptr )
 void *transaction_thread(void *ptr )
 {
     MYSQL * conn;
+    int transactions_until_optimize = 1000;
+    int tn = 0;
     t_data * data = (t_data *) ptr;
     conn = open_conn_db_timeout(port,
             IP,
@@ -228,6 +240,15 @@ void *transaction_thread(void *ptr )
             Test->try_query(conn, data->sql);
         }
         Test->try_query(conn, (char *) "COMMIT");
+        if (tn >= transactions_until_optimize)
+        {
+            tn = 0;
+            Test->tprintf("Removing everything from table in the transactions thread");
+            Test->try_query(conn, (char *) "DELETE FROM t1");
+            Test->tprintf("Optimizing table in the transactions thread");
+            Test->try_query(conn, (char *) "OPTIMIZE TABLE t1");
+        }
+        tn++;
     }
     mysql_close(conn);
 

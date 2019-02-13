@@ -40,6 +40,10 @@
 
 # $test_set - parameters to be send to 'ctest' (e.g. '-I 1,100',
 # '-LE UNSTABLE'
+# if $test_set starts from 'NAME#' ctest will not be executed,
+# the value of $test_set after 'NAME#' is used as bash command 
+# line
+# example: '#NAME long_test_time=3600 ./long_test'
 
 export vm_memory=${vm_memory:-"2048"}
 export dir=`pwd`
