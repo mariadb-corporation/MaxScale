@@ -81,9 +81,9 @@ private:
 
     void tick() override;
 
-    void check_hub_and_refresh_nodes();
-    void check_hub();
-    void choose_hub();
+    void check_cluster(Clustrix::Softfailed softfailed);
+    void check_hub(Clustrix::Softfailed softfailed);
+    void choose_hub(Clustrix::Softfailed softfailed);
     void refresh_nodes();
     bool check_cluster_membership(std::map<int, ClustrixMembership>* pMemberships);
 
@@ -106,6 +106,21 @@ private:
                            SERVER* pServer,
                            json_t** ppError);
 
+
+    bool should_check_cluster() const
+    {
+        return now() - m_last_cluster_check > m_config.cluster_monitor_interval();
+    }
+
+    void trigger_cluster_check()
+    {
+        m_last_cluster_check = 0;
+    }
+
+    void cluster_checked()
+    {
+        m_last_cluster_check = now();
+    }
 
     static long now()
     {

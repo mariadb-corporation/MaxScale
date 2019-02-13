@@ -150,7 +150,54 @@ bool Clustrix::is_part_of_the_quorum(const char* zName, const SERVER& server, MY
     }
     else
     {
-        MXS_ERROR("%s: Could not execute '%s' on %s:%d: %s", zName, zQuery, zAddress, port, mysql_error(pCon));
+        MXS_ERROR("%s: Could not execute '%s' on %s:%d: %s",
+                  zName, zQuery, zAddress, port, mysql_error(pCon));
+    }
+
+    return rv;
+}
+
+bool Clustrix::is_being_softfailed(const char* zName, const SERVER& server, MYSQL* pCon)
+{
+    bool rv = false;
+
+    const char* zAddress = server.address;
+    int port = server.port;
+
+    const char ZQUERY_TEMPLATE[] =
+        "SELECT sn.nodeid FROM system.softfailed_nodes AS sn INNER JOIN system.nodeinfo AS ni "
+        "WHERE sn.nodeid = ni.nodeid AND ni.iface_ip = '%s'";
+
+    char zQuery[sizeof(ZQUERY_TEMPLATE) + strlen(zAddress)];
+
+    sprintf(zQuery, ZQUERY_TEMPLATE, zAddress);
+
+    if (mysql_query(pCon, zQuery) == 0)
+    {
+        MYSQL_RES* pResult = mysql_store_result(pCon);
+
+        if (pResult)
+        {
+            mxb_assert(mysql_field_count(pCon) == 1);
+
+            MYSQL_ROW row;
+            while ((row = mysql_fetch_row(pResult)) != nullptr)
+            {
+                // If a row is found, it is because the node is being softfailed.
+                rv = true;
+            }
+
+            mysql_free_result(pResult);
+        }
+        else
+        {
+            MXS_WARNING("%s: No result returned for '%s' on %s:%d.", zName, zQuery, zAddress, port);
+        }
+    }
+    else
+    {
+        MXS_ERROR("%s: Could not execute '%s' on %s:%d: %s",
+                  zName, zQuery, zAddress, port, mysql_error(pCon));
     }
 
     return rv;
@@ -158,6 +205,7 @@ bool Clustrix::is_part_of_the_quorum(const char* zName, const SERVER& server, MY
 
 bool Clustrix::ping_or_connect_to_hub(const char* zName,
                                       const MXS_MONITORED_SERVER::ConnectionSettings& settings,
+                                      Softfailed softfailed,
                                       SERVER& server,
                                       MYSQL** ppCon)
 {
@@ -168,7 +216,16 @@ bool Clustrix::ping_or_connect_to_hub(const char* zName,
     {
         if (Clustrix::is_part_of_the_quorum(zName, server, *ppCon))
         {
-            connected = true;
+            if ((softfailed == Softfailed::REJECT) && Clustrix::is_being_softfailed(zName, server, *ppCon))
+            {
+                MXS_NOTICE("%s: The Clustrix node %s used as hub is part of the quorum, "
+                           "but it is being softfailed. Switching to another node.",
+                           zName, server.address);
+            }
+            else
+            {
+                connected = true;
+            }
         }
     }
     else

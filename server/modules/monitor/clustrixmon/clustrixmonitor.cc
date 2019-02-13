@@ -61,7 +61,9 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     m_config.set_cluster_monitor_interval(pParams->get_integer(CLUSTER_MONITOR_INTERVAL_NAME));
     m_config.set_health_check_threshold(pParams->get_integer(HEALTH_CHECK_THRESHOLD_NAME));
 
-    check_hub_and_refresh_nodes();
+    // At startup we accept softfailed nodes in an attempt to be able to
+    // connect at any cost. It'll be replaced once there is an alternative.
+    check_cluster(Clustrix::Softfailed::ACCEPT);
 
     return true;
 }
@@ -149,9 +151,9 @@ void ClustrixMonitor::post_loop()
 
 void ClustrixMonitor::tick()
 {
-    if (now() - m_last_cluster_check > m_config.cluster_monitor_interval())
+    if (should_check_cluster())
     {
-        check_hub_and_refresh_nodes();
+        check_cluster(Clustrix::Softfailed::REJECT);
     }
 
     switch (m_http.status())
@@ -176,7 +178,7 @@ void ClustrixMonitor::tick()
     }
 }
 
-void ClustrixMonitor::choose_hub()
+void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
 {
     mxb_assert(!m_pHub_con);
 
@@ -211,7 +213,7 @@ void ClustrixMonitor::choose_hub()
 
             if (ips.find(ms.server->address) == ips.end())
             {
-                if (Clustrix::ping_or_connect_to_hub(m_name, m_settings.conn_settings, ms))
+                if (Clustrix::ping_or_connect_to_hub(m_name, m_settings.conn_settings, softfailed, ms))
                 {
                     pHub_con = ms.con;
                     pHub_server = ms.server;
@@ -253,7 +255,8 @@ void ClustrixMonitor::refresh_nodes()
     if (check_cluster_membership(&memberships))
     {
         const char ZQUERY[] =
-            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid FROM system.nodeinfo AS ni "
+            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
+            "FROM system.nodeinfo AS ni "
             "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
 
         if (mysql_query(m_pHub_con, ZQUERY) == 0)
@@ -315,14 +318,16 @@ void ClustrixMonitor::refresh_nodes()
 
                             if (softfailed && !is_being_drained)
                             {
-                                MXS_NOTICE("%s: Node %d (%s) has been SOFTFAILed. Turning ON 'Being Drained'.",
+                                MXS_NOTICE("%s: Node %d (%s) has been SOFTFAILed. "
+                                           "Turning ON 'Being Drained'.",
                                            m_name, node.id(), node.server()->address);
 
                                 node.server()->set_status(SERVER_BEING_DRAINED);
                             }
                             else if (!softfailed && is_being_drained)
                             {
-                                MXS_NOTICE("%s: Node %d (%s) is no longer being SOFTFAILed. Turning OFF 'Being Drained'.",
+                                MXS_NOTICE("%s: Node %d (%s) is no longer being SOFTFAILed. "
+                                           "Turning OFF 'Being Drained'.",
                                            m_name, node.id(), node.server()->address);
 
                                 node.server()->clear_status(SERVER_BEING_DRAINED);
@@ -409,7 +414,7 @@ void ClustrixMonitor::refresh_nodes()
 
                 m_health_urls.swap(health_urls);
 
-                m_last_cluster_check = now();
+                cluster_checked();
             }
             else
             {
@@ -425,16 +430,16 @@ void ClustrixMonitor::refresh_nodes()
     }
 }
 
-void ClustrixMonitor::check_hub_and_refresh_nodes()
+void ClustrixMonitor::check_cluster(Clustrix::Softfailed softfailed)
 {
     if (m_pHub_con)
     {
-        check_hub();
+        check_hub(softfailed);
     }
 
     if (!m_pHub_con)
     {
-        choose_hub();
+        choose_hub(softfailed);
     }
 
     if (m_pHub_con)
@@ -443,12 +448,13 @@ void ClustrixMonitor::check_hub_and_refresh_nodes()
     }
 }
 
-void ClustrixMonitor::check_hub()
+void ClustrixMonitor::check_hub(Clustrix::Softfailed softfailed)
 {
     mxb_assert(m_pHub_con);
     mxb_assert(m_pHub_server);
 
-    if (!Clustrix::ping_or_connect_to_hub(m_name, m_settings.conn_settings, *m_pHub_server, &m_pHub_con))
+    if (!Clustrix::ping_or_connect_to_hub(m_name, m_settings.conn_settings, softfailed,
+                                          *m_pHub_server, &m_pHub_con))
     {
         mysql_close(m_pHub_con);
         m_pHub_con = nullptr;
@@ -658,7 +664,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
                         if (!node.is_running())
                         {
                             // Ok, the node is down. Trigger a cluster check at next tick.
-                            m_last_cluster_check = 0;
+                            trigger_cluster_check();
                         }
                     }
 
@@ -677,7 +683,13 @@ bool ClustrixMonitor::check_http(Call::action_t action)
 
 bool ClustrixMonitor::perform_softfail(SERVER* pServer, json_t** ppError)
 {
-    return perform_operation(Operation::SOFTFAIL, pServer, ppError);
+    bool rv = perform_operation(Operation::SOFTFAIL, pServer, ppError);
+
+    // Irrespective of whether the operation succeeded or not
+    // a cluster check is triggered at next tick.
+    trigger_cluster_check();
+
+    return rv;
 }
 
 bool ClustrixMonitor::perform_unsoftfail(SERVER* pServer, json_t** ppError)
@@ -698,7 +710,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
 
     if (!m_pHub_con)
     {
-        check_hub_and_refresh_nodes();
+        check_cluster(Clustrix::Softfailed::ACCEPT);
     }
 
     if (m_pHub_con)
