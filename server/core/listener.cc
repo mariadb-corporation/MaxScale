@@ -245,16 +245,17 @@ int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version)
  * @param key SSL private key
  * @param ca_cert SSL CA certificate
  */
-void listener_set_certificates(SSL_LISTENER* ssl_listener, char* cert, char* key, char* ca_cert)
+void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& cert,
+                               const std::string& key, const std::string& ca_cert)
 {
     MXS_FREE(ssl_listener->ssl_cert);
-    ssl_listener->ssl_cert = cert ? MXS_STRDUP_A(cert) : NULL;
+    ssl_listener->ssl_cert = !cert.empty() ? MXS_STRDUP_A(cert.c_str()) : nullptr;
 
     MXS_FREE(ssl_listener->ssl_key);
-    ssl_listener->ssl_key = key ? MXS_STRDUP_A(key) : NULL;
+    ssl_listener->ssl_key = !key.empty() ? MXS_STRDUP_A(key.c_str()) : nullptr;
 
     MXS_FREE(ssl_listener->ssl_ca_cert);
-    ssl_listener->ssl_ca_cert = ca_cert ? MXS_STRDUP_A(ca_cert) : NULL;
+    ssl_listener->ssl_ca_cert = !ca_cert.empty() ? MXS_STRDUP_A(ca_cert.c_str()) : nullptr;
 }
 
 RSA* create_rsa(int bits)

@@ -1129,10 +1129,10 @@ json_t* Server::server_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 
-bool Server::set_disk_space_threshold(const char* disk_space_threshold)
+bool Server::set_disk_space_threshold(const string& disk_space_threshold)
 {
     DiskSpaceLimits dst;
-    bool rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
+    bool rv = config_parse_disk_space_threshold(&dst, disk_space_threshold.c_str());
     if (rv)
     {
         set_disk_space_limits(dst);

@@ -215,8 +215,6 @@ static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 
 static bool        process_config_context(CONFIG_CONTEXT*);
 static bool        process_config_update(CONFIG_CONTEXT*);
-static char*       config_get_value(MXS_CONFIG_PARAMETER*, const char*);
-static const char* config_get_value_string(const MXS_CONFIG_PARAMETER* params, const char* name);
 static int         handle_global_item(const char*, const char*);
 static bool        check_config_objects(CONFIG_CONTEXT* context);
 static int         maxscale_getline(char** dest, int* size, FILE* file);
@@ -1253,33 +1251,6 @@ bool valid_object_type(std::string type)
     return types.count(type);
 }
 
-/**
- * Get the value of a config parameter
- *
- * @param params        The linked list of config parameters
- * @param name          The parameter to return
- * @return the parameter value or NULL if not found
- */
-static char* config_get_value(MXS_CONFIG_PARAMETER* params, const char* name)
-{
-    while (params)
-    {
-        if (!strcmp(params->name, name))
-        {
-            return params->value;
-        }
-
-        params = params->next;
-    }
-    return NULL;
-}
-
-const MXS_MODULE* get_module(CONFIG_CONTEXT* obj, const char* param_name, const char* module_type)
-{
-    const char* module = config_get_value(obj->parameters, param_name);
-    return module ? get_module(module, module_type) : NULL;
-}
-
 const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
 {
     std::string type = obj->parameters->get_string(CN_TYPE);
@@ -1381,7 +1352,7 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
     {
         for (int i = 0; p[i].name; i++)
         {
-            if (config_get_value(obj->parameters, p[i].name))
+            if (obj->parameters->contains(p[i].name))
             {
                 if (p[i].type == MXS_MODULE_PARAM_SERVICE
                     || p[i].type == MXS_MODULE_PARAM_SERVER)
@@ -1395,7 +1366,7 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
 
     std::string type = obj->parameters->get_string(CN_TYPE);
 
-    if (type == CN_SERVICE && config_get_value(obj->parameters, CN_FILTERS))
+    if (type == CN_SERVICE && obj->parameters->contains(CN_FILTERS))
     {
         for (std::string name : mxs::strtok(obj->parameters->get_string(CN_FILTERS), "|"))
         {
@@ -1403,12 +1374,12 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
         }
     }
 
-    if (type == CN_SERVICE && config_get_value(obj->parameters, CN_CLUSTER))
+    if (type == CN_SERVICE && obj->parameters->contains(CN_CLUSTER))
     {
         rval.insert(name_to_object(objects, obj, obj->parameters->get_string(CN_CLUSTER)));
     }
 
-    if ((type == CN_MONITOR || type == CN_SERVICE) && config_get_value(obj->parameters, CN_SERVERS))
+    if ((type == CN_MONITOR || type == CN_SERVICE) && obj->parameters->contains(CN_SERVERS))
     {
         for (std::string name : mxs::strtok(obj->parameters->get_string(CN_SERVERS), ","))
         {
@@ -2714,11 +2685,11 @@ bool config_create_ssl(const char* name,
     if (value)
     {
         bool error = false;
-        char* ssl_cert = config_get_value(params, CN_SSL_CERT);
-        char* ssl_key = config_get_value(params, CN_SSL_KEY);
-        char* ssl_ca_cert = config_get_value(params, CN_SSL_CA_CERT);
+        string ssl_cert = params->get_string(CN_SSL_CERT);
+        string ssl_key = params->get_string(CN_SSL_KEY);
+        string ssl_ca_cert = params->get_string(CN_SSL_CA_CERT);
 
-        if (ssl_ca_cert == NULL)
+        if (ssl_ca_cert.empty())
         {
             MXS_ERROR("CA Certificate missing for '%s'."
                       "Please provide the path to the certificate authority "
@@ -2729,7 +2700,7 @@ bool config_create_ssl(const char* name,
 
         if (require_cert)
         {
-            if (ssl_cert == NULL)
+            if (ssl_cert.empty())
             {
                 MXS_ERROR("Server certificate missing for listener '%s'."
                           "Please provide the path to the server certificate by adding "
@@ -2738,7 +2709,7 @@ bool config_create_ssl(const char* name,
                 error = true;
             }
 
-            if (ssl_key == NULL)
+            if (ssl_key.empty())
             {
                 MXS_ERROR("Server private key missing for listener '%s'. "
                           "Please provide the path to the server certificate key by "
@@ -2765,9 +2736,9 @@ bool config_create_ssl(const char* name,
 
         listener_set_certificates(ssl, ssl_cert, ssl_key, ssl_ca_cert);
 
-        mxb_assert(access(ssl_ca_cert, F_OK) == 0);
-        mxb_assert(!ssl_cert || access(ssl_cert, F_OK) == 0);
-        mxb_assert(!ssl_key || access(ssl_key, F_OK) == 0);
+        mxb_assert(access(ssl_ca_cert.c_str(), F_OK) == 0);
+        mxb_assert(ssl_cert.empty() || access(ssl_cert.c_str(), F_OK) == 0);
+        mxb_assert(ssl_key.empty() || access(ssl_key.c_str(), F_OK) == 0);
 
         if (!SSL_LISTENER_init(ssl))
         {
@@ -3673,19 +3644,19 @@ int create_new_service(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    char* user = config_get_value(obj->parameters, CN_USER);
-    char* auth = config_get_value(obj->parameters, CN_PASSWORD);
+    string user = obj->parameters->get_string(CN_USER);
+    string auth = obj->parameters->get_string(CN_PASSWORD);
     const MXS_MODULE* module = get_module(router.c_str(), MODULE_ROUTER);
     mxb_assert(module);
 
-    if ((!user || !auth)
+    if ((user.empty() || auth.empty())
         && !rcap_type_required(module->module_capabilities, RCAP_TYPE_NO_AUTH))
     {
         MXS_ERROR("Service '%s' is missing %s%s%s.",
                   obj->object,
-                  user ? "" : "the 'user' parameter",
-                  !user && !auth ? " and " : "",
-                  auth ? "" : "the 'password' parameter");
+                  !user.empty() ? "" : "the 'user' parameter",
+                  user.empty() && auth.empty() ? " and " : "",
+                  !auth.empty() ? "" : "the 'password' parameter");
         return 1;
     }
 
@@ -3719,7 +3690,8 @@ int create_new_service(CONFIG_CONTEXT* obj)
             }
         }
 
-        if (char* filters = config_get_value(obj->parameters, CN_FILTERS))
+        string filters = obj->parameters->get_string(CN_FILTERS);
+        if (!filters.empty())
         {
             auto flist = mxs::strtok(filters, "|");
 
@@ -3805,17 +3777,14 @@ int create_new_server(CONFIG_CONTEXT* obj)
 
     if (Server* server = Server::server_alloc(obj->object, obj->parameters))
     {
-        const char* disk_space_threshold = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
-        if (disk_space_threshold)
+        auto disk_space_threshold = obj->parameters->get_string(CN_DISK_SPACE_THRESHOLD);
+        if (!server->set_disk_space_threshold(disk_space_threshold))
         {
-            if (!server->set_disk_space_threshold(disk_space_threshold))
-            {
-                MXS_ERROR("Invalid value for '%s' for server %s: %s",
-                          CN_DISK_SPACE_THRESHOLD,
-                          server->name(),
-                          disk_space_threshold);
-                error = true;
-            }
+            MXS_ERROR("Invalid value for '%s' for server %s: %s",
+                      CN_DISK_SPACE_THRESHOLD,
+                      server->name(),
+                      disk_space_threshold.c_str());
+            error = true;
         }
     }
     else
@@ -3920,17 +3889,17 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 
     int error_count = 0;
 
-    const char* port = config_get_value(obj->parameters, CN_PORT);
-    const char* socket = config_get_value(obj->parameters, CN_SOCKET);
+    bool port_defined = obj->parameters->contains(CN_PORT);
+    bool socket_defined = obj->parameters->contains(CN_SOCKET);
 
-    if (socket && port)
+    if (port_defined && socket_defined)
     {
         MXS_ERROR("Creation of listener '%s' failed because both 'socket' and 'port' "
                   "are defined. Only one of them is allowed.",
                   obj->object);
         error_count++;
     }
-    else if (!socket && !port)
+    else if (!port_defined && !socket_defined)
     {
         MXS_ERROR("Listener '%s' is missing a required parameter. A Listener "
                   "must have a service, protocol and port (or socket) defined.",
@@ -3943,23 +3912,29 @@ int create_new_listener(CONFIG_CONTEXT* obj)
         Service* service = static_cast<Service*>(obj->parameters->get_service(CN_SERVICE));
         mxb_assert(service);
 
+        // The conditionals just enforce defaults expected in the function.
+        auto port = port_defined ? obj->parameters->get_integer(CN_PORT) : 0;
+        auto socket = socket_defined ? obj->parameters->get_string(CN_SOCKET) : "";
+
         // Remove this once maxadmin is removed
-        if (strcasecmp(protocol.c_str(), "maxscaled") == 0 && socket
-            && strcmp(socket, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG) == 0)
+        if (strcasecmp(protocol.c_str(), "maxscaled") == 0 && socket_defined
+            && socket == MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG)
         {
             socket = MAXADMIN_DEFAULT_SOCKET;
             address = "";
         }
 
-        if (auto l = service_find_listener(service, socket ? socket : "", address, socket ? 0 : atoi(port)))
+        if (auto l = service_find_listener(service, socket, address, port))
         {
+            string socket_type = socket_defined ? "socket" : "port";
+            string socket_definition = socket_defined ? socket : obj->parameters->get_string(CN_PORT);
             MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
                       "listener '%s' already listens on the %s %s.",
                       obj->object,
                       service->name(),
                       l->name(),
-                      socket ? "socket" : "port",
-                      socket ? socket : port);
+                      socket_type.c_str(),
+                      socket_definition.c_str());
             return 1;
         }
 
@@ -3975,9 +3950,9 @@ int create_new_listener(CONFIG_CONTEXT* obj)
         // authenticators that are specific to each protocol module
         auto authenticator = obj->parameters->get_string(CN_AUTHENTICATOR);
         auto authenticator_options = obj->parameters->get_string(CN_AUTHENTICATOR_OPTIONS);
-        int net_port = socket ? 0 : atoi(port);
+        int net_port = socket_defined ? 0 : port;
 
-        auto listener = Listener::create(service, obj->object, protocol, socket ? socket : address,
+        auto listener = Listener::create(service, obj->object, protocol, socket_defined ? socket : address,
                                          net_port, authenticator, authenticator_options, ssl_info);
 
         if (!listener)
@@ -3997,8 +3972,9 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 int create_new_filter(CONFIG_CONTEXT* obj)
 {
     int error_count = 0;
-    const char* module = config_get_value(obj->parameters, CN_MODULE);
-    mxb_assert(*module);
+    auto module_str = obj->parameters->get_string(CN_MODULE);
+    mxb_assert(!module_str.empty());
+    const char* module = module_str.c_str();
 
     if (const MXS_MODULE* mod = get_module(module, MODULE_FILTER))
     {

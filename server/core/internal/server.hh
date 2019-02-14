@@ -281,7 +281,7 @@ public:
      *
      * @return True, if the provided string is valid and the threshold could be set.
      */
-    bool set_disk_space_threshold(const char* disk_space_threshold);
+    bool set_disk_space_threshold(const std::string& disk_space_threshold);
 
     /**
      * Print all servers

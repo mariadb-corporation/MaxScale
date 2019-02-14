@@ -298,8 +298,8 @@ SListener listener_find(const std::string& name);
 std::vector<SListener> listener_find_by_service(const SERVICE* service);
 
 int  listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
-void listener_set_certificates(SSL_LISTENER* ssl_listener, char* cert, char* key, char* ca_cert);
-
+void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& cert,
+                               const std::string& key, const std::string& ca_cert);
 
 /**
  * Initialize SSL configuration
