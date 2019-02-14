@@ -256,7 +256,7 @@ void *transaction_thread(void *ptr )
         int stmt_num = 200000 / strlen(data->sql);
         for (int i = 0; i < stmt_num; i++)
         {
-            Test->try_query(conn, (char *) "test1", data->sql);
+            try_and_reconnect(conn, (char *) "test1", data->sql);
         }
         Test->try_query(conn, (char *) "COMMIT");
         if (tn >= transactions_until_optimize)
