@@ -375,6 +375,10 @@ public:
      */
     static void set_multiple(MXS_CONFIG_PARAMETER** destination, const MXS_CONFIG_PARAMETER* source);
 
+    static void set_from_list(MXS_CONFIG_PARAMETER** destination,
+                              std::vector<std::pair<const char*, const char*>> list,
+                              const MXS_MODULE_PARAM* module_params = NULL);
+
     /**
      * Remove a key-value pair from the container.
      *
@@ -667,27 +671,4 @@ bool config_is_valid_name(const char* name, std::string* reason = nullptr);
 inline bool config_is_valid_name(const std::string& name, std::string* reason = nullptr)
 {
     return config_is_valid_name(name.c_str());
-}
-
-
-namespace maxscale
-{
-
-// Helper class for allocating temporary configuration parameters
-class ParamList
-{
-public:
-    ParamList(const ParamList&) = delete;
-    ParamList& operator=(const ParamList&) = delete;
-
-    ParamList(std::initializer_list<std::pair<const char*, const char*>> list,
-              const MXS_MODULE_PARAM* module_params = NULL);
-
-    ~ParamList();
-
-    MXS_CONFIG_PARAMETER* params();
-
-private:
-    CONFIG_CONTEXT m_ctx = {(char*)""};
-};
 }

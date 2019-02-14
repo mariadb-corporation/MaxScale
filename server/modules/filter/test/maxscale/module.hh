@@ -28,45 +28,6 @@ namespace maxscale
 class Module
 {
 public:
-    class ConfigParameters : public MXS_CONFIG_PARAMETER
-    {
-        ConfigParameters(const ConfigParameters&);
-        ConfigParameters& operator=(const ConfigParameters&);
-
-    public:
-        ~ConfigParameters();
-
-        /**
-         * Get the value of a parameter
-         *
-         * @param zName The name of a parameter.
-         *
-         * @return The value of the parameter or NULL if the parameter does not exist.
-         */
-        const char* get(const char* zName) const;
-
-        /**
-         * Set the value of a parameter
-         *
-         * @param zName  The name of a parameter.
-         * @param zValue The value of the parameter.
-         */
-        void set_value(const char* zName, const char* zValue);
-
-        void set_value(const char* zName, const std::string& value);
-
-    private:
-        friend class Module;
-
-        ConfigParameters(const MXS_MODULE_PARAM* pParams);
-
-        const MXS_CONFIG_PARAMETER* get_param(const char* zName) const;
-        MXS_CONFIG_PARAMETER*       get_param(const char* zName);
-
-        MXS_CONFIG_PARAMETER* get_tail();
-
-        std::deque<std::string> m_values;   /** Storage for modified parameters. */
-    };
 
     /**
      * Get a ConfigParameters instance containing the default values
@@ -74,7 +35,7 @@ public:
      *
      * @return A ConfigParameters object.
      */
-    std::auto_ptr<ConfigParameters> create_default_parameters() const;
+    MXS_CONFIG_PARAMETER* create_default_parameters() const;
 
     /**
      * Load a module with a specific name, assumed to be of a specific type.

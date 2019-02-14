@@ -43,13 +43,7 @@
 #include "../server.cc"
 #include "../internal/server.hh"
 
-static mxs::ParamList params(
-{
-    {"address", "127.0.0.1"},
-    {"port", "9876"},
-    {"protocol", "HTTPD"},
-    {"authenticator", "NullAuthAllow"}
-}, config_server_params);
+static MXS_CONFIG_PARAMETER* params = nullptr;
 
 /**
  * test1    Allocate a server and do lots of other things
@@ -62,7 +56,7 @@ static int test1()
 
     /* Server tests */
     fprintf(stderr, "testserver : creating server called MyServer");
-    Server* server = Server::server_alloc("uniquename", params.params());
+    Server* server = Server::server_alloc("uniquename", params);
     mxb_assert_message(server, "Allocating the server should not fail");
 
     fprintf(stderr, "\t..done\nTest Parameter for Server.");
@@ -134,7 +128,7 @@ bool test_serialize()
     char old_config_name[] = "serialized-server.cnf.old";
     char* persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    Server* server = Server::server_alloc(name, params.params());
+    Server* server = Server::server_alloc(name, params);
     TEST(server, "Server allocation failed");
 
     /** Make sure the files don't exist */
@@ -179,6 +173,13 @@ int main(int argc, char** argv)
     set_libdir(MXS_STRDUP_A("../../modules/protocol/HTTPD/"));
     load_module("HTTPD", MODULE_PROTOCOL);
 
+    MXS_CONFIG_PARAMETER::set_from_list(&params,
+                                        {
+                                                {"address", "127.0.0.1"},
+                                                {"port", "9876"},
+                                                {"protocol", "HTTPD"},
+                                                {"authenticator", "NullAuthAllow"}
+                                        }, config_server_params);
     int result = 0;
 
     result += test1();

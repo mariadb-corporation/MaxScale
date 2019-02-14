@@ -1966,6 +1966,29 @@ void MXS_CONFIG_PARAMETER::set_multiple(MXS_CONFIG_PARAMETER** destination, cons
     }
 }
 
+void MXS_CONFIG_PARAMETER::set_from_list(MXS_CONFIG_PARAMETER** destination,
+                                         std::vector<std::pair<const char*, const char*>> list,
+                                         const MXS_MODULE_PARAM* module_params)
+{
+    // Add custom values.
+    for (const auto& a : list)
+    {
+        MXS_CONFIG_PARAMETER::set(destination, a.first, a.second);
+    }
+
+    if (module_params)
+    {
+        // Add default values for the rest of the parameters.
+        for (auto module_param = module_params; module_param->name; module_param++)
+        {
+            if (module_param->default_value && !(*destination)->contains(module_param->name))
+            {
+                MXS_CONFIG_PARAMETER::set(destination, module_param->name, module_param->default_value);
+            }
+        }
+    }
+}
+
 void MXS_CONFIG_PARAMETER::remove(MXS_CONFIG_PARAMETER** ppParams, const string& key)
 {
     mxb_assert(ppParams);
@@ -4951,34 +4974,6 @@ bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* pDisk_space_thre
     }
 
     return success;
-}
-
-namespace maxscale
-{
-
-ParamList::ParamList(std::initializer_list<std::pair<const char*, const char*>> list,
-                     const MXS_MODULE_PARAM* module_params)
-{
-    for (const auto& a : list)
-    {
-        config_add_param(&m_ctx, a.first, a.second);
-    }
-
-    if (module_params)
-    {
-        config_add_defaults(&m_ctx, module_params);
-    }
-}
-
-ParamList::~ParamList()
-{
-    MXS_CONFIG_PARAMETER::free_all(&m_ctx.parameters);
-}
-
-MXS_CONFIG_PARAMETER* ParamList::params()
-{
-    return m_ctx.parameters;
-}
 }
 
 void dump_if_changed(const MXS_MODULE_PARAM* params,

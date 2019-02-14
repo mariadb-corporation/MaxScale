@@ -119,26 +119,13 @@ public:
     {
         for (const auto& elem : parameters)
         {
-            // Allocate and add new head element.
-            MXS_CONFIG_PARAMETER* new_elem =
-                    static_cast<MXS_CONFIG_PARAMETER*>(MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER)));
-            new_elem->name = MXS_STRDUP(elem.name.c_str());
-            new_elem->value = MXS_STRDUP(elem.value.c_str());
-            new_elem->next = m_params;
-            m_params = new_elem;
+            MXS_CONFIG_PARAMETER::set(&m_params, elem.name, elem.value);
         }
     }
 
     ~ParamAdaptor()
     {
-        while (m_params)
-        {
-            auto elem = m_params;
-            m_params = elem->next;
-            MXS_FREE(elem->name);
-            MXS_FREE(elem->value);
-            MXS_FREE(elem);
-        }
+        MXS_CONFIG_PARAMETER::free_all(&m_params);
     }
 
     operator MXS_CONFIG_PARAMETER*()
