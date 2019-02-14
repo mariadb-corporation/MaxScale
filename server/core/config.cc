@@ -1709,34 +1709,6 @@ static bool process_config_context(CONFIG_CONTEXT* context)
     return error_count == 0;
 }
 
-void do_passwd_deprecation(CONFIG_CONTEXT* obj)
-{
-    if (auto p = config_get_param(obj->parameters, "passwd"))
-    {
-        if (obj->parameters->contains(CN_PASSWORD))
-        {
-            MXS_WARNING("Both 'password' and 'passwd' specified. Using value of '%s'.", CN_PASSWORD);
-        }
-
-        MXS_WARNING("The parameter 'passwd' is deprecated: use '%s' instead", CN_PASSWORD);
-        config_replace_param(obj, CN_PASSWORD, p->value);
-    }
-}
-
-MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name)
-{
-    while (params)
-    {
-        if (!strcmp(params->name, name))
-        {
-            return params;
-        }
-
-        params = params->next;
-    }
-    return NULL;
-}
-
 bool MXS_CONFIG_PARAMETER::get_bool(const std::string& key) const
 {
     string param_value = get_string(key);
@@ -1963,25 +1935,18 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 
 bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    MXS_CONFIG_PARAMETER* param = config_get_param(obj->parameters, key);
-    mxb_assert(param);
-    int paramlen = strlen(param->value) + strlen(value) + 2;
-    char tmp[paramlen];
+    mxb_assert(obj->parameters->contains(key));
+    auto old_val = obj->parameters->get_string(key);
+    string new_val = old_val + "," + value;
+    char* new_val_z = config_clean_string_list(new_val.c_str());
+
     bool rval = false;
-
-    strcpy(tmp, param->value);
-    strcat(tmp, ",");
-    strcat(tmp, value);
-
-    char* new_value = config_clean_string_list(tmp);
-
-    if (new_value)
+    if (new_val_z)
     {
-        MXS_FREE(param->value);
-        param->value = new_value;
+        MXS_CONFIG_PARAMETER::set(&obj->parameters, key, new_val_z);
+        MXS_FREE(new_val_z);
         rval = true;
     }
-
     return rval;
 }
 
@@ -3169,8 +3134,6 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
                 rval = false;
             }
         }
-
-        do_passwd_deprecation(obj);
 
         for (const auto& a : to_be_removed)
         {

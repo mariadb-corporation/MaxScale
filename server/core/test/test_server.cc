@@ -112,14 +112,13 @@ bool test_load_config(const char* input, Server* server)
             config_add_defaults(obj, config_server_params);
 
             TEST(strcmp(obj->object, server->name()) == 0, "Server names differ");
-            TEST(strcmp(server->address, config_get_param(param, "address")->value) == 0,
-                 "Server addresses differ");
-            TEST(server->protocol() == config_get_param(param, "protocol")->value,
-                 "Server protocols differ");
-            TEST(server->get_authenticator() == config_get_param(param, "authenticator")->value,
+            TEST(param->get_string("address") == server->address, "Server addresses differ");
+            TEST(param->get_string("protocol") == server->protocol(), "Server protocols differ");
+            TEST(param->get_string("authenticator") == server->get_authenticator(),
                  "Server authenticators differ");
-            TEST(server->port == atoi(config_get_param(param, "port")->value), "Server ports differ");
-            TEST(Server::server_alloc(obj->object, obj->parameters), "Failed to create server from loaded config");
+            TEST(param->get_integer("port") == server->port, "Server ports differ");
+            TEST(Server::server_alloc(obj->object, obj->parameters),
+                 "Failed to create server from loaded config");
             duplicate_context_finish(&dcontext);
             config_context_free(obj);
         }
