@@ -316,7 +316,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                 MXS_DEBUG("%s: binlog record in file %s, pos %lu has "
                           "SEMI_SYNC_ACK_REQ and needs a Semi-Sync ACK packet to "
                           "be sent to the master server [%s]:%d",
-                          router->service->name,
+                          router->service->name(),
                           router->binlog_name,
                           router->current_pos,
                           router->service->dbref->server->address,

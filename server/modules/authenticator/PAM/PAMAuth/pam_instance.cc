@@ -220,7 +220,7 @@ int PamInstance::load_users(SERVICE* service)
                         mxb_assert(mysql_num_fields(res) == PAM_USERS_QUERY_NUM_FIELDS);
                         MXS_NOTICE("Loaded %llu users for service %s.",
                                    mysql_num_rows(res),
-                                   service->name);
+                                   service->name());
                         MYSQL_ROW row;
                         while ((row = mysql_fetch_row(res)))
                         {

@@ -431,7 +431,7 @@ int blr_slave_request(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue
             snprintf(task_name,
                      BLRM_TASK_NAME_LEN,
                      "%s slaves heartbeat send",
-                     router->service->name);
+                     router->service->name());
 
             /* Add slave heartbeat check task with 1 second frequency */
             hktask_add(task_name, blr_send_slave_heartbeat, router, 1);
@@ -641,14 +641,14 @@ static int blr_slave_query(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* 
     }   /* - 2 - Handle SELECT, SET, SHOW and Admin commands */
     else if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
     {
-        MXS_ERROR("%s: Incomplete query.", router->service->name);
+        MXS_ERROR("%s: Incomplete query.", router->service->name());
     }
     else if (strcasecmp(word, "SELECT") == 0)
     {
         /* Handle SELECT */
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
-            MXS_ERROR("%s: Incomplete select query.", router->service->name);
+            MXS_ERROR("%s: Incomplete select query.", router->service->name());
         }
         else
         {
@@ -2044,7 +2044,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
             MXS_ERROR("%s: Slave %s:%i, server-id %d, binlog '%s', blr_slave_binlog_dump failure: "
                       "Requested binlog position %lu. Position is unsafe so disconnecting. "
                       "Latest safe position %lu, end of binlog file %lu",
-                      router->service->name,
+                      router->service->name(),
                       slave->dcb->remote,
                       dcb_get_port(slave->dcb),
                       slave->serverid,
@@ -2067,7 +2067,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
 
     MXS_DEBUG("%s: Slave %s:%i, COM_BINLOG_DUMP: binlog name '%s', length %lu, "
               "from position %lu.",
-              router->service->name,
+              router->service->name(),
               slave->dcb->remote,
               dcb_get_port(slave->dcb),
               slave->binlog_name,
@@ -2224,7 +2224,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
     slave->state = BLRS_DUMPING;
 
     MXS_NOTICE("%s: Slave [%s]:%d, server id %d requested binlog file %s from position %lu",
-               router->service->name,
+               router->service->name(),
                slave->dcb->remote,
                dcb_get_port(slave->dcb),
                slave->serverid,
@@ -2717,7 +2717,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         if (hdr.ok == SLAVE_POS_BAD_FD)
         {
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s%s', %s",
-                      router->service->name,
+                      router->service->name(),
                       slave->dcb->remote,
                       dcb_get_port(slave->dcb),
                       slave->serverid,
@@ -2729,7 +2729,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         if (hdr.ok == SLAVE_POS_BEYOND_EOF)
         {
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s%s', %s",
-                      router->service->name,
+                      router->service->name(),
                       slave->dcb->remote,
                       dcb_get_port(slave->dcb),
                       slave->serverid,
@@ -2752,7 +2752,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         if (hdr.ok == SLAVE_POS_READ_ERR)
         {
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s%s', %s",
-                      router->service->name,
+                      router->service->name(),
                       slave->dcb->remote,
                       dcb_get_port(slave->dcb),
                       slave->serverid,
@@ -2788,7 +2788,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
 
             MXS_NOTICE("%s: Slave %s:%i, server-id %d, binlog '%s%s', read %d events, "
                        "current committed transaction event being sent: %lu, %s",
-                       router->service->name,
+                       router->service->name(),
                        slave->dcb->remote,
                        dcb_get_port(slave->dcb),
                        slave->serverid,
@@ -3603,7 +3603,7 @@ static int blr_slave_disconnect_server(ROUTER_INSTANCE* router,
             /* server_id found */
             server_found = 1;
             MXS_NOTICE("%s: Slave %s, server id %d, disconnected by %s@%s",
-                       router->service->name,
+                       router->service->name(),
                        sptr->dcb->remote,
                        server_id,
                        slave->dcb->user,
@@ -3717,7 +3717,7 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
             }
 
             MXS_NOTICE("%s: Slave %s, server id %d, disconnected by %s@%s",
-                       router->service->name,
+                       router->service->name(),
                        sptr->dcb->remote,
                        sptr->serverid,
                        slave->dcb->user,
@@ -3906,7 +3906,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     MXS_NOTICE("%s: STOP SLAVE executed by %s@%s. Disconnecting from master [%s]:%d, "
                "read up to log %s, pos %lu, transaction safe pos %lu",
-               router->service->name,
+               router->service->name(),
                slave->dcb->user,
                slave->dcb->remote,
                router->service->dbref->server->address,
@@ -4100,7 +4100,7 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master [%s]:%d, "
                "binlog %s, pos %lu, transaction safe pos %lu",
-               router->service->name,
+               router->service->name(),
                slave->dcb->user,
                slave->dcb->remote,
                router->service->dbref->server->address,
@@ -4190,7 +4190,7 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
                  "Cannot use MASTER_USE_GTID. "
                  "Enable 'mariadb10_master_gtid' option first.");
 
-        MXS_ERROR("%s: %s", router->service->name, error);
+        MXS_ERROR("%s: %s", router->service->name(), error);
 
         return false;
     }
@@ -4211,7 +4211,7 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
                      "(%d seconds).",
                      BLR_HEARTBEAT_MAX_INTERVAL);
 
-            MXS_ERROR("%s: %s", router->service->name, error);
+            MXS_ERROR("%s: %s", router->service->name(), error);
 
             return false;
         }
@@ -4230,7 +4230,7 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
                      "interval is not valid: %s.",
                      this->connect_retry.c_str());
 
-            MXS_ERROR("%s: %s", router->service->name, error);
+            MXS_ERROR("%s: %s", router->service->name(), error);
 
             return false;
         }
@@ -4248,7 +4248,7 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
                      "is not valid: %s.",
                      this->port.c_str());
 
-            MXS_ERROR("%s: %s", router->service->name, error);
+            MXS_ERROR("%s: %s", router->service->name(), error);
 
             return false;
         }
@@ -4604,7 +4604,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                                         &options) != 0)
     {
         MXS_ERROR("%s CHANGE MASTER TO parse error: %s",
-                  router->service->name,
+                  router->service->name(),
                   error);
 
         return -1;
@@ -4658,7 +4658,7 @@ static int blr_set_master_hostname(ROUTER_INSTANCE* router, const char* hostname
         router->service->dbref->server->server_update_address(hostname);
 
         MXS_INFO("%s: New MASTER_HOST is [%s]",
-                 router->service->name,
+                 router->service->name(),
                  router->service->dbref->server->address);
 
         return 1;
@@ -4687,7 +4687,7 @@ static int blr_set_master_port(ROUTER_INSTANCE* router, int port)
         router->service->dbref->server->update_port(port);
 
         MXS_INFO("%s: New MASTER_PORT is [%i]",
-                 router->service->name,
+                 router->service->name(),
                  router->service->dbref->server->port);
 
         return 1;
@@ -4970,7 +4970,7 @@ static int blr_set_master_user(ROUTER_INSTANCE* router, const char* user)
         router->user = MXS_STRDUP_A(user);
 
         MXS_INFO("%s: New MASTER_USER is [%s]",
-                 router->service->name,
+                 router->service->name(),
                  router->user);
 
         return 1;
@@ -5711,7 +5711,7 @@ static int blr_slave_handle_variables(ROUTER_INSTANCE* router,
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
             MXS_ERROR("%s: Missing LIKE clause in SHOW [GLOBAL] VARIABLES.",
-                      router->service->name);
+                      router->service->name());
             return -1;
         }
         else if (strcasecmp(word, "'SERVER_ID'") == 0)
@@ -5947,7 +5947,7 @@ static int blr_slave_handle_status_variables(ROUTER_INSTANCE* router,
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
             MXS_ERROR("%s: Missing LIKE clause in SHOW [GLOBAL] STATUS.",
-                      router->service->name);
+                      router->service->name());
             return -1;
         }
         else if (strcasecmp(word, "'Uptime'") == 0)
@@ -6599,7 +6599,7 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE* router,
 
     if ((word = strtok_r(select_stmt, sep, &brkb)) == NULL)
     {
-        MXS_ERROR("%s: Incomplete select query.", router->service->name);
+        MXS_ERROR("%s: Incomplete select query.", router->service->name());
         return false;
     }
     else if (strcasecmp(word, "UNIX_TIMESTAMP()") == 0)
@@ -7519,7 +7519,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
     const char* sep = " \t,=";
     if ((word = strtok_r(show_stmt, sep, &brkb)) == NULL)
     {
-        MXS_ERROR("%s: Incomplete show query.", router->service->name);
+        MXS_ERROR("%s: Incomplete show query.", router->service->name());
         return false;
     }
     else if (strcasecmp(word, "WARNINGS") == 0)
@@ -7540,7 +7540,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
                 " 'mariadb10_slave_gtid' option to be set.";
             MXS_ERROR("%s: %s",
                       errmsg,
-                      router->service->name);
+                      router->service->name());
 
             blr_slave_send_error_packet(slave,
                                         errmsg,
@@ -7560,7 +7560,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
             MXS_ERROR("%s: Expected VARIABLES in SHOW GLOBAL",
-                      router->service->name);
+                      router->service->name());
             return false;
         }
         else if (strcasecmp(word, "VARIABLES") == 0)
@@ -7580,7 +7580,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
             else
             {
                 MXS_ERROR("%s: Expected LIKE clause in SHOW GLOBAL VARIABLES.",
-                          router->service->name);
+                          router->service->name());
                 return false;
             }
         }
@@ -7601,7 +7601,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
             else
             {
                 MXS_ERROR("%s: Expected LIKE clause in SHOW GLOBAL STATUS.",
-                          router->service->name);
+                          router->service->name());
                 return false;
             }
         }
@@ -7630,7 +7630,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
         else
         {
             MXS_ERROR("%s: Expected LIKE clause in SHOW VARIABLES.",
-                      router->service->name);
+                      router->service->name());
             return false;
         }
     }
@@ -7639,7 +7639,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
             MXS_ERROR("%s: Expected SHOW MASTER STATUS command",
-                      router->service->name);
+                      router->service->name());
             return false;
         }
         else if (strcasecmp(word, "STATUS") == 0)
@@ -7664,7 +7664,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
             MXS_ERROR("%s: Expected SHOW SLAVE STATUS command",
-                      router->service->name);
+                      router->service->name());
             return false;
         }
         else if (strcasecmp(word, "STATUS") == 0
@@ -7714,7 +7714,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
         else
         {
             MXS_ERROR("%s: Expected LIKE clause in SHOW STATUS.",
-                      router->service->name);
+                      router->service->name());
             return false;
         }
     }
@@ -7743,7 +7743,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE* router,
 
     if ((word = strtok_r(set_stmt, sep, &brkb)) == NULL)
     {
-        MXS_ERROR("%s: Incomplete set command.", router->service->name);
+        MXS_ERROR("%s: Incomplete set command.", router->service->name());
         return false;
     }
     else if ((strcasecmp(word, "autocommit") == 0)
@@ -7991,7 +7991,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE* router,
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
             MXS_ERROR("%s: Truncated SET NAMES command.",
-                      router->service->name);
+                      router->service->name());
             return false;
         }
         else if (strcasecmp(word, "latin1") == 0)
@@ -8042,7 +8042,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
 
     if (admin_opts == NULL || !admin_opts[0])
     {
-        MXS_ERROR("%s: Incomplete admin command.", router->service->name);
+        MXS_ERROR("%s: Incomplete admin command.", router->service->name());
         return false;
     }
     /* Handle PURGE command */
@@ -8071,7 +8071,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                 "'mariadb10_slave_gtid' option to be set.";
             MXS_ERROR("%s: %s",
                       errmsg,
-                      router->service->name);
+                      router->service->name());
 
             blr_slave_send_error_packet(slave,
                                         errmsg,
@@ -8085,7 +8085,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
     {
         if ((word = strtok_r(admin_opts, sep, &brkb)) == NULL)
         {
-            MXS_ERROR("%s: Incomplete RESET command.", router->service->name);
+            MXS_ERROR("%s: Incomplete RESET command.", router->service->name());
             return false;
         }
         /* RESET the current configured master cfg */
@@ -8103,7 +8103,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                 MXS_NOTICE("%s: 'RESET SLAVE executed'. Previous state MASTER_HOST='%s', "
                            "MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, "
                            "MASTER_USER='%s'",
-                           router->service->name,
+                           router->service->name(),
                            current_master.host.c_str(),
                            current_master.port,
                            current_master.logfile.c_str(),
@@ -8128,7 +8128,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                              path,
                              mxs_strerror(errno),
                              errno);
-                    MXS_ERROR("%s: %s", router->service->name, error_string);
+                    MXS_ERROR("%s: %s", router->service->name(), error_string);
                 }
 
                 pthread_mutex_lock(&router->lock);
@@ -8181,7 +8181,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
         if ((word = strtok_r(admin_opts, sep, &brkb)) == NULL)
         {
             MXS_ERROR("%s: Incomplete START command.",
-                      router->service->name);
+                      router->service->name());
             return false;
         }
         else if (strcasecmp(word, "SLAVE") == 0)
@@ -8195,7 +8195,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
     {
         if ((word = strtok_r(admin_opts, sep, &brkb)) == NULL)
         {
-            MXS_ERROR("%s: Incomplete STOP command.", router->service->name);
+            MXS_ERROR("%s: Incomplete STOP command.", router->service->name());
             return false;
         }
         else if (strcasecmp(word, "SLAVE") == 0)
@@ -8209,7 +8209,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
     {
         if ((word = strtok_r(admin_opts, sep, &brkb)) == NULL)
         {
-            MXS_ERROR("%s: Incomplete CHANGE command.", router->service->name);
+            MXS_ERROR("%s: Incomplete CHANGE command.", router->service->name());
             return false;
         }
         else if (strcasecmp(word, "MASTER") == 0)
@@ -8269,7 +8269,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                                  router->binlogdir,
                                  error);
                         MXS_ERROR("%s: %s",
-                                  router->service->name,
+                                  router->service->name(),
                                   error_string);
 
                         blr_slave_send_error_packet(slave,
@@ -8313,7 +8313,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                             && blr_file_new_binlog(router, router->binlog_name))
                         {
                             MXS_INFO("%s: 'master.ini' created, binlog file '%s' created",
-                                     router->service->name,
+                                     router->service->name(),
                                      router->binlog_name);
                         }
                         blr_slave_send_ok(router, slave);
@@ -8353,7 +8353,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                         {
                             MXS_INFO("%s: created new binlog file '%s' by "
                                      "'CHANGE MASTER TO' command",
-                                     router->service->name,
+                                     router->service->name(),
                                      router->binlog_name);
                         }
                     }
@@ -8369,7 +8369,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
         if ((word = strtok_r(admin_opts, sep, &brkb)) == NULL)
         {
             MXS_ERROR("%s: Incomplete DISCONNECT command.",
-                      router->service->name);
+                      router->service->name());
             return false;
         }
         else if (strcasecmp(word, "ALL") == 0)
@@ -8382,7 +8382,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
             if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
             {
                 MXS_ERROR("%s: Expected DISCONNECT SERVER $server_id",
-                          router->service->name);
+                          router->service->name());
                 return false;
             }
             else
@@ -9247,7 +9247,7 @@ static void blr_log_config_changes(ROUTER_INSTANCE* router,
                "MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, "
                "MASTER_USER='%s'"
                "%s%s%s",
-               router->service->name,
+               router->service->name(),
                current_master.host.c_str(),
                current_master.port,
                current_master.logfile.c_str(),
@@ -9331,7 +9331,7 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE* router,
 
     default:
         MXS_WARNING("%s: Slave %s: Unkwon status check %d.",
-                    router->service->name,
+                    router->service->name(),
                     slave->dcb->remote,
                     check);
         break;
@@ -9352,7 +9352,7 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE* router,
                               err_status,
                               err_code);
         MXS_ERROR("%s: Slave %s: %s%s",
-                  router->service->name,
+                  router->service->name(),
                   slave->dcb->remote,
                   err_msg,
                   msg_detail);
@@ -9373,7 +9373,7 @@ static void blr_abort_change_master(ROUTER_INSTANCE* router,
                                     const MasterServerConfig& current_master,
                                     const char* error)
 {
-    MXS_ERROR("%s: %s", router->service->name, error);
+    MXS_ERROR("%s: %s", router->service->name(), error);
     /* restore previous master_host and master_port */
     blr_master_restore_config(router, current_master);
 }
@@ -9589,13 +9589,13 @@ static bool blr_apply_changes(ROUTER_INSTANCE* router,
         {
             /* MASTER_USE_GTID=Slave_pos is set */
             MXS_INFO("%s: MASTER_USE_GTID is [%s]",
-                     router->service->name,
+                     router->service->name(),
                      change_master.use_mariadb10_gtid.c_str());
         }
 
         /* Always log the current GTID value with CHANGE_MASTER TO */
         MXS_INFO("%s: CHANGE MASTER TO, current GTID value is [%s]",
-                 router->service->name,
+                 router->service->name(),
                  router->last_mariadb_gtid);
 
         /* Always set empty filename at pos 4 with CHANGE_MASTER TO */
@@ -9662,7 +9662,7 @@ static bool blr_apply_changes(ROUTER_INSTANCE* router,
             router->binlog_fd = -1;
 
             MXS_INFO("%s: New MASTER_LOG_FILE is [%s]",
-                     router->service->name,
+                     router->service->name(),
                      router->binlog_name);
         }
     }
@@ -9701,7 +9701,7 @@ static bool blr_apply_changes(ROUTER_INSTANCE* router,
                 strcpy(router->binlog_name, new_logfile);
 
                 MXS_INFO("%s: New MASTER_LOG_FILE is [%s]",
-                         router->service->name,
+                         router->service->name(),
                          router->binlog_name);
             }
         }
@@ -9727,7 +9727,7 @@ static bool blr_apply_changes(ROUTER_INSTANCE* router,
         if (ret)
         {
             MXS_INFO("%s: New MASTER_LOG_POS is [%lu]",
-                     router->service->name,
+                     router->service->name(),
                      router->current_pos);
         }
     }
@@ -9804,7 +9804,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                     "This may be caused by a previous failure of the master. "
                     "Current master binlog is [%s%s] at %lu, replication state is [%s]. "
                     "Now rotating to new file [%s%s]",
-                    router->service->name,
+                    router->service->name(),
                     slave->dcb->remote,
                     dcb_get_port(slave->dcb),
                     slave->serverid,
@@ -9824,7 +9824,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
         MXS_ERROR("%s: Slave [%s]:%d, server-id %d reached "
                   "end of file for '%s%s' and next file to read%s%s%s%s "
                   "is not %s. Force replication abort after %d retries.",
-                  router->service->name,
+                  router->service->name(),
                   slave->dcb->remote,
                   dcb_get_port(slave->dcb),
                   slave->serverid,
@@ -9849,7 +9849,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                     "the master server. Current master binlog is "
                     "[%s%s] at %lu and replication state is [%s]. "
                     "The slave server is now in '%s' state.",
-                    router->service->name,
+                    router->service->name(),
                     slave->dcb->remote,
                     dcb_get_port(slave->dcb),
                     slave->serverid,

@@ -190,7 +190,7 @@ QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session)
     : m_instance(instance)
     , m_user(session_get_user(session))
     , m_remote(session_get_remote(session))
-    , m_service(session->service->name)
+    , m_service(session->service->name())
     , m_ses_id(session->ses_id)
 {
 }

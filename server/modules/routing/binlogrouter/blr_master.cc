@@ -147,13 +147,13 @@ static void blr_start_master(void* data)
             && router->master_state != BLRM_CONNECTING)
         {
             MXS_ERROR("%s: Master Connect: Unexpected master state [%s]\n",
-                      router->service->name,
+                      router->service->name(),
                       blrm_states[router->master_state]);
         }
         else
         {
             MXS_NOTICE("%s: Master Connect: binlog current state is [%s]\n",
-                       router->service->name,
+                       router->service->name(),
                        blrm_states[router->master_state]);
         }
 
@@ -176,7 +176,7 @@ static void blr_start_master(void* data)
         MXS_ERROR("%s: failure while connecting to master server '%s', "
                   "reached %d maximum number of retries. "
                   "Replication is stopped.",
-                  router->service->name,
+                  router->service->name(),
                   router->service->dbref->server->name(),
                   router->retry_limit);
         return;
@@ -245,7 +245,7 @@ static void blr_start_master(void* data)
 
         MXS_ERROR("%s: failure while connecting to master server '%s', "
                   "retrying in %d seconds",
-                  router->service->name,
+                  router->service->name(),
                   router->service->dbref->server->name(),
                   connect_retry);
         return;
@@ -254,7 +254,7 @@ static void blr_start_master(void* data)
 
     MXS_NOTICE("%s: attempting to connect to master"
                " server [%s]:%d, binlog='%s', pos=%lu%s%s",
-               router->service->name,
+               router->service->name(),
                router->service->dbref->server->address,
                router->service->dbref->server->port,
                router->binlog_name,
@@ -384,7 +384,7 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
             MXS_ERROR("%s: failed to connect to master server '%s', "
                       "reached %d maximum number of retries. "
                       "Replication is stopped.",
-                      router->service->name,
+                      router->service->name(),
                       router->service->dbref->server->name(),
                       router->retry_limit);
             return;
@@ -418,7 +418,7 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
 
         MXS_ERROR("%s: failed to connect to master server '%s', "
                   "retrying in %d seconds",
-                  router->service->name,
+                  router->service->name(),
                   router->service->dbref->server->name(),
                   connect_retry);
     }
@@ -528,7 +528,7 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
             pthread_mutex_unlock(&router->lock);
             atomic_add(&router->handling_threads, -1);
             MXS_ERROR("%s: Pending reconnect in state %s.",
-                      router->service->name,
+                      router->service->name(),
                       blrm_states[router->master_state]);
             blr_restart_master(router);
             return;
@@ -548,7 +548,7 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
          * they also request the GTID mode.
          */
         MXS_ERROR("%s: Master server does not support GTID Mode.",
-                  router->service->name);
+                  router->service->name());
     }
     else if (router->master_state != BLRM_BINLOGDUMP && MYSQL_RESPONSE_ERR(buf))
     {
@@ -571,7 +571,7 @@ void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
 
         MXS_ERROR("%s: Received error: %lu, '%s' from master during '%s' phase "
                   "of the master state machine.",
-                  router->service->name,
+                  router->service->name(),
                   mysql_errno,
                   msg_err ? msg_err : "(memory failure)",
                   blrm_states[router->master_state]);
@@ -803,7 +803,7 @@ static bool verify_checksum(ROUTER_INSTANCE* router, size_t len, uint8_t* ptr)
         rval = false;
         MXS_ERROR("%s: Checksum error in event from master, "
                   "binlog %s @ %lu. Closing master connection.",
-                  router->service->name,
+                  router->service->name(),
                   router->binlog_name,
                   router->current_pos);
         router->stats.n_badcrc++;
@@ -1468,7 +1468,7 @@ static bool blr_check_last_master_event(void* inst)
         snprintf(task_name,
                  BLRM_TASK_NAME_LEN,
                  "%s heartbeat",
-                 router->service->name);
+                 router->service->name());
 
         rval = false;
     }
@@ -1563,7 +1563,7 @@ static void blr_log_identity(ROUTER_INSTANCE* router)
     /* Seen by the master */
     MXS_NOTICE("%s: identity seen by the master: "
                "Server_id: %d, Slave_UUID: %s, Host: %s",
-               router->service->name,
+               router->service->name(),
                router->serverid,
                router->uuid == NULL ?
                "not available" :
@@ -1579,7 +1579,7 @@ static void blr_log_identity(ROUTER_INSTANCE* router)
     {
         MXS_NOTICE("%s: identity seen by the slaves: "
                    "server_id: %d, hostname: %s, MySQL version: %s",
-                   router->service->name,
+                   router->service->name(),
                    router->masterid,
                    (master_hostname == NULL ? "not available" : master_hostname),
                    (master_version == NULL ? "not available" : master_version));
@@ -1588,7 +1588,7 @@ static void blr_log_identity(ROUTER_INSTANCE* router)
     {
         MXS_NOTICE("%s: identity seen by the slaves: "
                    "server_id: %d, uuid: %s, hostname: %s, MySQL version: %s",
-                   router->service->name,
+                   router->service->name(),
                    router->masterid,
                    master_uuid,
                    (master_hostname == NULL ? "not available" : master_hostname),
@@ -1621,7 +1621,7 @@ int blr_write_data_into_binlog(ROUTER_INSTANCE* router, uint32_t data_len, uint8
     {
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
-                  router->service->name,
+                  router->service->name(),
                   router->binlog_position,
                   router->binlog_name,
                   mxs_strerror(errno));
@@ -1630,7 +1630,7 @@ int blr_write_data_into_binlog(ROUTER_INSTANCE* router, uint32_t data_len, uint8
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
-                      router->service->name,
+                      router->service->name(),
                       router->last_written,
                       router->binlog_name,
                       mxs_strerror(errno));
@@ -2348,7 +2348,7 @@ static void blr_register_mxw_tables(ROUTER_INSTANCE* router, GWBUF* buf)
 static void blr_register_getsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     MXS_NOTICE("%s: checking Semi-Sync replication capability for master server [%s]:%d",
-               router->service->name,
+               router->service->name(),
                router->service->dbref->server->address,
                router->service->dbref->server->port);
 
@@ -2383,7 +2383,7 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
         {
             /* not installed */
             MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync capability",
-                       router->service->name,
+                       router->service->name(),
                        router->service->dbref->server->address,
                        router->service->dbref->server->port);
 
@@ -2399,7 +2399,7 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
                 /* Installed but not enabled, right now */
                 MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync"
                            " enabled right now, Request Semi-Sync Replication anyway",
-                           router->service->name,
+                           router->service->name(),
                            router->service->dbref->server->address,
                            router->service->dbref->server->port);
             }
@@ -2408,7 +2408,7 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
                 /* Installed and enabled */
                 MXS_NOTICE("%s: master server [%s]:%d has semi_sync enabled,"
                            " Requesting Semi-Sync Replication",
-                           router->service->name,
+                           router->service->name(),
                            router->service->dbref->server->address,
                            router->service->dbref->server->port);
             }
@@ -2822,7 +2822,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
         {
             MXS_NOTICE("%s: Request binlog records from %s at "
                        "position %lu from master server [%s]:%d",
-                       router->service->name,
+                       router->service->name(),
                        router->binlog_name,
                        router->current_pos,
                        router->service->dbref->server->address,
@@ -2848,7 +2848,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
             snprintf(task_name,
                      BLRM_TASK_NAME_LEN,
                      "%s heartbeat",
-                     router->service->name);
+                     router->service->name());
             hktask_add(task_name,
                        blr_check_last_master_event,
                        router,
@@ -2883,7 +2883,7 @@ static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE* router,
             router->last_mariadb_gtid);
 
     MXS_INFO("%s: Requesting GTID (%s) from master server.",
-             router->service->name,
+             router->service->name(),
              router->last_mariadb_gtid);
     // Send the request
     blr_register_send_command(router,
@@ -3258,7 +3258,7 @@ void blr_master_set_config(ROUTER_INSTANCE* inst, const ChangeMasterConfig& conf
         {
             MXS_ERROR("Found unknown optional parameter value for 'ssl_version' for"
                       " service '%s': %s, ignoring it.",
-                      inst->service->name,
+                      inst->service->name(),
                       config.ssl_version.c_str());
         }
         else

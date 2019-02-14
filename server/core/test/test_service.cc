@@ -72,7 +72,7 @@ static int test1()
 
     mxb_assert_message(NULL != service, "New service with valid router must not be null");
     mxb_assert_message(0 != service_isvalid(service), "Service must be valid after creation");
-    mxb_assert_message(0 == strcmp("MyService", service->name), "Service must have given name");
+    mxb_assert_message(0 == strcmp("MyService", service->name()), "Service must have given name");
     fprintf(stderr, "\t..done\nAdding protocol testprotocol.");
     mxb_assert_message(Listener::create(service,
                                         "TestProtocol",

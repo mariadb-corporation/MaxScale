@@ -94,17 +94,17 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
 
         if (source)
         {
-            if (strcmp(source->routerModule, "binlogrouter") == 0)
+            if (strcmp(source->router_name(), "binlogrouter") == 0)
             {
-                MXS_INFO("Using configuration options from service '%s'.", source->name);
+                MXS_INFO("Using configuration options from service '%s'.", source->name());
                 source_service = source;
             }
             else
             {
                 MXS_ERROR("Service '%s' uses router module '%s' instead of "
                           "'binlogrouter'.",
-                          source->name,
-                          source->routerModule);
+                          source->name(),
+                          source->router_name());
                 return NULL;
             }
         }

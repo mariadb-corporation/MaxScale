@@ -151,7 +151,7 @@ bool runtime_link_server(Server* server, const char* target)
             else
             {
                 config_runtime_error("Service '%s' already uses server '%s'",
-                                     service->name,
+                                     service->name(),
                                      server->name());
             }
         }
@@ -159,7 +159,7 @@ bool runtime_link_server(Server* server, const char* target)
         {
             config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
                                  "Servers cannot explicitly be added to the service.",
-                                 service->name,
+                                 service->name(),
                                  service->m_monitor->m_name);
         }
     }
@@ -207,7 +207,7 @@ bool runtime_unlink_server(Server* server, const char* target)
             {
                 config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
                                      "Servers cannot explicitly be removed from the service.",
-                                     service->name,
+                                     service->name(),
                                      service->m_monitor->m_name);
             }
         }
@@ -704,7 +704,7 @@ bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
 
 bool runtime_alter_service(Service* service, const char* zKey, const char* zValue)
 {
-    const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
+    const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
     std::string key(zKey);
     std::string value(zValue);
 
@@ -749,21 +749,21 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
                 rval = false;
                 config_runtime_error("Reconfiguration of service '%s' failed. See log "
                                      "file for more details.",
-                                     service->name);
+                                     service->name());
             }
         }
         else
         {
             rval = false;
             config_runtime_error("Router '%s' does not support reconfiguration.",
-                                 service->routerModule);
+                                 service->router_name());
         }
     }
 
     if (rval)
     {
         service_serialize(service);
-        MXS_NOTICE("Updated service '%s': %s=%s", service->name, key.c_str(), value.c_str());
+        MXS_NOTICE("Updated service '%s': %s=%s", service->name(), key.c_str(), value.c_str());
     }
 
     return rval;
@@ -1125,7 +1125,7 @@ bool runtime_create_listener(Service* service,
             if (listener && listener_serialize(listener))
             {
                 MXS_NOTICE("Created %slistener '%s' at %s:%s for service '%s'",
-                           ssl ? "TLS encrypted " : "", name, print_addr, port, service->name);
+                           ssl ? "TLS encrypted " : "", name, print_addr, port, service->name());
 
                 if (listener->listen())
                 {
@@ -1181,8 +1181,8 @@ bool runtime_destroy_listener(Service* service, const char* name)
 
     if (!service_remove_listener(service, name))
     {
-        MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name);
-        config_runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name);
+        MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name());
+        config_runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name());
     }
     else
     {
@@ -1191,7 +1191,7 @@ bool runtime_destroy_listener(Service* service, const char* name)
                    "will be removed after the next restart of MaxScale or "
                    "when the associated service is destroyed.",
                    name,
-                   service->name);
+                   service->name());
     }
 
     return rval;
@@ -1402,7 +1402,7 @@ bool runtime_destroy_service(Service* service)
     {
         config_runtime_error("Service '%s' cannot be destroyed: Remove all servers and "
                              "destroy all listeners first",
-                             service->name);
+                             service->name());
     }
 
     return rval;
@@ -2397,7 +2397,7 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     }
     else
     {
-        config_runtime_error("Invalid object relations for '%s'", service->name);
+        config_runtime_error("Invalid object relations for '%s'", service->name());
     }
 
     return rval;
@@ -2502,7 +2502,7 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
 
         if (strcmp(type, CN_SERVERS) == 0)
         {
-            rval = object_to_server_relations(service->name, old_json.get(), j.get());
+            rval = object_to_server_relations(service->name(), old_json.get(), j.get());
         }
         else
         {
@@ -2534,7 +2534,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
     mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json)
-        && object_to_server_relations(service->name, old_json.get(), new_json)
+        && object_to_server_relations(service->name(), old_json.get(), new_json)
         && service_to_filter_relations(service, old_json.get(), new_json))
     {
         rval = true;
@@ -2555,7 +2555,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
                 }
             }
 
-            const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
+            const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
 
             for (int i = 0; mod->parameters[i].name; i++)
             {

@@ -71,7 +71,7 @@ int AvroSession::routeQuery(GWBUF* queue)
 
             state = AVRO_CLIENT_REGISTERED;
             MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
-                     dcb->service->name,
+                     dcb->service->name(),
                      dcb->remote != NULL ? dcb->remote : "");
         }
         break;

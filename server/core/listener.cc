@@ -515,7 +515,7 @@ bool Listener::create_listener_config(const char* filename)
     dprintf(file, "[%s]\n", m_name.c_str());
     dprintf(file, "type=listener\n");
     dprintf(file, "protocol=%s\n", m_protocol.c_str());
-    dprintf(file, "service=%s\n", m_service->name);
+    dprintf(file, "service=%s\n", m_service->name());
     dprintf(file, "address=%s\n", m_address.c_str());
     dprintf(file, "port=%u\n", m_port);
     dprintf(file, "authenticator=%s\n", m_authenticator.c_str());
@@ -970,7 +970,7 @@ bool Listener::listen_shared(std::string config_bind)
     }
     else
     {
-        MXS_ERROR("[%s] Failed to listen on %s", m_service->name, config_bind.c_str());
+        MXS_ERROR("[%s] Failed to listen on %s", m_service->name(), config_bind.c_str());
     }
 
     return rval;
@@ -987,12 +987,12 @@ bool Listener::listen()
         {
         case MXS_AUTH_LOADUSERS_FATAL:
             MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
-                      "service is not started.", m_service->name, name());
+                      "service is not started.", m_service->name(), name());
             return false;
 
         case MXS_AUTH_LOADUSERS_ERROR:
             MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                        " might not work.", m_service->name, name());
+                        " might not work.", m_service->name(), name());
             break;
 
         default:

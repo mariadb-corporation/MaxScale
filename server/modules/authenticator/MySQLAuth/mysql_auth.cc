@@ -334,7 +334,7 @@ static int mysql_auth_authenticate(DCB* dcb)
 
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
-                          dcb->service->name,
+                          dcb->service->name(),
                           client_data->user,
                           dcb->remote,
                           dcb_get_port(dcb),
@@ -346,7 +346,7 @@ static int mysql_auth_authenticate(DCB* dcb)
                 MXS_NOTICE("If you have a wildcard grant that covers this address, "
                            "try adding 'localhost_match_wildcard_host=true' for "
                            "service '%s'. ",
-                           dcb->service->name);
+                           dcb->service->name());
             }
         }
 
@@ -566,7 +566,7 @@ static bool add_service_user(Listener* port)
     }
     else
     {
-        MXS_ERROR("[%s] Failed to decrypt service user password.", port->service()->name);
+        MXS_ERROR("[%s] Failed to decrypt service user password.", port->service()->name());
     }
 
     return rval;
@@ -621,7 +621,7 @@ static int mysql_auth_load_users(Listener* port)
         if (loaded < 0)
         {
             MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.",
-                      service->name,
+                      service->name(),
                       port->name(),
                       *port->address() ? port->address() : "::",
                       port->port());
@@ -633,7 +633,7 @@ static int mysql_auth_load_users(Listener* port)
              * if loading of the users fails */
             if (!add_service_user(port))
             {
-                MXS_ERROR("[%s] Failed to inject service user.", port->service()->name);
+                MXS_ERROR("[%s] Failed to inject service user.", port->service()->name());
             }
             else
             {
@@ -649,18 +649,18 @@ static int mysql_auth_load_users(Listener* port)
             MXS_NOTICE("[%s] No users were loaded but 'inject_service_user' is enabled. "
                        "Enabling service credentials for authentication until "
                        "database users have been successfully loaded.",
-                       service->name);
+                       service->name());
         }
     }
     else if (loaded == 0 && !first_load)
     {
         MXS_WARNING("[%s]: failed to load any user information. Authentication"
                     " will probably fail as a result.",
-                    service->name);
+                    service->name());
     }
     else if (loaded > 0 && first_load)
     {
-        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name());
+        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name(), loaded, port->name());
     }
 
     return rc;

@@ -155,7 +155,7 @@ bool RWSplit::have_enough_servers() const
             MXS_ERROR("Unable to start %s service. There are "
                       "too few backend servers available. Found %d "
                       "when %d is required.",
-                      m_service->name,
+                      m_service->name(),
                       router_nsrv,
                       min_nsrv);
         }
@@ -169,7 +169,7 @@ bool RWSplit::have_enough_servers() const
                 MXS_ERROR("Unable to start %s service. There are "
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d when %d is required.",
-                          m_service->name,
+                          m_service->name(),
                           m_config->max_slave_connections,
                           min_nsrv);
             }
@@ -180,7 +180,7 @@ bool RWSplit::have_enough_servers() const
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d%% when at least %.0f%% "
                           "would be required.",
-                          m_service->name,
+                          m_service->name(),
                           m_config->rw_max_slave_conn_percent,
                           dbgpct);
             }
@@ -203,7 +203,7 @@ static void log_router_options_not_supported(SERVICE* service, std::string route
     MXS_ERROR("`router_options` is no longer supported in readwritesplit. "
               "To define the router options as parameters, add the following "
               "lines to service '%s':\n\n%s\n",
-              service->name,
+              service->name(),
               ss.str().c_str());
 }
 

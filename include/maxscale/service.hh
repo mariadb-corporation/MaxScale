@@ -94,11 +94,9 @@ inline bool server_ref_is_active(const SERVER_REF* ref)
 class SERVICE
 {
 public:
-    const char*               name;                 /**< The service name */
     int                       state;                /**< The service state */
     int                       client_count;         /**< Number of connected clients */
     int                       max_connections;      /**< Maximum client connections */
-    const char*               routerModule;         /**< Name of router module to use */
     struct mxs_router_object* router;               /**< The router we are using */
     struct mxs_router*        router_instance;      /**< The router instance for this
                                                      * service */
@@ -144,6 +142,28 @@ public:
                                                      * active */
     int32_t retain_last_statements;                 /**< How many statements to retain per session,
                                                      * -1 if not explicitly specified. */
+
+    const char* name() const
+    {
+        return m_name.c_str();
+    }
+
+    const char* router_name() const
+    {
+        return m_router_name.c_str();
+    }
+
+protected:
+    SERVICE(const std::string& name,
+            const std::string& router_name)
+        : m_name(name)                /** Service name. */
+        , m_router_name(router_name)  /** Router module. */
+    {
+    }
+
+private:
+    const std::string m_name;
+    const std::string m_router_name;
 };
 
 typedef enum count_spec_t

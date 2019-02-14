@@ -2571,11 +2571,11 @@ static void reload_dbusers(DCB* dcb, SERVICE* service)
 {
     if (service_refresh_users(service) == 0)
     {
-        dcb_printf(dcb, "Reloaded database users for service %s.\n", service->name);
+        dcb_printf(dcb, "Reloaded database users for service %s.\n", service->name());
     }
     else
     {
-        dcb_printf(dcb, "Error: Failed to reloaded database users for service %s.\n", service->name);
+        dcb_printf(dcb, "Error: Failed to reloaded database users for service %s.\n", service->name());
     }
 }
 

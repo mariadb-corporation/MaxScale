@@ -114,7 +114,7 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
 
     if (service->router_instance == NULL)
     {
-        MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name);
+        MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name());
         service->active = false;
         delete service;
         return NULL;
@@ -174,11 +174,10 @@ void service_remove_server(Monitor* pMonitor, SERVER* pServer)
     }
 }
 
-Service::Service(const std::string& service_name,
+Service::Service(const std::string& name,
                  const std::string& router_name,
                  MXS_CONFIG_PARAMETER* params)
-    : m_name(service_name)
-    , m_router_name(router_name)
+    : SERVICE(name, router_name)
     , m_user(params->get_string(CN_USER))
     , m_password(params->get_string(CN_PASSWORD))
     , m_weightby(params->get_string(CN_WEIGHTBY))
@@ -194,9 +193,6 @@ Service::Service(const std::string& service_name,
     capabilities = module->module_capabilities;
     client_count = 0;
     n_dbref = 0;
-    // TODO: Remove once the name and router module are not directly visible to modules
-    name = m_name.c_str();
-    routerModule = m_router_name.c_str();
     svc_config_param = NULL;
     svc_config_version = 0;
     stats.started = time(0);
@@ -306,7 +302,7 @@ void service_destroy(Service* service)
              sizeof(filename),
              "%s/%s.cnf",
              get_config_persistdir(),
-             service->name);
+             service->name());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -384,7 +380,7 @@ int serviceStartAllPorts(Service* service)
             service->stats.n_failed_starts++;
             int retry_after = MXS_MIN(service->stats.n_failed_starts * 10, service->max_retry_interval);
             MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
-                       service->name,
+                       service->name(),
                        retry_after);
 
             mxb::Worker* worker = mxb::Worker::get_current();
@@ -397,7 +393,7 @@ int serviceStartAllPorts(Service* service)
     }
     else
     {
-        MXS_WARNING("Service '%s' has no listeners defined.", service->name);
+        MXS_WARNING("Service '%s' has no listeners defined.", service->name());
         listeners = 1;      /** Set this to one to suppress errors */
     }
 
@@ -458,11 +454,11 @@ bool service_launch_all()
     for (Service* service : this_unit.services)
     {
         n += (i = serviceInitialize(service));
-        MXS_NOTICE("Service '%s' started (%d/%d)", service->name, curr_svc++, num_svc);
+        MXS_NOTICE("Service '%s' started (%d/%d)", service->name(), curr_svc++, num_svc);
 
         if (i == 0)
         {
-            MXS_ERROR("Failed to start service '%s'.", service->name);
+            MXS_ERROR("Failed to start service '%s'.", service->name());
             ok = false;
         }
 
@@ -781,7 +777,7 @@ bool Service::set_filters(const std::vector<std::string>& filters)
         }
         else
         {
-            MXS_ERROR("Unable to find filter '%s' for service '%s'", f.c_str(), name);
+            MXS_ERROR("Unable to find filter '%s' for service '%s'", f.c_str(), name());
             rval = false;
         }
     }
@@ -839,7 +835,7 @@ Service* service_internal_find(const char* name)
 
     for (Service* s : this_unit.services)
     {
-        if (strcmp(s->name, name) == 0 && atomic_load_int(&s->active))
+        if (strcmp(s->name(), name) == 0 && atomic_load_int(&s->active))
         {
             return s;
         }
@@ -888,8 +884,8 @@ void dprintService(DCB* dcb, SERVICE* svc)
     struct tm result;
     char timebuf[30];
 
-    dcb_printf(dcb, "\tService:                             %s\n", service->name);
-    dcb_printf(dcb, "\tRouter:                              %s\n", service->routerModule);
+    dcb_printf(dcb, "\tService:                             %s\n", service->name());
+    dcb_printf(dcb, "\tRouter:                              %s\n", service->router_name());
     switch (service->state)
     {
     case SERVICE_STATE_STARTED:
@@ -986,8 +982,8 @@ void dListServices(DCB* dcb)
             mxb_assert(service->stats.n_current >= 0);
             dcb_printf(dcb,
                        "%-25s | %-17s | %6d | %14d | ",
-                       service->name,
-                       service->routerModule,
+                       service->name(),
+                       service->router_name(),
                        service->stats.n_current,
                        service->stats.n_sessions);
 
@@ -1047,7 +1043,7 @@ void dListListeners(DCB* dcb)
             dcb_printf(dcb,
                        "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
                        listener->name(),
-                       service->name,
+                       service->name(),
                        listener->protocol(),
                        (listener && *listener->address()) ? listener->address() : "*",
                        listener->port(),
@@ -1224,7 +1220,7 @@ std::unique_ptr<ResultSet> serviceGetListenerList()
     {
         for (const auto& listener : listener_find_by_service(service))
         {
-            set->add_row({service->name, listener->protocol(), listener->address(),
+            set->add_row({service->name(), listener->protocol(), listener->address(),
                           std::to_string(listener->port()), listener->state()});
         }
     }
@@ -1245,7 +1241,7 @@ std::unique_ptr<ResultSet> serviceGetList()
 
     for (Service* s : this_unit.services)
     {
-        set->add_row({s->name, s->routerModule, std::to_string(s->stats.n_current),
+        set->add_row({s->name(), s->router_name(), std::to_string(s->stats.n_current),
                       std::to_string(s->stats.n_sessions)});
     }
 
@@ -1279,7 +1275,7 @@ bool service_all_services_have_listeners()
     {
         if (listener_find_by_service(service).empty())
         {
-            MXS_ERROR("Service '%s' has no listeners.", service->name);
+            MXS_ERROR("Service '%s' has no listeners.", service->name());
             rval = false;
         }
     }
@@ -1318,7 +1314,7 @@ static void service_calculate_weights(SERVICE* service)
         {
             MXS_WARNING("Weighting parameters for service '%s' will be ignored as "
                         "no servers have (positive) values for the parameter '%s'.",
-                        service->name,
+                        service->name(),
                         weightby);
         }
         else
@@ -1484,7 +1480,7 @@ bool service_serialize(const Service* service)
              sizeof(filename),
              "%s/%s.cnf.tmp",
              get_config_persistdir(),
-             service->name);
+             service->name());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -1577,7 +1573,7 @@ json_t* service_parameters_to_json(const SERVICE* service)
 {
     json_t* rval = json_object();
 
-    const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
+    const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
     config_add_module_params_json(service->svc_config_param,
                                   {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
                                   config_service_params,
@@ -1628,7 +1624,7 @@ json_t* service_attributes(const SERVICE* service)
 {
     json_t* attr = json_object();
 
-    json_object_set_new(attr, CN_ROUTER, json_string(service->routerModule));
+    json_object_set_new(attr, CN_ROUTER, json_string(service->router_name()));
     json_object_set_new(attr, CN_STATE, json_string(service_state_to_string(service->state)));
 
     if (service->router && service->router_instance && service->router->diagnostics_json)
@@ -1699,11 +1695,11 @@ json_t* service_json_data(const SERVICE* svc, const char* host)
     json_t* rval = json_object();
     LockGuard guard(service->lock);
 
-    json_object_set_new(rval, CN_ID, json_string(service->name));
+    json_object_set_new(rval, CN_ID, json_string(service->name()));
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVICES));
     json_object_set_new(rval, CN_ATTRIBUTES, service_attributes(service));
     json_object_set_new(rval, CN_RELATIONSHIPS, service->json_relationships(host));
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVICES, service->name));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVICES, service->name()));
 
     return rval;
 }
@@ -1711,7 +1707,7 @@ json_t* service_json_data(const SERVICE* svc, const char* host)
 json_t* service_to_json(const Service* service, const char* host)
 {
     string self = MXS_JSON_API_SERVICES;
-    self += service->name;
+    self += service->name();
     return mxs_json_resource(host, self.c_str(), service_json_data(service, host));
 }
 
@@ -1720,7 +1716,7 @@ json_t* service_listener_list_to_json(const Service* service, const char* host)
     /** This needs to be done here as the listeners are sort of sub-resources
      * of the service. */
     string self = MXS_JSON_API_SERVICES;
-    self += service->name;
+    self += service->name();
     self += "/listeners";
 
     return mxs_json_resource(host, self.c_str(), service_all_listeners_json_data(service));
@@ -1731,7 +1727,7 @@ json_t* service_listener_to_json(const Service* service, const char* name, const
     /** This needs to be done here as the listeners are sort of sub-resources
      * of the service. */
     string self = MXS_JSON_API_SERVICES;
-    self += service->name;
+    self += service->name();
     self += "/listeners/";
     self += name;
 
@@ -1767,7 +1763,7 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const char* host)
         {
             if (f == filter)
             {
-                mxs_json_add_relation(rel, service->name, CN_SERVICES);
+                mxs_json_add_relation(rel, service->name(), CN_SERVICES);
             }
         }
     }
@@ -1789,7 +1785,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
         {
             if (ref->server == server && server_ref_is_active(ref))
             {
-                names.push_back(service->name);
+                names.push_back(service->name());
             }
         }
     }

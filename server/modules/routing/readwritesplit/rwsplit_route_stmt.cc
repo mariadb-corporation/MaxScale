@@ -527,7 +527,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                         "command history, add `disable_sescmd_history=true` to "
                         "service '%s'. To increase the limit (currently %lu), add "
                         "`max_sescmd_history` to the same service and increase the value.",
-                        m_router->service()->name,
+                        m_router->service()->name(),
                         m_config.max_sescmd_history);
             warn_history_exceeded = false;
         }
@@ -965,7 +965,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
     }
 
     MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
-                m_router->service()->name,
+                m_router->service()->name(),
                 m_client->user,
                 m_client->remote,
                 errmsg);

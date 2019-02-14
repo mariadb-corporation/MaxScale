@@ -276,7 +276,7 @@ static bool process_argument(const MODULECMD* cmd,
             if ((arg->value.service = service_find((char*)value)))
             {
                 if (MODULECMD_ALLOW_NAME_MISMATCH(type)
-                    || strcmp(cmd->domain, arg->value.service->routerModule) == 0)
+                    || strcmp(cmd->domain, arg->value.service->router_name()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_SERVICE;
                     rval = true;

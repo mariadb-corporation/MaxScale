@@ -1519,7 +1519,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
                 if (match && m_instance->get_log_bitmask() & FW_LOG_MATCH)
                 {
                     MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %s",
-                               m_session->service->name,
+                               m_session->service->name(),
                                rname,
                                suser->name(),
                                user().c_str(),
@@ -1529,7 +1529,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
                 else if (!match && m_instance->get_log_bitmask() & FW_LOG_NO_MATCH)
                 {
                     MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %s",
-                               m_session->service->name,
+                               m_session->service->name(),
                                suser->name(),
                                user().c_str(),
                                remote().c_str(),

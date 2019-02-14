@@ -96,7 +96,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
 
     SERVICE* service = args->argv[0].value.service;
     char path[PATH_MAX + 1];
-    snprintf(path, PATH_MAX, "%s/%s/", get_datadir(), service->name);
+    snprintf(path, PATH_MAX, "%s/%s/", get_datadir(), service->name());
     bool rval = false;
 
     if (mxs_mkdir_all(path, 0777))
@@ -108,7 +108,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
         {
             if (write(fd, final_data, sizeof(final_data)) == static_cast<int>(sizeof(final_data)))
             {
-                MXS_NOTICE("Added user '%s' to service '%s'", user, service->name);
+                MXS_NOTICE("Added user '%s' to service '%s'", user, service->name());
                 rval = true;
             }
             else
@@ -282,7 +282,7 @@ static int cdc_auth_authenticate(DCB* dcb)
         {
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s', authentication failed.",
-                          dcb->service->name,
+                          dcb->service->name(),
                           client_data->user);
         }
     }
@@ -453,7 +453,7 @@ static int cdc_set_service_user(Listener* listener)
     {
         MXS_ERROR("decrypt password failed for service user %s, service %s",
                   service_user,
-                  service->name);
+                  service->name());
 
         return 1;
     }
@@ -551,7 +551,7 @@ int cdc_replace_users(Listener* listener)
                  PATH_MAX,
                  "%s/%s/%s",
                  get_datadir(),
-                 listener->service()->name,
+                 listener->service()->name(),
                  CDC_USERS_FILENAME);
 
         int i = cdc_read_users(newusers, path);

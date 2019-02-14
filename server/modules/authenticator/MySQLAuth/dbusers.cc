@@ -736,7 +736,7 @@ static bool check_table_permissions(MYSQL* mysql,
             MXS_LOG_MESSAGE(log_priority,
                             "[%s] User '%s' is missing SELECT privileges "
                             "on %s table.%sMySQL error message: %s",
-                            service->name,
+                            service->name(),
                             user,
                             table,
                             message ? message : " ",
@@ -746,7 +746,7 @@ static bool check_table_permissions(MYSQL* mysql,
         {
             MXS_ERROR("[%s] Failed to query from %s table."
                       " MySQL error message: %s",
-                      service->name,
+                      service->name(),
                       table,
                       mysql_error(mysql));
         }
@@ -759,7 +759,7 @@ static bool check_table_permissions(MYSQL* mysql,
         {
             MXS_ERROR("[%s] Result retrieval failed when checking for permissions to "
                       "the %s table: %s",
-                      service->name,
+                      service->name(),
                       table,
                       mysql_error(mysql));
         }
@@ -818,7 +818,7 @@ static bool check_default_table_permissions(MYSQL* mysql,
             {
                 MXS_WARNING("[%s] User '%s' is missing the SHOW DATABASES privilege. "
                             "This means that MaxScale cannot see all databases and authentication can fail.",
-                            service->name,
+                            service->name(),
                             user);
             }
 
@@ -895,7 +895,7 @@ static bool check_server_permissions(SERVICE* service,
 
         MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                   " checking authentication user credentials and permissions: %d %s",
-                  service->name,
+                  service->name(),
                   server->name(),
                   server->address,
                   server->port,
@@ -1027,7 +1027,7 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
             MXS_WARNING("The user for service '%s' might be missing the SELECT grant on "
                         "`mysql.roles_mapping` or `mysql.user`. Use of default roles is disabled "
                         "until the missing privileges are added. Error was: %s",
-                        service->name,
+                        service->name(),
                         mysql_error(conn));
         }
     }
@@ -1238,7 +1238,7 @@ static int get_users(Listener* listener, bool skip_local)
                           "[%s:%i] for service [%s]. MySQL error %i, %s",
                           server->server->address,
                           server->server->port,
-                          service->name,
+                          service->name(),
                           mysql_errno(con),
                           mysql_error(con));
                 mysql_close(con);
@@ -1274,7 +1274,7 @@ static int get_users(Listener* listener, bool skip_local)
     {
         MXS_ERROR("Unable to get user data from backend database for service [%s]."
                   " Failed to connect to any of the backend databases.",
-                  service->name);
+                  service->name());
     }
 
     return total_users;

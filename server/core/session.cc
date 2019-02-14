@@ -120,7 +120,7 @@ bool session_start(MXS_SESSION* session)
     {
         session->state = SESSION_STATE_TO_BE_FREED;
         MXS_ERROR("Failed to create new router session for service '%s'. "
-                  "See previous errors for more details.", session->service->name);
+                  "See previous errors for more details.", session->service->name());
         return false;
     }
 
@@ -151,7 +151,7 @@ bool session_start(MXS_SESSION* session)
     if (!session_setup_filters(session))
     {
         session->state = SESSION_STATE_TO_BE_FREED;
-        MXS_ERROR("Setting up filters failed. Terminating session %s.", session->service->name);
+        MXS_ERROR("Setting up filters failed. Terminating session %s.", session->service->name());
         return false;
     }
 
@@ -160,7 +160,7 @@ bool session_start(MXS_SESSION* session)
     mxb::atomic::add(&session->service->stats.n_current, 1, mxb::atomic::RELAXED);
 
     MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
-             session->service->name, session->ses_id,
+             session->service->name(), session->ses_id,
              session->client_dcb->user ? session->client_dcb->user : "<no user>",
              session->client_dcb->remote);
 
@@ -255,7 +255,7 @@ private:
  */
 static void session_free(MXS_SESSION* session)
 {
-    MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name, session->ses_id);
+    MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name(), session->ses_id);
     Service* service = static_cast<Service*>(session->service);
 
     session_final_free(session);
@@ -318,7 +318,7 @@ void printSession(MXS_SESSION* session)
 
     printf("Session %p\n", session);
     printf("\tState:        %s\n", session_state_to_string(session->state));
-    printf("\tService:      %s (%p)\n", session->service->name, session->service);
+    printf("\tService:      %s (%p)\n", session->service->name(), session->service);
     printf("\tClient DCB:   %p\n", session->client_dcb);
     printf("\tConnected:    %s\n",
            asctime_r(localtime_r(&session->stats.connect, &result), timebuf));
@@ -387,7 +387,7 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
 
     dcb_printf(dcb, "Session %" PRIu64 "\n", print_session->ses_id);
     dcb_printf(dcb, "\tState:               %s\n", session_state_to_string(print_session->state));
-    dcb_printf(dcb, "\tService:             %s\n", print_session->service->name);
+    dcb_printf(dcb, "\tService:             %s\n", print_session->service->name());
 
     if (print_session->client_dcb && print_session->client_dcb->remote)
     {
@@ -427,8 +427,8 @@ bool dListSessions_cb(DCB* dcb, void* data)
                    session->ses_id,
                    session->client_dcb && session->client_dcb->remote ?
                    session->client_dcb->remote : "",
-                   session->service && session->service->name ?
-                   session->service->name : "",
+                   session->service && session->service->name() ?
+                   session->service->name() : "",
                    session_state_to_string(session->state));
     }
 
@@ -601,7 +601,7 @@ bool dcb_iter_cb(DCB* dcb, void* data)
         char buf[20];
         snprintf(buf, sizeof(buf), "%p", ses);
 
-        set->add_row({buf, ses->client_dcb->remote, ses->service->name, session_state_to_string(ses->state)});
+        set->add_row({buf, ses->client_dcb->remote, ses->service->name(), session_state_to_string(ses->state)});
     }
 
     return true;
@@ -731,7 +731,7 @@ json_t* session_json_data(const Session* session, const char* host)
 
     /** Service relationship (one-to-one) */
     json_t* services = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
-    mxs_json_add_relation(services, session->service->name, CN_SERVICES);
+    mxs_json_add_relation(services, session->service->name(), CN_SERVICES);
     json_object_set_new(rel, CN_SERVICES, services);
 
     /** Filter relationships (one-to-many) */
@@ -1245,7 +1245,7 @@ bool Session::setup_filters(Service* service)
         {
             MXS_ERROR("Failed to create filter '%s' for service '%s'.\n",
                       filter_def_get_name(it->filter.get()),
-                      service->name);
+                      service->name());
             return false;
         }
 
@@ -1263,7 +1263,7 @@ bool Session::setup_filters(Service* service)
         {
             MXS_ERROR("Failed to create filter '%s' for service '%s'.",
                       filter_def_get_name(it->filter.get()),
-                      service->name);
+                      service->name());
             return false;
         }
 

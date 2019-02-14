@@ -260,18 +260,18 @@ int blr_file_init(ROUTER_INSTANCE* router)
     if (router->binlogdir == NULL)
     {
         const char* datadir = get_datadir();
-        size_t len = strlen(datadir) + sizeof('/') + strlen(router->service->name);
+        size_t len = strlen(datadir) + sizeof('/') + strlen(router->service->name());
 
         if (len > PATH_MAX)
         {
             MXS_ERROR("The length of %s/%s is more than the maximum length %d.",
                       datadir,
-                      router->service->name,
+                      router->service->name(),
                       PATH_MAX);
             return 0;
         }
 
-        snprintf(path, sizeof(path), "%s/%s", datadir, router->service->name);
+        snprintf(path, sizeof(path), "%s/%s", datadir, router->service->name());
 
         if (access(path, R_OK) == -1)
         {
@@ -290,7 +290,7 @@ int blr_file_init(ROUTER_INSTANCE* router)
     if (access(path, R_OK) == -1)
     {
         MXS_ERROR("%s: Unable to read the binlog directory %s.",
-                  router->service->name,
+                  router->service->name(),
                   router->binlogdir);
         return 0;
     }
@@ -308,7 +308,7 @@ int blr_file_init(ROUTER_INSTANCE* router)
         if ((dirp = opendir(path)) == NULL)
         {
             MXS_ERROR("%s: Unable to read the binlog directory %s, %s.",
-                      router->service->name,
+                      router->service->name(),
                       router->binlogdir,
                       mxs_strerror(errno));
             return 0;
@@ -384,7 +384,7 @@ int blr_file_init(ROUTER_INSTANCE* router)
             || !last_gtid.gtid[0])
         {
             MXS_INFO("%s: cannot find any GTID in GTID maps repo",
-                     router->service->name);
+                     router->service->name());
             return 0;
         }
 
@@ -507,7 +507,7 @@ static int blr_file_create(ROUTER_INSTANCE* router, char* orig_file)
         {
             MXS_ERROR("Service %s, Failed to create binlog"
                       " directory tree '%s': [%d] %s",
-                      router->service->name,
+                      router->service->name(),
                       path,
                       errno,
                       mxs_strerror(errno));
@@ -558,7 +558,7 @@ static int blr_file_create(ROUTER_INSTANCE* router, char* orig_file)
         {
             MXS_ERROR("%s: Failed to write magic string to "
                       "created binlog file %s, %s.",
-                      router->service->name,
+                      router->service->name(),
                       path,
                       mxs_strerror(errno));
             close(fd);
@@ -566,7 +566,7 @@ static int blr_file_create(ROUTER_INSTANCE* router, char* orig_file)
             if (!unlink(path))
             {
                 MXS_ERROR("%s: Failed to delete file %s, %s.",
-                          router->service->name,
+                          router->service->name(),
                           path,
                           mxs_strerror(errno));
             }
@@ -575,7 +575,7 @@ static int blr_file_create(ROUTER_INSTANCE* router, char* orig_file)
     else
     {
         MXS_ERROR("%s: Failed to create binlog file %s, %s.",
-                  router->service->name,
+                  router->service->name(),
                   path,
                   mxs_strerror(errno));
     }
@@ -645,7 +645,7 @@ void blr_file_append(ROUTER_INSTANCE* router, char* file)
             else
             {
                 MXS_ERROR("%s: Could not write magic to binlog file.",
-                          router->service->name);
+                          router->service->name());
             }
         }
         else
@@ -653,7 +653,7 @@ void blr_file_append(ROUTER_INSTANCE* router, char* file)
             /* If for any reason the file's length is between 1 and 3 bytes
              * then report an error. */
             MXS_ERROR("%s: binlog file %s has an invalid length %lu.",
-                      router->service->name,
+                      router->service->name(),
                       path,
                       router->current_pos);
             close(fd);
@@ -746,7 +746,7 @@ int blr_write_binlog_record(ROUTER_INSTANCE* router,
     {
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
-                  router->service->name,
+                  router->service->name(),
                   router->binlog_position,
                   router->binlog_name,
                   mxs_strerror(errno));
@@ -754,7 +754,7 @@ int blr_write_binlog_record(ROUTER_INSTANCE* router,
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
-                      router->service->name,
+                      router->service->name(),
                       router->binlog_position,
                       router->binlog_name,
                       mxs_strerror(errno));
@@ -3180,7 +3180,7 @@ int blr_handle_config_item(const char* name,
         {
             MXS_WARNING("Found invalid 'master_heartbeat_period' value"
                         " for service '%s': %s, ignoring it.",
-                        inst->service->name,
+                        inst->service->name(),
                         value);
             heartbeat_period = -1;
         }
@@ -3194,7 +3194,7 @@ int blr_handle_config_item(const char* name,
         {
             MXS_WARNING("Found invalid 'master_connect_retry' value"
                         " for service '%s': %s, ignoring it.",
-                        inst->service->name,
+                        inst->service->name(),
                         value);
             connect_retry = -1;
         }
@@ -3324,7 +3324,7 @@ int blr_handler_config(void* userdata, const char* section, const char* name, co
                   section,
                   SECTION_NAME,
                   SECTION_NAME,
-                  inst->service->name);
+                  inst->service->name());
         rc = 0;
     }
 
@@ -3347,7 +3347,7 @@ int blr_file_read_master_config(ROUTER_INSTANCE* router)
         blr_master_set_config(router, router->configs[0]);
     }
 
-    MXS_INFO("%s: %s parse result is %d", router->service->name, filename, rc);
+    MXS_INFO("%s: %s parse result is %d", router->service->name(), filename, rc);
 
     return rc;
 }
@@ -3726,7 +3726,7 @@ int blr_write_special_event(ROUTER_INSTANCE* router,
     {
         MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
-                  router->service->name,
+                  router->service->name(),
                   new_event_desc,
                   (unsigned long)file_offset,
                   router->binlog_name,
@@ -3736,7 +3736,7 @@ int blr_write_special_event(ROUTER_INSTANCE* router,
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate %s special binlog record at %lu of %s, %s. ",
-                      router->service->name,
+                      router->service->name(),
                       new_event_desc,
                       (unsigned long)file_offset,
                       router->binlog_name,
@@ -4386,7 +4386,7 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE* inst)
             {
                 MXS_ERROR("Service %s: failed to update GTID %s for %s:%lu,%lu "
                           "into gtid_maps database: %s",
-                          inst->service->name,
+                          inst->service->name(),
                           gtid_info.gtid,
                           gtid_info.binlog_name,
                           gtid_info.start,
@@ -4402,7 +4402,7 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE* inst)
         {
             MXS_ERROR("Service %s: failed to insert GTID %s for %s:%lu,%lu "
                       "into gtid_maps database: %s",
-                      inst->service->name,
+                      inst->service->name(),
                       gtid_info.gtid,
                       gtid_info.binlog_name,
                       gtid_info.start,
@@ -4878,7 +4878,7 @@ bool blr_binlog_file_exists(ROUTER_INSTANCE* router,
     {
         // No file found
         MXS_WARNING("%s: %s, missing binlog file '%s'",
-                    router->service->name,
+                    router->service->name(),
                     info_file == NULL ?
                     "ROTATE_EVENT" :
                     "Slave request",

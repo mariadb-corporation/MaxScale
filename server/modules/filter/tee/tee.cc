@@ -112,7 +112,7 @@ void Tee::diagnostics(DCB* dcb)
     }
     dcb_printf(dcb,
                "\t\tDuplicate statements to service		%s\n",
-               m_service->name);
+               m_service->name());
     if (m_user.length())
     {
         dcb_printf(dcb,
@@ -153,7 +153,7 @@ json_t* Tee::diagnostics_json() const
         json_object_set_new(rval, "source", json_string(m_source.c_str()));
     }
 
-    json_object_set_new(rval, "service", json_string(m_service->name));
+    json_object_set_new(rval, "service", json_string(m_service->name()));
 
     if (m_user.length())
     {

@@ -264,7 +264,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     {
         MXS_ERROR("%s: Error: Service is missing user credentials."
                   " Add the missing username or passwd parameter to the service.",
-                  service->name);
+                  service->name());
         return NULL;
     }
 
@@ -278,7 +278,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         MXS_WARNING("%s: backend database server is provided by master.ini file "
                     "for use with the binlog router."
                     " Server section is no longer required.",
-                    service->name);
+                    service->name());
 
         MXS_FREE(service->dbref);
         service->dbref = NULL;
@@ -468,7 +468,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
                 {
                     MXS_ERROR("Service %s, invalid server-id '%s'. "
                               "Please configure it with a unique positive integer value (1..2^32-1)",
-                              service->name,
+                              service->name(),
                               v.c_str());
                     free_instance(inst);
                     return NULL;
@@ -563,7 +563,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
                 {
                     MXS_ERROR("Service %s, invalid encryption_algorithm '%s'. "
                               "Supported algorithms: %s",
-                              service->name,
+                              service->name(),
                               v.c_str(),
                               blr_encryption_algorithm_list());
                     free_instance(inst);
@@ -648,7 +648,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
                 {
                     MXS_ERROR("%s: invalid Master ssl_cert_verification_depth %s."
                               " Setting it to default value %i.",
-                              service->name,
+                              service->name(),
                               v.c_str(),
                               inst->ssl_cert_verification_depth);
                     free_instance(inst);
@@ -658,7 +658,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             else
             {
                 MXS_WARNING("%s: unsupported router option %s for binlog router.",
-                            service->name,
+                            service->name(),
                             k.c_str());
             }
         }
@@ -677,7 +677,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     if (inst->heartbeat < 0)
     {
         MXS_ERROR("%s: invalid 'heartbeat' value.",
-                  service->name);
+                  service->name());
         free_instance(inst);
         return NULL;
     }
@@ -690,7 +690,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     if (inst->retry_interval <= 0)
     {
         MXS_ERROR("%s: invalid 'connect_retry' value.",
-                  service->name);
+                  service->name());
         free_instance(inst);
         return NULL;
     }
@@ -698,7 +698,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     if (inst->retry_limit <= 0)
     {
         MXS_ERROR("%s: invalid 'master_retry_count' value.",
-                  service->name);
+                  service->name());
         free_instance(inst);
         return NULL;
     }
@@ -709,7 +709,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             && !strlen(inst->binlogdir)))
     {
         MXS_ERROR("Service %s, binlog directory is not specified",
-                  service->name);
+                  service->name());
         free_instance(inst);
         return NULL;
     }
@@ -719,7 +719,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         MXS_ERROR("Service %s, server_id is not configured. "
                   "Please configure it with a unique positive "
                   "integer value (1..2^32-1)",
-                  service->name);
+                  service->name());
         free_instance(inst);
         return NULL;
     }
@@ -742,7 +742,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         if (mkdir_rval == -1)
         {
             MXS_ERROR("Service %s, Failed to create binlog directory '%s': [%d] %s",
-                      service->name,
+                      service->name(),
                       inst->binlogdir,
                       errno,
                       mxs_strerror(errno));
@@ -778,7 +778,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
 
     /* Log binlog structure storage mode */
     MXS_NOTICE("%s: storing binlog files in %s",
-               service->name,
+               service->name(),
                inst->storage_type == BLR_BINLOG_STORAGE_FLAT ?
                "'flat' mode" :
                "'tree' mode using GTID domain_id and server_id");
@@ -813,7 +813,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",
-                      inst->service->name);
+                      inst->service->name());
 
             sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
@@ -826,7 +826,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
                  static_cast<SSL_LISTENER*>(MXS_CALLOC(1, sizeof(SSL_LISTENER)))) == NULL)
         {
             MXS_ERROR("%s: Error allocating memory for SSL struct in createInstance",
-                      inst->service->name);
+                      inst->service->name());
 
             MXS_FREE(service->dbref);
             sqlite3_close_v2(inst->gtid_maps);
@@ -875,7 +875,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             MXS_WARNING("%s: master.ini file not found in %s."
                         " Master registration cannot be started."
                         " Configure with CHANGE MASTER TO ...",
-                        inst->service->name,
+                        inst->service->name(),
                         inst->binlogdir);
         }
         else
@@ -883,7 +883,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             MXS_ERROR("%s: master.ini file with errors in %s."
                       " Master registration cannot be started."
                       " Fix errors in it or configure with CHANGE MASTER TO ...",
-                      inst->service->name,
+                      inst->service->name(),
                       inst->binlogdir);
         }
     }
@@ -908,11 +908,11 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
 
     if (inst->ssl_enabled)
     {
-        MXS_INFO("%s: Replicating from master with SSL", service->name);
+        MXS_INFO("%s: Replicating from master with SSL", service->name());
     }
     else
     {
-        MXS_DEBUG("%s: Replicating from master without SSL", service->name);
+        MXS_DEBUG("%s: Replicating from master without SSL", service->name());
         /* Free the SSL struct because is not needed if MASTER_SSL = 0
          * Provided options, if any, are kept in inst->ssl_* vars
          * SHOW SLAVE STATUS can display those values
@@ -949,7 +949,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         if (blr_file_init(inst) == 0)
         {
             MXS_ERROR("%s: Service not started due to lack of binlog directory %s",
-                      service->name,
+                      service->name(),
                       inst->binlogdir);
 
             if (service->dbref && service->dbref->server)
@@ -984,14 +984,14 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     /*
      * Add tasks for statistic computation
      */
-    snprintf(task_name, BLRM_TASK_NAME_LEN, "%s stats", service->name);
+    snprintf(task_name, BLRM_TASK_NAME_LEN, "%s stats", service->name());
     hktask_add(task_name, stats_func, inst, BLR_STATS_FREQ);
 
     /* Log whether the transaction safety option value is on */
     if (inst->trx_safe)
     {
         MXS_NOTICE("%s: Service has transaction safety option set to ON",
-                   service->name);
+                   service->name());
     }
 
     /* Log whether the binlog encryption option value is on */
@@ -999,7 +999,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     {
         MXS_NOTICE("%s: Service has binlog encryption set to ON, algorithm: %s,"
                    " KEY len %lu bits",
-                   service->name,
+                   service->name(),
                    blr_get_encryption_algorithm(inst->encryption.encryption_algorithm),
                    8 * inst->encryption.key_len);
     }
@@ -1086,7 +1086,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
                                               " and START SLAVE."
                                               " Existing binlogs might be overwritten.");
                 MXS_ERROR("%s: %s",
-                          inst->service->name,
+                          inst->service->name(),
                           inst->m_errmsg);
 
                 return (MXS_ROUTER*)inst;
@@ -1306,7 +1306,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
          */
         MXS_NOTICE("%s: Master %s disconnected after %ld seconds. "
                    "%lu events read,",
-                   router->service->name,
+                   router->service->name(),
                    router->service->dbref->server->address,
                    time(0) - router->connect_time,
                    router->stats.n_binlogs_ses);
@@ -1329,7 +1329,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
             MXS_NOTICE("%s: Slave [%s]:%d, server id %d, disconnected after %ld seconds. "
                        "%d SQL commands, %d events sent (%lu bytes), binlog '%s', "
                        "last position %lu",
-                       router->service->name,
+                       router->service->name(),
                        slave->dcb->remote,
                        dcb_get_port(slave->dcb),
                        slave->serverid,
@@ -1344,7 +1344,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
         {
             MXS_NOTICE("%s: Slave %s, server id %d, disconnected after %ld seconds. "
                        "%d SQL commands",
-                       router->service->name,
+                       router->service->name(),
                        slave->dcb->remote,
                        slave->serverid,
                        time(0) - slave->connect_time,
@@ -2416,7 +2416,7 @@ static void errorReply(MXS_ROUTER* instance,
 
                 MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
                           "%s while connecting to master [%s]:%d. Replication is stopped.",
-                          router->service->name,
+                          router->service->name(),
                           router->m_errno,
                           router->m_errmsg,
                           blrm_states[BLRM_TIMESTAMP],
@@ -2463,7 +2463,7 @@ static void errorReply(MXS_ROUTER* instance,
 
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
                   "%sattempting reconnect to master [%s]:%d",
-                  router->service->name,
+                  router->service->name(),
                   mysql_errno,
                   errmsg,
                   blrm_states[router->master_state],
@@ -2476,7 +2476,7 @@ static void errorReply(MXS_ROUTER* instance,
         /* Stopped state, no reconnection */
         MXS_INFO("%s: Master connection has been closed. State is '%s', "
                  "%snot retrying a new connection to master [%s]:%d",
-                 router->service->name,
+                 router->service->name(),
                  blrm_states[router->master_state],
                  msg,
                  router->service->dbref->server->address,
@@ -2505,7 +2505,7 @@ static void errorReply(MXS_ROUTER* instance,
 
     MXS_NOTICE("%s: Master %s disconnected after %ld seconds. "
                "%lu events read.",
-               router->service->name,
+               router->service->name(),
                router->service->dbref->server->address,
                time(0) - router->connect_time,
                router->stats.n_binlogs_ses);
@@ -2964,8 +2964,8 @@ static void destroyInstance(MXS_ROUTER* instance)
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*) instance;
 
     MXS_DEBUG("Destroying instance of router %s for service %s",
-              inst->service->routerModule,
-              inst->service->name);
+              inst->service->router_name(),
+              inst->service->name());
 
     /* Check whether master connection is active */
     if (inst->master)
@@ -2996,7 +2996,7 @@ static void destroyInstance(MXS_ROUTER* instance)
 
     MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master [%s]:%d, "
              "read up to log %s, pos %lu, transaction safe pos %lu",
-             inst->service->name,
+             inst->service->name(),
              inst->service->dbref->server->address,
              inst->service->dbref->server->port,
              inst->binlog_name,
@@ -3008,7 +3008,7 @@ static void destroyInstance(MXS_ROUTER* instance)
     {
         MXS_WARNING("%s stopped by shutdown: detected mid-transaction in binlog file %s, "
                     "pos %lu, incomplete transaction starts at pos %lu",
-                    inst->service->name,
+                    inst->service->name(),
                     inst->binlog_name,
                     inst->current_pos,
                     inst->binlog_position);
@@ -3123,7 +3123,7 @@ bool blr_get_encryption_key(ROUTER_INSTANCE* router)
     {
         MXS_ERROR("Service %s, encryption key is not set. "
                   "Please specify key filename with 'encryption_key_file'",
-                  router->service->name);
+                  router->service->name());
         return false;
     }
     else
@@ -3257,7 +3257,7 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE* inst)
     if (rc != SQLITE_OK)
     {
         MXS_ERROR("Service %s, failed to create GTID index table 'gtid_maps': %s",
-                  inst->service->name,
+                  inst->service->name(),
                   sqlite3_errmsg(inst->gtid_maps));
         sqlite3_free(errmsg);
         /* Close GTID maps database */
@@ -3288,7 +3288,7 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE* inst)
         {
             // Otherwise we bail out.
             MXS_ERROR("Service %s, failed to alter GTID index table 'gtid_map': %s",
-                      inst->service->name,
+                      inst->service->name(),
                       s.c_str());
             sqlite3_close_v2(inst->gtid_maps);
             return false;
@@ -3296,7 +3296,7 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE* inst)
     }
 
     MXS_NOTICE("%s: Service has MariaDB GTID otion set to ON",
-               inst->service->name);
+               inst->service->name());
 
     return true;
 }
@@ -3304,7 +3304,7 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE* inst)
 void blr_log_disabled_heartbeat(const ROUTER_INSTANCE* inst)
 {
     MXS_WARNING("%s: %s",
-                inst->service->name,
+                inst->service->name(),
                 "MASTER_HEARTBEAT_PERIOD has been set to 0 (disabled): "
                 "a master network inactivity will not be handled.");
 }

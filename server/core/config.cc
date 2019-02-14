@@ -3996,7 +3996,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
             MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
                       "listener '%s' already listens on the %s %s.",
                       obj->object,
-                      service->name,
+                      service->name(),
                       l->name(),
                       socket ? "socket" : "port",
                       socket ? socket : port);

@@ -1374,7 +1374,7 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
     {
         dcb_printf(pdcb,
                    "\tService:            %s\n",
-                   dcb->session->service->name);
+                   dcb->session->service->name());
     }
     if (dcb->remote)
     {
@@ -1469,7 +1469,7 @@ static bool dlist_dcbs_cb(DCB* dcb, void* data)
                " %-16p | %-26s | %-18s | %s\n",
                dcb,
                gw_dcb_state2string(dcb->state),
-               ((dcb->session && dcb->session->service) ? dcb->session->service->name : ""),
+               ((dcb->session && dcb->session->service) ? dcb->session->service->name() : ""),
                (dcb->remote ? dcb->remote : ""));
     return true;
 }
@@ -1505,7 +1505,7 @@ static bool dlist_clients_cb(DCB* dcb, void* data)
                    (dcb->remote ? dcb->remote : ""),
                    dcb,
                    (dcb->session->service ?
-                    dcb->session->service->name : ""),
+                    dcb->session->service->name() : ""),
                    dcb->session);
     }
 
@@ -1546,7 +1546,7 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
     {
         dcb_printf(pdcb,
                    "\tService:            %s\n",
-                   dcb->session->service->name);
+                   dcb->session->service->name());
     }
     if (dcb->remote)
     {
@@ -3069,8 +3069,8 @@ int poll_add_dcb(DCB* dcb)
 
     if (dcb->role == DCB::Role::CLIENT)
     {
-        if (strcasecmp(dcb->service->routerModule, "cli") == 0
-            || strcasecmp(dcb->service->routerModule, "maxinfo") == 0)
+        if (strcasecmp(dcb->service->router_name(), "cli") == 0
+            || strcasecmp(dcb->service->router_name(), "maxinfo") == 0)
         {
             // If the DCB refers to an accepted maxadmin/maxinfo socket, we force it
             // to the main thread. That's done in order to prevent a deadlock
