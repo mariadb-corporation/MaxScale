@@ -17,6 +17,7 @@
 namespace
 {
 
+const char CN_DYNAMIC[] = "dynamic";
 const char CN_NORMAL[]  = "normal";
 const char CN_QUORUM[]  = "quorum";
 const char CN_STATIC[]  = "static";
@@ -33,6 +34,9 @@ std::string Clustrix::to_string(Clustrix::Status status)
 
     case Status::STATIC:
         return CN_STATIC;
+
+    case Status::DYNAMIC:
+        return CN_DYNAMIC;
 
     case Status::UNKNOWN:
         return CN_UNKNOWN;
@@ -51,6 +55,10 @@ Clustrix::Status Clustrix::status_from_string(const std::string& status)
     else if (status == CN_STATIC)
     {
         return Status::STATIC;
+    }
+    else if (status == CN_DYNAMIC)
+    {
+        return Status::DYNAMIC;
     }
     else
     {
@@ -94,15 +102,9 @@ bool Clustrix::is_part_of_the_quorum(const char* zName, const SERVER& server, MY
     const char* zAddress = server.address;
     int port = server.port;
 
-    const char ZQUERY_TEMPLATE[] =
-        "SELECT ms.status FROM system.membership AS ms INNER JOIN system.nodeinfo AS ni "
-        "ON ni.nodeid = ms.nid WHERE ni.iface_ip = '%s'";
+    const char ZQUERY[] = "SELECT status FROM system.membership WHERE nid = gtmnid()";
 
-    char zQuery[sizeof(ZQUERY_TEMPLATE) + strlen(zAddress)];
-
-    sprintf(zQuery, ZQUERY_TEMPLATE, zAddress);
-
-    if (mysql_query(pCon, zQuery) == 0)
+    if (mysql_query(pCon, ZQUERY) == 0)
     {
         MYSQL_RES* pResult = mysql_store_result(pCon);
 
@@ -110,48 +112,51 @@ bool Clustrix::is_part_of_the_quorum(const char* zName, const SERVER& server, MY
         {
             mxb_assert(mysql_field_count(pCon) == 1);
 
-            MYSQL_ROW row;
-            while ((row = mysql_fetch_row(pResult)) != nullptr)
+            MYSQL_ROW row = mysql_fetch_row(pResult);
+            if (row && row[0])
             {
-                if (row[0])
+                Clustrix::Status status = Clustrix::status_from_string(row[0]);
+
+                switch (status)
                 {
-                    Clustrix::Status status = Clustrix::status_from_string(row[0]);
+                case Clustrix::Status::QUORUM:
+                    rv = true;
+                    break;
 
-                    switch (status)
-                    {
-                    case Clustrix::Status::QUORUM:
-                        rv = true;
-                        break;
+                case Clustrix::Status::STATIC:
+                    MXS_NOTICE("%s: Node %s:%d is not part of the quorum (static), switching to "
+                               "other node for monitoring.",
+                               zName, zAddress, port);
+                    break;
 
-                    case Clustrix::Status::STATIC:
-                        MXS_NOTICE("%s: Node %s:%d is not part of the quorum, switching to "
-                                   "other node for monitoring.",
-                                   zName, zAddress, port);
-                        break;
+                case Clustrix::Status::DYNAMIC:
+                    MXS_NOTICE("%s: Node %s:%d is not part of the quorum (dynamic), switching to "
+                               "other node for monitoring.",
+                               zName, zAddress, port);
+                    break;
 
-                    case Clustrix::Status::UNKNOWN:
-                        MXS_WARNING("%s: Do not know how to interpret '%s'. Assuming node %s:%d "
-                                    "is not part of the quorum.",
-                                    zName, row[0], zAddress, port);
-                    }
+                case Clustrix::Status::UNKNOWN:
+                    MXS_WARNING("%s: Do not know how to interpret '%s'. Assuming node %s:%d "
+                                "is not part of the quorum.",
+                                zName, row[0], zAddress, port);
                 }
-                else
-                {
-                    MXS_WARNING("%s: No status returned for '%s' on %s:%d.", zName, zQuery, zAddress, port);
-                }
+            }
+            else
+            {
+                MXS_WARNING("%s: No status returned for '%s' on %s:%d.", zName, ZQUERY, zAddress, port);
             }
 
             mysql_free_result(pResult);
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s' on %s:%d.", zName, zQuery, zAddress, port);
+            MXS_WARNING("%s: No result returned for '%s' on %s:%d.", zName, ZQUERY, zAddress, port);
         }
     }
     else
     {
         MXS_ERROR("%s: Could not execute '%s' on %s:%d: %s",
-                  zName, zQuery, zAddress, port, mysql_error(pCon));
+                  zName, ZQUERY, zAddress, port, mysql_error(pCon));
     }
 
     return rv;
@@ -164,15 +169,9 @@ bool Clustrix::is_being_softfailed(const char* zName, const SERVER& server, MYSQ
     const char* zAddress = server.address;
     int port = server.port;
 
-    const char ZQUERY_TEMPLATE[] =
-        "SELECT sn.nodeid FROM system.softfailed_nodes AS sn INNER JOIN system.nodeinfo AS ni "
-        "WHERE sn.nodeid = ni.nodeid AND ni.iface_ip = '%s'";
+    const char ZQUERY[] = "SELECT nodeid FROM system.softfailed_nodes WHERE nodeid = gtmnid()";
 
-    char zQuery[sizeof(ZQUERY_TEMPLATE) + strlen(zAddress)];
-
-    sprintf(zQuery, ZQUERY_TEMPLATE, zAddress);
-
-    if (mysql_query(pCon, zQuery) == 0)
+    if (mysql_query(pCon, ZQUERY) == 0)
     {
         MYSQL_RES* pResult = mysql_store_result(pCon);
 
@@ -180,8 +179,8 @@ bool Clustrix::is_being_softfailed(const char* zName, const SERVER& server, MYSQ
         {
             mxb_assert(mysql_field_count(pCon) == 1);
 
-            MYSQL_ROW row;
-            while ((row = mysql_fetch_row(pResult)) != nullptr)
+            MYSQL_ROW row = mysql_fetch_row(pResult);
+            if (row)
             {
                 // If a row is found, it is because the node is being softfailed.
                 rv = true;
@@ -191,13 +190,13 @@ bool Clustrix::is_being_softfailed(const char* zName, const SERVER& server, MYSQ
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s' on %s:%d.", zName, zQuery, zAddress, port);
+            MXS_WARNING("%s: No result returned for '%s' on %s:%d.", zName, ZQUERY, zAddress, port);
         }
     }
     else
     {
         MXS_ERROR("%s: Could not execute '%s' on %s:%d: %s",
-                  zName, zQuery, zAddress, port, mysql_error(pCon));
+                  zName, ZQUERY, zAddress, port, mysql_error(pCon));
     }
 
     return rv;

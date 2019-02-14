@@ -24,6 +24,7 @@ enum class Status
 {
     QUORUM,
     STATIC,
+    DYNAMIC,
     UNKNOWN
 };
 
