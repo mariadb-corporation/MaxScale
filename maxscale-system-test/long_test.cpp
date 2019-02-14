@@ -162,6 +162,22 @@ int main(int argc, char *argv[])
     return rval;
 }
 
+void try_and_reconnect(MYSQL * conn, char * db, char * sql)
+{
+    if (execute_query(conn, sql))
+    {
+        Test->tprintf("reconnect");
+        mysql_close(conn);
+        conn = open_conn_db_timeout(port,
+                IP,
+                db,
+                Test->repl->user_name,
+                Test->repl->password,
+                20,
+                Test->ssl);
+    }
+}
+
 void *query_thread(void *ptr )
 {
     MYSQL * conn;
@@ -178,14 +194,16 @@ void *query_thread(void *ptr )
     while (!data->exit_flag)
     {
 
-        Test->try_query(conn, data->sql);
+        //Test->try_query(conn, data->sql);
+        try_and_reconnect(conn, (char *) "test", data->sql);
+
         if (tn >= inserts_until_optimize)
         {
             tn = 0;
             Test->tprintf("Removing everything from table in the queries thread");
-            Test->try_query(conn, (char *) "DELETE FROM t1");
+            try_and_reconnect(conn, (char *) "test", (char *) "DELETE FROM t1");
             Test->tprintf("Optimizing table in the queries thread");
-            Test->try_query(conn, (char *) "OPTIMIZE TABLE t1");
+            try_and_reconnect(conn, (char *) "test", (char *) "OPTIMIZE TABLE t1");
         }
         tn++;
     }
@@ -198,6 +216,7 @@ void *read_thread(void *ptr )
     MYSQL * conn;
     t_data * data = (t_data *) ptr;
     int i = 0;
+    char sql[256];
     conn = open_conn_db_timeout(port,
             IP,
             (char *) "test",
@@ -207,8 +226,8 @@ void *read_thread(void *ptr )
             Test->ssl);
     while (!data->exit_flag)
     {
-
-        Test->try_query(conn, "SELECT * FROM t1 WHERE fl=%d", data->id);
+        sprintf(sql, "SELECT * FROM t1 WHERE fl=%d", data->id);
+        try_and_reconnect(conn, (char *) "test", sql);
         i++;
     }
     mysql_close(conn);
@@ -231,22 +250,22 @@ void *transaction_thread(void *ptr )
     while (!data->exit_flag)
     {
 
-        Test->try_query(conn, (char *) "START TRANSACTION");
-        Test->try_query(conn, (char *) "SET autocommit = 0");
+        try_and_reconnect(conn, (char *) "test1", (char *) "START TRANSACTION");
+        try_and_reconnect(conn, (char *) "test1", (char *) "SET autocommit = 0");
 
         int stmt_num = 200000 / strlen(data->sql);
         for (int i = 0; i < stmt_num; i++)
         {
-            Test->try_query(conn, data->sql);
+            Test->try_query(conn, (char *) "test1", data->sql);
         }
         Test->try_query(conn, (char *) "COMMIT");
         if (tn >= transactions_until_optimize)
         {
             tn = 0;
             Test->tprintf("Removing everything from table in the transactions thread");
-            Test->try_query(conn, (char *) "DELETE FROM t1");
+            try_and_reconnect(conn, (char *) "test1", (char *) "DELETE FROM t1");
             Test->tprintf("Optimizing table in the transactions thread");
-            Test->try_query(conn, (char *) "OPTIMIZE TABLE t1");
+            try_and_reconnect(conn, (char *) "test1", (char *) "OPTIMIZE TABLE t1");
         }
         tn++;
     }
@@ -298,16 +317,16 @@ void *prepared_stmt_thread(void *ptr )
     while (!data->exit_flag)
     {
         sprintf(sql, "PREPARE stmt%d FROM 'SELECT * FROM t1 WHERE fl=@x;';", data->id);
-        Test->try_query(conn, sql);
-        Test->try_query(conn, "SET @x = 3;");
+        try_and_reconnect(conn, (char *) "test2", sql);
+        try_and_reconnect(conn, (char *) "test2", (char *) "SET @x = 3;");
         sprintf(sql, "EXECUTE stmt%d", data->id);
-        Test->try_query(conn, sql);
-        Test->try_query(conn, "SET @x = 4;");
-        Test->try_query(conn, sql);
-        Test->try_query(conn, "SET @x = 400;");
-        Test->try_query(conn, sql);
+        try_and_reconnect(conn, (char *) "test2", sql);
+        try_and_reconnect(conn, (char *) "test2", (char *) "SET @x = 4;");
+        try_and_reconnect(conn, (char *) "test2", sql);
+        try_and_reconnect(conn, (char *) "test2", (char *) "SET @x = 400;");
+        try_and_reconnect(conn, (char *) "test2", sql);
         sprintf(sql, "DEALLOCATE PREPARE stmt%d", data->id);
-        Test->try_query(conn, sql);
+        try_and_reconnect(conn, (char *) "test2", sql);
     }
     mysql_close(conn);
 
