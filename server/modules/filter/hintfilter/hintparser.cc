@@ -19,6 +19,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
+#include <maxscale/buffer.hh>
 #include "mysqlhint.hh"
 #include <maxscale/alloc.h>
 
@@ -804,4 +805,140 @@ HINTSTACK* free_hint_stack(HINTSTACK* hint_stack)
     {
         return NULL;
     }
+}
+
+/**
+ * Advance an iterator until either an unescaped character `c` is found or `end` is reached
+ *
+ * @param it  Iterator to start from
+ * @param end Past-the-end iterator
+ * @param c   The character to look for
+ *
+ * @return The iterator pointing at the first occurrence of the character or `end` if one was not found
+ */
+template<class InputIter>
+InputIter skip_until(InputIter it, InputIter end, char c)
+{
+    while (it != end)
+    {
+        if (*it == '\\')
+        {
+            if (++it == end)
+            {
+                continue;
+            }
+        }
+        else if (*it == c)
+        {
+            break;
+        }
+
+        ++it;
+    }
+
+    return it;
+}
+
+/**
+ * Extract a MariaDB comment
+ *
+ * @param it  Iterator pointing to the start of the search string
+ * @param end Past-the-end iterator
+ *
+ * @return A pair of iterators pointing to the range the comment spans. The comment tags themselves are not
+ *         included in this range. If no comment is found, a pair of `end` iterators is returned.
+ */
+template<class InputIter>
+std::pair<InputIter, InputIter> get_comment(InputIter it, InputIter end)
+{
+    while (it != end)
+    {
+        switch (*it)
+        {
+        case '\\':
+            if (++it == end)
+            {
+                continue;
+            }
+            break;
+
+        case '"':
+        case '\'':
+        case '`':
+            // Quoted literal string or identifier
+            if ((it = skip_until(std::next(it), end, *it)) == end)
+            {
+                // Malformed quoted value
+                continue;
+            }
+            break;
+
+        case '#':
+            // A comment that spans the rest of the line
+            ++it;
+            return {it, skip_until(it, end, '\n')};
+
+        case '-':
+            if (++it != end && *it == '-' && ++it != end && *it == ' ')
+            {
+                ++it;
+                return {it, skip_until(it, end, '\n')};
+            }
+            continue;
+
+        case '/':
+            if (++it != end && *it == '*' && ++it != end)
+            {
+                auto start = it;
+
+                while (it != end)
+                {
+                    auto comment_end = skip_until(it, end, '*');
+                    it = comment_end;
+
+                    if (it != end && ++it != end && *it == '/')
+                    {
+                        return {start, comment_end};
+                    }
+                }
+            }
+            continue;
+
+        default:
+            break;
+        }
+
+        ++it;
+    }
+
+    return {end, end};
+}
+
+/**
+ * Extract all MariaDB comments from a query
+ *
+ * @param start Iterator position to start from
+ * @param end   Past-the-end iterator
+ *
+ * @return A list of iterator pairs pointing to all comments in the query
+ */
+template<class InputIter>
+std::vector<std::pair<InputIter, InputIter>> get_all_comments(InputIter start, InputIter end)
+{
+    std::vector<std::pair<InputIter, InputIter>> rval;
+
+    do
+    {
+        auto comment = get_comment(start, end);
+
+        if (comment.first != comment.second)
+        {
+            rval.push_back(comment);
+        }
+
+        start = comment.second;
+    }
+    while (start != end);
+
+    return rval;
 }
