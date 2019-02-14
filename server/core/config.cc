@@ -302,7 +302,6 @@ const MXS_MODULE_PARAM config_service_params[] =
     {CN_SERVERS,                       MXS_MODULE_PARAM_STRING},
     {CN_USER,                          MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
     {CN_PASSWORD,                      MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
-    {"passwd",                         MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
     {CN_ENABLE_ROOT_USER,              MXS_MODULE_PARAM_BOOL,   "false"},
     {CN_MAX_RETRY_INTERVAL,            MXS_MODULE_PARAM_COUNT,  "3600"},
     {CN_MAX_CONNECTIONS,               MXS_MODULE_PARAM_COUNT,  "0"},
@@ -362,8 +361,6 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     {CN_USER,                      MXS_MODULE_PARAM_STRING, NULL,
      MXS_MODULE_OPT_REQUIRED},
     {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING, NULL,MXS_MODULE_OPT_REQUIRED },
-    {"passwd",                     MXS_MODULE_PARAM_STRING},
-
     {CN_SERVERS,                   MXS_MODULE_PARAM_SERVERLIST},
     {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_COUNT,  "2000"},
     {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_COUNT,  "3"},
