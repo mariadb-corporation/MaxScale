@@ -71,10 +71,15 @@ sampling duration (see `sampling_duration`).
 
 #### `throttling_duration`
 
-Required parameter. Time in milliseconds.
+Required parameter.
 
 This defines how long a session is allowed to be throttled before MaxScale 
 disconnects the session.
+
+The value is specified as documented
+[here](Getting-Started/Configuration-Guide.md#durations).
+If no explicit unit is provided, the value is interpreted as milliseconds
+in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
 
 ### `sampling_duration`
 
@@ -90,6 +95,11 @@ longer this time is, the longer bursts of high frequency querying is allowed.
 Due to the underlying granularity of time measurment (as of June 2018), it is 
 not recommended that this value is set to less than 100 milliseconds.
 
+The value is specified as documented
+[here](Getting-Started/Configuration-Guide.md#durations).
+If no explicit unit is provided, the value is interpreted as milliseconds
+in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
+
 ### `continuous_duration`
 
 Optional parameter. Default 2000 milliseconds or 2 seconds.
@@ -97,3 +107,8 @@ Optional parameter. Default 2000 milliseconds or 2 seconds.
 This value defines what continuous throttling means. Continuous throttling 
 starts as soon as the filter throttles the frequency. Continuous throttling ends 
 when no throttling has been performed in the past `continuous_duration` time.
+
+The value is specified as documented
+[here](Getting-Started/Configuration-Guide.md#durations).
+If no explicit unit is provided, the value is interpreted as milliseconds
+in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.

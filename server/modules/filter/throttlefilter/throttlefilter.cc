@@ -44,9 +44,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                                           /* Thread finish. */
         {
             {MAX_QPS_CFG,                                               MXS_MODULE_PARAM_INT },
-            {SAMPLING_DURATION_CFG,                                     MXS_MODULE_PARAM_INT, "250"},
-            {THROTTLE_DURATION_CFG,                                     MXS_MODULE_PARAM_INT },
-            {CONTINUOUS_DURATION_CFG,                                   MXS_MODULE_PARAM_INT, "2000"},
+            {SAMPLING_DURATION_CFG,                                     MXS_MODULE_PARAM_DURATION, "250ms"},
+            {THROTTLE_DURATION_CFG,                                     MXS_MODULE_PARAM_DURATION },
+            {CONTINUOUS_DURATION_CFG,                                   MXS_MODULE_PARAM_DURATION, "2000ms"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -64,9 +64,12 @@ ThrottleFilter::ThrottleFilter(const ThrottleConfig& config) : m_config(config)
 ThrottleFilter* ThrottleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
     int max_qps = pParams->get_integer(MAX_QPS_CFG);
-    int sample_msecs = pParams->get_integer(SAMPLING_DURATION_CFG);
-    int throttle_msecs = pParams->get_integer(THROTTLE_DURATION_CFG);
-    int cont_msecs = pParams->get_integer(CONTINUOUS_DURATION_CFG);
+    int sample_msecs =
+        pParams->get_duration(SAMPLING_DURATION_CFG, mxs::config::INTERPRET_AS_MILLISECONDS).count();
+    int throttle_msecs =
+        pParams->get_duration(THROTTLE_DURATION_CFG, mxs::config::INTERPRET_AS_MILLISECONDS).count();
+    int cont_msecs =
+        pParams->get_duration(CONTINUOUS_DURATION_CFG, mxs::config::INTERPRET_AS_MILLISECONDS).count();
     bool config_ok = true;
 
     if (max_qps < 2)
@@ -75,6 +78,7 @@ ThrottleFilter* ThrottleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* 
         config_ok = false;
     }
 
+    // TODO: These checks are unnecessary as a MXS_MODULE_PARAM_DURATION is required to be positive.
     if (sample_msecs < 0)
     {
         MXS_ERROR("Config value %s must be >= 0", SAMPLING_DURATION_CFG);
