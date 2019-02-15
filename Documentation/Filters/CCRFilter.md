@@ -57,8 +57,13 @@ The CCR filter has no mandatory parameters.
 
 ### `time`
 
-The time window in seconds during which queries are routed to the master. The
-default value for this parameter is 60 seconds.
+The time window during which queries are routed to the master. The duration
+can be specified as documented
+[here](Getting-Started/Configuration-Guide.md#durations)
+but the value  will always be rounded to the nearest second.
+If no explicit unit has been specified, the value is interpreted as seconds
+in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
+The default value for this parameter is 60 seconds.
 
 When a data modifying SQL statement is processed, a timer is set to the value of
 _time_. Once the timer has elapsed, all statements are routed normally. If a new

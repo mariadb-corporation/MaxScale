@@ -90,7 +90,9 @@ public:
         if (new_instance)
         {
             new_instance->m_count = params->get_integer("count");
-            new_instance->m_time = params->get_integer("time");
+            new_instance->m_time = params->get_duration("time", mxs::config::INTERPRET_AS_SECONDS).count();
+            // The window is in seconds.
+            new_instance->m_time = std::lround(new_instance->m_time / 1000.0);
             new_instance->m_match = params->get_string(PARAM_MATCH);
             new_instance->m_nomatch = params->get_string(PARAM_IGNORE);
 
@@ -345,11 +347,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                       /* Thread init. */
         NULL,                       /* Thread finish. */
         {
-            {"count",              MXS_MODULE_PARAM_COUNT,  "0"          },
-            {"time",               MXS_MODULE_PARAM_COUNT,  "60"         },
+            {"count",              MXS_MODULE_PARAM_COUNT, "0"},
+            {"time",               MXS_MODULE_PARAM_DURATION, "60s"},
             {PARAM_MATCH,          MXS_MODULE_PARAM_REGEX},
             {PARAM_IGNORE,         MXS_MODULE_PARAM_REGEX},
-            {"options",            MXS_MODULE_PARAM_ENUM,   "ignorecase", MXS_MODULE_OPT_NONE, option_values},
+            {"options",            MXS_MODULE_PARAM_ENUM, "ignorecase", MXS_MODULE_OPT_NONE, option_values},
             {MXS_END_MODULE_PARAMS}
         }
     };
