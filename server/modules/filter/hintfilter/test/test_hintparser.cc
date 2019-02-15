@@ -71,6 +71,51 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
     mxb_assert(rval);
 }
 
+static HINT_SESSION session = {};
+
+void test_parse(const std::string& input, int expected_type)
+{
+    for (auto comment : get_all_comments(input.begin(), input.end()))
+    {
+        std::string comment_str(comment.first, comment.second);
+        HINT* hint = process_comment(&session, comment.first, comment.second);
+
+        if (!hint && expected_type != 0)
+        {
+            std::cout << "Expected hint but didn't get one: " << comment_str << std::endl;
+        }
+        else if (hint && expected_type == 0)
+        {
+            std::cout << "Expected no hint but got one: " << comment_str << std::endl;
+        }
+        else if (hint && hint->type != expected_type)
+        {
+            std::cout << "Expected hint of type " << expected_type << " but got type "
+                      << (int)hint->type << ": " << comment_str << std::endl;
+        }
+    }
+}
+
+void count_hints(const std::string& input, int num_expected)
+{
+    int n = 0;
+
+    for (auto comment : get_all_comments(input.begin(), input.end()))
+    {
+        if (process_comment(&session, comment.first, comment.second))
+        {
+            ++n;
+        }
+    }
+
+    if (n != num_expected)
+    {
+        std::cout << "Expected " << num_expected << " hints but have " << n << "." << std::endl;
+    }
+
+    mxb_assert(n == num_expected);
+}
+
 int main(int argc, char** argv)
 {
     mxb::Log log(MXB_LOG_TARGET_STDOUT);
@@ -138,6 +183,45 @@ int main(int argc, char** argv)
     test("select 1; --bad comment\n -- working comment", {"working comment"});
     test("-- working comment\nselect 1; --bad comment", {"working comment"});
     test("select 1 -- working comment --bad comment", {"working comment --bad comment"});
+
+    test_parse("SELECT 1 /* maxscale route to master */", HINT_ROUTE_TO_MASTER);
+    test_parse("SELECT 1 /* maxscale route to slave */", HINT_ROUTE_TO_SLAVE);
+    test_parse("SELECT 1 /* maxscale route to last*/", HINT_ROUTE_TO_LAST_USED);
+    test_parse("SELECT 1 /* maxscale route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
+    test_parse("SELECT 1 /* maxscale test1 prepare route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
+    test_parse("SELECT 1 /* maxscale test1 start route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
+    test_parse("SELECT 1 /* maxscale start route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
+    test_parse("SELECT 1 /* maxscale end*/", 0);
+    test_parse("SELECT 1 /* maxscale end*/", 0);
+    test_parse("SELECT 1 /* maxscale key=value */", HINT_PARAMETER);
+    test_parse("SELECT 1 /* maxscale max_slave_replication_lag=1*/", HINT_PARAMETER);
+
+    // Process multiple comments  with hints in them
+    // Note: How the hints are used depends on the router module
+    count_hints("SELECT /* comment before hint */ 1 /* maxscale route to master */", 1);
+    count_hints("SELECT /* maxscale route to master */1/* comment after hint */", 1);
+    count_hints("SELECT /* maxscale route to slave */ 1 /* maxscale route to master */", 2);
+    count_hints("#maxscale route to slave\nSELECT 1;\n#maxscale route to master", 2);
+    count_hints("-- maxscale route to slave\nSELECT 1;\n-- maxscale route to master", 2);
+    count_hints("#maxscale route to slave \n#comment after hint\nSELECT 1", 1);
+    count_hints("#comment before hint\n#maxscale route to slave \nSELECT 1", 1);
+
+    // Hints with unexpected trailing input and unknown input
+    count_hints("/* maxscale route to slave server */ SELECT 1", 0);
+    count_hints("/* maxscale route to something */ SELECT 1", 0);
+    count_hints("/* maxscale route master */ SELECT 1", 0);
+    count_hints("/* maxscale route slave */ SELECT 1", 0);
+    count_hints("/* maxscale route to slave \n# comment inside comment\n */ SELECT 1", 0);
+    count_hints("/* maxscale route to slave -- */ SELECT 1", 0);
+    count_hints("/* maxscale route to slave # */ SELECT 1", 0);
+    count_hints("#/* maxscale route to slave */ SELECT 1", 0);
+    count_hints("-- /* maxscale route to slave */ SELECT 1", 0);
+    count_hints("-- # maxscale route to slave */ SELECT 1", 0);
+    count_hints("#-- maxscale route to slave */ SELECT 1", 0);
+
+    // The extra asterisk is a part of the comment and should cause the hint to be ignored. It could be
+    // processed but for the sake of simplicity and "bug compatibility" with 2.3 it is treated as an error.
+    count_hints("/**maxscale route to slave*/ SELECT 1", 0);
 
     return 0;
 }

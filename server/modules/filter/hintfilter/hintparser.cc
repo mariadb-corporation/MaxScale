@@ -943,3 +943,220 @@ std::vector<std::pair<InputIter, InputIter>> get_all_comments(InputIter start, I
 
     return rval;
 }
+
+// Simple container for two iterators and a token type
+template<class InputIter>
+struct Token
+{
+    InputIter   begin;
+    InputIter   end;
+    TOKEN_VALUE type;
+};
+
+/**
+ * Extract the next token
+ *
+ * @param it  Iterator to start from, modified to point to next non-whitespace character after the token
+ * @param end Past-the-end iterator
+ *
+ * @return The next token
+ */
+template<class InputIter>
+Token<InputIter> next_token(InputIter& it, InputIter end)
+{
+    const std::unordered_map<std::string, TOKEN_VALUE> tokens
+    {
+        {"begin", TOK_START},
+        {"end", TOK_STOP},
+        {"last", TOK_LAST},
+        {"master", TOK_MASTER},
+        {"maxscale", TOK_MAXSCALE},
+        {"prepare", TOK_PREPARE},
+        {"route", TOK_ROUTE},
+        {"server", TOK_SERVER},
+        {"slave", TOK_SLAVE},
+        {"start", TOK_START},
+        {"stop", TOK_STOP},
+        {"to", TOK_TO},
+    };
+
+    while (it != end && isspace(*it))
+    {
+        ++it;
+    }
+
+    TOKEN_VALUE type = TOK_END;
+    auto start = it;
+
+    if (it != end)
+    {
+        if (*it == '=')
+        {
+            ++it;
+            type = TOK_EQUAL;
+        }
+        else
+        {
+            while (it != end && !isspace(*it) && *it != '=')
+            {
+                ++it;
+            }
+
+            auto t = tokens.find(std::string(start, it));
+
+            if (t != tokens.end())
+            {
+                type = t->second;
+            }
+        }
+
+        if (type == TOK_END && start != it)
+        {
+            // We read a string identifier
+            type = TOK_STRING;
+        }
+    }
+
+    return {start, it, type};
+}
+
+/**
+ * Process the definition of a hint
+ *
+ * @param it  Start iterator
+ * @param end End iterator
+ *
+ * @return The processed hint or NULL on invalid input
+ */
+template<class InputIter>
+HINT* process_definition(InputIter it, InputIter end)
+{
+    HINT* rval = nullptr;
+    auto t = next_token(it, end);
+
+    if (t.type == TOK_ROUTE)
+    {
+        if (next_token(it, end).type == TOK_TO)
+        {
+            t = next_token(it, end);
+
+            if (t.type == TOK_MASTER)
+            {
+                rval = hint_create_route(nullptr, HINT_ROUTE_TO_MASTER, nullptr);
+            }
+            else if (t.type == TOK_SLAVE)
+            {
+                rval = hint_create_route(nullptr, HINT_ROUTE_TO_SLAVE, nullptr);
+            }
+            else if (t.type == TOK_LAST)
+            {
+                rval = hint_create_route(nullptr, HINT_ROUTE_TO_LAST_USED, nullptr);
+            }
+            else if (t.type == TOK_SERVER)
+            {
+                t = next_token(it, end);
+
+                if (t.type == TOK_STRING)
+                {
+                    std::string value(t.begin, t.end);
+                    rval = hint_create_route(nullptr, HINT_ROUTE_TO_NAMED_SERVER, value.c_str());
+                }
+            }
+        }
+    }
+    else if (t.type == TOK_STRING)
+    {
+        std::string key(t.begin, t.end);
+        auto eq = next_token(it, end);
+        auto val = next_token(it, end);
+
+        if (eq.type == TOK_EQUAL && val.type == TOK_STRING)
+        {
+            std::string value(val.begin, val.end);
+            rval = hint_create_parameter(nullptr, key.c_str(), value.c_str());
+        }
+    }
+
+    if (rval && next_token(it, end).type != TOK_END)
+    {
+        // Unexpected input after hint definition, treat it as an error and remove the hint
+        hint_free(rval);
+        rval = nullptr;
+    }
+
+    return rval;
+}
+
+template<class InputIter>
+HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
+{
+    HINT* rval = nullptr;
+
+    if (next_token(it, end).type == TOK_MAXSCALE)
+    {
+        // Peek at the next token
+        auto prev_it = it;
+        auto t = next_token(it, end);
+
+        if (t.type == TOK_START)
+        {
+            if ((rval = process_definition(it, end)))
+            {
+                hint_push(session, rval);
+            }
+        }
+        else if (t.type == TOK_STOP)
+        {
+            hint_pop(session);
+        }
+        else if (t.type == TOK_STRING)
+        {
+            std::string key(t.begin, t.end);
+            t = next_token(it, end);
+
+            if (t.type == TOK_EQUAL)
+            {
+                t = next_token(it, end);
+
+                if (t.type == TOK_STRING)
+                {
+                    // A key=value hint
+                    std::string value(t.begin, t.end);
+                    rval = hint_create_parameter(nullptr, key.c_str(), value.c_str());
+                }
+            }
+            else if (t.type == TOK_PREPARE)
+            {
+                if ((rval = process_definition(it, end)))
+                {
+                    // Preparation of a named hint
+                    create_named_hint(session, key.c_str(), rval);
+                }
+            }
+            else if (t.type == TOK_START)
+            {
+                if ((rval = process_definition(it, end)))
+                {
+                    if (!lookup_named_hint(session, key.c_str()))
+                    {
+                        // New hint defined, push it on to the stack
+                        create_named_hint(session, key.c_str(), rval);
+                        hint_push(session, hint_dup(rval));
+                    }
+                }
+                else if ((rval = lookup_named_hint(session, key.c_str())))
+                {
+                    // We starting an already define named hint
+                    hint_push(session, hint_dup(rval));
+                }
+            }
+        }
+        else
+        {
+            // Only hint definition in the comment, use the stored iterator to process it again
+            rval = process_definition(prev_it, end);
+        }
+    }
+
+    return rval;
+}
