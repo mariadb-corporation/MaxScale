@@ -39,6 +39,7 @@ Running       | The server is running.
 Master        | The server is the master.
 Slave         | The server is a slave.
 Being Drained | The server is being drained. Existing connections can continue to be used, but no new connections will be created to the server. Typically this status bit is turned on manually using _maxctrl_, but a monitor may also turn it on.
+Drained       | The server has been drained. The server was being drained and now the number of connections to the server has dropped to 0.
 Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenace mode, no connections will be created to it and existing connections will be closed.
 Slave of External Master | The server is a slave of a master that is not being monitored.
 

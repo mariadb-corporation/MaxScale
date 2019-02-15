@@ -611,7 +611,7 @@ void Server::dListServers(DCB* dcb)
     }
 }
 
-string SERVER::status_to_string(uint64_t flags)
+string SERVER::status_to_string(uint64_t flags, int nConnections)
 {
     string result;
     string separator;
@@ -630,6 +630,7 @@ string SERVER::status_to_string(uint64_t flags)
     // should not change, but this is more dependant on the monitors and have already changed.
     // Also, system tests compare to these strings so the output must stay constant for now.
     const string maintenance = "Maintenance";
+    const string drained = "Drained";
     const string being_drained = "Being Drained";
     const string master = "Master";
     const string relay = "Relay Master";
@@ -651,7 +652,14 @@ string SERVER::status_to_string(uint64_t flags)
     }
     else if (status_is_being_drained(flags))
     {
-        concatenate_if(true, being_drained);
+        if (nConnections == 0)
+        {
+            concatenate_if(true, drained);
+        }
+        else
+        {
+            concatenate_if(true, being_drained);
+        }
     }
 
     // Master cannot be a relay or a slave.
@@ -684,7 +692,7 @@ string SERVER::status_to_string(uint64_t flags)
 
 string SERVER::status_string() const
 {
-    return status_to_string(status);
+    return status_to_string(status, stats.n_current);
 }
 
 void SERVER::set_status(uint64_t bit)

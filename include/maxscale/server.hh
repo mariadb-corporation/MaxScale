@@ -468,10 +468,15 @@ public:
     /**
      * Convert a set of server status flags to a string.
      *
-     * @param flags Status flags
+     * @param flags         Status flags
+     * @param nConnections  Number of current connections. Only affects the output
+     *                      if the @c SERVER_BEING_DRAINED bit is on. In that case, if
+     *                      the number of connections is 0 the state will be reported
+     *                      as 'Drained', otherwise as 'Being Drained'.
+     *
      * @return A string representation of the status flags
      */
-    static std::string status_to_string(uint64_t flags);
+    static std::string status_to_string(uint64_t flags, int nConnections = -1);
 
     /**
      * Convert a status string to a status bit. Only converts one status element.
