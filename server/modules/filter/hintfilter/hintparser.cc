@@ -55,8 +55,8 @@ static struct
 
 static HINT_TOKEN* hint_next_token(GWBUF** buf, char** ptr);
 static void        hint_pop(HINT_SESSION*);
-static HINT*       lookup_named_hint(HINT_SESSION*, char*);
-static void        create_named_hint(HINT_SESSION*, char*, HINT*);
+static HINT*       lookup_named_hint(HINT_SESSION*, const char*);
+static void        create_named_hint(HINT_SESSION*, const char*, HINT*);
 static void        hint_push(HINT_SESSION*, HINT*);
 static const char* token_get_keyword(HINT_TOKEN* token);
 static void        token_free(HINT_TOKEN* token);
@@ -492,7 +492,6 @@ HINT* hint_parser(HINT_SESSION* session, GWBUF* request)
             /* We starting an already define set of named hints */
             rval = lookup_named_hint(session, hintname);
             hint_push(session, hint_dup(rval));
-            MXS_FREE(hintname);
             rval = NULL;
         }
         else if (hintname == NULL && rval == NULL)
@@ -529,6 +528,8 @@ HINT* hint_parser(HINT_SESSION* session, GWBUF* request)
     }
 
 retblock:
+    MXS_FREE(hintname);
+
     if (rval == NULL)
     {
         /* No new hint parsed in this statement, apply the current
@@ -705,7 +706,7 @@ static void hint_push(HINT_SESSION* session, HINT* hint)
  * @param name      The name to lookup
  * @return the HINT or NULL if the name was not found.
  */
-static HINT* lookup_named_hint(HINT_SESSION* session, char* name)
+static HINT* lookup_named_hint(HINT_SESSION* session, const char* name)
 {
     NAMEDHINTS* ptr = session->named_hints;
 
@@ -727,7 +728,7 @@ static HINT* lookup_named_hint(HINT_SESSION* session, char* name)
  * @param name      The name of the block to ceate
  * @param hint      The hints themselves
  */
-static void create_named_hint(HINT_SESSION* session, char* name, HINT* hint)
+static void create_named_hint(HINT_SESSION* session, const char* name, HINT* hint)
 {
     NAMEDHINTS* block;
 
@@ -736,7 +737,7 @@ static void create_named_hint(HINT_SESSION* session, char* name, HINT* hint)
         return;
     }
 
-    block->name = name;
+    block->name = MXS_STRDUP(name);
     block->hints = hint_dup(hint);
     block->next = session->named_hints;
     session->named_hints = block;

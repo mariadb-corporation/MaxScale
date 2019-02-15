@@ -145,7 +145,7 @@ HINT* hint_splice(HINT* head, HINT* list)
  * @param value The parameter value
  * @return The result hint list
  */
-HINT* hint_create_parameter(HINT* head, char* pname, const char* value)
+HINT* hint_create_parameter(HINT* head, const char* pname, const char* value)
 {
     HINT* hint;
 

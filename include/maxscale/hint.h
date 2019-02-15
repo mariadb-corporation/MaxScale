@@ -83,7 +83,7 @@ typedef struct hint
 } HINT;
 
 HINT* hint_alloc(HINT_TYPE, void*, unsigned int);
-HINT* hint_create_parameter(HINT*, char*, const char*);
+HINT* hint_create_parameter(HINT*, const char*, const char*);
 HINT* hint_create_route(HINT*, HINT_TYPE, const char*);
 HINT* hint_splice(HINT* head, HINT* list);
 void  hint_free(HINT*);
