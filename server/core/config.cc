@@ -236,7 +236,7 @@ int         create_new_server(CONFIG_CONTEXT* obj);
 int         create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers);
 int         create_new_listener(CONFIG_CONTEXT* obj);
 int         create_new_filter(CONFIG_CONTEXT* obj);
-void        config_fix_param(const MXS_MODULE_PARAM* params, MXS_CONFIG_PARAMETER* p);
+void        config_fix_param(const MXS_MODULE_PARAM* params, const string& name, string* value);
 std::string closest_matching_parameter(const std::string& str,
                                        const MXS_MODULE_PARAM* base,
                                        const MXS_MODULE_PARAM* mod);
@@ -1074,21 +1074,10 @@ bool export_config_file(const char* filename)
             CONFIG_CONTEXT* ctx = *it;
 
             file << '[' << ctx->object << "]\n";
-
-            // Parameters are also stored in reverse order
-            std::vector<MXS_CONFIG_PARAMETER*> params;
-
-            for (MXS_CONFIG_PARAMETER* p = ctx->parameters; p; p = p->next)
+            for (const auto& elem : *ctx->parameters)
             {
-                params.push_back(p);
+                file << elem.first << '=' << elem.second << '\n';
             }
-
-            for (auto pit = params.rbegin(); pit != params.rend(); pit++)
-            {
-                MXS_CONFIG_PARAMETER* p = *pit;
-                file << p->name << '=' << p->value << '\n';
-            }
-
             file << '\n';
         }
     }
@@ -1745,16 +1734,10 @@ SERVER* MXS_CONFIG_PARAMETER::get_server(const std::string& key) const
 
 bool MXS_CONFIG_PARAMETER::contains(const string& key) const
 {
-    auto params = this;
-    while (params)
-    {
-        if (params->name == key)
-        {
-            return true;
-        }
-        params = params->next;
-    }
-    return false;
+    // Because of how the parameters are used, this method can be called through a null pointer.
+    // Handle this here for now. TODO: Refactor away.
+    auto can_be_null = this;
+    return can_be_null ? m_contents.count(key) > 0 : false;
 }
 
 std::vector<SERVER*> config_get_server_list(const MXS_CONFIG_PARAMETER* params, const char* key,
@@ -1846,24 +1829,15 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
     return rval;
 }
 
-MXS_CONFIG_PARAMETER::~MXS_CONFIG_PARAMETER()
-{
-    MXS_FREE(name);
-    MXS_FREE(value);
-}
-
 string MXS_CONFIG_PARAMETER::get_string(const std::string& key) const
 {
-    auto params = this;
-    while (params)
+    string rval;
+    auto iter = m_contents.find(key);
+    if (iter != m_contents.end())
     {
-        if (params->name == key)
-        {
-            return params->value;
-        }
-        params = params->next;
+        rval = iter->second;
     }
-    return "";
+    return rval;
 }
 
 int64_t MXS_CONFIG_PARAMETER::get_integer(const std::string& key) const
@@ -1921,48 +1895,20 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
 void MXS_CONFIG_PARAMETER::set(MXS_CONFIG_PARAMETER** ppParams, const string& key, const string& value)
 {
     mxb_assert(ppParams);
-    char* new_value = MXS_STRDUP(value.c_str());
+
     if (*ppParams == nullptr)
     {
         // This is the first parameter.
-        auto new_param = new MXS_CONFIG_PARAMETER();
-        new_param->name = MXS_STRDUP(key.c_str());
-        new_param->value = new_value;
-        new_param->next = nullptr;
-        *ppParams = new_param;
-        return;
+        *ppParams = new MXS_CONFIG_PARAMETER();
     }
-
-    MXS_CONFIG_PARAMETER* pParam = *ppParams;
-    auto param = pParam->find(key);
-    if (param)
-    {
-        MXS_FREE(param->value);
-        param->value = new_value;
-    }
-    else
-    {
-        auto new_param = new MXS_CONFIG_PARAMETER();
-        new_param->name = MXS_STRDUP(key.c_str());
-        new_param->value = new_value;
-        new_param->next = nullptr;
-        // Iterate to the last parameter in the linked list.
-        auto last_param = pParam;
-        while (last_param->next)
-        {
-            last_param = last_param->next;
-        }
-        last_param->next = new_param;
-    }
+    (*ppParams)->m_contents[key] = value;
 }
 
 void MXS_CONFIG_PARAMETER::set_multiple(MXS_CONFIG_PARAMETER** destination, const MXS_CONFIG_PARAMETER* source)
 {
-    auto param = source;
-    while (param)
+    for (const auto& elem : *source)
     {
-        set(destination, param->name, param->value);
-        param = param->next;
+        set(destination, elem.first, elem.second);
     }
 }
 
@@ -1992,61 +1938,28 @@ void MXS_CONFIG_PARAMETER::set_from_list(MXS_CONFIG_PARAMETER** destination,
 void MXS_CONFIG_PARAMETER::remove(MXS_CONFIG_PARAMETER** ppParams, const string& key)
 {
     mxb_assert(ppParams);
-    MXS_CONFIG_PARAMETER* current = *ppParams;
-    if (current)
-    {
-        // Handle special case.
-        if (current->name == key)
-        {
-            *ppParams = current->next;
-            delete current;
-        }
-        else
-        {
-            MXS_CONFIG_PARAMETER* next = current->next;
-            while (next)
-            {
-                if (next->name == key)
-                {
-                    current->next = next->next;
-                    delete next;
-                    break;
-                }
-                else
-                {
-                    current = next;
-                    next = next->next;
-                }
-            }
-        }
-    }
+    (*ppParams)->m_contents.erase(key);
 }
 
 void MXS_CONFIG_PARAMETER::free_all(MXS_CONFIG_PARAMETER** ppParams)
 {
     mxb_assert(ppParams);
     auto pParam = *ppParams;
-    while (pParam)
+    if (pParam)
     {
-        auto temp = pParam;
-        pParam = pParam->next;
-        delete temp;
+        delete pParam;
     }
     *ppParams = nullptr;
 }
 
-MXS_CONFIG_PARAMETER* MXS_CONFIG_PARAMETER::find(const std::string& key)
+MXS_CONFIG_PARAMETER::ContainerType::const_iterator MXS_CONFIG_PARAMETER::begin() const
 {
-    auto param = this;
-    while (param)
-    {
-        if (param->name == key)
-        {
-            return param;
-        }
-        param = param->next;
-    }
-    return param;
+    return m_contents.begin();
+}
+
+MXS_CONFIG_PARAMETER::ContainerType::const_iterator MXS_CONFIG_PARAMETER::end() const
+{
+    return m_contents.end();
 }
 
 bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
@@ -2910,19 +2823,17 @@ static bool is_path_parameter(const MXS_MODULE_PARAM* params, const char* name)
     return rval;
 }
 
-static void process_path_parameter(MXS_CONFIG_PARAMETER* param)
+static void process_path_parameter(std::string* param)
 {
-    if (*param->value != '/')
+    if (param->empty() || param[0] != "/")
     {
         const char* mod_dir = get_module_configdir();
-        size_t size = strlen(param->value) + strlen(mod_dir) + 3;
-        char* value = (char*)MXS_MALLOC(size);
-        MXS_ABORT_IF_NULL(value);
+        size_t size = param->length() + strlen(mod_dir) + 3;
+        char new_value[size];
 
-        sprintf(value, "/%s/%s", mod_dir, param->value);
-        clean_up_pathname(value);
-        MXS_FREE(param->value);
-        param->value = value;
+        sprintf(new_value, "/%s/%s", mod_dir, param->c_str());
+        clean_up_pathname(new_value);
+        param->assign(new_value);
     }
 }
 
@@ -3069,15 +2980,16 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
         mxb_assert(param_set);
         std::vector<std::string> to_be_removed;
 
-        for (MXS_CONFIG_PARAMETER* params = obj->parameters; params; params = params->next)
+        for (auto iter = obj->parameters->begin(); iter != obj->parameters->end(); ++iter)
         {
+            const char* param_namez = iter->first.c_str();
             const MXS_MODULE_PARAM* fix_params;
 
-            if (param_in_set(param_set, params->name))
+            if (param_in_set(param_set, param_namez))
             {
                 fix_params = param_set;
             }
-            else if (param_in_set(mod->parameters, params->name))
+            else if (param_in_set(mod->parameters, param_namez))
             {
                 fix_params = mod->parameters;
             }
@@ -3088,40 +3000,39 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
                 if (type != CN_SERVER)
                 {
                     MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
-                              params->name,
-                              obj->object,
-                              type.c_str(),
-                              closest_matching_parameter(params->name, param_set, mod->parameters).c_str());
+                              param_namez, obj->object, type.c_str(),
+                              closest_matching_parameter(param_namez, param_set, mod->parameters).c_str());
                     rval = false;
                 }
                 continue;
             }
 
-            if (config_param_is_valid(fix_params, params->name, params->value, context))
+            const string param_value = iter->second;
+            if (config_param_is_valid(fix_params, param_namez, param_value.c_str(), context))
             {
-                if (is_path_parameter(fix_params, params->name))
+                auto temp = param_value;
+                if (is_path_parameter(fix_params, param_namez))
                 {
-                    process_path_parameter(params);
+                    process_path_parameter(&temp);
                 }
                 else    // Fix old-style object names
                 {
-                    config_fix_param(fix_params, params);
+                    config_fix_param(fix_params, param_namez, &temp);
                 }
+                MXS_CONFIG_PARAMETER::set(&obj->parameters, param_namez, temp);
 
-                if (param_is_deprecated(fix_params, params->name, obj->object))
+                if (param_is_deprecated(fix_params, param_namez, obj->object))
                 {
-                    to_be_removed.push_back(params->name);
+                    to_be_removed.push_back(param_namez);
                 }
             }
             else
             {
-                MXS_ERROR("Invalid value for parameter '%s' for object '%s' "
-                          "of type '%s': %s (was expecting %s)",
-                          params->name,
-                          params->value,
-                          obj->object,
+                MXS_ERROR("Invalid value '%s' for parameter '%s' for object '%s' "
+                          "of type '%s' (was expecting %s)",
+                          param_value.c_str(), param_namez, obj->object,
                           type.c_str(),
-                          param_type_to_str(fix_params, params->name));
+                          param_type_to_str(fix_params, param_namez));
                 rval = false;
             }
         }
@@ -3581,28 +3492,28 @@ void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params)
 /**
  * Convert a config value to a json object.
  *
- * @param param The parameter value to convert
  * @param param_info Type information for the parameter
  * @return Json integer, boolean or string
  */
-static json_t* param_value_to_json(const MXS_CONFIG_PARAMETER* param, const MXS_MODULE_PARAM* param_info)
+static
+json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& name, const string& value)
 {
-    mxb_assert(strcmp(param->name, param_info->name) == 0);
+    mxb_assert(name == param_info->name);
     json_t* rval = NULL;
 
     switch (param_info->type)
     {
     case MXS_MODULE_PARAM_COUNT:
     case MXS_MODULE_PARAM_INT:
-        rval = json_integer(strtol(param->value, NULL, 10));
+        rval = json_integer(strtol(value.c_str(), NULL, 10));
         break;
 
     case MXS_MODULE_PARAM_BOOL:
-        rval = json_boolean(config_truth_value(param->value));
+        rval = json_boolean(config_truth_value(value.c_str()));
         break;
 
     default:
-        rval = json_string(param->value);
+        rval = json_string(value.c_str());
         break;
     }
 
@@ -3616,25 +3527,27 @@ void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
                                    json_t* output)
 {
     // Create a map of the config values to ease their extraction
-    std::unordered_map<std::string, const MXS_CONFIG_PARAMETER*> params;
+    std::unordered_map<std::string, std::string> params;
 
-    for (const MXS_CONFIG_PARAMETER* p = parameters; p; p = p->next)
+    for (const auto& elem : *parameters)
     {
-        params[p->name] = p;
+        params[elem.first] = elem.second;
     }
 
-    for (auto param_info : {basic_params, module_params})
+    for (const auto* param_info : {basic_params, module_params})
     {
         for (int i = 0; param_info[i].name; i++)
         {
             if (ignored_params.count(param_info[i].name) == 0
                 && !json_object_get(output, param_info[i].name))
             {
-                if (auto item = params[param_info[i].name])
+                if (params.count(param_info[i].name) > 0)
                 {
-                    json_object_set_new(output,
-                                        param_info[i].name,
-                                        param_value_to_json(item, &param_info[i]));
+                    const string name = param_info[i].name;
+                    const string value = params[name];
+                    json_object_set_new(output, name.c_str(),
+                                        param_value_to_json(&param_info[i], name,
+                                                            value));
                 }
                 else
                 {
@@ -4176,36 +4089,40 @@ void fix_serverlist(char* value)
     strcpy(value, dest.c_str());
 }
 
-void config_fix_param(const MXS_MODULE_PARAM* params, MXS_CONFIG_PARAMETER* p)
+void config_fix_param(const MXS_MODULE_PARAM* params, const string& name, string* value)
 {
+    // A char* is needed for C-style functions.
+    char temp_value[value->length() + 1];
+    strcpy(temp_value, value->c_str());
+
     for (int i = 0; params[i].name; i++)
     {
-        if (strcmp(params[i].name, p->name) == 0)
+        if (params[i].name == name)
         {
             switch (params[i].type)
             {
             case MXS_MODULE_PARAM_SERVER:
             case MXS_MODULE_PARAM_SERVICE:
-                fix_object_name(p->value);
+                fix_object_name(temp_value);
                 break;
 
             case MXS_MODULE_PARAM_SERVERLIST:
-                fix_serverlist(p->value);
+                fix_serverlist(temp_value);
                 break;
 
             case MXS_MODULE_PARAM_QUOTEDSTRING:
                 // Remove *if* once '" .. "' is no longer optional
-                if (check_first_last_char(p->value, '"'))
+                if (check_first_last_char(temp_value, '"'))
                 {
-                    remove_first_last_char(p->value);
+                    remove_first_last_char(temp_value);
                 }
                 break;
 
             case MXS_MODULE_PARAM_REGEX:
                 // Remove *if* once '/ .. /' is no longer optional
-                if (check_first_last_char(p->value, '/'))
+                if (check_first_last_char(temp_value, '/'))
                 {
-                    remove_first_last_char(p->value);
+                    remove_first_last_char(temp_value);
                 }
                 break;
 
@@ -4216,6 +4133,7 @@ void config_fix_param(const MXS_MODULE_PARAM* params, MXS_CONFIG_PARAMETER* p)
             break;
         }
     }
+    value->assign(temp_value);
 }
 
 bool config_param_is_valid(const MXS_MODULE_PARAM* params,
@@ -5012,12 +4930,14 @@ void dump_param_list(int file,
                      const MXS_MODULE_PARAM* common_params,
                      const MXS_MODULE_PARAM* module_params)
 {
-    for (auto p = list; p; p = p->next)
+    for (const auto& p : *list)
     {
-        if (ignored.count(p->name) == 0 && *p->value)
+        const string& name = p.first;
+        const string& value = p.second;
+        if (ignored.count(name) == 0 && !value.empty())
         {
-            dump_if_changed(common_params, file, p->name, p->value);
-            dump_if_changed(module_params, file, p->name, p->value);
+            dump_if_changed(common_params, file, name, value);
+            dump_if_changed(module_params, file, name, value);
         }
     }
 }

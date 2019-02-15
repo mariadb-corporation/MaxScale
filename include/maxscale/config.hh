@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <string>
 #include <limits.h>
+#include <map>
 #include <openssl/sha.h>
 #include <sys/utsname.h>
 #include <time.h>
@@ -247,7 +248,7 @@ enum DurationUnit
 class MXS_CONFIG_PARAMETER
 {
 public:
-    ~MXS_CONFIG_PARAMETER();
+    using ContainerType = std::map<std::string, std::string>;
 
     /**
      * Get value of key as string.
@@ -389,15 +390,11 @@ public:
 
     static void free_all(MXS_CONFIG_PARAMETER** ppParams);
 
-    char*                    name {nullptr};          /**< The name of the parameter */
-    char*                    value {nullptr};         /**< The value of the parameter */
-    MXS_CONFIG_PARAMETER*    next {nullptr};          /**< Next pointer in the linked list */
+    ContainerType::const_iterator begin() const;
+    ContainerType::const_iterator end() const;
 
 private:
-    /**
-     * TODO: Remove this once using STL container.
-     */
-    MXS_CONFIG_PARAMETER* find(const std::string& key);
+    ContainerType m_contents;
 };
 
 /**

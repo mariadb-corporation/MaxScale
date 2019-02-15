@@ -1149,10 +1149,10 @@ void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param)
 
 void service_add_parameter(Service* service, const char* key, const char* value)
 {
-    auto p = new MXS_CONFIG_PARAMETER;
-    p->name = MXS_STRDUP(key);
-    p->value = MXS_STRDUP(value);
-    service_add_parameters(service, p);
+    MXS_CONFIG_PARAMETER p;
+    auto pp = &p;
+    MXS_CONFIG_PARAMETER::set(&pp, key, value);
+    service_add_parameters(service, &p);
 }
 
 void service_remove_parameter(Service* service, const char* key)

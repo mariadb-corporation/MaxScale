@@ -257,12 +257,14 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         server->set_monitor_password(monpw);
     }
 
-    for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+    for (auto p : *params)
     {
-        server->m_settings.all_parameters.push_back({p->name, p->value});
-        if (server->is_custom_parameter(p->name))
+        const string name = p.first;
+        const string value = p.second;
+        server->m_settings.all_parameters.push_back({name, value});
+        if (server->is_custom_parameter(name))
         {
-            server->set_parameter(p->name, p->value);
+            server->set_parameter(name, value);
         }
     }
 

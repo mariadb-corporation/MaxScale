@@ -119,9 +119,9 @@ FilterDef::FilterDef(std::string name,
     CONFIG_CONTEXT ctx = {};
     ctx.object = (char*)"";
 
-    for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+    for (auto p : *params)
     {
-        config_add_param(&ctx, p->name, p->value);
+        config_add_param(&ctx, p.first.c_str(), p.second.c_str());
     }
 
     // Store module, used when the filter is serialized

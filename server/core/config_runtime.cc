@@ -1271,9 +1271,9 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
 
             if (config_is_valid_name(name, &reason))
             {
-                for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+                for (auto elem : *params)
                 {
-                    config_replace_param(&ctx, p->name, p->value);
+                    config_replace_param(&ctx, elem.first.c_str(), elem.second.c_str());
                 }
 
                 if (!(filter = filter_alloc(name, module, ctx.parameters)))
@@ -1348,9 +1348,9 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
             std::string reason;
             if (config_is_valid_name(name, &reason))
             {
-                for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+                for (auto elem : *params)
                 {
-                    config_replace_param(&ctx, p->name, p->value);
+                    config_replace_param(&ctx, elem.first.c_str(), elem.second.c_str());
                 }
 
                 if ((service = service_alloc(name, router, ctx.parameters)) == NULL)
