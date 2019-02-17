@@ -119,13 +119,10 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    HINT_INSTANCE* my_instance = (HINT_INSTANCE*)instance;
     HINT_SESSION* my_session;
 
     if ((my_session = static_cast<HINT_SESSION*>(MXS_CALLOC(1, sizeof(HINT_SESSION)))) != NULL)
     {
-        my_session->query_len = 0;
-        my_session->request = NULL;
         my_session->stack = NULL;
         my_session->named_hints = NULL;
     }
@@ -145,12 +142,6 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
     HINT_SESSION* my_session = (HINT_SESSION*)session;
     NAMEDHINTS* named_hints;
     HINTSTACK* hint_stack;
-
-    if (my_session->request)
-    {
-        gwbuf_free(my_session->request);
-    }
-
 
     /** Free named hints */
     named_hints = my_session->named_hints;
@@ -208,8 +199,6 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
 
     if (modutil_is_SQL(queue) && gwbuf_length(queue) > 5)
     {
-        my_session->request = NULL;
-        my_session->query_len = 0;
         process_hints(my_session, queue);
     }
 
@@ -232,8 +221,6 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
  */
 static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
 {
-    HINT_INSTANCE* my_instance = (HINT_INSTANCE*)instance;
-    HINT_SESSION* my_session = (HINT_SESSION*)fsession;
 }
 
 /**

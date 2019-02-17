@@ -17,32 +17,6 @@
 
 MXS_BEGIN_DECLS
 
-/* Parser tokens for the hint parser */
-typedef enum
-{
-    TOK_MAXSCALE = 1,
-    TOK_PREPARE,
-    TOK_START,
-    TOK_STOP,
-    TOK_EQUAL,
-    TOK_STRING,
-    TOK_ROUTE,
-    TOK_TO,
-    TOK_MASTER,
-    TOK_SLAVE,
-    TOK_SERVER,
-    TOK_LAST,
-    TOK_LINEBRK,
-    TOK_END
-} TOKEN_VALUE;
-
-/* The tokenising return type */
-typedef struct
-{
-    TOKEN_VALUE token;      // The token itself
-    char*       value;      // The string version of the token
-} HINT_TOKEN;
-
 /**
  * A named hint set.
  *
@@ -84,27 +58,10 @@ typedef struct
 typedef struct
 {
     MXS_DOWNSTREAM down;
-    GWBUF*         request;
-    int            query_len;
     HINTSTACK*     stack;
     NAMEDHINTS*    named_hints;     /* The named hints defined in this session */
 } HINT_SESSION;
 
-/* Some useful macros */
-#define CURRENT_HINT(session) \
-    ((session)->stack   \
-     ? (session)->stack->hints : NULL)
-
-/* Hint Parser State Machine */
-#define HS_INIT         0
-#define HS_ROUTE        1
-#define HS_ROUTE1       2
-#define HS_ROUTE_SERVER 3
-#define HS_NAME         4
-#define HS_PVALUE       5
-#define HS_PREPARE      6
-
-extern HINT* hint_parser(HINT_SESSION* session, GWBUF* request);
 NAMEDHINTS*  free_named_hint(NAMEDHINTS* named_hint);
 HINTSTACK*   free_hint_stack(HINTSTACK* hint_stack);
 void         process_hints(HINT_SESSION* session, GWBUF* buffer);

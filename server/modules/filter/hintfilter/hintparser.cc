@@ -24,6 +24,25 @@
  * Code for parsing SQL comments and processing them into MaxScale hints
  */
 
+/* Parser tokens for the hint parser */
+typedef enum
+{
+    TOK_MAXSCALE = 1,
+    TOK_PREPARE,
+    TOK_START,
+    TOK_STOP,
+    TOK_EQUAL,
+    TOK_STRING,
+    TOK_ROUTE,
+    TOK_TO,
+    TOK_MASTER,
+    TOK_SLAVE,
+    TOK_SERVER,
+    TOK_LAST,
+    TOK_LINEBRK,
+    TOK_END
+} TOKEN_VALUE;
+
 /**
  * hint_pop - pop the hint off the top of the stack if it is not empty
  *
