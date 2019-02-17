@@ -953,6 +953,22 @@ struct Token
     TOKEN_VALUE type;
 };
 
+static const std::unordered_map<std::string, TOKEN_VALUE> tokens
+{
+    {"begin", TOK_START},
+    {"end", TOK_STOP},
+    {"last", TOK_LAST},
+    {"master", TOK_MASTER},
+    {"maxscale", TOK_MAXSCALE},
+    {"prepare", TOK_PREPARE},
+    {"route", TOK_ROUTE},
+    {"server", TOK_SERVER},
+    {"slave", TOK_SLAVE},
+    {"start", TOK_START},
+    {"stop", TOK_STOP},
+    {"to", TOK_TO},
+};
+
 /**
  * Extract the next token
  *
@@ -962,23 +978,9 @@ struct Token
  * @return The next token
  */
 template<class InputIter>
-Token<InputIter> next_token(InputIter& it, InputIter end)
+Token<InputIter> next_token(InputIter* iter, InputIter end)
 {
-    const std::unordered_map<std::string, TOKEN_VALUE> tokens
-    {
-        {"begin", TOK_START},
-        {"end", TOK_STOP},
-        {"last", TOK_LAST},
-        {"master", TOK_MASTER},
-        {"maxscale", TOK_MAXSCALE},
-        {"prepare", TOK_PREPARE},
-        {"route", TOK_ROUTE},
-        {"server", TOK_SERVER},
-        {"slave", TOK_SLAVE},
-        {"start", TOK_START},
-        {"stop", TOK_STOP},
-        {"to", TOK_TO},
-    };
+    InputIter& it = *iter;
 
     while (it != end && isspace(*it))
     {
@@ -1032,13 +1034,13 @@ template<class InputIter>
 HINT* process_definition(InputIter it, InputIter end)
 {
     HINT* rval = nullptr;
-    auto t = next_token(it, end);
+    auto t = next_token(&it, end);
 
     if (t.type == TOK_ROUTE)
     {
-        if (next_token(it, end).type == TOK_TO)
+        if (next_token(&it, end).type == TOK_TO)
         {
-            t = next_token(it, end);
+            t = next_token(&it, end);
 
             if (t.type == TOK_MASTER)
             {
@@ -1054,7 +1056,7 @@ HINT* process_definition(InputIter it, InputIter end)
             }
             else if (t.type == TOK_SERVER)
             {
-                t = next_token(it, end);
+                t = next_token(&it, end);
 
                 if (t.type == TOK_STRING)
                 {
@@ -1067,8 +1069,8 @@ HINT* process_definition(InputIter it, InputIter end)
     else if (t.type == TOK_STRING)
     {
         std::string key(t.begin, t.end);
-        auto eq = next_token(it, end);
-        auto val = next_token(it, end);
+        auto eq = next_token(&it, end);
+        auto val = next_token(&it, end);
 
         if (eq.type == TOK_EQUAL && val.type == TOK_STRING)
         {
@@ -1077,7 +1079,7 @@ HINT* process_definition(InputIter it, InputIter end)
         }
     }
 
-    if (rval && next_token(it, end).type != TOK_END)
+    if (rval && next_token(&it, end).type != TOK_END)
     {
         // Unexpected input after hint definition, treat it as an error and remove the hint
         hint_free(rval);
@@ -1092,17 +1094,17 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
 {
     HINT* rval = nullptr;
 
-    if (next_token(it, end).type == TOK_MAXSCALE)
+    if (next_token(&it, end).type == TOK_MAXSCALE)
     {
         // Peek at the next token
         auto prev_it = it;
-        auto t = next_token(it, end);
+        auto t = next_token(&it, end);
 
         if (t.type == TOK_START)
         {
             if ((rval = process_definition(it, end)))
             {
-                hint_push(session, rval);
+                hint_push(session, hint_dup(rval));
             }
         }
         else if (t.type == TOK_STOP)
@@ -1112,11 +1114,11 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
         else if (t.type == TOK_STRING)
         {
             std::string key(t.begin, t.end);
-            t = next_token(it, end);
+            t = next_token(&it, end);
 
             if (t.type == TOK_EQUAL)
             {
-                t = next_token(it, end);
+                t = next_token(&it, end);
 
                 if (t.type == TOK_STRING)
                 {
@@ -1127,10 +1129,12 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
             }
             else if (t.type == TOK_PREPARE)
             {
-                if ((rval = process_definition(it, end)))
+                HINT* hint = process_definition(it, end);
+
+                if (hint)
                 {
                     // Preparation of a named hint
-                    create_named_hint(session, key.c_str(), rval);
+                    create_named_hint(session, key.c_str(), hint);
                 }
             }
             else if (t.type == TOK_START)
@@ -1144,10 +1148,16 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
                         hint_push(session, hint_dup(rval));
                     }
                 }
-                else if ((rval = lookup_named_hint(session, key.c_str())))
+                else if (next_token(&it, end).type == TOK_END)
                 {
-                    // We starting an already define named hint
-                    hint_push(session, hint_dup(rval));
+                    HINT* hint = lookup_named_hint(session, key.c_str());
+
+                    if (hint)
+                    {
+                        // We're starting an already define named hint
+                        hint_push(session, hint_dup(hint));
+                        rval = hint_dup(hint);
+                    }
                 }
             }
         }
@@ -1159,4 +1169,26 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
     }
 
     return rval;
+}
+
+void process_hints(HINT_SESSION* session, GWBUF* buffer)
+{
+    mxs::Buffer buf(buffer);
+
+    for (auto comment : get_all_comments(std::next(buf.begin(), 5), buf.end()))
+    {
+        HINT* hint = process_comment(session, comment.first, comment.second);
+
+        if (hint)
+        {
+            buffer->hint = hint_splice(buffer->hint, hint);
+        }
+    }
+
+    if (!buffer->hint && session->stack)
+    {
+        buffer->hint = hint_dup(session->stack->hint);
+    }
+
+    buf.release();
 }

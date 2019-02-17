@@ -206,15 +206,11 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
 {
     HINT_SESSION* my_session = (HINT_SESSION*)session;
 
-    if (modutil_is_SQL(queue))
+    if (modutil_is_SQL(queue) && gwbuf_length(queue) > 5)
     {
         my_session->request = NULL;
         my_session->query_len = 0;
-        HINT* new_hint = hint_parser(my_session, queue);
-        if (new_hint)
-        {
-            queue->hint = hint_splice(queue->hint, new_hint);
-        }
+        process_hints(my_session, queue);
     }
 
     /* Now process the request */

@@ -107,5 +107,6 @@ typedef struct
 extern HINT* hint_parser(HINT_SESSION* session, GWBUF* request);
 NAMEDHINTS*  free_named_hint(NAMEDHINTS* named_hint);
 HINTSTACK*   free_hint_stack(HINTSTACK* hint_stack);
+void         process_hints(HINT_SESSION* session, GWBUF* buffer);
 
 MXS_END_DECLS
