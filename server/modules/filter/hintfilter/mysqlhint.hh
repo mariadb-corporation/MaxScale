@@ -39,7 +39,7 @@ private:
     std::vector<HINT*>                     stack;
     std::unordered_map<std::string, HINT*> named_hints;
 
-    template<class InputIter>
+    using InputIter = mxs::Buffer::iterator;
     HINT* process_comment(InputIter it, InputIter end);
     void  process_hints(GWBUF* buffer);
 

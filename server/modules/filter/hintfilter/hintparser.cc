@@ -24,6 +24,8 @@
  * Code for parsing SQL comments and processing them into MaxScale hints
  */
 
+using InputIter = mxs::Buffer::iterator;
+
 /* Parser tokens for the hint parser */
 typedef enum
 {
@@ -52,7 +54,6 @@ typedef enum
  *
  * @return The iterator pointing at the first occurrence of the character or `end` if one was not found
  */
-template<class InputIter>
 InputIter skip_until(InputIter it, InputIter end, char c)
 {
     while (it != end)
@@ -84,7 +85,6 @@ InputIter skip_until(InputIter it, InputIter end, char c)
  * @return A pair of iterators pointing to the range the comment spans. The comment tags themselves are not
  *         included in this range. If no comment is found, a pair of `end` iterators is returned.
  */
-template<class InputIter>
 std::pair<InputIter, InputIter> get_comment(InputIter it, InputIter end)
 {
     while (it != end)
@@ -158,7 +158,6 @@ std::pair<InputIter, InputIter> get_comment(InputIter it, InputIter end)
  *
  * @return A list of iterator pairs pointing to all comments in the query
  */
-template<class InputIter>
 std::vector<std::pair<InputIter, InputIter>> get_all_comments(InputIter start, InputIter end)
 {
     std::vector<std::pair<InputIter, InputIter>> rval;
@@ -180,7 +179,6 @@ std::vector<std::pair<InputIter, InputIter>> get_all_comments(InputIter start, I
 }
 
 // Simple container for two iterators and a token type
-template<class InputIter>
 struct Token
 {
     InputIter   begin;
@@ -212,8 +210,7 @@ static const std::unordered_map<std::string, TOKEN_VALUE> tokens
  *
  * @return The next token
  */
-template<class InputIter>
-Token<InputIter> next_token(InputIter* iter, InputIter end)
+Token next_token(InputIter* iter, InputIter end)
 {
     InputIter& it = *iter;
 
@@ -265,7 +262,6 @@ Token<InputIter> next_token(InputIter* iter, InputIter end)
  *
  * @return The processed hint or NULL on invalid input
  */
-template<class InputIter>
 HINT* process_definition(InputIter it, InputIter end)
 {
     HINT* rval = nullptr;
@@ -324,7 +320,6 @@ HINT* process_definition(InputIter it, InputIter end)
     return rval;
 }
 
-template<class InputIter>
 HINT* HINT_SESSION::process_comment(InputIter it, InputIter end)
 {
     HINT* rval = nullptr;

@@ -27,8 +27,9 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
 {
     bool rval = true;
     auto it = expected.begin();
+    mxs::Buffer buffer(input.c_str(), input.size());
 
-    for (auto output : get_all_comments(input.begin(), input.end()))
+    for (auto output : get_all_comments(buffer.begin(), buffer.end()))
     {
         if (it == expected.end())
         {
@@ -76,7 +77,9 @@ static HINT_SESSION session(nullptr);
 
 void test_parse(const std::string& input, int expected_type)
 {
-    for (auto comment : get_all_comments(input.begin(), input.end()))
+    mxs::Buffer buffer(input.c_str(), input.size());
+
+    for (auto comment : get_all_comments(buffer.begin(), buffer.end()))
     {
         std::string comment_str(comment.first, comment.second);
         HINT* hint = session.process_comment(comment.first, comment.second);
@@ -100,8 +103,9 @@ void test_parse(const std::string& input, int expected_type)
 void count_hints(const std::string& input, int num_expected)
 {
     int n = 0;
+    mxs::Buffer buffer(input.c_str(), input.size());
 
-    for (auto comment : get_all_comments(input.begin(), input.end()))
+    for (auto comment : get_all_comments(buffer.begin(), buffer.end()))
     {
         if (session.process_comment(comment.first, comment.second))
         {
