@@ -18,7 +18,7 @@
 /**
  * The hint instance structure
  */
-struct HINT_INSTANCE: public MXS_FILTER
+struct HINT_INSTANCE : public MXS_FILTER
 {
     int sessions = 0;
 };
@@ -26,11 +26,13 @@ struct HINT_INSTANCE: public MXS_FILTER
 /**
  * A hint parser session structure
  */
-struct HINT_SESSION: public MXS_FILTER_SESSION
+struct HINT_SESSION : public MXS_FILTER_SESSION
 {
-    MXS_DOWNSTREAM down;
-    std::vector<HINT*> stack;
+    MXS_DOWNSTREAM                         down;
+    std::vector<HINT*>                     stack;
     std::unordered_map<std::string, HINT*> named_hints;
-};
 
-void         process_hints(HINT_SESSION* session, GWBUF* buffer);
+    template<class InputIter>
+    HINT* process_comment(InputIter it, InputIter end);
+    void  process_hints(GWBUF* buffer);
+};

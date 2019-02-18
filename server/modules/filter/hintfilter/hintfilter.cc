@@ -101,7 +101,7 @@ extern "C"
  */
 static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    return static_cast<MXS_FILTER*>(new (std::nothrow)HINT_INSTANCE);
+    return static_cast<MXS_FILTER*>(new(std::nothrow) HINT_INSTANCE);
 }
 
 /**
@@ -113,7 +113,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    return static_cast<MXS_FILTER_SESSION*>(new (std::nothrow)HINT_SESSION);
+    return static_cast<MXS_FILTER_SESSION*>(new(std::nothrow) HINT_SESSION);
 }
 
 /**
@@ -179,7 +179,7 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
 
     if (modutil_is_SQL(queue) && gwbuf_length(queue) > 5)
     {
-        process_hints(my_session, queue);
+        my_session->process_hints(queue);
     }
 
     /* Now process the request */

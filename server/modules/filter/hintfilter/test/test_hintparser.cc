@@ -78,7 +78,7 @@ void test_parse(const std::string& input, int expected_type)
     for (auto comment : get_all_comments(input.begin(), input.end()))
     {
         std::string comment_str(comment.first, comment.second);
-        HINT* hint = process_comment(&session, comment.first, comment.second);
+        HINT* hint = session.process_comment(comment.first, comment.second);
 
         if (!hint && expected_type != 0)
         {
@@ -102,7 +102,7 @@ void count_hints(const std::string& input, int num_expected)
 
     for (auto comment : get_all_comments(input.begin(), input.end()))
     {
-        if (process_comment(&session, comment.first, comment.second))
+        if (session.process_comment(comment.first, comment.second))
         {
             ++n;
         }
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
     test_parse("SELECT 1 /* maxscale route to slave */", HINT_ROUTE_TO_SLAVE);
     test_parse("SELECT 1 /* maxscale route to last*/", HINT_ROUTE_TO_LAST_USED);
     test_parse("SELECT 1 /* maxscale route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
-    test_parse("SELECT 1 /* maxscale test1 prepare route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
+    test_parse("SELECT 1 /* maxscale test1 prepare route to server server1 */", 0);
     test_parse("SELECT 1 /* maxscale test1 start route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
     test_parse("SELECT 1 /* maxscale start route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
     test_parse("SELECT 1 /* maxscale end*/", 0);

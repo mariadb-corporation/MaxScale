@@ -325,7 +325,7 @@ HINT* process_definition(InputIter it, InputIter end)
 }
 
 template<class InputIter>
-HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
+HINT* HINT_SESSION::process_comment(InputIter it, InputIter end)
 {
     HINT* rval = nullptr;
 
@@ -339,15 +339,15 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
         {
             if ((rval = process_definition(it, end)))
             {
-                session->stack.push_back(hint_dup(rval));
+                stack.push_back(hint_dup(rval));
             }
         }
         else if (t.type == TOK_STOP)
         {
-            if (!session->stack.empty())
+            if (!stack.empty())
             {
-                hint_free(session->stack.back());
-                session->stack.pop_back();
+                hint_free(stack.back());
+                stack.pop_back();
             }
         }
         else if (t.type == TOK_STRING)
@@ -373,28 +373,28 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
                 if (hint)
                 {
                     // Preparation of a named hint
-                    session->named_hints[key] = hint_dup(hint);
+                    named_hints[key] = hint_dup(hint);
                 }
             }
             else if (t.type == TOK_START)
             {
                 if ((rval = process_definition(it, end)))
                 {
-                    if (session->named_hints.count(key) == 0)
+                    if (named_hints.count(key) == 0)
                     {
                         // New hint defined, push it on to the stack
-                        session->named_hints[key] = hint_dup(rval);
-                        session->stack.push_back(hint_dup(rval));
+                        named_hints[key] = hint_dup(rval);
+                        stack.push_back(hint_dup(rval));
                     }
                 }
                 else if (next_token(&it, end).type == TOK_END)
                 {
-                    auto it = session->named_hints.find(key);
+                    auto it = named_hints.find(key);
 
-                    if (it != session->named_hints.end())
+                    if (it != named_hints.end())
                     {
                         // We're starting an already define named hint
-                        session->stack.push_back(hint_dup(it->second));
+                        stack.push_back(hint_dup(it->second));
                         rval = hint_dup(it->second);
                     }
                 }
@@ -410,13 +410,13 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
     return rval;
 }
 
-void process_hints(HINT_SESSION* session, GWBUF* buffer)
+void HINT_SESSION::process_hints(GWBUF* buffer)
 {
     mxs::Buffer buf(buffer);
 
     for (auto comment : get_all_comments(std::next(buf.begin(), 5), buf.end()))
     {
-        HINT* hint = process_comment(session, comment.first, comment.second);
+        HINT* hint = process_comment(comment.first, comment.second);
 
         if (hint)
         {
@@ -424,9 +424,9 @@ void process_hints(HINT_SESSION* session, GWBUF* buffer)
         }
     }
 
-    if (!buffer->hint && !session->stack.empty())
+    if (!buffer->hint && !stack.empty())
     {
-        buffer->hint = hint_dup(session->stack.back());
+        buffer->hint = hint_dup(stack.back());
     }
 
     buf.release();
