@@ -16,16 +16,16 @@
 #include <maxscale/hint.h>
 #include <maxscale/filter.hh>
 
-class HINT_SESSION;
+class HintSession;
 
-class HINT_INSTANCE : public mxs::Filter<HINT_INSTANCE, HINT_SESSION>
+class HintInstance : public mxs::Filter<HintInstance, HintSession>
 {
 public:
-    static HINT_INSTANCE* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
-    HINT_SESSION*         newSession(MXS_SESSION* pSession);
-    void                  diagnostics(DCB* pDcb) const;
-    json_t*               diagnostics_json() const;
-    uint64_t              getCapabilities();
+    static HintInstance* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+    HintSession*         newSession(MXS_SESSION* pSession);
+    void                 diagnostics(DCB* pDcb) const;
+    json_t*              diagnostics_json() const;
+    uint64_t             getCapabilities();
 };
 
 enum TOKEN_VALUE
@@ -79,13 +79,13 @@ private:
     HINT*       parse_one(InputIter begin, InputIter end);
 };
 
-class HINT_SESSION : public mxs::FilterSession
+class HintSession : public mxs::FilterSession
 {
 public:
-    HINT_SESSION(const HINT_SESSION&) = delete;
-    HINT_SESSION& operator=(const HINT_SESSION&) = delete;
+    HintSession(const HintSession&) = delete;
+    HintSession& operator=(const HintSession&) = delete;
 
-    HINT_SESSION(MXS_SESSION* session);
+    HintSession(MXS_SESSION* session);
     int routeQuery(GWBUF* queue);
 
 private:

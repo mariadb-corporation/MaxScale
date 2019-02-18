@@ -27,31 +27,31 @@
  */
 
 // static
-HINT_INSTANCE* HINT_INSTANCE::create(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
+HintInstance* HintInstance::create(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
 {
-    return new(std::nothrow) HINT_INSTANCE;
+    return new(std::nothrow) HintInstance;
 }
 
-HINT_SESSION* HINT_INSTANCE::newSession(MXS_SESSION* pSession)
+HintSession* HintInstance::newSession(MXS_SESSION* pSession)
 {
-    return new(std::nothrow) HINT_SESSION(pSession);
+    return new(std::nothrow) HintSession(pSession);
 }
 
-void HINT_INSTANCE::diagnostics(DCB* pDcb) const
+void HintInstance::diagnostics(DCB* pDcb) const
 {
 }
 
-json_t* HINT_INSTANCE::diagnostics_json() const
+json_t* HintInstance::diagnostics_json() const
 {
     return nullptr;
 }
 
-uint64_t HINT_INSTANCE::getCapabilities()
+uint64_t HintInstance::getCapabilities()
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
 
-HINT_SESSION::HINT_SESSION(MXS_SESSION* session)
+HintSession::HintSession(MXS_SESSION* session)
     : mxs::FilterSession(session)
 {
 }
@@ -66,7 +66,7 @@ HINT_SESSION::HINT_SESSION(MXS_SESSION* session)
  * @param session   The filter session
  * @param queue     The query data
  */
-int HINT_SESSION::routeQuery(GWBUF* queue)
+int HintSession::routeQuery(GWBUF* queue)
 {
     if (modutil_is_SQL(queue) && gwbuf_length(queue) > 5)
     {
@@ -97,7 +97,7 @@ extern "C"
             "A hint parsing filter",
             "V1.0.0",
             RCAP_TYPE_CONTIGUOUS_INPUT,
-            &HINT_INSTANCE::s_object,
+            &HintInstance::s_object,
             NULL,   /* Process init. */
             NULL,   /* Process finish. */
             NULL,   /* Thread init. */

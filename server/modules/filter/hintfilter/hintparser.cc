@@ -412,7 +412,7 @@ HintParser::~HintParser()
     }
 }
 
-void HINT_SESSION::process_hints(GWBUF* buffer)
+void HintSession::process_hints(GWBUF* buffer)
 {
     mxs::Buffer buf(buffer);
     HINT* hint = m_parser.parse(std::next(buf.begin(), 5), buf.end());
