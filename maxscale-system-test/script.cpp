@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
     fclose(f);
 
     Test->tprintf("Copying expected script output to Maxscale machine");
-    char str[2048];
+    char str[4096 + 2048];
     sprintf(str,
             "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet script_output_expected* %s@%s:%s/",
             Test->maxscales->sshkey[0],

@@ -321,7 +321,7 @@ int Mariadb_nodes::stop_node(int node)
 
 int Mariadb_nodes::start_node(int node, const char* param)
 {
-    char cmd[1024];
+    char cmd[PATH_MAX + 1024];
     if (v51)
     {
         sprintf(cmd, "%s %s --report-host", start_db_command[node], param);
@@ -391,8 +391,8 @@ int Mariadb_nodes::cleanup_db_nodes()
 
 void Mariadb_nodes::create_users(int node)
 {
-    char str[1024];
-    char dtr[1024];
+    char str[PATH_MAX + 1024];
+    char dtr[PATH_MAX + 1024];
     // Create users for replication as well as the users that are used by the tests
     sprintf(str, "%s/create_user.sh", test_dir);
     sprintf(dtr, "%s", access_homedir[node]);
@@ -502,11 +502,13 @@ int Galera_nodes::start_galera()
         }
     }
 
-    char str[1024];
+    char str[PATH_MAX + 1024];
     sprintf(str, "%s/create_user_galera.sh", test_dir);
     copy_to_node_legacy(str, "~/", 0);
 
-    ssh_node_f(0, false, "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
+    ssh_node_f(0,
+               false,
+               "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
                user_name,
                password,
                socket_cmd[0]);
@@ -521,10 +523,12 @@ int Galera_nodes::start_galera()
 
 int Mariadb_nodes::clean_iptables(int node)
 {
-    return ssh_node_f(node, true,
+    return ssh_node_f(node,
+                      true,
                       "while [ \"$(iptables -n -L INPUT 1|grep '%d')\" != \"\" ]; do iptables -D INPUT 1; done;"
                       "while [ \"$(ip6tables -n -L INPUT 1|grep '%d')\" != \"\" ]; do ip6tables -D INPUT 1; done;",
-                      port[node], port[node]);
+                      port[node],
+                      port[node]);
 }
 
 int Mariadb_nodes::block_node(int node)
@@ -1057,7 +1061,8 @@ int Mariadb_nodes::get_version(int i)
     int local_result = 0;
     if (find_field(nodes[i], "SELECT @@version", "@@version", version[i]))
     {
-        cout << "Failed to get version: " << mysql_error(nodes[i]) << ", trying ssh node and use MariaDB client" << endl;
+        cout << "Failed to get version: " << mysql_error(nodes[i])
+             << ", trying ssh node and use MariaDB client" << endl;
         str = ssh_node_output(i, "mysql --batch --silent  -e \"select @@version\"", true, &ec);
         if (ec)
         {
@@ -1141,14 +1146,15 @@ int Mariadb_nodes::truncate_mariadb_logs()
     int local_result = 0;
     for (int node = 0; node < N; node++)
     {
-        char sys[1024];
+        char sys[PATH_MAX + 1500];
         if (strcmp(IP[node], "127.0.0.1") != 0)
         {
-            sprintf(sys,
-                    "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s 'sudo truncate  /var/lib/mysql/*.err --size 0;sudo rm -f /etc/my.cnf.d/binlog_enc*\' &",
-                    sshkey[node],
-                    access_user[node],
-                    IP[node]);
+            snprintf(sys,
+                     sizeof(sys),
+                     "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s 'sudo truncate  /var/lib/mysql/*.err --size 0;sudo rm -f /etc/my.cnf.d/binlog_enc*\' &",
+                     sshkey[node],
+                     access_user[node],
+                     IP[node]);
             local_result += system(sys);
         }
     }
@@ -1158,7 +1164,7 @@ int Mariadb_nodes::truncate_mariadb_logs()
 int Mariadb_nodes::configure_ssl(bool require)
 {
     int local_result = 0;
-    char str[1024];
+    char str[PATH_MAX + 256];
 
     this->ssl = 1;
 

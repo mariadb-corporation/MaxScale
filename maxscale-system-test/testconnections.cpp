@@ -659,7 +659,7 @@ void TestConnections::process_template(int m, const char* template_name, const c
     char str[4096];
     char template_file[1024];
 
-    char extended_template_file[1024];
+    char extended_template_file[1024 + 12];
 
     sprintf(template_file, "%s/cnf/maxscale.cnf.template.%s", test_dir, template_name);
     sprintf(extended_template_file, "%s.%03d", template_file, m);
@@ -853,9 +853,9 @@ int TestConnections::copy_all_logs()
 }
 int TestConnections::copy_maxscale_logs(double timestamp)
 {
-    char log_dir[1024];
-    char log_dir_i[1024];
-    char sys[1024];
+    char log_dir[PATH_MAX + 1024];
+    char log_dir_i[sizeof(log_dir) + 1024];
+    char sys[sizeof(log_dir_i) + 1024];
     if (timestamp == 0)
     {
         sprintf(log_dir, "LOGS/%s", test_name);
@@ -872,21 +872,21 @@ int TestConnections::copy_maxscale_logs(double timestamp)
         if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
         {
             int rc = maxscales->ssh_node_f(i, true,
-                                  "rm -rf %s/logs;"
-                                  "mkdir %s/logs;"
-                                  "cp %s/*.log %s/logs/;"
-                                  "cp /tmp/core* %s/logs/;"
-                                  "cp %s %s/logs/;"
-                                  "chmod 777 -R %s/logs;"
-                                  "ls /tmp/core* && exit 42;",
-                                  maxscales->access_homedir[i],
-                                  maxscales->access_homedir[i],
-                                  maxscales->maxscale_log_dir[i],
-                                  maxscales->access_homedir[i],
-                                  maxscales->access_homedir[i],
-                                  maxscales->maxscale_cnf[i],
-                                  maxscales->access_homedir[i],
-                                  maxscales->access_homedir[i]);
+                                           "rm -rf %s/logs;"
+                                           "mkdir %s/logs;"
+                                           "cp %s/*.log %s/logs/;"
+                                           "cp /tmp/core* %s/logs/;"
+                                           "cp %s %s/logs/;"
+                                           "chmod 777 -R %s/logs;"
+                                           "ls /tmp/core* && exit 42;",
+                                           maxscales->access_homedir[i],
+                                           maxscales->access_homedir[i],
+                                           maxscales->maxscale_log_dir[i],
+                                           maxscales->access_homedir[i],
+                                           maxscales->access_homedir[i],
+                                           maxscales->maxscale_cnf[i],
+                                           maxscales->access_homedir[i],
+                                           maxscales->access_homedir[i]);
             sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
             maxscales->copy_from_node(i, sys, log_dir_i);
             expect(rc != 42, "Test should not generate core files");
@@ -2055,14 +2055,14 @@ void TestConnections::check_current_connections(int m, int value)
 
 int TestConnections::take_snapshot(char* snapshot_name)
 {
-    char str[4096];
+    char str[PATH_MAX + 4096];
     sprintf(str, "%s %s", take_snapshot_command, snapshot_name);
     return call_system(str);
 }
 
 int TestConnections::revert_snapshot(char* snapshot_name)
 {
-    char str[4096];
+    char str[PATH_MAX + 4096];
     sprintf(str, "%s %s", revert_snapshot_command, snapshot_name);
     return call_system(str);
 }

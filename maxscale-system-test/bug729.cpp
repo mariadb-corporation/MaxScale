@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
-    char str[1024];
+    char str[4096 + 1024];
 
     sprintf(str,
             "php %s/bug729.php %s %d %s %s",
