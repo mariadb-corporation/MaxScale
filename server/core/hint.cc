@@ -167,15 +167,18 @@ HINT* hint_create_parameter(HINT* head, const char* pname, const char* value)
  */
 void hint_free(HINT* hint)
 {
-    if (hint->data)
+    if (hint)
     {
-        MXS_FREE(hint->data);
+        if (hint->data)
+        {
+            MXS_FREE(hint->data);
+        }
+        if (hint->value)
+        {
+            MXS_FREE(hint->value);
+        }
+        MXS_FREE(hint);
     }
-    if (hint->value)
-    {
-        MXS_FREE(hint->value);
-    }
-    MXS_FREE(hint);
 }
 
 bool hint_exists(HINT** p_hint,

@@ -23,6 +23,8 @@
 #include <iostream>
 #include <initializer_list>
 
+int errors = 0;
+
 void test(const std::string& input, std::initializer_list<std::string> expected)
 {
     bool rval = true;
@@ -34,7 +36,7 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
         if (it == expected.end())
         {
             std::cout << "Too much output: " << std::string(output.first, output.second) << std::endl;
-            rval = false;
+            errors++;;
             break;
         }
 
@@ -44,12 +46,12 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
         if (have != need)
         {
             std::cout << "Need " << need << " bytes but only have " << have << std::endl;
-            rval = false;
+            errors++;;
         }
         else if (!std::equal(output.first, output.second, it->begin()))
         {
             std::cout << "Output not equal to expected output" << std::endl;
-            rval = false;
+            errors++;;
         }
 
         if (!rval)
@@ -67,58 +69,56 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
     {
         std::cout << "Not enough output, need " << std::distance(it, expected.end())
                   << " more comments" << std::endl;
-        rval = false;
+        errors++;;
     }
-
-    mxb_assert(rval);
 }
 
-static HINT_SESSION session(nullptr);
 
 void test_parse(const std::string& input, int expected_type)
 {
     mxs::Buffer buffer(input.c_str(), input.size());
+    HintParser parser;
+    HINT* hint = parser.parse(buffer.begin(), buffer.end());
 
-    for (auto comment : get_all_comments(buffer.begin(), buffer.end()))
+    if (!hint && expected_type != 0)
     {
-        std::string comment_str(comment.first, comment.second);
-        HINT* hint = session.process_comment(comment.first, comment.second);
-
-        if (!hint && expected_type != 0)
-        {
-            std::cout << "Expected hint but didn't get one: " << comment_str << std::endl;
-        }
-        else if (hint && expected_type == 0)
-        {
-            std::cout << "Expected no hint but got one: " << comment_str << std::endl;
-        }
-        else if (hint && hint->type != expected_type)
-        {
-            std::cout << "Expected hint of type " << expected_type << " but got type "
-                      << (int)hint->type << ": " << comment_str << std::endl;
-        }
+        std::cout << "Expected hint but didn't get one: " << input << std::endl;
+        errors++;
     }
+    else if (hint && expected_type == 0)
+    {
+        std::cout << "Expected no hint but got one: " << input << std::endl;
+        errors++;
+    }
+    else if (hint && hint->type != expected_type)
+    {
+        std::cout << "Expected hint of type " << expected_type << " but got type "
+            << (int)hint->type << ": " << input << std::endl;
+        errors++;
+    }
+
+    hint_free(hint);
 }
 
 void count_hints(const std::string& input, int num_expected)
 {
-    int n = 0;
     mxs::Buffer buffer(input.c_str(), input.size());
+    HintParser parser;
+    int n = 0;
+    HINT* hint = parser.parse(buffer.begin(), buffer.end());
 
-    for (auto comment : get_all_comments(buffer.begin(), buffer.end()))
+    for (; hint; hint = hint->next)
     {
-        if (session.process_comment(comment.first, comment.second))
-        {
-            ++n;
-        }
+        n++;
     }
 
     if (n != num_expected)
     {
-        std::cout << "Expected " << num_expected << " hints but have " << n << "." << std::endl;
+        std::cout << "Expected " << num_expected << " hints but have " << n << ":" << input << std::endl;
+        errors++;
     }
 
-    mxb_assert(n == num_expected);
+    hint_free(hint);
 }
 
 int main(int argc, char** argv)
@@ -228,5 +228,5 @@ int main(int argc, char** argv)
     // processed but for the sake of simplicity and "bug compatibility" with 2.3 it is treated as an error.
     count_hints("/**maxscale route to slave*/ SELECT 1", 0);
 
-    return 0;
+    return errors;
 }

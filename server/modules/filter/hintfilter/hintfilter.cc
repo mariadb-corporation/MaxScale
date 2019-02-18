@@ -57,26 +57,6 @@ HINT_SESSION::HINT_SESSION(MXS_SESSION* session)
 }
 
 /**
- * Close a session with the filter, this is the mechanism
- * by which a filter may cleanup data structure etc.
- *
- * @param instance  The filter instance data
- * @param session   The session being closed
- */
-HINT_SESSION::~HINT_SESSION()
-{
-    for (auto& a : named_hints)
-    {
-        hint_free(a.second);
-    }
-
-    for (auto& a : stack)
-    {
-        hint_free(a);
-    }
-}
-
-/**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once applied the
  * query should normally be passed to the downstream component
