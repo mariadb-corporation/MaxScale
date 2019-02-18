@@ -44,158 +44,6 @@ typedef enum
 } TOKEN_VALUE;
 
 /**
- * hint_pop - pop the hint off the top of the stack if it is not empty
- *
- * @param   session The filter session.
- */
-void hint_pop(HINT_SESSION* session)
-{
-    HINTSTACK* ptr;
-    HINT* hint;
-
-    if ((ptr = session->stack) != NULL)
-    {
-        session->stack = ptr->next;
-        while (ptr->hint)
-        {
-            hint = ptr->hint;
-            ptr->hint = hint->next;
-            hint_free(hint);
-        }
-        MXS_FREE(ptr);
-    }
-}
-
-/**
- * Push a hint onto the stack of actie hints
- *
- * @param session   The filter session
- * @param hint      The hint to push, the hint ownership is retained
- *          by the stack and should not be freed by the caller
- */
-static void hint_push(HINT_SESSION* session, HINT* hint)
-{
-    HINTSTACK* item;
-
-    if ((item = (HINTSTACK*)MXS_MALLOC(sizeof(HINTSTACK))) == NULL)
-    {
-        return;
-    }
-    item->hint = hint;
-    item->next = session->stack;
-    session->stack = item;
-}
-
-/**
- * Search for a hint block that already exists with this name
- *
- * @param session   The filter session
- * @param name      The name to lookup
- * @return the HINT or NULL if the name was not found.
- */
-static HINT* lookup_named_hint(HINT_SESSION* session, const char* name)
-{
-    NAMEDHINTS* ptr = session->named_hints;
-
-    while (ptr)
-    {
-        if (strcmp(ptr->name, name) == 0)
-        {
-            return ptr->hints;
-        }
-        ptr = ptr->next;
-    }
-    return NULL;
-}
-
-/**
- * Create a named hint block
- *
- * @param session   The filter session
- * @param name      The name of the block to ceate
- * @param hint      The hints themselves
- */
-static void create_named_hint(HINT_SESSION* session, const char* name, HINT* hint)
-{
-    NAMEDHINTS* block;
-
-    if ((block = (NAMEDHINTS*)MXS_MALLOC(sizeof(NAMEDHINTS))) == NULL)
-    {
-        return;
-    }
-
-    block->name = MXS_STRDUP(name);
-    block->hints = hint_dup(hint);
-    block->next = session->named_hints;
-    session->named_hints = block;
-}
-
-/**
- * Release the given NAMEDHINTS struct and all included hints.
- *
- * @param named_hint NAMEDHINTS struct to be released
- *
- * @return pointer to next NAMEDHINTS struct.
- */
-NAMEDHINTS* free_named_hint(NAMEDHINTS* named_hint)
-{
-    NAMEDHINTS* next;
-
-    if (named_hint != NULL)
-    {
-        HINT* hint;
-
-        next = named_hint->next;
-
-        while (named_hint->hints != NULL)
-        {
-            hint = named_hint->hints->next;
-            hint_free(named_hint->hints);
-            named_hint->hints = hint;
-        }
-        MXS_FREE(named_hint->name);
-        MXS_FREE(named_hint);
-        return next;
-    }
-    else
-    {
-        return NULL;
-    }
-}
-
-/**
- * Release the given HINTSTACK struct and all included hints.
- *
- * @param hint_stack HINTSTACK struct to be released
- *
- * @return pointer to next HINTSTACK struct.
- */
-HINTSTACK* free_hint_stack(HINTSTACK* hint_stack)
-{
-    HINTSTACK* next;
-
-    if (hint_stack != NULL)
-    {
-        HINT* hint;
-
-        next = hint_stack->next;
-
-        while (hint_stack->hint != NULL)
-        {
-            hint = hint_stack->hint->next;
-            hint_free(hint_stack->hint);
-            hint_stack->hint = hint;
-        }
-        MXS_FREE(hint_stack);
-        return next;
-    }
-    else
-    {
-        return NULL;
-    }
-}
-
-/**
  * Advance an iterator until either an unescaped character `c` is found or `end` is reached
  *
  * @param it  Iterator to start from
@@ -491,12 +339,16 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
         {
             if ((rval = process_definition(it, end)))
             {
-                hint_push(session, hint_dup(rval));
+                session->stack.push_back(hint_dup(rval));
             }
         }
         else if (t.type == TOK_STOP)
         {
-            hint_pop(session);
+            if (!session->stack.empty())
+            {
+                hint_free(session->stack.back());
+                session->stack.pop_back();
+            }
         }
         else if (t.type == TOK_STRING)
         {
@@ -521,29 +373,29 @@ HINT* process_comment(HINT_SESSION* session, InputIter it, InputIter end)
                 if (hint)
                 {
                     // Preparation of a named hint
-                    create_named_hint(session, key.c_str(), hint);
+                    session->named_hints[key] = hint_dup(hint);
                 }
             }
             else if (t.type == TOK_START)
             {
                 if ((rval = process_definition(it, end)))
                 {
-                    if (!lookup_named_hint(session, key.c_str()))
+                    if (session->named_hints.count(key) == 0)
                     {
                         // New hint defined, push it on to the stack
-                        create_named_hint(session, key.c_str(), rval);
-                        hint_push(session, hint_dup(rval));
+                        session->named_hints[key] = hint_dup(rval);
+                        session->stack.push_back(hint_dup(rval));
                     }
                 }
                 else if (next_token(&it, end).type == TOK_END)
                 {
-                    HINT* hint = lookup_named_hint(session, key.c_str());
+                    auto it = session->named_hints.find(key);
 
-                    if (hint)
+                    if (it != session->named_hints.end())
                     {
                         // We're starting an already define named hint
-                        hint_push(session, hint_dup(hint));
-                        rval = hint_dup(hint);
+                        session->stack.push_back(hint_dup(it->second));
+                        rval = hint_dup(it->second);
                     }
                 }
             }
@@ -572,9 +424,9 @@ void process_hints(HINT_SESSION* session, GWBUF* buffer)
         }
     }
 
-    if (!buffer->hint && session->stack)
+    if (!buffer->hint && !session->stack.empty())
     {
-        buffer->hint = hint_dup(session->stack->hint);
+        buffer->hint = hint_dup(session->stack.back());
     }
 
     buf.release();

@@ -101,13 +101,7 @@ extern "C"
  */
 static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    HINT_INSTANCE* my_instance;
-
-    if ((my_instance = static_cast<HINT_INSTANCE*>(MXS_CALLOC(1, sizeof(HINT_INSTANCE)))) != NULL)
-    {
-        my_instance->sessions = 0;
-    }
-    return (MXS_FILTER*)my_instance;
+    return static_cast<MXS_FILTER*>(new (std::nothrow)HINT_INSTANCE);
 }
 
 /**
@@ -119,15 +113,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    HINT_SESSION* my_session;
-
-    if ((my_session = static_cast<HINT_SESSION*>(MXS_CALLOC(1, sizeof(HINT_SESSION)))) != NULL)
-    {
-        my_session->stack = NULL;
-        my_session->named_hints = NULL;
-    }
-
-    return (MXS_FILTER_SESSION*)my_session;
+    return static_cast<MXS_FILTER_SESSION*>(new (std::nothrow)HINT_SESSION);
 }
 
 /**
@@ -140,20 +126,15 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
 static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
     HINT_SESSION* my_session = (HINT_SESSION*)session;
-    NAMEDHINTS* named_hints;
-    HINTSTACK* hint_stack;
 
-    /** Free named hints */
-    named_hints = my_session->named_hints;
-
-    while ((named_hints = free_named_hint(named_hints)) != NULL)
+    for (auto& a : my_session->named_hints)
     {
+        hint_free(a.second);
     }
-    /** Free stacked hints */
-    hint_stack = my_session->stack;
 
-    while ((hint_stack = free_hint_stack(hint_stack)) != NULL)
+    for (auto& a : my_session->stack)
     {
+        hint_free(a);
     }
 }
 
@@ -165,8 +146,7 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
  */
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
-    MXS_FREE(session);
-    return;
+    delete session;
 }
 
 /**

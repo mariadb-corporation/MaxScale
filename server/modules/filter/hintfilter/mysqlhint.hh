@@ -15,55 +15,22 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/hint.h>
 
-MXS_BEGIN_DECLS
-
-/**
- * A named hint set.
- *
- * The hint "MaxScale name PREPARE ..." can be used to defined a named set
- * of hints that can be later applied.
- */
-typedef struct namedhints
-{
-    char* name;     /*< Hintsets name */
-    HINT* hints;
-    struct namedhints
-    * next;     /*< Next named hint */
-} NAMEDHINTS;
-
-/**
- * A session meaintains a stack of hints, the hints BEGIN and STOP are used
- * push hints on and off the stack. The current top of the stack is added to
- * any statement that does not explicitly define a hint for that signle
- * statement.
- */
-typedef struct hintstack
-{
-    HINT* hint;
-    struct hintstack
-    * next;
-} HINTSTACK;
-
 /**
  * The hint instance structure
  */
-typedef struct
+struct HINT_INSTANCE: public MXS_FILTER
 {
-    int sessions;
-} HINT_INSTANCE;
+    int sessions = 0;
+};
 
 /**
  * A hint parser session structure
  */
-typedef struct
+struct HINT_SESSION: public MXS_FILTER_SESSION
 {
     MXS_DOWNSTREAM down;
-    HINTSTACK*     stack;
-    NAMEDHINTS*    named_hints;     /* The named hints defined in this session */
-} HINT_SESSION;
+    std::vector<HINT*> stack;
+    std::unordered_map<std::string, HINT*> named_hints;
+};
 
-NAMEDHINTS*  free_named_hint(NAMEDHINTS* named_hint);
-HINTSTACK*   free_hint_stack(HINTSTACK* hint_stack);
 void         process_hints(HINT_SESSION* session, GWBUF* buffer);
-
-MXS_END_DECLS
