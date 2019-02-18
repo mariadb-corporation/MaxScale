@@ -39,6 +39,12 @@ int main(int argc, char *argv[])
     Test = new TestConnections(argc, argv);
     int i, j;
 
+    Test->maxscales->stop_maxscale(0);
+    Test->maxscales->ssh_node_f(0, true, "yum install -y valgrind gdb");
+    Test->maxscales->ssh_node_f(0, true, "rm -rf /var/cache/maxscale/maxscale.lock");
+    Test->maxscales->verbose = true;
+    Test->maxscales->ssh_node_f(0, false, "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all /usr/bin/maxscale ");
+exit(0);
     pthread_t thread_id[threads_type_num][max_threads_num];
     FUNC * thread[threads_type_num];
     thread[0] = query_thread;
@@ -66,6 +72,8 @@ int main(int argc, char *argv[])
 
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 300000;");
     Test->repl->execute_query_all_nodes((char *) "set global max_connect_errors = 10000000;");
+    Test->repl->execute_query_all_nodes((char *) "set global expire_logs_days = 1;");
+
 
 
     Test->maxscales->connect_rwsplit(0);
@@ -157,6 +165,8 @@ int main(int argc, char *argv[])
     fflush(stdout);
     Test->check_maxscale_alive(0);
 
+    Test->maxscales->ssh_node_f(0, true, "sudo kill $(pidof valgrind)");
+
     int rval = Test->global_result;
     delete Test;
     return rval;
@@ -237,7 +247,7 @@ void *read_thread(void *ptr )
 void *transaction_thread(void *ptr )
 {
     MYSQL * conn;
-    int transactions_until_optimize = 1000;
+    int transactions_until_optimize = 10;
     int tn = 0;
     t_data * data = (t_data *) ptr;
     conn = open_conn_db_timeout(port,
