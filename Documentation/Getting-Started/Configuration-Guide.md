@@ -1359,7 +1359,8 @@ database server.
 #### `port`
 
 The port on which the database listens for incoming connections. MariaDB
-MaxScale will use this port to connect to the database server.
+MaxScale will use this port to connect to the database server. The default value
+is 3306.
 
 #### `protocol`
 
