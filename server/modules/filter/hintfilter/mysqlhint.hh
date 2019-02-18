@@ -14,25 +14,36 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/hint.h>
+#include <maxscale/filter.hh>
 
-/**
- * The hint instance structure
- */
-struct HINT_INSTANCE : public MXS_FILTER
+class HINT_SESSION;
+
+class HINT_INSTANCE : public mxs::Filter<HINT_INSTANCE, HINT_SESSION>
 {
-    int sessions = 0;
+public:
+    static HINT_INSTANCE* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+    HINT_SESSION*         newSession(MXS_SESSION* pSession);
+    void                  diagnostics(DCB* pDcb) const;
+    json_t*               diagnostics_json() const;
+    uint64_t              getCapabilities();
 };
 
-/**
- * A hint parser session structure
- */
-struct HINT_SESSION : public MXS_FILTER_SESSION
+class HINT_SESSION : public mxs::FilterSession
 {
-    MXS_DOWNSTREAM                         down;
+public:
+    HINT_SESSION(MXS_SESSION* session);
+    ~HINT_SESSION();
+    int routeQuery(GWBUF* queue);
+
+private:
     std::vector<HINT*>                     stack;
     std::unordered_map<std::string, HINT*> named_hints;
 
     template<class InputIter>
     HINT* process_comment(InputIter it, InputIter end);
     void  process_hints(GWBUF* buffer);
+
+    // Unit testing functions
+    friend void count_hints(const std::string& input, int num_expected);
+    friend void test_parse(const std::string& input, int expected_type);
 };

@@ -16,6 +16,7 @@
 #endif
 
 #include "../hintparser.cc"
+#include "../hintfilter.cc"
 #include <maxbase/log.hh>
 
 #include <algorithm>
@@ -71,7 +72,7 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
     mxb_assert(rval);
 }
 
-static HINT_SESSION session = {};
+static HINT_SESSION session(nullptr);
 
 void test_parse(const std::string& input, int expected_type)
 {
