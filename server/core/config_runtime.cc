@@ -285,7 +285,7 @@ bool runtime_create_server(const char* name,
                                          name);
                 }
 
-                MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
+                delete ctx.parameters;
             }
             else
             {
@@ -606,7 +606,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     }
 
     std::lock_guard<std::mutex> guard(crt_lock);
-    MXS_CONFIG_PARAMETER::set(&monitor->parameters, key, value);
+    monitor->parameters->set(key, value);
     bool success = true;
     if (strcmp(key, CN_USER) == 0)
     {
@@ -1224,7 +1224,7 @@ bool runtime_create_monitor(const char* name, const char* module)
                     config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
                 }
 
-                MXS_CONFIG_PARAMETER::free_all(&params);
+                delete params;
             }
         }
         else
@@ -1281,7 +1281,7 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
                     config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
                 }
 
-                MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
+                delete ctx.parameters;
             }
             else
             {
@@ -1358,7 +1358,7 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
                     config_runtime_error("Could not create service '%s' with module '%s'", name, router);
                 }
 
-                MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
+                delete ctx.parameters;
             }
             else
             {
@@ -1443,10 +1443,9 @@ bool runtime_destroy_monitor(Monitor* monitor)
     return rval;
 }
 
-static MXS_CONFIG_PARAMETER* extract_parameters_from_json(json_t* json)
+static MXS_CONFIG_PARAMETER extract_parameters_from_json(json_t* json)
 {
-    CONFIG_CONTEXT ctx {(char*)""};
-
+    MXS_CONFIG_PARAMETER rval;
     if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
     {
         const char* key;
@@ -1454,11 +1453,11 @@ static MXS_CONFIG_PARAMETER* extract_parameters_from_json(json_t* json)
 
         json_object_foreach(parameters, key, value)
         {
-            config_add_param(&ctx, key, json_string_value(value));
+            rval.set(key, json_string_value(value));
         }
     }
 
-    return ctx.parameters;
+    return rval;
 }
 
 static bool extract_ordered_relations(json_t* json,
@@ -2283,11 +2282,9 @@ bool runtime_create_filter_from_json(json_t* json)
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
-        MXS_CONFIG_PARAMETER* params = extract_parameters_from_json(json);
+        auto params = extract_parameters_from_json(json);
 
-        rval = runtime_create_filter(name, module, params);
-
-        MXS_CONFIG_PARAMETER::free_all(&params);
+        rval = runtime_create_filter(name, module, &params);
     }
 
     return rval;
@@ -2301,9 +2298,9 @@ Service* runtime_create_service_from_json(json_t* json)
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* router = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ROUTER));
-        MXS_CONFIG_PARAMETER* params = extract_parameters_from_json(json);
+        auto params = extract_parameters_from_json(json);
 
-        if (runtime_create_service(name, router, params))
+        if (runtime_create_service(name, router, &params))
         {
             rval = service_internal_find(name);
             mxb_assert(rval);
@@ -2320,8 +2317,6 @@ Service* runtime_create_service_from_json(json_t* json)
                 serviceStart(rval);
             }
         }
-
-        MXS_CONFIG_PARAMETER::free_all(&params);
     }
 
     return rval;

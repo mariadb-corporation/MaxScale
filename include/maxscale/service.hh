@@ -156,7 +156,8 @@ public:
 protected:
     SERVICE(const std::string& name,
             const std::string& router_name)
-        : m_name(name)                /** Service name. */
+        : svc_config_param(new MXS_CONFIG_PARAMETER)
+        , m_name(name)                /** Service name. */
         , m_router_name(router_name)  /** Router module. */
     {
     }

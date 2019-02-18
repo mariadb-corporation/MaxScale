@@ -91,6 +91,13 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
+    // TODO: Think of a cleaner way to do this, e.g. reference.
+    MXS_CONFIG_PARAMETER empty;
+    if (!params)
+    {
+        params = &empty;
+    }
+
     Service* service = new(std::nothrow) Service(name, router, params);
 
     if (service == nullptr)
@@ -193,7 +200,6 @@ Service::Service(const std::string& name,
     capabilities = module->module_capabilities;
     client_count = 0;
     n_dbref = 0;
-    svc_config_param = NULL;
     svc_config_version = 0;
     stats.started = time(0);
     stats.n_failed_starts = 0;
@@ -268,7 +274,7 @@ Service::~Service()
         MXS_FREE(tmp);
     }
 
-    MXS_CONFIG_PARAMETER::free_all(&svc_config_param);
+    delete svc_config_param;
 }
 
 void service_free(Service* service)
@@ -1144,25 +1150,24 @@ int service_refresh_users(SERVICE* svc)
 
 void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param)
 {
-    MXS_CONFIG_PARAMETER::set_multiple(&service->svc_config_param, param);
+    service->svc_config_param->set_multiple(*param);
 }
 
 void service_add_parameter(Service* service, const char* key, const char* value)
 {
     MXS_CONFIG_PARAMETER p;
-    auto pp = &p;
-    MXS_CONFIG_PARAMETER::set(&pp, key, value);
+    p.set(key, value);
     service_add_parameters(service, &p);
 }
 
 void service_remove_parameter(Service* service, const char* key)
 {
-    MXS_CONFIG_PARAMETER::remove(&service->svc_config_param, key);
+    service->svc_config_param->remove(key);
 }
 
 void service_replace_parameter(Service* service, const char* key, const char* value)
 {
-    MXS_CONFIG_PARAMETER::set(&service->svc_config_param, key, value);
+    service->svc_config_param->set(key, value);
 }
 
 /**

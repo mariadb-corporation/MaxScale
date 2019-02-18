@@ -117,15 +117,16 @@ class ParamAdaptor
 public:
     ParamAdaptor(const std::vector<Server::ConfigParameter>& parameters)
     {
+        m_params = new MXS_CONFIG_PARAMETER;
         for (const auto& elem : parameters)
         {
-            MXS_CONFIG_PARAMETER::set(&m_params, elem.name, elem.value);
+            m_params->set(elem.name, elem.value);
         }
     }
 
     ~ParamAdaptor()
     {
-        MXS_CONFIG_PARAMETER::free_all(&m_params);
+        delete m_params;
     }
 
     operator MXS_CONFIG_PARAMETER*()

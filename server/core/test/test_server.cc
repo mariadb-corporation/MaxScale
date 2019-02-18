@@ -43,7 +43,7 @@
 #include "../server.cc"
 #include "../internal/server.hh"
 
-static MXS_CONFIG_PARAMETER* params = nullptr;
+static MXS_CONFIG_PARAMETER* params = new MXS_CONFIG_PARAMETER;
 
 /**
  * test1    Allocate a server and do lots of other things
@@ -96,8 +96,8 @@ bool test_load_config(const char* input, Server* server)
 
     if (duplicate_context_init(&dcontext))
     {
-        CONFIG_CONTEXT ccontext = {};
-        ccontext.object = (char*)"";
+        CONFIG_CONTEXT ccontext;
+        ccontext.object = MXS_STRDUP("");
 
         if (config_load_single_file(input, &dcontext, &ccontext))
         {
@@ -173,13 +173,12 @@ int main(int argc, char** argv)
     set_libdir(MXS_STRDUP_A("../../modules/protocol/HTTPD/"));
     load_module("HTTPD", MODULE_PROTOCOL);
 
-    MXS_CONFIG_PARAMETER::set_from_list(&params,
-                                        {
-                                                {"address", "127.0.0.1"},
-                                                {"port", "9876"},
-                                                {"protocol", "HTTPD"},
-                                                {"authenticator", "NullAuthAllow"}
-                                        }, config_server_params);
+    params->set_from_list({
+                             {"address", "127.0.0.1"},
+                             {"port", "9876"},
+                             {"protocol", "HTTPD"},
+                             {"authenticator", "NullAuthAllow"}
+                          }, config_server_params);
     int result = 0;
 
     result += test1();

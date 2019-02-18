@@ -320,10 +320,10 @@ int test(FilterModule& filter_module, const TEST_CASE& tc)
     int rv = 1;
 
     auto params = filter_module.create_default_parameters();
-    MXS_CONFIG_PARAMETER::set(&params, "cache_in_transactions", to_string(tc.cit));
-    MXS_CONFIG_PARAMETER::set(&params, "debug", "31");
-    MXS_CONFIG_PARAMETER::set(&params, "cached_data", "shared");
-    MXS_CONFIG_PARAMETER::set(&params, "selects", "verify_cacheable");
+    params->set("cache_in_transactions", to_string(tc.cit));
+    params->set("debug", "31");
+    params->set("cached_data", "shared");
+    params->set("selects", "verify_cacheable");
 
     auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", params);
 

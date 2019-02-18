@@ -133,21 +133,20 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
+    delete ctx.parameters;
 
     // Declared in config.cc and needs to be removed if/when blr is refactored
     extern const MXS_MODULE_PARAM config_server_params[];
 
-    MXS_CONFIG_PARAMETER* params = nullptr;
-    MXS_CONFIG_PARAMETER::set_from_list(&params,
-                                        {
-                                            {"address", "_none_"},
-                                            {"port", "3306"},
-                                            {"protocol", "MySQLBackend"},
-                                            {"authenticator", "MySQLBackendAuth"}
-                                        }, config_server_params);
+    MXS_CONFIG_PARAMETER params;
+    params.set_from_list({
+                             {"address", "_none_"},
+                             {"port", "3306"},
+                             {"protocol", "MySQLBackend"},
+                             {"authenticator", "MySQLBackendAuth"}
+                         }, config_server_params);
 
-    Server* server = Server::server_alloc("binlog_router_master_host", params);
+    Server* server = Server::server_alloc("binlog_router_master_host", &params);
     if (server == NULL)
     {
         printf("Failed to allocate 'server' object\n");

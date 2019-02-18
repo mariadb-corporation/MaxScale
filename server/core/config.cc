@@ -601,18 +601,32 @@ char* config_clean_string_list(const char* str)
     return dest;
 }
 
+CONFIG_CONTEXT::CONFIG_CONTEXT()
+    : object(nullptr)
+    , parameters(new MXS_CONFIG_PARAMETER)
+    , was_persisted(is_persisted_config)
+    , next(nullptr)
+{
+}
+
+CONFIG_CONTEXT::CONFIG_CONTEXT(const string& section)
+    : CONFIG_CONTEXT()
+{
+    object = MXS_STRDUP_A(section.c_str());
+}
+
+CONFIG_CONTEXT::~CONFIG_CONTEXT()
+{
+    delete parameters;
+    if (object)
+    {
+        MXS_FREE(object);
+    }
+}
+
 CONFIG_CONTEXT* config_context_create(const char* section)
 {
-    CONFIG_CONTEXT* ctx = (CONFIG_CONTEXT*)MXS_MALLOC(sizeof(CONFIG_CONTEXT));
-    if (ctx)
-    {
-        ctx->object = MXS_STRDUP_A(section);
-        ctx->was_persisted = is_persisted_config;
-        ctx->parameters = NULL;
-        ctx->next = NULL;
-    }
-
-    return ctx;
+    return new CONFIG_CONTEXT(section);
 }
 
 void fix_object_name(char* name)
@@ -1857,13 +1871,10 @@ void config_free_one_param(MXS_CONFIG_PARAMETER* p1)
 void config_context_free(CONFIG_CONTEXT* context)
 {
     CONFIG_CONTEXT* obj;
-
     while (context)
     {
         obj = context->next;
-        MXS_CONFIG_PARAMETER::free_all(&context->parameters);
-        MXS_FREE(context->object);
-        MXS_FREE(context);
+        delete context;
         context = obj;
     }
 }
@@ -1871,7 +1882,7 @@ void config_context_free(CONFIG_CONTEXT* context)
 bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
     mxb_assert(!obj->parameters->contains(key));
-    MXS_CONFIG_PARAMETER::set(&obj->parameters, key, value);
+    obj->parameters->set(key, value);
     return true;
 }
 
@@ -1885,41 +1896,33 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
     bool rval = false;
     if (new_val_z)
     {
-        MXS_CONFIG_PARAMETER::set(&obj->parameters, key, new_val_z);
+        obj->parameters->set(key, new_val_z);
         MXS_FREE(new_val_z);
         rval = true;
     }
     return rval;
 }
 
-void MXS_CONFIG_PARAMETER::set(MXS_CONFIG_PARAMETER** ppParams, const string& key, const string& value)
+void MXS_CONFIG_PARAMETER::set(const std::string& key, const std::string& value)
 {
-    mxb_assert(ppParams);
-
-    if (*ppParams == nullptr)
-    {
-        // This is the first parameter.
-        *ppParams = new MXS_CONFIG_PARAMETER();
-    }
-    (*ppParams)->m_contents[key] = value;
+    m_contents[key] = value;
 }
 
-void MXS_CONFIG_PARAMETER::set_multiple(MXS_CONFIG_PARAMETER** destination, const MXS_CONFIG_PARAMETER* source)
+void MXS_CONFIG_PARAMETER::set_multiple(const MXS_CONFIG_PARAMETER& source)
 {
-    for (const auto& elem : *source)
+    for (const auto& elem : source)
     {
-        set(destination, elem.first, elem.second);
+        set(elem.first, elem.second);
     }
 }
 
-void MXS_CONFIG_PARAMETER::set_from_list(MXS_CONFIG_PARAMETER** destination,
-                                         std::vector<std::pair<const char*, const char*>> list,
+void MXS_CONFIG_PARAMETER::set_from_list(std::vector<std::pair<const char*, const char*>> list,
                                          const MXS_MODULE_PARAM* module_params)
 {
     // Add custom values.
     for (const auto& a : list)
     {
-        MXS_CONFIG_PARAMETER::set(destination, a.first, a.second);
+        set(a.first, a.second);
     }
 
     if (module_params)
@@ -1927,29 +1930,22 @@ void MXS_CONFIG_PARAMETER::set_from_list(MXS_CONFIG_PARAMETER** destination,
         // Add default values for the rest of the parameters.
         for (auto module_param = module_params; module_param->name; module_param++)
         {
-            if (module_param->default_value && !(*destination)->contains(module_param->name))
+            if (module_param->default_value && !contains(module_param->name))
             {
-                MXS_CONFIG_PARAMETER::set(destination, module_param->name, module_param->default_value);
+                set(module_param->name, module_param->default_value);
             }
         }
     }
 }
 
-void MXS_CONFIG_PARAMETER::remove(MXS_CONFIG_PARAMETER** ppParams, const string& key)
+void MXS_CONFIG_PARAMETER::remove(const string& key)
 {
-    mxb_assert(ppParams);
-    (*ppParams)->m_contents.erase(key);
+    m_contents.erase(key);
 }
 
-void MXS_CONFIG_PARAMETER::free_all(MXS_CONFIG_PARAMETER** ppParams)
+void MXS_CONFIG_PARAMETER::clear()
 {
-    mxb_assert(ppParams);
-    auto pParam = *ppParams;
-    if (pParam)
-    {
-        delete pParam;
-    }
-    *ppParams = nullptr;
+    m_contents.clear();
 }
 
 MXS_CONFIG_PARAMETER::ContainerType::const_iterator MXS_CONFIG_PARAMETER::begin() const
@@ -1964,13 +1960,13 @@ MXS_CONFIG_PARAMETER::ContainerType::const_iterator MXS_CONFIG_PARAMETER::end() 
 
 bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    MXS_CONFIG_PARAMETER::set(&obj->parameters, key, value);
+    obj->parameters->set(key, value);
     return true;
 }
 
 void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
 {
-    MXS_CONFIG_PARAMETER::remove(&obj->parameters, name);
+    obj->parameters->remove(name);
 }
 
 /**
@@ -3019,7 +3015,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
                 {
                     config_fix_param(fix_params, param_namez, &temp);
                 }
-                MXS_CONFIG_PARAMETER::set(&obj->parameters, param_namez, temp);
+                obj->parameters->set(param_namez, temp);
 
                 if (param_is_deprecated(fix_params, param_namez, obj->object))
                 {

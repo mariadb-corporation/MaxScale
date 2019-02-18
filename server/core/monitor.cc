@@ -184,6 +184,7 @@ Monitor::Monitor(const string& name, const string& module)
     , m_module(module)
 {
     memset(m_journal_hash, 0, sizeof(m_journal_hash));
+    parameters = new MXS_CONFIG_PARAMETER;
 }
 
 void Monitor::stop()
@@ -235,16 +236,16 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     if (!error)
     {
         // Store module name into parameter storage.
-        MXS_CONFIG_PARAMETER::set(&parameters, CN_MODULE, m_module);
+        parameters->set(CN_MODULE, m_module);
         // Add all config settings to text-mode storage. Needed for serialization.
-        MXS_CONFIG_PARAMETER::set_multiple(&parameters, params);
+        parameters->set_multiple(*params);
     }
     return !error;
 }
 
 Monitor::~Monitor()
 {
-    MXS_CONFIG_PARAMETER::free_all(&parameters);
+    delete parameters;
     monitor_server_free_all(m_servers);
     MXS_FREE((const_cast<char*>(m_name)));
 }

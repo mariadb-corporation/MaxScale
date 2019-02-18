@@ -47,8 +47,8 @@ int test_validity()
         {MXS_END_MODULE_PARAMS}
     };
 
-    CONFIG_CONTEXT ctx = {};
-    ctx.object = (char*)"";
+    CONFIG_CONTEXT ctx;
+    ctx.object = MXS_STRDUP("");
 
     /** Int parameter */
     TEST(config_param_is_valid(params, "p1", "1", &ctx));
@@ -110,8 +110,8 @@ int test_validity()
     TEST(!config_param_is_valid(params, "p9", "4711q", &ctx));
 
     /** Service parameter */
-    CONFIG_CONTEXT svc = {};
-    svc.object = (char*)"test-service";
+    CONFIG_CONTEXT svc;
+    svc.object = MXS_STRDUP("test-service");
     ctx.next = &svc;
     config_add_param(&svc, "type", "service");
     TEST(config_param_is_valid(params, "p7", "test-service", &ctx));
@@ -129,7 +129,6 @@ int test_validity()
     TEST(!config_param_is_valid(params, "p8", "d", &ctx));
     TEST(!config_param_is_valid(params, "p8", "a,d", &ctx));
     TEST(!config_param_is_valid(params, "p8", "a,b,c,d", &ctx));
-    MXS_CONFIG_PARAMETER::free_all(&svc.parameters);
     return 0;
 }
 
@@ -156,11 +155,11 @@ int test_add_parameter()
     };
 
 
-    CONFIG_CONTEXT svc1 = {}, svc2 = {}, ctx = {};
-    svc1.object = (char*)"my-service";
-    svc2.object = (char*)"some-service";
+    CONFIG_CONTEXT svc1, svc2, ctx;
+    svc1.object = MXS_STRDUP("my-service");
+    svc2.object = MXS_STRDUP("some-service");
     svc2.next = &svc1;
-    ctx.object = (char*)"";
+    ctx.object = MXS_STRDUP("");
     ctx.next = &svc2;
     config_add_param(&svc1, "type", "service");
     config_add_param(&svc2, "type", "service");
@@ -176,8 +175,7 @@ int test_add_parameter()
     TEST(ctx.parameters->get_string("p6") == "/tmp");
     TEST(ctx.parameters->get_string("p7") == "my-service");
 
-    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
-    ctx.parameters = NULL;
+    ctx.parameters->clear();
 
     /** Test custom parameters overriding default values */
     config_add_param(&ctx, "p1", "-321");
@@ -198,9 +196,6 @@ int test_add_parameter()
     TEST(val == 5);
     TEST(ctx.parameters->get_string("p6") == "/dev/null");
     TEST(ctx.parameters->get_string("p7") == "some-service");
-    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
-    MXS_CONFIG_PARAMETER::free_all(&svc1.parameters);
-    MXS_CONFIG_PARAMETER::free_all(&svc2.parameters);
     return 0;
 }
 
@@ -214,21 +209,19 @@ int test_required_parameters()
         {MXS_END_MODULE_PARAMS}
     };
 
-    CONFIG_CONTEXT ctx = {};
-    ctx.object = (char*)"";
+    CONFIG_CONTEXT ctx;
+    ctx.object = MXS_STRDUP("");
 
     TEST(missing_required_parameters(params, ctx.parameters, "test"));
     config_add_defaults(&ctx, params);
     TEST(!missing_required_parameters(params, ctx.parameters, "test"));
 
-    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
-    ctx.parameters = NULL;
+    ctx.parameters->clear();
 
     config_add_param(&ctx, "p1", "1");
     config_add_param(&ctx, "p2", "1");
     config_add_param(&ctx, "p3", "1");
     TEST(!missing_required_parameters(params, ctx.parameters, "test"));
-    MXS_CONFIG_PARAMETER::free_all(&ctx.parameters);
     return 0;
 }
 

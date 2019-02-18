@@ -817,8 +817,8 @@ int test(FilterModule& filter_module, const FW_TEST& t)
     file.write(t.zRules);
 
     auto params = filter_module.create_default_parameters();
-    MXS_CONFIG_PARAMETER::set(&params, "action", zAction);
-    MXS_CONFIG_PARAMETER::set(&params, "rules", file.name());
+    params->set("action", zAction);
+    params->set("rules", file.name());
 
     auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", params);
 

@@ -59,7 +59,7 @@ static struct
  */
 static void filter_free_parameters(FilterDef* filter)
 {
-    MXS_CONFIG_PARAMETER::free_all(&filter->parameters);
+    delete filter->parameters;
 }
 
 /**
@@ -116,18 +116,14 @@ FilterDef::FilterDef(std::string name,
     , obj(object)
 {
     // TODO: Add config_clone_param_chain
-    CONFIG_CONTEXT ctx = {};
-    ctx.object = (char*)"";
-
+    parameters = new MXS_CONFIG_PARAMETER;
     for (auto p : *params)
     {
-        config_add_param(&ctx, p.first.c_str(), p.second.c_str());
+        parameters->set(p.first, p.second);
     }
 
     // Store module, used when the filter is serialized
-    config_replace_param(&ctx, CN_MODULE, module.c_str());
-
-    parameters = ctx.parameters;
+    parameters->set(CN_MODULE, module);
 }
 
 FilterDef::~FilterDef()

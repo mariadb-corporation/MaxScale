@@ -362,33 +362,29 @@ public:
      * to handle the special case of params being empty. This is needed until the config management
      * has been properly refactored.
      *
-     * @param ppParams Double pointer to the parameters structure to edit
      * @param key Parameter key
      * @param value Value to set
      */
-    static void set(MXS_CONFIG_PARAMETER** ppParams, const std::string& key, const std::string& value);
+    void set(const std::string& key, const std::string& value);
 
     /**
      * Copy all key-value pairs from a set to this container. If a key doesn't exist, it is added.
      *
-     * @param destination Destination of the copied parameters
      * @param source Parameters to copy
      */
-    static void set_multiple(MXS_CONFIG_PARAMETER** destination, const MXS_CONFIG_PARAMETER* source);
+    void set_multiple(const MXS_CONFIG_PARAMETER& source);
 
-    static void set_from_list(MXS_CONFIG_PARAMETER** destination,
-                              std::vector<std::pair<const char*, const char*>> list,
-                              const MXS_MODULE_PARAM* module_params = NULL);
+    void set_from_list(std::vector<std::pair<const char*, const char*>> list,
+                       const MXS_MODULE_PARAM* module_params = NULL);
 
     /**
      * Remove a key-value pair from the container.
      *
-     * @param ppParams Parameters container
      * @param key Key to remove
      */
-    static void remove(MXS_CONFIG_PARAMETER** ppParams, const std::string& key);
+    void remove(const std::string& key);
 
-    static void free_all(MXS_CONFIG_PARAMETER** ppParams);
+    void clear();
 
     ContainerType::const_iterator begin() const;
     ContainerType::const_iterator end() const;
@@ -404,6 +400,10 @@ private:
 class CONFIG_CONTEXT
 {
 public:
+    CONFIG_CONTEXT();
+    CONFIG_CONTEXT(const std::string& section);
+    ~CONFIG_CONTEXT();
+
     char*                  object;          /**< The name of the object being configured */
     MXS_CONFIG_PARAMETER*  parameters;      /**< The list of parameter values */
     bool                   was_persisted;   /**< True if this object was persisted */
