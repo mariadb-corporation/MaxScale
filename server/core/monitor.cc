@@ -184,7 +184,6 @@ Monitor::Monitor(const string& name, const string& module)
     , m_module(module)
 {
     memset(m_journal_hash, 0, sizeof(m_journal_hash));
-    parameters = new MXS_CONFIG_PARAMETER;
 }
 
 void Monitor::stop()
@@ -236,16 +235,15 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     if (!error)
     {
         // Store module name into parameter storage.
-        parameters->set(CN_MODULE, m_module);
+        parameters.set(CN_MODULE, m_module);
         // Add all config settings to text-mode storage. Needed for serialization.
-        parameters->set_multiple(*params);
+        parameters.set_multiple(*params);
     }
     return !error;
 }
 
 Monitor::~Monitor()
 {
-    delete parameters;
     monitor_server_free_all(m_servers);
     MXS_FREE((const_cast<char*>(m_name)));
 }
@@ -297,7 +295,7 @@ void monitor_start_all()
     this_unit.foreach_monitor([](Monitor* monitor) {
         if (monitor->m_active)
         {
-            MonitorManager::monitor_start(monitor, monitor->parameters);
+            MonitorManager::monitor_start(monitor, &monitor->parameters);
         }
         return true;
     });
@@ -367,7 +365,7 @@ bool Monitor::add_server(Monitor* mon, SERVER* server)
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
-            MonitorManager::monitor_start(mon, mon->parameters);
+            MonitorManager::monitor_start(mon, &mon->parameters);
         }
     }
 
@@ -455,7 +453,7 @@ void Monitor::remove_server(Monitor* mon, SERVER* server)
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
-        MonitorManager::monitor_start(mon, mon->parameters);
+        MonitorManager::monitor_start(mon, &mon->parameters);
     }
 }
 
@@ -1436,7 +1434,7 @@ static bool create_monitor_config(const Monitor* monitor, const char* filename)
         mxb_assert(mod);
 
         dump_param_list(file,
-                        monitor->parameters,
+                        &monitor->parameters,
                         {CN_TYPE, CN_SERVERS},
                         config_monitor_params,
                         mod->parameters);
@@ -1620,7 +1618,7 @@ json_t* monitor_parameters_to_json(const Monitor* monitor)
 {
     json_t* rval = json_object();
     const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
-    config_add_module_params_json(monitor->parameters,
+    config_add_module_params_json(&monitor->parameters,
                                   {CN_TYPE, CN_MODULE, CN_SERVERS},
                                   config_monitor_params,
                                   mod->parameters,

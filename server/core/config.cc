@@ -4899,7 +4899,7 @@ void dump_if_changed(const MXS_MODULE_PARAM* params,
 }
 
 void dump_param_list(int file,
-                     MXS_CONFIG_PARAMETER* list,
+                     const MXS_CONFIG_PARAMETER* list,
                      const std::unordered_set<std::string>& ignored,
                      const MXS_MODULE_PARAM* common_params,
                      const MXS_MODULE_PARAM* module_params)

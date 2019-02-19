@@ -604,7 +604,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     }
 
     std::lock_guard<std::mutex> guard(crt_lock);
-    monitor->parameters->set(key, value);
+    monitor->parameters.set(key, value);
     bool success = true;
     if (strcmp(key, CN_USER) == 0)
     {
@@ -695,7 +695,7 @@ bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
     }
     if (was_running)
     {
-        MonitorManager::monitor_start(monitor, monitor->parameters);
+        MonitorManager::monitor_start(monitor, &monitor->parameters);
     }
     return success;
 }
@@ -729,10 +729,10 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
         if (service->router->configureInstance && service->capabilities & RCAP_TYPE_RUNTIME_CONFIG)
         {
             // Stash the old value in case the reconfiguration fails.
-            std::string old_value = service->svc_config_param->get_string(key);
+            std::string old_value = service->svc_config_param.get_string(key);
             service_replace_parameter(service, key.c_str(), value.c_str());
 
-            if (!service->router->configureInstance(service->router_instance, service->svc_config_param))
+            if (!service->router->configureInstance(service->router_instance, &service->svc_config_param))
             {
                 // Reconfiguration failed, restore the old value of the parameter
                 if (old_value.empty())
@@ -2258,7 +2258,7 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
             }
             else
             {
-                MonitorManager::monitor_start(rval, rval->parameters);
+                MonitorManager::monitor_start(rval, &rval->parameters);
             }
         }
     }
@@ -2440,7 +2440,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 
             if (restart)
             {
-                MonitorManager::monitor_start(monitor, monitor->parameters);
+                MonitorManager::monitor_start(monitor, &monitor->parameters);
             }
         }
     }

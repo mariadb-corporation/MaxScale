@@ -273,8 +273,6 @@ Service::~Service()
         dbref = dbref->next;
         MXS_FREE(tmp);
     }
-
-    delete svc_config_param;
 }
 
 void service_free(Service* service)
@@ -1150,7 +1148,7 @@ int service_refresh_users(SERVICE* svc)
 
 void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param)
 {
-    service->svc_config_param->set_multiple(*param);
+    service->svc_config_param.set_multiple(*param);
 }
 
 void service_add_parameter(Service* service, const char* key, const char* value)
@@ -1162,12 +1160,12 @@ void service_add_parameter(Service* service, const char* key, const char* value)
 
 void service_remove_parameter(Service* service, const char* key)
 {
-    service->svc_config_param->remove(key);
+    service->svc_config_param.remove(key);
 }
 
 void service_replace_parameter(Service* service, const char* key, const char* value)
 {
-    service->svc_config_param->set(key, value);
+    service->svc_config_param.set(key, value);
 }
 
 /**
@@ -1467,7 +1465,7 @@ bool Service::dump_config(const char* filename) const
     mxb_assert(mod);
 
     dump_param_list(file,
-                    svc_config_param,
+                    &svc_config_param,
                     {CN_TYPE, CN_FILTERS, CN_SERVERS},
                     config_service_params,
                     mod->parameters);
@@ -1579,7 +1577,7 @@ json_t* service_parameters_to_json(const SERVICE* service)
     json_t* rval = json_object();
 
     const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
-    config_add_module_params_json(service->svc_config_param,
+    config_add_module_params_json(&service->svc_config_param,
                                   {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
                                   config_service_params,
                                   mod->parameters,

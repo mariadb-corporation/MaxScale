@@ -235,7 +235,7 @@ bool get_suffixed_duration(const char* zValue,
 
 // Dump a parameter list into a file as `key=value` pairs
 void dump_param_list(int file,
-                     MXS_CONFIG_PARAMETER* list,
+                     const MXS_CONFIG_PARAMETER* list,
                      const std::unordered_set<std::string>& ignored,
                      const MXS_MODULE_PARAM* common_params,
                      const MXS_MODULE_PARAM* module_params);

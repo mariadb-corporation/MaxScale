@@ -315,7 +315,7 @@ public:
     uint64_t m_ticks {0};                         /**< Number of performed monitoring intervals */
     uint8_t  m_journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */
 
-    MXS_CONFIG_PARAMETER* parameters = nullptr;         /**< Configuration parameters */
+    MXS_CONFIG_PARAMETER parameters;                    /**< Configuration parameters */
     std::vector<MXS_MONITORED_SERVER*> m_servers;       /**< Monitored servers */
 
 protected:

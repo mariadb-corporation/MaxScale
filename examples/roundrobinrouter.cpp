@@ -162,11 +162,11 @@ RRRouter::RRRouter(SERVICE* service)
 {
     RR_DEBUG("Creating instance.");
     /* Read options specific to round robin router. */
-    MXS_CONFIG_PARAMETER* params = service->svc_config_param;
-    m_max_backends = params->get_integer(MAX_BACKENDS);
-    m_write_server = params->get_server(WRITE_BACKEND);
-    m_print_on_routing = params->get_bool(PRINT_ON_ROUTING);
-    m_example_enum = params->get_enum(DUMMY, enum_example);
+    const MXS_CONFIG_PARAMETER& params = service->svc_config_param;
+    m_max_backends = params.get_integer(MAX_BACKENDS);
+    m_write_server = params.get_server(WRITE_BACKEND);
+    m_print_on_routing = params.get_bool(PRINT_ON_ROUTING);
+    m_example_enum = params.get_enum(DUMMY, enum_example);
 
     RR_DEBUG("Settings read:");
     RR_DEBUG("'%s': %d", MAX_BACKENDS, m_max_backends);

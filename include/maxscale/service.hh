@@ -112,8 +112,7 @@ public:
     bool          enable_root;                      /**< Allow root user  access */
     bool          localhost_match_wildcard_host;    /**< Match localhost against wildcard
                                                      * */
-    MXS_CONFIG_PARAMETER* svc_config_param;         /**<  list of config params and values
-                                                     * */
+    MXS_CONFIG_PARAMETER svc_config_param;          /**<  list of config params and values */
     int svc_config_version;                         /**<  Version number of configuration
                                                      * */
     bool svc_do_shutdown;                           /**< tells the service to exit loops
@@ -156,8 +155,7 @@ public:
 protected:
     SERVICE(const std::string& name,
             const std::string& router_name)
-        : svc_config_param(new MXS_CONFIG_PARAMETER)
-        , m_name(name)                /** Service name. */
+        : m_name(name)                /** Service name. */
         , m_router_name(router_name)  /** Router module. */
     {
     }

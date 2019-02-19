@@ -61,12 +61,12 @@ using namespace maxscale;
  */
 void Avro::read_source_service_options(SERVICE* source)
 {
-    MXS_CONFIG_PARAMETER* params = source->svc_config_param;
-    binlogdir = params->get_string("binlogdir");
-    filestem = params->get_string("filestem");
+    MXS_CONFIG_PARAMETER& params = source->svc_config_param;
+    binlogdir = params.get_string("binlogdir");
+    filestem = params.get_string("filestem");
     mxb_assert(!binlogdir.empty() && !filestem.empty());
 
-    for (const auto& opt : mxs::strtok(params->get_string("router_options"), ", \t"))
+    for (const auto& opt : mxs::strtok(params.get_string("router_options"), ", \t"))
     {
         auto kv = mxs::strtok(opt, "=");
 
@@ -85,7 +85,7 @@ void Avro::read_source_service_options(SERVICE* source)
 Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
 {
     SERVICE* source_service = NULL;
-    std::string source_name = service->svc_config_param->get_string("source");
+    std::string source_name = service->svc_config_param.get_string("source");
 
     if (!source_name.empty())
     {
@@ -115,7 +115,7 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
         }
     }
 
-    return new(std::nothrow) Avro(service, service->svc_config_param, source_service, handler);
+    return new(std::nothrow) Avro(service, &service->svc_config_param, source_service, handler);
 }
 
 Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler)

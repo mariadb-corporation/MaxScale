@@ -2727,7 +2727,7 @@ static void shutdown_monitor(DCB* dcb, Monitor* monitor)
  */
 static void restart_monitor(DCB* dcb, Monitor* monitor)
 {
-    MonitorManager::monitor_start(monitor, monitor->parameters);
+    MonitorManager::monitor_start(monitor, &monitor->parameters);
 }
 
 /**
