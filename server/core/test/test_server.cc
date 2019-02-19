@@ -97,21 +97,21 @@ bool test_load_config(const char* input, Server* server)
     if (duplicate_context_init(&dcontext))
     {
         CONFIG_CONTEXT ccontext;
-        ccontext.object = MXS_STRDUP("");
+        ccontext.name = MXS_STRDUP("");
 
         if (config_load_single_file(input, &dcontext, &ccontext))
         {
             CONFIG_CONTEXT* obj = ccontext.next;
-            MXS_CONFIG_PARAMETER* param = obj->parameters;
+            MXS_CONFIG_PARAMETER* param = &obj->parameters;
             config_add_defaults(obj, config_server_params);
 
-            TEST(strcmp(obj->object, server->name()) == 0, "Server names differ");
+            TEST(strcmp(obj->object(), server->name()) == 0, "Server names differ");
             TEST(param->get_string("address") == server->address, "Server addresses differ");
             TEST(param->get_string("protocol") == server->protocol(), "Server protocols differ");
             TEST(param->get_string("authenticator") == server->get_authenticator(),
                  "Server authenticators differ");
             TEST(param->get_integer("port") == server->port, "Server ports differ");
-            TEST(Server::server_alloc(obj->object, obj->parameters),
+            TEST(Server::server_alloc(obj->object(), &obj->parameters),
                  "Failed to create server from loaded config");
             duplicate_context_finish(&dcontext);
             config_context_free(obj);

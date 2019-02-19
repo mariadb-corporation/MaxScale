@@ -106,12 +106,12 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
  *
  * @return Whether loading succeeded and the list of default parameters
  */
-static std::pair<bool, MXS_CONFIG_PARAMETER*> load_defaults(const char* name,
+static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
                                                             const char* module_type,
                                                             const char* object_type)
 {
     bool rval;
-    MXS_CONFIG_PARAMETER* params = NULL;
+    MXS_CONFIG_PARAMETER params;
     CONFIG_CONTEXT ctx = {(char*)""};
 
     if (const MXS_MODULE* mod = get_module(name, module_type))
@@ -269,7 +269,7 @@ bool runtime_create_server(const char* name,
                     config_replace_param(&ctx, "authenticator", authenticator);
                 }
 
-                Server* server = Server::server_alloc(name, ctx.parameters);
+                Server* server = Server::server_alloc(name, &ctx.parameters);
 
                 if (server && (!external || server->serialize()))
                 {
@@ -284,8 +284,6 @@ bool runtime_create_server(const char* name,
                     config_runtime_error("Failed to create server '%s', see error log for more details",
                                          name);
                 }
-
-                delete ctx.parameters;
             }
             else
             {
@@ -382,7 +380,7 @@ static SSL_LISTENER* create_ssl(const char* name,
             && (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth))
             && (!verify || config_add_param(obj, CN_SSL_VERIFY_PEER_CERTIFICATE, verify)))
         {
-            config_create_ssl(name, obj->parameters, true, &rval);
+            config_create_ssl(name, &obj->parameters, true, &rval);
         }
 
         config_context_free(obj);
@@ -1213,18 +1211,16 @@ bool runtime_create_monitor(const char* name, const char* module)
         }
         else if (config_is_valid_name(name, &reason))
         {
-            MXS_CONFIG_PARAMETER* params;
+            MXS_CONFIG_PARAMETER params;
             bool ok;
             tie(ok, params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
 
             if (ok)
             {
-                if ((monitor = MonitorManager::create_monitor(name, module, params)) == NULL)
+                if ((monitor = MonitorManager::create_monitor(name, module, &params)) == NULL)
                 {
                     config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
                 }
-
-                delete params;
             }
         }
         else
@@ -1276,12 +1272,10 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
                     config_replace_param(&ctx, elem.first.c_str(), elem.second.c_str());
                 }
 
-                if (!(filter = filter_alloc(name, module, ctx.parameters)))
+                if (!(filter = filter_alloc(name, module, &ctx.parameters)))
                 {
                     config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
                 }
-
-                delete ctx.parameters;
             }
             else
             {
@@ -1353,12 +1347,10 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
                     config_replace_param(&ctx, elem.first.c_str(), elem.second.c_str());
                 }
 
-                if ((service = service_alloc(name, router, ctx.parameters)) == NULL)
+                if ((service = service_alloc(name, router, &ctx.parameters)) == NULL)
                 {
                     config_runtime_error("Could not create service '%s' with module '%s'", name, router);
                 }
-
-                delete ctx.parameters;
             }
             else
             {

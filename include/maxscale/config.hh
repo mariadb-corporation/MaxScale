@@ -400,14 +400,17 @@ private:
 class CONFIG_CONTEXT
 {
 public:
-    CONFIG_CONTEXT();
-    CONFIG_CONTEXT(const std::string& section);
-    ~CONFIG_CONTEXT();
+    CONFIG_CONTEXT(const std::string& section = "");
 
-    char*                  object;          /**< The name of the object being configured */
-    MXS_CONFIG_PARAMETER*  parameters;      /**< The list of parameter values */
+    std::string            name;            /**< The name of the object being configured */
+    MXS_CONFIG_PARAMETER   parameters;      /**< The list of parameter values */
     bool                   was_persisted;   /**< True if this object was persisted */
     CONFIG_CONTEXT*        next;            /**< Next pointer in the linked list */
+
+    const char* object() const
+    {
+        return name.c_str();
+    }
 };
 
 /**

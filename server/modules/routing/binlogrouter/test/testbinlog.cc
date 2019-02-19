@@ -127,13 +127,11 @@ int main(int argc, char** argv)
 
     config_replace_param(&ctx, "router_options", options);
 
-    if ((service = service_alloc("test_service", "binlogrouter", ctx.parameters)) == NULL)
+    if ((service = service_alloc("test_service", "binlogrouter", &ctx.parameters)) == NULL)
     {
         printf("Failed to allocate 'service' object\n");
         return 1;
     }
-
-    delete ctx.parameters;
 
     // Declared in config.cc and needs to be removed if/when blr is refactored
     extern const MXS_MODULE_PARAM config_server_params[];

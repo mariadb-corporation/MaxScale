@@ -50,11 +50,6 @@ extern const MXS_MODULE_PARAM config_server_params[];
 extern const char* config_pre_parse_global_params[];
 
 /**
- * Initialize the configuration subsystem
- */
-void config_init();
-
-/**
  * Finalize the configuration subsystem
  */
 void config_finish();

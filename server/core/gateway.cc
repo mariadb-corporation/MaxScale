@@ -1440,7 +1440,6 @@ int main(int argc, char** argv)
             }
         };
 
-    config_init();
     config_set_global_defaults();
     mxb_assert(cnf);
 
