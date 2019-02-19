@@ -115,8 +115,6 @@ public:
 
 private:
     FilterList  m_filters;          /**< Ordered list of filters */
-    std::string m_name;             /**< Name of the service */
-    std::string m_router_name;      /**< Router module */
     std::string m_user;             /**< Username */
     std::string m_password;         /**< Password */
     std::string m_weightby;         /**< Weighting parameter name */

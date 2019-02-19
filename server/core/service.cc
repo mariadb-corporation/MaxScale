@@ -1086,7 +1086,7 @@ bool Service::refresh_users()
         {
             MXS_WARNING("[%s] Refresh rate limit (once every %ld seconds) exceeded for "
                         "load of users' table.",
-                        m_name.c_str(),
+                        name(),
                         config->users_refresh_time);
             m_rate_limits[self].warned = true;
         }
@@ -1105,7 +1105,7 @@ bool Service::refresh_users()
             case MXS_AUTH_LOADUSERS_FATAL:
                 MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
                           " authentication will not work.",
-                          m_name.c_str(),
+                          name(),
                           listener->name());
                 ret = false;
                 break;
@@ -1113,7 +1113,7 @@ bool Service::refresh_users()
             case MXS_AUTH_LOADUSERS_ERROR:
                 MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
                             " might not work.",
-                            m_name.c_str(),
+                            name(),
                             listener->name());
                 ret = false;
                 break;
@@ -1416,7 +1416,7 @@ bool Service::dump_config(const char* filename) const
     {
         MXS_ERROR("Failed to open file '%s' when serializing service '%s': %d, %s",
                   filename,
-                  m_name.c_str(),
+                  name(),
                   errno,
                   mxs_strerror(errno));
         return false;
@@ -1425,7 +1425,7 @@ bool Service::dump_config(const char* filename) const
     /**
      * TODO: Check for return values on all of the dprintf calls
      */
-    dprintf(file, "[%s]\n", m_name.c_str());
+    dprintf(file, "[%s]\n", name());
     dprintf(file, "%s=service\n", CN_TYPE);
 
     if (!m_filters.empty())
@@ -1458,7 +1458,7 @@ bool Service::dump_config(const char* filename) const
         dprintf(file, "\n");
     }
 
-    const MXS_MODULE* mod = get_module(m_router_name.c_str(), NULL);
+    const MXS_MODULE* mod = get_module(router_name(), NULL);
     mxb_assert(mod);
 
     dump_param_list(file,
