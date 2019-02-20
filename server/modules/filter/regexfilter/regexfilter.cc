@@ -22,7 +22,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 
 /**
  * @file regexfilter.c - a very simple regular expression rewrite filter.
@@ -229,7 +229,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
 
         int cflags = params->get_enum("options", option_values);
 
-        if (!(my_instance->re = config_get_compiled_regex(params, "match", cflags, nullptr)))
+        if (!(my_instance->re = params->get_compiled_regex("match", cflags, nullptr).release()))
         {
             free_instance(my_instance);
             return NULL;

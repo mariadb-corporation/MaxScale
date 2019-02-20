@@ -167,29 +167,24 @@ void QlaFilterSession::close()
 
 QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* params)
 {
-    bool error = false;
     QlaInstance* my_instance = NULL;
 
-    const char* keys[] = {PARAM_MATCH, PARAM_EXCLUDE};
-    pcre2_code* re_match = NULL;
-    pcre2_code* re_exclude = NULL;
     uint32_t ovec_size = 0;
     int cflags = params->get_enum(PARAM_OPTIONS, option_values);
-    pcre2_code** code_arr[] = {&re_match, &re_exclude};
-    if (config_get_compiled_regexes(params,
-                                    keys,
-                                    sizeof(keys) / sizeof(char*),
-                                    cflags,
-                                    &ovec_size,
-                                    code_arr))
+    bool compile_error = false;
+    auto code_arr = params->get_compiled_regexes({PARAM_MATCH, PARAM_EXCLUDE}, cflags,
+                                                 &ovec_size, &compile_error);
+    auto re_match = std::move(code_arr[0]);
+    auto re_exclude = std::move(code_arr[1]);
+    if (!compile_error)
     {
         // The instance is allocated before opening the file since open_log_file() takes the instance as a
         // parameter. Will be fixed (or at least cleaned) with a later refactoring of functions/methods.
         my_instance = new(std::nothrow) QlaInstance(name, params);
         if (my_instance)
         {
-            my_instance->m_re_match = re_match;
-            my_instance->m_re_exclude = re_exclude;
+            my_instance->m_re_match = re_match.release();
+            my_instance->m_re_exclude = re_exclude.release();
             my_instance->m_ovec_size = ovec_size;
             // Try to open the unified log file
             if (my_instance->m_settings.write_unified_log)
@@ -200,24 +195,9 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
                 {
                     delete my_instance;
                     my_instance = NULL;
-                    error = true;
                 }
             }
         }
-        else
-        {
-            error = true;
-        }
-    }
-    else
-    {
-        error = true;
-    }
-
-    if (error)
-    {
-        pcre2_code_free(re_match);
-        pcre2_code_free(re_exclude);
     }
 
     return my_instance;

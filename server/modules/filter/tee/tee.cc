@@ -22,6 +22,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modulecmd.hh>
+#include <maxscale/pcre2.hh>
 
 #include "tee.hh"
 #include "teesession.hh"
@@ -66,8 +67,8 @@ Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
 {
     SERVICE* service = params->get_service("service");
     uint32_t cflags = params->get_enum("options", option_values);
-    pcre2_code* match = config_get_compiled_regex(params, "match", cflags, NULL);
-    pcre2_code* exclude = config_get_compiled_regex(params, "exclude", cflags, NULL);
+    pcre2_code* match = params->get_compiled_regex("match", cflags, NULL).release();
+    pcre2_code* exclude = params->get_compiled_regex("exclude", cflags, NULL).release();
 
     Tee* my_instance = new(std::nothrow) Tee(service,
                                              params->get_string("source"),

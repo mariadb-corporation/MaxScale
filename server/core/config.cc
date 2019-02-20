@@ -51,7 +51,7 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/maxadmin.h>
 #include <maxscale/paths.h>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
@@ -1732,10 +1732,9 @@ bool MXS_CONFIG_PARAMETER::contains(const string& key) const
     return can_be_null ? m_contents.count(key) > 0 : false;
 }
 
-std::vector<SERVER*> config_get_server_list(const MXS_CONFIG_PARAMETER* params, const char* key,
-                                            string* name_error_out)
+std::vector<SERVER*> MXS_CONFIG_PARAMETER::get_server_list(const string& key, string* name_error_out) const
 {
-    auto names_list = params->get_string(key);
+    auto names_list = get_string(key);
     auto server_names = config_break_list_string(names_list);
     std::vector<SERVER*> server_arr = SERVER::server_find_by_unique_names(server_names);
     for (size_t i = 0; i < server_arr.size(); i++)
@@ -1765,58 +1764,60 @@ char* MXS_CONFIG_PARAMETER::get_c_str_copy(const string& key) const
     return rval;
 }
 
-pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER* params,
-                                      const char* key,
-                                      uint32_t options,
-                                      uint32_t* output_ovec_size)
+std::unique_ptr<pcre2_code>
+MXS_CONFIG_PARAMETER::get_compiled_regex(const string& key, uint32_t options,
+                                         uint32_t* output_ovec_size) const
 {
-    auto regex_string = params->get_string(key);
-    pcre2_code* code = NULL;
+    auto regex_string = get_string(key);
+    std::unique_ptr<pcre2_code> code;
 
     if (!regex_string.empty())
     {
         uint32_t jit_available = 0;
         pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
-        code = compile_regex_string(regex_string.c_str(), jit_available, options, output_ovec_size);
+        code.reset(compile_regex_string(regex_string.c_str(), jit_available, options, output_ovec_size));
     }
 
     return code;
 }
 
-bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
-                                 const char* keys[],
-                                 int keys_size,
-                                 uint32_t options,
-                                 uint32_t* out_ovec_size,
-                                 pcre2_code** out_codes[])
+std::vector<std::unique_ptr<pcre2_code>>
+MXS_CONFIG_PARAMETER::get_compiled_regexes(const std::vector<string>& keys, uint32_t options,
+                                           uint32_t* ovec_size_out, bool* compile_error_out)
 {
-    bool rval = true;
+    std::vector<std::unique_ptr<pcre2_code>> rval;
+    bool compile_error = false;
     uint32_t max_ovec_size = 0;
     uint32_t ovec_size_temp = 0;
-    for (int i = 0; i < keys_size; i++)
+    for (auto& key : keys)
     {
-        mxb_assert(out_codes[i]);
-        *out_codes[i] = config_get_compiled_regex(params,
-                                                  keys[i],
-                                                  options,
-                                                  &ovec_size_temp);
-        if (*out_codes[i])
+        std::unique_ptr<pcre2_code> code;
+        /* get_compiled_regex() returns null if the config setting didn't exist. */
+        if (contains(key))
         {
-            if (ovec_size_temp > max_ovec_size)
+            code = get_compiled_regex(key, options, &ovec_size_temp);
+            if (code)
             {
-                max_ovec_size = ovec_size_temp;
+                if (ovec_size_temp > max_ovec_size)
+                {
+                    max_ovec_size = ovec_size_temp;
+                }
+            }
+            else
+            {
+                compile_error = true;
             }
         }
-        /* config_get_compiled_regex() returns null also if the config setting
-         * didn't exist. Check that before setting error state. */
-        else if (params->contains(keys[i]))
-        {
-            rval = false;
-        }
+        rval.push_back(std::move(code));
     }
-    if (out_ovec_size)
+
+    if (ovec_size_out)
     {
-        *out_ovec_size = max_ovec_size;
+        *ovec_size_out = max_ovec_size;
+    }
+    if (compile_error_out)
+    {
+        *compile_error_out = compile_error;
     }
     return rval;
 }
@@ -3724,7 +3725,7 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
     if (params->contains(CN_SERVERS))
     {
         string name_not_found;
-        auto servers = config_get_server_list(params, CN_SERVERS, &name_not_found);
+        auto servers = params->get_server_list(CN_SERVERS, &name_not_found);
         if (servers.empty())
         {
             err = true;

@@ -63,3 +63,21 @@ struct CloserTraits<pcre2_match_data*>
     }
 };
 }
+
+namespace std
+{
+
+template<> class default_delete<pcre2_code>
+{
+public:
+    void operator()(pcre2_code* p)
+    {
+        if (p)
+        {
+            pcre2_code_free(p);
+        }
+    }
+};
+
+}
+

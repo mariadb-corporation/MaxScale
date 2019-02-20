@@ -15,15 +15,16 @@
 #include <string>
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
+#include <maxscale/pcre2.hh>
 #include "binlogfiltersession.hh"
 
 // Binlog Filter configuration
 struct BinlogConfig
 {
     BinlogConfig(const MXS_CONFIG_PARAMETER* pParams)
-        : match(config_get_compiled_regex(pParams, "match", 0, nullptr))
+        : match(pParams->get_compiled_regex("match", 0, nullptr).release())
         , md_match(match ? pcre2_match_data_create_from_pattern(match, nullptr) : nullptr)
-        , exclude(config_get_compiled_regex(pParams, "exclude", 0, nullptr))
+        , exclude(pParams->get_compiled_regex("exclude", 0, nullptr).release())
         , md_exclude(exclude ? pcre2_match_data_create_from_pattern(exclude, nullptr) : nullptr)
     {
     }

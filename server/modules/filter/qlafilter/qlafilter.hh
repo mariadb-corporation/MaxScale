@@ -19,7 +19,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxscale/config.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 
 class QlaFilterSession;
 struct LogEventElems;

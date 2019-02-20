@@ -22,7 +22,7 @@
 #include <maxscale/hint.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/query_classifier.hh>
 
 using std::string;
@@ -97,11 +97,14 @@ public:
             new_instance->m_nomatch = params->get_string(PARAM_IGNORE);
 
             int cflags = params->get_enum("options", option_values);
-            const char* keys[] = {PARAM_MATCH, PARAM_IGNORE};
-            pcre2_code** code_arr[] = {&new_instance->re, &new_instance->nore};
-            if (!config_get_compiled_regexes(params, keys, sizeof(keys) / sizeof(char*),
-                                             cflags, &new_instance->ovector_size,
-                                             code_arr))
+            bool compile_error = false;
+            auto code_arr = params->get_compiled_regexes({PARAM_MATCH, PARAM_IGNORE},
+                                                         cflags,
+                                                         &new_instance->ovector_size,
+                                                         &compile_error);
+            new_instance->re = code_arr[0].release();
+            new_instance->nore = code_arr[1].release();
+            if (compile_error)
             {
                 delete new_instance;
                 new_instance = nullptr;

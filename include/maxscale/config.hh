@@ -350,6 +350,45 @@ public:
     SERVER* get_server(const std::string& key) const;
 
     /**
+     * Get an array of servers. The value is expected to be a comma-separated list of server names.
+     *
+     * @param key Parameter name
+     * @param name_error_out If a server name was not found, it is written here. Only the first such name
+     * is written.
+     * @return Found servers. If even one server name was invalid, the array will be empty.
+     */
+    std::vector<SERVER*> get_server_list(const std::string& key, std::string* name_error_out = nullptr) const;
+
+    /**
+     * Get a compiled regular expression and the ovector size of the pattern. The
+     * return value should be freed by the caller.
+     *
+     * @param key Parameter name
+     * @param options PCRE2 compilation options
+     * @param output_ovec_size Output for match data ovector size. On error,
+     * nothing is written. If NULL, the parameter is ignored.
+     * @return Compiled regex code on success. NULL if key was not found or compilation failed.
+     */
+    std::unique_ptr<pcre2_code>
+    get_compiled_regex(const std::string& key, uint32_t options, uint32_t* output_ovec_size) const;
+
+    /**
+     * Get multiple compiled regular expressions and the maximum ovector size of
+     * the patterns. The returned regex codes should be freed by the caller.
+     *
+     * @param keys An array of parameter keys.
+     * @param options PCRE2 compilation options
+     * @param ovec_size_out If not null, the maximum ovector size of successfully
+     * compiled patterns is written here.
+     * @param compile_error_out If not null, is set to true if a pattern compilation failed.
+     * @return Array of compiled patterns, one element for each key. If a key is not found or the pattern
+     * cannot be compiled, the corresponding element will be null.
+     */
+    std::vector<std::unique_ptr<pcre2_code>>
+    get_compiled_regexes(const std::vector<std::string>& keys, uint32_t options,
+                         uint32_t* ovec_size_out, bool* compile_error_out);
+
+    /**
      * Check if a key exists.
      *
      * @param key Parameter name
@@ -499,61 +538,6 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                            const char* key,
                            const char* value,
                            const CONFIG_CONTEXT* context);
-
-/**
- * @brief Get an array of servers. The caller should free the produced array,
- * but not the array elements.
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- * @param name_error_out If a server name was not found, it is written here. Only the first such name
- * is written.
- * @return Found servers. If even one server name was invalid, the array will be empty.
- */
-std::vector<SERVER*>
-config_get_server_list(const MXS_CONFIG_PARAMETER* params, const char* key,
-                       std::string* name_error_out = nullptr);
-
-/**
- * Get a compiled regular expression and the ovector size of the pattern. The
- * return value should be freed by the caller.
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- * @param options PCRE2 compilation options
- * @param output_ovec_size Output for match data ovector size. On error,
- * nothing is written. If NULL, the parameter is ignored.
- * @return Compiled regex code on success, NULL otherwise
- */
-pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER* params,
-                                      const char* key,
-                                      uint32_t options,
-                                      uint32_t* output_ovec_size);
-
-/**
- * Get multiple compiled regular expressions and the maximum ovector size of
- * the patterns. The returned regex codes should be freed by the caller.
- *
- * @param params List of configuration parameters
- * @param keys An array of parameter names. If an element is not found in @c params,
- * the corresponding spot in @c out_codes is set to NULL.
- * @param keys_size Size of both @c keys and @c out_arr
- * @param options PCRE2 compilation options
- * @param out_ovec_size If not NULL, the maximum ovector size of successfully
- * compiled patterns is written here.
- * @param out_codes An array of handles to compiled codes. The referenced pointers
- * will be set to point to the compiled codes. The array size must be equal to
- * @c keys array size and it must contain valid pointers.
- *
- * @return True, if all patterns given by @c keys were successfully compiled.
- * False otherwise.
- */
-bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
-                                 const char* keys[],
-                                 int keys_size,
-                                 uint32_t options,
-                                 uint32_t* out_ovec_size,
-                                 pcre2_code** out_codes[]);
 
 /**
  * Break a comma-separated list into a string array. Removes whitespace from list items.

@@ -27,7 +27,7 @@
 #include <memory>
 
 #include <maxscale/buffer.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/service.hh>
 #include <maxscale/backend.hh>
 #include <maxscale/protocol/rwbackend.hh>

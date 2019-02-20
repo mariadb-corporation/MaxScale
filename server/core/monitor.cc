@@ -214,7 +214,7 @@ bool Monitor::configure_base(const MXS_CONFIG_PARAMETER* params)
     m_settings.conn_settings.password = params->get_string(CN_PASSWORD);
 
     // The monitor serverlist has already been checked to be valid. Empty value is ok too.
-    auto servers_temp = config_get_server_list(params, CN_SERVERS);
+    auto servers_temp = params->get_server_list(CN_SERVERS);
     for (auto elem : servers_temp)
     {
         // This function checks if server is already monitored. TODO: This should be a config error.
@@ -2233,7 +2233,7 @@ std::vector<MXS_MONITORED_SERVER*> mon_config_get_servers(const MXS_CONFIG_PARAM
     }
 
     string name_error;
-    auto servers = config_get_server_list(params, key, &name_error);
+    auto servers = params->get_server_list(key, &name_error);
     if (!servers.empty())
     {
         // All servers in the array must be monitored by the given monitor.
