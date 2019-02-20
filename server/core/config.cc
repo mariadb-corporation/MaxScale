@@ -4218,7 +4218,8 @@ bool config_is_ssl_parameter(const char* key)
     return false;
 }
 
-static bool check_path_parameter(const MXS_MODULE_PARAM* params, const char* value)
+// TEMPORARILY EXPOSED
+/*static*/ bool check_path_parameter(const MXS_MODULE_PARAM* params, const char* value)
 {
     bool valid = false;
 

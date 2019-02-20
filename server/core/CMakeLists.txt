@@ -5,6 +5,7 @@ add_library(maxscale-common SHARED
   backend.cc
   buffer.cc
   config.cc
+  config2.cc
   config_runtime.cc
   dcb.cc
   encryption.cc
