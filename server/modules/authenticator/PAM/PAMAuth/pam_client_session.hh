@@ -33,9 +33,7 @@ public:
     bool extract(DCB* dcb, GWBUF* read_buffer);
 private:
     PamClientSession(sqlite3* dbhandle, const PamInstance& instance);
-    void get_pam_user_services(const DCB* dcb,
-                               const MYSQL_session* session,
-                               StringVector* services_out);
+    void get_pam_user_services(const DCB* dcb, const MYSQL_session* session, StringVector* services_out);
     maxscale::Buffer create_auth_change_packet() const;
 
     pam_auth_state     m_state;     /**< Authentication state*/
