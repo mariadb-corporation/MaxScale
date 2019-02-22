@@ -1853,58 +1853,82 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
         goto retblock;
     }
 
-    lex->current_select = lex->all_selects_list;
-
-    while (lex->current_select)
+    if (lex->sql_command == SQLCOM_CHANGE_DB)
     {
-        tbl = lex->current_select->table_list.first;
-
-        while (tbl)
+        if (lex->select_lex.db)
         {
-            if (lex->sql_command == SQLCOM_SHOW_FIELDS)
+            if (i >= currsz)
             {
-                // If we are describing, we want the actual table, not the information_schema.
-                if (tbl->schema_select_lex)
+                tmp = (char**) realloc(databases,
+                                       sizeof(char*) * (currsz * 2 + 1));
+
+                if (tmp == NULL)
                 {
-                    tbl = tbl->schema_select_lex->table_list.first;
+                    goto retblock;
                 }
+
+                databases = tmp;
+                currsz = currsz * 2 + 1;
             }
 
-            // The database is sometimes an empty string. So as not to return
-            // an array of empty strings, we need to check for that possibility.
-            if ((strcmp(tbl->db, "skygw_virtual") != 0) && (*tbl->db != 0))
-            {
-                if (i >= currsz)
-                {
-                    tmp = (char**) realloc(databases,
-                                           sizeof(char*) * (currsz * 2 + 1));
+            databases[i++] = strdup(lex->select_lex.db);
+        }
+    }
+    else
+    {
+        lex->current_select = lex->all_selects_list;
 
-                    if (tmp == NULL)
+        while (lex->current_select)
+        {
+            tbl = lex->current_select->table_list.first;
+
+            while (tbl)
+            {
+                if (lex->sql_command == SQLCOM_SHOW_FIELDS)
+                {
+                    // If we are describing, we want the actual table, not the information_schema.
+                    if (tbl->schema_select_lex)
                     {
-                        goto retblock;
+                        tbl = tbl->schema_select_lex->table_list.first;
+                    }
+                }
+
+                // The database is sometimes an empty string. So as not to return
+                // an array of empty strings, we need to check for that possibility.
+                if ((strcmp(tbl->db, "skygw_virtual") != 0) && (*tbl->db != 0))
+                {
+                    if (i >= currsz)
+                    {
+                        tmp = (char**) realloc(databases,
+                                               sizeof(char*) * (currsz * 2 + 1));
+
+                        if (tmp == NULL)
+                        {
+                            goto retblock;
+                        }
+
+                        databases = tmp;
+                        currsz = currsz * 2 + 1;
                     }
 
-                    databases = tmp;
-                    currsz = currsz * 2 + 1;
+                    int j = 0;
+
+                    while ((j < i) && (strcmp(tbl->db, databases[j]) != 0))
+                    {
+                        ++j;
+                    }
+
+                    if (j == i)     // Not found
+                    {
+                        databases[i++] = strdup(tbl->db);
+                    }
                 }
 
-                int j = 0;
-
-                while ((j < i) && (strcmp(tbl->db, databases[j]) != 0))
-                {
-                    ++j;
-                }
-
-                if (j == i)     // Not found
-                {
-                    databases[i++] = strdup(tbl->db);
-                }
+                tbl = tbl->next_local;
             }
 
-            tbl = tbl->next_local;
+            lex->current_select = lex->current_select->next_select_in_list();
         }
-
-        lex->current_select = lex->current_select->next_select_in_list();
     }
 
 retblock:

@@ -3046,6 +3046,13 @@ public:
         m_status = QC_QUERY_PARSED;
         m_type_mask = QUERY_TYPE_SESSION_WRITE;
         m_operation = QUERY_OP_CHANGE_DB;
+
+        if (should_collect(QC_COLLECT_DATABASES))
+        {
+            char* zCopy = MXS_STRNDUP_A(pToken->z, pToken->n);
+
+            m_database_names.push_back(zCopy);
+        }
     }
 
     void set_type_mask(uint32_t type_mask)
