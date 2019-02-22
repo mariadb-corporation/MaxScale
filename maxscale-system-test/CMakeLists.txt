@@ -926,8 +926,12 @@ add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_B
 # a tool to create RDS Aurora cluster
 add_test_executable_notest(create_rds.cpp create_rds replication LABELS EXTERN_BACKEND)
 
-# start sysbench ageints RWSplit for infinite execution
+# start sysbench against RWSplit for infinite execution
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication LABELS readwritesplit REPL_BACKEND)
+
+# own long test
+# 'long_test_time' variable defines time of execution (in seconds)
+add_test_executable_notest(long_test.cpp long_test replication LABELS readwritesplit REPL_BACKEND)
 
 # test effect of local_address in configuration file
 add_test_executable(local_address.cpp local_address local_address LABELS REPL_BACKEND)
