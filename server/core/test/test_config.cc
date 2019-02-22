@@ -48,7 +48,6 @@ int test_validity()
     };
 
     CONFIG_CONTEXT ctx;
-    ctx.name = MXS_STRDUP("");
 
     /** Int parameter */
     TEST(config_param_is_valid(params, "p1", "1", &ctx));
@@ -110,9 +109,8 @@ int test_validity()
     TEST(!config_param_is_valid(params, "p9", "4711q", &ctx));
 
     /** Service parameter */
-    CONFIG_CONTEXT svc;
-    svc.name = MXS_STRDUP("test-service");
-    ctx.next = &svc;
+    CONFIG_CONTEXT svc("test-service");
+    ctx.m_next = &svc;
     config_add_param(&svc, "type", "service");
     TEST(config_param_is_valid(params, "p7", "test-service", &ctx));
     TEST(!config_param_is_valid(params, "p7", "test-service", NULL));
@@ -155,27 +153,26 @@ int test_add_parameter()
     };
 
 
-    CONFIG_CONTEXT svc1, svc2, ctx;
-    svc1.name = MXS_STRDUP("my-service");
-    svc2.name = MXS_STRDUP("some-service");
-    svc2.next = &svc1;
-    ctx.name = MXS_STRDUP("");
-    ctx.next = &svc2;
+    CONFIG_CONTEXT svc1("my-service");
+    CONFIG_CONTEXT svc2("some-service");
+    CONFIG_CONTEXT ctx;
+    svc2.m_next = &svc1;
+    ctx.m_next = &svc2;
     config_add_param(&svc1, "type", "service");
     config_add_param(&svc2, "type", "service");
 
     config_add_defaults(&ctx, params);
 
     /** Test default values */
-    TEST(ctx.parameters.get_integer("p1") == -123);
-    TEST(ctx.parameters.get_integer("p2") == 123);
-    TEST(ctx.parameters.get_bool("p3") == true);
-    TEST(ctx.parameters.get_string("p4") == "default");
-    TEST(ctx.parameters.get_enum("p5", enum_values) == 1);
-    TEST(ctx.parameters.get_string("p6") == "/tmp");
-    TEST(ctx.parameters.get_string("p7") == "my-service");
+    TEST(ctx.m_parameters.get_integer("p1") == -123);
+    TEST(ctx.m_parameters.get_integer("p2") == 123);
+    TEST(ctx.m_parameters.get_bool("p3") == true);
+    TEST(ctx.m_parameters.get_string("p4") == "default");
+    TEST(ctx.m_parameters.get_enum("p5", enum_values) == 1);
+    TEST(ctx.m_parameters.get_string("p6") == "/tmp");
+    TEST(ctx.m_parameters.get_string("p7") == "my-service");
 
-    ctx.parameters.clear();
+    ctx.m_parameters.clear();
 
     /** Test custom parameters overriding default values */
     config_add_param(&ctx, "p1", "-321");
@@ -188,14 +185,14 @@ int test_add_parameter()
 
     config_add_defaults(&ctx, params);
 
-    TEST(ctx.parameters.get_integer("p1") == -321);
-    TEST(ctx.parameters.get_integer("p2") == 321);
-    TEST(ctx.parameters.contains("p3") && ctx.parameters.get_bool("p3") == false);
-    TEST(ctx.parameters.get_string("p4") == "strange");
-    int val = ctx.parameters.get_enum("p5", enum_values);
+    TEST(ctx.m_parameters.get_integer("p1") == -321);
+    TEST(ctx.m_parameters.get_integer("p2") == 321);
+    TEST(ctx.m_parameters.contains("p3") && ctx.m_parameters.get_bool("p3") == false);
+    TEST(ctx.m_parameters.get_string("p4") == "strange");
+    int val = ctx.m_parameters.get_enum("p5", enum_values);
     TEST(val == 5);
-    TEST(ctx.parameters.get_string("p6") == "/dev/null");
-    TEST(ctx.parameters.get_string("p7") == "some-service");
+    TEST(ctx.m_parameters.get_string("p6") == "/dev/null");
+    TEST(ctx.m_parameters.get_string("p7") == "some-service");
     return 0;
 }
 
@@ -210,18 +207,17 @@ int test_required_parameters()
     };
 
     CONFIG_CONTEXT ctx;
-    ctx.name = MXS_STRDUP("");
 
-    TEST(missing_required_parameters(params, ctx.parameters, "test"));
+    TEST(missing_required_parameters(params, ctx.m_parameters, "test"));
     config_add_defaults(&ctx, params);
-    TEST(!missing_required_parameters(params, ctx.parameters, "test"));
+    TEST(!missing_required_parameters(params, ctx.m_parameters, "test"));
 
-    ctx.parameters.clear();
+    ctx.m_parameters.clear();
 
     config_add_param(&ctx, "p1", "1");
     config_add_param(&ctx, "p2", "1");
     config_add_param(&ctx, "p3", "1");
-    TEST(!missing_required_parameters(params, ctx.parameters, "test"));
+    TEST(!missing_required_parameters(params, ctx.m_parameters, "test"));
     return 0;
 }
 

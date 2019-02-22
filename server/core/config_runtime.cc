@@ -118,7 +118,7 @@ static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
     {
         config_add_defaults(&ctx, get_type_parameters(object_type));
         config_add_defaults(&ctx, mod->parameters);
-        params = ctx.parameters;
+        params = ctx.m_parameters;
         rval = true;
     }
     else
@@ -250,7 +250,7 @@ bool runtime_create_server(const char* name,
 
             CONFIG_CONTEXT ctx {(char*)""};
             bool ok;
-            tie(ok, ctx.parameters) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
+            tie(ok, ctx.m_parameters) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
 
             if (ok)
             {
@@ -269,7 +269,7 @@ bool runtime_create_server(const char* name,
                     config_replace_param(&ctx, "authenticator", authenticator);
                 }
 
-                Server* server = Server::server_alloc(name, &ctx.parameters);
+                Server* server = Server::server_alloc(name, &ctx.m_parameters);
 
                 if (server && (!external || server->serialize()))
                 {
@@ -380,7 +380,7 @@ static SSL_LISTENER* create_ssl(const char* name,
             && (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth))
             && (!verify || config_add_param(obj, CN_SSL_VERIFY_PEER_CERTIFICATE, verify)))
         {
-            config_create_ssl(name, &obj->parameters, true, &rval);
+            config_create_ssl(name, &obj->m_parameters, true, &rval);
         }
 
         config_context_free(obj);
@@ -1259,7 +1259,7 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
         SFilterDef filter;
         CONFIG_CONTEXT ctx {(char*)""};
         bool ok;
-        tie(ok, ctx.parameters) = load_defaults(module, MODULE_FILTER, CN_FILTER);
+        tie(ok, ctx.m_parameters) = load_defaults(module, MODULE_FILTER, CN_FILTER);
 
         if (ok)
         {
@@ -1272,7 +1272,7 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
                     config_replace_param(&ctx, elem.first.c_str(), elem.second.c_str());
                 }
 
-                if (!(filter = filter_alloc(name, module, &ctx.parameters)))
+                if (!(filter = filter_alloc(name, module, &ctx.m_parameters)))
                 {
                     config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
                 }
@@ -1335,7 +1335,7 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
         Service* service = NULL;
         CONFIG_CONTEXT ctx {(char*)""};
         bool ok;
-        tie(ok, ctx.parameters) = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
+        tie(ok, ctx.m_parameters) = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
 
         if (ok)
         {
@@ -1347,7 +1347,7 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
                     config_replace_param(&ctx, elem.first.c_str(), elem.second.c_str());
                 }
 
-                if ((service = service_alloc(name, router, &ctx.parameters)) == NULL)
+                if ((service = service_alloc(name, router, &ctx.m_parameters)) == NULL)
                 {
                     config_runtime_error("Could not create service '%s' with module '%s'", name, router);
                 }
