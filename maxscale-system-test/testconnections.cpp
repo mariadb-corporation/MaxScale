@@ -87,7 +87,8 @@ TestConnections::TestConnections(int argc, char *argv[]):
     no_galera(false),
     no_vm_revert(true),
     threads(4),
-    use_ipv6(false)
+    use_ipv6(false),
+    use_valgrind(false)
 {
     signal_set(SIGSEGV, sigfatal_handler);
     signal_set(SIGABRT, sigfatal_handler);
@@ -239,7 +240,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
     repl->take_snapshot_command = take_snapshot_command;
     repl->revert_snapshot_command = revert_snapshot_command;
 
-    maxscales = new Maxscales("maxscale", test_dir, verbose);
+    maxscales = new Maxscales("maxscale", test_dir, verbose, use_valgrind);
 
     maxscales->use_ipv6 = use_ipv6;
     maxscales->ssl = ssl;
@@ -347,6 +348,16 @@ TestConnections::~TestConnections()
         //galera->disable_ssl();
     }
 
+    if (use_valgrind)
+    {
+        // stop all Maxscales to get proper Valgrind logs
+        for (int i = 0; i < maxscales->N; i++)
+        {
+            stop_maxscale(i);
+        }
+        sleep(15); // sleep to let logs be written do disks
+    }
+
     copy_all_logs();
 
     /* Temporary disable snapshot revert due to Galera failures
@@ -420,14 +431,12 @@ void TestConnections::expect(bool result, const char *format, ...)
 
 void TestConnections::read_env()
 {
-
     char *env;
 
     if (verbose)
     {
         printf("Reading test setup configuration from environmental variables\n");
     }
-
 
     //env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
 
@@ -530,6 +539,12 @@ void TestConnections::read_env()
     if ((env != NULL) && ((strcasecmp(env, "no") == 0) || (strcasecmp(env, "false") == 0) ))
     {
         no_vm_revert = false;
+    }
+
+    env = getenv("use_valgrind");
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    {
+        use_valgrind = true;
     }
 }
 
@@ -683,22 +698,18 @@ void TestConnections::init_maxscale(int m)
                           "chmod a+x %s;"
                           "%s"
                           "iptables -F INPUT;"
-                          "rm -f %s/maxscale.log;"
-                          "rm -f %s/maxscale1.log;"
-                          "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
-                          "%s",
+                          "rm -f %s/*;"
+                          "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*",
                           maxscales->access_homedir[m],
                           maxscales->access_homedir[m],
                           maxscales->access_homedir[m],
                           maxscale::start ? "killall -9 maxscale;" : "",
-                          maxscales->maxscale_log_dir[m],
-                          maxscales->maxscale_log_dir[m],
-                          maxscale::start ? "service maxscale restart" : "");
-
+                          maxscales->maxscale_log_dir[m]);
     fflush(stdout);
-
     if (maxscale::start)
     {
+        maxscales->restart_maxscale(m);
+        fflush(stdout);
         int waits;
 
         for (waits = 0; waits < 15; waits++)
@@ -1064,9 +1075,9 @@ bool TestConnections::replicate_from_master(int m)
     repl->execute_query_all_nodes("STOP SLAVE");
 
     /** Clean up MaxScale directories */
-    maxscales->ssh_node(m, "service maxscale stop", true);
+    maxscales->stop_maxscale(m);
     prepare_binlog(m);
-    maxscales->ssh_node(m, "service maxscale start", true);
+    maxscales->start_maxscale(m);
 
     char log_file[256] = "";
     char log_pos[256] = "4";
@@ -1318,7 +1329,16 @@ int TestConnections::find_connected_slave1(int m)
 int TestConnections::check_maxscale_processes(int m, int expected)
 {
     int exit_code;
-    char* maxscale_num = maxscales->ssh_node_output(m, "ps -C maxscale | grep maxscale | wc -l", false,
+    const char * ps_cmd;
+    if (use_valgrind)
+    {
+        ps_cmd = "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l";
+    }
+    else
+    {
+        ps_cmd = "ps -C maxscale | grep maxscale | wc -l";
+    }
+    char* maxscale_num = maxscales->ssh_node_output(m, ps_cmd, false,
                          &exit_code);
     if ((maxscale_num == NULL) || (exit_code != 0))
     {
@@ -1332,9 +1352,9 @@ int TestConnections::check_maxscale_processes(int m, int expected)
 
     if (atoi(maxscale_num) != expected)
     {
-        tprintf("%s maxscale processes detected, trying agin in 5 seconds\n", maxscale_num);
+        tprintf("%s maxscale processes detected, trying again in 5 seconds\n", maxscale_num);
         sleep(5);
-        maxscale_num = maxscales->ssh_node_output(m, "ps -C maxscale | grep maxscale | wc -l", false, &exit_code);
+        maxscale_num = maxscales->ssh_node_output(m, ps_cmd, false, &exit_code);
         if (atoi(maxscale_num) != expected)
         {
             add_result(1, "Number of MaxScale processes is not %d, it is %s\n", expected, maxscale_num);
@@ -1346,7 +1366,7 @@ int TestConnections::check_maxscale_processes(int m, int expected)
 
 int TestConnections::stop_maxscale(int m)
 {
-    int res = maxscales->ssh_node(m, "service maxscale stop", true);
+    int res = maxscales->stop_maxscale(m);
     check_maxscale_processes(m, 0);
     fflush(stdout);
     return res;
@@ -1354,7 +1374,7 @@ int TestConnections::stop_maxscale(int m)
 
 int TestConnections::start_maxscale(int m)
 {
-    int res = maxscales->ssh_node(m, "service maxscale start", true);
+    int res = maxscales->start_maxscale(m);
     check_maxscale_processes(m, 1);
     fflush(stdout);
     return res;
@@ -1380,7 +1400,6 @@ int TestConnections::check_maxscale_alive(int m)
     maxscales->close_maxscale_connections(m);
     add_result(global_result - gr, "Maxscale is not alive\n");
     stop_timeout();
-
     check_maxscale_processes(m, 1);
 
     return global_result - gr;

@@ -44,15 +44,6 @@ int main(int argc, char *argv[])
                   "please define 'long_test_time' variable to set running time (seconds)\n"
                   "***************************************************\n");
 
-    Test->maxscales->stop_maxscale(0);
-    Test->maxscales->ssh_node_f(0, true, "yum install -y valgrind gdb");
-    Test->maxscales->ssh_node_f(0, true, "apt install -y --force-yes valgrind gdb");
-    Test->maxscales->ssh_node_f(0, true, "zypper -n install valgrind gdb");
-    Test->maxscales->ssh_node_f(0, true, "rm -rf /var/cache/maxscale/maxscale.lock");
-    Test->maxscales->ssh_node_f(0, false,
-                                "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
-                                "--log-file=/var/log/maxscale/valgrind.log --trace-children=yes "
-                                "--track-origins=yes /usr/bin/maxscale");
     pthread_t thread_id[threads_type_num][max_threads_num];
     FUNC * thread[threads_type_num];
     thread[0] = query_thread;
@@ -173,7 +164,7 @@ int main(int argc, char *argv[])
     //fflush(stdout);
     //Test->check_maxscale_alive(0);
 
-    Test->maxscales->ssh_node_f(0, true, "sudo kill $(pidof valgrind)");
+    Test->maxscales->stop_maxscale(0);
 
     int rval = Test->global_result;
     delete Test;

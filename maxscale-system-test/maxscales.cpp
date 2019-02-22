@@ -2,12 +2,24 @@
 #include <sstream>
 #include <unordered_map>
 
-Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose)
+Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose, bool use_valgrind)
 {
     strcpy(prefix, pref);
     this->verbose = verbose;
+    this->use_valgrind = use_valgrind;
+    valgring_log_num = 0;
     strcpy(test_dir, test_cwd);
     read_env();
+    if (use_valgrind)
+    {
+        for (int i = 0; i < N; i++)
+        {
+            ssh_node_f(i, true, "yum install -y valgrind gdb 2>&1", maxscale_log_dir[i]);
+            ssh_node_f(i, true, "apt install -y --force-yes valgrind gdb 2>&1", maxscale_log_dir[i]);
+            ssh_node_f(i, true, "zypper -n install valgrind gdb 2>&1", maxscale_log_dir[i]);
+            ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
+        }
+    }
 }
 
 int Maxscales::read_env()
@@ -208,21 +220,54 @@ int Maxscales::close_maxscale_connections(int m)
 
 int Maxscales::restart_maxscale(int m)
 {
-    int res = ssh_node(m, "service maxscale restart", true);
+    int res;
+    if (use_valgrind)
+    {
+        res = stop_maxscale(m);
+        res += start_maxscale(m);
+    }
+    else
+    {
+        res =ssh_node(m, "service maxscale restart", true);
+    }
     fflush(stdout);
     return res;
 }
 
 int Maxscales::start_maxscale(int m)
 {
-    int res = ssh_node(m, "service maxscale start", true);
+    int res;
+    if (use_valgrind)
+    {
+        res = ssh_node_f(m, false,
+                   "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
+                   "--log-file=/%s/valgrind%02d.log --trace-children=yes "
+                   "--track-origins=yes /usr/bin/maxscale", maxscale_log_dir[m], valgring_log_num);
+        valgring_log_num++;
+    }
+    else
+    {
+        res = ssh_node(m, "service maxscale start", true);
+    }
     fflush(stdout);
     return res;
 }
 
 int Maxscales::stop_maxscale(int m)
 {
-    int res = ssh_node(m, "service maxscale stop", true);
+    int res;
+    if (use_valgrind)
+    {
+        res = ssh_node_f(m, true, "sudo kill $(pidof valgrind) 2>&1 > /dev/null");
+        if ((res != 0) || atoi(ssh_node_output(m, "pidof valgrind", true, &res)) > 0)
+        {
+            res = ssh_node_f(m, true, "sudo kill -9 $(pidof valgrind) 2>&1 > /dev/null");
+        }
+    }
+    else
+    {
+        res = ssh_node(m, "service maxscale stop", true);
+    }
     fflush(stdout);
     return res;
 }

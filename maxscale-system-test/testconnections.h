@@ -477,8 +477,6 @@ public:
      */
     int list_dirs(int m = 0);
 
-
-
     /**
      * @brief make_snapshot Makes a snapshot for all running VMs
      * @param snapshot_name name of created snapshot
@@ -513,6 +511,11 @@ public:
     int stop_maxscale(int m = 0);
     int start_maxscale(int m = 0);
     void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
+
+    /**
+     * @brief use_valrind if true Maxscale will be executed under Valgrind
+     */
+    bool use_valgrind;
 
 private:
     void report_result(const char *format, va_list argp);
