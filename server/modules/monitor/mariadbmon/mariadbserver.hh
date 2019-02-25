@@ -15,6 +15,7 @@
 #include <functional>
 #include <string>
 #include <memory>
+#include <mutex>
 #include <maxscale/monitor.h>
 #include <maxbase/stopwatch.hh>
 #include "server_utils.hh"
@@ -113,6 +114,7 @@ public:
         bool log_bin = false;           /* Is binary logging enabled? */
         bool log_slave_updates = false; /* Does the slave write replicated events to binlog? */
     };
+
 
     /* Monitored server base class/struct. MariaDBServer does not own the struct, it is not freed
      * (or connection closed) when a MariaDBServer is destroyed. */
@@ -547,6 +549,12 @@ private:
         ENABLE,
         DISABLE
     };
+
+    /* Protects array-like fields from concurrent access. This is only required for fields which can be
+     * read from another thread while the monitor is running. In practice, these are fields read during
+     * diagnostics-methods. Reading inside monitor thread does not need to be mutexed, as outside threads
+     * only read the values. */
+    mutable std::mutex m_arraylock;
 
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
