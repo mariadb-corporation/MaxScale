@@ -407,7 +407,8 @@ int test_domain_matching(const char* actual_module,
     /** Create a monitor */
     char* libdir = MXS_STRDUP_A("../../modules/monitor/mariadbmon/");
     set_libdir(libdir);
-    MonitorManager::create_monitor(name, actual_module, NULL);
+    MXS_CONFIG_PARAMETER empty;
+    MonitorManager::create_monitor(name, actual_module, &empty);
 
     const MODULECMD* cmd;
 
