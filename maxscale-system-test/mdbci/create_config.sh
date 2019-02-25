@@ -32,26 +32,17 @@ ${mdbci_dir}/mdbci --override --template  ${MDBCI_VM_PATH}/${name}.json generate
 mkdir ${MDBCI_VM_PATH}/$name/cnf
 cp -r ${script_dir}/cnf/* ${MDBCI_VM_PATH}/$name/cnf/
 
-
-while [ -f ~/vagrant_lock ]
-do
-	echo "vagrant is locked, waiting ..."
-	sleep 5
-done
-touch ~/vagrant_lock
-echo ${JOB_NAME}-${BUILD_NUMBER} >> ~/vagrant_lock
-
 echo "running vagrant up $provider"
 
 ${mdbci_dir}/mdbci up $name --attempts 3
 if [ $? != 0 ]; then
 	echo "Error creating configuration"
-	rm ~/vagrant_lock
+	rm -f ~/vagrant_lock
 	exit 1
 fi
 
 #cp ~/build-scripts/team_keys .
 ${mdbci_dir}/mdbci public_keys --key ${team_keys} $name
 
-rm ~/vagrant_lock
+rm -f ~/vagrant_lock
 exit 0

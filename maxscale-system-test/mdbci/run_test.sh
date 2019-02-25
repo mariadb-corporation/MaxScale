@@ -91,7 +91,7 @@ set -x
             if [ "${do_not_destroy_vm}" != "yes" ] ; then
                 ${mdbci_dir}/mdbci destroy $name
             fi
-            rm ~/vagrant_lock
+            rm -f ~/vagrant_lock
             exit 1
         fi
         ${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name clean
@@ -105,7 +105,7 @@ else
   if [ "${do_not_destroy_vm}" != "yes" ] ; then
 	${mdbci_dir}/mdbci destroy $name
   fi
-  rm ~/vagrant_lock
+  rm -f ~/vagrant_lock
   exit 1
 fi
 
