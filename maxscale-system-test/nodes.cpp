@@ -472,3 +472,13 @@ const char* Nodes::ip(int i) const
 {
     return use_ipv6 ?  IP6[i] : IP[i];
 }
+
+int Nodes::start_vm(int node)
+{
+    return(system(start_vm_command[node]));
+}
+
+int Nodes::stop_vm(int node)
+{
+    return(system(stop_vm_command[node]));
+}
