@@ -391,12 +391,10 @@ int Mariadb_nodes::cleanup_db_nodes()
 
 void Mariadb_nodes::create_users(int node)
 {
-    char str[1024];
-    char dtr[1024];
+    char str[strlen(test_dir) + 17];
     // Create users for replication as well as the users that are used by the tests
     sprintf(str, "%s/create_user.sh", test_dir);
-    sprintf(dtr, "%s", access_homedir[node]);
-    copy_to_node(node, str, dtr);
+    copy_to_node(node, str, access_homedir[node]);
     ssh_node_f(node, false,
                "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
                user_name, password, access_homedir[0], socket_cmd[0]);
@@ -502,7 +500,7 @@ int Galera_nodes::start_galera()
         }
     }
 
-    char str[1024];
+    char str[strlen(test_dir) + 25];
     sprintf(str, "%s/create_user_galera.sh", test_dir);
     copy_to_node_legacy(str, "~/", 0);
 
@@ -1158,7 +1156,7 @@ int Mariadb_nodes::truncate_mariadb_logs()
 int Mariadb_nodes::configure_ssl(bool require)
 {
     int local_result = 0;
-    char str[1024];
+    char str[strlen(test_dir) + 20];
 
     this->ssl = 1;
 
