@@ -162,7 +162,7 @@ void MariaDBMonitor::Test::init_servers(int count)
         MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER;    // Contents mostly undefined
         mon_server->server = base_server;
 
-        MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_use_hostnames);
+        MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_use_hostnames, false);
 
         if (m_use_hostnames)
         {
