@@ -463,6 +463,7 @@ int RDS::create_cluster()
     char * result;
     json_error_t error;
     size_t i;
+    int res = 0;
 
     sprintf(cmd,
             "aws rds create-db-cluster --database-name=test --engine=aurora --master-username=skysql --master-user-password=skysqlrds --db-cluster-identifier=%s --db-subnet-group-name=%s",
@@ -487,7 +488,7 @@ int RDS::create_cluster()
         printf("Security group %s\n", sg_id);
         sprintf(cmd,
                 "aws ec2 authorize-security-group-ingress --group-id %s --protocol tcp --port 3306 --cidr 0.0.0.0/0", sg_id);
-        system(cmd);
+        res += system(cmd);
     }
     sg_intern = sg_id;
 
@@ -497,9 +498,9 @@ int RDS::create_cluster()
                 "aws rds create-db-instance --db-cluster-identifier=%s --engine=aurora --db-instance-class=db.t2.medium --publicly-accessible --db-instance-identifier=node%03lu",
                 cluster_name_intern, i);
         printf("%s\n", cmd);
-        system(cmd);
+        res += system(cmd);
     }
-    return 0;
+    return res;
 }
 
 int RDS::get_writer(const char ** writer_name)
