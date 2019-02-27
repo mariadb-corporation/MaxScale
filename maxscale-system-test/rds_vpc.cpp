@@ -168,6 +168,7 @@ int RDS::destroy_route_tables()
     json_t *root;
     char cmd[1024];
     char * json;
+    int res = 0;
 
     sprintf(cmd, "aws ec2 describe-vpcs --vpc-ids=%s", vpc_id_intern);
     if (execute_cmd(cmd, &json))
@@ -196,11 +197,11 @@ int RDS::destroy_route_tables()
         if (strcmp(vpc_id_intern, vpc_id) == 0)
         {
             sprintf(cmd, "aws ec2 delete-route-table --route-table-id %s", rt_id);
-            system(cmd);
+            res += system(cmd);
         }
     }
 
-    return 0;
+    return res;
 }
 
 int RDS::detach_and_destroy_gw()

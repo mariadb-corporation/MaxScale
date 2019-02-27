@@ -41,9 +41,9 @@ const char *rules_failure[] =
     NULL
 };
 
-void truncate_maxscale_logs(TestConnections& test)
+int truncate_maxscale_logs(TestConnections& test)
 {
-    test.maxscales->ssh_node(0, "truncate -s 0 /var/log/maxscale/*", true);
+    return test.maxscales->ssh_node(0, "truncate -s 0 /var/log/maxscale/max*", true);
 }
 
 void create_rule(const char *rule, const char* user)
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
     for (int i = 0; rules_failure[i]; i++)
     {
         /** Create rule file with syntax error */
-        truncate(temp_rules, 0);
+        test.add_result(truncate(temp_rules, 0), "Failed to truncate");
         create_rule(rules_failure[i], users_ok[0]);
         copy_rules(&test, (char*)temp_rules, (char*)test_dir);
 
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
          * a message about the syntax error. */
         test.check_maxscale_processes(0, 0);
         test.check_log_err(0, "syntax error", true);
-        truncate_maxscale_logs(test);
+        test.add_result(truncate_maxscale_logs(test), "Failed to truncate Maxscale logs");
     }
 
     return test.global_result;

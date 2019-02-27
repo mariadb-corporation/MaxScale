@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
             "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet script_output_expected* %s@%s:%s/",
             Test->maxscales->sshkey[0], Test->maxscales->access_user[0], Test->maxscales->IP[0],
             Test->maxscales->access_homedir[0]);
-    system(str);
+    Test->add_result(system(str), "Error copying script to VM");
 
     sprintf(str, "%s/script_output_expected", Test->maxscales->access_homedir[0]);
     test_script_monitor(Test, Test->repl, str);

@@ -1964,14 +1964,14 @@ void TestConnections::check_current_connections(int m, int value)
 
 int TestConnections::take_snapshot(char * snapshot_name)
 {
-    char str[4096];
+    char str[strlen(take_snapshot_command) + strlen(snapshot_name) + 2];
     sprintf(str, "%s %s", take_snapshot_command, snapshot_name);
     return system(str);
 }
 
 int TestConnections::revert_snapshot(char * snapshot_name)
 {
-    char str[4096];
+    char str[strlen(revert_snapshot_command) + strlen(snapshot_name) + 2];
     sprintf(str, "%s %s", revert_snapshot_command, snapshot_name);
     return system(str);
 }
