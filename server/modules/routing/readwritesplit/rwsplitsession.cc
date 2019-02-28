@@ -23,13 +23,14 @@ using namespace maxscale;
 
 RWSplitSession::RWSplitSession(RWSplit* instance,
                                MXS_SESSION* session,
+                               const Config& config,
                                mxs::SRWBackends backends,
                                mxs::RWBackend*  master)
     : mxs::RouterSession(session)
     , m_backends(std::move(backends))
     , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
     , m_current_master(master)
-    , m_config(instance->config())
+    , m_config(config)
     , m_last_keepalive_check(mxs_clock())
     , m_nbackends(instance->service()->n_dbref)
     , m_client(session->client_dcb)
@@ -71,17 +72,18 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
          */
 
         RWBackend* master = nullptr;
-
+        const auto& config = router->config();
         auto backend_ptrs = sptr_vec_to_ptr_vec(backends);
 
-        if (router->select_connect_backend_servers(session,
-                                                   backend_ptrs,
-                                                   &master,
-                                                   NULL,
-                                                   NULL,
-                                                   connection_type::ALL))
+        if (config.lazy_connect
+            || router->select_connect_backend_servers(session,
+                                                      backend_ptrs,
+                                                      &master,
+                                                      NULL,
+                                                      NULL,
+                                                      connection_type::ALL))
         {
-            if ((rses = new RWSplitSession(router, session, std::move(backends), master)))
+            if ((rses = new RWSplitSession(router, session, config, std::move(backends), master)))
             {
                 router->stats().n_sessions += 1;
             }
@@ -1102,11 +1104,17 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
     }
 
     bool succp = false;
+
+    if (m_config.lazy_connect)
+    {
+        // Lazy connect is enabled, don't care whether we have available servers
+        succp = true;
+    }
     /**
      * Try to get replacement slave or at least the minimum
      * number of slave connections for router session.
      */
-    if (m_recv_sescmd > 0 && m_config.disable_sescmd_history)
+    else if (m_recv_sescmd > 0 && m_config.disable_sescmd_history)
     {
         for (const auto& a : m_raw_backends)
         {

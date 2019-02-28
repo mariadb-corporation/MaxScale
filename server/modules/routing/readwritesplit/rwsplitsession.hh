@@ -133,6 +133,7 @@ public:
 private:
     RWSplitSession(RWSplit* instance,
                    MXS_SESSION* session,
+                   const Config& config,
                    mxs::SRWBackends backends,
                    mxs::RWBackend*  master);
 
@@ -290,7 +291,7 @@ private:
     uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
     uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
                                                  * command */
-    ExecMap         m_exec_map;                 /**< Map of COM_STMT_EXECUTE statement IDs to
+    ExecMap m_exec_map;                         /**< Map of COM_STMT_EXECUTE statement IDs to
                                                  * Backends */
     std::string          m_gtid_pos;            /**< Gtid position for causal read */
     wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */

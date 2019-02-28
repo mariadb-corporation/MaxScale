@@ -545,6 +545,20 @@ when the slave timed out.
 The timeout for the slave synchronization done by `causal_reads`. The
 default value is 10 seconds.
 
+### `lazy_connect`
+
+Lazy connection creation causes connections to backend servers to be opened only
+when they are needed. This reduces the load that is placed on the backend
+servers when the client connections are short. This parameter is a boolean type
+and is disabled by default.
+
+By default readwritesplit opens as many connections as it can when the session
+is first opened. This makes the execution of the first query faster when all
+available connections are already created. When `lazy_connect` is enabled, this
+initial connection creation is skipped. If the client executes only read
+queries, no connection to the master is made. If only write queries are made,
+only the master connection is used.
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint

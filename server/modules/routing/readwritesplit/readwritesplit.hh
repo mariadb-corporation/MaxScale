@@ -159,6 +159,7 @@ struct Config
         , transaction_replay(params->get_bool("transaction_replay"))
         , trx_max_size(params->get_size("transaction_replay_max_size"))
         , optimistic_trx(params->get_bool("optimistic_trx"))
+        , lazy_connect(params->get_bool("lazy_connect"))
     {
         if (causal_reads)
         {
@@ -177,13 +178,17 @@ struct Config
             transaction_replay = true;
         }
 
-        if (transaction_replay)
+        if (transaction_replay || lazy_connect)
         {
             /**
              * Replaying transactions requires that we are able to do delayed query
-             * retries and reconnect to a master.
+             * retries. Both transaction replay and lazy connection creation require
+             * fail-on-write failure mode and reconnections to masters.
              */
-            delayed_retry = true;
+            if (transaction_replay)
+            {
+                delayed_retry = true;
+            }
             master_reconnection = true;
             master_failure_mode = RW_FAIL_ON_WRITE;
         }
@@ -217,6 +222,7 @@ struct Config
     bool        transaction_replay;     /**< Replay failed transactions */
     size_t      trx_max_size;           /**< Max transaction size for replaying */
     bool        optimistic_trx;         /**< Enable optimistic transactions */
+    bool        lazy_connect;           /**< Create connections only when needed */
 };
 
 /**

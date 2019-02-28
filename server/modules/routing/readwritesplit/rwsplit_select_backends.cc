@@ -57,6 +57,13 @@ PRWBackends::iterator best_score(PRWBackends& sBackends,
     for (auto ite = sBackends.begin(); ite != sBackends.end(); ++ite)
     {
         double score = server_score((**ite).backend());
+
+        if (!(*ite)->in_use())
+        {
+            // To prefer servers that we are connected to, inflate the score of unconnected servers
+            score = (score + 5.0) * 1.5;
+        }
+
         if (min > score)
         {
             min = score;

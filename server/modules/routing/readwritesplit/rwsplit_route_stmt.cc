@@ -922,7 +922,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
                || old_master->dcb()->role == DCB::Role::BACKEND);
     mxb_assert(!curr_master || !curr_master->in_use()
                || curr_master->dcb()->role == DCB::Role::BACKEND);
-    char errmsg[SERVER::MAX_ADDRESS_LEN * 2 + 100];      // Extra space for error message
+    char errmsg[SERVER::MAX_ADDRESS_LEN* 2 + 100];      // Extra space for error message
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout)
     {
