@@ -333,11 +333,10 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
      * This will prevent repeated authentication failures. */
     if (errcode == ER_HOST_IS_BLOCKED)
     {
-        MXS_ERROR("Server %s has been put into maintenance mode due "
-                  "to the server blocking connections from MaxScale. "
-                  "Run 'mysqladmin -h %s -P %d flush-hosts' on this "
-                  "server before taking this server out of maintenance "
-                  "mode.",
+        MXS_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
+                  "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
+                  "this server out of maintenance mode. To avoid this problem in the future, set "
+                  "'max_connect_errors' to a larger value in the backend server.",
                   dcb->server->name,
                   dcb->server->address,
                   dcb->server->port);
