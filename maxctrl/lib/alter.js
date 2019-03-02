@@ -93,7 +93,10 @@ exports.builder = function(yargs) {
         })
         .command('service <service> <key> <value>', 'Alter service parameters', function(yargs) {
             return yargs.epilog('To display the service parameters, execute `show service <service>`. ' +
-                                'The following list of parameters can be altered at runtime:\n\n' + JSON.stringify(service_params, null, 4))
+                                'Some routers support runtime configuration changes to all parameters. ' +
+                                'Currently all readconnroute, readwritesplit and schemarouter parameters ' +
+                                'can be changed at runtime. In addition to module specific parameters, ' +
+                                'the following list of common service parameters can be altered at runtime:\n\n' + JSON.stringify(service_params, null, 4))
             .usage('Usage: alter service <service> <key> <value>')
         }, function(argv) {
             maxctrl(argv, function(host) {
