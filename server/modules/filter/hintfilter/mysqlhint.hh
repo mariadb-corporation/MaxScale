@@ -16,6 +16,18 @@
 #include <maxscale/hint.h>
 #include <maxscale/filter.hh>
 
+namespace std
+{
+template<>
+struct default_delete<HINT>
+{
+    void operator()(HINT* pHint)
+    {
+        hint_free(pHint);
+    }
+};
+}
+
 class HintSession;
 
 class HintInstance : public mxs::Filter<HintInstance, HintSession>
@@ -62,8 +74,6 @@ public:
      */
     HINT* parse(InputIter begin, InputIter end);
 
-    ~HintParser();
-
 private:
 
     InputIter m_it;
@@ -71,8 +81,8 @@ private:
     InputIter m_tok_begin;
     InputIter m_tok_end;
 
-    std::vector<HINT*>                     m_stack;
-    std::unordered_map<std::string, HINT*> m_named_hints;
+    std::vector<std::unique_ptr<HINT>>                     m_stack;
+    std::unordered_map<std::string, std::unique_ptr<HINT>> m_named_hints;
 
     TOKEN_VALUE next_token();
     HINT*       process_definition();

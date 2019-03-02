@@ -307,14 +307,13 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
         {
             if ((rval = process_definition()))
             {
-                m_stack.push_back(hint_dup(rval));
+                m_stack.emplace_back(hint_dup(rval));
             }
         }
         else if (t == TOK_STOP)
         {
             if (!m_stack.empty())
             {
-                hint_free(m_stack.back());
                 m_stack.pop_back();
             }
         }
@@ -339,7 +338,7 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
                 if (hint)
                 {
                     // Preparation of a named hint
-                    m_named_hints[key] = hint_dup(hint);
+                    m_named_hints[key] = std::unique_ptr<HINT>(hint_dup(hint));
                 }
             }
             else if (t == TOK_START)
@@ -349,8 +348,8 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
                     if (m_named_hints.count(key) == 0)
                     {
                         // New hint defined, push it on to the stack
-                        m_named_hints[key] = hint_dup(rval);
-                        m_stack.push_back(hint_dup(rval));
+                        m_named_hints[key] = std::unique_ptr<HINT>(hint_dup(rval));
+                        m_stack.emplace_back(hint_dup(rval));
                     }
                 }
                 else if (next_token() == TOK_END)
@@ -360,8 +359,8 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
                     if (it != m_named_hints.end())
                     {
                         // We're starting an already define named hint
-                        m_stack.push_back(hint_dup(it->second));
-                        rval = hint_dup(it->second);
+                        m_stack.emplace_back(hint_dup(it->second.get()));
+                        rval = hint_dup(it->second.get());
                     }
                 }
             }
@@ -393,23 +392,10 @@ HINT* HintParser::parse(InputIter it, InputIter end)
 
     if (!rval && !m_stack.empty())
     {
-        rval = hint_dup(m_stack.back());
+        rval = hint_dup(m_stack.back().get());
     }
 
     return rval;
-}
-
-HintParser::~HintParser()
-{
-    for (auto& a : m_named_hints)
-    {
-        hint_free(a.second);
-    }
-
-    for (auto& a : m_stack)
-    {
-        hint_free(a);
-    }
 }
 
 void HintSession::process_hints(GWBUF* buffer)
