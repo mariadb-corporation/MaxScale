@@ -30,7 +30,7 @@ protocol=mariadbbackend
 ```
 
 The server configuration is identical with that of any other server, but since
-these servers are _only_ used for bootrstrapping the Clustrix monitor it is
+these servers are _only_ used for bootstrapping the Clustrix monitor it is
 adviceable to use names that clearly will identify them as such.
 
 The actual Clustrix monitor configuration looks as follows:
