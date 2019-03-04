@@ -75,11 +75,11 @@ int main(int argc, char* argv[])
                                        "GRANT SELECT,USAGE,CREATE ON shard_db.* TO 'user%d'@'%%'",
                                        i),
                          "Query should succeed.");
+        execute_query(Test->repl->nodes[i], "FLUSH PRIVILEGES");
     }
 
     Test->repl->close_connections();
     Test->stop_timeout();
-    sleep(10);
 
     MYSQL* conn;
     for (i = 0; i < Test->repl->N; i++)
@@ -97,6 +97,7 @@ int main(int argc, char* argv[])
         Test->add_result(execute_query(conn, "CREATE TABLE table%d (x1 int, fl int);", i),
                          "Query should succeed.");
     }
+    sleep(6); // The router is configured to refresh the shard map if older than 5 seconds.
 
     for (i = 0; i < Test->repl->N; i++)
     {
