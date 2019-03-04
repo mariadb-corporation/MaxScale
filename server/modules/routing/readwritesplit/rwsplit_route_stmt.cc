@@ -91,6 +91,30 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
     return rval;
 }
 
+bool RWSplitSession::create_one_connection()
+{
+    // Try to first find a master
+    for (auto backend : m_raw_backends)
+    {
+        if (backend->can_connect() && backend->is_master())
+        {
+            return prepare_target(backend, TARGET_MASTER);
+        }
+    }
+
+    // If no master was found, find a slave
+    for (auto backend : m_raw_backends)
+    {
+        if (backend->can_connect() && backend->is_slave())
+        {
+            return prepare_target(backend, TARGET_SLAVE);
+        }
+    }
+
+    // No servers are available
+    return false;
+}
+
 void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 {
     mxb_assert(querybuf);
@@ -558,6 +582,15 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         compress_history(sescmd);
         m_sescmd_list.push_back(sescmd);
+    }
+
+    if (m_config.lazy_connect && !attempted_write && nsucc == 0)
+    {
+        // If no connections are open, create one and execute the session command on it
+        if (create_one_connection())
+        {
+            nsucc = 1;
+        }
     }
 
     if (nsucc)

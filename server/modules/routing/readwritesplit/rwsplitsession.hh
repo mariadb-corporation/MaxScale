@@ -163,6 +163,7 @@ private:
     bool            handle_got_target(GWBUF* querybuf, mxs::RWBackend* target, bool store);
     void            handle_connection_keepalive(mxs::RWBackend* target);
     bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
+    bool            create_one_connection();
     void            retry_query(GWBUF* querybuf, int delay = 1);
 
     bool should_replace_master(mxs::RWBackend* target);
