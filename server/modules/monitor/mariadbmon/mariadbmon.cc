@@ -80,7 +80,8 @@ void MariaDBMonitor::reset_server_info()
     // Next, initialize the data.
     for (auto mon_server : Monitor::m_servers)
     {
-        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_assume_unique_hostnames));
+        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(),
+                            m_assume_unique_hostnames, m_handle_event_scheduler));
     }
 }
 

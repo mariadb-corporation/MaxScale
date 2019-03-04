@@ -28,20 +28,12 @@ using maxbase::Duration;
 using maxbase::StopWatch;
 using maxsql::QueryResult;
 
-class MariaDBServer::EventInfo
-{
-public:
-    std::string database;
-    std::string name;
-    std::string definer;
-    std::string status;
-};
-
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index,
-                             bool assume_unique_hostnames)
+                             bool assume_unique_hostnames, bool query_events)
     : m_server_base(monitored_server)
     , m_config_index(config_index)
     , m_assume_unique_hostnames(assume_unique_hostnames)
+    , m_query_events(query_events)
 {
     mxb_assert(monitored_server);
 }
@@ -861,6 +853,10 @@ void MariaDBServer::monitor_server()
         {
             query_ok = update_gtids(&errmsg);
         }
+        if (query_ok && m_query_events)
+        {
+            query_ok = update_enabled_events();
+        }
     }
     else
     {
@@ -1245,22 +1241,24 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
     return NULL;
 }
 
-bool MariaDBServer::enable_events(json_t** error_out)
+bool MariaDBServer::enable_events(const EventNameSet& event_names, json_t** error_out)
 {
     int found_disabled_events = 0;
     int events_enabled = 0;
-    // Helper function which enables a slaveside disabled event.
-    ManipulatorFunc enabler = [this, &found_disabled_events, &events_enabled](const EventInfo& event,
-                                                                              json_t** error_out) {
-            if (event.status == "SLAVESIDE_DISABLED")
+
+    // Helper function which enables a disabled event if that event name is found in the events-set.
+    ManipulatorFunc enabler = [this, event_names, &found_disabled_events, &events_enabled](
+            const EventInfo& event, json_t** error_out) {
+        if (event_names.count(event.name) > 0
+            && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
+        {
+            found_disabled_events++;
+            if (alter_event(event, "ENABLE", error_out))
             {
-                found_disabled_events++;
-                if (alter_event(event, "ENABLE", error_out))
-                {
-                    events_enabled++;
-                }
+                events_enabled++;
             }
-        };
+        }
+    };
 
     bool rval = false;
     if (events_foreach(enabler, error_out))
@@ -1384,8 +1382,7 @@ bool MariaDBServer::events_foreach(ManipulatorFunc& func, json_t** error_out)
     while (event_info->next_row())
     {
         EventInfo event;
-        event.database = event_info->get_string(db_name_ind);
-        event.name = event_info->get_string(event_name_ind);
+        event.name = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
         event.definer = event_info->get_string(event_definer_ind);
         event.status = event_info->get_string(event_status_ind);
         func(event, error_out);
@@ -1405,51 +1402,40 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
 {
     bool rval = false;
     string error_msg;
-    // First switch to the correct database.
-    string use_db_query = string_printf("USE %s;", event.database.c_str());
-    if (execute_cmd(use_db_query, &error_msg))
+    // An ALTER EVENT by default changes the definer (owner) of the event to the monitor user.
+    // This causes problems if the monitor user does not have privileges to run
+    // the event contents. Prevent this by setting definer explicitly.
+    // The definer may be of the form user@host. If host includes %, then it must be quoted.
+    // For simplicity, quote the host always.
+    string quoted_definer;
+    auto loc_at = event.definer.find('@');
+    if (loc_at != string::npos)
     {
-        // An ALTER EVENT by default changes the definer (owner) of the event to the monitor user.
-        // This causes problems if the monitor user does not have privileges to run
-        // the event contents. Prevent this by setting definer explicitly.
-        // The definer may be of the form user@host. If host includes %, then it must be quoted.
-        // For simplicity, quote the host always.
-        string quoted_definer;
-        auto loc_at = event.definer.find('@');
-        if (loc_at != string::npos)
-        {
-            auto host_begin = loc_at + 1;
-            quoted_definer = event.definer.substr(0, loc_at + 1)
-                +   // host_begin may be the null-char if @ was the last char
-                "'" + event.definer.substr(host_begin, string::npos) + "'";
-        }
-        else
-        {
-            // Just the username
-            quoted_definer = event.definer;
-        }
-        string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s %s;",
-                                                 quoted_definer.c_str(),
-                                                 event.name.c_str(),
-                                                 target_status.c_str());
-        if (execute_cmd(alter_event_query, &error_msg))
-        {
-            rval = true;
-            const char FMT[] = "Event '%s' of database '%s' on server '%s' set to '%s'.";
-            MXS_NOTICE(FMT, event.name.c_str(), event.database.c_str(), name(), target_status.c_str());
-        }
-        else
-        {
-            const char FMT[] = "Could not alter event '%s' of database '%s' on server '%s': %s";
-            PRINT_MXS_JSON_ERROR(error_out, FMT, event.name.c_str(), event.database.c_str(), name(),
-                                 error_msg.c_str());
-        }
+        auto host_begin = loc_at + 1;
+        quoted_definer = event.definer.substr(0, loc_at + 1)
+            +   // host_begin may be the null-char if @ was the last char
+            "'" + event.definer.substr(host_begin, string::npos) + "'";
     }
     else
     {
-        const char FMT[] = "Could not switch to database '%s' on '%s': %s Event '%s' not altered.";
-        PRINT_MXS_JSON_ERROR(error_out, FMT, event.database.c_str(), name(), error_msg.c_str(),
-                             event.name.c_str());
+        // Just the username
+        quoted_definer = event.definer;
+    }
+
+    string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s %s;",
+                                             quoted_definer.c_str(),
+                                             event.name.c_str(),
+                                             target_status.c_str());
+    if (execute_cmd(alter_event_query, &error_msg))
+    {
+        rval = true;
+        const char FMT[] = "Event '%s' on server '%s' set to '%s'.";
+        MXS_NOTICE(FMT, event.name.c_str(), name(), target_status.c_str());
+    }
+    else
+    {
+        const char FMT[] = "Could not alter event '%s' on server '%s': %s";
+        PRINT_MXS_JSON_ERROR(error_out, FMT, event.name.c_str(), name(), error_msg.c_str());
     }
     return rval;
 }
@@ -1533,7 +1519,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 if (promotion.handle_events)
                 {
                     // TODO: Add query replying to enable_events
-                    bool events_enabled = enable_events(error_out);
+                    bool events_enabled = enable_events(promotion.events_to_enable, error_out);
                     general.time_remaining -= timer.restart();
                     if (!events_enabled)
                     {
@@ -2141,4 +2127,34 @@ bool MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveS
         }
     }   // 'stop_slave_conn' prints its own errors
     return success;
+}
+
+bool MariaDBServer::update_enabled_events()
+{
+    string error_msg;
+    // Get names of all enabled scheduled events on the server.
+    auto event_info = execute_query("SELECT Event_schema, Event_name FROM information_schema.EVENTS WHERE "
+                                    "Status = 'ENABLED';", &error_msg);
+    if (event_info.get() == NULL)
+    {
+                MXS_ERROR("Could not query events of '%s': %s Event handling can be disabled by "
+                          "setting '%s' to false.",
+                          name(), error_msg.c_str(), CN_HANDLE_EVENTS);
+        return false;
+    }
+
+    auto db_name_ind = 0;
+    auto event_name_ind = 1;
+
+    EventNameSet full_names;
+    full_names.reserve(event_info->get_row_count());
+
+    while (event_info->next_row())
+    {
+        string full_name = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
+        full_names.insert(full_name); // Ignore duplicates, they shouldn't exists.
+    }
+
+    m_enabled_events = std::move(full_names);
+    return true;
 }

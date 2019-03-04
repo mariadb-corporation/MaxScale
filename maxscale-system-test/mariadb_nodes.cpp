@@ -395,8 +395,7 @@ void Mariadb_nodes::create_users(int node)
     char dtr[PATH_MAX + 1024];
     // Create users for replication as well as the users that are used by the tests
     sprintf(str, "%s/create_user.sh", test_dir);
-    sprintf(dtr, "%s", access_homedir[node]);
-    copy_to_node(node, str, dtr);
+    copy_to_node(node, str, access_homedir[node]);
     ssh_node_f(node, false,
                "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
                user_name, password, access_homedir[0], socket_cmd[0]);

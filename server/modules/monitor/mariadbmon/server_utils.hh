@@ -13,6 +13,7 @@
 #pragma once
 #include "mariadbmon_common.hh"
 
+#include <unordered_set>
 #include <string>
 #include <vector>
 #include <maxbase/stopwatch.hh>
@@ -207,7 +208,8 @@ public:
     bool                      should_be_copied(std::string* ignore_reason_out) const;
 };
 
-typedef std::vector<SlaveStatus> SlaveStatusArray;
+using SlaveStatusArray = std::vector<SlaveStatus>;
+using EventNameSet = std::unordered_set<std::string>;
 
 enum class OperationType
 {
@@ -237,6 +239,13 @@ public:
     const std::string      sql_file;        // Path to file with SQL commands to run during op
     const SlaveStatusArray conns_to_copy;   // Slave connections the target should copy/merge
 
+    const EventNameSet events_to_enable; // Scheduled event names last seen on master.
+
     ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
-                    const std::string& sql_file, const SlaveStatusArray& conns_to_copy);
+                    const std::string& sql_file, const SlaveStatusArray& conns_to_copy,
+                    const EventNameSet& events_to_enable);
+
+    ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
+                    const std::string& sql_file);
+
 };

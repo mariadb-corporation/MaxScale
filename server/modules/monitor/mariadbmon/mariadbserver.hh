@@ -72,6 +72,17 @@ struct NodeData
 class MariaDBServer
 {
 public:
+    MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index,
+                  bool assume_unique_hostnames, bool query_events);
+
+    class EventInfo
+    {
+    public:
+        std::string name;       /**< Event name in <database.name> form */
+        std::string definer;    /**< Definer of the event */
+        std::string status;     /**< Status of the event */
+    };
+
     enum class server_type
     {
         UNKNOWN,            /* Totally unknown. Server has not been connected to yet. */
@@ -136,10 +147,10 @@ public:
      * 'update_replication_settings' before use. */
     ReplicationSettings m_rpl_settings;
 
-    bool m_print_update_errormsg = true;    /* Should an update error be printed? */
+    bool         m_query_events; /* Copy of monitor->m_handle_event_scheduler. TODO: move elsewhere */
+    EventNameSet m_enabled_events; /* Enabled scheduled events */
 
-    MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index,
-                  bool assume_unique_hostnames = true);
+    bool m_print_update_errormsg = true;    /* Should an update error be printed? */
 
     /**
      * Print server information to a json object.
@@ -330,12 +341,14 @@ public:
     bool run_sql_from_file(const std::string& path, json_t** error_out);
 
     /**
-     * Enable any "SLAVESIDE_DISABLED" events. Event scheduler is not touched.
+     * Enable any "SLAVESIDE_DISABLED" or "DISABLED events. Event scheduler is not touched. Only events
+     * with names matching an element in the event_names set are enabled.
      *
+     * @param event_names Names of events that should be enabled
      * @param error_out Error output
      * @return True if all SLAVESIDE_DISABLED events were enabled
      */
-    bool enable_events(json_t** error_out);
+    bool enable_events(const EventNameSet& event_names, json_t** error_out);
 
     /**
      * Disable any "ENABLED" events. Event scheduler is not touched.
@@ -517,7 +530,6 @@ public:
     void set_status(uint64_t bits);
 
 private:
-    class EventInfo;
     typedef std::function<void (const EventInfo&, json_t** error_out)> ManipulatorFunc;
 
     enum class StopMode
@@ -559,4 +571,6 @@ private:
     bool        set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
     bool        merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
     std::string generate_change_master_cmd(GeneralOpData& op, const SlaveStatus& slave_conn);
+
+    bool update_enabled_events();
 };

@@ -155,14 +155,21 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
     return accepted;
 }
 
-ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
-                                 bool handle_events, const std::string& sql_file,
-                                 const SlaveStatusArray& conns_to_copy)
+ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
+                                 const std::string& sql_file, const SlaveStatusArray& conns_to_copy,
+                                 const EventNameSet& events_to_enable)
     : target(target)
     , to_from_master(was_is_master)
     , handle_events(handle_events)
     , sql_file(sql_file)
     , conns_to_copy(conns_to_copy)
+    , events_to_enable(events_to_enable)
+{
+}
+
+ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
+                                 const std::string& sql_file)
+    : ServerOperation(target, was_is_master, handle_events, sql_file, {}, {})
 {
 }
 
