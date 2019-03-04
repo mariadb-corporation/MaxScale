@@ -91,11 +91,17 @@ export build_result=$?
 shellcheck `find . | grep "\.sh"` | grep -i "POSIX sh"
 if [ $? -eq 0 ] ; then
         echo "POSIX sh error are found in the scripts"
-#        exit 1
 fi
 
-${script_dir}/create_remote_repo.sh
-${script_dir}/copy_repos.sh
+if [ ${build_result} -eq 0 ]; then
+        ${script_dir}/create_remote_repo.sh
+        export build_result=$?
+fi
+
+if [ ${build_result} -eq 0 ]; then
+        ${script_dir}/copy_repos.sh
+        export build_result=$?
+fi
 
 echo "Removing locks and destroying VM"
 
