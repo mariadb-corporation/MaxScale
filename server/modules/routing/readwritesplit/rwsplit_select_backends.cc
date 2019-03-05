@@ -22,6 +22,7 @@
 #include <functional>
 #include <random>
 #include <iostream>
+#include <array>
 
 #include <maxbase/stopwatch.hh>
 #include <maxscale/router.h>
@@ -201,6 +202,11 @@ BackendSelectFunction get_backend_select_function(select_criteria_t sc)
     return backend_cmp_current_load;
 }
 
+namespace
+{
+// Buffers for sorting the servers, thread_local to avoid repeated memory allocations
+thread_local std::array<SRWBackendVector, 3> priority_map;
+}
 
 /**
  * @brief Find the best slave candidate for routing reads.
@@ -216,7 +222,6 @@ SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
                                              bool masters_accepts_reads)
 {
     // Group backends by priority. The set of highest priority backends will then compete.
-    std::map<int, SRWBackendVector> priority_map;
     int best_priority {INT_MAX};    // low numbers are high priority
 
     for (auto& psBackend : backends)
@@ -230,16 +235,16 @@ SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
         {
             if (!is_busy)
             {
-                priority = 1;   // highest priority, idle servers
+                priority = 0;   // highest priority, idle servers
             }
             else
             {
-                priority = 13;      // lowest priority, busy servers
+                priority = 2;       // lowest priority, busy servers
             }
         }
         else
         {
-            priority = 2;   // idle masters with masters_accept_reads==false
+            priority = 1;   // idle masters with masters_accept_reads==false
         }
 
         priority_map[priority].push_back(psBackend);
@@ -247,8 +252,14 @@ SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
     }
 
     auto best = select(priority_map[best_priority]);
+    auto rval = std::find(backends.begin(), backends.end(), *best);
 
-    return std::find(backends.begin(), backends.end(), *best);
+    for (auto& a : priority_map)
+    {
+        a.clear();
+    }
+
+    return rval;
 }
 
 /**
