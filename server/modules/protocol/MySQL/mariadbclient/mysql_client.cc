@@ -1118,8 +1118,6 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
             // is thread and not session specific.
             qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
         }
-
-        session_retain_statement(session, read_buffer);
     }
     /** Update the current protocol command being executed */
     else if (!process_client_commands(dcb, nbytes_read, &read_buffer))
@@ -1671,6 +1669,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
         {
             // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
             packetbuf = gwbuf_make_contiguous(packetbuf);
+            session_retain_statement(session, packetbuf);
 
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
 
