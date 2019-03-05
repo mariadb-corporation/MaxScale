@@ -199,15 +199,7 @@ Service::Service(const std::string& service_name,
     log_auth_warnings = config_get_bool(params, CN_LOG_AUTH_WARNINGS);
     strip_db_esc = config_get_bool(params, CN_STRIP_DB_ESC);
     session_track_trx_state = config_get_bool(params, CN_SESSION_TRACK_TRX_STATE);
-
-    if (config_get_param(params, CN_RETAIN_LAST_STATEMENTS))
-    {
-        retain_last_statements = config_get_integer(params, CN_RETAIN_LAST_STATEMENTS);
-    }
-    else
-    {
-        retain_last_statements = -1; // Indicates that it has not been set.
-    }
+    retain_last_statements = config_get_integer(params, CN_RETAIN_LAST_STATEMENTS);
 
     /**
      * At service start last update is set to config->users_refresh_time seconds earlier.
