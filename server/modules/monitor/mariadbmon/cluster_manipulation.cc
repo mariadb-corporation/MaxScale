@@ -234,6 +234,9 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         }
     }
 
+    // Also record the previous master, needed for scheduled events.
+    MariaDBServer* old_master = (m_master && m_master->is_master()) ? m_master : nullptr;
+
     bool rval = false;
     if (new_master)
     {
@@ -333,11 +336,19 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
 
                 if (m_handle_event_scheduler)
                 {
-                    if (!new_master->enable_events(error_out))
+                    if (old_master)
                     {
-                        error = true;
-                        PRINT_MXS_JSON_ERROR(error_out, "Could not enable events on '%s': %s",
-                                             new_master->name(), error_msg.c_str());
+                        if (!new_master->enable_events(old_master->m_enabled_events, error_out))
+                        {
+                            error = true;
+                            PRINT_MXS_JSON_ERROR(error_out, "Could not enable events on '%s': %s",
+                                                 new_master->name(), error_msg.c_str());
+                        }
+                    }
+                    else
+                    {
+                        MXS_WARNING("No scheduled events were enabled on '%s' because previous master is "
+                                    "unknown. Check events manually.", new_master->name());
                     }
                 }
 
@@ -625,8 +636,8 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             {
                 // Assume that server is an old master which was failed over. Even if this is not really
                 // the case, the following is unlikely to do damage.
-                ServerOperation demotion(joinable, true, /* treat as old master */
-                                         m_handle_event_scheduler, m_demote_sql_file, {} /* unused */);
+                ServerOperation demotion(joinable, true,  /* treat as old master */
+                                         m_handle_event_scheduler, m_demote_sql_file);
                 if (joinable->demote(general, demotion))
                 {
                     MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
@@ -1397,8 +1408,8 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
             auto time_limit = maxbase::Duration((double)m_failover_timeout);
             bool promoting_to_master = (demotion_target == m_master);
             ServerOperation promotion(promotion_target, promoting_to_master,
-                                         m_handle_event_scheduler, m_promote_sql_file,
-                                         demotion_target->m_slave_status);
+                                      m_handle_event_scheduler, m_promote_sql_file,
+                                      demotion_target->m_slave_status, demotion_target->m_enabled_events);
             GeneralOpData general(m_replication_user, m_replication_password, error_out, time_limit);
             rval.reset(new FailoverParams(promotion, demotion_target, general));
         }
@@ -1687,9 +1698,10 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         maxbase::Duration time_limit((double)m_switchover_timeout);
         bool master_swap = (demotion_target == m_master);
         ServerOperation promotion(promotion_target, master_swap, m_handle_event_scheduler,
-                                  m_promote_sql_file, demotion_target->m_slave_status);
+                                  m_promote_sql_file,
+                                  demotion_target->m_slave_status, demotion_target->m_enabled_events);
         ServerOperation demotion(demotion_target, master_swap, m_handle_event_scheduler,
-                                 m_demote_sql_file, promotion_target->m_slave_status);
+                                 m_demote_sql_file, promotion_target->m_slave_status, {} /* unused */);
         GeneralOpData general(m_replication_user, m_replication_password, error_out, time_limit);
         rval.reset(new SwitchoverParams(promotion, demotion, general));
     }
