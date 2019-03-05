@@ -1415,9 +1415,9 @@ bool monitor_serialize(const Monitor* monitor)
     return rval;
 }
 
-void mon_hangup_failed_servers(Monitor* monitor)
+void Monitor::hangup_failed_servers()
 {
-    for (MXS_MONITORED_SERVER* ptr : monitor->m_servers)
+    for (MXS_MONITORED_SERVER* ptr : m_servers)
     {
         if (mon_status_changed(ptr) && (!(ptr->server->is_usable()) || !(ptr->server->is_in_cluster())))
         {
@@ -1438,17 +1438,15 @@ void mon_report_query_error(MXS_MONITORED_SERVER* db)
 /**
  * Check if admin is requesting setting or clearing maintenance status on the server and act accordingly.
  * Should be called at the beginning of a monitor loop.
- *
- * @param monitor The target monitor
  */
-void monitor_check_maintenance_requests(Monitor* monitor)
+void Monitor::check_maintenance_requests()
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
      * maintenance flag should be read-written atomically to prevent missing a value. */
-    int flags_changed = atomic_exchange_int(&monitor->check_status_flag, Monitor::STATUS_FLAG_NOCHECK);
+    int flags_changed = atomic_exchange_int(&check_status_flag, Monitor::STATUS_FLAG_NOCHECK);
     if (flags_changed != Monitor::STATUS_FLAG_NOCHECK)
     {
-        for (auto ptr : monitor->m_servers)
+        for (auto ptr : m_servers)
         {
             // The only server status bit the admin may change is the [Maintenance] bit.
             int admin_msg = atomic_exchange_int(&ptr->status_request,
@@ -1937,12 +1935,13 @@ static bool process_data_file(Monitor* monitor,
     return true;
 }
 
-void store_server_journal(Monitor* monitor, MXS_MONITORED_SERVER* master)
+void Monitor::store_server_journal(MXS_MONITORED_SERVER* master)
 {
+    auto monitor = this; // TODO: cleanup later
     /** Calculate how much memory we need to allocate */
     uint32_t size = MMB_LEN_SCHEMA_VERSION + MMB_LEN_CRC32;
 
-    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
+    for (MXS_MONITORED_SERVER* db : m_servers)
     {
         /** Each server is stored as a type byte and a null-terminated string
          * followed by eight byte server status. */
@@ -2001,8 +2000,9 @@ void store_server_journal(Monitor* monitor, MXS_MONITORED_SERVER* master)
     MXS_FREE(data);
 }
 
-void load_server_journal(Monitor* monitor, MXS_MONITORED_SERVER** master)
+void Monitor::load_server_journal(MXS_MONITORED_SERVER** master)
 {
+    auto monitor = this; // TODO: cleanup later
     char path[PATH_MAX];
     FILE* file = open_data_file(monitor, path);
 
@@ -2137,45 +2137,43 @@ bool Monitor::journal_is_stale() const
     return is_stale;
 }
 
-MXS_MONITORED_SERVER* mon_get_monitored_server(const Monitor* mon, SERVER* search_server)
+MXS_MONITORED_SERVER* Monitor::get_monitored_server(SERVER* search_server)
 {
-    mxb_assert(mon && search_server);
-    for (MXS_MONITORED_SERVER* iter : mon->m_servers)
+    mxb_assert(search_server);
+    for (const auto iter : m_servers)
     {
         if (iter->server == search_server)
         {
             return iter;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
-std::vector<MXS_MONITORED_SERVER*> mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
-                                                          const char* key, const Monitor* mon,
-                                                          bool* error_out)
+std::vector<MXS_MONITORED_SERVER*> Monitor::get_monitored_serverlist(const string& key, bool* error_out)
 {
     std::vector<MXS_MONITORED_SERVER*> monitored_array;
     // Check that value exists.
-    if (!params->contains(key))
+    if (!parameters.contains(key))
     {
         return monitored_array;
     }
 
     string name_error;
-    auto servers = params->get_server_list(key, &name_error);
+    auto servers = parameters.get_server_list(key, &name_error);
     if (!servers.empty())
     {
         // All servers in the array must be monitored by the given monitor.
         for (auto elem : servers)
         {
-            MXS_MONITORED_SERVER* mon_serv = mon_get_monitored_server(mon, elem);
+            MXS_MONITORED_SERVER* mon_serv = get_monitored_server(elem);
             if (mon_serv)
             {
                 monitored_array.push_back(mon_serv);
             }
             else
             {
-                MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), mon->m_name);
+                MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), m_name);
                 *error_out = true;
             }
         }
@@ -2187,7 +2185,8 @@ std::vector<MXS_MONITORED_SERVER*> mon_config_get_servers(const MXS_CONFIG_PARAM
     }
     else
     {
-        MXS_ERROR("Serverlist setting '%s' contains invalid server name '%s'.", key, name_error.c_str());
+        MXS_ERROR("Serverlist setting '%s' contains invalid server name '%s'.",
+                  key.c_str(), name_error.c_str());
         *error_out = true;
     }
 
@@ -2218,7 +2217,7 @@ const char WRN_REQUEST_OVERWRITTEN[] =
 
 bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    MXS_MONITORED_SERVER* msrv = mon_get_monitored_server(this, srv);
+    MXS_MONITORED_SERVER* msrv = get_monitored_server(srv);
     mxb_assert(msrv);
 
     if (!msrv)
@@ -2281,7 +2280,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 
 bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    MXS_MONITORED_SERVER* msrv = mon_get_monitored_server(this, srv);
+    MXS_MONITORED_SERVER* msrv = get_monitored_server(srv);
     mxb_assert(msrv);
 
     if (!msrv)
@@ -2383,7 +2382,6 @@ namespace maxscale
 
 MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)
-    , m_monitor(this)
     , m_master(NULL)
     , m_thread_running(false)
     , m_shutdown(0)
@@ -2770,7 +2768,7 @@ bool MonitorWorker::pre_run()
         m_thread_running.store(true, std::memory_order_release);
         m_semaphore.post();
 
-        load_server_journal(m_monitor, &m_master);
+        load_server_journal(&m_master);
         pre_loop();
         delayed_call(1, &MonitorWorker::call_run_one_tick, this);
     }
@@ -2823,7 +2821,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
 
 void MonitorWorker::run_one_tick()
 {
-    monitor_check_maintenance_requests(m_monitor);
+    check_maintenance_requests();
 
     tick();
     mxb::atomic::add(&m_ticks, 1, mxb::atomic::RELAXED);
@@ -2832,8 +2830,8 @@ void MonitorWorker::run_one_tick()
 
     process_state_changes();
 
-    mon_hangup_failed_servers(m_monitor);
-    store_server_journal(m_monitor, m_master);
+    hangup_failed_servers();
+    store_server_journal(m_master);
 }
 
 bool MonitorWorker::immediate_tick_required() const

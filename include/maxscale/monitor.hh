@@ -337,6 +337,47 @@ protected:
     virtual void server_removed(SERVER* server);
 
     /**
+     * Get an array of monitored servers. If a server defined in the config setting is not monitored by
+     * this monitor, the returned array will be empty.
+     *
+     * @param key Setting name
+     * @param error_out Set to true if an error occurs
+     * @return Output array
+     */
+    std::vector<MXS_MONITORED_SERVER*> get_monitored_serverlist(const std::string& key, bool* error_out);
+
+    /**
+     * Find the monitored server representing the server.
+     *
+     * @param search_server Server to search for
+     * @return Found monitored server or NULL if not found
+     */
+    MXS_MONITORED_SERVER* get_monitored_server(SERVER* search_server);
+
+    /**
+     * @brief Load a journal of server states
+     *
+     * @param master  Set to point to the current master
+     */
+    void load_server_journal(MXS_MONITORED_SERVER** master);
+
+    /**
+     * @brief Store a journal of server states
+     *
+     * @param master  The current master server or NULL if no master exists
+     */
+    void store_server_journal(MXS_MONITORED_SERVER* master);
+
+    void check_maintenance_requests();
+
+    /**
+     * @brief Hangup connections to failed servers
+     *
+     * Injects hangup events for DCB that are connected to servers that are down.
+     */
+    void hangup_failed_servers();
+
+    /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
      */
@@ -467,8 +508,6 @@ void monitor_clear_pending_status(MXS_MONITORED_SERVER* mserver, uint64_t bit);
  */
 void monitor_set_pending_status(MXS_MONITORED_SERVER* mserver, uint64_t bit);
 
-void monitor_check_maintenance_requests(Monitor* monitor);
-
 bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv);
 bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv);
 
@@ -489,15 +528,6 @@ mxs_connect_result_t mon_ping_or_connect_to_db(const MXS_MONITORED_SERVER::Conne
 bool                 mon_connection_is_ok(mxs_connect_result_t connect_result);
 void                 mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval);
 const char*          mon_get_event_name(mxs_monitor_event_t event);
-
-/**
- * @brief Hangup connections to failed servers
- *
- * Injects hangup events for DCB that are connected to servers that are down.
- *
- * @param monitor Monitor object
- */
-void mon_hangup_failed_servers(Monitor* monitor);
 
 /**
  * @brief Report query errors
@@ -534,45 +564,6 @@ json_t* monitor_list_to_json(const char* host);
  * @return Array of monitor links or NULL if no relations exist
  */
 json_t* monitor_relations_to_server(const SERVER* server, const char* host);
-
-/**
- * @brief Store a journal of server states
- *
- * @param monitor Monitor to journal
- * @param master  The current master server or NULL if no master exists
- */
-void store_server_journal(Monitor* monitor, MXS_MONITORED_SERVER* master);
-
-/**
- * @brief Load a journal of server states
- *
- * @param monitor Monitor where journal is loaded
- * @param master  Set to point to the current master
- */
-void load_server_journal(Monitor* monitor, MXS_MONITORED_SERVER** master);
-
-/**
- * Find the monitored server representing the server.
- *
- * @param mon Cluster monitor
- * @param search_server Server to search for
- * @return Found monitored server or NULL if not found
- */
-MXS_MONITORED_SERVER* mon_get_monitored_server(const Monitor* mon, SERVER* search_server);
-
-/**
- * Get an array of monitored servers. If a server defined in the config setting is not monitored by
- * the given monitor, the returned array will be empty.
- *
- * @param params Config parameters
- * @param key Setting name
- * @param mon Monitor which should monitor the servers
- * @param error_out Set to true if an error occurs
- * @return Output array
- */
-std::vector<MXS_MONITORED_SERVER*> mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
-                                                          const char* key, const Monitor* mon,
-                                                          bool* error_out);
 
 // Function for waiting one monitor interval
 void monitor_debug_wait();
@@ -771,7 +762,6 @@ protected:
      */
     virtual bool immediate_tick_required() const;
 
-    Monitor*              m_monitor;    /**< The generic monitor structure. */
     MXS_MONITORED_SERVER* m_master;     /**< Master server */
 
 private:

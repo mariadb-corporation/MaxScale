@@ -218,7 +218,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_excluded_servers.clear();
     bool settings_ok = true;
     bool list_error = false;
-    auto excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, m_monitor, &list_error);
+    auto excluded = get_monitored_serverlist(CN_NO_PROMOTE_SERVERS, &list_error);
     if (list_error)
     {
         settings_ok = false;
