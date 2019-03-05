@@ -250,17 +250,20 @@ static int database_cb(void* data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-static bool check_database(sqlite3* handle, const char* database)
+static bool check_database(MYSQL_AUTH* instance, sqlite3* handle, const char* database)
 {
     bool rval = true;
 
     if (*database)
     {
         rval = false;
-        size_t len = sizeof(mysqlauth_validate_database_query) + strlen(database) + 1;
+        const char* query = instance->lower_case_table_names ?
+            mysqlauth_validate_database_query_lower :
+            mysqlauth_validate_database_query;
+        size_t len = strlen(query) + strlen(database) + 1;
         char sql[len];
 
-        sprintf(sql, mysqlauth_validate_database_query, database);
+        sprintf(sql, query, database);
 
         char* err;
 
@@ -391,7 +394,7 @@ int validate_mysql_user(MYSQL_AUTH* instance,
                               session->client_sha1))
         {
             /** Password is OK, check that the database exists */
-            if (check_database(handle, session->db))
+            if (check_database(instance, handle, session->db))
             {
                 rval = MXS_AUTH_SUCCEEDED;
             }

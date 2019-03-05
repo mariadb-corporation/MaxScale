@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <maxbase/stacktrace.hh>
 
 #include "mariadb_func.h"
@@ -120,6 +121,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     , no_vm_revert(true)
     , threads(4)
     , use_ipv6(false)
+    , use_valgrind(false)
 {
     std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
@@ -293,7 +295,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     repl->take_snapshot_command = take_snapshot_command;
     repl->revert_snapshot_command = revert_snapshot_command;
 
-    maxscales = new Maxscales("maxscale", test_dir, verbose);
+    maxscales = new Maxscales("maxscale", test_dir, verbose, use_valgrind);
 
     maxscales->use_ipv6 = use_ipv6;
     maxscales->ssl = ssl;
@@ -404,6 +406,16 @@ TestConnections::~TestConnections()
         // galera->disable_ssl();
     }
 
+    if (use_valgrind)
+    {
+        // stop all Maxscales to get proper Valgrind logs
+        for (int i = 0; i < maxscales->N; i++)
+        {
+            stop_maxscale(i);
+        }
+        sleep(15);      // sleep to let logs be written do disks
+    }
+
     copy_all_logs();
 
     /* Temporary disable snapshot revert due to Galera failures
@@ -482,14 +494,12 @@ void TestConnections::expect(bool result, const char* format, ...)
 
 void TestConnections::read_env()
 {
-
     char* env;
 
     if (verbose)
     {
         printf("Reading test setup configuration from environmental variables\n");
     }
-
 
     // env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
 
@@ -598,6 +608,12 @@ void TestConnections::read_env()
     if ((env != NULL) && ((strcasecmp(env, "no") == 0) || (strcasecmp(env, "false") == 0)))
     {
         no_vm_revert = false;
+    }
+
+    env = getenv("use_valgrind");
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
+    {
+        use_valgrind = true;
     }
 }
 
@@ -770,17 +786,24 @@ void TestConnections::init_maxscale(int m)
 
 void TestConnections::copy_one_mariadb_log(int i, std::string filename)
 {
-    int exit_code;
-    char* mariadb_log = repl->ssh_node_output(i, "cat /var/lib/mysql/*.err 2>/dev/null", true, &exit_code);
-    FILE* f = fopen(filename.c_str(), "w");
-
-    if (f != NULL)
+    auto log_retrive_commands =
     {
-        fwrite(mariadb_log, sizeof(char), strlen(mariadb_log), f);
-        fclose(f);
-    }
+        "cat /var/lib/mysql/*.err",
+        "cat /var/log/syslog | grep mysql",
+        "cat /var/log/messages | grep mysql"
+    };
 
-    free(mariadb_log);
+    int j = 1;
+
+    for (auto cmd : log_retrive_commands)
+    {
+        std::ofstream outfile(filename + std::to_string(j++));
+
+        if (outfile)
+        {
+            outfile << repl->ssh_output(cmd, i).second;
+        }
+    }
 }
 
 int TestConnections::copy_mariadb_logs(Mariadb_nodes* repl,
@@ -793,8 +816,8 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes* repl,
     {
         for (int i = 0; i < repl->N; i++)
         {
-            if (strcmp(repl->IP[i], "127.0.0.1") != 0)      // Do not copy MariaDB logs in case of local
-                                                            // backend
+            // Do not copy MariaDB logs in case of local backend
+            if (strcmp(repl->IP[i], "127.0.0.1") != 0)
             {
                 char str[4096];
                 sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
@@ -857,21 +880,21 @@ int TestConnections::copy_maxscale_logs(double timestamp)
         if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
         {
             int rc = maxscales->ssh_node_f(i, true,
-                                  "rm -rf %s/logs;"
-                                  "mkdir %s/logs;"
-                                  "cp %s/*.log %s/logs/;"
-                                  "cp /tmp/core* %s/logs/;"
-                                  "cp %s %s/logs/;"
-                                  "chmod 777 -R %s/logs;"
-                                  "ls /tmp/core* && exit 42;",
-                                  maxscales->access_homedir[i],
-                                  maxscales->access_homedir[i],
-                                  maxscales->maxscale_log_dir[i],
-                                  maxscales->access_homedir[i],
-                                  maxscales->access_homedir[i],
-                                  maxscales->maxscale_cnf[i],
-                                  maxscales->access_homedir[i],
-                                  maxscales->access_homedir[i]);
+                                           "rm -rf %s/logs;"
+                                           "mkdir %s/logs;"
+                                           "cp %s/*.log %s/logs/;"
+                                           "cp /tmp/core* %s/logs/;"
+                                           "cp %s %s/logs/;"
+                                           "chmod 777 -R %s/logs;"
+                                           "ls /tmp/core* && exit 42;",
+                                           maxscales->access_homedir[i],
+                                           maxscales->access_homedir[i],
+                                           maxscales->maxscale_log_dir[i],
+                                           maxscales->access_homedir[i],
+                                           maxscales->access_homedir[i],
+                                           maxscales->maxscale_cnf[i],
+                                           maxscales->access_homedir[i],
+                                           maxscales->access_homedir[i]);
             sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
             maxscales->copy_from_node(i, sys, log_dir_i);
             expect(rc != 42, "Test should not generate core files");
@@ -1158,9 +1181,9 @@ bool TestConnections::replicate_from_master(int m)
     repl->execute_query_all_nodes("STOP SLAVE");
 
     /** Clean up MaxScale directories */
-    maxscales->ssh_node(m, "service maxscale stop", true);
+    maxscales->stop_maxscale(m);
     prepare_binlog(m);
-    maxscales->ssh_node(m, "service maxscale start", true);
+    maxscales->start_maxscale(m);
 
     char log_file[256] = "";
     char log_pos[256] = "4";
@@ -1368,11 +1391,13 @@ int TestConnections::find_connected_slave1(int m)
 
 int TestConnections::check_maxscale_processes(int m, int expected)
 {
+    const char* ps_cmd = use_valgrind ?
+        "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
+        "ps -C maxscale | grep maxscale | wc -l";
+
     int exit_code;
-    char* maxscale_num = maxscales->ssh_node_output(m,
-                                                    "ps -C maxscale | grep maxscale | wc -l",
-                                                    false,
-                                                    &exit_code);
+    char* maxscale_num = maxscales->ssh_node_output(m, ps_cmd, false, &exit_code);
+
     if ((maxscale_num == NULL) || (exit_code != 0))
     {
         return -1;
@@ -1385,12 +1410,10 @@ int TestConnections::check_maxscale_processes(int m, int expected)
 
     if (atoi(maxscale_num) != expected)
     {
-        tprintf("%s maxscale processes detected, trying agin in 5 seconds\n", maxscale_num);
+        tprintf("%s maxscale processes detected, trying again in 5 seconds\n", maxscale_num);
         sleep(5);
-        maxscale_num = maxscales->ssh_node_output(m,
-                                                  "ps -C maxscale | grep maxscale | wc -l",
-                                                  false,
-                                                  &exit_code);
+        maxscale_num = maxscales->ssh_node_output(m, ps_cmd, false, &exit_code);
+
         if (atoi(maxscale_num) != expected)
         {
             add_result(1, "Number of MaxScale processes is not %d, it is %s\n", expected, maxscale_num);
@@ -1402,7 +1425,7 @@ int TestConnections::check_maxscale_processes(int m, int expected)
 
 int TestConnections::stop_maxscale(int m)
 {
-    int res = maxscales->ssh_node(m, "service maxscale stop", true);
+    int res = maxscales->stop_maxscale(m);
     check_maxscale_processes(m, 0);
     fflush(stdout);
     return res;
@@ -1410,7 +1433,7 @@ int TestConnections::stop_maxscale(int m)
 
 int TestConnections::start_maxscale(int m)
 {
-    int res = maxscales->ssh_node(m, "service maxscale start", true);
+    int res = maxscales->start_maxscale(m);
     check_maxscale_processes(m, 1);
     fflush(stdout);
     return res;
@@ -1436,7 +1459,6 @@ int TestConnections::check_maxscale_alive(int m)
     maxscales->close_maxscale_connections(m);
     add_result(global_result - gr, "Maxscale is not alive\n");
     stop_timeout();
-
     check_maxscale_processes(m, 1);
 
     return global_result - gr;
@@ -2040,14 +2062,14 @@ void TestConnections::check_current_connections(int m, int value)
 
 int TestConnections::take_snapshot(char* snapshot_name)
 {
-    char str[4096];
+    char str[strlen(take_snapshot_command) + strlen(snapshot_name) + 2];
     sprintf(str, "%s %s", take_snapshot_command, snapshot_name);
     return system(str);
 }
 
 int TestConnections::revert_snapshot(char* snapshot_name)
 {
-    char str[4096];
+    char str[strlen(revert_snapshot_command) + strlen(snapshot_name) + 2];
     sprintf(str, "%s %s", revert_snapshot_command, snapshot_name);
     return system(str);
 }

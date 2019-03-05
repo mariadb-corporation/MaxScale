@@ -121,7 +121,3 @@ If test run was executed with parameter 'do_not_destroy' set yo 'yes' please do 
 [destroy](http://max-tst-01.mariadb.com:8089/view/axilary/job/destroy/) against your 'target'
 
 This job also have to be executed if test run job crashed or it was interrupted.
-
-In case of build or test job crash, interruption, Jenkins crash during Vagrant operation it is possible that Vagrant lock
-stays in locked state and no other job can progress (job can be started, but it is waiting for Vagrant lock -
-'/home/vagrant/vagrant_lock' can be seen in the job log). In this case lock can be removed by [remove_lock](http://max-tst-01.mariadb.com:8089/view/axilary/job/remove_lock/) job.

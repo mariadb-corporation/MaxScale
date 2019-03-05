@@ -81,6 +81,8 @@ static const char mysqlauth_skip_auth_query[] =
 /** Query that checks that the database exists */
 static const char mysqlauth_validate_database_query[] =
     "SELECT * FROM " MYSQLAUTH_DATABASES_TABLE_NAME " WHERE db = '%s' LIMIT 1";
+static const char mysqlauth_validate_database_query_lower[] =
+    "SELECT * FROM " MYSQLAUTH_DATABASES_TABLE_NAME " WHERE LOWER(db) = LOWER('%s') LIMIT 1";
 
 /** Delete query used to clean up the database before loading new users */
 static const char delete_users_query[] = "DELETE FROM " MYSQLAUTH_USERS_TABLE_NAME;

@@ -64,6 +64,5 @@ int main(int argc, char *argv[])
     execute_query_silent(test.repl->nodes[0], "DROP USER user@'%%';");
     execute_query_silent(test.repl->nodes[0], "DROP TABLE test.t1");
     test.repl->disconnect();
-
     return test.global_result;
 }

@@ -81,7 +81,7 @@ cd ${script_dir}/../../
 rm -rf build
 
 mkdir build && cd build
-cmake .. -DBUILDNAME=$JOB_NAME-$BUILD_NUMBER-$target -DBUILD_SYSTEM_TESTS=Y
+cmake .. -DBUILDNAME=$JOB_NAME-$BUILD_NUMBER-$target -DBUILD_SYSTEM_TESTS=Y -DCMAKE_BUILD_TYPE=Debug
 cd maxscale-system-test
 make
 

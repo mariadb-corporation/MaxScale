@@ -21,13 +21,6 @@ eval "cat <<EOF
 $(<${script_dir}/templates/install.json.template)
 " 2> /dev/null > $MDBCI_VM_PATH/${name}.json
 
-while [ -f ~/vagrant_lock ]
-do
-	sleep 5
-done
-touch ~/vagrant_lock
-echo $JOB_NAME-$BUILD_NUMBER >> ~/vagrant_lock
-
 # destroying existing box
 if [ -d "install_$box" ]; then
         ${mdbci_dir}/mdbci destroy $name
@@ -42,12 +35,12 @@ if [ $? != 0 ] ; then
 		if [ "x$do_not_destroy_vm" != "xyes" ] ; then
                         ${mdbci_dir}/mdbci destroy $name
 		fi
-		rm ~/vagrant_lock
+		rm -f ~/vagrant_lock
 		exit 1
 	fi
 fi
 
-rm ~/vagrant_lock
+rm -f ~/vagrant_lock
 
 # get VM info
 export sshuser=`${mdbci_dir}/mdbci ssh --command 'whoami' --silent $name/maxscale 2> /dev/null | tr -d '\r'`

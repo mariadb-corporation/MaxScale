@@ -63,13 +63,6 @@ if [ "$already_running" != "ok" ]; then
 $(<${script_dir}/templates/build.json.template)
 " 2> /dev/null > $MDBCI_VM_PATH/${name}.json
 
-	while [ -f ~/vagrant_lock ]
-	do
-		sleep 5
-	done
-	touch ~/vagrant_lock
-	echo $JOB_NAME-$BUILD_NUMBER >> ~/vagrant_lock
-
 	# starting VM for build
 	echo "Generating build VM template"
 	${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json generate $name
@@ -77,7 +70,6 @@ $(<${script_dir}/templates/build.json.template)
 	${mdbci_dir}/mdbci up --attempts=1 $name
 	if [ $? != 0 ] ; then
 		echo "Error starting VM"
-		rm ~/vagrant_lock
 		exit 1
 	fi
 	echo "copying public keys to VM"
@@ -92,9 +84,6 @@ export sshkey=`${mdbci_dir}/mdbci show keyfile $name/build --silent 2> /dev/null
 export scpopt="-i $sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectTimeout=120 "
 export sshopt="$scpopt $sshuser@$IP"
 
-echo "Release Vagrant lock"
-rm ~/vagrant_lock
-
 echo "Starting build"
 ${script_dir}/remote_build.sh
 export build_result=$?
@@ -102,11 +91,17 @@ export build_result=$?
 shellcheck `find . | grep "\.sh"` | grep -i "POSIX sh"
 if [ $? -eq 0 ] ; then
         echo "POSIX sh error are found in the scripts"
-#        exit 1
 fi
 
-${script_dir}/create_remote_repo.sh
-${script_dir}/copy_repos.sh
+if [ ${build_result} -eq 0 ]; then
+        ${script_dir}/create_remote_repo.sh
+        export build_result=$?
+fi
+
+if [ ${build_result} -eq 0 ]; then
+        ${script_dir}/copy_repos.sh
+        export build_result=$?
+fi
 
 echo "Removing locks and destroying VM"
 

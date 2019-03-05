@@ -169,6 +169,7 @@ int RDS::destroy_route_tables()
     json_t* root;
     char cmd[1024];
     char* json;
+    int res = 0;
 
     sprintf(cmd, "aws ec2 describe-vpcs --vpc-ids=%s", vpc_id_intern);
     if (execute_cmd(cmd, &json))
@@ -197,11 +198,11 @@ int RDS::destroy_route_tables()
         if (strcmp(vpc_id_intern, vpc_id) == 0)
         {
             sprintf(cmd, "aws ec2 delete-route-table --route-table-id %s", rt_id);
-            system(cmd);
+            res += system(cmd);
         }
     }
 
-    return 0;
+    return res;
 }
 
 int RDS::detach_and_destroy_gw()
@@ -477,6 +478,7 @@ int RDS::create_cluster()
     char* result;
     json_error_t error;
     size_t i;
+    int res = 0;
 
     sprintf(cmd,
             "aws rds create-db-cluster --database-name=test --engine=aurora --master-username=skysql --master-user-password=skysqlrds --db-cluster-identifier=%s --db-subnet-group-name=%s",
@@ -503,7 +505,7 @@ int RDS::create_cluster()
         sprintf(cmd,
                 "aws ec2 authorize-security-group-ingress --group-id %s --protocol tcp --port 3306 --cidr 0.0.0.0/0",
                 sg_id);
-        system(cmd);
+        res += system(cmd);
     }
     sg_intern = sg_id;
 
@@ -514,9 +516,9 @@ int RDS::create_cluster()
                 cluster_name_intern,
                 i);
         printf("%s\n", cmd);
-        system(cmd);
+        res += system(cmd);
     }
-    return 0;
+    return res;
 }
 
 int RDS::get_writer(const char** writer_name)
