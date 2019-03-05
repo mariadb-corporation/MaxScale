@@ -56,6 +56,7 @@ typedef enum
     GWBUF_TYPE_RESULT         = (1 << 3),
     GWBUF_TYPE_REPLY_OK       = (1 << 4),
     GWBUF_TYPE_REPLAYED       = (1 << 5),
+    GWBUF_TYPE_TRACK_STATE    = (1 << 6),
 } gwbuf_type_t;
 
 #define GWBUF_IS_TYPE_UNDEFINED(b)     ((b)->gwbuf_type == 0)
@@ -65,7 +66,10 @@ typedef enum
 #define GWBUF_IS_REPLY_OK(b)           ((b)->gwbuf_type & GWBUF_TYPE_REPLY_OK)
 
 // True if the query is not initiated by the client but an internal replaying mechanism
-#define GWBUF_IS_REPLAYED(b)           ((b)->gwbuf_type & GWBUF_TYPE_REPLAYED)
+#define GWBUF_IS_REPLAYED(b) ((b)->gwbuf_type & GWBUF_TYPE_REPLAYED)
+
+// Track session state change response
+#define GWBUF_SHOULD_TRACK_STATE(b) ((b)->gwbuf_type & GWBUF_TYPE_TRACK_STATE)
 
 typedef enum
 {

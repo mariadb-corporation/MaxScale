@@ -280,6 +280,11 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         }
         else if (TARGET_IS_MASTER(route_target))
         {
+            if (m_config.causal_reads)
+            {
+                gwbuf_set_type(querybuf, GWBUF_TYPE_TRACK_STATE);
+            }
+
             succp = handle_master_is_target(&target);
 
             if (!succp && should_migrate_trx(target))

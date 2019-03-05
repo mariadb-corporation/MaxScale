@@ -338,6 +338,7 @@ typedef struct
     GWBUF*                 stored_query;                /*< Temporarily stored queries */
     bool                   collect_result;              /*< Collect the next result set as one buffer */
     bool                   changing_user;
+    bool                   track_state;     /*< Track session state */
     uint32_t               num_eof_packets; /*< Encountered eof packet number, used for check
                                              * packet type */
     bool large_query;                       /*< Whether to ignore the command byte of the next

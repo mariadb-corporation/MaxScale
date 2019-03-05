@@ -447,6 +447,8 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
     {
         proto->collect_result = true;
     }
+
+    proto->track_state = GWBUF_SHOULD_TRACK_STATE(buffer);
 }
 
 /*******************************************************************************
@@ -836,7 +838,8 @@ static int gw_read_and_write(DCB* dcb)
          * The OK packets sent in response to COM_STMT_PREPARE are of a different
          * format so we need to detect and skip them. */
         if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING)
-            && !expecting_ps_response(proto))
+            && !expecting_ps_response(proto)
+            && proto->track_state)
         {
             mxs_mysql_get_session_track_info(tmp, proto);
         }

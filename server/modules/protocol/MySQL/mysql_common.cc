@@ -63,6 +63,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->changing_user = false;
     p->num_eof_packets = 0;
     p->large_query = false;
+    p->track_state = false;
     /*< Assign fd with protocol */
     p->fd = fd;
     p->owner_dcb = dcb;
