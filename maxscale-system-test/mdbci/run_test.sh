@@ -40,6 +40,10 @@
 
 # $test_set - parameters to be send to 'ctest' (e.g. '-I 1,100',
 # '-LE UNSTABLE'
+# if $test_set starts from 'NAME#' ctest will not be executed,
+# the value of $test_set after 'NAME#' is used as bash command 
+# line
+# example: '#NAME long_test_time=3600 ./long_test'
 
 export vm_memory=${vm_memory:-"2048"}
 export dir=`pwd`
@@ -73,11 +77,15 @@ if [ $res == 0 ] ; then
 set -x
     echo ${test_set} | grep "NAME#"
     if [ $? == 0 ] ; then
-        named_test=`echo ${test_set} | sed "s/NAME#//" | sed "s/ //g"`
+        named_test=`echo ${test_set} | sed "s/NAME#//"`
+        echo ${named_test} | grep "\./"
+        if [ $? != 0 ] ; then
+            named_test="./"${named_test}
+        fi
     fi
 
     if [ ! -z "${named_test}" ] ; then
-        ./${named_test}
+        eval ${named_test}
     else
         ./check_backend
         if [ $? != 0 ]; then
@@ -85,7 +93,7 @@ set -x
             if [ "${do_not_destroy_vm}" != "yes" ] ; then
                 ${mdbci_dir}/mdbci destroy $name
             fi
-            rm ~/vagrant_lock
+            rm -f ~/vagrant_lock
             exit 1
         fi
         ${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name clean
@@ -99,7 +107,7 @@ else
   if [ "${do_not_destroy_vm}" != "yes" ] ; then
 	${mdbci_dir}/mdbci destroy $name
   fi
-  rm ~/vagrant_lock
+  rm -f ~/vagrant_lock
   exit 1
 fi
 

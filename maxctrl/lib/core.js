@@ -65,7 +65,7 @@ program
         default: false,
         type: 'boolean'
     })
-    .group(['s', 'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-verify-server-cert'], 'HTTPS/TLS Options:')
+    .group(['s', 'tls-key', 'tls-passphrase', 'tls-cert', 'tls-ca-cert', 'n'], 'HTTPS/TLS Options:')
     .option('s', {
         alias: 'secure',
         describe: 'Enable HTTPS requests',
@@ -88,7 +88,8 @@ program
         describe: 'Path to TLS CA certificate',
         type: 'string'
     })
-    .option('tls-verify-server-cert', {
+    .option('n', {
+        alias: 'tls-verify-server-cert',
         describe: 'Whether to verify server TLS certificates',
         default: true,
         type: 'boolean'

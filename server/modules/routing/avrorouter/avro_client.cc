@@ -667,11 +667,12 @@ static std::string get_next_filename(std::string file, std::string dir)
 {
     // Find the last and second to last dot
     auto last = file.find_last_of('.');
-    auto almost_last = file.find_last_of('.', last);
+    auto part = file.substr(0, last);
+    auto almost_last = part.find_last_of('.');
     mxb_assert(last != std::string::npos && almost_last != std::string::npos);
 
     // Extract the number between the dots
-    std::string number_part = file.substr(almost_last + 1, last);
+    std::string number_part = part.substr(almost_last + 1, std::string::npos);
     int filenum = strtol(number_part.c_str(), NULL, 10);
 
     std::string file_part = file.substr(0, almost_last);

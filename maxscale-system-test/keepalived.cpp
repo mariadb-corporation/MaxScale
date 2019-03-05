@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     print_version_string(Test);
 
     Test->tprintf("Suspend Maxscale 000 machine and waiting\n");
-    system(Test->maxscales->stop_vm_command[0]);
+    Test->add_result(Test->maxscales->start_vm(0), "Failed to stop VM maxscale_000\n");
     sleep(FAILOVER_WAIT_TIME);
 
     version = print_version_string(Test);
@@ -59,12 +59,12 @@ int main(int argc, char* argv[])
 
 
     Test->tprintf("Resume Maxscale 000 machine and waiting\n");
-    system(Test->maxscales->start_vm_command[0]);
+    Test->add_result(Test->maxscales->start_vm(0), "Failed to start VM maxscale_000\n");
     sleep(FAILOVER_WAIT_TIME);
     print_version_string(Test);
 
     Test->tprintf("Suspend Maxscale 001 machine and waiting\n");
-    system(Test->maxscales->stop_vm_command[1]);
+    Test->add_result(Test->maxscales->start_vm(1), "Failed to stop VM maxscale_001\n");
     sleep(FAILOVER_WAIT_TIME);
 
     version = print_version_string(Test);
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 
     print_version_string(Test);
     Test->tprintf("Resume Maxscale 001 machine and waiting\n");
-    system(Test->maxscales->start_vm_command[1]);
+    Test->add_result(Test->maxscales->start_vm(1), "Failed to start VM maxscale_001\n");
     sleep(FAILOVER_WAIT_TIME);
     print_version_string(Test);
 

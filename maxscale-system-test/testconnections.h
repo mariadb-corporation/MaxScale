@@ -531,8 +531,6 @@ public:
      */
     int list_dirs(int m = 0);
 
-
-
     /**
      * @brief make_snapshot Makes a snapshot for all running VMs
      * @param snapshot_name name of created snapshot
@@ -604,6 +602,11 @@ public:
     {
         m_on_destroy.push_back(func);
     }
+
+    /**
+     * @brief use_valrind if true Maxscale will be executed under Valgrind
+     */
+    bool use_valgrind;
 
 private:
     void report_result(const char* format, va_list argp);

@@ -187,10 +187,6 @@ MariaDBMonitor* MariaDBMonitor::create(const string& name, const string& module)
  */
 bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    /* Reset all monitored state info. The server dependent values must be reset as servers could have been
-     * added, removed and modified. */
-    reset_server_info();
-
     m_detect_stale_master = params->get_bool("detect_stale_master");
     m_detect_stale_slave = params->get_bool("detect_stale_slave");
     m_ignore_external_masters = params->get_bool("ignore_external_masters");
@@ -209,6 +205,10 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
     m_maintenance_on_low_disk_space = params->get_bool(CN_MAINTENANCE_ON_LOW_DISK_SPACE);
     m_handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);
+
+    /* Reset all monitored state info. The server dependent values must be reset as servers could have been
+     * added, removed and modified. */
+    reset_server_info();
 
     m_excluded_servers.clear();
     bool settings_ok = true;

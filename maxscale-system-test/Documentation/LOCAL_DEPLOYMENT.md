@@ -141,13 +141,6 @@ https://help.ubuntu.com/lts/serverguide/libvirt.html
 https://github.com/vagrant-libvirt/vagrant-libvirt#installation
 
 
-### vagrant is locked, waiting ...
-
-```bash
-rm ~/vagrant_lock
-```
-
-
 ### Random VM creation failures
 
 Plese check the amount of free memory and amount of running VMs
