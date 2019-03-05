@@ -497,16 +497,6 @@ void Monitor::remove_server(SERVER* server)
 
 }
 
-void Monitor::set_user(const string& user)
-{
-    m_settings.conn_settings.username = user;
-}
-
-void Monitor::set_password(const string& passwd)
-{
-    m_settings.conn_settings.password = passwd;
-}
-
 /**
  * Show all monitors
  *
@@ -630,70 +620,6 @@ Monitor* monitor_repurpose_destroyed(const char* name, const char* module)
         }
         return (rval == nullptr);
     });
-    return rval;
-}
-
-/**
- * Set the monitor sampling interval.
- *
- * @param interval The sampling interval in milliseconds
- */
-void Monitor::set_interval(int64_t interval)
-{
-    m_settings.interval = interval;
-}
-
-/**
- * Set the maximum age of the monitor journal
- *
- * @param interval      The journal age in seconds
- */
-void Monitor::monitor_set_journal_max_age(time_t value)
-{
-    m_settings.journal_max_age = value;
-}
-
-void Monitor::set_script_timeout(int value)
-{
-    m_settings.script_timeout = value;
-}
-
-bool Monitor::set_network_timeout(int type, int value, const char* key)
-{
-    bool rval = true;
-
-    if (value > 0)
-    {
-        switch (type)
-        {
-        case MONITOR_CONNECT_TIMEOUT:
-            m_settings.conn_settings.connect_timeout = value;
-            break;
-
-        case MONITOR_READ_TIMEOUT:
-            m_settings.conn_settings.read_timeout = value;
-            break;
-
-        case MONITOR_WRITE_TIMEOUT:
-            m_settings.conn_settings.write_timeout = value;
-            break;
-
-        case MONITOR_CONNECT_ATTEMPTS:
-            m_settings.conn_settings.connect_attempts = value;
-            break;
-
-        default:
-            MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
-            mxb_assert(!true);
-            rval = false;
-            break;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Value '%s' for monitor '%s' is not a positive integer: %d", key, m_name, value);
-        rval = false;
-    }
     return rval;
 }
 

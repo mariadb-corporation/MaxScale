@@ -236,8 +236,6 @@ public:
      */
     bool set_disk_space_threshold(const std::string& dst_setting);
 
-    void set_interval(int64_t interval);
-
     /**
      * Set status of monitored server.
      *
@@ -261,33 +259,6 @@ public:
      * @return True, if the bit could be cleared.
      */
     bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
-
-    /**
-     * Set Monitor timeouts for connect/read/write
-     *
-     * @param type          The timeout handling type
-     * @param value         The timeout to set
-     * @param key           Timeout setting name
-     */
-    bool set_network_timeout(int, int, const char*);
-
-    /**
-     * Set username used to connect to backends.
-     *
-     * @param user The default username to use when connecting
-     */
-    void set_user(const std::string& user);
-
-    /**
-     * Set password used to connect to backends.
-     *
-     * @param passwd The password in encrypted form
-     */
-    void set_password(const std::string& passwd);
-
-    void set_script_timeout(int value);
-
-    void monitor_set_journal_max_age(time_t value);
 
     /**
      * Create a list of running servers
