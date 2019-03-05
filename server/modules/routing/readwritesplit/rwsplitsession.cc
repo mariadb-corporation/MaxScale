@@ -563,6 +563,17 @@ static bool server_is_shutting_down(GWBUF* writebuf)
     return err == ER_SERVER_SHUTDOWN || err == ER_NORMAL_SHUTDOWN || err == ER_SHUTDOWN_COMPLETE;
 }
 
+void RWSplitSession::close_stale_connections()
+{
+    for (auto& backend : m_backends)
+    {
+        if (backend->in_use() && !backend->can_connect())
+        {
+            backend->close();
+        }
+    }
+}
+
 void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
 {
     DCB* client_dcb = backend_dcb->session->client_dcb;
@@ -719,6 +730,15 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         MXS_INFO("Transaction complete");
         m_trx.close();
         m_can_replay_trx = true;
+    }
+
+    if (m_expected_responses == 0)
+    {
+        /**
+         * Close stale connections to servers in maintenance. Done here to avoid closing the connections
+         * before all responses have been received.
+         */
+        close_stale_connections();
     }
 
     if (backend->in_use() && backend->has_session_commands())
