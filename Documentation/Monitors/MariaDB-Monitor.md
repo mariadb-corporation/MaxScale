@@ -340,9 +340,10 @@ selection criteria is as follows in descending priority:
 later.
 3. Prepare the new master:
       1. Remove the slave connection the new master used to replicate from the old
-master.
+      master.
       2. Disable the *read\_only*-flag.
-      3. Enable scheduled server events (if event handling is on).
+      3. Enable scheduled server events (if event handling is on). Only events that were
+      enabled on the old master are enabled.
       4. Run the commands in `promotion_sql_file`.
       5. Start replication from external master if one existed.
 4. Redirect all other slaves to replicate from the new master:
@@ -350,6 +351,9 @@ master.
       2. CHANGE MASTER TO
       3. START SLAVE
 5. Check that all slaves are replicating.
+
+Failover is considered successful if steps 1 to 3 succeeded, as the cluster then has at
+least a valid master server.
 
 **Switchover** swaps a running master with a running slave. It does the
 following:
@@ -364,6 +368,9 @@ following:
 3. Promote new master and redirect slaves as in failover steps 3 and 4. Also
 redirect the demoted old master.
 4. Check that all slaves are replicating.
+
+Similar to failover, switchover is considered successful if the new master was
+successfully promoted.
 
 **Rejoin** joins a standalone server to the cluster or redirects a slave
 replicating from a server other than the master. A standalone server is joined
@@ -391,7 +398,9 @@ operation  proceeds as follows:
  *gtid\_current\_pos*.
 2. Prepare new master:
       1. Disable the *read\_only*-flag.
-      2. Enable scheduled server events (if event handling is on).
+      2. Enable scheduled server events (if event handling is on). Events are only enabled
+      if the cluster had a master server when starting the reset-replication operation.
+      Only events that were enabled on the previous master are enabled on the new.
 3. Direct other servers to replicate from the new master as in the other
 operations.
 
@@ -735,14 +744,19 @@ demotion_sql_file=/home/root/scripts/demotion.sql
 ```
 #### `handle_server_events`
 
-This setting is on by default. If enabled, the monitor will attempt to enable
-and disable server events during a switchover, failover or rejoin. When a server
-is being demoted, any events with "ENABLED" status are set to
-"SLAVESIDE_DISABLED". The reverse applies to a server being promoted to master.
-When a standalone server is rejoined to the cluster, its events are also
-disabled since it is now a slave. The monitor does not check whether the same
-events were disabled and enabled during a switchover or failover/rejoin. All
-events with the expected status are altered.
+This setting is on by default. If enabled, the monitor continuously queries the
+servers for enabled scheduled events and uses this information when performing
+cluster operations, enabling and disabling events as appropriate.
+
+When a server is being demoted, any events with "ENABLED" status are set to
+"SLAVESIDE_DISABLED". When a server is being promoted to master, events that are either
+"SLAVESIDE_DISABLED" or "DISABLED" are set to "ENABLED" if the same event was also enabled
+on the old master server last time it was successfully queried. Events are considered
+identical if they have the same schema and name. When a standalone server is rejoined to
+the cluster, its events are also disabled since it is now a slave.
+
+The monitor does not check whether the same events were disabled and enabled during a
+switchover or failover/rejoin. All events that meet the criteria above are altered.
 
 The monitor does not enable or disable the event scheduler itself. For the
 events to run on the new master server, the scheduler should be enabled by the
