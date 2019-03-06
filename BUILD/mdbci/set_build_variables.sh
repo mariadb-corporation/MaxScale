@@ -51,7 +51,7 @@ if [ $? == 0 ] ; then
   export platform_family="debian"
 fi
 
-export cmake_flags=${cmake_flags:-"-DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DBUILD_MMMON=Y -DBUILD_AVRO=Y -DBUILD_CDC=Y"}
+export cmake_flags=${cmake_flags:-"-DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DBUILD_AVRO=Y -DBUILD_CDC=Y"}
 echo "cmake_flags=$cmake_flags"
 
 export do_not_destroy_vm=${do_not_destroy_vm:-"no"}

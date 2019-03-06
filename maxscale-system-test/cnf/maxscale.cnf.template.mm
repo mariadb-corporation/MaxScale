@@ -4,7 +4,7 @@ log_warning=1
 
 [MySQL-Monitor]
 type=monitor
-module=mmmon
+module=mariadbmon
 servers= server1, server2
 user=maxskysql
 password= skysql
