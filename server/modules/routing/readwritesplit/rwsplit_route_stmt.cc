@@ -658,11 +658,9 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 
     for (auto& backend : m_raw_backends)
     {
-        bool can_take_slave_into_use = backend->is_slave()
-            && !backend->in_use()
-            && can_recover_servers()
-            && backend->can_connect()
-            && counts.second < m_router->max_slave_count();
+        bool can_take_slave_into_use = !backend->in_use() && can_recover_servers()
+            && backend->can_connect() && counts.second < m_router->max_slave_count()
+            && (backend->is_slave() || (backend->is_master() && m_config.master_accept_reads));
 
         bool master_or_slave = backend->is_master() || backend->is_slave();
         bool is_usable = backend->in_use() || can_take_slave_into_use;
