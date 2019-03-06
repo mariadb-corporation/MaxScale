@@ -150,8 +150,6 @@ public:
         int connect_attempts {1};   /**< How many times a connection is attempted */
     };
 
-    MXS_MONITORED_SERVER(SERVER* server);
-
     /**
      * Maintenance mode request constants.
      */
@@ -160,6 +158,37 @@ public:
     static const int MAINT_ON          = 2;
     static const int BEING_DRAINED_OFF = 3;
     static const int BEING_DRAINED_ON  = 4;
+
+    MXS_MONITORED_SERVER(SERVER* server);
+
+    /**
+     * Set pending status bits in the monitor server
+     *
+     * @param bits      The bits to set for the server
+     */
+    void set_pending_status(uint64_t bits);
+
+    /**
+     * Clear pending status bits in the monitor server
+     *
+     * @param bits      The bits to clear for the server
+     */
+    void clear_pending_status(uint64_t bits);
+
+    /**
+     * Store the current server status to the previous and pending status
+     * fields of the monitored server.
+     */
+    void stash_current_status();
+
+    bool status_changed();
+    bool should_print_fail_status();
+    void log_connect_error(mxs_connect_result_t rval);
+
+    /**
+     * Report query error to log.
+     */
+    void mon_report_query_error();
 
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.
@@ -485,33 +514,6 @@ extern const char CN_SCRIPT[];
 extern const char CN_SCRIPT_TIMEOUT[];
 
 /**
- * Store the current server status to the previous and pending status
- * fields of the monitored server.
- *
- * @param mserver  The monitored server to update
- */
-void monitor_stash_current_status(MXS_MONITORED_SERVER* ptr);
-
-/**
- * Clear pending status bits in the monitor server
- *
- * @param mserver  The monitored server to update
- * @param bit      The bits to clear for the server
- */
-void monitor_clear_pending_status(MXS_MONITORED_SERVER* mserver, uint64_t bit);
-
-/**
- * Set pending status bits in the monitor server
- *
- * @param mserver  The monitored server to update
- * @param bit      The bits to set for the server
- */
-void monitor_set_pending_status(MXS_MONITORED_SERVER* mserver, uint64_t bit);
-
-bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv);
-bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv);
-
-/**
  * Ping or connect to a database. If connection does not exist or ping fails, a new connection
  * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
  * to call MySQL C API functions to find out the reason of the failure.
@@ -526,15 +528,7 @@ mxs_connect_result_t mon_ping_or_connect_to_db(const MXS_MONITORED_SERVER::Conne
                                                SERVER& server, MYSQL** ppConn);
 
 bool                 mon_connection_is_ok(mxs_connect_result_t connect_result);
-void                 mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval);
 const char*          mon_get_event_name(mxs_monitor_event_t event);
-
-/**
- * @brief Report query errors
- *
- * @param db Database where the query failed
- */
-void mon_report_query_error(MXS_MONITORED_SERVER* db);
 
 /**
  * @brief Convert monitor to JSON
@@ -545,28 +539,6 @@ void mon_report_query_error(MXS_MONITORED_SERVER* db);
  * @return JSON representation of the monitor
  */
 json_t* monitor_to_json(const Monitor* monitor, const char* host);
-
-/**
- * @brief Convert all monitors to JSON
- *
- * @param host    Hostname of this server
- *
- * @return JSON array containing all monitors
- */
-json_t* monitor_list_to_json(const char* host);
-
-/**
- * @brief Get links to monitors that relate to a server
- *
- * @param server Server to inspect
- * @param host   Hostname of this server
- *
- * @return Array of monitor links or NULL if no relations exist
- */
-json_t* monitor_relations_to_server(const SERVER* server, const char* host);
-
-// Function for waiting one monitor interval
-void monitor_debug_wait();
 
 namespace maxscale
 {

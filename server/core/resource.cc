@@ -608,7 +608,7 @@ HttpResponse cb_get_filter(const HttpRequest& request)
 
 HttpResponse cb_all_monitors(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, monitor_list_to_json(request.host()));
+    return HttpResponse(MHD_HTTP_OK, MonitorManager::monitor_list_to_json(request.host()));
 }
 
 HttpResponse cb_get_monitor(const HttpRequest& request)
@@ -742,7 +742,7 @@ HttpResponse cb_unix_user(const HttpRequest& request)
 
 HttpResponse cb_monitor_wait(const HttpRequest& request)
 {
-    monitor_debug_wait();
+    MonitorManager::monitor_debug_wait();
     return HttpResponse(MHD_HTTP_OK);
 }
 HttpResponse cb_create_user(const HttpRequest& request)

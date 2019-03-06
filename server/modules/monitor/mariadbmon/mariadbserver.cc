@@ -991,12 +991,12 @@ void MariaDBServer::check_permissions()
 
 void MariaDBServer::clear_status(uint64_t bits)
 {
-    monitor_clear_pending_status(m_server_base, bits);
+    m_server_base->clear_pending_status(bits);
 }
 
 void MariaDBServer::set_status(uint64_t bits)
 {
-    monitor_set_pending_status(m_server_base, bits);
+    m_server_base->set_pending_status(bits);
 }
 
 /**

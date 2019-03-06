@@ -74,7 +74,7 @@ static bool is_master(MXS_MONITORED_SERVER* server)
     }
     else
     {
-        mon_report_query_error(server);
+        server->mon_report_query_error();
     }
 
     return rval;
@@ -101,7 +101,7 @@ static bool is_slave(MXS_MONITORED_SERVER* server)
     }
     else
     {
-        mon_report_query_error(server);
+        server->mon_report_query_error();
     }
 
     return rval;
@@ -111,18 +111,18 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     if (is_master(monitored_server))
     {
-        monitor_set_pending_status(monitored_server, SERVER_MASTER);
-        monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
+        monitored_server->set_pending_status(SERVER_MASTER);
+        monitored_server->clear_pending_status(SERVER_SLAVE);
     }
     else if (is_slave(monitored_server))
     {
-        monitor_set_pending_status(monitored_server, SERVER_SLAVE);
-        monitor_clear_pending_status(monitored_server, SERVER_MASTER);
+        monitored_server->set_pending_status(SERVER_SLAVE);
+        monitored_server->clear_pending_status(SERVER_MASTER);
     }
     else
     {
-        monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
-        monitor_clear_pending_status(monitored_server, SERVER_MASTER);
+        monitored_server->clear_pending_status(SERVER_SLAVE);
+        monitored_server->clear_pending_status(SERVER_MASTER);
     }
 }
 

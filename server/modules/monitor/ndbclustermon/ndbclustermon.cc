@@ -76,7 +76,7 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
     else
     {
-        mon_report_query_error(monitored_server);
+        monitored_server->mon_report_query_error();
     }
 
     /* Check the the SQL node id in the MySQL cluster */
@@ -108,16 +108,16 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
     else
     {
-        mon_report_query_error(monitored_server);
+        monitored_server->mon_report_query_error();
     }
 
     if (isjoined)
     {
-        monitor_set_pending_status(monitored_server, SERVER_NDB);
+        monitored_server->set_pending_status(SERVER_NDB);
     }
     else
     {
-        monitor_clear_pending_status(monitored_server, SERVER_NDB);
+        monitored_server->clear_pending_status(SERVER_NDB);
     }
 }
 

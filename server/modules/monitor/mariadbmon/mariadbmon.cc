@@ -406,7 +406,7 @@ void MariaDBMonitor::update_server(MariaDBServer* server)
          * iteration. */
         if (server->had_status(SERVER_RUNNING) || server->had_status(SERVER_MAINT))
         {
-            mon_log_connect_error(mon_srv, conn_status);
+            mon_srv->log_connect_error(conn_status);
         }
     }
 
@@ -657,7 +657,7 @@ void MariaDBMonitor::update_external_master()
 void MariaDBMonitor::log_master_changes()
 {
     MXS_MONITORED_SERVER* root_master = m_master ? m_master->m_server_base : NULL;
-    if (root_master && mon_status_changed(root_master)
+    if (root_master && root_master->status_changed()
         && !(root_master->pending_status & SERVER_WAS_MASTER))
     {
         if ((root_master->pending_status & SERVER_MASTER) && m_master->is_running())

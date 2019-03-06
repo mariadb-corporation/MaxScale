@@ -715,20 +715,20 @@ bool Monitor::test_permissions(const string& query)
     return rval;
 }
 
-void monitor_stash_current_status(MXS_MONITORED_SERVER* ptr)
+void MXS_MONITORED_SERVER::stash_current_status()
 {
-    ptr->mon_prev_status = ptr->server->status;
-    ptr->pending_status = ptr->server->status;
+    mon_prev_status = server->status;
+    pending_status = server->status;
 }
 
-void monitor_set_pending_status(MXS_MONITORED_SERVER* ptr, uint64_t bit)
+void MXS_MONITORED_SERVER::set_pending_status(uint64_t bits)
 {
-    ptr->pending_status |= bit;
+    pending_status |= bits;
 }
 
-void monitor_clear_pending_status(MXS_MONITORED_SERVER* ptr, uint64_t bit)
+void MXS_MONITORED_SERVER::clear_pending_status(uint64_t bits)
 {
-    ptr->pending_status &= ~bit;
+    pending_status &= ~bits;
 }
 
 /*
@@ -944,21 +944,20 @@ void Monitor::append_node_names(char* dest, int len, int status, credentials_app
 }
 
 /**
- * Check if current monitored server status has changed
+ * Check if current monitored server status has changed.
  *
- * @param mon_srv       The monitored server
- * @return              true if status has changed or false
+ * @return              true if status has changed
  */
-bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv)
+bool MXS_MONITORED_SERVER::status_changed()
 {
     bool rval = false;
 
     /* Previous status is -1 if not yet set */
-    if (mon_srv->mon_prev_status != static_cast<uint64_t>(-1))
+    if (mon_prev_status != static_cast<uint64_t>(-1))
     {
 
-        uint64_t old_status = mon_srv->mon_prev_status & all_server_bits;
-        uint64_t new_status = mon_srv->server->status & all_server_bits;
+        uint64_t old_status = mon_prev_status & all_server_bits;
+        uint64_t new_status = server->status & all_server_bits;
 
         /**
          * The state has changed if the relevant state bits are not the same,
@@ -977,14 +976,13 @@ bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv)
 }
 
 /**
- * Check if current monitored server has a loggable failure status
+ * Check if current monitored server has a loggable failure status.
  *
- * @param mon_srv       The monitored server
- * @return              true if failed status can be logged or false
+ * @return true if failed status can be logged or false
  */
-bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv)
+bool MXS_MONITORED_SERVER::should_print_fail_status()
 {
-    return mon_srv->server->is_down() && mon_srv->mon_err_count == 0;
+    return server->is_down() && mon_err_count == 0;
 }
 
 static MXS_MONITORED_SERVER* find_parent_node(const std::vector<MXS_MONITORED_SERVER*>& servers,
@@ -1279,20 +1277,18 @@ bool mon_connection_is_ok(mxs_connect_result_t connect_result)
 /**
  * Log an error about the failure to connect to a backend server and why it happened.
  *
- * @param database Backend database
  * @param rval Return value of mon_ping_or_connect_to_db
  */
-void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval)
+void MXS_MONITORED_SERVER::log_connect_error(mxs_connect_result_t rval)
 {
-    mxb_assert(!mon_connection_is_ok(rval) && database);
+    mxb_assert(!mon_connection_is_ok(rval));
     const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
     const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
-    auto srv = database->server;
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ? TIMED_OUT : REFUSED,
-              srv->name(),
-              srv->address,
-              srv->port,
-              mysql_error(database->con));
+              server->name(),
+              server->address,
+              server->port,
+              mysql_error(con));
 }
 
 static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
@@ -1419,20 +1415,20 @@ void Monitor::hangup_failed_servers()
 {
     for (MXS_MONITORED_SERVER* ptr : m_servers)
     {
-        if (mon_status_changed(ptr) && (!(ptr->server->is_usable()) || !(ptr->server->is_in_cluster())))
+        if (ptr->status_changed() && (!(ptr->server->is_usable()) || !(ptr->server->is_in_cluster())))
         {
             dcb_hangup_foreach(ptr->server);
         }
     }
 }
 
-void mon_report_query_error(MXS_MONITORED_SERVER* db)
+void MXS_MONITORED_SERVER::mon_report_query_error()
 {
     MXS_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
-              db->server->name(),
-              db->server->address,
-              db->server->port,
-              mysql_error(db->con));
+              server->name(),
+              server->address,
+              server->port,
+              mysql_error(con));
 }
 
 /**
@@ -1488,7 +1484,7 @@ void Monitor::detect_handle_state_changes()
 
     for (MXS_MONITORED_SERVER* ptr : m_servers)
     {
-        if (mon_status_changed(ptr))
+        if (ptr->status_changed())
         {
             /**
              * The last executed event will be needed if a passive MaxScale is
@@ -1604,7 +1600,7 @@ json_t* monitor_to_json(const Monitor* monitor, const char* host)
     return mxs_json_resource(host, self.c_str(), monitor_json_data(monitor, host));
 }
 
-json_t* monitor_list_to_json(const char* host)
+json_t* MonitorManager::monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();
     this_unit.foreach_monitor([rval, host](Monitor* mon) {
@@ -1623,7 +1619,7 @@ json_t* monitor_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
 }
 
-json_t* monitor_relations_to_server(const SERVER* server, const char* host)
+json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const char* host)
 {
     std::vector<std::string> names;
     this_unit.foreach_monitor([&names, server](Monitor* mon) {
@@ -1844,7 +1840,7 @@ static const char* process_server(Monitor* monitor, const char* data, const char
             uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
             db->mon_prev_status = status;
             db->server->set_status(status);
-            monitor_set_pending_status(db, status);
+            db->set_pending_status(status);
             break;
         }
     }
@@ -2346,7 +2342,7 @@ void Monitor::populate_services()
     }
 }
 
-void monitor_debug_wait()
+void MonitorManager::monitor_debug_wait()
 {
     using namespace std::chrono;
     std::map<Monitor*, uint64_t> ticks;
@@ -2684,8 +2680,8 @@ void MonitorWorkerSimple::tick()
 
             if (mon_connection_is_ok(rval))
             {
-                monitor_clear_pending_status(pMs, SERVER_AUTH_ERROR);
-                monitor_set_pending_status(pMs, SERVER_RUNNING);
+                pMs->clear_pending_status(SERVER_AUTH_ERROR);
+                pMs->set_pending_status(SERVER_RUNNING);
 
                 if (should_update_disk_space_status(pMs))
                 {
@@ -2703,25 +2699,25 @@ void MonitorWorkerSimple::tick()
                  */
                 const uint64_t bits_to_clear = ~SERVER_WAS_MASTER;
 
-                monitor_clear_pending_status(pMs, bits_to_clear);
+                pMs->clear_pending_status(bits_to_clear);
 
                 if (mysql_errno(pMs->con) == ER_ACCESS_DENIED_ERROR)
                 {
-                    monitor_set_pending_status(pMs, SERVER_AUTH_ERROR);
+                    pMs->set_pending_status(SERVER_AUTH_ERROR);
                 }
                 else
                 {
-                    monitor_clear_pending_status(pMs, SERVER_AUTH_ERROR);
+                    pMs->clear_pending_status(SERVER_AUTH_ERROR);
                 }
 
-                if (mon_status_changed(pMs) && mon_print_fail_status(pMs))
+                if (pMs->status_changed() && pMs->should_print_fail_status())
                 {
-                    mon_log_connect_error(pMs, rval);
+                    pMs->log_connect_error(rval);
                 }
             }
 
 #if defined (SS_DEBUG)
-            if (mon_status_changed(pMs) || mon_print_fail_status(pMs))
+            if (pMs->status_changed() || pMs->should_print_fail_status())
             {
                 // The current status is still in pMs->pending_status.
                 MXS_DEBUG("Backend server [%s]:%d state : %s",

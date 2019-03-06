@@ -57,7 +57,7 @@ bool AuroraMonitor::has_sufficient_permissions()
  */
 void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    monitor_clear_pending_status(monitored_server, SERVER_MASTER | SERVER_SLAVE);
+    monitored_server->clear_pending_status(SERVER_MASTER | SERVER_SLAVE);
 
     MYSQL_RES* result;
 
@@ -78,12 +78,12 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             status = SERVER_MASTER;
         }
 
-        monitor_set_pending_status(monitored_server, status);
+        monitored_server->set_pending_status(status);
         mysql_free_result(result);
     }
     else
     {
-        mon_report_query_error(monitored_server);
+        monitored_server->mon_report_query_error();
     }
 }
 

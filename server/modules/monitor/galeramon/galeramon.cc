@@ -224,7 +224,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
     else
     {
-        mon_report_query_error(monitored_server);
+        monitored_server->mon_report_query_error();
     }
 }
 
@@ -264,8 +264,8 @@ void GaleraMonitor::post_tick()
             if (ptr != m_master)
             {
                 /* set the Slave role and clear master stickiness */
-                monitor_clear_pending_status(ptr, repl_bits);
-                monitor_set_pending_status(ptr, SERVER_SLAVE);
+                ptr->clear_pending_status(repl_bits);
+                ptr->set_pending_status(SERVER_SLAVE);
             }
             else
             {
@@ -273,14 +273,14 @@ void GaleraMonitor::post_tick()
                     && m_master->server->node_id != candidate_master->server->node_id)
                 {
                     /* set master role and master stickiness */
-                    monitor_clear_pending_status(ptr, repl_bits);
-                    monitor_set_pending_status(ptr, SERVER_MASTER | SERVER_MASTER_STICKINESS);
+                    ptr->clear_pending_status(repl_bits);
+                    ptr->set_pending_status(SERVER_MASTER | SERVER_MASTER_STICKINESS);
                 }
                 else
                 {
                     /* set master role and clear master stickiness */
-                    monitor_clear_pending_status(ptr, repl_bits);
-                    monitor_set_pending_status(ptr, SERVER_MASTER);
+                    ptr->clear_pending_status(repl_bits);
+                    ptr->set_pending_status(SERVER_MASTER);
                 }
             }
 
@@ -288,8 +288,8 @@ void GaleraMonitor::post_tick()
         }
         else
         {
-            monitor_clear_pending_status(ptr, repl_bits);
-            monitor_set_pending_status(ptr, 0);
+            ptr->clear_pending_status(repl_bits);
+            ptr->set_pending_status(0);
         }
     }
 
@@ -348,7 +348,7 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER* database, const char* server_
     }
     else
     {
-        mon_report_query_error(database);
+        database->mon_report_query_error();
     }
 
     return rval;
@@ -569,7 +569,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
         }
         else
         {
-            mon_report_query_error(ptr);
+            ptr->mon_report_query_error();
         }
     }
 
@@ -587,7 +587,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
         MXS_MONITORED_SERVER* ptr = node_list[k];
         if (mxs_mysql_query(ptr->con, donor_list) != 0)
         {
-            mon_report_query_error(ptr);
+            ptr->mon_report_query_error();
         }
     }
 
@@ -713,11 +713,11 @@ void GaleraMonitor::set_galera_cluster()
     {
         if (it->second.joined)
         {
-            monitor_set_pending_status(it->first, SERVER_JOINED);
+            it->first->set_pending_status(SERVER_JOINED);
         }
         else
         {
-            monitor_clear_pending_status(it->first, SERVER_JOINED);
+            it->first->clear_pending_status(SERVER_JOINED);
         }
     }
 }

@@ -127,6 +127,28 @@ public:
      * @param monitor The monitor to stop
      */
     static void monitor_stop(Monitor*);
+
+    /**
+     * Get links to monitors that relate to a server.
+     *
+     * @param server Server to inspect
+     * @param host   Hostname of this server
+     * @return Array of monitor links or NULL if no relations exist
+     */
+    static json_t* monitor_relations_to_server(const SERVER* server, const char* host);
+
+    /**
+     * Convert all monitors to JSON.
+     *
+     * @param host    Hostname of this server
+     * @return JSON array containing all monitors
+     */
+    static json_t* monitor_list_to_json(const char* host);
+
+    /**
+     * Waits until all running monitors have advanced one tick.
+     */
+    static void monitor_debug_wait();
 };
 
 

@@ -566,7 +566,7 @@ void ClustrixMonitor::update_server_statuses()
 
     for (auto ms : m_servers)
     {
-        monitor_stash_current_status(ms);
+        ms->stash_current_status();
 
         auto it = find_if(m_nodes.begin(), m_nodes.end(),
                           [ms](const std::pair<int,ClustrixNode>& element) -> bool {
@@ -580,16 +580,16 @@ void ClustrixMonitor::update_server_statuses()
 
             if (info.is_running())
             {
-                monitor_set_pending_status(ms, SERVER_RUNNING);
+                ms->set_pending_status(SERVER_RUNNING);
             }
             else
             {
-                monitor_clear_pending_status(ms, SERVER_RUNNING);
+                ms->clear_pending_status(SERVER_RUNNING);
             }
         }
         else
         {
-            monitor_clear_pending_status(ms, SERVER_RUNNING);
+            ms->clear_pending_status(SERVER_RUNNING);
         }
     }
 }

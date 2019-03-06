@@ -1087,7 +1087,7 @@ static json_t* server_to_json_data(const Server* server, const char* host)
     /** Relationships */
     json_t* rel = json_object();
     json_t* service_rel = service_relations_to_server(server, host);
-    json_t* monitor_rel = monitor_relations_to_server(server, host);
+    json_t* monitor_rel = MonitorManager::monitor_relations_to_server(server, host);
 
     if (service_rel)
     {

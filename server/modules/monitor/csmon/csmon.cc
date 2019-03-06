@@ -47,7 +47,7 @@ static std::string do_query(MXS_MONITORED_SERVER* srv, const char* query)
     }
     else
     {
-        mon_report_query_error(srv);
+        srv->mon_report_query_error();
     }
 
     return rval;
@@ -95,7 +95,7 @@ bool CsMonitor::has_sufficient_permissions()
 
 void CsMonitor::update_server_status(MXS_MONITORED_SERVER* srv)
 {
-    monitor_clear_pending_status(srv, SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
+    srv->clear_pending_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
     int status = 0;
 
     if (do_query(srv, alive_query) == "1")
@@ -114,7 +114,7 @@ void CsMonitor::update_server_status(MXS_MONITORED_SERVER* srv)
         }
     }
 
-    monitor_set_pending_status(srv, status);
+    srv->set_pending_status(status);
 }
 
 bool CsMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
