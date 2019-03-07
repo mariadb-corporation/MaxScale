@@ -186,7 +186,7 @@ static void exec_show_modules(DCB* dcb, MAXINFO_TREE* tree)
  */
 static void exec_show_monitors(DCB* dcb, MAXINFO_TREE* tree)
 {
-    monitor_get_list()->write(dcb);
+    MonitorManager::monitor_get_list()->write(dcb);
 }
 
 /**
@@ -503,10 +503,10 @@ void exec_shutdown_monitor(DCB* dcb, MAXINFO_TREE* tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        Monitor* monitor = monitor_find(tree->value);
+        Monitor* monitor = MonitorManager::find_monitor(tree->value);
         if (monitor)
         {
-            MonitorManager::monitor_stop(monitor);
+            MonitorManager::stop_monitor(monitor);
             maxinfo_send_ok(dcb);
         }
         else
@@ -612,10 +612,10 @@ void exec_restart_monitor(DCB* dcb, MAXINFO_TREE* tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        Monitor* monitor = monitor_find(tree->value);
+        Monitor* monitor = MonitorManager::find_monitor(tree->value);
         if (monitor)
         {
-            MonitorManager::monitor_start(monitor);
+            MonitorManager::start_monitor(monitor);
             maxinfo_send_ok(dcb);
         }
         else

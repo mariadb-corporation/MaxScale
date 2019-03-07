@@ -3614,7 +3614,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
 
         if (!cluster.empty())
         {
-            Monitor* pMonitor = monitor_find(cluster.c_str());
+            Monitor* pMonitor = MonitorManager::find_monitor(cluster.c_str());
 
             if (pMonitor)
             {

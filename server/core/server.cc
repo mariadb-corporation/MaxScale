@@ -950,7 +950,7 @@ bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
     /* First check if the server is monitored. This isn't done under a lock
      * but the race condition cannot cause significant harm. Monitors are never
      * freed so the pointer stays valid. */
-    Monitor* mon = monitor_server_in_use(srv);
+    Monitor* mon = MonitorManager::server_is_monitored(srv);
     if (mon)
     {
         written = mon->set_server_status(srv, bit, errmsg_out);
@@ -969,7 +969,7 @@ bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
 {
     // See server_set_status().
     bool written = false;
-    Monitor* mon = monitor_server_in_use(srv);
+    Monitor* mon = MonitorManager::server_is_monitored(srv);
     if (mon)
     {
         written = mon->clear_server_status(srv, bit, errmsg_out);

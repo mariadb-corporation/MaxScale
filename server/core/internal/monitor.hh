@@ -22,30 +22,6 @@
 
 #define MON_ARG_MAX 8192
 
-#define DEFAULT_CONNECT_TIMEOUT     3
-#define DEFAULT_READ_TIMEOUT        3
-#define DEFAULT_WRITE_TIMEOUT       3
-#define DEFAULT_CONNECTION_ATTEMPTS 1
-
-#define DEFAULT_MONITOR_INTERVAL 2000   // in milliseconds
-
-/** Default maximum journal age in seconds */
-#define DEFAULT_JOURNAL_MAX_AGE 28800
-
-/** Default script execution timeout in seconds */
-#define DEFAULT_SCRIPT_TIMEOUT 90
-
-/**
- * Monitor network timeout types
- */
-typedef enum
-{
-    MONITOR_CONNECT_TIMEOUT  = 0,
-    MONITOR_READ_TIMEOUT     = 1,
-    MONITOR_WRITE_TIMEOUT    = 2,
-    MONITOR_CONNECT_ATTEMPTS = 3
-} monitor_timeouts_t;
-
 /* Is not really an event as the other values, but is a valid config setting and also the default.
  * Bitmask value matches all events. */
 static const MXS_ENUM_VALUE mxs_monitor_event_default_enum = {"all", ~0ULL};
@@ -77,8 +53,6 @@ static const MXS_ENUM_VALUE mxs_monitor_event_enum_values[] =
     {NULL}
 };
 
-std::unique_ptr<ResultSet> monitor_get_list();
-
 /**
  * This class contains internal monitor management functions that should not be exposed in the public
  * monitor class. It's a friend of MXS_MONITOR.
@@ -99,6 +73,15 @@ public:
                                    MXS_CONFIG_PARAMETER* params);
 
     /**
+     * Mark monitor as deactivated. A deactivated monitor appears not to exist, as if it had been
+     * destroyed. Any servers the monitor had are removed. The monitor should not be serialized after
+     * this function.
+     *
+     * @param monitor Monitor to deactivate
+     */
+    static void deactivate_monitor(Monitor* monitor);
+
+    /**
      * @brief Destroys all monitors. At this point all monitors should
      *        have been stopped.
      *
@@ -106,27 +89,24 @@ public:
      */
     static void destroy_all_monitors();
 
-    static void monitor_start(Monitor*);
-
-    /**
-     * @brief Populate services with the servers of the monitors.
-     */
-    static void populate_services();
-
-    static bool add_server(Monitor* mon, SERVER* server);
-
-
-    static void remove_server(Monitor* mon, SERVER* server)
-    {
-        Monitor::remove_server(mon, server);
-    }
+    static void start_monitor(Monitor* monitor);
 
     /**
      * Stop a given monitor
      *
      * @param monitor The monitor to stop
      */
-    static void monitor_stop(Monitor*);
+    static void stop_monitor(Monitor* monitor);
+
+    static void stop_all_monitors();
+    static void start_all_monitors();
+
+    static Monitor* find_monitor(const char* name);
+
+    /**
+     * @brief Populate services with the servers of the monitors.
+     */
+    static void populate_services();
 
     /**
      * Get links to monitors that relate to a server.
@@ -146,37 +126,26 @@ public:
     static json_t* monitor_list_to_json(const char* host);
 
     /**
+     * Check if a server is being monitored and return the monitor.
+     * @param server Server that is queried
+     * @return The monitor watching this server, or NULL if not monitored
+     */
+    static Monitor* server_is_monitored(const SERVER* server);
+
+    static Monitor* reactivate_monitor(const char* name, const char* module);
+
+    static void show_all_monitors(DCB* dcb);
+    static void monitor_show(DCB* dcb, Monitor* monitor);
+
+    static void monitor_list(DCB*);
+
+    static std::unique_ptr<ResultSet> monitor_get_list();
+
+    /**
      * Waits until all running monitors have advanced one tick.
      */
-    static void monitor_debug_wait();
+    static void debug_wait_one_tick();
 };
-
-
-
-
-
-/**
- * @brief Mark monitor as deactivated
- *
- * A deactivated monitor appears not to exist, as if it had been
- * destroyed.
- *
- * @param monitor
- */
-void monitor_deactivate(Monitor* monitor);
-
-void monitor_stop_all();
-void monitor_start_all();
-
-Monitor* monitor_find(const char*);
-Monitor* monitor_repurpose_destroyed(const char* name, const char* module);
-
-void monitor_show(DCB*, Monitor*);
-void monitor_show_all(DCB*);
-
-void monitor_list(DCB*);
-
-void monitor_set_journal_max_age(Monitor* mon, time_t value);
 
 /**
  * @brief Serialize a monitor to a file
@@ -187,10 +156,3 @@ void monitor_set_journal_max_age(Monitor* mon, time_t value);
  * @return True if serialization was successful
  */
 bool monitor_serialize(const Monitor* monitor);
-
-/**
- * Check if a server is being monitored and return the monitor.
- * @param server Server that is queried
- * @return The monitor watching this server, or NULL if not monitored
- */
-Monitor* monitor_server_in_use(const SERVER* server);

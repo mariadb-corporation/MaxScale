@@ -215,23 +215,34 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 
     // The monitor serverlist has already been checked to be valid. Empty value is ok too.
     // First, remove all servers.
-
-    auto servers_temp = params->get_server_list(CN_SERVERS);
     while (!m_servers.empty())
     {
         SERVER* remove = m_servers.front()->server;
         remove_server(remove);
     }
 
+    auto servers_temp = params->get_server_list(CN_SERVERS);
+    bool error = false;
     for (auto elem : servers_temp)
     {
-        // This function checks if server is already monitored. TODO: This should be a config error.
-        add_server(elem);
+        // TODO: Monitor should not access MonitorManager.
+        Monitor* srv_monitored_by = MonitorManager::server_is_monitored(elem);
+        if (srv_monitored_by)
+        {
+            mxb_assert(srv_monitored_by != this);
+            MXS_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
+                      elem->name(), srv_monitored_by->m_name);
+            error = true;
+        }
+        else
+        {
+            add_server(elem);
+        }
     }
 
     /* The previous config values were normal types and were checked by the config manager
      * to be correct. The following is a complicated type and needs to be checked separately. */
-    bool error = false;
+
     auto threshold_string = params->get_string(CN_DISK_SPACE_THRESHOLD);
     if (!set_disk_space_threshold(threshold_string))
     {
@@ -266,7 +277,7 @@ void MonitorManager::destroy_all_monitors()
     }
 }
 
-void MonitorManager::monitor_start(Monitor* monitor)
+void MonitorManager::start_monitor(Monitor* monitor)
 {
     mxb_assert(monitor);
 
@@ -282,11 +293,6 @@ void MonitorManager::monitor_start(Monitor* monitor)
     }
 }
 
-bool MonitorManager::add_server(Monitor* mon, SERVER* server)
-{
-    return false;
-}
-
 void MonitorManager::populate_services()
 {
     this_unit.foreach_monitor([](Monitor* pMonitor) -> bool {
@@ -298,18 +304,18 @@ void MonitorManager::populate_services()
 /**
  * Start all monitors
  */
-void monitor_start_all()
+void MonitorManager::start_all_monitors()
 {
     this_unit.foreach_monitor([](Monitor* monitor) {
         if (monitor->m_active)
         {
-            MonitorManager::monitor_start(monitor);
+            MonitorManager::start_monitor(monitor);
         }
         return true;
     });
 }
 
-void MonitorManager::monitor_stop(Monitor* monitor)
+void MonitorManager::stop_monitor(Monitor* monitor)
 {
     mxb_assert(monitor);
 
@@ -322,8 +328,17 @@ void MonitorManager::monitor_stop(Monitor* monitor)
     }
 }
 
-void monitor_deactivate(Monitor* monitor)
+void MonitorManager::deactivate_monitor(Monitor* monitor)
 {
+    // This cannot be done with configure(), since other, module-specific config settings may depend on the
+    // "servers"-setting of the base monitor. Directly manipulate monitor field for now, later use a dtor
+    // to cleanly "deactivate" inherited objects.
+    stop_monitor(monitor);
+    while (!monitor->m_servers.empty())
+    {
+        monitor->remove_server(monitor->m_servers.front()->server);
+    }
+
     this_unit.run_behind_lock([monitor](){
         monitor->m_active = false;
     });
@@ -332,47 +347,15 @@ void monitor_deactivate(Monitor* monitor)
 /**
  * Shutdown all running monitors
  */
-void monitor_stop_all()
+void MonitorManager::stop_all_monitors()
 {
     this_unit.foreach_monitor([](Monitor* monitor) {
         if (monitor->m_active)
         {
-            MonitorManager::monitor_stop(monitor);
+            MonitorManager::stop_monitor(monitor);
         }
         return true;
     });
-}
-
-//static
-bool Monitor::add_server(Monitor* mon, SERVER* server)
-{
-    mxb_assert(mon && server);
-    bool rval = false;
-
-    if (monitor_server_in_use(server))
-    {
-        MXS_ERROR("Server '%s' is already monitored.", server->name());
-    }
-    else
-    {
-        rval = true;
-
-        monitor_state_t old_state = mon->state();
-
-        if (old_state == MONITOR_STATE_RUNNING)
-        {
-            MonitorManager::monitor_stop(mon);
-        }
-
-        mon->add_server(server);
-
-        if (old_state == MONITOR_STATE_RUNNING)
-        {
-            MonitorManager::monitor_start(mon);
-        }
-    }
-
-    return rval;
 }
 
 /**
@@ -381,23 +364,13 @@ bool Monitor::add_server(Monitor* mon, SERVER* server)
  * It is assumed that the monitor is currently not running and that the
  * server is not currently being monitored.
  *
- * @param server  A server.
+ * @param server  A server
  */
 void Monitor::add_server(SERVER* server)
 {
     mxb_assert(state() != MONITOR_STATE_RUNNING);
-    mxb_assert(!monitor_server_in_use(server));
-
-    MXS_MONITORED_SERVER* db = new (std::nothrow) MXS_MONITORED_SERVER(server);
-    MXS_ABORT_IF_NULL(db);
-
-    using Guard = std::unique_lock<std::mutex>;
-    Guard guard(m_lock);
-
-    m_servers.push_back(db);
-
-    guard.unlock();
-
+    auto new_server = new MXS_MONITORED_SERVER(server);
+    m_servers.push_back(new_server);
     server_added(server);
 }
 
@@ -449,14 +422,14 @@ void Monitor::remove_server(Monitor* mon, SERVER* server)
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
-        MonitorManager::monitor_stop(mon);
+        MonitorManager::stop_monitor(mon);
     }
 
     mon->remove_server(server);
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
-        MonitorManager::monitor_start(mon);
+        MonitorManager::start_monitor(mon);
     }
 }
 
@@ -502,7 +475,7 @@ void Monitor::remove_server(SERVER* server)
  *
  * @param dcb   DCB for printing output
  */
-void monitor_show_all(DCB* dcb)
+void MonitorManager::show_all_monitors(DCB* dcb)
 {
     this_unit.foreach_monitor([dcb](Monitor* monitor) {
         if (monitor->m_active)
@@ -518,7 +491,7 @@ void monitor_show_all(DCB* dcb)
  *
  * @param dcb   DCB for printing output
  */
-void monitor_show(DCB* dcb, Monitor* monitor)
+void MonitorManager::monitor_show(DCB* dcb, Monitor* monitor)
 {
     monitor->show(dcb);
 }
@@ -563,7 +536,7 @@ void Monitor::show(DCB* dcb)
  *
  * @param dcb   DCB for printing output
  */
-void monitor_list(DCB* dcb)
+void MonitorManager::monitor_list(DCB* dcb)
 {
     dcb_printf(dcb, "---------------------+---------------------\n");
     dcb_printf(dcb, "%-20s | Status\n", "Monitor");
@@ -590,7 +563,7 @@ void monitor_list(DCB* dcb)
  * @param       name    The name of the monitor
  * @return      Pointer to the monitor or NULL
  */
-Monitor* monitor_find(const char* name)
+Monitor* MonitorManager::find_monitor(const char* name)
 {
     Monitor* rval = nullptr;
     this_unit.foreach_monitor([&rval, name](Monitor* ptr) {
@@ -608,7 +581,7 @@ Monitor* monitor_find(const char* name)
  * @param name The name of the monitor
  * @return  Pointer to the destroyed monitor or NULL if monitor is not found
  */
-Monitor* monitor_repurpose_destroyed(const char* name, const char* module)
+Monitor* MonitorManager::reactivate_monitor(const char* name, const char* module)
 {
     Monitor* rval = NULL;
     this_unit.foreach_monitor([&rval, name, module](Monitor* monitor) {
@@ -628,7 +601,7 @@ Monitor* monitor_repurpose_destroyed(const char* name, const char* module)
  *
  * @return A Result set
  */
-std::unique_ptr<ResultSet> monitor_get_list()
+std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
     this_unit.foreach_monitor([&set](Monitor* ptr) {
@@ -1301,7 +1274,7 @@ static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
                prev.c_str(), next.c_str());
 }
 
-Monitor* monitor_server_in_use(const SERVER* server)
+Monitor* MonitorManager::server_is_monitored(const SERVER* server)
 {
     Monitor* rval = nullptr;
     this_unit.foreach_monitor([&rval, server](Monitor* monitor) {
@@ -2328,7 +2301,7 @@ void Monitor::populate_services()
     }
 }
 
-void MonitorManager::monitor_debug_wait()
+void MonitorManager::debug_wait_one_tick()
 {
     using namespace std::chrono;
     std::map<Monitor*, uint64_t> ticks;

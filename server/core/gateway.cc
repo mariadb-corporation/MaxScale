@@ -2186,7 +2186,7 @@ int main(int argc, char** argv)
     }
 
     /** Start all monitors */
-    monitor_start_all();
+    MonitorManager::start_all_monitors();
 
     if (cnf->config_check)
     {
@@ -2258,7 +2258,7 @@ int main(int argc, char** argv)
     mxs_admin_shutdown();
 
     /*< Stop all monitors */
-    monitor_stop_all();
+    MonitorManager::stop_all_monitors();
 
     /*< Destroy all monitors */
     MonitorManager::destroy_all_monitors();

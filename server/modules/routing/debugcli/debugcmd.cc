@@ -291,7 +291,7 @@ struct subcommand showoptions[] =
         {0               }
     },
     {
-        "monitor", 1, 1, (FN)monitor_show,
+        "monitor", 1, 1, (FN)MonitorManager::monitor_show,
         "Show monitor details",
         "Usage: show monitor MONITOR\n"
         "\n"
@@ -302,7 +302,7 @@ struct subcommand showoptions[] =
         {ARG_TYPE_MONITOR}
     },
     {
-        "monitors", 0, 0, (FN)monitor_show_all,
+        "monitors", 0, 0, (FN)MonitorManager::show_all_monitors,
         "Show all monitors",
         "Usage: show monitors",
         {0               }
@@ -482,7 +482,7 @@ struct subcommand listoptions[] =
         {0                    }
     },
     {
-        "monitors", 0, 0, (FN)monitor_list,
+        "monitors", 0, 0, (FN)MonitorManager::monitor_list,
         "List all monitors",
         "Usage: list monitors",
         {0                    }
@@ -1293,7 +1293,7 @@ static void createListener(DCB* dcb,
 
 static void createMonitor(DCB* dcb, const char* name, const char* module)
 {
-    if (monitor_find(name))
+    if (MonitorManager::find_monitor(name))
     {
         dcb_printf(dcb, "Monitor '%s' already exists\n", name);
     }
@@ -1993,7 +1993,7 @@ static unsigned long convert_arg(char* arg, int arg_type)
 
     case ARG_TYPE_MONITOR:
         fix_object_name(arg);
-        rval = (unsigned long)monitor_find(arg);
+        rval = (unsigned long) MonitorManager::find_monitor(arg);
         break;
 
     case ARG_TYPE_FILTER:
@@ -2716,7 +2716,7 @@ static void show_qc_all(DCB* dcb)
  */
 static void shutdown_monitor(DCB* dcb, Monitor* monitor)
 {
-    MonitorManager::monitor_stop(monitor);
+    MonitorManager::stop_monitor(monitor);
 }
 
 /**
@@ -2727,7 +2727,7 @@ static void shutdown_monitor(DCB* dcb, Monitor* monitor)
  */
 static void restart_monitor(DCB* dcb, Monitor* monitor)
 {
-    MonitorManager::monitor_start(monitor);
+    MonitorManager::start_monitor(monitor);
 }
 
 /**

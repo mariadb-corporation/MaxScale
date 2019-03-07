@@ -435,7 +435,20 @@ protected:
 private:
     friend class MonitorManager;
 
+    /**
+     * @brief Add a server to a monitor.
+     *
+     * Add a server to a monitor, provided the server is not currently
+     * being monitored by any monitor. Before adding the server to the
+     * monitor, the monitor is stopped if it is running and after the
+     * addition it is restarted if it was running.
+     *
+     * @param server   A server.
+     *
+     * @return True, if the monitor was added, false otherwise.
+     */
     void add_server(SERVER* server);
+
     void remove_server(SERVER* server);
 
     /**
@@ -466,20 +479,6 @@ private:
      */
     int launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
 
-    /**
-     * @brief Add a server to a monitor.
-     *
-     * Add a server to a monitor, provided the server is not currently
-     * being monitored by any monitor. Before adding the server to the
-     * monitor, the monitor is stopped if it is running and after the
-     * addition it is restarted if it was running.
-     *
-     * @param monitor  A monitor.
-     * @param server   A server.
-     *
-     * @return True, if the monitor was added, false otherwise.
-     */
-    static bool add_server(Monitor* mon, SERVER* server);
 
     /**
      * @brief Remove a server from a monitor.

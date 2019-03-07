@@ -125,7 +125,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
         if ((path == ":service" && service_find(target.c_str()))
             || (path == ":server" && Server::find_by_unique_name(target))
             || (path == ":filter" && filter_find(target.c_str()))
-            || (path == ":monitor" && monitor_find(target.c_str()))
+            || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
             || (path == ":module" && get_module(target.c_str(), NULL))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
             || (path == ":unixuser" && admin_linux_account_enabled(target.c_str())))
@@ -259,20 +259,20 @@ private:
 
 HttpResponse cb_stop_monitor(const HttpRequest& request)
 {
-    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     if (monitor)
     {
-        MonitorManager::monitor_stop(monitor);
+        MonitorManager::stop_monitor(monitor);
     }
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
 HttpResponse cb_start_monitor(const HttpRequest& request)
 {
-    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     if (monitor)
     {
-        MonitorManager::monitor_start(monitor);
+        MonitorManager::start_monitor(monitor);
     }
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
@@ -390,7 +390,7 @@ HttpResponse cb_create_service_listener(const HttpRequest& request)
 
 HttpResponse cb_alter_monitor(const HttpRequest& request)
 {
-    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     mxb_assert(monitor && request.get_json());
 
     if (runtime_alter_monitor_from_json(monitor, request.get_json()))
@@ -403,7 +403,7 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
 
 HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
 {
-    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     mxb_assert(monitor && request.get_json());
 
     if (runtime_alter_monitor_relationships_from_json(monitor, request.get_json()))
@@ -492,7 +492,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
 
 HttpResponse cb_delete_monitor(const HttpRequest& request)
 {
-    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     mxb_assert(monitor);
 
     if (runtime_destroy_monitor(monitor))
@@ -613,7 +613,7 @@ HttpResponse cb_all_monitors(const HttpRequest& request)
 
 HttpResponse cb_get_monitor(const HttpRequest& request)
 {
-    Monitor* monitor = monitor_find(request.uri_part(1).c_str());
+    Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     mxb_assert(monitor);
     return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
 }
@@ -742,7 +742,7 @@ HttpResponse cb_unix_user(const HttpRequest& request)
 
 HttpResponse cb_monitor_wait(const HttpRequest& request)
 {
-    MonitorManager::monitor_debug_wait();
+    MonitorManager::debug_wait_one_tick();
     return HttpResponse(MHD_HTTP_OK);
 }
 HttpResponse cb_create_user(const HttpRequest& request)

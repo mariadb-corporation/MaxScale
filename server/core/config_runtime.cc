@@ -137,7 +137,7 @@ bool runtime_add_server(Monitor* mon, Server* server)
     mxb_assert(mon && server);
     bool rval = false;
 
-    if (monitor_server_in_use(server))
+    if (MonitorManager::server_is_monitored(server))
     {
         MXS_ERROR("Server '%s' is already monitored.", server->name());
     }
@@ -167,7 +167,7 @@ bool runtime_remove_server(Monitor* mon, Server* server)
     mxb_assert(mon && server);
     bool rval = false;
 
-    if (monitor_server_in_use(server) != mon)
+    if (MonitorManager::server_is_monitored(server) != mon)
     {
         MXS_ERROR("Server '%s' is not monitored by '%s'.", server->name(), mon->m_name);
     }
@@ -209,7 +209,7 @@ bool runtime_link_server(Server* server, const char* target)
 
     bool rval = false;
     Service* service = service_internal_find(target);
-    Monitor* monitor = service ? NULL : monitor_find(target);
+    Monitor* monitor = service ? NULL : MonitorManager::find_monitor(target);
 
     if (service)
     {
@@ -263,7 +263,7 @@ bool runtime_unlink_server(Server* server, const char* target)
 
     bool rval = false;
     Service* service = service_internal_find(target);
-    Monitor* monitor = service ? NULL : monitor_find(target);
+    Monitor* monitor = service ? NULL : MonitorManager::find_monitor(target);
 
     if (service || monitor)
     {
@@ -380,7 +380,7 @@ bool runtime_destroy_server(Server* server)
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
-    if (service_server_in_use(server) || monitor_server_in_use(server))
+    if (service_server_in_use(server) || MonitorManager::server_is_monitored(server))
     {
         const char* err = "Cannot destroy server '%s' as it is used by at least "
                           "one service or monitor";
@@ -696,7 +696,7 @@ bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
     bool was_running = (monitor->state() == MONITOR_STATE_RUNNING);
     if (was_running)
     {
-        MonitorManager::monitor_stop(monitor);
+        MonitorManager::stop_monitor(monitor);
     }
     bool success = do_alter_monitor(monitor, key, value);
     if (success)
@@ -705,7 +705,7 @@ bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
     }
     if (was_running)
     {
-        MonitorManager::monitor_start(monitor);
+        MonitorManager::start_monitor(monitor);
     }
     return success;
 }
@@ -1210,9 +1210,9 @@ bool runtime_create_monitor(const char* name, const char* module)
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
-    if (monitor_find(name) == NULL)
+    if (MonitorManager::find_monitor(name) == NULL)
     {
-        Monitor* monitor = monitor_repurpose_destroyed(name, module);
+        Monitor* monitor = MonitorManager::reactivate_monitor(name, module);
         std::string reason;
 
         if (monitor)
@@ -1432,13 +1432,7 @@ bool runtime_destroy_monitor(Monitor* monitor)
 
     if (rval)
     {
-        MonitorManager::monitor_stop(monitor);
-
-        while (!monitor->m_servers.empty())
-        {
-            MonitorManager::remove_server(monitor, monitor->m_servers[0]->server);
-        }
-        monitor_deactivate(monitor);
+        MonitorManager::deactivate_monitor(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->m_name);
     }
 
@@ -1735,7 +1729,7 @@ static bool server_contains_required_fields(json_t* json)
 static bool server_relation_is_valid(const std::string& type, const std::string& value)
 {
     return (type == CN_SERVICES && service_internal_find(value.c_str()))
-           || (type == CN_MONITORS && monitor_find(value.c_str()));
+           || (type == CN_MONITORS && MonitorManager::find_monitor(value.c_str()));
 }
 
 static bool filter_to_service_relation_is_valid(const std::string& type, const std::string& value)
@@ -2258,7 +2252,7 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
 
         if (runtime_create_monitor(name, module))
         {
-            rval = monitor_find(name);
+            rval = MonitorManager::find_monitor(name);
             mxb_assert(rval);
 
             if (!runtime_alter_monitor_from_json(rval, json))
@@ -2268,7 +2262,7 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
             }
             else
             {
-                MonitorManager::monitor_start(rval);
+                MonitorManager::start_monitor(rval);
             }
         }
     }
@@ -2420,7 +2414,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
         if (parameters)
         {
             bool restart = (monitor->state() != MONITOR_STATE_STOPPED);
-            MonitorManager::monitor_stop(monitor);
+            MonitorManager::stop_monitor(monitor);
             const char* key;
             json_t* value;
 
@@ -2451,7 +2445,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 
             if (restart)
             {
-                MonitorManager::monitor_start(monitor);
+                MonitorManager::start_monitor(monitor);
             }
         }
     }
