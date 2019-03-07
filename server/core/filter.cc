@@ -540,12 +540,13 @@ static bool create_filter_config(const SFilterDef& filter, const char* filename)
 
     dprintf(file, "[%s]\n", filter->name.c_str());
     dprintf(file, "%s=%s\n", CN_TYPE, CN_FILTER);
+    dprintf(file, "%s=%s\n", CN_MODULE, filter->module.c_str());
 
     const MXS_MODULE* mod = get_module(filter->module.c_str(), NULL);
     mxb_assert(mod);
 
     MXS_MODULE_PARAM no_common_params = {};
-    dump_param_list(file, filter->parameters, {CN_TYPE}, &no_common_params, mod->parameters);
+    dump_param_list(file, filter->parameters, {CN_TYPE, CN_MODULE}, &no_common_params, mod->parameters);
     close(file);
 
     return true;
