@@ -166,7 +166,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
                                            std::string* errmsg_out)
 {
     StopWatch timer;
-    string cmd_prefix;
+    string max_stmt_time;
     int connector_timeout = -1;
     if (m_capabilities.max_statement_time)
     {
@@ -175,14 +175,15 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         mxb_assert(rv == 0);
         if (connector_timeout > 0)
         {
-            cmd_prefix = string_printf("SET STATEMENT max_statement_time=%i FOR ", connector_timeout);
+            max_stmt_time = string_printf("SET STATEMENT max_statement_time=%i FOR ", connector_timeout);
         }
     }
 
-    string command = cmd_prefix + cmd;
+    const string command = max_stmt_time + cmd;
     // If a query lasts less than 1s, sleep so that at most 1 query/s is sent.
     // This prevents busy-looping when faced with some network errors.
     const Duration min_query_time(1.0);
+
     // Even if time is up, try at least once.
     bool cmd_success = false;
     bool keep_trying = true;
@@ -196,17 +197,27 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
 
         // Check if there is time to retry.
         Duration time_remaining = time_limit - timer.split();
+        bool non_fatal_connector_err = mxs_mysql_is_net_error(errornum);
         keep_trying = (time_remaining.secs() > 0)
-            // either a connector-c timeout
-            && (mxs_mysql_is_net_error(errornum)
-                // or query was interrupted by max_statement_time.
-                || (!cmd_prefix.empty() && errornum == ER_STATEMENT_TIMEOUT));
+            // Either a connector-c timeout or query was interrupted by max_statement_time.
+            && (non_fatal_connector_err || (!max_stmt_time.empty() && errornum == ER_STATEMENT_TIMEOUT));
+
         if (!cmd_success)
         {
             if (keep_trying)
             {
-                MXS_WARNING("Query '%s' timed out on '%s': Retrying with %.1f seconds left.",
-                            command.c_str(), name(), time_remaining.secs());
+                string retrying = string_printf("Retrying with %.1f seconds left.", time_remaining.secs());
+                if (non_fatal_connector_err)
+                {
+                    MXS_WARNING("%s %s", error_msg.c_str(), retrying.c_str());
+                }
+                else
+                {
+                    // Timed out because of max_statement_time.
+                    MXS_WARNING("Query '%s' timed out on '%s'. %s",
+                                command.c_str(), name(), retrying.c_str());
+                }
+
                 if (query_time < min_query_time)
                 {
                     Duration query_sleep = min_query_time - query_time;
@@ -216,7 +227,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
             }
             else if (errmsg_out)
             {
-                *errmsg_out = error_msg;    // The error string already has all required info.
+                *errmsg_out = error_msg; // The error string already has all required info.
             }
         }
     }
