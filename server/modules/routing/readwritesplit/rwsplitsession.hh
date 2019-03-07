@@ -144,6 +144,7 @@ private:
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
     bool route_single_stmt(GWBUF* querybuf);
     bool route_stored_query();
+    void close_stale_connections();
 
     mxs::RWBackend* get_hinted_backend(char* name);
     mxs::RWBackend* get_slave_backend(int max_rlag);

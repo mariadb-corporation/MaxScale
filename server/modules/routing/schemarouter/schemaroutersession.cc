@@ -1592,8 +1592,17 @@ bool SchemaRouterSession::send_tables(GWBUF* pPacket)
 
     if (database.empty())
     {
-        MXS_FREE(query);
-        return false;
+        // Was not a "show tables from x". If a current database is selected, use that as target.
+        if (!m_current_db.empty())
+        {
+            database = m_current_db;
+        }
+        else
+        {
+            // No current db, route the query to a server, likely getting "No database selected"
+            MXS_FREE(query);
+            return false;
+        }
     }
 
     ServerMap tablelist;
