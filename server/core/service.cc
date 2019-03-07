@@ -1850,7 +1850,7 @@ bool Service::dump_config(const char* filename) const
         for (const auto& f : m_filters)
         {
             dprintf(file, "%s%s", sep, f->name.c_str());
-            sep = ",";
+            sep = "|";
         }
 
         dprintf(file, "\n");
