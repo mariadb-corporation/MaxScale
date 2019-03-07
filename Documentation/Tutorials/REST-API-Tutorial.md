@@ -53,7 +53,7 @@ now secure and can be used across networks.
 ## Requesting Data
 
 **Note:** For the sake of brevity, the rest of this tutorial will omit the
-TLS/SSL options for the `curl` command line. For more information, refer to the
+TLS/SSL options from the `curl` command line. For more information, refer to the
 `curl` manpage.
 
 The most basic task to do with the REST API is to see whether MaxScale is up and
@@ -272,8 +272,7 @@ execute the following command.
 curl -X PATCH -d @server1.txt 127.0.0.1:8989/v1/servers/server1
 ```
 
-To verify that the data was updated correctly, request the updated created
-object.
+To verify that the data was updated correctly, request the updated object.
 
 ```
 curl 127.0.0.1:8989/v1/servers/server1
