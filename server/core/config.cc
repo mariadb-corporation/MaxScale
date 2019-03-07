@@ -4869,24 +4869,28 @@ bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* pDisk_space_thre
     return success;
 }
 
-void dump_param_list(int file,
-                     const MXS_CONFIG_PARAMETER* list,
-                     const std::unordered_set<std::string>& ignored,
-                     const MXS_MODULE_PARAM* common_params,
-                     const MXS_MODULE_PARAM* module_params)
+std::string generate_config_string(const std::string& instance_name, const MXS_CONFIG_PARAMETER& parameters,
+                                   const MXS_MODULE_PARAM* common_param_defs,
+                                   const MXS_MODULE_PARAM* module_param_defs)
 {
-    for (const auto& p : *list)
+    string output = "[" + instance_name + "]\n";;
+    // Common params and module params are null-terminated arrays. Loop over both and print parameter
+    // names and values.
+    for (auto param_set : {common_param_defs, module_param_defs})
     {
-        const string& name = p.first;
-        const string& value = p.second;
-        if (ignored.count(name) == 0 && !value.empty())
+        for (int i = 0; param_set[i].name; i++)
         {
-            if (dprintf(file, "%s=%s\n", name.c_str(), value.c_str()) == -1)
+            auto param_info = param_set + i;
+            string param_name = param_info->name;
+            if (parameters.contains(param_name))
             {
-                MXS_ERROR("Failed to serialize service value: %d, %s", errno, mxs_strerror(errno));
+                // Parameter value in the container can be an empty string and still be printed.
+                string param_value = parameters.get_string(param_name);
+                output += param_name + "=" + param_value + "\n";
             }
         }
     }
+    return output;
 }
 
 /**

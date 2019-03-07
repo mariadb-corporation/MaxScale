@@ -233,12 +233,19 @@ bool get_suffixed_duration(const char* zValue,
                            std::chrono::milliseconds* pDuration,
                            mxs::config::DurationUnit* pUnit = nullptr);
 
-// Dump a parameter list into a file as `key=value` pairs
-void dump_param_list(int file,
-                     const MXS_CONFIG_PARAMETER* list,
-                     const std::unordered_set<std::string>& ignored,
-                     const MXS_MODULE_PARAM* common_params,
-                     const MXS_MODULE_PARAM* module_params);
+/**
+ * Generate configuration file contents out of module configuration parameters. Only parameters defined
+ * in the parameter definition arrays are printed. Printing is in the order the parameters are given in
+ * the definitions.
+ *
+ * @param instance_name The module instance name
+ * @param parameters Configuration parameter values
+ * @param common_param_defs Common module parameter definitions. These are printed first.
+ * @param module_param_defs Module-specific parameter definitions.
+ */
+std::string generate_config_string(const std::string& instance_name, const MXS_CONFIG_PARAMETER& parameters,
+                                   const MXS_MODULE_PARAM* common_param_defs,
+                                   const MXS_MODULE_PARAM* module_param_defs);
 
 /**
  * Check whether a parameter can be modified at runtime

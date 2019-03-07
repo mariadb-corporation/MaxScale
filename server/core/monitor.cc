@@ -1325,7 +1325,6 @@ Monitor* monitor_server_in_use(const SERVER* server)
 static bool create_monitor_config(const Monitor* monitor, const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
     if (file == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
@@ -1338,31 +1337,18 @@ static bool create_monitor_config(const Monitor* monitor, const char* filename)
 
     {
         Guard guard(monitor->m_lock);
-        dprintf(file, "[%s]\n", monitor->m_name);
-        dprintf(file, "%s=monitor\n", CN_TYPE);
-
-        if (!monitor->m_servers.empty())
-        {
-            dprintf(file, "%s=", CN_SERVERS);
-            for (MXS_MONITORED_SERVER* db : monitor->m_servers)
-            {
-                if (db != monitor->m_servers[0])
-                {
-                    dprintf(file, ",");
-                }
-                dprintf(file, "%s", db->server->name());
-            }
-            dprintf(file, "\n");
-        }
 
         const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
         mxb_assert(mod);
 
-        dump_param_list(file,
-                        &monitor->parameters,
-                        {CN_TYPE, CN_SERVERS},
-                        config_monitor_params,
-                        mod->parameters);
+        string config = generate_config_string(monitor->m_name, monitor->parameters,
+                                               config_monitor_params, mod->parameters);
+
+        if (dprintf(file, "%s", config.c_str()) == -1)
+        {
+            MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
+                      filename, errno, mxs_strerror(errno));
+        }
     }
 
     close(file);

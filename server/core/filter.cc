@@ -514,18 +514,17 @@ static bool create_filter_config(const SFilterDef& filter, const char* filename)
     }
 
     Guard guard(filter->lock);
-
-    dprintf(file, "[%s]\n", filter->name.c_str());
-    dprintf(file, "%s=%s\n", CN_TYPE, CN_FILTER);
-    dprintf(file, "%s=%s\n", CN_MODULE, filter->module.c_str());
-
     const MXS_MODULE* mod = get_module(filter->module.c_str(), NULL);
     mxb_assert(mod);
 
-    MXS_MODULE_PARAM no_common_params = {};
-    dump_param_list(file, filter->parameters, {CN_TYPE, CN_MODULE}, &no_common_params, mod->parameters);
+    string config_str = generate_config_string(filter->name, *filter->parameters,
+                                               config_filter_params, mod->parameters);
+    if (dprintf(file, "%s", config_str.c_str()) == -1)
+    {
+        MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
     close(file);
-
     return true;
 }
 

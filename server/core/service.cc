@@ -1417,12 +1417,23 @@ bool Service::dump_config(const char* filename) const
         return false;
     }
 
+    const MXS_MODULE* mod = get_module(router_name(), NULL);
+    mxb_assert(mod);
+
+    MXS_CONFIG_PARAMETER params_to_print = svc_config_param;
+    // The next text-mode parameter may not be up-to-date, print them manually. TODO: Fix
+    params_to_print.remove(CN_FILTERS);
+    params_to_print.remove(CN_SERVERS);
+
+    string config = generate_config_string(name(), params_to_print, config_service_params, mod->parameters);
+    if (dprintf(file, "%s", config.c_str()) == -1)
+    {
+        MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
     /**
      * TODO: Check for return values on all of the dprintf calls
      */
-    dprintf(file, "[%s]\n", name());
-    dprintf(file, "%s=service\n", CN_TYPE);
-
     if (!m_filters.empty())
     {
         dprintf(file, "%s=", CN_FILTERS);
@@ -1452,16 +1463,6 @@ bool Service::dump_config(const char* filename) const
         }
         dprintf(file, "\n");
     }
-
-    const MXS_MODULE* mod = get_module(router_name(), NULL);
-    mxb_assert(mod);
-
-    dump_param_list(file,
-                    &svc_config_param,
-                    {CN_TYPE, CN_FILTERS, CN_SERVERS},
-                    config_service_params,
-                    mod->parameters);
-
     close(file);
 
     return true;

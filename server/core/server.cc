@@ -880,22 +880,23 @@ bool Server::create_server_config(const Server* server, const char* filename)
     }
 
     // TODO: Check for return values on all of the dprintf calls
-    dprintf(file, "[%s]\n", server->name());
-    dprintf(file, "%s=server\n", CN_TYPE);
-
     const MXS_MODULE* mod = get_module(server->m_settings.protocol.c_str(), MODULE_PROTOCOL);
-    dump_param_list(file,
-                    ParamAdaptor(server->m_settings.all_parameters),
-                    {CN_TYPE},
-                    config_server_params,
-                    mod->parameters);
+    string config = generate_config_string(server->name(),
+                                           *ParamAdaptor(server->m_settings.all_parameters),
+                                           config_server_params,
+                                           mod->parameters);
 
     // Print custom parameters
     for (const auto& elem : server->m_settings.custom_parameters)
     {
-        dprintf(file, "%s=%s\n", elem.first.c_str(), elem.second.c_str());
+        config += elem.first + "=" + elem.second + "\n";
     }
 
+    if (dprintf(file, "%s", config.c_str()) == -1)
+    {
+        MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
     close(file);
     return true;
 }
