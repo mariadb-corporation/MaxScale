@@ -267,12 +267,7 @@ public:
 
     int  max_slave_count() const;
     bool have_enough_servers() const;
-    bool select_connect_backend_servers(MXS_SESSION* session,
-                                        mxs::PRWBackends& backends,
-                                        mxs::RWBackend**  current_master,
-                                        mxs::SessionCommandList* sescmd_list,
-                                        int* expected_responses,
-                                        connection_type type);
+
     // API functions
 
     /**

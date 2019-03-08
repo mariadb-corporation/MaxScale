@@ -21,18 +21,14 @@
 
 using namespace maxscale;
 
-RWSplitSession::RWSplitSession(RWSplit* instance,
-                               MXS_SESSION* session,
-                               const Config& config,
-                               mxs::SRWBackends backends,
-                               mxs::RWBackend*  master)
+RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends)
     : mxs::RouterSession(session)
     , m_backends(std::move(backends))
     , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
     , m_current_master(master)
     , m_target_node(nullptr)
     , m_prev_target(nullptr)
-    , m_config(config)
+    , m_config(instance->config())
     , m_last_keepalive_check(mxs_clock())
     , m_nbackends(instance->service()->n_dbref)
     , m_client(session->client_dcb)
@@ -58,6 +54,11 @@ RWSplitSession::RWSplitSession(RWSplit* instance,
         n_conn = MXS_MAX(floor((double)m_nbackends * pct), 1);
         m_config.max_slave_connections = n_conn;
     }
+
+    for (auto& b : m_raw_backends)
+    {
+        m_server_stats[b->server()].start_session();
+    }
 }
 
 RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
@@ -68,31 +69,16 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
     {
         SRWBackends backends = RWBackend::from_servers(router->service()->dbref);
 
-        /**
-         * At least the master must be found if the router is in the strict mode.
-         * If sessions without master are allowed, only a slave must be found.
-         */
-
-        RWBackend* master = nullptr;
-        const auto& config = router->config();
-        auto backend_ptrs = sptr_vec_to_ptr_vec(backends);
-
-        if (config.lazy_connect
-            || router->select_connect_backend_servers(session,
-                                                      backend_ptrs,
-                                                      &master,
-                                                      NULL,
-                                                      NULL,
-                                                      connection_type::ALL))
+        if ((rses = new(std::nothrow) RWSplitSession(router, session, std::move(backends))))
         {
-            if ((rses = new RWSplitSession(router, session, config, std::move(backends), master)))
+            if (rses->open_connections())
             {
                 router->stats().n_sessions += 1;
             }
-
-            for (auto& b : backends)
+            else
             {
-                rses->m_server_stats[b->server()].start_session();
+                delete rses;
+                rses = nullptr;
             }
         }
     }
@@ -1115,25 +1101,9 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
 
     bool succp = false;
 
-    if (m_config.lazy_connect)
+    if (!can_recover_servers())
     {
-        // Lazy connect is enabled, don't care whether we have available servers
-        succp = true;
-    }
-    /**
-     * Try to get replacement slave or at least the minimum
-     * number of slave connections for router session.
-     */
-    else if (m_recv_sescmd > 0 && m_config.disable_sescmd_history)
-    {
-        for (const auto& a : m_raw_backends)
-        {
-            if (a->in_use())
-            {
-                succp = true;
-                break;
-            }
-        }
+        succp = can_continue_session();
 
         if (!succp)
         {
@@ -1143,13 +1113,8 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
     }
     else
     {
-
-        succp = m_router->select_connect_backend_servers(ses,
-                                                         m_raw_backends,
-                                                         &m_current_master,
-                                                         &m_sescmd_list,
-                                                         &m_expected_responses,
-                                                         connection_type::SLAVE);
+        // Try to replace failed connections
+        succp = open_connections();
     }
 
     return succp;

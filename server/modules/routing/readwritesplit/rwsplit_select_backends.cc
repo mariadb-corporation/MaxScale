@@ -12,6 +12,7 @@
  */
 
 #include "readwritesplit.hh"
+#include "rwsplitsession.hh"
 
 #include <stdio.h>
 #include <strings.h>
@@ -378,93 +379,71 @@ std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
 /**
  * Select and connect to backend servers
  *
- * @param inst               Router instance
- * @param session            Client session
- * @param backends           List of backend servers
- * @param current_master     The current master server
- * @param sescmd_list        List of session commands to execute
- * @param expected_responses Pointer where number of expected responses are written
- * @param type               Connection type, ALL for all types, SLAVE for slaves only
- *
  * @return True if session can continue
  */
-bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
-                                             mxs::PRWBackends& backends,
-                                             mxs::RWBackend**  current_master,
-                                             SessionCommandList* sescmd_list,
-                                             int* expected_responses,
-                                             connection_type type)
+bool RWSplitSession::open_connections()
 {
-    const Config& cnf {config()};
-    RWBackend* master = get_root_master(backends, *current_master, cnf.backend_select_fct);
+    if (m_config.lazy_connect)
+    {
+        return true;    // No need to create connections
+    }
 
-    if ((!master || !master->can_connect()) && cnf.master_failure_mode == RW_FAIL_INSTANTLY)
+    RWBackend* master = get_root_master(m_raw_backends, m_current_master, m_config.backend_select_fct);
+
+    if ((!master || !master->can_connect()) && m_config.master_failure_mode == RW_FAIL_INSTANTLY)
     {
         if (!master)
         {
-            MXS_ERROR("Couldn't find suitable Master from %lu candidates.", backends.size());
+            MXS_ERROR("Couldn't find suitable Master from %lu candidates.", m_raw_backends.size());
         }
         else
         {
             MXS_ERROR("Master exists (%s), but it is being drained and cannot be used.",
                       master->server()->address);
         }
-
         return false;
     }
 
-    auto select_criteria = cnf.slave_selection_criteria;
-
     if (mxs_log_is_priority_enabled(LOG_INFO))
     {
-        log_server_connections(select_criteria, backends);
+        log_server_connections(m_config.slave_selection_criteria, m_raw_backends);
     }
 
-    if (type == ALL && master && master->connect(session))
+    if (can_recover_servers())
     {
-        MXS_INFO("Selected Master: %s", master->name());
-        *current_master = master;
+        // A master connection can be safely attempted
+        if (master && !master->in_use() && master->can_connect() && prepare_connection(master))
+        {
+            MXS_INFO("Selected Master: %s", master->name());
+            m_current_master = master;
+        }
     }
 
-    auto counts = get_slave_counts(backends, master);
-    int slaves_connected = counts.second;
-    int max_nslaves = max_slave_count();
-
-    mxb_assert(slaves_connected <= max_nslaves || max_nslaves == 0);
-
+    int n_slaves = get_slave_counts(m_raw_backends, master).second;
+    int max_nslaves = m_router->max_slave_count();
     PRWBackends candidates;
-    for (auto& pBackend : backends)
+    mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
+
+    for (auto& pBackend : m_raw_backends)
     {
-        if (!pBackend->in_use()
-            && pBackend->can_connect()
-            && valid_for_slave(pBackend, master))
+        if (!pBackend->in_use() && pBackend->can_connect() && valid_for_slave(pBackend, master))
         {
             candidates.push_back(pBackend);
         }
     }
 
-    while (slaves_connected < max_nslaves && candidates.size())
+    for (auto ite = m_config.backend_select_fct(candidates);
+         n_slaves < max_nslaves && !candidates.empty() && ite != candidates.end();
+         ite = m_config.backend_select_fct(candidates))
     {
-        auto ite = m_config->backend_select_fct(candidates);
-        if (ite == candidates.end())
+        if (prepare_connection(*ite))
         {
-            break;
+            MXS_INFO("Selected Slave: %s", (*ite)->name());
+            ++n_slaves;
         }
 
-        auto& backend = *ite;
-
-        if (backend->connect(session, sescmd_list))
-        {
-            MXS_INFO("Selected Slave: %s", backend->name());
-
-            if (sescmd_list && sescmd_list->size() && expected_responses)
-            {
-                (*expected_responses)++;
-            }
-
-            ++slaves_connected;
-        }
         candidates.erase(ite);
     }
+
     return true;
 }

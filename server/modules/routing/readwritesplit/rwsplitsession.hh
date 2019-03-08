@@ -131,12 +131,9 @@ public:
     }
 
 private:
-    RWSplitSession(RWSplit* instance,
-                   MXS_SESSION* session,
-                   const Config& config,
-                   mxs::SRWBackends backends,
-                   mxs::RWBackend*  master);
+    RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends);
 
+    bool open_connections();
     void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket);
     void compress_history(mxs::SSessionCommand& sescmd);
 
@@ -163,6 +160,7 @@ private:
     bool            handle_got_target(GWBUF* querybuf, mxs::RWBackend* target, bool store);
     void            handle_connection_keepalive(mxs::RWBackend* target);
     bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
+    bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection();
     void            retry_query(GWBUF* querybuf, int delay = 1);
 
@@ -246,6 +244,13 @@ private:
     inline bool can_recover_servers() const
     {
         return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
+    }
+
+    inline bool can_continue_session() const
+    {
+        return std::any_of(m_raw_backends.begin(), m_raw_backends.end(), [](mxs::RWBackend* b) {
+                               return b->in_use();
+                           });
     }
 
     inline bool is_large_query(GWBUF* buf)

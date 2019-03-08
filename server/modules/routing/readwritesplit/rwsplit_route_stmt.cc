@@ -67,6 +67,27 @@ void RWSplitSession::handle_connection_keepalive(RWBackend* target)
     mxb_assert(nserv < m_nbackends);
 }
 
+bool RWSplitSession::prepare_connection(RWBackend* target)
+{
+    mxb_assert(!target->in_use());
+    bool rval = target->connect(m_client->session, &m_sescmd_list);
+
+    if (rval)
+    {
+        MXS_INFO("Connected to '%s'", target->name());
+
+        if (target->is_waiting_result())
+        {
+            mxb_assert_message(!m_sescmd_list.empty() && target->has_session_commands(),
+                               "Session command list must not be empty and target "
+                               "should have unfinished session commands.");
+            m_expected_responses++;
+        }
+    }
+
+    return rval;
+}
+
 bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_target)
 {
     bool rval = true;
@@ -76,16 +97,7 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
     {
         mxb_assert(target->can_connect() && can_recover_servers());
         mxb_assert(!TARGET_IS_MASTER(route_target) || m_config.master_reconnection);
-        rval = target->connect(m_client->session, &m_sescmd_list);
-        MXS_INFO("Connected to '%s'", target->name());
-
-        if (rval && target->is_waiting_result())
-        {
-            mxb_assert_message(!m_sescmd_list.empty() && target->has_session_commands(),
-                               "Session command list must not be empty and target "
-                               "should have unfinished session commands.");
-            m_expected_responses++;
-        }
+        rval = prepare_connection(target);
     }
 
     return rval;
