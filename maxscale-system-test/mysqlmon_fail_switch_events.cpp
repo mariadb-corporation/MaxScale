@@ -22,6 +22,12 @@ const char EVENT_SHCEDULER[] = "SET GLOBAL event_scheduler = %s;";
 const char USE_TEST[] = "USE test;";
 const char DELETE_EVENT[] = "DROP EVENT %s;";
 
+const char EV_STATE_ENABLED[] = "ENABLED";
+const char EV_STATE_DISABLED[] = "DISABLED";
+const char EV_STATE_SLAVE_DISABLED[] = "SLAVESIDE_DISABLED";
+
+const char WRONG_MASTER_FMT[] = "%s is not master as expected. Current master id: %i.";
+
 int read_incremented_field(TestConnections& test)
 {
     int rval = -1;
@@ -137,10 +143,55 @@ bool check_event_status(TestConnections& test, int node,
         else
         {
             rval = true;
-            cout << "Event '" << event_name << "' is '" << status << "' as it should.\n";
+            cout << "Event '" << event_name << "' is '" << status << "' on node " << node <<
+                    " as it should.\n";
         }
     }
     return rval;
+}
+
+void set_event_state(TestConnections& test, const string& event_name, const string& new_state)
+{
+    bool success = false;
+    test.maxscales->connect_maxscale(0);
+    MYSQL* conn = test.maxscales->conn_rwsplit[0];
+    const char query_fmt[] = "ALTER EVENT %s %s;";
+
+    if ((test.try_query(conn, USE_TEST) == 0)
+        && (test.try_query(conn, query_fmt, event_name.c_str(), new_state.c_str()) == 0))
+    {
+        success = true;
+    }
+    test.expect(success, "ALTER EVENT failed: %s", mysql_error(conn));
+    if (success)
+    {
+        cout << "Event '" << event_name << "' set to '" << new_state << "'.\n";
+    }
+}
+
+void switchover(TestConnections& test, const string& new_master)
+{
+    string switch_cmd = "call command mysqlmon switchover MySQL-Monitor " + new_master;
+    test.maxscales->execute_maxadmin_command_print(0, switch_cmd.c_str());
+    test.maxscales->wait_for_monitor(2);
+    // Check success.
+    auto new_master_status = test.get_server_status(new_master.c_str());
+    auto new_master_id = test.get_master_server_id();
+    string status_string;
+    for (auto elem : new_master_status)
+    {
+        status_string += elem + ", ";
+    }
+
+    bool success = (new_master_status.count("Master") == 1);
+    test.expect(success,
+                "%s is not master as expected. Status: %s. Current master id: %i",
+                new_master.c_str(), status_string.c_str(), new_master_id);
+
+    if (success)
+    {
+        cout << "Switchover success, " + new_master + " is new master.\n";
+    }
 }
 
 int main(int argc, char** argv)
@@ -154,10 +205,17 @@ int main(int argc, char** argv)
     // Schedule a repeating event.
     create_event(test);
 
+    int server1_ind = 0;
+    int server2_ind = 1;
+    int server1_id = test.repl->get_server_id(server1_ind);
+
+    const char* server_names[] = {"server1", "server2", "server3", "server4"};
+    auto server1_name = server_names[server1_ind];
+    auto server2_name = server_names[server2_ind];
+
     int master_id_begin = test.get_master_server_id();
-    int node0_id = test.repl->get_server_id(0);
-    test.expect(master_id_begin == node0_id,
-                "First server is not the master: master id: %i", master_id_begin);
+
+    test.expect(master_id_begin == server1_id, WRONG_MASTER_FMT, server1_name, master_id_begin);
 
     // If initialisation failed, fail the test immediately.
     if (test.global_result != 0)
@@ -167,8 +225,8 @@ int main(int argc, char** argv)
     }
 
     // Part 1: Do a failover
-    cout << "Step 1: Stop master and wait for failover. Check that another server is promoted.\n";
-    test.repl->stop_node(0);
+    cout << "\nStep 1: Stop master and wait for failover. Check that another server is promoted.\n";
+    test.repl->stop_node(server1_ind);
     test.maxscales->wait_for_monitor(3);
     get_output(test);
     int master_id_failover = test.get_master_server_id();
@@ -187,21 +245,21 @@ int main(int argc, char** argv)
     }
 
     // Part 2: Start node 0, let it join the cluster and check that the event is properly disabled.
-    cout << "Step 2: Restart node 0. It should join the cluster.\n";
-    test.repl->start_node(0);
+    cout << "\nStep 2: Restart " << server1_name << ". It should join the cluster.\n";
+    test.repl->start_node(server1_ind);
     test.maxscales->wait_for_monitor(4);
     get_output(test);
-    const char server_name[] = "server1";
-    auto states = test.get_server_status(server_name);
+
+    auto states = test.get_server_status(server1_name);
     if (states.count("Slave") < 1)
     {
         test.expect(false, "%s is not a slave as expected. Status: %s",
-                    server_name, string_set_to_string(states).c_str());
+                    server1_name, string_set_to_string(states).c_str());
     }
     else
     {
         // Old master joined as slave, check that event is disabled.
-        check_event_status(test, 0, EVENT_NAME, "SLAVESIDE_DISABLED");
+        check_event_status(test, server1_ind, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
     }
 
     if (test.global_result != 0)
@@ -212,29 +270,49 @@ int main(int argc, char** argv)
 
     // Part 3: Switchover back to server1 as master. The event will most likely not run because the old
     // master doesn't have event scheduler on anymore.
-    cout << "Step 3: Switchover back to server1. Check that event is enabled. Don't check that the "
-            "event is running since the scheduler process is likely off.\n";
-    string switch_cmd = "call command mysqlmon switchover MySQL-Monitor server1";
-    test.maxscales->execute_maxadmin_command_print(0, switch_cmd.c_str());
-    test.maxscales->wait_for_monitor(1);
-    get_output(test);
-    // Check success.
-    int master_id_switchover = test.get_master_server_id();
-    test.expect(master_id_switchover == node0_id,
-                "server1 is not master as expected. Current master: %i.", master_id_switchover);
-    check_event_status(test, 0, EVENT_NAME, "ENABLED");
-    if (test.global_result != 0)
+    cout << "\nStep 3: Switchover back to " << server1_name << ". Check that event is enabled. "
+            "Don't check that the event is running since the scheduler process is likely off.\n";
+    switchover(test, server1_name);
+    if (test.ok())
     {
-        try_delete_event(test);
-        return test.global_result;
+        check_event_status(test, server1_ind, EVENT_NAME, EV_STATE_ENABLED);
     }
 
-    // Check that all other nodes are slaves.
-    for (int i = 1; i < test.repl->N; i++)
+    // Part 4: Disable the event on master. The event should still be "SLAVESIDE_DISABLED" on slaves.
+    // Check that after switchover, the event is not enabled.
+    cout << "\nStep 4: Disable event on master, switchover to " << server2_name << ". "
+            "Check that event is still disabled.\n";
+    if (test.ok())
     {
-        string server_name = "server" + std::to_string(i + 1);
-        auto states = test.maxscales->get_server_status(server_name.c_str());
-        test.expect(states.count("Slave") == 1, "%s is not a slave.", server_name.c_str());
+        set_event_state(test, EVENT_NAME, "DISABLE");
+        test.maxscales->wait_for_monitor(); // Wait for the monitor to detect the change.
+        check_event_status(test, server1_ind, EVENT_NAME, EV_STATE_DISABLED);
+        check_event_status(test, server2_ind, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
+
+        if (test.ok())
+        {
+            cout << "Event is disabled on master and slaveside-disabled on slave.\n";
+            switchover(test, server2_name);
+            if (test.ok())
+            {
+                // Event should not have been touched.
+                check_event_status(test, server2_ind, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
+            }
+
+            // Switchover back.
+            switchover(test, server1_name);
+        }
+    }
+
+    if (test.ok())
+    {
+           // Check that all other nodes are slaves.
+        for (int i = 1; i < test.repl->N; i++)
+        {
+            string server_name = server_names[i];
+            auto states = test.maxscales->get_server_status(server_name.c_str());
+            test.expect(states.count("Slave") == 1, "%s is not a slave.", server_name.c_str());
+        }
     }
 
     try_delete_event(test);
