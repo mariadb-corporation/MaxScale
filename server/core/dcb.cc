@@ -2041,8 +2041,7 @@ static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct server* server)
 
     for (DCB* dcb = this_unit.all_dcbs[id]; dcb; dcb = dcb->thread.next)
     {
-        if (dcb->state == DCB_STATE_POLLING && dcb->server
-            && dcb->server == server)
+        if (dcb->state == DCB_STATE_POLLING && dcb->server && dcb->server == server && dcb->n_close == 0)
         {
             dcb->flags |= DCBF_HUNG;
             dcb->func.hangup(dcb);
