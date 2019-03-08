@@ -247,7 +247,11 @@ int Maxscales::restart_maxscale(int m)
     if (use_valgrind)
     {
         res = stop_maxscale(m);
-        res += start_maxscale(m);
+        res = ssh_node_f(m, false,
+                         "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
+                         "--log-file=/%s/valgrind%02d.log --trace-children=yes "
+                         "--track-origins=yes /usr/bin/maxscale", maxscale_log_dir[m], valgring_log_num);
+        valgring_log_num++;
     }
     else
     {
