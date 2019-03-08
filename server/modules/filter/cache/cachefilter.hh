@@ -14,10 +14,12 @@
 
 #include <maxscale/ccdefs.hh>
 #include <limits.h>
+#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include "rules.hh"
 #include "cache.hh"
 #include "cachefiltersession.hh"
+#include "cacheconfig.hh"
 
 
 class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
@@ -45,15 +47,14 @@ public:
 
     uint64_t getCapabilities();
 
+
 private:
     CacheFilter();
 
     CacheFilter(const CacheFilter&);
     CacheFilter& operator=(const CacheFilter&);
 
-    static bool process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& config);
-
 private:
-    CACHE_CONFIG         m_config;
+    CacheConfig          m_config;
     std::auto_ptr<Cache> m_sCache;
 };

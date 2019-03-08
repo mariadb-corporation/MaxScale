@@ -29,10 +29,10 @@ namespace mock = maxscale::mock;
 namespace
 {
 
-struct CONFIG
+struct SETTINGS
 {
     bool stop_at_first_error;
-} config =
+} settings =
 {
     true,   // stop_at_first_error
 };
@@ -366,7 +366,7 @@ int run()
 
                     cout << endl;
 
-                    if ((rv != 0) && config.stop_at_first_error)
+                    if ((rv != 0) && settings.stop_at_first_error)
                     {
                         break;
                     }
@@ -414,7 +414,7 @@ int main(int argc, char* argv[])
         switch (c)
         {
         case 'd':
-            config.stop_at_first_error = false;
+            settings.stop_at_first_error = false;
             break;
 
         default:

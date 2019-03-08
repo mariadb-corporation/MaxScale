@@ -22,7 +22,7 @@ class CachePT : public Cache
 public:
     ~CachePT();
 
-    static CachePT* Create(const std::string& name, const CACHE_CONFIG* pConfig);
+    static CachePT* Create(const std::string& name, const CacheConfig* pConfig);
 
     bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
@@ -47,13 +47,13 @@ private:
     typedef std::vector<SCache>    Caches;
 
     CachePT(const std::string& name,
-            const CACHE_CONFIG* pConfig,
+            const CacheConfig* pConfig,
             const std::vector<SCacheRules>& rules,
             SStorageFactory sFactory,
             const Caches&   caches);
 
     static CachePT* Create(const std::string& name,
-                           const CACHE_CONFIG* pConfig,
+                           const CacheConfig* pConfig,
                            const std::vector<SCacheRules>& rules,
                            SStorageFactory sFactory);
 

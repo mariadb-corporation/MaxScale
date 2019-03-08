@@ -226,6 +226,10 @@ public:
      * @return True, if the rules could be loaded, false otherwise.
      */
     static bool load(const char* zPath, uint32_t debug, std::vector<SCacheRules>* pRules);
+    static bool load(const std::string& path, uint32_t debug, std::vector<SCacheRules>* pRules)
+    {
+        return load(path.c_str(), debug, pRules);
+    }
 
     /**
      * Returns the json rules object.

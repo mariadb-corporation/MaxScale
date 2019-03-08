@@ -23,12 +23,12 @@
 namespace
 {
 
-inline bool cache_max_resultset_rows_exceeded(const CACHE_CONFIG& config, uint64_t rows)
+inline bool cache_max_resultset_rows_exceeded(const CacheConfig& config, uint64_t rows)
 {
     return config.max_resultset_rows == 0 ? false : rows > config.max_resultset_rows;
 }
 
-inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64_t size)
+inline bool cache_max_resultset_size_exceeded(const CacheConfig& config, uint64_t size)
 {
     return config.max_resultset_size == 0 ? false : size > config.max_resultset_size;
 }
@@ -189,8 +189,8 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     , m_is_read_only(true)
     , m_use(pCache->config().enabled)
     , m_populate(pCache->config().enabled)
-    , m_soft_ttl(pCache->config().soft_ttl)
-    , m_hard_ttl(pCache->config().hard_ttl)
+    , m_soft_ttl(pCache->config().soft_ttl.count())
+    , m_hard_ttl(pCache->config().hard_ttl.count())
 {
     m_key.data = 0;
 
@@ -808,7 +808,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
-        const CACHE_CONFIG& config = m_pCache->config();
+        const CacheConfig& config = m_pCache->config();
 
         if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {

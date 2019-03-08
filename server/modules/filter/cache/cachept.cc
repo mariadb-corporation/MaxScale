@@ -47,7 +47,7 @@ inline int thread_index()
 }
 
 CachePT::CachePT(const std::string& name,
-                 const CACHE_CONFIG* pConfig,
+                 const CacheConfig* pConfig,
                  const std::vector<SCacheRules>& rules,
                  SStorageFactory sFactory,
                  const Caches&   caches)
@@ -62,7 +62,7 @@ CachePT::~CachePT()
 }
 
 // static
-CachePT* CachePT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
+CachePT* CachePT::Create(const std::string& name, const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
 
@@ -148,7 +148,7 @@ cache_result_t CachePT::del_value(const CACHE_KEY& key)
 
 // static
 CachePT* CachePT::Create(const std::string& name,
-                         const CACHE_CONFIG* pConfig,
+                         const CacheConfig* pConfig,
                          const std::vector<SCacheRules>& rules,
                          SStorageFactory sFactory)
 {

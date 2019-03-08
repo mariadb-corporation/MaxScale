@@ -23,6 +23,10 @@ public:
     ~StorageFactory();
 
     static StorageFactory* Open(const char* zName);
+    static StorageFactory* Open(const std::string& name)
+    {
+        return Open(name.c_str());
+    }
 
     /**
      * The capabilities of storages created using this factory.

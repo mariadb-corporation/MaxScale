@@ -28,7 +28,7 @@
 using namespace std;
 
 Cache::Cache(const std::string& name,
-             const CACHE_CONFIG* pConfig,
+             const CacheConfig* pConfig,
              const std::vector<SCacheRules>& rules,
              SStorageFactory sFactory)
     : m_name(name)
@@ -43,7 +43,7 @@ Cache::~Cache()
 }
 
 // static
-bool Cache::Create(const CACHE_CONFIG& config,
+bool Cache::Create(const CacheConfig& config,
                    std::vector<SCacheRules>* pRules,
                    StorageFactory** ppFactory)
 {
@@ -52,13 +52,13 @@ bool Cache::Create(const CACHE_CONFIG& config,
 
     bool rv = false;
 
-    if (config.rules)
+    if (!config.rules.empty())
     {
-        rv = CacheRules::load(config.rules, config.debug, &rules);
+        rv = CacheRules::load(config.rules.get(), config.debug.get(), &rules);
     }
     else
     {
-        auto_ptr<CacheRules> sRules(CacheRules::create(config.debug));
+        auto_ptr<CacheRules> sRules(CacheRules::create(config.debug.get()));
 
         if (sRules.get())
         {
@@ -69,7 +69,7 @@ bool Cache::Create(const CACHE_CONFIG& config,
 
     if (rv)
     {
-        pFactory = StorageFactory::Open(config.storage);
+        pFactory = StorageFactory::Open(config.storage.get());
 
         if (pFactory)
         {
@@ -78,7 +78,7 @@ bool Cache::Create(const CACHE_CONFIG& config,
         }
         else
         {
-            MXS_ERROR("Could not open storage factory '%s'.", config.storage);
+            MXS_ERROR("Could not open storage factory '%s'.", config.storage.c_str());
         }
     }
     else

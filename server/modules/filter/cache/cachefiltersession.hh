@@ -109,7 +109,7 @@ private:
 
     bool log_decisions() const
     {
-        return m_pCache->config().debug & CACHE_DEBUG_DECISIONS ? true : false;
+        return m_pCache->config().debug.is_set(CACHE_DEBUG_DECISIONS);
     }
 
     void store_result();

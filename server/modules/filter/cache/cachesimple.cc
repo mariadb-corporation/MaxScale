@@ -17,7 +17,7 @@
 #include "storagefactory.hh"
 
 CacheSimple::CacheSimple(const std::string& name,
-                         const CACHE_CONFIG* pConfig,
+                         const CacheConfig* pConfig,
                          const std::vector<SCacheRules>& rules,
                          SStorageFactory sFactory,
                          Storage* pStorage)
@@ -32,7 +32,7 @@ CacheSimple::~CacheSimple()
 }
 
 // static
-bool CacheSimple::Create(const CACHE_CONFIG& config,
+bool CacheSimple::Create(const CacheConfig& config,
                          std::vector<SCacheRules>* pRules,
                          StorageFactory** ppFactory)
 {

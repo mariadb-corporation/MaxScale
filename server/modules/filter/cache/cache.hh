@@ -22,6 +22,7 @@
 
 #include "rules.hh"
 #include "cache_storage_api.hh"
+#include "cacheconfig.hh"
 
 class CacheFilterSession;
 class StorageFactory;
@@ -46,68 +47,6 @@ class StorageFactory;
 #define UINT64_MAX (18446744073709551615UL)
 #endif
 
-typedef enum cache_selects
-{
-    CACHE_SELECTS_ASSUME_CACHEABLE,
-    CACHE_SELECTS_VERIFY_CACHEABLE,
-} cache_selects_t;
-
-// Count
-#define CACHE_ZDEFAULT_MAX_RESULTSET_ROWS "0"
-// Bytes
-#define CACHE_ZDEFAULT_MAX_RESULTSET_SIZE "0"
-// Duration
-#define CACHE_ZDEFAULT_HARD_TTL "0s"
-// Duration
-#define CACHE_ZDEFAULT_SOFT_TTL "0s"
-// Integer value
-#define CACHE_ZDEFAULT_DEBUG "0"
-// Positive integer
-#define CACHE_ZDEFAULT_MAX_COUNT "0"
-// Positive integer
-#define CACHE_ZDEFAULT_MAX_SIZE "0"
-// Thread model
-#define CACHE_ZDEFAULT_THREAD_MODEL "thread_specific"
-const cache_thread_model CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
-// Cacheable selects
-#define CACHE_ZDEFAULT_SELECTS "assume_cacheable"
-const cache_selects_t CACHE_DEFAULT_SELECTS = CACHE_SELECTS_ASSUME_CACHEABLE;
-// Storage
-#define CACHE_ZDEFAULT_STORAGE "storage_inmemory"
-// Transaction behaviour
-#define CACHE_ZDEFAULT_CACHE_IN_TRXS "all_transactions"
-// Enabled
-#define CACHE_ZDEFAULT_ENABLED "true"
-
-typedef enum cache_in_trxs
-{
-    // Do NOT change the order. Code relies upon NEVER < READ_ONLY < ALL.
-    CACHE_IN_TRXS_NEVER,
-    CACHE_IN_TRXS_READ_ONLY,
-    CACHE_IN_TRXS_ALL,
-} cache_in_trxs_t;
-
-typedef struct cache_config
-{
-    uint64_t max_resultset_rows;            /**< The maximum number of rows of a resultset for it to be
-                                             * cached. */
-    uint64_t             max_resultset_size;/**< The maximum size of a resultset for it to be cached. */
-    char*                rules;             /**< Name of rules file. */
-    char*                storage;           /**< Name of storage module. */
-    char*                storage_options;   /**< Raw options for storage module. */
-    char**               storage_argv;      /**< Cooked options for storage module. */
-    int                  storage_argc;      /**< Number of cooked options. */
-    uint32_t             hard_ttl;          /**< Hard time to live. */
-    uint32_t             soft_ttl;          /**< Soft time to live. */
-    uint64_t             max_count;         /**< Maximum number of entries in the cache.*/
-    uint64_t             max_size;          /**< Maximum size of the cache.*/
-    uint32_t             debug;             /**< Debug settings. */
-    cache_thread_model_t thread_model;      /**< Thread model. */
-    cache_selects_t      selects;           /**< Assume/verify that selects are cacheable. */
-    cache_in_trxs_t      cache_in_trxs;     /**< To cache or not to cache inside transactions. */
-    bool                 enabled;           /**< Whether the cache is enabled or not. */
-} CACHE_CONFIG;
-
 class Cache
 {
 public:
@@ -127,7 +66,7 @@ public:
     void    show(DCB* pDcb) const;
     json_t* show_json() const;
 
-    const CACHE_CONFIG& config() const
+    const CacheConfig& config() const
     {
         return m_config;
     }
@@ -218,11 +157,11 @@ public:
 
 protected:
     Cache(const std::string& name,
-          const CACHE_CONFIG* pConfig,
+          const CacheConfig* pConfig,
           const std::vector<SCacheRules>& rules,
           SStorageFactory sFactory);
 
-    static bool Create(const CACHE_CONFIG& config,
+    static bool Create(const CacheConfig& config,
                        std::vector<SCacheRules>* pRules,
                        StorageFactory** ppFactory);
 
@@ -234,7 +173,7 @@ private:
 
 protected:
     const std::string        m_name;    // The name of the instance; the section name in the config.
-    const CACHE_CONFIG&      m_config;  // The configuration of the cache instance.
+    const CacheConfig&       m_config;  // The configuration of the cache instance.
     std::vector<SCacheRules> m_rules;   // The rules of the cache instance.
     SStorageFactory          m_sFactory;// The storage factory.
 };

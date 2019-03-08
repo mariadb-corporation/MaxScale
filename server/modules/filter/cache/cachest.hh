@@ -20,11 +20,11 @@ class CacheST : public CacheSimple
 public:
     ~CacheST();
 
-    static CacheST* Create(const std::string& name, const CACHE_CONFIG* pConfig);
+    static CacheST* Create(const std::string& name, const CacheConfig* pConfig);
     static CacheST* Create(const std::string& name,
                            const std::vector<SCacheRules>& rules,
                            SStorageFactory sFactory,
-                           const CACHE_CONFIG* pConfig);
+                           const CacheConfig* pConfig);
 
     json_t* get_info(uint32_t what) const;
 
@@ -34,13 +34,13 @@ public:
 
 private:
     CacheST(const std::string& name,
-            const CACHE_CONFIG* pConfig,
+            const CacheConfig* pConfig,
             const std::vector<SCacheRules>& rules,
             SStorageFactory sFactory,
             Storage* pStorage);
 
     static CacheST* Create(const std::string& name,
-                           const CACHE_CONFIG* pConfig,
+                           const CacheConfig* pConfig,
                            const std::vector<SCacheRules>& rules,
                            SStorageFactory sFactory);
 private:

@@ -20,6 +20,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>
 
+#include "cacheconfig.hh"
 #include "cachemt.hh"
 #include "cachept.hh"
 
@@ -30,59 +31,6 @@ namespace
 {
 
 static char VERSION_STRING[] = "V1.0.0";
-
-/**
- * Frees all data of a config object, but not the object itself
- *
- * @param pConfig  Pointer to a config object.
- */
-void cache_config_finish(CACHE_CONFIG& config)
-{
-    MXS_FREE(config.rules);
-    MXS_FREE(config.storage);
-    MXS_FREE(config.storage_options);
-    MXS_FREE(config.storage_argv);      // The items need not be freed, they point into storage_options.
-
-    config.max_resultset_rows = 0;
-    config.max_resultset_size = 0;
-    config.rules = NULL;
-    config.storage = NULL;
-    config.storage_options = NULL;
-    config.storage_argc = 0;
-    config.storage_argv = NULL;
-    config.hard_ttl = 0;
-    config.soft_ttl = 0;
-    config.debug = 0;
-    config.thread_model = CACHE_DEFAULT_THREAD_MODEL;
-    config.selects = CACHE_DEFAULT_SELECTS;
-}
-
-/**
- * Frees all data of a config object, and the object itself
- *
- * @param pConfig  Pointer to a config object.
- */
-void cache_config_free(CACHE_CONFIG* pConfig)
-{
-    if (pConfig)
-    {
-        cache_config_finish(*pConfig);
-        MXS_FREE(pConfig);
-    }
-}
-
-/**
- * Resets the data without freeing anything.
- *
- * @param config  Reference to a config object.
- */
-void cache_config_reset(CACHE_CONFIG& config)
-{
-    memset(&config, 0, sizeof(config));
-
-    config.thread_model = CACHE_DEFAULT_THREAD_MODEL;
-    config.selects = CACHE_DEFAULT_SELECTS;
-}
 
 /**
  * Implement "call command cache show ..."
@@ -179,84 +127,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,               /* Process finish. */
         NULL,               /* Thread init. */
         NULL,               /* Thread finish. */
-        {
-            {
-                "storage",
-                MXS_MODULE_PARAM_STRING,
-                CACHE_ZDEFAULT_STORAGE
-            },
-            {
-                "storage_options",
-                MXS_MODULE_PARAM_STRING
-            },
-            {
-                "hard_ttl",
-                MXS_MODULE_PARAM_DURATION,
-                CACHE_ZDEFAULT_HARD_TTL
-            },
-            {
-                "soft_ttl",
-                MXS_MODULE_PARAM_DURATION,
-                CACHE_ZDEFAULT_SOFT_TTL
-            },
-            {
-                "max_resultset_rows",
-                MXS_MODULE_PARAM_COUNT,
-                CACHE_ZDEFAULT_MAX_RESULTSET_ROWS
-            },
-            {
-                "max_resultset_size",
-                MXS_MODULE_PARAM_SIZE,
-                CACHE_ZDEFAULT_MAX_RESULTSET_SIZE
-            },
-            {
-                "max_count",
-                MXS_MODULE_PARAM_COUNT,
-                CACHE_ZDEFAULT_MAX_COUNT
-            },
-            {
-                "max_size",
-                MXS_MODULE_PARAM_SIZE,
-                CACHE_ZDEFAULT_MAX_SIZE
-            },
-            {
-                "rules",
-                MXS_MODULE_PARAM_PATH
-            },
-            {
-                "debug",
-                MXS_MODULE_PARAM_COUNT,
-                CACHE_ZDEFAULT_DEBUG
-            },
-            {
-                "cached_data",
-                MXS_MODULE_PARAM_ENUM,
-                CACHE_ZDEFAULT_THREAD_MODEL,
-                MXS_MODULE_OPT_NONE,
-                parameter_cached_data_values
-            },
-            {
-                "selects",
-                MXS_MODULE_PARAM_ENUM,
-                CACHE_ZDEFAULT_SELECTS,
-                MXS_MODULE_OPT_NONE,
-                parameter_selects_values
-            },
-            {
-                "cache_in_transactions",
-                MXS_MODULE_PARAM_ENUM,
-                CACHE_ZDEFAULT_CACHE_IN_TRXS,
-                MXS_MODULE_OPT_NONE,
-                parameter_cache_in_trxs_values
-            },
-            {
-                "enabled",
-                MXS_MODULE_PARAM_BOOL,
-                CACHE_ZDEFAULT_ENABLED
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
     };
+
+    static bool populated = false;
+
+    if (!populated)
+    {
+        CacheConfig::specification().populate(info);
+        populated = true;
+    }
 
     return &info;
 }
@@ -267,12 +146,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
 CacheFilter::CacheFilter()
 {
-    cache_config_reset(m_config);
 }
 
 CacheFilter::~CacheFilter()
 {
-    cache_config_finish(m_config);
 }
 
 // static
@@ -284,9 +161,9 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
     {
         Cache* pCache = NULL;
 
-        if (process_params(ppParams, pFilter->m_config))
+        if (CacheConfig::specification().configure(pFilter->m_config, *ppParams))
         {
-            switch (pFilter->m_config.thread_model)
+            switch (pFilter->m_config.thread_model.get())
             {
             case CACHE_THREAD_MODEL_MT:
                 MXS_NOTICE("Creating shared cache.");
@@ -309,7 +186,6 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
         }
         else
         {
-            cache_config_finish(pFilter->m_config);
             delete pFilter;
             pFilter = NULL;
         }
@@ -338,131 +214,4 @@ json_t* CacheFilter::diagnostics_json() const
 uint64_t CacheFilter::getCapabilities()
 {
     return RCAP_TYPE_NONE;
-}
-
-// static
-bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& config)
-{
-    bool error = false;
-
-    config.debug = ppParams->get_integer("debug");
-    config.hard_ttl = ppParams->get_duration("hard_ttl", mxs::config::INTERPRET_AS_SECONDS).count();
-    config.soft_ttl = ppParams->get_duration("soft_ttl",  mxs::config::INTERPRET_AS_SECONDS).count();
-    config.max_size = ppParams->get_size("max_size");
-    config.max_count = ppParams->get_integer("max_count");
-    config.storage = ppParams->get_c_str_copy("storage");
-    config.max_resultset_rows = ppParams->get_integer("max_resultset_rows");
-    config.max_resultset_size = ppParams->get_size("max_resultset_size");
-    config.thread_model = static_cast<cache_thread_model_t>(ppParams->get_enum("cached_data",
-                                                                               parameter_cached_data_values));
-    config.selects = static_cast<cache_selects_t>(ppParams->get_enum("selects",
-                                                                     parameter_selects_values));
-    config.cache_in_trxs = static_cast<cache_in_trxs_t>(ppParams->get_enum("cache_in_transactions",
-                                                                           parameter_cache_in_trxs_values));
-    config.enabled = ppParams->get_bool("enabled");
-
-    if (!config.storage)
-    {
-        error = true;
-    }
-
-    if ((config.debug < CACHE_DEBUG_MIN) || (config.debug > CACHE_DEBUG_MAX))
-    {
-        MXS_ERROR("The value of the configuration entry 'debug' must "
-                  "be between %d and %d, inclusive.",
-                  CACHE_DEBUG_MIN,
-                  CACHE_DEBUG_MAX);
-        error = true;
-    }
-
-    config.rules = ppParams->get_c_str_copy("rules");
-
-    string storage_options = ppParams->get_string("storage_options");
-    if (!storage_options.empty())
-    {
-        config.storage_options = MXS_STRDUP(storage_options.c_str());
-
-        if (config.storage_options)
-        {
-            int argc = 1;
-            char* arg = config.storage_options;
-
-            while ((arg = strchr(arg, ',')))
-            {
-                arg = arg + 1;
-                ++argc;
-            }
-
-            config.storage_argv = (char**) MXS_MALLOC((argc + 1) * sizeof(char*));
-
-            if (config.storage_argv)
-            {
-                config.storage_argc = argc;
-
-                int i = 0;
-                arg = config.storage_options;
-                config.storage_argv[i++] = arg;
-
-                while ((arg = strchr(config.storage_options, ',')))
-                {
-                    *arg = 0;
-                    ++arg;
-                    config.storage_argv[i++] = arg;
-                }
-
-                config.storage_argv[i] = NULL;
-            }
-            else
-            {
-                MXS_FREE(config.storage_options);
-                config.storage_options = NULL;
-            }
-        }
-        else
-        {
-            error = true;
-        }
-    }
-
-    if (!error)
-    {
-        if (config.soft_ttl > config.hard_ttl)
-        {
-            MXS_WARNING("The value of 'soft_ttl' must be less than or equal to that of 'hard_ttl'. "
-                        "Setting 'soft_ttl' to the same value as 'hard_ttl'.");
-            config.soft_ttl = config.hard_ttl;
-        }
-
-        if (config.max_resultset_size == 0)
-        {
-            if (config.max_size != 0)
-            {
-                // If a specific size has been configured for 'max_size' but 'max_resultset_size'
-                // has not been specifically set, then we silently set it to the same as 'max_size'.
-                config.max_resultset_size = config.max_size;
-            }
-        }
-        else
-        {
-            mxb_assert(config.max_resultset_size != 0);
-
-            if ((config.max_size != 0) && (config.max_resultset_size > config.max_size))
-            {
-                MXS_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
-                            "the value of 'max_size' %ld. Adjusting the value of 'max_resultset_size' "
-                            "down to %ld.",
-                            config.max_resultset_size,
-                            config.max_size,
-                            config.max_size);
-                config.max_resultset_size = config.max_size;
-            }
-        }
-    }
-
-    if (error)
-    {
-        cache_config_finish(config);
-    }
-
-    return !error;
 }

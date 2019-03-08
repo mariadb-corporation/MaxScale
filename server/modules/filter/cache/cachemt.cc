@@ -19,7 +19,7 @@
 using std::shared_ptr;
 
 CacheMT::CacheMT(const std::string& name,
-                 const CACHE_CONFIG* pConfig,
+                 const CacheConfig* pConfig,
                  const std::vector<SCacheRules>& rules,
                  SStorageFactory sFactory,
                  Storage* pStorage)
@@ -32,7 +32,7 @@ CacheMT::~CacheMT()
 {
 }
 
-CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
+CacheMT* CacheMT::Create(const std::string& name, const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
 
@@ -74,17 +74,17 @@ void CacheMT::refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession
 
 // static
 CacheMT* CacheMT::Create(const std::string& name,
-                         const CACHE_CONFIG* pConfig,
+                         const CacheConfig* pConfig,
                          const std::vector<SCacheRules>& rules,
                          SStorageFactory sFactory)
 {
     CacheMT* pCache = NULL;
 
     CacheStorageConfig storage_config(CACHE_THREAD_MODEL_MT,
-                                      pConfig->hard_ttl,
-                                      pConfig->soft_ttl,
-                                      pConfig->max_count,
-                                      pConfig->max_size);
+                                      pConfig->hard_ttl.count(),
+                                      pConfig->soft_ttl.count(),
+                                      pConfig->max_count.get(),
+                                      pConfig->max_size.get());
 
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;

@@ -19,7 +19,7 @@
 using std::shared_ptr;
 
 CacheST::CacheST(const std::string& name,
-                 const CACHE_CONFIG* pConfig,
+                 const CacheConfig* pConfig,
                  const std::vector<SCacheRules>& rules,
                  SStorageFactory sFactory,
                  Storage* pStorage)
@@ -32,7 +32,7 @@ CacheST::~CacheST()
 {
 }
 
-CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
+CacheST* CacheST::Create(const std::string& name, const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
 
@@ -55,7 +55,7 @@ CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 CacheST* CacheST::Create(const std::string& name,
                          const std::vector<SCacheRules>& rules,
                          SStorageFactory sFactory,
-                         const CACHE_CONFIG* pConfig)
+                         const CacheConfig* pConfig)
 {
     mxb_assert(sFactory.get());
     mxb_assert(pConfig);
@@ -80,17 +80,17 @@ void CacheST::refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession
 
 // static
 CacheST* CacheST::Create(const std::string& name,
-                         const CACHE_CONFIG* pConfig,
+                         const CacheConfig* pConfig,
                          const std::vector<SCacheRules>& rules,
                          SStorageFactory sFactory)
 {
     CacheST* pCache = NULL;
 
     CacheStorageConfig storage_config(CACHE_THREAD_MODEL_ST,
-                                      pConfig->hard_ttl,
-                                      pConfig->soft_ttl,
-                                      pConfig->max_count,
-                                      pConfig->max_size);
+                                      pConfig->hard_ttl.count(),
+                                      pConfig->soft_ttl.count(),
+                                      pConfig->max_count.get(),
+                                      pConfig->max_size.get());
 
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;

@@ -1,6 +1,7 @@
 if (JANSSON_FOUND)
   add_library(cache SHARED
     cache.cc
+    cacheconfig.cc
     cachefilter.cc
     cachefiltersession.cc
     cache_storage_api.cc
