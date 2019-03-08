@@ -391,7 +391,8 @@ static inline const char* failure_mode_to_str(enum failure_mode type)
 void closed_session_reply(GWBUF* querybuf);
 bool send_readonly_error(DCB* dcb);
 
-mxs::RWBackend* get_root_master(const mxs::PRWBackends& backends);
+mxs::RWBackend* get_root_master(const mxs::PRWBackends& backends, mxs::RWBackend* current_master,
+                                const BackendSelectFunction& func);
 
 /**
  * Get total slave count and connected slave count

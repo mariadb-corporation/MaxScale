@@ -335,17 +335,28 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
     }
 }
 
-RWBackend* get_root_master(const PRWBackends& backends)
+namespace
 {
-    RWBackend* master = nullptr;
-    for (auto candidate : backends)
+// Buffer used for selecting the best master
+thread_local PRWBackends sort_buffer;
+}
+
+RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_master,
+                           const BackendSelectFunction& func)
+{
+    if (current_master && current_master->in_use() && current_master->is_master())
     {
-        if (candidate->is_master())
-        {
-            master = candidate;
-            break;
-        }
+        return current_master;
     }
+
+    std::copy_if(backends.begin(), backends.end(), std::back_inserter(sort_buffer),
+                 [](RWBackend* backend) {
+                     return backend->can_connect() && backend->is_master();
+                 });
+
+    auto it = func(sort_buffer);
+    auto master = it != sort_buffer.end() ? *it : nullptr;
+    sort_buffer.clear();
 
     return master;
 }
@@ -394,8 +405,8 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
                                              int* expected_responses,
                                              connection_type type)
 {
-    RWBackend* master = get_root_master(backends);
     const Config& cnf {config()};
+    RWBackend* master = get_root_master(backends, *current_master, cnf.backend_select_fct);
 
     if ((!master || !master->can_connect()) && cnf.master_failure_mode == RW_FAIL_INSTANTLY)
     {
@@ -419,23 +430,10 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
         log_server_connections(select_criteria, backends);
     }
 
-    if (type == ALL)
+    if (type == ALL && master && master->connect(session))
     {
-        /** Find a master server */
-        for (PRWBackends::const_iterator it = backends.begin(); it != backends.end(); it++)
-        {
-            RWBackend* backend = *it;
-
-            if (backend->can_connect() && master && backend == master)
-            {
-                if (backend->connect(session))
-                {
-                    MXS_INFO("Selected Master: %s", backend->name());
-                    *current_master = backend;
-                }
-                break;
-            }
-        }
+        MXS_INFO("Selected Master: %s", master->name());
+        *current_master = master;
     }
 
     auto counts = get_slave_counts(backends, master);
