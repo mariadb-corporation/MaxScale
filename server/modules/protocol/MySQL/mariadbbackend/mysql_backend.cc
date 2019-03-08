@@ -1354,6 +1354,7 @@ static int gw_error_backend_event(DCB* dcb)
  */
 static int gw_backend_hangup(DCB* dcb)
 {
+    mxb_assert(dcb->n_close == 0);
     MXS_SESSION* session = dcb->session;
 
     if (dcb->persistentstart)
