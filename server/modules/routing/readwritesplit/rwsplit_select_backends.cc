@@ -201,12 +201,6 @@ BackendSelectFunction get_backend_select_function(select_criteria_t sc)
     return backend_cmp_current_load;
 }
 
-namespace
-{
-// Buffers for sorting the servers, thread_local to avoid repeated memory allocations
-thread_local std::array<PRWBackends, 3> priority_map;
-}
-
 /**
  * @brief Find the best slave candidate for routing reads.
  *
@@ -221,7 +215,13 @@ PRWBackends::iterator find_best_backend(PRWBackends& backends,
                                         bool masters_accepts_reads)
 {
     // Group backends by priority. The set of highest priority backends will then compete.
-    int best_priority {2};    // low numbers are high priority
+    int best_priority {INT_MAX};    // low numbers are high priority
+    thread_local std::array<PRWBackends, 3> priority_map;
+
+    for (auto& a : priority_map)
+    {
+        a.clear();
+    }
 
     for (auto& psBackend : backends)
     {
@@ -256,11 +256,6 @@ PRWBackends::iterator find_best_backend(PRWBackends& backends,
     if (best != priority_map[best_priority].end())
     {
         rval = std::find(backends.begin(), backends.end(), *best);
-    }
-
-    for (auto& a : priority_map)
-    {
-        a.clear();
     }
 
     return rval;
@@ -335,12 +330,6 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
     }
 }
 
-namespace
-{
-// Buffer used for selecting the best master
-thread_local PRWBackends sort_buffer;
-}
-
 RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_master,
                            const BackendSelectFunction& func)
 {
@@ -349,16 +338,17 @@ RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_maste
         return current_master;
     }
 
+    thread_local PRWBackends sort_buffer;
+    sort_buffer.clear();
+
     std::copy_if(backends.begin(), backends.end(), std::back_inserter(sort_buffer),
                  [](RWBackend* backend) {
                      return backend->can_connect() && backend->is_master();
                  });
 
     auto it = func(sort_buffer);
-    auto master = it != sort_buffer.end() ? *it : nullptr;
-    sort_buffer.clear();
 
-    return master;
+    return it != sort_buffer.end() ? *it : nullptr;
 }
 
 std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
