@@ -619,6 +619,13 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
             server->set_persistmaxtime(atoi(value));
         }
     }
+    if (strcmp(key, CN_RANK) == 0)
+    {
+        if (is_valid_integer(value))
+        {
+            server->set_rank(atoi(value));
+        }
+    }
     else
     {
         /**

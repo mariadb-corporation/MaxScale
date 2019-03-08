@@ -62,6 +62,11 @@ public:
         m_settings.persistmaxtime = persistmaxtime;
     }
 
+    void set_rank(int rank)
+    {
+        m_settings.rank = rank;
+    }
+
     bool have_disk_space_limits() const override
     {
         std::lock_guard<std::mutex> guard(m_settings.lock);
@@ -115,6 +120,11 @@ public:
     std::string get_authenticator() const
     {
         return m_settings.authenticator;
+    }
+
+    int rank() const override
+    {
+        return m_settings.rank;
     }
 
     /**
@@ -330,6 +340,8 @@ private:
 
         long persistpoolmax = 0;    /**< Maximum size of persistent connections pool */
         long persistmaxtime = 0;    /**< Maximum number of seconds connection can live */
+
+        int rank;   /*< The ranking of this server, used to prioritize certain servers over others */
 
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */

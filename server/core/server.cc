@@ -63,6 +63,7 @@ const char CN_MONITORUSER[] = "monitoruser";
 const char CN_PERSISTMAXTIME[] = "persistmaxtime";
 const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
 const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
+const char CN_RANK[] = "rank";
 
 namespace
 {
@@ -251,6 +252,11 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->persistent = persistent;
     server->last_event = SERVER_UP_EVENT;
     server->status = SERVER_RUNNING;
+
+    if ((server->m_settings.rank = params->get_integer(CN_RANK)) == -1)
+    {
+        server->m_settings.rank = std::numeric_limits<int>::max();
+    }
 
     if (!monuser.empty())
     {

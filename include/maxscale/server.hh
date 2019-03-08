@@ -28,6 +28,7 @@ extern const char CN_MONITORUSER[];
 extern const char CN_PERSISTMAXTIME[];
 extern const char CN_PERSISTPOOLMAX[];
 extern const char CN_PROXY_PROTOCOL[];
+extern const char CN_RANK[];
 
 /**
  * Status bits in the SERVER->status member, which describes the general state of a server. Although the
@@ -275,6 +276,13 @@ public:
      * @return Backend protocol module name of the server
      */
     virtual std::string protocol() const = 0;
+
+    /**
+     * Get server rank
+     *
+     * @return The server rank
+     */
+    virtual int rank() const = 0;
 
     /*
      * Update server address. TODO: Move this to internal class once blr is gone.
