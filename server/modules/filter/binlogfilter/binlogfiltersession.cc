@@ -229,7 +229,7 @@ int BinlogFilterSession::clientReply(GWBUF* pPacket)
         // they are replaced by a RAND_EVENT event packet
         if (m_skip)
         {
-            replaceEvent(&pPacket);
+            replaceEvent(&pPacket, hdr);
         }
         break;
 
@@ -323,7 +323,7 @@ bool BinlogFilterSession::checkEvent(GWBUF* buffer,
                  * Some events skipped.
                  * Set next pos to 0 instead of real one and new CRC32
                  */
-                fixEvent(event + MYSQL_HEADER_LEN + 1, hdr.event_size);
+                fixEvent(event + MYSQL_HEADER_LEN + 1, hdr.event_size, hdr);
             }
             break;
 
@@ -444,12 +444,12 @@ static void event_set_crc32(uint8_t* event, uint32_t event_size)
  * @param event    Pointer to event data
  * @event_size     The event size
  */
-void BinlogFilterSession::fixEvent(uint8_t* event, uint32_t event_size)
+void BinlogFilterSession::fixEvent(uint8_t* event, uint32_t event_size, const REP_HEADER& hdr)
 {
     // Set next pos to 0.
     // The next_pos offset is the 13th byte in replication event header 19 bytes
     // +  4 (time) + 1 (type) + 4 (server_id) + 4 (event_size)
-    gw_mysql_set_byte4(event + 4 + 1 + 4 + 4, 0);
+    gw_mysql_set_byte4(event + 4 + 1 + 4 + 4, hdr.next_pos);
 
     // Set CRC32 in the new event
     if (m_crc)
@@ -466,7 +466,7 @@ void BinlogFilterSession::fixEvent(uint8_t* event, uint32_t event_size)
  *
  * @param pPacket    The GWBUF with event data
  */
-void BinlogFilterSession::replaceEvent(GWBUF** ppPacket)
+void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
 {
 
     uint32_t buf_len = gwbuf_length(*ppPacket);
@@ -596,7 +596,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket)
     }
 
     // Fix Event Next pos = 0 and set new CRC32
-    fixEvent(ptr + MYSQL_HEADER_LEN + 1, new_event_size);
+    fixEvent(ptr + MYSQL_HEADER_LEN + 1, new_event_size, hdr);
 }
 
 /**

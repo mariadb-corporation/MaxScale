@@ -85,13 +85,13 @@ private:
     void filterError(GWBUF* pPacket);
 
     // Fix event: set next pos to 0 and set new CRC32
-    void fixEvent(uint8_t* data, uint32_t event_size);
+    void fixEvent(uint8_t* data, uint32_t event_size, const REP_HEADER& hdr);
 
     // Whether to skip current event
     bool checkEvent(GWBUF* data, const REP_HEADER& hdr);
 
     // Filter the replication event
-    void replaceEvent(GWBUF** data);
+    void replaceEvent(GWBUF** data, const REP_HEADER& hdr);
 
     // Handle event size
     void handlePackets(uint32_t len, const REP_HEADER& hdr);
