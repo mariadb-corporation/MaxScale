@@ -801,11 +801,16 @@ void TestConnections::copy_one_mariadb_log(int i, std::string filename)
 
     for (auto cmd : log_retrive_commands)
     {
-        std::ofstream outfile(filename + std::to_string(j++));
+        auto output = repl->ssh_output(cmd, i).second;
 
-        if (outfile)
+        if (!output.empty())
         {
-            outfile << repl->ssh_output(cmd, i).second;
+            std::ofstream outfile(filename + std::to_string(j++));
+
+            if (outfile)
+            {
+                outfile << output;
+            }
         }
     }
 }
