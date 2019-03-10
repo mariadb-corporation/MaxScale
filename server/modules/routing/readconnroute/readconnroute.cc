@@ -83,18 +83,29 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  */
 SERVER_REF* RCR::get_root_master()
 {
+    int best_rank {std::numeric_limits<int>::max()};
     SERVER_REF* master_host = nullptr;
+
     for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
     {
         if (server_ref_is_active(ref) && ref->server->is_master())
         {
-            // No master found yet or this one has better weight.
-            if (!master_host || ref->server_weight > master_host->server_weight)
+            int rank = ref->server->rank();
+
+            if (!master_host)
             {
+                // No master found yet
+                master_host = ref;
+            }
+            else if (rank < best_rank
+                     || (rank == best_rank && ref->server_weight > master_host->server_weight))
+            {
+                best_rank = rank;
                 master_host = ref;
             }
         }
     }
+
     return master_host;
 }
 
@@ -219,6 +230,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
      * connection router.
      */
     SERVER_REF* candidate = nullptr;
+    int best_rank {std::numeric_limits<int>::max()};
 
     /*
      * Loop over all the servers and find any that have fewer connections
@@ -276,22 +288,26 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
             }
 
             /* If no candidate set, set first running server as our initial candidate server */
-            if (!candidate)
+            if (!candidate || ref->server->rank() < best_rank)
             {
+                best_rank = ref->server->rank();
                 candidate = ref;
             }
-            else if (ref->server_weight == 0 || candidate->server_weight == 0)
+            else if (ref->server->rank() == best_rank)
             {
-                if (ref->server_weight)     // anything with a weight is better
+                if (ref->server_weight == 0 || candidate->server_weight == 0)
                 {
+                    if (ref->server_weight)     // anything with a weight is better
+                    {
+                        candidate = ref;
+                    }
+                }
+                else if ((ref->connections + 1) / ref->server_weight
+                         < (candidate->connections + 1) / candidate->server_weight)
+                {
+                    /* ref has a better score. */
                     candidate = ref;
                 }
-            }
-            else if ((ref->connections + 1) / ref->server_weight
-                     < (candidate->connections + 1) / candidate->server_weight)
-            {
-                /* ref has a better score. */
-                candidate = ref;
             }
         }
     }
