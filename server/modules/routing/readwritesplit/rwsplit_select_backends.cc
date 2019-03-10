@@ -202,6 +202,32 @@ BackendSelectFunction get_backend_select_function(select_criteria_t sc)
     return backend_cmp_current_load;
 }
 
+// Calculates server priority
+int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
+{
+    int priority;
+    bool is_busy = backend->in_use() && backend->has_session_commands();
+    bool acts_slave = backend->is_slave() || (backend->is_master() && masters_accepts_reads);
+
+    if (acts_slave)
+    {
+        if (!is_busy)
+        {
+            priority = 0;   // highest priority, idle servers
+        }
+        else
+        {
+            priority = 2;   // lowest priority, busy servers
+        }
+    }
+    else
+    {
+        priority = 1;   // idle masters with masters_accept_reads==false
+    }
+
+    return priority;
+}
+
 /**
  * @brief Find the best slave candidate for routing reads.
  *
@@ -215,51 +241,50 @@ PRWBackends::iterator find_best_backend(PRWBackends& backends,
                                         BackendSelectFunction select,
                                         bool masters_accepts_reads)
 {
-    // Group backends by priority. The set of highest priority backends will then compete.
-    int best_priority {INT_MAX};    // low numbers are high priority
-    thread_local std::array<PRWBackends, 3> priority_map;
-
-    for (auto& a : priority_map)
-    {
-        a.clear();
-    }
+    // Group backends by priority and rank (lower is better). The set of best backends will then compete.
+    int best_priority {INT_MAX};
+    int best_rank {std::numeric_limits<int>::max()};
+    thread_local PRWBackends candidates;
+    candidates.clear();
 
     for (auto& psBackend : backends)
     {
-        auto& backend = *psBackend;
-        bool is_busy = backend.in_use() && backend.has_session_commands();
-        bool acts_slave = backend.is_slave() || (backend.is_master() && masters_accepts_reads);
+        int priority = get_backend_priority(psBackend, masters_accepts_reads);
+        int rank = psBackend->server()->rank();
 
-        int priority;
-        if (acts_slave)
+        if (rank < best_rank || (rank == best_rank && priority < best_priority))
         {
-            if (!is_busy)
-            {
-                priority = 0;   // highest priority, idle servers
-            }
-            else
-            {
-                priority = 2;       // lowest priority, busy servers
-            }
-        }
-        else
-        {
-            priority = 1;   // idle masters with masters_accept_reads==false
+            candidates.clear();
+            best_rank = rank;
+            best_priority = priority;
         }
 
-        priority_map[priority].push_back(psBackend);
-        best_priority = std::min(best_priority, priority);
+        if (rank == best_rank && priority == best_priority)
+        {
+            candidates.push_back(psBackend);
+        }
     }
 
-    auto best = select(priority_map[best_priority]);
-    auto rval = backends.end();
-
-    if (best != priority_map[best_priority].end())
-    {
-        rval = std::find(backends.begin(), backends.end(), *best);
-    }
+    auto best = select(candidates);
+    auto rval = std::find(backends.begin(), backends.end(), *best);
 
     return rval;
+}
+
+void add_backend_with_rank(RWBackend* backend, PRWBackends* candidates, int* best_rank)
+{
+    int rank = backend->server()->rank();
+
+    if (rank < *best_rank)
+    {
+        *best_rank = rank;
+        candidates->clear();
+    }
+
+    if (rank == *best_rank)
+    {
+        candidates->push_back(backend);
+    }
 }
 
 /**
@@ -339,17 +364,20 @@ RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_maste
         return current_master;
     }
 
-    thread_local PRWBackends sort_buffer;
-    sort_buffer.clear();
+    thread_local PRWBackends candidates;
+    candidates.clear();
+    int best_rank {std::numeric_limits<int>::max()};
 
-    std::copy_if(backends.begin(), backends.end(), std::back_inserter(sort_buffer),
-                 [](RWBackend* backend) {
-                     return backend->can_connect() && backend->is_master();
-                 });
+    for (const auto& backend : backends)
+    {
+        if (backend->can_connect() && backend->is_master())
+        {
+            add_backend_with_rank(backend, &candidates, &best_rank);
+        }
+    }
 
-    auto it = func(sort_buffer);
-
-    return it != sort_buffer.end() ? *it : nullptr;
+    auto it = func(candidates);
+    return it != candidates.end() ? *it : nullptr;
 }
 
 std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
@@ -421,6 +449,7 @@ bool RWSplitSession::open_connections()
 
     int n_slaves = get_slave_counts(m_raw_backends, master).second;
     int max_nslaves = m_router->max_slave_count();
+    int best_rank {std::numeric_limits<int>::max()};
     PRWBackends candidates;
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
 
@@ -428,7 +457,7 @@ bool RWSplitSession::open_connections()
     {
         if (!pBackend->in_use() && pBackend->can_connect() && valid_for_slave(pBackend, master))
         {
-            candidates.push_back(pBackend);
+            add_backend_with_rank(pBackend, &candidates, &best_rank);
         }
     }
 
