@@ -243,14 +243,14 @@ PRWBackends::iterator find_best_backend(PRWBackends& backends,
 {
     // Group backends by priority and rank (lower is better). The set of best backends will then compete.
     int best_priority {INT_MAX};
-    int best_rank {std::numeric_limits<int>::max()};
+    auto best_rank = std::numeric_limits<int64_t>::max();
     thread_local PRWBackends candidates;
     candidates.clear();
 
     for (auto& psBackend : backends)
     {
         int priority = get_backend_priority(psBackend, masters_accepts_reads);
-        int rank = psBackend->server()->rank();
+        auto rank = psBackend->server()->rank();
 
         if (rank < best_rank || (rank == best_rank && priority < best_priority))
         {
@@ -271,9 +271,9 @@ PRWBackends::iterator find_best_backend(PRWBackends& backends,
     return rval;
 }
 
-void add_backend_with_rank(RWBackend* backend, PRWBackends* candidates, int* best_rank)
+void add_backend_with_rank(RWBackend* backend, PRWBackends* candidates, int64_t* best_rank)
 {
-    int rank = backend->server()->rank();
+    auto rank = backend->server()->rank();
 
     if (rank < *best_rank)
     {
@@ -366,7 +366,7 @@ RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_maste
 
     thread_local PRWBackends candidates;
     candidates.clear();
-    int best_rank {std::numeric_limits<int>::max()};
+    auto best_rank = std::numeric_limits<int64_t>::max();
 
     for (const auto& backend : backends)
     {
@@ -449,7 +449,7 @@ bool RWSplitSession::open_connections()
 
     int n_slaves = get_slave_counts(m_raw_backends, master).second;
     int max_nslaves = m_router->max_slave_count();
-    int best_rank {std::numeric_limits<int>::max()};
+    auto best_rank = std::numeric_limits<int64_t>::max();
     PRWBackends candidates;
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
 

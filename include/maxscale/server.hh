@@ -282,7 +282,7 @@ public:
      *
      * @return The server rank
      */
-    virtual int rank() const = 0;
+    virtual int64_t rank() const = 0;
 
     /*
      * Update server address. TODO: Move this to internal class once blr is gone.

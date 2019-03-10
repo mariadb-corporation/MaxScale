@@ -621,9 +621,13 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     }
     if (strcmp(key, CN_RANK) == 0)
     {
-        if (is_valid_integer(value))
+        if (auto i = get_positive_int(value))
         {
-            server->set_rank(atoi(value));
+            server->set_rank(i);
+        }
+        else
+        {
+            config_runtime_error("Invalid value for '%s': %s", CN_RANK, value);
         }
     }
     else

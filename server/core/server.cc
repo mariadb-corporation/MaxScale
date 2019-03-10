@@ -252,11 +252,8 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->persistent = persistent;
     server->last_event = SERVER_UP_EVENT;
     server->status = SERVER_RUNNING;
-
-    if ((server->m_settings.rank = params->get_integer(CN_RANK)) == -1)
-    {
-        server->m_settings.rank = std::numeric_limits<int>::max();
-    }
+    server->m_settings.rank = params->get_integer(CN_RANK);
+    mxb_assert(server->m_settings.rank > 0);
 
     if (!monuser.empty())
     {

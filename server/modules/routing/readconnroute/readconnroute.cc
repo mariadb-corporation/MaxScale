@@ -83,14 +83,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  */
 SERVER_REF* RCR::get_root_master()
 {
-    int best_rank {std::numeric_limits<int>::max()};
+    auto best_rank = std::numeric_limits<int64_t>::max();
     SERVER_REF* master_host = nullptr;
 
     for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
     {
         if (server_ref_is_active(ref) && ref->server->is_master())
         {
-            int rank = ref->server->rank();
+            auto rank = ref->server->rank();
 
             if (!master_host)
             {
@@ -230,7 +230,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
      * connection router.
      */
     SERVER_REF* candidate = nullptr;
-    int best_rank {std::numeric_limits<int>::max()};
+    auto best_rank = std::numeric_limits<int64_t>::max();
 
     /*
      * Loop over all the servers and find any that have fewer connections

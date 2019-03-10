@@ -425,7 +425,7 @@ const MXS_MODULE_PARAM config_server_params[] =
     {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,  "9"},
     {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_DISK_SPACE_THRESHOLD,        MXS_MODULE_PARAM_STRING},
-    {CN_RANK,                        MXS_MODULE_PARAM_INT,    "-1"},
+    {CN_RANK,                        MXS_MODULE_PARAM_COUNT,  "2147483647"},
     {NULL}
 };
 
