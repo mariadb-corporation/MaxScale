@@ -228,47 +228,54 @@ int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
     return priority;
 }
 
-/**
- * @brief Find the best slave candidate for routing reads.
- *
- * @param backends All backends
- * @param select   Server selection function
- * @param masters_accepts_reads
- *
- * @return iterator to the best slave or backends.end() if none found
- */
-PRWBackends::iterator find_best_backend(PRWBackends& backends,
-                                        BackendSelectFunction select,
-                                        bool masters_accepts_reads)
+RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
-    // Group backends by priority and rank (lower is better). The set of best backends will then compete.
-    int best_priority {INT_MAX};
-    auto best_rank = std::numeric_limits<int64_t>::max();
     thread_local PRWBackends candidates;
     candidates.clear();
 
-    for (auto& psBackend : backends)
-    {
-        int priority = get_backend_priority(psBackend, masters_accepts_reads);
-        auto rank = psBackend->server()->rank();
+    auto counts = get_slave_counts(m_raw_backends, m_current_master);
+    int best_priority {INT_MAX};
+    auto best_rank = std::numeric_limits<int64_t>::max();
 
-        if (rank < best_rank || (rank == best_rank && priority < best_priority))
+    // Create a list of backends valid for read operations
+    for (auto& backend : m_raw_backends)
+    {
+        bool can_take_slave_into_use = !backend->in_use() && can_recover_servers()
+            && backend->can_connect() && counts.second < m_router->max_slave_count()
+            && (backend->is_slave() || backend->is_master());
+
+        bool master_or_slave = backend->is_master() || backend->is_slave();
+        bool is_usable = backend->in_use() || can_take_slave_into_use;
+        bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
+        int priority = get_backend_priority(backend, m_config.master_accept_reads);
+        auto rank = backend->server()->rank();
+
+        if (master_or_slave && is_usable && rlag_ok)
         {
-            candidates.clear();
-            best_rank = rank;
-            best_priority = priority;
+            if (rank < best_rank || (rank == best_rank && priority < best_priority))
+            {
+                candidates.clear();
+                best_rank = rank;
+                best_priority = priority;
+            }
+
+            if (rank == best_rank && priority == best_priority)
+            {
+                candidates.push_back(backend);
+            }
         }
 
-        if (rank == best_rank && priority == best_priority)
+        if (max_rlag > 0)
         {
-            candidates.push_back(psBackend);
+            auto state = rlag_ok ? SERVER::RLagState::ABOVE_LIMIT : SERVER::RLagState::BELOW_LIMIT;
+            backend->change_rlag_state(state, max_rlag);
         }
     }
 
-    auto best = select(candidates);
-    auto rval = std::find(backends.begin(), backends.end(), *best);
+    // Let the slave selection function pick the best server
+    PRWBackends::const_iterator rval = m_config.backend_select_fct(candidates);
 
-    return rval;
+    return (rval == candidates.end()) ? nullptr : *rval;
 }
 
 void add_backend_with_rank(RWBackend* backend, PRWBackends* candidates, int64_t* best_rank)

@@ -633,14 +633,6 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     return nsucc;
 }
 
-/**
- * Check if replication lag is below acceptable levels
- */
-static inline bool rpl_lag_is_ok(RWBackend* backend, int max_rlag)
-{
-    return max_rlag == SERVER::RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
-}
-
 RWBackend* RWSplitSession::get_hinted_backend(char* name)
 {
     RWBackend* rval = nullptr;
@@ -659,49 +651,6 @@ RWBackend* RWSplitSession::get_hinted_backend(char* name)
     }
 
     return rval;
-}
-
-RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
-{
-    // create a list of useable backends (includes masters, function name is a bit off),
-    // then feed that list to compare.
-    PRWBackends candidates;
-    auto counts = get_slave_counts(m_raw_backends, m_current_master);
-
-    for (auto& backend : m_raw_backends)
-    {
-        bool can_take_slave_into_use = !backend->in_use() && can_recover_servers()
-            && backend->can_connect() && counts.second < m_router->max_slave_count()
-            && (backend->is_slave() || backend->is_master());
-
-        bool master_or_slave = backend->is_master() || backend->is_slave();
-        bool is_usable = backend->in_use() || can_take_slave_into_use;
-        bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
-
-        if (master_or_slave && is_usable)
-        {
-            if (rlag_ok)
-            {
-                candidates.push_back(backend);
-                if (max_rlag > 0)
-                {
-                    // Replication lag discrimination is on and the server passed.
-                    backend->change_rlag_state(SERVER::RLagState::BELOW_LIMIT, max_rlag);
-                }
-            }
-            else
-            {
-                // The server is otherwise usable except it's lagging too much.
-                backend->change_rlag_state(SERVER::RLagState::ABOVE_LIMIT, max_rlag);
-            }
-        }
-    }
-
-    PRWBackends::const_iterator rval = find_best_backend(candidates,
-                                                         m_config.backend_select_fct,
-                                                         m_config.master_accept_reads);
-
-    return (rval == candidates.end()) ? nullptr : *rval;
 }
 
 RWBackend* RWSplitSession::get_master_backend()

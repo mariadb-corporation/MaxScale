@@ -399,21 +399,6 @@ mxs::RWBackend* get_root_master(const mxs::PRWBackends& backends, mxs::RWBackend
  */
 std::pair<int, int> get_slave_counts(mxs::PRWBackends& backends, mxs::RWBackend* master);
 
-/**
- * Find the best backend by grouping the servers by priority, and then applying
- * selection criteria to the best group.
- *
- * @param backends: vector of RWBackend*
- * @param select:   selection function
- * @param master_accept_reads: NOTE: even if this is false, in some cases a master can
- *                             still be selected for reads.
- *
- * @return Valid iterator into argument backends, or end(backends) if empty
- */
-mxs::PRWBackends::iterator find_best_backend(mxs::PRWBackends& backends,
-                                             BackendSelectFunction select,
-                                             bool masters_accepts_reads);
-
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
@@ -427,3 +412,11 @@ void close_all_connections(mxs::PRWBackends& backends);
  * @return String representation of the error
  */
 std::string extract_error(GWBUF* buffer);
+
+/**
+ * Check if replication lag is below acceptable levels
+ */
+static inline bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
+{
+    return max_rlag == SERVER::RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
+}
