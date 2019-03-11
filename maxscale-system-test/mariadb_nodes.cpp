@@ -939,6 +939,18 @@ std::string Mariadb_nodes::get_server_id_str(int index)
     return ss.str();
 }
 
+std::vector<std::string> Mariadb_nodes::get_all_server_ids_str()
+{
+    std::vector<std::string> rval;
+
+    for (int i = 0; i < N; i++)
+    {
+        rval.push_back(get_server_id_str(i));
+    }
+
+    return rval;
+}
+
 std::vector<int> Mariadb_nodes::get_all_server_ids()
 {
     std::vector<int> rval;

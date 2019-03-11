@@ -322,6 +322,7 @@ public:
      * @return List of server IDs
      */
     std::vector<int> get_all_server_ids();
+    std::vector<std::string> get_all_server_ids_str();
 
     /**
      * @brief Execute 'mysqladmin flush-hosts' on all nodes
