@@ -50,9 +50,14 @@ module.exports = function() {
 
         // No password given, ask it from the command line
         if (argv.p == '') {
-            argv.p = readlineSync.question('Enter password: ', {
-                hideEchoBack: true
-            })
+            if (process.stdin.isTTY) {
+                argv.p = readlineSync.question('Enter password: ', {
+                    hideEchoBack: true
+                })
+            } else {
+                var line = fs.readFileSync(0)
+                argv.p = line.toString().trim()
+            }
         }
 
         // Split the hostnames, separated by commas

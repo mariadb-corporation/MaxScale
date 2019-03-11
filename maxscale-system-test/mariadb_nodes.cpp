@@ -1139,15 +1139,13 @@ int Mariadb_nodes::truncate_mariadb_logs()
     int local_result = 0;
     for (int node = 0; node < N; node++)
     {
-        char sys[1024];
         if (strcmp(IP[node], "127.0.0.1") != 0)
         {
-            sprintf(sys,
-                    "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s 'sudo truncate  /var/lib/mysql/*.err --size 0;sudo rm -f /etc/my.cnf.d/binlog_enc*\' &",
-                    sshkey[node],
-                    access_user[node],
-                    IP[node]);
-            local_result += system(sys);
+            local_result += ssh_node_f(node, true,
+                                       "truncate -s 0 /var/lib/mysql/*.err;"
+                                       "truncate -s 0 /var/log/syslog;"
+                                       "truncate -s 0 /var/log/messages;"
+                                       "rm -f /etc/my.cnf.d/binlog_enc*;");
         }
     }
     return local_result;
