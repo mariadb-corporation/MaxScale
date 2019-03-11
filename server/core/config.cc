@@ -313,7 +313,7 @@ const MXS_MODULE_PARAM config_service_params[] =
     {CN_LOG_AUTH_WARNINGS,             MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_RETRY_ON_FAILURE,              MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_SESSION_TRACK_TRX_STATE,       MXS_MODULE_PARAM_BOOL,   "false"},
-    {CN_RETAIN_LAST_STATEMENTS,        MXS_MODULE_PARAM_COUNT,  "0"},
+    {CN_RETAIN_LAST_STATEMENTS,        MXS_MODULE_PARAM_COUNT,  "-1"},
     {CN_CLUSTER,                       MXS_MODULE_PARAM_STRING},
     {NULL}
 };
@@ -4869,36 +4869,6 @@ bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* pDisk_space_thre
     return success;
 }
 
-void dump_if_changed(const MXS_MODULE_PARAM* params,
-                     int file,
-                     const std::string& key,
-                     const std::string& value)
-{
-    for (int i = 0; params[i].name; i++)
-    {
-        if (params[i].name == key)
-        {
-            /**
-             * This detects only exact matches, not ones that are logically equivalent
-             * but lexicographically different e.g. 1 and true. This might not
-             * be a bad thing: it'll distinct user defined values from defaults.
-             */
-
-            if (!params[i].default_value || value != params[i].default_value)
-            {
-                if (dprintf(file, "%s=%s\n", key.c_str(), value.c_str()) == -1)
-                {
-                    MXS_ERROR("Failed to serialize service value: %d, %s",
-                              errno,
-                              mxs_strerror(errno));
-                }
-            }
-
-            break;
-        }
-    }
-}
-
 void dump_param_list(int file,
                      const MXS_CONFIG_PARAMETER* list,
                      const std::unordered_set<std::string>& ignored,
@@ -4911,8 +4881,10 @@ void dump_param_list(int file,
         const string& value = p.second;
         if (ignored.count(name) == 0 && !value.empty())
         {
-            dump_if_changed(common_params, file, name, value);
-            dump_if_changed(module_params, file, name, value);
+            if (dprintf(file, "%s=%s\n", name.c_str(), value.c_str()) == -1)
+            {
+                MXS_ERROR("Failed to serialize service value: %d, %s", errno, mxs_strerror(errno));
+            }
         }
     }
 }

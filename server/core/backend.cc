@@ -47,7 +47,7 @@ Backend::~Backend()
 
 void Backend::close(close_type type)
 {
-    mxb_assert(m_dcb->n_close == 0);
+    mxb_assert(m_dcb && m_dcb->n_close == 0);
 
     if (!m_closed)
     {
@@ -180,7 +180,7 @@ void Backend::set_state(backend_state state)
 
 bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
 {
-    mxb_assert(!in_use());
+    mxb_assert(!in_use() && m_dcb == nullptr);
     bool rval = false;
 
     if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol().c_str())))
