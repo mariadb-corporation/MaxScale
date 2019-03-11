@@ -1701,7 +1701,8 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
                                   m_promote_sql_file,
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);
         ServerOperation demotion(demotion_target, master_swap, m_handle_event_scheduler,
-                                 m_demote_sql_file, promotion_target->m_slave_status, {} /* unused */);
+                                 m_demote_sql_file, promotion_target->m_slave_status,
+                                 EventNameSet() /* unused */);
         GeneralOpData general(m_replication_user, m_replication_password, error_out, time_limit);
         rval.reset(new SwitchoverParams(promotion, demotion, general));
     }

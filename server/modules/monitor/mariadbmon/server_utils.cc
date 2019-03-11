@@ -169,7 +169,8 @@ ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master, bool
 
 ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
                                  const std::string& sql_file)
-    : ServerOperation(target, was_is_master, handle_events, sql_file, {}, {})
+    : ServerOperation(target, was_is_master, handle_events, sql_file,
+                      SlaveStatusArray() /* empty */, EventNameSet() /* empty */)
 {
 }
 
