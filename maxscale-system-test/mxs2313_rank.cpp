@@ -72,11 +72,36 @@ void test_rwsplit(TestConnections& test, std::vector<std::string> ids)
         auto id = c.field("SELECT @@server_id");
         test.expect(!id.empty() && id != ids[3], "Third slave should not reply");
     }
+}
+
+void test_readconnroute(TestConnections& test, std::vector<std::string> ids)
+{
+    std::cout << "Readconnroute with descending server rank" << std::endl;
 
     test.check_maxctrl("alter server server1 rank 1");
     test.check_maxctrl("alter server server2 rank 2");
     test.check_maxctrl("alter server server3 rank 3");
     test.check_maxctrl("alter server server4 rank 4");
+
+    auto do_test = [&](int node) {
+            Connection c = test.maxscales->readconn_master();
+            c.connect();
+            test.expect(c.field("SELECT @@server_id") == ids[node], "server%d should reply", node + 1);
+        };
+
+    do_test(0);
+    block_wait(0);
+    do_test(1);
+    block_wait(1);
+    do_test(2);
+    block_wait(2);
+    do_test(3);
+    unblock_wait(2);
+    do_test(2);
+    unblock_wait(1);
+    do_test(1);
+    unblock_wait(0);
+    do_test(0);
 }
 
 int main(int argc, char* argv[])
@@ -99,6 +124,7 @@ int main(int argc, char* argv[])
     test.repl->disconnect();
 
     test_rwsplit(test, ids);
+    test_readconnroute(test, ids);
 
     return test.global_result;
 }

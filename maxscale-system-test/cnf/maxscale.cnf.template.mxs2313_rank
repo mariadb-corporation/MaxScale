@@ -61,4 +61,4 @@ port=4006
 type=listener
 service=Read-Connection-Router
 protocol=MySQLClient
-port=4009
+port=4008
