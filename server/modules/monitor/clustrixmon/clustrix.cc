@@ -209,9 +209,9 @@ bool Clustrix::ping_or_connect_to_hub(const char* zName,
                                       MYSQL** ppCon)
 {
     bool connected = false;
-    mxs_connect_result_t rv = mon_ping_or_connect_to_db(settings, server, ppCon);
+    mxs_connect_result_t rv = Monitor::ping_or_connect_to_db(settings, server, ppCon);
 
-    if (mon_connection_is_ok(rv))
+    if (Monitor::connection_is_ok(rv))
     {
         if (Clustrix::is_part_of_the_quorum(zName, server, *ppCon))
         {

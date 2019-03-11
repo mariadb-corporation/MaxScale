@@ -136,18 +136,268 @@ private:
 
 ThisUnit this_unit;
 
+const char* monitor_state_to_string(monitor_state_t state)
+{
+    switch (state)
+    {
+        case MONITOR_STATE_RUNNING:
+            return "Running";
+
+        case MONITOR_STATE_STOPPED:
+            return "Stopped";
+
+        default:
+            mxb_assert(false);
+            return "Unknown";
+    }
 }
 
-static void        monitor_server_free_all(std::vector<MXS_MONITORED_SERVER*>& servers);
-static void        remove_server_journal(Monitor* monitor);
-static const char* monitor_state_to_string(monitor_state_t state);
-
 /** Server type specific bits */
-static uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB;
+const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB;
 
 /** All server bits */
-static uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
-    | SERVER_JOINED | SERVER_NDB;
+const uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
+                                 | SERVER_JOINED | SERVER_NDB;
+
+const char journal_name[] = "monitor.dat";
+const char journal_template[] = "%s/%s/%s";
+
+/**
+ * @brief Remove .tmp suffix and rename file
+ *
+ * @param src File to rename
+ * @return True if file was successfully renamed
+ */
+bool rename_tmp_file(Monitor* monitor, const char* src)
+{
+    bool rval = true;
+    char dest[PATH_MAX + 1];
+    snprintf(dest, sizeof(dest), journal_template, get_datadir(), monitor->m_name, journal_name);
+
+    if (rename(src, dest) == -1)
+    {
+        rval = false;
+                MXS_ERROR("Failed to rename journal file '%s' to '%s': %d, %s",
+                          src,
+                          dest,
+                          errno,
+                          mxs_strerror(errno));
+    }
+
+    return rval;
+}
+
+/**
+ * @brief Open temporary file
+ *
+ * @param monitor Monitor
+ * @param path Output where the path is stored
+ * @return Opened file or NULL on error
+ */
+ FILE* open_tmp_file(Monitor* monitor, char* path)
+{
+    int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->m_name, "");
+    int max_bytes = PATH_MAX - (int)sizeof(journal_name);
+    FILE* rval = NULL;
+
+    if (nbytes < max_bytes && mxs_mkdir_all(path, 0744))
+    {
+        strcat(path, journal_name);
+        strcat(path, "XXXXXX");
+        int fd = mkstemp(path);
+
+        if (fd == -1)
+        {
+                    MXS_ERROR("Failed to open file '%s': %d, %s", path, errno, mxs_strerror(errno));
+        }
+        else
+        {
+            rval = fdopen(fd, "w");
+        }
+    }
+    else
+    {
+                MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
+                          "length of %d bytes",
+                          nbytes,
+                          max_bytes);
+    }
+
+    return rval;
+}
+
+/**
+ * @brief Store server data to in-memory buffer
+ *
+ * @param monitor Monitor
+ * @param data Pointer to in-memory buffer used for storage, should be at least
+ *             PATH_MAX bytes long
+ * @param size Size of @c data
+ */
+void store_data(Monitor* monitor, MXS_MONITORED_SERVER* master, uint8_t* data, uint32_t size)
+{
+    uint8_t* ptr = data;
+
+    /** Store the data length */
+    mxb_assert(sizeof(size) == MMB_LEN_BYTES);
+    ptr = mxs_set_byte4(ptr, size);
+
+    /** Then the schema version */
+    *ptr++ = MMB_SCHEMA_VERSION;
+
+    /** Store the states of all servers */
+    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
+    {
+        *ptr++ = (char)SVT_SERVER;                              // Value type
+        memcpy(ptr, db->server->name(), strlen(db->server->name()));// Name of the server
+        ptr += strlen(db->server->name());
+        *ptr++ = '\0';      // Null-terminate the string
+
+        auto status = db->server->status;
+        static_assert(sizeof(status) == MMB_LEN_SERVER_STATUS,
+                      "Status size should be MMB_LEN_SERVER_STATUS bytes");
+        ptr = maxscale::set_byteN(ptr, status, MMB_LEN_SERVER_STATUS);
+    }
+
+    /** Store the current root master if we have one */
+    if (master)
+    {
+        *ptr++ = (char)SVT_MASTER;
+        memcpy(ptr, master->server->name(), strlen(master->server->name()));
+        ptr += strlen(master->server->name());
+        *ptr++ = '\0';      // Null-terminate the string
+    }
+
+    /** Calculate the CRC32 for the complete payload minus the CRC32 bytes */
+    uint32_t crc = crc32(0L, NULL, 0);
+    crc = crc32(crc, (uint8_t*)data + MMB_LEN_BYTES, size - MMB_LEN_CRC32);
+    mxb_assert(sizeof(crc) == MMB_LEN_CRC32);
+
+    ptr = mxs_set_byte4(ptr, crc);
+    mxb_assert(ptr - data == size + MMB_LEN_BYTES);
+}
+
+/**
+ * Check that memory area contains a null terminator
+ */
+static bool has_null_terminator(const char* data, const char* end)
+{
+    while (data < end)
+    {
+        if (*data == '\0')
+        {
+            return true;
+        }
+        data++;
+    }
+
+    return false;
+}
+
+/**
+ * Process a generic server
+ */
+const char* process_server(Monitor* monitor, const char* data, const char* end)
+{
+    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
+    {
+        if (strcmp(db->server->name(), data) == 0)
+        {
+            const unsigned char* sptr = (unsigned char*)strchr(data, '\0');
+            mxb_assert(sptr);
+            sptr++;
+
+            uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
+            db->mon_prev_status = status;
+            db->server->set_status(status);
+            db->set_pending_status(status);
+            break;
+        }
+    }
+
+    data += strlen(data) + 1 + MMB_LEN_SERVER_STATUS;
+
+    return data;
+}
+
+/**
+ * Process a master
+ */
+const char* process_master(Monitor* monitor, MXS_MONITORED_SERVER** master,
+                           const char* data, const char* end)
+{
+    if (master)
+    {
+        for (MXS_MONITORED_SERVER* db : monitor->m_servers)
+        {
+            if (strcmp(db->server->name(), data) == 0)
+            {
+                *master = db;
+                break;
+            }
+        }
+    }
+
+    data += strlen(data) + 1;
+
+    return data;
+}
+
+/**
+ * Check that the calculated CRC32 matches the one stored on disk
+ */
+bool check_crc32(const uint8_t* data, uint32_t size, const uint8_t* crc_ptr)
+{
+    uint32_t crc = mxs_get_byte4(crc_ptr);
+    uint32_t calculated_crc = crc32(0L, NULL, 0);
+    calculated_crc = crc32(calculated_crc, data, size);
+    return calculated_crc == crc;
+}
+
+/**
+ * Process the stored journal data
+ */
+bool process_data_file(Monitor* monitor, MXS_MONITORED_SERVER** master,
+                       const char* data, const char* crc_ptr)
+{
+    const char* ptr = data;
+    MXB_AT_DEBUG(const char* prevptr = ptr);
+
+    while (ptr < crc_ptr)
+    {
+        /** All values contain a null terminated string */
+        if (!has_null_terminator(ptr, crc_ptr))
+        {
+                    MXS_ERROR("Possible corrupted journal file (no null terminator found). Ignoring.");
+            return false;
+        }
+
+        stored_value_type type = (stored_value_type)ptr[0];
+        ptr += MMB_LEN_VALUE_TYPE;
+
+        switch (type)
+        {
+            case SVT_SERVER:
+                ptr = process_server(monitor, ptr, crc_ptr);
+                break;
+
+            case SVT_MASTER:
+                ptr = process_master(monitor, master, ptr, crc_ptr);
+                break;
+
+            default:
+                        MXS_ERROR("Possible corrupted journal file (unknown stored value). Ignoring.");
+                return false;
+        }
+        mxb_assert(prevptr != ptr);
+        MXB_AT_DEBUG(prevptr = ptr);
+    }
+
+    mxb_assert(ptr == crc_ptr);
+    return true;
+}
+
+}
 
 Monitor* MonitorManager::create_monitor(const string& name, const string& module,
                                         MXS_CONFIG_PARAMETER* params)
@@ -263,7 +513,12 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 
 Monitor::~Monitor()
 {
-    monitor_server_free_all(m_servers);
+    for (auto server : m_servers)
+    {
+        // TODO: store unique pointers in the array
+        delete server;
+    }
+    m_servers.clear();
     MXS_FREE((const_cast<char*>(m_name)));
 }
 
@@ -384,54 +639,12 @@ void Monitor::server_removed(SERVER* server)
     service_remove_server(this, server);
 }
 
-static void monitor_server_free(MXS_MONITORED_SERVER* tofree)
-{
-    if (tofree)
-    {
-        if (tofree->con)
-        {
-            mysql_close(tofree->con);
-        }
-        delete tofree;
-    }
-}
-
-/**
- * Free monitor server list
- * @param servers Servers to free
- */
-static void monitor_server_free_all(std::vector<MXS_MONITORED_SERVER*>& servers)
-{
-    for (auto server : servers)
-    {
-        monitor_server_free(server);
-    }
-    servers.clear();
-}
-
 /**
  * Remove a server from a monitor.
  *
  * @param mon           The Monitor instance
  * @param server        The Server to remove
  */
-//static
-void Monitor::remove_server(Monitor* mon, SERVER* server)
-{
-    monitor_state_t old_state = mon->state();
-
-    if (old_state == MONITOR_STATE_RUNNING)
-    {
-        MonitorManager::stop_monitor(mon);
-    }
-
-    mon->remove_server(server);
-
-    if (old_state == MONITOR_STATE_RUNNING)
-    {
-        MonitorManager::start_monitor(mon);
-    }
-}
 
 /**
  * @brief Remove a server from the monitor.
@@ -463,11 +676,9 @@ void Monitor::remove_server(SERVER* server)
 
     if (ptr)
     {
-        monitor_server_free(ptr);
-
+        delete ptr;
         server_removed(server);
     }
-
 }
 
 /**
@@ -625,7 +836,7 @@ bool Monitor::test_permissions(const string& query)
 
     for (MXS_MONITORED_SERVER* mondb : monitor->m_servers)
     {
-        if (!mon_connection_is_ok(mondb->ping_or_connect(m_settings.conn_settings)))
+        if (!connection_is_ok(mondb->ping_or_connect(m_settings.conn_settings)))
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
@@ -708,12 +919,11 @@ void MXS_MONITORED_SERVER::clear_pending_status(uint64_t bits)
  * Determine a monitor event, defined by the difference between the old
  * status of a server and the new status.
  *
- * @param   node                The monitor server data for a particular server
- * @result  monitor_event_t     A monitor event (enum)
+ * @return  monitor_event_t     A monitor event (enum)
  *
  * @note This function must only be called from mon_process_state_changes
  */
-static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
+mxs_monitor_event_t MXS_MONITORED_SERVER::get_event_type() const
 {
     typedef enum
     {
@@ -726,8 +936,8 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
 
     general_event_type event_type = UNSUPPORTED_EVENT;
 
-    uint64_t prev = node->mon_prev_status & all_server_bits;
-    uint64_t present = node->server->status & all_server_bits;
+    uint64_t prev = mon_prev_status & all_server_bits;
+    uint64_t present = server->status & all_server_bits;
 
     if (prev == present)
     {
@@ -838,7 +1048,7 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
     return rval;
 }
 
-const char* mon_get_event_name(mxs_monitor_event_t event)
+const char* Monitor::get_event_name(mxs_monitor_event_t event)
 {
     for (int i = 0; mxs_monitor_event_enum_values[i].name; i++)
     {
@@ -852,14 +1062,9 @@ const char* mon_get_event_name(mxs_monitor_event_t event)
     return "undefined_event";
 }
 
-/*
- * Given a monitor event (enum) provide a text string equivalent
- * @param   node    The monitor server data whose event is wanted
- * @result  string  The name of the monitor event for the server
- */
-static const char* mon_get_event_name(MXS_MONITORED_SERVER* node)
+const char* MXS_MONITORED_SERVER::get_event_name()
 {
-    return mon_get_event_name((mxs_monitor_event_t)node->server->last_event);
+    return Monitor::get_event_name((mxs_monitor_event_t) server->last_event);
 }
 
 void Monitor::append_node_names(char* dest, int len, int status, credentials_approach_t approach)
@@ -958,14 +1163,13 @@ bool MXS_MONITORED_SERVER::should_print_fail_status()
     return server->is_down() && mon_err_count == 0;
 }
 
-static MXS_MONITORED_SERVER* find_parent_node(const std::vector<MXS_MONITORED_SERVER*>& servers,
-                                              MXS_MONITORED_SERVER* target)
+MXS_MONITORED_SERVER* Monitor::find_parent_node(MXS_MONITORED_SERVER* target)
 {
     MXS_MONITORED_SERVER* rval = NULL;
 
     if (target->server->master_id > 0)
     {
-        for (MXS_MONITORED_SERVER* node : servers)
+        for (MXS_MONITORED_SERVER* node : m_servers)
         {
             if (node->server->node_id == target->server->master_id)
             {
@@ -978,16 +1182,14 @@ static MXS_MONITORED_SERVER* find_parent_node(const std::vector<MXS_MONITORED_SE
     return rval;
 }
 
-static std::string child_nodes(const std::vector<MXS_MONITORED_SERVER*>& servers,
-                               MXS_MONITORED_SERVER* parent)
+std::string Monitor::child_nodes(MXS_MONITORED_SERVER* parent)
 {
     std::stringstream ss;
 
     if (parent->server->node_id > 0)
     {
         bool have_content = false;
-
-        for (MXS_MONITORED_SERVER* node : servers)
+        for (MXS_MONITORED_SERVER* node : m_servers)
         {
             if (node->server->master_id == parent->server->node_id)
             {
@@ -1017,7 +1219,7 @@ int Monitor::launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
     if (externcmd_matches(cmd, "$PARENT"))
     {
         std::stringstream ss;
-        MXS_MONITORED_SERVER* parent = find_parent_node(m_servers, ptr);
+        MXS_MONITORED_SERVER* parent = find_parent_node(ptr);
 
         if (parent)
         {
@@ -1028,12 +1230,12 @@ int Monitor::launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
 
     if (externcmd_matches(cmd, "$CHILDREN"))
     {
-        externcmd_substitute_arg(cmd, "[$]CHILDREN", child_nodes(m_servers, ptr).c_str());
+        externcmd_substitute_arg(cmd, "[$]CHILDREN", child_nodes(ptr).c_str());
     }
 
     if (externcmd_matches(cmd, "$EVENT"))
     {
-        externcmd_substitute_arg(cmd, "[$]EVENT", mon_get_event_name(ptr));
+        externcmd_substitute_arg(cmd, "[$]EVENT", ptr->get_event_name());
     }
 
     char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
@@ -1084,7 +1286,7 @@ int Monitor::launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
             // Internal error
             MXS_ERROR("Failed to execute script '%s' on server state change event '%s'",
                       cmd->argv[0],
-                      mon_get_event_name(ptr));
+                      ptr->get_event_name());
         }
         else
         {
@@ -1092,7 +1294,7 @@ int Monitor::launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
             MXS_ERROR("Script '%s' returned %d on event '%s'",
                       cmd->argv[0],
                       rv,
-                      mon_get_event_name(ptr));
+                      ptr->get_event_name());
         }
     }
     else
@@ -1136,7 +1338,7 @@ int Monitor::launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
 
         MXS_NOTICE("Executed monitor script '%s' on event '%s'",
                    scriptStr,
-                   mon_get_event_name(ptr));
+                   ptr->get_event_name());
 
         if (!memError)
         {
@@ -1170,8 +1372,8 @@ int Monitor::launch_script(MXS_MONITORED_SERVER* ptr)
     return rv;
 }
 
-mxs_connect_result_t mon_ping_or_connect_to_db(const MXS_MONITORED_SERVER::ConnectionSettings& sett,
-                                               SERVER& server, MYSQL** ppConn)
+mxs_connect_result_t Monitor::ping_or_connect_to_db(const MXS_MONITORED_SERVER::ConnectionSettings& sett,
+                                                    SERVER& server, MYSQL** ppConn)
 {
     mxb_assert(ppConn);
     auto pConn = *ppConn;
@@ -1233,7 +1435,7 @@ mxs_connect_result_t mon_ping_or_connect_to_db(const MXS_MONITORED_SERVER::Conne
 
 mxs_connect_result_t MXS_MONITORED_SERVER::ping_or_connect(const ConnectionSettings& settings)
 {
-    return mon_ping_or_connect_to_db(settings, *server, &con);
+    return Monitor::ping_or_connect_to_db(settings, *server, &con);
 }
 
 /**
@@ -1242,7 +1444,7 @@ mxs_connect_result_t MXS_MONITORED_SERVER::ping_or_connect(const ConnectionSetti
  * @param connect_result Return value of mon_ping_or_connect_to_db
  * @return True of connection is ok
  */
-bool mon_connection_is_ok(mxs_connect_result_t connect_result)
+bool Monitor::connection_is_ok(mxs_connect_result_t connect_result)
 {
     return connect_result == MONITOR_CONN_EXISTING_OK || connect_result == MONITOR_CONN_NEWCONN_OK;
 }
@@ -1254,7 +1456,7 @@ bool mon_connection_is_ok(mxs_connect_result_t connect_result)
  */
 void MXS_MONITORED_SERVER::log_connect_error(mxs_connect_result_t rval)
 {
-    mxb_assert(!mon_connection_is_ok(rval));
+    mxb_assert(!Monitor::connection_is_ok(rval));
     const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
     const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ? TIMED_OUT : REFUSED,
@@ -1264,13 +1466,13 @@ void MXS_MONITORED_SERVER::log_connect_error(mxs_connect_result_t rval)
               mysql_error(con));
 }
 
-static void mon_log_state_change(MXS_MONITORED_SERVER* ptr)
+void MXS_MONITORED_SERVER::log_state_change()
 {
-    string prev = SERVER::status_to_string(ptr->mon_prev_status);
-    string next = ptr->server->status_string();
+    string prev = SERVER::status_to_string(mon_prev_status);
+    string next = server->status_string();
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
-               ptr->server->name(), ptr->server->address, ptr->server->port,
-               mon_get_event_name(ptr),
+               server->name(), server->address, server->port,
+               get_event_name(),
                prev.c_str(), next.c_str());
 }
 
@@ -1295,7 +1497,7 @@ Monitor* MonitorManager::server_is_monitored(const SERVER* server)
     return rval;
 }
 
-static bool create_monitor_config(const Monitor* monitor, const char* filename)
+bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (file == -1)
@@ -1328,7 +1530,7 @@ static bool create_monitor_config(const Monitor* monitor, const char* filename)
     return true;
 }
 
-bool monitor_serialize(const Monitor* monitor)
+bool MonitorManager::monitor_serialize(const Monitor* monitor)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -1453,10 +1655,10 @@ void Monitor::detect_handle_state_changes()
              * In this case, a failover script should be called if no master_up
              * or new_master events are triggered within a pre-defined time limit.
              */
-            mxs_monitor_event_t event = mon_get_event_type(ptr);
+            mxs_monitor_event_t event = ptr->get_event_type();
             ptr->server->last_event = event;
             ptr->server->triggered_at = mxs_clock();
-            mon_log_state_change(ptr);
+            ptr->log_state_change();
 
             if (event == MASTER_DOWN_EVENT)
             {
@@ -1477,22 +1679,6 @@ void Monitor::detect_handle_state_changes()
     if (master_down && master_up)
     {
         MXS_NOTICE("Master switch detected: lost a master and gained a new one");
-    }
-}
-
-static const char* monitor_state_to_string(monitor_state_t state)
-{
-    switch (state)
-    {
-    case MONITOR_STATE_RUNNING:
-        return "Running";
-
-    case MONITOR_STATE_STOPPED:
-        return "Stopped";
-
-    default:
-        mxb_assert(false);
-        return "Unknown";
     }
 }
 
@@ -1552,7 +1738,7 @@ json_t* monitor_json_data(const Monitor* monitor, const char* host)
     return rval;
 }
 
-json_t* monitor_to_json(const Monitor* monitor, const char* host)
+json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host)
 {
     string self = MXS_JSON_API_MONITORS;
     self += monitor->m_name;
@@ -1612,127 +1798,9 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const 
     return rel;
 }
 
-static const char journal_name[] = "monitor.dat";
-static const char journal_template[] = "%s/%s/%s";
-
-/**
- * @brief Remove .tmp suffix and rename file
- *
- * @param src File to rename
- * @return True if file was successfully renamed
- */
-static bool rename_tmp_file(Monitor* monitor, const char* src)
+int Monitor::get_data_file_path(char* path) const
 {
-    bool rval = true;
-    char dest[PATH_MAX + 1];
-    snprintf(dest, sizeof(dest), journal_template, get_datadir(), monitor->m_name, journal_name);
-
-    if (rename(src, dest) == -1)
-    {
-        rval = false;
-        MXS_ERROR("Failed to rename journal file '%s' to '%s': %d, %s",
-                  src,
-                  dest,
-                  errno,
-                  mxs_strerror(errno));
-    }
-
-    return rval;
-}
-
-/**
- * @brief Open temporary file
- *
- * @param monitor Monitor
- * @param path Output where the path is stored
- * @return Opened file or NULL on error
- */
-static FILE* open_tmp_file(Monitor* monitor, char* path)
-{
-    int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->m_name, "");
-    int max_bytes = PATH_MAX - (int)sizeof(journal_name);
-    FILE* rval = NULL;
-
-    if (nbytes < max_bytes && mxs_mkdir_all(path, 0744))
-    {
-        strcat(path, journal_name);
-        strcat(path, "XXXXXX");
-        int fd = mkstemp(path);
-
-        if (fd == -1)
-        {
-            MXS_ERROR("Failed to open file '%s': %d, %s", path, errno, mxs_strerror(errno));
-        }
-        else
-        {
-            rval = fdopen(fd, "w");
-        }
-    }
-    else
-    {
-        MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
-                  "length of %d bytes",
-                  nbytes,
-                  max_bytes);
-    }
-
-    return rval;
-}
-
-/**
- * @brief Store server data to in-memory buffer
- *
- * @param monitor Monitor
- * @param data Pointer to in-memory buffer used for storage, should be at least
- *             PATH_MAX bytes long
- * @param size Size of @c data
- */
-static void store_data(Monitor* monitor, MXS_MONITORED_SERVER* master, uint8_t* data, uint32_t size)
-{
-    uint8_t* ptr = data;
-
-    /** Store the data length */
-    mxb_assert(sizeof(size) == MMB_LEN_BYTES);
-    ptr = mxs_set_byte4(ptr, size);
-
-    /** Then the schema version */
-    *ptr++ = MMB_SCHEMA_VERSION;
-
-    /** Store the states of all servers */
-    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
-    {
-        *ptr++ = (char)SVT_SERVER;                              // Value type
-        memcpy(ptr, db->server->name(), strlen(db->server->name()));// Name of the server
-        ptr += strlen(db->server->name());
-        *ptr++ = '\0';      // Null-terminate the string
-
-        auto status = db->server->status;
-        static_assert(sizeof(status) == MMB_LEN_SERVER_STATUS,
-                      "Status size should be MMB_LEN_SERVER_STATUS bytes");
-        ptr = maxscale::set_byteN(ptr, status, MMB_LEN_SERVER_STATUS);
-    }
-
-    /** Store the current root master if we have one */
-    if (master)
-    {
-        *ptr++ = (char)SVT_MASTER;
-        memcpy(ptr, master->server->name(), strlen(master->server->name()));
-        ptr += strlen(master->server->name());
-        *ptr++ = '\0';      // Null-terminate the string
-    }
-
-    /** Calculate the CRC32 for the complete payload minus the CRC32 bytes */
-    uint32_t crc = crc32(0L, NULL, 0);
-    crc = crc32(crc, (uint8_t*)data + MMB_LEN_BYTES, size - MMB_LEN_CRC32);
-    mxb_assert(sizeof(crc) == MMB_LEN_CRC32);
-
-    ptr = mxs_set_byte4(ptr, crc);
-    mxb_assert(ptr - data == size + MMB_LEN_BYTES);
-}
-
-static int get_data_file_path(const Monitor* monitor, char* path)
-{
-    int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->m_name, journal_name);
+    int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), m_name, journal_name);
     return rv;
 }
 
@@ -1743,10 +1811,10 @@ static int get_data_file_path(const Monitor* monitor, char* path)
  * @param path Output where path is stored
  * @return Opened file or NULL on error
  */
-static FILE* open_data_file(Monitor* monitor, char* path)
+FILE* Monitor::open_data_file(Monitor* monitor, char* path)
 {
     FILE* rval = NULL;
-    int nbytes = get_data_file_path(monitor, path);
+    int nbytes = monitor->get_data_file_path(path);
 
     if (nbytes < PATH_MAX)
     {
@@ -1764,130 +1832,6 @@ static FILE* open_data_file(Monitor* monitor, char* path)
     }
 
     return rval;
-}
-
-/**
- * Check that memory area contains a null terminator
- */
-static bool has_null_terminator(const char* data, const char* end)
-{
-    while (data < end)
-    {
-        if (*data == '\0')
-        {
-            return true;
-        }
-        data++;
-    }
-
-    return false;
-}
-
-/**
- * Process a generic server
- */
-static const char* process_server(Monitor* monitor, const char* data, const char* end)
-{
-    for (MXS_MONITORED_SERVER* db : monitor->m_servers)
-    {
-        if (strcmp(db->server->name(), data) == 0)
-        {
-            const unsigned char* sptr = (unsigned char*)strchr(data, '\0');
-            mxb_assert(sptr);
-            sptr++;
-
-            uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
-            db->mon_prev_status = status;
-            db->server->set_status(status);
-            db->set_pending_status(status);
-            break;
-        }
-    }
-
-    data += strlen(data) + 1 + MMB_LEN_SERVER_STATUS;
-
-    return data;
-}
-
-/**
- * Process a master
- */
-static const char* process_master(Monitor* monitor,
-                                  MXS_MONITORED_SERVER** master,
-                                  const char* data,
-                                  const char* end)
-{
-    if (master)
-    {
-        for (MXS_MONITORED_SERVER* db : monitor->m_servers)
-        {
-            if (strcmp(db->server->name(), data) == 0)
-            {
-                *master = db;
-                break;
-            }
-        }
-    }
-
-    data += strlen(data) + 1;
-
-    return data;
-}
-
-/**
- * Check that the calculated CRC32 matches the one stored on disk
- */
-static bool check_crc32(const uint8_t* data, uint32_t size, const uint8_t* crc_ptr)
-{
-    uint32_t crc = mxs_get_byte4(crc_ptr);
-    uint32_t calculated_crc = crc32(0L, NULL, 0);
-    calculated_crc = crc32(calculated_crc, data, size);
-    return calculated_crc == crc;
-}
-
-/**
- * Process the stored journal data
- */
-static bool process_data_file(Monitor* monitor,
-                              MXS_MONITORED_SERVER** master,
-                              const char* data,
-                              const char* crc_ptr)
-{
-    const char* ptr = data;
-    MXB_AT_DEBUG(const char* prevptr = ptr);
-
-    while (ptr < crc_ptr)
-    {
-        /** All values contain a null terminated string */
-        if (!has_null_terminator(ptr, crc_ptr))
-        {
-            MXS_ERROR("Possible corrupted journal file (no null terminator found). Ignoring.");
-            return false;
-        }
-
-        stored_value_type type = (stored_value_type)ptr[0];
-        ptr += MMB_LEN_VALUE_TYPE;
-
-        switch (type)
-        {
-        case SVT_SERVER:
-            ptr = process_server(monitor, ptr, crc_ptr);
-            break;
-
-        case SVT_MASTER:
-            ptr = process_master(monitor, master, ptr, crc_ptr);
-            break;
-
-        default:
-            MXS_ERROR("Possible corrupted journal file (unknown stored value). Ignoring.");
-            return false;
-        }
-        mxb_assert(prevptr != ptr);
-        MXB_AT_DEBUG(prevptr = ptr);
-    }
-
-    mxb_assert(ptr == crc_ptr);
-    return true;
 }
 
 void Monitor::store_server_journal(MXS_MONITORED_SERVER* master)
@@ -2040,11 +1984,10 @@ void Monitor::load_server_journal(MXS_MONITORED_SERVER** master)
     }
 }
 
-static void remove_server_journal(Monitor* monitor)
+void Monitor::remove_server_journal()
 {
     char path[PATH_MAX];
-
-    if (get_data_file_path(monitor, path) < PATH_MAX)
+    if (get_data_file_path(path) < PATH_MAX)
     {
         unlink(path);
     }
@@ -2059,7 +2002,7 @@ bool Monitor::journal_is_stale() const
     bool is_stale = true;
     char path[PATH_MAX];
     auto max_age = m_settings.journal_max_age;
-    if (get_data_file_path(this, path) < PATH_MAX)
+    if (get_data_file_path(path) < PATH_MAX)
     {
         struct stat st;
 
@@ -2393,7 +2336,7 @@ bool MonitorWorker::start()
     if (journal_is_stale())
     {
         MXS_WARNING("Removing stale journal file for monitor '%s'.", m_name);
-        remove_server_journal(this);
+        remove_server_journal();
     }
 
     if (!m_checked)
@@ -2637,7 +2580,7 @@ void MonitorWorkerSimple::tick()
 
             mxs_connect_result_t rval = pMs->ping_or_connect(m_settings.conn_settings);
 
-            if (mon_connection_is_ok(rval))
+            if (connection_is_ok(rval))
             {
                 pMs->clear_pending_status(SERVER_AUTH_ERROR);
                 pMs->set_pending_status(SERVER_RUNNING);
@@ -2799,4 +2742,12 @@ MXS_MONITORED_SERVER::MXS_MONITORED_SERVER(SERVER* server)
     : server(server)
     , disk_space_checked(maxscale::MonitorWorker::get_time_ms()) // Pretend disk space was just checked.
 {
+}
+
+MXS_MONITORED_SERVER::~MXS_MONITORED_SERVER()
+{
+    if (con)
+    {
+        mysql_close(con);
+    }
 }

@@ -161,6 +161,8 @@ public:
 
     MXS_MONITORED_SERVER(SERVER* server);
 
+    ~MXS_MONITORED_SERVER();
+
     /**
      * Set pending status bits in the monitor server
      *
@@ -200,6 +202,21 @@ public:
      */
     mxs_connect_result_t ping_or_connect(const ConnectionSettings& settings);
 
+    const char* get_event_name();
+
+    /*
+     * Determine a monitor event, defined by the difference between the old
+     * status of a server and the new status.
+     *
+     * @param   node                The monitor server data for a particular server
+     * @result  monitor_event_t     A monitor event (enum)
+     *
+     * @note This function must only be called from mon_process_state_changes
+     */
+    mxs_monitor_event_t get_event_type() const;
+
+    void log_state_change();
+
     SERVER*  server = nullptr;      /**< The server being monitored */
     MYSQL*   con = nullptr;         /**< The MySQL connection */
     bool     log_version_err = true;
@@ -210,9 +227,6 @@ public:
     int      status_request = NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
                                           * server? */
 };
-
-#define MAX_MONITOR_USER_LEN     512
-#define MAX_MONITOR_PASSWORD_LEN 512
 
 /**
  * Representation of the running monitor.
@@ -225,6 +239,30 @@ public:
 
     static const int STATUS_FLAG_NOCHECK = 0;
     static const int STATUS_FLAG_CHECK   = -1;
+
+    /**
+     * Ping or connect to a database. If connection does not exist or ping fails, a new connection
+     * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
+     * to call MySQL C API functions to find out the reason of the failure.
+     *
+     * @param sett        Connection settings
+     * @param pServer     A server
+     * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
+     *                    valid or NULL.
+     * @return Connection status.
+     */
+    static mxs_connect_result_t ping_or_connect_to_db(const MXS_MONITORED_SERVER::ConnectionSettings& sett,
+                                                      SERVER& server, MYSQL** ppConn);
+
+    static bool connection_is_ok(mxs_connect_result_t connect_result);
+
+    /*
+     * Convert a monitor event (enum) to string.
+     *
+     * @param   event    The event
+     * @return  Text description
+     */
+    static const char* get_event_name(mxs_monitor_event_t event);
 
     virtual monitor_state_t state() const = 0;
 
@@ -406,6 +444,12 @@ protected:
      */
     void hangup_failed_servers();
 
+    void remove_server_journal();
+
+    MXS_MONITORED_SERVER* find_parent_node(MXS_MONITORED_SERVER* target);
+
+    std::string child_nodes(MXS_MONITORED_SERVER* parent);
+
     /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
@@ -479,23 +523,13 @@ private:
      */
     int launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
 
-
-    /**
-     * @brief Remove a server from a monitor.
-     *
-     * If the server is being monitored by the server, remove it.
-     * Before removing, the monitor is stopped if it is running and after
-     * the removal it is restarted if it was running.
-     *
-     * @param monitor  A monitor.
-     * @param server   A server.
-     */
-    static void remove_server(Monitor* mon, SERVER* server);
-
     /**
      * @brief The monitor should populate associated services.
      */
     virtual void populate_services();
+
+    FILE* open_data_file(Monitor* monitor, char* path);
+    int get_data_file_path(char* path) const;
 };
 
 /**
@@ -511,33 +545,6 @@ extern const char CN_JOURNAL_MAX_AGE[];
 extern const char CN_MONITOR_INTERVAL[];
 extern const char CN_SCRIPT[];
 extern const char CN_SCRIPT_TIMEOUT[];
-
-/**
- * Ping or connect to a database. If connection does not exist or ping fails, a new connection
- * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
- * to call MySQL C API functions to find out the reason of the failure.
- *
- * @param sett        Connection settings
- * @param pServer     A server
- * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
- *                    valid or NULL.
- * @return Connection status.
- */
-mxs_connect_result_t mon_ping_or_connect_to_db(const MXS_MONITORED_SERVER::ConnectionSettings& sett,
-                                               SERVER& server, MYSQL** ppConn);
-
-bool                 mon_connection_is_ok(mxs_connect_result_t connect_result);
-const char*          mon_get_event_name(mxs_monitor_event_t event);
-
-/**
- * @brief Convert monitor to JSON
- *
- * @param monitor Monitor to convert
- * @param host    Hostname of this server
- *
- * @return JSON representation of the monitor
- */
-json_t* monitor_to_json(const Monitor* monitor, const char* host);
 
 namespace maxscale
 {

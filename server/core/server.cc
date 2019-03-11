@@ -480,7 +480,7 @@ void Server::print_to_dcb(DCB* dcb) const
     dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
     dcb_printf(dcb,
                "\tLast event:                          %s\n",
-               mon_get_event_name((mxs_monitor_event_t)server->last_event));
+               Monitor::get_event_name((mxs_monitor_event_t) server->last_event));
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
     if (server->is_slave() || server->is_relay())
@@ -1039,7 +1039,7 @@ json_t* Server::server_json_attributes(const Server* server)
     json_object_set_new(attr, "node_id", json_integer(server->node_id));
     json_object_set_new(attr, "master_id", json_integer(server->master_id));
 
-    const char* event_name = mon_get_event_name((mxs_monitor_event_t)server->last_event);
+    const char* event_name = Monitor::get_event_name((mxs_monitor_event_t) server->last_event);
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     json_object_set_new(attr, "last_event", json_string(event_name));
     json_object_set_new(attr, "triggered_at", json_string(http_to_date(t).c_str()));

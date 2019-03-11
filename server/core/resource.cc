@@ -615,7 +615,7 @@ HttpResponse cb_get_monitor(const HttpRequest& request)
 {
     Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     mxb_assert(monitor);
-    return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
+    return HttpResponse(MHD_HTTP_OK, MonitorManager::monitor_to_json(monitor, request.host()));
 }
 
 HttpResponse cb_all_sessions(const HttpRequest& request)

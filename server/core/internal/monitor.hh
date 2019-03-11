@@ -142,17 +142,29 @@ public:
     static std::unique_ptr<ResultSet> monitor_get_list();
 
     /**
+     * @brief Serialize a monitor to a file
+     *
+     * This converts the static configuration of the monitor into an INI format file.
+     *
+     * @param monitor Monitor to serialize
+     * @return True if serialization was successful
+     */
+    static bool monitor_serialize(const Monitor* monitor);
+
+    /**
+     * @brief Convert monitor to JSON
+     *
+     * @param monitor Monitor to convert
+     * @param host    Hostname of this server
+     *
+     * @return JSON representation of the monitor
+     */
+    static json_t* monitor_to_json(const Monitor* monitor, const char* host);
+
+    static bool create_monitor_config(const Monitor* monitor, const char* filename);
+
+    /**
      * Waits until all running monitors have advanced one tick.
      */
     static void debug_wait_one_tick();
 };
-
-/**
- * @brief Serialize a monitor to a file
- *
- * This converts the static configuration of the monitor into an INI format file.
- *
- * @param monitor Monitor to serialize
- * @return True if serialization was successful
- */
-bool monitor_serialize(const Monitor* monitor);

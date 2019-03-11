@@ -239,7 +239,7 @@ bool runtime_link_server(Server* server, const char* target)
     {
         if (runtime_add_server(monitor, server))
         {
-            monitor_serialize(monitor);
+            MonitorManager::monitor_serialize(monitor);
             rval = true;
         }
         else
@@ -286,7 +286,7 @@ bool runtime_unlink_server(Server* server, const char* target)
         else if (monitor)
         {
             runtime_remove_server(monitor, server);
-            monitor_serialize(monitor);
+            MonitorManager::monitor_serialize(monitor);
             rval = true;
         }
 
@@ -701,7 +701,7 @@ bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
     bool success = do_alter_monitor(monitor, key, value);
     if (success)
     {
-        monitor_serialize(monitor);
+        MonitorManager::monitor_serialize(monitor);
     }
     if (was_running)
     {
@@ -1240,7 +1240,7 @@ bool runtime_create_monitor(const char* name, const char* module)
 
         if (monitor)
         {
-            if (monitor_serialize(monitor))
+            if (MonitorManager::monitor_serialize(monitor))
             {
                 MXS_NOTICE("Created monitor '%s'", name);
                 rval = true;
@@ -2398,7 +2398,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 {
     bool success = false;
 
-    std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));
+    std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
     mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json)
@@ -2440,7 +2440,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 
             if (success && changed)
             {
-                monitor_serialize(monitor);
+                MonitorManager::monitor_serialize(monitor);
             }
 
             if (restart)
@@ -2456,7 +2456,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, json_t* json)
 {
     bool rval = false;
-    std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));
+    std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
     mxb_assert(old_json.get());
 
     if (is_valid_relationship_body(json))

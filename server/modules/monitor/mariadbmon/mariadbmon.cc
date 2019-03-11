@@ -338,7 +338,7 @@ void MariaDBMonitor::update_server(MariaDBServer* server)
     mxs_connect_result_t conn_status = mon_srv->ping_or_connect(m_settings.conn_settings);
     MYSQL* conn = mon_srv->con;     // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 
-    if (mon_connection_is_ok(conn_status))
+    if (connection_is_ok(conn_status))
     {
         server->set_status(SERVER_RUNNING);
         if (conn_status == MONITOR_CONN_NEWCONN_OK)
