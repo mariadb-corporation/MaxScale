@@ -265,33 +265,19 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 void MariaDBMonitor::diagnostics(DCB* dcb) const
 {
     /* The problem with diagnostic printing is that some of the printed elements are array-like and their
-     * length could change during a monitor loop. Thus, the variables should only be read by the monitor
-     * thread and not the admin thread. Because the diagnostic must be printable even when the monitor is
-     * not running, the printing must be done outside the normal loop. */
+     * length could change during a monitor loop. Such variables are protected by mutexes. Locking is
+     * only required when the monitor thread writes to such a variable and when the admin thread is
+     * reading it. */
 
     mxb_assert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    /* The 'dcb' is owned by the admin thread (the thread executing this function), and probably
-     * should not be written to by any other thread. To prevent this, have the monitor thread
-     * print the diagnostics to a string. */
-    string diag_str;
-
-    // 'execute' is not a const method, although the task we are sending is.
-    MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
-    auto func = [this, &diag_str] {
-            diag_str = diagnostics_to_string();
-        };
-
-    if (!mutable_ptr->call(func, Worker::EXECUTE_AUTO))
-    {
-        diag_str = DIAG_ERROR;
-    }
-
-    dcb_printf(dcb, "%s", diag_str.c_str());
+    dcb_printf(dcb, "%s", diagnostics_to_string().c_str());
 }
 
 string MariaDBMonitor::diagnostics_to_string() const
 {
     string rval;
+    rval.reserve(1000); // Enough for basic output.
+
     rval += string_printf("Automatic failover:     %s\n", m_auto_failover ? "Enabled" : "Disabled");
     rval += string_printf("Failcount:              %d\n", m_failcount);
     rval += string_printf("Failover timeout:       %u\n", m_failover_timeout);
@@ -317,24 +303,16 @@ string MariaDBMonitor::diagnostics_to_string() const
 json_t* MariaDBMonitor::diagnostics_json() const
 {
     mxb_assert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    json_t* rval = NULL;
-    MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
-    auto func = [this, &rval] {
-            rval = to_json();
-        };
-
-    if (!mutable_ptr->call(func, Worker::EXECUTE_AUTO))
-    {
-        rval = mxs_json_error_append(rval, "%s", DIAG_ERROR);
-    }
-
-    return rval;
+    return to_json();
 }
 
 json_t* MariaDBMonitor::to_json() const
 {
     json_t* rval = MonitorWorker::diagnostics_json();
-    json_object_set_new(rval, "master", m_master == NULL ? json_null() : json_string(m_master->name()));
+
+    // The m_master-pointer can be modified during a tick, but the pointed object cannot be deleted.
+    auto master = mxb::atomic::load(&m_master, mxb::atomic::RELAXED);
+    json_object_set_new(rval, "master", master == nullptr ? json_null() : json_string(master->name()));
     json_object_set_new(rval,
                         "master_gtid_domain_id",
                         m_master_gtid_domain == GTID_DOMAIN_UNKNOWN ? json_null() :
@@ -690,7 +668,7 @@ void MariaDBMonitor::log_master_changes()
 
 void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
 {
-    m_master = new_master;
+    mxb::atomic::store(&m_master, new_master, mxb::atomic::RELAXED);
     update_master_cycle_info();
     m_warn_current_master_invalid = true;
     m_warn_have_better_master = true;
@@ -823,8 +801,6 @@ bool MariaDBMonitor::run_manual_reset_replication(SERVER* master_server, json_t*
                                           }, error_out);
     return send_ok && rval;
 }
-
-
 
 /**
  * Command handler for 'switchover'

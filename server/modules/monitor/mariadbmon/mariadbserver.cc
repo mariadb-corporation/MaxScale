@@ -27,6 +27,7 @@ using maxbase::string_printf;
 using maxbase::Duration;
 using maxbase::StopWatch;
 using maxsql::QueryResult;
+using Guard = std::lock_guard<std::mutex>;
 
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index,
                              bool assume_unique_hostnames, bool query_events)
@@ -399,6 +400,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 
         // Always write to m_slave_status. Even if the new status is equal by topology,
         // gtid:s etc may have changed.
+        Guard guard(m_arraylock);
         m_slave_status = std::move(slave_status_new);
     }
 
@@ -415,6 +417,8 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
     auto result = execute_query(query, errmsg_out);
     if (result.get() != NULL)
     {
+        Guard guard(m_arraylock);
+
         rval = true;
         if (result->next_row())
         {
@@ -677,9 +681,12 @@ string MariaDBServer::diagnostics() const
     const char fmt_int64[] = "%-23s %" PRIi64 "\n";
 
     string rval;
+    rval.reserve(300); // Enough for most common ouput.
+
     rval += string_printf(fmt_string, "Server:", name());
     rval += string_printf(fmt_int64, "Server ID:", m_server_id);
     rval += string_printf(fmt_string, "Read only:", (m_read_only ? "Yes" : "No"));
+    Guard guard(m_arraylock);
     if (!m_gtid_current_pos.empty())
     {
         rval += string_printf(fmt_string, "Gtid current position:", m_gtid_current_pos.to_string().c_str());
@@ -708,6 +715,7 @@ json_t* MariaDBServer::to_json() const
     json_object_set_new(result, "server_id", json_integer(m_server_id));
     json_object_set_new(result, "read_only", json_boolean(m_read_only));
 
+    Guard guard(m_arraylock);
     json_object_set_new(result,
                         "gtid_current_pos",
                         m_gtid_current_pos.empty() ? json_null() :
