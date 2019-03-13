@@ -73,7 +73,7 @@ struct NodeData
 class MariaDBServer
 {
 public:
-    MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index,
+    MariaDBServer(mxs::MXS_MONITORED_SERVER* monitored_server, int config_index,
                   bool assume_unique_hostnames, bool query_events);
 
     class EventInfo
@@ -119,7 +119,7 @@ public:
 
     /* Monitored server base class/struct. MariaDBServer does not own the struct, it is not freed
      * (or connection closed) when a MariaDBServer is destroyed. */
-    MXS_MONITORED_SERVER* m_server_base = NULL;
+    mxs::MXS_MONITORED_SERVER* m_server_base = NULL;
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
     int m_config_index = 0;
 

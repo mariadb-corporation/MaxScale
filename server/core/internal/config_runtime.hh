@@ -143,7 +143,7 @@ bool runtime_enable_server_ssl(Server* server,
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value);
+bool runtime_alter_monitor(mxs::Monitor* monitor, const char* key, const char* value);
 
 /**
  * @brief Alter service parameters
@@ -254,7 +254,7 @@ bool runtime_destroy_filter(const SFilterDef& filter);
  * @param monitor Monitor to destroy
  * @return True if monitor was destroyed
  */
-bool runtime_destroy_monitor(Monitor* monitor);
+bool runtime_destroy_monitor(mxs::Monitor* monitor);
 
 /**
  * Destroy a service
@@ -304,7 +304,7 @@ bool runtime_alter_server_relationships_from_json(Server* server, const char* ty
  *
  * @return Created monitor or NULL on error
  */
-Monitor* runtime_create_monitor_from_json(json_t* json);
+mxs::Monitor* runtime_create_monitor_from_json(json_t* json);
 
 /**
  * @brief Create a new filter from JSON
@@ -332,7 +332,7 @@ Service* runtime_create_service_from_json(json_t* json);
  *
  * @return True if the monitor was successfully modified to represent @c new_json
  */
-bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json);
+bool runtime_alter_monitor_from_json(mxs::Monitor* monitor, json_t* new_json);
 
 /**
  * @brief Alter monitor relationships
@@ -342,7 +342,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json);
  *
  * @return True if the relationships were successfully modified
  */
-bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, json_t* json);
+bool runtime_alter_monitor_relationships_from_json(mxs::Monitor* monitor, json_t* json);
 
 /**
  * @brief Alter a service using JSON

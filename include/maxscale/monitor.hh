@@ -28,10 +28,15 @@
 #include <maxscale/server.hh>
 #include <maxscale/protocol/mysql.hh>
 
+namespace maxscale
+{
 class Monitor;
+}
+
 struct DCB;
 struct json_t;
 struct EXTERNCMD;
+class MonitorManager;
 
 /**
  * @verbatim
@@ -56,8 +61,22 @@ struct MXS_MONITOR_API
      * @param module Module name of the monitor
      * @return Monitor object
      */
-    Monitor* (* createInstance)(const std::string& name, const std::string& module);
+    maxscale::Monitor* (* createInstance)(const std::string& name, const std::string& module);
 };
+
+/**
+ * Monitor configuration parameters names
+ */
+extern const char CN_BACKEND_CONNECT_ATTEMPTS[];
+extern const char CN_BACKEND_CONNECT_TIMEOUT[];
+extern const char CN_BACKEND_READ_TIMEOUT[];
+extern const char CN_BACKEND_WRITE_TIMEOUT[];
+extern const char CN_DISK_SPACE_CHECK_INTERVAL[];
+extern const char CN_EVENTS[];
+extern const char CN_JOURNAL_MAX_AGE[];
+extern const char CN_MONITOR_INTERVAL[];
+extern const char CN_SCRIPT[];
+extern const char CN_SCRIPT_TIMEOUT[];
 
 /**
  * The monitor API version number. Any change to the monitor module API
@@ -128,6 +147,9 @@ enum credentials_approach_t
     CREDENTIALS_INCLUDE,
     CREDENTIALS_EXCLUDE,
 };
+
+namespace maxscale
+{
 
 /**
  * The linked list of servers that are being monitored by the monitor module.
@@ -477,7 +499,7 @@ protected:
     Settings m_settings;
 
 private:
-    friend class MonitorManager;
+    friend class ::MonitorManager;
 
     /**
      * @brief Add a server to a monitor.
@@ -531,23 +553,6 @@ private:
     FILE* open_data_file(Monitor* monitor, char* path);
     int get_data_file_path(char* path) const;
 };
-
-/**
- * Monitor configuration parameters names
- */
-extern const char CN_BACKEND_CONNECT_ATTEMPTS[];
-extern const char CN_BACKEND_CONNECT_TIMEOUT[];
-extern const char CN_BACKEND_READ_TIMEOUT[];
-extern const char CN_BACKEND_WRITE_TIMEOUT[];
-extern const char CN_DISK_SPACE_CHECK_INTERVAL[];
-extern const char CN_EVENTS[];
-extern const char CN_JOURNAL_MAX_AGE[];
-extern const char CN_MONITOR_INTERVAL[];
-extern const char CN_SCRIPT[];
-extern const char CN_SCRIPT_TIMEOUT[];
-
-namespace maxscale
-{
 
 /**
  * An abstract class which helps implement a monitor based on a maxbase::Worker thread.

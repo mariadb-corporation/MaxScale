@@ -251,7 +251,7 @@ private:
 
     MariaDBServer* get_server(const std::string& host, int port);
     MariaDBServer* get_server(int64_t id);
-    MariaDBServer* get_server(MXS_MONITORED_SERVER* mon_server);
+    MariaDBServer* get_server(mxs::MXS_MONITORED_SERVER* mon_server);
     MariaDBServer* get_server(SERVER* server);
 
     // Cluster discovery and status assignment methods, top levels

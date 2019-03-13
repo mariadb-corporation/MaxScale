@@ -40,6 +40,7 @@ using std::list;
 using std::map;
 using std::string;
 using std::stringstream;
+using maxscale::Monitor;
 
 Resource::Resource(ResourceCallback cb, int components, ...)
     : m_cb(cb)

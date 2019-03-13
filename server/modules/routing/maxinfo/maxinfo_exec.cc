@@ -503,7 +503,7 @@ void exec_shutdown_monitor(DCB* dcb, MAXINFO_TREE* tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        Monitor* monitor = MonitorManager::find_monitor(tree->value);
+        mxs::Monitor* monitor = MonitorManager::find_monitor(tree->value);
         if (monitor)
         {
             MonitorManager::stop_monitor(monitor);
@@ -612,7 +612,7 @@ void exec_restart_monitor(DCB* dcb, MAXINFO_TREE* tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        Monitor* monitor = MonitorManager::find_monitor(tree->value);
+        mxs::Monitor* monitor = MonitorManager::find_monitor(tree->value);
         if (monitor)
         {
             MonitorManager::start_monitor(monitor);

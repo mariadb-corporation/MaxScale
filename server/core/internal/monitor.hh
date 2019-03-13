@@ -69,8 +69,8 @@ public:
      * @param module        The module name to load
      * @return              The newly created monitor, or NULL on error
      */
-    static Monitor* create_monitor(const std::string& name, const std::string& module,
-                                   MXS_CONFIG_PARAMETER* params);
+    static mxs::Monitor* create_monitor(const std::string& name, const std::string& module,
+                                        MXS_CONFIG_PARAMETER* params);
 
     /**
      * Mark monitor as deactivated. A deactivated monitor appears not to exist, as if it had been
@@ -79,7 +79,7 @@ public:
      *
      * @param monitor Monitor to deactivate
      */
-    static void deactivate_monitor(Monitor* monitor);
+    static void deactivate_monitor(mxs::Monitor* monitor);
 
     /**
      * @brief Destroys all monitors. At this point all monitors should
@@ -89,19 +89,19 @@ public:
      */
     static void destroy_all_monitors();
 
-    static void start_monitor(Monitor* monitor);
+    static void start_monitor(mxs::Monitor* monitor);
 
     /**
      * Stop a given monitor
      *
      * @param monitor The monitor to stop
      */
-    static void stop_monitor(Monitor* monitor);
+    static void stop_monitor(mxs::Monitor* monitor);
 
     static void stop_all_monitors();
     static void start_all_monitors();
 
-    static Monitor* find_monitor(const char* name);
+    static mxs::Monitor* find_monitor(const char* name);
 
     /**
      * @brief Populate services with the servers of the monitors.
@@ -130,12 +130,12 @@ public:
      * @param server Server that is queried
      * @return The monitor watching this server, or NULL if not monitored
      */
-    static Monitor* server_is_monitored(const SERVER* server);
+    static mxs::Monitor* server_is_monitored(const SERVER* server);
 
-    static Monitor* reactivate_monitor(const char* name, const char* module);
+    static mxs::Monitor* reactivate_monitor(const char* name, const char* module);
 
     static void show_all_monitors(DCB* dcb);
-    static void monitor_show(DCB* dcb, Monitor* monitor);
+    static void monitor_show(DCB* dcb, mxs::Monitor* monitor);
 
     static void monitor_list(DCB*);
 
@@ -149,7 +149,7 @@ public:
      * @param monitor Monitor to serialize
      * @return True if serialization was successful
      */
-    static bool monitor_serialize(const Monitor* monitor);
+    static bool monitor_serialize(const mxs::Monitor* monitor);
 
     /**
      * @brief Convert monitor to JSON
@@ -159,9 +159,9 @@ public:
      *
      * @return JSON representation of the monitor
      */
-    static json_t* monitor_to_json(const Monitor* monitor, const char* host);
+    static json_t* monitor_to_json(const mxs::Monitor* monitor, const char* host);
 
-    static bool create_monitor_config(const Monitor* monitor, const char* filename);
+    static bool create_monitor_config(const mxs::Monitor* monitor, const char* filename);
 
     /**
      * Waits until all running monitors have advanced one tick.

@@ -161,7 +161,7 @@ public:
     }
 
     bool can_be_used_as_hub(const char* zName,
-                            const MXS_MONITORED_SERVER::ConnectionSettings& settings);
+                            const mxs::MXS_MONITORED_SERVER::ConnectionSettings& settings);
 
     SERVER* server() const
     {

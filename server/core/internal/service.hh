@@ -21,7 +21,10 @@
 
 #include "filter.hh"
 
+namespace maxscale
+{
 class Monitor;
+}
 
 /**
  * @file service.h - MaxScale internal service functions
@@ -106,7 +109,7 @@ public:
     mutable std::mutex lock;
 
     // TODO: Make this private.
-    Monitor*    m_monitor { nullptr }; /**< A possibly associated monitor */
+    mxs::Monitor*    m_monitor { nullptr }; /**< A possibly associated monitor */
 
     bool uses_cluster() const
     {
@@ -413,7 +416,7 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const char* host);
  * @param monitor  A monitor.
  * @param server   A server.
  */
-void service_add_server(Monitor* pMonitor, SERVER* pServer);
+void service_add_server(mxs::Monitor* pMonitor, SERVER* pServer);
 
 /**
  * @brief Remove server from all services associated with a monitor
@@ -421,7 +424,7 @@ void service_add_server(Monitor* pMonitor, SERVER* pServer);
  * @param monitor  A monitor.
  * @param server   A server.
  */
-void service_remove_server(Monitor* pMonitor, SERVER* pServer);
+void service_remove_server(mxs::Monitor* pMonitor, SERVER* pServer);
 
 std::unique_ptr<ResultSet> serviceGetList(void);
 std::unique_ptr<ResultSet> serviceGetListenerList(void);

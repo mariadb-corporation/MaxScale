@@ -65,7 +65,7 @@ bool is_part_of_the_quorum(const char* zName, const SERVER& server, MYSQL* pCon)
  *
  * @return True, if the node is part of the quorum, false otherwise.
  */
-inline bool is_part_of_the_quorum(const char* zName, MXS_MONITORED_SERVER& ms)
+inline bool is_part_of_the_quorum(const char* zName, mxs::MXS_MONITORED_SERVER& ms)
 {
     mxb_assert(ms.server);
     mxb_assert(ms.con);
@@ -100,7 +100,7 @@ bool is_being_softfailed(const char* zName, const SERVER& server, MYSQL* pCon);
  * @note Upon return @c *ppCon will be non-NULL.
  */
 bool ping_or_connect_to_hub(const char* zName,
-                            const MXS_MONITORED_SERVER::ConnectionSettings& settings,
+                            const mxs::MXS_MONITORED_SERVER::ConnectionSettings& settings,
                             Softfailed softfailed,
                             SERVER& server,
                             MYSQL** ppCon);
@@ -117,9 +117,9 @@ bool ping_or_connect_to_hub(const char* zName,
  * @return True, if the server can be used as hub, false otherwise.
  */
 inline bool ping_or_connect_to_hub(const char* zName,
-                                   const MXS_MONITORED_SERVER::ConnectionSettings& settings,
+                                   const mxs::MXS_MONITORED_SERVER::ConnectionSettings& settings,
                                    Softfailed softfailed,
-                                   MXS_MONITORED_SERVER& ms)
+                                   mxs::MXS_MONITORED_SERVER& ms)
 {
     return ping_or_connect_to_hub(zName, settings, softfailed, *ms.server, &ms.con);
 }

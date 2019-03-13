@@ -96,7 +96,7 @@ struct arg_node
         SERVER*         server;
         MXS_SESSION*    session;
         DCB*            dcb;
-        Monitor*        monitor;
+        mxs::Monitor*   monitor;
         MXS_FILTER_DEF* filter;
     } value;
 };

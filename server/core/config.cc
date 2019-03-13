@@ -68,6 +68,7 @@
 
 using std::set;
 using std::string;
+using maxscale::Monitor;
 
 const char CN_ACCOUNT[] = "account";
 const char CN_ADDRESS[] = "address";

@@ -22,6 +22,8 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.hh>
 
+using maxscale::MXS_MONITORED_SERVER;
+
 namespace
 {
 

@@ -33,6 +33,8 @@
 #define DONOR_NODE_NAME_MAX_LEN 60
 #define DONOR_LIST_SET_VAR      "SET GLOBAL wsrep_sst_donor = \""
 
+using maxscale::MXS_MONITORED_SERVER;
+
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 

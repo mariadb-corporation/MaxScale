@@ -32,6 +32,8 @@
 
 using std::string;
 using maxbase::string_printf;
+using maxscale::Monitor;
+using maxscale::MXS_MONITORED_SERVER;
 
 // Config parameter names
 const char* const CN_AUTO_FAILOVER = "auto_failover";

@@ -25,6 +25,7 @@
 #include <maxscale/protocol/mysql.hh>
 #include <mysqld_error.h>
 
+using maxscale::MXS_MONITORED_SERVER;
 
 GRMon::GRMon(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)

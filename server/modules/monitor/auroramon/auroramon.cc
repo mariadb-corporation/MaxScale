@@ -24,6 +24,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.hh>
 
+using maxscale::MXS_MONITORED_SERVER;
 
 AuroraMonitor::AuroraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)

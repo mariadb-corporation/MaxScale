@@ -14,6 +14,9 @@
 #include "clustrix.hh"
 #include <maxbase/assert.h>
 
+using maxscale::Monitor;
+using maxscale::MXS_MONITORED_SERVER;
+
 namespace
 {
 

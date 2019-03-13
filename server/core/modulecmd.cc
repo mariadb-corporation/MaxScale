@@ -27,6 +27,8 @@
 /** Size of the error buffer */
 #define MODULECMD_ERRBUF_SIZE 512
 
+using maxscale::Monitor;
+
 /** Thread local error buffer */
 thread_local char* errbuf = NULL;
 

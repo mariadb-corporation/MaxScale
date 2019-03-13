@@ -45,6 +45,7 @@ typedef std::set<std::string>    StringSet;
 typedef std::vector<std::string> StringVector;
 
 using std::tie;
+using maxscale::Monitor;
 
 static std::mutex crt_lock;
 

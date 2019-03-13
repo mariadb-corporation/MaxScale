@@ -80,6 +80,8 @@
 #define ARG_TYPE_NUMERIC     10
 #define ARG_TYPE_OBJECT_NAME 11     // A string where whitespace is replaced with hyphens
 
+using maxscale::Monitor;
+
 /**
  * The subcommand structure
  *

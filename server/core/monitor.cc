@@ -70,6 +70,8 @@ enum stored_value_type
 using std::string;
 using std::set;
 using Guard = std::lock_guard<std::mutex>;
+using maxscale::Monitor;
+using maxscale::MXS_MONITORED_SERVER;
 
 const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
 const char CN_BACKEND_CONNECT_TIMEOUT[] = "backend_connect_timeout";
@@ -397,6 +399,62 @@ bool process_data_file(Monitor* monitor, MXS_MONITORED_SERVER** master,
     return true;
 }
 
+json_t* monitor_parameters_to_json(const Monitor* monitor)
+{
+    json_t* rval = json_object();
+    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
+    config_add_module_params_json(&monitor->parameters,
+                                  {CN_TYPE, CN_MODULE, CN_SERVERS},
+                                  config_monitor_params,
+                                  mod->parameters,
+                                  rval);
+    return rval;
+}
+
+json_t* monitor_json_data(const Monitor* monitor, const char* host)
+{
+    json_t* rval = json_object();
+    json_t* attr = json_object();
+    json_t* rel = json_object();
+
+    {
+        Guard guard(monitor->m_lock);
+        json_object_set_new(rval, CN_ID, json_string(monitor->m_name));
+        json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
+
+        json_object_set_new(attr, CN_MODULE, json_string(monitor->m_module.c_str()));
+        json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state())));
+        json_object_set_new(attr, CN_TICKS, json_integer(monitor->m_ticks));
+
+        /** Monitor parameters */
+        json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
+
+        if (monitor->state() == MONITOR_STATE_RUNNING)
+        {
+            json_t* diag = monitor->diagnostics_json();
+            if (diag)
+            {
+                json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
+            }
+        }
+
+        if (!monitor->m_servers.empty())
+        {
+            json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
+            for (MXS_MONITORED_SERVER* db : monitor->m_servers)
+            {
+                mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
+            }
+            json_object_set_new(rel, CN_SERVERS, mon_rel);
+        }
+    }
+
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+    json_object_set_new(rval, CN_ATTRIBUTES, attr);
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->m_name));
+    return rval;
+}
+
 }
 
 Monitor* MonitorManager::create_monitor(const string& name, const string& module,
@@ -428,6 +486,396 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
     }
     return mon;
 }
+
+void MonitorManager::debug_wait_one_tick()
+{
+    using namespace std::chrono;
+    std::map<Monitor*, uint64_t> ticks;
+
+    // Get tick values for all monitors
+    this_unit.foreach_monitor([&ticks](Monitor* mon) {
+        ticks[mon] = mxb::atomic::load(&mon->m_ticks);
+        return true;
+    });
+
+    // Wait for all running monitors to advance at least one tick.
+    this_unit.foreach_monitor([&ticks](Monitor* mon) {
+        if (mon->state() == MONITOR_STATE_RUNNING)
+        {
+            auto start = steady_clock::now();
+            // A monitor may have been added in between the two foreach-calls (not if config changes are
+            // serialized). Check if entry exists.
+            if (ticks.count(mon) > 0)
+            {
+                auto tick = ticks[mon];
+                while (mxb::atomic::load(&mon->m_ticks) == tick && (steady_clock::now() - start < seconds(60)))
+                {
+                    std::this_thread::sleep_for(milliseconds(100));
+                }
+            }
+        }
+        return true;
+    });
+}
+
+void MonitorManager::destroy_all_monitors()
+{
+    auto monitors = this_unit.clear();
+    for (auto monitor : monitors)
+    {
+        mxb_assert(monitor->state() == MONITOR_STATE_STOPPED);
+        delete monitor;
+    }
+}
+
+void MonitorManager::start_monitor(Monitor* monitor)
+{
+    mxb_assert(monitor);
+
+    Guard guard(monitor->m_lock);
+
+    // Only start the monitor if it's stopped.
+    if (monitor->state() == MONITOR_STATE_STOPPED)
+    {
+        if (!monitor->start())
+        {
+                    MXS_ERROR("Failed to start monitor '%s'.", monitor->m_name);
+        }
+    }
+}
+
+void MonitorManager::populate_services()
+{
+    this_unit.foreach_monitor([](Monitor* pMonitor) -> bool {
+        pMonitor->populate_services();
+        return true;
+    });
+}
+
+/**
+ * Start all monitors
+ */
+void MonitorManager::start_all_monitors()
+{
+    this_unit.foreach_monitor([](Monitor* monitor) {
+        if (monitor->m_active)
+        {
+            MonitorManager::start_monitor(monitor);
+        }
+        return true;
+    });
+}
+
+void MonitorManager::stop_monitor(Monitor* monitor)
+{
+    mxb_assert(monitor);
+
+    Guard guard(monitor->m_lock);
+
+    /** Only stop the monitor if it is running */
+    if (monitor->state() == MONITOR_STATE_RUNNING)
+    {
+        monitor->stop();
+    }
+}
+
+void MonitorManager::deactivate_monitor(Monitor* monitor)
+{
+    // This cannot be done with configure(), since other, module-specific config settings may depend on the
+    // "servers"-setting of the base monitor. Directly manipulate monitor field for now, later use a dtor
+    // to cleanly "deactivate" inherited objects.
+    stop_monitor(monitor);
+    while (!monitor->m_servers.empty())
+    {
+        monitor->remove_server(monitor->m_servers.front()->server);
+    }
+
+    this_unit.run_behind_lock([monitor](){
+        monitor->m_active = false;
+    });
+}
+
+/**
+ * Shutdown all running monitors
+ */
+void MonitorManager::stop_all_monitors()
+{
+    this_unit.foreach_monitor([](Monitor* monitor) {
+        if (monitor->m_active)
+        {
+            MonitorManager::stop_monitor(monitor);
+        }
+        return true;
+    });
+}
+
+/**
+ * Show all monitors
+ *
+ * @param dcb   DCB for printing output
+ */
+void MonitorManager::show_all_monitors(DCB* dcb)
+{
+    this_unit.foreach_monitor([dcb](Monitor* monitor) {
+        if (monitor->m_active)
+        {
+            monitor_show(dcb, monitor);
+        }
+        return true;
+    });
+}
+
+/**
+ * Show a single monitor
+ *
+ * @param dcb   DCB for printing output
+ */
+void MonitorManager::monitor_show(DCB* dcb, Monitor* monitor)
+{
+    monitor->show(dcb);
+}
+
+/**
+ * List all the monitors
+ *
+ * @param dcb   DCB for printing output
+ */
+void MonitorManager::monitor_list(DCB* dcb)
+{
+    dcb_printf(dcb, "---------------------+---------------------\n");
+    dcb_printf(dcb, "%-20s | Status\n", "Monitor");
+    dcb_printf(dcb, "---------------------+---------------------\n");
+
+    this_unit.foreach_monitor([dcb](Monitor* ptr){
+        if (ptr->m_active)
+        {
+            dcb_printf(dcb,
+                       "%-20s | %s\n",
+                       ptr->m_name,
+                       ptr->state() == MONITOR_STATE_RUNNING ?
+                       "Running" : "Stopped");
+        }
+        return true;
+    });
+
+    dcb_printf(dcb, "---------------------+---------------------\n");
+}
+
+/**
+ * Find a monitor by name
+ *
+ * @param       name    The name of the monitor
+ * @return      Pointer to the monitor or NULL
+ */
+Monitor* MonitorManager::find_monitor(const char* name)
+{
+    Monitor* rval = nullptr;
+    this_unit.foreach_monitor([&rval, name](Monitor* ptr) {
+        if (!strcmp(ptr->m_name, name) && ptr->m_active)
+        {
+            rval = ptr;
+        }
+        return (rval == nullptr);
+    });
+    return rval;
+}
+
+/**
+ * Find a destroyed monitor by name
+ *
+ * @param name The name of the monitor
+ * @return  Pointer to the destroyed monitor or NULL if monitor is not found
+ */
+Monitor* MonitorManager::reactivate_monitor(const char* name, const char* module)
+{
+    Monitor* rval = NULL;
+    this_unit.foreach_monitor([&rval, name, module](Monitor* monitor) {
+        if (strcmp(monitor->m_name, name) == 0 && (monitor->m_module == module))
+        {
+            mxb_assert(!monitor->m_active);
+            monitor->m_active = true;
+            rval = monitor;
+        }
+        return (rval == nullptr);
+    });
+    return rval;
+}
+
+/**
+ * Return a resultset that has the current set of monitors in it
+ *
+ * @return A Result set
+ */
+std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
+{
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
+    this_unit.foreach_monitor([&set](Monitor* ptr) {
+        const char* state = ptr->state() == MONITOR_STATE_RUNNING ? "Running" : "Stopped";
+        set->add_row({ptr->m_name, state});
+        return true;
+    });
+    return set;
+}
+
+Monitor* MonitorManager::server_is_monitored(const SERVER* server)
+{
+    Monitor* rval = nullptr;
+    this_unit.foreach_monitor([&rval, server](Monitor* monitor) {
+        Guard guard(monitor->m_lock);
+        if (monitor->m_active)
+        {
+            for (MXS_MONITORED_SERVER* db : monitor->m_servers)
+            {
+                if (db->server == server)
+                {
+                    rval = monitor;
+                    break;
+                }
+            }
+        }
+        return (rval == nullptr);
+    });
+    return rval;
+}
+
+bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    if (file == -1)
+    {
+                MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
+                          filename,
+                          monitor->m_name,
+                          errno,
+                          mxs_strerror(errno));
+        return false;
+    }
+
+    {
+        Guard guard(monitor->m_lock);
+
+        const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
+        mxb_assert(mod);
+
+        string config = generate_config_string(monitor->m_name, monitor->parameters,
+                                               config_monitor_params, mod->parameters);
+
+        if (dprintf(file, "%s", config.c_str()) == -1)
+        {
+                    MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
+                              filename, errno, mxs_strerror(errno));
+        }
+    }
+
+    close(file);
+    return true;
+}
+
+bool MonitorManager::monitor_serialize(const Monitor* monitor)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename,
+             sizeof(filename),
+             "%s/%s.cnf.tmp",
+             get_config_persistdir(),
+             monitor->m_name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+                MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
+                          filename,
+                          errno,
+                          mxs_strerror(errno));
+    }
+    else if (create_monitor_config(monitor, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char* dot = strrchr(final_filename, '.');
+        mxb_assert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+                    MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
+                              filename,
+                              errno,
+                              mxs_strerror(errno));
+        }
+    }
+
+    return rval;
+}
+
+json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host)
+{
+    string self = MXS_JSON_API_MONITORS;
+    self += monitor->m_name;
+    return mxs_json_resource(host, self.c_str(), monitor_json_data(monitor, host));
+}
+
+json_t* MonitorManager::monitor_list_to_json(const char* host)
+{
+    json_t* rval = json_array();
+    this_unit.foreach_monitor([rval, host](Monitor* mon) {
+        if (mon->m_active)
+        {
+            json_t* json = monitor_json_data(mon, host);
+
+            if (json)
+            {
+                json_array_append_new(rval, json);
+            }
+        }
+        return true;
+    });
+
+    return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
+}
+
+json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const char* host)
+{
+    std::vector<std::string> names;
+    this_unit.foreach_monitor([&names, server](Monitor* mon) {
+        Guard guard(mon->m_lock);
+        if (mon->m_active)
+        {
+            for (MXS_MONITORED_SERVER* db : mon->m_servers)
+            {
+                if (db->server == server)
+                {
+                    names.push_back(mon->m_name);
+                    break;
+                }
+            }
+        }
+        return true;
+    });
+
+    json_t* rel = NULL;
+    if (!names.empty())
+    {
+        rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
+
+        for (std::vector<std::string>::iterator it = names.begin();
+             it != names.end(); it++)
+        {
+            mxs_json_add_relation(rel, it->c_str(), CN_MONITORS);
+        }
+    }
+
+    return rel;
+}
+
+
+namespace maxscale
+{
 
 Monitor::Monitor(const string& name, const string& module)
     : m_name(MXS_STRDUP_A(name.c_str()))
@@ -522,97 +970,6 @@ Monitor::~Monitor()
     MXS_FREE((const_cast<char*>(m_name)));
 }
 
-void MonitorManager::destroy_all_monitors()
-{
-    auto monitors = this_unit.clear();
-    for (auto monitor : monitors)
-    {
-        mxb_assert(monitor->state() == MONITOR_STATE_STOPPED);
-        delete monitor;
-    }
-}
-
-void MonitorManager::start_monitor(Monitor* monitor)
-{
-    mxb_assert(monitor);
-
-    Guard guard(monitor->m_lock);
-
-    // Only start the monitor if it's stopped.
-    if (monitor->state() == MONITOR_STATE_STOPPED)
-    {
-        if (!monitor->start())
-        {
-            MXS_ERROR("Failed to start monitor '%s'.", monitor->m_name);
-        }
-    }
-}
-
-void MonitorManager::populate_services()
-{
-    this_unit.foreach_monitor([](Monitor* pMonitor) -> bool {
-            pMonitor->populate_services();
-            return true;
-        });
-}
-
-/**
- * Start all monitors
- */
-void MonitorManager::start_all_monitors()
-{
-    this_unit.foreach_monitor([](Monitor* monitor) {
-        if (monitor->m_active)
-        {
-            MonitorManager::start_monitor(monitor);
-        }
-        return true;
-    });
-}
-
-void MonitorManager::stop_monitor(Monitor* monitor)
-{
-    mxb_assert(monitor);
-
-    Guard guard(monitor->m_lock);
-
-    /** Only stop the monitor if it is running */
-    if (monitor->state() == MONITOR_STATE_RUNNING)
-    {
-        monitor->stop();
-    }
-}
-
-void MonitorManager::deactivate_monitor(Monitor* monitor)
-{
-    // This cannot be done with configure(), since other, module-specific config settings may depend on the
-    // "servers"-setting of the base monitor. Directly manipulate monitor field for now, later use a dtor
-    // to cleanly "deactivate" inherited objects.
-    stop_monitor(monitor);
-    while (!monitor->m_servers.empty())
-    {
-        monitor->remove_server(monitor->m_servers.front()->server);
-    }
-
-    this_unit.run_behind_lock([monitor](){
-        monitor->m_active = false;
-    });
-}
-
-/**
- * Shutdown all running monitors
- */
-void MonitorManager::stop_all_monitors()
-{
-    this_unit.foreach_monitor([](Monitor* monitor) {
-        if (monitor->m_active)
-        {
-            MonitorManager::stop_monitor(monitor);
-        }
-        return true;
-    });
-}
-
 /**
  * @brief Add a server to the monitor.
  *
@@ -681,32 +1038,6 @@ void Monitor::remove_server(SERVER* server)
     }
 }
 
-/**
- * Show all monitors
- *
- * @param dcb   DCB for printing output
- */
-void MonitorManager::show_all_monitors(DCB* dcb)
-{
-    this_unit.foreach_monitor([dcb](Monitor* monitor) {
-        if (monitor->m_active)
-        {
-            monitor_show(dcb, monitor);
-        }
-        return true;
-    });
-}
-
-/**
- * Show a single monitor
- *
- * @param dcb   DCB for printing output
- */
-void MonitorManager::monitor_show(DCB* dcb, Monitor* monitor)
-{
-    monitor->show(dcb);
-}
-
 void Monitor::show(DCB* dcb)
 {
     Monitor* monitor = this;
@@ -740,87 +1071,6 @@ void Monitor::show(DCB* dcb)
         dcb_printf(dcb, " (no diagnostics)\n");
     }
     dcb_printf(dcb, "\n");
-}
-
-/**
- * List all the monitors
- *
- * @param dcb   DCB for printing output
- */
-void MonitorManager::monitor_list(DCB* dcb)
-{
-    dcb_printf(dcb, "---------------------+---------------------\n");
-    dcb_printf(dcb, "%-20s | Status\n", "Monitor");
-    dcb_printf(dcb, "---------------------+---------------------\n");
-
-    this_unit.foreach_monitor([dcb](Monitor* ptr){
-        if (ptr->m_active)
-        {
-            dcb_printf(dcb,
-                       "%-20s | %s\n",
-                       ptr->m_name,
-                       ptr->state() == MONITOR_STATE_RUNNING ?
-                       "Running" : "Stopped");
-        }
-        return true;
-    });
-
-    dcb_printf(dcb, "---------------------+---------------------\n");
-}
-
-/**
- * Find a monitor by name
- *
- * @param       name    The name of the monitor
- * @return      Pointer to the monitor or NULL
- */
-Monitor* MonitorManager::find_monitor(const char* name)
-{
-    Monitor* rval = nullptr;
-    this_unit.foreach_monitor([&rval, name](Monitor* ptr) {
-        if (!strcmp(ptr->m_name, name) && ptr->m_active)
-        {
-            rval = ptr;
-        }
-        return (rval == nullptr);
-    });
-    return rval;
-}
-/**
- * Find a destroyed monitor by name
- *
- * @param name The name of the monitor
- * @return  Pointer to the destroyed monitor or NULL if monitor is not found
- */
-Monitor* MonitorManager::reactivate_monitor(const char* name, const char* module)
-{
-    Monitor* rval = NULL;
-    this_unit.foreach_monitor([&rval, name, module](Monitor* monitor) {
-        if (strcmp(monitor->m_name, name) == 0 && (monitor->m_module == module))
-        {
-            mxb_assert(!monitor->m_active);
-            monitor->m_active = true;
-            rval = monitor;
-        }
-        return (rval == nullptr);
-    });
-    return rval;
-}
-
-/**
- * Return a resultset that has the current set of monitors in it
- *
- * @return A Result set
- */
-std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
-{
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
-    this_unit.foreach_monitor([&set](Monitor* ptr) {
-        const char* state = ptr->state() == MONITOR_STATE_RUNNING ? "Running" : "Stopped";
-        set->add_row({ptr->m_name, state});
-        return true;
-    });
-    return set;
 }
 
 bool Monitor::test_permissions(const string& query)
@@ -1476,102 +1726,6 @@ void MXS_MONITORED_SERVER::log_state_change()
                prev.c_str(), next.c_str());
 }
 
-Monitor* MonitorManager::server_is_monitored(const SERVER* server)
-{
-    Monitor* rval = nullptr;
-    this_unit.foreach_monitor([&rval, server](Monitor* monitor) {
-        Guard guard(monitor->m_lock);
-        if (monitor->m_active)
-        {
-            for (MXS_MONITORED_SERVER* db : monitor->m_servers)
-            {
-                if (db->server == server)
-                {
-                    rval = monitor;
-                    break;
-                }
-            }
-        }
-        return (rval == nullptr);
-    });
-    return rval;
-}
-
-bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* filename)
-{
-    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    if (file == -1)
-    {
-        MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
-                  filename,
-                  monitor->m_name,
-                  errno,
-                  mxs_strerror(errno));
-        return false;
-    }
-
-    {
-        Guard guard(monitor->m_lock);
-
-        const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
-        mxb_assert(mod);
-
-        string config = generate_config_string(monitor->m_name, monitor->parameters,
-                                               config_monitor_params, mod->parameters);
-
-        if (dprintf(file, "%s", config.c_str()) == -1)
-        {
-            MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
-        }
-    }
-
-    close(file);
-    return true;
-}
-
-bool MonitorManager::monitor_serialize(const Monitor* monitor)
-{
-    bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename,
-             sizeof(filename),
-             "%s/%s.cnf.tmp",
-             get_config_persistdir(),
-             monitor->m_name);
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
-                  filename,
-                  errno,
-                  mxs_strerror(errno));
-    }
-    else if (create_monitor_config(monitor, filename))
-    {
-        char final_filename[PATH_MAX];
-        strcpy(final_filename, filename);
-
-        char* dot = strrchr(final_filename, '.');
-        mxb_assert(dot);
-        *dot = '\0';
-
-        if (rename(filename, final_filename) == 0)
-        {
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
-                      filename,
-                      errno,
-                      mxs_strerror(errno));
-        }
-    }
-
-    return rval;
-}
-
 void Monitor::hangup_failed_servers()
 {
     for (MXS_MONITORED_SERVER* ptr : m_servers)
@@ -1680,122 +1834,6 @@ void Monitor::detect_handle_state_changes()
     {
         MXS_NOTICE("Master switch detected: lost a master and gained a new one");
     }
-}
-
-json_t* monitor_parameters_to_json(const Monitor* monitor)
-{
-    json_t* rval = json_object();
-    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
-    config_add_module_params_json(&monitor->parameters,
-                                  {CN_TYPE, CN_MODULE, CN_SERVERS},
-                                  config_monitor_params,
-                                  mod->parameters,
-                                  rval);
-    return rval;
-}
-
-json_t* monitor_json_data(const Monitor* monitor, const char* host)
-{
-    json_t* rval = json_object();
-    json_t* attr = json_object();
-    json_t* rel = json_object();
-
-    {
-        Guard guard(monitor->m_lock);
-        json_object_set_new(rval, CN_ID, json_string(monitor->m_name));
-        json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
-
-        json_object_set_new(attr, CN_MODULE, json_string(monitor->m_module.c_str()));
-        json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state())));
-        json_object_set_new(attr, CN_TICKS, json_integer(monitor->m_ticks));
-
-        /** Monitor parameters */
-        json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
-
-        if (monitor->state() == MONITOR_STATE_RUNNING)
-        {
-            json_t* diag = monitor->diagnostics_json();
-            if (diag)
-            {
-                json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
-            }
-        }
-
-        if (!monitor->m_servers.empty())
-        {
-            json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
-            for (MXS_MONITORED_SERVER* db : monitor->m_servers)
-            {
-                mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
-            }
-            json_object_set_new(rel, CN_SERVERS, mon_rel);
-        }
-    }
-
-    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
-    json_object_set_new(rval, CN_ATTRIBUTES, attr);
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->m_name));
-    return rval;
-}
-
-json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host)
-{
-    string self = MXS_JSON_API_MONITORS;
-    self += monitor->m_name;
-    return mxs_json_resource(host, self.c_str(), monitor_json_data(monitor, host));
-}
-
-json_t* MonitorManager::monitor_list_to_json(const char* host)
-{
-    json_t* rval = json_array();
-    this_unit.foreach_monitor([rval, host](Monitor* mon) {
-        if (mon->m_active)
-        {
-            json_t* json = monitor_json_data(mon, host);
-
-            if (json)
-            {
-                json_array_append_new(rval, json);
-            }
-        }
-        return true;
-    });
-
-    return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
-}
-
-json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const char* host)
-{
-    std::vector<std::string> names;
-    this_unit.foreach_monitor([&names, server](Monitor* mon) {
-        Guard guard(mon->m_lock);
-        if (mon->m_active)
-        {
-            for (MXS_MONITORED_SERVER* db : mon->m_servers)
-            {
-                if (db->server == server)
-                {
-                    names.push_back(mon->m_name);
-                    break;
-                }
-            }
-        }
-        return true;
-    });
-
-    json_t* rel = NULL;
-    if (!names.empty())
-    {
-        rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
-
-        for (std::vector<std::string>::iterator it = names.begin();
-             it != names.end(); it++)
-        {
-            mxs_json_add_relation(rel, it->c_str(), CN_MONITORS);
-        }
-    }
-
-    return rel;
 }
 
 int Monitor::get_data_file_path(char* path) const
@@ -2243,40 +2281,6 @@ void Monitor::populate_services()
         service_add_server(this, pMs->server);
     }
 }
-
-void MonitorManager::debug_wait_one_tick()
-{
-    using namespace std::chrono;
-    std::map<Monitor*, uint64_t> ticks;
-
-    // Get tick values for all monitors
-    this_unit.foreach_monitor([&ticks](Monitor* mon) {
-        ticks[mon] = mxb::atomic::load(&mon->m_ticks);
-        return true;
-    });
-
-    // Wait for all running monitors to advance at least one tick.
-    this_unit.foreach_monitor([&ticks](Monitor* mon) {
-            if (mon->state() == MONITOR_STATE_RUNNING)
-        {
-            auto start = steady_clock::now();
-            // A monitor may have been added in between the two foreach-calls (not if config changes are
-            // serialized). Check if entry exists.
-            if (ticks.count(mon) > 0)
-            {
-                auto tick = ticks[mon];
-                while (mxb::atomic::load(&mon->m_ticks) == tick && (steady_clock::now() - start < seconds(60)))
-                {
-                    std::this_thread::sleep_for(milliseconds(100));
-                }
-            }
-        }
-        return true;
-    });
-}
-
-namespace maxscale
-{
 
 MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)

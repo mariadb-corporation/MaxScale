@@ -25,6 +25,7 @@
 
 using std::string;
 using std::cout;
+using maxscale::MXS_MONITORED_SERVER;
 
 // Maximum sizes for array types
 const int MAX_CYCLE_SIZE = 10;

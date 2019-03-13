@@ -32,7 +32,7 @@ struct GaleraNode
     std::string cluster_uuid;   /**< Cluster UUID */
 };
 
-typedef std::unordered_map<MXS_MONITORED_SERVER*, GaleraNode> NodeMap;
+typedef std::unordered_map<mxs::MXS_MONITORED_SERVER*, GaleraNode> NodeMap;
 
 class GaleraMonitor : public maxscale::MonitorWorkerSimple
 {
@@ -48,7 +48,7 @@ public:
 protected:
     bool configure(const MXS_CONFIG_PARAMETER* param);
     bool has_sufficient_permissions();
-    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
+    void update_server_status(mxs::MXS_MONITORED_SERVER* monitored_server);
     void pre_tick();
     void post_tick();
 
@@ -71,7 +71,7 @@ private:
     bool detect_cluster_size(const int n_nodes,
                              const char* candidate_uuid,
                              const int   candidate_size);
-    MXS_MONITORED_SERVER* get_candidate_master();
+    mxs::MXS_MONITORED_SERVER* get_candidate_master();
     void                  set_galera_cluster();
     void                  update_sst_donor_nodes(int is_cluster);
 };

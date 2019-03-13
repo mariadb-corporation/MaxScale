@@ -20,6 +20,7 @@
 
 namespace http = mxb::http;
 using namespace std;
+using maxscale::MXS_MONITORED_SERVER;
 
 #define LOG_JSON_ERROR(ppJson, format, ...) \
     do { \

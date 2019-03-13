@@ -53,6 +53,7 @@
 
 using maxbase::Worker;
 using maxscale::RoutingWorker;
+using maxscale::Monitor;
 
 using std::string;
 using Guard = std::lock_guard<std::mutex>;
@@ -480,7 +481,7 @@ void Server::print_to_dcb(DCB* dcb) const
     dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
     dcb_printf(dcb,
                "\tLast event:                          %s\n",
-               Monitor::get_event_name((mxs_monitor_event_t) server->last_event));
+               mxs::Monitor::get_event_name((mxs_monitor_event_t) server->last_event));
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
     if (server->is_slave() || server->is_relay())
