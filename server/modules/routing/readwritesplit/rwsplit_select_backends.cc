@@ -222,7 +222,7 @@ SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
                                              bool masters_accepts_reads)
 {
     // Group backends by priority. The set of highest priority backends will then compete.
-    int best_priority {INT_MAX};    // low numbers are high priority
+    int best_priority {2};    // low numbers are high priority
 
     for (auto& psBackend : backends)
     {
@@ -252,7 +252,12 @@ SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
     }
 
     auto best = select(priority_map[best_priority]);
-    auto rval = std::find(backends.begin(), backends.end(), *best);
+    auto rval = backends.end();
+
+    if (best != priority_map[best_priority].end())
+    {
+        rval = std::find(backends.begin(), backends.end(), *best);
+    }
 
     for (auto& a : priority_map)
     {
