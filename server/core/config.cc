@@ -1688,30 +1688,22 @@ MXS_CONFIG_PARAMETER::get_duration(const std::string& key,
 
 int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
 {
-    string param_value = get_string(key);
-    char tmp_val[param_value.length() + 1];
-    strcpy(tmp_val, param_value.c_str());
+    int64_t rv = 0;
 
-    int rv = 0;
-    bool found = false;
-    char* endptr;
-    const char* delim = ", \t";
-    char* tok = strtok_r(tmp_val, delim, &endptr);
-
-    while (tok)
+    for (const auto& tok : mxs::strtok(get_string(key), ", \t"))
     {
-        for (int i = 0; enum_mapping[i].name; i++)
+        auto value = config_enum_to_value(tok, enum_mapping);
+
+        if (value == MXS_UNKNOWN_ENUM_VALUE)
         {
-            if (strcmp(enum_mapping[i].name, tok) == 0)
-            {
-                found = true;
-                rv |= enum_mapping[i].enum_value;
-            }
+            rv = MXS_UNKNOWN_ENUM_VALUE;
+            break;
         }
-        tok = strtok_r(NULL, delim, &endptr);
+
+        rv |= value;
     }
 
-    return found ? rv : -1;
+    return rv;
 }
 
 SERVICE* MXS_CONFIG_PARAMETER::get_service(const std::string& key) const
@@ -5016,4 +5008,17 @@ bool config_is_valid_name(const char* zName, std::string* pReason)
     }
 
     return is_valid;
+}
+
+int64_t config_enum_to_value(const std::string& value, const MXS_ENUM_VALUE* values)
+{
+    for (auto v = values; v->name; ++v)
+    {
+        if (value == v->name)
+        {
+            return v->enum_value;
+        }
+    }
+
+    return MXS_UNKNOWN_ENUM_VALUE;
 }

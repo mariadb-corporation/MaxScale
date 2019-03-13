@@ -255,3 +255,16 @@ std::string generate_config_string(const std::string& instance_name, const MXS_C
  * @return True if the parameter can be modified at runtime
  */
 bool config_can_modify_at_runtime(const char* name);
+
+// Value returned for unknown enumeration values
+constexpr int64_t MXS_UNKNOWN_ENUM_VALUE {-1};
+
+/**
+ * Convert enum name to integer value
+ *
+ * @param key    The enum name to convert
+ * @param values The list of enum values
+ *
+ * @return The enum value or MXS_UNKNOWN_ENUM_VALUE on unknown value
+ */
+int64_t config_enum_to_value(const std::string& key, const MXS_ENUM_VALUE* values);
