@@ -107,8 +107,8 @@ public:
     bool run_manual_reset_replication(SERVER* master_server, json_t** error_out);
 
 protected:
-    void pre_loop();
-    void tick();
+    void pre_loop() override;
+    void tick() override;
     void process_state_changes() override;
 
 private:
@@ -255,7 +255,6 @@ private:
     MariaDBServer* get_server(SERVER* server);
 
     // Cluster discovery and status assignment methods, top levels
-    void update_server(MariaDBServer* server, bool time_to_update_disk_space);
     void update_topology();
     void build_replication_graph();
     void assign_new_master(MariaDBServer* new_master);

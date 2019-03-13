@@ -116,7 +116,6 @@ public:
         bool log_slave_updates = false; /* Does the slave write replicated events to binlog? */
     };
 
-
     /* Monitored server base class/struct. MariaDBServer does not own the struct, it is not freed
      * (or connection closed) when a MariaDBServer is destroyed. */
     mxs::MonitorServer* m_server_base = NULL;
@@ -167,6 +166,9 @@ public:
      * @return Diagnostics string
      */
     std::string diagnostics() const;
+
+    void update_server(bool time_to_update_disk_space,
+                       const mxs::MonitorServer::ConnectionSettings& conn_settings);
 
     /**
      * Query this server.

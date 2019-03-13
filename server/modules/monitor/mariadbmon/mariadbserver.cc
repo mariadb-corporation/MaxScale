@@ -2178,3 +2178,72 @@ bool MariaDBServer::update_enabled_events()
     m_enabled_events = std::move(full_names);
     return true;
 }
+
+/**
+ * Connect to and query/update a server.
+ *
+ * @param server The server to update
+ */
+void MariaDBServer::update_server(bool time_to_update_disk_space,
+                                  const MonitorServer::ConnectionSettings& conn_settings)
+{
+    auto server = this;
+    MonitorServer* mon_srv = server->m_server_base;
+    mxs_connect_result_t conn_status = mon_srv->ping_or_connect(conn_settings);
+    MYSQL* conn = mon_srv->con;     // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
+
+    if (mxs::Monitor::connection_is_ok(conn_status))
+    {
+        server->set_status(SERVER_RUNNING);
+        if (conn_status == MONITOR_CONN_NEWCONN_OK)
+        {
+            // Is a new connection or a reconnection. Check server version.
+            server->update_server_version();
+        }
+
+        if (server->m_capabilities.basic_support
+            || server->m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
+        {
+            // Check permissions if permissions failed last time or if this is a new connection.
+            if (server->had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
+            {
+                server->check_permissions();
+            }
+
+            // If permissions are ok, continue.
+            if (!server->has_status(SERVER_AUTH_ERROR))
+            {
+                if (time_to_update_disk_space && mon_srv->can_update_disk_space_status())
+                {
+                    mon_srv->update_disk_space_status();
+                }
+
+                // Query MariaDBServer specific data
+                server->monitor_server();
+            }
+        }
+    }
+    else
+    {
+        /* The current server is not running. Clear all but the stale master bit as it is used to detect
+         * masters that went down but came up. */
+        server->clear_status(~SERVER_WAS_MASTER);
+        auto conn_errno = mysql_errno(conn);
+        if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+        {
+            server->set_status(SERVER_AUTH_ERROR);
+        }
+
+        /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
+         * iteration. */
+        if (server->had_status(SERVER_RUNNING) || server->had_status(SERVER_MAINT))
+        {
+            mon_srv->log_connect_error(conn_status);
+        }
+    }
+
+    /** Increase or reset the error count of the server. */
+    bool is_running = server->is_running();
+    bool in_maintenance = server->is_in_maintenance();
+    mon_srv->mon_err_count = (is_running || in_maintenance) ? 0 : mon_srv->mon_err_count + 1;
+}
