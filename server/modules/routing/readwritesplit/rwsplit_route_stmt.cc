@@ -738,16 +738,12 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
  */
 int RWSplitSession::get_max_replication_lag()
 {
-    int conf_max_rlag;
+    int conf_max_rlag = SERVER::RLAG_UNDEFINED;
 
     /** if there is no configured value, then longest possible int is used */
     if (m_config.max_slave_replication_lag > 0)
     {
         conf_max_rlag = m_config.max_slave_replication_lag;
-    }
-    else
-    {
-        conf_max_rlag = ~(1 << 31);
     }
 
     return conf_max_rlag;
