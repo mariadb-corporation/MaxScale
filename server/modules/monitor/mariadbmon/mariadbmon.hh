@@ -255,7 +255,7 @@ private:
     MariaDBServer* get_server(SERVER* server);
 
     // Cluster discovery and status assignment methods, top levels
-    void update_server(MariaDBServer* server);
+    void update_server(MariaDBServer* server, bool time_to_update_disk_space);
     void update_topology();
     void build_replication_graph();
     void assign_new_master(MariaDBServer* new_master);

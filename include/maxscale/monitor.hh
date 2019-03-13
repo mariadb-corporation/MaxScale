@@ -22,6 +22,7 @@
 #include <mutex>
 #include <openssl/sha.h>
 #include <maxbase/semaphore.hh>
+#include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
 #include <maxbase/iterator.hh>
 #include <maxscale/config.hh>
@@ -181,7 +182,7 @@ public:
     static const int BEING_DRAINED_OFF = 3;
     static const int BEING_DRAINED_ON  = 4;
 
-    MonitorServer(SERVER* server);
+    MonitorServer(SERVER* server, const SERVER::DiskSpaceLimits& monitor_limits);
 
     ~MonitorServer();
 
@@ -239,15 +240,38 @@ public:
 
     void log_state_change();
 
-    SERVER*  server = nullptr;      /**< The server being monitored */
-    MYSQL*   con = nullptr;         /**< The MySQL connection */
-    bool     log_version_err = true;
-    int      mon_err_count = 0;
-    uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
-    uint64_t pending_status = 0;        /**< Status during current monitor loop */
-    int64_t  disk_space_checked = 0;    /**< When was the disk space checked the last time */
-    int      status_request = NO_CHANGE; /**< Is admin requesting Maintenance=ON/OFF on the
-                                          * server? */
+    /**
+     * Is this server ok to update disk space status. Only checks if the server knows of valid disk space
+     * limits settings and that the check has not failed before. Disk space check interval should be
+     * checked by the monitor.
+     *
+     * @return True, if the disk space should be checked, false otherwise.
+     */
+    bool can_update_disk_space_status() const;
+
+    /**
+     * @brief Update the disk space status of a server.
+     *
+     * After the call, the bit @c SERVER_DISK_SPACE_EXHAUSTED will be set on
+     * @c pMonitored_server->pending_status if the disk space is exhausted
+     * or cleared if it is not.
+     */
+    void update_disk_space_status();
+
+    SERVER*         server = nullptr;      /**< The server being monitored */
+    MYSQL*          con = nullptr;         /**< The MySQL connection */
+    bool            log_version_err = true;
+    int             mon_err_count = 0;
+
+    uint64_t        mon_prev_status = -1;      /**< Status before starting the current monitor loop */
+    uint64_t        pending_status = 0;        /**< Status during current monitor loop */
+
+    int             status_request = NO_CHANGE;  /**< Is admin requesting Maintenance=ON/OFF on the
+                                                   *  server? */
+private:
+    const SERVER::DiskSpaceLimits& monitor_limits; /**< Monitor-level disk-space limits */
+
+    bool ok_to_check_disk_space {true}; /**< Set to false if check fails */
 };
 
 /**
@@ -473,6 +497,14 @@ protected:
     std::string child_nodes(MonitorServer* parent);
 
     /**
+     * Checks if it's time to check disk space. If true is returned, the internal timer is reset
+     * so that the next true is only returned once disk_space_check_interval has again passed.
+     *
+     * @return True if disk space should be checked
+     */
+    bool check_disk_space_this_tick();
+
+    /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
      */
@@ -488,10 +520,9 @@ protected:
         time_t      journal_max_age {0}; /**< Maximum age of journal file */
 
         SERVER::DiskSpaceLimits  disk_space_limits;     /**< Disk space thresholds */
-        /**
-         * How often should a disk space check be made at most, in milliseconds. Negative values imply
-         * disabling. */
-        int64_t disk_space_check_interval = -1;
+
+        // How often should a disk space check be made at most. Negative values imply disabling.
+        maxbase::Duration disk_space_check_interval {-1};
 
         MonitorServer::ConnectionSettings conn_settings;
     };
@@ -552,6 +583,8 @@ private:
 
     FILE* open_data_file(Monitor* monitor, char* path);
     int get_data_file_path(char* path) const;
+
+    mxb::StopWatch m_disk_space_checked;    /**< When was disk space checked the last time */
 };
 
 /**
@@ -655,24 +688,6 @@ protected:
     {
         return atomic_load_int32(&m_shutdown) != 0;
     }
-
-    /**
-     * @brief Should the disk space status be updated.
-     *
-     * @param pMonitored_server  The monitored server in question.
-     *
-     * @return True, if the disk space should be checked, false otherwise.
-     */
-    bool should_update_disk_space_status(const MonitorServer* pMonitored_server) const;
-
-    /**
-     * @brief Update the disk space status of a server.
-     *
-     * After the call, the bit @c SERVER_DISK_SPACE_EXHAUSTED will be set on
-     * @c pMonitored_server->pending_status if the disk space is exhausted
-     * or cleared if it is not.
-     */
-    void update_disk_space_status(MonitorServer* pMonitored_server);
 
     /**
      * @brief Configure the monitor.

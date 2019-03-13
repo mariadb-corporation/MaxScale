@@ -898,18 +898,26 @@ void Monitor::stop()
 
 bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    m_settings.conn_settings.read_timeout = params->get_integer(CN_BACKEND_READ_TIMEOUT);
-    m_settings.conn_settings.write_timeout = params->get_integer(CN_BACKEND_WRITE_TIMEOUT);
-    m_settings.conn_settings.connect_timeout = params->get_integer(CN_BACKEND_CONNECT_TIMEOUT);
-    m_settings.conn_settings.connect_attempts = params->get_integer(CN_BACKEND_CONNECT_ATTEMPTS);
+
+
     m_settings.interval = params->get_integer(CN_MONITOR_INTERVAL);
     m_settings.journal_max_age = params->get_integer(CN_JOURNAL_MAX_AGE);
     m_settings.script_timeout = params->get_integer(CN_SCRIPT_TIMEOUT);
     m_settings.script = params->get_string(CN_SCRIPT);
     m_settings.events = params->get_enum(CN_EVENTS, mxs_monitor_event_enum_values);
-    m_settings.disk_space_check_interval = params->get_integer(CN_DISK_SPACE_CHECK_INTERVAL);
+
+    m_settings.conn_settings.read_timeout = params->get_integer(CN_BACKEND_READ_TIMEOUT);
+    m_settings.conn_settings.write_timeout = params->get_integer(CN_BACKEND_WRITE_TIMEOUT);
+    m_settings.conn_settings.connect_timeout = params->get_integer(CN_BACKEND_CONNECT_TIMEOUT);
+    m_settings.conn_settings.connect_attempts = params->get_integer(CN_BACKEND_CONNECT_ATTEMPTS);
     m_settings.conn_settings.username = params->get_string(CN_USER);
     m_settings.conn_settings.password = params->get_string(CN_PASSWORD);
+
+    // Disk check interval is given in ms, duration is constructed from seconds.
+    auto dsc_interval = params->get_integer(CN_DISK_SPACE_CHECK_INTERVAL);
+    // 0 implies disabling -> save negative value to interval.
+    m_settings.disk_space_check_interval = (dsc_interval > 0) ?
+            mxb::Duration(static_cast<double>(dsc_interval) / 1000) : mxb::Duration(-1);
 
     // The monitor serverlist has already been checked to be valid. Empty value is ok too.
     // First, remove all servers.
@@ -981,7 +989,7 @@ Monitor::~Monitor()
 void Monitor::add_server(SERVER* server)
 {
     mxb_assert(state() != MONITOR_STATE_RUNNING);
-    auto new_server = new MonitorServer(server);
+    auto new_server = new MonitorServer(server, m_settings.disk_space_limits);
     m_servers.push_back(new_server);
     server_added(server);
 }
@@ -2282,6 +2290,21 @@ void Monitor::populate_services()
     }
 }
 
+bool Monitor::check_disk_space_this_tick()
+{
+    bool should_update_disk_space = false;
+    auto check_interval = m_settings.disk_space_check_interval;
+
+    if ((check_interval.secs() > 0) && m_disk_space_checked.split() > check_interval)
+    {
+        should_update_disk_space = true;
+        // Whether or not disk space check succeeds, reset the timer. This way, disk space is always
+        // checked during the same tick for all servers.
+        m_disk_space_checked.restart();
+    }
+    return should_update_disk_space;
+}
+
 MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)
     , m_master(NULL)
@@ -2393,22 +2416,9 @@ int64_t MonitorWorker::get_time_ms()
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
 }
 
-bool MonitorWorker::should_update_disk_space_status(const MonitorServer* pMs) const
+bool MonitorServer::can_update_disk_space_status() const
 {
-    bool should_check = false;
-
-    if ((m_settings.disk_space_check_interval > 0)
-        && (pMs->disk_space_checked != -1) // -1 means disabled
-        && (!m_settings.disk_space_limits.empty() || pMs->server->have_disk_space_limits()))
-    {
-        int64_t now = get_time_ms();
-        if (now - pMs->disk_space_checked > m_settings.disk_space_check_interval)
-        {
-            should_check = true;
-        }
-    }
-
-    return should_check;
+    return ok_to_check_disk_space && (!monitor_limits.empty() || server->have_disk_space_limits());
 }
 
 namespace
@@ -2439,8 +2449,9 @@ bool check_disk_space_exhausted(MonitorServer* pMs,
 }
 }
 
-void MonitorWorker::update_disk_space_status(MonitorServer* pMs)
+void MonitorServer::update_disk_space_status()
 {
+    auto pMs = this; // TODO: Clean
     std::map<std::string, disk::SizesAndName> info;
 
     int rv = disk::get_info_by_path(pMs->con, &info);
@@ -2451,7 +2462,7 @@ void MonitorWorker::update_disk_space_status(MonitorServer* pMs)
         auto dst = pMs->server->get_disk_space_limits();
         if (dst.empty())
         {
-            dst = m_settings.disk_space_limits;
+            dst = monitor_limits;
         }
 
         bool disk_space_exhausted = false;
@@ -2512,8 +2523,6 @@ void MonitorWorker::update_disk_space_status(MonitorServer* pMs)
         {
             pMs->pending_status &= ~SERVER_DISK_SPACE_EXHAUSTED;
         }
-
-        pMs->disk_space_checked = get_time_ms();
     }
     else
     {
@@ -2522,7 +2531,7 @@ void MonitorWorker::update_disk_space_status(MonitorServer* pMs)
         if (mysql_errno(pMs->con) == ER_UNKNOWN_TABLE)
         {
             // Disable disk space checking for this server.
-            pMs->disk_space_checked = -1;
+            pMs->ok_to_check_disk_space = false;
 
             MXS_ERROR("Disk space cannot be checked for %s at %s, because either the "
                       "version (%s) is too old, or the DISKS information schema plugin "
@@ -2575,6 +2584,8 @@ void MonitorWorkerSimple::tick()
 {
     pre_tick();
 
+    const bool should_update_disk_space = check_disk_space_this_tick();
+
     for (MonitorServer* pMs : m_servers)
     {
         if (!pMs->server->is_in_maint())
@@ -2589,9 +2600,9 @@ void MonitorWorkerSimple::tick()
                 pMs->clear_pending_status(SERVER_AUTH_ERROR);
                 pMs->set_pending_status(SERVER_RUNNING);
 
-                if (should_update_disk_space_status(pMs))
+                if (should_update_disk_space && pMs->can_update_disk_space_status())
                 {
-                    update_disk_space_status(pMs);
+                    pMs->update_disk_space_status();
                 }
 
                 update_server_status(pMs);
@@ -2742,9 +2753,9 @@ bool MonitorWorker::immediate_tick_required() const
 }
 }
 
-MonitorServer::MonitorServer(SERVER* server)
+MonitorServer::MonitorServer(SERVER* server, const SERVER::DiskSpaceLimits& monitor_limits)
     : server(server)
-    , disk_space_checked(maxscale::MonitorWorker::get_time_ms()) // Pretend disk space was just checked.
+    , monitor_limits(monitor_limits)
 {
 }
 

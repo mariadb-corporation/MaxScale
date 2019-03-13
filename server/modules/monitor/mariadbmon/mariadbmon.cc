@@ -334,7 +334,7 @@ json_t* MariaDBMonitor::to_json() const
  *
  * @param server The server to update
  */
-void MariaDBMonitor::update_server(MariaDBServer* server)
+void MariaDBMonitor::update_server(MariaDBServer* server, bool time_to_update_disk_space)
 {
     MonitorServer* mon_srv = server->m_server_base;
     mxs_connect_result_t conn_status = mon_srv->ping_or_connect(m_settings.conn_settings);
@@ -361,9 +361,9 @@ void MariaDBMonitor::update_server(MariaDBServer* server)
             // If permissions are ok, continue.
             if (!server->has_status(SERVER_AUTH_ERROR))
             {
-                if (should_update_disk_space_status(mon_srv))
+                if (time_to_update_disk_space && mon_srv->can_update_disk_space_status())
                 {
-                    update_disk_space_status(mon_srv);
+                    mon_srv->update_disk_space_status();
                 }
 
                 // Query MariaDBServer specific data
@@ -433,10 +433,12 @@ void MariaDBMonitor::tick()
         mon_srv->mon_prev_status = status;
     }
 
+    bool should_update_disk_space = check_disk_space_this_tick();
+
     // Query all servers for their status.
     for (MariaDBServer* server : m_servers)
     {
-        update_server(server);
+        update_server(server, should_update_disk_space);
         if (server->m_topology_changed)
         {
             m_cluster_topology_changed = true;
