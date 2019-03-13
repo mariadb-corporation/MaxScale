@@ -65,6 +65,15 @@ const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
 const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 const char CN_RANK[] = "rank";
 
+const MXS_ENUM_VALUE rank_values[] =
+{
+    {"primary", 1},
+    {"secondary", 2},
+    {NULL}
+};
+
+const char* DEFAULT_RANK = "primary";
+
 namespace
 {
 
@@ -252,7 +261,7 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->persistent = persistent;
     server->last_event = SERVER_UP_EVENT;
     server->status = SERVER_RUNNING;
-    server->m_settings.rank = params->get_integer(CN_RANK);
+    server->m_settings.rank = params->get_enum(CN_RANK, rank_values);
     mxb_assert(server->m_settings.rank > 0);
 
     if (!monuser.empty())

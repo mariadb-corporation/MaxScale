@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <maxbase/average.hh>
 #include <maxscale/ssl.hh>
+#include <maxscale/modinfo.h>
 
 /**
  * Server configuration parameters names
@@ -29,6 +30,12 @@ extern const char CN_PERSISTMAXTIME[];
 extern const char CN_PERSISTPOOLMAX[];
 extern const char CN_PROXY_PROTOCOL[];
 extern const char CN_RANK[];
+
+// The enum values for `rank`
+extern const MXS_ENUM_VALUE rank_values[];
+
+// Default value for `rank`
+extern const char* DEFAULT_RANK;
 
 /**
  * Status bits in the SERVER->status member, which describes the general state of a server. Although the

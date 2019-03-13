@@ -621,9 +621,11 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     }
     if (strcmp(key, CN_RANK) == 0)
     {
-        if (auto i = get_positive_int(value))
+        auto v = config_enum_to_value(value, rank_values);
+
+        if (v != MXS_UNKNOWN_ENUM_VALUE)
         {
-            server->set_rank(i);
+            server->set_rank(v);
         }
         else
         {
