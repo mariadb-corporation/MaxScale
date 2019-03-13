@@ -20,7 +20,7 @@
 
 namespace http = mxb::http;
 using namespace std;
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
 #define LOG_JSON_ERROR(ppJson, format, ...) \
     do { \
@@ -215,7 +215,7 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
 
         for (auto it = m_servers.begin(); !pHub_con && (it != m_servers.end()); ++it)
         {
-            MXS_MONITORED_SERVER& ms = **it;
+            MonitorServer& ms = **it;
 
             if (ips.find(ms.server->address) == ips.end())
             {

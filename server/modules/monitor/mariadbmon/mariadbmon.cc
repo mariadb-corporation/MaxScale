@@ -33,7 +33,7 @@
 using std::string;
 using maxbase::string_printf;
 using maxscale::Monitor;
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
 // Config parameter names
 const char* const CN_AUTO_FAILOVER = "auto_failover";
@@ -134,7 +134,7 @@ MariaDBServer* MariaDBMonitor::get_server(int64_t id)
     return (found != m_servers_by_id.end()) ? (*found).second : NULL;
 }
 
-MariaDBServer* MariaDBMonitor::get_server(MXS_MONITORED_SERVER* mon_server)
+MariaDBServer* MariaDBMonitor::get_server(MonitorServer* mon_server)
 {
     return get_server(mon_server->server);
 }
@@ -336,7 +336,7 @@ json_t* MariaDBMonitor::to_json() const
  */
 void MariaDBMonitor::update_server(MariaDBServer* server)
 {
-    MXS_MONITORED_SERVER* mon_srv = server->m_server_base;
+    MonitorServer* mon_srv = server->m_server_base;
     mxs_connect_result_t conn_status = mon_srv->ping_or_connect(m_settings.conn_settings);
     MYSQL* conn = mon_srv->con;     // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 
@@ -423,7 +423,7 @@ void MariaDBMonitor::pre_loop()
 
 void MariaDBMonitor::tick()
 {
-    /* Update MXS_MONITORED_SERVER->pending_status. This is where the monitor loop writes it's findings.
+    /* Update MonitorServer->pending_status. This is where the monitor loop writes it's findings.
      * Also, backup current status so that it can be compared to any deduced state. */
     for (auto srv : m_servers)
     {
@@ -636,7 +636,7 @@ void MariaDBMonitor::update_external_master()
 
 void MariaDBMonitor::log_master_changes()
 {
-    MXS_MONITORED_SERVER* root_master = m_master ? m_master->m_server_base : NULL;
+    MonitorServer* root_master = m_master ? m_master->m_server_base : NULL;
     if (root_master && root_master->status_changed()
         && !(root_master->pending_status & SERVER_WAS_MASTER))
     {

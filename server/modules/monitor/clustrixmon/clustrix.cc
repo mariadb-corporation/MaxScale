@@ -15,7 +15,7 @@
 #include <maxbase/assert.h>
 
 using maxscale::Monitor;
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
 namespace
 {
@@ -206,7 +206,7 @@ bool Clustrix::is_being_softfailed(const char* zName, const SERVER& server, MYSQ
 }
 
 bool Clustrix::ping_or_connect_to_hub(const char* zName,
-                                      const MXS_MONITORED_SERVER::ConnectionSettings& settings,
+                                      const MonitorServer::ConnectionSettings& settings,
                                       Softfailed softfailed,
                                       SERVER& server,
                                       MYSQL** ppCon)

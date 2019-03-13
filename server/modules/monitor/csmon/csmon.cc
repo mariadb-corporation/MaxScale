@@ -22,7 +22,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.hh>
 
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
 namespace
 {
@@ -31,7 +31,7 @@ constexpr const char* alive_query = "SELECT mcsSystemReady() = 1 && mcsSystemRea
 constexpr const char* role_query = "SELECT mcsSystemPrimary()";
 
 // Helper for extracting string results from queries
-static std::string do_query(MXS_MONITORED_SERVER* srv, const char* query)
+static std::string do_query(MonitorServer* srv, const char* query)
 {
     std::string rval;
     MYSQL_RES* result;
@@ -56,7 +56,7 @@ static std::string do_query(MXS_MONITORED_SERVER* srv, const char* query)
 }
 
 // Returns a numeric version similar to mysql_get_server_version
-int get_cs_version(MXS_MONITORED_SERVER* srv)
+int get_cs_version(MonitorServer* srv)
 {
     // GCC 4.8 appears to have a broken std::regex_constants::ECMAScript that doesn't support brackets
     std::regex re("Columnstore \\([0-9]*\\)[.]\\([0-9]*\\)[.]\\([0-9]*\\)-[0-9]*",
@@ -95,7 +95,7 @@ bool CsMonitor::has_sufficient_permissions()
     return test_permissions(alive_query);
 }
 
-void CsMonitor::update_server_status(MXS_MONITORED_SERVER* srv)
+void CsMonitor::update_server_status(MonitorServer* srv)
 {
     srv->clear_pending_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
     int status = 0;

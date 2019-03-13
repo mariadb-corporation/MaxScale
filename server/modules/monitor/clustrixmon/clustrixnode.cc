@@ -15,7 +15,7 @@
 #include "clustrix.hh"
 
 bool ClustrixNode::can_be_used_as_hub(const char* zName,
-                                      const mxs::MXS_MONITORED_SERVER::ConnectionSettings& settings)
+                                      const mxs::MonitorServer::ConnectionSettings& settings)
 {
     mxb_assert(m_pServer);
     bool rv = Clustrix::ping_or_connect_to_hub(zName, settings, Clustrix::Softfailed::REJECT,

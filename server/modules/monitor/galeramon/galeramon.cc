@@ -33,16 +33,16 @@
 #define DONOR_NODE_NAME_MAX_LEN 60
 #define DONOR_LIST_SET_VAR      "SET GLOBAL wsrep_sst_donor = \""
 
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static MXS_MONITORED_SERVER* set_cluster_master(MXS_MONITORED_SERVER*, MXS_MONITORED_SERVER*, int);
+static MonitorServer*        set_cluster_master(MonitorServer*, MonitorServer*, int);
 static void                  disableMasterFailback(void*, int);
 static int                   compare_node_index(const void*, const void*);
 static int                   compare_node_priority(const void*, const void*);
-static bool                  using_xtrabackup(MXS_MONITORED_SERVER* database, const char* server_string);
+static bool                  using_xtrabackup(MonitorServer* database, const char* server_string);
 
 GaleraMonitor::GaleraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
@@ -130,7 +130,7 @@ bool GaleraMonitor::has_sufficient_permissions()
     return test_permissions("SHOW STATUS LIKE 'wsrep_local_state'");
 }
 
-void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
+void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
 {
     MYSQL_ROW row;
     MYSQL_RES* result;
@@ -254,7 +254,7 @@ void GaleraMonitor::post_tick()
      */
 
     /* get the candidate master, following MXS_MIN(node_id) rule */
-    MXS_MONITORED_SERVER* candidate_master = get_candidate_master();
+    MonitorServer* candidate_master = get_candidate_master();
 
     m_master = set_cluster_master(m_master, candidate_master, m_disableMasterFailback);
 
@@ -318,7 +318,7 @@ void GaleraMonitor::post_tick()
     }
 }
 
-static bool using_xtrabackup(MXS_MONITORED_SERVER* database, const char* server_string)
+static bool using_xtrabackup(MonitorServer* database, const char* server_string)
 {
     bool rval = false;
     MYSQL_RES* result;
@@ -365,9 +365,9 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER* database, const char* server_
  * @param   servers The monitored servers list
  * @return  The candidate master on success, NULL on failure
  */
-MXS_MONITORED_SERVER* GaleraMonitor::get_candidate_master()
+MonitorServer* GaleraMonitor::get_candidate_master()
 {
-    MXS_MONITORED_SERVER* candidate_master = NULL;
+    MonitorServer* candidate_master = NULL;
     long min_id = -1;
     int minval = INT_MAX;
     int currval;
@@ -437,9 +437,9 @@ MXS_MONITORED_SERVER* GaleraMonitor::get_candidate_master()
  * @param   candidate_master The candidate master server accordingly to the selection rule
  * @return  The  master node pointer (could be NULL)
  */
-static MXS_MONITORED_SERVER* set_cluster_master(MXS_MONITORED_SERVER* current_master,
-                                                MXS_MONITORED_SERVER* candidate_master,
-                                                int master_stickiness)
+static MonitorServer* set_cluster_master(MonitorServer* current_master,
+                                         MonitorServer* candidate_master,
+                                         int master_stickiness)
 {
     /*
      * if current master is not set or master_stickiness is not enable
@@ -488,7 +488,7 @@ static MXS_MONITORED_SERVER* set_cluster_master(MXS_MONITORED_SERVER* current_ma
  */
 void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 {
-    MXS_MONITORED_SERVER* ptr;
+    MonitorServer* ptr;
     MYSQL_ROW row;
     MYSQL_RES* result;
     bool ignore_priority = true;
@@ -499,7 +499,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     }
 
     unsigned int found_slaves = 0;
-    MXS_MONITORED_SERVER* node_list[is_cluster - 1];
+    MonitorServer* node_list[is_cluster - 1];
     /* Donor list size = DONOR_LIST_SET_VAR + n_hosts * max_host_len + n_hosts + 1 */
 
     char* donor_list = static_cast<char*>(MXS_CALLOC(1,
@@ -520,7 +520,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     {
         if ((ptr->pending_status & SERVER_JOINED) && (ptr->pending_status & SERVER_SLAVE))
         {
-            node_list[found_slaves] = (MXS_MONITORED_SERVER*)ptr;
+            node_list[found_slaves] = (MonitorServer*)ptr;
             found_slaves++;
 
             /* Check the server parameter "priority"
@@ -541,13 +541,13 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     /* Sort the array */
     qsort(node_list,
           found_slaves,
-          sizeof(MXS_MONITORED_SERVER*),
+          sizeof(MonitorServer*),
           sort_order ? compare_node_priority : compare_node_index);
 
     /* Select nodename from each server and append it to node_list */
     for (unsigned int k = 0; k < found_slaves; k++)
     {
-        MXS_MONITORED_SERVER* ptr = node_list[k];
+        MonitorServer* ptr = node_list[k];
 
         /* Get the Galera node name */
         if (mxs_mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
@@ -586,7 +586,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     /* Set now rep_sst_donor in each slave node */
     for (unsigned int k = 0; k < found_slaves; k++)
     {
-        MXS_MONITORED_SERVER* ptr = node_list[k];
+        MonitorServer* ptr = node_list[k];
         if (mxs_mysql_query(ptr->con, donor_list) != 0)
         {
             ptr->mon_report_query_error();
@@ -611,8 +611,8 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 
 static int compare_node_index(const void* a, const void* b)
 {
-    const MXS_MONITORED_SERVER* s_a = *(MXS_MONITORED_SERVER* const*)a;
-    const MXS_MONITORED_SERVER* s_b = *(MXS_MONITORED_SERVER* const*)b;
+    const MonitorServer* s_a = *(MonitorServer* const*)a;
+    const MonitorServer* s_b = *(MonitorServer* const*)b;
 
     // Order is DESC: b - a
     return s_b->server->node_id - s_a->server->node_id;
@@ -639,8 +639,8 @@ static int compare_node_index(const void* a, const void* b)
 
 static int compare_node_priority(const void* a, const void* b)
 {
-    const MXS_MONITORED_SERVER* s_a = *(MXS_MONITORED_SERVER* const*)a;
-    const MXS_MONITORED_SERVER* s_b = *(MXS_MONITORED_SERVER* const*)b;
+    const MonitorServer* s_a = *(MonitorServer* const*)a;
+    const MonitorServer* s_b = *(MonitorServer* const*)b;
     std::string pri_a = s_a->server->get_custom_parameter("priority");
     std::string pri_b = s_b->server->get_custom_parameter("priority");
     bool have_a = !pri_a.empty();

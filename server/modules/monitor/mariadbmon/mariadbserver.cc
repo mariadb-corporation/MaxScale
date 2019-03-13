@@ -28,9 +28,9 @@ using maxbase::Duration;
 using maxbase::StopWatch;
 using maxsql::QueryResult;
 using Guard = std::lock_guard<std::mutex>;
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
-MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index,
+MariaDBServer::MariaDBServer(MonitorServer* monitored_server, int config_index,
                              bool assume_unique_hostnames, bool query_events)
     : m_server_base(monitored_server)
     , m_config_index(config_index)

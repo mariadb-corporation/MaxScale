@@ -42,7 +42,7 @@ bool NDBCMonitor::has_sufficient_permissions()
     return test_permissions("SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'");
 }
 
-void NDBCMonitor::update_server_status(mxs::MXS_MONITORED_SERVER* monitored_server)
+void NDBCMonitor::update_server_status(mxs::MonitorServer* monitored_server)
 {
     MYSQL_ROW row;
     MYSQL_RES* result;

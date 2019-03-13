@@ -30,7 +30,7 @@ public:
 
 protected:
     bool has_sufficient_permissions();
-    void update_server_status(mxs::MXS_MONITORED_SERVER* monitored_server);
+    void update_server_status(mxs::MonitorServer* monitored_server);
 
 private:
     GRMon(const std::string& name, const std::string& module);

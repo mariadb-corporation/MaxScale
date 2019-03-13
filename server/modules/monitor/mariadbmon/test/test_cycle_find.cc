@@ -25,7 +25,7 @@
 
 using std::string;
 using std::cout;
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
 // Maximum sizes for array types
 const int MAX_CYCLE_SIZE = 10;
@@ -159,7 +159,7 @@ void MariaDBMonitor::Test::init_servers(int count)
     {
         // Server contents mostly undefined
         auto base_server = Server::create_test_server();
-        MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER(base_server);
+        MonitorServer* mon_server = new MonitorServer(base_server);
         MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_use_hostnames, true);
 
         if (m_use_hostnames)

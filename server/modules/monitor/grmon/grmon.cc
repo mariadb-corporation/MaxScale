@@ -25,7 +25,7 @@
 #include <maxscale/protocol/mysql.hh>
 #include <mysqld_error.h>
 
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
 GRMon::GRMon(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
@@ -54,7 +54,7 @@ static inline bool is_false(const char* value)
            || strcasecmp(value, "false") == 0;
 }
 
-static bool is_master(MXS_MONITORED_SERVER* server)
+static bool is_master(MonitorServer* server)
 {
     bool rval = false;
     MYSQL_RES* result;
@@ -81,7 +81,7 @@ static bool is_master(MXS_MONITORED_SERVER* server)
     return rval;
 }
 
-static bool is_slave(MXS_MONITORED_SERVER* server)
+static bool is_slave(MonitorServer* server)
 {
     bool rval = false;
     MYSQL_RES* result;
@@ -108,7 +108,7 @@ static bool is_slave(MXS_MONITORED_SERVER* server)
     return rval;
 }
 
-void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
+void GRMon::update_server_status(MonitorServer* monitored_server)
 {
     if (is_master(monitored_server))
     {

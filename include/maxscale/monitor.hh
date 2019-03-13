@@ -154,7 +154,7 @@ namespace maxscale
 /**
  * The linked list of servers that are being monitored by the monitor module.
  */
-class MXS_MONITORED_SERVER
+class MonitorServer
 {
 public:
     class ConnectionSettings
@@ -181,9 +181,9 @@ public:
     static const int BEING_DRAINED_OFF = 3;
     static const int BEING_DRAINED_ON  = 4;
 
-    MXS_MONITORED_SERVER(SERVER* server);
+    MonitorServer(SERVER* server);
 
-    ~MXS_MONITORED_SERVER();
+    ~MonitorServer();
 
     /**
      * Set pending status bits in the monitor server
@@ -273,7 +273,7 @@ public:
      *                    valid or NULL.
      * @return Connection status.
      */
-    static mxs_connect_result_t ping_or_connect_to_db(const MXS_MONITORED_SERVER::ConnectionSettings& sett,
+    static mxs_connect_result_t ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett,
                                                       SERVER& server, MYSQL** ppConn);
 
     static bool connection_is_ok(mxs_connect_result_t connect_result);
@@ -373,8 +373,8 @@ public:
     uint64_t m_ticks {0};                         /**< Number of performed monitoring intervals */
     uint8_t  m_journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */
 
-    MXS_CONFIG_PARAMETER parameters;                    /**< Configuration parameters */
-    std::vector<MXS_MONITORED_SERVER*> m_servers;       /**< Monitored servers */
+    MXS_CONFIG_PARAMETER parameters;             /**< Configuration parameters */
+    std::vector<MonitorServer*> m_servers;       /**< Monitored servers */
 
 protected:
     /**
@@ -433,7 +433,7 @@ protected:
      * @param error_out Set to true if an error occurs
      * @return Output array
      */
-    std::vector<MXS_MONITORED_SERVER*> get_monitored_serverlist(const std::string& key, bool* error_out);
+    std::vector<MonitorServer*> get_monitored_serverlist(const std::string& key, bool* error_out);
 
     /**
      * Find the monitored server representing the server.
@@ -441,21 +441,21 @@ protected:
      * @param search_server Server to search for
      * @return Found monitored server or NULL if not found
      */
-    MXS_MONITORED_SERVER* get_monitored_server(SERVER* search_server);
+    MonitorServer* get_monitored_server(SERVER* search_server);
 
     /**
      * @brief Load a journal of server states
      *
      * @param master  Set to point to the current master
      */
-    void load_server_journal(MXS_MONITORED_SERVER** master);
+    void load_server_journal(MonitorServer** master);
 
     /**
      * @brief Store a journal of server states
      *
      * @param master  The current master server or NULL if no master exists
      */
-    void store_server_journal(MXS_MONITORED_SERVER* master);
+    void store_server_journal(MonitorServer* master);
 
     void check_maintenance_requests();
 
@@ -468,9 +468,9 @@ protected:
 
     void remove_server_journal();
 
-    MXS_MONITORED_SERVER* find_parent_node(MXS_MONITORED_SERVER* target);
+    MonitorServer* find_parent_node(MonitorServer* target);
 
-    std::string child_nodes(MXS_MONITORED_SERVER* parent);
+    std::string child_nodes(MonitorServer* parent);
 
     /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
@@ -493,7 +493,7 @@ protected:
          * disabling. */
         int64_t disk_space_check_interval = -1;
 
-        MXS_MONITORED_SERVER::ConnectionSettings conn_settings;
+        MonitorServer::ConnectionSettings conn_settings;
     };
 
     Settings m_settings;
@@ -531,7 +531,7 @@ private:
      * @param ptr     The server which has changed state
      * @return Return value of the executed script or -1 on error
      */
-    int launch_script(MXS_MONITORED_SERVER* ptr);
+    int launch_script(MonitorServer* ptr);
 
     /**
      * Launch a command
@@ -543,7 +543,7 @@ private:
      *
      * @return Return value of the executed script or -1 on error.
      */
-    int launch_command(MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
+    int launch_command(MonitorServer* ptr, EXTERNCMD* cmd);
 
     /**
      * @brief The monitor should populate associated services.
@@ -663,7 +663,7 @@ protected:
      *
      * @return True, if the disk space should be checked, false otherwise.
      */
-    bool should_update_disk_space_status(const MXS_MONITORED_SERVER* pMonitored_server) const;
+    bool should_update_disk_space_status(const MonitorServer* pMonitored_server) const;
 
     /**
      * @brief Update the disk space status of a server.
@@ -672,7 +672,7 @@ protected:
      * @c pMonitored_server->pending_status if the disk space is exhausted
      * or cleared if it is not.
      */
-    void update_disk_space_status(MXS_MONITORED_SERVER* pMonitored_server);
+    void update_disk_space_status(MonitorServer* pMonitored_server);
 
     /**
      * @brief Configure the monitor.
@@ -745,7 +745,7 @@ protected:
      */
     virtual bool immediate_tick_required() const;
 
-    MXS_MONITORED_SERVER* m_master;     /**< Master server */
+    MonitorServer* m_master;     /**< Master server */
 
 private:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
@@ -779,7 +779,7 @@ protected:
      * The implementation should probe the server in question and update
      * the server status bits.
      */
-    virtual void update_server_status(MXS_MONITORED_SERVER* pMonitored_server) = 0;
+    virtual void update_server_status(MonitorServer* pMonitored_server) = 0;
 
     /**
      * @brief Called right at the beginning of @c tick().

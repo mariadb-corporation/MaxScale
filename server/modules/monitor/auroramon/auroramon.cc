@@ -24,7 +24,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.hh>
 
-using maxscale::MXS_MONITORED_SERVER;
+using maxscale::MonitorServer;
 
 AuroraMonitor::AuroraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
@@ -56,7 +56,7 @@ bool AuroraMonitor::has_sufficient_permissions()
  *
  * @param monitored_server  Server whose status should be updated
  */
-void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
+void AuroraMonitor::update_server_status(MonitorServer* monitored_server)
 {
     monitored_server->clear_pending_status(SERVER_MASTER | SERVER_SLAVE);
 
