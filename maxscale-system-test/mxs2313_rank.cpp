@@ -11,49 +11,65 @@ std::function<void(int)> unblock_wait;
 
 void test_rwsplit(TestConnections& test, std::vector<std::string> ids)
 {
-    std::cout << "Slaves with descending rank and a low ranking master" << std::endl;
+    std::cout << "Servers in two groups with different ranks" << std::endl;
 
-    test.check_maxctrl("alter server server1 rank 9999");
-    test.check_maxctrl("alter server server2 rank 2");
-    test.check_maxctrl("alter server server3 rank 3");
-    test.check_maxctrl("alter server server4 rank 4");
+    test.check_maxctrl("alter server server1 rank primary");
+    test.check_maxctrl("alter server server2 rank primary");
+    test.check_maxctrl("alter server server3 rank secondary");
+    test.check_maxctrl("alter server server4 rank secondary");
 
     Connection c = test.maxscales->rwsplit();
+
+    auto is_primary = [&]() {
+            auto id = c.field("SELECT @@server_id");
+            test.expect(id == ids[0] || id == ids[1], "Primary servers should reply");
+        };
+    auto is_secondary = [&]() {
+            auto id = c.field("SELECT @@server_id");
+            test.expect(id == ids[2] || id == ids[3], "Secondary servers should reply");
+        };
+
     c.connect();
-    test.expect(c.field("SELECT @@server_id") == ids[1], "First slave should reply");
-
-    block_wait(1);
-    test.expect(c.field("SELECT @@server_id") == ids[2], "Second slave should reply");
-
-    block_wait(2);
-    test.expect(c.field("SELECT @@server_id") == ids[3], "Third slave should reply");
-
-    block_wait(3);
-    test.expect(c.field("SELECT @@server_id") == ids[0], "Master should reply");
+    is_primary();
 
     block_wait(0);
+    is_primary();
+
+    block_wait(1);
+    is_secondary();
+
+    block_wait(2);
+    is_secondary();
+
+    block_wait(3);
     test.expect(!c.query("SELECT @@server_id"), "Query should fail");
 
-    unblock_wait(0);
+    unblock_wait(3);
     c.disconnect();
     c.connect();
-    test.expect(c.field("SELECT @@server_id") == ids[0], "Master should reply");
-
-    unblock_wait(3);
-    test.expect(c.field("SELECT @@server_id") == ids[3], "Third slave should reply");
+    is_secondary();
 
     unblock_wait(2);
-    test.expect(c.field("SELECT @@server_id") == ids[2], "Second slave should reply");
+    is_secondary();
 
     unblock_wait(1);
-    test.expect(c.field("SELECT @@server_id") == ids[1], "First slave should reply");
+    is_secondary();
+
+    unblock_wait(0);
+    is_secondary();
+
+    test.expect(c.query("SELECT @@server_id, @@last_insert_id"), "Query should work");
+    is_primary();
 
     std::cout << "Grouping servers into a three-node cluster with one low-ranking server" << std::endl;
 
-    test.check_maxctrl("alter server server1 rank 1");
-    test.check_maxctrl("alter server server2 rank 1");
-    test.check_maxctrl("alter server server3 rank 1");
-    test.check_maxctrl("alter server server4 rank 9999");
+    test.check_maxctrl("alter server server1 rank primary");
+    test.check_maxctrl("alter server server2 rank primary");
+    test.check_maxctrl("alter server server3 rank primary");
+    test.check_maxctrl("alter server server4 rank secondary");
+
+    c.disconnect();
+    c.connect();
 
     block_wait(0);
     auto id = c.field("SELECT @@server_id");
@@ -69,19 +85,23 @@ void test_rwsplit(TestConnections& test, std::vector<std::string> ids)
     for (int i = 0; i < 3; i++)
     {
         unblock_wait(i);
-        auto id = c.field("SELECT @@server_id");
-        test.expect(!id.empty() && id != ids[3], "Third slave should not reply");
+        test.expect(c.field("SELECT @@server_id") == ids[3], "Third slave should reply");
     }
+
+    block_wait(3);
+    id = c.field("SELECT @@server_id");
+    test.expect(!id.empty() && id != ids[3], "Third slave should not reply");
+    unblock_wait(3);
 }
 
 void test_readconnroute(TestConnections& test, std::vector<std::string> ids)
 {
     std::cout << "Readconnroute with descending server rank" << std::endl;
 
-    test.check_maxctrl("alter server server1 rank 1");
-    test.check_maxctrl("alter server server2 rank 2");
-    test.check_maxctrl("alter server server3 rank 3");
-    test.check_maxctrl("alter server server4 rank 4");
+    test.check_maxctrl("alter server server1 rank primary");
+    test.check_maxctrl("alter server server2 rank primary");
+    test.check_maxctrl("alter server server3 rank secondary");
+    test.check_maxctrl("alter server server4 rank secondary");
 
     auto do_test = [&](int node) {
             Connection c = test.maxscales->readconn_master();
