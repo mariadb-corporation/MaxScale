@@ -559,6 +559,31 @@ initial connection creation is skipped. If the client executes only read
 queries, no connection to the master is made. If only write queries are made,
 only the master connection is used.
 
+## Server Ranks
+
+The general rule with server ranks is that primary servers will be used before
+secondary servers. Readwritesplit is an exception to this rule. The following
+rules govern how readwritesplit behaves with servers that have different ranks.
+
+* Sessions will use the current master server as long as possible. This means
+  that sessions with a secondary master will not use the primary master as long
+  as the secondary master is available.
+
+* All slave connections will use the same rank as the master connection. Any
+  stale connections with a different rank than the master will be discarded.
+
+* If no master connection is available and `master_reconnection` is enabled, a
+  connection to the best master is created. If the new master has a different
+  priority than existing connections have, the connections with a different rank
+  will be discarded.
+
+* If open connections exist, these will be used for routing. This means that if
+  the master is lost but the session still has slave servers with the same rank,
+  they will remain in use.
+
+* If no open connections exist, the servers with the best rank will used.
+
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint

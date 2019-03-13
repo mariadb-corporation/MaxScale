@@ -1558,95 +1558,54 @@ if the disk space situation should be monitored.
 
 #### `rank`
 
-The ranking of this server. Servers with a lower value of `rank` are prioritized
-over servers with a higher value. This parameter is intended to allow the user
-to control in which order the servers of a cluster are used.
+This parameter controls the order in which servers are used. Valid values for
+this parameter are `primary` and `secondary`. The default value is
+`primary`. This parameter replaces the use of the `weightby` parameter as the
+primary means of controlling server usage.
 
-The default value is 2147483647 which is also the upper limit for the value. The
-lowest accepted value is 1. This parameter replaces the use of the `weightby`
-parameter as the primary means of controlling server usage.
+This behavior depends on the router implementation but the general rule of thumb
+is that primary servers will be used before secondary servers.
 
-Each server that shares the same `rank` is placed into a set and only one set of
-servers is used at any one time. This behavior depends on the router
-implementation which is why there are a few exceptions to this rule.
+Readconnroute will always use primary servers before secondary servers as long
+as they match the configured server type.
 
-One exception to the rule is when a readwritesplit session must find a master
-server but the rank of the master is not the lowest among all available
-servers. In this case readwritesplit will pick the master with the lowest value
-of rank among all master servers.
+Readwritesplit will pick servers that have the same rank as the current
+master. Read the
+[readwritesplit documentation on server ranks](../Routers/ReadWriteSplit.md#server-ranks)
+for a detailed description of the behavior.
 
-The following example configuration demonstrates how the parameter is used.
+The following example server configuration demonstrates how `rank` can be used
+to exclude `DR-site` servers from routing.
 
 ```
-[A]
+[main-site-master]
 type=server
 address=192.168.0.11
 protocol=MariaDBBackend
-rank=1
+rank=primary
 
-[B]
+[main-site-slave]
+type=server
+address=192.168.0.12
+protocol=MariaDBBackend
+rank=primary
+
+[DR-site-master]
+type=server
+address=192.168.0.21
+protocol=MariaDBBackend
+rank=secondary
+
+[DR-site-slave]
 type=server
 address=192.168.0.22
 protocol=MariaDBBackend
-rank=2
-
-[C]
-type=server
-address=192.168.0.33
-protocol=MariaDBBackend
-rank=2
-
-[D]
-type=server
-address=192.168.0.44
-protocol=MariaDBBackend
+rank=secondary
 ```
 
-The three servers, A, B and C, each have a `rank` value. Server D has no rank so
-the default value is used. Three distinct sets of servers are created:
-
-1. A
-2. B and C
-3. D
-
-If A is available, it will always be used. When A is not available, both B and C
-are used. Only when D is the last available server will it be used.
-
-Another example use-case for this is a remote server (D) replicating from a
-cluster (A, B, C) that is primarily used for backups but in case of a total
-cluster failure is also used as a read-only standbyu server. To configure this
-in MaxScale using `rank` the following could be used.
-
-```
-[A]
-type=server
-address=192.168.0.11
-protocol=MariaDBBackend
-rank=1
-
-[B]
-type=server
-address=192.168.0.22
-protocol=MariaDBBackend
-rank=1
-
-[C]
-type=server
-address=192.168.0.33
-protocol=MariaDBBackend
-rank=1
-
-[D]
-type=server
-address=192.168.0.44
-protocol=MariaDBBackend
-rank=2
-```
-
-With this configuration the three servers in the primary cluster (A, B, C) would
-be used. Only when the whole primary cluster is down would server D be used and
-as soon as any of the primary servers became available, D would stop receiving
-traffic.
+The `main-site-master` and `main-site-slave` servers will be used as long as
+they are available. When they are no longer available, the `DR-site-master` and
+`DR-site-slave` will be used.
 
 ### Listener
 
