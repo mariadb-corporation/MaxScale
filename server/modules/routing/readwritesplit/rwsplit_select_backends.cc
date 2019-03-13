@@ -228,6 +228,41 @@ int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
     return priority;
 }
 
+int64_t RWSplitSession::get_current_rank()
+{
+    int64_t rv = 1;
+
+    if (m_current_master && m_current_master->in_use())
+    {
+        rv = m_current_master->server()->rank();
+    }
+    else
+    {
+        auto compare = [](RWBackend* a, RWBackend* b) {
+                if (a->in_use() != b->in_use())
+                {
+                    return a->in_use();
+                }
+                else if (a->can_connect() != b->can_connect())
+                {
+                    return a->can_connect();
+                }
+                else
+                {
+                    return a->server()->rank() < b->server()->rank();
+                }
+            };
+        auto it = std::min_element(m_raw_backends.begin(), m_raw_backends.end(), compare);
+
+        if (it != m_raw_backends.end())
+        {
+            rv = (*it)->server()->rank();
+        }
+    }
+
+    return rv;
+}
+
 RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
     thread_local PRWBackends candidates;
@@ -235,7 +270,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 
     auto counts = get_slave_counts(m_raw_backends, m_current_master);
     int best_priority {INT_MAX};
-    auto best_rank = std::numeric_limits<int64_t>::max();
+    auto current_rank = get_current_rank();
 
     // Create a list of backends valid for read operations
     for (auto& backend : m_raw_backends)
@@ -250,16 +285,15 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
         int priority = get_backend_priority(backend, m_config.master_accept_reads);
         auto rank = backend->server()->rank();
 
-        if (master_or_slave && is_usable && rlag_ok)
+        if (master_or_slave && is_usable && rlag_ok && rank == current_rank)
         {
-            if (rank < best_rank || (rank == best_rank && priority < best_priority))
+            if (priority < best_priority)
             {
                 candidates.clear();
-                best_rank = rank;
                 best_priority = priority;
             }
 
-            if (rank == best_rank && priority == best_priority)
+            if (priority == best_priority)
             {
                 candidates.push_back(backend);
             }
@@ -276,22 +310,6 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     PRWBackends::const_iterator rval = m_config.backend_select_fct(candidates);
 
     return (rval == candidates.end()) ? nullptr : *rval;
-}
-
-void add_backend_with_rank(RWBackend* backend, PRWBackends* candidates, int64_t* best_rank)
-{
-    auto rank = backend->server()->rank();
-
-    if (rank < *best_rank)
-    {
-        *best_rank = rank;
-        candidates->clear();
-    }
-
-    if (rank == *best_rank)
-    {
-        candidates->push_back(backend);
-    }
 }
 
 /**
@@ -379,7 +397,18 @@ RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_maste
     {
         if (backend->can_connect() && backend->is_master())
         {
-            add_backend_with_rank(backend, &candidates, &best_rank);
+            auto rank = backend->server()->rank();
+
+            if (rank < best_rank)
+            {
+                best_rank = rank;
+                candidates.clear();
+            }
+
+            if (rank == best_rank)
+            {
+                candidates.push_back(backend);
+            }
         }
     }
 
@@ -456,15 +485,17 @@ bool RWSplitSession::open_connections()
 
     int n_slaves = get_slave_counts(m_raw_backends, master).second;
     int max_nslaves = m_router->max_slave_count();
-    auto best_rank = std::numeric_limits<int64_t>::max();
-    PRWBackends candidates;
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
+    auto current_rank = get_current_rank();
+    thread_local PRWBackends candidates;
+    candidates.clear();
 
-    for (auto& pBackend : m_raw_backends)
+    for (auto& backend : m_raw_backends)
     {
-        if (!pBackend->in_use() && pBackend->can_connect() && valid_for_slave(pBackend, master))
+        if (!backend->in_use() && backend->can_connect() && valid_for_slave(backend, master)
+            && backend->server()->rank() == current_rank)
         {
-            add_backend_with_rank(pBackend, &candidates, &best_rank);
+            candidates.push_back(backend);
         }
     }
 

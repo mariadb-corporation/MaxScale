@@ -144,6 +144,7 @@ private:
     bool route_stored_query();
     void close_stale_connections();
 
+    int64_t         get_current_rank();
     mxs::RWBackend* get_hinted_backend(char* name);
     mxs::RWBackend* get_slave_backend(int max_rlag);
     mxs::RWBackend* get_master_backend();

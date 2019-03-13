@@ -563,11 +563,23 @@ static bool server_is_shutting_down(GWBUF* writebuf)
 
 void RWSplitSession::close_stale_connections()
 {
+    auto current_rank = get_current_rank();
+
     for (auto& backend : m_backends)
     {
-        if (backend->in_use() && !backend->can_connect())
+        if (backend->in_use())
         {
-            backend->close();
+            if (!backend->can_connect())
+            {
+                MXS_INFO("Discarding connection to '%s': Server is in maintenance", backend->name());
+                backend->close();
+            }
+            else if (backend->server()->rank() != current_rank)
+            {
+                MXS_INFO("Discarding connection to '%s': Server has rank %ld and current rank is %ld",
+                         backend->name(), backend->server()->rank(), current_rank);
+                backend->close();
+            }
         }
     }
 }
