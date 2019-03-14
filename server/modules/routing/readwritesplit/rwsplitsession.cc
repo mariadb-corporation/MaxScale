@@ -740,15 +740,6 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         m_can_replay_trx = true;
     }
 
-    if (m_expected_responses == 0)
-    {
-        /**
-         * Close stale connections to servers in maintenance. Done here to avoid closing the connections
-         * before all responses have been received.
-         */
-        close_stale_connections();
-    }
-
     if (backend->in_use() && backend->has_session_commands())
     {
         // Backend is still in use and has more session commands to execute
@@ -774,6 +765,15 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
+    }
+
+    if (m_expected_responses == 0)
+    {
+        /**
+         * Close stale connections to servers in maintenance. Done here to avoid closing the connections
+         * before all responses have been received.
+         */
+        close_stale_connections();
     }
 }
 
