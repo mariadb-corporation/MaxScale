@@ -1774,14 +1774,7 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
     if (written < 0)
     {
         *stop_writing = true;
-#if defined (SS_DEBUG)
-        if (saved_errno != EAGAIN
-            && saved_errno != EWOULDBLOCK)
-#else
-        if (saved_errno != EAGAIN
-            && saved_errno != EWOULDBLOCK
-            && saved_errno != EPIPE)
-#endif
+        if (saved_errno != EAGAIN && saved_errno != EWOULDBLOCK && saved_errno != EPIPE)
         {
             MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
                       dcb->type(),

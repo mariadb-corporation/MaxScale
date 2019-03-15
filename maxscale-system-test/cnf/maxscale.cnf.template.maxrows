@@ -1,11 +1,16 @@
 [maxscale]
 threads=###threads###
-log_warning=1
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
 
 [MySQL-Monitor]
 type=monitor
 module=mysqlmon
-servers= server1, server2,server3  ,server4
+servers=server1
 user=maxskysql
 password= skysql
 monitor_interval=1000
@@ -13,8 +18,8 @@ detect_stale_master=false
 
 [RW-Split-Router]
 type=service
-router= readwritesplit
-servers=server1,     server2,              server3,server4
+router=readwritesplit
+servers=server1
 user=maxskysql
 password=skysql
 slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
@@ -25,7 +30,7 @@ filters=MaxRows
 type=service
 router=readconnroute
 router_options= slave
-servers=server1,server2,server3,server4
+servers=server1
 user=maxskysql
 password=skysql
 
@@ -33,7 +38,7 @@ password=skysql
 type=service
 router=readconnroute
 router_options=master
-servers=server1,server2,server3,server4
+servers=server1
 user=maxskysql
 password=skysql
 
@@ -42,7 +47,6 @@ type=listener
 service=RW-Split-Router
 protocol=MySQLClient
 port=4006
-#socket=/tmp/rwsplit.sock
 
 [Read-Connection-Listener-Slave]
 type=listener
@@ -64,7 +68,6 @@ router=cli
 type=listener
 service=CLI
 protocol=maxscaled
-#address=localhost
 socket=default
 
 [MaxRows]
@@ -73,28 +76,3 @@ module=maxrows
 max_resultset_rows=20
 max_resultset_size=900000000
 debug=3
-
-[server1]
-type=server
-address=###node_server_IP_1###
-port=###node_server_port_1###
-protocol=MySQLBackend
-
-[server2]
-type=server
-address=###node_server_IP_2###
-port=###node_server_port_2###
-protocol=MySQLBackend
-
-[server3]
-type=server
-address=###node_server_IP_3###
-port=###node_server_port_3###
-protocol=MySQLBackend
-
-[server4]
-type=server
-address=###node_server_IP_4###
-port=###node_server_port_4###
-protocol=MySQLBackend
-

@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     for (int i = 0; rules_failure[i]; i++)
     {
         /** Create rule file with syntax error */
-        test.add_result(truncate(temp_rules, 0), "Failed to truncate");
+        int __attribute__((unused)) rc = truncate(temp_rules, 0);
         create_rule(rules_failure[i], users_ok[0]);
         char buf[PATH_MAX + 1];
         copy_rules(&test, (char*)temp_rules, (char*)getcwd(buf, sizeof(buf)));
