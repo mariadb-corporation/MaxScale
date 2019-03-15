@@ -263,6 +263,35 @@ static bool is_localhost_address(struct sockaddr_storage *addr)
     return rval;
 }
 
+// Helper function for generating an AuthSwitchRequest packet.
+static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session* client_data)
+{
+    /**
+     * The AuthSwitchRequest packet:
+     * 4 bytes     - Header
+     * 0xfe        - Command byte
+     * string[NUL] - Auth plugin name
+     * string[EOF] - Scramble
+     */
+    const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
+
+    /* When sending an AuthSwitchRequest for "mysql_native_password", the scramble data needs an extra
+     * byte in the end. */
+    unsigned int payloadlen = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE + 1;
+    unsigned int buflen = MYSQL_HEADER_LEN + payloadlen;
+    GWBUF* buffer = gwbuf_alloc(buflen);
+    uint8_t* bufdata = GWBUF_DATA(buffer);
+    gw_mysql_set_byte3(bufdata, payloadlen);
+    bufdata += 3;
+    *bufdata++ = client_data->next_sequence;
+    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST; // AuthSwitchRequest command
+    memcpy(bufdata, plugin, sizeof(plugin));
+    bufdata += sizeof(plugin);
+    memcpy(bufdata, proto->scramble, GW_MYSQL_SCRAMBLE_SIZE);
+    bufdata += GW_MYSQL_SCRAMBLE_SIZE;
+    *bufdata = '\0';
+    return buffer;
+};
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
  *
@@ -286,6 +315,22 @@ mysql_auth_authenticate(DCB *dcb)
 
         MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
         MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+
+        if (!client_data->correct_authenticator)
+        {
+            // Client is attempting to use wrong authenticator, send switch request packet.
+            GWBUF* switch_packet = gen_auth_switch_request_packet(protocol, client_data);
+            if (dcb_write(dcb, switch_packet))
+            {
+                client_data->auth_switch_sent = true;
+                return MXS_AUTH_INCOMPLETE;
+            }
+            else
+            {
+                return MXS_AUTH_FAILED;
+            }
+        }
+
         auth_ret = validate_mysql_user(instance, dcb, client_data,
                                        protocol->scramble, sizeof(protocol->scramble));
 
@@ -388,15 +433,60 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
      * Note that the fixed elements add up to 36
      */
 
-    /* Detect now if there are enough bytes to continue */
-    if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23))
+    /* Check that the packet length is reasonable. The first packet needs to be sufficiently large to
+     * contain required data. If the buffer is unexpectedly large (likely an erroneous or malicious client),
+     * discard the packet as parsing it may cause overflow. The limit is just a guess, but it seems the
+     * packets from most plugins are < 100 bytes. */
+    if ((!client_data->auth_switch_sent &&
+        (client_auth_packet_size >= MYSQL_AUTH_PACKET_BASE_SIZE && client_auth_packet_size < 1028))
+        // If the client is replying to an AuthSwitchRequest, the length is predetermined.
+        || (client_data->auth_switch_sent
+            && (client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)))
+    {
+        return mysql_auth_set_client_data(client_data, protocol, buf);
+    }
+    else
     {
         /* Packet is not big enough */
         return false;
     }
 
-    return mysql_auth_set_client_data(client_data, protocol, buf);
+
 }
+
+/**
+ * Helper function for reading a 0-terminated string safely from an array that may not be 0-terminated.
+ * The output array should be long enough to contain any string that fits into the packet starting from
+ * packet_length_used.
+ */
+static bool read_zstr(const uint8_t* client_auth_packet, size_t client_auth_packet_size,
+                      int* packet_length_used, char* output)
+{
+    int null_char_ind = -1;
+    int start_ind = *packet_length_used;
+    for (int i = start_ind; i < client_auth_packet_size; i++)
+    {
+        if (client_auth_packet[i] == '\0')
+        {
+            null_char_ind = i;
+            break;
+        }
+    }
+
+    if (null_char_ind >= 0)
+    {
+        if (output)
+        {
+            memcpy(output, client_auth_packet + start_ind, null_char_ind - start_ind + 1);
+        }
+        *packet_length_used = null_char_ind + 1;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+};
 
 /**
  * @brief Transfer detailed data from the authentication request to the DCB.
@@ -425,7 +515,9 @@ mysql_auth_set_client_data(
 
     /* Make authentication token length 0 and token null in case none is provided */
     client_data->auth_token_len = 0;
+    MXS_FREE((client_data->auth_token));
     client_data->auth_token = NULL;
+    client_data->correct_authenticator = false;
 
     if (client_auth_packet_size > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
@@ -453,34 +545,99 @@ mysql_auth_set_client_data(
             /* We should find an authentication token next */
             /* One byte of packet is the length of authentication token */
             client_data->auth_token_len = client_auth_packet[packet_length_used];
+            packet_length_used++;
 
-            if (client_auth_packet_size >
+            if (client_auth_packet_size <
                 (packet_length_used + client_data->auth_token_len))
             {
+                /* Packet was too small to contain authentication token */
+                return false;
+            }
+            else
+            {
                 client_data->auth_token = (uint8_t*)MXS_MALLOC(client_data->auth_token_len);
-
-                if (client_data->auth_token)
-                {
-                    /* The extra 1 is for the token length byte, just extracted*/
-                    memcpy(client_data->auth_token,
-                           client_auth_packet + MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1 + 1,
-                           client_data->auth_token_len);
-                }
-                else
+                if (!client_data->auth_token)
                 {
                     /* Failed to allocate space for authentication token string */
                     return false;
                 }
-            }
-            else
-            {
-                /* Packet was too small to contain authentication token */
-                return false;
+                else
+                {
+                    memcpy(client_data->auth_token,
+                           client_auth_packet + packet_length_used,
+                           client_data->auth_token_len);
+                    packet_length_used += client_data->auth_token_len;
+
+                    // Database name may be next. It has already been read and is skipped.
+                    if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+                    {
+                        if (!read_zstr(client_auth_packet, client_auth_packet_size,
+                                       &packet_length_used, NULL))
+                        {
+                            return false;
+                        }
+                    }
+
+                    // Authentication plugin name.
+                    if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_PLUGIN_AUTH)
+                    {
+                        int bytes_left = client_auth_packet_size - packet_length_used;
+                        if (bytes_left < 1)
+                        {
+                            return false;
+                        }
+                        else
+                        {
+                            char plugin_name[bytes_left];
+                            if (!read_zstr(client_auth_packet, client_auth_packet_size,
+                                           &packet_length_used, plugin_name))
+                            {
+                                return false;
+                            }
+                            else
+                            {
+                                // Check that the plugin is as expected. If not, make a note so the
+                                // authentication function switches the plugin.
+                                bool correct_auth = strcmp(plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN) == 0;
+                                client_data->correct_authenticator = correct_auth;
+                                if (!correct_auth)
+                                {
+                                    // The switch attempt is done later but the message is clearest if
+                                    // logged at once.
+                                    MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
+                                             "plugin '%s'. Trying to switch to '%s'.",
+                                             client_data->user, protocol->owner_dcb->remote, plugin_name,
+                                             DEFAULT_MYSQL_AUTH_PLUGIN);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         else
         {
             return false;
+        }
+    }
+    else if (client_data->auth_switch_sent)
+    {
+        // Client is replying to an AuthSwitch request. The packet should contain the authentication token.
+        // Length has already been checked.
+        ss_dassert(client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN);
+        uint8_t* auth_token = (uint8_t*)(MXS_MALLOC(MYSQL_SCRAMBLE_LEN));
+        if (!auth_token)
+        {
+            /* Failed to allocate space for authentication token string */
+            return false;
+        }
+        else
+        {
+            memcpy(auth_token, client_auth_packet + MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN);
+            client_data->auth_token = auth_token;
+            client_data->auth_token_len = MYSQL_SCRAMBLE_LEN;
+            // Assume that correct authenticator is now used. If this is not the case, authentication fails.
+            client_data->correct_authenticator = true;
         }
     }
 

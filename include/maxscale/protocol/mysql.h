@@ -141,6 +141,9 @@ typedef struct mysql_session
     char db[MYSQL_DATABASE_MAXLEN + 1];             /*< database       */
     int  auth_token_len;                            /*< token length   */
     uint8_t *auth_token;                            /*< token          */
+    bool     correct_authenticator;                 /*< is session using mysql_native_password? */
+    uint8_t  next_sequence;                         /*< Next packet sequence */
+    bool     auth_switch_sent;                      /*< Expecting a response to AuthSwitchRequest? */
 #if defined(SS_DEBUG)
     skygw_chk_t myses_chk_tail;
 #endif
