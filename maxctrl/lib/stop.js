@@ -37,10 +37,10 @@ exports.builder = function(yargs) {
                 return doRequest(host, 'monitors/' + argv.name + '/stop', null, {method: 'PUT'})
             })
         })
-        .command('maxscale', 'Stop MaxScale by stopping all services', function(yargs) {
+        .command(['services', 'maxscale'], 'Stop all services', function(yargs) {
             return yargs.epilog('This command will execute the `stop service` command for ' +
                                 'all services in MaxScale.')
-                .usage('Usage: stop maxscale')
+                .usage('Usage: stop [services|maxscale]')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'services/', function(res) {

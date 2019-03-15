@@ -248,3 +248,16 @@ On behalf of the entire MaxScale team,
 
 YOUR NAME HERE
 ```
+
+## 10. Update the version number for the next release
+
+Increment the `MAXSCALE_VERSION_PATCH` value in the `VERSIONxx.cmake` file
+in the source root where `xx` is the major and minor release number. For
+example, with 2.2 releases, update the `VERSION22.cmake` file.
+
+If the `MAXSCALE_BUILD_NUMBER` is not 1, set it to 1. This is only
+incremented if the packages have to be rebuilt after a release has been
+made.
+
+Make sure the `VERSION.cmake` points to the latest `VERSIONxx.cmake` file
+so that updates in older releases won't affect newer releases.
