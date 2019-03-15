@@ -521,8 +521,10 @@ static bool route_stored_query(RWSplitSession *rses)
         }
         else
         {
-            /** Routing was stopped, we need to wait for a response before retrying */
-            rses->query_queue = gwbuf_append(temp_storage, rses->query_queue);
+            /** Routing was stopped, we need to wait for a response before retrying.
+             * temp_storage holds the tail end of the queue and query_queue contains the query we attempted
+             * to route. Append temp_storage to query_queue to keep the order of the queries correct. */
+            rses->query_queue = gwbuf_append(rses->query_queue, temp_storage);
             break;
         }
     }
