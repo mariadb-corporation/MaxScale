@@ -30,6 +30,8 @@ RWSplitSession::RWSplitSession(RWSplit* instance,
     , m_backends(std::move(backends))
     , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
     , m_current_master(master)
+    , m_target_node(nullptr)
+    , m_prev_target(nullptr)
     , m_config(config)
     , m_last_keepalive_check(mxs_clock())
     , m_nbackends(instance->service()->n_dbref)
