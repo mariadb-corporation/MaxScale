@@ -168,6 +168,7 @@ private:
     bool should_replace_master(mxs::RWBackend* target);
     void replace_master(mxs::RWBackend* target);
     bool should_migrate_trx(mxs::RWBackend* target);
+    bool start_trx_migration(mxs::RWBackend* target, GWBUF* querybuf);
     void log_master_routing_failure(bool found,
                                     mxs::RWBackend* old_master,
                                     mxs::RWBackend* curr_master);
@@ -264,6 +265,34 @@ private:
         mxb_assert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
 
         return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
+    }
+
+    inline bool can_route_queries() const
+    {
+        return m_query_queue == NULL
+               && (m_expected_responses == 0
+                   || m_qc.load_data_state() == mxs::QueryClassifier::LOAD_DATA_ACTIVE
+                   || m_qc.large_query());
+    }
+
+    inline mxs::QueryClassifier::current_target_t get_current_target() const
+    {
+        mxs::QueryClassifier::current_target_t current_target;
+
+        if (m_target_node == NULL)
+        {
+            current_target = mxs::QueryClassifier::CURRENT_TARGET_UNDEFINED;
+        }
+        else if (m_target_node == m_current_master)
+        {
+            current_target = mxs::QueryClassifier::CURRENT_TARGET_MASTER;
+        }
+        else
+        {
+            current_target = mxs::QueryClassifier::CURRENT_TARGET_SLAVE;
+        }
+
+        return current_target;
     }
 
     void update_trx_statistics()

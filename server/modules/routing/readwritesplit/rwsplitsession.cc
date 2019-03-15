@@ -25,7 +25,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     : mxs::RouterSession(session)
     , m_backends(std::move(backends))
     , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
-    , m_current_master(master)
+    , m_current_master(nullptr)
     , m_target_node(nullptr)
     , m_prev_target(nullptr)
     , m_config(instance->config())
@@ -88,10 +88,8 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
 
 void close_all_connections(PRWBackends& backends)
 {
-    for (PRWBackends::iterator it = backends.begin(); it != backends.end(); it++)
+    for (auto& backend : backends)
     {
-        RWBackend* backend = *it;
-
         if (backend->in_use())
         {
             backend->close();
@@ -133,31 +131,12 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         return 1;
     }
 
-    if (m_query_queue == NULL
-        && (m_expected_responses == 0
-            || m_qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE
-            || m_qc.large_query()))
+    if (can_route_queries())
     {
         /** Gather the information required to make routing decisions */
-
-        QueryClassifier::current_target_t current_target;
-
-        if (m_target_node == NULL)
-        {
-            current_target = QueryClassifier::CURRENT_TARGET_UNDEFINED;
-        }
-        else if (m_target_node == m_current_master)
-        {
-            current_target = QueryClassifier::CURRENT_TARGET_MASTER;
-        }
-        else
-        {
-            current_target = QueryClassifier::CURRENT_TARGET_SLAVE;
-        }
-
         if (!m_qc.large_query())
         {
-            m_qc.update_route_info(current_target, querybuf);
+            m_qc.update_route_info(get_current_target(), querybuf);
         }
 
         /** No active or pending queries */
@@ -168,15 +147,12 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
     }
     else
     {
-        /**
-         * We are already processing a request from the client. Store the
-         * new query and wait for the previous one to complete.
-         */
+        // Already busy executing a query, put the query in a queue and route it later
         mxb_assert(m_expected_responses > 0 || m_query_queue);
-        MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command",
-                 gwbuf_length(querybuf),
-                 GWBUF_DATA(querybuf)[4],
-                 m_expected_responses);
+        MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command: %s",
+                 gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], m_expected_responses,
+                 mxs::extract_sql(querybuf, 1024).c_str());
+
         m_query_queue = gwbuf_append(m_query_queue, querybuf);
         querybuf = NULL;
         rval = 1;

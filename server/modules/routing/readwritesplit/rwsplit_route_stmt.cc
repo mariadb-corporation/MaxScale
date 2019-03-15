@@ -322,23 +322,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
 
             if (!succp && should_migrate_trx(target))
             {
-                MXS_INFO("Starting transaction migration from '%s' to '%s'",
-                         m_current_master->name(),
-                         target->name());
-
-                /**
-                 * Stash the current query so that the transaction replay treats
-                 * it as if the query was interrupted.
-                 */
-                m_current_query.copy_from(querybuf);
-
-                /**
-                 * After the transaction replay has been started, the rest of
-                 * the query processing needs to be skipped. This is done to avoid
-                 * the error logging done when no valid target is found for a query
-                 * as well as to prevent retrying of queries in the wrong order.
-                 */
-                return start_trx_replay();
+                return start_trx_migration(target, querybuf);
             }
         }
 
@@ -362,15 +346,6 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             {
                 // Target server was found and is in the correct state
                 succp = handle_got_target(querybuf, target, store_stmt);
-
-                if (succp && command == MXS_COM_STMT_EXECUTE && !is_locked_to_master())
-                {
-                    /** Track the targets of the COM_STMT_EXECUTE statements. This
-                     * information is used to route all COM_STMT_FETCH commands
-                     * to the same server where the COM_STMT_EXECUTE was done. */
-                    m_exec_map[stmt_id] = target;
-                    MXS_INFO("COM_STMT_EXECUTE on %s: %s", target->name(), target->uri());
-                }
             }
         }
         else if (can_retry_query() || can_continue_trx_replay())
@@ -995,6 +970,25 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
            m_can_replay_trx;
 }
 
+bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
+{
+    MXS_INFO("Starting transaction migration from '%s' to '%s'", m_current_master->name(), target->name());
+
+    /**
+     * Stash the current query so that the transaction replay treats
+     * it as if the query was interrupted.
+     */
+    m_current_query.copy_from(querybuf);
+
+    /**
+     * After the transaction replay has been started, the rest of
+     * the query processing needs to be skipped. This is done to avoid
+     * the error logging done when no valid target is found for a query
+     * as well as to prevent retrying of queries in the wrong order.
+     */
+    return start_trx_replay();
+}
+
 /**
  * @brief Handle master is the target
  *
@@ -1125,30 +1119,31 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER* server, GWBUF* origin)
  */
 bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool store)
 {
-    mxb_assert(target->in_use());
+    mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
+    mxb_assert_message(!target->has_session_commands(), "The session command cursor must not be active");
+
     /**
-     * If the transaction is READ ONLY set forced_node to this backend.
-     * This SLAVE backend will be used until the COMMIT is seen.
+     * TODO: This effectively disables pipelining of queries, very bad for batch insert performance. Replace
+     *       with proper, per server tracking of which responses need to be sent to the client. This would
+     *       also solve MXS-2009 by speeding up session commands.
      */
+    mxb_assert_message(target->get_reply_state() == REPLY_STATE_DONE || m_qc.large_query(),
+                       "Node must be idle when routing queries to it");
+
+    MXS_INFO("Route query to %s: %s \t%s <", target->is_master() ? "master" : "slave",
+             target->name(), target->uri());
+
     if (!m_target_node && session_trx_is_read_only(m_client->session))
     {
+        // Lock the session to this node until the read-only transaction ends
         m_target_node = target;
     }
-
-    MXS_INFO("Route query to %s: %s \t%s <",
-             target->is_master() ? "master" : "slave",
-             target->name(),
-             target->uri());
-
-    /** The session command cursor must not be active */
-    mxb_assert(!target->has_session_commands());
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF* send_buf = gwbuf_clone(querybuf);
 
-    if (m_config.causal_reads && cmd == COM_QUERY && !m_gtid_pos.empty()
-        && target->is_slave())
+    if (m_config.causal_reads && cmd == COM_QUERY && !m_gtid_pos.empty() && target->is_slave())
     {
         // Perform the causal read only when the query is routed to a slave
         send_buf = add_prefix_wait_gtid(target->server(), send_buf);
@@ -1165,16 +1160,6 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     }
 
     bool large_query = is_large_query(querybuf);
-
-    /**
-     * We should not be routing a query to a server that is busy processing a result.
-     *
-     * TODO: This effectively disables pipelining of queries, very bad for batch insert performance. Replace
-     *       with proper, per server tracking of which responses need to be sent to the client. This would
-     *       also solve MXS-2009 by speeding up session commands.
-     */
-    mxb_assert(target->get_reply_state() == REPLY_STATE_DONE || m_qc.large_query());
-
     uint32_t orig_id = 0;
 
     if (!is_locked_to_master() && mxs_mysql_is_ps_command(cmd) && !m_qc.large_query())
@@ -1226,13 +1211,11 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         // Store the current target
         m_prev_target = target;
 
-        /**
-         * If a READ ONLY transaction is ending set forced_node to NULL
-         */
         if (m_target_node
             && session_trx_is_read_only(m_client->session)
             && session_trx_is_ending(m_client->session))
         {
+            // Read-only transaction is over, stop routing queries to a specific node
             m_target_node = nullptr;
         }
     }
@@ -1245,6 +1228,15 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         }
 
         MXS_ERROR("Routing query failed.");
+    }
+
+    if (success && cmd == MXS_COM_STMT_EXECUTE && !is_locked_to_master())
+    {
+        /** Track the targets of the COM_STMT_EXECUTE statements. This
+         * information is used to route all COM_STMT_FETCH commands
+         * to the same server where the COM_STMT_EXECUTE was done. */
+        m_exec_map[m_qc.current_route_info().stmt_id()] = target;
+        MXS_INFO("COM_STMT_EXECUTE on %s: %s", target->name(), target->uri());
     }
 
     return success;
