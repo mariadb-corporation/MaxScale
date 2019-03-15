@@ -16,6 +16,7 @@
 #include "trx.hh"
 
 #include <string>
+#include <deque>
 
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
@@ -269,7 +270,7 @@ private:
 
     inline bool can_route_queries() const
     {
-        return m_query_queue == NULL
+        return m_query_queue.empty()
                && (m_expected_responses == 0
                    || m_qc.load_data_state() == mxs::QueryClassifier::LOAD_DATA_ACTIVE
                    || m_qc.large_query());
@@ -319,7 +320,7 @@ private:
     uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
     int              m_expected_responses;      /**< Number of expected responses to the current
                                                  * query */
-    GWBUF*                  m_query_queue;      /**< Queued commands waiting to be executed */
+    std::deque<GWBUF*>      m_query_queue;      /**< Queued commands waiting to be executed */
     RWSplit*                m_router;           /**< The router instance */
     mxs::SessionCommandList m_sescmd_list;      /**< List of executed session commands */
     ResponseMap             m_sescmd_responses; /**< Response to each session command */
