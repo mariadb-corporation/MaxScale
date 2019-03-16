@@ -24,6 +24,11 @@
 
 class SERVER;
 
+namespace maxscale
+{
+class Buffer;
+}
+
 /**
  * Buffer properties - used to store properties related to the buffer
  * contents. This may be added at any point during the processing of the
@@ -404,6 +409,7 @@ extern void dprintAllBuffers(void* pdcb);
  * @param log_level Log priority where the message is written
  */
 void gwbuf_hexdump(GWBUF* buffer, int log_level);
+void gwbuf_hexdump(const mxs::Buffer& buffer, int log_level);
 
 /**
  * Return pointer of the byte at offset from start of chained buffer
@@ -1041,6 +1047,16 @@ public:
     size_t length() const
     {
         return gwbuf_length(m_pBuffer);
+    }
+
+    /**
+     * Whether the buffer is empty.
+     *
+     * @return True if the buffer is empty
+     */
+    bool empty() const
+    {
+        return m_pBuffer == nullptr;
     }
 
     /**

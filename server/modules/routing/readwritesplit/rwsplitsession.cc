@@ -98,7 +98,6 @@ void close_all_connections(PRWBackends& backends)
 
 void RWSplitSession::close()
 {
-    std::for_each(m_query_queue.begin(), m_query_queue.end(), gwbuf_free);
     close_all_connections(m_raw_backends);
     m_current_query.reset();
 
@@ -154,7 +153,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
                  gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], m_expected_responses,
                  mxs::extract_sql(querybuf, 1024).c_str());
 
-        m_query_queue.push_back(querybuf);
+        m_query_queue.emplace_back(querybuf);
         querybuf = NULL;
         rval = 1;
 
@@ -193,13 +192,13 @@ bool RWSplitSession::route_stored_query()
     {
         MXS_INFO(">>> Routing stored queries");
 
-        GWBUF* query_queue = m_query_queue.front();
+        auto query = std::move(m_query_queue.front());
         m_query_queue.pop_front();
 
-        mxb_assert(query_queue);
-        mxb_assert_message(modutil_count_packets(query_queue) == 1, "Buffer must contain only one packet");
+        mxb_assert(!query.empty());
+        mxb_assert_message(modutil_count_packets(query.get()) == 1, "Buffer must contain only one packet");
 
-        if (query_queue == NULL)
+        if (query.empty())
         {
             MXS_ALERT("Queued query unexpectedly empty, dumping query queue contents");
             for (auto& a : m_query_queue)
@@ -216,10 +215,10 @@ bool RWSplitSession::route_stored_query()
 
         // TODO: Move the handling of queued queries to the client protocol
         // TODO: module where the command tracking is done automatically.
-        uint8_t cmd = mxs_mysql_get_command(query_queue);
+        uint8_t cmd = mxs_mysql_get_command(query.get());
         mysql_protocol_set_current_command(m_client, (mxs_mysql_cmd_t)cmd);
 
-        if (!routeQuery(query_queue))
+        if (!routeQuery(query.release()))
         {
             rval = false;
             MXS_ERROR("Failed to route queued query.");
@@ -235,7 +234,7 @@ bool RWSplitSession::route_stored_query()
         else
         {
             /** Routing was stopped, we need to wait for a response before retrying */
-            std::copy(m_query_queue.begin(), m_query_queue.end(), std::back_inserter(temp_storage));
+            temp_storage.push_front(std::move(m_query_queue.front()));
             m_query_queue = std::move(temp_storage);
             break;
         }

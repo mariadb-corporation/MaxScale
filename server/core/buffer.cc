@@ -783,3 +783,8 @@ void gwbuf_hexdump(GWBUF* buffer, int log_level)
 
     MXS_LOG_MESSAGE(log_level, "%.*s", n, ss.str().c_str());
 }
+
+void gwbuf_hexdump(const mxs::Buffer& buffer, int log_level)
+{
+    return gwbuf_hexdump(const_cast<mxs::Buffer&>(buffer).get(), log_level);
+}
