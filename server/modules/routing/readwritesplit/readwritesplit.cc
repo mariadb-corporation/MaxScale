@@ -918,6 +918,7 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
     {
         router_cli_ses->rses_closed = true;
         close_all_connections(router_cli_ses->backends);
+        gwbuf_free(router_cli_ses->query_queue);
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
             router_cli_ses->sescmd_list.size())
