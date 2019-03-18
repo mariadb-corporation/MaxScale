@@ -405,6 +405,7 @@ public:
      *            otherwise the task is delivered via the message loop.
      */
     static size_t execute_concurrently(Task& task);
+    static size_t execute_concurrently(std::function<void()> func);
 
     /**
      * Broadcast a message to all worker.
@@ -705,6 +706,12 @@ public:
         return *get_local_value();
     }
 
+    // Const version of dereference operator
+    const T& operator*() const
+    {
+        return *get_local_value();
+    }
+
     /**
      * Assign a value
      *
@@ -746,7 +753,7 @@ public:
                                           RoutingWorker::EXECUTE_AUTO);
 
         sem.wait_n(n);
-        return std::move(rval);
+        return rval;
     }
 
 private:

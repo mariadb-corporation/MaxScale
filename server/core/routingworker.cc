@@ -781,6 +781,13 @@ size_t RoutingWorker::execute_concurrently(Task& task)
 }
 
 // static
+size_t RoutingWorker::execute_concurrently(std::function<void()> func)
+{
+    Semaphore sem;
+    return sem.wait_n(RoutingWorker::broadcast(func, &sem, EXECUTE_AUTO));
+}
+
+// static
 size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     // NOTE: No logging here, this function must be signal safe.
