@@ -121,7 +121,7 @@ void CsMonitor::update_server_status(MXS_MONITORED_SERVER* srv)
 
 bool CsMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
-    if (MonitorWorkerSimple::configure(pParams))
+    if (!MonitorWorkerSimple::configure(pParams))
     {
         return false;
     }
