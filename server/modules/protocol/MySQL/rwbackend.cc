@@ -192,6 +192,14 @@ void RWBackend::process_reply(GWBUF* buffer)
                 // TODO: Don't clone the buffer
                 GWBUF* tmp = gwbuf_clone(buffer);
                 tmp = gwbuf_consume(tmp, mxs_mysql_get_packet_len(tmp));
+
+                // Consume repeating OK packets
+                while (mxs_mysql_more_results_after_ok(buffer) && have_next_packet(tmp))
+                {
+                    tmp = gwbuf_consume(tmp, mxs_mysql_get_packet_len(tmp));
+                    mxb_assert(tmp);
+                }
+
                 process_reply(tmp);
                 gwbuf_free(tmp);
                 return;
