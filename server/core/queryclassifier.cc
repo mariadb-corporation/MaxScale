@@ -148,8 +148,6 @@ uint32_t get_prepare_type(GWBUF* buffer)
         }
     }
 
-    mxb_assert((type & (QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_PREPARE_NAMED_STMT)) == 0);
-
     return type;
 }
 
