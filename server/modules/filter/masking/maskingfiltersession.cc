@@ -389,13 +389,15 @@ bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
         zHost = "";
     }
 
-    auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
+    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+    {
+        auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
             const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
 
             return pRule ? true : false;
         };
 
-    auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
+        auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
             const QC_FIELD_INFO* begin = function_info.fields;
             const QC_FIELD_INFO* end = begin + function_info.n_fields;
 
@@ -404,21 +406,33 @@ bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
             return i != end;
         };
 
-    const QC_FUNCTION_INFO* pInfos;
-    size_t nInfos;
+        const QC_FUNCTION_INFO* pInfos;
+        size_t nInfos;
 
-    qc_get_function_info(pPacket, &pInfos, &nInfos);
+        qc_get_function_info(pPacket, &pInfos, &nInfos);
 
-    const QC_FUNCTION_INFO* begin = pInfos;
-    const QC_FUNCTION_INFO* end = begin + nInfos;
+        const QC_FUNCTION_INFO* begin = pInfos;
+        const QC_FUNCTION_INFO* end = begin + nInfos;
 
-    auto i = std::find_if(begin, end, pred2);
+        auto i = std::find_if(begin, end, pred2);
 
-    if (i != end)
+        if (i != end)
+        {
+            std::stringstream ss;
+            ss << "The function " << i->name << " is used in conjunction with a field "
+               << "that should be masked for '" << zUser << "'@'" << zHost << "', access is denied.";
+
+            GWBUF* pResponse = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
+            set_response(pResponse);
+
+            rejected = true;
+        }
+    }
+    else
     {
         std::stringstream ss;
-        ss << "The function " << i->name << " is used in conjunction with a field "
-           << "that should be masked for '" << zUser << "'@'" << zHost << "', access is denied.";
+        ss << "The statement could not be fully parsed and will hence be "
+           << "rejected (masking filter).";
 
         GWBUF* pResponse = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
         set_response(pResponse);
