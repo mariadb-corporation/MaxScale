@@ -185,8 +185,8 @@ public:
     typedef Registry<MXS_SESSION> SessionsById;
     typedef std::vector<DCB*>     Zombies;
 
-    typedef std::unordered_map<uint64_t, void*>           LocalData;
-    typedef std::unordered_map<uint64_t, void (*)(void*)> DataDeleters;
+    typedef std::vector<void*>           LocalData;
+    typedef std::vector<void (*)(void*)> DataDeleters;
 
     /**
      * Initialize the routing worker mechanism.
@@ -475,8 +475,8 @@ public:
      */
     static uint64_t create_key()
     {
-        static uint64_t id_generator = 0;
-        return mxb::atomic::add(&id_generator, 1, mxb::atomic::RELAXED);
+        static std::atomic<uint64_t> id_generator {0};
+        return id_generator.fetch_add(1, std::memory_order_relaxed);
     }
 
     /**
@@ -487,6 +487,12 @@ public:
      */
     void set_data(uint64_t key, void* data, void (* callback)(void*))
     {
+        if (m_local_data.size() <= key)
+        {
+            m_local_data.resize(key + 1, nullptr);
+            m_data_deleters.resize(key + 1, nullptr);
+        }
+
         if (callback)
         {
             m_data_deleters[key] = callback;
@@ -502,10 +508,9 @@ public:
      *
      * @return Data previously stored
      */
-    void* get_data(uint64_t key)
+    void* get_data(uint64_t key) const
     {
-        auto it = m_local_data.find(key);
-        return it != m_local_data.end() ? it->second : NULL;
+        return key < m_local_data.size() ? m_local_data[key] : nullptr;
     }
 
     /**
@@ -517,19 +522,15 @@ public:
      */
     void delete_data(uint64_t key)
     {
-        auto data = m_local_data.find(key);
-
-        if (data != m_local_data.end())
+        if (key < m_local_data.size())
         {
-            auto deleter = m_data_deleters.find(key);
-
-            if (deleter != m_data_deleters.end())
+            if (auto deleter = m_data_deleters[key])
             {
-                deleter->second(data->second);
-                m_data_deleters.erase(deleter);
+                deleter(m_local_data[key]);
             }
 
-            m_local_data.erase(data);
+            m_data_deleters[key] = nullptr;
+            m_local_data[key] = nullptr;
         }
     }
 
@@ -766,7 +767,8 @@ private:
 
     T* get_local_value() const
     {
-        T* my_value = static_cast<T*>(mxs_rworker_get_data(m_handle));
+        auto worker = RoutingWorker::get_current();
+        T* my_value = static_cast<T*>(worker->get_data(m_handle));
 
         if (my_value == nullptr)
         {
@@ -775,7 +777,7 @@ private:
             my_value = new T(m_value);
             guard.unlock();
 
-            mxs_rworker_set_data(m_handle, my_value, destroy_value);
+            worker->set_data(m_handle, my_value, destroy_value);
         }
 
         mxb_assert(my_value);
