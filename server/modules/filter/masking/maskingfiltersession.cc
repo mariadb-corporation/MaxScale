@@ -31,6 +31,25 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
+namespace
+{
+
+GWBUF* create_error_response(const char* zMessage)
+{
+    return modutil_create_mysql_err_msg(1, 0, 1141, "HY000", zMessage);
+}
+
+GWBUF* create_parse_error_response()
+{
+    const char* zMessage =
+        "The statement could not be fully parsed and will hence be "
+        "rejected (masking filter).";
+
+    return create_error_response(zMessage);
+}
+
+}
+
 MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter)
     : maxscale::FilterSession(pSession)
     , m_filter(*pFilter)
@@ -48,6 +67,49 @@ MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession, const 
     return new MaskingFilterSession(pSession, pFilter);
 }
 
+void MaskingFilterSession::check_query(GWBUF* pPacket)
+{
+    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+    {
+        if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
+        {
+            GWBUF* pP = qc_get_preparable_stmt(pPacket);
+
+            if (pP)
+            {
+                check_query(pP);
+            }
+            else
+            {
+                // If pP is NULL, it indicates that we have a "prepare ps from @a". It must
+                // be rejected as we currently have no means for checking what columns are
+                // referred to.
+                const char* zMessage =
+                    "A statement prepared from a variable is rejected (masking filter).";
+
+                set_response(create_error_response(zMessage));
+                m_state = EXPECTING_NOTHING;
+            }
+        }
+        else
+        {
+            if (reject_if_function_used(pPacket))
+            {
+                m_state = EXPECTING_NOTHING;
+            }
+            else
+            {
+                m_state = EXPECTING_RESPONSE;
+            }
+        }
+    }
+    else
+    {
+        set_response(create_parse_error_response());
+        m_state = EXPECTING_NOTHING;
+    }
+ }
+
 int MaskingFilterSession::routeQuery(GWBUF* pPacket)
 {
     ComRequest request(pPacket);
@@ -58,13 +120,39 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_QUERY:
         m_res.reset(request.command(), m_filter.rules());
 
-        if (m_filter.config().prevent_function_usage() && reject_if_function_used(pPacket))
+        if (m_filter.config().prevent_function_usage())
         {
-            m_state = EXPECTING_NOTHING;
+            check_query(pPacket);
         }
         else
         {
             m_state = EXPECTING_RESPONSE;
+        }
+        break;
+
+    case MXS_COM_STMT_PREPARE:
+        if (m_filter.config().prevent_function_usage())
+        {
+            if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+            {
+                if (reject_if_function_used(pPacket))
+                {
+                    m_state = EXPECTING_NOTHING;
+                }
+                else
+                {
+                    m_state = IGNORING_RESPONSE;
+                }
+            }
+            else
+            {
+                set_response(create_parse_error_response());
+                m_state = EXPECTING_NOTHING;
+            }
+        }
+        else
+        {
+            m_state = IGNORING_RESPONSE;
         }
         break;
 
@@ -389,53 +477,38 @@ bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
         zHost = "";
     }
 
-    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
-    {
-        auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-            const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+    auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
+        const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
 
-            return pRule ? true : false;
-        };
+        return pRule ? true : false;
+    };
 
-        auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
-            const QC_FIELD_INFO* begin = function_info.fields;
-            const QC_FIELD_INFO* end = begin + function_info.n_fields;
+    auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
+        const QC_FIELD_INFO* begin = function_info.fields;
+        const QC_FIELD_INFO* end = begin + function_info.n_fields;
 
-            auto i = std::find_if(begin, end, pred1);
+        auto i = std::find_if(begin, end, pred1);
 
-            return i != end;
-        };
+        return i != end;
+    };
 
-        const QC_FUNCTION_INFO* pInfos;
-        size_t nInfos;
+    const QC_FUNCTION_INFO* pInfos;
+    size_t nInfos;
 
-        qc_get_function_info(pPacket, &pInfos, &nInfos);
+    qc_get_function_info(pPacket, &pInfos, &nInfos);
 
-        const QC_FUNCTION_INFO* begin = pInfos;
-        const QC_FUNCTION_INFO* end = begin + nInfos;
+    const QC_FUNCTION_INFO* begin = pInfos;
+    const QC_FUNCTION_INFO* end = begin + nInfos;
 
-        auto i = std::find_if(begin, end, pred2);
+    auto i = std::find_if(begin, end, pred2);
 
-        if (i != end)
-        {
-            std::stringstream ss;
-            ss << "The function " << i->name << " is used in conjunction with a field "
-               << "that should be masked for '" << zUser << "'@'" << zHost << "', access is denied.";
-
-            GWBUF* pResponse = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
-            set_response(pResponse);
-
-            rejected = true;
-        }
-    }
-    else
+    if (i != end)
     {
         std::stringstream ss;
-        ss << "The statement could not be fully parsed and will hence be "
-           << "rejected (masking filter).";
+        ss << "The function " << i->name << " is used in conjunction with a field "
+           << "that should be masked for '" << zUser << "'@'" << zHost << "', access is denied.";
 
-        GWBUF* pResponse = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
-        set_response(pResponse);
+        set_response(create_error_response(ss.str().c_str()));
 
         rejected = true;
     }

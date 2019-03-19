@@ -53,6 +53,8 @@ private:
         SUPPRESSING_RESPONSE
     };
 
+    void check_query(GWBUF* pPacket);
+
     void handle_response(GWBUF* pPacket);
     void handle_field(GWBUF* pPacket);
     void handle_row(GWBUF* pPacket);
