@@ -1024,7 +1024,10 @@ uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_
 
     while ((client_dcb = listener->accept_one_dcb()))
     {
-        listener->m_proto_func.accept(client_dcb);
+        auto worker = mxs::RoutingWorker::pick_worker();
+        worker->execute([listener, client_dcb]() {
+                            listener->m_proto_func.accept(client_dcb);
+                        }, mxs::RoutingWorker::EXECUTE_AUTO);
     }
 
     return 1;
