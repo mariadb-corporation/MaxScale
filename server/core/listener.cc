@@ -773,39 +773,27 @@ static int create_unix_socket(const char* path)
  *
  * @return New socket or -1 on error
  */
-int start_listening(const char* config)
+int start_listening(const std::string& host, uint16_t port)
 {
-    char host[strlen(config) + 1];
-    strcpy(host, config);
-    char* port_str = strrchr(host, '|');
-    uint16_t port = 0;
-
-    if (port_str)
-    {
-        *port_str++ = 0;
-        port = atoi(port_str);
-    }
-
-    mxb_assert(strchr(host, '/') || port > 0);
+    mxb_assert(host[0] == '/' || port != 0);
 
     int listener_socket = -1;
 
-    if (strchr(host, '/'))
+    if (host[0] == '/')
     {
-        listener_socket = create_unix_socket(host);
+        listener_socket = create_unix_socket(host.c_str());
     }
     else if (port > 0)
     {
         struct sockaddr_storage server_address = {};
-        listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, host, port);
+        listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, host.c_str(), port);
 
-        if (listener_socket == -1 && strcmp(host, "::") == 0)
+        if (listener_socket == -1 && host == "::")
         {
             /** Attempt to bind to the IPv4 if the default IPv6 one is used */
             MXS_WARNING("Failed to bind on default IPv6 host '::', attempting "
                         "to bind on IPv4 version '0.0.0.0'");
-            strcpy(host, "0.0.0.0");
-            listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, host, port);
+            listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, "0.0.0.0", port);
         }
     }
 
@@ -820,7 +808,8 @@ int start_listening(const char* config)
          */
         if (listen(listener_socket, INT_MAX) != 0)
         {
-            MXS_ERROR("Failed to start listening on [%s]:%u: %d, %s", host, port, errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to start listening on [%s]:%u: %d, %s", host.c_str(), port, errno,
+                      mxs_strerror(errno));
             close(listener_socket);
             return -1;
         }
@@ -951,10 +940,10 @@ DCB* Listener::accept_one_dcb()
     return client_dcb;
 }
 
-bool Listener::listen_shared(std::string config_bind)
+bool Listener::listen_shared()
 {
     bool rval = false;
-    int fd = start_listening(config_bind.data());
+    int fd = start_listening(m_address.c_str(), m_port);
 
     if (fd != -1)
     {
@@ -971,7 +960,7 @@ bool Listener::listen_shared(std::string config_bind)
     }
     else
     {
-        MXS_ERROR("[%s] Failed to listen on %s", m_service->name(), config_bind.c_str());
+        MXS_ERROR("[%s] Failed to listen on [%s]:%u", m_service->name(), m_address.c_str(), m_port);
     }
 
     return rval;
@@ -1002,14 +991,12 @@ bool Listener::listen()
     }
 
     bool rval = false;
-    std::stringstream ss;
-    ss << m_address << "|" << m_port;
 
-    // TODO: Detect the need for SO_REUSEPORT here
-    rval = listen_shared(ss.str());
+    rval = listen_shared();
 
     if (rval)
     {
+        m_state = STARTED;
         MXS_NOTICE("Listening for connections at [%s]:%u", m_address.c_str(), m_port);
     }
 

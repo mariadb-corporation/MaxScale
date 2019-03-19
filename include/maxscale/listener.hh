@@ -238,13 +238,10 @@ private:
     /**
      * Listen on a file descriptor shared between all workers
      *
-     * @param config_bind The bind configuration consisting of an address and a port separated by the pipe
-     *                    character. For UNIX domain sockets, the address is the socket path and the port
-     *                    is always zero.
      *
      * @return True if the listening was started successfully
      */
-    bool listen_shared(std::string config_bind);
+    bool listen_shared();
 
     /**
      * Accept a single client connection
