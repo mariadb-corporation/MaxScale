@@ -203,7 +203,7 @@ private:
     MXS_PROTOCOL      m_proto_func;     /**< Preloaded protocol functions */
     MXS_AUTHENTICATOR m_auth_func;      /**< Preloaded authenticator functions */
 
-    int m_fd;     /**< File descriptor the listener listens on */
+    mxs::rworker_local<int> m_fd {-1};      /**< File descriptor the listener listens on */
 
     /** A shared pointer to the listener itself that is passed as the argument to
      * the protocol's accept function. This allows client connections to live
@@ -238,10 +238,14 @@ private:
     /**
      * Listen on a file descriptor shared between all workers
      *
-     *
      * @return True if the listening was started successfully
      */
     bool listen_shared();
+
+    /**
+     * Close all opened file descriptors for this listener
+     */
+    void close_all_fds();
 
     /**
      * Accept a single client connection
@@ -253,11 +257,11 @@ private:
     /**
      * The file descriptor for accepting new connections
      *
-     * When SO_REUSEPORT is in use, each worker has a separate file descriptor that they accept on.
+     * @return The worker-local file descriptor
      */
     int fd() const
     {
-        return m_fd;
+        return *m_fd;
     }
 
     // Handler for EPOLL_IN events

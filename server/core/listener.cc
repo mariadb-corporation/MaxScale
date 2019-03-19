@@ -128,14 +128,27 @@ SListener Listener::create(SERVICE* service,
     return listener;
 }
 
+void Listener::close_all_fds()
+{
+    // Shared fds all have the same value. Unique fds each have a unique value. By sorting the values,
+    // removing duplicates and skipping negative values, both cases work and use the same code.
+    auto values = m_fd.values();
+    std::sort(values.begin(), values.end());
+    auto end = std::unique(values.begin(), values.end());
+    auto start = std::upper_bound(values.begin(), end, -1);
+    std::for_each(start, end, close);
+
+    // Make sure we don't accidentally use a closed fd
+    m_fd.assign(-1);
+}
+
 void Listener::destroy(const SListener& listener)
 {
     // Remove the listener from all workers. This makes sure that there's no concurrent access while we're
     // closing things up.
     listener->stop();
 
-    close(listener->m_fd);
-    listener->m_fd = -1;
+    listener->close_all_fds();
     listener->m_state = DESTROYED;
 
     std::lock_guard<std::mutex> guard(listener_lock);
@@ -949,7 +962,8 @@ bool Listener::listen_shared()
     {
         if (mxs::RoutingWorker::add_shared_fd(fd, EPOLLIN, this))
         {
-            m_fd = fd;
+            // All workers share the same fd, assign it here
+            m_fd.assign(fd);
             rval = true;
             m_state = STARTED;
         }
