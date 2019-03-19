@@ -1012,25 +1012,53 @@ static MySqlServerInfo* get_server_info(const MYSQL_MONITOR* handle, const  MXS_
 
 static bool set_replication_credentials(MYSQL_MONITOR *handle, const MXS_CONFIG_PARAMETER* params)
 {
-    bool rval = false;
-    const char* repl_user = config_get_string(params, CN_REPLICATION_USER);
-    const char* repl_pw = config_get_string(params, CN_REPLICATION_PASSWORD);
+    MXS_CONFIG_PARAMETER* mutable_params = const_cast<MXS_CONFIG_PARAMETER*>(params);
+    bool repl_user_exists = (config_get_param(mutable_params, CN_REPLICATION_USER) != NULL);
+    bool repl_pw_exists = (config_get_param(mutable_params, CN_REPLICATION_PASSWORD) != NULL);
 
-    if (!*repl_user && !*repl_pw)
+    // Because runtime modifications are performed 1-by-1, we must be less strict here and allow
+    // partial setups. Password is not required even if username is set. This is contrary to the
+    // general monitor username & pw, which are both required. Even this assumes that the username
+    // is given first in a "maxadmin alter monitor"-command.
+    const char* repl_user = NULL;
+    const char* repl_pw = NULL;
+    if (repl_user_exists)
     {
-        // No replication credentials defined, use monitor credentials
-        repl_user = handle->monitor->user;
-        repl_pw = handle->monitor->password;
+        repl_user = config_get_string(params, CN_REPLICATION_USER);
+        if (repl_pw_exists)
+        {
+            // Ok, both set.
+            repl_pw = config_get_string(params, CN_REPLICATION_PASSWORD);
+        }
+        else
+        {
+            // Ok. This needs to be accepted so that runtime modifications work. Hopefully the password is set
+            // later on.
+            repl_pw = "";
+        }
+    }
+    else
+    {
+        if (repl_pw_exists)
+        {
+            MXS_ERROR("'%s' is defined while '%s' is not. If performing an \"alter monitor\"-command, "
+                      "give '%s' first.", CN_REPLICATION_PASSWORD, CN_REPLICATION_USER, CN_REPLICATION_USER);
+            return false;
+        }
+        else
+        {
+            // Ok, neither is set. Use monitor credentials.
+            repl_user = handle->monitor->user;
+            repl_pw = handle->monitor->password;
+        }
     }
 
-    if (*repl_user && *repl_pw)
-    {
-        handle->replication_user = MXS_STRDUP_A(repl_user);
-        handle->replication_password = decrypt_password(repl_pw);
-        rval = true;
-    }
+    MXS_FREE(handle->replication_user);
+    MXS_FREE(handle->replication_password);
+    handle->replication_user = MXS_STRDUP_A(repl_user);
+    handle->replication_password = decrypt_password(repl_pw);
 
-    return rval;
+    return true;
 }
 
 /**
@@ -1070,8 +1098,11 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     {
         handle->shutdown = 0;
         MXS_FREE(handle->script);
+        handle->script = NULL;
         MXS_FREE(handle->replication_user);
+        handle->replication_user = NULL;
         MXS_FREE(handle->replication_password);
+        handle->replication_password = NULL;
         MXS_FREE(handle->excluded_servers);
         handle->excluded_servers = NULL;
         handle->n_excluded = 0;
@@ -1101,6 +1132,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->external_master_host[0] = '\0';
         handle->external_master_port = PORT_UNKNOWN;
         handle->monitor = monitor;
+        handle->replication_user = NULL;
+        handle->replication_password = NULL;
     }
 
     /** This should always be reset to NULL */
@@ -1142,7 +1175,6 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 
     if (!set_replication_credentials(handle, params))
     {
-        MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
         error = true;
     }
 
