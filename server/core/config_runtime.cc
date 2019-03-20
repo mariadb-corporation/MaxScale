@@ -2426,56 +2426,36 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
 bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 {
     bool success = false;
-
     std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
     mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json)
         && object_to_server_relations(monitor->m_name, old_json.get(), new_json))
     {
-        success = true;
-        bool changed = false;
-        json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
-        json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
+        bool restart = (monitor->state() != MONITOR_STATE_STOPPED);
+        MonitorManager::stop_monitor(monitor);
 
-        mxb_assert(old_parameters);
+        // Take the old parameters and combine it with the new parameters. Keep the old ones around in case we
+        // need to roll back the configuration change.
+        auto old_params = monitor->parameters;
+        auto new_params = old_params;
+        new_params.set_multiple(extract_parameters(new_json));
 
-        if (parameters)
+        if (monitor->configure(&new_params))
         {
-            bool restart = (monitor->state() != MONITOR_STATE_STOPPED);
-            MonitorManager::stop_monitor(monitor);
-            const char* key;
-            json_t* value;
+            MonitorManager::monitor_serialize(monitor);
+            success = true;
+        }
+        else
+        {
+            // Something went wrong, restore the old parameters
+            MXB_AT_DEBUG(bool check = ) monitor->configure(&old_params);
+            mxb_assert(check);
+        }
 
-            json_object_foreach(parameters, key, value)
-            {
-                json_t* new_val = json_object_get(parameters, key);
-                json_t* old_val = json_object_get(old_parameters, key);
-
-                if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
-                {
-                    /** No change in values */
-                }
-                else if (do_alter_monitor(monitor, key, mxs::json_to_string(value).c_str()))
-                {
-                    changed = true;
-                }
-                else
-                {
-                    success = false;
-                    break;
-                }
-            }
-
-            if (success && changed)
-            {
-                MonitorManager::monitor_serialize(monitor);
-            }
-
-            if (restart)
-            {
-                MonitorManager::start_monitor(monitor);
-            }
+        if (restart)
+        {
+            MonitorManager::start_monitor(monitor);
         }
     }
 
