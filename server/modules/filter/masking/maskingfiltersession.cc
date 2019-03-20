@@ -67,8 +67,25 @@ MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession, const 
     return new MaskingFilterSession(pSession, pFilter);
 }
 
-void MaskingFilterSession::check_query(GWBUF* pPacket)
+bool MaskingFilterSession::check_query(GWBUF* pPacket)
 {
+    bool rv = true;
+
+    if (m_filter.config().prevent_function_usage())
+    {
+        if (reject_if_function_used(pPacket))
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
+{
+    bool rv = false;
+
     if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
     {
         if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
@@ -77,7 +94,7 @@ void MaskingFilterSession::check_query(GWBUF* pPacket)
 
             if (pP)
             {
-                check_query(pP);
+                rv = check_textual_query(pP);
             }
             else
             {
@@ -88,27 +105,36 @@ void MaskingFilterSession::check_query(GWBUF* pPacket)
                     "A statement prepared from a variable is rejected (masking filter).";
 
                 set_response(create_error_response(zMessage));
-                m_state = EXPECTING_NOTHING;
             }
         }
         else
         {
-            if (reject_if_function_used(pPacket))
-            {
-                m_state = EXPECTING_NOTHING;
-            }
-            else
-            {
-                m_state = EXPECTING_RESPONSE;
-            }
+            rv = check_query(pPacket);
         }
     }
     else
     {
         set_response(create_parse_error_response());
-        m_state = EXPECTING_NOTHING;
     }
- }
+
+    return rv;
+}
+
+bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+    {
+        rv = check_query(pPacket);
+    }
+    else
+    {
+        set_response(create_parse_error_response());
+    }
+
+    return rv;
+}
 
 int MaskingFilterSession::routeQuery(GWBUF* pPacket)
 {
@@ -120,9 +146,16 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_QUERY:
         m_res.reset(request.command(), m_filter.rules());
 
-        if (m_filter.config().prevent_function_usage())
+        if (m_filter.config().is_parsing_needed())
         {
-            check_query(pPacket);
+            if (check_textual_query(pPacket))
+            {
+                m_state = EXPECTING_RESPONSE;
+            }
+            else
+            {
+                m_state = EXPECTING_NOTHING;
+            }
         }
         else
         {
@@ -131,22 +164,14 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_STMT_PREPARE:
-        if (m_filter.config().prevent_function_usage())
+        if (m_filter.config().is_parsing_needed())
         {
-            if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+            if (check_binary_query(pPacket))
             {
-                if (reject_if_function_used(pPacket))
-                {
-                    m_state = EXPECTING_NOTHING;
-                }
-                else
-                {
-                    m_state = IGNORING_RESPONSE;
-                }
+                m_state = IGNORING_RESPONSE;
             }
             else
             {
-                set_response(create_parse_error_response());
                 m_state = EXPECTING_NOTHING;
             }
         }

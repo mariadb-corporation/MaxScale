@@ -53,7 +53,9 @@ private:
         SUPPRESSING_RESPONSE
     };
 
-    void check_query(GWBUF* pPacket);
+    bool check_query(GWBUF* pPacket);
+    bool check_textual_query(GWBUF* pPacket);
+    bool check_binary_query(GWBUF* pPacket);
 
     void handle_response(GWBUF* pPacket);
     void handle_field(GWBUF* pPacket);
