@@ -90,13 +90,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT,
         &MaskingFilter::s_object,
-        NULL,                                                                               /* Process init.
-                                                                                             * */
-        NULL,                                                                               /* Process finish.
-                                                                                             * */
-        NULL,                                                                               /* Thread init. */
-        NULL,                                                                               /* Thread finish.
-                                                                                             * */
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
         {
             {
                 Config::rules_name,
@@ -122,6 +119,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 Config::prevent_function_usage_name,
                 MXS_MODULE_PARAM_BOOL,
                 Config::prevent_function_usage_default,
+                MXS_MODULE_OPT_NONE,
+            },
+            {
+                Config::check_user_variables_name,
+                MXS_MODULE_PARAM_BOOL,
+                Config::check_user_variables_default,
                 MXS_MODULE_OPT_NONE,
             },
             {MXS_END_MODULE_PARAMS}

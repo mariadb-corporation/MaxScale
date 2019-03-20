@@ -27,6 +27,7 @@ const char config_value_never[] = "never";
 const char config_value_always[] = "always";
 
 const char config_name_prevent_function_usage[] = "prevent_function_usage";
+const char config_check_user_variables[] = "check_user_variables";
 
 const char config_value_true[] = "true";
 }
@@ -85,6 +86,14 @@ const char* MaskingFilterConfig::prevent_function_usage_name = config_name_preve
 const char* MaskingFilterConfig::prevent_function_usage_default = config_value_true;
 
 /*
+ * PARAM check_user_variables
+ */
+const char* MaskingFilterConfig::check_user_variables_name = config_check_user_variables;
+
+// static
+const char* MaskingFilterConfig::check_user_variables_default = config_value_true;
+
+/*
  * MaskingFilterConfig
  */
 
@@ -114,4 +123,10 @@ MaskingFilterConfig::warn_type_mismatch_t MaskingFilterConfig::get_warn_type_mis
 bool MaskingFilterConfig::get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams)
 {
     return config_get_bool(pParams, prevent_function_usage_name);
+}
+
+// static
+bool MaskingFilterConfig::get_check_user_variables(const MXS_CONFIG_PARAMETER* pParams)
+{
+    return config_get_bool(pParams, check_user_variables_name);
 }
