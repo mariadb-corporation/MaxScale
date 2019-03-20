@@ -1299,7 +1299,7 @@ static void createMonitor(DCB* dcb, const char* name, const char* module)
     {
         dcb_printf(dcb, "Monitor '%s' already exists\n", name);
     }
-    else if (runtime_create_monitor(name, module))
+    else if (runtime_create_monitor(name, module, nullptr))
     {
         dcb_printf(dcb, "Created monitor '%s'\n", name);
     }

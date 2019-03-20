@@ -1219,7 +1219,7 @@ bool runtime_destroy_listener(Service* service, const char* name)
     return rval;
 }
 
-bool runtime_create_monitor(const char* name, const char* module)
+bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
@@ -1235,13 +1235,18 @@ bool runtime_create_monitor(const char* name, const char* module)
         }
         else if (config_is_valid_name(name, &reason))
         {
-            MXS_CONFIG_PARAMETER params;
+            MXS_CONFIG_PARAMETER final_params;
             bool ok;
-            tie(ok, params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
+            tie(ok, final_params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
 
             if (ok)
             {
-                if ((monitor = MonitorManager::create_monitor(name, module, &params)) == NULL)
+                if (params)
+                {
+                    final_params.set_multiple(*params);
+                }
+
+                if ((monitor = MonitorManager::create_monitor(name, module, &final_params)) == NULL)
                 {
                     config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
                 }
@@ -2254,6 +2259,24 @@ static bool validate_monitor_json(json_t* json)
     return rval;
 }
 
+MXS_CONFIG_PARAMETER extract_parameters(json_t* json)
+{
+    MXS_CONFIG_PARAMETER params;
+
+    if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    {
+        const char* key;
+        json_t* value;
+
+        json_object_foreach(parameters, key, value)
+        {
+            params.set(key, mxs::json_to_string(value));
+        }
+    }
+
+    return params;
+}
+
 Monitor* runtime_create_monitor_from_json(json_t* json)
 {
     Monitor* rval = NULL;
@@ -2263,21 +2286,13 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
+        auto params = extract_parameters(json);
 
-        if (runtime_create_monitor(name, module))
+        if (runtime_create_monitor(name, module, &params))
         {
             rval = MonitorManager::find_monitor(name);
             mxb_assert(rval);
-
-            if (!runtime_alter_monitor_from_json(rval, json))
-            {
-                runtime_destroy_monitor(rval);
-                rval = NULL;
-            }
-            else
-            {
-                MonitorManager::start_monitor(rval);
-            }
+            MonitorManager::start_monitor(rval);
         }
     }
 

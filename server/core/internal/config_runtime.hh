@@ -217,11 +217,13 @@ bool runtime_destroy_listener(Service* service, const char* name);
 /**
  * @brief Create a new monitor
  *
- * @param name Name of the monitor
+ * @param name   Name of the monitor
  * @param module Monitor module
+ * @param params Parameters for the monitor
+ *
  * @return True if new monitor was created and persisted
  */
-bool runtime_create_monitor(const char* name, const char* module);
+bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PARAMETER* params);
 
 /**
  * @brief Create a new filter
