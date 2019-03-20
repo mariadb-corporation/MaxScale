@@ -71,9 +71,22 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
 {
     bool rv = true;
 
+    const char* zUser = session_get_user(m_pSession);
+    const char* zHost = session_get_remote(m_pSession);
+
+    if (!zUser)
+    {
+        zUser = "";
+    }
+
+    if (!zHost)
+    {
+        zHost = "";
+    }
+
     if (m_filter.config().prevent_function_usage())
     {
-        if (reject_if_function_used(pPacket))
+        if (is_function_used(pPacket, zUser, zHost))
         {
             rv = false;
         }
@@ -483,24 +496,11 @@ void MaskingFilterSession::mask_values(ComPacket& response)
     }
 }
 
-bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
+bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    bool rejected = false;
+    bool is_used = false;
 
     SMaskingRules sRules = m_filter.rules();
-
-    const char* zUser = session_get_user(m_pSession);
-    const char* zHost = session_get_remote(m_pSession);
-
-    if (!zUser)
-    {
-        zUser = "";
-    }
-
-    if (!zHost)
-    {
-        zHost = "";
-    }
 
     auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
         const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
@@ -535,8 +535,8 @@ bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
 
         set_response(create_error_response(ss.str().c_str()));
 
-        rejected = true;
+        is_used = true;
     }
 
-    return rejected;
+    return is_used;
 }
