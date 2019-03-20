@@ -742,6 +742,7 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
  */
 static GWBUF* dcb_basic_read_SSL(DCB* dcb, int* nsingleread)
 {
+    const size_t MXS_SO_RCVBUF_SIZE = (128 * 1024);
     unsigned char temp_buffer[MXS_SO_RCVBUF_SIZE];
     GWBUF* buffer = NULL;
 

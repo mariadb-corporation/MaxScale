@@ -22,21 +22,6 @@
 
 MXS_BEGIN_DECLS
 
-
-/**
- * MXS_SO_RCVBUF
- *
- * The size of the network input buffer.
- */
-#define MXS_SO_RCVBUF_SIZE (128 * 1024)
-
-/**
- * MXS_SO_SNDBUF
- *
- * The size of the network output buffer.
- */
-#define MXS_SO_SNDBUF_SIZE (128 * 1024)
-
 /**
  * MXS_MAX_THREADS
  *

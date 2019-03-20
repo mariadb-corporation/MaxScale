@@ -945,13 +945,9 @@ void utils_end()
 
 bool configure_network_socket(int so, int type)
 {
-    int sndbufsize = MXS_SO_SNDBUF_SIZE;
-    int rcvbufsize = MXS_SO_RCVBUF_SIZE;
     int one = 1;
 
-    if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &sndbufsize, sizeof(sndbufsize)) != 0
-        || setsockopt(so, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(rcvbufsize)) != 0
-        || (type != AF_UNIX && setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0))
+    if (type != AF_UNIX && setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
         MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
         mxb_assert(!true);
