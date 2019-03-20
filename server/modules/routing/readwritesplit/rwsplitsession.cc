@@ -545,12 +545,14 @@ void RWSplitSession::close_stale_connections()
     {
         if (backend->in_use())
         {
-            if (!backend->can_connect())
+            auto server = backend->server();
+
+            if (!server->is_usable())
             {
                 MXS_INFO("Discarding connection to '%s': Server is in maintenance", backend->name());
                 backend->close();
             }
-            else if (backend->server()->rank() != current_rank)
+            else if (server->rank() != current_rank)
             {
                 MXS_INFO("Discarding connection to '%s': Server has rank %ld and current rank is %ld",
                          backend->name(), backend->server()->rank(), current_rank);
