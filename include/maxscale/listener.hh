@@ -41,6 +41,13 @@ public:
 
     ~Listener();
 
+    enum class Type
+    {
+        UNIX_SOCKET,    // UNIX domain socket shared between workers
+        SHARED_TCP,     // TCP listening socket shared between workers
+        UNIQUE_TCP      // Unique TCP listening socket for each worker
+    };
+
     /**
      * Create a new listener
      *
@@ -173,6 +180,11 @@ public:
      */
     void print_users(DCB* dcb);
 
+    Type type() const
+    {
+        return m_type;
+    }
+
     // Functions that are temporarily public
     bool          create_listener_config(const char* filename);
     struct users* users() const;
@@ -202,6 +214,8 @@ private:
     std::atomic<bool> m_active;         /**< True if the port has not been deleted */
     MXS_PROTOCOL      m_proto_func;     /**< Preloaded protocol functions */
     MXS_AUTHENTICATOR m_auth_func;      /**< Preloaded authenticator functions */
+
+    Type m_type;    /**< The type of the listener */
 
     mxs::rworker_local<int> m_fd {-1};      /**< File descriptor the listener listens on */
 
@@ -241,6 +255,13 @@ private:
      * @return True if the listening was started successfully
      */
     bool listen_shared();
+
+    /**
+     * Listen with a unique file descriptor for each worker
+     *
+     * @return True if the listening was started successfully
+     */
+    bool listen_unique();
 
     /**
      * Close all opened file descriptors for this listener
