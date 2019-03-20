@@ -4087,7 +4087,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
             address = "";
         }
 
-        if (auto l = service_find_listener(service, socket, address, port))
+        if (auto l = listener_find_by_config(socket, address, port))
         {
             string socket_type = socket_defined ? "socket" : "port";
             string socket_definition = socket_defined ? socket : obj->m_parameters.get_string(CN_PORT);

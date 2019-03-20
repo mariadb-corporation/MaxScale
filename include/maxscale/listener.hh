@@ -319,6 +319,19 @@ SListener listener_find(const std::string& name);
  */
 std::vector<SListener> listener_find_by_service(const SERVICE* service);
 
+/**
+ * Find listener by configuration
+ *
+ * @param socket  Optional path to a socket file
+ * @param address Address where the listener listens
+ * @param port    The port on which the listener listens
+ *
+ * @return The matching listener if one was found
+ */
+SListener listener_find_by_config(const std::string& socket,
+                                  const std::string& address,
+                                  unsigned short port);
+
 int  listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
 void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& cert,
                                const std::string& key, const std::string& ca_cert);
