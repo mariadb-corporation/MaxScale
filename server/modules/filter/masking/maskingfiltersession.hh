@@ -66,6 +66,7 @@ private:
     void mask_values(ComPacket& response);
 
     bool is_function_used(GWBUF* pPacket, const char* zUser, const char* zHost);
+    bool is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost);
 
 private:
     typedef std::shared_ptr<MaskingRules> SMaskingRules;

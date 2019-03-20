@@ -106,6 +106,10 @@ void run(TestConnections& test)
     // This should NOT succeed as a function is used with a masked column
     // in a binary prepared statement.
     test_one_ps(test, "SELECT LENGTH(a), b FROM masking_auto_firewall", Expect::FAILURE);
+
+    // This should NOT succeed as a masked column is used in a statement
+    // defining a variable.
+    test_one(test, "set @a = (SELECT a, b FROM masking_auto_firewall)", Expect::FAILURE);
 }
 
 }

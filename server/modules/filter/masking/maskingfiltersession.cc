@@ -69,8 +69,6 @@ MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession, const 
 
 bool MaskingFilterSession::check_query(GWBUF* pPacket)
 {
-    bool rv = true;
-
     const char* zUser = session_get_user(m_pSession);
     const char* zHost = session_get_remote(m_pSession);
 
@@ -84,9 +82,19 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
         zHost = "";
     }
 
-    if (m_filter.config().prevent_function_usage())
+    bool rv = true;
+
+    if (rv && m_filter.config().prevent_function_usage())
     {
         if (is_function_used(pPacket, zUser, zHost))
+        {
+            rv = false;
+        }
+    }
+
+    if (rv && m_filter.config().check_user_variables())
+    {
+        if (is_variable_defined(pPacket, zUser, zHost))
         {
             rv = false;
         }
@@ -539,4 +547,45 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
     }
 
     return is_used;
+}
+
+bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost)
+{
+    if (!qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
+    {
+        return false;
+    }
+
+    bool is_defined = false;
+
+    SMaskingRules sRules = m_filter.rules();
+
+    auto pred = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
+        const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+
+        return pRule ? true : false;
+    };
+
+    const QC_FIELD_INFO* pInfos;
+    size_t nInfos;
+
+    qc_get_field_info(pPacket, &pInfos, &nInfos);
+
+    const QC_FIELD_INFO* begin = pInfos;
+    const QC_FIELD_INFO* end = begin + nInfos;
+
+    auto i = std::find_if(begin, end, pred);
+
+    if (i != end)
+    {
+        std::stringstream ss;
+        ss << "The field " << i->column << " that should be masked for '" << zUser << "'@'" << zHost
+           << "' is used when defining a variable, access is denied.";
+
+        set_response(create_error_response(ss.str().c_str()));
+
+        is_defined = true;
+    }
+
+    return is_defined;
 }
