@@ -17,6 +17,11 @@
 
 class ExampleFilter;
 
+/*
+ * Defines session-specific data for this filter. An object of this class is created when a client connects
+ * and deleted on disconnect. The object is only accessed from one thread because sessions are locked to
+ * a thread when created.
+ */
 class ExampleFilterSession : public maxscale::FilterSession
 {
     // Prevent copy-constructor and assignment operator usage
@@ -26,19 +31,48 @@ class ExampleFilterSession : public maxscale::FilterSession
 public:
     ~ExampleFilterSession();
 
-    // Called when a client session has been closed
+    // Called when a client session has been closed. Destructor will be called right after.
     void close();
 
-    // Create a new filter session
-    static ExampleFilterSession* create(MXS_SESSION* pSession, const ExampleFilter* pFilter);
+    /**
+     * Called by ExampleFilter::newSession() to create the session.
+     *
+     * @param pSession pSession The generic MaxScale session object
+     * @param pFilter The shared filter object
+     * @return A new session or NULL on failure
+     */
+    static ExampleFilterSession* create(MXS_SESSION* pSession, ExampleFilter& pFilter);
 
-    // Handle a query from the client
+    /**
+     * Handle a query from the client. This is called when the client sends a query and the query has not
+     * been blocked by any previous component in the query processing chain. The filter should do its own
+     * processing and then send the query to the next component. If the query comes in multiple packets,
+     * this is called for each packet.
+     *
+     * @param pPacket Packet containing the query, or at least a part of it
+     * @return 0 on success. This typically depends on the later stages of the query processing chain.
+     */
     int routeQuery(GWBUF* pPacket);
 
-    // Handle a reply from server
+
+    /**
+     * Handle a reply from server. The reply typically contains a resultset or a response to a command.
+     * The filter should do its own processing and then send the query to the next component.
+     * If the reply comes in multiple packets, this is called for each packet. The processing chain for
+     * replies is the same as for queries, just walked in the opposite direction.
+     *
+     * @param pPacket Packet containing results
+     * @return 0 on success. This typically depends on the later stages of the reply processing chain.
+     */
     int clientReply(GWBUF* pPacket);
 
 private:
     // Used in the create function
-    ExampleFilterSession(MXS_SESSION* pSession);
+    ExampleFilterSession(MXS_SESSION* pSession, ExampleFilter& filter);
+
+    ExampleFilter& m_filter;   /**< Shared filter data */
+
+    uint64_t m_session_id {0}; /**< Session id */
+    int      m_queries {0};    /**< How many queries has this session seen */
+    int      m_replies {0};    /**< How many replies has this session seen */
 };
