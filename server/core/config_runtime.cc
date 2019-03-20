@@ -108,8 +108,8 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
  * @return Whether loading succeeded and the list of default parameters
  */
 static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
-                                                            const char* module_type,
-                                                            const char* object_type)
+                                                           const char* module_type,
+                                                           const char* object_type)
 {
     bool rval;
     MXS_CONFIG_PARAMETER params;
@@ -306,7 +306,7 @@ bool runtime_create_server(const char* name,
                            const char* port,
                            const char* protocol,
                            const char* authenticator,
-                           bool        external)
+                           bool external)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
@@ -698,7 +698,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
     {
         // Configure failed, restore original configs. This should not fail.
         // TODO: add a flag to monitor which prevents startup if config is wrong.
-        MXB_AT_DEBUG(bool check =) monitor->configure(&originals);
+        MXB_AT_DEBUG(bool check = ) monitor->configure(&originals);
         mxb_assert(check);
     }
     return success;

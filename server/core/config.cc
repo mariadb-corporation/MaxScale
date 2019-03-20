@@ -1932,14 +1932,14 @@ uint64_t MXS_CONFIG_PARAMETER::get_size(const std::string& key) const
     return intval;
 }
 
-std::chrono::milliseconds
-MXS_CONFIG_PARAMETER::get_duration(const std::string& key,
-                                   mxs::config::DurationInterpretation interpretation) const
+std::chrono::milliseconds MXS_CONFIG_PARAMETER::get_duration(const std::string& key,
+                                                             mxs::config::DurationInterpretation interpretation)
+const
 {
     string value = get_string(key);
-    std::chrono::milliseconds duration { 0 };
+    std::chrono::milliseconds duration {0};
     MXB_AT_DEBUG(bool rval = ) get_suffixed_duration(value.c_str(), interpretation, &duration);
-    mxb_assert(rval); // When this function is called, the validity of the value should have been checked.
+    mxb_assert(rval);   // When this function is called, the validity of the value should have been checked.
     return duration;
 }
 
@@ -2015,9 +2015,8 @@ char* MXS_CONFIG_PARAMETER::get_c_str_copy(const string& key) const
     return rval;
 }
 
-std::unique_ptr<pcre2_code>
-MXS_CONFIG_PARAMETER::get_compiled_regex(const string& key, uint32_t options,
-                                         uint32_t* output_ovec_size) const
+std::unique_ptr<pcre2_code> MXS_CONFIG_PARAMETER::get_compiled_regex(const string& key, uint32_t options,
+                                                                     uint32_t* output_ovec_size) const
 {
     auto regex_string = get_string(key);
     std::unique_ptr<pcre2_code> code;
@@ -2032,9 +2031,11 @@ MXS_CONFIG_PARAMETER::get_compiled_regex(const string& key, uint32_t options,
     return code;
 }
 
-std::vector<std::unique_ptr<pcre2_code>>
-MXS_CONFIG_PARAMETER::get_compiled_regexes(const std::vector<string>& keys, uint32_t options,
-                                           uint32_t* ovec_size_out, bool* compile_error_out)
+std::vector<std::unique_ptr<pcre2_code>> MXS_CONFIG_PARAMETER::get_compiled_regexes(
+    const std::vector<string>& keys,
+    uint32_t options,
+    uint32_t* ovec_size_out,
+    bool* compile_error_out)
 {
     std::vector<std::unique_ptr<pcre2_code>> rval;
     bool compile_error = false;
@@ -3008,7 +3009,7 @@ void config_set_global_defaults()
  * @return True if at least one of the required parameters is missing
  */
 static bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
-                                        const MXS_CONFIG_PARAMETER&   params,
+                                        const MXS_CONFIG_PARAMETER& params,
                                         const char* name)
 {
     bool rval = false;
@@ -5017,7 +5018,7 @@ bool get_suffixed_duration(const char* zValue,
 
     default:
         break;
-    };
+    }
 
     if (*zEnd == 0)
     {
@@ -5124,7 +5125,7 @@ std::string generate_config_string(const std::string& instance_name, const MXS_C
                                    const MXS_MODULE_PARAM* common_param_defs,
                                    const MXS_MODULE_PARAM* module_param_defs)
 {
-    string output = "[" + instance_name + "]\n";;
+    string output = "[" + instance_name + "]\n";
     // Common params and module params are null-terminated arrays. Loop over both and print parameter
     // names and values.
     for (auto param_set : {common_param_defs, module_param_defs})
