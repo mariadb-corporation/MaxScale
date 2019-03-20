@@ -2654,6 +2654,12 @@ public:
         return rv;
     }
 
+    void maxscaleSetStatusCap(int cap)
+    {
+        mxb_assert(cap >= QC_QUERY_TOKENIZED && cap <= QC_QUERY_PARSED);
+        m_status_cap = static_cast<qc_parse_result_t>(cap);
+    }
+
     void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
     {
         mxb_assert(this_thread.initialized);
@@ -3066,6 +3072,7 @@ private:
     QcSqliteInfo(uint32_t cllct)
         : m_refs(1)
         , m_status(QC_QUERY_INVALID)
+        , m_status_cap(QC_QUERY_PARSED)
         , m_collect(cllct)
         , m_collected(0)
         , m_pQuery(NULL)
@@ -3271,6 +3278,7 @@ public:
     // TODO: Make these private once everything's been updated.
     int32_t m_refs;                             // The reference count.
     qc_parse_result_t m_status;                 // The validity of the information in this structure.
+    qc_parse_result_t m_status_cap;             // The cap on 'm_status', it won't be set to higher than this.
     uint32_t m_collect;                         // What information should be collected.
     uint32_t m_collected;                       // What information has been collected.
     const char* m_pQuery;                       // The query passed to sqlite.
@@ -3372,6 +3380,7 @@ extern "C"
 
     extern int  maxscaleComment();
     extern int  maxscaleKeyword(int token);
+    extern void maxscaleSetStatusCap(int cap);
     extern int  maxscaleTranslateKeyword(int token);
 }
 
@@ -3422,6 +3431,11 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
     const int l = (len > max_len ? max_len : len);
     const char* suffix = (len > max_len ? "..." : "");
     const char* format;
+
+    if (this_thread.pInfo->m_status > this_thread.pInfo->m_status_cap)
+    {
+        this_thread.pInfo->m_status = this_thread.pInfo->m_status_cap;
+    }
 
     if (this_thread.pInfo->m_operation == QUERY_OP_EXPLAIN)
     {
@@ -4320,6 +4334,18 @@ void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
     mxb_assert(pInfo);
 
     QC_EXCEPTION_GUARD(pInfo->maxscaleLock(pParse, type, pTables));
+}
+
+void maxscaleSetStatusCap(int cap)
+{
+    QC_TRACE();
+
+    mxb_assert((cap >= QC_QUERY_INVALID) && (cap <= QC_QUERY_PARSED));
+
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    mxb_assert(pInfo);
+
+    QC_EXCEPTION_GUARD(pInfo->maxscaleSetStatusCap(cap));
 }
 
 int maxscaleTranslateKeyword(int token)
