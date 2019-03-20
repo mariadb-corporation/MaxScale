@@ -556,4 +556,18 @@ uint64_t get_byteN(const uint8_t* ptr, int bytes);
  * @return The next byte after the stored value
  */
 uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes);
+
+/**
+ * Get kernel version
+ *
+ * @return The kernel version as `major * 10000 + minor * 100 + patch`
+ */
+int get_kernel_version();
+
+/**
+ * Does the system support SO_REUSEPORT
+ *
+ * @return True if the system supports SO_REUSEPORT
+ */
+bool have_so_reuseport();
 }

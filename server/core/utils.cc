@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <netinet/tcp.h>
 #include <openssl/sha.h>
 #include <thread>
@@ -968,6 +969,17 @@ static bool configure_listener_socket(int so)
         return false;
     }
 
+#ifdef SO_REUSEPORT
+    if (mxs::have_so_reuseport())
+    {
+        if (setsockopt(so, SOL_SOCKET, SO_REUSEPORT, &one, sizeof(one)) != 0)
+        {
+            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+            return false;
+        }
+    }
+#endif
+
     return setnonblocking(so) == 0;
 }
 
@@ -1185,4 +1197,39 @@ uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes)
     return ptr + bytes;
 }
 
+int get_kernel_version()
+{
+    int rval = 0;
+    utsname name;
+
+    if (uname(&name) == 0)
+    {
+        std::istringstream rel {name.release};
+        int major = 0;
+        int minor = 0;
+        int patch = 0;
+        char dot;
+        rel >> major;
+        rel >> dot;
+        rel >> minor;
+        rel >> dot;
+        rel >> patch;
+
+        rval = major * 10000 + minor * 100 + patch;
+    }
+
+    return rval;
+}
+
+namespace
+{
+// SO_REUSEPORT was added in Linux 3.9. Even if SO_REUSEPORT is defined it doesn't mean the kernel supports it
+// which is why we have to check the kernel version.
+static const bool kernel_supports_so_reuseport = get_kernel_version() >= 30900;
+}
+
+bool have_so_reuseport()
+{
+    return kernel_supports_so_reuseport;
+}
 }
