@@ -636,6 +636,7 @@ public:
     };
 
     void update_field_info(const QcAliases* pAliases,
+                           uint32_t context,
                            const char* zDatabase,
                            const char* zTable,
                            const char* zColumn,
@@ -681,6 +682,7 @@ public:
                 item.table = zTable ? MXS_STRDUP(zTable) : NULL;
                 mxb_assert(zColumn);
                 item.column = MXS_STRDUP(zColumn);
+                item.context = context;
 
                 // We are happy if we at least could dup the column.
 
@@ -689,6 +691,10 @@ public:
                     m_field_infos.push_back(item);
                 }
             }
+        }
+        else
+        {
+            i->context |= context;
         }
     }
 
@@ -799,6 +805,7 @@ public:
     }
 
     void update_field_infos(QcAliases* pAliases,
+                            uint32_t context,
                             int prev_token,
                             const Expr* pExpr,
                             qc_token_position_t pos,
@@ -813,15 +820,15 @@ public:
         switch (pExpr->op)
         {
         case TK_ASTERISK:   // select *
-            update_field_infos_from_expr(pAliases, pExpr, pExclude);
+            update_field_infos_from_expr(pAliases, context, pExpr, pExclude);
             break;
 
         case TK_DOT:    // select a.b ... select a.b.c
-            update_field_infos_from_expr(pAliases, pExpr, pExclude);
+            update_field_infos_from_expr(pAliases, context, pExpr, pExclude);
             break;
 
         case TK_ID:     // select a
-            update_field_infos_from_expr(pAliases, pExpr, pExclude);
+            update_field_infos_from_expr(pAliases, context, pExpr, pExclude);
             break;
 
         case TK_VARIABLE:
@@ -1008,12 +1015,12 @@ public:
 
             if (pLeft)
             {
-                update_field_infos(pAliases, pExpr->op, pExpr->pLeft, QC_TOKEN_LEFT, pExclude);
+                update_field_infos(pAliases, context, pExpr->op, pExpr->pLeft, QC_TOKEN_LEFT, pExclude);
             }
 
             if (pRight)
             {
-                update_field_infos(pAliases, pExpr->op, pExpr->pRight, QC_TOKEN_RIGHT, pExclude);
+                update_field_infos(pAliases, context, pExpr->op, pExpr->pRight, QC_TOKEN_RIGHT, pExclude);
             }
 
             if (pExpr->x.pList)
@@ -1023,7 +1030,7 @@ public:
                 case TK_FUNCTION:
                     if (!ignore_exprlist)
                     {
-                        update_field_infos_from_exprlist(pAliases, pExpr->x.pList, pExclude);
+                        update_field_infos_from_exprlist(pAliases, context, pExpr->x.pList, pExclude);
                     }
                     break;
 
@@ -1047,7 +1054,7 @@ public:
                         if (pExpr->flags & EP_xIsSelect)
                         {
                             mxb_assert(pAliases);
-                            update_field_infos_from_subselect(*pAliases, pExpr->x.pSelect, pExclude);
+                            update_field_infos_from_subselect(*pAliases, context, pExpr->x.pSelect, pExclude);
 
 
                             if (zName)
@@ -1060,7 +1067,7 @@ public:
                         }
                         else
                         {
-                            update_field_infos_from_exprlist(pAliases, pExpr->x.pList, pExclude);
+                            update_field_infos_from_exprlist(pAliases, context, pExpr->x.pList, pExclude);
 
                             if (zName)
                             {
@@ -1152,6 +1159,7 @@ public:
     }
 
     void update_field_infos_from_expr(QcAliases* pAliases,
+                                      uint32_t context,
                                       const Expr* pExpr,
                                       const ExprList* pExclude)
     {
@@ -1163,12 +1171,13 @@ public:
         {
             if (get_field_name(pExpr, &zDatabase, &zTable, &zColumn))
             {
-                update_field_info(pAliases, zDatabase, zTable, zColumn, pExclude);
+                update_field_info(pAliases, context, zDatabase, zTable, zColumn, pExclude);
             }
         }
     }
 
     void update_field_infos_from_exprlist(QcAliases* pAliases,
+                                          uint32_t context,
                                           const ExprList* pEList,
                                           const ExprList* pExclude)
     {
@@ -1176,11 +1185,12 @@ public:
         {
             ExprList::ExprList_item* pItem = &pEList->a[i];
 
-            update_field_infos(pAliases, 0, pItem->pExpr, QC_TOKEN_MIDDLE, pExclude);
+            update_field_infos(pAliases, context, 0, pItem->pExpr, QC_TOKEN_MIDDLE, pExclude);
         }
     }
 
     void update_field_infos_from_idlist(QcAliases* pAliases,
+                                        uint32_t context,
                                         const IdList* pIds,
                                         const ExprList* pExclude)
     {
@@ -1190,7 +1200,7 @@ public:
             {
                 IdList::IdList_item* pItem = &pIds->a[i];
 
-                update_field_info(pAliases, NULL, NULL, pItem->zName, pExclude);
+                update_field_info(pAliases, context, NULL, NULL, pItem->zName, pExclude);
             }
         }
     }
@@ -1202,6 +1212,7 @@ public:
     };
 
     void update_field_infos_from_select(QcAliases& aliases,
+                                        uint32_t context,
                                         const Select* pSelect,
                                         const ExprList* pExclude,
                                         compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
@@ -1219,7 +1230,7 @@ public:
 
                 if (pSrc->a[i].pSelect)
                 {
-                    update_field_infos_from_select(aliases, pSrc->a[i].pSelect, pExclude);
+                    update_field_infos_from_select(aliases, context | QC_FIELD_SUBQUERY, pSrc->a[i].pSelect, pExclude);
                 }
 
 #ifdef QC_COLLECT_NAMES_FROM_USING
@@ -1237,13 +1248,14 @@ public:
 
         if (pSelect->pEList)
         {
-            update_field_infos_from_exprlist(&aliases, pSelect->pEList, NULL);
+            update_field_infos_from_exprlist(&aliases, context, pSelect->pEList, NULL);
         }
 
         if (pSelect->pWhere)
         {
             m_has_clause = true;
             update_field_infos(&aliases,
+                               context,
                                0,
                                pSelect->pWhere,
                                QC_TOKEN_MIDDLE,
@@ -1253,6 +1265,7 @@ public:
         if (pSelect->pGroupBy)
         {
             update_field_infos_from_exprlist(&aliases,
+                                             context,
                                              pSelect->pGroupBy,
                                              pSelect->pEList);
         }
@@ -1269,7 +1282,7 @@ public:
 
         if (pSelect->pWith)
         {
-            update_field_infos_from_with(&aliases, pSelect->pWith);
+            update_field_infos_from_with(&aliases, context, pSelect->pWith);
         }
 
         if (compound_approach == ANALYZE_COMPOUND_SELECTS)
@@ -1280,10 +1293,22 @@ public:
 
                 while (pPrior)
                 {
-                    update_field_infos_from_subselect(aliases,
-                                                      pPrior,
-                                                      pExclude,
-                                                      IGNORE_COMPOUND_SELECTS);
+                    uint32_t ctx = context;
+
+                    if (!pPrior->pPrior)
+                    {
+                        // The fields in the first select in a UNION are not considered to
+                        // be in a union. Those names will be visible in the resultset.
+                        ctx &= ~QC_FIELD_UNION;
+                    }
+
+                    QcAliases aliases2(aliases);
+
+                    update_field_infos_from_select(aliases2,
+                                                   ctx,
+                                                   pPrior,
+                                                   pExclude,
+                                                   IGNORE_COMPOUND_SELECTS);
                     pPrior = pPrior->pPrior;
                 }
             }
@@ -1291,16 +1316,19 @@ public:
     }
 
     void update_field_infos_from_subselect(const QcAliases& existing_aliases,
+                                           uint32_t context,
                                            const Select* pSelect,
                                            const ExprList* pExclude,
                                            compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
     {
         QcAliases aliases(existing_aliases);
 
-        update_field_infos_from_select(aliases, pSelect, pExclude, compound_approach);
+        context |= QC_FIELD_SUBQUERY;
+
+        update_field_infos_from_select(aliases, context, pSelect, pExclude, compound_approach);
     }
 
-    void update_field_infos_from_with(QcAliases* pAliases, const With* pWith)
+    void update_field_infos_from_with(QcAliases* pAliases, uint32_t context, const With* pWith)
     {
         for (int i = 0; i < pWith->nCte; ++i)
         {
@@ -1309,7 +1337,7 @@ public:
             if (pCte->pSelect)
             {
                 mxb_assert(pAliases);
-                update_field_infos_from_subselect(*pAliases, pCte->pSelect, NULL);
+                update_field_infos_from_subselect(*pAliases, context, pCte->pSelect, NULL);
             }
         }
     }
@@ -1669,7 +1697,8 @@ public:
 
         if (pSelect)
         {
-            update_field_infos_from_select(aliases, pSelect, NULL);
+            uint32_t context = 0;
+            update_field_infos_from_select(aliases, context, pSelect, NULL);
         }
 
         exposed_sqlite3ExprListDelete(pParse->db, pCNames);
@@ -1739,7 +1768,8 @@ public:
 
             if (pWhere)
             {
-                update_field_infos(&aliases, 0, pWhere, QC_TOKEN_MIDDLE, 0);
+                uint32_t context = 0;
+                update_field_infos(&aliases, context, 0, pWhere, QC_TOKEN_MIDDLE, 0);
             }
         }
 
@@ -1794,7 +1824,8 @@ public:
         if (pSelect)
         {
             QcAliases aliases;
-            update_field_infos_from_select(aliases, pSelect, NULL);
+            uint32_t context = 0;
+            update_field_infos_from_select(aliases, context, pSelect, NULL);
         }
         else if (pOldTable)
         {
@@ -1822,12 +1853,13 @@ public:
             mxb_assert(pTabList->nSrc >= 1);
 
             QcAliases aliases;
+            uint32_t context = 0;
 
             update_names_from_srclist(&aliases, pTabList);
 
             if (pColumns)
             {
-                update_field_infos_from_idlist(&aliases, pColumns, NULL);
+                update_field_infos_from_idlist(&aliases, context, pColumns, NULL);
 
                 int i = update_function_info(&aliases, "=", NULL);
 
@@ -1852,12 +1884,12 @@ public:
 
             if (pSelect)
             {
-                update_field_infos_from_select(aliases, pSelect, NULL);
+                update_field_infos_from_select(aliases, context, pSelect, NULL);
             }
 
             if (pSet)
             {
-                update_field_infos_from_exprlist(&aliases, pSet, NULL);
+                update_field_infos_from_exprlist(&aliases, context, pSet, NULL);
             }
         }
 
@@ -1959,6 +1991,7 @@ public:
         if (m_operation != QUERY_OP_EXPLAIN)
         {
             QcAliases aliases;
+            uint32_t context = 0;
 
             m_type_mask = QUERY_TYPE_WRITE;
             m_operation = QUERY_OP_UPDATE;
@@ -1972,6 +2005,7 @@ public:
                     ExprList::ExprList_item* pItem = &pChanges->a[i];
 
                     update_field_infos(&aliases,
+                                       context,
                                        0,
                                        pItem->pExpr,
                                        QC_TOKEN_MIDDLE,
@@ -1981,7 +2015,7 @@ public:
 
             if (pWhere)
             {
-                update_field_infos(&aliases, 0, pWhere, QC_TOKEN_MIDDLE, pChanges);
+                update_field_infos(&aliases, context, 0, pWhere, QC_TOKEN_MIDDLE, pChanges);
             }
         }
 
@@ -2040,7 +2074,8 @@ public:
         }
 
         QcAliases aliases;
-        update_field_infos_from_select(aliases, pSelect, NULL);
+        uint32_t context = (pSelect->op == TK_UNION && pSelect->pPrior) ? QC_FIELD_UNION : 0;
+        update_field_infos_from_select(aliases, context, pSelect, NULL);
     }
 
     void maxscaleAlterTable(Parse* pParse,              /* Parser context. */
@@ -2086,7 +2121,8 @@ public:
         if (pExprList)
         {
             QcAliases aliases;
-            update_field_infos_from_exprlist(&aliases, pExprList, NULL);
+            uint32_t context = 0;
+            update_field_infos_from_exprlist(&aliases, context, pExprList, NULL);
         }
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);
@@ -2907,7 +2943,8 @@ public:
                             if (pValue->op == TK_SELECT)
                             {
                                 QcAliases aliases;
-                                update_field_infos_from_select(aliases, pValue->x.pSelect, NULL);
+                                uint32_t context = 0;
+                                update_field_infos_from_select(aliases, context, pValue->x.pSelect, NULL);
                             }
                         }
                         break;
