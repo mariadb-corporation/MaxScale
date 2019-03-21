@@ -62,7 +62,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
 ExampleFilter::ExampleFilter(const MXS_CONFIG_PARAMETER* pParams)
 {
-    m_collect_global_counts = config_get_bool(pParams, CN_COUNT_GLOBALS);
+    m_collect_global_counts = pParams->get_bool(CN_COUNT_GLOBALS);
 }
 
 ExampleFilter::~ExampleFilter()
