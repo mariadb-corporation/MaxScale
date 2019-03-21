@@ -17,8 +17,10 @@
 #include "examplefiltersession.hh"
 #include "examplefilter.hh"
 
-ExampleFilterSession::ExampleFilterSession(MXS_SESSION* pSession)
+ExampleFilterSession::ExampleFilterSession(MXS_SESSION* pSession, ExampleFilter& filter)
     : mxs::FilterSession(pSession)
+    , m_filter(filter)
+    , m_session_id(pSession->ses_id)
 {
 }
 
@@ -27,21 +29,31 @@ ExampleFilterSession::~ExampleFilterSession()
 }
 
 // static
-ExampleFilterSession* ExampleFilterSession::create(MXS_SESSION* pSession, const ExampleFilter* pFilter)
+ExampleFilterSession* ExampleFilterSession::create(MXS_SESSION* pSession, ExampleFilter& filter)
 {
-    return new ExampleFilterSession(pSession);
+    return new ExampleFilterSession(pSession, filter);
 }
 
 void ExampleFilterSession::close()
 {
+    // When the session is closed, report the numbers to the log.
+    MXS_NOTICE("Session %lu routed %i queries and %i replies.", m_session_id, m_queries, m_replies);
 }
 
 int ExampleFilterSession::routeQuery(GWBUF* pPacket)
 {
+    m_queries++;
+    m_filter.query_seen();
+
+    // Pass the query forward.
     return mxs::FilterSession::routeQuery(pPacket);
 }
 
 int ExampleFilterSession::clientReply(GWBUF* pPacket)
 {
+    m_replies++;
+    m_filter.reply_seen();
+
+    // Pass the reply forward.
     return mxs::FilterSession::clientReply(pPacket);
 }
