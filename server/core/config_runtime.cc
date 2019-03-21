@@ -2263,6 +2263,15 @@ bool server_relationship_to_parameter(json_t* json, MXS_CONFIG_PARAMETER* params
                                            });
             params->set(CN_SERVERS, servers);
         }
+        else if (json_t* rel = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS))
+        {
+            if (json_is_array(rel) || json_is_null(rel))
+            {
+                mxb_assert(json_is_null(rel) || json_array_size(rel) == 0);
+                // Empty relationship, remove the parameter
+                params->remove(CN_SERVERS);
+            }
+        }
     }
 
     return rval;
@@ -2558,7 +2567,7 @@ bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, json_t* jso
                                             "data",
                                             json_object_get(json, "data")));
 
-        if (object_to_server_relations(monitor->m_name, old_json.get(), j.get()))
+        if (runtime_alter_monitor_from_json(monitor, j.get()))
         {
             rval = true;
         }
