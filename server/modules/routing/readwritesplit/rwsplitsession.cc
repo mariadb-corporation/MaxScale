@@ -108,6 +108,7 @@ void close_all_connections(SRWBackendList& backends)
 
 void RWSplitSession::close()
 {
+    gwbuf_free(m_query_queue);
     close_all_connections(m_backends);
     m_current_query.reset();
 
