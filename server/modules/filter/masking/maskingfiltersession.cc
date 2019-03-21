@@ -84,7 +84,9 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
 
     bool rv = true;
 
-    if (rv && m_filter.config().prevent_function_usage())
+    const MaskingFilter::Config& config = m_filter.config();
+
+    if (rv && config.prevent_function_usage())
     {
         if (is_function_used(pPacket, zUser, zHost))
         {
@@ -92,9 +94,17 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
         }
     }
 
-    if (rv && m_filter.config().check_user_variables())
+    if (rv && config.check_user_variables())
     {
         if (is_variable_defined(pPacket, zUser, zHost))
+        {
+            rv = false;
+        }
+    }
+
+    if (rv && config.check_unions())
+    {
+        if (is_union_used(pPacket, zUser, zHost))
         {
             rv = false;
         }
@@ -588,4 +598,74 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     }
 
     return is_defined;
+}
+
+bool MaskingFilterSession::is_union_used(GWBUF* pPacket, const char* zUser, const char* zHost)
+{
+    if (qc_get_operation(pPacket) != QUERY_OP_SELECT)
+    {
+        return false;
+    }
+
+    bool is_used = false;
+
+    SMaskingRules sRules = m_filter.rules();
+
+    auto pred = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
+        bool rv = false;
+
+        if (field_info.context & QC_FIELD_UNION)
+        {
+            if (strcmp(field_info.column, "*") == 0)
+            {
+                rv = true;
+            }
+            else
+            {
+                const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+
+                if (pRule)
+                {
+                    rv = true;
+                }
+            }
+        }
+
+        return rv;
+    };
+
+    const QC_FIELD_INFO* pInfos;
+    size_t nInfos;
+
+    qc_get_field_info(pPacket, &pInfos, &nInfos);
+
+    const QC_FIELD_INFO* begin = pInfos;
+    const QC_FIELD_INFO* end = begin + nInfos;
+
+    auto i = std::find_if(begin, end, pred);
+
+    if (i != end)
+    {
+        const char* zColumn = i->column;
+
+        std::stringstream ss;
+
+        if (strcmp(zColumn, "*") == 0)
+        {
+            ss << "'*' is used in the second or subsequent SELECT of a UNION, which "
+               << "may include a field that should be masked for '" << zUser << "'@'" << zHost
+               << "', access is denied.";
+        }
+        else
+        {
+            ss << "The field " << zColumn << " that should be masked for '" << zUser << "'@'" << zHost
+               << "' is used in the second or subsequent SELECT of a UNION, access is denied.";
+        }
+
+        set_response(create_error_response(ss.str().c_str()));
+
+        is_used = true;
+    }
+
+    return is_used;
 }
