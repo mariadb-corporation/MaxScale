@@ -87,6 +87,15 @@ Please see the configuration parameter
 [check_unions](#check_unions)
 for how to change the default behaviour.
 
+From MaxScale 2.3.5 onwards, the masking filter will examine subqueries
+and if a subquery refers to columns that should be masked, the statement
+will be rejected.
+
+Please see the configuration parameter
+[check_subqueries](#check_subqueries)
+for how to change the default behaviour.
+
+
 ## Limitations
 
 The masking filter can _only_ be used for masking columns of the following
@@ -210,6 +219,20 @@ SELECT a FROM t1 UNION select b from t2;
 will be rejected if `b` is a column that should be masked.
 ```
 check_unions=false
+```
+
+The default value is `true`.
+
+#### `check_subqueries`
+
+This optional parameter specifies how the masking filter should
+behave with respect to subqueries. If true, then a statement like
+```
+SELECT * FROM (SELECT a as b FROM t1) as t2;
+```
+will be rejected if `a` is a column that should be masked.
+```
+check_subqueries=false
 ```
 
 The default value is `true`.

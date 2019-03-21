@@ -29,6 +29,7 @@ const char config_value_always[] = "always";
 const char config_name_prevent_function_usage[] = "prevent_function_usage";
 const char config_check_user_variables[] = "check_user_variables";
 const char config_check_unions[] = "check_unions";
+const char config_check_subqueries[] = "check_subqueries";
 
 const char config_value_true[] = "true";
 }
@@ -104,6 +105,15 @@ const char* MaskingFilterConfig::check_unions_name = config_check_unions;
 // static
 const char* MaskingFilterConfig::check_unions_default = config_value_true;
 
+/*
+ * PARAM check_subqueries
+ */
+// static
+const char* MaskingFilterConfig::check_subqueries_name = config_check_subqueries;
+
+// static
+const char* MaskingFilterConfig::check_subqueries_default = config_value_true;
+
 
 /*
  * MaskingFilterConfig
@@ -147,4 +157,10 @@ bool MaskingFilterConfig::get_check_user_variables(const MXS_CONFIG_PARAMETER* p
 bool MaskingFilterConfig::get_check_unions(const MXS_CONFIG_PARAMETER* pParams)
 {
     return config_get_bool(pParams, check_unions_name);
+}
+
+// static
+bool MaskingFilterConfig::get_check_subqueries(const MXS_CONFIG_PARAMETER* pParams)
+{
+    return config_get_bool(pParams, check_subqueries_name);
 }
