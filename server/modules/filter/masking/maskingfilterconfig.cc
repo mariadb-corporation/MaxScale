@@ -128,5 +128,5 @@ bool MaskingFilterConfig::get_prevent_function_usage(const MXS_CONFIG_PARAMETER*
 // static
 bool MaskingFilterConfig::get_check_user_variables(const MXS_CONFIG_PARAMETER* pParams)
 {
-    return config_get_bool(pParams, check_user_variables_name);
+    return pParams->get_bool(check_user_variables_name);
 }
