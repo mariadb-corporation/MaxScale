@@ -210,6 +210,9 @@ add_test_executable(kill_query.cpp kill_query replication LABELS REPL_BACKEND)
 # MXS-2250: DESCRIBE on temporary table should work.
 add_test_executable(mxs2250_describe_temp_table.cpp mxs2250_describe_temp_table mxs2250_describe_temp_table LABELS REPL_BACKEND)
 
+# MXS-2355: Try to log in using a different authentication plugin
+add_test_executable(mxs2355_wrong_auth.cpp mxs2355_wrong_auth maxctrl LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: Tests that require GTID           #
 ############################################
