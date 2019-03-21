@@ -132,8 +132,6 @@ public:
      */
     static mxs::Monitor* server_is_monitored(const SERVER* server);
 
-    static mxs::Monitor* reactivate_monitor(const char* name, const char* module);
-
     static void show_all_monitors(DCB* dcb);
     static void monitor_show(DCB* dcb, mxs::Monitor* monitor);
 

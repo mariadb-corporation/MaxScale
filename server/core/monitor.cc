@@ -681,27 +681,6 @@ Monitor* MonitorManager::find_monitor(const char* name)
 }
 
 /**
- * Find a destroyed monitor by name
- *
- * @param name The name of the monitor
- * @return  Pointer to the destroyed monitor or NULL if monitor is not found
- */
-Monitor* MonitorManager::reactivate_monitor(const char* name, const char* module)
-{
-    Monitor* rval = NULL;
-    this_unit.foreach_monitor([&rval, name, module](Monitor* monitor) {
-        if (strcmp(monitor->m_name, name) == 0 && (monitor->m_module == module))
-        {
-            mxb_assert(!monitor->m_active);
-            monitor->m_active = true;
-            rval = monitor;
-        }
-        return (rval == nullptr);
-    });
-    return rval;
-}
-
-/**
  * Return a resultset that has the current set of monitors in it
  *
  * @return A Result set

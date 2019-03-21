@@ -1234,14 +1234,9 @@ bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PAR
 
     if (MonitorManager::find_monitor(name) == NULL)
     {
-        Monitor* monitor = MonitorManager::reactivate_monitor(name, module);
         std::string reason;
 
-        if (monitor)
-        {
-            MXS_DEBUG("Repurposed monitor '%s'", name);
-        }
-        else if (config_is_valid_name(name, &reason))
+        if (config_is_valid_name(name, &reason))
         {
             MXS_CONFIG_PARAMETER final_params;
             bool ok;
@@ -1254,28 +1249,26 @@ bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PAR
                     final_params.set_multiple(*params);
                 }
 
-                if ((monitor = MonitorManager::create_monitor(name, module, &final_params)) == NULL)
+                Monitor* monitor = MonitorManager::create_monitor(name, module, &final_params);
+
+                if (!monitor)
                 {
                     config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
+                }
+                else if (!MonitorManager::monitor_serialize(monitor))
+                {
+                    config_runtime_error("Failed to serialize monitor '%s'", name);
+                }
+                else
+                {
+                    MXS_NOTICE("Created monitor '%s'", name);
+                    rval = true;
                 }
             }
         }
         else
         {
             config_runtime_error("%s", reason.c_str());
-        }
-
-        if (monitor)
-        {
-            if (MonitorManager::monitor_serialize(monitor))
-            {
-                MXS_NOTICE("Created monitor '%s'", name);
-                rval = true;
-            }
-            else
-            {
-                config_runtime_error("Failed to serialize monitor '%s'", name);
-            }
         }
     }
     else
