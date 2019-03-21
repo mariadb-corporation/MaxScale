@@ -2016,9 +2016,9 @@ json_t* runtime_get_json_error()
     json_t* obj = NULL;
     std::string errmsg = runtime_get_error();
 
-    if (errmsg.length())
+    if (!errmsg.empty())
     {
-        obj = mxs_json_error(errmsg.c_str());
+        obj = mxs_json_error("%s", errmsg.c_str());
     }
 
     return obj;
