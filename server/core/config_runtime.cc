@@ -655,6 +655,24 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     return true;
 }
 
+static bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,
+                                          const MXS_CONFIG_PARAMETER* params)
+{
+    bool rval = false;
+    mxb_assert(mod_params);
+
+    for (int i = 0; mod_params[i].name; i++)
+    {
+        if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) && !params->contains(mod_params[i].name))
+        {
+            config_runtime_error("Mandatory parameter '%s' is not defined.", mod_params[i].name);
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 bool validate_param(const MXS_MODULE_PARAM* basic,
                     const MXS_MODULE_PARAM* module,
                     const char* key,
@@ -677,6 +695,23 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     else
     {
         rval = true;
+    }
+
+    return rval;
+}
+
+bool validate_param(const MXS_MODULE_PARAM* basic,
+                    const MXS_MODULE_PARAM* module,
+                    MXS_CONFIG_PARAMETER*   params)
+{
+    bool rval = std::all_of(params->begin(), params->end(),
+                            [basic, module](const std::pair<std::string, std::string>& p) {
+                                return validate_param(basic, module, p.first.c_str(), p.second.c_str());
+                            });
+
+    if (undefined_mandatory_parameter(basic, params) || undefined_mandatory_parameter(module, params))
+    {
+        rval = false;
     }
 
     return rval;
@@ -1248,6 +1283,12 @@ bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PAR
                 {
                     final_params.set_multiple(*params);
                 }
+
+                // Make sure the type and module parameters are in the parameter list. If this function is
+                // called from runtime_create_monitor_from_json, the assignment is redundant. Due to the fact
+                // that maxadmin is still supported, we must do this.
+                final_params.set(CN_TYPE, CN_MONITOR);
+                final_params.set(CN_MODULE, module);
 
                 Monitor* monitor = MonitorManager::create_monitor(name, module, &final_params);
 
@@ -2205,6 +2246,28 @@ static bool validate_object_json(json_t* json,
     return rval;
 }
 
+bool server_relationship_to_parameter(json_t* json, MXS_CONFIG_PARAMETER* params)
+{
+    StringSet relations;
+    bool rval = false;
+
+    if (extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_SERVERS, object_relation_is_valid))
+    {
+        rval = true;
+
+        if (!relations.empty())
+        {
+            auto servers = std::accumulate(std::next(relations.begin()), relations.end(), *relations.begin(),
+                                           [](std::string sum, std::string s) {
+                                               return sum + ',' + s;
+                                           });
+            params->set(CN_SERVERS, servers);
+        }
+    }
+
+    return rval;
+}
+
 static bool unlink_object_from_servers(const char* target, StringSet& relations)
 {
     bool rval = true;
@@ -2263,8 +2326,9 @@ static bool validate_monitor_json(json_t* json)
 MXS_CONFIG_PARAMETER extract_parameters(json_t* json)
 {
     MXS_CONFIG_PARAMETER params;
+    json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
 
-    if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    if (parameters && json_is_object(parameters))
     {
         const char* key;
         json_t* value;
@@ -2280,20 +2344,36 @@ MXS_CONFIG_PARAMETER extract_parameters(json_t* json)
 
 Monitor* runtime_create_monitor_from_json(json_t* json)
 {
-    Monitor* rval = NULL;
+    Monitor* rval = nullptr;
 
     if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {object_to_server})
         && validate_monitor_json(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
-        auto params = extract_parameters(json);
 
-        if (runtime_create_monitor(name, module, &params))
+        if (const MXS_MODULE* mod = get_module(module, MODULE_MONITOR))
         {
-            rval = MonitorManager::find_monitor(name);
-            mxb_assert(rval);
-            MonitorManager::start_monitor(rval);
+            auto params = extract_parameters(json);
+
+            // Make sure the type and module parameters are in the parameter list
+            params.set(CN_TYPE, CN_MONITOR);
+            params.set(CN_MODULE, module);
+
+            if (validate_param(config_monitor_params, mod->parameters, &params)
+                && server_relationship_to_parameter(json, &params))
+            {
+                if (runtime_create_monitor(name, module, &params))
+                {
+                    rval = MonitorManager::find_monitor(name);
+                    mxb_assert(rval);
+                    MonitorManager::start_monitor(rval);
+                }
+            }
+        }
+        else
+        {
+            config_runtime_error("Unknown module: %s", module);
         }
     }
 
@@ -2429,20 +2509,20 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
     bool success = false;
     std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
     mxb_assert(old_json.get());
+    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
+
+    auto params = monitor->parameters;
+    params.set_multiple(extract_parameters(new_json));
 
     if (is_valid_resource_body(new_json)
-        && object_to_server_relations(monitor->m_name, old_json.get(), new_json))
+        && validate_param(config_monitor_params, mod->parameters, &params)
+        && server_relationship_to_parameter(new_json, &params))
     {
         bool restart = (monitor->state() != MONITOR_STATE_STOPPED);
         MonitorManager::stop_monitor(monitor);
-
-        // Take the old parameters and combine it with the new parameters. Keep the old ones around in case we
-        // need to roll back the configuration change.
         auto old_params = monitor->parameters;
-        auto new_params = old_params;
-        new_params.set_multiple(extract_parameters(new_json));
 
-        if (monitor->configure(&new_params))
+        if (monitor->configure(&params))
         {
             MonitorManager::monitor_serialize(monitor);
             success = true;
