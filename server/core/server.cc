@@ -38,7 +38,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/maxscale.h>

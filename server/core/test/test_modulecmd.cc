@@ -21,7 +21,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/session.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 
 #include "../internal/monitor.hh"
 

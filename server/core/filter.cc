@@ -35,7 +35,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/service.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 
 #include "internal/config.hh"
 #include "internal/modules.hh"

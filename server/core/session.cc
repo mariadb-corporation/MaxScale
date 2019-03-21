@@ -31,7 +31,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/router.hh>

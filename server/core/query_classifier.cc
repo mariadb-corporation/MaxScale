@@ -21,7 +21,7 @@
 #include <maxbase/atomic.h>
 #include <maxbase/format.hh>
 #include <maxscale/config.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>

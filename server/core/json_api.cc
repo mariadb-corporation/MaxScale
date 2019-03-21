@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 
 #include <string>
 
@@ -205,6 +205,24 @@ json_t* mxs_json_error(const char* format, ...)
     va_end(args);
 
     return json_error(message);
+}
+
+json_t* mxs_json_error(const std::vector<std::string>& errors)
+{
+    json_t* rval = nullptr;
+
+    if (!errors.empty())
+    {
+        auto it = errors.begin();
+        rval = json_error(it->c_str());
+
+        for (it = std::next(it); it != errors.end(); ++it)
+        {
+            rval = mxs_json_error_append(rval, it->c_str());
+        }
+    }
+
+    return rval;
 }
 
 static json_t* json_error_append(json_t* obj, const char* message)

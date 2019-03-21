@@ -26,7 +26,7 @@
 #include <maxscale/users.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/paths.h>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 
 /**
  * @file adminusers.c - Administration user account management

@@ -29,7 +29,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/clock.h>
 #include <maxscale/jansson.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/paths.h>
 #include <maxscale/router.hh>
 #include <maxscale/users.h>
@@ -50,23 +50,31 @@ using maxscale::Monitor;
 static std::mutex crt_lock;
 
 #define RUNTIME_ERRMSG_BUFSIZE 512
-thread_local char runtime_errmsg[RUNTIME_ERRMSG_BUFSIZE];
+thread_local std::vector<std::string> runtime_errmsg;
 
 typedef std::function<bool (const std::string&, const std::string&)> JsonValidator;
 typedef std::pair<const char*, JsonValidator>                        Relationship;
 
 void config_runtime_error(const char* fmt, ...)
 {
+    char errmsg[RUNTIME_ERRMSG_BUFSIZE];
     va_list list;
     va_start(list, fmt);
-    vsnprintf(runtime_errmsg, sizeof(runtime_errmsg), fmt, list);
+    vsnprintf(errmsg, sizeof(errmsg), fmt, list);
     va_end(list);
+    runtime_errmsg.push_back(errmsg);
 }
 
 static std::string runtime_get_error()
 {
-    std::string rval(runtime_errmsg);
-    runtime_errmsg[0] = '\0';
+    std::string rval;
+
+    if (!runtime_errmsg.empty())
+    {
+        rval = runtime_errmsg.back();
+        runtime_errmsg.clear();
+    }
+
     return rval;
 }
 
@@ -2779,11 +2787,11 @@ bool runtime_create_listener_from_json(Service* service, json_t* json)
 json_t* runtime_get_json_error()
 {
     json_t* obj = NULL;
-    std::string errmsg = runtime_get_error();
 
-    if (errmsg.length())
+    if (!runtime_errmsg.empty())
     {
-        obj = mxs_json_error(errmsg.c_str());
+        obj = mxs_json_error(runtime_errmsg);
+        runtime_errmsg.clear();
     }
 
     return obj;

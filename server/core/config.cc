@@ -46,7 +46,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/limits.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/maxadmin.h>

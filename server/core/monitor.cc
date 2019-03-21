@@ -32,7 +32,7 @@
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/mariadb.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
@@ -40,7 +40,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <mysqld_error.h>
 
 #include "internal/config.hh"

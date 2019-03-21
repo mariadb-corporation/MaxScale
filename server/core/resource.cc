@@ -21,7 +21,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/jansson.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/routingworker.hh>
 

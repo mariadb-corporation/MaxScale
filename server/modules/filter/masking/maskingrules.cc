@@ -22,7 +22,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/utils.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 
 using std::auto_ptr;
 using std::string;

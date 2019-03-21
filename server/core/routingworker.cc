@@ -30,7 +30,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/statistics.hh>
 

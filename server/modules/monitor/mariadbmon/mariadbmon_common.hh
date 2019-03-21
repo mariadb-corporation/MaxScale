@@ -21,7 +21,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <string>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 
 /** Utility macros for printing both MXS_ERROR and json error */
 #define PRINT_MXS_JSON_ERROR(err_out, format, ...) \

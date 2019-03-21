@@ -8,7 +8,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/utils.h>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/jansson.hh>
 
 #include "throttlefilter.hh"

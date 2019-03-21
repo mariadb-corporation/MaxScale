@@ -45,7 +45,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 
 using std::string;
 
@@ -100,7 +100,6 @@ void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
                                    const char* rep_newline, std::stringstream* output);
 
 bool check_replace_file(const string& filename, FILE** ppFile);
-
 }
 
 QlaInstance::QlaInstance(const string& name, MXS_CONFIG_PARAMETER* params)

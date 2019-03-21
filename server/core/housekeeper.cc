@@ -25,7 +25,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/config.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include <maxscale/query_classifier.hh>
 
 /**

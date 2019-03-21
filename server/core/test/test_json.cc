@@ -16,7 +16,7 @@
 #include <string>
 
 #include <maxscale/jansson.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 
 using std::string;
 

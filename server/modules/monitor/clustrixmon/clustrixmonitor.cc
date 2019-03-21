@@ -14,7 +14,7 @@
 #include "clustrixmonitor.hh"
 #include <algorithm>
 #include <set>
-#include <maxscale/json_api.h>
+#include <maxscale/json_api.hh>
 #include "../../../core/internal/config_runtime.hh"
 #include "../../../core/internal/service.hh"
 
