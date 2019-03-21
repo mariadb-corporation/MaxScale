@@ -214,26 +214,10 @@ describe('Cluster Sync', function() {
     // As the listeners cannot be truly deleted, since there's no code for actually closing a socket at runtime,
     // we do the listener tests last
     it('sync listener creation/deletion', function() {
-        if (primary_host == '127.0.0.1:8989' && secondary_host == '127.0.0.1:8990') {
-            // Test with both MaxScales on the same machine
-
-            return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts ' + secondary_host)
-            // As both MaxScales are on the same machine, both can't listen on the same port. The sync should fail due to this
-                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host).should.be.rejected)
-            // Create the listener on the second MaxScale to avoid it being synced later on
-                .then(() => doCommand('create listener RW-Split-Router my-listener-2 5998 --hosts ' + primary_host))
-            // Sync after creation should succeed
-                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
-            // Destroy the created listener, should succeed
-                .then(() => doCommand('destroy listener RW-Split-Router my-listener-2 --hosts ' + primary_host))
-                .then(() => doCommand('cluster sync ' + primary_host + ' --hosts ' + secondary_host))
-        } else {
-            // MaxScales are on different machines
-            return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts ' + secondary_host)
-                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
-                .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
-                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
-        }
+        return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts ' + secondary_host)
+            .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
+            .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
+            .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
     })
 
     after(stopDoubleMaxScale)
