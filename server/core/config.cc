@@ -450,6 +450,7 @@ const char* config_pre_parse_global_params[] =
     CN_MAXLOG,
     CN_LOG_AUGMENTATION,
     CN_LOG_TO_SHM,
+    CN_SUBSTITUTE_VARIABLES,
     NULL
 };
 

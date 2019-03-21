@@ -28,6 +28,50 @@ void init(TestConnections& test)
     test.try_query(pMysql, "INSERT INTO masking_auto_firewall VALUES ('hello', 'world')");
 }
 
+enum class Expect
+{
+    FAILURE,
+    SUCCESS
+};
+
+void test_one(TestConnections& test, const char* zQuery, Expect expect)
+{
+    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+
+    const char* zExpect = (expect == Expect::SUCCESS ? "SHOULD" : "should NOT");
+
+    test.tprintf("Executing '%s', %s succeed.", zQuery, zExpect);
+    int rv = execute_query_silent(pMysql, zQuery);
+
+    if (expect == Expect::SUCCESS)
+    {
+        test.add_result(rv, "Could NOT execute query '%s'.", zQuery);
+    }
+    else
+    {
+        test.add_result(rv == 0, "COULD execute query '%s'.", zQuery);
+    }
+}
+
+void test_one_ps(TestConnections& test, const char* zQuery, Expect expect)
+{
+    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+
+    MYSQL_STMT* pPs = mysql_stmt_init(pMysql);
+    int rv = mysql_stmt_prepare(pPs, zQuery, strlen(zQuery));
+
+    if (expect == Expect::SUCCESS)
+    {
+        test.add_result(rv, "Could NOT prepare statement.");
+    }
+    else
+    {
+        test.add_result(rv == 0, "COULD prepare statement.");
+    }
+
+    mysql_stmt_close(pPs);
+}
+
 void run(TestConnections& test)
 {
     init(test);
@@ -36,18 +80,38 @@ void run(TestConnections& test)
 
     int rv;
 
-    // This should go through, a is simply masked.
-    static const char* zMasked_query = "SELECT a, b FROM masking_auto_firewall";
-    test.tprintf("Executing '%s', SHOULD succeed.", zMasked_query);
-    rv = execute_query(pMysql, "%s", zMasked_query);
-    test.add_result(rv, "Could NOT execute query '%s'.", zMasked_query);
+    // This SHOULD go through, a is simply masked.
+    test_one(test, "SELECT a, b FROM masking_auto_firewall", Expect::SUCCESS);
 
     // This should NOT go through as a function is used with a masked column.
-    static const char* zRejected_query = "SELECT LENGTH(a), b FROM masking_auto_firewall";
-    test.tprintf("Executing '%s', should NOT succeed.", zRejected_query);
-    rv = execute_query_silent(pMysql, zRejected_query);
-    test.add_result(rv == 0, "COULD execute query '%s'.", zRejected_query);
+    test_one(test, "SELECT LENGTH(a), b FROM masking_auto_firewall", Expect::FAILURE);
+
+    // This SHOULD go through as a function is NOT used with a masked column
+    // in a prepared statement.
+    test_one(test, "PREPARE ps1 FROM 'SELECT a, LENGTH(b) FROM masking_auto_firewall'", Expect::SUCCESS);
+
+    // This should NOT go through as a function is used with a masked column
+    // in a prepared statement.
+    test_one(test, "PREPARE ps2 FROM 'SELECT LENGTH(a), b FROM masking_auto_firewall'", Expect::FAILURE);
+
+    rv = execute_query_silent(pMysql, "set @a = 'SELECT LENGTH(a), b FROM masking_auto_firewall'");
+    test.add_result(rv, "Could NOT set variable.");
+    // This should NOT go through as a prepared statement is prepared from a variable.
+    test_one(test, "PREPARE ps3 FROM @a", Expect::FAILURE);
+
+    // This SHOULD succeed as a function is NOT used with a masked column
+    // in a binary prepared statement.
+    test_one_ps(test, "SELECT a, LENGTH(b) FROM masking_auto_firewall", Expect::SUCCESS);
+
+    // This should NOT succeed as a function is used with a masked column
+    // in a binary prepared statement.
+    test_one_ps(test, "SELECT LENGTH(a), b FROM masking_auto_firewall", Expect::FAILURE);
+
+    // This should NOT succeed as a masked column is used in a statement
+    // defining a variable.
+    test_one(test, "set @a = (SELECT a, b FROM masking_auto_firewall)", Expect::FAILURE);
 }
+
 }
 
 int main(int argc, char* argv[])

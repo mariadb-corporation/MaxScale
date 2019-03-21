@@ -219,18 +219,19 @@ GWBUF* gwbuf_clone(GWBUF* buf)
     return rval;
 }
 
-GWBUF* gwbuf_deep_clone(const GWBUF* buf)
+static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
 {
     mxb_assert(buf->owner == RoutingWorker::get_current_id());
     GWBUF* rval = NULL;
 
     if (buf)
     {
-        size_t buflen = gwbuf_length(buf);
-        rval = gwbuf_alloc(buflen);
+        rval = gwbuf_alloc(length);
 
-        if (rval && gwbuf_copy_data(buf, 0, buflen, GWBUF_DATA(rval)) == buflen)
+        if (rval && gwbuf_copy_data(buf, 0, length, GWBUF_DATA(rval)) == length)
         {
+            // The copying of the type is done to retain the type characteristic of the buffer without
+            // having a link the orginal data or parsing info.
             rval->gwbuf_type = buf->gwbuf_type;
         }
         else
@@ -243,7 +244,12 @@ GWBUF* gwbuf_deep_clone(const GWBUF* buf)
     return rval;
 }
 
-static GWBUF* gwbuf_clone_portion(GWBUF* buf,
+GWBUF* gwbuf_deep_clone(const GWBUF* buf)
+{
+    return gwbuf_deep_clone_portion(buf, gwbuf_length(buf));
+}
+
+static GWBUF *gwbuf_clone_portion(GWBUF* buf,
                                   size_t start_offset,
                                   size_t length)
 {
@@ -310,7 +316,7 @@ GWBUF* gwbuf_split(GWBUF** buf, size_t length)
             if (length > 0)
             {
                 mxb_assert(GWBUF_LENGTH(buffer) > length);
-                GWBUF* partial = gwbuf_clone_portion(buffer, 0, length);
+                GWBUF* partial = gwbuf_deep_clone_portion(buffer, length);
 
                 /** If the head points to the original head of the buffer chain
                  * and we are splitting a contiguous buffer, we only need to return

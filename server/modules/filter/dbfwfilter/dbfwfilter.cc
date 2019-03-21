@@ -1479,71 +1479,81 @@ int DbfwSession::routeQuery(GWBUF* buffer)
         if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT))
         {
             analyzed_queue = qc_get_preparable_stmt(buffer);
-            mxb_assert(analyzed_queue);
+
+            // 'analyzed_queue' will be NULL if the statement is prepared from
+            // a variable like in : "prepare ps from @a".
         }
 
-        SUser suser = find_user_data(this_thread->users(m_instance), user(), remote());
         bool query_ok = false;
 
-        if (command_is_mandatory(buffer))
+        if (!analyzed_queue)
         {
-            query_ok = true;
+            set_error("Firewall rejects statements prepared from a variable.");
         }
-        else if (suser)
+        else
         {
-            char* rname = NULL;
-            bool match = suser->match(m_instance, this, analyzed_queue, &rname);
+            SUser suser = find_user_data(this_thread->users(m_instance), user(), remote());
 
-            switch (m_instance->get_action())
+            if (command_is_mandatory(buffer))
             {
-            case FW_ACTION_ALLOW:
-                query_ok = match;
-                break;
-
-            case FW_ACTION_BLOCK:
-                query_ok = !match;
-                break;
-
-            case FW_ACTION_IGNORE:
                 query_ok = true;
-                break;
-
-            default:
-                MXS_ERROR("Unknown dbfwfilter action: %d", m_instance->get_action());
-                mxb_assert(false);
-                break;
             }
-
-            if (m_instance->get_log_bitmask() != FW_LOG_NONE)
+            else if (suser)
             {
-                if (match && m_instance->get_log_bitmask() & FW_LOG_MATCH)
-                {
-                    MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %s",
-                               m_session->service->name(),
-                               rname,
-                               suser->name(),
-                               user().c_str(),
-                               remote().c_str(),
-                               get_sql(buffer).c_str());
-                }
-                else if (!match && m_instance->get_log_bitmask() & FW_LOG_NO_MATCH)
-                {
-                    MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %s",
-                               m_session->service->name(),
-                               suser->name(),
-                               user().c_str(),
-                               remote().c_str(),
-                               get_sql(buffer).c_str());
-                }
-            }
+                char* rname = NULL;
+                bool match = suser->match(m_instance, this, analyzed_queue, &rname);
 
-            MXS_FREE(rname);
-        }
-        /** If the instance is in whitelist mode, only users that have a rule
-         * defined for them are allowed */
-        else if (m_instance->get_action() != FW_ACTION_ALLOW)
-        {
-            query_ok = true;
+                switch (m_instance->get_action())
+                {
+                case FW_ACTION_ALLOW:
+                    query_ok = match;
+                    break;
+
+                case FW_ACTION_BLOCK:
+                    query_ok = !match;
+                    break;
+
+                case FW_ACTION_IGNORE:
+                    query_ok = true;
+                    break;
+
+                default:
+                    MXS_ERROR("Unknown dbfwfilter action: %d", m_instance->get_action());
+                    mxb_assert(false);
+                    break;
+                }
+
+                if (m_instance->get_log_bitmask() != FW_LOG_NONE)
+                {
+                    if (match && m_instance->get_log_bitmask() & FW_LOG_MATCH)
+                    {
+                        MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %s",
+                                   m_session->service->name,
+                                   rname,
+                                   suser->name(),
+                                   user().c_str(),
+                                   remote().c_str(),
+                                   get_sql(buffer).c_str());
+                    }
+                    else if (!match && m_instance->get_log_bitmask() & FW_LOG_NO_MATCH)
+                    {
+                        MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %s",
+                                   m_session->service->name,
+                                   suser->name(),
+                                   user().c_str(),
+                                   remote().c_str(),
+                                   get_sql(buffer).c_str());
+                    }
+                }
+
+                MXS_FREE(rname);
+            }
+            /** If the instance is in whitelist mode, only users that have a rule
+             * defined for them are allowed */
+            else if (m_instance->get_action() != FW_ACTION_ALLOW)
+            {
+                query_ok = true;
+            }
         }
 
         if (query_ok)

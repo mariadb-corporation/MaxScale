@@ -31,6 +31,25 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
+namespace
+{
+
+GWBUF* create_error_response(const char* zMessage)
+{
+    return modutil_create_mysql_err_msg(1, 0, 1141, "HY000", zMessage);
+}
+
+GWBUF* create_parse_error_response()
+{
+    const char* zMessage =
+        "The statement could not be fully parsed and will hence be "
+        "rejected (masking filter).";
+
+    return create_error_response(zMessage);
+}
+
+}
+
 MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter)
     : maxscale::FilterSession(pSession)
     , m_filter(*pFilter)
@@ -48,6 +67,96 @@ MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession, const 
     return new MaskingFilterSession(pSession, pFilter);
 }
 
+bool MaskingFilterSession::check_query(GWBUF* pPacket)
+{
+    const char* zUser = session_get_user(m_pSession);
+    const char* zHost = session_get_remote(m_pSession);
+
+    if (!zUser)
+    {
+        zUser = "";
+    }
+
+    if (!zHost)
+    {
+        zHost = "";
+    }
+
+    bool rv = true;
+
+    if (rv && m_filter.config().prevent_function_usage())
+    {
+        if (is_function_used(pPacket, zUser, zHost))
+        {
+            rv = false;
+        }
+    }
+
+    if (rv && m_filter.config().check_user_variables())
+    {
+        if (is_variable_defined(pPacket, zUser, zHost))
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+    {
+        if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
+        {
+            GWBUF* pP = qc_get_preparable_stmt(pPacket);
+
+            if (pP)
+            {
+                rv = check_textual_query(pP);
+            }
+            else
+            {
+                // If pP is NULL, it indicates that we have a "prepare ps from @a". It must
+                // be rejected as we currently have no means for checking what columns are
+                // referred to.
+                const char* zMessage =
+                    "A statement prepared from a variable is rejected (masking filter).";
+
+                set_response(create_error_response(zMessage));
+            }
+        }
+        else
+        {
+            rv = check_query(pPacket);
+        }
+    }
+    else
+    {
+        set_response(create_parse_error_response());
+    }
+
+    return rv;
+}
+
+bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+    {
+        rv = check_query(pPacket);
+    }
+    else
+    {
+        set_response(create_parse_error_response());
+    }
+
+    return rv;
+}
+
 int MaskingFilterSession::routeQuery(GWBUF* pPacket)
 {
     ComRequest request(pPacket);
@@ -58,13 +167,38 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_QUERY:
         m_res.reset(request.command(), m_filter.rules());
 
-        if (m_filter.config().prevent_function_usage() && reject_if_function_used(pPacket))
+        if (m_filter.config().is_parsing_needed())
         {
-            m_state = EXPECTING_NOTHING;
+            if (check_textual_query(pPacket))
+            {
+                m_state = EXPECTING_RESPONSE;
+            }
+            else
+            {
+                m_state = EXPECTING_NOTHING;
+            }
         }
         else
         {
             m_state = EXPECTING_RESPONSE;
+        }
+        break;
+
+    case MXS_COM_STMT_PREPARE:
+        if (m_filter.config().is_parsing_needed())
+        {
+            if (check_binary_query(pPacket))
+            {
+                m_state = IGNORING_RESPONSE;
+            }
+            else
+            {
+                m_state = EXPECTING_NOTHING;
+            }
+        }
+        else
+        {
+            m_state = IGNORING_RESPONSE;
         }
         break;
 
@@ -370,39 +504,26 @@ void MaskingFilterSession::mask_values(ComPacket& response)
     }
 }
 
-bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
+bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    bool rejected = false;
+    bool is_used = false;
 
     SMaskingRules sRules = m_filter.rules();
 
-    const char* zUser = session_get_user(m_pSession);
-    const char* zHost = session_get_remote(m_pSession);
-
-    if (!zUser)
-    {
-        zUser = "";
-    }
-
-    if (!zHost)
-    {
-        zHost = "";
-    }
-
     auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-            const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+        const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
 
-            return pRule ? true : false;
-        };
+        return pRule ? true : false;
+    };
 
     auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
-            const QC_FIELD_INFO* begin = function_info.fields;
-            const QC_FIELD_INFO* end = begin + function_info.n_fields;
+        const QC_FIELD_INFO* begin = function_info.fields;
+        const QC_FIELD_INFO* end = begin + function_info.n_fields;
 
-            auto i = std::find_if(begin, end, pred1);
+        auto i = std::find_if(begin, end, pred1);
 
-            return i != end;
-        };
+        return i != end;
+    };
 
     const QC_FUNCTION_INFO* pInfos;
     size_t nInfos;
@@ -420,11 +541,51 @@ bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
         ss << "The function " << i->name << " is used in conjunction with a field "
            << "that should be masked for '" << zUser << "'@'" << zHost << "', access is denied.";
 
-        GWBUF* pResponse = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
-        set_response(pResponse);
+        set_response(create_error_response(ss.str().c_str()));
 
-        rejected = true;
+        is_used = true;
     }
 
-    return rejected;
+    return is_used;
+}
+
+bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost)
+{
+    if (!qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
+    {
+        return false;
+    }
+
+    bool is_defined = false;
+
+    SMaskingRules sRules = m_filter.rules();
+
+    auto pred = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
+        const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+
+        return pRule ? true : false;
+    };
+
+    const QC_FIELD_INFO* pInfos;
+    size_t nInfos;
+
+    qc_get_field_info(pPacket, &pInfos, &nInfos);
+
+    const QC_FIELD_INFO* begin = pInfos;
+    const QC_FIELD_INFO* end = begin + nInfos;
+
+    auto i = std::find_if(begin, end, pred);
+
+    if (i != end)
+    {
+        std::stringstream ss;
+        ss << "The field " << i->column << " that should be masked for '" << zUser << "'@'" << zHost
+           << "' is used when defining a variable, access is denied.";
+
+        set_response(create_error_response(ss.str().c_str()));
+
+        is_defined = true;
+    }
+
+    return is_defined;
 }

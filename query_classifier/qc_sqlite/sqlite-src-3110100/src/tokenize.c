@@ -259,10 +259,18 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         // MySQL-specific code
         for (i=3, c=z[2]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}
         if (c=='*' && z[i]=='/'){
-          char* znc = (char*) z;
-          znc[0]=znc[1]=znc[2]=znc[i-1]=znc[i]=' '; // Remove comment chars, i.e. "/*!" and "*/".
-          for (i=3; sqlite3Isdigit(z[i]); ++i){} // Jump over the MySQL version number.
-          for (; sqlite3Isspace(z[i]); ++i){} // Jump over any space.
+          if (sqlite3Isdigit(z[3])) {
+            // A version specific executable comment, e.g. "/*!99999 ..." => never parsed.
+            extern void maxscaleSetStatusCap(int);
+            maxscaleSetStatusCap(2); // QC_QUERY_PARTIALLY_PARSED, see query_classifier.h:qc_parse_result
+            ++i; // Next after the trailing '/'
+          }
+          else {
+            // A non-version specific executable comment, e.g. "/*! select 1 */ => always parsed.
+            char* znc = (char*) z;
+            znc[0]=znc[1]=znc[2]=znc[i-1]=znc[i]=' '; // Remove comment chars, i.e. "/*!" and "*/".
+            for (i=3; sqlite3Isspace(z[i]); ++i){} // Jump over any space.
+          }
         }
       } else {
         for(i=3, c=z[2]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}

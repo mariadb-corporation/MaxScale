@@ -45,12 +45,16 @@ public:
     static const char* prevent_function_usage_name;
     static const char* prevent_function_usage_default;
 
+    static const char* check_user_variables_name;
+    static const char* check_user_variables_default;
+
     MaskingFilterConfig(const char* zName, const MXS_CONFIG_PARAMETER* pParams)
         : m_name(zName)
         , m_large_payload(get_large_payload(pParams))
         , m_rules(get_rules(pParams))
         , m_warn_type_mismatch(get_warn_type_mismatch(pParams))
         , m_prevent_function_usage(get_prevent_function_usage(pParams))
+        , m_check_user_variables(get_check_user_variables(pParams))
     {
     }
     ~MaskingFilterConfig()
@@ -82,6 +86,11 @@ public:
         return m_prevent_function_usage;
     }
 
+    bool check_user_variables() const
+    {
+        return m_check_user_variables;
+    }
+
     void set_large_payload(large_payload_t l)
     {
         m_large_payload = l;
@@ -101,10 +110,21 @@ public:
         m_prevent_function_usage = b;
     }
 
+    void set_check_user_variables(bool b)
+    {
+        m_check_user_variables = b;
+    }
+
+    bool is_parsing_needed() const
+    {
+        return prevent_function_usage() || check_user_variables();
+    }
+
     static large_payload_t      get_large_payload(const MXS_CONFIG_PARAMETER* pParams);
     static std::string          get_rules(const MXS_CONFIG_PARAMETER* pParams);
     static warn_type_mismatch_t get_warn_type_mismatch(const MXS_CONFIG_PARAMETER* pParams);
     static bool                 get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams);
+    static bool                 get_check_user_variables(const MXS_CONFIG_PARAMETER* pParams);
 
 private:
     std::string          m_name;
@@ -112,4 +132,5 @@ private:
     std::string          m_rules;
     warn_type_mismatch_t m_warn_type_mismatch;
     bool                 m_prevent_function_usage;
+    bool                 m_check_user_variables;
 };

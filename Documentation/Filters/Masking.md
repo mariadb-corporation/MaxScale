@@ -71,6 +71,14 @@ Please see the configuration parameter
 [prevent_function_usage](#prevent_function_usage)
 for how to change the default behaviour.
 
+From MaxScale 2.3.5 onwards, the masking filter will check the
+definition of user variables and reject statements that define a user
+variable using a statement that refers to columns that should be masked.
+
+Please see the configuration parameter
+[check_user_variables](#check_user_variables)
+for how to change the default behaviour.
+
 ## Limitations
 
 The masking filter can _only_ be used for masking columns of the following
@@ -168,6 +176,20 @@ filter should be setup to allow or reject the use of certain functions.
 ```
 prevent_function_usage=false
 ```
+The default value is `true`.
+
+#### `check_user_variables`
+
+This optional parameter specifies how the masking filter should
+behave with respect to user variables. If true, then a statement like
+```
+set @a = (select ssn from customer where id = 1);
+```
+will be rejected if `ssn` is a column that should be masked.
+```
+check_user_variables=false
+```
+
 The default value is `true`.
 
 ## Rules
