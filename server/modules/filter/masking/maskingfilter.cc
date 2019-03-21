@@ -127,6 +127,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 Config::check_user_variables_default,
                 MXS_MODULE_OPT_NONE,
             },
+            {
+                Config::check_unions_name,
+                MXS_MODULE_PARAM_BOOL,
+                Config::check_unions_default,
+                MXS_MODULE_OPT_NONE,
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };

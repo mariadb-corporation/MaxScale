@@ -79,6 +79,14 @@ Please see the configuration parameter
 [check_user_variables](#check_user_variables)
 for how to change the default behaviour.
 
+From MaxScale 2.3.5 onwards, the masking filter will examine unions
+and if the second or subsequent SELECT refer to columns that should
+be masked, the statement will be rejected.
+
+Please see the configuration parameter
+[check_unions](#check_unions)
+for how to change the default behaviour.
+
 ## Limitations
 
 The masking filter can _only_ be used for masking columns of the following
@@ -188,6 +196,20 @@ set @a = (select ssn from customer where id = 1);
 will be rejected if `ssn` is a column that should be masked.
 ```
 check_user_variables=false
+```
+
+The default value is `true`.
+
+#### `check_unions`
+
+This optional parameter specifies how the masking filter should
+behave with respect to UNIONs. If true, then a statement like
+```
+SELECT a FROM t1 UNION select b from t2;
+```
+will be rejected if `b` is a column that should be masked.
+```
+check_unions=false
 ```
 
 The default value is `true`.
