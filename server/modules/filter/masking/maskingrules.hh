@@ -143,12 +143,20 @@ public:
          */
         virtual void rewrite(LEncString& s) const = 0;
 
+        /**
+         * Does this rule apply to a specific account.
+         *
+         * @param zUser  The current user.
+         * @param zHost  The current host.
+         *
+         * @return True, if the rule applies.
+         */
+        bool matches_account(const char* zUser,
+                             const char* zHost) const;
+
     private:
         Rule(const Rule&);
         Rule& operator=(const Rule&);
-
-        bool matches_account(const char* zUser,
-                             const char* zHost) const;
 
     private:
         std::string           m_column;
@@ -395,6 +403,16 @@ public:
                              const char* zHost) const;
 
     typedef std::shared_ptr<Rule> SRule;
+
+    /**
+     * Is there any rule for the specified user.
+     *
+     * @param zUser  The current user.
+     * @param zHost  The current host.
+     *
+     * @return True, if there is a rule for that user/host combination.
+     */
+    bool has_rule_for(const char* zUser, const char* zHost) const;
 
 private:
     MaskingRules(json_t* pRoot, const std::vector<SRule>& rules);

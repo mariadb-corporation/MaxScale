@@ -571,9 +571,19 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     SMaskingRules sRules = m_filter.rules();
 
     auto pred = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-        const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+        bool rv = false;
 
-        return pRule ? true : false;
+        if (strcmp(field_info.column, "*") == 0)
+        {
+            // If "*" is used, then we must block if there is any rule for the current user.
+            rv = sRules->has_rule_for(zUser, zHost);
+        }
+        else
+        {
+            rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+        }
+
+        return rv;
     };
 
     const QC_FIELD_INFO* pInfos;
@@ -588,12 +598,22 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 
     if (i != end)
     {
+        const char* zColumn = i->column;
+
         std::stringstream ss;
-        ss << "The field " << i->column << " that should be masked for '" << zUser << "'@'" << zHost
-           << "' is used when defining a variable, access is denied.";
+
+        if (strcmp(zColumn, "*") == 0)
+        {
+            ss << "'*' is used in the definition of a variable and there are masking rules "
+               << "for '" << zUser << "'@'" << zHost << "', access is denied.";
+        }
+        else
+        {
+            ss << "The field " << i->column << " that should be masked for '" << zUser << "'@'" << zHost
+               << "' is used when defining a variable, access is denied.";
+        }
 
         set_response(create_error_response(ss.str().c_str()));
-
         is_defined = true;
     }
 
@@ -618,16 +638,12 @@ bool MaskingFilterSession::is_union_used(GWBUF* pPacket, const char* zUser, cons
         {
             if (strcmp(field_info.column, "*") == 0)
             {
-                rv = true;
+                // If "*" is used, then we must block if there is any rule for the current user.
+                rv = sRules->has_rule_for(zUser, zHost);
             }
             else
             {
-                const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
-
-                if (pRule)
-                {
-                    rv = true;
-                }
+                rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
             }
         }
 
@@ -652,9 +668,8 @@ bool MaskingFilterSession::is_union_used(GWBUF* pPacket, const char* zUser, cons
 
         if (strcmp(zColumn, "*") == 0)
         {
-            ss << "'*' is used in the second or subsequent SELECT of a UNION, which "
-               << "may include a field that should be masked for '" << zUser << "'@'" << zHost
-               << "', access is denied.";
+            ss << "'*' is used in the second or subsequent SELECT of a UNION and there are "
+               << "masking rules for '" << zUser << "'@'" << zHost << "', access is denied.";
         }
         else
         {
@@ -663,7 +678,6 @@ bool MaskingFilterSession::is_union_used(GWBUF* pPacket, const char* zUser, cons
         }
 
         set_response(create_error_response(ss.str().c_str()));
-
         is_used = true;
     }
 
