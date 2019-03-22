@@ -67,8 +67,7 @@ private:
 
     bool is_function_used(GWBUF* pPacket, const char* zUser, const char* zHost);
     bool is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost);
-    bool is_union_used(GWBUF* pPacket, const char* zUser, const char* zHost);
-    bool is_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost);
+    bool is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost);
 
 private:
     typedef std::shared_ptr<MaskingRules> SMaskingRules;
