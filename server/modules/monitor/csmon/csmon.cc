@@ -103,10 +103,9 @@ void CsMonitor::update_server_status(MXS_MONITORED_SERVER* srv)
     {
         status |= SERVER_RUNNING;
 
-        if (get_cs_version(srv) >= 10107)
+        if (get_cs_version(srv) >= 10200)
         {
-            // 1.1.7 should support the mcsSystemPrimary function
-            // TODO: Update when the actual release is out
+            // 1.2 supports the mcsSystemPrimary function
             status |= do_query(srv, role_query) == "1" ? SERVER_MASTER : SERVER_SLAVE;
         }
         else
