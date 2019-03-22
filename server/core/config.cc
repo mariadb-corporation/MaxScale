@@ -3052,7 +3052,7 @@ static bool is_path_parameter(const MXS_MODULE_PARAM* params, const char* name)
 
 static void process_path_parameter(std::string* param)
 {
-    if (param->empty() || param[0] != "/")
+    if (param->empty() || (*param)[0] != '/')
     {
         const char* mod_dir = get_module_configdir();
         size_t size = param->length() + strlen(mod_dir) + 3;
