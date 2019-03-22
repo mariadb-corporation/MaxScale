@@ -786,14 +786,12 @@ HttpResponse cb_set_server(const HttpRequest& request)
         }
         else
         {
-            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error(errmsg.c_str()));
+            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("%s", errmsg.c_str()));
         }
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN,
-                        mxs_json_error("Invalid or missing value for the `%s` "
-                                       "parameter",
-                                       CN_STATE));
+                        mxs_json_error("Invalid or missing value for the `%s` parameter", CN_STATE));
 }
 
 HttpResponse cb_clear_server(const HttpRequest& request)
@@ -810,14 +808,12 @@ HttpResponse cb_clear_server(const HttpRequest& request)
         }
         else
         {
-            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error(errmsg.c_str()));
+            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("%s", errmsg.c_str()));
         }
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN,
-                        mxs_json_error("Invalid or missing value for the `%s` "
-                                       "parameter",
-                                       CN_STATE));
+                        mxs_json_error("Invalid or missing value for the `%s` parameter", CN_STATE));
 }
 
 HttpResponse cb_modulecmd(const HttpRequest& request)

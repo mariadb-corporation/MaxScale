@@ -218,7 +218,7 @@ json_t* mxs_json_error(const std::vector<std::string>& errors)
 
         for (it = std::next(it); it != errors.end(); ++it)
         {
-            rval = mxs_json_error_append(rval, it->c_str());
+            rval = mxs_json_error_append(rval, "%s", it->c_str());
         }
     }
 
