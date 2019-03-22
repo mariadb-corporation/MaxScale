@@ -154,27 +154,49 @@ MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
 
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
 {
-    bool rval = false;
-    string repl_user = params->get_string(CN_REPLICATION_USER);
-    string repl_pw = params->get_string(CN_REPLICATION_PASSWORD);
+    bool repl_user_exists = params->contains(CN_REPLICATION_USER);
+    bool repl_pw_exists = params->contains(CN_REPLICATION_PASSWORD);
 
-    if (repl_user.empty() && repl_pw.empty())
+    // Because runtime modifications are performed 1-by-1, we must be less strict here and allow
+    // partial setups. Password is not required even if username is set. This is contrary to the
+    // general monitor username & pw, which are both required. Even this assumes that the username
+    // is given first in a "maxadmin alter monitor"-command.
+
+    string repl_user;
+    string repl_pw;
+    if (repl_user_exists)
     {
-        // No replication credentials defined, use monitor credentials
-        repl_user = m_settings.conn_settings.username;
-        repl_pw = m_settings.conn_settings.password;
+        repl_user = params->get_string(CN_REPLICATION_USER);
+        if (repl_pw_exists)
+        {
+            // Ok, both set.
+            repl_pw = params->get_string(CN_REPLICATION_PASSWORD);
+        }
+        // Password not set is ok. This needs to be accepted so that runtime modifications work.
+        // Hopefully the password is set later on.
+    }
+    else
+    {
+        if (repl_pw_exists)
+        {
+            MXS_ERROR("'%s' is defined while '%s' is not. If performing an \"alter monitor\"-command, "
+                      "give '%s' first.", CN_REPLICATION_PASSWORD, CN_REPLICATION_USER, CN_REPLICATION_USER);
+            return false;
+        }
+        else
+        {
+            // Ok, neither is set. Use monitor credentials.
+            repl_user = m_settings.conn_settings.username;
+            repl_pw = m_settings.conn_settings.password;
+        }
     }
 
-    if (!repl_user.empty() && !repl_pw.empty())
-    {
-        m_replication_user = repl_user;
-        char* decrypted = decrypt_password(repl_pw.c_str());
-        m_replication_password = decrypted;
-        MXS_FREE(decrypted);
-        rval = true;
-    }
+    m_replication_user = repl_user;
+    char* decrypted = decrypt_password(repl_pw.c_str());
+    m_replication_password = decrypted;
+    MXS_FREE(decrypted);
 
-    return rval;
+    return true;
 }
 
 MariaDBMonitor* MariaDBMonitor::create(const string& name, const string& module)
@@ -240,7 +262,6 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     }
     if (!set_replication_credentials(params))
     {
-        MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
         settings_ok = false;
     }
     if (!m_assume_unique_hostnames)
