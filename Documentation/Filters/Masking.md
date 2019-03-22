@@ -5,26 +5,7 @@ This filter was introduced in MariaDB MaxScale 2.1.
 Table of Contents
 =================
 
-* [Overview](#overview)
-* [Security](#security)
-* [Limitations](#limitations)
-* [Configuration](#configuration)
-   * [Filter Parameters](#filter-parameters)
-      * [rules](#rules)
-      * [warn_type_mismatch](#warn_type_mismatch)
-      * [large_payload](#large_payload)
-      * [prevent_function_usage](#prevent_function_usage)
-* [Rules](#rules-1)
-   * [replace](#replace)
-   * [obfuscate](#obfuscate)
-   * [with](#with)
-   * [applies_to](#applies_to)
-   * [exempted](#exempted)
-* [Module commands](#module-commands)
-   * [reload](#reload)
-* [Example](#example)
-   * [Configuration](#configuration-1)
-   * [masking_rules.json](#masking_rulesjson)
+[TOC]
 
 ## Overview
 
@@ -95,6 +76,16 @@ Please see the configuration parameter
 [check_subqueries](#check_subqueries)
 for how to change the default behaviour.
 
+Note that in order to ensure that it is not possible to get access to
+masked data, the privileges of the users should be minimized. For instance,
+if a user can create tables and perform inserts, he or she can execute
+something like
+```
+CREATE TABLE cheat (revealed_ssn TEXT);
+INSERT INTO cheat SELECT ssn FROM users;
+SELECT revealed_ssn FROM cheat;
+```
+to get access to the cleartext version of a masked field `ssn`.
 
 ## Limitations
 
