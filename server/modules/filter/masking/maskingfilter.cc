@@ -133,6 +133,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 Config::check_unions_default,
                 MXS_MODULE_OPT_NONE,
             },
+            {
+                Config::check_subqueries_name,
+                MXS_MODULE_PARAM_BOOL,
+                Config::check_subqueries_default,
+                MXS_MODULE_OPT_NONE,
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
