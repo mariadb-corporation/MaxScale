@@ -718,6 +718,7 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
     }
 
     next_sequence++;
+    ((MYSQL_session*)(dcb->data))->next_sequence = next_sequence;
 
     /**
      * The first step in the authentication process is to extract the
