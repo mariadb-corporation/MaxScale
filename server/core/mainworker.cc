@@ -61,20 +61,20 @@ MainWorker& MainWorker::get()
 
 void MainWorker::add_task(const char* zName, TASKFN func, void* pData, int frequency)
 {
-    call([=]() {
-            mxb_assert(m_tasks_by_name.find(zName) == m_tasks_by_name.end());
+    execute([=]() {
+                mxb_assert(m_tasks_by_name.find(zName) == m_tasks_by_name.end());
 
-            Task task(zName, func, pData, frequency);
+                Task task(zName, func, pData, frequency);
 
-            auto p = m_tasks_by_name.insert(std::make_pair(std::string(zName), task));
-            Task& inserted_task = (*p.first).second;
+                auto p = m_tasks_by_name.insert(std::make_pair(std::string(zName), task));
+                Task& inserted_task = (*p.first).second;
 
-            inserted_task.id = delayed_call(frequency * 1000,
-                                            &MainWorker::call_task,
-                                            this,
-                                            &inserted_task);
-        },
-        EXECUTE_AUTO);
+                inserted_task.id = delayed_call(frequency * 1000,
+                                                &MainWorker::call_task,
+                                                this,
+                                                &inserted_task);
+            },
+            EXECUTE_AUTO);
 }
 
 void MainWorker::remove_task(const char* zName)
