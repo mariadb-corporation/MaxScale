@@ -36,7 +36,7 @@ public:
     void              query_ended();    // ok to call without a query_started
     bool              make_valid();     // make valid even if there are only filter_samples
     bool              is_valid() const;
-    int               num_samples() const;
+    long              num_samples() const;
     maxbase::Duration average() const;
     bool              sync_time_reached();  // is it time to apply the average to the server?
     void              reset();
@@ -44,7 +44,7 @@ public:
 private:
     const int                      m_num_filter_samples;
     const maxbase::Duration        m_sync_duration;
-    int                            m_sample_count;
+    long                           m_sample_count;
     std::vector<maxbase::Duration> m_samples;   // N sampels from which median is used
     maxbase::CumulativeAverage     m_average;
     maxbase::TimePoint             m_last_start;

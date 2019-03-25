@@ -17,7 +17,7 @@
 namespace maxbase
 {
 
-void CumulativeAverage::add(double ave, int num_samples)
+void CumulativeAverage::add(double ave, long num_samples)
 {
     m_num_samples += num_samples;
 
@@ -38,7 +38,7 @@ double CumulativeAverage::average() const
     return m_ave;
 }
 
-int CumulativeAverage::num_samples() const
+long CumulativeAverage::num_samples() const
 {
     return m_num_samples;
 }
@@ -61,17 +61,17 @@ void CumulativeAverage::reset()
     m_num_last_added = 0;
 }
 
-EMAverage::EMAverage(double min_alpha, double max_alpha, int sample_max)
+EMAverage::EMAverage(double min_alpha, double max_alpha, long sample_max)
     : m_min_alpha{min_alpha}
     , m_max_alpha{max_alpha}
     , m_sample_max{sample_max}
 {
 }
 
-void EMAverage::add(double ave, int num_samples)
+void EMAverage::add(double ave, long num_samples)
 {
     // Give more weight to initial samples.
-    int sample_max = std::min(m_num_samples ? m_num_samples : 1, m_sample_max);
+    long sample_max = std::min(m_num_samples ? m_num_samples : 1, m_sample_max);
 
     double alpha = m_min_alpha + m_max_alpha
         * std::min(double(num_samples) / sample_max, 1.0);
@@ -97,17 +97,17 @@ double EMAverage::average() const
     return m_ave;
 }
 
-int EMAverage::num_samples() const
+long EMAverage::num_samples() const
 {
     return m_num_samples;
 }
 
-void EMAverage::set_sample_max(int sample_max)
+void EMAverage::set_sample_max(long sample_max)
 {
     m_sample_max = sample_max;
 }
 
-int EMAverage::sample_max() const
+long EMAverage::sample_max() const
 {
     return m_sample_max;
 }

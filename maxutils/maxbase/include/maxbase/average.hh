@@ -34,7 +34,7 @@ public:
      * @param ave         The average value
      * @param num_samples How many samples were taken to construct it
      */
-    void add(double ave, int num_samples = 1);
+    void add(double ave, long num_samples = 1);
 
     /**
      * Get the average value
@@ -48,7 +48,7 @@ public:
      *
      * @return Number of collected samples
      */
-    int num_samples() const;
+    long num_samples() const;
 
     /**
      * Reset the average value
@@ -60,8 +60,8 @@ public:
     CumulativeAverage& operator+=(const CumulativeAverage& rhs);
 private:
     double m_ave = 0;
-    int    m_num_samples = 0;
-    int    m_num_last_added = 0;
+    long   m_num_samples = 0;
+    long   m_num_last_added = 0;
 };
 
 CumulativeAverage operator+(const CumulativeAverage& rhs, const CumulativeAverage& lhs);
@@ -81,7 +81,7 @@ public:
      * @param max_alpha  The extra alpha value
      * @param sample_max Maximum number of samples to use
      */
-    EMAverage(double min_alpha, double max_alpha, int sample_max);
+    EMAverage(double min_alpha, double max_alpha, long sample_max);
 
     /**
      * Add a new value to the average made of `num_samples` samples
@@ -101,7 +101,7 @@ public:
      * @param ave         Value to add
      * @param num_samples Number of samples the value consists of
      */
-    void add(double ave, int num_samples = 1);
+    void add(double ave, long num_samples = 1);
 
     /**
      * Add a CumulativeAverage
@@ -124,21 +124,21 @@ public:
      *
      * @return The number of samples
      */
-    int num_samples() const;
+    long num_samples() const;
 
     /**
      * Set maximum sample size
      *
      * @param sample_max The new sample max size
      */
-    void set_sample_max(int sample_max);
+    void set_sample_max(long sample_max);
 
     /**
      * Get maximum sample size
      *
      * @return The maximum sample size
      */
-    int sample_max() const;
+    long sample_max() const;
 
     /**
      * Reset the average
@@ -150,8 +150,8 @@ public:
 private:
     const double m_min_alpha;
     const double m_max_alpha;
-    int          m_sample_max;
-    int          m_num_samples = 0;
+    long         m_sample_max;
+    long         m_num_samples = 0;
     double       m_ave = 0;
 };
 

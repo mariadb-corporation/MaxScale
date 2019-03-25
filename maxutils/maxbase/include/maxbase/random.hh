@@ -37,8 +37,8 @@ public:
     uint64_t rand();
     uint32_t rand32();
     bool     rand_bool();
-    int64_t  b_to_e_exclusive(int64_t b, int64_t e);
-    double   zero_to_one_exclusive();
+    int64_t  b_to_e_co(int64_t b, int64_t e);
+    double   zero_to_one_co();
 private:
     uint64_t rotl(const uint64_t x, int k);
     std::array<uint64_t, 4> m_state;
@@ -57,8 +57,8 @@ public:
     uint64_t rand();
     uint32_t rand32();
     bool     rand_bool();
-    int64_t  b_to_e_exclusive(int64_t b, int64_t e);
-    double   zero_to_one_exclusive();
+    int64_t  b_to_e_co(int64_t b, int64_t e);
+    double   zero_to_one_co();
 
     // Borrow the mt19937_64 engine for other distributions.
     std::mt19937_64& rnd_engine();
@@ -104,7 +104,7 @@ inline bool XorShiftRandom::rand_bool()
     return std::signbit(int64_t(rand()));
 }
 
-inline double XorShiftRandom::zero_to_one_exclusive()
+inline double XorShiftRandom::zero_to_one_co()
 {
     uint64_t x = rand();
 
@@ -118,7 +118,7 @@ inline double XorShiftRandom::zero_to_one_exclusive()
     return u.d - 1.0;
 }
 
-inline int64_t XorShiftRandom::b_to_e_exclusive(int64_t b, int64_t e)
+inline int64_t XorShiftRandom::b_to_e_co(int64_t b, int64_t e)
 {
     // With 64 bits mod bias does not happen in practise (a very, very large e-b would be needed).
     // alternative: return b + int64_t(zero_to_one_exclusive()*(e-b));
@@ -140,13 +140,13 @@ inline bool StdTwisterRandom::rand_bool()
     return std::signbit(int32_t(rand32()));
 }
 
-inline double StdTwisterRandom::zero_to_one_exclusive()
+inline double StdTwisterRandom::zero_to_one_co()
 {
     std::uniform_real_distribution<double> zero_to_one {0, 1};
     return zero_to_one(m_twister_engine_64);
 }
 
-inline int64_t StdTwisterRandom::b_to_e_exclusive(int64_t b, int64_t e)
+inline int64_t StdTwisterRandom::b_to_e_co(int64_t b, int64_t e)
 {
     std::uniform_int_distribution<int64_t> dist {b, e - 1};
     return dist(m_twister_engine_64);

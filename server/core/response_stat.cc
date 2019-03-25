@@ -71,7 +71,7 @@ bool ResponseStat::is_valid() const
     return m_average.num_samples();
 }
 
-int ResponseStat::num_samples() const
+long ResponseStat::num_samples() const
 {
     return m_average.num_samples();
 }

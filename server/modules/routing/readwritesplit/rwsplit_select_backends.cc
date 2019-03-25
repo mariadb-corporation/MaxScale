@@ -161,7 +161,7 @@ PRWBackends::iterator backend_cmp_response_time(PRWBackends& sBackends)
     }
 
     // Find the winner, role the ball:
-    double ball = maxbase::Worker::get_current()->random_engine().zero_to_one_exclusive();
+    double ball = maxbase::Worker::get_current()->random_engine().zero_to_one_co();
 
     double slot_walk {0};
     int winner {0};
