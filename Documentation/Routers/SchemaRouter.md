@@ -8,8 +8,12 @@ database-based sharding, the schemarouter also enables cross-node
 session variable usage by routing all queries that modify the session to all
 nodes.
 
-From 2.3.0 onwards, the SchemaRouter is capable of table family sharding,
-in addition to being capable of sharding databases.
+The main limitation of SchemaRouter is that aside from session variable writes
+and some specific queries, a query can only target one server. This means that
+queries which depend on results from multiple servers give incorrect results.
+See [Limitations](#limitations) for more information.
+
+From 2.3.0 onwards, SchemaRouter is capable of limited table family sharding.
 
 Table of Contents
 =================
@@ -49,6 +53,19 @@ always be from the same node.
 In almost all the cases these can be avoided by proper server configuration
 and the databases are always mapped to the same servers. More on
 configuration in the next chapter.
+
+To check how databases and tables map to servers, execute the special query
+`SHOW SHARDS`. The query does not support any modifiers such as `LIKE`.
+
+```
+show shards;
+
+Database |Server       |
+---------|-------------|
+db1.t1   |MyServer1    |
+db1.t2   |MyServer1    |
+db2.t1   |MyServer2    |
+```
 
 ## Configuration
 
@@ -185,8 +202,38 @@ The minimum interval between database map refreshes in seconds.
 
 ## Limitations
 
-For a list of schemarouter limitations, please read the
-[Limitations](../About/Limitations.md) document.
+1. Cross-database queries (e.g. `SELECT column FROM database1.table UNION select column
+FROM database2.table`) are not properly supported. Such queries are routed either to the
+first explicit database in the query, the current database in use or to the first
+available database, depending on which succeeds.
+
+* Without a default database, queries without explicit databases that do not modify the
+session state will be routed to the first available server. This includes queries such as
+`CREATE DATABASE db1`. Such queries should be done directly on the node or the router
+should be equipped with the hint filter and a routing hint should be used. Queries that
+modify the session state (e.g. `SET autocommit=1`) will be routed to all servers
+regardless of the default database.
+
+* SELECT queries that modify session variables are not supported because uniform results
+can not be guaranteed. If such a query is executed, the behavior of the router is
+undefined. To work around this limitation, the query must be executed in separate parts.
+
+* If a query targets a database the SchemaRouter has not mapped to a server, the
+query will be routed to the first available server. This possibly returns an
+error about database rights instead of a missing database.
+
+* The preparation of a prepared statement is routed to all servers. The
+execution of a prepared statement is routed to the first available server or to
+the server pointed by a routing hint attached to the query. In practice this
+means that prepared statements aren't supported by the SchemaRouter.
+
+* `SHOW DATABASES` is handled by the router instead of routed to a server. The router only
+answers correctly to the basic version of the query. Any modifiers such as `LIKE` are
+ignored.
+
+* `SHOW TABLES` is routed to the server with the current database. If using table-level
+sharding, the results will be incomplete. Use `SHOW SHARDS` to get results from the router
+itself.
 
 ## Examples
 
