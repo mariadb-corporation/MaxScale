@@ -1848,14 +1848,14 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
         goto retblock;
     }
 
-    if (lex->describe || is_show_command(lex->sql_command))
+    if (lex->describe || (is_show_command(lex->sql_command) && !(lex->sql_command == SQLCOM_SHOW_TABLES)))
     {
         goto retblock;
     }
 
-    if (lex->sql_command == SQLCOM_CHANGE_DB)
+    if (lex->sql_command == SQLCOM_CHANGE_DB || lex->sql_command == SQLCOM_SHOW_TABLES)
     {
-        if (lex->select_lex.db)
+        if (lex->select_lex.db && (strcmp(lex->select_lex.db, "skygw_virtual") != 0))
         {
             if (i >= currsz)
             {

@@ -3031,6 +3031,14 @@ public:
 
         case MXS_SHOW_TABLES:
             m_type_mask = QUERY_TYPE_SHOW_TABLES;
+            if (pShow->pDatabase->z)
+            {
+                char db[pShow->pDatabase->n + 1];
+                strncpy(db, pShow->pDatabase->z, pShow->pDatabase->n);
+                db[pShow->pDatabase->n] = 0;
+
+                update_database_names(db);
+            }
             break;
 
         case MXS_SHOW_VARIABLES:
