@@ -801,6 +801,10 @@ void TestConnections::init_maxscale(int m)
                               true,
                               "maxctrl api get maxscale/debug/monitor_wait");
     }
+    else
+    {
+        maxscales->stop_maxscale(m);
+    }
 }
 
 void TestConnections::copy_one_mariadb_log(int i, std::string filename)
