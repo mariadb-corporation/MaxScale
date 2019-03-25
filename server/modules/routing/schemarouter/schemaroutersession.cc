@@ -342,14 +342,6 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             gwbuf_free(pPacket);
             return 1;
         }
-        else if (qc_query_is_type(type, QUERY_TYPE_SHOW_TABLES))
-        {
-            if (send_tables(pPacket))
-            {
-                gwbuf_free(pPacket);
-                return 1;
-            }
-        }
         else if (detect_show_shards(pPacket))
         {
             if (send_shards())
@@ -1574,69 +1566,6 @@ void SchemaRouterSession::send_databases()
     }
 
     set->write(m_client);
-}
-
-bool SchemaRouterSession::send_tables(GWBUF* pPacket)
-{
-    char* query = modutil_get_SQL(pPacket);
-    char* tmp;
-    std::string database;
-
-    if ((tmp = strcasestr(query, "from")))
-    {
-        const char* delim = "` \n\t;";
-        char* saved, * tok = strtok_r(tmp, delim, &saved);
-        tok = strtok_r(NULL, delim, &saved);
-        database = tok;
-    }
-
-    if (database.empty())
-    {
-        // Was not a "show tables from x". If a current database is selected, use that as target.
-        if (!m_current_db.empty())
-        {
-            database = m_current_db;
-        }
-        else
-        {
-            // No current db, route the query to a server, likely getting "No database selected"
-            MXS_FREE(query);
-            return false;
-        }
-    }
-
-    ServerMap tablelist;
-    std::list<std::string> table_names;
-    m_shard.get_content(tablelist);
-
-    for (ServerMap::iterator it = tablelist.begin(); it != tablelist.end(); it++)
-    {
-        std::size_t pos = it->first.find(".");
-        // If the database is empty ignore it
-        if (pos == std::string::npos)
-        {
-            continue;
-        }
-        std::string db = it->first.substr(0, pos);
-
-        if (db.compare(database) == 0)
-        {
-            std::string table = it->first.substr(pos + 1);
-            table_names.push_back(table);
-        }
-    }
-
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Table"});
-
-    for (const auto& name : table_names)
-    {
-        set->add_row({name});
-    }
-
-    set->write(m_client);
-
-    MXS_FREE(query);
-    return true;
 }
 
 bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SSRBackend& bref, uint8_t command, uint32_t type)
