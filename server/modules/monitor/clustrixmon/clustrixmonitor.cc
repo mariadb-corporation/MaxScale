@@ -67,10 +67,6 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     m_config.set_cluster_monitor_interval(pParams->get_integer(CLUSTER_MONITOR_INTERVAL_NAME));
     m_config.set_health_check_threshold(pParams->get_integer(HEALTH_CHECK_THRESHOLD_NAME));
 
-    // At startup we accept softfailed nodes in an attempt to be able to
-    // connect at any cost. It'll be replaced once there is an alternative.
-    check_cluster(Clustrix::Softfailed::ACCEPT);
-
     return true;
 }
 
@@ -141,6 +137,10 @@ void ClustrixMonitor::server_removed(SERVER* pServer)
 
 void ClustrixMonitor::pre_loop()
 {
+    // At startup we accept softfailed nodes in an attempt to be able to
+    // connect at any cost. It'll be replaced once there is an alternative.
+    check_cluster(Clustrix::Softfailed::ACCEPT);
+
     make_health_check();
 }
 
