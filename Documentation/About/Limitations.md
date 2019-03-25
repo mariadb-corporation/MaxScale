@@ -4,6 +4,8 @@ This document lists known issues and limitations in MariaDB MaxScale and its
 plugins. Since limitations are related to specific plugins, this document is
 divided into several sections.
 
+[TOC]
+
 ## Configuration limitations
 
 In versions 2.1.2 and earlier, the configuration files are limited to 1024
@@ -13,6 +15,16 @@ MaxScale 2.1.3. MaxScale 2.3.0 increased this limit to 16777216 characters.
 In versions 2.2.12 and earlier, the section names in the configuration files
 were limited to 49 characters. This limitation was increased to 1023 characters
 in MaxScale 2.2.13.
+
+### Multiple MaxScales on same server
+
+Starting with MaxScale 2.4.0, on systems with Linux kernels 3.9 or newer due to
+the addition of SO_REUSEPORT support, it is possible for multiple MaxScale
+instances to listen on the same network port if the directories used by both
+instances are completely separate and there are no conflicts which can cause
+unexpected splitting of connections. This will only happen if users explicitly
+tell MaxScale to ignore the default directories and will not happen in normal
+use.
 
 ## Security limitiations
 

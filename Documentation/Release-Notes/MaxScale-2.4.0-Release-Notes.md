@@ -19,6 +19,19 @@ configuration files, then MaxScale will not start.
 Whitespace in section names that was deprecated in 2.2 will now be
 rejected and cause the startup of MaxScale to fail.
 
+### Binding on network ports
+
+MaxScale 2.4.0 will now use the SO_REUSEPORT capability offered by newer kernels
+that allows reuse of network listener ports. In practice this means improved
+connection creation speed with more dynamic balancing of connections.
+
+As a side-effect of this, it is possible for two MaxScale instances to bind on
+the same listener port on systems that have Linux kernels newer than 3.9. This
+can only happen if the MaxScale instances use completely different directory
+structures (i.e. different `--basedir` arguments). Normal use of MaxScale still
+detects multiple MaxScales trying to bind to the same ports. Almost always, this
+will not have any negative side-effects.
+
 ## Dropped Features
 
 ## New Features
