@@ -18,14 +18,12 @@ int main(int argc, char* argv[])
     test.set_timeout(60);
     for (int i = 0; i < 2; i++)
     {
-        test.add_result(test.maxscales->ssh_node_f(0,
-                                                   true,
-                                                   "maxadmin show dbusers \"RW Split Router\"|grep 'User names'"),
-                        "Old style objects in maxadmin commands should succeed");
-        test.add_result(test.maxscales->ssh_node_f(0,
-                                                   true,
-                                                   "maxadmin show dbusers RW-Split-Router|grep 'User names'"),
-                        "New style objects in maxadmin commands should succeed");
+        constexpr const char* old_cmd = "maxadmin show dbusers \"RW Split Router\"|grep 'User names'";
+        constexpr const char* new_cmd = "maxadmin show dbusers RW-Split-Router|grep 'User names'";
+        test.expect(test.maxscales->ssh_node_f(0, true, old_cmd) != 0,
+                    "Old style objects in maxadmin commands should fail");
+        test.expect(test.maxscales->ssh_node_f(0, true, new_cmd) == 0,
+                    "New style objects in maxadmin commands should succeed");
     }
 
     return test.global_result;
