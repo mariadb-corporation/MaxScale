@@ -54,15 +54,6 @@ static struct
 } this_unit;
 
 /**
- * Free filter parameters
- * @param filter FilterDef whose parameters are to be freed
- */
-static void filter_free_parameters(FilterDef* filter)
-{
-    delete filter->parameters;
-}
-
-/**
  * Allocate a new filter
  *
  * @param name   The filter name
@@ -111,19 +102,10 @@ FilterDef::FilterDef(std::string name,
                      MXS_CONFIG_PARAMETER* params)
     : name(name)
     , module(module)
-    , parameters(NULL)
+    , parameters(*params)
     , filter(instance)
     , obj(object)
 {
-    // TODO: Add config_clone_param_chain
-    parameters = new MXS_CONFIG_PARAMETER;
-    for (auto p : *params)
-    {
-        parameters->set(p.first, p.second);
-    }
-
-    // Store module, used when the filter is serialized
-    parameters->set(CN_MODULE, module);
 }
 
 FilterDef::~FilterDef()
@@ -132,8 +114,6 @@ FilterDef::~FilterDef()
     {
         obj->destroyInstance(filter);
     }
-
-    filter_free_parameters(this);
 }
 
 /**
@@ -378,7 +358,7 @@ json_t* filter_parameters_to_json(const SFilterDef& filter)
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(filter->module.c_str(), MODULE_FILTER);
-    config_add_module_params_json(filter->parameters,
+    config_add_module_params_json(&filter->parameters,
                                   {CN_TYPE, CN_MODULE},
                                   config_filter_params,
                                   mod->parameters,
@@ -517,7 +497,7 @@ static bool create_filter_config(const SFilterDef& filter, const char* filename)
     const MXS_MODULE* mod = get_module(filter->module.c_str(), NULL);
     mxb_assert(mod);
 
-    string config_str = generate_config_string(filter->name, *filter->parameters,
+    string config_str = generate_config_string(filter->name, filter->parameters,
                                                config_filter_params, mod->parameters);
     if (dprintf(file, "%s", config_str.c_str()) == -1)
     {

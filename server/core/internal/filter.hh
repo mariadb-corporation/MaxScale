@@ -36,12 +36,12 @@ struct FilterDef : public MXS_FILTER_DEF
               MXS_CONFIG_PARAMETER* params);
     ~FilterDef();
 
-    std::string           name;         /**< The Filter name */
-    std::string           module;       /**< The module to load */
-    MXS_CONFIG_PARAMETER* parameters;   /**< The filter parameters */
-    MXS_FILTER*           filter;       /**< The runtime filter */
-    MXS_FILTER_OBJECT*    obj;          /**< The "MODULE_OBJECT" for the filter */
-    mutable std::mutex    lock;
+    std::string          name;          /**< The Filter name */
+    std::string          module;        /**< The module to load */
+    MXS_CONFIG_PARAMETER parameters;    /**< The filter parameters */
+    MXS_FILTER*          filter;        /**< The runtime filter */
+    MXS_FILTER_OBJECT*   obj;           /**< The "MODULE_OBJECT" for the filter */
+    mutable std::mutex   lock;
 };
 
 typedef std::shared_ptr<FilterDef> SFilterDef;
