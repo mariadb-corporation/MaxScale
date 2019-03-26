@@ -178,3 +178,28 @@ public:
      */
     static void debug_wait_one_tick();
 };
+
+// RAII helper class for temprarily stopping monitors
+class MonitorStop
+{
+public:
+    MonitorStop(mxs::Monitor* monitor)
+        : m_monitor(monitor->state() == MONITOR_STATE_RUNNING ? monitor : nullptr)
+    {
+        if (m_monitor)
+        {
+            MonitorManager::stop_monitor(m_monitor);
+        }
+    }
+
+    ~MonitorStop()
+    {
+        if (m_monitor)
+        {
+            MonitorManager::start_monitor(m_monitor);
+        }
+    }
+
+private:
+    mxs::Monitor* m_monitor;
+};

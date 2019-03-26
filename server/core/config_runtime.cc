@@ -760,21 +760,14 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
 
 bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
 {
-    // If the monitor is already stopped, don't stop/start it.
-    bool was_running = (monitor->state() == MONITOR_STATE_RUNNING);
-    if (was_running)
-    {
-        MonitorManager::stop_monitor(monitor);
-    }
+    MonitorStop stop(monitor);
     bool success = do_alter_monitor(monitor, key, value);
+
     if (success)
     {
         MonitorManager::monitor_serialize(monitor);
     }
-    if (was_running)
-    {
-        MonitorManager::start_monitor(monitor);
-    }
+
     return success;
 }
 
