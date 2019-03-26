@@ -150,6 +150,18 @@ public:
     static bool monitor_serialize(const mxs::Monitor* monitor);
 
     /**
+     * Attempt to reconfigure a monitor
+     *
+     * If the configuration fails, the old parameters are restored.
+     *
+     * @param monitor    Monitor to reconfigure
+     * @param parameters New parameters to apply
+     *
+     * @return True if reconfiguration was successful
+     */
+    static bool reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG_PARAMETER& parameters);
+
+    /**
      * @brief Convert monitor to JSON
      *
      * @param monitor Monitor to convert

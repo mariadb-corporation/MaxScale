@@ -745,23 +745,16 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
         return false;
     }
 
-    // Backup monitor parameters in case configure fails.
-    MXS_CONFIG_PARAMETER originals = monitor->parameters;
     MXS_CONFIG_PARAMETER modified = monitor->parameters;
-
     modified.set(key, value);
-    bool success = monitor->configure(&modified);
+
+    bool success = MonitorManager::reconfigure_monitor(monitor, modified);
+
     if (success)
     {
         MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->m_name, key, value);
     }
-    else
-    {
-        // Configure failed, restore original configs. This should not fail.
-        // TODO: add a flag to monitor which prevents startup if config is wrong.
-        MXB_AT_DEBUG(bool check = ) monitor->configure(&originals);
-        mxb_assert(check);
-    }
+
     return success;
 }
 
@@ -2535,16 +2528,10 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
         MonitorManager::stop_monitor(monitor);
         auto old_params = monitor->parameters;
 
-        if (monitor->configure(&params))
+        if (MonitorManager::reconfigure_monitor(monitor, params))
         {
             MonitorManager::monitor_serialize(monitor);
             success = true;
-        }
-        else
-        {
-            // Something went wrong, restore the old parameters
-            MXB_AT_DEBUG(bool check = ) monitor->configure(&old_params);
-            mxb_assert(check);
         }
 
         if (restart)

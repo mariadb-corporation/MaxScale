@@ -792,6 +792,24 @@ bool MonitorManager::monitor_serialize(const Monitor* monitor)
     return rval;
 }
 
+// static
+bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG_PARAMETER& parameters)
+{
+    // Backup monitor parameters in case configure fails.
+    auto orig = monitor->parameters;
+    monitor->parameters.clear();
+
+    bool success = monitor->configure(&parameters);
+
+    if (!success)
+    {
+        MXB_AT_DEBUG(bool check = ) monitor->configure(&orig);
+        mxb_assert(check);
+    }
+
+    return success;
+}
+
 json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host)
 {
     string self = MXS_JSON_API_MONITORS;
