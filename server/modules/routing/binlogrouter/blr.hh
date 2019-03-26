@@ -799,6 +799,7 @@ struct ROUTER_INSTANCE : public MXS_ROUTER
     unsigned int            long_burst; /*< Long burst for slave catchup */
     unsigned long           burst_size; /*< Maximum size of burst to send */
     unsigned long           heartbeat;  /*< Configured heartbeat value */
+    bool                    heartbeat_task_active;
     ROUTER_STATS            stats;      /*< Statistics for this router */
     int                     active_logs;
     int                     reconnect_pending;

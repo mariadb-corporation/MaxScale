@@ -1460,15 +1460,18 @@ static bool blr_check_last_master_event(void* inst)
 
     if ((!master_check) || (master_state != BLRM_BINLOGDUMP))
     {
-        /*
-         * Remove the task, it will be added again
-         * when master state is back to BLRM_BINLOGDUMP
-         * by blr_master_response()
-         */
-        snprintf(task_name,
-                 BLRM_TASK_NAME_LEN,
-                 "%s heartbeat",
-                 router->service->name());
+        if (router->heartbeat_task_active)
+        {
+            // Remove the task, it will be added again when master state is back to BLRM_BINLOGDUMP by
+            // blr_master_response()
+            snprintf(task_name,
+                     BLRM_TASK_NAME_LEN,
+                     "%s heartbeat",
+                     router->service->name());
+
+            hktask_remove(task_name);
+            router->heartbeat_task_active = false;
+        }
 
         rval = false;
     }
@@ -2842,8 +2845,9 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
         /**
          * Set heartbeat check task
          */
-        if (router->heartbeat > 0)
+        if (router->heartbeat > 0 && !router->heartbeat_task_active)
         {
+            router->heartbeat_task_active = true;
             char task_name[BLRM_TASK_NAME_LEN + 1] = "";
             snprintf(task_name,
                      BLRM_TASK_NAME_LEN,
