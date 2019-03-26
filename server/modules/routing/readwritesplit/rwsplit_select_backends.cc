@@ -53,6 +53,7 @@ static bool valid_for_slave(const RWBackend* backend, const RWBackend* master)
 PRWBackends::iterator best_score(PRWBackends& sBackends,
                                  std::function<double(SERVER_REF* server)> server_score)
 {
+    const double max_score = std::nexttoward(std::numeric_limits<double>::max(), 0.0);
     double min {std::numeric_limits<double>::max()};
     auto best = sBackends.end();
     for (auto ite = sBackends.begin(); ite != sBackends.end(); ++ite)
@@ -65,12 +66,22 @@ PRWBackends::iterator best_score(PRWBackends& sBackends,
             score = (score + 5.0) * 1.5;
         }
 
+        if (score > max_score)
+        {
+            // Cap values to a maximum value. This guarantees that we choose a server from the set of
+            // available candidates.
+            score = max_score;
+        }
+
         if (min > score)
         {
             min = score;
             best = ite;
         }
     }
+
+    mxb_assert_message(best != sBackends.end() || sBackends.empty(),
+                       "A candidate must be chosen if we have candidates");
 
     return best;
 }
