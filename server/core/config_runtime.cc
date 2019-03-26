@@ -349,28 +349,26 @@ bool runtime_create_server(const char* name,
                 protocol = "mariadbbackend";
             }
 
-            CONFIG_CONTEXT ctx {(char*)""};
+            MXS_CONFIG_PARAMETER parameters;
             bool ok;
-            tie(ok, ctx.m_parameters) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
+            tie(ok, parameters) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
 
             if (ok)
             {
-                config_replace_param(&ctx, CN_PROTOCOL, protocol);
-
                 if (address)
                 {
-                    config_replace_param(&ctx, "address", address);
+                    parameters.set(CN_ADDRESS, address);
                 }
                 if (port)
                 {
-                    config_replace_param(&ctx, "port", port);
+                    parameters.set(CN_PORT, port);
                 }
                 if (authenticator)
                 {
-                    config_replace_param(&ctx, "authenticator", authenticator);
+                    parameters.set(CN_AUTHENTICATOR, authenticator);
                 }
 
-                Server* server = Server::server_alloc(name, &ctx.m_parameters);
+                Server* server = Server::server_alloc(name, &parameters);
 
                 if (server && (!external || server->serialize()))
                 {
@@ -1342,9 +1340,9 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
     if (!filter_find(name))
     {
         SFilterDef filter;
-        CONFIG_CONTEXT ctx {(char*)""};
+        MXS_CONFIG_PARAMETER parameters;
         bool ok;
-        tie(ok, ctx.m_parameters) = load_defaults(module, MODULE_FILTER, CN_FILTER);
+        tie(ok, parameters) = load_defaults(module, MODULE_FILTER, CN_FILTER);
 
         if (ok)
         {
@@ -1352,12 +1350,12 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
 
             if (config_is_valid_name(name, &reason))
             {
-                for (auto elem : *params)
+                if (params)
                 {
-                    config_replace_param(&ctx, elem.first.c_str(), elem.second.c_str());
+                    parameters.set_multiple(*params);
                 }
 
-                if (!(filter = filter_alloc(name, module, &ctx.m_parameters)))
+                if (!(filter = filter_alloc(name, module, &parameters)))
                 {
                     config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
                 }
@@ -1418,41 +1416,37 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
     if (service_internal_find(name) == NULL)
     {
         Service* service = NULL;
-        CONFIG_CONTEXT ctx {(char*)""};
+        MXS_CONFIG_PARAMETER parameters;
         bool ok;
-        tie(ok, ctx.m_parameters) = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
+        tie(ok, parameters) = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
 
         if (ok)
         {
             std::string reason;
             if (config_is_valid_name(name, &reason))
             {
-                for (auto elem : *params)
+                if (params)
                 {
-                    config_replace_param(&ctx, elem.first.c_str(), elem.second.c_str());
+                    parameters.set_multiple(*params);
                 }
 
-                if ((service = service_alloc(name, router, &ctx.m_parameters)) == NULL)
+                if ((service = service_alloc(name, router, &parameters)) == nullptr)
                 {
                     config_runtime_error("Could not create service '%s' with module '%s'", name, router);
+                }
+                else if (!service_serialize(service))
+                {
+                    config_runtime_error("Failed to serialize service '%s'", name);
+                }
+                else
+                {
+                    MXS_NOTICE("Created service '%s'", name);
+                    rval = true;
                 }
             }
             else
             {
                 config_runtime_error("%s", reason.c_str());
-            }
-        }
-
-        if (service)
-        {
-            if (service_serialize(service))
-            {
-                MXS_NOTICE("Created service '%s'", name);
-                rval = true;
-            }
-            else
-            {
-                config_runtime_error("Failed to serialize service '%s'", name);
             }
         }
     }
