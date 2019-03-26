@@ -1675,52 +1675,57 @@ SERVER* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_que
 
     if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
     {
+        // If pStmt is null, the PREPARE was malformed. In that case it can be routed to any backend to get
+        // a proper error response. Also returns null if preparing from a variable. This is a limitation.
         GWBUF* pStmt = qc_get_preparable_stmt(buffer);
-        int n_tables = 0;
-        char** tables = qc_get_table_names(pStmt, &n_tables, true);
-        char* stmt = qc_get_prepare_name(buffer);
-
-        for (int i = 0; i < n_tables; i++)
+        if (pStmt)
         {
-            SERVER* target = m_shard.get_location(tables[i]);
+            int n_tables = 0;
+            char** tables = qc_get_table_names(pStmt, &n_tables, true);
+            char* stmt = qc_get_prepare_name(buffer);
 
-            if (target)
+            for (int i = 0; i < n_tables; i++)
             {
-
-                if (rval && target != rval)
+                SERVER* target = m_shard.get_location(tables[i]);
+                if (target)
                 {
-                    MXS_ERROR("Statement targets tables on servers '%s' and '%s'. "
-                              "Cross server queries are not supported.",
-                              rval->name,
-                              target->name);
+                    if (rval && target != rval)
+                    {
+                        MXS_ERROR("Statement targets tables on servers '%s' and '%s'. "
+                                  "Cross server queries are not supported.",
+                                  rval->name, target->name);
+                    }
+                    else if (rval == NULL)
+                    {
+                        rval = target;
+                    }
                 }
-                else if (rval == NULL)
-                {
-                    rval = target;
-                }
+                MXS_FREE(tables[i]);
             }
-            MXS_FREE(tables[i]);
-        }
 
-        if (rval)
-        {
-            MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name);
-            m_shard.add_statement(stmt, rval);
+            if (rval)
+            {
+                MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name);
+                m_shard.add_statement(stmt, rval);
+            }
+            MXS_FREE(tables);
+            MXS_FREE(stmt);
         }
-        MXS_FREE(tables);
-        MXS_FREE(stmt);
     }
     else if (op == QUERY_OP_EXECUTE)
     {
         char* stmt = qc_get_prepare_name(buffer);
-        rval = m_shard.get_statement(stmt);
-        MXS_INFO("Executing named statement %s on server %s", stmt, rval->name);
+        SERVER* ps_target = m_shard.get_statement(stmt);
+        if (ps_target)
+        {
+            rval = ps_target;
+            MXS_INFO("Executing named statement %s on server %s", stmt, rval->name);
+        }
         MXS_FREE(stmt);
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE))
     {
         char* stmt = qc_get_prepare_name(buffer);
-
         if ((rval = m_shard.get_statement(stmt)))
         {
             MXS_INFO("Closing named statement %s on server %s", stmt, rval->name);
