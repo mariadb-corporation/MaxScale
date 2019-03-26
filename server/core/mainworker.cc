@@ -59,14 +59,14 @@ MainWorker& MainWorker::get()
     return *this_unit.pCurrent_main;
 }
 
-void MainWorker::add_task(const char* zName, TASKFN func, void* pData, int frequency)
+void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int frequency)
 {
     execute([=]() {
-                mxb_assert(m_tasks_by_name.find(zName) == m_tasks_by_name.end());
+                mxb_assert_message(m_tasks_by_name.find(name) == m_tasks_by_name.end(), name.c_str());
 
-                Task task(zName, func, pData, frequency);
+                Task task(name.c_str(), func, pData, frequency);
 
-                auto p = m_tasks_by_name.insert(std::make_pair(std::string(zName), task));
+                auto p = m_tasks_by_name.insert(std::make_pair(name, task));
                 Task& inserted_task = (*p.first).second;
 
                 inserted_task.id = delayed_call(frequency * 1000,
@@ -77,21 +77,22 @@ void MainWorker::add_task(const char* zName, TASKFN func, void* pData, int frequ
             EXECUTE_AUTO);
 }
 
-void MainWorker::remove_task(const char* zName)
+void MainWorker::remove_task(const std::string& name)
 {
-    call([this, zName]() {
-            auto it = m_tasks_by_name.find(zName);
-            mxb_assert(it != m_tasks_by_name.end());
 
-            if (it != m_tasks_by_name.end())
-            {
-                MXB_AT_DEBUG(bool cancelled =) cancel_delayed_call(it->second.id);
-                mxb_assert(cancelled);
+    call([this, name]() {
+             auto it = m_tasks_by_name.find(name);
+             mxb_assert(it != m_tasks_by_name.end());
 
-                m_tasks_by_name.erase(it);
-            }
-        },
-        EXECUTE_AUTO);
+             if (it != m_tasks_by_name.end())
+             {
+                 MXB_AT_DEBUG(bool cancelled = ) cancel_delayed_call(it->second.id);
+                 mxb_assert(cancelled);
+
+                 m_tasks_by_name.erase(it);
+             }
+         },
+         EXECUTE_AUTO);
 }
 
 void MainWorker::show_tasks(DCB* pDcb) const

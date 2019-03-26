@@ -51,8 +51,8 @@ public:
      */
     static MainWorker& get();
 
-    void add_task(const char* zName, TASKFN func, void* pData, int frequency);
-    void remove_task(const char* zName);
+    void add_task(const std::string& name, TASKFN func, void* pData, int frequency);
+    void remove_task(const std::string& name);
 
     void show_tasks(DCB* pDcb) const;
     json_t* tasks_to_json(const char* zhost) const;
