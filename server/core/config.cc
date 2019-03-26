@@ -282,7 +282,7 @@ const MXS_MODULE_PARAM config_service_params[] =
     {
         CN_TYPE,
         MXS_MODULE_PARAM_STRING,
-        NULL,
+        CN_SERVICE,
         MXS_MODULE_OPT_REQUIRED
     },
     {
@@ -386,7 +386,7 @@ const MXS_MODULE_PARAM config_listener_params[] =
     {
         CN_TYPE,
         MXS_MODULE_PARAM_STRING,
-        NULL,
+        CN_LISTENER,
         MXS_MODULE_OPT_REQUIRED
     },
     {
@@ -473,7 +473,7 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     {
         CN_TYPE,
         MXS_MODULE_PARAM_STRING,
-        NULL,
+        CN_MONITOR,
         MXS_MODULE_OPT_REQUIRED
     },
     {
@@ -560,7 +560,7 @@ const MXS_MODULE_PARAM config_filter_params[] =
 {
     {
         CN_TYPE, MXS_MODULE_PARAM_STRING,
-        NULL,
+        CN_FILTER,
         MXS_MODULE_OPT_REQUIRED
     },
     {
@@ -577,7 +577,7 @@ const MXS_MODULE_PARAM config_server_params[] =
     {
         CN_TYPE,
         MXS_MODULE_PARAM_STRING,
-        NULL,
+        CN_SERVER,
         MXS_MODULE_OPT_REQUIRED
     },
     {

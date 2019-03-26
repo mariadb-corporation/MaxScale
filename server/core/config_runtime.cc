@@ -106,6 +106,25 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     return NULL;
 }
 
+std::string get_module_param_name(const std::string& type)
+{
+    if (type == CN_SERVICE)
+    {
+        return CN_ROUTER;
+    }
+    else if (type == CN_LISTENER || type == CN_SERVER)
+    {
+        return CN_PROTOCOL;
+    }
+    else if (type == CN_MONITOR || type == CN_FILTER)
+    {
+        return CN_MODULE;
+    }
+
+    mxb_assert(!true);
+    return "";
+}
+
 /**
  * @brief Load module default parameters
  *
@@ -128,6 +147,7 @@ static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
         config_add_defaults(&ctx, get_type_parameters(object_type));
         config_add_defaults(&ctx, mod->parameters);
         params = ctx.m_parameters;
+        params.set(get_module_param_name(object_type), name);
         rval = true;
     }
     else
@@ -1284,12 +1304,6 @@ bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PAR
                     final_params.set_multiple(*params);
                 }
 
-                // Make sure the type and module parameters are in the parameter list. If this function is
-                // called from runtime_create_monitor_from_json, the assignment is redundant. Due to the fact
-                // that maxadmin is still supported, we must do this.
-                final_params.set(CN_TYPE, CN_MONITOR);
-                final_params.set(CN_MODULE, module);
-
                 Monitor* monitor = MonitorManager::create_monitor(name, module, &final_params);
 
                 if (!monitor)
@@ -2364,10 +2378,6 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
         if (const MXS_MODULE* mod = get_module(module, MODULE_MONITOR))
         {
             auto params = extract_parameters(json);
-
-            // Make sure the type and module parameters are in the parameter list
-            params.set(CN_TYPE, CN_MONITOR);
-            params.set(CN_MODULE, module);
 
             if (validate_param(config_monitor_params, mod->parameters, &params)
                 && server_relationship_to_parameter(json, &params))
