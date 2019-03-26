@@ -1630,41 +1630,59 @@ SERVER* SchemaRouterSession::get_query_target(GWBUF* buffer)
     int n_databases = 0;
     char** databases = qc_get_database_names(buffer, &n_databases);
 
-    for (int i = 0; i < n_databases; i++)
+    if (n_databases > 0)
     {
-        for (int j = 0; j < n_tables; j++)
+        // Prefer to select the route target by table. If no tables, route by database.
+        if (n_tables)
         {
-            SERVER* target = m_shard.get_location(tables[j]);
-
-            if (target)
+            for (int i = 0; i < n_tables; i++)
             {
-
-                if (rval && target != rval)
+                SERVER* target = m_shard.get_location(tables[i]);
+                if (target)
                 {
-                    MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
-                              "Cross server queries are not supported.",
-                              rval->name,
-                              target->name);
-                }
-                else if (rval == NULL)
-                {
-                    rval = target;
-                    MXS_INFO("Query targets table '%s' on server '%s'",
-                             tables[j],
-                             rval->name);
+                    if (rval && target != rval)
+                    {
+                        MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
+                                  "Cross server queries are not supported.",
+                                  rval->name, target->name);
+                    }
+                    else if (rval == NULL)
+                    {
+                        rval = target;
+                        MXS_INFO("Query targets table '%s' on server '%s'", tables[i], rval->name);
+                    }
                 }
             }
         }
+        else if (rval == nullptr)
+        {
+            // Queries which target a database but no tables can have multiple targets. Select first one.
+            for (int i = 0; i < n_databases; i++)
+            {
+                SERVER* target = m_shard.get_location(databases[i]);
+                if (target)
+                {
+                    rval = target;
+                    break;
+                }
+            }
+        }
+    }
 
+
+    // Free the databases and tables arrays.
+    for (int i = 0; i < n_databases; i++)
+    {
         MXS_FREE(databases[i]);
     }
+    MXS_FREE(databases);
 
     for (int i = 0; i < n_tables; i++)
     {
         MXS_FREE(tables[i]);
     }
     MXS_FREE(tables);
-    MXS_FREE(databases);
+
     return rval;
 }
 

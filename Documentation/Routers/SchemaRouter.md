@@ -233,8 +233,12 @@ answers correctly to the basic version of the query. Any modifiers such as `LIKE
 ignored.
 
 * `SHOW TABLES` is routed to the server with the current database. If using table-level
-sharding, the results will be incomplete. Use `SHOW SHARDS` to get results from the router
-itself.
+sharding, the results will be incomplete. Similarly, `SHOW TABLES FROM db1` is routed to
+the server with database `db1`, ignoring table sharding. Use `SHOW SHARDS` to get results
+from the router itself.
+
+* `USE db1` is routed to the server with `db1`. If the database is divided to multiple
+servers, only one server will get the command.
 
 ## Examples
 
