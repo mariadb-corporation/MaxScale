@@ -194,7 +194,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                     info.joined = 1;
                 }
                 /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
-                else if (strcmp(row[1], "2") == 0 && m_availableWhenDonor == 1
+                else if (strcmp(row[1], "5") == 0 && m_availableWhenDonor == 1
                          && using_xtrabackup(monitored_server, server_string))
                 {
                     info.joined = 1;
