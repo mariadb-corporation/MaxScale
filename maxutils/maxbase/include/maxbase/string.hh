@@ -15,6 +15,9 @@
 #include <maxbase/ccdefs.hh>
 #include <algorithm>
 #include <string>
+#include <sstream>
+#include <cstring>
+#include <vector>
 
 /**
  * Thread-safe (but not re-entrant) strerror.
@@ -143,4 +146,54 @@ inline std::string trimmed_copy(const std::string& original)
     return s;
 }
 
+/**
+ * Tokenize a string
+ *
+ * @param str   String to tokenize
+ * @param delim List of delimiters (see strtok(3))
+ *
+ * @return List of tokenized strings
+ */
+inline std::vector<std::string> strtok(std::string str, const char* delim)
+{
+    std::vector<std::string> rval;
+    char* save_ptr;
+    char* tok = strtok_r(&str[0], delim, &save_ptr);
+
+    while (tok)
+    {
+        rval.emplace_back(tok);
+        tok = strtok_r(NULL, delim, &save_ptr);
+    }
+
+    return rval;
+}
+
+/**
+ * Join objects into a string delimited by separators
+ *
+ * @param container Container that provides iterators, stored value must support writing to ostream with
+ *                  operator<<
+ * @param separator Value used as the separator
+ *
+ * @return String created by joining all values and delimiting them with `separator` (no trailing delimiter)
+ */
+template<class T>
+std::string join(const T& container, const std::string& separator = ",")
+{
+    std::stringstream ss;
+    auto it = begin(container);
+
+    if (it != end(container))
+    {
+        ss << *it++;
+
+        while (it != end(container))
+        {
+            ss << separator << *it++;
+        }
+    }
+
+    return ss.str();
+}
 }

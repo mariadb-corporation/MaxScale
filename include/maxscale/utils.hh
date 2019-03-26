@@ -30,6 +30,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.h>
 #include <maxscale/jansson.hh>
+#include <maxbase/string.hh>
 
 namespace maxscale
 {
@@ -44,17 +45,7 @@ namespace maxscale
  */
 inline std::vector<std::string> strtok(std::string str, const char* delim)
 {
-    std::vector<std::string> rval;
-    char* save_ptr;
-    char* tok = strtok_r(&str[0], delim, &save_ptr);
-
-    while (tok)
-    {
-        rval.emplace_back(tok);
-        tok = strtok_r(NULL, delim, &save_ptr);
-    }
-
-    return rval;
+    return mxb::strtok(str, delim);
 }
 
 /**
