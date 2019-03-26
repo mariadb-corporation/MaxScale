@@ -125,7 +125,7 @@ public:
         {
             m_nRunning = m_health_check_threshold;
 
-            m_pServer->set_status(SERVER_RUNNING);
+            m_pServer->set_status(SERVER_MASTER | SERVER_RUNNING);
         }
         else
         {
@@ -142,7 +142,7 @@ public:
 
                 if (m_nRunning == 0)
                 {
-                    m_pServer->clear_status(SERVER_RUNNING);
+                    m_pServer->clear_status(SERVER_MASTER | SERVER_RUNNING);
                 }
             }
         }

@@ -581,16 +581,16 @@ void ClustrixMonitor::update_server_statuses()
 
             if (info.is_running())
             {
-                ms->set_pending_status(SERVER_RUNNING);
+                ms->set_pending_status(SERVER_MASTER | SERVER_RUNNING);
             }
             else
             {
-                ms->clear_pending_status(SERVER_RUNNING);
+                ms->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
             }
         }
         else
         {
-            ms->clear_pending_status(SERVER_RUNNING);
+            ms->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
         }
     }
 }
