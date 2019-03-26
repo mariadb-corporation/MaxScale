@@ -198,37 +198,25 @@ bool runtime_remove_server(Monitor* mon, Server* server)
 
     if (MonitorManager::server_is_monitored(server) != mon)
     {
-        MXS_ERROR("Server '%s' is not monitored by '%s'.", server->name(), mon->m_name);
+        config_runtime_error("Server '%s' is not monitored by '%s'.", server->name(), mon->m_name);
     }
     else
     {
-        // Construct the new list. The removed value could be anywhere.
-        string serverlist = mon->parameters.get_string(CN_SERVERS);
-        auto names = config_break_list_string(serverlist);
-        bool found = false;
-        for (auto iter = names.begin(); iter != names.end(); ++iter)
-        {
-            if (*iter == server->name())
-            {
-                found = true;
-                names.erase(iter);
-                break;
-            }
-        }
+        MonitorStop stop(mon);
 
-        if (found)
+        // Construct the new server list
+        auto params = mon->parameters;
+        auto names = config_break_list_string(params.get_string(CN_SERVERS));
+        names.erase(std::remove(names.begin(), names.end(), server->name()));
+        std::string servers = mxb::join(names, ",");
+        params.set(CN_SERVERS, servers);
+
+        if (MonitorManager::reconfigure_monitor(mon, params))
         {
-            // Rebuild the string.
-            string new_list;
-            string separator;
-            for (auto name : names)
-            {
-                new_list += separator + name;
-                separator = ", ";
-            }
-            rval = runtime_alter_monitor(mon, CN_SERVERS, new_list.c_str());
+            rval = MonitorManager::monitor_serialize(mon);
         }
     }
+
     return rval;
 }
 
@@ -314,9 +302,10 @@ bool runtime_unlink_server(Server* server, const char* target)
         }
         else if (monitor)
         {
-            runtime_remove_server(monitor, server);
-            MonitorManager::monitor_serialize(monitor);
-            rval = true;
+            if ((rval = runtime_remove_server(monitor, server)))
+            {
+                MonitorManager::monitor_serialize(monitor);
+            }
         }
 
         if (rval)
