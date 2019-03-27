@@ -24,6 +24,7 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/buffer.hh>
@@ -203,6 +204,40 @@ public:
     void get_stats(QC_CACHE_STATS* pStats)
     {
         *pStats = m_stats;
+    }
+
+    void get_state(std::map<std::string, QC_CACHE_ENTRY>& state) const
+    {
+        for (const auto& info : m_infos)
+        {
+            const std::string& stmt = info.first;
+            const Entry& entry = info.second;
+
+            auto it = state.find(stmt);
+
+            if (it == state.end())
+            {
+                QC_CACHE_ENTRY e {};
+
+                e.hits = entry.hits;
+                e.result = this_unit.classifier->qc_get_result_from_info(entry.pInfo);
+
+                state.insert(std::make_pair(stmt, e));
+            }
+            else
+            {
+                QC_CACHE_ENTRY& e = it->second;
+
+                e.hits += entry.hits;
+#if defined (SS_DEBUG)
+                QC_STMT_RESULT result = this_unit.classifier->qc_get_result_from_info(entry.pInfo);
+
+                mxb_assert(e.result.status == result.status);
+                mxb_assert(e.result.type_mask == result.type_mask);
+                mxb_assert(e.result.op == result.op);
+#endif
+            }
+        }
     }
 
 private:
@@ -1507,7 +1542,51 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
 
 std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
 {
+    std::map<std::string, QC_CACHE_ENTRY> state;
+
+    // Assuming the classification cache of all workers will roughly be similar
+    // (which will be the case unless something is broken), collecting the
+    // information serially from all routing workers will consume 1/N of the
+    // memory that would be consumed if the information were collected in
+    // parallel and then coalesced here.
+
+    mxs::RoutingWorker::execute_serially([&state]() {
+            qc_get_cache_state(state);
+        });
+
+    json_t* pArray = json_array();
+
+    for (const auto& p : state)
+    {
+        const auto& stmt = p.first;
+        const auto& entry = p.second;
+
+        json_t* pStmt = json_string(stmt.c_str());
+        json_t* pHits = json_integer(entry.hits);
+        json_t* pClassification = json_object();
+
+        json_object_set_new(pClassification,
+                            CN_PARSE_RESULT, json_string(qc_result_to_string(entry.result.status)));
+
+        char* zType_mask = qc_typemask_to_string(entry.result.type_mask);
+        json_object_set_new(pClassification, CN_TYPE_MASK, json_string(zType_mask));
+        MXS_FREE(zType_mask);
+        json_object_set_new(pClassification,
+                            CN_OPERATION,
+                            json_string(qc_op_to_string(entry.result.op)));
+
+        json_t* pObject = json_object();
+
+        json_object_set_new(pObject, CN_STATEMENT, pStmt);
+        json_object_set_new(pObject, CN_HITS, pHits);
+        json_object_set_new(pObject, CN_CLASSIFICATION, pClassification);
+
+        json_array_append(pArray, pObject);
+    }
+
     json_t* pAttributes = json_object();
+
+    json_object_set_new(pAttributes, CN_STATEMENTS, pArray);
 
     json_t* pSelf = json_object();
     json_object_set_new(pSelf, CN_ID, json_string(CN_CACHE));
@@ -1515,4 +1594,14 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
     json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
 
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pSelf));
+}
+
+void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state)
+{
+    QCInfoCache* pCache = this_thread.pInfo_cache;
+
+    if (pCache)
+    {
+        pCache->get_state(state);
+    }
 }

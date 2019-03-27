@@ -256,6 +256,18 @@ public:
         }
     }
 
+    QC_STMT_RESULT get_result() const
+    {
+        QC_STMT_RESULT result =
+        {
+            m_status,
+            m_type_mask,
+            m_operation
+        };
+
+        return result;
+    }
+
     static QcSqliteInfo* create(uint32_t collect)
     {
         QcSqliteInfo* pInfo = new(std::nothrow) QcSqliteInfo(collect);
@@ -4496,27 +4508,29 @@ void maxscaleUse(Parse* pParse, Token* pToken)
 /**
  * API
  */
-static int32_t       qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* args);
-static int32_t       qc_sqlite_process_init(void);
-static void          qc_sqlite_process_end(void);
-static int32_t       qc_sqlite_thread_init(void);
-static void          qc_sqlite_thread_end(void);
-static int32_t       qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result);
-static int32_t       qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
-static int32_t       qc_sqlite_get_operation(GWBUF* query, int32_t* op);
-static int32_t       qc_sqlite_get_created_table_name(GWBUF* query, char** name);
-static int32_t       qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
-static int32_t       qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, char*** names, int* tblsize);
-static int32_t       qc_sqlite_get_canonical(GWBUF* query, char** canonical);
-static int32_t       qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
-static int32_t       qc_sqlite_get_database_names(GWBUF* query, char*** names, int* sizep);
-static int32_t       qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
-static void          qc_sqlite_set_server_version(uint64_t version);
-static void          qc_sqlite_get_server_version(uint64_t* version);
-static int32_t       qc_sqlite_get_sql_mode(qc_sql_mode_t* sql_mode);
-static int32_t       qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode);
-static QC_STMT_INFO* qc_sqlite_info_dup(QC_STMT_INFO* info);
-static void          qc_sqlite_info_close(QC_STMT_INFO* info);
+static int32_t        qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* args);
+static int32_t        qc_sqlite_process_init(void);
+static void           qc_sqlite_process_end(void);
+static int32_t        qc_sqlite_thread_init(void);
+static void           qc_sqlite_thread_end(void);
+static int32_t        qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result);
+static int32_t        qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
+static int32_t        qc_sqlite_get_operation(GWBUF* query, int32_t* op);
+static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, char** name);
+static int32_t        qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
+static int32_t        qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, char*** names, int* tblsize);
+static int32_t        qc_sqlite_get_canonical(GWBUF* query, char** canonical);
+static int32_t        qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
+static int32_t        qc_sqlite_get_database_names(GWBUF* query, char*** names, int* sizep);
+static int32_t        qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
+static void           qc_sqlite_set_server_version(uint64_t version);
+static void           qc_sqlite_get_server_version(uint64_t* version);
+static int32_t        qc_sqlite_get_sql_mode(qc_sql_mode_t* sql_mode);
+static int32_t        qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode);
+static QC_STMT_INFO*  qc_sqlite_info_dup(QC_STMT_INFO* info);
+static void           qc_sqlite_info_close(QC_STMT_INFO* info);
+static QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo);
+
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 {
@@ -5199,6 +5213,11 @@ void qc_sqlite_info_close(QC_STMT_INFO* info)
     static_cast<QcSqliteInfo*>(info)->dec_ref();
 }
 
+QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo)
+{
+    return static_cast<const QcSqliteInfo*>(pInfo)->get_result();
+}
+
 /**
  * EXPORTS
  */
@@ -5234,6 +5253,7 @@ extern "C"
             qc_sqlite_set_sql_mode,
             qc_sqlite_info_dup,
             qc_sqlite_info_close,
+            qc_sqlite_get_result_from_info,
         };
 
         static MXS_MODULE info =

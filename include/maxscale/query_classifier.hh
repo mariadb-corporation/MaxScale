@@ -12,6 +12,7 @@
  */
 #pragma once
 
+#include <map>
 #include <maxscale/ccdefs.hh>
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.hh>
@@ -170,6 +171,17 @@ enum qc_result_t
  */
 struct QC_STMT_INFO
 {
+};
+
+/**
+ * QC_STMT_RESULT contains limited information about a particular
+ * statement.
+ */
+struct QC_STMT_RESULT
+{
+    qc_parse_result_t status;
+    uint32_t          type_mask;
+    qc_query_op_t     op;
 };
 
 /**
@@ -439,6 +451,15 @@ struct QUERY_CLASSIFIER
      * @param info  The info to be closed.
      */
     void (* qc_info_close)(QC_STMT_INFO* info);
+
+    /**
+     * Get result from info.
+     *
+     * @param  The info whose result should be returned.
+     *
+     * @return The result of the provided info.
+     */
+    QC_STMT_RESULT (*qc_get_result_from_info)(const QC_STMT_INFO* info);
 };
 
 /**
@@ -949,3 +970,23 @@ json_t* qc_get_cache_stats_as_json();
  * @return The corresponding string.
  */
 const char* qc_result_to_string(qc_parse_result_t result);
+
+/**
+ * Public interface to query classifier cache state.
+ */
+struct QC_CACHE_ENTRY
+{
+    int64_t        hits;
+    QC_STMT_RESULT result;
+};
+
+/**
+ * Obtain query classifier cache information for the @b calling thread.
+ *
+ * @param state  Map where information is added.
+ *
+ * @note Calling with a non-empty @c state means that a cumulative result
+ *       will be obtained, that is, the hits of a particular key will
+ *       be added the hits of that key if it already is in the map.
+ */
+void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state);

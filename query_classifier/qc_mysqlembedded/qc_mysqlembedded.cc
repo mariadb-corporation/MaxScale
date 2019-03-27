@@ -3561,6 +3561,7 @@ extern "C"
             qc_mysql_set_sql_mode,
             nullptr,    // qc_info_dup not supported.
             nullptr,    // qc_info_close not supported.
+            nullptr,    // qc_get_result_from_info not supported
         };
 
         static MXS_MODULE info =
