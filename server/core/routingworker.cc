@@ -773,6 +773,28 @@ size_t RoutingWorker::execute_serially(Task& task)
     return n;
 }
 
+//static
+size_t RoutingWorker::execute_serially(std::function<void()> func)
+{
+    Semaphore sem;
+    size_t n = 0;
+
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        mxb_assert(pWorker);
+
+        if (pWorker->execute(func, &sem, EXECUTE_AUTO))
+        {
+            sem.wait();
+            ++n;
+        }
+    }
+
+    return n;
+}
+
 // static
 size_t RoutingWorker::execute_concurrently(Task& task)
 {

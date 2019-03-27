@@ -388,6 +388,7 @@ public:
      *            otherwise the task is delivered via the message loop.
      */
     static size_t execute_serially(Task& task);
+    static size_t execute_serially(std::function<void()> func);
 
     /**
      * Executes a task on all workers concurrently and waits until all workers
