@@ -1780,11 +1780,11 @@ void Monitor::check_maintenance_requests()
                 break;
 
             case MonitorServer::BEING_DRAINED_ON:
-                ptr->server->set_status(SERVER_BEING_DRAINED);
+                ptr->server->set_status(SERVER_DRAINING);
                 break;
 
             case MonitorServer::BEING_DRAINED_OFF:
-                ptr->server->clear_status(SERVER_BEING_DRAINED);
+                ptr->server->clear_status(SERVER_DRAINING);
                 break;
 
             case MonitorServer::NO_CHANGE:
@@ -2174,7 +2174,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
     {
         /* This server is monitored, in which case modifying any other status bit than Maintenance is
          * disallowed. */
-        if (bit & ~(SERVER_MAINT | SERVER_BEING_DRAINED))
+        if (bit & ~(SERVER_MAINT | SERVER_DRAINING))
         {
             MXS_ERROR(ERR_CANNOT_MODIFY);
             if (errmsg_out)
@@ -2194,7 +2194,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
             }
             else
             {
-                mxb_assert(bit & SERVER_BEING_DRAINED);
+                mxb_assert(bit & SERVER_DRAINING);
                 request = MonitorServer::BEING_DRAINED_ON;
             }
 
@@ -2235,7 +2235,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 
     if (state() == MONITOR_STATE_RUNNING)
     {
-        if (bit & ~(SERVER_MAINT | SERVER_BEING_DRAINED))
+        if (bit & ~(SERVER_MAINT | SERVER_DRAINING))
         {
             MXS_ERROR(ERR_CANNOT_MODIFY);
             if (errmsg_out)
@@ -2252,7 +2252,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
             }
             else
             {
-                mxb_assert(bit & SERVER_BEING_DRAINED);
+                mxb_assert(bit & SERVER_DRAINING);
                 request = MonitorServer::BEING_DRAINED_OFF;
             }
 

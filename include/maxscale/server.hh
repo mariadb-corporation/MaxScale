@@ -47,7 +47,7 @@ extern const char* DEFAULT_RANK;
 #define SERVER_AUTH_ERROR           (1 << 2)   /**<< Authentication error from monitor */
 #define SERVER_MASTER               (1 << 3)   /**<< The server is a master, i.e. can handle writes */
 #define SERVER_SLAVE                (1 << 4)   /**<< The server is a slave, i.e. can handle reads */
-#define SERVER_BEING_DRAINED        (1 << 5)   /**<< The server is being drained, i.e. no new connection should be created. */
+#define SERVER_DRAINING             (1 << 5)   /**<< The server is being drained, i.e. no new connection should be created. */
 #define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)   /**<< The disk space of the server is exhausted */
 // Bits used by MariaDB Monitor (mostly)
 #define SERVER_SLAVE_OF_EXT_MASTER  (1 << 16)  /**<< Server is slave of a non-monitored master */
@@ -60,7 +60,7 @@ extern const char* DEFAULT_RANK;
 
 inline bool status_is_connectable(uint64_t status)
 {
-    return (status & (SERVER_RUNNING | SERVER_MAINT | SERVER_BEING_DRAINED)) == SERVER_RUNNING;
+    return (status & (SERVER_RUNNING | SERVER_MAINT | SERVER_DRAINING)) == SERVER_RUNNING;
 }
 
 inline bool status_is_usable(uint64_t status)
@@ -83,9 +83,9 @@ inline bool status_is_in_maint(uint64_t status)
     return status & SERVER_MAINT;
 }
 
-inline bool status_is_being_drained(uint64_t status)
+inline bool status_is_draining(uint64_t status)
 {
-    return status & SERVER_BEING_DRAINED;
+    return status & SERVER_DRAINING;
 }
 
 inline bool status_is_master(uint64_t status)
@@ -384,9 +384,9 @@ public:
      *
      * @return True if server is being drained.
      */
-    bool is_being_drained() const
+    bool is_draining() const
     {
-        return status_is_being_drained(status);
+        return status_is_draining(status);
     }
 
     /**
@@ -485,9 +485,9 @@ public:
      *
      * @param flags         Status flags
      * @param nConnections  Number of current connections. Only affects the output
-     *                      if the @c SERVER_BEING_DRAINED bit is on. In that case, if
+     *                      if the @c SERVER_DRAINING bit is on. In that case, if
      *                      the number of connections is 0 the state will be reported
-     *                      as 'Drained', otherwise as 'Being Drained'.
+     *                      as 'Drained', otherwise as 'Draining'.
      *
      * @return A string representation of the status flags
      */

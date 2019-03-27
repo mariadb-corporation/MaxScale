@@ -634,7 +634,7 @@ string SERVER::status_to_string(uint64_t flags, int nConnections)
     // Also, system tests compare to these strings so the output must stay constant for now.
     const string maintenance = "Maintenance";
     const string drained = "Drained";
-    const string being_drained = "Being Drained";
+    const string draining = "Draining";
     const string master = "Master";
     const string relay = "Relay Master";
     const string slave = "Slave";
@@ -646,14 +646,14 @@ string SERVER::status_to_string(uint64_t flags, int nConnections)
     const string running = "Running";
     const string down = "Down";
 
-    // Maintenance/Being Drained is usually set by user so is printed first.
-    // Being Drained in the presence of Maintenance has no effect, so we only
+    // Maintenance/Draining is usually set by user so is printed first.
+    // Draining in the presence of Maintenance has no effect, so we only
     // print either one of those, with Maintenance taking precedence.
     if (status_is_in_maint(flags))
     {
         concatenate_if(true, maintenance);
     }
-    else if (status_is_being_drained(flags))
+    else if (status_is_draining(flags))
     {
         if (nConnections == 0)
         {
@@ -661,7 +661,7 @@ string SERVER::status_to_string(uint64_t flags, int nConnections)
         }
         else
         {
-            concatenate_if(true, being_drained);
+            concatenate_if(true, draining);
         }
     }
 
@@ -851,7 +851,7 @@ uint64_t SERVER::status_from_string(const char* str)
         {"maintenance", SERVER_MAINT        },
         {"maint",       SERVER_MAINT        },
         {"stale",       SERVER_WAS_MASTER   },
-        {"drain",       SERVER_BEING_DRAINED},
+        {"drain",       SERVER_DRAINING     },
         {NULL,          0                   }
     };
 

@@ -121,7 +121,7 @@ be softfailed like
 $ maxctrl call command clustrixmon softfail TheClustrixMonitor @@TheClustrixMonitor:node-1
 ```
 If a node is successfully softfailed, then the status of the corresponding
-MaxScale server object will be set to `Being Drained`, which will prevent
+MaxScale server object will be set to `Draining`, which will prevent
 new connections from being created to the node.
 
 ### `unsoftfail`
@@ -136,7 +136,7 @@ like:
 ```
 $ maxctrl call command clustrixmon unsoftfail TheClustrixMonitor @@TheClustrixMonitor:node-1
 ```
-If a node is successfully softfailed, then a `Being Drained` status of
+If a node is successfully softfailed, then a `Draining` status of
 the corresponding MaxScale server object will be cleared.
 
 ## SOFTFAILed nodes
@@ -144,13 +144,13 @@ the corresponding MaxScale server object will be cleared.
 During the cluster check, which is performed once per
 `cluster_monitor_interval`, the monitor will also check whether any
 nodes are being softfailed. The status of the corresponding server
-object of a node being softfailed will be set to `Being Drained`,
+object of a node being softfailed will be set to `Draining`,
 which will prevent new connections from being created to that node.
 
-If a node that was softfailed is UNSOFTFAILed then the `Being Drained`
+If a node that was softfailed is UNSOFTFAILed then the `Draining`
 status will be cleared.
 
 If the softfailing and unsoftfailing is initiated using the `softfail`
 and `unsoftfail` commands of the Clustrix monitor, then there will be
 no delay between the softfailing or unsoftfailing being initated and the
-`Being Drained` status being turned on/off.
+`Draining` status being turned on/off.

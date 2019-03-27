@@ -30,26 +30,26 @@ connections to the server can continue to be used but new connections
 are no longer created to the server.
 
 In the output of `maxctrl`, the fact that a server is being drained
-is visible in the `State` column as the value `Being Drained`.
+is visible in the `State` column as the value `Draining`.
 ```
 ┌─────────┬─────────────────┬──────┬─────────────┬───────────────────────────────┬───────┐
 │ Server  │ Address         │ Port │ Connections │ State                         │ GTID  │
 ├─────────┼─────────────────┼──────┼─────────────┼───────────────────────────────┼───────┤
 │ Server1 │ 192.168.121.159 │ 3306 │ 2           │ Master, Running               │ 0-1-6 │
 ├─────────┼─────────────────┼──────┼─────────────┼───────────────────────────────┼───────┤
-│ Server2 │ 192.168.121.80  │ 3306 │ 1           │ Being Drained, Slave, Running │ 0-1-6 │
+│ Server2 │ 192.168.121.80  │ 3306 │ 1           │ Draining, Slave, Running      │ 0-1-6 │
 ├─────────┼─────────────────┼──────┼─────────────┼───────────────────────────────┼───────┤
 │ Server3 │ 192.168.121.122 │ 3306 │ 2           │ Slave, Running                │ 0-1-6 │
 ├─────────┼─────────────────┼──────┼─────────────┼───────────────────────────────┼───────┤
 │ Server4 │ 192.168.121.144 │ 3306 │ 2           │ Slave, Running                │ 0-1-6 │
 └─────────┴─────────────────┴──────┴─────────────┴───────────────────────────────┴───────┘
 ```
-A server is set in the _being drained_ state the same way as it is
-set in the _maintenance_ state:
+A server is set in the _Draining_ state the same way as it is
+set in the _Maintenance_ state:
 ```
 $ maxctrl set server Server2 drain
 ```
-Note that although the state is displayed as `Being Drained`, when setting
+Note that although the state is displayed as `Draining`, when setting
 and clearing the state, the word `drain` is used.
 
 Note that the full implication of draining a server depends upon

@@ -320,23 +320,23 @@ void ClustrixMonitor::refresh_nodes()
                                 node.set_health_port(health_port);
                             }
 
-                            bool is_being_drained = node.server()->is_being_drained();
+                            bool is_draining = node.server()->is_draining();
 
-                            if (softfailed && !is_being_drained)
+                            if (softfailed && !is_draining)
                             {
                                 MXS_NOTICE("%s: Node %d (%s) has been SOFTFAILed. "
                                            "Turning ON 'Being Drained'.",
                                            m_name, node.id(), node.server()->address);
 
-                                node.server()->set_status(SERVER_BEING_DRAINED);
+                                node.server()->set_status(SERVER_DRAINING);
                             }
-                            else if (!softfailed && is_being_drained)
+                            else if (!softfailed && is_draining)
                             {
                                 MXS_NOTICE("%s: Node %d (%s) is no longer being SOFTFAILed. "
                                            "Turning OFF 'Being Drained'.",
                                            m_name, node.id(), node.server()->address);
 
-                                node.server()->clear_status(SERVER_BEING_DRAINED);
+                                node.server()->clear_status(SERVER_DRAINING);
                             }
 
                             nids.erase(id);
@@ -358,7 +358,7 @@ void ClustrixMonitor::refresh_nodes()
 
                                 if (softfailed)
                                 {
-                                    pServer->set_status(SERVER_BEING_DRAINED);
+                                    pServer->set_status(SERVER_DRAINING);
                                 }
 
                                 const ClustrixMembership& membership = mit->second;
@@ -746,7 +746,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
                 {
                     MXS_NOTICE("%s: Turning on 'Being Drained' on server %s.",
                                m_name, pServer->address);
-                    pServer->set_status(SERVER_BEING_DRAINED);
+                    pServer->set_status(SERVER_DRAINING);
                 }
                 else
                 {
@@ -754,7 +754,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
 
                     MXS_NOTICE("%s: Turning off 'Being Drained' on server %s.",
                                m_name, pServer->address);
-                    pServer->clear_status(SERVER_BEING_DRAINED);
+                    pServer->clear_status(SERVER_DRAINING);
                 }
             }
             else

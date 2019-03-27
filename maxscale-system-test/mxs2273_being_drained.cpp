@@ -12,7 +12,7 @@
  */
 
 /*
- * MXS-2273: Introduce server state BEING_DRAINED
+ * MXS-2273: Introduce server state DRAINING
  * https://jira.mariadb.org/browse/MXS-2273
  */
 
@@ -71,24 +71,24 @@ void check_state(TestConnections& test,
 
 void set_drain(TestConnections& test, const string& server)
 {
-    test.tprintf("%s: Setting 'Being Drained' state.\n", server.c_str());
+    test.tprintf("%s: Setting 'Draining' state.\n", server.c_str());
     string command = "set server " + server + " drain";
 
     test.check_maxctrl(command);
     test.maxscales->wait_for_monitor();
 
-    check_state(test, server, Expectation::INCLUDES, "Being Drained");
+    check_state(test, server, Expectation::INCLUDES, "Draining");
 }
 
 void clear_drain(TestConnections& test, const string& server)
 {
-    test.tprintf("%s: Clearing 'Being Drained' state.\n", server.c_str());
+    test.tprintf("%s: Clearing 'Draining' state.\n", server.c_str());
     string command = "clear server " + server + " drain";
 
     test.check_maxctrl(command);
     test.maxscales->wait_for_monitor();
 
-    check_state(test, server, Expectation::EXCLUDES, "Being Drained");
+    check_state(test, server, Expectation::EXCLUDES, "Draining");
 }
 
 void check_connections(TestConnections& test, const string& server, int nExpected)
@@ -260,10 +260,10 @@ int main(int argc, char* argv[])
 
 #ifdef SS_DEBUG
     // During development, check that the tests do not leave the servers
-    // in 'Being Drained' state.
-    check_state(test, server1, Expectation::EXCLUDES, "Being Drained");
-    check_state(test, server2, Expectation::EXCLUDES, "Being Drained");
-    check_state(test, server3, Expectation::EXCLUDES, "Being Drained");
+    // in 'Draining' state.
+    check_state(test, server1, Expectation::EXCLUDES, "Draining");
+    check_state(test, server2, Expectation::EXCLUDES, "Draining");
+    check_state(test, server3, Expectation::EXCLUDES, "Draining");
 #endif
 
     return test.global_result;
