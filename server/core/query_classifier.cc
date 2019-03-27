@@ -144,7 +144,7 @@ public:
 
         if (i != m_infos.end())
         {
-            const Entry& entry = i->second;
+            Entry& entry = i->second;
 
             if (entry.sql_mode == this_unit.qc_sql_mode)
             {
@@ -152,6 +152,7 @@ public:
                 this_unit.classifier->qc_info_dup(entry.pInfo);
                 pInfo = entry.pInfo;
 
+                ++entry.hits;
                 ++m_stats.hits;
             }
             else
@@ -210,11 +211,13 @@ private:
         Entry(QC_STMT_INFO* pInfo, qc_sql_mode_t sql_mode)
             : pInfo(pInfo)
             , sql_mode(sql_mode)
+            , hits(0)
         {
         }
 
         QC_STMT_INFO* pInfo;
         qc_sql_mode_t sql_mode;
+        int64_t       hits;
     };
 
     typedef std::unordered_map<std::string, Entry> InfosByStmt;
