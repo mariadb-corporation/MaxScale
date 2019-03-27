@@ -19,6 +19,7 @@
 #include "testconnections.h"
 #include <iostream>
 #include <string>
+#include <regex>
 
 using namespace std;
 
@@ -39,7 +40,7 @@ enum class Expectation
 
 void check_state(TestConnections& test,
                  const string& server,
-                 Expectation expectation,
+                 Expectation   expectation,
                  const string& what)
 {
     if (expectation == Expectation::INCLUDES)
@@ -53,9 +54,9 @@ void check_state(TestConnections& test,
 
     string command = "api get servers/" + server + " data.attributes.state";
 
-    pair<int,string> result = test.maxctrl(command);
+    pair<int, string> result = test.maxctrl(command);
 
-    bool found = result.second.find(what) != string::npos;
+    bool found = std::regex_search(result.second, std::regex(what));
 
     if (expectation == Expectation::INCLUDES)
     {
@@ -77,7 +78,7 @@ void set_drain(TestConnections& test, const string& server)
     test.check_maxctrl(command);
     test.maxscales->wait_for_monitor();
 
-    check_state(test, server, Expectation::INCLUDES, "Draining");
+    check_state(test, server, Expectation::INCLUDES, "Draining|Drained");
 }
 
 void clear_drain(TestConnections& test, const string& server)
@@ -88,7 +89,7 @@ void clear_drain(TestConnections& test, const string& server)
     test.check_maxctrl(command);
     test.maxscales->wait_for_monitor();
 
-    check_state(test, server, Expectation::EXCLUDES, "Draining");
+    check_state(test, server, Expectation::EXCLUDES, "Draining|Drained");
 }
 
 void check_connections(TestConnections& test, const string& server, int nExpected)
@@ -96,12 +97,18 @@ void check_connections(TestConnections& test, const string& server, int nExpecte
     test.tprintf("%s: Expecting %d connections.", server.c_str(), nExpected);
     string command = "api get servers/" + server + " data.attributes.statistics.connections";
 
-    pair<int,string> result = test.maxctrl(command);
+    pair<int, string> result = test.maxctrl(command);
 
     int nConnections = atoi(result.second.c_str());
 
     test.expect(nConnections == nExpected, "%s: expected %d connections, found %d.",
                 server.c_str(), nExpected, nConnections);
+
+    if (nConnections == 0)
+    {
+        // A server with no connections shouldn't be in Draining state
+        check_state(test, server, Expectation::EXCLUDES, "Draining");
+    }
 }
 
 void smoke_test(TestConnections& test, Connection& conn)
@@ -248,7 +255,6 @@ void test_rcr(TestConnections& test)
     clear_drain(test, server2);
     clear_drain(test, server3);
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -261,9 +267,9 @@ int main(int argc, char* argv[])
 #ifdef SS_DEBUG
     // During development, check that the tests do not leave the servers
     // in 'Draining' state.
-    check_state(test, server1, Expectation::EXCLUDES, "Draining");
-    check_state(test, server2, Expectation::EXCLUDES, "Draining");
-    check_state(test, server3, Expectation::EXCLUDES, "Draining");
+    check_state(test, server1, Expectation::EXCLUDES, "Draining|Drained");
+    check_state(test, server2, Expectation::EXCLUDES, "Draining|Drained");
+    check_state(test, server3, Expectation::EXCLUDES, "Draining|Drained");
 #endif
 
     return test.global_result;
