@@ -92,6 +92,7 @@ const char CN_AUTH_CONNECT_TIMEOUT[] = "auth_connect_timeout";
 const char CN_AUTH_READ_TIMEOUT[] = "auth_read_timeout";
 const char CN_AUTH_WRITE_TIMEOUT[] = "auth_write_timeout";
 const char CN_AUTO[] = "auto";
+const char CN_CACHE[] = "cache";
 const char CN_CACHE_SIZE[] = "cache_size";
 const char CN_CLASSIFY[] = "classify";
 const char CN_CLUSTER[] = "cluster";

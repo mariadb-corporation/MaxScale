@@ -105,6 +105,7 @@ extern const char CN_AUTH_CONNECT_TIMEOUT[];
 extern const char CN_AUTH_READ_TIMEOUT[];
 extern const char CN_AUTH_WRITE_TIMEOUT[];
 extern const char CN_AUTO[];
+extern const char CN_CACHE[];
 extern const char CN_CACHE_SIZE[];
 extern const char CN_CLASSIFY[];
 extern const char CN_CONNECTION_TIMEOUT[];

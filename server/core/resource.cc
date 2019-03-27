@@ -691,6 +691,11 @@ HttpResponse cb_qc_classify(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, qc_classify_as_json(request.host(), sql).release());
 }
 
+HttpResponse cb_qc_cache(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, qc_cache_as_json(request.host()).release());
+}
+
 HttpResponse cb_thread(const HttpRequest& request)
 {
     int id = atoi(request.last_uri_part().c_str());
@@ -969,6 +974,8 @@ public:
         m_get.push_back(SResource(new Resource(cb_qc, 2, "maxscale", "query_classifier")));
         m_get.push_back(SResource(new Resource(cb_qc_classify, 3,
                                                "maxscale", "query_classifier", "classify")));
+        m_get.push_back(SResource(new Resource(cb_qc_cache, 3,
+                                               "maxscale", "query_classifier", "cache")));
         m_get.push_back(SResource(new Resource(cb_all_threads, 2, "maxscale", "threads")));
         m_get.push_back(SResource(new Resource(cb_thread, 3, "maxscale", "threads", ":thread")));
         m_get.push_back(SResource(new Resource(cb_logs, 2, "maxscale", "logs")));

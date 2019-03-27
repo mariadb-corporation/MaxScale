@@ -36,6 +36,7 @@
 #define MXS_JSON_API_QC_STATS    "/maxscale/qc_stats/"
 #define MXS_JSON_API_QC          "/maxscale/query_classifier/"
 #define MXS_JSON_API_QC_CLASSIFY "/maxscale/query_classifier/classify"
+#define MXS_JSON_API_QC_CACHE    "/maxscale/query_classifier/cache"
 #define MXS_JSON_API_USERS       "/users/"
 
 /**

@@ -1504,3 +1504,15 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
 
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CLASSIFY, pSelf));
 }
+
+std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
+{
+    json_t* pAttributes = json_object();
+
+    json_t* pSelf = json_object();
+    json_object_set_new(pSelf, CN_ID, json_string(CN_CACHE));
+    json_object_set_new(pSelf, CN_TYPE, json_string(CN_CACHE));
+    json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
+
+    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pSelf));
+}
