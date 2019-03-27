@@ -184,6 +184,8 @@ typedef struct dcb
     uint32_t        n_close;         /** How many times dcb_close has been called. */
     char            *path;           /** If a Unix socket, the path it was bound to. */
     skygw_chk_t     dcb_chk_tail;
+
+    uint64_t m_uid; /**< Unique identifier for this DCB */
 } DCB;
 
 /**

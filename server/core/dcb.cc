@@ -168,6 +168,8 @@ dcb_initialize(DCB *dcb)
     *dcb = this_unit.dcb_initialized;
 }
 
+static uint64_t uid_generator = 0;
+
 /**
  * @brief Allocate a new DCB.
  *
@@ -196,6 +198,7 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
     newdcb->dcb_role = role;
     newdcb->listener = listener;
     newdcb->last_read = hkheartbeat;
+    newdcb->m_uid = atomic_add_uint64(&uid_generator, 1);
 
     if (role == DCB_ROLE_SERVICE_LISTENER)
     {
@@ -3223,13 +3226,14 @@ public:
     FakeEventTask(DCB* dcb, GWBUF* buf, uint32_t ev):
         m_dcb(dcb),
         m_buffer(buf),
-        m_ev(ev)
+        m_ev(ev),
+        m_uid(dcb->m_uid)
     {
     }
 
     void execute(Worker& worker)
     {
-        if (dcb_is_still_valid(m_dcb, worker.get_current_id()))
+        if (dcb_is_still_valid(m_dcb, worker.get_current_id()) && m_dcb->m_uid == m_uid)
         {
             m_dcb->fakeq = m_buffer;
             dcb_handler(m_dcb, m_ev);
@@ -3244,6 +3248,7 @@ private:
     DCB*     m_dcb;
     GWBUF*   m_buffer;
     uint32_t m_ev;
+    uint64_t m_uid; /**< DCB UID guarantees we deliver the event to the correct DCB */
 };
 
 static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
