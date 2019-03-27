@@ -141,7 +141,11 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         " ('wsrep_cluster_state_uuid',"
         " 'wsrep_cluster_size',"
         " 'wsrep_local_index',"
-        " 'wsrep_local_state')";
+        " 'wsrep_local_state',"
+        " 'wsrep_desync',"
+        " 'wsrep_ready',"
+        " 'wsrep_sst_donor_rejects_queries',"
+        " 'wsrep_reject_queries')";
 
     if (mxs_mysql_query(monitored_server->con, cluster_member) == 0
         && (result = mysql_store_result(monitored_server->con)) != NULL)
@@ -206,6 +210,42 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                 }
 
                 info.local_state = atoi(row[1]);
+            }
+
+            /* Node is in desync - lets take it offline */
+            if (strcmp(row[0], "wsrep_desync") == 0)
+            {
+              if (strcasecmp(row[1],"YES") || strcasecmp(row[1],"ON") || strcasecmp(row[1],"1") || strcasecmp(row[1],"true"))
+              {
+                info.joined = 0;
+              }
+            }
+
+            /* Node rejects queries - lets take it offline */
+            if (strcmp(row[0], "wsrep_reject_queries") == 0)
+            {
+              if (strcasecmp(row[1],"ALL") || strcasecmp(row[1],"ALL_KILL"))
+              {
+                info.joined = 0;
+              }
+            }
+
+            /* Node rejects queries - lets take it offline */
+            if (strcmp(row[0], "wsrep_sst_donor_rejects_queries") == 0)
+            {
+              if (strcasecmp(row[1],"YES") || strcasecmp(row[1],"ON") || strcasecmp(row[1],"1") || strcasecmp(row[1],"true"))
+              {
+                info.joined = 0;
+              }
+            }
+
+            /* Node is not ready - lets take it offline */
+            if (strcmp(row[0], "wsrep_ready") == 0)
+            {
+              if (strcasecmp(row[1],"YES") || strcasecmp(row[1],"ON") || strcasecmp(row[1],"1") || strcasecmp(row[1],"true"))
+              {
+                info.joined = 0;
+              }
             }
 
             if (strcmp(row[0], "wsrep_cluster_state_uuid") == 0 && row[1] && *row[1])
