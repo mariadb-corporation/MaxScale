@@ -2346,7 +2346,12 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
 
         if (const MXS_MODULE* mod = get_module(module, MODULE_MONITOR))
         {
-            auto params = extract_parameters(json);
+            MXS_CONFIG_PARAMETER params;
+            bool ok;
+            tie(ok, params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
+            mxb_assert(ok);
+
+            params.set_multiple(extract_parameters(json));
 
             if (validate_param(config_monitor_params, mod->parameters, &params)
                 && server_relationship_to_parameter(json, &params))
