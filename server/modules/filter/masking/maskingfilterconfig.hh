@@ -48,6 +48,12 @@ public:
     static const char* check_user_variables_name;
     static const char* check_user_variables_default;
 
+    static const char* check_unions_name;
+    static const char* check_unions_default;
+
+    static const char* check_subqueries_name;
+    static const char* check_subqueries_default;
+
     MaskingFilterConfig(const char* zName, const MXS_CONFIG_PARAMETER* pParams)
         : m_name(zName)
         , m_large_payload(get_large_payload(pParams))
@@ -55,8 +61,11 @@ public:
         , m_warn_type_mismatch(get_warn_type_mismatch(pParams))
         , m_prevent_function_usage(get_prevent_function_usage(pParams))
         , m_check_user_variables(get_check_user_variables(pParams))
+        , m_check_unions(get_check_unions(pParams))
+        , m_check_subqueries(get_check_subqueries(pParams))
     {
     }
+
     ~MaskingFilterConfig()
     {
     }
@@ -91,6 +100,16 @@ public:
         return m_check_user_variables;
     }
 
+    bool check_unions() const
+    {
+        return m_check_unions;
+    }
+
+    bool check_subqueries() const
+    {
+        return m_check_subqueries;
+    }
+
     void set_large_payload(large_payload_t l)
     {
         m_large_payload = l;
@@ -115,9 +134,19 @@ public:
         m_check_user_variables = b;
     }
 
+    void set_check_unions(bool b)
+    {
+        m_check_unions = b;
+    }
+
+    void set_check_subqueries(bool b)
+    {
+        m_check_subqueries = b;
+    }
+
     bool is_parsing_needed() const
     {
-        return prevent_function_usage() || check_user_variables();
+        return prevent_function_usage() || check_user_variables() || check_unions() || check_subqueries();
     }
 
     static large_payload_t      get_large_payload(const MXS_CONFIG_PARAMETER* pParams);
@@ -125,6 +154,8 @@ public:
     static warn_type_mismatch_t get_warn_type_mismatch(const MXS_CONFIG_PARAMETER* pParams);
     static bool                 get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams);
     static bool                 get_check_user_variables(const MXS_CONFIG_PARAMETER* pParams);
+    static bool                 get_check_unions(const MXS_CONFIG_PARAMETER* pParams);
+    static bool                 get_check_subqueries(const MXS_CONFIG_PARAMETER* pParams);
 
 private:
     std::string          m_name;
@@ -133,4 +164,6 @@ private:
     warn_type_mismatch_t m_warn_type_mismatch;
     bool                 m_prevent_function_usage;
     bool                 m_check_user_variables;
+    bool                 m_check_unions;
+    bool                 m_check_subqueries;
 };

@@ -1467,3 +1467,12 @@ const MaskingRules::Rule* MaskingRules::get_rule_for(const QC_FIELD_INFO& field_
 
     return pRule;
 }
+
+bool MaskingRules::has_rule_for(const char* zUser, const char* zHost) const
+{
+    auto i = std::find_if(m_rules.begin(), m_rules.end(), [zUser, zHost](SRule sRule) {
+            return sRule->matches_account(zUser, zHost);
+        });
+
+    return i != m_rules.end();
+}

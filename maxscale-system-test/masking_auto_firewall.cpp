@@ -110,6 +110,24 @@ void run(TestConnections& test)
     // This should NOT succeed as a masked column is used in a statement
     // defining a variable.
     test_one(test, "set @a = (SELECT a, b FROM masking_auto_firewall)", Expect::FAILURE);
+
+    // This SHOULD succeed as a masked column is not used in the statment.
+    test_one(test, "select 1 UNION select b FROM masking_auto_firewall", Expect::SUCCESS);
+
+    // This should NOT succeed as a masked column is used in the statment.
+    test_one(test, "select 1 UNION select a FROM masking_auto_firewall", Expect::FAILURE);
+
+    // This should NOT succeed as '*' is used in the statment.
+    test_one(test, "select 1 UNION select * FROM masking_auto_firewall", Expect::FAILURE);
+
+    // This SHOULD succeed as a masked column is not used in the statment.
+    test_one(test, "select * FROM (select b from masking_auto_firewall)", Expect::SUCCESS);
+
+    // This SHOULD succeed as a masked column is not used in the statment.
+    test_one(test, "select * FROM (select a as b from masking_auto_firewall)", Expect::FAILURE);
+
+    // This SHOULD succeed as '*' is used in the statment.
+    test_one(test, "select * FROM (select * from masking_auto_firewall)", Expect::FAILURE);
 }
 
 }

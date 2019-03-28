@@ -38,6 +38,8 @@
 #include <sys/un.h>
 #include <time.h>
 
+#include <atomic>
+
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/atomic.hh>
@@ -78,6 +80,7 @@ static struct
 {
     DCB** all_dcbs;         /** #workers sized array of pointers to DCBs where dcbs are listed. */
     bool  check_timeouts;   /** Should session timeouts be checked. */
+    std::atomic<uint64_t> uid_generator {0};
 } this_unit;
 
 static thread_local struct
@@ -161,6 +164,7 @@ DCB::DCB(Role role, MXS_SESSION* session)
     , low_water(config_writeq_low_water())
     , service(session->service)
     , last_read(mxs_clock())
+    , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
 {
     // TODO: Remove DCB::Role::INTERNAL to always have a valid listener
     if (session->listener)
@@ -2805,6 +2809,7 @@ public:
         : m_dcb(dcb)
         , m_buffer(buf)
         , m_ev(ev)
+        , m_uid(dcb->m_uid)
     {
     }
 
@@ -2813,7 +2818,7 @@ public:
         mxb_assert(&worker == RoutingWorker::get_current());
 
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
-        if (dcb_is_still_valid(m_dcb, rworker.id()))
+        if (dcb_is_still_valid(m_dcb, rworker.id()) && m_dcb->m_uid == m_uid)
         {
             m_dcb->fakeq = m_buffer;
             dcb_handler(m_dcb, m_ev);
@@ -2828,6 +2833,7 @@ private:
     DCB*     m_dcb;
     GWBUF*   m_buffer;
     uint32_t m_ev;
+    uint64_t m_uid; /**< DCB UID guarantees we deliver the event to the correct DCB */
 };
 
 static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)

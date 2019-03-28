@@ -28,6 +28,8 @@ const char config_value_always[] = "always";
 
 const char config_name_prevent_function_usage[] = "prevent_function_usage";
 const char config_check_user_variables[] = "check_user_variables";
+const char config_check_unions[] = "check_unions";
+const char config_check_subqueries[] = "check_subqueries";
 
 const char config_value_true[] = "true";
 }
@@ -88,10 +90,30 @@ const char* MaskingFilterConfig::prevent_function_usage_default = config_value_t
 /*
  * PARAM check_user_variables
  */
+// static
 const char* MaskingFilterConfig::check_user_variables_name = config_check_user_variables;
 
 // static
 const char* MaskingFilterConfig::check_user_variables_default = config_value_true;
+
+/*
+ * PARAM check_unions
+ */
+// static
+const char* MaskingFilterConfig::check_unions_name = config_check_unions;
+
+// static
+const char* MaskingFilterConfig::check_unions_default = config_value_true;
+
+/*
+ * PARAM check_subqueries
+ */
+// static
+const char* MaskingFilterConfig::check_subqueries_name = config_check_subqueries;
+
+// static
+const char* MaskingFilterConfig::check_subqueries_default = config_value_true;
+
 
 /*
  * MaskingFilterConfig
@@ -129,4 +151,16 @@ bool MaskingFilterConfig::get_prevent_function_usage(const MXS_CONFIG_PARAMETER*
 bool MaskingFilterConfig::get_check_user_variables(const MXS_CONFIG_PARAMETER* pParams)
 {
     return pParams->get_bool(check_user_variables_name);
+}
+
+// static
+bool MaskingFilterConfig::get_check_unions(const MXS_CONFIG_PARAMETER* pParams)
+{
+    return pParams->get_bool(check_unions_name);
+}
+
+// static
+bool MaskingFilterConfig::get_check_subqueries(const MXS_CONFIG_PARAMETER* pParams)
+{
+    return pParams->get_bool(check_subqueries_name);
 }

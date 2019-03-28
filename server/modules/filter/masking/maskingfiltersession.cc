@@ -82,25 +82,45 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
         zHost = "";
     }
 
-    bool rv = true;
+    bool acceptable = true;
 
-    if (rv && m_filter.config().prevent_function_usage())
+    const MaskingFilter::Config& config = m_filter.config();
+
+    if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
     {
-        if (is_function_used(pPacket, zUser, zHost))
+        if (config.check_user_variables())
         {
-            rv = false;
+            if (is_variable_defined(pPacket, zUser, zHost))
+            {
+                acceptable = false;
+            }
+        }
+    }
+    else
+    {
+        qc_query_op_t op = qc_get_operation(pPacket);
+
+        if (op == QUERY_OP_SELECT)
+        {
+            if (config.check_unions() || config.check_subqueries())
+            {
+                if (is_union_or_subquery_used(pPacket, zUser, zHost))
+                {
+                    acceptable = false;
+                }
+            }
+        }
+
+        if (acceptable && config.prevent_function_usage())
+        {
+            if (is_function_used(pPacket, zUser, zHost))
+            {
+                acceptable = false;
+            }
         }
     }
 
-    if (rv && m_filter.config().check_user_variables())
-    {
-        if (is_variable_defined(pPacket, zUser, zHost))
-        {
-            rv = false;
-        }
-    }
-
-    return rv;
+    return acceptable;
 }
 
 bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
@@ -551,19 +571,26 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
 
 bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
-    if (!qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
-    {
-        return false;
-    }
+    mxb_assert(qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE));
 
     bool is_defined = false;
 
     SMaskingRules sRules = m_filter.rules();
 
     auto pred = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-        const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+        bool rv = false;
 
-        return pRule ? true : false;
+        if (strcmp(field_info.column, "*") == 0)
+        {
+            // If "*" is used, then we must block if there is any rule for the current user.
+            rv = sRules->has_rule_for(zUser, zHost);
+        }
+        else
+        {
+            rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+        }
+
+        return rv;
     };
 
     const QC_FIELD_INFO* pInfos;
@@ -578,14 +605,121 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 
     if (i != end)
     {
+        const char* zColumn = i->column;
+
         std::stringstream ss;
-        ss << "The field " << i->column << " that should be masked for '" << zUser << "'@'" << zHost
-           << "' is used when defining a variable, access is denied.";
+
+        if (strcmp(zColumn, "*") == 0)
+        {
+            ss << "'*' is used in the definition of a variable and there are masking rules "
+               << "for '" << zUser << "'@'" << zHost << "', access is denied.";
+        }
+        else
+        {
+            ss << "The field " << i->column << " that should be masked for '" << zUser << "'@'" << zHost
+               << "' is used when defining a variable, access is denied.";
+        }
 
         set_response(create_error_response(ss.str().c_str()));
-
         is_defined = true;
     }
 
     return is_defined;
+}
+
+bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost)
+{
+    mxb_assert(qc_get_operation(pPacket) == QUERY_OP_SELECT);
+
+    const MaskingFilter::Config& config = m_filter.config();
+
+    mxb_assert(config.check_unions() || config.check_subqueries());
+
+    bool is_used = false;
+
+    SMaskingRules sRules = m_filter.rules();
+
+    uint32_t mask = 0;
+
+    if (config.check_unions())
+    {
+        mask |= QC_FIELD_UNION;
+    }
+
+    if (config.check_subqueries())
+    {
+        mask |= QC_FIELD_SUBQUERY;
+    }
+
+    auto pred = [&sRules, mask, zUser, zHost](const QC_FIELD_INFO& field_info) {
+        bool rv = false;
+
+        if (field_info.context & mask)
+        {
+            if (strcmp(field_info.column, "*") == 0)
+            {
+                // If "*" is used, then we must block if there is any rule for the current user.
+                rv = sRules->has_rule_for(zUser, zHost);
+            }
+            else
+            {
+                rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+            }
+        }
+
+        return rv;
+    };
+
+    const QC_FIELD_INFO* pInfos;
+    size_t nInfos;
+
+    qc_get_field_info(pPacket, &pInfos, &nInfos);
+
+    const QC_FIELD_INFO* begin = pInfos;
+    const QC_FIELD_INFO* end = begin + nInfos;
+
+    auto i = std::find_if(begin, end, pred);
+
+    if (i != end)
+    {
+        const char* zColumn = i->column;
+
+        std::stringstream ss;
+
+        if (config.check_unions() && (i->context & QC_FIELD_UNION))
+        {
+            if (strcmp(zColumn, "*") == 0)
+            {
+                ss << "'*' is used in the second or subsequent SELECT of a UNION and there are "
+                   << "masking rules for '" << zUser << "'@'" << zHost << "', access is denied.";
+            }
+            else
+            {
+                ss << "The field " << zColumn << " that should be masked for '" << zUser << "'@'" << zHost
+                   << "' is used in the second or subsequent SELECT of a UNION, access is denied.";
+            }
+        }
+        else if (config.check_subqueries() && (i->context & QC_FIELD_SUBQUERY))
+        {
+            if (strcmp(zColumn, "*") == 0)
+            {
+                ss << "'*' is used in a subquery and there are masking rules for '"
+                   << zUser << "'@'" << zHost << "', access is denied.";
+            }
+            else
+            {
+                ss << "The field " << zColumn << " that should be masked for '"
+                   << zUser << "'@'" << zHost << "' is used in a subquery, access is denied.";
+            }
+        }
+        else
+        {
+            mxb_assert(!true);
+        }
+
+        set_response(create_error_response(ss.str().c_str()));
+        is_used = true;
+    }
+
+    return is_used;
 }

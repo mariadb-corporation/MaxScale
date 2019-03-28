@@ -876,6 +876,7 @@ public:
         : m_database(info.database ? info.database : "")
         , m_table(info.table ? info.table : "")
         , m_column(info.column ? info.column : "")
+        , m_context(info.context)
     {
     }
 
@@ -939,12 +940,33 @@ public:
         }
 
         out << m_column;
+
+        if (m_context != 0)
+        {
+            out << "(";
+            bool first = true;
+
+            if (m_context & QC_FIELD_UNION)
+            {
+                out << (first ? "" : ", ") << "UNION";
+                first = false;
+            }
+
+            if (m_context & QC_FIELD_SUBQUERY)
+            {
+                out << (first ? "" : ", ") << "SUBQUERY";
+                first = false;
+            }
+
+            out << ")";
+        }
     }
 
 private:
     std::string m_database;
     std::string m_table;
     std::string m_column;
+    uint32_t    m_context;
 };
 
 ostream& operator<<(ostream& out, const QcFieldInfo& x)
@@ -1010,7 +1032,17 @@ bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1,
     if (f1 == f2)
     {
         ss << "Ok : ";
-        ss << f1;
+
+        // TODO: Currently qc_sqlite provides context information, while qc_mysqlembedded
+        // TODO: does not. To ensure that the output always contains the maximum amount
+        // TODO: of information, we simply generate both output and print the longest.
+
+        stringstream ss1;
+        ss1 << f1;
+        stringstream ss2;
+        ss2 << f2;
+
+        ss << (ss1.str().length() > ss2.str().length() ? ss1.str() : ss2.str());
         success = true;
     }
     else

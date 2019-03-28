@@ -262,32 +262,5 @@ variables to the master.
 
 ### Schemarouter limitations (schemarouter)
 
-The schemarouter currently has some limitations due to the nature of the
-sharding implementation and the way the session variables are detected and
-routed. Here is a list of the current limitations:
+Please see [SchemaRouter documentation](../Routers/SchemaRouter.md).
 
-* Cross-database queries (e.g. `SELECT column FROM database1.table UNION select
-column FROM database2.table`) are not supported and are routed either to the
-first explicit database in the query, the current database in use or to the
-first available database, depending on which succeeds.
-
-* Without a default database, queries without explicit databases that do not
-modify the session state will be routed to the first available server. This
-means that, for example when creating a new database, queries should be done
-directly on the node or the router should be equipped with the hint filter and a
-routing hint should be used. Queries that modify the session state (e.g. `SET
-autocommit=1`) will be routed to all servers regardless of the default database.
-
-* SELECT queries that modify session variables are not currently supported because
-uniform results can not be guaranteed. If such a query is executed, the behavior
-of the router is undefined. To work around this limitation, the query must be
-executed in separate parts.
-
-* If a query targets a database the schemarouter hasn't mapped to a server, the
-query will be routed to the first available server. This possibly returns an
-error about database rights instead of a missing database.
-
-* The preparation of a prepared statement is routed to all servers. The
-execution of a prepared statement is routed to the first available server or to
-the server pointed by a routing hint attached to the query. In practice this
-means that prepared statements aren't supported by the schemarouter.

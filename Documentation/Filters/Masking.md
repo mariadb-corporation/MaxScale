@@ -5,26 +5,7 @@ This filter was introduced in MariaDB MaxScale 2.1.
 Table of Contents
 =================
 
-* [Overview](#overview)
-* [Security](#security)
-* [Limitations](#limitations)
-* [Configuration](#configuration)
-   * [Filter Parameters](#filter-parameters)
-      * [rules](#rules)
-      * [warn_type_mismatch](#warn_type_mismatch)
-      * [large_payload](#large_payload)
-      * [prevent_function_usage](#prevent_function_usage)
-* [Rules](#rules-1)
-   * [replace](#replace)
-   * [obfuscate](#obfuscate)
-   * [with](#with)
-   * [applies_to](#applies_to)
-   * [exempted](#exempted)
-* [Module commands](#module-commands)
-   * [reload](#reload)
-* [Example](#example)
-   * [Configuration](#configuration-1)
-   * [masking_rules.json](#masking_rulesjson)
+[TOC]
 
 ## Overview
 
@@ -78,6 +59,33 @@ variable using a statement that refers to columns that should be masked.
 Please see the configuration parameter
 [check_user_variables](#check_user_variables)
 for how to change the default behaviour.
+
+From MaxScale 2.3.5 onwards, the masking filter will examine unions
+and if the second or subsequent SELECT refer to columns that should
+be masked, the statement will be rejected.
+
+Please see the configuration parameter
+[check_unions](#check_unions)
+for how to change the default behaviour.
+
+From MaxScale 2.3.5 onwards, the masking filter will examine subqueries
+and if a subquery refers to columns that should be masked, the statement
+will be rejected.
+
+Please see the configuration parameter
+[check_subqueries](#check_subqueries)
+for how to change the default behaviour.
+
+Note that in order to ensure that it is not possible to get access to
+masked data, the privileges of the users should be minimized. For instance,
+if a user can create tables and perform inserts, he or she can execute
+something like
+```
+CREATE TABLE cheat (revealed_ssn TEXT);
+INSERT INTO cheat SELECT ssn FROM users;
+SELECT revealed_ssn FROM cheat;
+```
+to get access to the cleartext version of a masked field `ssn`.
 
 ## Limitations
 
@@ -188,6 +196,34 @@ set @a = (select ssn from customer where id = 1);
 will be rejected if `ssn` is a column that should be masked.
 ```
 check_user_variables=false
+```
+
+The default value is `true`.
+
+#### `check_unions`
+
+This optional parameter specifies how the masking filter should
+behave with respect to UNIONs. If true, then a statement like
+```
+SELECT a FROM t1 UNION select b from t2;
+```
+will be rejected if `b` is a column that should be masked.
+```
+check_unions=false
+```
+
+The default value is `true`.
+
+#### `check_subqueries`
+
+This optional parameter specifies how the masking filter should
+behave with respect to subqueries. If true, then a statement like
+```
+SELECT * FROM (SELECT a as b FROM t1) as t2;
+```
+will be rejected if `a` is a column that should be masked.
+```
+check_subqueries=false
 ```
 
 The default value is `true`.

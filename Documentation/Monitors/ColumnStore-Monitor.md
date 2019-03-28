@@ -20,10 +20,9 @@ GRANT ALL ON infinidb_vtable.* TO 'maxuser'@'%';
 
 ## Master Selection
 
-The automatic master detection only works with ColumnStore 1.1.7 (planned
-version at the time of writing). Older versions of ColumnStore do not implement
-the required functionality to automatically detect which of the servers is the
-primary UM.
+The automatic master detection only works with ColumnStore 1.2. Older versions
+of ColumnStore do not implement the required functionality to automatically
+detect which of the servers is the primary UM.
 
 With older versions the `primary` parameter must be defined to tell the monitor
 which of the servers is the primary UM node. This guarantees that DDL statements

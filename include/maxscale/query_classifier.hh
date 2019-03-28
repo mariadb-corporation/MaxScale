@@ -125,13 +125,23 @@ enum qc_parse_result_t
 };
 
 /**
- * QC_FIELD_INFO contains information about a field used in a statement.
+ * qc_field_context_t defines the context where a field appears.
+ *
+ * NOTE: A particular bit does NOT mean that the field appears ONLY in the context,
+ *       but it may appear in other contexts as well.
  */
+typedef enum qc_field_context
+{
+    QC_FIELD_UNION    = 1, /** The field appears on the right hand side in a UNION. */
+    QC_FIELD_SUBQUERY = 2 /** The field appears in a subquery. */
+} qc_field_context_t;
+
 struct QC_FIELD_INFO
 {
     char* database; /** Present if the field is of the form "a.b.c", NULL otherwise. */
     char* table;    /** Present if the field is of the form "a.b", NULL otherwise. */
     char* column;   /** Always present. */
+    uint32_t context;  /** The context in which the field appears. */
 };
 
 /**
