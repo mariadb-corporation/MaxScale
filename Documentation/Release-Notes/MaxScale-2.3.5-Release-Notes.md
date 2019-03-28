@@ -11,6 +11,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## Bug fixes
 
 * [MXS-2410](https://jira.mariadb.org/browse/MXS-2410) Hangup delivered to wrong DCB
+* [MXS-2409](https://jira.mariadb.org/browse/MXS-2409) Schemarouter crashes if PREPARE or EXECUTE is malformed
 * [MXS-2403](https://jira.mariadb.org/browse/MXS-2403) Masking filter should check subqueries
 * [MXS-2402](https://jira.mariadb.org/browse/MXS-2402) Masking filter should check unions
 * [MXS-2398](https://jira.mariadb.org/browse/MXS-2398) Recognize MariaDB specific executable comments
@@ -26,6 +27,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-2370](https://jira.mariadb.org/browse/MXS-2370) Query timeout warning message does not print reason of timeout
 * [MXS-2368](https://jira.mariadb.org/browse/MXS-2368) maxctrl requires password on command line and cannot change user password
 * [MXS-2365](https://jira.mariadb.org/browse/MXS-2365) Wrong classification of queued queries in readwritesplit
+* [MXS-2359](https://jira.mariadb.org/browse/MXS-2359) LIKE clause in SHOW TABLES is ignored by schemarouter
 * [MXS-2357](https://jira.mariadb.org/browse/MXS-2357) maxctrl documentation for alter service, include use_sql_variables_in
 * [MXS-2355](https://jira.mariadb.org/browse/MXS-2355) MaxScale does not let mysql client 8.0.15 to connect with password
 * [MXS-2342](https://jira.mariadb.org/browse/MXS-2342) maxadmin commands hang when master pod deleted after failover occurs
