@@ -18,6 +18,7 @@
 #include <iostream>
 #include <vector>
 #include <future>
+#include "envv.h"
 
 using std::cout;
 using std::endl;
@@ -32,8 +33,9 @@ void Mariadb_nodes::require_gtid(bool value)
     g_require_gtid = value;
 }
 
-Mariadb_nodes::Mariadb_nodes(const char* pref, const char* test_cwd, bool verbose)
-    : v51(false)
+Mariadb_nodes::Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose,
+                             std::string network_config):
+    v51(false)
 {
     use_ipv6 = false;
     strcpy(prefix, pref);
@@ -41,6 +43,7 @@ Mariadb_nodes::Mariadb_nodes(const char* pref, const char* test_cwd, bool verbos
     memset(blocked, 0, sizeof(blocked));
     no_set_pos = false;
     this->verbose = verbose;
+    this->network_config = network_config;
     strcpy(test_dir, test_cwd);
     read_env();
     truncate_mariadb_logs();
@@ -125,43 +128,20 @@ void Mariadb_nodes::close_connections()
     }
 }
 
-
-
 void Mariadb_nodes::read_env()
 {
-    char* env;
     char env_name[64];
 
     read_basic_env();
 
     sprintf(env_name, "%s_user", prefix);
-    env = getenv(env_name);
-    if (env != NULL)
-    {
-        sscanf(env, "%s", user_name);
-    }
-    else
-    {
-        sprintf(user_name, "skysql");
-    }
-    sprintf(env_name, "%s_password", prefix);
-    env = getenv(env_name);
-    if (env != NULL)
-    {
-        sscanf(env, "%s", password);
-    }
-    else
-    {
-        sprintf(password, "skysql");
-    }
+    user_name = readenv(env_name, "skysql");
 
-    ssl = false;
+    sprintf(env_name, "%s_password", prefix);
+    password = readenv(env_name, "skysql");
+
     sprintf(env_name, "%s_ssl", prefix);
-    env = getenv(env_name);
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
-    {
-        ssl = true;
-    }
+    ssl = readenv_bool(env_name, false);
 
     if ((N > 0) && (N < 255))
     {
@@ -169,66 +149,34 @@ void Mariadb_nodes::read_env()
         {
             // reading ports
             sprintf(env_name, "%s_%03d_port", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sscanf(env, "%d", &port[i]);
-            }
-            else
-            {
-                port[i] = 3306;
-            }
-            // reading sockets
-            sprintf(env_name, "%s_%03d_socket", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(socket[i], "%s", env);
-                sprintf(socket_cmd[i], "--socket=%s", env);
-            }
-            else
-            {
-                sprintf(socket[i], " ");
-                sprintf(socket_cmd[i], " ");
-            }
+            port[i] = readenv_int(env_name, 3306);
 
+            //reading sockets
+            sprintf(env_name, "%s_%03d_socket", prefix, i);
+            socket[i] = readenv(env_name, " ");
+            if (strcmp(socket[i], " "))
+            {
+                socket_cmd[i] = (char *) malloc(strlen(socket[i]) + 10);
+                sprintf(socket_cmd[i], "--socket=%s", socket[i]);
+            }
+            else
+            {
+                socket_cmd[i] = (char *) " ";
+            }
+            sprintf(env_name, "%s_%03d_socket_cmd", prefix, i);
+            setenv(env_name, socket_cmd[i], 1);
 
             // reading start_db_command
             sprintf(env_name, "%s_%03d_start_db_command", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(start_db_command[i], "%s", env);
-            }
-            else
-            {
-                sprintf(start_db_command[i], "%s", "service mysql start");
-            }
+            start_db_command[i] = readenv(env_name, (char *) "service mysql start");
 
             // reading stop_db_command
             sprintf(env_name, "%s_%03d_stop_db_command", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(stop_db_command[i], "%s", env);
-            }
-            else
-            {
-                sprintf(stop_db_command[i], "%s", "service mysql stop");
-            }
+            stop_db_command[i] = readenv(env_name, (char *) "service mysql stop");
 
             // reading cleanup_db_command
             sprintf(env_name, "%s_%03d_cleanup_db_command", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(cleanup_db_command[i], "%s", env);
-            }
-            else
-            {
-                sprintf(cleanup_db_command[i],
-                        "service mysql stop; killall -9 mysqld; rm -rf /var/lib/mysql/*");
-            }
+            cleanup_db_command[i] = readenv(env_name, (char *) "rm -rf /var/lib/mysql/*; killall -9 mysqld");
         }
     }
 }

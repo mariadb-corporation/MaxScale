@@ -4,8 +4,6 @@
 #
 # TODO: Don't test correctness of routing with mysqltest
 #
-rp=`realpath $0`
-export src_dir=`dirname $rp`
 
 # TODO: Don't copy this and "unmangle" the test instead
 cp -r $src_dir/Hartmut_tests/maxscale-mysqltest ./Hartmut_tests/maxscale-mysqltest/
@@ -15,9 +13,9 @@ echo "--disable_query_log" > Hartmut_tests/maxscale-mysqltest/testconf.inc
 echo "SET @TMASTER_ID=$master_id;" >> Hartmut_tests/maxscale-mysqltest/testconf.inc
 echo "--enable_query_log" >> Hartmut_tests/maxscale-mysqltest/testconf.inc
 
-$src_dir/mysqltest_driver.sh $1 $PWD/Hartmut_tests/maxscale-mysqltest 4006
+echo "--disable_query_log" > testconf.inc
+echo "SET @TMASTER_ID=$master_id;" >> testconf.inc
+echo "--enable_query_log" >> testconf.inc
 
-ret=$?
-$src_dir/copy_logs.sh $1
+$src_dir/mysqltest_driver.sh "$1" "$PWD/Hartmut_tests/maxscale-mysqltest" 4006
 
-exit $ret

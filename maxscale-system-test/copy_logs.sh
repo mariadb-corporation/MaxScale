@@ -22,20 +22,17 @@ if [ $? -ne 0 ]; then
         echo "Error creating log dir"
 fi
 
-export maxscale_sshkey=$maxscale_keyfile
 echo "log_dir:         $logs_dir"
-echo "maxscale_sshkey: $maxscale_sshkey"
-echo "maxscale_IP:     $maxscale_IP"
+echo "maxscale_sshkey: $maxscale_000_keyfile"
+echo "maxscale_IP:     $maxscale_000_network"
 
 if [ $maxscale_IP != "127.0.0.1" ] ; then
-    ssh -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $maxscale_access_user@$maxscale_IP "rm -rf logs; mkdir logs; $maxscale_access_sudo cp $maxscale_log_dir/*.log logs/; $maxscale_access_sudo cp /tmp/core* logs; $maxscale_access_sudo chmod 777 -R logs"
-    scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $maxscale_access_user@$maxscale_IP:logs/* $logs_dir
+    ssh -i ${maxscale_000_keyfile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet ${maxscale_000_whoami}@${maxscale_000_network} "rm -rf logs; mkdir logs; ${maxscale_000_access_sudo} cp ${maxscale_log_dir}/*.log logs/; ${maxscale_000_access_sudo} cp /tmp/core* logs; ${maxscale_000_access_sudo} chmod 777 -R logs"
+    scp -i ${maxscale_000_keyfile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet ${maxscale_000_whoami}@${maxscale_000_network}:logs/* $logs_dir
     if [ $? -ne 0 ]; then
 	echo "Error copying Maxscale logs"
     fi
-    #scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $maxscale_access_user@$maxscale_IP:/tmp/core* $logs_dir
-    #scp  -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $maxscale_access_user@$maxscale_IP:/root/core* $logs_dir
-    scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $maxscale_access_user@$maxscale_IP:$maxscale_cnf $logs_dir
+    scp -i ${maxscale_000_keyfile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet ${maxscale_000_whoami}@${maxscale_000_network}:$maxscale_cnf $logs_dir
     chmod a+r $logs_dir/*
 else
     sudo cp $maxscale_log_dir/*.log $logs_dir

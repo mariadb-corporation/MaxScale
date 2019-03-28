@@ -1,6 +1,4 @@
-#ifndef BIG_LOAD_H
-#define BIG_LOAD_H
-
+#pragma once
 
 #include "testconnections.h"
 #include "sql_t1.h"
@@ -33,6 +31,7 @@ void* query_thread2(void* ptr);
  * @param galera if true use Galera backend (Test->galera instead of Test->repl)
  * @param report_errors if true call add_result() in case of query failure
  */
+
 void load(long* new_inserts,
           long* new_selects,
           long* selects,
@@ -44,5 +43,3 @@ void load(long* new_inserts,
           int   rwsplit_only,
           bool  galera,
           bool  report_errors);
-
-#endif      // BIG_LOAD_H

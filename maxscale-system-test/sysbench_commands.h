@@ -1,5 +1,4 @@
-#ifndef SYSBENCH_COMMANDS_H
-#define SYSBENCH_COMMANDS_H
+#pragma once
 
 /*const char * SYSBENCH_PREPARE =
  *        "sysbench oltp_read_write \
@@ -73,5 +72,3 @@ const char* SYSBENCH_COMMAND_SHORT =
                         --mysql-db=test \
                         --threads=32 \
                         --max-requests=0 --report-interval=5 --time=300 run";
-
-#endif      // SYSBENCH_COMMANDS_H

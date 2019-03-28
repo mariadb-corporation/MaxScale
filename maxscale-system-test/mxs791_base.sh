@@ -1,32 +1,26 @@
 #!/bin/bash
 
 rp=`realpath $0`
-export src_dir=`dirname $rp`
-$PWD/non_native_setup $test_name
 
-if [ $? -ne 0 ] ; then
-        echo "configuring maxscale failed"
-        exit 1
-fi
 export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
 
 res=0
 echo "Trying RWSplit"
-echo "show tables" | mysql -u$maxscale_user -p$maxscale_password -h $maxscale_IP -P 4006 $ssl_option test
+echo "show tables" | mysql -u$maxscale_user -p$maxscale_password -h ${maxscale_000_network} -P 4006 $ssl_option test
 if [ $? != 0 ] ; then
         res=1
         echo "Can't connect to DB 'test'"
 fi
 
 echo "Trying ReadConn master"
-echo "show tables" | mysql -u$maxscale_user -p$maxscale_password -h $maxscale_IP -P 4008 $ssl_options test
+echo "show tables" | mysql -u$maxscale_user -p$maxscale_password -h ${maxscale_000_network} -P 4008 $ssl_options test
 if [ $? != 0 ] ; then
         res=1
         echo "Can't connect to DB 'test'"
 fi
 
 echo "Trying ReadConn slave"
-echo "show tables" | mysql -u$maxscale_user -p$maxscale_password -h $maxscale_IP -P 4009 $ssl_options test
+echo "show tables" | mysql -u$maxscale_user -p$maxscale_password -h ${maxscale_000_network} -P 4009 $ssl_options test
 if [ $? != 0 ] ; then
         res=1
         echo "Can't connect to DB 'test'"

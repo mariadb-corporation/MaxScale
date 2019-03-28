@@ -5,24 +5,14 @@
 ## - call MariaDB client with different --default-character-set= settings
 ## - check output of SHOW VARIABLES LIKE 'char%'
 
-rp=`realpath $0`
-export src_dir=`dirname $rp`
-export test_dir=`pwd`
-export test_name=`basename $rp`
-$test_dir/non_native_setup $test_name
-
-if [ $? -ne 0 ] ; then
-        echo "configuring maxscale failed"
-        exit 1
-fi
 export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
 
 for char_set in "latin1" "latin2"
 do
 
-	line1=`mysql -u$node_user -p$node_password -h $maxscale_IP -P 4006 $ssl_options --default-character-set="$char_set" -e "SHOW VARIABLES LIKE 'char%'" | grep "character_set_client"`
-	line2=`mysql -u$node_user -p$node_password -h $maxscale_IP -P 4006 $ssl_options --default-character-set="$char_set" -e "SHOW VARIABLES LIKE 'char%'" | grep "character_set_connection"`
-	line3=`mysql -u$node_user -p$node_password -h $maxscale_IP -P 4006 $ssl_options --default-character-set="$char_set" -e "SHOW VARIABLES LIKE 'char%'" | grep "character_set_results"`
+	line1=`mysql -u$node_user -p$node_password -h ${maxscale_000_network} -P 4006 $ssl_options --default-character-set="$char_set" -e "SHOW VARIABLES LIKE 'char%'" | grep "character_set_client"`
+	line2=`mysql -u$node_user -p$node_password -h ${maxscale_000_network} -P 4006 $ssl_options --default-character-set="$char_set" -e "SHOW VARIABLES LIKE 'char%'" | grep "character_set_connection"`
+	line3=`mysql -u$node_user -p$node_password -h ${maxscale_000_network} -P 4006 $ssl_options --default-character-set="$char_set" -e "SHOW VARIABLES LIKE 'char%'" | grep "character_set_results"`
 
 	echo $line1 | grep "$char_set"
 	res1=$?
@@ -34,10 +24,9 @@ do
 
 	if [[ $res1 != 0 ]] || [[ $res2 != 0 ]] || [[ $res3 != 0 ]] ; then
 		echo "charset is ignored"
-		mysql -u$node_user -p$node_password -h $maxscale_IP -P 4006 $ssl_options --default-character-set="latin2" -e "SHOW VARIABLES LIKE 'char%'"
-		$src_dir/copy_logs.sh bug564
+		mysql -u$node_user -p$node_password -h ${maxscale_000_network} -P 4006 $ssl_options --default-character-set="latin2" -e "SHOW VARIABLES LIKE 'char%'"
 		exit 1
 	fi
 done
-$src_dir/copy_logs.sh bug564
+
 exit 0

@@ -1,7 +1,13 @@
 
 # Helper function to add a configuration template
-function(add_template name template)
-  set(CNF_TEMPLATES "${CNF_TEMPLATES}{\"${name}\",\"${template}\"}," CACHE INTERNAL "")
+function(add_template name template labels)
+  set(CNF_TEMPLATES "${CNF_TEMPLATES}{\"${name}\",\"${template}\", \"${labels}\"}," CACHE INTERNAL "")
+endfunction()
+
+
+# Helper function to add a configuration template
+function(add_template_manual name template)
+  add_template(${name} ${template} "${name}.cpp;${name};${template};LABELS;CONFIG")
 endfunction()
 
 # Default test timeout
@@ -18,7 +24,7 @@ set(TIMEOUT 900)
 # test set, the function should be called as follows:
 #     add_test_executable(simple_test.cpp simple_test simple_config LABELS some_label)
 function(add_test_executable source name template)
-  add_template(${name} ${template})
+  add_template(${name} ${template} "${ARGV}")
   add_executable(${name} ${source})
   target_link_libraries(${name} testcore)
   add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -34,15 +40,15 @@ endfunction()
 
 # Same as add_test_executable, but do not add executable into tests list
 function(add_test_executable_notest source name template)
-  add_template(${name} ${template})
+  add_template(${name} ${template} "${ARGV}")
   add_executable(${name} ${source})
   target_link_libraries(${name} testcore)
 endfunction()
 
 # Add a test which uses another test as the executable
 function(add_test_derived name executable template)
-  add_template(${name} ${template})
-  add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${executable} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_template(${name} ${template} "${ARGV}")
+  add_test(NAME ${name} COMMAND ${CMAKE_BINARY_DIR}/${executable} ${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
   set_property(TEST ${name} PROPERTY TIMEOUT ${TIMEOUT})
 
   list(REMOVE_AT ARGV 0 1 2)
@@ -57,8 +63,8 @@ endfunction()
 # The naming of the templates follow the same principles as add_test_executable.
 # also suitable for symlinks
 function(add_test_script name script template labels)
-  add_template(${name} ${template})
-  add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/${script} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_template(${name} ${template} "${ARGV}")
+  add_test(NAME ${name} COMMAND non_native_setup ${name} ${script} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   list(REMOVE_AT ARGV 0 1 2)
 

@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
         for (i = 0; i < threads_num[j]; i++)
         {
             data[j][i].sql = (char*) malloc((i +1) * 32 * 14 + 32);
-            create_insert_string(data[j][i].sql, (i + 1) * 32 , i);
+            create_insert_string(data[j][i].sql, (i + 1) * 32, i);
             Test->tprintf("sqL %d: %d\n", i, strlen(data[j][i].sql));
             data[j][i].exit_flag = false;
             data[j][i].id = i;
@@ -178,12 +178,12 @@ void try_and_reconnect(MYSQL * conn, char * db, char * sql)
         Test->tprintf("reconnect");
         mysql_close(conn);
         conn = open_conn_db_timeout(port,
-                IP,
-                db,
-                Test->repl->user_name,
-                Test->repl->password,
-                20,
-                Test->ssl);
+                                    IP,
+                                    db,
+                                    Test->repl->user_name,
+                                    Test->repl->password,
+                                    20,
+                                    Test->ssl);
     }
 }
 
@@ -194,12 +194,12 @@ void *query_thread(void *ptr )
     int inserts_until_optimize = 100000;
     int tn = 0;
     conn = open_conn_db_timeout(port,
-            IP,
-            (char *) "test",
-            Test->repl->user_name,
-            Test->repl->password,
-            20,
-            Test->ssl);
+                                IP,
+                                (char *) "test",
+                                Test->repl->user_name,
+                                Test->repl->password,
+                                20,
+                                Test->ssl);
     while (!data->exit_flag)
     {
 
@@ -227,12 +227,12 @@ void *read_thread(void *ptr )
     int i = 0;
     char sql[256];
     conn = open_conn_db_timeout(port,
-            IP,
-            (char *) "test",
-            Test->repl->user_name,
-            Test->repl->password,
-            20,
-            Test->ssl);
+                                IP,
+                                (char *) "test",
+                                Test->repl->user_name,
+                                Test->repl->password,
+                                20,
+                                Test->ssl);
     while (!data->exit_flag)
     {
         sprintf(sql, "SELECT * FROM t1 WHERE fl=%d", data->id);
@@ -250,12 +250,12 @@ void *transaction_thread(void *ptr )
     int tn = 0;
     t_data * data = (t_data *) ptr;
     conn = open_conn_db_timeout(port,
-            IP,
-            (char *) "test1",
-            Test->repl->user_name,
-            Test->repl->password,
-            20,
-            Test->ssl);
+                                IP,
+                                (char *) "test1",
+                                Test->repl->user_name,
+                                Test->repl->password,
+                                20,
+                                Test->ssl);
     while (!data->exit_flag)
     {
 
@@ -281,12 +281,12 @@ void *transaction_thread(void *ptr )
     mysql_close(conn);
 
     conn = open_conn_db_timeout(port,
-                    IP,
-                    (char *) "",
-                    Test->maxscales->user_name,
-                    Test->maxscales->password,
-                    20,
-                    Test->ssl);
+                                IP,
+                                (char *) "",
+                                Test->maxscales->user_name,
+                                Test->maxscales->password,
+                                20,
+                                Test->ssl);
     Test->try_query(conn, "DROP DATABASE test1");
     mysql_close(conn);
     return NULL;
@@ -299,12 +299,12 @@ void *short_session_thread(void *ptr )
     while (!data->exit_flag)
     {
         conn = open_conn_db_timeout(port,
-                IP,
-                (char *) "test",
-                Test->repl->user_name,
-                Test->repl->password,
-                20,
-                Test->ssl);
+                                    IP,
+                                    (char *) "test",
+                                    Test->repl->user_name,
+                                    Test->repl->password,
+                                    20,
+                                    Test->ssl);
         mysql_close(conn);
     }
     return NULL;
@@ -317,12 +317,12 @@ void *prepared_stmt_thread(void *ptr )
     t_data * data = (t_data *) ptr;
     char sql[256];
     conn = open_conn_db_timeout(port,
-            IP,
-            (char *) "test2",
-            Test->repl->user_name,
-            Test->repl->password,
-            20,
-            Test->ssl);
+                                IP,
+                                (char *) "test2",
+                                Test->repl->user_name,
+                                Test->repl->password,
+                                20,
+                                Test->ssl);
     while (!data->exit_flag)
     {
         sprintf(sql, "PREPARE stmt%d FROM 'SELECT * FROM t1 WHERE fl=@x;';", data->id);
@@ -340,12 +340,12 @@ void *prepared_stmt_thread(void *ptr )
     mysql_close(conn);
 
     conn = open_conn_db_timeout(port,
-                    IP,
-                    (char *) "",
-                    Test->maxscales->user_name,
-                    Test->maxscales->password,
-                    20,
-                    Test->ssl);
+                                IP,
+                                (char *) "",
+                                Test->maxscales->user_name,
+                                Test->maxscales->password,
+                                20,
+                                Test->ssl);
     Test->try_query(conn, "DROP DATABASE test2");
     mysql_close(conn);
     return NULL;

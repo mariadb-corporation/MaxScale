@@ -5,8 +5,9 @@ static struct
 {
     const char* test_name;
     const char* test_template;
+    const char* test_labels;
 } cnf_templates[] __attribute__((unused)) = {
-@CNF_TEMPLATES@ {NULL, NULL}};
+@CNF_TEMPLATES@ {NULL, NULL, NULL}};
 
 /** The default template to use */
 static const char * default_template __attribute__((unused)) = "replication";
