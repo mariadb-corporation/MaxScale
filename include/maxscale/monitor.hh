@@ -312,6 +312,8 @@ public:
 
     virtual monitor_state_t state() const = 0;
 
+    const char* name() const;
+
     /**
      * Configure the monitor. Called by monitor creation and altering code. Any inheriting classes
      * should override this with their own configuration processing function. The overriding function
@@ -385,7 +387,7 @@ public:
 
     void show(DCB* dcb);
 
-    const char* const m_name;           /**< Monitor instance name. TODO: change to string */
+    const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */
     bool              m_active {true};  /**< True if monitor exists and has not been "destroyed". */
 

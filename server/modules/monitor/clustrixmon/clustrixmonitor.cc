@@ -95,7 +95,7 @@ bool ClustrixMonitor::softfail(SERVER* pServer, json_t** ppError)
         LOG_JSON_ERROR(ppError,
                        "%s: The monitor is not running and hence "
                        "SOFTFAIL cannot be performed for %s.",
-                       m_name, pServer->address);
+                       name(), pServer->address);
     }
 
     return true;
@@ -117,7 +117,7 @@ bool ClustrixMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
         LOG_JSON_ERROR(ppError,
                        "%s: The monitor is not running and hence "
                        "UNSOFTFAIL cannot be performed for %s.",
-                       m_name, pServer->address);
+                       name(), pServer->address);
     }
 
     return true;
@@ -165,11 +165,11 @@ void ClustrixMonitor::tick()
     switch (m_http.status())
     {
     case http::Async::PENDING:
-        MXS_WARNING("%s: Health check round had not completed when next tick arrived.", m_name);
+        MXS_WARNING("%s: Health check round had not completed when next tick arrived.", name());
         break;
 
     case http::Async::ERROR:
-        MXS_WARNING("%s: Health check round ended with general error.", m_name);
+        MXS_WARNING("%s: Health check round ended with general error.", name());
 	make_health_check();
 	break;
 
@@ -199,7 +199,7 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
         auto& element = *it;
         ClustrixNode& node = element.second;
 
-        if (node.can_be_used_as_hub(m_name, m_settings.conn_settings))
+        if (node.can_be_used_as_hub(name(), m_settings.conn_settings))
         {
             pHub_con = node.release_connection();
             pHub_server = node.server();
@@ -219,7 +219,7 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
 
             if (ips.find(ms.server->address) == ips.end())
             {
-                if (Clustrix::ping_or_connect_to_hub(m_name, m_settings.conn_settings, softfailed, ms))
+                if (Clustrix::ping_or_connect_to_hub(name(), m_settings.conn_settings, softfailed, ms))
                 {
                     pHub_con = ms.con;
                     pHub_server = ms.server;
@@ -237,7 +237,7 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
     if (pHub_con)
     {
         MXS_NOTICE("%s: Monitoring Clustrix cluster state using node %s:%d.",
-                   m_name, pHub_server->address, pHub_server->port);
+                   name(), pHub_server->address, pHub_server->port);
 
         m_pHub_con = pHub_con;
         m_pHub_server = pHub_server;
@@ -248,7 +248,7 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
     else
     {
         MXS_ERROR("%s: Could not connect to any server or no server that could "
-                  "be connected to was part of the quorum.", m_name);
+                  "be connected to was part of the quorum.", name());
     }
 }
 
@@ -293,7 +293,7 @@ void ClustrixMonitor::refresh_nodes()
 
                         // '@@' ensures no clash with user created servers.
                         // Monitor name ensures no clash with other Clustrix monitor instances.
-                        string name = string("@@") + m_name + ":node-" + std::to_string(id);
+                        string server_name = string("@@") + m_name + ":node-" + std::to_string(id);
 
                         auto nit = m_nodes.find(id);
                         auto mit = memberships.find(id);
@@ -301,7 +301,7 @@ void ClustrixMonitor::refresh_nodes()
                         if (nit != m_nodes.end())
                         {
                             // Existing node.
-                            mxb_assert(SERVER::find_by_unique_name(name));
+                            mxb_assert(SERVER::find_by_unique_name(server_name));
 
                             ClustrixNode& node = nit->second;
 
@@ -326,7 +326,7 @@ void ClustrixMonitor::refresh_nodes()
                             {
                                 MXS_NOTICE("%s: Node %d (%s) has been SOFTFAILed. "
                                            "Turning ON 'Being Drained'.",
-                                           m_name, node.id(), node.server()->address);
+                                           name(), node.id(), node.server()->address);
 
                                 node.server()->set_status(SERVER_DRAINING);
                             }
@@ -334,7 +334,7 @@ void ClustrixMonitor::refresh_nodes()
                             {
                                 MXS_NOTICE("%s: Node %d (%s) is no longer being SOFTFAILed. "
                                            "Turning OFF 'Being Drained'.",
-                                           m_name, node.id(), node.server()->address);
+                                           name(), node.id(), node.server()->address);
 
                                 node.server()->clear_status(SERVER_DRAINING);
                             }
@@ -344,16 +344,16 @@ void ClustrixMonitor::refresh_nodes()
                         else if (mit != memberships.end())
                         {
                             // New node.
-                            mxb_assert(!SERVER::find_by_unique_name(name));
+                            mxb_assert(!SERVER::find_by_unique_name(server_name));
 
-                            if (runtime_create_server(name.c_str(),
+                            if (runtime_create_server(server_name.c_str(),
                                                       ip.c_str(),
                                                       std::to_string(mysql_port).c_str(),
                                                       "mariadbbackend",
                                                       "mysqlbackendauth",
                                                       false))
                             {
-                                SERVER* pServer = SERVER::find_by_unique_name(name);
+                                SERVER* pServer = SERVER::find_by_unique_name(server_name);
                                 mxb_assert(pServer);
 
                                 if (softfailed)
@@ -376,7 +376,7 @@ void ClustrixMonitor::refresh_nodes()
                             else
                             {
                                 MXS_ERROR("%s: Could not create server %s at %s:%d.",
-                                          m_name, name.c_str(), ip.c_str(), mysql_port);
+                                          name(), server_name.c_str(), ip.c_str(), mysql_port);
                             }
 
                             memberships.erase(mit);
@@ -386,13 +386,13 @@ void ClustrixMonitor::refresh_nodes()
                             // Node found in system.node_info but not in system.membership
                             MXS_ERROR("%s: Node %d at %s:%d,%d found in system.node_info "
                                       "but not in system.membership.",
-                                      m_name, id, ip.c_str(), mysql_port, health_port);
+                                      name(), id, ip.c_str(), mysql_port, health_port);
                         }
                     }
                     else
                     {
                         MXS_WARNING("%s: Either nodeid and/or iface_ip is missing, ignoring node.",
-                                    m_name);
+                                    name());
                     }
                 }
 
@@ -425,13 +425,13 @@ void ClustrixMonitor::refresh_nodes()
             else
             {
                 MXS_WARNING("%s: No result returned for '%s' on %s.",
-                            m_name, ZQUERY, m_pHub_server->address);
+                            name(), ZQUERY, m_pHub_server->address);
             }
         }
         else
         {
             MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-                      m_name, ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
+                      name(), ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
         }
     }
 }
@@ -459,7 +459,7 @@ void ClustrixMonitor::check_hub(Clustrix::Softfailed softfailed)
     mxb_assert(m_pHub_con);
     mxb_assert(m_pHub_server);
 
-    if (!Clustrix::ping_or_connect_to_hub(m_name, m_settings.conn_settings, softfailed,
+    if (!Clustrix::ping_or_connect_to_hub(name(), m_settings.conn_settings, softfailed,
                                           *m_pHub_server, &m_pHub_con))
     {
         mysql_close(m_pHub_con);
@@ -528,7 +528,7 @@ bool ClustrixMonitor::check_cluster_membership(std::map<int, ClustrixMembership>
                 else
                 {
                     MXS_WARNING("%s: No node id returned in row for '%s'.",
-                                m_name, ZQUERY);
+                                name(), ZQUERY);
                 }
             }
 
@@ -549,13 +549,13 @@ bool ClustrixMonitor::check_cluster_membership(std::map<int, ClustrixMembership>
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s'.", m_name, ZQUERY);
+            MXS_WARNING("%s: No result returned for '%s'.", name(), ZQUERY);
         }
     }
     else
     {
         MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-		  m_name, ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
+		  name(), ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
     }
 
     return rv;
@@ -608,11 +608,11 @@ void ClustrixMonitor::make_health_check()
 	break;
 
     case http::Async::ERROR:
-	MXS_ERROR("%s: Could not initiate health check.", m_name);
+	MXS_ERROR("%s: Could not initiate health check.", name());
 	break;
 
     case http::Async::READY:
-	MXS_INFO("%s: Health check available immediately.", m_name);
+	MXS_INFO("%s: Health check available immediately.", name());
 	break;
     }
 }
@@ -680,7 +680,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
             break;
 
         case http::Async::ERROR:
-            MXS_ERROR("%s: Health check waiting ended with general error.", m_name);
+            MXS_ERROR("%s: Health check waiting ended with general error.", name());
         }
     }
 
@@ -740,12 +740,12 @@ bool ClustrixMonitor::perform_operation(Operation operation,
             if (mysql_query(m_pHub_con, zQuery) == 0)
             {
                 MXS_NOTICE("%s: %s performed on node %d (%s).",
-                           m_name, zOperation, id, pServer->address);
+                           name(), zOperation, id, pServer->address);
 
                 if (operation == Operation::SOFTFAIL)
                 {
                     MXS_NOTICE("%s: Turning on 'Being Drained' on server %s.",
-                               m_name, pServer->address);
+                               name(), pServer->address);
                     pServer->set_status(SERVER_DRAINING);
                 }
                 else
@@ -753,7 +753,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
                     mxb_assert(operation == Operation::UNSOFTFAIL);
 
                     MXS_NOTICE("%s: Turning off 'Being Drained' on server %s.",
-                               m_name, pServer->address);
+                               name(), pServer->address);
                     pServer->clear_status(SERVER_DRAINING);
                 }
             }
@@ -761,7 +761,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
             {
                 LOG_JSON_ERROR(ppError,
                                "%s: The execution of '%s' failed: %s",
-                               m_name, zQuery, mysql_error(m_pHub_con));
+                               name(), zQuery, mysql_error(m_pHub_con));
             }
         }
         else
@@ -769,7 +769,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
             LOG_JSON_ERROR(ppError,
                            "%s: The server %s is not being monitored, "
                            "cannot perform %s.",
-                           m_name, pServer->address, zOperation);
+                           name(), pServer->address, zOperation);
         }
     }
     else
@@ -777,7 +777,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
         LOG_JSON_ERROR(ppError,
                        "%s: Could not could not connect to any Clustrix node, "
                        "cannot perform %s of %s.",
-                       m_name, zOperation, pServer->address);
+                       name(), zOperation, pServer->address);
     }
 
     return performed;

@@ -1418,16 +1418,14 @@ static void destroyListener(DCB* dcb, SERVICE* service, const char* name)
 
 static void destroyMonitor(DCB* dcb, Monitor* monitor)
 {
-    char name[strlen(monitor->m_name) + 1];
-    strcpy(name, monitor->m_name);
-
+    std::string name = monitor->name();
     if (runtime_destroy_monitor(monitor))
     {
-        dcb_printf(dcb, "Destroyed monitor '%s'\n", name);
+        dcb_printf(dcb, "Destroyed monitor '%s'\n", name.c_str());
     }
     else
     {
-        dcb_printf(dcb, "Failed to destroy monitor '%s', see log file for more details\n", name);
+        dcb_printf(dcb, "Failed to destroy monitor '%s', see log file for more details\n", name.c_str());
     }
 }
 

@@ -174,7 +174,7 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
 {
     bool rval = true;
     char dest[PATH_MAX + 1];
-    snprintf(dest, sizeof(dest), journal_template, get_datadir(), monitor->m_name, journal_name);
+    snprintf(dest, sizeof(dest), journal_template, get_datadir(), monitor->name(), journal_name);
 
     if (rename(src, dest) == -1)
     {
@@ -198,7 +198,7 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
  */
  FILE* open_tmp_file(Monitor* monitor, char* path)
 {
-    int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->m_name, "");
+    int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name(), "");
     int max_bytes = PATH_MAX - (int)sizeof(journal_name);
     FILE* rval = NULL;
 
@@ -419,7 +419,7 @@ json_t* monitor_json_data(const Monitor* monitor, const char* host)
 
     {
         Guard guard(monitor->m_lock);
-        json_object_set_new(rval, CN_ID, json_string(monitor->m_name));
+        json_object_set_new(rval, CN_ID, json_string(monitor->name()));
         json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
 
         json_object_set_new(attr, CN_MODULE, json_string(monitor->m_module.c_str()));
@@ -451,7 +451,7 @@ json_t* monitor_json_data(const Monitor* monitor, const char* host)
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->m_name));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->name()));
     return rval;
 }
 
@@ -539,7 +539,7 @@ void MonitorManager::start_monitor(Monitor* monitor)
     {
         if (!monitor->start())
         {
-                    MXS_ERROR("Failed to start monitor '%s'.", monitor->m_name);
+                    MXS_ERROR("Failed to start monitor '%s'.", monitor->name());
         }
     }
 }
@@ -651,7 +651,7 @@ void MonitorManager::monitor_list(DCB* dcb)
         {
             dcb_printf(dcb,
                        "%-20s | %s\n",
-                       ptr->m_name,
+                       ptr->name(),
                        ptr->state() == MONITOR_STATE_RUNNING ?
                        "Running" : "Stopped");
         }
@@ -671,7 +671,7 @@ Monitor* MonitorManager::find_monitor(const char* name)
 {
     Monitor* rval = nullptr;
     this_unit.foreach_monitor([&rval, name](Monitor* ptr) {
-        if (!strcmp(ptr->m_name, name) && ptr->m_active)
+        if (ptr->m_name == name && ptr->m_active)
         {
             rval = ptr;
         }
@@ -724,7 +724,7 @@ bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* f
     {
                 MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
                           filename,
-                          monitor->m_name,
+                          monitor->name(),
                           errno,
                           mxs_strerror(errno));
         return false;
@@ -758,7 +758,7 @@ bool MonitorManager::monitor_serialize(const Monitor* monitor)
              sizeof(filename),
              "%s/%s.cnf.tmp",
              get_config_persistdir(),
-             monitor->m_name);
+             monitor->name());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -875,7 +875,7 @@ namespace maxscale
 {
 
 Monitor::Monitor(const string& name, const string& module)
-    : m_name(MXS_STRDUP_A(name.c_str()))
+    : m_name(name)
     , m_module(module)
 {
     memset(m_journal_hash, 0, sizeof(m_journal_hash));
@@ -893,10 +893,13 @@ void Monitor::stop()
     }
 }
 
+const char* Monitor::name() const
+{
+    return m_name.c_str();
+}
+
 bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-
-
     m_settings.interval = params->get_integer(CN_MONITOR_INTERVAL);
     m_settings.journal_max_age = params->get_integer(CN_JOURNAL_MAX_AGE);
     m_settings.script_timeout = params->get_integer(CN_SCRIPT_TIMEOUT);
@@ -934,7 +937,7 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
         {
             mxb_assert(srv_monitored_by != this);
             MXS_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
-                      elem->name(), srv_monitored_by->m_name);
+                      elem->name(), srv_monitored_by->name());
             error = true;
         }
         else
@@ -950,7 +953,7 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
     if (!set_disk_space_threshold(threshold_string))
     {
         MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                  CN_DISK_SPACE_THRESHOLD, m_name, threshold_string.c_str());
+                  CN_DISK_SPACE_THRESHOLD, name(), threshold_string.c_str());
         error = true;
     }
 
@@ -972,7 +975,6 @@ Monitor::~Monitor()
         delete server;
     }
     m_servers.clear();
-    MXS_FREE((const_cast<char*>(m_name)));
 }
 
 /**
@@ -1045,9 +1047,7 @@ void Monitor::remove_server(SERVER* server)
 
 void Monitor::show(DCB* dcb)
 {
-    Monitor* monitor = this;
-    dcb_printf(dcb, "Monitor:                %p\n", monitor);
-    dcb_printf(dcb, "Name:                   %s\n", m_name);
+    dcb_printf(dcb, "Name:                   %s\n", name());
     dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(state()));
     dcb_printf(dcb, "Times monitored:        %lu\n", m_ticks);
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
@@ -1059,7 +1059,7 @@ void Monitor::show(DCB* dcb)
 
     const char* sep = "";
 
-    for (MonitorServer* db : monitor->m_servers)
+    for (const auto& db : m_servers)
     {
         dcb_printf(dcb, "%s[%s]:%d", sep, db->server->address, db->server->port);
         sep = ", ";
@@ -1069,7 +1069,7 @@ void Monitor::show(DCB* dcb)
 
     if (state() == MONITOR_STATE_RUNNING)
     {
-        monitor->diagnostics(dcb);
+        diagnostics(dcb);
     }
     else
     {
@@ -1095,7 +1095,7 @@ bool Monitor::test_permissions(const string& query)
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
-                      monitor->m_name,
+                      monitor->name(),
                       mondb->server->name(),
                       mondb->server->address,
                       mondb->server->port,
@@ -1130,7 +1130,7 @@ bool Monitor::test_permissions(const string& query)
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      m_name, query.c_str(), m_settings.conn_settings.username.c_str(),
+                      name(), query.c_str(), m_settings.conn_settings.username.c_str(),
                       mysql_error(mondb->con));
         }
         else
@@ -1140,7 +1140,7 @@ bool Monitor::test_permissions(const string& query)
             if (res == NULL)
             {
                 MXS_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
-                          monitor->m_name,
+                          monitor->name(),
                           mysql_error(mondb->con));
             }
             else
@@ -1843,7 +1843,7 @@ void Monitor::detect_handle_state_changes()
 
 int Monitor::get_data_file_path(char* path) const
 {
-    int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), m_name, journal_name);
+    int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), name(), journal_name);
     return rv;
 }
 
@@ -2114,7 +2114,7 @@ std::vector<MonitorServer*> Monitor::get_monitored_serverlist(const string& key,
             }
             else
             {
-                MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), m_name);
+                MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), name());
                 *error_out = true;
             }
         }
@@ -2164,7 +2164,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
     if (!msrv)
     {
         MXS_ERROR("Monitor %s requested to set status of server %s that it does not monitor.",
-                  m_name, srv->address);
+                  name(), srv->address);
         return false;
     }
 
@@ -2227,7 +2227,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
     if (!msrv)
     {
         MXS_ERROR("Monitor %s requested to clear status of server %s that it does not monitor.",
-                  m_name, srv->address);
+                  name(), srv->address);
         return false;
     }
 
@@ -2359,7 +2359,7 @@ bool MonitorWorker::start()
 
     if (journal_is_stale())
     {
-        MXS_WARNING("Removing stale journal file for monitor '%s'.", m_name);
+        MXS_WARNING("Removing stale journal file for monitor '%s'.", name());
         remove_server_journal();
     }
 
@@ -2382,7 +2382,7 @@ bool MonitorWorker::start()
         m_loop_called = get_time_ms() - m_settings.interval; // Next tick should happen immediately.
         if (!Worker::start())
         {
-            MXS_ERROR("Failed to start worker for monitor '%s'.", m_name);
+            MXS_ERROR("Failed to start worker for monitor '%s'.", name());
         }
         else
         {
@@ -2684,7 +2684,7 @@ bool MonitorWorker::pre_run()
     }
     else
     {
-        MXS_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.", m_name);
+        MXS_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.", name());
         m_semaphore.post();
     }
 

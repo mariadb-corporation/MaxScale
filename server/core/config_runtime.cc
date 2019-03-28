@@ -198,7 +198,7 @@ bool runtime_remove_server(Monitor* mon, Server* server)
 
     if (MonitorManager::server_is_monitored(server) != mon)
     {
-        config_runtime_error("Server '%s' is not monitored by '%s'.", server->name(), mon->m_name);
+        config_runtime_error("Server '%s' is not monitored by '%s'.", server->name(), mon->name());
     }
     else
     {
@@ -249,7 +249,7 @@ bool runtime_link_server(Server* server, const char* target)
             config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
                                  "Servers cannot explicitly be added to the service.",
                                  service->name(),
-                                 service->m_monitor->m_name);
+                                 service->m_monitor->name());
         }
     }
     else if (monitor)
@@ -297,7 +297,7 @@ bool runtime_unlink_server(Server* server, const char* target)
                 config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
                                      "Servers cannot explicitly be removed from the service.",
                                      service->name(),
-                                     service->m_monitor->m_name);
+                                     service->m_monitor->name());
             }
         }
         else if (monitor)
@@ -741,7 +741,7 @@ bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
 
     if (success)
     {
-        MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->m_name, key, value);
+        MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name(), key, value);
     }
 
     return success;
@@ -1461,12 +1461,12 @@ bool runtime_destroy_monitor(Monitor* monitor)
     if (Service* s = service_uses_monitor(monitor))
     {
         config_runtime_error("Monitor '%s' cannot be destroyed as it is used by service '%s'",
-                             monitor->m_name, s->name());
+                             monitor->name(), s->name());
     }
     else
     {
         char filename[PATH_MAX];
-        snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->m_name);
+        snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->name());
 
         std::lock_guard<std::mutex> guard(crt_lock);
 
@@ -1486,7 +1486,7 @@ bool runtime_destroy_monitor(Monitor* monitor)
     if (rval)
     {
         MonitorManager::deactivate_monitor(monitor);
-        MXS_NOTICE("Destroyed monitor '%s'", monitor->m_name);
+        MXS_NOTICE("Destroyed monitor '%s'", monitor->name());
     }
 
     return rval;
