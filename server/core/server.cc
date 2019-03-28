@@ -323,11 +323,13 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
         && server->persistent[id]   // Check after cleaning
         && (server->status & SERVER_RUNNING))
     {
-        mxb_assert(dcb->server);
-
         dcb = server->persistent[id];
+
         while (dcb)
         {
+            mxb_assert(dcb->role == DCB::Role::BACKEND);
+            mxb_assert(dcb->server);
+
             if (dcb->user
                 && dcb->remote
                 && !ip.empty()
