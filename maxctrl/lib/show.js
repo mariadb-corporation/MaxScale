@@ -279,6 +279,18 @@ exports.builder = function(yargs) {
                 ])
             })
         })
+        .command('qc_cache', 'Show query classifier cache', function(yargs) {
+            return yargs.epilog('Show contents (statement and hits) of query classifier cache.')
+                .usage('Usage: show qc_cache')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'maxscale/query_classifier/cache', [
+                    {'Statement': 'id'},
+                    {'Hits': 'attributes.hits'},
+                    {'Type': 'attributes.classification.type_mask' }
+                ])
+            })
+        })
         .usage('Usage: show <command>')
         .help()
         .command('*', 'the default command', {}, function(argv) {
