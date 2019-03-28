@@ -438,11 +438,8 @@ failure of a master node without any visible effects to the client.
 If no replacement node becomes available before the timeout controlled by
 `delayed_retry_timeout` is exceeded, the client connection is closed.
 
-Not all transactions can be safely replayed. Only when the following criteria
-are met, the transaction can be safely replayed.
-
-* Transaction contains only data modification (`INSERT`, `UPDATE`, `DELETE`
-  etc.) or `SELECT ... FOR UPDATE` statements.
+Only when the following criteria are met, the transaction can be safely
+replayed.
 
 * The replacement server where the transaction is applied returns results
   identical to the original partial transaction.
@@ -451,10 +448,11 @@ If the results from the replacement server are not identical when the transactio
 replayed, the client connection is closed. This means that any transaction with a server
 specific result (e.g. `NOW()`, `@@server_id`) cannot be replayed successfully.
 
-Performing MVCC reads (`SELECT` queries without `FOR UPDATE` or `LOCK IN SHARE MODE`)
-with transaction replay is discouraged. If such statements are executed
-but the results of each reply are identical, the transaction is replayed but the results
-are not guaranteed to be consistent on the database level.
+It is recommended that the transaction contains only data modification
+(`INSERT`, `UPDATE`, `DELETE` etc.) or `SELECT ... FOR UPDATE`
+statements. Performing MVCC reads (`SELECT` queries without `FOR UPDATE` or
+`LOCK IN SHARE MODE`) is discouraged as it doesn't guarantee strict ordering of
+events.
 
 ### `transaction_replay_max_size`
 
