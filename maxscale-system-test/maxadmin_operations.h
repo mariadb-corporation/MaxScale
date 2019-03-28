@@ -1,6 +1,4 @@
-#ifndef MAXADMIN_OPERATIONS_H
-#define MAXADMIN_OPERATIONS_H
-
+#pragma once
 
 #include <stdio.h>
 #include <string.h>
@@ -102,5 +100,3 @@ int execute_maxadmin_command_tcp(char * hostname, char *user, char *password, ch
  * @return  0 if parameter is found
  */
 int execute_maxadmin_command_print_pcp(char * hostname, char *user, char *password, char * cmd);
-
-#endif // MAXADMIN_OPERATIONS_H

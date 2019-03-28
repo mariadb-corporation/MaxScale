@@ -113,7 +113,7 @@ json_t * RDS::get_cluster()
     char cmd[1024];
     char *result;
     sprintf(cmd, "aws rds describe-db-clusters --db-cluster-identifier=%s", cluster_name_intern);
-    execute_cmd(cmd , &result);
+    execute_cmd(cmd, &result);
     return get_cluster_descr(result);
 }
 
@@ -469,7 +469,7 @@ int RDS::create_cluster()
             "aws rds create-db-cluster --database-name=test --engine=aurora --master-username=skysql --master-user-password=skysqlrds --db-cluster-identifier=%s --db-subnet-group-name=%s",
             cluster_name_intern, cluster_name_intern);
 
-    execute_cmd(cmd , &result);
+    execute_cmd(cmd, &result);
     json_t * root = json_loads( result, 0, &error );
     if ( !root )
     {
@@ -508,7 +508,7 @@ int RDS::get_writer(const char ** writer_name)
     char * json;
     char cmd[1024];
     sprintf(cmd, "aws rds describe-db-clusters --db-cluster-identifier=%s", cluster_name_intern);
-    execute_cmd(cmd , &json);
+    execute_cmd(cmd, &json);
     json_t * cluster = get_cluster_descr(json);
     json_t * nodes = json_object_get(cluster, "DBClusterMembers");
 

@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     sleep(10);
 
     Test->set_timeout(60);
-    Test->add_result(Test->create_connections(0, 70 , true, true, true, true),
+    Test->add_result(Test->create_connections(0, 70, true, true, true, true),
                      "Connections creation error \n");
 
     Test->check_log_err(0, (char *) "fatal signal 11", false);

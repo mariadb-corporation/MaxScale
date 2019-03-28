@@ -15,13 +15,13 @@
 void run_test(TestConnections& test, MYSQL* conn)
 {
     test.expect(mysql_change_user(conn, "user", "pass2", "test") == 0,
-                     "changing user failed: %s", mysql_error(conn));
+                "changing user failed: %s", mysql_error(conn));
 
     test.expect(execute_query_silent(conn, "INSERT INTO t1 VALUES (77, 11);") != 0,
                 "INSERT query succeeded without INSERT privilege");
 
     test.expect(mysql_change_user(conn, test.repl->user_name, test.repl->password, "test") == 0,
-                     "changing user failed: %s", mysql_error(conn));
+                "changing user failed: %s", mysql_error(conn));
 
     test.expect(execute_query_silent(conn, "INSERT INTO t1 VALUES (77, 11);") == 0,
                 "INSERT query succeeded without INSERT privilege");
@@ -31,7 +31,7 @@ void run_test(TestConnections& test, MYSQL* conn)
                 "changing user with wrong password successed!");
 
     test.expect(strstr(mysql_error(conn), "Access denied for user"),
-                       "Wrong error message returned on failed authentication");
+                "Wrong error message returned on failed authentication");
 
     test.expect(execute_query_silent(conn, "INSERT INTO t1 VALUES (77, 11);") != 0,
                 "Query should fail, MaxScale should disconnect on auth failure");

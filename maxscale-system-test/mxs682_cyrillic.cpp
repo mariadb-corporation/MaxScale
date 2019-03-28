@@ -33,9 +33,16 @@ int main(int argc, char *argv[])
     test.maxscales->disconnect();
 
     test.stop_timeout();
-    test.repl->connect();
-    test.repl->sync_slaves();
-    test.repl->disconnect();
+    if (test.repl)
+    {
+        test.repl->connect();
+        test.repl->sync_slaves();
+        test.repl->disconnect();
+    }
+    else
+    {
+        sleep(10);
+    }
 
     test.set_timeout(60);
     test.maxscales->connect();
@@ -45,7 +52,7 @@ int main(int argc, char *argv[])
     test.maxscales->disconnect();
 
     nodes->connect();
-    for (int i = 0; i < test.repl->N; i++)
+    for (int i = 0; i < nodes->N; i++)
     {
         check_val(nodes->nodes[i], test);
     }

@@ -1,5 +1,4 @@
-#ifndef GET_MY_IP_H
-#define GET_MY_IP_H
+#pragma once
 
 /**
  * @brief get_my_ip Get IP address of machine where this code is executed as it is visible from remote machine
@@ -9,5 +8,3 @@
  * @return 0 in case of success
  */
 int get_my_ip(char * remote_ip, char *my_ip );
-
-#endif // GET_MY_IP_H

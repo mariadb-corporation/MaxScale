@@ -56,7 +56,7 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         Test->maxscales->close_rwsplit(0);
 
         Test->tprintf("Waiting for the table to replicate\n");
-        Test->repl->sync_slaves();
+        nodes->sync_slaves();
 
         pthread_t thread1[threads_num];
         pthread_t thread2[threads_num];

@@ -131,7 +131,7 @@ int main(int argc, char** argv)
     {
         int ec;
         test.maxscales->ssh_node_output(0,
-                                        "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server4" , true, &ec);
+                                        "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server4", true, &ec);
         test.maxscales->wait_for_monitor();
         master_id = get_master_server_id(test);
         test.expect(master_id == 1, "Server 1 should be the cluster master.");

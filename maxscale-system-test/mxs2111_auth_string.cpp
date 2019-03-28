@@ -9,7 +9,7 @@ int main(int argc, char **argv)
     TestConnections::require_repl_version("10.2.0");
     TestConnections test(argc, argv);
 
-    auto batch = [&](std::vector<std::string> queries){
+    auto batch = [&](std::vector<std::string> queries) {
         test.maxscales->connect();
         for (const auto& a: queries)
         {

@@ -2,31 +2,13 @@
 
 script=`basename "$0"`
 
-if [ $# -lt 1 ]
-then
-    echo "usage: $script name [user] [password]"
-    echo ""
-    echo "name    : The name of the test (from CMakeLists.txt) That selects the"
-    echo "          configuration template to be used."
-    echo "user    : The user using which the test should be run."
-    echo "password: The password of the user."
-    exit 1
-fi
-
-if [ "$maxscale_IP" == "" ]
-then
-    echo "Error: The environment variable maxscale_IP must be set."
-    exit 1
-fi
-
-src_dir=$(dirname $(realpath $0))
 source=$src_dir/masking/$1/masking_rules.json
-target=$maxscale_access_user@$maxscale_IP:/home/$maxscale_access_user/masking_rules.json
+target=${maxscale_000_whoami}@${maxscale_000_network}:/home/${maxscale_000_whoami}/masking_rules.json
 
-if [ $maxscale_IP != "127.0.0.1" ] ; then
-	scp -i $maxscale_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $source $target
+if [ ${maxscale_000_network} != "127.0.0.1" ] ; then
+	scp -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $source $target
 else
-	cp $source /home/$maxscale_access_user/masking_rules.json
+	cp $source /home/${maxscale_000_whoami}/masking_rules.json
 fi
 
 if [ $? -ne 0 ]
@@ -35,25 +17,11 @@ then
     exit 1
 fi
 
-echo $source copied to $target
+echo $source copied to $target, restarting Maxscale
 
-test_dir=`pwd`
-
-$test_dir/non_native_setup $1
-
-password=
-if [ $# -ge 3 ]
-then
-    password=$3
-fi
-
-user=
-if [ $# -ge 2 ]
-then
-    user=$2
-fi
+ssh  -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} 'sudo service maxscale restart'
 
 # [Read Connection Listener Master] in cnf/maxscale.maxscale.cnf.template.$1
 port=4008
 
-$src_dir/mysqltest_driver.sh $1 $src_dir/masking/$1 $port $user $password
+$src_dir/mysqltest_driver.sh $1 $src_dir/masking/$1 $port $maxscale_user $maxscale_password

@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
         if (create_user(test, pMysql))
         {
             int rv = test.repl->connect();
-	    test.repl->sync_slaves();
+            test.repl->sync_slaves();
 
             test.expect(rv == 0, "Could not connect to MS.");
 

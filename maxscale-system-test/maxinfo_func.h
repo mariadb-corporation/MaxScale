@@ -1,5 +1,4 @@
-#ifndef MAXINFO_FUNC_H
-#define MAXINFO_FUNC_H
+#pragma once
 
 int create_tcp_socket();
 char *get_ip(char *host);
@@ -20,6 +19,3 @@ static char* bin2hex(const unsigned char *old, const size_t oldlen);
 char * cdc_auth_srt(char * user, char * password);
 int setnonblocking(int sock);
 int get_x_fl_from_json(char * line, long long int * x1, long long int * fl);
-
-
-#endif // MAXINFO_FUNC_H

@@ -1,5 +1,4 @@
-#ifndef TESTCONNECTIONS_H
-#define TESTCONNECTIONS_H
+#pragma once
 
 #include "mariadb_nodes.h"
 #include "maxscales.h"
@@ -11,6 +10,9 @@
 #include <string>
 
 typedef std::set<std::string> StringSet;
+
+#define MDBCI_FAUILT 200 // Exit code for the case when failure caused by MDBCI non-zero exit
+#define BROKEN_VM_FAUILT 201 // Exit code for the case when failure caused by screwed VMs
 
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
@@ -84,7 +86,7 @@ public:
     /**
      * @brief galera Mariadb_nodes object containing references to Galera setuo
      */
-    Mariadb_nodes * galera;
+    Galera_nodes * galera;
 
     /**
      * @brief repl Mariadb_nodes object containing references to Master/Slave setuo
@@ -97,19 +99,39 @@ public:
     Maxscales * maxscales;
 
     /**
+     * @brief mdbci_config_name Name of MDBCI VMs set
+     */
+    char * mdbci_config_name;
+
+    /**
+     * @brief mdbci_vm_path Path to directory with MDBCI VMs descriptions
+     */
+    char * mdbci_vm_path;
+
+    /**
+     * @brief mdbci_temlate Name of mdbci VMs tempate file
+     */
+    char * mdbci_template;
+
+    /**
+     * @brief target Name of Maxscale repository in the CI
+     */
+    char * target;
+
+    /**
      * @brief GetLogsCommand Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
      */
-    char get_logs_command[4096];
+    char * get_logs_command;
 
     /**
      * @brief make_snapshot_command Command line to create a snapshot of all VMs
      */
-    char take_snapshot_command[4096];
+    char * take_snapshot_command;
 
     /**
      * @brief revert_snapshot_command Command line to revert a snapshot of all VMs
      */
-    char revert_snapshot_command[4096];
+    char * revert_snapshot_command;
 
     /**
      * @brief use_snapshots if TRUE every test is trying to revert snapshot before running the test
@@ -123,6 +145,11 @@ public:
      * @return 0 if success
      */
     int copy_mariadb_logs(Mariadb_nodes *repl, char * prefix);
+
+    /**
+     * @brief network_config Content of MDBCI network_config file
+     */
+    std::string network_config;
 
     /**
      * @brief no_backend_log_copy if true logs from backends are not copied
@@ -170,6 +197,11 @@ public:
      * to use GTID to connect to Maxscale binlog router
      */
     bool binlog_slave_gtid;
+
+    /**
+     * @brief no_repl Do not check, restart and use Maxster/Slave setup;
+     */
+    bool no_repl;
 
     /**
      * @brief no_galera Do not check, restart and use Galera setup; all Galera tests will fail
@@ -228,6 +260,39 @@ public:
      */
     bool use_ipv6;
 
+    /**
+     * @brief template_name Name of maxscale.cnf template
+     */
+    const char * template_name;
+
+    /**
+     * @brief labels 'LABELS' string from CMakeLists.txt
+     */
+    const char * labels;
+
+    /**
+     * @brief mdbci_labels labels to be passed to MDBCI
+     */
+    std::string mdbci_labels;
+
+    /**
+     * @brief configured_labels List of lables for which nodes are configured
+     */
+    std::string configured_labels;
+
+    /**
+    * @brief vm_path Path to the VM Vagrant directory
+    */
+    std::string vm_path;
+
+    /**
+     * @brief reinstall_maxscale Flag that is set when 'reinstall_maxscale'
+     * option is provided;
+     * if true Maxscale will be removed and re-installed on all Maxscale nodes
+     * Used for 'run_test_snapshot'
+     */
+    bool reinstall_maxscale;
+
     /** Check whether all nodes are in a valid state */
     static void check_nodes(bool value);
 
@@ -250,6 +315,11 @@ public:
 
     /** Same as add_result() but inverted */
     void expect(bool result, const char *format, ...) __attribute__((format(printf, 3, 4)));
+
+    /**
+     * @brief read_mdbci_info Reads name of MDBCI config and tryes to load all network info
+     */
+    void read_mdbci_info();
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -513,9 +583,29 @@ public:
     void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
 
     /**
+     * @brief process_mdbci_template Read template file from maxscale-system-test/mdbci/templates
+     * and replace all placeholders with acutal values
+     * @return 0 in case of success
+     */
+    int process_mdbci_template();
+
+    /**
+     * @brief call_mdbci Execute MDBCI to bring up nodes
+     * @return 0 if success
+     */
+    int call_mdbci(const char *options);
+
+    /**
      * @brief use_valrind if true Maxscale will be executed under Valgrind
      */
     bool use_valgrind;
+
+    /**
+     * @brief resinstall_maxscales Remove Maxscale form all nodes and installs new ones
+     * (to be used for run_test_snapshot)
+     * @return 0 in case of success
+     */
+    int reinstall_maxscales();
 
 private:
     void report_result(const char *format, va_list argp);
@@ -545,4 +635,18 @@ void * log_copy_thread(void *ptr );
 */
 std::string dump_status(const StringSet& current, const StringSet& expected);
 
-#endif // TESTCONNECTIONS_H
+/**
+ * @brief get_template_name Returns the name of maxscale.cnf template to use for given test
+ * @param test_name Name of the test
+ * @param labels pointer to string for storing all test labels
+ * @return Name of maxscale.cnf file template
+ */
+const char *get_template_name(char * test_name, const char **labels);
+
+/**
+ * @brief readenv_and_set_default Read enviromental variable and set default values if
+ * variable is not defined
+ * @param name Name of the environmental variable
+ * @param defaultenv Default values to be set
+ * @return Envaronmental variable value
+ */

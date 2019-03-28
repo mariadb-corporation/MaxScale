@@ -7,27 +7,16 @@
 ## - repeat for RWSplit, ReadConn
 
 
-rp=`realpath $0`
-export src_dir=`dirname $rp`
-export test_dir=`pwd`
-export test_name=`basename $rp`
-
-$test_dir/non_native_setup $test_name
-
-if [ $? -ne 0 ] ; then
-        echo "configuring maxscale failed"
-        exit 1
-fi
 export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
 
 #echo "Waiting for 15 seconds"
 #sleep 15
 
-mariadb_err=`mysql -u$node_user -p$node_password -h $node_000_network $ssl_options --socket=$node_000_socket -P $node_000_port non_existing_db 2>&1`
-maxscale_err=`mysql -u$node_user -p$node_password -h $maxscale_IP -P 4006 $ssl_options non_existing_db 2>&1`
+mariadb_err=`mysql -u$node_user -p$node_password -h $node_000_network $ssl_options $node_000_socket_cmd -P $node_000_port non_existing_db 2>&1`
+maxscale_err=`mysql -u$node_user -p$node_password -h ${maxscale_000_network} -P 4006 $ssl_options non_existing_db 2>&1`
 
-maxscale_err1=`mysql -u$node_user -p$node_password -h $maxscale_IP -P 4008 $ssl_options non_existing_db 2>&1`
-maxscale_err2=`mysql -u$node_user -p$node_password -h $maxscale_IP -P 4009 $ssl_options non_existing_db 2>&1`
+maxscale_err1=`mysql -u$node_user -p$node_password -h ${maxscale_000_network} -P 4008 $ssl_options non_existing_db 2>&1`
+maxscale_err2=`mysql -u$node_user -p$node_password -h ${maxscale_000_network} -P 4009 $ssl_options non_existing_db 2>&1`
 
 echo "MariaDB message"
 echo "$mariadb_err"
@@ -70,5 +59,4 @@ else
         echo "Messages are same"
 fi
 
-$src_dir/copy_logs.sh bug561
 exit $res

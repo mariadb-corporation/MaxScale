@@ -1,5 +1,4 @@
-#ifndef BUG670_SQL_H
-#define BUG670_SQL_H
+#pragma once
 
 const char * bug670_sql =
     "set autocommit=0;\
@@ -39,5 +38,3 @@ const char * bug670_sql =
         set autocommit=1;\
         delete from mysql.t1 where id = 7; \
         select 1 as \"endof cycle\" from dual;\n";
-
-#endif // BUG670_SQL_H

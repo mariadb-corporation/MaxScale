@@ -80,7 +80,7 @@ int main(int argc, char** argv)
         // Switch master back to server1 so last check is faster
         int ec;
         test.maxscales->ssh_node_output(0, "maxadmin call command mysqlmon switchover "
-                                        "MySQL-Monitor server1 server2" , true, &ec);
+                                        "MySQL-Monitor server1 server2", true, &ec);
         test.maxscales->wait_for_monitor(); // Wait for monitor to update status
         get_output(test);
         master_id = get_master_server_id(test);

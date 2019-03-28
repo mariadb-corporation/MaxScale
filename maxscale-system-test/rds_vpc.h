@@ -1,5 +1,4 @@
-#ifndef RDS_VPC_H
-#define RDS_VPC_H
+#pragma once
 
 #include <iostream>
 #include <unistd.h>
@@ -259,5 +258,3 @@ public:
     const char * sg_intern;
 
 };
-
-#endif // RDS_VPC_H

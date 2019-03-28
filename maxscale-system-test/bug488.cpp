@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(10);
     int i;
 
-    Test->repl->connect();
+    Test->galera->connect();
     Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Trying SHOW VARIABLES to different Maxscale services\n");
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(10);
     Test->maxscales->close_maxscale_connections(0);
-    Test->repl->close_connections();
+    Test->galera->close_connections();
 
     Test->check_maxscale_alive(0);
 

@@ -33,7 +33,7 @@ int get_my_ip(char * remote_ip, char * my_ip )
     serv.sin_addr.s_addr = inet_addr( remote_ip );
     serv.sin_port = htons( dns_port );
 
-    connect( sock , (const struct sockaddr*) &serv , sizeof(serv) );
+    connect( sock, (const struct sockaddr*) &serv, sizeof(serv) );
 
     struct sockaddr_in name;
     socklen_t namelen = sizeof(name);
@@ -52,7 +52,7 @@ int get_my_ip(char * remote_ip, char * my_ip )
     else
     {
         //Some error
-        printf ("Error number : %d . Error message : %s \n" , errno , strerror(errno));
+        printf ("Error number : %d . Error message : %s \n", errno, strerror(errno));
         close(sock);
         return 2;
     }

@@ -1,5 +1,4 @@
-#ifndef DIFFERENT_SIZE_H
-#define DIFFERENT_SIZE_H
+#pragma once
 
 #include <iostream>
 #include <unistd.h>
@@ -34,5 +33,3 @@ void set_max_packet(TestConnections* Test, bool binlog, char * cmd);
  * @param binlog if true - connects to Master, otherwise - to RWSplit router
  */
 void different_packet_size(TestConnections* Test, bool binlog);
-
-#endif // DIFFERENT_SIZE_H

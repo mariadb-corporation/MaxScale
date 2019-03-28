@@ -98,10 +98,10 @@ int main(int argc, char *argv[])
 
     sprintf(str, "Performing automatic failover to replace failed master 'server%d'", first_master + 1);
     Test->tprintf("Checking Maxscale log on 000 for the failover message %s\n", str);
-    Test->check_log_err(0, str , true);
+    Test->check_log_err(0, str, true);
     sprintf(str, "Performing automatic failover to replace failed master");
     Test->tprintf("Checking Maxscale log on 001 for the lack of failover message\n");
-    Test->check_log_err(1, str , false);
+    Test->check_log_err(1, str, false);
 
     passive = check_maxscale_passive(Test, 0);
     if (passive)
@@ -140,11 +140,11 @@ int main(int argc, char *argv[])
     }
     sprintf(str, "Performing automatic failover to replace failed master 'server%d'", second_master + 1);
     Test->tprintf("Checking Maxscale log on 001 for the failover message %s\n", str);
-    Test->check_log_err(1, str , true);
+    Test->check_log_err(1, str, true);
 
-    Test->check_log_err(1, (char *) "Multiple failed master servers detected" , false);
-    Test->check_log_err(1, (char *) "Failed to perform failover" , false);
-    Test->check_log_err(1, (char *) "disabling automatic failover" , false);
+    Test->check_log_err(1, (char *) "Multiple failed master servers detected", false);
+    Test->check_log_err(1, (char *) "Failed to perform failover", false);
+    Test->check_log_err(1, (char *) "disabling automatic failover", false);
 
     Test->tprintf("Start Maxscale 000\n");
 
@@ -165,17 +165,17 @@ int main(int argc, char *argv[])
 
     sprintf(str, "Performing automatic failover to replace failed master 'server%d'", second_master + 1);
     Test->tprintf("Checking Maxscale log on 001 for the failover message %s\n", str);
-    Test->check_log_err(1, str , true);
+    Test->check_log_err(1, str, true);
     Test->tprintf("Checking Maxscale log on 000 for the lack of failover message %s\n", str);
-    Test->check_log_err(0, str , false);
+    Test->check_log_err(0, str, false);
 
-    Test->check_log_err(1, (char *) "Multiple failed master servers detected" , false);
-    Test->check_log_err(1, (char *) "Failed to perform failover" , false);
-    Test->check_log_err(1, (char *) "disabling automatic failover" , false);
+    Test->check_log_err(1, (char *) "Multiple failed master servers detected", false);
+    Test->check_log_err(1, (char *) "Failed to perform failover", false);
+    Test->check_log_err(1, (char *) "disabling automatic failover", false);
 
-    Test->check_log_err(0, (char *) "Multiple failed master servers detected" , false);
-    Test->check_log_err(0, (char *) "Failed to perform failover" , false);
-    Test->check_log_err(0, (char *) "disabling automatic failover" , false);
+    Test->check_log_err(0, (char *) "Multiple failed master servers detected", false);
+    Test->check_log_err(0, (char *) "Failed to perform failover", false);
+    Test->check_log_err(0, (char *) "disabling automatic failover", false);
 
 
 //    Test->repl->require_gtid(false);

@@ -76,7 +76,8 @@ int main(int argc, char *argv[])
     Test->try_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (10);");
 
     Test->stop_timeout();
-    Test->repl->sync_slaves();
+
+    Test->galera->sync_slaves();
 
     Test->tprintf("Trying \n");
     char last_insert_id1[1024];

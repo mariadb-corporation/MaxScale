@@ -43,7 +43,7 @@ connectMaxScale(char *hostname, char *port)
         return -1;
     }
     if (setsockopt(so, SOL_SOCKET,
-                   SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
+                   SO_KEEPALIVE, &keepalive, sizeof(keepalive )))
     {
         perror("setsockopt");
     }

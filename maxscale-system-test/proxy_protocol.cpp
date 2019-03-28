@@ -94,9 +94,9 @@ int main(int argc, char *argv[])
             auto testconn = open_conn(maxscale_port, maxscale_ip, username, userpass);
             if (testconn)
             {
-               test.expect(execute_query(testconn, "SELECT 1") != 0,
-                           "Query with user %s succeeded when failure was expected.", username.c_str());
-               mysql_close(testconn);
+                test.expect(execute_query(testconn, "SELECT 1") != 0,
+                            "Query with user %s succeeded when failure was expected.", username.c_str());
+                mysql_close(testconn);
             }
         }
     }

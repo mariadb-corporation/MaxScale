@@ -1,5 +1,4 @@
-#ifndef EXECUTE_CMD_H
-#define EXECUTE_CMD_H
+#pragma once
 
 #include <iostream>
 #include <unistd.h>
@@ -13,5 +12,3 @@ using namespace std;
  * @return Process exit code
  */
 int execute_cmd(char * cmd, char ** res);
-
-#endif // EXECUTE_CMD_H

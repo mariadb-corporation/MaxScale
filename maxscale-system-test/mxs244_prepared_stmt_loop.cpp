@@ -21,7 +21,6 @@ int main(int argc, char *argv[])
     int r = (Test->smoke) ? 1 : 3;
 
     Test->set_timeout(5);
-    Test->repl->connect();
     Test->maxscales->connect_maxscale(0);
     MYSQL * router[3];
     router[0] = Test->maxscales->conn_rwsplit[0];

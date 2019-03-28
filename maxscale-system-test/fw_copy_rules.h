@@ -1,5 +1,4 @@
-#ifndef FW_COPY_RULES_H
-#define FW_COPY_RULES_H
+#pragma once
 
 #include "testconnections.h"
 
@@ -10,5 +9,3 @@
  * @param rules_dir Directory where file is located
  */
 void copy_rules(TestConnections* Test, const char* rules_name, const char* rules_dir);
-
-#endif // FW_COPY_RULES_H

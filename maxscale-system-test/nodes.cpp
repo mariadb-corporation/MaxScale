@@ -3,6 +3,8 @@
 #include <cstring>
 #include <iostream>
 
+#include "envv.h"
+
 Nodes::Nodes()
 {
 }
@@ -50,9 +52,7 @@ void Nodes::generate_ssh_cmd(char *cmd, int node, const char *ssh, bool sudo)
         }
         else
         {
-            sprintf(cmd, "%s",
-                    ssh);
-
+            sprintf(cmd, "%s", ssh);
         }
     }
     else
@@ -105,7 +105,6 @@ char * Nodes::ssh_node_output(int node, const char *ssh, bool sudo, int *exit_co
     char *cmd = (char*)malloc(strlen(ssh) + 1024);
 
     generate_ssh_cmd(cmd, node, ssh, sudo);
-//tprintf("############ssh smd %s\n:", cmd);
     FILE *output = popen(cmd, "r");
     if (output == NULL)
     {
@@ -152,6 +151,7 @@ int Nodes::ssh_node(int node, const char *ssh, bool sudo)
                 "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s%s",
                 sshkey[node], access_user[node], IP[node], verbose ? "" :  " > /dev/null");
     }
+
     int rc = 1;
     FILE *in = popen(cmd, "w");
 
@@ -201,8 +201,6 @@ int  Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
     int result = ssh_node(node, sys, sudo);
     free(sys);
     return (result);
-
-
 }
 
 int Nodes::copy_to_node(int i, const char* src, const char* dest)
@@ -272,39 +270,15 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
 
 int Nodes::read_basic_env()
 {
-    char * env;
     char env_name[64];
-    sprintf(env_name, "%s_N", prefix);
-    env = getenv(env_name);
-    if (env != NULL)
-    {
-        sscanf(env, "%d", &N);
-    }
-    else
-    {
-        N = 1;
-    }
 
     sprintf(env_name, "%s_user", prefix);
-    env = getenv(env_name);
-    if (env != NULL)
-    {
-        sscanf(env, "%s", user_name);
-    }
-    else
-    {
-        sprintf(user_name, "skysql");
-    }
+    user_name = readenv(env_name, "skysql");
+
     sprintf(env_name, "%s_password", prefix);
-    env = getenv(env_name);
-    if (env != NULL)
-    {
-        sscanf(env, "%s", password);
-    }
-    else
-    {
-        sprintf(password, "skysql");
-    }
+    password = readenv(env_name, "skysql");
+
+    N = get_N();
 
     if ((N > 0) && (N < 255))
     {
@@ -312,156 +286,69 @@ int Nodes::read_basic_env()
         {
             //reading IPs
             sprintf(env_name, "%s_%03d_network", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
-            {
-                sprintf(env_name, "%s_network", prefix);
-                env = getenv(env_name);
-
-            }
-            if (env != NULL)
-            {
-                sprintf(IP[i], "%s", env);
-            }
+            IP[i] = get_nc_item((char*) env_name);
 
             //reading private IPs
             sprintf(env_name, "%s_%03d_private_ip", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
+            IP_private[i] = get_nc_item((char*) env_name);
+            if (IP_private[i] == NULL)
             {
-                sprintf(env_name, "%s_private_ip", prefix);
-                env = getenv(env_name);
+                IP_private[i] = IP[i];
             }
-            if (env != NULL)
-            {
-                sprintf(IP_private[i], "%s", env);
-            }
-            else
-            {
-                sprintf(IP_private[i], "%s", IP[i]);
-            }
+            setenv(env_name, IP_private[i], 1);
 
             //reading IPv6
             sprintf(env_name, "%s_%03d_network6", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
+            IP6[i] = get_nc_item((char*) env_name);
+            if (IP6[i] == NULL)
             {
-                sprintf(env_name, "%s_network6", prefix);
-                env = getenv(env_name);
+                IP6[i] = IP[i];
             }
-            if (env != NULL)
-            {
-                sprintf(IP6[i], "%s", env);
-            }
-            else
-            {
-                sprintf(IP6[i], "%s", IP[i]);
-            }
+            setenv(env_name, IP6[i], 1);
+
             //reading sshkey
             sprintf(env_name, "%s_%03d_keyfile", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
-            {
-                sprintf(env_name, "%s_keyfile", prefix);
-                env = getenv(env_name);
-            }
-            if (env != NULL)
-            {
-                sprintf(sshkey[i], "%s", env);
-            }
+            sshkey[i] = get_nc_item((char*) env_name);
+
 
             sprintf(env_name, "%s_%03d_whoami", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
+            access_user[i] = get_nc_item((char*) env_name);
+            if (access_user[i] == NULL)
             {
-                sprintf(env_name, "%s_whoami", prefix);
-                env = getenv(env_name);
+                access_user[i] = (char *) "vagrant";
             }
-
-            if (env != NULL)
-            {
-                sprintf(access_user[i], "%s", env);
-            }
-            else
-            {
-                sprintf(access_user[i], "vagrant");
-            }
+            setenv(env_name, access_user[i], 1);
 
             sprintf(env_name, "%s_%03d_access_sudo", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
-            {
-                sprintf(env_name, "%s_access_sudo", prefix);
-                env = getenv(env_name);
-            }
-            if (env != NULL)
-            {
-                sprintf(access_sudo[i], "%s", env);
-            }
-            else
-            {
-                sprintf(access_sudo[i], " ");
-            }
+            access_sudo[i] = readenv(env_name, " sudo ");
 
             if (strcmp(access_user[i], "root") == 0)
             {
-                sprintf(access_homedir[i], "/%s/", access_user[i]);
+                access_homedir[i] = (char *) "/root/";
             }
             else
             {
+                access_homedir[i] = (char *) malloc(strlen(access_user[i] + 9));
                 sprintf(access_homedir[i], "/home/%s/", access_user[i]);
             }
 
             sprintf(env_name, "%s_%03d_hostname", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
+            hostname[i] = get_nc_item((char*) env_name);
+            if (hostname[i] == NULL)
             {
-                sprintf(env_name, "%s_hostname", prefix);
-                env = getenv(env_name);
+                hostname[i] = IP[i];
             }
-
-            if (env != NULL)
-            {
-                sprintf(hostname[i], "%s", env);
-            }
-            else
-            {
-                sprintf(hostname[i], "%s", IP[i]);
-            }
+            setenv(env_name, hostname[i], 1);
 
             sprintf(env_name, "%s_%03d_start_vm_command", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
-            {
-                sprintf(env_name, "%s_start_vm_command", prefix);
-                env = getenv(env_name);
-            }
-
-            if (env != NULL)
-            {
-                sprintf(start_vm_command[i], "%s", env);
-            }
-            else
-            {
-                sprintf(start_vm_command[i], "exit 0");
-            }
+            start_vm_command[i] = readenv(env_name, "curr_dir=`pwd`; cd %s/%s;vagrant resume %s_%03d ; cd $curr_dir",
+                                          getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
+            setenv(env_name, start_vm_command[i], 1);
 
             sprintf(env_name, "%s_%03d_stop_vm_command", prefix, i);
-            env = getenv(env_name);
-            if (env == NULL)
-            {
-                sprintf(env_name, "%s_stop_vm_command", prefix);
-                env = getenv(env_name);
-            }
-
-            if (env != NULL)
-            {
-                sprintf(stop_vm_command[i], "%s", env);
-            }
-            else
-            {
-                sprintf(stop_vm_command[i], "exit 0");
-            }
+            stop_vm_command[i] = readenv(env_name, "curr_dir=`pwd`; cd %s/%s;vagrant suspend %s_%03d ; cd $curr_dir",
+                                         getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
+            setenv(env_name, stop_vm_command[i], 1);
         }
     }
 
@@ -473,12 +360,52 @@ const char* Nodes::ip(int i) const
     return use_ipv6 ?  IP6[i] : IP[i];
 }
 
+char * Nodes::get_nc_item(char * item_name)
+{
+    size_t start = network_config.find(item_name);
+    if (start == std::string::npos)
+    {
+        return NULL;
+    }
+    size_t end = network_config.find("\n", start);
+    size_t equal = network_config.find("=", start);
+    if (end == std::string::npos)
+    {
+        end = network_config.length();
+    }
+    if (equal == std::string::npos)
+    {
+        return NULL;
+    }
+
+    char * cstr = new char [end - equal + 1];
+    strcpy(cstr, network_config.substr(equal + 1, end - equal - 1).c_str());
+    setenv(item_name, cstr, 1);
+
+    return (cstr);
+}
+
+int Nodes::get_N()
+{
+    int N = 0;
+    char item[strlen(prefix) + 13];
+    do
+    {
+        sprintf(item, "%s_%03d_network", prefix, N);
+        N++;
+    }
+    while (network_config.find(item) != std::string::npos);
+    sprintf(item, "%s_N", prefix);
+    setenv(item, std::to_string(N).c_str(), 1);
+    return N - 1 ;
+}
+
 int Nodes::start_vm(int node)
 {
-    return(system(start_vm_command[node]));
+    return (system(start_vm_command[node]));
 }
 
 int Nodes::stop_vm(int node)
 {
-    return(system(stop_vm_command[node]));
+    return (system(stop_vm_command[node]));
 }

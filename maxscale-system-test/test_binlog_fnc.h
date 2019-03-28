@@ -1,5 +1,4 @@
-#ifndef TEST_BINLOG_FNC_H
-#define TEST_BINLOG_FNC_H
+#pragma once
 
 #include <iostream>
 #include "testconnections.h"
@@ -26,5 +25,3 @@ int start_transaction(TestConnections* Test);
  * @param Test TestConnections object
  */
 void test_binlog(TestConnections* Test);
-
-#endif // TEST_BINLOG_FNC_H

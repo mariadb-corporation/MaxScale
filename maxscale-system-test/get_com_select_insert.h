@@ -1,5 +1,4 @@
-#ifndef GET_COM_SELECT_INSERT_H
-#define GET_COM_SELECT_INSERT_H
+#pragma once
 
 #include "testconnections.h"
 
@@ -24,6 +23,3 @@ int get_global_status_allnodes(long int *selects, long int *inserts, Mariadb_nod
  */
 int print_delta(long int *new_selects, long int *new_inserts, long int *selects, long int *inserts,
                 int nodes_num);
-
-
-#endif // GET_COM_SELECT_INSERT_H

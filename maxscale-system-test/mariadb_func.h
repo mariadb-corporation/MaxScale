@@ -1,6 +1,4 @@
-#ifndef MARIADB_FUNC_H
-#define MARIADB_FUNC_H
-
+#pragma once
 
 /**
  * @file mariadb_func.h - basic DB interaction routines
@@ -107,7 +105,8 @@ static MYSQL* open_conn(int port, std::string ip, std::string user, std::string 
  *
  * @return MYSQL struct
  */
-static MYSQL* open_conn_no_db(int port, std::string ip, std::string user, std::string password, bool ssl = false)
+static MYSQL* open_conn_no_db(int port, std::string ip, std::string user, std::string password,
+                              bool ssl = false)
 {
     return open_conn_db_flags(port, ip, "", user, password, CLIENT_MULTI_STATEMENTS, ssl);
 }
@@ -229,5 +228,3 @@ Row get_row(MYSQL* conn, std::string sql);
 Result get_result(MYSQL* conn, std::string sql);
 
 int get_int_version(std::string version);
-
-#endif // MARIADB_FUNC_H

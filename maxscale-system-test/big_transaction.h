@@ -1,5 +1,4 @@
-#ifndef BIG_TRANSACTION_H
-#define BIG_TRANSACTION_H
+#pragma once
 
 #include <mariadb/mysql.h>
 #include <stdio.h>
@@ -13,5 +12,3 @@
  * @return 0 if success
  */
 int big_transaction(MYSQL * conn, int N);
-
-#endif // BIG_TRANSACTION_H

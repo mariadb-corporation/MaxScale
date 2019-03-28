@@ -1,5 +1,4 @@
-#ifndef BLOB_TEST_H
-#define BLOB_TEST_H
+#pragma once
 
 #include "testconnections.h"
 
@@ -28,5 +27,3 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, unsigne
  */
 int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk_size, int chunks,
                         int rows);
-
-#endif // BLOB_TEST_H

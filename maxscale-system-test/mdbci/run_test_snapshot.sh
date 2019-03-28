@@ -19,19 +19,19 @@ export dir=`pwd`
 export script_dir="$(dirname $(readlink -f $0))"
 
 . ${script_dir}/set_run_test_variables.sh
-export name="$box-$product-$version-permanent"
+export mdbci_config_name="$box-$product-$version-permanent"
 
 export snapshot_name=${snapshot_name:-"clean"}
 
 rm -rf LOGS
 
 export target=`echo $target | sed "s/?//g"`
-export name=`echo $name | sed "s/?//g"`
+export mdbci_config_name=`echo ${mdbci_config_name} | sed "s/?//g"`
 
 . ${script_dir}/configure_log_dir.sh
 
 # Setting snapshot_lock
-export snapshot_lock_file=${MDBCI_VM_PATH}/${name}_snapshot_lock
+export snapshot_lock_file=${MDBCI_VM_PATH}/${mdbci_config_name}_snapshot_lock
 if [ -f ${snapshot_lock_file} ]; then
     echo "Snapshot is locked, waiting ..."
 fi
@@ -43,34 +43,18 @@ done
 touch ${snapshot_lock_file}
 echo $JOB_NAME-$BUILD_NUMBER >> ${snapshot_lock_file}
 
-${mdbci_dir}/mdbci snapshot revert --path-to-nodes $name --snapshot-name $snapshot_name
+mdbci snapshot revert --path-to-nodes ${mdbci_config_name} --snapshot-name ${snapshot_name}
 
 if [ $? != 0 ]; then
-	${mdbci_dir}/mdbci destroy $name
-	${MDBCI_VM_PATH}/scripts/clean_vms.sh $name
+	mdbci destroy ${mdbci_config_name}
+	${MDBCI_VM_PATH}/scripts/clean_vms.sh ${mdbci_config_name}
 
-	${script_dir}/create_config.sh
-	checkExitStatus $? "Error creating configuration" $snapshot_lock_file
+	new_config=true	
 
-	echo "Creating snapshot from new config"
-	${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name $snapshot_name
-fi
-
-. ${script_dir}/set_env.sh "$name"
-
-if [ ${maxscale_N} -gt 1 ] ; then
-    maxscales_vm=`env | grep maxscale | grep network | sed 's/_network.*//' | grep "_"`
-else
-    maxscales_vm="maxscale"
 fi
 
 for maxscale_vm_name in ${maxscales_vm}
 do
-    ${mdbci_dir}/mdbci sudo --command 'yum remove maxscale -y' $name/${maxscale_vm_name}
-    ${mdbci_dir}/mdbci sudo --command 'yum clean all' $name/${maxscale_vm_name}
-
-    ${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${target} $name/${maxscale_vm_name}
-    ${mdbci_dir}/mdbci install_product --product maxscale_ci $name/${maxscale_vm_name}
 
     checkExitStatus $? "Error installing Maxscale" $snapshot_lock_file
 done
@@ -83,9 +67,15 @@ mkdir build && cd build
 cmake .. -DBUILDNAME=$JOB_NAME-$BUILD_NUMBER-$target -DBUILD_SYSTEM_TESTS=Y -DCMAKE_BUILD_TYPE=Debug
 make
 
-./check_backend --restart-galera
-
+./check_backend --restart-galera --reinstall-maxscale
 checkExitStatus $? "Failed to check backends" $snapshot_lock_file
+
+if [${new_config}] == "true" ; then
+	echo "Creating snapshot from new config"
+	mdbci snapshot take --path-to-nodes ${mdbci_config_name} --snapshot-name $snapshot_name
+fi
+
+
 ulimit -c unlimited
 ctest $test_set -VV -D Nightly
 cp core.* ${logs_publish_dir}
