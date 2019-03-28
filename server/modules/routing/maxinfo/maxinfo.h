@@ -137,5 +137,6 @@ extern void          maxinfo_send_error(DCB*, int, const char*);
 extern void maxinfo_send_parse_error(DCB*, char*, PARSE_ERROR);
 extern std::unique_ptr<ResultSet> maxinfo_variables();
 extern std::unique_ptr<ResultSet> maxinfo_status();
+extern int                        handle_url(INFO_INSTANCE* instance, INFO_SESSION* session, GWBUF* queue);
 
 #endif

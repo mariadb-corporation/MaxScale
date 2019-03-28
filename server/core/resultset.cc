@@ -16,6 +16,7 @@
 
 #include <numeric>
 
+#include <maxscale/alloc.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
@@ -205,4 +206,25 @@ void ResultSet::write(DCB* dcb)
     }
 
     mysql_send_eof(dcb, seqno);
+}
+
+void ResultSet::write_as_json(DCB* dcb)
+{
+    json_t* arr = json_array();
+
+    for (const auto& row : m_rows)
+    {
+        json_t* obj = json_object();
+
+        for (size_t i = 0; i < row.size(); i++)
+        {
+            json_object_set_new(obj, m_columns[i].c_str(), json_string(row[i].c_str()));
+        }
+
+        json_array_append_new(arr, obj);
+    }
+
+    char* js = json_dumps(arr, JSON_INDENT(4));
+    dcb_printf(dcb, "%s", js);
+    MXS_FREE(js);
 }

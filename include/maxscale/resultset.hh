@@ -52,6 +52,13 @@ public:
      */
     void write(DCB* dcb);
 
+    /**
+     * Write the result set to a DCB as JSON
+     *
+     * @param dcb DCB where the result set is written
+     */
+    void write_as_json(DCB* dcb);
+
 private:
     std::vector<std::string>              m_columns;
     std::vector<std::vector<std::string>> m_rows;
