@@ -76,6 +76,8 @@ being drained is the master, then it will not be possible to connect
 unless `master_failure_mode` has been set to something else but the
 default `fail_instantly`.
 
+Once the server has been drained, the state will be `Drained`.
+
 ### Cluster
 
 The servers a service uses can now be specified using the `cluster`
@@ -100,6 +102,21 @@ Please see the
 for details.
 
 _Not_ providing an explicit unit has been deprecated in MaxScale 2.4.
+
+### Query Classifier Cache
+
+It is now possible to examine the contents of the query classifier cache.
+The REST-API endpoint is
+```
+/v1/maxscale/query_classifier/cache
+```
+and the equivalent _maxctrl_ command
+```
+maxctrl show qc_cache
+```
+The output shows the statements (the canonical version) in the cache,
+the number of times they have been encountered and how they have been
+classified.
 
 ## Bug fixes
 
