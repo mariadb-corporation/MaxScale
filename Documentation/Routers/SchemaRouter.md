@@ -222,18 +222,23 @@ undefined. To work around this limitation, the query must be executed in separat
 query will be routed to the first available server. This possibly returns an
 error about database rights instead of a missing database.
 
-* The preparation of a prepared statement is routed to all servers. The
-execution of a prepared statement is routed to the first available server or to
-the server pointed by a routing hint attached to the query. In practice this
-means that prepared statements aren't supported by the SchemaRouter.
+* Prepared statement support is limited. PREPARE, EXECUTE and DEALLOCATE are routed to the
+correct backend if the statement is known and only requires one backend server. EXECUTE
+IMMEADIATE is not supported and is routed to the first available backend and may give
+wrong results. Similarly, preparing a statement from a variable (e.g. `PREPARE stmt FROM
+@a`) is not supported and may be routed wrong.
 
 * `SHOW DATABASES` is handled by the router instead of routed to a server. The router only
 answers correctly to the basic version of the query. Any modifiers such as `LIKE` are
 ignored.
 
 * `SHOW TABLES` is routed to the server with the current database. If using table-level
-sharding, the results will be incomplete. Use `SHOW SHARDS` to get results from the router
-itself.
+sharding, the results will be incomplete. Similarly, `SHOW TABLES FROM db1` is routed to
+the server with database `db1`, ignoring table sharding. Use `SHOW SHARDS` to get results
+from the router itself.
+
+* `USE db1` is routed to the server with `db1`. If the database is divided to multiple
+servers, only one server will get the command.
 
 ## Examples
 

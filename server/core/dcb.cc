@@ -1668,19 +1668,23 @@ const char* gw_dcb_state2string(dcb_state_t state)
  */
 void dcb_printf(DCB* dcb, const char* fmt, ...)
 {
-    GWBUF* buf;
     va_list args;
-
-    if ((buf = gwbuf_alloc(10240)) == NULL)
-    {
-        return;
-    }
     va_start(args, fmt);
-    vsnprintf((char*)GWBUF_DATA(buf), 10240, fmt, args);
+    int n = vsnprintf(nullptr, 0, fmt, args);
     va_end(args);
 
-    buf->end = (void*)((char*)GWBUF_DATA(buf) + strlen((char*)GWBUF_DATA(buf)));
-    dcb->func.write(dcb, buf);
+    GWBUF* buf = gwbuf_alloc(n + 1);
+
+    if (buf)
+    {
+        va_start(args, fmt);
+        vsnprintf((char*)GWBUF_DATA(buf), n + 1, fmt, args);
+        va_end(args);
+
+        // Remove the trailing null character
+        GWBUF_RTRIM(buf, 1);
+        dcb->func.write(dcb, buf);
+    }
 }
 
 /**

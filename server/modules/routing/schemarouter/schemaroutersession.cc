@@ -1630,41 +1630,59 @@ SERVER* SchemaRouterSession::get_query_target(GWBUF* buffer)
     int n_databases = 0;
     char** databases = qc_get_database_names(buffer, &n_databases);
 
-    for (int i = 0; i < n_databases; i++)
+    if (n_databases > 0)
     {
-        for (int j = 0; j < n_tables; j++)
+        // Prefer to select the route target by table. If no tables, route by database.
+        if (n_tables)
         {
-            SERVER* target = m_shard.get_location(tables[j]);
-
-            if (target)
+            for (int i = 0; i < n_tables; i++)
             {
-
-                if (rval && target != rval)
+                SERVER* target = m_shard.get_location(tables[i]);
+                if (target)
                 {
-                    MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
-                              "Cross server queries are not supported.",
-                              rval->name(),
-                              target->name());
-                }
-                else if (rval == NULL)
-                {
-                    rval = target;
-                    MXS_INFO("Query targets table '%s' on server '%s'",
-                             tables[j],
-                             rval->name());
+                    if (rval && target != rval)
+                    {
+                        MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
+                                  "Cross server queries are not supported.",
+                                  rval->name(), target->name());
+                    }
+                    else if (rval == NULL)
+                    {
+                        rval = target;
+                        MXS_INFO("Query targets table '%s' on server '%s'", tables[i], rval->name());
+                    }
                 }
             }
         }
+        else if (rval == nullptr)
+        {
+            // Queries which target a database but no tables can have multiple targets. Select first one.
+            for (int i = 0; i < n_databases; i++)
+            {
+                SERVER* target = m_shard.get_location(databases[i]);
+                if (target)
+                {
+                    rval = target;
+                    break;
+                }
+            }
+        }
+    }
 
+
+    // Free the databases and tables arrays.
+    for (int i = 0; i < n_databases; i++)
+    {
         MXS_FREE(databases[i]);
     }
+    MXS_FREE(databases);
 
     for (int i = 0; i < n_tables; i++)
     {
         MXS_FREE(tables[i]);
     }
     MXS_FREE(tables);
-    MXS_FREE(databases);
+
     return rval;
 }
 
@@ -1675,52 +1693,57 @@ SERVER* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_que
 
     if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
     {
+        // If pStmt is null, the PREPARE was malformed. In that case it can be routed to any backend to get
+        // a proper error response. Also returns null if preparing from a variable. This is a limitation.
         GWBUF* pStmt = qc_get_preparable_stmt(buffer);
-        int n_tables = 0;
-        char** tables = qc_get_table_names(pStmt, &n_tables, true);
-        char* stmt = qc_get_prepare_name(buffer);
-
-        for (int i = 0; i < n_tables; i++)
+        if (pStmt)
         {
-            SERVER* target = m_shard.get_location(tables[i]);
+            int n_tables = 0;
+            char** tables = qc_get_table_names(pStmt, &n_tables, true);
+            char* stmt = qc_get_prepare_name(buffer);
 
-            if (target)
+            for (int i = 0; i < n_tables; i++)
             {
-
-                if (rval && target != rval)
+                SERVER* target = m_shard.get_location(tables[i]);
+                if (target)
                 {
-                    MXS_ERROR("Statement targets tables on servers '%s' and '%s'. "
-                              "Cross server queries are not supported.",
-                              rval->name(),
-                              target->name());
+                    if (rval && target != rval)
+                    {
+                        MXS_ERROR("Statement targets tables on servers '%s' and '%s'. "
+                                  "Cross server queries are not supported.",
+                                  rval->name(), target->name());
+                    }
+                    else if (rval == NULL)
+                    {
+                        rval = target;
+                    }
                 }
-                else if (rval == NULL)
-                {
-                    rval = target;
-                }
+                MXS_FREE(tables[i]);
             }
-            MXS_FREE(tables[i]);
-        }
 
-        if (rval)
-        {
-            MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name());
-            m_shard.add_statement(stmt, rval);
+            if (rval)
+            {
+                MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name());
+                m_shard.add_statement(stmt, rval);
+            }
+            MXS_FREE(tables);
+            MXS_FREE(stmt);
         }
-        MXS_FREE(tables);
-        MXS_FREE(stmt);
     }
     else if (op == QUERY_OP_EXECUTE)
     {
         char* stmt = qc_get_prepare_name(buffer);
-        rval = m_shard.get_statement(stmt);
-        MXS_INFO("Executing named statement %s on server %s", stmt, rval->name());
+        SERVER* ps_target = m_shard.get_statement(stmt);
+        if (ps_target)
+        {
+            rval = ps_target;
+            MXS_INFO("Executing named statement %s on server %s", stmt, rval->name());
+        }
         MXS_FREE(stmt);
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE))
     {
         char* stmt = qc_get_prepare_name(buffer);
-
         if ((rval = m_shard.get_statement(stmt)))
         {
             MXS_INFO("Closing named statement %s on server %s", stmt, rval->name());

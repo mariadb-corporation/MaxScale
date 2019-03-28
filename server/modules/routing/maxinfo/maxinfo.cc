@@ -303,6 +303,7 @@ static int execute(MXS_ROUTER* rinstance, MXS_ROUTER_SESSION* router_session, GW
 
     if (GWBUF_TYPE(queue) == GWBUF_TYPE_HTTP)
     {
+        handle_url(instance, session, queue);
         gwbuf_free(queue);
         return 0;
     }
