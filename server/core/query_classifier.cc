@@ -1540,6 +1540,37 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CLASSIFY, pSelf));
 }
 
+namespace
+{
+
+json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry)
+{
+    json_t* pHits = json_integer(entry.hits);
+
+    json_t* pClassification = json_object();
+    json_object_set_new(pClassification,
+                        CN_PARSE_RESULT, json_string(qc_result_to_string(entry.result.status)));
+    char* zType_mask = qc_typemask_to_string(entry.result.type_mask);
+    json_object_set_new(pClassification, CN_TYPE_MASK, json_string(zType_mask));
+    MXS_FREE(zType_mask);
+    json_object_set_new(pClassification,
+                        CN_OPERATION,
+                        json_string(qc_op_to_string(entry.result.op)));
+
+    json_t* pAttributes = json_object();
+    json_object_set_new(pAttributes, CN_HITS, pHits);
+    json_object_set_new(pAttributes, CN_CLASSIFICATION, pClassification);
+
+    json_t* pSelf = json_object();
+    json_object_set_new(pSelf, CN_ID, json_string(stmt.c_str()));
+    json_object_set_new(pSelf, CN_TYPE, json_string(CN_CACHE));
+    json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
+
+    return pSelf;
+}
+
+}
+
 std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
 {
     std::map<std::string, QC_CACHE_ENTRY> state;
@@ -1554,46 +1585,19 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
             qc_get_cache_state(state);
         });
 
-    json_t* pArray = json_array();
+    json_t* pData = json_array();
 
     for (const auto& p : state)
     {
         const auto& stmt = p.first;
         const auto& entry = p.second;
 
-        json_t* pStmt = json_string(stmt.c_str());
-        json_t* pHits = json_integer(entry.hits);
-        json_t* pClassification = json_object();
+        json_t* pEntry = cache_entry_as_json(stmt, entry);
 
-        json_object_set_new(pClassification,
-                            CN_PARSE_RESULT, json_string(qc_result_to_string(entry.result.status)));
-
-        char* zType_mask = qc_typemask_to_string(entry.result.type_mask);
-        json_object_set_new(pClassification, CN_TYPE_MASK, json_string(zType_mask));
-        MXS_FREE(zType_mask);
-        json_object_set_new(pClassification,
-                            CN_OPERATION,
-                            json_string(qc_op_to_string(entry.result.op)));
-
-        json_t* pObject = json_object();
-
-        json_object_set_new(pObject, CN_STATEMENT, pStmt);
-        json_object_set_new(pObject, CN_HITS, pHits);
-        json_object_set_new(pObject, CN_CLASSIFICATION, pClassification);
-
-        json_array_append(pArray, pObject);
+        json_array_append_new(pData, pEntry);
     }
 
-    json_t* pAttributes = json_object();
-
-    json_object_set_new(pAttributes, CN_STATEMENTS, pArray);
-
-    json_t* pSelf = json_object();
-    json_object_set_new(pSelf, CN_ID, json_string(CN_CACHE));
-    json_object_set_new(pSelf, CN_TYPE, json_string(CN_CACHE));
-    json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
-
-    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pSelf));
+    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pData));
 }
 
 void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state)
