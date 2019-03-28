@@ -354,6 +354,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     inst->trx_safe = params->get_bool("transaction_safety");
     inst->fileroot = params->get_c_str_copy("filestem");
     inst->heartbeat_task_active = false;
+    inst->slave_heartbeat_task_active = false;
 
     /* Server id */
     inst->serverid = params->get_integer("server_id");

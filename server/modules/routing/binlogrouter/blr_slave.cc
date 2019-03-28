@@ -425,8 +425,10 @@ int blr_slave_request(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue
         /* Check whether to add the heartbeat check for this slave */
         if (rv && slave->state == BLRS_DUMPING
             && router->send_slave_heartbeat
-            && slave->heartbeat > 0)
+            && slave->heartbeat > 0
+            && !router->slave_heartbeat_task_active)
         {
+            router->slave_heartbeat_task_active = true;
             char task_name[BLRM_TASK_NAME_LEN + 1] = "";
             snprintf(task_name,
                      BLRM_TASK_NAME_LEN,
