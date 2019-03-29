@@ -258,10 +258,8 @@ public:
     /**
      * @brief alias for restart_maxscale
      */
-    int start_maxscale(int m = 0)
-    {
-        return restart_maxscale(m);
-    }
+    int start_maxscale(int m = 0);
+
     int start(int m = 0)
     {
         return start_maxscale(m);
