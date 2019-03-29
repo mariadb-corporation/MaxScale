@@ -80,7 +80,7 @@ fi
 if [ ! -z "${named_test}" ] ; then
     eval ${named_test}
 else
-    ctest -VV -D Nightly ${test_set}
+    ctest -VV ${test_set}
 fi
 cp core.* ${logs_publish_dir}
 ${script_dir}/copy_logs.sh
