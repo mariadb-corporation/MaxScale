@@ -216,8 +216,10 @@ static Keyword aKeywordTable[] = {
   { "CURRENT_TIMESTAMP","TK_CTIME_KW",     ALWAYS                 },
 #ifdef MAXSCALE
   { "DATA",             "TK_DATA",         ALWAYS                 },
-#endif
+  { "DATABASE",         "TK_DATABASE",     ALWAYS                 },
+#else
   { "DATABASE",         "TK_DATABASE",     ATTACH                 },
+#endif
 #ifdef MAXSCALE
   { "DATABASES",        "TK_DATABASES_KW", ALWAYS                 },
   { "DEALLOCATE",       "TK_DEALLOCATE",   ALWAYS                 },

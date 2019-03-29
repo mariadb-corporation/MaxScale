@@ -2239,24 +2239,44 @@ public:
         m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
         m_operation = QUERY_OP_DROP;
 
-        if (what == MXS_DROP_SEQUENCE)
+        switch (what)
         {
-            const char* zDatabase = NULL;
-            char database[pDatabase ? pDatabase->n + 1 : 1];
-
-            if (pDatabase)
+        case MXS_DROP_DATABASE:
             {
+#ifdef TODO_SPECIFIC_OP_FOR_DROP_DATABASE_ADDED
+                // TODO: As there is only QUERY_OP_DROP, you can't be fully
+                // TODO: certain what a returned database actually refers to
+                // TODO: so better not to provide a name until there is a
+                // TODO: specific op.
+                char database[pDatabase->n + 1];
                 strncpy(database, pDatabase->z, pDatabase->n);
                 database[pDatabase->n] = 0;
 
-                zDatabase = database;
+                update_database_names(database);
+#endif
             }
+            break;
 
-            char table[pName->n + 1];
-            strncpy(table, pName->z, pName->n);
-            table[pName->n] = 0;
+        case MXS_DROP_SEQUENCE:
+            {
+                const char* zDatabase = NULL;
+                char database[pDatabase ? pDatabase->n + 1 : 1];
 
-            update_names(zDatabase, table, NULL, NULL);
+                if (pDatabase)
+                {
+                    strncpy(database, pDatabase->z, pDatabase->n);
+                    database[pDatabase->n] = 0;
+
+                    zDatabase = database;
+                }
+
+                char table[pName->n + 1];
+                strncpy(table, pName->z, pName->n);
+                table[pName->n] = 0;
+
+                update_names(zDatabase, table, NULL, NULL);
+            }
+            break;
         }
     }
 
