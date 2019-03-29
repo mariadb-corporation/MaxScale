@@ -48,7 +48,7 @@ endfunction()
 # Add a test which uses another test as the executable
 function(add_test_derived name executable template)
   add_template(${name} ${template} "${ARGV}")
-  add_test(NAME ${name} COMMAND ${CMAKE_BINARY_DIR}/${executable} ${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+  add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${executable} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   set_property(TEST ${name} PROPERTY TIMEOUT ${TIMEOUT})
 
   list(REMOVE_AT ARGV 0 1 2)
@@ -64,7 +64,7 @@ endfunction()
 # also suitable for symlinks
 function(add_test_script name script template labels)
   add_template(${name} ${template} "${ARGV}")
-  add_test(NAME ${name} COMMAND non_native_setup ${name} ${script} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+  add_test(NAME ${name} COMMAND non_native_setup ${name} ${script} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
   list(REMOVE_AT ARGV 0 1 2)
 
