@@ -121,13 +121,13 @@ void run(TestConnections& test)
     test_one(test, "select 1 UNION select * FROM masking_auto_firewall", Expect::FAILURE);
 
     // This SHOULD succeed as a masked column is not used in the statment.
-    test_one(test, "select * FROM (select b from masking_auto_firewall)", Expect::SUCCESS);
+    test_one(test, "select * FROM (select b from masking_auto_firewall) tbl", Expect::SUCCESS);
 
     // This SHOULD succeed as a masked column is not used in the statment.
-    test_one(test, "select * FROM (select a as b from masking_auto_firewall)", Expect::FAILURE);
+    test_one(test, "select * FROM (select a as b from masking_auto_firewall) tbl", Expect::FAILURE);
 
     // This SHOULD succeed as '*' is used in the statment.
-    test_one(test, "select * FROM (select * from masking_auto_firewall)", Expect::FAILURE);
+    test_one(test, "select * FROM (select * from masking_auto_firewall) tbl", Expect::FAILURE);
 }
 
 }
