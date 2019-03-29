@@ -61,7 +61,8 @@ mdbci destroy ${mdbci_config_name}
 . ${script_dir}/configure_log_dir.sh
 
 ulimit -c unlimited
-cd ${script_dir}/..
+
+cd ${script_dir}/../../
 mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
 cd maxscale-system-test
