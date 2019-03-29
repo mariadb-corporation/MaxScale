@@ -63,7 +63,8 @@ mdbci destroy ${mdbci_config_name}
 ulimit -c unlimited
 cd ${script_dir}/..
 mkdir build && cd build
-cmake .. -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug -DBUILD_SYSTEM_TESTS=Y
+cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=$=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
+
 make
 
 echo ${test_set} | grep "NAME#"
