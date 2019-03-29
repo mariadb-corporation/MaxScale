@@ -389,7 +389,6 @@ public:
 
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */
-    bool              m_active {true};  /**< True if monitor exists and has not been "destroyed". */
 
     mutable std::mutex m_lock;
 

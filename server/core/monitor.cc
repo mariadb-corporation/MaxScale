@@ -125,15 +125,19 @@ public:
         m_all_monitors.insert(m_all_monitors.begin(), monitor);
     }
 
-    void run_behind_lock(std::function<void(void)> apply)
+    void move_to_deactivated_list(Monitor *monitor)
     {
         Guard guard(m_all_monitors_lock);
-        apply();
+        auto iter = std::find(m_all_monitors.begin(), m_all_monitors.end(), monitor);
+        mxb_assert(iter != m_all_monitors.end());
+        m_all_monitors.erase(iter);
+        m_deact_monitors.push_back(monitor);
     }
 
 private:
-    std::mutex m_all_monitors_lock;        /**< Protects access to array */
-    std::vector<Monitor*> m_all_monitors;  /**< Global list of monitors, in configuration file order */
+    std::mutex m_all_monitors_lock;          /**< Protects access to arrays */
+    std::vector<Monitor*> m_all_monitors;    /**< Global list of monitors, in configuration file order */
+    std::vector<Monitor*> m_deact_monitors;  /**< Deactivated monitors. TODO: delete monitors */
 };
 
 ThisUnit this_unit;
@@ -558,10 +562,7 @@ void MonitorManager::populate_services()
 void MonitorManager::start_all_monitors()
 {
     this_unit.foreach_monitor([](Monitor* monitor) {
-        if (monitor->m_active)
-        {
-            MonitorManager::start_monitor(monitor);
-        }
+        MonitorManager::start_monitor(monitor);
         return true;
     });
 }
@@ -589,10 +590,7 @@ void MonitorManager::deactivate_monitor(Monitor* monitor)
     {
         monitor->remove_server(monitor->m_servers.front()->server);
     }
-
-    this_unit.run_behind_lock([monitor](){
-        monitor->m_active = false;
-    });
+    this_unit.move_to_deactivated_list(monitor);
 }
 
 /**
@@ -601,10 +599,7 @@ void MonitorManager::deactivate_monitor(Monitor* monitor)
 void MonitorManager::stop_all_monitors()
 {
     this_unit.foreach_monitor([](Monitor* monitor) {
-        if (monitor->m_active)
-        {
-            MonitorManager::stop_monitor(monitor);
-        }
+        MonitorManager::stop_monitor(monitor);
         return true;
     });
 }
@@ -617,10 +612,7 @@ void MonitorManager::stop_all_monitors()
 void MonitorManager::show_all_monitors(DCB* dcb)
 {
     this_unit.foreach_monitor([dcb](Monitor* monitor) {
-        if (monitor->m_active)
-        {
-            monitor_show(dcb, monitor);
-        }
+        monitor_show(dcb, monitor);
         return true;
     });
 }
@@ -646,15 +638,9 @@ void MonitorManager::monitor_list(DCB* dcb)
     dcb_printf(dcb, "%-20s | Status\n", "Monitor");
     dcb_printf(dcb, "---------------------+---------------------\n");
 
-    this_unit.foreach_monitor([dcb](Monitor* ptr){
-        if (ptr->m_active)
-        {
-            dcb_printf(dcb,
-                       "%-20s | %s\n",
-                       ptr->name(),
-                       ptr->state() == MONITOR_STATE_RUNNING ?
-                       "Running" : "Stopped");
-        }
+    this_unit.foreach_monitor([dcb](Monitor* ptr) {
+        dcb_printf(dcb, "%-20s | %s\n",
+                   ptr->name(), ptr->state() == MONITOR_STATE_RUNNING ? "Running" : "Stopped");
         return true;
     });
 
@@ -671,7 +657,7 @@ Monitor* MonitorManager::find_monitor(const char* name)
 {
     Monitor* rval = nullptr;
     this_unit.foreach_monitor([&rval, name](Monitor* ptr) {
-        if (ptr->m_name == name && ptr->m_active)
+        if (ptr->m_name == name)
         {
             rval = ptr;
         }
@@ -701,15 +687,12 @@ Monitor* MonitorManager::server_is_monitored(const SERVER* server)
     Monitor* rval = nullptr;
     this_unit.foreach_monitor([&rval, server](Monitor* monitor) {
         Guard guard(monitor->m_lock);
-        if (monitor->m_active)
+        for (MonitorServer* db : monitor->m_servers)
         {
-            for (MonitorServer* db : monitor->m_servers)
+            if (db->server == server)
             {
-                if (db->server == server)
-                {
-                    rval = monitor;
-                    break;
-                }
+                rval = monitor;
+                break;
             }
         }
         return (rval == nullptr);
@@ -821,14 +804,10 @@ json_t* MonitorManager::monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();
     this_unit.foreach_monitor([rval, host](Monitor* mon) {
-        if (mon->m_active)
+        json_t* json = monitor_json_data(mon, host);
+        if (json)
         {
-            json_t* json = monitor_json_data(mon, host);
-
-            if (json)
-            {
-                json_array_append_new(rval, json);
-            }
+            json_array_append_new(rval, json);
         }
         return true;
     });
@@ -841,15 +820,12 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const 
     std::vector<std::string> names;
     this_unit.foreach_monitor([&names, server](Monitor* mon) {
         Guard guard(mon->m_lock);
-        if (mon->m_active)
+        for (MonitorServer* db : mon->m_servers)
         {
-            for (MonitorServer* db : mon->m_servers)
+            if (db->server == server)
             {
-                if (db->server == server)
-                {
-                    names.push_back(mon->m_name);
-                    break;
-                }
+                names.push_back(mon->m_name);
+                break;
             }
         }
         return true;
