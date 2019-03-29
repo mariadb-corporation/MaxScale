@@ -54,6 +54,27 @@ public:
         return m_reply_state;
     }
 
+    const char* reply_state_str() const
+    {
+        switch (m_reply_state)
+        {
+        case REPLY_STATE_START:
+            return "START";
+
+        case REPLY_STATE_DONE:
+            return "DONE";
+
+        case REPLY_STATE_RSET_COLDEF:
+            return "COLDEF";
+
+        case REPLY_STATE_RSET_ROWS:
+            return "ROWS";
+
+        default:
+            return "UNKNOWN";
+        }
+    }
+
     void     add_ps_handle(uint32_t id, uint32_t handle);
     uint32_t get_ps_handle(uint32_t id) const;
 

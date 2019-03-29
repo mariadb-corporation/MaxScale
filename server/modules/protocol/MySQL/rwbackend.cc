@@ -254,6 +254,9 @@ void RWBackend::process_reply(GWBUF* buffer)
         }
     }
 
+    MXS_DEBUG("cmd: %02hhx bytes: %u packets: %d state: %s", mxs_mysql_get_command(buffer),
+              gwbuf_length(buffer), modutil_count_packets(buffer), reply_state_str());
+
     if (get_reply_state() == REPLY_STATE_DONE)
     {
         ack_write();
