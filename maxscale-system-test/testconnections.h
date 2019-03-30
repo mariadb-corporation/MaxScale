@@ -161,7 +161,7 @@ public:
      * @param prefix file name prefix
      * @return 0 if success
      */
-    int copy_mariadb_logs(Mariadb_nodes* repl, const char* prefix, std::vector<std::thread>& threads);
+    int copy_mariadb_logs(Mariadb_nodes* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
     /**
      * @brief MaxScale runs locally, specified using -l.
@@ -700,7 +700,7 @@ public:
 
 private:
     void report_result(const char* format, va_list argp);
-    void copy_one_mariadb_log(int i, std::string filename);
+    void copy_one_mariadb_log(Mariadb_nodes *nrepl, int i, std::string filename);
 
     std::vector<std::function<void (void)>> m_on_destroy;
 };

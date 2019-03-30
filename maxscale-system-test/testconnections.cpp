@@ -849,7 +849,7 @@ void TestConnections::init_maxscale(int m)
     }
 }
 
-void TestConnections::copy_one_mariadb_log(int i, std::string filename)
+void TestConnections::copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename)
 {
     auto log_retrive_commands =
     {
@@ -862,7 +862,7 @@ void TestConnections::copy_one_mariadb_log(int i, std::string filename)
 
     for (auto cmd : log_retrive_commands)
     {
-        auto output = repl->ssh_output(cmd, i).second;
+        auto output = nrepl->ssh_output(cmd, i).second;
 
         if (!output.empty())
         {
@@ -876,22 +876,22 @@ void TestConnections::copy_one_mariadb_log(int i, std::string filename)
     }
 }
 
-int TestConnections::copy_mariadb_logs(Mariadb_nodes* repl,
+int TestConnections::copy_mariadb_logs(Mariadb_nodes* nrepl,
                                        const char* prefix,
                                        std::vector<std::thread>& threads)
 {
     int local_result = 0;
 
-    if (repl)
+    if (nrepl)
     {
-        for (int i = 0; i < repl->N; i++)
+        for (int i = 0; i < nrepl->N; i++)
         {
             // Do not copy MariaDB logs in case of local backend
-            if (strcmp(repl->IP[i], "127.0.0.1") != 0)
+            if (strcmp(nrepl->IP[i], "127.0.0.1") != 0)
             {
                 char str[4096];
                 sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
-                threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, i, str);
+                threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, str);
             }
         }
     }
