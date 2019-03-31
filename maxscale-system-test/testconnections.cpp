@@ -159,6 +159,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         {"no-timeouts",       no_argument,              0,                        'z'                },
         {"no-galera",         no_argument,              0,                        'y'                },
         {"local-maxscale",    optional_argument,        0,                        'l'                },
+        {"reinstall-maxscale",no_argument,              0,                        'm'                },
         {0,                   0,                        0,                        0                  }
     };
 

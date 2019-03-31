@@ -730,7 +730,7 @@ add_test_executable(no_password.cpp no_password replication LABELS MySQLAuth LIG
 add_test_executable(open_close_connections.cpp open_close_connections replication LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Test with persistant connections configured and big number iof opened connections ,expect no crash
-add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
+add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale GALERA_BACKEND REPL_BACKEND readwritesplit)
 
 # Check if prepared statement works via Maxscale (via RWSplit)
 add_test_executable(prepared_statement.cpp prepared_statement replication LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -902,7 +902,7 @@ set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
 
 # MXS-1849: Table family sharding router
 # https://jira.mariadb.org/browse/MXS-1849
-add_test_executable(mxs1849_table_sharding.cpp mxs1849_table_sharding mxs1849_table_sharding LABELS schemarouter BREAKS_REPL)
+add_test_executable(mxs1849_table_sharding.cpp mxs1849_table_sharding mxs1849_table_sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-1985: MaxScale hangs on concurrent KILL processing
 # https://jira.mariadb.org/browse/MXS-1985
@@ -910,7 +910,7 @@ add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS R
 
 # MXS-1113: Support of prepared statement for schemarouter
 # https://jira.mariadb.org/browse/MXS-1113
-add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL)
+add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-2037: Wildcards not working with source in Named Server Filter
 # https://jira.mariadb.org/browse/MXS-2037
