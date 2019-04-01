@@ -65,7 +65,7 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
         if (test.global_result == 0)
         {
             test.tprintf("Maxscale was killed by systemd - ok");
-            test.maxscales->ssh_node_f(0, true, "rm -f /tmp/*core");
+            test.maxscales->ssh_node_f(0, true, "rm -f /tmp/core*");
         }
     }
 }
