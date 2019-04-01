@@ -347,6 +347,15 @@ bool service_port_is_used(int port);
  */
 bool service_has_named_listener(Service* service, const char* name);
 
+/**
+ * See if a monitor is used by any service
+ *
+ * @param monitor Monitor to look for
+ *
+ * @return The first service that uses the monitor or nullptr if no service uses it
+ */
+Service* service_uses_monitor(mxs::Monitor* monitor);
+
 // Required by MaxAdmin
 int service_enable_root(Service* service, int action);
 

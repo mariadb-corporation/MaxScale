@@ -840,6 +840,21 @@ Service* service_internal_find(const char* name)
     return nullptr;
 }
 
+Service* service_uses_monitor(mxs::Monitor* monitor)
+{
+    LockGuard guard(this_unit.lock);
+
+    for (Service* s : this_unit.services)
+    {
+        if (s->m_monitor == monitor)
+        {
+            return s;
+        }
+    }
+
+    return nullptr;
+}
+
 /**
  * Return a named service
  *

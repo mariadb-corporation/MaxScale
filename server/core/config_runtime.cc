@@ -1457,21 +1457,30 @@ bool runtime_destroy_service(Service* service)
 bool runtime_destroy_monitor(Monitor* monitor)
 {
     bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->m_name);
 
-    std::lock_guard<std::mutex> guard(crt_lock);
-
-    if (unlink(filename) == -1 && errno != ENOENT)
+    if (Service* s = service_uses_monitor(monitor))
     {
-        MXS_ERROR("Failed to remove persisted monitor configuration '%s': %d, %s",
-                  filename,
-                  errno,
-                  mxs_strerror(errno));
+        config_runtime_error("Monitor '%s' cannot be destroyed as it is used by service '%s'",
+                             monitor->m_name, s->name());
     }
     else
     {
-        rval = true;
+        char filename[PATH_MAX];
+        snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->m_name);
+
+        std::lock_guard<std::mutex> guard(crt_lock);
+
+        if (unlink(filename) == -1 && errno != ENOENT)
+        {
+            MXS_ERROR("Failed to remove persisted monitor configuration '%s': %d, %s",
+                      filename,
+                      errno,
+                      mxs_strerror(errno));
+        }
+        else
+        {
+            rval = true;
+        }
     }
 
     if (rval)
