@@ -405,10 +405,11 @@ static bool should_skip_query(const BinlogConfig& config, const std::string& sql
         qc_free_table_names(names, n);
     }
 
-    // Also check for the default database in case the query has no tables in it
-    if (!rval && should_skip(config, db))
+    // Also check for the default database in case the query has no tables in it. The dot at the end is
+    // required to distinct database names from table names.
+    if (n == 0)
     {
-        rval = true;
+        rval = should_skip(config, db + '.');
     }
 
     gwbuf_free(buf);
