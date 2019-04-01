@@ -140,6 +140,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     repl = NULL;
     galera = NULL;
     maxscales = NULL;
+    reinstall_maxscale = false;
 
     read_env();
 
