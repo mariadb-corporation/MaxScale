@@ -23,6 +23,7 @@ module=masking
 rules=/home/vagrant/mxs1719.json
 warn_type_mismatch=always
 large_payload=ignore
+require_fully_parsed=false
 
 [RWS]
 type=service

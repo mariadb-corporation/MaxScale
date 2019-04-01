@@ -10,6 +10,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-2412](https://jira.mariadb.org/browse/MXS-2412) Service serialization is broken
 * [MXS-2410](https://jira.mariadb.org/browse/MXS-2410) Hangup delivered to wrong DCB
 * [MXS-2409](https://jira.mariadb.org/browse/MXS-2409) Schemarouter crashes if PREPARE or EXECUTE is malformed
 * [MXS-2403](https://jira.mariadb.org/browse/MXS-2403) Masking filter should check subqueries
