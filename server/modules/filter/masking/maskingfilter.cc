@@ -139,6 +139,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 Config::check_subqueries_default,
                 MXS_MODULE_OPT_NONE,
             },
+            {
+                Config::require_fully_parsed_name,
+                MXS_MODULE_PARAM_BOOL,
+                Config::require_fully_parsed_default,
+                MXS_MODULE_OPT_NONE,
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };

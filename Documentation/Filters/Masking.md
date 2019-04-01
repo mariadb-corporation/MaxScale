@@ -87,6 +87,15 @@ SELECT revealed_ssn FROM cheat;
 ```
 to get access to the cleartext version of a masked field `ssn`.
 
+From MaxScale 2.3.5 onwards, the masking filter will, if any of the
+`prevent_function_usage`, `check_user_variables`, `check_unions` or
+`check_subqueries` parameters is set to true, block statements that
+cannot be fully parsed.
+
+Please see the configuration parameter
+[require_fully_parsed](#require_fully_parsed)
+for how to change the default behaviour.
+
 ## Limitations
 
 The masking filter can _only_ be used for masking columns of the following
@@ -185,6 +194,26 @@ filter should be setup to allow or reject the use of certain functions.
 prevent_function_usage=false
 ```
 The default value is `true`.
+
+#### `require_fully_parsed`
+
+This optional parameter specifies how the masking filter should
+behave in case any of `prevent_function_usage`, `check_user_variables`,
+`check_unions` or `check_subqueries` is true and it encounters a
+statement that cannot be fully parsed,
+
+If true, then statements that cannot be fully parsed (due to a
+parser limitation) will be blocked.
+```
+require_fully_parsed=false
+```
+
+The default value is `true`.
+
+Note that if this parameter is set to false, then `prevent_function_usage`,
+`check_user_variables`, `check_unions` and `check_subqueries` are rendered
+less effective, as it with a statement that can not be fully parsed may be
+possible to bypass the protection that they are intended to provide.
 
 #### `check_user_variables`
 
