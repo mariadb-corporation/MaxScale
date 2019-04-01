@@ -54,6 +54,9 @@ public:
     static const char* check_subqueries_name;
     static const char* check_subqueries_default;
 
+    static const char* require_fully_parsed_name;
+    static const char* require_fully_parsed_default;
+
     MaskingFilterConfig(const char* zName, const MXS_CONFIG_PARAMETER* pParams)
         : m_name(zName)
         , m_large_payload(get_large_payload(pParams))
@@ -63,6 +66,7 @@ public:
         , m_check_user_variables(get_check_user_variables(pParams))
         , m_check_unions(get_check_unions(pParams))
         , m_check_subqueries(get_check_subqueries(pParams))
+        , m_require_fully_parsed(get_require_fully_parsed(pParams))
     {
     }
 
@@ -110,6 +114,11 @@ public:
         return m_check_subqueries;
     }
 
+    bool require_fully_parsed() const
+    {
+        return m_require_fully_parsed;
+    }
+
     void set_large_payload(large_payload_t l)
     {
         m_large_payload = l;
@@ -144,6 +153,11 @@ public:
         m_check_subqueries = b;
     }
 
+    void set_require_fully_parsed(bool b)
+    {
+        m_require_fully_parsed = b;
+    }
+
     bool is_parsing_needed() const
     {
         return prevent_function_usage() || check_user_variables() || check_unions() || check_subqueries();
@@ -156,6 +170,7 @@ public:
     static bool                 get_check_user_variables(const MXS_CONFIG_PARAMETER* pParams);
     static bool                 get_check_unions(const MXS_CONFIG_PARAMETER* pParams);
     static bool                 get_check_subqueries(const MXS_CONFIG_PARAMETER* pParams);
+    static bool                 get_require_fully_parsed(const MXS_CONFIG_PARAMETER* pParams);
 
 private:
     std::string          m_name;
@@ -166,4 +181,5 @@ private:
     bool                 m_check_user_variables;
     bool                 m_check_unions;
     bool                 m_check_subqueries;
+    bool                 m_require_fully_parsed;
 };

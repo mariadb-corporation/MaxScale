@@ -127,7 +127,8 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
 {
     bool rv = false;
 
-    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED
+        || !m_filter.config().require_fully_parsed())
     {
         if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
         {
@@ -165,7 +166,8 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
 {
     bool rv = false;
 
-    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED)
+    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED
+        || !m_filter.config().require_fully_parsed())
     {
         rv = check_query(pPacket);
     }

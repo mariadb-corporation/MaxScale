@@ -71,6 +71,7 @@ socket=default
 type=filter
 module=masking
 rules=/###access_homedir###/masking_rules.json
+require_fully_parsed=false
 
 [server1]
 type=server

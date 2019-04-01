@@ -615,7 +615,7 @@ columnid(A) ::= nm(X). {
   // TODO: However, if not here then rules such as CAST need to be modified.
   BINARY
   /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/
-  DATA /*DATABASE*/ DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
+  DATA DATABASE DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
   /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/
   FIRST FLUSH /*FOR*/ FORMAT
   GLOBAL
@@ -2860,6 +2860,12 @@ eq_opt ::= EQ.
 
 default_opt ::= .
 default_opt ::= DEFAULT.
+
+////////////////////////// DROP DATABASE statement /////////////////////////////////////
+//
+cmd ::= DROP DATABASE ifexists id(X). {
+    maxscaleDrop(pParse, MXS_DROP_DATABASE, &X, NULL);
+}
 
 //////////////////////// CALL statement ////////////////////////////////////
 //

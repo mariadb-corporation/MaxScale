@@ -17,21 +17,23 @@
 namespace
 {
 
-const char config_name_large_payload[] = "large_payload";
-const char config_name_rules[] = "rules";
-const char config_name_warn_type_mismatch[] = "warn_type_mismatch";
-
-const char config_value_abort[] = "abort";
-const char config_value_ignore[] = "ignore";
-const char config_value_never[] = "never";
-const char config_value_always[] = "always";
-
+const char config_name_check_subqueries[]       = "check_subqueries";
+const char config_name_check_unions[]           = "check_unions";
+const char config_name_check_user_variables[]   = "check_user_variables";
+const char config_name_large_payload[]          = "large_payload";
 const char config_name_prevent_function_usage[] = "prevent_function_usage";
-const char config_check_user_variables[] = "check_user_variables";
-const char config_check_unions[] = "check_unions";
-const char config_check_subqueries[] = "check_subqueries";
+const char config_name_require_fully_parsed[]   = "require_fully_parsed";
+const char config_name_rules[]                  = "rules";
+const char config_name_warn_type_mismatch[]     = "warn_type_mismatch";
+
+
+const char config_value_abort[]  = "abort";
+const char config_value_always[] = "always";
+const char config_value_ignore[] = "ignore";
+const char config_value_never[]  = "never";
 
 const char config_value_true[] = "true";
+
 }
 
 /*
@@ -63,10 +65,9 @@ const char* MaskingFilterConfig::rules_name = config_name_rules;
  * PARAM warn_type_mismatch
  */
 
-// static
 const char* MaskingFilterConfig::warn_type_mismatch_name = config_name_warn_type_mismatch;
+const char* MaskingFilterConfig::warn_type_mismatch_default = config_value_never;
 
-// static
 const MXS_ENUM_VALUE MaskingFilterConfig::warn_type_mismatch_values[] =
 {
     {config_value_never,  MaskingFilterConfig::WARN_NEVER   },
@@ -74,45 +75,35 @@ const MXS_ENUM_VALUE MaskingFilterConfig::warn_type_mismatch_values[] =
     {NULL}
 };
 
-// static
-const char* MaskingFilterConfig::warn_type_mismatch_default = config_value_never;
-
 /*
  * PARAM prevent_function_usage
  */
-
-// static
 const char* MaskingFilterConfig::prevent_function_usage_name = config_name_prevent_function_usage;
-
-// static
 const char* MaskingFilterConfig::prevent_function_usage_default = config_value_true;
 
 /*
  * PARAM check_user_variables
  */
-// static
-const char* MaskingFilterConfig::check_user_variables_name = config_check_user_variables;
-
-// static
+const char* MaskingFilterConfig::check_user_variables_name = config_name_check_user_variables;
 const char* MaskingFilterConfig::check_user_variables_default = config_value_true;
 
 /*
  * PARAM check_unions
  */
-// static
-const char* MaskingFilterConfig::check_unions_name = config_check_unions;
-
-// static
+const char* MaskingFilterConfig::check_unions_name = config_name_check_unions;
 const char* MaskingFilterConfig::check_unions_default = config_value_true;
 
 /*
  * PARAM check_subqueries
  */
-// static
-const char* MaskingFilterConfig::check_subqueries_name = config_check_subqueries;
-
-// static
+const char* MaskingFilterConfig::check_subqueries_name = config_name_check_subqueries;
 const char* MaskingFilterConfig::check_subqueries_default = config_value_true;
+
+/*
+ * PARAM require_fully_parsed
+ */
+const char* MaskingFilterConfig::require_fully_parsed_name = config_name_require_fully_parsed;
+const char* MaskingFilterConfig::require_fully_parsed_default = config_name_require_fully_parsed;
 
 
 /*
@@ -163,4 +154,10 @@ bool MaskingFilterConfig::get_check_unions(const MXS_CONFIG_PARAMETER* pParams)
 bool MaskingFilterConfig::get_check_subqueries(const MXS_CONFIG_PARAMETER* pParams)
 {
     return pParams->get_bool(check_subqueries_name);
+}
+
+// static
+bool MaskingFilterConfig::get_require_fully_parsed(const MXS_CONFIG_PARAMETER* pParams)
+{
+    return pParams->get_bool(require_fully_parsed_name);
 }

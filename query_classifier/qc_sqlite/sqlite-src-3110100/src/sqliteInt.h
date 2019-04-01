@@ -4094,6 +4094,7 @@ int sqlite3DbstatRegister(sqlite3*);
 
 typedef enum mxs_drop
 {
+    MXS_DROP_DATABASE,
     MXS_DROP_FUNCTION,
     MXS_DROP_SEQUENCE,
 } mxs_drop_t;
