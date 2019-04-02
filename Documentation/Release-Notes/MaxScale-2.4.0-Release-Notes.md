@@ -32,6 +32,12 @@ structures (i.e. different `--basedir` arguments). Normal use of MaxScale still
 detects multiple MaxScales trying to bind to the same ports. Almost always, this
 will not have any negative side-effects.
 
+### Maintenance mode and Readwritesplit
+
+Readwritesplit now allows open transactions to finish if the master is put into
+maintenance mode. To forcefully close all connections to a server use the
+`maxctrl set server <name> maintenance --force` command.
+
 ## Dropped Features
 
 ## New Features

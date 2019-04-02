@@ -22,6 +22,24 @@ resilient setup and easy master failover by using one of the Galera nodes as a
 Write-Master node, where all write queries are routed, and spreading the read
 load over all the nodes.
 
+## Interaction with servers in `Maintenance` and `Draining` state
+
+When a server that readwritesplit uses is put into maintenance mode, any ongoing
+requests are allowed to finish before the connection is closed. If the server
+that is put into maintenance mode is a master, open transaction are allowed to
+complete before the connection is closed. Note that this means neither idle
+session nor long-running transactions will be closed by readwritesplit. To
+forcefully close the connections, use the following command:
+
+```
+maxctrl set server <server> maintenance --force
+```
+
+If a server is put into the `Draining` state while a connection is open, the
+connection will be used normally. Whenever a new connection needs to be created,
+whether that be due to a network error or when a new session being opened, only
+servers that are neither `Draining` nor `Drained` will be used.
+
 ## Configuration
 
 Readwritesplit router-specific settings are specified in the configuration file
