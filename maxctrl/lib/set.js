@@ -17,6 +17,12 @@ exports.desc = 'Set object state'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
+        .group(['force'], 'Set options:')
+        .option('force', {
+            describe: 'Forcefully close all connections to the target server',
+            type: 'boolean',
+            default: false
+        })
         .command('server <server> <state>', 'Set server state', function(yargs) {
             return yargs.epilog('If <server> is monitored by a monitor, this command should ' +
                                 'only be used to set the server into the `maintenance` state. ' +
@@ -27,6 +33,9 @@ exports.builder = function(yargs) {
                 .usage('Usage: set server <server> <state>')
         }, function(argv) {
             var target = 'servers/' + argv.server + '/set?state=' + argv.state
+            if (argv.force) {
+                target += '&force=yes'
+            }
             maxctrl(argv, function(host) {
                 return doRequest(host, target, null, {method: 'PUT'})
             })

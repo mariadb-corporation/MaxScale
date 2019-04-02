@@ -787,6 +787,11 @@ HttpResponse cb_set_server(const HttpRequest& request)
         string errmsg;
         if (mxs::server_set_status(server, opt, &errmsg))
         {
+            if (status_is_in_maint(opt) && request.get_option(CN_FORCE) == CN_YES)
+            {
+                dcb_hangup_foreach(server);
+            }
+
             return HttpResponse(MHD_HTTP_NO_CONTENT);
         }
         else
