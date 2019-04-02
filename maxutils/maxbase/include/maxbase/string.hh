@@ -182,13 +182,13 @@ template<class T>
 std::string join(const T& container, const std::string& separator = ",")
 {
     std::stringstream ss;
-    auto it = begin(container);
+    auto it = std::begin(container);
 
-    if (it != end(container))
+    if (it != std::end(container))
     {
         ss << *it++;
 
-        while (it != end(container))
+        while (it != std::end(container))
         {
             ss << separator << *it++;
         }
