@@ -289,9 +289,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
 
             if (!succp && should_migrate_trx(target))
             {
-                MXS_INFO("Starting transaction migration from '%s' to '%s'",
-                         m_current_master->name(),
-                         target->name());
+                MXS_INFO("Migrating transaction to '%s'", target->name());
 
                 /**
                  * Stash the current query so that the transaction replay treats
