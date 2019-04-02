@@ -2190,7 +2190,7 @@ bool MariaDBServer::update_enabled_events()
  *
  * @param server The server to update
  */
-void MariaDBServer::update_server(bool time_to_update_disk_space)
+void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_update_lock_status)
 {
     auto server = this;
     MonitorServer* mon_srv = server;
@@ -2245,6 +2245,11 @@ void MariaDBServer::update_server(bool time_to_update_disk_space)
         {
             mon_srv->log_connect_error(conn_status);
         }
+    }
+
+    if (time_to_update_lock_status)
+    {
+        update_lock_status();
     }
 
     /** Increase or reset the error count of the server. */
@@ -2315,4 +2320,103 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
         }
     }
     return !error;
+}
+
+void MariaDBServer::update_lock_status()
+{
+    // Try to get a MariaDBMonitor specific lock on the server. It's possible the locking fails if another
+    // MaxScale has it. If any error occurs, assume no lock.
+    if (!is_running() || has_status(SERVER_AUTH_ERROR))
+    {
+        m_have_lock = false;
+        return;
+    }
+
+    // First, check who currectly has the lock.
+    string cmd = string_printf("SELECT IS_USED_LOCK('%s')", LOCK_NAME);
+    string err_msg;
+    auto res_is_used = execute_query(cmd, &err_msg);
+    if (res_is_used && res_is_used->next_row())
+    {
+        if (res_is_used->get_string(0).empty())
+        {
+            // Lock is free, try to get it.
+            cmd = string_printf("SELECT GET_LOCK('%s', 0)", LOCK_NAME);
+            auto res_get_lock = execute_query(cmd, &err_msg);
+            if (res_get_lock && res_get_lock->next_row())
+            {
+                if (res_get_lock->get_string(0).empty())
+                {
+                    // This means an error occurred. This MaxScale does not have the lock.
+                    m_have_lock = false;
+                }
+                else if (res_get_lock->get_int(0) == 1)
+                {
+                    m_have_lock = true;
+                }
+            }
+        }
+        else
+        {
+            auto lock_owner_id = res_is_used->get_int(0);
+            if (lock_owner_id >= 0 && (size_t)lock_owner_id == con->thread_id)
+            {
+                // This MaxScale has the lock. Print warning if it got the lock without knowing it.
+                if (!m_have_lock)
+                {
+                    MXS_WARNING("Acquired the lock '%s' on server '%s' without locking it.",
+                                LOCK_NAME, name());
+                    m_have_lock = true;
+                }
+            }
+            else
+            {
+                // Another MaxScale has the lock. Print a warning if lock was lost without releasing it.
+                // This may happen if connection broke and was recreated.
+                if (m_have_lock)
+                {
+                    MXS_WARNING("Lost the lock '%s' on server '%s' without releasing it. "
+                                "The lock is now owned by connection '%li'.",
+                                LOCK_NAME, name(), lock_owner_id);
+                    m_have_lock = false;
+                }
+            }
+        }
+    }
+    else
+    {
+        // If the query failed, assume that this MaxScale does not have the lock. This is correct if
+        // connection failed.
+        m_have_lock = false;
+    }
+
+    if (!err_msg.empty())
+    {
+        MXS_ERROR("Failed to update lock status of server '%s'. %s", name(), err_msg.c_str());
+    }
+}
+
+void MariaDBServer::release_lock()
+{
+    // Try to release the lock.
+    string cmd = string_printf("SELECT FREE_LOCK('%s')", LOCK_NAME);
+    string err_msg;
+    auto res_release_lock = execute_query(cmd, &err_msg);
+    if (res_release_lock)
+    {
+        if (res_release_lock->get_int(0) == 1)
+        {
+            // Expected.
+            m_have_lock = false;
+        }
+        else
+        {
+            // Lock did not exist or was not owned by this connection. Error will be detected by
+            // 'update_lock_status'.
+        }
+    }
+    else
+    {
+        MXS_ERROR("Failed to release lock on server '%s'. %s", name(), err_msg.c_str());
+    }
 }

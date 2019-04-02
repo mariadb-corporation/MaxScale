@@ -19,6 +19,8 @@ const int64_t SERVER_ID_UNKNOWN = -1;
 const int64_t GTID_DOMAIN_UNKNOWN = -1;
 /** Default port */
 const int PORT_UNKNOWN = 0;
+/** Server lock name */
+const char* LOCK_NAME = "maxscale_mariadbmonitor";
 
 using std::string;
 

@@ -44,6 +44,13 @@ public:
     class Test;
     friend class Test;
 
+    enum class RequireLocks
+    {
+        NONE,
+        MAJORITY_RUNNING,
+        MAJORITY_ALL
+    };
+
     /**
      * Create the monitor instance and return the instance data.
      *
@@ -221,6 +228,9 @@ private:
     bool m_warn_cannot_rejoin {true};           /* Print warning if auto_rejoin fails because of invalid
                                                  * gtid:s? */
 
+    mxb::StopWatch m_last_lock_update;  /* Time since last lock status update */
+    bool m_have_lock_majority {false};  /* Does the monitor have lock majority? */
+
     // MariaDB-Monitor specific settings. These are only written to when configuring the monitor.
     class Settings
     {
@@ -255,6 +265,10 @@ private:
         bool enforce_simple_topology {false};       /* Can the monitor assume and enforce a simple, 1-master
                                                      * and N slaves topology? Also allows unsafe failover */
 
+        /* Should all cluster modification commands require a majority of server locks?
+         * Used in multi-Maxscale situations. */
+        RequireLocks require_server_locks {RequireLocks::NONE};
+
         // Cluster operations additional settings
         int  failover_timeout {10};            /* Time limit in seconds for failover */
         int  switchover_timeout {10};          /* Time limit in seconds for switchover */
@@ -278,6 +292,8 @@ private:
     void reset_node_index_info();
     bool execute_manual_command(std::function<void ()> command, json_t** error_out);
     bool immediate_tick_required() const;
+    bool require_server_locks() const;
+    bool check_lock_status_this_tick();
 
     std::string diagnostics_to_string() const;
     json_t*     to_json() const;
@@ -297,6 +313,7 @@ private:
     void assign_server_roles();
     void assign_slave_and_relay_master(MariaDBServer* start_node);
     void check_cluster_operations_support();
+    void update_cluster_lock_status();
 
     MariaDBServer* find_topology_master_server(RequireRunning req_running, std::string* msg_out = nullptr);
     MariaDBServer* find_best_reach_server(const ServerArray& candidates);
@@ -318,6 +335,7 @@ private:
     void handle_low_disk_space_master();
     void handle_auto_failover();
     void handle_auto_rejoin();
+    bool lock_status_is_ok(json_t** error_out = nullptr) const;
 
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration* event_age_out,

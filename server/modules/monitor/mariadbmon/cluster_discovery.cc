@@ -1005,6 +1005,61 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
     return is_valid;
 };
 
+void MariaDBMonitor::update_cluster_lock_status()
+{
+    if (require_server_locks())
+    {
+        int locks_held = 0;
+        int running_servers = 0;
+        for (MariaDBServer* server : servers())
+        {
+            locks_held += server->m_have_lock;
+            running_servers += server->is_running();
+        }
+
+        // Check if the monitor has a majority of locks.
+        bool had_lock_majority = m_have_lock_majority;
+        bool have_lock_majority = false;
+        if (m_settings.require_server_locks == RequireLocks::MAJORITY_RUNNING)
+        {
+            have_lock_majority = (locks_held >= (running_servers / 2 + 1));
+        }
+        else if (m_settings.require_server_locks == RequireLocks::MAJORITY_ALL)
+        {
+            have_lock_majority = (locks_held >= ((int)servers().size() / 2 + 1));
+        }
+
+        // Release locks if no majority. This gives another MaxScale the chance to get them.
+        // TODO: multithread
+        if (locks_held > 0 && !have_lock_majority)
+        {
+            for (MariaDBServer* server : servers())
+            {
+                if (server->m_have_lock)
+                {
+                    server->release_lock();
+                }
+            }
+        }
+
+        // If situation changed, log it.
+        if (have_lock_majority != had_lock_majority)
+        {
+            if (have_lock_majority)
+            {
+                MXS_NOTICE("'%s' acquired the exclusive lock on the majority of its servers. "
+                           "Cluster manipulation operations such as failover can be executed.", name());
+            }
+            else
+            {
+                MXS_WARNING("'%s' lost the exclusive lock on the majority of its servers. "
+                            "Cluster manipulation operations such as failover are disabled.", name());
+            }
+        }
+        m_have_lock_majority = have_lock_majority;
+    }
+}
+
 string MariaDBMonitor::DNSResolver::resolve_server(const string& host)
 {
     auto now = mxb::Clock::now();

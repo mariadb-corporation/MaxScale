@@ -154,6 +154,7 @@ public:
     GtidList         m_gtid_binlog_pos;     /* Gtid of latest event written to binlog. */
     SlaveStatusArray m_slave_status;        /* Data returned from SHOW (ALL) SLAVE(S) STATUS */
     NodeData         m_node;                /* Replication topology data */
+    bool             m_have_lock = false;   /* Does this MaxScale have a lock on the server? */
 
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
      * only written to once. */
@@ -172,6 +173,8 @@ public:
 
     const SharedSettings& m_settings; /* Settings required for various operations */
 
+
+
     /**
      * Print server information to a json object.
      *
@@ -186,7 +189,7 @@ public:
      */
     std::string diagnostics() const;
 
-    void update_server(bool time_to_update_disk_space);
+    void update_server(bool time_to_update_disk_space, bool time_to_update_lock_status);
 
     /**
      * Query this server.
@@ -561,6 +564,9 @@ public:
      * @param bits Which flags to set
      */
     void set_status(uint64_t bits);
+
+    void update_lock_status();
+    void release_lock();
 
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;

@@ -51,6 +51,8 @@ static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_DETECT_STANDALONE_MASTER[] = "detect_standalone_master";
 static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
 static const char CN_ASSUME_UNIQUE_HOSTNAMES[] = "assume_unique_hostnames";
+
+
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[] = "verify_master_failure";
 static const char CN_MASTER_FAILURE_TIMEOUT[] = "master_failure_timeout";
@@ -58,6 +60,29 @@ static const char CN_MASTER_FAILURE_TIMEOUT[] = "master_failure_timeout";
 static const char CN_REPLICATION_USER[] = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 static const char CN_REPLICATION_MASTER_SSL[] = "replication_master_ssl";
+
+namespace
+{
+
+const char CLUSTER_OP_REQUIRE_LOCKS[] = "cluster_manipulation_require_locks";
+const MXS_ENUM_VALUE lock_none = {"none", static_cast<int>(MariaDBMonitor::RequireLocks::NONE)};
+const MXS_ENUM_VALUE lock_majority_running =
+{
+    "majority_of_running", static_cast<int>(MariaDBMonitor::RequireLocks::MAJORITY_RUNNING)
+};
+const MXS_ENUM_VALUE lock_majority_all =
+{
+    "majority_of_all", static_cast<int>(MariaDBMonitor::RequireLocks::MAJORITY_ALL)
+};
+
+const MXS_ENUM_VALUE require_lock_values[] =
+{
+        {lock_none},
+        {lock_majority_running},
+        {lock_majority_all},
+};
+
+}
 
 MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
     : MonitorWorker(name, module)
@@ -239,6 +264,8 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.shared.demotion_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
     m_settings.switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
     m_settings.maintenance_on_low_disk_space = params->get_bool(CN_MAINTENANCE_ON_LOW_DISK_SPACE);
+    m_settings.require_server_locks =
+            static_cast<RequireLocks>(params->get_enum(CLUSTER_OP_REQUIRE_LOCKS, require_lock_values));
     m_settings.shared.handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);
     m_settings.shared.replication_ssl = params->get_bool(CN_REPLICATION_MASTER_SSL);
 
@@ -345,6 +372,11 @@ string MariaDBMonitor::diagnostics_to_string() const
         rval += string_printf("%s\n", monitored_servers_to_string(m_settings.excluded_servers).c_str());
     }
 
+    if (require_server_locks())
+    {
+        rval += string_printf("Server lock majority:    %s\n", m_have_lock_majority ? "Yes" : "No");
+    }
+
     rval += string_printf("\nServer information:\n-------------------\n\n");
     for (auto srv : servers())
     {
@@ -426,9 +458,9 @@ void MariaDBMonitor::tick()
 
     // Query all servers for their status.
     bool should_update_disk_space = check_disk_space_this_tick();
-
-    auto update_task = [should_update_disk_space](MariaDBServer* server) {
-        server->update_server(should_update_disk_space);
+    bool should_update_lock_status = check_lock_status_this_tick();
+    auto update_task = [should_update_disk_space, should_update_lock_status](MariaDBServer* server) {
+        server->update_server(should_update_disk_space, should_update_lock_status);
         };
 
     // Asynchronously query all servers for their status.
@@ -453,6 +485,7 @@ void MariaDBMonitor::tick()
         }
     }
 
+    update_cluster_lock_status();
     update_topology();
 
     if (m_cluster_topology_changed)
@@ -715,6 +748,24 @@ bool MariaDBMonitor::execute_manual_command(std::function<void(void)> command, j
 bool MariaDBMonitor::immediate_tick_required() const
 {
     return m_manual_cmd.command_waiting_exec;
+}
+
+bool MariaDBMonitor::require_server_locks() const
+{
+    return (m_settings.require_server_locks == RequireLocks::MAJORITY_ALL)
+        || (m_settings.require_server_locks == RequireLocks::MAJORITY_RUNNING);
+}
+
+bool MariaDBMonitor::check_lock_status_this_tick()
+{
+    bool should_update_lock_status = false;
+    auto check_interval = mxb::Duration((double)60); // Re-check once per minute.
+    if (require_server_locks() && m_last_lock_update.split() > check_interval)
+    {
+        should_update_lock_status = true;
+        m_last_lock_update.restart();
+    }
+    return should_update_lock_status;
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* promotion_server, SERVER* demotion_server,
@@ -1037,6 +1088,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 CN_ENFORCE_SIMPLE_TOPOLOGY,          MXS_MODULE_PARAM_BOOL,      "false"
+            },
+            {
+                    CLUSTER_OP_REQUIRE_LOCKS, MXS_MODULE_PARAM_ENUM, lock_none.name,
+                    MXS_MODULE_OPT_NONE, require_lock_values
             },
             {MXS_END_MODULE_PARAMS}
         }

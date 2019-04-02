@@ -49,6 +49,12 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
      * Manual commands (as well as automatic ones) are ran at the end of a normal monitor loop,
      * so server states can be assumed to be up-to-date.
      */
+
+    if (!lock_status_is_ok(error_out))
+    {
+        return false;
+    }
+
     bool switchover_done = false;
     auto op = switchover_prepare(promotion_server, demotion_server, Log::ON, error_out);
     if (op)
@@ -75,6 +81,11 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
 
 bool MariaDBMonitor::manual_failover(json_t** output)
 {
+    if (!lock_status_is_ok(output))
+    {
+        return false;
+    }
+
     bool failover_done = false;
     auto op = failover_prepare(Log::ON, output);
     if (op)
@@ -99,6 +110,11 @@ bool MariaDBMonitor::manual_failover(json_t** output)
 
 bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
 {
+    if (!lock_status_is_ok(output))
+    {
+        return false;
+    }
+
     bool rval = false;
     if (cluster_can_be_joined())
     {
@@ -1803,6 +1819,21 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* d
     return gtid_domain_ok && gtid_ok;
 }
 
+bool MariaDBMonitor::lock_status_is_ok(json_t** error_out) const
+{
+    if (require_server_locks() && !m_have_lock_majority)
+    {
+        const char locks_taken[] =
+                "Cannot perform cluster operation because this MaxScale does not have exclusive locks "
+                "on a majority of servers. Run \"SELECT IS_USED_LOCK('%s');\" on the servers to find out "
+                "which connection has the locks.";
+        auto err_msg = string_printf(locks_taken, LOCK_NAME);
+        PRINT_MXS_JSON_ERROR(error_out, "%s", err_msg.c_str());
+        return false;
+    }
+    return true;
+}
+
 /**
  * List slaves which should be redirected to the new master.
  *
@@ -1843,7 +1874,7 @@ void MariaDBMonitor::delay_auto_cluster_ops()
 bool MariaDBMonitor::can_perform_cluster_ops()
 {
     return !config_get_global_options()->passive && cluster_operation_disable_timer <= 0
-           && !m_cluster_modified;
+           && !m_cluster_modified && (!require_server_locks() || m_have_lock_majority);
 }
 
 /**

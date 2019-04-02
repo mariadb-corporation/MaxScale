@@ -43,6 +43,7 @@ extern const int64_t SERVER_ID_UNKNOWN;
 extern const int64_t GTID_DOMAIN_UNKNOWN;
 extern const int PORT_UNKNOWN;
 extern const char* const CN_HANDLE_EVENTS;
+extern const char* LOCK_NAME;
 
 // Helper class for concatenating strings with a delimiter.
 class DelimitedPrinter
