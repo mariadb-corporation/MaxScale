@@ -118,6 +118,16 @@ The output shows the statements (the canonical version) in the cache,
 the number of times they have been encountered and how they have been
 classified.
 
+### REST API & MaxCtrl: Hard maintenance mode
+
+The new `--force` option for the `set server` command in MaxCtrl allows all
+connections to the server in question to be closed when it is set into
+maintenance mode. This causes idle connections to be closed immediately.
+
+For more information, read the
+[REST-API](../REST-API/Resources-Server.md#set-server-state) documentation for
+the `set` endpoint.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.4.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.4.0)

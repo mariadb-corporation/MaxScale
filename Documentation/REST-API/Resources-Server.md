@@ -574,6 +574,18 @@ the following URL must be made:
 PUT /v1/servers/db-server-1/set?state=maintenance
 ```
 
+This endpoint also supports the `force=yes` parameter that will cause all
+connections to the server to be closed if `state=maintenance` is also set. By
+default setting a server into maintenance mode will cause connections to be
+closed only after the next request is sent.
+
+The following example forcefully closes all connections to server _db-server-1_
+and sets it into maintenance mode:
+
+```
+PUT /v1/servers/db-server-1/set?state=maintenance&force=yes
+```
+
 #### Response
 
 Server state modified:
