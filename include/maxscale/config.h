@@ -124,6 +124,7 @@ extern const char CN_FIELDS[];
 extern const char CN_FILTERS[];
 extern const char CN_FILTER[];
 extern const char CN_FILTER_DIAGNOSTICS[];
+extern const char CN_FORCE[];
 extern const char CN_FUNCTIONS[];
 extern const char CN_GATEWAY[];
 extern const char CN_HAS_WHERE_CLAUSE[];
@@ -202,6 +203,7 @@ extern const char CN_VERSION_STRING[];
 extern const char CN_WEIGHTBY[];
 extern const char CN_WRITEQ_HIGH_WATER[];
 extern const char CN_WRITEQ_LOW_WATER[];
+extern const char CN_YES[];
 
 /*
  * Global configuration items that are read (or pre_parsed) to be available for

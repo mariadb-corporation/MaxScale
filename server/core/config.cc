@@ -105,6 +105,7 @@ const char CN_FIELDS[] = "fields";
 const char CN_FILTERS[] = "filters";
 const char CN_FILTER[] = "filter";
 const char CN_FILTER_DIAGNOSTICS[] = "filter_diagnostics";
+const char CN_FORCE[] = "force";
 const char CN_FUNCTIONS[] = "functions";
 const char CN_GATEWAY[] = "gateway";
 const char CN_HAS_WHERE_CLAUSE[] = "has_where_clause";
@@ -186,6 +187,7 @@ const char CN_VERSION_STRING[] = "version_string";
 const char CN_WEIGHTBY[] = "weightby";
 const char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
 const char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
+const char CN_YES[] = "yes";
 
 
 extern const char CN_LOGDIR[] = "logdir";
