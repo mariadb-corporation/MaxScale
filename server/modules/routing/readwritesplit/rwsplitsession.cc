@@ -138,12 +138,11 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
     {
         MXS_INFO("New query received while transaction replay is active: %s",
                  mxs::extract_sql(querybuf).c_str());
-        mxb_assert(!m_interrupted_query.get());
-        m_interrupted_query.reset(querybuf);
+        m_query_queue = gwbuf_append(m_query_queue, querybuf);
         return 1;
     }
 
-    if (m_query_queue == NULL
+    if ((m_query_queue == NULL || GWBUF_IS_REPLAYED(querybuf))
         && (m_expected_responses == 0
             || m_qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE
             || m_qc.large_query()))
@@ -468,6 +467,10 @@ void RWSplitSession::trx_replay_next_stmt()
                 {
                     MXS_INFO("Resuming execution: %s", mxs::extract_sql(m_interrupted_query.get()).c_str());
                     retry_query(m_interrupted_query.release(), 0);
+                }
+                else if (m_query_queue)
+                {
+                    route_stored_query();
                 }
             }
             else
