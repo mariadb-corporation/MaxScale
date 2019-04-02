@@ -638,7 +638,7 @@ RWBackend* RWSplitSession::get_master_backend()
     {
         if (master->in_use() || (m_config.master_reconnection && master->can_connect()))
         {
-            if (master->is_master())
+            if (can_continue_using_master(master))
             {
                 rval = master;
             }

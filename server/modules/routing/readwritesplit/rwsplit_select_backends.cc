@@ -395,7 +395,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_master,
                            const BackendSelectFunction& func)
 {
-    if (current_master && current_master->in_use() && current_master->is_master())
+    if (current_master && current_master->in_use() && can_continue_using_master(current_master))
     {
         return current_master;
     }

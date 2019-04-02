@@ -541,7 +541,7 @@ void RWSplitSession::close_stale_connections()
 {
     auto current_rank = get_current_rank();
 
-    for (auto& backend : m_backends)
+    for (auto& backend : m_raw_backends)
     {
         if (backend->in_use())
         {
@@ -549,8 +549,17 @@ void RWSplitSession::close_stale_connections()
 
             if (!server->is_usable())
             {
-                MXS_INFO("Discarding connection to '%s': Server is in maintenance", backend->name());
-                backend->close();
+                if (backend == m_current_master
+                    && can_continue_using_master(m_current_master)
+                    && !session_trx_is_ending(m_client->session))
+                {
+                    MXS_INFO("Keeping connection to '%s' open until transaction ends", backend->name());
+                }
+                else
+                {
+                    MXS_INFO("Discarding connection to '%s': Server is in maintenance", backend->name());
+                    backend->close();
+                }
             }
             else if (server->rank() != current_rank)
             {
