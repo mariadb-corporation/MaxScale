@@ -16,13 +16,6 @@
 # If it is not defined, name will be automatically genereted
 # using $box and current date and time
 
-# $ci_url - URL to Maxscale CI repository
-# (default "http://max-tst-01.mariadb.com/ci-repository/")
-# if build is done also locally and binaries are not uploaded to
-# max-tst-01.mariadb.com $ci_url should toint to local web server
-# e.g. http://192.168.122.1/repository (IP should be a host IP in the
-# virtual network (not 127.0.0.1))
-
 # $product - 'mariadb' or 'mysql'
 
 # $version - version of backend DB (e.g. '10.1', '10.2')
@@ -36,7 +29,7 @@
 # $team_keys - path to the file with open ssh keys to be
 # installed on all VMs (default ${HOME}/team_keys)
 
-# $don_not_destroy_vm - if 'yes' VM won't be destored afther the test
+# $do_not_destroy_vm - if 'yes' VM won't be destored afther the test
 
 # $test_set - parameters to be send to 'ctest' (e.g. '-I 1,100',
 # '-LE UNSTABLE'
@@ -58,60 +51,42 @@ export script_dir="$(dirname $(readlink -f $0))"
 rm -rf LOGS
 
 export target=`echo $target | sed "s/?//g"`
-export name=`echo $name | sed "s/?//g"`
+export mdbci_config_name=`echo ${mdbci_config_name} | sed "s/?//g"`
+
+export provider=`mdbci show provider $box --silent 2> /dev/null`
+export backend_box=${backend_box:-"centos_7_"$provider}
+
+mdbci destroy ${mdbci_config_name}
 
 . ${script_dir}/configure_log_dir.sh
 
-${script_dir}/create_config.sh
-res=$?
-
 ulimit -c unlimited
-if [ $res == 0 ] ; then
-    . ${script_dir}/set_env.sh $name
-    cd ${script_dir}/../../
 
-    mkdir build && cd build
-    cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
-    cd maxscale-system-test
-    make
-set -x
-    echo ${test_set} | grep "NAME#"
-    if [ $? == 0 ] ; then
-        named_test=`echo ${test_set} | sed "s/NAME#//"`
-        echo ${named_test} | grep "\./"
-        if [ $? != 0 ] ; then
-            named_test="./"${named_test}
-        fi
-    fi
+cd ${script_dir}/../../
+mkdir build && cd build
+cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
+cd maxscale-system-test
+make
 
-    if [ ! -z "${named_test}" ] ; then
-        eval ${named_test}
-    else
-        ./check_backend
-        if [ $? != 0 ]; then
-            echo "Backend broken!"
-            if [ "${do_not_destroy_vm}" != "yes" ] ; then
-                ${mdbci_dir}/mdbci destroy $name
-            fi
-            rm -f ~/vagrant_lock
-            exit 1
-        fi
-        ${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name clean
-        ctest -VV ${test_set}
+echo ${test_set} | grep "NAME#"
+if [ $? == 0 ] ; then
+    named_test=`echo ${test_set} | sed "s/NAME#//"`
+    echo ${named_test} | grep "\./"
+    if [ $? != 0 ] ; then
+        named_test="./"${named_test}
     fi
-    cp core.* ${logs_publish_dir}
-    ${script_dir}/copy_logs.sh
-    cd $dir
-else
-  echo "Failed to create VMs, exiting"
-  if [ "${do_not_destroy_vm}" != "yes" ] ; then
-	${mdbci_dir}/mdbci destroy $name
-  fi
-  rm -f ~/vagrant_lock
-  exit 1
 fi
 
+if [ ! -z "${named_test}" ] ; then
+    eval ${named_test}
+else
+    ctest -VV ${test_set}
+fi
+cp core.* ${logs_publish_dir}
+${script_dir}/copy_logs.sh
+cd $dir
+
 if [ "${do_not_destroy_vm}" != "yes" ] ; then
-	${mdbci_dir}/mdbci destroy $name
+	mdbci destroy ${mdbci_config_name}
 	echo "clean up done!"
 fi

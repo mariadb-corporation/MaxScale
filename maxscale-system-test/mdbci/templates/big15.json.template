@@ -3,6 +3,9 @@
   {
         "hostname" : "node_000",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
 	"product" : {
       		"name": "${product}",
 		"version": "${version}",
@@ -16,6 +19,9 @@
   {
         "hostname" : "node_001",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -28,6 +34,9 @@
   {
         "hostname" : "node_002",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -40,6 +49,9 @@
   {
         "hostname" : "node_003",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -51,6 +63,9 @@
   {
         "hostname" : "node_004",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -62,6 +77,9 @@
   {
         "hostname" : "node_005",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -73,6 +91,9 @@
   {
         "hostname" : "node_006",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -84,6 +105,9 @@
   {
         "hostname" : "node_007",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -95,6 +119,9 @@
   {
         "hostname" : "node_008",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -106,6 +133,9 @@
   {
         "hostname" : "node_009",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -117,6 +147,9 @@
   {
         "hostname" : "node_0010",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -128,6 +161,9 @@
   {
         "hostname" : "node_0011",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -139,6 +175,9 @@
   {
         "hostname" : "node_0012",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -150,6 +189,9 @@
   {
         "hostname" : "node_0013",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -161,6 +203,9 @@
   {
         "hostname" : "node_0014",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "REPL_BACKEND"
+        ],
         "product" : {
                 "name": "${product}",
                 "version": "${version}",
@@ -173,6 +218,9 @@
   {
         "hostname" : "galera_000",
         "box" : "centos_7_aws",
+        "labels" : [
+                "GALERA_BACKEND"
+        ],
         "product" : {
                 "name": "galera",
                 "version": "${galera_version}",
@@ -185,6 +233,9 @@
   {
         "hostname" : "galera_001",
         "box" : "centos_7_aws",
+        "labels" : [
+                "GALERA_BACKEND"
+        ],
         "product" : {
                 "name": "galera",
                 "version": "${galera_version}",
@@ -197,6 +248,9 @@
   {
         "hostname" : "galera_002",
         "box" : "centos_7_aws",
+        "labels" : [
+                "GALERA_BACKEND"
+        ],
         "product" : {
                 "name": "galera",
                 "version": "${galera_version}",
@@ -209,6 +263,9 @@
   {
         "hostname" : "galera_003",
         "box" : "centos_7_aws",
+        "labels" : [
+                "GALERA_BACKEND"
+        ],
         "product" : {
                 "name": "galera",
                 "version": "${galera_version}",
@@ -217,10 +274,13 @@
         }
   },
 
-  "maxscale" :
+  "maxscale_000" :
   {
         "hostname" : "maxscale",
         "box" : "centos_7_aws_large",
+        "labels" : [
+                "MAXSCALE"
+        ],
         "product" : {
                 "name" : "maxscale_ci",
                 "version" : "${target}"

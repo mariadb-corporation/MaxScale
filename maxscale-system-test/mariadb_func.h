@@ -1,6 +1,4 @@
-#ifndef MARIADB_FUNC_H
-#define MARIADB_FUNC_H
-
+#pragma once
 
 /**
  * @file mariadb_func.h - basic DB interaction routines
@@ -353,5 +351,3 @@ private:
     bool        m_ssl;
     MYSQL*      m_conn = nullptr;
 };
-
-#endif      // MARIADB_FUNC_H

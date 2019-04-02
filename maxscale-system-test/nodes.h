@@ -1,5 +1,4 @@
-#ifndef NODES_H
-#define NODES_H
+#pragma once
 
 #include <errno.h>
 #include <string>
@@ -17,16 +16,16 @@ class Nodes
 public:
     Nodes();
 
-    char IP[256][1024];
+    char * IP[256];
     /**
      * @brief  private IP address strings for every backend node (for AWS)
      */
 
-    char IP_private[256][1024];
+    char * IP_private[256];
     /**
      * @brief  IP address strings for every backend node (IPv6)
      */
-    char IP6[256][1024];
+    char * IP6[256];
 
     /**
      * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
@@ -37,7 +36,7 @@ public:
     /**
      * @brief  Path to ssh key for every backend node
      */
-    char sshkey[256][4096];
+    char * sshkey[256];
 
     /**
      * @brief Number of backend nodes
@@ -52,38 +51,43 @@ public:
     /**
      * @brief access_user Unix users name to access nodes via ssh
      */
-    char access_user[256][256];
+    char * access_user[256];
 
     /**
      * @brief access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
      */
-    char access_sudo[256][64];
+    char * access_sudo[256];
 
     /**
      * @brief access_homedir home directory of access_user
      */
-    char access_homedir[256][256];
+    char * access_homedir[256];
 
-    char hostname[256][1024];
+    char * hostname[256];
 
     /**
      * @brief stop_vm_command Command to suspend VM
      */
-    char stop_vm_command[256][1024];
+    char * stop_vm_command[256];
     /**
      *
      * @brief start_vm_command Command to resume VM
      */
-    char start_vm_command[256][1024];
+    char * start_vm_command[256];
 
     /**
      * @brief   User name to access backend nodes
      */
-    char user_name[256];
+    char * user_name;
     /**
      * @brief   Password to access backend nodes
      */
-    char password[256];
+    char * password;
+
+    /**
+     * @brief network_config Content of MDBCI network_config file
+     */
+    std::string network_config;
 
     /**
      * @brief Verbose command output
@@ -175,6 +179,19 @@ public:
     int read_basic_env();
 
     /**
+     * @brief get_nc_item Find variable in the MDBCI network_config file
+     * @param item_name Name of the variable
+     * @return value of variable
+     */
+    char *get_nc_item(char * item_name);
+
+    /**
+     * @brief get_N Calculate the number of nodes discribed in the _netoek_config file
+     * @return Number of nodes
+     */
+    int get_N();
+
+    /**
      * @brief start_vm Start virtual machine
      * @param node Node number
      * @return 0 in case of success
@@ -191,5 +208,3 @@ public:
 private:
     int check_node_ssh(int node);
 };
-
-#endif      // NODES_H

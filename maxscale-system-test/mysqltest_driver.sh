@@ -12,7 +12,7 @@ then
     exit 1
 fi
 
-if [ "$maxscale_IP" == "" ]
+if [ "${maxscale_000_network}" == "" ]
 then
     echo "Error: The environment variable maxscale_IP must be set."
     exit 1
@@ -42,19 +42,17 @@ res=0
 [ -d log_$1 ] && rm -r log_$1
 mkdir log_$1
 
-echo
-
 # Run the test
-for t in `$2/t/*.test|xargs -L 1 basename`
+for t in `ls $2/t/*.test|xargs -L 1 basename`
 do
     printf "$t:"
     test_name=${t%%.test}
-    mysqltest --host=$maxscale_IP --port=$port \
+    mysqltest --host=${maxscale_000_network} --port=$port \
               --user=$user --password=$password \
               --logdir=log_$1 \
               --test-file=$2/t/$test_name.test \
-              --result-file=$2/r/$test_name.result \
-              --silent
+              --result-file=$2/r/$test_name.result #\
+#              --silent
 
     if [ $? -eq 0 ]
     then
@@ -64,10 +62,5 @@ do
         res=1
     fi
 done
-
-echo
-
-# Copy logs from the VM
-$src_dir/copy_logs.sh $1
 
 exit $res

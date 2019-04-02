@@ -33,6 +33,7 @@ int get_my_ip(char* remote_ip, char* my_ip)
     serv.sin_addr.s_addr = inet_addr(remote_ip);
     serv.sin_port = htons(dns_port);
 
+
     connect(sock, (const struct sockaddr*) &serv, sizeof(serv));
 
     struct sockaddr_in name;

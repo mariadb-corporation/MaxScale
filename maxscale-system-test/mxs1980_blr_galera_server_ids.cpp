@@ -334,10 +334,11 @@ void restore_server_ids(TestConnections& test, const map<int, string>& server_id
 {
     for_each(server_ids_by_index.begin(),
              server_ids_by_index.end(),
-             [&test](const pair<int, string>& server_id_by_index) {
-                 test.try_query(test.galera->nodes[server_id_by_index.first],
-                                "set GLOBAL server_id=%s", server_id_by_index.second.c_str());
-             });
+             [&test](const pair<int, string>& server_id_by_index)
+    {
+        test.try_query(test.galera->nodes[server_id_by_index.first],
+                       "set GLOBAL server_id=%s", server_id_by_index.second.c_str());
+    });
 }
 
 // STOP SLAVE; START SLAVE cycle.
@@ -345,9 +346,10 @@ void restart_slave(TestConnections& test, MYSQL* pSlave)
 {
     Row row;
 
-    auto replication_failed = [](const std::string& column) {
-            return column.find("Got fatal error") != string::npos;
-        };
+    auto replication_failed = [](const std::string & column)
+    {
+        return column.find("Got fatal error") != string::npos;
+    };
 
     cout << "Stopping slave." << endl;
     test.try_query(pSlave, "STOP SLAVE");
@@ -441,7 +443,10 @@ int main(int argc, char* argv[])
 
     if (setup_server_ids(test, &server_ids_by_index))
     {
-        for (Approach approach : {Approach::GTID, Approach::FILE_POS})
+        for (Approach approach :
+             {
+                 Approach::GTID, Approach::FILE_POS
+             })
         {
             inserted_rows = 0;
 
@@ -483,9 +488,9 @@ int main(int argc, char* argv[])
             {
                 if (setup_blr(test, pMaxscale, gtid, approach))
                 {
-                    int slave_index = test.repl->N - 1;     // We use the last slave.
+                    int slave_index = test.galera->N - 1;     // We use the last slave.
 
-                    Mariadb_nodes& ms = *test.repl;
+                    Mariadb_nodes& ms = *test.galera;
                     ms.connect(slave_index);
 
                     MYSQL* pSlave = ms.nodes[slave_index];
