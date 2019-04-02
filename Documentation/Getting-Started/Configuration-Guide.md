@@ -142,6 +142,40 @@ invoked without explicitly providing a user and password then they will
 by default use `admin` and `mariadb`. That means that when the default
 user is removed, the credentials must always be provded.
 
+### Static Configuration Parameters
+
+The following list of global configuration parameters can **NOT** be changed at
+runtime and can only be defined in a configuration file:
+
+* `threads`
+* `thread_stack_size`
+* `log_to_shm`
+* `log_augmentation`
+* `logdir`
+* `datadir`
+* `libdir`
+* `cachedir`
+* `piddir`
+* `execdir`
+* `connector_plugindir`
+* `persistdir`
+* `module_configdir`
+* `language`
+* `query_classifier`
+* `query_classifier_args`
+* `substitute_variables`
+* `sql_mode`
+* `local_address`
+* `users_refresh_time`
+* `admin_auth`
+* `admin_ssl_key`
+* `admin_ssl_cert`
+* `admin_ssl_ca_cert`
+* `admin_enabled`
+
+All other parameters that relate to objects can be altered at runtime or can be
+changed by destroying and recreating the object in question.
+
 ## Configuration
 
 The MariaDB MaxScale configuration is read from a file that MariaDB MaxScale
