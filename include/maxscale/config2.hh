@@ -298,30 +298,10 @@ private:
     value_type m_default_value;
 };
 
-/**
- * ParamCount
- */
-class ParamCount : public Param
+class ParamNumber : public Param
 {
 public:
-    using value_type = uint64_t;
-
-    ParamCount(Specification* pSpecification,
-               const char* zName,
-               const char* zDescription)
-        : ParamCount(pSpecification, zName, zDescription, Param::MANDATORY, value_type())
-    {
-    }
-
-    ParamCount(Specification* pSpecification,
-               const char* zName,
-               const char* zDescription,
-               value_type default_value)
-        : ParamCount(pSpecification, zName, zDescription, Param::OPTIONAL, default_value)
-    {
-    }
-
-    std::string type() const override;
+    using value_type = int64_t;
 
     std::string default_to_string() const override;
 
@@ -332,19 +312,164 @@ public:
     bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
+protected:
+    ParamNumber(Specification* pSpecification,
+                const char* zName,
+                const char* zDescription,
+                Kind kind,
+                mxs_module_param_type legacy_type,
+                value_type default_value,
+                value_type min_value,
+                value_type max_value)
+        : Param(pSpecification, zName, zDescription, kind, legacy_type)
+        , m_default_value(default_value)
+        , m_min_value(min_value <= max_value ? min_value : max_value)
+        , m_max_value(max_value)
+    {
+        mxb_assert(min_value <= max_value);
+    }
+
+private:
+    value_type m_default_value;
+    value_type m_min_value;
+    value_type m_max_value;
+};
+
+/**
+ * ParamCount
+ */
+class ParamCount : public ParamNumber
+{
+public:
+    ParamCount(Specification* pSpecification,
+               const char* zName,
+               const char* zDescription)
+        : ParamCount(pSpecification, zName, zDescription, Param::MANDATORY,
+                     value_type(), 0, std::numeric_limits<uint32_t>::max())
+    {
+    }
+
+    ParamCount(Specification* pSpecification,
+               const char* zName,
+               const char* zDescription,
+               value_type min_value,
+               value_type max_value)
+        : ParamCount(pSpecification, zName, zDescription, Param::MANDATORY,
+                     value_type(), min_value, max_value)
+    {
+    }
+
+    ParamCount(Specification* pSpecification,
+               const char* zName,
+               const char* zDescription,
+               value_type default_value)
+        : ParamCount(pSpecification, zName, zDescription, Param::OPTIONAL,
+                     default_value, 0, std::numeric_limits<uint32_t>::max())
+    {
+    }
+
+    ParamCount(Specification* pSpecification,
+               const char* zName,
+               const char* zDescription,
+               value_type default_value,
+               value_type min_value,
+               value_type max_value)
+        : ParamCount(pSpecification, zName, zDescription, Param::OPTIONAL,
+                     default_value, min_value, max_value)
+    {
+    }
+
+    std::string type() const override;
+
 private:
     ParamCount(Specification* pSpecification,
                const char* zName,
                const char* zDescription,
                Kind kind,
-               value_type default_value)
-        : Param(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_COUNT)
-        , m_default_value(default_value)
+               value_type default_value,
+               value_type min_value,
+               value_type max_value)
+        : ParamNumber(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_COUNT,
+                      default_value,
+                      min_value >= 0 ? min_value : 0,
+                      max_value <= std::numeric_limits<uint32_t>::max()
+                      ? max_value : std::numeric_limits<uint32_t>::max())
+    {
+        mxb_assert(min_value >= 0);
+        mxb_assert(max_value <= std::numeric_limits<uint32_t>::max());
+    }
+};
+
+using ParamNatural = ParamCount;
+
+/**
+ * ParamInteger
+ */
+class ParamInteger : public ParamNumber
+{
+public:
+    ParamInteger(Specification* pSpecification,
+                 const char* zName,
+                 const char* zDescription)
+        : ParamInteger(pSpecification, zName, zDescription, Param::MANDATORY,
+                       value_type(),
+                       std::numeric_limits<int32_t>::min(),
+                       std::numeric_limits<int32_t>::max())
     {
     }
 
+    ParamInteger(Specification* pSpecification,
+                 const char* zName,
+                 const char* zDescription,
+                 value_type min_value,
+                 value_type max_value)
+        : ParamInteger(pSpecification, zName, zDescription, Param::MANDATORY,
+                       value_type(), min_value, max_value)
+    {
+    }
+
+    ParamInteger(Specification* pSpecification,
+                 const char* zName,
+                 const char* zDescription,
+                 value_type default_value)
+        : ParamInteger(pSpecification, zName, zDescription, Param::OPTIONAL,
+                       default_value,
+                       std::numeric_limits<int32_t>::min(),
+                       std::numeric_limits<int32_t>::max())
+    {
+    }
+
+    ParamInteger(Specification* pSpecification,
+                 const char* zName,
+                 const char* zDescription,
+                 value_type default_value,
+                 value_type min_value,
+                 value_type max_value)
+        : ParamInteger(pSpecification, zName, zDescription, Param::OPTIONAL,
+                       default_value, min_value, max_value)
+    {
+    }
+
+    std::string type() const override;
+
 private:
-    value_type m_default_value;
+    ParamInteger(Specification* pSpecification,
+                 const char* zName,
+                 const char* zDescription,
+                 Kind kind,
+                 value_type default_value,
+                 value_type min_value,
+                 value_type max_value)
+        : ParamNumber(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_INT,
+                      default_value,
+                      min_value >= std::numeric_limits<int32_t>::min()
+                      ? min_value : std::numeric_limits<int32_t>::min(),
+                      max_value <= std::numeric_limits<int32_t>::max()
+                      ? max_value : std::numeric_limits<int32_t>::max())
+    {
+        mxb_assert(min_value >= std::numeric_limits<int32_t>::min());
+        mxb_assert(max_value <= std::numeric_limits<int32_t>::max());
+    }
 };
 
 /**
@@ -624,7 +749,7 @@ private:
 /**
  * ParamBitMask
  */
-using ParamBitMask  = ParamCount;
+using ParamBitMask = ParamCount;
 
 /**
  * An instance of the class Configuration specifies the configuration of a particular
@@ -954,14 +1079,35 @@ inline bool operator >= (const typename ParamType::value_type& lhs,
 }
 
 
+class Number : public ConcreteType<Number, ParamNumber>
+{
+protected:
+    Number(Configuration* pConfiguration, const ParamNumber* pParam)
+        : ConcreteType(pConfiguration, pParam)
+    {
+    }
+};
+
 /**
  * Count
  */
-class Count : public ConcreteType<Count, ParamCount>
+class Count : public Number
 {
 public:
-    Count(Configuration*  pConfiguration, const ParamCount* pParam)
-        : ConcreteType(pConfiguration, pParam)
+    Count(Configuration* pConfiguration, const ParamCount* pParam)
+        : Number(pConfiguration, pParam)
+    {
+    }
+};
+
+/**
+ * Integer
+ */
+class Integer : public Number
+{
+public:
+    Integer(Configuration* pConfiguration, const ParamInteger* pParam)
+        : Number(pConfiguration, pParam)
     {
     }
 };

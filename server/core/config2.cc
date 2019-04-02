@@ -439,49 +439,44 @@ string ParamBool::to_string(value_type value) const
 }
 
 /**
- * ParamCount
+ * ParamNumber
  */
-std::string ParamCount::type() const
-{
-    return "count";
-}
-
-std::string ParamCount::default_to_string() const
+std::string ParamNumber::default_to_string() const
 {
     return to_string(m_default_value);
 }
 
-bool ParamCount::validate(const std::string& value_as_string, std::string* pMessage) const
+bool ParamNumber::validate(const std::string& value_as_string, std::string* pMessage) const
 {
     value_type value;
     return from_string(value_as_string, &value, pMessage);
 }
 
-bool ParamCount::set(Type& value, const std::string& value_as_string) const
+bool ParamNumber::set(Type& value, const std::string& value_as_string) const
 {
     mxb_assert(&value.parameter() == this);
 
-    Count& count_value = static_cast<Count&>(value);
+    Number& number_value = static_cast<Number&>(value);
 
     value_type x;
     bool valid = from_string(value_as_string, &x);
 
     if (valid)
     {
-        count_value.set(x);
+        number_value.set(x);
     }
 
     return valid;
 }
 
-bool ParamCount::from_string(const std::string& value_as_string,
-                             value_type* pValue,
-                             std::string* pMessage) const
+bool ParamNumber::from_string(const std::string& value_as_string,
+                              value_type* pValue,
+                              std::string* pMessage) const
 {
     const char* zValue = value_as_string.c_str();
     char* zEnd;
     long l = strtol(zValue, &zEnd, 10);
-    bool valid = (l >= 0 && zEnd != zValue && *zEnd == 0);
+    bool valid = (l >= m_min_value && l <= m_max_value && zEnd != zValue && *zEnd == 0);
 
     if (valid)
     {
@@ -489,16 +484,47 @@ bool ParamCount::from_string(const std::string& value_as_string,
     }
     else if (pMessage)
     {
-        *pMessage = "Invalid count: ";
+        if (!(zEnd != zValue && *zEnd == 0))
+        {
+            *pMessage = "Invalid ";
+        }
+        else if (!(l >= m_min_value))
+        {
+            *pMessage = "Too small a ";
+        }
+        else
+        {
+            mxb_assert(!(l <= m_max_value));
+            *pMessage = "Too large a ";
+        }
+
+        *pMessage += type();
+        *pMessage += ": ";
         *pMessage += value_as_string;
     }
 
     return valid;
 }
 
-std::string ParamCount::to_string(value_type value) const
+std::string ParamNumber::to_string(value_type value) const
 {
     return std::to_string(value);
+}
+
+/**
+ * ParamCount
+ */
+std::string ParamCount::type() const
+{
+    return "count";
+}
+
+/**
+ * ParamInteger
+ */
+std::string ParamInteger::type() const
+{
+    return "integer";
 }
 
 /**

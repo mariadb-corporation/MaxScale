@@ -46,6 +46,11 @@ param_count(&specification,
             "count_parameter",
             "Specifies the cardinality of something.");
 
+config::ParamInteger
+param_integer(&specification,
+              "integer_parameter",
+              "Specifies a number.");
+
 config::ParamDuration<std::chrono::seconds>
 param_duration_1(&specification,
                  "duration_parameter_1",
@@ -274,6 +279,24 @@ int test_string(config::String& value)
     return test(value, entries, elements_in_array(entries));
 }
 
+int test_integer(config::Integer& value)
+{
+    static const TestEntry<config::Integer::value_type> entries[] =
+    {
+        { "0",           true, 0 },
+        { "-1",          true, -1 },
+        { "1",           true, 1 },
+        { "-2147483648", true, -2147483648 },
+        { "2147483647",  true, 2147483647 },
+
+        { "-2147483649", false },
+        { "2147483648",  false },
+        { "0x10"  ,      false },
+    };
+
+    return test(value, entries, elements_in_array(entries));
+}
+
 int main()
 {
     mxb::Log log;
@@ -313,6 +336,9 @@ int main()
 
     config::String value_string(&configuration, &param_string);
     nErrors += test_string(value_string);
+
+    config::Integer value_integer(&configuration, &param_integer);
+    nErrors += test_integer(value_integer);
 
     return nErrors ? EXIT_FAILURE : EXIT_SUCCESS;
 }
