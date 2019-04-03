@@ -164,6 +164,7 @@ runtime and can only be defined in a configuration file:
 * `sql_mode`
 * `local_address`
 * `users_refresh_time`
+* `load_persisted_configs`
 * `admin_auth`
 * `admin_ssl_key`
 * `admin_ssl_cert`
@@ -870,6 +871,19 @@ Low water mark for network write buffer. Once the traffic throttling is enabled,
 it will only be disabled when the write queue is below `writeq_low_water`. The
 parameter accepts size type values. The minimum allowed size is 512
 bytes. `writeq_high_water` must always be greater than `writeq_low_water`.
+
+#### `load_persisted_configs`
+
+Load persisted runtime changes on startup. This parameter accepts boolean values
+and is enabled by default. This parameter was added in MaxScale 2.3.6.
+
+All runtime configuration changes are persisted in generated configuration files
+located by default in `/var/lib/maxscale/maxscale.cnf.d/` and are loaded on
+startup after main configuration files have been read. To make runtime
+configurations volatile (i.e. they are lost when maxscale is restarted), use
+`load_persisted_configs=false`. All changes are still persisted since it stores
+the current runtime state of MaxScale. This makes problem analysis easier if an
+unexpected outage happens.
 
 ### REST API Configuration
 

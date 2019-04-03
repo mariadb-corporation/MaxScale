@@ -164,6 +164,7 @@ extern const char CN_QUERY_RETRIES[];
 extern const char CN_QUERY_RETRY_TIMEOUT[];
 extern const char CN_RELATIONSHIPS[];
 extern const char CN_LINKS[];
+extern const char CN_LOAD_PERSISTED_CONFIGS[];
 extern const char CN_REQUIRED[];
 extern const char CN_RETAIN_LAST_STATEMENTS[];
 extern const char CN_RETRY_ON_FAILURE[];
@@ -294,6 +295,7 @@ typedef struct
     char             peer_user[MAX_ADMIN_HOST_LEN];     /**< Username for maxscale-to-maxscale traffic */
     char             peer_password[MAX_ADMIN_HOST_LEN]; /**< Password for maxscale-to-maxscale traffic */
     mxb_log_target_t log_target;                        /**< Log type */
+    bool             load_persisted_configs;            /**< Load persisted configuration files on startup */
 } MXS_CONFIG;
 
 /**
