@@ -381,3 +381,105 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
 }
 
 }
+
+#if defined(SS_DEBUG)
+/**
+ * Return decoded MySQL response packet.
+ *
+ * Intended to be used when debugging with a GDB-based debugger.
+ * For instance, if GDB has been stopped by a breakpoint in
+ * clientReply() you can use this function for investigating
+ * what the response packet contains:
+ *
+ * (gdb) p dbg_decode_response(writebuf)
+ * $30 = 0x7ffff0d40d54 "Packet no: 1, Payload len: 44, Command : ERR,
+ * Code: 1146, Message : Table 'test.blahasdf' doesn't exist"
+ *
+ * @param pPacket  A MySQL response packet.
+ *
+ * @return The packet decoded into a descriptive string.
+ */
+char *dbg_decode_response(GWBUF* pPacket)
+{
+    uint8_t header[MYSQL_HEADER_LEN + 1];
+
+    gwbuf_copy_data(pPacket, 0, sizeof(header), header);
+
+    uint32_t payload_len = MYSQL_GET_PAYLOAD_LEN(header);
+    uint32_t packet_no = MYSQL_GET_PACKET_NO(header);
+
+    uint32_t command = std::numeric_limits<uint32_t>::max();
+
+    if (gwbuf_length(pPacket) > MYSQL_HEADER_LEN)
+    {
+        command = MYSQL_GET_COMMAND(header);
+    }
+
+    const int buflen = 1024; // Should be enough.
+
+    thread_local char buffer[buflen];
+
+    int len = buflen;
+    char* z = buffer;
+
+    int l = snprintf(z, len, "Packet no: %u, Payload len: %u", packet_no, payload_len);
+
+    z += l;
+    len -= l;
+
+    switch (command)
+    {
+    case 0x00:
+        snprintf(z, len, ", Command : OK");
+        break;
+
+    case 0xff:
+        {
+            l = snprintf(z, len, ", Command : ERR");
+            z += l;
+            len -= l;
+
+            uint8_t error[payload_len];
+
+            gwbuf_copy_data(pPacket, MYSQL_HEADER_LEN, payload_len, error);
+
+            uint32_t error_code = gw_mysql_get_byte2(&error[1]);
+
+            l = snprintf(z, len, ", Code: %u", error_code);
+            z += l;
+            len -= l;
+
+            const int message_index = 1 + 2 + 1 + 5;
+            uint8_t* pMessage = &error[message_index];
+
+            l = snprintf(z, len, ", Message : ");
+
+            z += l;
+            len -= l;
+
+            int message_len = payload_len - message_index;
+
+            if (message_len + 1 > len)
+            {
+                message_len = len - 1;
+            }
+
+            strncpy(z, (char*)pMessage, message_len);
+            z[message_len] = 0;
+        }
+        break;
+
+    case 0xfb:
+        snprintf(z, len, ", Command : GET_MORE_CLIENT_DATA");
+        break;
+
+    case std::numeric_limits<uint32_t>::max():
+        break;
+
+    default:
+        snprintf(z, len, ", Command : Result Set");
+    }
+
+    return buffer;
+}
+#endif
