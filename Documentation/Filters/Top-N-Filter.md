@@ -37,7 +37,7 @@ module=topfilter
 
 [Service]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 password=mypasswd
@@ -196,7 +196,7 @@ In the service definition add both filters
 ```
 [App-Service]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 password=mypasswd

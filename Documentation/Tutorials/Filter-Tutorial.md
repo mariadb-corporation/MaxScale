@@ -142,7 +142,7 @@ protocol=MariaDBBackend
 
 [Cassandra]
 type=service
-router=readconnrouter
+router=readconnroute
 router_options=running
 servers=CassandraDB
 user=maxscale
