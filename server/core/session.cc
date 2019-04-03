@@ -1490,7 +1490,7 @@ void Session::retain_statement(GWBUF* pBuffer)
     {
         mxb_assert(m_last_queries.size() <= m_retain_last_statements);
 
-        std::shared_ptr<GWBUF> sBuffer(gwbuf_clone(pBuffer));
+        std::shared_ptr<GWBUF> sBuffer(gwbuf_clone(pBuffer), std::default_delete<GWBUF>());
 
         m_last_queries.push_front(QueryInfo(sBuffer));
 
