@@ -22,8 +22,6 @@
 
 MXS_BEGIN_DECLS
 
-#define ADMIN_SALT "$1$MXS"
-
 /* Max length of fields in for admin users */
 #define ADMIN_USER_MAXLEN       128
 #define ADMIN_PASSWORD_MAXLEN   128

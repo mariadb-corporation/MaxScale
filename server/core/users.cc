@@ -31,6 +31,12 @@ namespace
 static const char STR_BASIC[] = "basic";
 static const char STR_ADMIN[] = "admin";
 
+// Generates SHA2-512 hashes
+constexpr const char* ADMIN_SALT = "$6$MXS";
+
+// Generates MD5 hashes, only used for authentication of old users
+constexpr const char* OLD_ADMIN_SALT = "$1$MXS";
+
 struct UserInfo
 {
     UserInfo()
@@ -65,9 +71,9 @@ public:
     {
     }
 
-    bool add(std::string user, std::string password, user_account_type perm)
+    bool add(const std::string& user, const std::string& password, user_account_type perm)
     {
-        return add_hashed(user, mxs::crypt(password, ADMIN_SALT), perm);
+        return add_hashed(user, hash(password), perm);
     }
 
     bool remove(std::string user)
@@ -99,6 +105,21 @@ public:
             {
                 *output = it->second;
             }
+        }
+
+        return rval;
+    }
+
+    bool authenticate(const std::string& user, const std::string& password)
+    {
+        bool rval = false;
+        UserInfo info;
+
+        if (get(user, &info))
+        {
+            // The second character tell us which hashing function to use
+            auto crypted = info.password[1] == ADMIN_SALT[1] ? hash(password) : old_hash(password);
+            rval = info.password == crypted;
         }
 
         return rval;
@@ -208,7 +229,7 @@ public:
     }
 
 private:
-    bool add_hashed(std::string user, std::string password, user_account_type perm)
+    bool add_hashed(const std::string& user, const std::string& password, user_account_type perm)
     {
         std::lock_guard<std::mutex> guard(m_lock);
         return m_data.insert(std::make_pair(user, UserInfo(password, perm))).second;
@@ -245,6 +266,16 @@ private:
                 MXS_ERROR("Corrupt JSON value in users file: %s", mxs::json_dump(value).c_str());
             }
         }
+    }
+
+    std::string hash(const std::string& password)
+    {
+        return mxs::crypt(password, ADMIN_SALT);
+    }
+
+    std::string old_hash(const std::string& password)
+    {
+        return mxs::crypt(password, OLD_ADMIN_SALT);
     }
 
     mutable std::mutex m_lock;
@@ -297,15 +328,7 @@ bool users_find(USERS* users, const char* user)
 bool users_auth(USERS* users, const char* user, const char* password)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    bool rval = false;
-    UserInfo info;
-
-    if (u->get(user, &info))
-    {
-        rval = info.password == mxs::crypt(password, ADMIN_SALT);
-    }
-
-    return rval;
+    return u->authenticate(user, password);
 }
 
 bool users_is_admin(USERS* users, const char* user, const char* password)
