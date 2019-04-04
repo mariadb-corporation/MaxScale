@@ -813,6 +813,11 @@ bool RWSplitSession::start_trx_replay()
             m_trx.close();
             m_trx = m_orig_trx;
             m_current_query.copy_from(m_orig_stmt);
+
+            // Erase all replayed queries from the query queue to prevent checksum mismatches
+            m_query_queue.erase(std::remove_if(m_query_queue.begin(), m_query_queue.end(), [](mxs::Buffer b) {
+                                                   return GWBUF_IS_REPLAYED(b.get());
+                                               }), m_query_queue.end());
         }
 
         if (m_trx.have_stmts() || m_current_query.get())
