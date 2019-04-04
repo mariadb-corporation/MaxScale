@@ -3161,9 +3161,9 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
                 MXS_ERROR("Invalid value for parameter '%s' for object '%s' "
                           "of type '%s': %s (was expecting %s)",
                           params->name,
-                          params->value,
                           obj->object,
                           type.c_str(),
+                          params->value,
                           param_type_to_str(fix_params, params->name));
                 rval = false;
             }
