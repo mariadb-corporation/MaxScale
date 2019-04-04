@@ -16,6 +16,7 @@
 #include "trx.hh"
 
 #include <string>
+#include <deque>
 
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.h>
@@ -140,18 +141,17 @@ public:
     int                 m_nbackends;            /**< Number of backend servers (obsolete) */
     DCB*                m_client;               /**< The client DCB */
     uint64_t            m_sescmd_count;         /**< Number of executed session commands (starts from 1) */
-    int                 m_expected_responses;   /**< Number of expected responses to the current
-                                                 * query */
-    GWBUF*                  m_query_queue;      /**< Queued commands waiting to be executed */
+    int                 m_expected_responses;   /**< Number of expected responses to the current query */
+
+    std::deque<mxs::Buffer> m_query_queue;      /**< Queued commands waiting to be executed */
     RWSplit*                m_router;           /**< The router instance */
     mxs::SessionCommandList m_sescmd_list;      /**< List of executed session commands */
     ResponseMap             m_sescmd_responses; /**< Response to each session command */
     SlaveResponseList       m_slave_responses;  /**< Slaves that replied before the master */
     uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
-    uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
-                                                 * command */
-    ExecMap         m_exec_map;                 /**< Map of COM_STMT_EXECUTE statement IDs to
-                                                 * Backends */
+    uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session command */
+    ExecMap                 m_exec_map;         /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
+
     std::string          m_gtid_pos;            /**< Gtid position for causal read */
     wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
     uint32_t             m_next_seq;            /**< Next packet's sequence number */
