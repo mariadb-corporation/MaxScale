@@ -35,6 +35,8 @@
 
 #include <maxscale/users.h>
 
+#include "test_utils.hh"
+
 static int test1()
 {
     USERS* users;
@@ -81,6 +83,7 @@ int main(int argc, char** argv)
 {
     int result = 0;
 
+    init_test_env(nullptr);
     result += test1();
 
     exit(result);

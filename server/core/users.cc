@@ -67,8 +67,7 @@ public:
 
     bool add(std::string user, std::string password, user_account_type perm)
     {
-        std::lock_guard<std::mutex> guard(m_lock);
-        return m_data.insert(std::make_pair(user, UserInfo(password, perm))).second;
+        return add_hashed(user, mxs::crypt(password, ADMIN_SALT), perm);
     }
 
     bool remove(std::string user)
@@ -209,6 +208,11 @@ public:
     }
 
 private:
+    bool add_hashed(std::string user, std::string password, user_account_type perm)
+    {
+        std::lock_guard<std::mutex> guard(m_lock);
+        return m_data.insert(std::make_pair(user, UserInfo(password, perm))).second;
+    }
 
     static bool is_admin(const UserMap::value_type& value)
     {
@@ -232,9 +236,9 @@ private:
                 && password && json_is_string(password)
                 && json_to_account_type(type) != USER_ACCOUNT_UNKNOWN)
             {
-                add(json_string_value(name),
-                    json_string_value(password),
-                    json_to_account_type(type));
+                add_hashed(json_string_value(name),
+                           json_string_value(password),
+                           json_to_account_type(type));
             }
             else
             {

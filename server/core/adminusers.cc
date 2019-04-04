@@ -432,8 +432,7 @@ bool admin_linux_account_enabled(const char* uname)
  */
 const char* admin_add_inet_user(const char* uname, const char* password, enum user_account_type type)
 {
-    auto cpassword = mxs::crypt(password, ADMIN_SALT);
-    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, cpassword.c_str(), type);
+    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, password, type);
 }
 
 /**
