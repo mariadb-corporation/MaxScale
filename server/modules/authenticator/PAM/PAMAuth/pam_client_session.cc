@@ -14,7 +14,7 @@
 #include "pam_client_session.hh"
 
 #include <sstream>
-#include <security/pam_appl.h>
+#include <maxbase/pam_utils.hh>
 #include <maxscale/event.hh>
 
 using maxscale::Buffer;
@@ -75,145 +75,6 @@ int user_services_cb(void* data, int columns, char** column_vals, char** column_
     return 0;
 }
 
-/** Used by the PAM conversation function */
-struct ConversationData
-{
-    DCB*   m_client;
-    int    m_counter;
-    string m_password;
-
-    ConversationData(DCB* client, int counter, const string& password)
-        : m_client(client)
-        , m_counter(counter)
-        , m_password(password)
-    {
-    }
-};
-
-/**
- * PAM conversation function. The implementation "cheats" by not actually doing
- * I/O with the client. This should only be called once per client when
- * authenticating. See
- * http://www.linux-pam.org/Linux-PAM-html/adg-interface-of-app-expected.html#adg-pam_conv
- * for more information.
- */
-int conversation_func(int num_msg,
-                      const struct pam_message** msg,
-                      struct pam_response** resp_out,
-                      void* appdata_ptr)
-{
-    MXS_DEBUG("Entering PAM conversation function.");
-    int rval = PAM_CONV_ERR;
-    ConversationData* data = static_cast<ConversationData*>(appdata_ptr);
-    if (data->m_counter > 1)
-    {
-        MXS_ERROR("Multiple calls to conversation function for client '%s'. %s",
-                  data->m_client->user,
-                  GENERAL_ERRMSG);
-    }
-    else if (num_msg == 1)
-    {
-        pam_message first = *msg[0];
-        if ((first.msg_style != PAM_PROMPT_ECHO_OFF && first.msg_style != PAM_PROMPT_ECHO_ON)
-            || PASSWORD != first.msg)
-        {
-            MXS_ERROR("Unexpected PAM message: type='%d', contents='%s'",
-                      first.msg_style,
-                      first.msg);
-        }
-        else
-        {
-            pam_response* response = static_cast<pam_response*>(MXS_MALLOC(sizeof(pam_response)));
-            if (response)
-            {
-                response->resp_retcode = 0;
-                response->resp = MXS_STRDUP(data->m_password.c_str());
-                *resp_out = response;
-                rval = PAM_SUCCESS;
-            }
-        }
-    }
-    else
-    {
-        MXS_ERROR("Conversation function received '%d' messages from API. Only "
-                  "singular messages are supported.",
-                  num_msg);
-    }
-    data->m_counter++;
-    return rval;
-}
-
-/**
- * @brief Check if the client password is correct for the service
- *
- * @param user Username
- * @param password Password
- * @param service Which PAM service is the user logging to
- * @param client Client DCB
- * @return True if username & password are ok
- */
-bool validate_pam_password(const string& user, const string& password, const string& service, DCB* client)
-{
-    const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication for user '%s': '%s'.";
-    const char PAM_AUTH_ERR_MSG[] = "Pam authentication for user '%s' failed: '%s'.";
-    const char PAM_ACC_ERR_MSG[] = "Pam account check for user '%s' failed: '%s'.";
-    ConversationData appdata(client, 0, password);
-    pam_conv conv_struct = {conversation_func, &appdata};
-    bool authenticated = false;
-    bool account_ok = false;
-    pam_handle_t* pam_handle = NULL;
-    int pam_status = pam_start(service.c_str(), user.c_str(), &conv_struct, &pam_handle);
-    if (pam_status == PAM_SUCCESS)
-    {
-        pam_status = pam_authenticate(pam_handle, 0);
-        switch (pam_status)
-        {
-        case PAM_SUCCESS:
-            authenticated = true;
-            MXS_DEBUG("pam_authenticate returned success.");
-            break;
-
-        case PAM_USER_UNKNOWN:
-        case PAM_AUTH_ERR:
-            // Normal failure, username or password was wrong.
-            MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                          PAM_AUTH_ERR_MSG,
-                          user.c_str(),
-                          pam_strerror(pam_handle, pam_status));
-            break;
-
-        default:
-            // More exotic error
-            MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                          PAM_AUTH_ERR_MSG,
-                          user.c_str(),
-                          pam_strerror(pam_handle, pam_status));
-            break;
-        }
-    }
-    else
-    {
-        MXS_ERROR(PAM_START_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
-    }
-
-    if (authenticated)
-    {
-        pam_status = pam_acct_mgmt(pam_handle, 0);
-        switch (pam_status)
-        {
-        case PAM_SUCCESS:
-            account_ok = true;
-            break;
-
-        default:
-            // Credentials have already been checked to be ok, so this is again a bit of an exotic error.
-            MXS_ERROR(PAM_ACC_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
-            break;
-        }
-    }
-    pam_end(pam_handle, pam_status);
-    return account_ok;
-}
 }
 
 PamClientSession::PamClientSession(sqlite3* dbhandle, const PamInstance& instance)
@@ -404,19 +265,26 @@ int PamClientSession::authenticate(DCB* dcb)
                     }
                     if (try_validate)
                     {
-                        for (StringVector::iterator iter = services.begin();
-                             iter != services.end() && !authenticated;
-                             iter++)
+                        for (auto iter = services.begin(); iter != services.end() && !authenticated; ++iter)
                         {
+                            string service = *iter;
                             // The server PAM plugin uses "mysql" as the default service when authenticating
                             // a user with no service.
-                            if (iter->empty())
+                            if (service.empty())
                             {
-                                *iter = "mysql";
+                                service = "mysql";
                             }
-                            if (validate_pam_password(ses->user, password, *iter, dcb))
+
+                            mxb::PamResult res = mxb::pam_authenticate(ses->user, password, service,
+                                                                       PASSWORD);
+                            if (res.type == mxb::PamResult::Result::SUCCESS)
                             {
                                 authenticated = true;
+                            }
+                            else
+                            {
+                                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s",
+                                              res.error.c_str());
                             }
                         }
                     }
