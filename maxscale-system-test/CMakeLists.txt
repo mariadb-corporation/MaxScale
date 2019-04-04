@@ -939,6 +939,9 @@ add_test_executable(mxs2300_history_pruning.cpp mxs2300_history_pruning mxs2300_
 # MXS-2326: Routing hints aren't cloned in gwbuf_clone
 add_test_executable(mxs2326_hint_clone.cpp mxs2326_hint_clone mxs2326_hint_clone LABELS readwritesplit REPL_BACKEND)
 
+# MXS-2417: Ignore persisted configs with load_persisted_configs=false
+add_test_executable(mxs2417_ignore_persisted_cnf.cpp mxs2417_ignore_persisted_cnf mxs2417_ignore_persisted_cnf LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
