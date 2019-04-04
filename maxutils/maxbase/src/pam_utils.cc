@@ -101,9 +101,9 @@ namespace maxbase
 PamResult pam_authenticate(const string& user, const string& password, const string& service,
                            const string& expected_msg)
 {
-    const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication for user '%s': '%s'.";
-    const char PAM_AUTH_ERR_MSG[] = "PAM authentication for user '%s' failed: '%s'.";
-    const char PAM_ACC_ERR_MSG[] = "PAM account check for user '%s' failed: '%s'.";
+    const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication of user '%s': '%s'.";
+    const char PAM_AUTH_ERR_MSG[] = "PAM authentication of user '%s' to service '%s' failed: '%s'.";
+    const char PAM_ACC_ERR_MSG[] = "PAM account check of user '%s' to service '%s' failed: '%s'.";
 
     ConversationData appdata(user, password, expected_msg);
     pam_conv conv_struct = {conversation_func, &appdata};
@@ -127,15 +127,15 @@ PamResult pam_authenticate(const string& user, const string& password, const str
             case PAM_AUTH_ERR:
                 // Normal failure, username or password was wrong.
                 result.type = PamResult::Result::WRONG_USER_PW;
-                result.error = mxb::string_printf(PAM_AUTH_ERR_MSG,
-                                                  user.c_str(), pam_strerror(pam_handle, pam_status));
+                result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(), service.c_str(),
+                                                  pam_strerror(pam_handle, pam_status));
                 break;
 
             default:
                 // More exotic error
                 result.type = PamResult::Result::MISC_ERROR;
-                result.error = mxb::string_printf(PAM_AUTH_ERR_MSG,
-                                                  user.c_str(), pam_strerror(pam_handle, pam_status));
+                result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(),  service.c_str(),
+                                                  pam_strerror(pam_handle, pam_status));
                 break;
         }
     }
@@ -158,8 +158,8 @@ PamResult pam_authenticate(const string& user, const string& password, const str
             default:
                 // Credentials have already been checked to be ok, so this is a somewhat unexpected error.
                 result.type = PamResult::Result::ACCOUNT_INVALID;
-                result.error = mxb::string_printf(PAM_ACC_ERR_MSG,
-                                                  user.c_str(), pam_strerror(pam_handle, pam_status));
+                result.error = mxb::string_printf(PAM_ACC_ERR_MSG, user.c_str(), service.c_str(),
+                                                  pam_strerror(pam_handle, pam_status));
                 break;
         }
     }

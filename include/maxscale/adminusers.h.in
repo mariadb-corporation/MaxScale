@@ -101,6 +101,19 @@ json_t* admin_all_users_to_json(const char* host, enum user_type type);
  */
 json_t* admin_user_to_json(const char* host, const char* user, enum user_type type);
 
+/**
+ * Check if user credentials are accepted by any of the configured REST API PAM services. By default, both
+ * the read-only and read-write services are attempted.
+ *
+ * @param username Username
+ * @param password Password
+ * @param min_acc_type Minimum account type required. If BASIC, authentication succeeds if
+ * either read-only or readwrite service succeeds. If ADMIN, only the readwrite service is attempted.
+ * @return True if user & password logged in successfully
+ */
+bool admin_user_is_pam_account(const std::string& username, const std::string& password,
+                               user_account_type min_acc_type = USER_ACCOUNT_BASIC);
+
 void dcb_PrintAdminUsers(DCB *dcb);
 
 MXS_END_DECLS

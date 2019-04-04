@@ -25,9 +25,11 @@
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/adminusers.h>
+#include <maxbase/pam_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
+#include <maxscale/event.hh>
 
 /**
  * @file adminusers.c - Administration user account management
@@ -477,26 +479,35 @@ bool admin_inet_user_exists(const char* uname)
  */
 bool admin_verify_inet_user(const char* username, const char* password)
 {
-    bool rv = false;
-
+    bool authenticated = false;
     if (inet_users)
     {
-        rv = users_auth(inet_users, username, password);
+        authenticated = users_auth(inet_users, username, password);
     }
 
-    return rv;
+    // If normal authentication didn't work, try PAM.
+    // TODO: The reason for 'users_auth' failing is not known here. If the username existed but pw was wrong,
+    // should PAM even be attempted?
+    if (!authenticated)
+    {
+        authenticated = admin_user_is_pam_account(username, password);
+    }
+
+    return authenticated;
 }
 
 bool admin_user_is_inet_admin(const char* username, const char* password)
 {
-    bool rval = false;
-
+    bool is_admin = false;
     if (inet_users)
     {
-        rval = users_is_admin(inet_users, username, password);
+        is_admin = users_is_admin(inet_users, username, password);
     }
-
-    return rval;
+    if (!is_admin)
+    {
+        is_admin = admin_user_is_pam_account(username, password, USER_ACCOUNT_ADMIN);
+    }
+    return is_admin;
 }
 
 bool admin_user_is_unix_admin(const char* username)
@@ -520,6 +531,64 @@ bool admin_is_last_admin(const char* user)
 {
     return (admin_user_is_inet_admin(user, nullptr) || admin_user_is_unix_admin(user))
            && (users_admin_count(inet_users) + users_admin_count(linux_users)) == 1;
+}
+
+bool admin_user_is_pam_account(const std::string& username, const std::string& password,
+                               user_account_type min_acc_type)
+{
+    mxb_assert(min_acc_type == USER_ACCOUNT_BASIC || min_acc_type == USER_ACCOUNT_ADMIN);
+    auto pam_ro_srv = config_get_global_options()->admin_pam_ro_service;
+    auto pam_rw_srv = config_get_global_options()->admin_pam_rw_service;
+    bool have_ro_srv = !pam_ro_srv.empty();
+    bool have_rw_srv = !pam_rw_srv.empty();
+
+    if (!have_ro_srv && !have_rw_srv)
+    {
+        // PAM auth is not configured.
+        return false;
+    }
+
+    bool auth_attempted = false;
+    mxb::PamResult pam_res;
+    if (min_acc_type == USER_ACCOUNT_ADMIN)
+    {
+        // Must be a readwrite user.
+        if (have_rw_srv)
+        {
+            pam_res = mxb::pam_authenticate(username, password, pam_rw_srv);
+            auth_attempted = true;
+        }
+    }
+    else
+    {
+        // Either account type is ok.
+        if (have_ro_srv != have_rw_srv)
+        {
+            // One PAM service is configured.
+            auto pam_srv = have_ro_srv ? pam_ro_srv : pam_rw_srv;
+            pam_res = mxb::pam_authenticate(username, password, pam_srv);
+        }
+        else
+        {
+            // Have both, try ro first.
+            pam_res = mxb::pam_authenticate(username, password, pam_ro_srv);
+            if (pam_res.type != mxb::PamResult::Result::SUCCESS)
+            {
+                pam_res = mxb::pam_authenticate(username, password, pam_rw_srv);
+            }
+        }
+        auth_attempted = true;
+    }
+
+    if (pam_res.type == mxb::PamResult::Result::SUCCESS)
+    {
+        return true;
+    }
+    else if (auth_attempted)
+    {
+        MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s", pam_res.error.c_str());
+    }
+    return false;
 }
 
 /**

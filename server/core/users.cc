@@ -21,9 +21,11 @@
 #include <unordered_map>
 
 #include <maxscale/adminusers.h>
-#include <maxscale/users.h>
+#include <maxbase/pam_utils.hh>
 #include <maxscale/authenticator.hh>
+#include <maxscale/event.hh>
 #include <maxscale/jansson.hh>
+#include <maxscale/users.h>
 
 namespace
 {

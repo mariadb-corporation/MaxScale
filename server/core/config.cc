@@ -80,6 +80,8 @@ const char CN_ADMIN_PORT[] = "admin_port";
 const char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 const char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 const char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
+const char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
+const char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
 const char CN_ARGUMENTS[] = "arguments";
 const char CN_ARG_MAX[] = "arg_max";
 const char CN_ARG_MIN[] = "arg_min";
@@ -2612,6 +2614,14 @@ static int handle_global_item(const char* name, const char* value)
     {
         gateway.admin_log_auth_failures = config_truth_value(value);
     }
+    else if (strcmp(name, CN_ADMIN_PAM_READWRITE_SERVICE) == 0)
+    {
+        gateway.admin_pam_rw_service = value;
+    }
+    else if (strcmp(name, CN_ADMIN_PAM_READONLY_SERVICE) == 0)
+    {
+        gateway.admin_pam_ro_service = value;
+    }
     else if (strcmp(name, CN_PASSIVE) == 0)
     {
         gateway.passive = config_truth_value((char*)value);
@@ -2827,6 +2837,8 @@ bool config_can_modify_at_runtime(const char* name)
         CN_ADMIN_SSL_KEY,
         CN_ADMIN_HOST,
         CN_ADMIN_PORT,
+        CN_ADMIN_PAM_READWRITE_SERVICE,
+        CN_ADMIN_PAM_READONLY_SERVICE,
         CN_LOG_THROTTLING,
         "sql_mode",
         CN_QUERY_CLASSIFIER_ARGS,
@@ -4647,6 +4659,11 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
     json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
     json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
+    json_object_set_new(param, CN_ADMIN_PAM_READWRITE_SERVICE,
+                        json_string(cnf->admin_pam_rw_service.c_str()));
+    json_object_set_new(param, CN_ADMIN_PAM_READONLY_SERVICE,
+                        json_string(cnf->admin_pam_ro_service.c_str()));
+
     json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
 
     json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));

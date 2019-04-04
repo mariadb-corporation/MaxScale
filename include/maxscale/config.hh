@@ -470,8 +470,8 @@ struct MXS_CONFIG
     size_t  thread_stack_size;                          /**< The stack size of each worker thread */
     char    release_string[RELEASE_STR_LENGTH];         /**< The release name string of the system */
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
-    uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address
-                                                         * */
+    uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
+
     unsigned int n_nbpoll;                              /**< Tune number of non-blocking polls */
     unsigned int pollsleep;                             /**< Wait time in blocking polls */
     int          syslog;                                /**< Log to syslog */
@@ -492,8 +492,10 @@ struct MXS_CONFIG
     uint16_t            admin_port;                     /**< Admin interface port */
     bool                admin_auth;                     /**< Admin interface authentication */
     bool                admin_enabled;                  /**< Admin interface is enabled */
-    bool                admin_log_auth_failures;        /**< Log admin interface authentication failures
-                                                         * */
+    bool                admin_log_auth_failures;        /**< Log admin interface authentication failures */
+    std::string         admin_pam_rw_service;           /**< PAM service for read-write users */
+    std::string         admin_pam_ro_service;           /**< PAM service for read-only users */
+
     char admin_ssl_key[PATH_MAX];                       /**< Admin SSL key */
     char admin_ssl_cert[PATH_MAX];                      /**< Admin SSL cert */
     char admin_ssl_ca_cert[PATH_MAX];                   /**< Admin SSL CA cert */

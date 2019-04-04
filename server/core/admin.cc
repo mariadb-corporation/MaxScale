@@ -71,11 +71,10 @@ static inline size_t request_data_length(MHD_Connection* connection)
     return rval;
 }
 
-static bool modifies_data(MHD_Connection* connection, string method)
+static bool modifies_data(const string& method)
 {
     return (method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT
-            || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH)
-           && request_data_length(connection);
+            || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH);
 }
 
 static void send_auth_error(MHD_Connection* connection)
@@ -192,7 +191,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             send_auth_error(connection);
             rval = false;
         }
-        else if (!admin_user_is_inet_admin(user, pw) && modifies_data(connection, method))
+        else if (modifies_data(method) && !admin_user_is_inet_admin(user, pw))
         {
             if (config_get_global_options()->admin_log_auth_failures)
             {
@@ -256,7 +255,7 @@ int handle_client(void* cls,
         if (client->get_state() == Client::OK)
         {
             // Authentication was successful, start processing the request
-            if (state == Client::INIT && modifies_data(connection, method))
+            if (state == Client::INIT && request_data_length(connection))
             {
                 // The first call doesn't have any data
                 rval = MHD_YES;
