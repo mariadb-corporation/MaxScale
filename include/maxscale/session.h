@@ -621,6 +621,11 @@ char* session_set_variable_value(MXS_SESSION* session,
 void session_set_retain_last_statements(uint32_t n);
 
 /**
+ * Get retain_last_statements
+ */
+uint32_t session_get_retain_last_statements();
+
+/**
  * @brief Retain provided statement, if configured to do so.
  *
  * @param session  The session.
@@ -668,6 +673,11 @@ void session_set_dump_statements(session_dump_statements_t value);
  * @return Whether and when to dump statements.
  */
 session_dump_statements_t session_get_dump_statements();
+
+/**
+ * String version of session_get_dump_statements
+ */
+const char* session_get_dump_statements_str();
 
 /**
  * @brief Route the query again after a delay

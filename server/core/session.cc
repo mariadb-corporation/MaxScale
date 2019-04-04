@@ -1055,6 +1055,11 @@ void session_set_retain_last_statements(uint32_t n)
     this_unit.retain_last_statements = n;
 }
 
+uint32_t session_get_retain_last_statements()
+{
+    return this_unit.retain_last_statements;
+}
+
 void session_set_dump_statements(session_dump_statements_t value)
 {
     this_unit.dump_statements = value;
@@ -1063,6 +1068,25 @@ void session_set_dump_statements(session_dump_statements_t value)
 session_dump_statements_t session_get_dump_statements()
 {
     return this_unit.dump_statements;
+}
+
+const char* session_get_dump_statements_str()
+{
+    switch (this_unit.dump_statements)
+    {
+    case SESSION_DUMP_STATEMENTS_NEVER:
+        return "never";
+
+    case SESSION_DUMP_STATEMENTS_ON_CLOSE:
+        return "on_close";
+
+    case SESSION_DUMP_STATEMENTS_ON_ERROR:
+        return "on_error";
+
+    default:
+        mxb_assert(!true);
+        return "unknown";
+    }
 }
 
 void session_retain_statement(MXS_SESSION* pSession, GWBUF* pBuffer)

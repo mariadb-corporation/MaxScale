@@ -4548,6 +4548,10 @@ json_t* config_maxscale_to_json(const char* host)
                         CN_QUERY_CLASSIFIER_CACHE_SIZE,
                         json_integer(cnf->qc_cache_properties.max_size));
 
+    json_object_set_new(param, CN_RETAIN_LAST_STATEMENTS, json_integer(session_get_retain_last_statements()));
+    json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
+    json_object_set_new(param, CN_LOAD_PERSISTED_CONFIGS, json_boolean(cnf->load_persisted_configs));
+
     json_t* attr = json_object();
     time_t started = maxscale_started();
     time_t activated = started + MXS_CLOCK_TO_SEC(cnf->promoted_at);
