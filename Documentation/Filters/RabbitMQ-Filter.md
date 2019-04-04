@@ -41,7 +41,7 @@ logging_source_user=maxtest
 
 [RabbitMQ-Service]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 password=mypasswd

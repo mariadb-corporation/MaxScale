@@ -270,10 +270,9 @@ private:
 
     inline bool can_route_queries() const
     {
-        return m_query_queue.empty()
-               && (m_expected_responses == 0
-                   || m_qc.load_data_state() == mxs::QueryClassifier::LOAD_DATA_ACTIVE
-                   || m_qc.large_query());
+        return m_expected_responses == 0
+               || m_qc.load_data_state() == mxs::QueryClassifier::LOAD_DATA_ACTIVE
+               || m_qc.large_query();
     }
 
     inline mxs::QueryClassifier::current_target_t get_current_target() const

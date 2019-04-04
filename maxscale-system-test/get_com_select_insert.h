@@ -1,5 +1,4 @@
-#ifndef GET_COM_SELECT_INSERT_H
-#define GET_COM_SELECT_INSERT_H
+#pragma once
 
 #include "testconnections.h"
 
@@ -28,6 +27,3 @@ int print_delta(long int* new_selects,
                 long int* selects,
                 long int* inserts,
                 int nodes_num);
-
-
-#endif      // GET_COM_SELECT_INSERT_H

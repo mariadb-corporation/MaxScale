@@ -28,6 +28,7 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
   blob_test.cpp keepalived_func.cpp tcp_connection.cpp base/stopwatch.cpp fw_copy_rules.cpp
+  labels_table.cpp envv.cpp
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
 target_link_libraries(testcore ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt maxbase)
@@ -38,21 +39,21 @@ add_dependencies(testcore connector-c jansson maxbase)
 include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
 
 # Tool used to check backend state
-add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG)
+add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND TWO_MAXSCALES)
 
 # Configuration tests
-add_template(bug359 bug359)
-add_template(bug495 bug495)
-add_template(bug526 bug526)
-add_template(bug479 bug479)
-add_template(bug493 bug493)
-add_template(bug643_1 bug643_1)
-add_template(mxs652_bad_ssl bad_ssl)
-add_template(mxs710_bad_socket mxs710_bad_socket)
-add_template(mxs710_bad_socket mxs711_two_ports)
-add_template(mxs720_line_with_no_equal mxs720_line_with_no_equal)
-add_template(mxs720_wierd_line mxs720_wierd_line)
-add_template(mxs710_bad_socket mxs799)
+add_template_manual(bug359 bug359)
+add_template_manual(bug495 bug495)
+add_template_manual(bug526 bug526)
+add_template_manual(bug479 bug479)
+add_template_manual(bug493 bug493)
+add_template_manual(bug643_1 bug643_1)
+add_template_manual(mxs652_bad_ssl bad_ssl)
+add_template_manual(mxs710_bad_socket mxs710_bad_socket)
+add_template_manual(mxs710_bad_socket mxs711_two_ports)
+add_template_manual(mxs720_line_with_no_equal mxs720_line_with_no_equal)
+add_template_manual(mxs720_wierd_line mxs720_wierd_line)
+add_template_manual(mxs710_bad_socket mxs799)
 add_test_executable(config_test.cpp config_test replication LABELS CONFIG)
 
 add_subdirectory(cdc_datatypes)
@@ -151,7 +152,7 @@ add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconn
 add_test_executable(bug662.cpp bug662 bug662 LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
 
 # Bad TEE filter configuration
-add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol)
+add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
 add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
@@ -340,9 +341,6 @@ add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop gale
 # Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
 add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol readwritesplit LIGHT GALERA_BACKEND)
 
-# Crash with Galera and backend restart when persistant cfonnections are in use
-add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale GALERA_BACKEND)
-
 # Playing with blocking and unblocking nodes under INSERT load
 add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera_mxs564 LABELS readwritesplit readconnroute GALERA_BACKEND)
 
@@ -396,7 +394,7 @@ add_test_executable(mxs1583_fwf.cpp mxs1583_fwf mxs1583_fwf LABELS dbfwfilter RE
 add_test_executable(kill_master.cpp kill_master replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Test insertstream filter
-add_test_script(insertstream insertstream.sh insertstream LABELS insertstream REPL_BACKEND)
+add_test_script(insertstream.sh insertstream.sh insertstream LABELS insertstream REPL_BACKEND)
 
 # Check load balancing
 add_test_executable(load_balancing.cpp load_balancing load LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -408,7 +406,7 @@ add_test_derived(load_balancing_pers10 load_balancing load_pers10 LABELS readwri
 add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
 
 # Test with extremely big blob inserting/selecting with > 16 mb data blocks
-add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute HEAVY REPL_BACKEND)
+add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute HEAVY REPL_BACKEND GALERA_BACKEND)
 
 # Schemarouter implicit database detection
 add_test_executable(mxs1310_implicit_db.cpp mxs1310_implicit_db mxs1310_implicit_db LABELS schemarouter REPL_BACKEND)
@@ -418,7 +416,10 @@ add_test_executable(mxs1323_retry_read.cpp mxs1323_retry_read mxs1323 LABELS rea
 add_test_executable(mxs1323_stress.cpp mxs1323_stress mxs1323 LABELS readwritesplit REPL_BACKEND)
 
 # A set of MariaDB server tests executed against Maxscale RWSplit
-add_test_script(mariadb_tests_hartmut mariadb_tests_hartmut.sh replication LABELS readwritesplit REPL_BACKEND)
+add_test_script(mariadb_tests_hartmut.sh mariadb_tests_hartmut.sh replication LABELS readwritesplit REPL_BACKEND)
+
+# A set of MariaDB server tests executed against Maxscale RWSplit (Galera backend)
+add_test_script(mariadb_tests_hartmut_galera.sh mariadb_tests_hartmut.sh galera_hartmut LABELS readwritesplit GALERA_BACKEND)
 
 # Creates a number of connections > max_connections setting
 add_test_executable(max_connections.cpp max_connections replication LABELS MySQLAuth MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
@@ -433,7 +434,7 @@ add_test_script(maxinfo.py maxinfo.py maxinfo LABELS maxinfo LIGHT REPL_BACKEND)
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication LABELS maxscale LIGHT REPL_BACKEND)
 
 # Test of multi master monitor
-add_test_executable(mm.cpp mm mm LABELS mysqlmon BREAKS_REPL)
+add_test_executable(mm.cpp mm mm LABELS mysqlmon BREAKS_REPL REPL_BACKEND)
 
 # Regression case for the bug "Two monitors loaded at the same time result into not working installation"
 add_test_executable(mxs118.cpp mxs118 mxs118 LABELS maxscale LIGHT REPL_BACKEND)
@@ -456,6 +457,9 @@ add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS rea
 
 # Creates and closes a lot of connections, checks that 'maxadmin list servers' shows 0 connections at the end
 add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit REPL_BACKEND)
+
+# Crash with Galera and backend restart when persistant cfonnections are in use
+add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale REPL_BACKEND GALERA_BACKEND)
 
 # Load huge file with 'LOAD DATA LOCAL INFILE'
 add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BACKEND)
@@ -496,6 +500,9 @@ add_test_executable(mxs729_maxadmin.cpp mxs729_maxadmin replication LABELS MaxAd
 
 # Simple connect test in bash, checks that defined in cmd line DB is selected
 add_test_script(mxs791.sh mxs791.sh replication LABELS UNSTABLE HEAVY REPL_BACKEND)
+
+# Simple connect test in bash, checks that defined in cmd line DB is selected (Galera backend)
+add_test_script(mxs791_galera.sh mxs791.sh galera LABELS UNSTABLE HEAVY GALERA_BACKEND)
 
 # Checks "Current no. of conns" maxadmin output after long blob inserting
 add_test_executable(mxs812_1.cpp mxs812_1 longblob LABELS readwritesplit REPL_BACKEND)
@@ -568,7 +575,7 @@ add_test_executable(cache_runtime_ttl.cpp cache_runtime_ttl cache_runtime_ttl LA
 add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACKEND)
 
 # Proxy protocol test
-add_test_executable(proxy_protocol.cpp proxy_protocol proxy_protocol LABELS MySQLAuth MySQLProtocol)
+add_test_executable(proxy_protocol.cpp proxy_protocol proxy_protocol LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Regression case for the bug "Defunct processes after maxscale have executed script during failover"
 add_test_executable(mxs1045.cpp mxs1045 mxs1045 LABELS maxscale REPL_BACKEND)
@@ -625,9 +632,9 @@ add_test_executable(mxs1516.cpp mxs1516 replication LABELS readconnroute REPL_BA
 # https://jira.mariadb.org/browse/MXS-1549
 add_test_executable(mxs1549_optimistic_trx.cpp mxs1549_optimistic_trx mxs1549_optimistic_trx LABELS readwritesplit REPL_BACKEND)
 
-# MXS-1585: Crash in MaxScale 2.1.12
-# https://jira.mariadb.org/browse/MXS-1585
-add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS readwritesplit REPL_BACKEND)
+ # MXS-1585: Crash in MaxScale 2.1.12
+ # https://jira.mariadb.org/browse/MXS-1585
+add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS GALERA_BACKEND)
 
 # MXS-1643: Too many monitor events are triggered
 # https://jira.mariadb.org/browse/MXS-1643
@@ -718,7 +725,7 @@ add_test_executable(no_password.cpp no_password replication LABELS MySQLAuth LIG
 add_test_executable(open_close_connections.cpp open_close_connections replication LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Test with persistant connections configured and big number iof opened connections ,expect no crash
-add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
+add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale GALERA_BACKEND REPL_BACKEND readwritesplit)
 
 # Check if prepared statement works via Maxscale (via RWSplit)
 add_test_executable(prepared_statement.cpp prepared_statement replication LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -760,13 +767,13 @@ add_test_executable(rwsplit_multi_stmt.cpp rwsplit_multi_stmt rwsplit_multi_stmt
 add_test_executable(schemarouter_duplicate.cpp schemarouter_duplicate schemarouter_duplicate LABELS schemarouter REPL_BACKEND)
 
 # Test of external script execution
-add_test_executable(script.cpp script script LABELS maxscale REPL_BACKEND)
+add_test_executable(script.cpp script script LABELS maxscale REPL_BACKEND GALERA_BACKEND)
 
 # Test 10.3 SEQUENCE objects
-add_test_executable(sequence.cpp sequence replication LABELS LIGHT)
+add_test_executable(sequence.cpp sequence replication LABELS LIGHT REPL_BACKEND)
 
-# Test 10.1 compound statements with readwritesplit
-add_test_executable(compound_statement.cpp compound_statement replication LABELS readwritesplit LIGHT)
+# Test 10.1 compound statements
+add_test_executable(compound_statement.cpp compound_statement replication LABELS LIGHT REPL_BACKEND)
 
 # Check if 'weightby' parameter works
 add_test_executable(server_weight.cpp server_weight server_weight LABELS readwritesplit readconnroute LIGHT REPL_BACKEND)
@@ -775,10 +782,10 @@ add_test_executable(server_weight.cpp server_weight server_weight LABELS readwri
 add_test_executable(session_limits.cpp session_limits session_limits LABELS readwritesplit REPL_BACKEND)
 
 # Test of schema router
-add_test_executable(sharding.cpp sharding sharding LABELS schemarouter BREAKS_REPL)
+add_test_executable(sharding.cpp sharding sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-1160: LOAD DATA LOCAL INFILE with schemarouter
-add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS schemarouter BREAKS_REPL)
+add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # Do short sessions (open conn, short query, close conn) in the loop
 add_test_executable(short_sessions.cpp short_sessions replication LABELS readwritesplit readconnroute REPL_BACKEND)
@@ -787,7 +794,7 @@ add_test_executable(short_sessions.cpp short_sessions replication LABELS readwri
 add_test_derived(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute REPL_BACKEND)
 
 # Regression case for crash if maxadmin 'show monitors' command is issued, but no monitor is not running
-add_test_executable(show_monitor_crash.cpp show_monitor_crash show_monitor_crash LABELS maxscale)
+add_test_executable(show_monitor_crash.cpp show_monitor_crash show_monitor_crash LABELS maxscale REPL_BACKEND)
 
 # Check how Maxscale works in case of one slave failure, only one slave is configured
 add_test_executable(slave_failover.cpp slave_failover replication.one_slave LABELS readwritesplit REPL_BACKEND)
@@ -815,6 +822,10 @@ add_test_executable(temporal_tables.cpp temporal_tables replication LABELS readw
 
 # Test routing hints (mainly about how readwritesplit deals with them)
 add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwritesplit LIGHT REPL_BACKEND)
+
+# Run MaxCtrl test suite
+# add_test_executable(test_maxctrl.cpp test_maxctrl maxctrl LABELS REPL_BACKEND)
+
 
 # Creates KDC and tries authrization via GSSAPI (both client and backend)
 # works only with yum-based distributions
@@ -886,7 +897,7 @@ set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
 
 # MXS-1849: Table family sharding router
 # https://jira.mariadb.org/browse/MXS-1849
-add_test_executable(mxs1849_table_sharding.cpp mxs1849_table_sharding mxs1849_table_sharding LABELS schemarouter BREAKS_REPL)
+add_test_executable(mxs1849_table_sharding.cpp mxs1849_table_sharding mxs1849_table_sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-1985: MaxScale hangs on concurrent KILL processing
 # https://jira.mariadb.org/browse/MXS-1985
@@ -894,7 +905,7 @@ add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS R
 
 # MXS-1113: Support of prepared statement for schemarouter
 # https://jira.mariadb.org/browse/MXS-1113
-add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL)
+add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-2037: Wildcards not working with source in Named Server Filter
 # https://jira.mariadb.org/browse/MXS-2037
@@ -933,6 +944,73 @@ add_test_executable(mxs2313_rank.cpp mxs2313_rank mxs2313_rank LABELS readwrites
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
 
+# Binlogrouter tests, these heavily alter the replication so they are run last
+add_test_executable(avro.cpp avro avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
+add_test_executable(avro_alter.cpp avro_alter avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
+
+# Test avrorouter file compression
+#add_test_script(avro_compression avro avro_compression LABELS avrorouter binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
+
+# In the binlog router setup stop Master and promote one of the Slaves to be new Master
+add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
+
+# trying to start binlog setup with incomplete Maxscale.cnf
+add_test_executable(binlog_incompl.cpp binlog_incompl binlog_incompl LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
+
+# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=1,transaction_safety=1
+add_test_executable(binlog_semisync.cpp binlog_semisync setup_binlog_semisync LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
+
+# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=0,transaction_safety=0
+add_test_derived(binlog_semisync_txs0_ss0 binlog_semisync setup_binlog_semisync_txs0_ss0 LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
+
+# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=0,transaction_safety=1
+add_test_derived(binlog_semisync_txs0_ss1 binlog_semisync setup_binlog_semisync_txs0_ss1 LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
+
+# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=1,transaction_safety=0
+add_test_derived(binlog_semisync_txs1_ss0 binlog_semisync setup_binlog_semisync_txs1_ss0 LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
+
+set_tests_properties(binlog_semisync PROPERTIES TIMEOUT 3600)
+set_tests_properties(binlog_semisync_txs0_ss0 PROPERTIES TIMEOUT 3600)
+set_tests_properties(binlog_semisync_txs0_ss1 PROPERTIES TIMEOUT 3600)
+set_tests_properties(binlog_semisync_txs1_ss0 PROPERTIES TIMEOUT 3600)
+
+#
+# The encryption tests don't work as they require the file key management plugin
+#
+# Binlog encription test (aes_cbr encryption)
+#add_test_executable(mxs1073_binlog_enc.cpp mxs1073_binlog_enc binlog_enc_aes_cbc LABELS binlogrouter 10.1 BREAKS_REPL REPL_BACKEND)
+# Binlog encription test (aes_ctr encryption)
+#add_test_script(mxs1073_binlog_enc_aes_ctr mxs1073_binlog_enc binlog_enc_aes_ctr LABELS binlogrouter 10.1 BREAKS_REPL REPL_BACKEND)
+
+# Test of CDC protocol (avro listener)
+add_test_executable(cdc_client.cpp cdc_client avro LABELS avrorouter binlogrouter BREAKS_REPL REPL_BACKEND)
+
+# Tries INSERTs with size close to 0x0ffffff * N (with binlog backend)
+add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
+
+# Try to configure binlog router to use wrong password for Master and check 'slave status' on binlog
+add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd setup_binlog LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
+
+# Regression case for crash if long host name is used for binlog router (in 'change master to ...')
+add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
+
+# Test that masking filter can handle multi-statements.
+add_test_executable(mxs1719.cpp mxs1719 mxs1719 LABELS masking REPL_BACKEND)
+
+# configure binlog router setup, execute queries and transactions, check data;
+add_test_executable(setup_binlog.cpp setup_binlog setup_binlog LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
+
+# configure binlog router setup, execute queries and transactions, check data;
+add_test_executable(setup_binlog_gtid.cpp setup_binlog_gtid setup_binlog_gtid LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
+
+# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=CRC32 option
+# disabled because it is included into setup_binlog test, separate test was created for debugging
+# add_test_executable(setup_binlog_crc_32.cpp setup_binlog_crc_32 setup_binlog LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
+
+# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=NONE option
+# disabled because it is included into setup_binlog test, separate test was created for debugging
+# add_test_executable(setup_binlog_crc_none.cpp setup_binlog_crc_none setup_binlog LABELS binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
+
 # MXS-1542: Check that UTF16 strings work
 # https://jira.mariadb.org/browse/MXS-1542
 add_test_executable(mxs1542.cpp mxs1542 avro LABELS avrorouter REPL_BACKEND)
@@ -941,56 +1019,8 @@ add_test_executable(mxs1542.cpp mxs1542 avro LABELS avrorouter REPL_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1543
 add_test_executable(mxs1543.cpp mxs1543 avro LABELS avrorouter REPL_BACKEND)
 
-# Binlogrouter tests, these heavily alter the replication so they are run last
-add_test_executable(avro.cpp avro avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)
-add_test_executable(avro_alter.cpp avro_alter avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)
-
-# In the binlog router setup stop Master and promote one of the Slaves to be new Master
-add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe LABELS binlogrouter BREAKS_REPL)
-
 # In the binlog router setup stop Master and promote one of the Slaves to be new Master (use GTID)
-add_test_executable(binlog_change_master_gtid.cpp binlog_change_master_gtid setup_binlog_tx_safe_gtid LABELS binlogrouter BREAKS_REPL)
-
-# trying to start binlog setup with incomplete Maxscale.cnf
-add_test_executable(binlog_incompl.cpp binlog_incompl binlog_incompl LABELS binlogrouter BREAKS_REPL)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=1,transaction_safety=1
-add_test_executable(binlog_semisync.cpp binlog_semisync setup_binlog_semisync LABELS binlogrouter HEAVY BREAKS_REPL)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=0,transaction_safety=0
-add_test_derived(binlog_semisync_txs0_ss0 binlog_semisync setup_binlog_semisync_txs0_ss0 LABELS binlogrouter HEAVY BREAKS_REPL)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=0,transaction_safety=1
-add_test_derived(binlog_semisync_txs0_ss1 binlog_semisync setup_binlog_semisync_txs0_ss1 LABELS binlogrouter HEAVY BREAKS_REPL)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=1,transaction_safety=0
-add_test_derived(binlog_semisync_txs1_ss0 binlog_semisync setup_binlog_semisync_txs1_ss0 LABELS binlogrouter HEAVY BREAKS_REPL)
-
-set_tests_properties(binlog_semisync PROPERTIES TIMEOUT 3600)
-set_tests_properties(binlog_semisync_txs0_ss0 PROPERTIES TIMEOUT 3600)
-set_tests_properties(binlog_semisync_txs0_ss1 PROPERTIES TIMEOUT 3600)
-set_tests_properties(binlog_semisync_txs1_ss0 PROPERTIES TIMEOUT 3600)
-
-# Test of CDC protocol (avro listener)
-add_test_executable(cdc_client.cpp cdc_client avro LABELS avrorouter binlogrouter BREAKS_REPL)
-
-# Tries INSERTs with size close to 0x0ffffff * N (with binlog backend)
-add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog LABELS binlogrouter HEAVY BREAKS_REPL)
-
-# Try to configure binlog router to use wrong password for Master and check 'slave status' on binlog
-add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd setup_binlog LABELS binlogrouter BREAKS_REPL)
-
-# Regression case for crash if long host name is used for binlog router (in 'change master to ...')
-add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog LABELS binlogrouter BREAKS_REPL)
-
-# Test that masking filter can handle multi-statements.
-add_test_executable(mxs1719.cpp mxs1719 mxs1719 LABELS masking REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data;
-add_test_executable(setup_binlog.cpp setup_binlog setup_binlog LABELS binlogrouter BREAKS_REPL)
-
-# configure binlog router setup, execute queries and transactions, check data;
-add_test_executable(setup_binlog_gtid.cpp setup_binlog_gtid setup_binlog_gtid LABELS binlogrouter BREAKS_REPL)
+add_test_executable(binlog_change_master_gtid.cpp binlog_change_master_gtid setup_binlog_tx_safe_gtid LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-701: Binlog filtering
 # https://jira.mariadb.org/browse/MXS-701

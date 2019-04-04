@@ -1,10 +1,8 @@
 #!/bin/bash
 
-rp=`realpath $0`
-export src_dir=`dirname $rp`
 
-user=skysql
-password=skysql
+user=$maxscale_user
+password=$maxscale_password
 
 # See cnf/maxscale.cnf.template.cache_basic
 port=4008
@@ -20,8 +18,7 @@ function run_test
     echo $test_name
     logdir=log_$test_name
     mkdir -p $logdir
-
-    mysqltest --host=$maxscale_IP --port=$port \
+    mysqltest --host=${maxscale_000_network} --port=$port \
               --user=$user --password=$password \
               --logdir=$logdir \
               --test-file=$dir/t/$test_name.test \
@@ -40,37 +37,15 @@ function run_test
     return $rc
 }
 
-if [ $# -lt 1 ]
-then
-    echo "usage: $script name"
-    echo ""
-    echo "name    : The name of the test (from CMakeLists.txt) That selects the"
-    echo "          configuration template to be used."
-    exit 1
-fi
-
-if [ "$maxscale_IP" == "" ]
-then
-    echo "Error: The environment variable maxscale_IP must be set."
-    exit 1
-fi
-
-expected_name="cache_basic"
-
-if [ "$1" != "$expected_name" ]
-then
-    echo "warning: Expected test name to be $expected_name_basic, was $1."
-fi
-
-export dir="$src_dir/cache/$expected_name"
+export dir="$src_dir/cache/$1"
 
 source=$src_dir/cache/$1/cache_rules.json
-target=vagrant@$maxscale_IP:/home/$maxscale_access_user/cache_rules.json
+target=${maxscale_000_whoami}@${maxscale_000_network}:/home/${maxscale_000_whoami}/cache_rules.json
 
-if [ $maxscale_IP != "127.0.0.1" ] ; then
-   scp -i $maxscale_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $source $target
+if [ ${maxscale_000_network} != "127.0.0.1" ] ; then
+   scp -i ${maxscale_000_keyfile} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $source $target
 else
-   cp $source /home/$maxscale_access_user/cache_rules.json
+   cp $source /home/${maxscale_000_whoami}/cache_rules.json
 fi
 
 if [ $? -ne 0 ]
@@ -79,13 +54,9 @@ then
     exit 1
 fi
 
-echo $source copied to $target
+echo $source copied to $target, restarting Maxscale
 
-test_dir=`pwd`
-
-$test_dir/non_native_setup $1
-
-echo
+ssh  -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} 'sudo service maxscale restart'
 
 # We sleep slightly longer than the TTL to ensure that the TTL mechanism
 # kicks in.

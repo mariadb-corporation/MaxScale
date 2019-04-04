@@ -972,7 +972,7 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
 
 bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
 {
-    MXS_INFO("Starting transaction migration from '%s' to '%s'", m_current_master->name(), target->name());
+    MXS_INFO("Starting transaction migration to '%s'", target->name());
 
     /**
      * Stash the current query so that the transaction replay treats

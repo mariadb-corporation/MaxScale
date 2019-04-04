@@ -129,6 +129,7 @@ extern const char CN_HITS[];
 extern const char CN_ID[];
 extern const char CN_INET[];
 extern const char CN_LINKS[];
+extern const char CN_LOAD_PERSISTED_CONFIGS[];
 extern const char CN_LISTENER[];
 extern const char CN_LISTENERS[];
 extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
@@ -510,6 +511,7 @@ struct MXS_CONFIG
     char             peer_user[MAX_ADMIN_HOST_LEN];     /**< Username for maxscale-to-maxscale traffic */
     char             peer_password[MAX_ADMIN_HOST_LEN]; /**< Password for maxscale-to-maxscale traffic */
     mxb_log_target_t log_target;                        /**< Log type */
+    bool             load_persisted_configs;            /**< Load persisted configuration files on startup */
 };
 
 /**

@@ -119,6 +119,7 @@ const char CN_INET[] = "inet";
 const char CN_LINKS[] = "links";
 const char CN_LISTENERS[] = "listeners";
 const char CN_LISTENER[] = "listener";
+const char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
 const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
 const char CN_LOCAL_ADDRESS[] = "local_address";
 const char CN_LOG_AUTH_WARNINGS[] = "log_auth_warnings";
@@ -1391,7 +1392,8 @@ static bool config_load_and_process(const char* filename, bool (* process_config
             const char* persist_cnf = get_config_persistdir();
             mxs_mkdir_all(persist_cnf, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-            if (is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
+            if (config_get_global_options()->load_persisted_configs
+                && is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
             {
                 /**
                  * Set the global flag that we are processing a persisted configuration.
@@ -2729,6 +2731,20 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
+    else if (strcmp(name, CN_LOAD_PERSISTED_CONFIGS) == 0)
+    {
+        int b = config_truth_value(value);
+
+        if (b != -1)
+        {
+            gateway.load_persisted_configs = b;
+        }
+        else
+        {
+            MXS_ERROR("Invalid value for '%s': %s", CN_LOAD_PERSISTED_CONFIGS, value);
+            return 0;
+        }
+    }
     else
     {
         bool found = false;
@@ -2947,6 +2963,7 @@ void config_set_global_defaults()
     gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
     gateway.passive = false;
     gateway.promoted_at = 0;
+    gateway.load_persisted_configs = true;
 
     gateway.peer_hosts[0] = '\0';
     gateway.peer_user[0] = '\0';

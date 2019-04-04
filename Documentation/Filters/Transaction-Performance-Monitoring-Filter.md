@@ -21,7 +21,7 @@ module=tpmfilter
 
 [MyService]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 password=mypasswd
@@ -130,7 +130,7 @@ named_pipe=/tmp/tpmfilter
 
 [Product-Service]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 password=mypasswd

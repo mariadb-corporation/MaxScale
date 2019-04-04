@@ -1,5 +1,4 @@
-#ifndef BLOB_TEST_H
-#define BLOB_TEST_H
+#pragma once
 
 #include "testconnections.h"
 
@@ -36,5 +35,3 @@ int check_longblob_data(TestConnections* Test,
                         unsigned long chunk_size,
                         int chunks,
                         int rows);
-
-#endif      // BLOB_TEST_H

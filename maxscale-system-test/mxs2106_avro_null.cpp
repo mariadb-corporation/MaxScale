@@ -39,22 +39,22 @@ int main(int argc, char** argv)
     test.expect(conn.connect("test.test1"), "Failed to connect");
 
     auto check = [&](const std::string& name) {
-            static int i = 1;
-            CDC::SRow row = conn.read();
+        static int i = 1;
+        CDC::SRow row = conn.read();
 
-            if (row)
-            {
-                test.expect(row->is_null(name),
-                            "%d: `%s` is not null: %s",
-                            i++,
-                            name.c_str(),
-                            row->value(name).c_str());
-            }
-            else
-            {
-                test.tprintf("Error: %s", conn.error().c_str());
-            }
-        };
+        if (row)
+        {
+            test.expect(row->is_null(name),
+                        "%d: `%s` is not null: %s",
+                        i++,
+                        name.c_str(),
+                        row->value(name).c_str());
+        }
+        else
+        {
+            test.tprintf("Error: %s", conn.error().c_str());
+        }
+    };
 
     // The three inserts
     check("some_date");

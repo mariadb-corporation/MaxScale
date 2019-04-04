@@ -24,7 +24,7 @@ service=DataMart
 
 [Data-Service]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 password=mypasswd

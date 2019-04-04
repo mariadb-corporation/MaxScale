@@ -1,5 +1,4 @@
-#ifndef SQL_T1_H
-#define SQL_T1_H
+#pragma once
 
 #include "mariadb_func.h"
 #include "testconnections.h"
@@ -72,6 +71,4 @@ int select_from_t1(MYSQL* conn, int N);
  * @param conn MYSQL handler
  * @return 0 if content of t1 is ok
  */
-int check_if_t1_exists(MYSQL* conn);
-
-#endif      // SQL_T1_H
+int check_if_t1_exists(MYSQL *conn);

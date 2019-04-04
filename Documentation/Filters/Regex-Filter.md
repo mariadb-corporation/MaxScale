@@ -21,7 +21,7 @@ replace=replacement string
 
 [MyService]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 password=mypasswd
@@ -107,7 +107,7 @@ replace=ENGINE=
 
 [MyService]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 password=mypasswd

@@ -1,5 +1,4 @@
-#ifndef MARIADB_NODES_H
-#define MARIADB_NODES_H
+#pragma once
 
 /**
  * @file mariadb_nodes.h - backend nodes routines
@@ -36,7 +35,7 @@ public:
      * @brief Constructor
      * @param pref  name of backend setup (like 'repl' or 'galera')
      */
-    Mariadb_nodes(const char* pref, const char* test_cwd, bool verbose);
+    Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose, std::string network_config);
 
     virtual ~Mariadb_nodes();
 
@@ -55,20 +54,20 @@ public:
     /**
      * @brief Unix socket to connecto to MariaDB
      */
-    char socket[256][1024];
+    char * socket[256];
     /**
      * @brief 'socket=$socket' line
      */
-    char socket_cmd[256][1024];
+    char * socket_cmd[256];
 
     /**
      * @brief   User name to access backend nodes
      */
-    char user_name[256];
+    char * user_name;
     /**
      * @brief   Password to access backend nodes
      */
-    char password[256];
+    char * password;
     /**
      * @brief master index of node which was last configured to be Master
      */
@@ -77,18 +76,18 @@ public:
     /**
      * @brief start_db_command Command to start DB server
      */
-    char start_db_command[256][4096];
+    char * start_db_command[256];
 
     /**
      * @brief stop_db_command Command to start DB server
      */
-    char stop_db_command[256][4096];
+    char * stop_db_command[256];
 
     /**
      * @brief cleanup_db_command Command to remove all
      * data files and re-install DB with mysql_install_db
      */
-    char cleanup_db_command[256][4096];
+    char * cleanup_db_command[256];
 
     /**
      * @brief ssl if true ssl will be used
@@ -381,7 +380,7 @@ public:
      * Only works with master-slave replication and should not be used with Galera clusters.
      * The function expects that the first node, @c nodes[0], is the master.
      */
-    void sync_slaves(int node = 0);
+    virtual void sync_slaves(int node = 0);
 
     /**
      * @brief Close all connections to this node
@@ -488,10 +487,8 @@ class Galera_nodes : public Mariadb_nodes
 {
 public:
 
-    Galera_nodes(const char* pref, const char* test_cwd, bool verbose)
-        : Mariadb_nodes(pref, test_cwd, verbose)
-    {
-    }
+    Galera_nodes(const char *pref, const char *test_cwd, bool verbose, std::string network_config) :
+        Mariadb_nodes(pref, test_cwd, verbose, network_config) { }
 
     int start_galera();
 
@@ -508,6 +505,9 @@ public:
     }
 
     std::string get_config_name(int node) override;
-};
 
-#endif      // MARIADB_NODES_H
+    virtual void sync_slaves(int node = 0)
+    {
+        sleep(10);
+    }
+};
