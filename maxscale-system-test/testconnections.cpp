@@ -217,10 +217,13 @@ TestConnections::TestConnections(int argc, char *argv[]):
         }
     }
 
-    test_name = basename(argv[0]);
-    if (!strcmp(test_name, "non_native_setup"))
+    if (optind < argc)
     {
-        test_name = argv[1];
+        test_name = argv[optind];
+    }
+    else
+    {
+        test_name = basename(argv[0]);
     }
 
     const char * labels_string = NULL;
