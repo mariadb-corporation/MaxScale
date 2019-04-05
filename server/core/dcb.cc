@@ -100,7 +100,6 @@ static inline DCB* dcb_find_in_list(DCB* dcb);
 static void        dcb_stop_polling_and_shutdown(DCB* dcb);
 static bool        dcb_maybe_add_persistent(DCB*);
 static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue);
-static int         dcb_bytes_readable(DCB* dcb);
 static int         dcb_read_no_bytes_available(DCB* dcb, int nreadtotal);
 static int         dcb_create_SSL(DCB* dcb, SSL_LISTENER* ssl);
 static int         dcb_read_SSL(DCB* dcb, GWBUF** head);
@@ -638,9 +637,10 @@ int dcb_read(DCB* dcb,
  * Find the number of bytes available for the DCB's socket
  *
  * @param dcb       The DCB to read from
+ *
  * @return          -1 on error, otherwise the total number of bytes available
  */
-static int dcb_bytes_readable(DCB* dcb)
+int dcb_bytes_readable(DCB* dcb)
 {
     int bytesavailable;
 
