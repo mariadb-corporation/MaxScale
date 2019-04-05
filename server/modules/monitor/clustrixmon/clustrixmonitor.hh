@@ -14,6 +14,7 @@
 
 #include "clustrixmon.hh"
 #include <map>
+#include <set>
 #include <sqlite3.h>
 #include <maxscale/monitor.hh>
 #include <maxbase/http.hh>
@@ -87,6 +88,11 @@ private:
     void check_cluster(Clustrix::Softfailed softfailed);
     void check_hub(Clustrix::Softfailed softfailed);
     void choose_hub(Clustrix::Softfailed softfailed);
+
+    bool choose_dynamic_hub(Clustrix::Softfailed softfailed, std::set<std::string>& ips_checked);
+    bool choose_bootstrap_hub(Clustrix::Softfailed softfailed, std::set<std::string>& ips_checked);
+    bool choose_persisted_hub(Clustrix::Softfailed softfailed, std::set<std::string>& ips_checked);
+
     void refresh_nodes();
     bool check_cluster_membership(std::map<int, ClustrixMembership>* pMemberships);
 

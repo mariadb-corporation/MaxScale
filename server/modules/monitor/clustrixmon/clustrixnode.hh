@@ -161,7 +161,8 @@ public:
     }
 
     bool can_be_used_as_hub(const char* zName,
-                            const mxs::MonitorServer::ConnectionSettings& settings);
+                            const mxs::MonitorServer::ConnectionSettings& settings,
+                            Clustrix::Softfailed softfailed);
 
     SERVER* server() const
     {

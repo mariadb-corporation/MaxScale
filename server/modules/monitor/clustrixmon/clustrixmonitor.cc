@@ -274,68 +274,81 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
 {
     mxb_assert(!m_pHub_con);
 
-    SERVER* pHub_server = nullptr;
-    MYSQL* pHub_con = nullptr;
-
     set<string> ips;
 
-    // First we check the dynamic servers, in case there are.
-    for (auto it = m_nodes.begin(); !pHub_con && (it != m_nodes.end()); ++it)
+    // First we check the dynamic servers, in case there are,
+    if (!choose_dynamic_hub(softfailed, ips))
     {
-        auto& element = *it;
-        ClustrixNode& node = element.second;
-
-        if (node.can_be_used_as_hub(name(), m_settings.conn_settings))
+        // then we check the bootstrap servers, and
+        if (!choose_bootstrap_hub(softfailed, ips))
         {
-            pHub_con = node.release_connection();
-            pHub_server = node.server();
-        }
-
-        ips.insert(node.ip());
-    }
-
-    if (!pHub_con)
-    {
-        // If that fails, then we check the bootstrap servers, but only if
-        // it was not checked above.
-
-        for (auto it = m_servers.begin(); !pHub_con && (it != m_servers.end()); ++it)
-        {
-            MonitorServer& ms = **it;
-
-            if (ips.find(ms.server->address) == ips.end())
-            {
-                if (Clustrix::ping_or_connect_to_hub(name(), m_settings.conn_settings, softfailed, ms))
-                {
-                    pHub_con = ms.con;
-                    pHub_server = ms.server;
-                }
-                else if (ms.con)
-                {
-                    mysql_close(ms.con);
-                }
-
-                ms.con = nullptr;
-            }
+            // finally, if all else fails, we check servers that have been persisted.
+            // In practise we will only get here at startup (no dynamic servers)
+            // if the bootstrap servers cannot be contacted.
+            choose_persisted_hub(softfailed, ips);
         }
     }
 
-    if (pHub_con)
+    if (m_pHub_con)
     {
         MXS_NOTICE("%s: Monitoring Clustrix cluster state using node %s:%d.",
-                   name(), pHub_server->address, pHub_server->port);
-
-        m_pHub_con = pHub_con;
-        m_pHub_server = pHub_server;
-
-        mxb_assert(m_pHub_con);
-        mxb_assert(m_pHub_con);
+                   name(), m_pHub_server->address, m_pHub_server->port);
     }
     else
     {
         MXS_ERROR("%s: Could not connect to any server or no server that could "
                   "be connected to was part of the quorum.", name());
     }
+}
+
+bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
+{
+    for (auto it = m_nodes.begin(); !m_pHub_con && (it != m_nodes.end()); ++it)
+    {
+        auto& element = *it;
+        ClustrixNode& node = element.second;
+
+        if (node.can_be_used_as_hub(name(), m_settings.conn_settings, softfailed))
+        {
+            m_pHub_con = node.release_connection();
+            m_pHub_server = node.server();
+        }
+
+        ips_checked.insert(node.ip());
+    }
+
+    return m_pHub_con != nullptr;
+}
+
+bool ClustrixMonitor::choose_bootstrap_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
+{
+    for (auto it = m_servers.begin(); !m_pHub_con && (it != m_servers.end()); ++it)
+    {
+        MonitorServer& ms = **it;
+
+        if (ips_checked.find(ms.server->address) == ips_checked.end())
+        {
+            if (Clustrix::ping_or_connect_to_hub(name(), m_settings.conn_settings, softfailed, ms))
+            {
+                m_pHub_con = ms.con;
+                m_pHub_server = ms.server;
+            }
+            else if (ms.con)
+            {
+                mysql_close(ms.con);
+            }
+
+            ms.con = nullptr;
+        }
+    }
+
+    return m_pHub_con != nullptr;
+}
+
+bool ClustrixMonitor::choose_persisted_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
+{
+    // TODO: Check persisted servers.
+    return false;
 }
 
 void ClustrixMonitor::refresh_nodes()
