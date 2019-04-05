@@ -38,6 +38,13 @@ Readwritesplit now allows open transactions to finish if the master is put into
 maintenance mode. To forcefully close all connections to a server use the
 `maxctrl set server <name> maintenance --force` command.
 
+### Stronger hashing algorithm for admin user passwords
+
+The administrative user passwords are now stored as SHA2-512 hashes which is an
+improvement over the older MD5 hashing algorithm. New users will use the
+stronger algorithm but old users will continue using the weaker one. To upgrade
+administrative users, recreate the user.
+
 ## Dropped Features
 
 ## New Features
