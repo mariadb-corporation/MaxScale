@@ -82,6 +82,8 @@ typedef struct
     MXS_MONITORED_SERVER** excluded_servers; /**< Servers banned for master promotion during auto-failover. */
     const char* promote_sql_file;  /**< File with sql commands which are ran to a server being promoted. */
     const char* demote_sql_file;   /**< File with sql commands which are ran to a server being demoted. */
+    int cluster_operation_disable_timer; /**< Counter for temporary automatic cluster operation disabling. */
+    bool cluster_op_performed;     /**< Has an automatic failover/rejoin been performed this loop? */
 
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;

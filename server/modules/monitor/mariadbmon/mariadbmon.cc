@@ -33,8 +33,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/utils.h>
-// TODO: For monitorAddParameters
-#include "../../../core/internal/monitor.h"
 
 /** Column positions for SHOW SLAVE STATUS */
 #define MYSQL55_STATUS_MASTER_LOG_POS 5
@@ -95,7 +93,7 @@ static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
 static MySqlServerInfo* get_server_info(const MYSQL_MONITOR* handle, const MXS_MONITORED_SERVER* db);
-static bool mon_process_failover(MYSQL_MONITOR*, uint32_t, bool*);
+static void mon_process_failover(MYSQL_MONITOR* monitor);
 static bool do_failover(MYSQL_MONITOR* mon, json_t** output);
 static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
                           MXS_MONITORED_SERVER* new_master, json_t** err_out);
@@ -109,7 +107,8 @@ static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* s
 static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output);
 static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& servers, json_t** output);
 static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
-static void disable_setting(MYSQL_MONITOR* mon, const char* setting);
+static void delay_auto_cluster_ops(MYSQL_MONITOR* mon);
+static bool can_perform_cluster_ops(MYSQL_MONITOR* mon);
 static bool cluster_can_be_joined(MYSQL_MONITOR* mon);
 static bool can_replicate_from(MYSQL_MONITOR* mon,
                                MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
@@ -552,15 +551,9 @@ bool mysql_switchover(MXS_MONITOR* mon, MXS_MONITORED_SERVER* new_master,
         }
         else
         {
-            string format = "Switchover %s -> %s failed";
-            bool failover = config_get_bool(mon->parameters, CN_AUTO_FAILOVER);
-            if (failover)
-            {
-                disable_setting(handle, CN_AUTO_FAILOVER);
-                format += ", failover has been disabled.";
-            }
-            format += ".";
-            PRINT_MXS_JSON_ERROR(error_out, format.c_str(), curr_master_name, new_master_name);
+            const char format[] = "Switchover %s -> %s failed.";
+            PRINT_MXS_JSON_ERROR(error_out, format, curr_master_name, new_master_name);
+            delay_auto_cluster_ops(handle);
         }
     }
 
@@ -2206,7 +2199,8 @@ monitorMain(void *arg)
     size_t nrounds = 0;
     int log_no_master = 1;
     bool heartbeat_checked = false;
-
+    handle->cluster_op_performed = false;
+    handle->cluster_operation_disable_timer = 0;
     replication_heartbeat = handle->replicationHeartbeat;
     detect_stale_master = handle->detectStaleMaster;
 
@@ -2255,6 +2249,12 @@ monitorMain(void *arg)
         num_servers = 0;
 
         atomic_add_uint64(&mon->ticks, 1);
+        handle->cluster_op_performed = false;
+        if (handle->cluster_operation_disable_timer > 0)
+        {
+            handle->cluster_operation_disable_timer--;
+        }
+
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 
@@ -2559,34 +2559,25 @@ monitorMain(void *arg)
          * need to be launched.
          */
         mon_process_state_changes(mon, handle->script, handle->events);
-        bool cluster_modified = false; // Has an automatic failover/rejoin been performed this loop?
 
-        if (handle->auto_failover)
+        if (handle->auto_failover && can_perform_cluster_ops(handle))
         {
-            const char RE_ENABLE_FMT[] = "%s To re-enable failover, manually set '%s' to 'true' for monitor "
-                                         "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
             if (failover_not_possible(handle))
             {
                 const char PROBLEMS[] = "Failover is not possible due to one or more problems in the "
-                                        "replication configuration, disabling automatic failover. Failover "
-                                        "should only be enabled after the replication configuration has been "
-                                        "fixed.";
-                MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, mon->name);
-                handle->auto_failover = false;
-                disable_setting(handle, CN_AUTO_FAILOVER);
+                                        "replication configuration.";
+                MXS_ERROR(PROBLEMS);
+                delay_auto_cluster_ops(handle);
             }
             // If master seems to be down, check if slaves are receiving events.
             else if (handle->verify_master_failure && handle->master &&
                      SERVER_IS_DOWN(handle->master->server) && slave_receiving_events(handle))
             {
-                MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
+                MXS_NOTICE("A slave is still receiving data from master, delaying failover.");
             }
-            else if (!mon_process_failover(handle, handle->failover_timeout, &cluster_modified))
+            else
             {
-                const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
-                MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, mon->name);
-                handle->auto_failover = false;
-                disable_setting(handle, CN_AUTO_FAILOVER);
+                mon_process_failover(handle);
             }
         }
 
@@ -2651,10 +2642,9 @@ monitorMain(void *arg)
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (!config_get_global_options()->passive && handle->auto_rejoin &&
-            !cluster_modified && cluster_can_be_joined(handle))
+        if (handle->auto_rejoin && cluster_can_be_joined(handle) && can_perform_cluster_ops(handle))
         {
-            // Check if any servers should be autojoined to the cluster
+            // Check if any servers should be autojoined to the cluster.
             ServerVector joinable_servers;
             if (get_joinable_servers(handle, &joinable_servers))
             {
@@ -2662,7 +2652,7 @@ monitorMain(void *arg)
                 if (joins > 0)
                 {
                     MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
-                    cluster_modified = true;
+                    handle->cluster_op_performed = true;
                 }
             }
             else
@@ -2675,7 +2665,7 @@ monitorMain(void *arg)
         /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
          * perform this if cluster has been modified this loop since it may not be clear which server
          * should be a slave. */
-        if (!config_get_global_options()->passive && handle->enforce_read_only_slaves && !cluster_modified)
+        if (handle->enforce_read_only_slaves && can_perform_cluster_ops(handle))
         {
             enforce_read_only_on_slaves(handle);
         }
@@ -3384,30 +3374,19 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
 }
 
 /**
- * @brief Process possible failover event
+ * If a master has failed, performs failover. This function only works with flat replication topologies
+ * Should be called immediately after @c mon_process_state_changes.
  *
- * If a master failure has occurred and MaxScale is configured with failover
- * functionality, this fuction executes an external failover program to elect
- * a new master server.
- *
- * This function should be called immediately after @c mon_process_state_changes.
- *
- * @param monitor               Monitor whose cluster is processed
- * @param failover_timeout      Timeout in seconds for the failover
- * @param cluster_modified_out  Set to true if modifying cluster
- * @return True on success, false on error
- *
- * @todo Currently this only works with flat replication topologies and
- *       needs to be moved inside mysqlmon as it is MariaDB specific code.
+ * @param monitor Monitor whose cluster is processed
  */
-bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, bool* cluster_modified_out)
+void mon_process_failover(MYSQL_MONITOR* monitor)
 {
-    ss_dassert(*cluster_modified_out == false);
-    if (config_get_global_options()->passive ||
-        (monitor->master && SERVER_IS_MASTER(monitor->master->server)))
+    ss_dassert(monitor->cluster_op_performed == false);
+    if (monitor->master && SERVER_IS_MASTER(monitor->master->server))
     {
-        return true;
+        return;
     }
+    int failover_timeout = monitor->failover_timeout;
 
     MXS_MONITORED_SERVER* failed_master = NULL;
     for (MXS_MONITORED_SERVER *ptr = monitor->monitor->monitored_servers; ptr; ptr = ptr->next)
@@ -3416,12 +3395,11 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
         {
             if (failed_master)
             {
-                MXS_ALERT("Multiple failed master servers detected: "
-                          "'%s' is the first master to fail but server "
-                          "'%s' has also triggered a master_down event.",
-                          failed_master->server->unique_name,
-                          ptr->server->unique_name);
-                return false;
+                MXS_ERROR("Multiple failed master servers detected: '%s' is the first master to fail "
+                          "but server '%s' has also triggered a master_down event.",
+                          failed_master->server->unique_name, ptr->server->unique_name);
+                delay_auto_cluster_ops(monitor);
+                return;
             }
 
             if (ptr->server->active_event)
@@ -3442,7 +3420,7 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
                 if (t > timeout)
                 {
                     MXS_WARNING("Failover of server '%s' did not take place within "
-                                "%u seconds, failover needs to be re-triggered",
+                                "%i seconds, failover needs to be re-triggered",
                                 ptr->server->unique_name, failover_timeout);
                     failed_master = ptr;
                 }
@@ -3450,7 +3428,6 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
         }
     }
 
-    bool rval = true;
     if (failed_master)
     {
         int failcount = monitor->failcount;
@@ -3468,12 +3445,15 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
                 monitor->warn_failover_precond = true;
                 MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
                            failed_master->server->unique_name);
-                failed_master->new_event = false;
-                // If this fails, auto_failover is disabled.
-                rval = do_failover(monitor, NULL);
-                if (rval)
+                if (do_failover(monitor, NULL))
                 {
-                    *cluster_modified_out = true;
+                    monitor->cluster_op_performed = true;
+                    failed_master->new_event = false;
+                }
+                else
+                {
+                    MXS_ERROR("Automatic failover failed.");
+                    delay_auto_cluster_ops(monitor);
                 }
             }
             else
@@ -3493,8 +3473,6 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
     {
         monitor->warn_failover_precond = true;
     }
-
-    return rval;
 }
 
 /**
@@ -3755,8 +3733,8 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
            io_pos_stable &&
            difftime(time(NULL), begin) < seconds_remaining)
     {
-        MXS_INFO("Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
-                 new_master->server->unique_name, master_info->relay_log_events());
+        MXS_NOTICE("Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
+                   new_master->server->unique_name, master_info->relay_log_events());
         thread_millisleep(1000); // Sleep for a while before querying server again.
         // Todo: check server version before entering failover.
         Gtid old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
@@ -4916,6 +4894,7 @@ static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_serve
 {
     SERVER* master = mon->master->server;
     uint32_t servers_joined = 0;
+    bool rejoin_error = false;
     if (!joinable_servers.empty())
     {
         string change_cmd = generate_change_master_cmd(mon, master->name, master->port);
@@ -4947,6 +4926,10 @@ static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_serve
                 MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
                            "redirecting it to '%s'.", name, master_name, master_name);
                 op_success = redirect_one_slave(joinable, change_cmd.c_str());
+                if (!op_success)
+                {
+                    rejoin_error = true;
+                }
             }
 
             if (op_success)
@@ -4954,6 +4937,11 @@ static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_serve
                 servers_joined++;
             }
         }
+    }
+
+    if (rejoin_error)
+    {
+        delay_auto_cluster_ops(mon);
     }
     return servers_joined;
 }
@@ -4993,19 +4981,21 @@ static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd)
     return success;
 }
 
-/**
- * Set a monitor config parameter to "false". The effect persists over stopMonitor/startMonitor but not
- * MaxScale restart. Only use on boolean config settings.
- *
- * @param mon Cluster monitor
- * @param setting_name Setting to disable
- */
-static void disable_setting(MYSQL_MONITOR* mon, const char* setting)
+static void delay_auto_cluster_ops(MYSQL_MONITOR* mon)
 {
-    MXS_CONFIG_PARAMETER p = {};
-    p.name = const_cast<char*>(setting);
-    p.value = const_cast<char*>("false");
-    monitorAddParameters(mon->monitor, &p);
+    if (mon->auto_failover || mon->auto_rejoin || mon->enforce_read_only_slaves)
+    {
+        const char DISABLING_AUTO_OPS[] = "Disabling automatic cluster operations for %i monitor ticks.";
+        MXS_NOTICE(DISABLING_AUTO_OPS, mon->failcount);
+    }
+    // + 1 is because the start of next tick substracts 1.
+    mon->cluster_operation_disable_timer = mon->failcount + 1;
+}
+
+static bool can_perform_cluster_ops(MYSQL_MONITOR* mon)
+{
+    return (!config_get_global_options()->passive && mon->cluster_operation_disable_timer <= 0 &&
+            !mon->cluster_op_performed);
 }
 
 /**
@@ -5132,6 +5122,7 @@ static bool check_sql_files(MYSQL_MONITOR* mon)
 static void enforce_read_only_on_slaves(MYSQL_MONITOR* mon)
 {
     const char QUERY[] = "SET GLOBAL read_only=1;";
+    bool error = false;
     for (MXS_MONITORED_SERVER* mon_srv = mon->monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
     {
         MySqlServerInfo* serv_info = get_server_info(mon, mon_srv);
@@ -5145,7 +5136,13 @@ static void enforce_read_only_on_slaves(MYSQL_MONITOR* mon)
             else
             {
                 MXS_ERROR("Setting read_only on server '%s' failed: '%s.", name, mysql_error(mon_srv->con));
+                error = true;
             }
         }
+    }
+
+    if (error)
+    {
+        delay_auto_cluster_ops(mon);
     }
 }
