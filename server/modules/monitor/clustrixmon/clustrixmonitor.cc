@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <set>
 #include <maxscale/json_api.hh>
+#include <maxscale/paths.h>
 #include "../../../core/internal/config_runtime.hh"
 #include "../../../core/internal/service.hh"
 
@@ -37,21 +38,106 @@ namespace
 const int DEFAULT_MYSQL_PORT = 3306;
 const int DEFAULT_HEALTH_PORT = 3581;
 
+// Change this, if the schema is changed.
+const int SCHEMA_VERSION = 1;
+
+static const char SQL_CREATE[] =
+    "CREATE TABLE IF NOT EXISTS clustrix_nodes "
+    "(id INT PRIMARY KEY, ip VARCHAR(255), mysql_port INT, health_port INT)";
+
+static const char SQL_UPSERT_FORMAT[] =
+    "INSERT OR REPLACE INTO clustrix_nodes (id, ip, mysql_port, health_port) "
+    "VALUES (%d, '%s', %d, %d)";
+
+static const char SQL_DELETE_FORMAT[] =
+    "DELETE FROM clustrix_nodes WHERE id = %d";
 }
 
-ClustrixMonitor::ClustrixMonitor(const string& name, const string& module)
+namespace
+{
+
+bool create_schema(sqlite3* pDb)
+{
+    char* pError = nullptr;
+    int rv = sqlite3_exec(pDb, SQL_CREATE, nullptr, nullptr, &pError);
+
+    if (rv != SQLITE_OK)
+    {
+        MXS_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
+    }
+
+    return rv == SQLITE_OK;
+}
+
+sqlite3* open_or_create_db(const std::string& path)
+{
+    sqlite3* pDb = nullptr;
+    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_CREATE;
+    int rv = sqlite3_open_v2(path.c_str(), &pDb, flags, nullptr);
+
+    if (rv == SQLITE_OK)
+    {
+        if (create_schema(pDb))
+        {
+            MXS_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
+        }
+        else
+        {
+            MXS_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
+
+            if (unlink(path.c_str()) != 0)
+            {
+                MXS_ERROR("Failed to delete database %s that could not be properly "
+                          "initialized. You should delete the database manually.", path.c_str());
+                sqlite3_close_v2(pDb);
+                pDb = nullptr;
+            }
+        }
+    }
+    else
+    {
+        MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
+                  path.c_str(), sqlite3_errstr(rv));
+    }
+
+    return pDb;
+}
+
+}
+
+ClustrixMonitor::ClustrixMonitor(const string& name, const string& module, sqlite3* pDb)
     : MonitorWorker(name, module)
+    , m_pDb(pDb)
 {
 }
 
 ClustrixMonitor::~ClustrixMonitor()
 {
+    sqlite3_close_v2(m_pDb);
 }
 
 //static
 ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& module)
 {
-    return new ClustrixMonitor(name, module);
+    string path = get_datadir();
+
+    path += "/";
+    path += name;
+    path += "/clustrix_nodes-";
+    path += std::to_string(SCHEMA_VERSION);
+    path += ".db";
+
+    sqlite3* pDb = open_or_create_db(path);
+
+    if (!pDb)
+    {
+        MXS_WARNING("Could not open sqlite3 database for storing information "
+                    "about dynamically detected Clustrix nodes. The Clustrix "
+                    "monitor will remain dependant upon statically defined "
+                    "bootstrap nodes.");
+    }
+
+    return new ClustrixMonitor(name, module, pDb);
 }
 
 bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
@@ -305,19 +391,24 @@ void ClustrixMonitor::refresh_nodes()
 
                             ClustrixNode& node = nit->second;
 
+                            bool changed = false;
+
                             if (node.ip() != ip)
                             {
                                 node.set_ip(ip);
+                                changed = true;
                             }
 
                             if (node.mysql_port() != mysql_port)
                             {
                                 node.set_mysql_port(mysql_port);
+                                changed = true;
                             }
 
                             if (node.health_port() != health_port)
                             {
                                 node.set_health_port(health_port);
+                                changed = true;
                             }
 
                             bool is_draining = node.server()->is_draining();
@@ -337,6 +428,11 @@ void ClustrixMonitor::refresh_nodes()
                                            name(), node.id(), node.server()->address);
 
                                 node.server()->clear_status(SERVER_DRAINING);
+                            }
+
+                            if (changed)
+                            {
+                                persist_node(node);
                             }
 
                             nids.erase(id);
@@ -368,6 +464,7 @@ void ClustrixMonitor::refresh_nodes()
                                                   health_check_threshold, pServer);
 
                                 m_nodes.insert(make_pair(id, node));
+                                persist_node(node);
 
                                 // New server, so it needs to be added to all services that
                                 // use this monitor for defining its cluster of servers.
@@ -407,6 +504,7 @@ void ClustrixMonitor::refresh_nodes()
 
                     ClustrixNode& node = it->second;
                     node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
+                    unpersist_node(node);
                 }
 
                 vector<string> health_urls;
@@ -781,4 +879,58 @@ bool ClustrixMonitor::perform_operation(Operation operation,
     }
 
     return performed;
+}
+
+void ClustrixMonitor::persist_node(const ClustrixNode& node)
+{
+    if (!m_pDb)
+    {
+        return;
+    }
+
+    char sql_upsert[sizeof(SQL_UPSERT_FORMAT) + 10 + node.ip().length() + 10 + 10];
+
+    int id = node.id();
+    const char* zIp = node.ip().c_str();
+    int mysql_port = node.mysql_port();
+    int health_port = node.health_port();
+
+    sprintf(sql_upsert, SQL_UPSERT_FORMAT, id, zIp, mysql_port, health_port);
+
+    char* pError = nullptr;
+    if (sqlite3_exec(m_pDb, sql_upsert, nullptr, nullptr, &pError) == SQLITE_OK)
+    {
+        MXS_INFO("Updated Clustrix node in bookkeeping: %d, '%s', %d, %d.",
+                 id, zIp, mysql_port, health_port);
+    }
+    else
+    {
+        MXS_ERROR("Could not update Ćlustrix node (%d, '%s', %d, %d) in bookkeeping: %s",
+                  id, zIp, mysql_port, health_port, pError ? pError : "Unknown error");
+    }
+}
+
+void ClustrixMonitor::unpersist_node(const ClustrixNode& node)
+{
+    if (!m_pDb)
+    {
+        return;
+    }
+
+    char sql_delete[sizeof(SQL_UPSERT_FORMAT) + 10];
+
+    int id = node.id();
+
+    sprintf(sql_delete, SQL_DELETE_FORMAT, id);
+
+    char* pError = nullptr;
+    if (sqlite3_exec(m_pDb, sql_delete, nullptr, nullptr, &pError) == SQLITE_OK)
+    {
+        MXS_INFO("Deleted Clustrix node %d from bookkeeping.", id);
+    }
+    else
+    {
+        MXS_ERROR("Could not delete Ćlustrix node %d from bookkeeping: %s",
+                  id, pError ? pError : "Unknown error");
+    }
 }

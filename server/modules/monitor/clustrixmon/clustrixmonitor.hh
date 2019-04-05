@@ -14,6 +14,7 @@
 
 #include "clustrixmon.hh"
 #include <map>
+#include <sqlite3.h>
 #include <maxscale/monitor.hh>
 #include <maxbase/http.hh>
 #include "clustrixmembership.hh"
@@ -74,7 +75,9 @@ protected:
     void server_removed(SERVER* pServer) override;
 
 private:
-    ClustrixMonitor(const std::string& name, const std::string& module);
+    ClustrixMonitor(const std::string& name,
+                    const std::string& module,
+                    sqlite3* pDb);
 
     void pre_loop() override;
     void post_loop() override;
@@ -127,6 +130,9 @@ private:
         return mxb::WorkerLoad::get_time_ms();
     }
 
+    void persist_node(const ClustrixNode& node);
+    void unpersist_node(const ClustrixNode& node);
+
 private:
     Config                      m_config;
     std::map<int, ClustrixNode> m_nodes;
@@ -136,4 +142,5 @@ private:
     long                        m_last_cluster_check    { 0 };
     SERVER*                     m_pHub_server           { nullptr };
     MYSQL*                      m_pHub_con              { nullptr };
+    sqlite3*                    m_pDb                   { nullptr };
 };
