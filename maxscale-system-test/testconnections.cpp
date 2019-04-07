@@ -107,6 +107,8 @@ void TestConnections::restart_galera(bool value)
     maxscale::restart_galera = value;
 }
 
+bool TestConnections::verbose = false;
+
 TestConnections::TestConnections(int argc, char* argv[])
     : enable_timeouts(true)
     , global_result(0)
@@ -114,7 +116,6 @@ TestConnections::TestConnections(int argc, char* argv[])
     , local_maxscale(false)
     , no_backend_log_copy(false)
     , no_maxscale_log_copy(false)
-    , verbose(false)
     , smoke(true)
     , binlog_cmd_option(0)
     , ssl(false)
@@ -288,7 +289,7 @@ TestConnections::TestConnections(int argc, char* argv[])
             mdbci_call_needed = true;
             tprintf("Machines with label '%s' are not running, MDBCI UP call is needed", label.c_str());
         }
-        else
+        else if (verbose)
         {
             tprintf("Machines with label '%s' are running, MDBCI UP call is not needed", label.c_str());
         }
@@ -306,13 +307,19 @@ TestConnections::TestConnections(int argc, char* argv[])
     if (mdbci_labels.find(std::string("REPL_BACKEND")) == std::string::npos)
     {
         no_repl = true;
-        tprintf("No need to use Master/Slave");
+        if (verbose)
+        {
+            tprintf("No need to use Master/Slave");
+        }
     }
 
     if (mdbci_labels.find(std::string("GALERA_BACKEND")) == std::string::npos)
     {
         no_galera = true;
-        tprintf("No need to use Galera");
+        if (verbose)
+        {
+            tprintf("No need to use Galera");
+        }
     }
 
     get_logs_command = (char *) malloc(strlen(test_dir) + 14);

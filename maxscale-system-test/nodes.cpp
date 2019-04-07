@@ -168,6 +168,11 @@ int Nodes::ssh_node(int node, const char* ssh, bool sudo)
                 verbose ? "" :  " > /dev/null");
     }
 
+    if (verbose)
+    {
+        std::cout << ssh << std::endl;
+    }
+
     int rc = 1;
     FILE* in = popen(cmd, "w");
 

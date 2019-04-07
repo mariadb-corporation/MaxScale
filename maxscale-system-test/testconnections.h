@@ -186,7 +186,7 @@ public:
     /**
      * @brief verbose if true more printing activated
      */
-    bool verbose;
+    static bool verbose;
 
     /**
      * @brief smoke if true all tests are executed in quick mode
