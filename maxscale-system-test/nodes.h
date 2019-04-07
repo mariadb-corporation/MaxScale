@@ -168,9 +168,9 @@ public:
     /**
      * @brief Check node via ssh and restart it if it is not resposible
      * @param node Node index
-     * @return 0 if node is ok, 1 if start failed
+     * @return True if node is ok, false if start failed
      */
-    int check_nodes();
+    bool check_nodes();
 
     /**
      * @brief read_basic_env Read IP, sshkey, etc - common parameters for all kinds of nodes
@@ -206,5 +206,5 @@ public:
     int stop_vm(int node);
 
 private:
-    int check_node_ssh(int node);
+    bool check_node_ssh(int node);
 };
