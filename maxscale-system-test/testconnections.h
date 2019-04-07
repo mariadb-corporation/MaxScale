@@ -700,9 +700,15 @@ public:
 
 private:
     void report_result(const char* format, va_list argp);
-    void copy_one_mariadb_log(Mariadb_nodes *nrepl, int i, std::string filename);
+    void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
 
-    std::vector<std::function<void (void)>> m_on_destroy;
+    bool too_many_maxscales() const
+    {
+        return maxscales->N < 2
+               && mdbci_labels.find("SECOND_MAXSCALE") != std::string::npos;
+    }
+
+    std::vector<std::function<void(void)>> m_on_destroy;
 };
 
 /**
