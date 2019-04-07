@@ -18,6 +18,9 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <maxscale/protocol/mysql.hh>
+#include <mariadb_rpl.h>
+
 MXS_BEGIN_DECLS
 
 #define BINLOG_FNAMELEN   255
@@ -30,9 +33,10 @@ MXS_BEGIN_DECLS
 #define BINLOG_EVENT_HDR_LEN 19
 
 /**
- * Binlog event types
+ * Definitions/aliases for binlog event types
+ *
+ * They are already defined in mariadb_rpl.h but legacy code uses these defines
  */
-#define START_EVENT_V3           0x01
 #define QUERY_EVENT              0x02
 #define STOP_EVENT               0x03
 #define ROTATE_EVENT             0x04
@@ -64,9 +68,6 @@ MXS_BEGIN_DECLS
 #define WRITE_ROWS_EVENTv2       0x1E
 #define UPDATE_ROWS_EVENTv2      0x1F
 #define DELETE_ROWS_EVENTv2      0x20
-#define GTID_EVENT               0x21
-#define ANONYMOUS_GTID_EVENT     0x22
-#define PREVIOUS_GTIDS_EVENT     0x23
 
 #define MAX_EVENT_TYPE 0x23
 
@@ -75,8 +76,6 @@ MXS_BEGIN_DECLS
 #define MARIADB_ANNOTATE_ROWS_EVENT 0xa0
 /* New MariaDB 10 event numbers start from here */
 #define MARIADB10_BINLOG_CHECKPOINT_EVENT 0xa1
-#define MARIADB10_GTID_EVENT              0xa2
-#define MARIADB10_GTID_GTID_LIST_EVENT    0xa3
 
 #define MAX_EVENT_TYPE_MARIADB10 0xa3
 
@@ -91,7 +90,6 @@ MXS_BEGIN_DECLS
 #define LOG_EVENT_THREAD_SPECIFIC_F          0x0004
 #define LOG_EVENT_SUPPRESS_USE_F             0x0008
 #define LOG_EVENT_UPDATE_TABLE_MAP_VERSION_F 0x0010
-#define LOG_EVENT_ARTIFICIAL_F               0x0020
 #define LOG_EVENT_RELAY_LOG_F                0x0040
 #define LOG_EVENT_IGNORABLE_F                0x0080
 #define LOG_EVENT_NO_FILTER_F                0x0100

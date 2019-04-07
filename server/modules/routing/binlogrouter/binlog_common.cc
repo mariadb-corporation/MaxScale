@@ -219,23 +219,11 @@ const char* binlog_event_name(int type)
     case GTID_EVENT:
         return "GTID_EVENT";
 
-    case ANONYMOUS_GTID_EVENT:
-        return "ANONYMOUS_GTID_EVENT";
-
-    case PREVIOUS_GTIDS_EVENT:
-        return "PREVIOUS_GTIDS_EVENT";
-
     case MARIADB_ANNOTATE_ROWS_EVENT:
         return "MARIADB_ANNOTATE_ROWS_EVENT";
 
     case MARIADB10_BINLOG_CHECKPOINT_EVENT:
         return "MARIADB10_BINLOG_CHECKPOINT_EVENT";
-
-    case MARIADB10_GTID_EVENT:
-        return "MARIADB10_GTID_EVENT";
-
-    case MARIADB10_GTID_GTID_LIST_EVENT:
-        return "MARIADB10_GTID_GTID_LIST_EVENT";
 
     default:
         return "UNKNOWN_EVENT";
