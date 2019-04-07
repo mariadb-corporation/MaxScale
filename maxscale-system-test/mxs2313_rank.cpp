@@ -124,6 +124,28 @@ void test_readconnroute(TestConnections& test, std::vector<std::string> ids)
     do_test(0);
 }
 
+void test_hints(TestConnections& test, std::vector<std::string> ids)
+{
+    std::cout << "Test that routing hints override server rank" << std::endl;
+
+    test.check_maxctrl("alter server server1 rank primary");
+    test.check_maxctrl("alter server server2 rank primary");
+    test.check_maxctrl("alter server server3 rank primary");
+    test.check_maxctrl("alter server server4 rank secondary");
+
+    Connection c = test.maxscales->rwsplit();
+    c.connect();
+
+    auto id = c.field("SELECT @@server_id -- maxscale route to server server4");
+    test.expect(!id.empty() && id == ids[3], "Third slave should reply");
+
+    id = c.field("SELECT @@server_id -- maxscale route to slave");
+    test.expect(!id.empty() && (id == ids[1] || id == ids[2]), "Primary slave should reply");
+
+    id = c.field("SELECT @@server_id -- maxscale route to master");
+    test.expect(!id.empty() && id == ids[0], "Master should reply");
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
@@ -145,6 +167,7 @@ int main(int argc, char* argv[])
 
     test_rwsplit(test, ids);
     test_readconnroute(test, ids);
+    test_hints(test, ids);
 
     return test.global_result;
 }

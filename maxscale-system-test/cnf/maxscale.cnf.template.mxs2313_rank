@@ -34,6 +34,10 @@ user=maxskysql
 password=skysql
 monitor_interval=1000
 
+[Hint]
+type=filter
+module=hintfilter
+
 [RW-Split-Router]
 type=service
 router=readwritesplit
@@ -42,6 +46,7 @@ user=maxskysql
 password=skysql
 master_failure_mode=fail_on_write
 master_reconnection=true
+filters=Hint
 
 [Read-Connection-Router]
 type=service
