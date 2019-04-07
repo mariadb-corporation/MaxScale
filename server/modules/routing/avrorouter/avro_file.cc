@@ -384,7 +384,10 @@ bool notify_cb(DCB* dcb, void* data)
 
 void notify_all_clients(SERVICE* service)
 {
-    dcb_foreach(notify_cb, service);
+    auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    worker->execute([service]() {
+                        dcb_foreach(notify_cb, service);
+                    }, mxs::RoutingWorker::EXECUTE_AUTO);
 }
 
 void do_checkpoint(Avro* router)

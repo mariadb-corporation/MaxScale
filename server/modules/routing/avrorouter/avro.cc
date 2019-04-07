@@ -133,22 +133,41 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
     , handler(service, handler, params->get_compiled_regex("match", 0, NULL).release(),
               params->get_compiled_regex("exclude", 0, NULL).release())
 {
-    if (source)
+    if (params->contains(CN_SERVERS))
     {
-        read_source_service_options(source);
+        MXS_NOTICE("Replicating directly from a master server");
+        cdc::Config cnf;
+        cnf.service = service;
+        cnf.statedir = avrodir;
+        cnf.server_id = params->get_integer("server_id");
+        cnf.gtid = params->get_string("gtid_start_pos");
+
+        auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+        worker->execute([this, cnf]() {
+                            m_replicator = cdc::Replicator::start(cnf, &this->handler);
+                            mxb_assert(m_replicator);
+                        }, mxs::RoutingWorker::EXECUTE_QUEUED);
+    }
+    else
+    {
+        if (source)
+        {
+            read_source_service_options(source);
+        }
+
+        char filename[BINLOG_FNAMELEN + 1];
+        snprintf(filename,
+                 sizeof(filename),
+                 BINLOG_NAMEFMT,
+                 filestem.c_str(),
+                 static_cast<int>(params->get_integer("start_index")));
+        binlog_name = filename;
+
+        MXS_NOTICE("Reading MySQL binlog files from %s", binlogdir.c_str());
+        MXS_NOTICE("First binlog is: %s", binlog_name.c_str());
     }
 
-    char filename[BINLOG_FNAMELEN + 1];
-    snprintf(filename,
-             sizeof(filename),
-             BINLOG_NAMEFMT,
-             filestem.c_str(),
-             static_cast<int>(params->get_integer("start_index")));
-    binlog_name = filename;
-
-    MXS_NOTICE("Reading MySQL binlog files from %s", binlogdir.c_str());
     MXS_NOTICE("Avro files stored at: %s", avrodir.c_str());
-    MXS_NOTICE("First binlog is: %s", binlog_name.c_str());
 
     // TODO: Do these in Avro::create
     avro_load_conversion_state(this);

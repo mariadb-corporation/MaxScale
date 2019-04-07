@@ -998,7 +998,7 @@ void Rpl::handle_event(REP_HEADER hdr, uint8_t* ptr)
     {
         handle_row_event(&hdr, ptr);
     }
-    else if (hdr.event_type == MARIADB10_GTID_EVENT)
+    else if (hdr.event_type == GTID_EVENT)
     {
         m_gtid.extract(hdr, ptr);
     }

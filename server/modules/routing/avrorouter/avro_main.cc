@@ -62,13 +62,13 @@ MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
     uint64_t block_size = service->svc_config_param.get_size("block_size");
     mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(
-            service->svc_config_param.get_enum("codec", codec_values));
+        service->svc_config_param.get_enum("codec", codec_values));
     std::string avrodir = service->svc_config_param.get_string("avrodir");
     SRowEventHandler handler(new AvroConverter(avrodir, block_size, codec));
 
     Avro* router = Avro::create(service, handler);
 
-    if (router)
+    if (router && !params->contains(CN_SERVERS))
     {
         conversion_task_ctl(router, true);
     }
@@ -525,25 +525,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_X_OK
                 | MXS_MODULE_OPT_PATH_CREAT
             },
-            {"source",
-             MXS_MODULE_PARAM_SERVICE},
-            {"filestem",                          MXS_MODULE_PARAM_STRING,
-             BINLOG_NAME_ROOT},
-            {"group_rows",                        MXS_MODULE_PARAM_COUNT,
-             "1000"},
-            {"group_trx",                         MXS_MODULE_PARAM_COUNT,
-             "1"},
-            {"start_index",                       MXS_MODULE_PARAM_COUNT,
-             "1"},
-            {"block_size",                        MXS_MODULE_PARAM_SIZE,
-             "0"},
-            {"codec",                             MXS_MODULE_PARAM_ENUM,  "null",
-             MXS_MODULE_OPT_ENUM_UNIQUE,
-             codec_values},
-            {"match",
-             MXS_MODULE_PARAM_REGEX},
-            {"exclude",
-             MXS_MODULE_PARAM_REGEX},
+            {"source", MXS_MODULE_PARAM_SERVICE},
+            {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
+            {"group_rows", MXS_MODULE_PARAM_COUNT, "1000"},
+            {"group_trx", MXS_MODULE_PARAM_COUNT, "1"},
+            {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
+            {"block_size", MXS_MODULE_PARAM_SIZE, "0"},
+            {"codec", MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
+            {"match", MXS_MODULE_PARAM_REGEX},
+            {"exclude", MXS_MODULE_PARAM_REGEX},
+            {"server_id", MXS_MODULE_PARAM_STRING, "1234"},
+            {"gtid_start_pos", MXS_MODULE_PARAM_STRING},
             {MXS_END_MODULE_PARAMS}
         }
     };

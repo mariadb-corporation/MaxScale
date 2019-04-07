@@ -31,6 +31,7 @@
 #include <blr_constants.hh>
 
 #include "rpl.hh"
+#include "replicator.hh"
 
 MXS_BEGIN_DECLS
 
@@ -104,7 +105,7 @@ enum mxs_avro_codec_type
 
 static const MXS_ENUM_VALUE codec_values[] =
 {
-    {"null",    MXS_AVRO_CODEC_NULL   },
+    {"null", MXS_AVRO_CODEC_NULL},
     {"deflate", MXS_AVRO_CODEC_DEFLATE},
 // Not yet implemented
 //    {"snappy", MXS_AVRO_CODEC_SNAPPY},
@@ -135,6 +136,8 @@ public:
     Rpl         handler;
 
 private:
+    std::unique_ptr<cdc::Replicator> m_replicator;
+
     Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler);
     void read_source_service_options(SERVICE* source);
 };
@@ -219,6 +222,6 @@ REP_HEADER        construct_header(uint8_t* ptr);
 bool              avro_save_conversion_state(Avro* router);
 bool              avro_load_conversion_state(Avro* router);
 void              avro_load_metadata_from_schemas(Avro* router);
-void              notify_all_clients(Avro* router);
+void              notify_all_clients(SERVICE* router);
 
 MXS_END_DECLS
