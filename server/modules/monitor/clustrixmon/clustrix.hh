@@ -50,12 +50,11 @@ enum class Softfailed
  * Is a particular Clustrix node part of the quorum.
  *
  * @param zName   The name of the Clustrix monitor instance.
- * @param server  The server object of a Clustrix node.
  * @param pCon    Valid MYSQL handle to the server.
  *
  * @return True, if the node is part of the quorum, false otherwise.
  */
-bool is_part_of_the_quorum(const char* zName, const SERVER& server, MYSQL* pCon);
+bool is_part_of_the_quorum(const char* zName, MYSQL* pCon);
 
 /**
  * Is a particular Clustrix node part of the quorum.
@@ -67,22 +66,20 @@ bool is_part_of_the_quorum(const char* zName, const SERVER& server, MYSQL* pCon)
  */
 inline bool is_part_of_the_quorum(const char* zName, mxs::MonitorServer& ms)
 {
-    mxb_assert(ms.server);
     mxb_assert(ms.con);
 
-    return is_part_of_the_quorum(zName, *ms.server, ms.con);
+    return is_part_of_the_quorum(zName, ms.con);
 }
 
 /**
  * Is a particular Clustrix node being softfailed.
  *
- * @param zName   The name of the Clustrix monitor instance.
- * @param server  The server object of a Clustrix node.
- * @param pCon    Valid MYSQL handle to the server.
+ * @param zName  The name of the Clustrix monitor instance.
+ * @param pCon   Valid MYSQL handle to the server.
  *
  * @return True, if the node is being softfailed, false otherwise.
  */
-bool is_being_softfailed(const char* zName, const SERVER& server, MYSQL* pCon);
+bool is_being_softfailed(const char* zName, MYSQL* pCon);
 
 /**
  * Ping or create connection to server and check whether it can be used

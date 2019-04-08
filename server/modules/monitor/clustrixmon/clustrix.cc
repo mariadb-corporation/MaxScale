@@ -98,12 +98,9 @@ Clustrix::SubState Clustrix::substate_from_string(const std::string& substate)
     }
 }
 
-bool Clustrix::is_part_of_the_quorum(const char* zName, const SERVER& server, MYSQL* pCon)
+bool Clustrix::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
 {
     bool rv = false;
-
-    const char* zAddress = server.address;
-    int port = server.port;
 
     const char ZQUERY[] = "SELECT status FROM system.membership WHERE nid = gtmnid()";
 
@@ -127,50 +124,49 @@ bool Clustrix::is_part_of_the_quorum(const char* zName, const SERVER& server, MY
                     break;
 
                 case Clustrix::Status::STATIC:
-                    MXS_NOTICE("%s: Node %s:%d is not part of the quorum (static), switching to "
+                    MXS_NOTICE("%s: Node %s is not part of the quorum (static), switching to "
                                "other node for monitoring.",
-                               zName, zAddress, port);
+                               zName, mysql_get_host_info(pCon));
                     break;
 
                 case Clustrix::Status::DYNAMIC:
-                    MXS_NOTICE("%s: Node %s:%d is not part of the quorum (dynamic), switching to "
+                    MXS_NOTICE("%s: Node %s is not part of the quorum (dynamic), switching to "
                                "other node for monitoring.",
-                               zName, zAddress, port);
+                               zName, mysql_get_host_info(pCon));
                     break;
 
                 case Clustrix::Status::UNKNOWN:
-                    MXS_WARNING("%s: Do not know how to interpret '%s'. Assuming node %s:%d "
+                    MXS_WARNING("%s: Do not know how to interpret '%s'. Assuming node %s "
                                 "is not part of the quorum.",
-                                zName, row[0], zAddress, port);
+                                zName, row[0], mysql_get_host_info(pCon));
                 }
             }
             else
             {
-                MXS_WARNING("%s: No status returned for '%s' on %s:%d.", zName, ZQUERY, zAddress, port);
+                MXS_WARNING("%s: No status returned for '%s' on %s.",
+                            zName, ZQUERY, mysql_get_host_info(pCon));
             }
 
             mysql_free_result(pResult);
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s' on %s:%d.", zName, ZQUERY, zAddress, port);
+            MXS_WARNING("%s: No result returned for '%s' on %s.",
+                        zName, ZQUERY, mysql_get_host_info(pCon));
         }
     }
     else
     {
-        MXS_ERROR("%s: Could not execute '%s' on %s:%d: %s",
-                  zName, ZQUERY, zAddress, port, mysql_error(pCon));
+        MXS_ERROR("%s: Could not execute '%s' on %s: %s",
+                  zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
     }
 
     return rv;
 }
 
-bool Clustrix::is_being_softfailed(const char* zName, const SERVER& server, MYSQL* pCon)
+bool Clustrix::is_being_softfailed(const char* zName, MYSQL* pCon)
 {
     bool rv = false;
-
-    const char* zAddress = server.address;
-    int port = server.port;
 
     const char ZQUERY[] = "SELECT nodeid FROM system.softfailed_nodes WHERE nodeid = gtmnid()";
 
@@ -193,13 +189,14 @@ bool Clustrix::is_being_softfailed(const char* zName, const SERVER& server, MYSQ
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s' on %s:%d.", zName, ZQUERY, zAddress, port);
+            MXS_WARNING("%s: No result returned for '%s' on %s.",
+                        zName, ZQUERY, mysql_get_host_info(pCon));
         }
     }
     else
     {
-        MXS_ERROR("%s: Could not execute '%s' on %s:%d: %s",
-                  zName, ZQUERY, zAddress, port, mysql_error(pCon));
+        MXS_ERROR("%s: Could not execute '%s' on %s: %s",
+                  zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
     }
 
     return rv;
@@ -216,9 +213,9 @@ bool Clustrix::ping_or_connect_to_hub(const char* zName,
 
     if (Monitor::connection_is_ok(rv))
     {
-        if (Clustrix::is_part_of_the_quorum(zName, server, *ppCon))
+        if (Clustrix::is_part_of_the_quorum(zName, *ppCon))
         {
-            if ((softfailed == Softfailed::REJECT) && Clustrix::is_being_softfailed(zName, server, *ppCon))
+            if ((softfailed == Softfailed::REJECT) && Clustrix::is_being_softfailed(zName, *ppCon))
             {
                 MXS_NOTICE("%s: The Clustrix node %s used as hub is part of the quorum, "
                            "but it is being softfailed. Switching to another node.",
