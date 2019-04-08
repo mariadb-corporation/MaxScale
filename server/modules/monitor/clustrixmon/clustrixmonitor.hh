@@ -21,7 +21,8 @@
 #include "clustrixmembership.hh"
 #include "clustrixnode.hh"
 
-class ClustrixMonitor : public maxscale::MonitorWorker
+class ClustrixMonitor : public maxscale::MonitorWorker,
+                        private ClustrixNode::Persister
 {
     ClustrixMonitor(const ClustrixMonitor&) = delete;
     ClustrixMonitor& operator=(const ClustrixMonitor&) = delete;
@@ -91,10 +92,12 @@ private:
 
     bool choose_dynamic_hub(Clustrix::Softfailed softfailed, std::set<std::string>& ips_checked);
     bool choose_bootstrap_hub(Clustrix::Softfailed softfailed, std::set<std::string>& ips_checked);
-    bool choose_persisted_hub(Clustrix::Softfailed softfailed, std::set<std::string>& ips_checked);
+    bool refresh_using_persisted_nodes(std::set<std::string>& ips_checked);
 
-    void refresh_nodes();
-    bool check_cluster_membership(std::map<int, ClustrixMembership>* pMemberships);
+    bool refresh_nodes();
+    bool refresh_nodes(MYSQL* pHub_con);
+    bool check_cluster_membership(MYSQL* pHub_con,
+                                  std::map<int, ClustrixMembership>* pMemberships);
 
     void update_server_statuses();
 
@@ -136,8 +139,9 @@ private:
         return mxb::WorkerLoad::get_time_ms();
     }
 
-    void persist_node(const ClustrixNode& node);
-    void unpersist_node(const ClustrixNode& node);
+    // ClustrixNode::Persister
+    void persist(const ClustrixNode& node);
+    void unpersist(const ClustrixNode& node);
 
 private:
     Config                      m_config;

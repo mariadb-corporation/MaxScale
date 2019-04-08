@@ -22,6 +22,13 @@
 class ClustrixNode
 {
 public:
+    class Persister
+    {
+    public:
+        virtual void persist(const ClustrixNode& node) = 0;
+        virtual void unpersist(const ClustrixNode& node) = 0;
+    };
+
     enum
     {
         DEFAULT_MYSQL_PORT  = 3306,
@@ -34,13 +41,15 @@ public:
         APPROACH_DEFAULT
     };
 
-    ClustrixNode(const ClustrixMembership& membership,
+    ClustrixNode(Persister* pPersister,
+                 const ClustrixMembership& membership,
                  const std::string& ip,
                  int mysql_port,
                  int health_port,
                  int health_check_threshold,
                  SERVER* pServer)
-        : m_id(membership.id())
+        : m_persister(*pPersister)
+        , m_id(membership.id())
         , m_status(membership.status())
         , m_substate(membership.substate())
         , m_instance(membership.instance())
@@ -52,6 +61,8 @@ public:
         , m_pServer(pServer)
         , m_pCon(nullptr)
     {
+        m_pServer->set_status(SERVER_MASTER | SERVER_RUNNING);
+        m_persister.persist(*this);
     }
 
     ~ClustrixNode()
@@ -87,31 +98,14 @@ public:
         return m_ip;
     }
 
-    void set_ip(const std::string& ip)
-    {
-        m_ip = ip;
-        m_pServer->server_update_address(ip);
-    }
-
     int mysql_port() const
     {
         return m_mysql_port;
     }
 
-    void set_mysql_port(int port)
-    {
-        m_mysql_port = port;
-        m_pServer->update_port(port);
-    }
-
     int health_port() const
     {
         return m_health_port;
-    }
-
-    void set_health_port(int port)
-    {
-        m_health_port = port;
     }
 
     bool is_running() const
@@ -123,9 +117,13 @@ public:
     {
         if (running)
         {
-            m_nRunning = m_health_check_threshold;
+            if (m_nRunning == 0)
+            {
+                m_pServer->set_status(SERVER_MASTER | SERVER_RUNNING);
+                m_persister.persist(*this);
+            }
 
-            m_pServer->set_status(SERVER_MASTER | SERVER_RUNNING);
+            m_nRunning = m_health_check_threshold;
         }
         else
         {
@@ -143,8 +141,40 @@ public:
                 if (m_nRunning == 0)
                 {
                     m_pServer->clear_status(SERVER_MASTER | SERVER_RUNNING);
+                    m_persister.unpersist(*this);
                 }
             }
+        }
+    }
+
+    void update(const std::string& ip,
+                int mysql_port,
+                int health_port)
+    {
+        bool changed = false;
+
+        if (ip != m_ip)
+        {
+            m_ip = ip;
+            changed = true;
+        }
+
+        if (mysql_port != m_mysql_port)
+        {
+            m_mysql_port = mysql_port;
+            m_pServer->update_port(m_mysql_port);
+            changed = true;
+        }
+
+        if (health_port != m_health_port)
+        {
+            m_health_port = health_port;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            m_persister.persist(*this);
         }
     }
 
@@ -158,6 +188,7 @@ public:
     void deactivate_server()
     {
         m_pServer->is_active = false;
+        m_persister.unpersist(*this);
     }
 
     bool can_be_used_as_hub(const char* zName,
@@ -194,6 +225,7 @@ public:
     }
 
 private:
+    Persister&         m_persister;
     int                m_id;
     Clustrix::Status   m_status;
     Clustrix::SubState m_substate;

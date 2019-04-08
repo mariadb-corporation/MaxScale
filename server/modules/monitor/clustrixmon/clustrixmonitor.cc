@@ -16,6 +16,7 @@
 #include <set>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.h>
+#include <maxscale/secrets.h>
 #include "../../../core/internal/config_runtime.hh"
 #include "../../../core/internal/service.hh"
 
@@ -51,6 +52,28 @@ static const char SQL_UPSERT_FORMAT[] =
 
 static const char SQL_DELETE_FORMAT[] =
     "DELETE FROM clustrix_nodes WHERE id = %d";
+
+static const char SQL_SELECT[] =
+    "SELECT ip, mysql_port FROM clustrix_nodes";
+
+using HostPortPair  = std::pair<std::string, int>;
+using HostPortPairs = std::vector<HostPortPair>;
+
+// sqlite3 callback.
+int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
+{
+    std::vector<HostPortPair>* pNodes = static_cast<std::vector<HostPortPair>*>(pData);
+
+    mxb_assert(nColumns == 2);
+
+    std::string host(ppColumn[0]);
+    int port = atoi(ppColumn[1]);
+
+    pNodes->emplace_back(host, port);
+
+    return 0;
+}
+
 }
 
 namespace
@@ -88,7 +111,7 @@ sqlite3* open_or_create_db(const std::string& path)
             if (unlink(path.c_str()) != 0)
             {
                 MXS_ERROR("Failed to delete database %s that could not be properly "
-                          "initialized. You should delete the database manually.", path.c_str());
+                          "initialized. It should be deleted manually.", path.c_str());
                 sqlite3_close_v2(pDb);
                 pDb = nullptr;
             }
@@ -282,10 +305,14 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
         // then we check the bootstrap servers, and
         if (!choose_bootstrap_hub(softfailed, ips))
         {
-            // finally, if all else fails, we check servers that have been persisted.
-            // In practise we will only get here at startup (no dynamic servers)
-            // if the bootstrap servers cannot be contacted.
-            choose_persisted_hub(softfailed, ips);
+            // finally, if all else fails - in practise we will only get here at
+            // startup (no dynamic servers) if the bootstrap servers cannot be
+            // contacted - we try to refresh the nodes using persisted information
+            if (refresh_using_persisted_nodes(ips))
+            {
+                // and then select a hub from the dynamic ones.
+                choose_dynamic_hub(softfailed, ips);
+            }
         }
     }
 
@@ -345,32 +372,108 @@ bool ClustrixMonitor::choose_bootstrap_hub(Clustrix::Softfailed softfailed, std:
     return m_pHub_con != nullptr;
 }
 
-bool ClustrixMonitor::choose_persisted_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
+bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
 {
-    // TODO: Check persisted servers.
-    return false;
+    MXS_NOTICE("Attempting to find a Clustrix bootstrap node from one of the nodes "
+               "used during the previous run of MaxScale.");
+
+    bool refreshed = false;
+
+    HostPortPairs nodes;
+    char* pError = nullptr;
+    int rv = sqlite3_exec(m_pDb, SQL_SELECT, select_cb, &nodes, &pError);
+
+    if (rv == SQLITE_OK)
+    {
+        const std::string& username = m_settings.conn_settings.username;
+        const std::string& password = m_settings.conn_settings.password;
+        char* zPassword = decrypt_password(password.c_str());
+
+        auto it = nodes.begin();
+
+        while (!refreshed && (it != nodes.end()))
+        {
+            const auto& node = *it;
+
+            const std::string& host = node.first;
+
+            if (ips_checked.find(host) == ips_checked.end())
+            {
+                ips_checked.insert(host);
+                int port = node.second;
+
+                MXS_NOTICE("Trying to find out cluster nodes from %s:%d.", host.c_str(), port);
+
+                MYSQL* pHub_con = mysql_init(NULL);
+
+                if (mysql_real_connect(pHub_con, host.c_str(),
+                                       username.c_str(), zPassword,
+                                       nullptr,
+                                       port, nullptr, 0))
+                {
+                    if (Clustrix::is_part_of_the_quorum(name(), pHub_con))
+                    {
+                        if (refresh_nodes(pHub_con))
+                        {
+                            MXS_NOTICE("Cluster nodes refreshed.");
+                            refreshed = true;
+                        }
+                    }
+                    else
+                    {
+                        MXS_WARNING("%s:%d is not part of the quorum, ignoring.", host.c_str(), port);
+                    }
+                }
+                else
+                {
+                    MXS_WARNING("Could not connect to %s:%d.", host.c_str(), port);
+                }
+
+                mysql_close(pHub_con);
+            }
+
+            ++it;
+        }
+
+        MXS_FREE(zPassword);
+    }
+    else
+    {
+        MXS_ERROR("Could not look up persisted nodes: %s", pError ? pError : "Unknown error");
+    }
+
+    return refreshed;
 }
 
-void ClustrixMonitor::refresh_nodes()
+bool ClustrixMonitor::refresh_nodes()
 {
     mxb_assert(m_pHub_con);
 
+    return refresh_nodes(m_pHub_con);
+}
+
+bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
+{
+    mxb_assert(pHub_con);
+
     map<int, ClustrixMembership> memberships;
 
-    if (check_cluster_membership(&memberships))
+    bool refreshed = check_cluster_membership(pHub_con, &memberships);
+
+    if (refreshed)
     {
         const char ZQUERY[] =
             "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
             "FROM system.nodeinfo AS ni "
             "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
 
-        if (mysql_query(m_pHub_con, ZQUERY) == 0)
+        if (mysql_query(pHub_con, ZQUERY) == 0)
         {
-            MYSQL_RES* pResult = mysql_store_result(m_pHub_con);
+            MYSQL_RES* pResult = mysql_store_result(pHub_con);
 
             if (pResult)
             {
-                mxb_assert(mysql_field_count(m_pHub_con) == 5);
+                mxb_assert(mysql_field_count(pHub_con) == 5);
 
                 set<int> nids;
                 for (const auto& element : m_nodes)
@@ -404,25 +507,7 @@ void ClustrixMonitor::refresh_nodes()
 
                             ClustrixNode& node = nit->second;
 
-                            bool changed = false;
-
-                            if (node.ip() != ip)
-                            {
-                                node.set_ip(ip);
-                                changed = true;
-                            }
-
-                            if (node.mysql_port() != mysql_port)
-                            {
-                                node.set_mysql_port(mysql_port);
-                                changed = true;
-                            }
-
-                            if (node.health_port() != health_port)
-                            {
-                                node.set_health_port(health_port);
-                                changed = true;
-                            }
+                            node.update(ip, mysql_port, health_port);
 
                             bool is_draining = node.server()->is_draining();
 
@@ -441,11 +526,6 @@ void ClustrixMonitor::refresh_nodes()
                                            name(), node.id(), node.server()->address);
 
                                 node.server()->clear_status(SERVER_DRAINING);
-                            }
-
-                            if (changed)
-                            {
-                                persist_node(node);
                             }
 
                             nids.erase(id);
@@ -473,11 +553,10 @@ void ClustrixMonitor::refresh_nodes()
                                 const ClustrixMembership& membership = mit->second;
                                 int health_check_threshold = m_config.health_check_threshold();
 
-                                ClustrixNode node(membership, ip, mysql_port, health_port,
+                                ClustrixNode node(this, membership, ip, mysql_port, health_port,
                                                   health_check_threshold, pServer);
 
                                 m_nodes.insert(make_pair(id, node));
-                                persist_node(node);
 
                                 // New server, so it needs to be added to all services that
                                 // use this monitor for defining its cluster of servers.
@@ -517,7 +596,6 @@ void ClustrixMonitor::refresh_nodes()
 
                     ClustrixNode& node = it->second;
                     node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
-                    unpersist_node(node);
                 }
 
                 vector<string> health_urls;
@@ -536,15 +614,17 @@ void ClustrixMonitor::refresh_nodes()
             else
             {
                 MXS_WARNING("%s: No result returned for '%s' on %s.",
-                            name(), ZQUERY, m_pHub_server->address);
+                            name(), ZQUERY, mysql_get_host_info(pHub_con));
             }
         }
         else
         {
             MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-                      name(), ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
+                      name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
         }
     }
+
+    return refreshed;
 }
 
 void ClustrixMonitor::check_cluster(Clustrix::Softfailed softfailed)
@@ -578,24 +658,23 @@ void ClustrixMonitor::check_hub(Clustrix::Softfailed softfailed)
     }
 }
 
-bool ClustrixMonitor::check_cluster_membership(std::map<int, ClustrixMembership>* pMemberships)
+bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
+                                               std::map<int, ClustrixMembership>* pMemberships)
 {
+    mxb_assert(pHub_con);
     mxb_assert(pMemberships);
-
-    mxb_assert(m_pHub_con);
-    mxb_assert(m_pHub_server);
 
     bool rv = false;
 
     const char ZQUERY[] = "SELECT nid, status, instance, substate FROM system.membership";
 
-    if (mysql_query(m_pHub_con, ZQUERY) == 0)
+    if (mysql_query(pHub_con, ZQUERY) == 0)
     {
-        MYSQL_RES* pResult = mysql_store_result(m_pHub_con);
+        MYSQL_RES* pResult = mysql_store_result(pHub_con);
 
         if (pResult)
         {
-            mxb_assert(mysql_field_count(m_pHub_con) == 4);
+            mxb_assert(mysql_field_count(pHub_con) == 4);
 
             set<int> nids;
             for (const auto& element : m_nodes)
@@ -666,7 +745,7 @@ bool ClustrixMonitor::check_cluster_membership(std::map<int, ClustrixMembership>
     else
     {
         MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-		  name(), ZQUERY, m_pHub_server->address, mysql_error(m_pHub_con));
+		  name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
     }
 
     return rv;
@@ -894,7 +973,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
     return performed;
 }
 
-void ClustrixMonitor::persist_node(const ClustrixNode& node)
+void ClustrixMonitor::persist(const ClustrixNode& node)
 {
     if (!m_pDb)
     {
@@ -923,7 +1002,7 @@ void ClustrixMonitor::persist_node(const ClustrixNode& node)
     }
 }
 
-void ClustrixMonitor::unpersist_node(const ClustrixNode& node)
+void ClustrixMonitor::unpersist(const ClustrixNode& node)
 {
     if (!m_pDb)
     {
