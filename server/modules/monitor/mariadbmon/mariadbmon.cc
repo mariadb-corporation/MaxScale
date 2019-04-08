@@ -54,9 +54,7 @@ static const char CN_MASTER_FAILURE_TIMEOUT[] = "master_failure_timeout";
 // Replication credentials parameters for failover/switchover/join
 static const char CN_REPLICATION_USER[] = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
-
-static const char DIAG_ERROR[] = "Internal error, could not print diagnostics. "
-                                 "Check log for more information.";
+static const char CN_REPLICATION_MASTER_SSL[] = "replication_master_ssl";
 
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstance(monitor)
@@ -227,6 +225,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_switchover_on_low_disk_space = config_get_bool(params, CN_SWITCHOVER_ON_LOW_DISK_SPACE);
     m_maintenance_on_low_disk_space = config_get_bool(params, CN_MAINTENANCE_ON_LOW_DISK_SPACE);
     m_handle_event_scheduler = config_get_bool(params, CN_HANDLE_EVENTS);
+    m_replication_ssl = config_get_bool(params, CN_REPLICATION_MASTER_SSL);
 
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
@@ -1066,6 +1065,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_STRING
+            },
+            {
+                CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
                 CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,   "true"

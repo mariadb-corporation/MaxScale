@@ -212,6 +212,7 @@ private:
     // Cluster operations additional settings
     std::string m_replication_user;             /* Replication user for CHANGE MASTER TO-commands */
     std::string m_replication_password;         /* Replication password for CHANGE MASTER TO-commands */
+    bool        m_replication_ssl = false;      /* Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
     bool        m_handle_event_scheduler = true;/* Should failover/switchover enable/disable any scheduled
                                                  * events on the servers during promote/demote? */
     uint32_t    m_failover_timeout = 10;        /* Time limit in seconds for failover */
