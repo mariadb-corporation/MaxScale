@@ -28,6 +28,7 @@ enum reply_state_t
     REPLY_STATE_START,          /**< Query sent to backend */
     REPLY_STATE_DONE,           /**< Complete reply received */
     REPLY_STATE_RSET_COLDEF,    /**< Resultset response, waiting for column definitions */
+    REPLY_STATE_RSET_COLDEF_EOF,/**< Resultset response, waiting for EOF for column definitions */
     REPLY_STATE_RSET_ROWS       /**< Resultset response, waiting for rows */
 };
 
@@ -66,6 +67,9 @@ public:
 
         case REPLY_STATE_RSET_COLDEF:
             return "COLDEF";
+
+        case REPLY_STATE_RSET_COLDEF_EOF:
+            return "COLDEF_EOF";
 
         case REPLY_STATE_RSET_ROWS:
             return "ROWS";
@@ -137,6 +141,8 @@ public:
         return m_reply_state == REPLY_STATE_DONE;
     }
 
+    void process_packets(GWBUF* buffer);
+
     // Controlled by the session
     ResponseStat& response_stat();
 private:
@@ -148,6 +154,7 @@ private:
     uint32_t         m_expected_rows;           /**< Number of rows a COM_STMT_FETCH is retrieving */
     bool             m_local_infile_requested;  /**< Whether a LOCAL INFILE was requested */
     ResponseStat     m_response_stat;
+    uint64_t         m_num_coldefs = 0;
 
     inline bool is_opening_cursor() const
     {
