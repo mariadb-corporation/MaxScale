@@ -58,17 +58,32 @@ int conversation_func(int num_msg,
     MXB_DEBUG("Entering PAM conversation function.");
     int rval = PAM_CONV_ERR;
     ConversationData* data = static_cast<ConversationData*>(appdata_ptr);
+    data->m_counter++;
     if (data->m_counter > 1)
     {
         MXB_ERROR("Multiple calls to conversation function for client '%s'. %s",
                   data->m_client.c_str(), GENERAL_ERRMSG);
     }
-    else if (num_msg == 1)
+    else if (num_msg != 1)
+    {
+        MXB_ERROR("Conversation function received '%d' messages from API. Only singular messages are "
+                  "supported.", num_msg);
+    }
+    else
     {
         pam_message first = *msg[0];
         // Check that the first message from the PAM system is as expected.
-        if ((first.msg_style == PAM_PROMPT_ECHO_OFF || first.msg_style == PAM_PROMPT_ECHO_ON)
-            && (data->m_expected_msg.empty() || data->m_expected_msg == first.msg))
+        if (first.msg_style != PAM_PROMPT_ECHO_OFF && first.msg_style != PAM_PROMPT_ECHO_ON)
+        {
+            MXB_ERROR("Unexpected PAM message type '%i' when '%i' or '%i' was expected.",
+                      first.msg_style, PAM_PROMPT_ECHO_OFF, PAM_PROMPT_ECHO_ON);
+        }
+        else if (!data->m_expected_msg.empty() && data->m_expected_msg != first.msg)
+        {
+            MXB_ERROR("Unexpected PAM message contents '%s' when '%s' was expected.",
+                      first.msg, data->m_expected_msg.c_str());
+        }
+        else
         {
             pam_response* response = static_cast<pam_response*>(MXS_MALLOC(sizeof(pam_response)));
             if (response)
@@ -79,17 +94,7 @@ int conversation_func(int num_msg,
                 rval = PAM_SUCCESS;
             }
         }
-        else
-        {
-            MXB_ERROR("Unexpected PAM message: type='%d', contents='%s'", first.msg_style, first.msg);
-        }
     }
-    else
-    {
-        MXB_ERROR("Conversation function received '%d' messages from API. Only singular messages are "
-                  "supported.", num_msg);
-    }
-    data->m_counter++;
     return rval;
 }
 
