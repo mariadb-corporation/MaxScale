@@ -969,6 +969,21 @@ be completely disabled to prevent access to it.
 Log authentication failures for the admin interface. This parameter expects a
 boolean value and is enabled by default.
 
+#### `admin_pam_readwrite_service` and `admin_pam_readonly_service`
+
+Use Pluggable Authentication Modules (PAM) for REST API authentication. The settings
+accept a PAM service name which is used during authentication if normal authentication
+fails. `admin_pam_readwrite_service` should accept users who can do any
+MaxCtrl/REST-API-operation. `admin_pam_readonly_service` should accept users who can only
+do read operations. Because REST-API does not support back and forth communication between
+the client and MaxScale, the PAM services must be simple. They should only ask for the
+password and nothing else.
+
+If only `admin_pam_readwrite_service` is configured, both read and write operations can be
+authenticated by PAM. If only `admin_pam_readonly_service` is configured, only read
+operations can be authenticated by PAM. If both are set, the service used is determined by
+the requested operation. Leave or set both empty to disable PAM for REST-API.
+
 #### _events_
 
 MaxScale logs warnings and errors for various reasons and often it is self-
