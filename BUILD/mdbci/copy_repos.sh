@@ -8,7 +8,7 @@ if [ "$box_type" == "RPM" ] ; then
 	# Build can be executed to check if it is possible to build
         # and to run install and upgrade tests
         # with thre real RHEL, but we use CentOS packages for production
-        if [ "$platform" != "rhel" ] ; then
+        if [[ "$platform" != "rhel" || ( "$platform" == "rhel"  && "$platform_version" == "8" ) ]]; then
                 export arch=`ssh $sshopt "arch"`
                 . ${script_dir}/generate_build_info_path.sh
 
