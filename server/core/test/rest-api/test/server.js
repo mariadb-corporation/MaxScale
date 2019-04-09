@@ -156,6 +156,18 @@ describe("Server State", function() {
             })
     });
 
+    it("force server into maintenance", function() {
+        return request.put(base_url + "/servers/" + server.data.id + "/set?state=maintenance&force=yes")
+            .then(function(resp) {
+                return request.get(base_url + "/servers/" + server.data.id)
+            })
+            .then(function(resp) {
+                var srv = JSON.parse(resp)
+                srv.data.attributes.state.should.match(/Maintenance/)
+                srv.data.attributes.statistics.connections.should.be.equal(0)
+            })
+    });
+
     it("clear maintenance", function() {
         return request.put(base_url + "/servers/" + server.data.id + "/clear?state=maintenance")
             .then(function(resp) {
