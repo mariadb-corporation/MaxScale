@@ -142,6 +142,7 @@ public:
     }
 
     void process_packets(GWBUF* buffer);
+    void process_reply_start(mxs::Buffer::iterator it);
 
     // Controlled by the session
     ResponseStat& response_stat();

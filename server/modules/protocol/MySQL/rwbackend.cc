@@ -229,6 +229,53 @@ uint64_t is_last_eof(Iter it)
     return (status & SERVER_MORE_RESULTS_EXIST) == 0;
 }
 
+void RWBackend::process_reply_start(mxs::Buffer::iterator it)
+{
+    uint8_t cmd = *it;
+    m_local_infile_requested = false;
+
+    switch (cmd)
+    {
+    case MYSQL_REPLY_OK:
+        if (is_last_ok(it))
+        {
+            // No more results
+            set_reply_state(REPLY_STATE_DONE);
+        }
+        break;
+
+    case MYSQL_REPLY_LOCAL_INFILE:
+        m_local_infile_requested = true;
+        set_reply_state(REPLY_STATE_DONE);
+        break;
+
+    case MYSQL_REPLY_ERR:
+        // Nothing ever follows an error packet
+        set_reply_state(REPLY_STATE_DONE);
+        break;
+
+    case MYSQL_REPLY_EOF:
+        // EOF packets are never expected as the first response
+        mxb_assert(!true);
+        break;
+
+    default:
+        if (current_command() == MXS_COM_FIELD_LIST)
+        {
+            // COM_FIELD_LIST sends a strange kind of a result set
+            set_reply_state(REPLY_STATE_RSET_ROWS);
+        }
+        else
+        {
+            // Start of a result set
+            m_num_coldefs = get_encoded_int(it);
+            set_reply_state(REPLY_STATE_RSET_COLDEF);
+        }
+
+        break;
+    }
+}
+
 void RWBackend::process_packets(GWBUF* result)
 {
     mxs::Buffer buffer(result);
@@ -248,49 +295,7 @@ void RWBackend::process_packets(GWBUF* result)
         switch (m_reply_state)
         {
         case REPLY_STATE_START:
-            m_local_infile_requested = false;
-
-            switch (cmd)
-            {
-            case MYSQL_REPLY_OK:
-                if (is_last_ok(it))
-                {
-                    // No more results
-                    set_reply_state(REPLY_STATE_DONE);
-                }
-                break;
-
-            case MYSQL_REPLY_LOCAL_INFILE:
-                m_local_infile_requested = true;
-                set_reply_state(REPLY_STATE_DONE);
-                break;
-
-            case MYSQL_REPLY_ERR:
-                // Nothing ever follows an error packet
-                set_reply_state(REPLY_STATE_DONE);
-                break;
-
-            case MYSQL_REPLY_EOF:
-                // EOF packets are never expected as the first response
-                mxb_assert(!true);
-                break;
-
-            default:
-
-                if (current_command() == MXS_COM_FIELD_LIST)
-                {
-                    // COM_FIELD_LIST sends a strange kind of a result set
-                    set_reply_state(REPLY_STATE_RSET_ROWS);
-                }
-                else
-                {
-                    // Start of a result set
-                    m_num_coldefs = get_encoded_int(it);
-                    set_reply_state(REPLY_STATE_RSET_COLDEF);
-                }
-
-                break;
-            }
+            process_reply_start(it);
             break;
 
         case REPLY_STATE_DONE:
@@ -323,10 +328,13 @@ void RWBackend::process_packets(GWBUF* result)
             break;
 
         case REPLY_STATE_RSET_ROWS:
-            if ((cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
-                || cmd == MYSQL_REPLY_ERR)
+            if (cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
             {
                 set_reply_state(is_last_eof(it) ? REPLY_STATE_DONE : REPLY_STATE_START);
+            }
+            else if (cmd == MYSQL_REPLY_ERR)
+            {
+                set_reply_state(REPLY_STATE_DONE);
             }
             break;
         }
