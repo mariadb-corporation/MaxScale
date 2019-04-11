@@ -248,6 +248,7 @@ void ClustrixMonitor::server_removed(SERVER* pServer)
 
 void ClustrixMonitor::pre_loop()
 {
+    load_server_journal(nullptr);
     if (m_config.dynamic_node_detection())
     {
         // At startup we accept softfailed nodes in an attempt to be able to
@@ -275,6 +276,7 @@ void ClustrixMonitor::post_loop()
 
 void ClustrixMonitor::tick()
 {
+    check_maintenance_requests();
     if (m_config.dynamic_node_detection() && should_check_cluster())
     {
         check_cluster(Clustrix::Softfailed::REJECT);
@@ -300,6 +302,11 @@ void ClustrixMonitor::tick()
 	}
 	break;
     }
+
+    flush_server_status();
+    process_state_changes();
+    hangup_failed_servers();
+    store_server_journal(nullptr);
 }
 
 void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)

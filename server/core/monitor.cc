@@ -2280,7 +2280,6 @@ bool Monitor::check_disk_space_this_tick()
 
 MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)
-    , m_master(NULL)
     , m_thread_running(false)
     , m_shutdown(0)
     , m_checked(false)
@@ -2354,7 +2353,6 @@ bool MonitorWorker::start()
     bool started = false;
     if (m_checked)
     {
-        m_master = NULL;
         m_loop_called = get_time_ms() - m_settings.interval; // Next tick should happen immediately.
         if (!Worker::start())
         {
@@ -2545,6 +2543,18 @@ void MonitorWorker::flush_server_status()
     }
 }
 
+void MonitorWorkerSimple::pre_loop()
+{
+    m_master = nullptr;
+    load_server_journal(&m_master);
+    // Add another overridable function for derived classes (e.g. pre_loop_monsimple) if required.
+}
+
+void MonitorWorkerSimple::post_loop()
+{
+
+}
+
 void MonitorWorkerSimple::pre_tick()
 {
 }
@@ -2555,6 +2565,7 @@ void MonitorWorkerSimple::post_tick()
 
 void MonitorWorkerSimple::tick()
 {
+    check_maintenance_requests();
     pre_tick();
 
     const bool should_update_disk_space = check_disk_space_this_tick();
@@ -2628,6 +2639,11 @@ void MonitorWorkerSimple::tick()
     }
 
     post_tick();
+
+    flush_server_status();
+    process_state_changes();
+    hangup_failed_servers();
+    store_server_journal(m_master);
 }
 
 void MonitorWorker::pre_loop()
@@ -2654,7 +2670,6 @@ bool MonitorWorker::pre_run()
         m_thread_running.store(true, std::memory_order_release);
         m_semaphore.post();
 
-        load_server_journal(&m_master);
         pre_loop();
         delayed_call(1, &MonitorWorker::call_run_one_tick, this);
     }
@@ -2707,17 +2722,8 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
 
 void MonitorWorker::run_one_tick()
 {
-    check_maintenance_requests();
-
     tick();
     mxb::atomic::add(&m_ticks, 1, mxb::atomic::RELAXED);
-
-    flush_server_status();
-
-    process_state_changes();
-
-    hangup_failed_servers();
-    store_server_journal(m_master);
 }
 
 bool MonitorWorker::immediate_tick_required() const

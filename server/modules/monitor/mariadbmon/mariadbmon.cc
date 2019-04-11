@@ -350,9 +350,10 @@ json_t* MariaDBMonitor::to_json() const
 
 void MariaDBMonitor::pre_loop()
 {
-    // MonitorInstance reads the journal and has the last known master in its m_master member variable.
+    // Read the journal and the last known master.
     // Write the corresponding MariaDBServer into the class-specific m_master variable.
-    auto journal_master = MonitorWorker::m_master;
+    MonitorServer* journal_master = nullptr;
+    load_server_journal(&journal_master);
     if (journal_master)
     {
         // This is somewhat questionable, as the journal only contains status bits but no actual topology
@@ -375,6 +376,8 @@ void MariaDBMonitor::pre_loop()
 
 void MariaDBMonitor::tick()
 {
+    check_maintenance_requests();
+
     /* Update MonitorServer->pending_status. This is where the monitor loop writes it's findings.
      * Also, backup current status so that it can be compared to any deduced state. */
     for (auto srv : m_servers)
@@ -463,10 +466,10 @@ void MariaDBMonitor::tick()
 
     log_master_changes();
 
-    // Before exiting, we need to store the current master into the m_master
-    // member variable of MonitorInstance so that the right server will be
-    // stored to the journal.
-    MonitorWorker::m_master = m_master ? m_master->m_server_base : NULL;
+    flush_server_status();
+    process_state_changes();
+    hangup_failed_servers();
+    store_server_journal(m_master ? m_master->m_server_base : nullptr);
 }
 
 void MariaDBMonitor::process_state_changes()

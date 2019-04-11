@@ -761,8 +761,6 @@ protected:
      */
     virtual bool immediate_tick_required() const;
 
-    MonitorServer* m_master;     /**< Master server */
-
 private:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
     int32_t           m_shutdown;       /**< Non-zero if the monitor should shut down. */
@@ -811,11 +809,16 @@ protected:
      */
     virtual void post_tick();
 
+    MonitorServer* m_master {nullptr};     /**< Master server */
+
 private:
     /**
      * @brief Monitor the servers
      *
-     * This function is called once per monitor round and will for each server:
+     * This function is called once per monitor round. It does the following:
+     * - Perform any maintenance or drain state changes requested by user
+     *
+     * -Then, for each server:
      *
      *   - Do nothing, if the server is in maintenance.
      *   - Store the previous status of the server.
@@ -826,8 +829,17 @@ private:
      *     If there is not, the pending status will be updated accordingly and
      *     @c update_server_status() will *not* be called.
      *   - After the call, update the error count of the server if it is down.
+     *
+     * - Flush states for all servers
+     * - Launch monitor scripts for events
+     * - Hangup failed servers
+     * - Store monitor journal
      */
-    void tick();    // final
+    void tick() final;
+
+    void pre_loop() final;
+    void post_loop() final;
+
 };
 
 /**
