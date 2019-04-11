@@ -1332,7 +1332,9 @@ char* CacheFilterSession::set_cache_soft_ttl(const char* zName,
 
     if (get_uint32_value(pValue_begin, pValue_end, &value))
     {
-        m_soft_ttl = value;
+        // The config value is stored in milliseconds, but runtime changes
+        // are made in seconds.
+        m_soft_ttl = value * 1000;
     }
     else
     {
@@ -1354,7 +1356,9 @@ char* CacheFilterSession::set_cache_hard_ttl(const char* zName,
 
     if (get_uint32_value(pValue_begin, pValue_end, &value))
     {
-        m_hard_ttl = value;
+        // The config value is stored in milliseconds, but runtime changes
+        // are made in seconds.
+        m_hard_ttl = value * 1000;
     }
     else
     {

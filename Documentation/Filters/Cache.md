@@ -406,10 +406,10 @@ but only after it has explicitly been set once.
 
 #### `@maxscale.cache.soft_ttl`
 
-Using the variable `@maxscale.cache.soft_ttl` it is possible to specify
-at runtime what _soft ttl_ should be applied. Its initial value is the
-value of the configuration parameter `soft_ttl`. That is, by default the
-value is 0.
+Using the variable `@maxscale.cache.soft_ttl` it is possible at runtime
+to specify _in seconds_ what _soft ttl_ should be applied. Its initial
+value is the value of the configuration parameter `soft_ttl`. That is,
+by default the value is 0.
 
 The purpose of this variable is make it possible for an application to decide
 statement by statement what _soft ttl_ should be applied.
@@ -436,10 +436,10 @@ but only after it has explicitly been set once.
 
 #### `@maxscale.cache.hard_ttl`
 
-Using the variable `@maxscale.cache.hard_ttl` it is possible to specify
-at runtime what _hard ttl_ should be applied. Its initial value is the
-value of the configuration parameter `hard_ttl`. That is, by default the
-value is 0.
+Using the variable `@maxscale.cache.hard_ttl` it is possible at runtime
+to specify _in seconds_ what _hard ttl_ should be applied. Its initial
+value is the value of the configuration parameter `hard_ttl`. That is,
+by default the value is 0.
 
 The purpose of this variable is make it possible for an application to decide
 statement by statement what _hard ttl_ should be applied.
