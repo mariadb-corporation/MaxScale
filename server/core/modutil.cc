@@ -1459,9 +1459,16 @@ std::string get_canonical(GWBUF* querybuf)
                 break;
             }
         }
-        else if (is_space(*it) && (i == 0 || is_space(rval[i - 1])))
+        else if (is_space(*it))
         {
-            // Repeating space, skip it
+            if (i == 0 || is_space(rval[i - 1]))
+            {
+                // Leading or repeating whitespace, skip it
+            }
+            else
+            {
+                rval[i++] = ' ';
+            }
         }
         else if (*it == '/' && is_next(it, buf.end(), "/*"))
         {
@@ -1563,6 +1570,12 @@ std::string get_canonical(GWBUF* querybuf)
         }
 
         mxb_assert(it != buf.end());
+    }
+
+    // Remove trailing whitespace
+    while (i > 0 && is_space(rval[i - 1]))
+    {
+        --i;
     }
 
     // Shrink the buffer so that the internal bookkeeping of std::string remains up to date
