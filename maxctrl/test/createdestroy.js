@@ -104,6 +104,12 @@ describe("Create/Destroy Commands", function() {
             .should.be.rejected
     })
 
+    it('create and destroy server with socket', function() {
+        return verifyCommand('create server server7 /tmp/server.sock', 'servers/server7')
+            .then(() => doCommand('destroy server server7'))
+            .should.be.fulfilled
+    })
+
     it('create listener', function() {
         return verifyCommand('create listener RW-Split-Router my-listener 4567',
                             'services/RW-Split-Router/listeners/my-listener')

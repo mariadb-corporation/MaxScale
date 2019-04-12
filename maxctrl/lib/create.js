@@ -83,12 +83,12 @@ exports.builder = function(yargs) {
             describe: 'Link the created server to these monitors',
             type: 'array'
         })
-        .command('server <name> <host> <port>', 'Create a new server', function(yargs) {
+        .command('server <name> <host|socket> [port]', 'Create a new server', function(yargs) {
             return yargs.epilog('The created server will not be used by any services or monitors ' +
                                 'unless the --services or --monitors options are given. The list ' +
                                 'of servers a service or a monitor uses can be altered with the ' +
                                 '`link` and `unlink` commands.')
-                .usage('Usage: create server <name> <host> <port>')
+                .usage('Usage: create server <name> <host|socket> [port]')
         }, function(argv) {
             var server = {
                 'data': {
@@ -96,8 +96,6 @@ exports.builder = function(yargs) {
                     'type': 'servers',
                     'attributes': {
                         'parameters': {
-                            'address': argv.host,
-                            'port': argv.port,
                             'protocol': argv.protocol,
                             'authenticator': argv.authenticator,
                             'authenticator_options': argv.auth_options,
@@ -109,6 +107,13 @@ exports.builder = function(yargs) {
                         }
                     }
                 }
+            }
+
+            if (argv.host[0] == '/') {
+                server.data.attributes.parameters.socket = argv.host
+            } else {
+                server.data.attributes.parameters.address = argv.host
+                server.data.attributes.parameters.port = argv.port
             }
 
             if (argv.services) {
