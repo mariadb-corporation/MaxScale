@@ -346,7 +346,8 @@ bool runtime_create_server(const char* name,
             {
                 if (address)
                 {
-                    parameters.set(CN_ADDRESS, address);
+                    auto param_name = *address == '/' ? CN_SOCKET : CN_ADDRESS;
+                    parameters.set(param_name, address);
                 }
                 if (port)
                 {
@@ -597,7 +598,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     std::lock_guard<std::mutex> guard(crt_lock);
     server->set_parameter(key, value);
 
-    if (strcmp(key, CN_ADDRESS) == 0)
+    if (strcmp(key, CN_ADDRESS) == 0 || strcmp(key, CN_SOCKET) == 0)
     {
         server->server_update_address(value);
     }
@@ -1740,11 +1741,52 @@ static bool is_valid_resource_body(json_t* json)
     return rval;
 }
 
+static bool server_alter_fields_are_valid(json_t* json)
+{
+    bool rval = false;
+    json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
+    json_t* socket = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_SOCKET);
+    json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
+
+    if (address && socket)
+    {
+        config_runtime_error("Request body defines both of the '%s' and '%s' fields",
+                             MXS_JSON_PTR_PARAM_ADDRESS, MXS_JSON_PTR_PARAM_SOCKET);
+    }
+    else if (address && !json_is_string(address))
+    {
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_ADDRESS);
+    }
+    else if (address && json_is_string(address) && json_string_value(address)[0] == '/')
+    {
+        config_runtime_error("The '%s' field is not a valid address", MXS_JSON_PTR_PARAM_ADDRESS);
+    }
+    else if (socket && !json_is_string(socket))
+    {
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_SOCKET);
+    }
+    else if (port && !json_is_integer(port))
+    {
+        config_runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
+    }
+    else if (socket && !json_is_string(socket))
+    {
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_SOCKET);
+    }
+    else
+    {
+        rval = true;
+    }
+
+    return rval;
+}
+
 static bool server_contains_required_fields(json_t* json)
 {
     json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
     json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
     json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
+    json_t* socket = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_SOCKET);
     bool rval = false;
 
     if (!id)
@@ -1755,19 +1797,33 @@ static bool server_contains_required_fields(json_t* json)
     {
         config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
     }
-    else if (!address)
+    else if (!address && !socket)
     {
-        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_ADDRESS);
+        config_runtime_error("Request body does not define '%s' or '%s'",
+                             MXS_JSON_PTR_PARAM_ADDRESS, MXS_JSON_PTR_PARAM_SOCKET);
     }
-    else if (!json_is_string(address))
+    else if (address && socket)
+    {
+        config_runtime_error("Request body defines both of the '%s' and '%s' fields",
+                             MXS_JSON_PTR_PARAM_ADDRESS, MXS_JSON_PTR_PARAM_SOCKET);
+    }
+    else if (address && !json_is_string(address))
     {
         config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_ADDRESS);
     }
-    else if (!port)
+    else if (address && json_is_string(address) && json_string_value(address)[0] == '/')
+    {
+        config_runtime_error("The '%s' field is not a valid address", MXS_JSON_PTR_PARAM_ADDRESS);
+    }
+    else if (socket && !json_is_string(socket))
+    {
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_SOCKET);
+    }
+    else if (!address && port)
     {
         config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_PORT);
     }
-    else if (!json_is_integer(port))
+    else if (port && !json_is_integer(port))
     {
         config_runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
     }
@@ -1958,11 +2014,14 @@ Server* runtime_create_server_from_json(json_t* json)
 {
     Server* rval = NULL;
 
-    if (is_valid_resource_body(json)
-        && server_contains_required_fields(json))
+    if (is_valid_resource_body(json) && server_contains_required_fields(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
-        const char* address = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS));
+
+        // Either `address` or `socket` is defined, not both
+        json_t* addr = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
+        json_t* sock = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_SOCKET);
+        const char* address = addr ? json_string_value(addr) : json_string_value(sock);
 
         /** The port needs to be in string format */
         std::string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
@@ -2076,7 +2135,8 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
     mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json)
-        && server_to_object_relations(server, old_json.get(), new_json))
+        && server_to_object_relations(server, old_json.get(), new_json)
+        && server_alter_fields_are_valid(new_json))
     {
         rval = true;
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);

@@ -242,7 +242,9 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    auto address = params->get_string(CN_ADDRESS);
+    auto address = params->contains(CN_ADDRESS) ?
+        params->get_string(CN_ADDRESS) : params->get_string(CN_SOCKET);
+
     careful_strcpy(server->address, MAX_ADDRESS_LEN, address.c_str());
     if (address.length() > MAX_ADDRESS_LEN)
     {

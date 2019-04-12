@@ -61,6 +61,7 @@ class SERVICE;
 /** Parameter value JSON Pointers */
 #define MXS_JSON_PTR_PARAM_PORT                  MXS_JSON_PTR_PARAMETERS "/port"
 #define MXS_JSON_PTR_PARAM_ADDRESS               MXS_JSON_PTR_PARAMETERS "/address"
+#define MXS_JSON_PTR_PARAM_SOCKET                MXS_JSON_PTR_PARAMETERS "/socket"
 #define MXS_JSON_PTR_PARAM_PROTOCOL              MXS_JSON_PTR_PARAMETERS "/protocol"
 #define MXS_JSON_PTR_PARAM_AUTHENTICATOR         MXS_JSON_PTR_PARAMETERS "/authenticator"
 #define MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS MXS_JSON_PTR_PARAMETERS "/authenticator_options"
