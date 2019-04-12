@@ -156,10 +156,14 @@ module.exports.execute = function(argv, opts) {
 }
 
 function askQuestion() {
+    inquirer.registerPrompt('command', require('inquirer-command-prompt'))
+
     var question = [ {
         name: 'maxctrl',
         prefix: '',
-        suffix: ''
+        suffix: '',
+        type: 'command',
+        message: 'maxctrl'
     }]
     var running = true
 
