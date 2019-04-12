@@ -39,6 +39,11 @@ class Type;
 class Specification
 {
 public:
+    enum Kind
+    {
+        FILTER
+    };
+
     using ParamsByName   = std::map<std::string, Param*>;
     using const_iterator = ParamsByName::const_iterator;
     using value_type     = ParamsByName::value_type;
@@ -48,8 +53,13 @@ public:
      *
      * @param zModule The the name of the module, e.g. "cachefilter".
      */
-    Specification(const char* zModule);
+    Specification(const char* zModule, Kind kind);
     ~Specification();
+
+    /**
+     * @return What kind of specification.
+     */
+    Kind kind() const;
 
     /**
      * @return The module name of this specification.
@@ -133,6 +143,7 @@ private:
 
 private:
     std::string  m_module;
+    Kind         m_kind;
     ParamsByName m_params;
 };
 

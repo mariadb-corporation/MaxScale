@@ -34,7 +34,7 @@ inline ostream& operator << (ostream& out, const std::chrono::milliseconds& x)
     return out;
 }
 
-config::Specification specification("test_module");
+config::Specification specification("test_module", config::Specification::FILTER);
 
 config::ParamBool
 param_bool(&specification,

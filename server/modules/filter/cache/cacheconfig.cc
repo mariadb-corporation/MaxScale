@@ -17,7 +17,7 @@
 
 #define CACHE_ZDEFAULT_STORAGE "\"storage_inmemory\""
 
-config::Specification CacheConfig::s_specification(MXS_MODULE_NAME);
+config::Specification CacheConfig::s_specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
 config::ParamString CacheConfig::s_storage(
     &s_specification,

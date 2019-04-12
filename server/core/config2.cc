@@ -16,14 +16,60 @@
 
 using namespace std;
 
+namespace
+{
+
+using namespace config;
+
+// TODO: Do not duplicate information from config.cc.
+
+const char* pzCore_filter_params[] = {
+    CN_TYPE,
+    CN_MODULE,
+    nullptr,
+};
+
+bool is_core_param(Specification::Kind kind, const std::string& param)
+{
+    bool rv = false;
+
+    const char** pzCore_params = nullptr;
+
+    switch (kind)
+    {
+    case Specification::FILTER:
+        pzCore_params = pzCore_filter_params;
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    if (pzCore_params)
+    {
+        while (!rv && *pzCore_params)
+        {
+            const char* zCore_param = *pzCore_params;
+
+            rv = (param == zCore_param);
+            ++pzCore_params;
+        }
+    }
+
+    return rv;
+}
+
+}
+
 namespace config
 {
 
 /**
  * class Specification
  */
-Specification::Specification(const char* zModule)
+Specification::Specification(const char* zModule, Kind kind)
     : m_module(zModule)
+    , m_kind(kind)
 {
 }
 
@@ -68,16 +114,17 @@ bool Specification::validate(const MXS_CONFIG_PARAMETER& params) const
 
         if (pParam)
         {
+            bool param_valid = true;
             string message;
 
             if (!pParam->validate(value.c_str(), &message))
             {
-                valid = false;
+                param_valid = false;
             }
 
             if (!message.empty())
             {
-                if (valid)
+                if (param_valid)
                 {
                     MXS_WARNING("%s: %s", name.c_str(), message.c_str());
                 }
@@ -89,7 +136,7 @@ bool Specification::validate(const MXS_CONFIG_PARAMETER& params) const
 
             provided.insert(name);
         }
-        else
+        else if (!is_core_param(m_kind, name))
         {
             MXS_WARNING("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
             valid = false;
@@ -121,26 +168,30 @@ bool Specification::configure(Configuration& configuration, const MXS_CONFIG_PAR
     for (const auto& param : params)
     {
         const auto& name = param.first;
-        const auto& value = param.second;
 
-        const Param* pParam = find_param(name.c_str());
-        config::Type* pValue = configuration.find_value(name.c_str());
-
-        mxb_assert(pValue && pParam); // Should have been validated.
-        mxb_assert(&pValue->parameter() == pParam);
-
-        if (pParam && pValue)
+        if (!is_core_param(m_kind, name))
         {
-            if (!pParam->set(*pValue, value.c_str()))
+            const auto& value = param.second;
+
+            const Param* pParam = find_param(name.c_str());
+            config::Type* pValue = configuration.find_value(name.c_str());
+
+            mxb_assert(pValue && pParam); // Should have been validated.
+            mxb_assert(&pValue->parameter() == pParam);
+
+            if (pParam && pValue)
             {
-                mxb_assert(!true);
+                if (!pParam->set(*pValue, value.c_str()))
+                {
+                    mxb_assert(!true);
+                    configured = false;
+                }
+            }
+            else
+            {
+                MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
                 configured = false;
             }
-        }
-        else
-        {
-            MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
-            configured = false;
         }
     }
 
