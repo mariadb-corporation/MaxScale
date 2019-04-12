@@ -125,6 +125,7 @@ extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
+extern void maxscaleReset(Parse*, int what);
 extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
@@ -614,7 +615,7 @@ columnid(A) ::= nm(X). {
   // TODO: BINARY is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
   BINARY
-  /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/
+  CACHE /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/
   DATA DATABASE DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
   /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/
   FIRST FLUSH /*FOR*/ FORMAT
@@ -628,8 +629,8 @@ columnid(A) ::= nm(X). {
   NO
   OF OFFSET OPEN
   PREVIOUS
-  QUICK
-  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESTRICT ROLLBACK ROLLUP ROW
+  QUERY QUICK
+  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLLBACK ROLLUP ROW
   SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SLAVE /*START*/ STATEMENT STATUS
   TABLES TEMP TEMPTABLE /*TRIGGER*/
   /*TRUNCATE*/
@@ -3077,6 +3078,12 @@ tables_to_rename(A) ::= tables_to_rename(X) COMMA table_to_rename(Y).
 
 rename ::= RENAME TABLE tables_to_rename(X). {
   maxscaleRenameTable(pParse, X);
+}
+
+//////////////////////// The RESET statement ////////////////////////////////////
+//
+cmd ::= RESET QUERY CACHE. {
+  maxscaleReset(pParse, MXS_RESET_QUERY_CACHE);
 }
 
 //////////////////////// The SET statement ////////////////////////////////////

@@ -999,6 +999,17 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         goto return_qtype;
         break;
 
+    case SQLCOM_RESET:
+        if (lex->type & REFRESH_QUERY_CACHE)
+        {
+            type |= QUERY_TYPE_SESSION_WRITE;
+        }
+        else
+        {
+            type |= QUERY_TYPE_WRITE;
+        }
+        break;
+
     default:
         type |= QUERY_TYPE_WRITE;
         break;

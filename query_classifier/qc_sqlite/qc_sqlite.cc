@@ -2602,6 +2602,11 @@ public:
                 m_operation = QUERY_OP_REVOKE;
                 break;
 
+            case TK_RESET:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                break;
+
             case TK_SELECT:
                 m_status = QC_QUERY_TOKENIZED;
                 m_type_mask = QUERY_TYPE_READ;
@@ -2831,6 +2836,23 @@ public:
 
         case TK_REVOKE:
             m_operation = QUERY_OP_REVOKE;
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+    }
+
+    void maxscaleReset(Parse* pParse, int what)
+    {
+        mxb_assert(this_thread.initialized);
+
+        m_status = QC_QUERY_PARSED;
+
+        switch (what)
+        {
+        case MXS_RESET_QUERY_CACHE:
+            m_type_mask = (QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_COMMIT);
             break;
 
         default:
@@ -3448,6 +3470,7 @@ extern "C"
     extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
     extern void maxscalePrivileges(Parse*, int kind);
     extern void maxscaleRenameTable(Parse*, SrcList* pTables);
+    extern void maxscaleReset(Parse*, int what);
     extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
     extern void maxscaleShow(Parse*, MxsShow* pShow);
     extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
@@ -4486,6 +4509,16 @@ void maxscalePrivileges(Parse* pParse, int kind)
     mxb_assert(pInfo);
 
     QC_EXCEPTION_GUARD(pInfo->maxscalePrivileges(pParse, kind));
+}
+
+void maxscaleReset(Parse* pParse, int what)
+{
+    QC_TRACE();
+
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    mxb_assert(pInfo);
+
+    QC_EXCEPTION_GUARD(pInfo->maxscaleReset(pParse, what));
 }
 
 void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)

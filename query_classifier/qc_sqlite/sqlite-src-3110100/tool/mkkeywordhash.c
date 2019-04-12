@@ -180,6 +180,7 @@ static Keyword aKeywordTable[] = {
   { "BY",               "TK_BY",           ALWAYS                 },
 #ifdef MAXSCALE
   { "CALL",             "TK_CALL",         ALWAYS                 },
+  { "CACHE",            "TK_CACHE",        ALWAYS                 },
 #endif
   { "CASCADE",          "TK_CASCADE",      FKEY                   },
   { "CASE",             "TK_CASE",         ALWAYS                 },
@@ -391,7 +392,9 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "PROCEDURE",        "TK_FUNCTION_KW",  ALWAYS                 },
 #endif
-#ifndef MAXSCALE
+#ifdef MAXSCALE
+  { "QUERY",            "TK_QUERY",        ALWAYS                 },
+#else
   { "QUERY",            "TK_QUERY",        EXPLAIN                },
 #endif
 #ifdef MAXSCALE
@@ -409,6 +412,9 @@ static Keyword aKeywordTable[] = {
   { "RELEASE",          "TK_RELEASE",      ALWAYS                 },
   { "RENAME",           "TK_RENAME",       ALTER                  },
   { "REPLACE",          "TK_REPLACE",      CONFLICT               },
+#ifdef MAXSCALE
+  { "RESET",            "TK_RESET",        ALWAYS                 },
+#endif
   { "RESTRICT",         "TK_RESTRICT",     FKEY                   },
 #ifdef MAXSCALE
   { "REVOKE",           "TK_REVOKE",       ALWAYS                 },

@@ -4099,6 +4099,11 @@ typedef enum mxs_drop
     MXS_DROP_SEQUENCE,
 } mxs_drop_t;
 
+typedef enum mxs_reset
+{
+    MXS_RESET_QUERY_CACHE
+} mxs_reset_t;
+
 typedef enum mxs_set
 {
     MXS_SET_VARIABLES,
