@@ -627,6 +627,22 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
       ** SQL keywords start with the letter 'x'.  Fall through */
     }
 #endif
+#ifdef MAXSCALE
+    // It may be the "XA" keyword.
+    // If the next character is 'a' or 'A', followed by whitespace or a
+    // comment, then we are indeed dealing with the "XA" keyword.
+    if (( z[1]=='a' || z[1]=='A' ) &&
+        (sqlite3Isspace(z[2]) ||                              // Whitespace
+         (z[2]=='/' && z[3]=='*') ||                          // Beginning of /* comment
+         (z[2]=='#') ||                                       // # eol comment
+         (z[2]=='-' && z[3]=='-' && sqlite3Isspace(z[4])))) { // --  eol comment
+      extern int maxscaleKeyword(int);
+
+      *tokenType = TK_XA;
+      maxscaleKeyword(*tokenType);
+      return 2;
+    }
+#endif
     case CC_ID: {
       i = 1;
       break;

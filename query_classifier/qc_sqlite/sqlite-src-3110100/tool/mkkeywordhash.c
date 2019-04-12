@@ -500,6 +500,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "WORK",             "TK_WORK",         ALWAYS                 },
   { "WRITE",            "TK_WRITE",        ALWAYS                 },
+  { "XA",               "TK_XA",           ALWAYS                 },
 #endif
   { "ZEROFILL",         "TK_ZEROFILL",     ALWAYS                 },
 };
