@@ -2,6 +2,9 @@
 #include <string>
 #include <cstring>
 #include <iostream>
+#include <future>
+#include <functional>
+#include <algorithm>
 
 #include "envv.h"
 
@@ -9,36 +12,29 @@ Nodes::Nodes()
 {
 }
 
-int Nodes::check_node_ssh(int node)
+bool Nodes::check_node_ssh(int node)
 {
-    int res = 0;
+    bool res = true;
 
-    if (ssh_node(node, (char*) "ls > /dev/null", false) != 0)
+    if (ssh_node(node, "ls > /dev/null", false) != 0)
     {
-        printf("Node %d is not available\n", node);
-        fflush(stdout);
-        res = 1;
+        std::cout << "Node " << node << " is not available" << std::endl;
+        res = false;
     }
-    else
-    {
-        fflush(stdout);
-    }
+
     return res;
 }
 
-int Nodes::check_nodes()
+bool Nodes::check_nodes()
 {
-    std::cout << "Checking nodes..." << std::endl;
+    std::vector<std::future<bool>> f;
 
     for (int i = 0; i < N; i++)
     {
-        if (check_node_ssh(i) != 0)
-        {
-            return 1;
-        }
+        f.push_back(std::async(std::launch::async, &Nodes::check_node_ssh, this, i));
     }
 
-    return 0;
+    return std::all_of(f.begin(), f.end(), std::mem_fn(&std::future<bool>::get));
 }
 
 void Nodes::generate_ssh_cmd(char* cmd, int node, const char* ssh, bool sudo)
@@ -166,6 +162,11 @@ int Nodes::ssh_node(int node, const char* ssh, bool sudo)
                 access_user[node],
                 IP[node],
                 verbose ? "" :  " > /dev/null");
+    }
+
+    if (verbose)
+    {
+        std::cout << ssh << std::endl;
     }
 
     int rc = 1;

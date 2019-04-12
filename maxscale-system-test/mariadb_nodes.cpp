@@ -18,6 +18,8 @@
 #include <iostream>
 #include <vector>
 #include <future>
+#include <functional>
+#include <algorithm>
 #include "envv.h"
 
 using std::cout;
@@ -1102,19 +1104,22 @@ std::string Mariadb_nodes::get_lowest_version()
 
 int Mariadb_nodes::truncate_mariadb_logs()
 {
-    int local_result = 0;
+    std::vector<std::future<int>> results;
+
     for (int node = 0; node < N; node++)
     {
         if (strcmp(IP[node], "127.0.0.1") != 0)
         {
-            local_result += ssh_node_f(node, true,
-                                       "truncate -s 0 /var/lib/mysql/*.err;"
-                                       "truncate -s 0 /var/log/syslog;"
-                                       "truncate -s 0 /var/log/messages;"
-                                       "rm -f /etc/my.cnf.d/binlog_enc*;");
+            auto f = std::async(std::launch::async, &Nodes::ssh_node_f, this, node, true,
+                                "truncate -s 0 /var/lib/mysql/*.err;"
+                                "truncate -s 0 /var/log/syslog;"
+                                "truncate -s 0 /var/log/messages;"
+                                "rm -f /etc/my.cnf.d/binlog_enc*;");
+            results.push_back(std::move(f));
         }
     }
-    return local_result;
+
+    return std::count_if(results.begin(), results.end(), std::mem_fn(&std::future<int>::get));
 }
 
 int Mariadb_nodes::configure_ssl(bool require)

@@ -22,6 +22,20 @@ describe("Set/Clear Commands", function() {
             })
     })
 
+    it('force maintenance mode', function() {
+        return verifyCommand('set server server1 maintenance --force', 'servers/server1')
+            .then(function(res) {
+                res.data.attributes.state.should.match(/Maintenance/)
+            })
+    })
+
+    it('clear maintenance mode', function() {
+        return verifyCommand('clear server server1 maintenance', 'servers/server1')
+            .then(function(res) {
+                res.data.attributes.state.should.not.match(/Maintenance/)
+            })
+    })
+
     it('reject set incorrect state', function() {
         return doCommand('set server server2 something')
             .should.be.rejected

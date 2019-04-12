@@ -28,11 +28,13 @@ exports.handler = function (argv) {
         return doRequest(host,
                          'maxscale/query_classifier/classify?sql=' + argv.statement,
                          (res) => {
-                             var a = res.data.attributes.parameters.functions.map((f) => {
-                                 return f.name + ': (' + f.arguments.join(', ') + ')'
-                             });
+                             if (res.data.attributes.parameters.functions) {
+                                 var a = res.data.attributes.parameters.functions.map((f) => {
+                                     return f.name + ': (' + f.arguments.join(', ') + ')'
+                                 });
 
-                             res.data.attributes.parameters.functions = a;
+                                 res.data.attributes.parameters.functions = a;
+                             }
 
                              return formatResource(classify_fields, res.data)
                          })
@@ -44,14 +46,6 @@ exports.builder = function(yargs) {
         .epilog('Classify the statement using MaxScale and display the result. ' +
                 'The possible values for "Parse result", "Type mask" and "Operation" ' +
                 'can be looked up in ' +
-                'https://github.com/mariadb-corporation/MaxScale/blob/' +
-                '2.3/include/maxscale/query_classifier.h')
+                'https://github.com/mariadb-corporation/MaxScale/blob/2.3/include/maxscale/query_classifier.h')
         .help()
-        .command('*', 'the default command', {}, function(argv) {
-            console.log("*");
-            maxctrl(argv, function(host) {
-                console.log(argv.statement);
-                return error('Unknown command. See output of `help stop` for a list of commands.')
-            })
-        })
 }

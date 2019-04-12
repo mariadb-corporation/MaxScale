@@ -1078,6 +1078,14 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
 
     // get ThreadID: 4 bytes
     uint32_t tid = gw_mysql_get_byte4(payload);
+
+    // LocalClient also uses this code and it doesn't populate the server pointer
+    // TODO: fix it
+    if (conn->owner_dcb && conn->owner_dcb->server)
+    {
+        MXS_INFO("Connected to '%s' with thread id %u", conn->owner_dcb->server->name(), tid);
+    }
+
     /* TODO: Correct value of thread id could be queried later from backend if
      * there is any worry it might be larger than 32bit allows. */
     conn->thread_id = tid;

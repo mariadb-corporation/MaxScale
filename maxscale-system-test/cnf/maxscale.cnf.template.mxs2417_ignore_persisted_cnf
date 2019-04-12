@@ -1,0 +1,3 @@
+[maxscale]
+threads=###threads###
+load_persisted_configs=false

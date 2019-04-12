@@ -243,6 +243,7 @@ int  dcb_write(DCB*, GWBUF*);
 DCB* dcb_alloc(DCB::Role, MXS_SESSION*);
 DCB* dcb_connect(struct SERVER*, MXS_SESSION*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
+int  dcb_bytes_readable(DCB* dcb);
 int  dcb_drain_writeq(DCB*);
 void dcb_close(DCB*);
 

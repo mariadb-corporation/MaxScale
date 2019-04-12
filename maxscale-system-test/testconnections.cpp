@@ -12,6 +12,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <future>
 #include <maxbase/stacktrace.hh>
 
 #include "mariadb_func.h"
@@ -119,6 +120,8 @@ void TestConnections::restart_galera(bool value)
     maxscale::restart_galera = value;
 }
 
+bool TestConnections::verbose = false;
+
 TestConnections::TestConnections(int argc, char* argv[])
     : enable_timeouts(true)
     , global_result(0)
@@ -126,7 +129,6 @@ TestConnections::TestConnections(int argc, char* argv[])
     , local_maxscale(false)
     , no_backend_log_copy(false)
     , no_maxscale_log_copy(false)
-    , verbose(false)
     , smoke(true)
     , binlog_cmd_option(0)
     , ssl(false)
@@ -303,7 +305,7 @@ TestConnections::TestConnections(int argc, char* argv[])
             mdbci_call_needed = true;
             tprintf("Machines with label '%s' are not running, MDBCI UP call is needed", label.c_str());
         }
-        else
+        else if (verbose)
         {
             tprintf("Machines with label '%s' are running, MDBCI UP call is not needed", label.c_str());
         }
@@ -321,13 +323,19 @@ TestConnections::TestConnections(int argc, char* argv[])
     if (mdbci_labels.find(std::string("REPL_BACKEND")) == std::string::npos)
     {
         no_repl = true;
-        tprintf("No need to use Master/Slave");
+        if (verbose)
+        {
+            tprintf("No need to use Master/Slave");
+        }
     }
 
     if (mdbci_labels.find(std::string("GALERA_BACKEND")) == std::string::npos)
     {
         no_galera = true;
-        tprintf("No need to use Galera");
+        if (verbose)
+        {
+            tprintf("No need to use Galera");
+        }
     }
 
     get_logs_command = (char *) malloc(strlen(test_dir) + 14);
@@ -345,19 +353,16 @@ TestConnections::TestConnections(int argc, char* argv[])
         exit(0);
     }
 
+    std::future<bool> repl_future;
+    std::future<bool> galera_future;
+
     if (!no_repl)
     {
         repl = new Mariadb_nodes("node", test_dir, verbose, network_config);
         repl->use_ipv6 = use_ipv6;
         repl->take_snapshot_command = take_snapshot_command;
         repl->revert_snapshot_command = revert_snapshot_command;
-        if (repl->check_nodes())
-        {
-            if (call_mdbci("--recreate"))
-            {
-                exit(MDBCI_FAUILT);
-            }
-        }
+        repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
     }
     else
     {
@@ -371,13 +376,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         galera->use_ipv6 = false;
         galera->take_snapshot_command = take_snapshot_command;
         galera->revert_snapshot_command = revert_snapshot_command;
-        if (galera->check_nodes())
-        {
-            if (call_mdbci("--recreate"))
-            {
-                exit(MDBCI_FAUILT);
-            }
-        }
+        galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
     }
     else
     {
@@ -385,23 +384,26 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
     maxscales = new Maxscales("maxscale", test_dir, verbose, use_valgrind, network_config);
-    if (maxscales->check_nodes() ||
-            ((maxscales->N < 2) && (mdbci_labels.find(std::string("SECOND_MAXSCALE")) != std::string::npos))
-       )
+
+    bool maxscale_ok = maxscales->check_nodes();
+    bool repl_ok = no_repl || repl_future.get();
+    bool galera_ok = no_galera || galera_future.get();
+    bool node_error = !maxscale_ok || !repl_ok || !galera_ok;
+
+    if (node_error || too_many_maxscales())
     {
+        tprintf("Recreating VMs: %s", node_error ? "node check failed" : "too many maxscales");
+
         if (call_mdbci("--recreate"))
         {
             exit(MDBCI_FAUILT);
         }
     }
 
-    if (reinstall_maxscale)
+    if (reinstall_maxscale && reinstall_maxscales())
     {
-        if (reinstall_maxscales())
-        {
-            tprintf("Failed to install Maxscale: target is %s", target);
-            exit(MDBCI_FAUILT);
-        }
+        tprintf("Failed to install Maxscale: target is %s", target);
+        exit(MDBCI_FAUILT);
     }
 
     std::string src = std::string(test_dir) + "/mdbci/add_core_cnf.sh";
@@ -422,39 +424,33 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (repl)
+    if (repl && maxscale::required_repl_version.length())
     {
-        if (maxscale::required_repl_version.length())
-        {
-            int ver_repl_required = get_int_version(maxscale::required_repl_version);
-            std::string ver_repl = repl->get_lowest_version();
-            int int_ver_repl = get_int_version(ver_repl);
+        int ver_repl_required = get_int_version(maxscale::required_repl_version);
+        std::string ver_repl = repl->get_lowest_version();
+        int int_ver_repl = get_int_version(ver_repl);
 
-            if (int_ver_repl < ver_repl_required)
-            {
-                tprintf("Test requires a higher version of backend servers, skipping test.");
-                tprintf("Required version: %s", maxscale::required_repl_version.c_str());
-                tprintf("Master-slave version: %s", ver_repl.c_str());
-                exit(0);
-            }
+        if (int_ver_repl < ver_repl_required)
+        {
+            tprintf("Test requires a higher version of backend servers, skipping test.");
+            tprintf("Required version: %s", maxscale::required_repl_version.c_str());
+            tprintf("Master-slave version: %s", ver_repl.c_str());
+            exit(0);
         }
     }
 
-    if (galera)
+    if (galera && maxscale::required_galera_version.length())
     {
-        if (maxscale::required_galera_version.length())
-        {
-            int ver_galera_required = get_int_version(maxscale::required_galera_version);
-            std::string ver_galera = galera->get_lowest_version();
-            int int_ver_galera = get_int_version(ver_galera);
+        int ver_galera_required = get_int_version(maxscale::required_galera_version);
+        std::string ver_galera = galera->get_lowest_version();
+        int int_ver_galera = get_int_version(ver_galera);
 
-            if (int_ver_galera < ver_galera_required)
-            {
-                tprintf("Test requires a higher version of backend servers, skipping test.");
-                tprintf("Required version: %s", maxscale::required_galera_version.c_str());
-                tprintf("Galera version: %s", ver_galera.c_str());
-                exit(0);
-            }
+        if (int_ver_galera < ver_galera_required)
+        {
+            tprintf("Test requires a higher version of backend servers, skipping test.");
+            tprintf("Required version: %s", maxscale::required_galera_version.c_str());
+            tprintf("Galera version: %s", ver_galera.c_str());
+            exit(0);
         }
     }
 
@@ -464,22 +460,15 @@ TestConnections::TestConnections(int argc, char* argv[])
         galera->start_replication();
     }
 
-
     if (maxscale::check_nodes)
     {
-        if (repl)
+        if (repl && !repl->fix_replication())
         {
-            if (!repl->fix_replication() )
-            {
-                exit(BROKEN_VM_FAUILT);
-            }
+            exit(BROKEN_VM_FAUILT);
         }
-        if (galera)
+        if (galera && !galera->fix_replication())
         {
-            if (!galera->fix_replication())
-            {
-                exit(BROKEN_VM_FAUILT);
-            }
+            exit(BROKEN_VM_FAUILT);
         }
     }
 

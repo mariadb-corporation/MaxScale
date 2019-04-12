@@ -52,12 +52,17 @@ file locations, configuration options and version information.
                 "admin_ssl_key": "",
                 "admin_ssl_cert": "",
                 "admin_ssl_ca_cert": "",
-                "query_classifier": ""
+                "query_classifier": "",
+                "query_classifier_cache_size": 416215859,
+                "retain_last_statements": 2,
+                "dump_last_statements": "never",
+                "load_persisted_configs": false
             },
-            "version": "2.2.0",
-            "commit": "aa1a413cd961d467083d1974c2a027f612201845",
-            "started_at": "Wed, 06 Sep 2017 06:51:54 GMT",
-            "uptime": 1227
+            "version": "2.3.6",
+            "commit": "47158faf12c156775c39388652a77f8a8c542d28",
+            "started_at": "Thu, 04 Apr 2019 21:04:06 GMT",
+            "activated_at": "Thu, 04 Apr 2019 21:04:06 GMT",
+            "uptime": 337
         },
         "id": "maxscale",
         "type": "maxscale"

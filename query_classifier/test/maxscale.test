@@ -121,3 +121,11 @@ SELECT X(coordinates), Y(coordinates), ST_X(coordinates), ST_Y(coordinates) FROM
 
 # MXS-2248
 SELECT curdate() + interval '60' day;
+
+# MXS-2431
+XA BEGIN 'xid';
+XA END 'xid';
+XA PREPARE 'xid';
+XA COMMIT 'xid';
+XA ROLLBACK 'xid'
+XA RECOVER 'xid';

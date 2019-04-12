@@ -1586,18 +1586,16 @@ public:
         }
     }
 
-    void mxs_sqlite3BeginTrigger(Parse* pParse,         /* The parse context of the CREATE TRIGGER statement
-                                                         * */
-                                 Token* pName1,         /* The name of the trigger */
-                                 Token* pName2,         /* The name of the trigger */
-                                 int tr_tm,             /* One of TK_BEFORE, TK_AFTER, TK_INSTEAD */
-                                 int op,                /* One of TK_INSERT, TK_UPDATE, TK_DELETE */
-                                 IdList* pColumns,      /* column list if this is an UPDATE OF trigger */
-                                 SrcList* pTableName,   /* The name of the table/view the trigger applies to
-                                                         * */
-                                 Expr* pWhen,           /* WHEN clause */
-                                 int   isTemp,          /* True if the TEMPORARY keyword is present */
-                                 int   noErr)           /* Suppress errors if the trigger already exists */
+    void mxs_sqlite3BeginTrigger(Parse* pParse,       /* The parse context of the CREATE TRIGGER statement */
+                                 Token* pName1,       /* The name of the trigger */
+                                 Token* pName2,       /* The name of the trigger */
+                                 int tr_tm,           /* One of TK_BEFORE, TK_AFTER, TK_INSTEAD */
+                                 int op,              /* One of TK_INSERT, TK_UPDATE, TK_DELETE */
+                                 IdList* pColumns,    /* column list if this is an UPDATE OF trigger */
+                                 SrcList* pTableName, /* The name of the table/view the trigger applies to */
+                                 Expr* pWhen,         /* WHEN clause */
+                                 int   isTemp,        /* True if the TEMPORARY keyword is present */
+                                 int   noErr)         /* Suppress errors if the trigger already exists */
     {
         mxb_assert(this_thread.initialized);
 
@@ -2641,6 +2639,11 @@ public:
             case TK_TRUNCATE:
                 m_status = QC_QUERY_TOKENIZED;
                 m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                break;
+
+            case TK_XA:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             default:

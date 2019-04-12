@@ -639,6 +639,7 @@ columnid(A) ::= nm(X). {
   VALUE VIEW /*VIRTUAL*/
   /*WITH*/
   WORK
+  XA
 %endif
   .
 %wildcard ANY.

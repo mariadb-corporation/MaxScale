@@ -190,22 +190,8 @@ bool RWSplitSession::route_stored_query()
     while (!m_query_queue.empty())
     {
         MXS_INFO(">>> Routing stored queries");
-
         auto query = std::move(m_query_queue.front());
         m_query_queue.pop_front();
-
-        mxb_assert(!query.empty());
-        mxb_assert_message(modutil_count_packets(query.get()) == 1, "Buffer must contain only one packet");
-
-        if (query.empty())
-        {
-            MXS_ALERT("Queued query unexpectedly empty, dumping query queue contents");
-            for (auto& a : m_query_queue)
-            {
-                gwbuf_hexdump(a, LOG_ALERT);
-            }
-            return true;
-        }
 
         /** Store the query queue locally for the duration of the routeQuery call.
          * This prevents recursive calls into this function. */
@@ -232,7 +218,12 @@ bool RWSplitSession::route_stored_query()
         }
         else
         {
-            /** Routing was stopped, we need to wait for a response before retrying */
+            /**
+             * Routing was stopped, we need to wait for a response before retrying.
+             * temp_storage holds the tail end of the queue and m_query_queue contains the query we attempted
+             * to route.
+             */
+            mxb_assert(m_query_queue.size() == 1);
             temp_storage.push_front(std::move(m_query_queue.front()));
             m_query_queue = std::move(temp_storage);
             break;
@@ -810,6 +801,11 @@ bool RWSplitSession::start_trx_replay()
             m_trx.close();
             m_trx = m_orig_trx;
             m_current_query.copy_from(m_orig_stmt);
+
+            // Erase all replayed queries from the query queue to prevent checksum mismatches
+            m_query_queue.erase(std::remove_if(m_query_queue.begin(), m_query_queue.end(), [](mxs::Buffer b) {
+                                                   return GWBUF_IS_REPLAYED(b.get());
+                                               }), m_query_queue.end());
         }
 
         if (m_trx.have_stmts() || m_current_query.get())

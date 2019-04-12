@@ -40,6 +40,7 @@ enum reply_state_t
     REPLY_STATE_START,          /**< Query sent to backend */
     REPLY_STATE_DONE,           /**< Complete reply received */
     REPLY_STATE_RSET_COLDEF,    /**< Resultset response, waiting for column definitions */
+    REPLY_STATE_RSET_COLDEF_EOF,/**< Resultset response, waiting for EOF for column definitions */
     REPLY_STATE_RSET_ROWS       /**< Resultset response, waiting for rows */
 };
 
@@ -68,6 +69,30 @@ public:
     inline reply_state_t get_reply_state() const
     {
         return m_reply_state;
+    }
+
+    const char* reply_state_str() const
+    {
+        switch (m_reply_state)
+        {
+        case REPLY_STATE_START:
+            return "START";
+
+        case REPLY_STATE_DONE:
+            return "DONE";
+
+        case REPLY_STATE_RSET_COLDEF:
+            return "COLDEF";
+
+        case REPLY_STATE_RSET_COLDEF_EOF:
+            return "COLDEF_EOF";
+
+        case REPLY_STATE_RSET_ROWS:
+            return "ROWS";
+
+        default:
+            return "UNKNOWN";
+        }
     }
 
     void     add_ps_handle(uint32_t id, uint32_t handle);
@@ -132,6 +157,9 @@ public:
         return m_reply_state == REPLY_STATE_DONE;
     }
 
+    void process_packets(GWBUF* buffer);
+    void process_reply_start(mxs::Buffer::iterator it);
+
     // Controlled by the session
     ResponseStat& response_stat();
 
@@ -152,6 +180,7 @@ private:
     uint32_t         m_expected_rows;           /**< Number of rows a COM_STMT_FETCH is retrieving */
     bool             m_local_infile_requested;  /**< Whether a LOCAL INFILE was requested */
     ResponseStat     m_response_stat;
+    uint64_t         m_num_coldefs = 0;
 
     inline bool is_opening_cursor() const
     {

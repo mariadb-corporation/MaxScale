@@ -485,7 +485,10 @@ int gw_read_client_event(DCB* dcb)
     {
         max_bytes = 36;
     }
-    return_code = dcb_read(dcb, &read_buffer, max_bytes);
+
+    const uint32_t max_single_read = GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN;
+    return_code = dcb_read(dcb, &read_buffer, max_bytes > 0 ? max_bytes : max_single_read);
+
     if (return_code < 0)
     {
         dcb_close(dcb);
@@ -493,6 +496,13 @@ int gw_read_client_event(DCB* dcb)
     if (0 == (nbytes_read = gwbuf_length(read_buffer)))
     {
         return return_code;
+    }
+
+    if (nbytes_read == max_single_read && dcb_bytes_readable(dcb) > 0)
+    {
+        // We read a maximally long packet, route it first. This is done in case there's a lot more data
+        // waiting and we have to start throttling the reads.
+        poll_fake_read_event(dcb);
     }
 
     return_code = 0;
