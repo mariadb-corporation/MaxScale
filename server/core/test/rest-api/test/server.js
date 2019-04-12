@@ -26,7 +26,29 @@ var rel = {
 describe("Server", function() {
     before(startMaxScale)
 
+    it("rejects new server with only `port`", function() {
+        delete server.data.attributes.parameters.address
+        return request.post(base_url + "/servers/", {json: server })
+            .should.be.rejected
+    });
+
+    it("rejects new server with both `address` and `socket`", function() {
+        server.data.attributes.parameters.address = '127.0.0.1'
+        server.data.attributes.parameters.socket = '/tmp/mysql.sock'
+        return request.post(base_url + "/servers/", {json: server })
+            .should.be.rejected
+    });
+
+    it("rejects new server with neither `address` nor `socket`", function() {
+        delete server.data.attributes.parameters.address
+        delete server.data.attributes.parameters.socket
+        return request.post(base_url + "/servers/", {json: server })
+            .should.be.rejected
+    });
+
     it("create new server", function() {
+        server.data.attributes.parameters.address = '127.0.0.1'
+        server.data.attributes.parameters.port = 3000
         return request.post(base_url + "/servers/", {json: server })
             .should.be.fulfilled
     });
@@ -38,6 +60,34 @@ describe("Server", function() {
 
     it("update server", function() {
         server.data.attributes.parameters.weight = 10
+        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+            .should.be.fulfilled
+    });
+
+    it("rejects invalid `address`", function() {
+        server.data.attributes.parameters.address = '/tmp/mysql.sock'
+        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+            .should.be.rejected
+    });
+
+    it("rejects invalid `port`", function() {
+        server.data.attributes.parameters.address = '127.0.0.1'
+        server.data.attributes.parameters.port = '/tmp/server.sock'
+        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+            .should.be.rejected
+    });
+
+    it("rejects `address` and `socket` in PATCH", function() {
+        server.data.attributes.parameters.address = '127.0.0.1'
+        server.data.attributes.parameters.socket = '/tmp/mysql.sock'
+        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+            .should.be.rejected
+    });
+
+    it("alters `address` to `socket` in PATCH", function() {
+        delete server.data.attributes.parameters.address
+        delete server.data.attributes.parameters.port
+        server.data.attributes.parameters.socket = '/tmp/mysql.sock'
         return request.patch(base_url + "/servers/" + server.data.id, { json: server})
             .should.be.fulfilled
     });
