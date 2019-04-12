@@ -34,24 +34,24 @@ config::ParamString CacheConfig::s_storage_options(
     "\"\""
     );
 
-config::ParamDuration<std::chrono::seconds> CacheConfig::s_hard_ttl(
+config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_hard_ttl(
     &s_specification,
     "hard_ttl",
     "Hard time to live; the maximum amount of time the cached result is "
     "used before it is discarded and the result is fetched from the backend. "
     "See also 'soft_ttl'.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::seconds { 0 }
+    std::chrono::milliseconds { 0 }
     );
 
-config::ParamDuration<std::chrono::seconds> CacheConfig::s_soft_ttl(
+config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_soft_ttl(
     &s_specification,
     "soft_ttl",
     "Soft time to live; the maximum amount of time the cached result is "
     "used before the first client querying for the result is used for refreshing "
     "the cached data from the backend. See also 'hard_ttl'.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::seconds { 0 }
+    std::chrono::milliseconds { 0 }
     );
 
 config::ParamCount CacheConfig::s_max_resultset_rows(
