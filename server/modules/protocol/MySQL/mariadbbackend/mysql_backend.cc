@@ -261,7 +261,19 @@ static int gw_do_connect_to_backend(char* host, int port, int* fd)
     int rv = -1;
 
     /* prepare for connect */
-    int so = open_network_socket(MXS_SOCKET_NETWORK, &serv_addr, host, port);
+    int so;
+    size_t sz;
+
+    if (host[0] == '/')
+    {
+        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&serv_addr, host);
+        sz = sizeof(sockaddr_un);
+    }
+    else
+    {
+        so = open_network_socket(MXS_SOCKET_NETWORK, &serv_addr, host, port);
+        sz = sizeof(sockaddr_storage);
+    }
 
     if (so == -1)
     {
@@ -269,7 +281,7 @@ static int gw_do_connect_to_backend(char* host, int port, int* fd)
         return rv;
     }
 
-    rv = connect(so, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+    rv = connect(so, (struct sockaddr*)&serv_addr, sz);
 
     if (rv != 0)
     {
