@@ -10,9 +10,11 @@ instances within MaxScale.
 
 A minimal configuration for a monitor requires one server in the Clustrix
 cluster, and a username and a password to connect to the server. Note that
-the Clustrix monitor will only use that server in order to dynamically find
-out the configuration of the cluster; after startup it will completely rely
-upon information obtained at runtime.
+by default the Clustrix monitor will only use that server in order to
+dynamically find out the configuration of the cluster; after startup it
+will completely rely upon information obtained at runtime. To change the
+default behaviour, please see the parameter
+[dynamic_node_detection](#dynamic_node_detection).
 
 To ensure that the Clustrix monitor will be able to start, it is adviseable
 to provide _more_ than one server to cater for the case that not all nodes
@@ -96,6 +98,52 @@ considers a particular node to be down. The default value is 2.
 ```
 health_check_threshold=3
 ```
+
+### `dynamic_node_detection`
+
+By default, the Clustrix monitor will only use the bootstrap nodes
+in order to connect to the Clustrux cluster and then find out the
+cluster configuration dynamically at runtime.
+
+That behaviour can be turned off with this optional parameter, in
+which case all Clustrix nodes must manually be defined as shown below.
+
+```
+[Node-1]
+type=server
+address=192.168.121.77
+port=3306
+...
+
+[Node-2]
+...
+
+[Node-3]
+...
+
+[Clustrix-Monitor]
+type=monitor
+module=clustrixmon
+servers=Node-1, Node-2, Node-3
+dynamic_node_detection=false
+```
+
+The default value of `dynamic_node_detection` is `true`.
+
+See also [health_check_port](#health_check_port).
+
+### `health_check_port`
+
+With this optional parameter it can be specified what health check
+port to use, if `dynamic_node_detection` has been disabled.
+
+```
+health_check_port=4711
+```
+The default value is `3581`.
+
+Note that this parameter is _ignored_ unless `dynamic_node_detection`
+is `false`. Note also that the port must be the same for all nodes.
 
 ## Commands
 

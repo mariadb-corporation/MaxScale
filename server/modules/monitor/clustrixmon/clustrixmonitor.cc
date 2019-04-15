@@ -175,6 +175,8 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 
     m_config.set_cluster_monitor_interval(pParams->get_integer(CLUSTER_MONITOR_INTERVAL_NAME));
     m_config.set_health_check_threshold(pParams->get_integer(HEALTH_CHECK_THRESHOLD_NAME));
+    m_config.set_dynamic_node_detection(pParams->get_bool(DYNAMIC_NODE_DETECTION_NAME));
+    m_config.set_health_check_port(pParams->get_integer(HEALTH_CHECK_PORT_NAME));
 
     return true;
 }

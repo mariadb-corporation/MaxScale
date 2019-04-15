@@ -21,6 +21,14 @@
 const long DEFAULT_CLUSTER_MONITOR_INTERVAL_VALUE = 60000;
 #define    DEFAULT_CLUSTER_MONITOR_INTERVAL_ZVALUE  "60000"
 
-#define    HEALTH_CHECK_THRESHOLD_NAME            "health_check_threshold"
-const long DEFAULT_HEALTH_CHECK_THRESHOLD_VALUE = 2;
-#define    DEFAULT_HEALTH_CHECK_THRESHOLD_ZVALUE  "2"
+#define    HEALTH_CHECK_THRESHOLD_NAME              "health_check_threshold"
+const long DEFAULT_HEALTH_CHECK_THRESHOLD_VALUE   = 2;
+#define    DEFAULT_HEALTH_CHECK_THRESHOLD_ZVALUE    "2"
+
+#define    DYNAMIC_NODE_DETECTION_NAME              "dynamic_node_detection"
+const bool DEFAULT_DYNAMIC_NODE_DETECTION_VALUE   = true;
+#define    DEFAULT_DYNAMIC_NODE_DETECTION_ZVALUE    "true"
+
+#define    HEALTH_CHECK_PORT_NAME                   "health_check_port"
+const long DEFAULT_HEALTH_CHECK_PORT_VALUE        = 3581;
+#define    DEFAULT_HEALTH_CHECK_PORT_ZVALUE         "3581"

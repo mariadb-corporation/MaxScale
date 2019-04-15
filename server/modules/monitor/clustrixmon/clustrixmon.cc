@@ -111,6 +111,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_PARAM_COUNT,
                 DEFAULT_HEALTH_CHECK_THRESHOLD_ZVALUE
             },
+            {
+                DYNAMIC_NODE_DETECTION_NAME,
+                MXS_MODULE_PARAM_BOOL,
+                DEFAULT_DYNAMIC_NODE_DETECTION_ZVALUE
+            },
+            {
+                HEALTH_CHECK_PORT_NAME,
+                MXS_MODULE_PARAM_COUNT,
+                DEFAULT_HEALTH_CHECK_PORT_ZVALUE
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };

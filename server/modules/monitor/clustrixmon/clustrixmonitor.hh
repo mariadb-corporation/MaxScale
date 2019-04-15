@@ -33,6 +33,8 @@ public:
         Config()
             : m_cluster_monitor_interval(DEFAULT_CLUSTER_MONITOR_INTERVAL_VALUE)
             , m_health_check_threshold(DEFAULT_HEALTH_CHECK_THRESHOLD_VALUE)
+            , m_dynamic_node_detection(DEFAULT_DYNAMIC_NODE_DETECTION_VALUE)
+            , m_health_check_port(DEFAULT_HEALTH_CHECK_PORT_VALUE)
         {
         };
 
@@ -56,9 +58,31 @@ public:
             m_health_check_threshold = l;
         }
 
+        bool dynamic_node_detection() const
+        {
+            return m_dynamic_node_detection;
+        }
+
+        void set_dynamic_node_detection(bool b)
+        {
+            m_dynamic_node_detection = b;
+        }
+
+        int health_check_port() const
+        {
+            return m_health_check_port;
+        }
+
+        void set_health_check_port(int p)
+        {
+            m_health_check_port = p;
+        }
+
     private:
         long m_cluster_monitor_interval;
         long m_health_check_threshold;
+        bool m_dynamic_node_detection;
+        int  m_health_check_port;
     };
 
     ~ClustrixMonitor();
