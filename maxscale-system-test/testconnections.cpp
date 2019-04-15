@@ -2103,7 +2103,7 @@ int TestConnections::call_mdbci(const char * options)
         return 1;
     }
 
-    std::string team_keys = readenv("team_keys", "~/team_keys");
+    std::string team_keys = readenv("team_keys", "~/.ssh/id_rsa.pub");
     system((std::string("mdbci public_keys --key ") +
             team_keys +
             std::string(" ") +
