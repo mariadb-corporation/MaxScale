@@ -87,7 +87,9 @@ exports.builder = function(yargs) {
             return yargs.epilog('The created server will not be used by any services or monitors ' +
                                 'unless the --services or --monitors options are given. The list ' +
                                 'of servers a service or a monitor uses can be altered with the ' +
-                                '`link` and `unlink` commands.')
+                                '`link` and `unlink` commands. If the <host|socket> argument is an ' +
+                                'absolute path, the server will use a local UNIX domain socket ' +
+                                'connection. In this case the [port] argument is ignored.')
                 .usage('Usage: create server <name> <host|socket> [port]')
         }, function(argv) {
             var server = {
