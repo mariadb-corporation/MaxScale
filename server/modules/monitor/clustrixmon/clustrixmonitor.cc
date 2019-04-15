@@ -248,9 +248,16 @@ void ClustrixMonitor::server_removed(SERVER* pServer)
 
 void ClustrixMonitor::pre_loop()
 {
-    // At startup we accept softfailed nodes in an attempt to be able to
-    // connect at any cost. It'll be replaced once there is an alternative.
-    check_cluster(Clustrix::Softfailed::ACCEPT);
+    if (m_config.dynamic_node_detection())
+    {
+        // At startup we accept softfailed nodes in an attempt to be able to
+        // connect at any cost. It'll be replaced once there is an alternative.
+        check_cluster(Clustrix::Softfailed::ACCEPT);
+    }
+    else
+    {
+        populate_from_bootstrap_servers();
+    }
 
     make_health_check();
 }
@@ -268,7 +275,7 @@ void ClustrixMonitor::post_loop()
 
 void ClustrixMonitor::tick()
 {
-    if (should_check_cluster())
+    if (m_config.dynamic_node_detection() && should_check_cluster())
     {
         check_cluster(Clustrix::Softfailed::REJECT);
     }
@@ -600,17 +607,7 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                     node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
                 }
 
-                vector<string> health_urls;
-                for (const auto& element : m_nodes)
-                {
-                    const ClustrixNode& node = element.second;
-                    string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
-
-                    health_urls.push_back(url);
-                }
-
-                m_health_urls.swap(health_urls);
-
+                update_http_urls();
                 cluster_checked();
             }
             else
@@ -753,6 +750,37 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
     return rv;
 }
 
+void ClustrixMonitor::populate_from_bootstrap_servers()
+{
+    int id = 1;
+
+    for (auto ms : m_servers)
+    {
+        SERVER* pServer = ms->server;
+
+        Clustrix::Status status = Clustrix::Status::UNKNOWN;
+        Clustrix::SubState substate = Clustrix::SubState::UNKNOWN;
+        int instance = 1;
+        ClustrixMembership membership(id, status, substate, instance);
+
+        std::string ip = pServer->address;
+        int mysql_port = pServer->port;
+        int health_port = m_config.health_check_port();
+        int health_check_threshold = m_config.health_check_threshold();
+
+        ClustrixNode node(this, membership, ip, mysql_port, health_port, health_check_threshold, pServer);
+
+        m_nodes.insert(make_pair(id, node));
+        ++id;
+
+        // New server, so it needs to be added to all services that
+        // use this monitor for defining its cluster of servers.
+        service_add_server(this, pServer);
+    }
+
+    update_http_urls();
+}
+
 void ClustrixMonitor::update_server_statuses()
 {
     mxb_assert(!m_servers.empty());
@@ -877,6 +905,20 @@ bool ClustrixMonitor::check_http(Call::action_t action)
     }
 
     return false;
+}
+
+void ClustrixMonitor::update_http_urls()
+{
+    vector<string> health_urls;
+    for (const auto& element : m_nodes)
+    {
+        const ClustrixNode& node = element.second;
+        string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
+
+        health_urls.push_back(url);
+    }
+
+    m_health_urls.swap(health_urls);
 }
 
 bool ClustrixMonitor::perform_softfail(SERVER* pServer, json_t** ppError)

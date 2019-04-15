@@ -102,7 +102,7 @@ health_check_threshold=3
 ### `dynamic_node_detection`
 
 By default, the Clustrix monitor will only use the bootstrap nodes
-in order to connect to the Clustrux cluster and then find out the
+in order to connect to the Clustrix cluster and then find out the
 cluster configuration dynamically at runtime.
 
 That behaviour can be turned off with this optional parameter, in

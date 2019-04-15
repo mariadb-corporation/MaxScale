@@ -123,11 +123,14 @@ private:
     bool check_cluster_membership(MYSQL* pHub_con,
                                   std::map<int, ClustrixMembership>* pMemberships);
 
+    void populate_from_bootstrap_servers();
+
     void update_server_statuses();
 
     void make_health_check();
     void initiate_delayed_http_check();
     bool check_http(Call::action_t action);
+    void update_http_urls();
 
     bool perform_softfail(SERVER* pServer, json_t** ppError);
     bool perform_unsoftfail(SERVER* pServer, json_t** ppError);
