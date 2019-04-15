@@ -208,6 +208,7 @@ Iter skip_encoded_int(Iter it)
         break;
 
     default:
+        std::advance(it, 1);
         break;
     }
 
