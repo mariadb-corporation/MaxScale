@@ -303,8 +303,8 @@ void RWBackend::process_packets(GWBUF* result)
 
         case REPLY_STATE_DONE:
             // This should never happen
-            mxb_assert(!true);
             MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u", cmd, len);
+            mxb_assert(!true);
             break;
 
         case REPLY_STATE_RSET_COLDEF:
