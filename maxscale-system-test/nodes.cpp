@@ -50,9 +50,7 @@ void Nodes::generate_ssh_cmd(char* cmd, int node, const char* ssh, bool sudo)
         }
         else
         {
-            sprintf(cmd,
-                    "%s",
-                    ssh);
+            sprintf(cmd, "%s", ssh);
         }
     }
     else
