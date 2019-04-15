@@ -2102,6 +2102,13 @@ int TestConnections::call_mdbci(const char * options)
         tprintf("MDBCI failed to bring up virtual machines");
         return 1;
     }
+
+    std::string team_keys = readenv("team_keys", "~/team_keys");
+    system((std::string("mdbci public_keys --key ") +
+            team_keys +
+            std::string(" ") +
+            std::string(mdbci_config_name)).c_str() );
+
     read_env();
     if (repl)
     {
