@@ -363,6 +363,30 @@ TestConnections::TestConnections(int argc, char *argv[]):
         }
     }
 
+    if ((restart_galera) && (galera))
+    {
+        galera->stop_nodes();
+        galera->start_replication();
+    }
+
+    if (maxscale::check_nodes)
+    {
+        if (repl)
+        {
+            if (!repl->fix_replication() )
+            {
+                exit(BROKEN_VM_FAUILT);
+            }
+        }
+        if (galera)
+        {
+            if (!galera->fix_replication())
+            {
+                exit(BROKEN_VM_FAUILT);
+            }
+        }
+    }
+
     if (repl)
     {
         if (maxscale::required_repl_version.length())
@@ -395,30 +419,6 @@ TestConnections::TestConnections(int argc, char *argv[]):
                 tprintf("Required version: %s", maxscale::required_galera_version.c_str());
                 tprintf("Galera version: %s", ver_galera.c_str());
                 exit(0);
-            }
-        }
-    }
-
-    if ((restart_galera) && (galera))
-    {
-        galera->stop_nodes();
-        galera->start_replication();
-    }
-
-    if (maxscale::check_nodes)
-    {
-        if (repl)
-        {
-            if (!repl->fix_replication() )
-            {
-                exit(BROKEN_VM_FAUILT);
-            }
-        }
-        if (galera)
-        {
-            if (!galera->fix_replication())
-            {
-                exit(BROKEN_VM_FAUILT);
             }
         }
     }
