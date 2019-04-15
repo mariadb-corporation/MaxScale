@@ -64,6 +64,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < iterations; i++)
     {
 
+        Test->set_timeout(30);
         Test->tprintf("Connection to backend\n");
         Test->repl->connect();
         Test->tprintf("Connection to Maxscale\n");
@@ -80,8 +81,10 @@ int main(int argc, char* argv[])
         Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE t1");
         Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS test1;");
         Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE test1;");
+        Test->set_timeout(10 * Test->repl->N);
         Test->repl->sync_slaves();
 
+        Test->set_timeout(30);
         Test->tprintf("Testing with database 'test1'\n");
         Test->add_result(Test->use_db(0, (char*) "test1"), "use_db failed\n");
         Test->add_result(Test->insert_select(0, N), "insert-select check failed\n");

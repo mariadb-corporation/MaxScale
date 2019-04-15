@@ -40,8 +40,10 @@ int main(int argc, char* argv[])
     {
         conn[i] = Test->maxscales->open_rwsplit_connection(0);
     }
-    Test->tprintf("Waiting 5 seconds\n");
-    sleep(5);
+    Test->tprintf("Waiting %d seconds\n", 2 * Test->repl->N);
+    Test->stop_timeout();
+    sleep(2 * Test->repl->N);
+    Test->set_timeout(30);
 
     int ConnFloor = floor((float)TestConnNum / (Test->repl->N - 1));
     int ConnCell = ceil((float)TestConnNum / (Test->repl->N - 1));
@@ -61,6 +63,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Checking connections to each node\n");
     for (int i = 1; i < Test->repl->N; i++)
     {
+        Test->set_timeout(20);
         conn_num =
             get_conn_num(Test->repl->nodes[i],
                          Test->maxscales->ip(0),

@@ -476,6 +476,12 @@ public:
      */
     void replicate_from(int slave, int master, const char* type = "current_pos");
 
+    /**
+     * @brief limit_nodes Restart replication for only new_N nodes
+     * @param new_N new number of nodes in replication
+     */
+    void limit_nodes(int new_N);
+
 private:
 
     bool check_master_node(MYSQL* conn);

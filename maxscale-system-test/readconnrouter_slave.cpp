@@ -15,7 +15,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(100);
+    Test->set_timeout(25 * Test->repl->N);
     Test->repl->connect();
 
     const int TestConnNum = 100;
@@ -26,8 +26,10 @@ int main(int argc, char* argv[])
     Test->tprintf("Creating %d connections to ReadConnRouter in 'slave' mode\n", TestConnNum);
     for (i = 0; i < TestConnNum; i++)
     {
+        Test->set_timeout(10 * Test->repl->N);
         conn[i] = Test->maxscales->open_readconn_slave_connection(0);
     }
+    Test->set_timeout(25 * Test->repl->N);
     Test->tprintf("Waiting 5 seconds\n");
     sleep(5);
 

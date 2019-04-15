@@ -1442,3 +1442,14 @@ void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
     execute_query(nodes[slave], "%s", change_master.str().c_str());
     execute_query(nodes[slave], "START SLAVE;");
 }
+
+void Mariadb_nodes::limit_nodes(int new_N)
+{
+    if (N > new_N)
+    {
+        execute_query_all_nodes((char*) "stop slave;");
+        N = new_N;
+        fix_replication();
+        sleep(10);
+    }
+}

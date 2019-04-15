@@ -1041,6 +1041,64 @@ add_test_executable(mxs2057_systemd_watchdog.cpp mxs2057_systemd_watchdog mxs205
 ############################################
 # END: binlogrouter and avrorouter tests   #
 ############################################
+
+############################################
+# BEGIN: tests with 15 machines backend    #
+############################################
+
+# temporarily added UNSTABLE HEAVY labels to prevent execution of these tests in daily rounds
+
+
+# own long test
+# 'long_test_time' variable defines time of execution (in seconds)
+#add_test_executable_notest(long_test.cpp long_test_big replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Tries INSERTs with size close to 0x0ffffff * N
+add_test_derived(different_size_rwsplit_big different_size_rwsplit replication_big LABELS readwritesplit UNSTABLE HEAVY REPL_BACKEND BIG_REPL_BACKEND)
+
+# Check how Maxscale works in case of one slave failure, only one slave is configured
+add_test_derived(slave_failover_big slave_failover replication.one_slave_big LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend
+add_test_derived(sql_queries_big sql_queries replication_big LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Check temporal tables commands functionality
+add_test_derived(temporal_tables_big temporal_tables replication_big LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Check if prepared statement works via Maxscale (via RWSplit)
+add_test_derived(prepared_statement_big prepared_statement replication_big LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Connect to ReadConn in master mode and check if there is only one backend connection to master
+add_test_derived(readconnrouter_master_big readconnrouter_master replication_big LABELS readconnroute REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Creates 100 connections to ReadConn in slave mode and check if connections are distributed among all slaves
+add_test_derived(readconnrouter_slave_big readconnrouter_slave replication_big LABELS readconnroute REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Checks changes of COM_SELECT and COM_INSERT after queris to check if RWSplit sends queries to master or to slave depending on if it is write or read only query
+add_test_derived(rw_select_insert_big rw_select_insert replication_big LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Checks connections are distributed equaly among backends
+add_test_derived(rwsplit_conn_num_big rwsplit_conn_num repl_lgc_big LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+# Check that there is one connection to Master and one connection to one of slaves
+add_test_derived(rwsplit_connect_big rwsplit_connect replication_big LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+
+set_tests_properties(different_size_rwsplit_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
+set_tests_properties(slave_failover_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(sql_queries_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(temporal_tables_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(prepared_statement_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(readconnrouter_master_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(readconnrouter_slave_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(rw_select_insert_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(rwsplit_conn_num_big PROPERTIES TIMEOUT 3600)
+set_tests_properties(rwsplit_connect_big PROPERTIES TIMEOUT 3600)
+
+############################################
+# END: tests with 15 machines backend    #
+############################################
+###############################
 # DO NOT ADD TESTS AFTER THIS #
 ###############################
 
