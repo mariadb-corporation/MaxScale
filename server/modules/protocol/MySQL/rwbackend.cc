@@ -16,6 +16,8 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.hh>
 
+using Iter = mxs::Buffer::iterator;
+
 namespace maxscale
 {
 
@@ -153,7 +155,6 @@ static inline bool have_next_packet(GWBUF* buffer)
     return gwbuf_length(buffer) > len;
 }
 
-template<class Iter>
 uint64_t get_encoded_int(Iter it)
 {
     uint64_t len = *it++;
@@ -189,27 +190,31 @@ uint64_t get_encoded_int(Iter it)
     return len;
 }
 
-template<class Iter>
 Iter skip_encoded_int(Iter it)
 {
     switch (*it)
     {
     case 0xfc:
-        return std::next(it, 3);
+        std::advance(it, 3);
+        break;
 
     case 0xfd:
-        return std::next(it, 4);
+        std::advance(it, 4);
+        break;
 
     case 0xfe:
-        return std::next(it, 9);
+        std::advance(it, 9);
+        break;
 
     default:
-        return std::next(it);
+        std::advance(it, 1);
+        break;
     }
+
+    return it;
 }
 
-template<class Iter>
-uint64_t is_last_ok(Iter it)
+bool is_last_ok(Iter it)
 {
     ++it;                       // Skip the command byte
     it = skip_encoded_int(it);  // Affected rows
@@ -219,8 +224,7 @@ uint64_t is_last_ok(Iter it)
     return (status & SERVER_MORE_RESULTS_EXIST) == 0;
 }
 
-template<class Iter>
-uint64_t is_last_eof(Iter it)
+bool is_last_eof(Iter it)
 {
     std::advance(it, 3);    // Skip the command byte and warning count
     uint16_t status = *it++;
@@ -228,7 +232,7 @@ uint64_t is_last_eof(Iter it)
     return (status & SERVER_MORE_RESULTS_EXIST) == 0;
 }
 
-void RWBackend::process_reply_start(mxs::Buffer::iterator it)
+void RWBackend::process_reply_start(Iter it)
 {
     uint8_t cmd = *it;
     m_local_infile_requested = false;
@@ -299,8 +303,8 @@ void RWBackend::process_packets(GWBUF* result)
 
         case REPLY_STATE_DONE:
             // This should never happen
-            mxb_assert(!true);
             MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u", cmd, len);
+            mxb_assert(!true);
             break;
 
         case REPLY_STATE_RSET_COLDEF:
