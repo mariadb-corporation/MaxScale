@@ -557,7 +557,7 @@ void TestConnections::read_mdbci_info()
     target = readenv("target", "develop");
 
     mdbci_config_name = readenv("mdbci_config_name", "local");
-    vm_path = std::string(mdbci_vm_path) + std::string(mdbci_config_name);
+    vm_path = std::string(mdbci_vm_path) + std::string("/") + std::string(mdbci_config_name);
     if (mdbci_config_name != NULL)
     {
         std::ifstream nc_file;
