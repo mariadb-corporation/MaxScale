@@ -943,6 +943,9 @@ add_test_executable(mxs2313_rank.cpp mxs2313_rank mxs2313_rank LABELS readwrites
 # MXS-2417: Ignore persisted configs with load_persisted_configs=false
 add_test_executable(mxs2417_ignore_persisted_cnf.cpp mxs2417_ignore_persisted_cnf mxs2417_ignore_persisted_cnf LABELS REPL_BACKEND)
 
+# MXS-1662: PAM admin authentication
+add_test_executable(mxs1662_pam_admin.cpp mxs1662_pam_admin mxs1662_pam_admin LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################

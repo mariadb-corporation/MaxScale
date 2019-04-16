@@ -1,0 +1,3 @@
+[maxscale]
+threads=###threads###
+admin_pam_readwrite_service=passwd
