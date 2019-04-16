@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <sstream>
 
 #if !defined (MXS_MODULE_NAME)
 #define MXS_MODULE_NAME NULL
@@ -97,5 +98,26 @@ json_t* mxs_logs_to_json(const char* host);
 #define MXS_OOM_IFNULL         MXB_OOM_IFNULL
 
 #define mxs_strerror mxb_strerror
+
+#define MXS_STREAM_LOG_HELPER(CMXSLOGLEVEL__, mxs_msg_str__) \
+    do { \
+        if (!mxb_log_is_priority_enabled(CMXSLOGLEVEL__)) \
+        { \
+            break; \
+        } \
+        thread_local std::ostringstream os; \
+        os.clear(); \
+        os.seekp(0); \
+        os << mxs_msg_str__; \
+        mxb_log_message(CMXSLOGLEVEL__, MXB_MODULE_NAME, __FILE__, __LINE__, \
+                        __func__, "%s", os.str().c_str()); \
+    } while (false)
+
+#define MXS_SALERT(mxs_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_ALERT, mxs_msg_str__)
+#define MXS_SERROR(mxs_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_ERR, mxs_msg_str__)
+#define MXS_SWARNING(mxs_msg_str__) MXS_STREAM_LOG_HELPER(LOG_WARNING, mxs_msg_str__)
+#define MXS_SNOTICE(mxs_msg_str__)  MXS_STREAM_LOG_HELPER(LOG_NOTICE, mxs_msg_str__)
+#define MXS_SINFO(mxs_msg_str__)    MXS_STREAM_LOG_HELPER(LOG_INFO, mxs_msg_str__)
+#define MXS_SDEBUG(mxs_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_DEBUG, mxs_msg_str__)
 
 MXS_END_DECLS
