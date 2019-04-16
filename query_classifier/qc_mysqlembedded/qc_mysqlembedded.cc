@@ -774,9 +774,8 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         if (set_autocommit_stmt == 1)
         {
             type |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
+            type |= QUERY_TYPE_COMMIT;
         }
-
-        type |= QUERY_TYPE_COMMIT;
     }
 
     if (set_autocommit_stmt == 0)

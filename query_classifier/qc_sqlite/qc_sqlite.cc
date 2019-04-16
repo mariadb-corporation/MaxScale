@@ -1550,7 +1550,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_ALTER;
     }
 
@@ -1568,7 +1568,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
 
         update_names_from_srclist(NULL, pSrcList);
 
@@ -1600,7 +1600,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
 
         if (pTableName)
         {
@@ -1650,7 +1650,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_CREATE;
 
         if (pTblName)
@@ -1679,7 +1679,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_CREATE;
 
         const Token* pName = pName2->z ? pName2 : pName1;
@@ -1792,7 +1792,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_DROP;
 
         update_names_from_srclist(NULL, pTable);
@@ -1807,10 +1807,6 @@ public:
 
         m_status = QC_QUERY_PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        if (!isTemp)
-        {
-            m_type_mask |= QUERY_TYPE_COMMIT;
-        }
         m_operation = QUERY_OP_DROP;
         if (!isView)
         {
@@ -1948,10 +1944,6 @@ public:
         if (isTemp)
         {
             m_type_mask |= QUERY_TYPE_CREATE_TMP_TABLE;
-        }
-        else
-        {
-            m_type_mask |= QUERY_TYPE_COMMIT;
         }
 
         const Token* pName = pName2->z ? pName2 : pName1;
@@ -2095,7 +2087,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_ALTER;
 
         switch (command)
@@ -2143,7 +2135,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
 
         update_names_from_srclist(NULL, pTables);
 
@@ -2245,7 +2237,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_DROP;
 
         switch (what)
@@ -2380,7 +2372,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
     }
 
     void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Token* pName)
@@ -2505,7 +2497,7 @@ public:
             {
             case TK_ALTER:
                 m_status = QC_QUERY_TOKENIZED;
-                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_ALTER;
                 break;
 
@@ -2530,7 +2522,7 @@ public:
 
             case TK_CREATE:
                 m_status = QC_QUERY_TOKENIZED;
-                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_CREATE;
                 break;
 
@@ -2548,7 +2540,7 @@ public:
 
             case TK_DROP:
                 m_status = QC_QUERY_TOKENIZED;
-                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_DROP;
                 break;
 
@@ -2565,7 +2557,7 @@ public:
 
             case TK_GRANT:
                 m_status = QC_QUERY_TOKENIZED;
-                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_GRANT;
                 break;
 
@@ -2598,13 +2590,13 @@ public:
 
             case TK_REVOKE:
                 m_status = QC_QUERY_TOKENIZED;
-                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_type_mask = QUERY_TYPE_WRITE;
                 m_operation = QUERY_OP_REVOKE;
                 break;
 
             case TK_RESET:
                 m_status = QC_QUERY_TOKENIZED;
-                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_SELECT:
@@ -2643,7 +2635,7 @@ public:
 
             case TK_TRUNCATE:
                 m_status = QC_QUERY_TOKENIZED;
-                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_type_mask = QUERY_TYPE_WRITE;
                 break;
 
             case TK_XA:
@@ -2665,7 +2657,7 @@ public:
                 if (m_keyword_2 == TK_TABLE)
                 {
                     m_status = QC_QUERY_TOKENIZED;
-                    m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                    m_type_mask = QUERY_TYPE_WRITE;
                 }
                 break;
 
@@ -2690,7 +2682,7 @@ public:
                 if (m_keyword_2 == TK_TABLE)
                 {
                     m_status = QC_QUERY_TOKENIZED;
-                    m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                    m_type_mask = QUERY_TYPE_WRITE;
                 }
                 break;
 
@@ -2740,7 +2732,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT;
+        m_type_mask = QUERY_TYPE_WRITE;
 
         for (int i = 0; i < pTables->nSrc; ++i)
         {
@@ -2826,7 +2818,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
 
         switch (kind)
         {
@@ -2852,7 +2844,7 @@ public:
         switch (what)
         {
         case MXS_RESET_QUERY_CACHE:
-            m_type_mask = (QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_COMMIT);
+            m_type_mask = QUERY_TYPE_SESSION_WRITE;
             break;
 
         default:
@@ -3123,7 +3115,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_TRUNCATE;
 
         char* zDatabase;
