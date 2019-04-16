@@ -11,6 +11,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## New Features
 
 * [MXS-2417](https://jira.mariadb.org/browse/MXS-2417) MaxScale main config should take precedence over runtime config on restart
+* [MXS-2344](https://jira.mariadb.org/browse/MXS-2344) Support MASTER_SSL in mariadbmon for encrypting replication traffic
 
 ### REST API & MaxCtrl: Hard maintenance mode
 
@@ -20,12 +21,15 @@ maintenance mode. This causes idle connections to be closed immediately.
 
 For more information, read the
 [REST-API](../REST-API/Resources-Server.md#set-server-state) documentation for
-the `set` endpoint.
 
 ## Bug fixes
 
+* [MXS-2423](https://jira.mariadb.org/browse/MXS-2423) retain_last_statements not in maxctrl show maxscale
 * [MXS-2419](https://jira.mariadb.org/browse/MXS-2419) Hangs on query during multiple transaction replays
 * [MXS-2418](https://jira.mariadb.org/browse/MXS-2418) Crash on transaction replay if log_info is on and session starts with no master
+* [MXS-2416](https://jira.mariadb.org/browse/MXS-2416) Possible memory leak
+* [MXS-2324](https://jira.mariadb.org/browse/MXS-2324) Maxscale disconnect after commit without begin from Icinga2
+* [MXS-2259](https://jira.mariadb.org/browse/MXS-2259) Maxscale consumes large amounts of memory even with buffer limits set.
 
 ## Known Issues and Limitations
 
