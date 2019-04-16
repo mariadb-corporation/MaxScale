@@ -499,6 +499,12 @@ bool admin_verify_inet_user(const char* username, const char* password)
 bool admin_user_is_inet_admin(const char* username, const char* password)
 {
     bool is_admin = false;
+
+    if (!password)
+    {
+        password = "";
+    }
+
     if (inet_users)
     {
         is_admin = users_is_admin(inet_users, username, password);
