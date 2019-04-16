@@ -19,7 +19,8 @@ describe("Unknown Commands", function() {
         'alter',
         'rotate',
         'call',
-        'cluster'
+        'cluster',
+        'drain'
     ]
 
     endpoints.forEach(function (i) {
