@@ -27,13 +27,11 @@ using maxbase::string_printf;
 using maxbase::StopWatch;
 using maxbase::Duration;
 
-static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
-                                    "for monitor '%s' via MaxAdmin or the REST API, or restart MaxScale.";
 const char NO_SERVER[] = "Server '%s' is not monitored by '%s'.";
 const char FAILOVER_OK[] = "Failover '%s' -> '%s' performed.";
 const char FAILOVER_FAIL[] = "Failover '%s' -> '%s' failed.";
 const char SWITCHOVER_OK[] = "Switchover '%s' -> '%s' performed.";
-const char SWITCHOVER_FAIL[] = "Switchover %s -> %s failed";
+const char SWITCHOVER_FAIL[] = "Switchover %s -> %s failed.";
 
 /**
  * Run a manual switchover, promoting a new master server and demoting the existing master.
@@ -64,14 +62,8 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
         {
             string msg = string_printf(SWITCHOVER_FAIL,
                                        op->demotion.target->name(), op->promotion.target->name());
-            bool failover_setting = parameters.get_bool(CN_AUTO_FAILOVER);
-            if (failover_setting)
-            {
-                disable_setting(CN_AUTO_FAILOVER);
-                msg += ", automatic failover has been disabled";
-            }
-            msg += ".";
             PRINT_MXS_JSON_ERROR(error_out, "%s", msg.c_str());
+            delay_auto_cluster_ops();
         }
     }
     else
@@ -625,6 +617,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
     SERVER* master_server = m_master->m_server_base->server;
     const char* master_name = master_server->name();
     uint32_t servers_joined = 0;
+    bool rejoin_error = false;
     if (!joinable_servers.empty())
     {
         for (MariaDBServer* joinable : joinable_servers)
@@ -656,7 +649,8 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                 else
                 {
                     PRINT_MXS_JSON_ERROR(output,
-                                         "Failed to prepare (demote) standalone server '%s' for rejoin.", name);
+                                         "Failed to prepare (demote) standalone server '%s' for rejoin.",
+                                         name);
                 }
             }
             else
@@ -675,7 +669,16 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                 servers_joined++;
                 m_cluster_modified = true;
             }
+            else
+            {
+                rejoin_error = true;
+            }
         }
+    }
+
+    if (rejoin_error)
+    {
+        delay_auto_cluster_ops();
     }
     return servers_joined;
 }
@@ -1474,7 +1477,7 @@ void MariaDBMonitor::handle_auto_failover()
             else
             {
                 MXS_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion.target->name());
-                report_and_disable("failover", CN_AUTO_FAILOVER, &m_auto_failover);
+                delay_auto_cluster_ops();
             }
         }
         else
@@ -1536,25 +1539,10 @@ void MariaDBMonitor::check_cluster_operations_support()
     {
         const char PROBLEMS[] =
             "The backend cluster does not support failover/switchover due to the following reason(s):\n"
-            "%s\n"
-            "Automatic failover/switchover has been disabled. They should only be enabled "
-            "after the above issues have been resolved.";
-        string p1 = string_printf(PROBLEMS, all_reasons.c_str());
-        string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, name());
-        string p3 = string_printf(RE_ENABLE_FMT, "switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE, name());
-        string total_msg = p1 + " " + p2 + " " + p3;
-        MXS_ERROR("%s", total_msg.c_str());
-
-        if (m_auto_failover)
-        {
-            m_auto_failover = false;
-            disable_setting(CN_AUTO_FAILOVER);
-        }
-        if (m_switchover_on_low_disk_space)
-        {
-            m_switchover_on_low_disk_space = false;
-            disable_setting(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
-        }
+            "%s\n";
+        string msg = string_printf(PROBLEMS, all_reasons.c_str());
+        MXS_ERROR("%s", msg.c_str());
+        delay_auto_cluster_ops();
     }
 }
 
@@ -1719,6 +1707,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
 void MariaDBMonitor::enforce_read_only_on_slaves()
 {
     const char QUERY[] = "SET GLOBAL read_only=1;";
+    bool error = false;
     for (MariaDBServer* server : m_servers)
     {
         if (server->is_slave() && !server->is_read_only()
@@ -1732,8 +1721,14 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
             else
             {
                 MXS_ERROR("Setting read_only on '%s' failed: '%s'.", server->name(), mysql_error(conn));
+                error = true;
             }
         }
+    }
+
+    if (error)
+    {
+        delay_auto_cluster_ops();
     }
 }
 
@@ -1762,8 +1757,7 @@ void MariaDBMonitor::handle_low_disk_space_master()
             else
             {
                 MXS_ERROR(SWITCHOVER_FAIL, op->demotion.target->name(), op->promotion.target->name());
-                report_and_disable("switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE,
-                                   &m_switchover_on_low_disk_space);
+                delay_auto_cluster_ops();
             }
         }
         else
@@ -1796,19 +1790,6 @@ void MariaDBMonitor::handle_auto_rejoin()
         }
     }
     // get_joinable_servers prints an error if master is unresponsive
-}
-
-void MariaDBMonitor::report_and_disable(const string& operation, const string& setting_name,
-                                        bool* setting_var)
-{
-    string p1 = string_printf("Automatic %s failed, disabling automatic %s.",
-                              operation.c_str(),
-                              operation.c_str());
-    string p2 = string_printf(RE_ENABLE_FMT, operation.c_str(), setting_name.c_str(), name());
-    string error_msg = p1 + " " + p2;
-    MXS_ERROR("%s", error_msg.c_str());
-    *setting_var = false;
-    disable_setting(setting_name.c_str());
 }
 
 /**
@@ -1876,6 +1857,24 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
         }
     }
     return redirectable_slaves;
+}
+
+void MariaDBMonitor::delay_auto_cluster_ops()
+{
+    if (m_auto_failover || m_auto_rejoin || m_enforce_read_only_slaves || m_switchover_on_low_disk_space)
+    {
+        const char DISABLING_AUTO_OPS[] = "Disabling automatic cluster operations for %i monitor ticks.";
+        MXS_NOTICE(DISABLING_AUTO_OPS, m_failcount);
+    }
+    // + 1 because the start of next tick subtracts 1.
+    cluster_operation_disable_timer = m_failcount + 1;
+
+}
+
+bool MariaDBMonitor::can_perform_cluster_ops()
+{
+    return (!config_get_global_options()->passive && cluster_operation_disable_timer <= 0 &&
+            !m_cluster_modified);
 }
 
 MariaDBMonitor::SwitchoverParams::SwitchoverParams(const ServerOperation& promotion,
