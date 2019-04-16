@@ -222,11 +222,12 @@ class GeneralOpData
 public:
     const std::string replication_user;             // User for CHANGE MASTER TO ...
     const std::string replication_password;         // Password for CHANGE MASTER TO ...
+    const bool        replication_ssl;              // MASTER_SSL=1 in CHANGE MASTER TO ...
     json_t** const    error_out;                    // Json error output
     maxbase::Duration time_remaining;               // How much time remains to complete the operation
 
     GeneralOpData(const std::string& replication_user, const std::string& replication_password,
-                  json_t** error, maxbase::Duration time_remaining);
+                  bool replication_ssl, json_t** error, maxbase::Duration time_remaining);
 };
 
 // Operation data which concerns a single server

@@ -411,6 +411,10 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
     change_cmd << "CHANGE MASTER TO MASTER_HOST = '" << master_host << "', ";
     change_cmd << "MASTER_PORT = " << master_port << ", ";
     change_cmd << "MASTER_USE_GTID = current_pos, ";
+    if (m_replication_ssl)
+    {
+        change_cmd << "MASTER_SSL = 1, ";
+    }
     change_cmd << "MASTER_USER = '" << m_replication_user << "', ";
     const char MASTER_PW[] = "MASTER_PASSWORD = '";
     const char END[] = "';";
@@ -630,7 +634,8 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
             // the first phase of standalone rejoin is similar to switchover.
             maxbase::Duration time_limit((double)m_switchover_timeout);
-            GeneralOpData general(m_replication_user, m_replication_password, output, time_limit);
+            GeneralOpData general(m_replication_user, m_replication_password, m_replication_ssl,
+                                  output, time_limit);
 
             if (joinable->m_slave_status.empty())
             {
@@ -1410,7 +1415,8 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
             ServerOperation promotion(promotion_target, promoting_to_master,
                                       m_handle_event_scheduler, m_promote_sql_file,
                                       demotion_target->m_slave_status, demotion_target->m_enabled_events);
-            GeneralOpData general(m_replication_user, m_replication_password, error_out, time_limit);
+            GeneralOpData general(m_replication_user, m_replication_password, m_replication_ssl,
+                                  error_out, time_limit);
             rval.reset(new FailoverParams(promotion, demotion_target, general));
         }
     }
@@ -1703,7 +1709,8 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         ServerOperation demotion(demotion_target, master_swap, m_handle_event_scheduler,
                                  m_demote_sql_file, promotion_target->m_slave_status,
                                  EventNameSet() /* unused */);
-        GeneralOpData general(m_replication_user, m_replication_password, error_out, time_limit);
+        GeneralOpData general(m_replication_user, m_replication_password, m_replication_ssl,
+                              error_out, time_limit);
         rval.reset(new SwitchoverParams(promotion, demotion, general));
     }
     return rval;

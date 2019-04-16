@@ -651,7 +651,7 @@ executed.
 
 Both `replication_user` and `replication_password` parameters must be defined if
 a custom replication user is used. If neither of the parameters is defined, the
-`CHANGE MASTER TO` command will use the monitor credentials for the replication
+`CHANGE MASTER TO`-command will use the monitor credentials for the replication
 user.
 
 The credentials used for replication must have the `REPLICATION SLAVE`
@@ -660,6 +660,19 @@ privilege.
 `replication_password` uses the same encryption scheme as other password
 parameters. If password encryption is in use, `replication_password` must be
 encrypted with the same key to avoid erroneous decryption.
+
+#### `replication_master_ssl`
+
+Type: bool Default: off
+
+If set to ON, any `CHANGE MASTER TO`-command generated will set `MASTER_SSL=1` to enable
+encryption for the replication stream. This setting should only be enabled if the backend
+servers are configured for ssl. This typically means setting *ssl_ca*, *ssl_cert* and
+*ssl_key* in the server configuration file. Additionally, credentials for the replication
+user should require an encrypted connection (`e.g. ALTER USER repl@'%' REQUIRE SSL;`).
+
+If the setting is left OFF, `MASTER_SSL` is not set at all, which will preserve existing
+settings when redirecting a slave connection.
 
 #### `failover_timeout` and `switchover_timeout`
 
