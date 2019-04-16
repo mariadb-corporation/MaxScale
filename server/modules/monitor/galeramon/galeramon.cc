@@ -242,7 +242,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             /* Node is not ready - lets take it offline */
             if (strcmp(row[0], "wsrep_ready") == 0)
             {
-              if (strcasecmp(row[1],"YES") || strcasecmp(row[1],"ON") || strcasecmp(row[1],"1") || strcasecmp(row[1],"true"))
+              if (strcasecmp(row[1],"NO") || strcasecmp(row[1],"OFF") || strcasecmp(row[1],"0") || strcasecmp(row[1],"false"))
               {
                 info.joined = 0;
               }
