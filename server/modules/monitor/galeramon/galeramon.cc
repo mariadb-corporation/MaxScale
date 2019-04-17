@@ -29,6 +29,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/secrets.h>
+#include <maxsql/mariadb.hh>
 
 #define DONOR_NODE_NAME_MAX_LEN 60
 #define DONOR_LIST_SET_VAR      "SET GLOBAL wsrep_sst_donor = \""
@@ -101,6 +102,25 @@ json_t* GaleraMonitor::diagnostics_json() const
         json_object_set_new(rval, "cluster_size", json_integer(m_cluster_size));
     }
 
+    json_t* arr = json_array();
+
+    for (auto ptr : m_servers)
+    {
+        auto it = m_info.find(ptr);
+
+        if (it != m_info.end())
+        {
+            json_t* obj = json_object();
+            json_object_set_new(obj, "name", json_string(it->first->server->name()));
+            json_object_set_new(obj, "gtid_current_pos", json_string(it->second.gtid_current_pos.c_str()));
+            json_object_set_new(obj, "gtid_binlog_pos", json_string(it->second.gtid_binlog_pos.c_str()));
+            json_object_set_new(obj, "read_only", json_boolean(it->second.read_only));
+            json_array_append_new(arr, obj);
+        }
+    }
+
+    json_object_set_new(rval, "server_info", arr);
+
     return rval;
 }
 
@@ -128,6 +148,24 @@ bool GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 bool GaleraMonitor::has_sufficient_permissions()
 {
     return test_permissions("SHOW STATUS LIKE 'wsrep_local_state'");
+}
+
+void get_gtid(MonitorServer* srv, GaleraNode* info)
+{
+    if (mxs_mysql_query(srv->con, "SELECT @@gtid_current_pos, @@gtid_binlog_pos, @@read_only") == 0)
+    {
+        if (auto result = mysql_store_result(srv->con))
+        {
+            mxq::QueryResult res(result);
+
+            if (res.next_row())
+            {
+                info->gtid_current_pos = res.get_string(0);
+                info->gtid_binlog_pos = res.get_string(1);
+                info->read_only = res.get_bool(2);
+            }
+        }
+    }
 }
 
 void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
@@ -218,11 +256,12 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             }
         }
 
+        mysql_free_result(result);
+
+        get_gtid(monitored_server, &info);
         monitored_server->server->node_id = info.joined ? info.local_index : -1;
 
         m_info[monitored_server] = info;
-
-        mysql_free_result(result);
     }
     else
     {

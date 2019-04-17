@@ -30,6 +30,9 @@ struct GaleraNode
     int         local_state;    /**< Node state */
     int         cluster_size;   /**< The cluster size*/
     std::string cluster_uuid;   /**< Cluster UUID */
+    std::string gtid_binlog_pos;
+    std::string gtid_current_pos;
+    bool        read_only = false;
 };
 
 typedef std::unordered_map<mxs::MonitorServer*, GaleraNode> NodeMap;
