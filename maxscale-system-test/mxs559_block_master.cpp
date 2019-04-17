@@ -114,6 +114,7 @@ int main(int argc, char* argv[])
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
     test.maxscales->close_maxscale_connections(0);
 
+    test.maxscales->wait_for_monitor();
     test.check_maxscale_alive(0);
     test.log_excludes(0, "due to authentication failure");
     test.log_excludes(0, "due to handshake failure");
