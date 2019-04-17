@@ -155,9 +155,33 @@ string QueryResult::get_string(int64_t column_ind) const
     return data ? data : "";
 }
 
+string QueryResult::get_string(const std::string& name) const
+{
+    auto idx = get_col_index(name);
+
+    if (idx != -1)
+    {
+        return get_string(idx);
+    }
+
+    return "";
+}
+
 int64_t QueryResult::get_int(int64_t column_ind) const
 {
     return parse_integer(column_ind, "integer");
+}
+
+int64_t QueryResult::get_int(const std::string& name) const
+{
+    auto idx = get_col_index(name);
+
+    if (idx != -1)
+    {
+        return get_int(idx);
+    }
+
+    return 0;
 }
 
 /**
@@ -210,6 +234,18 @@ bool QueryResult::get_bool(int64_t column_ind) const
         }
     }
     return rval;
+}
+
+bool QueryResult::get_bool(const std::string& name) const
+{
+    auto idx = get_col_index(name);
+
+    if (idx != -1)
+    {
+        return get_bool(idx);
+    }
+
+    return 0;
 }
 
 bool QueryResult::field_is_null(int64_t column_ind) const

@@ -115,6 +115,7 @@ public:
      * @return Value as string
      */
     std::string get_string(int64_t column_ind) const;
+    std::string get_string(const std::string& name) const;
 
     /**
      * Read an integer value from the current row and given column.
@@ -123,6 +124,7 @@ public:
      * @return Value as integer. If the data could not be parsed an error flag is set.
      */
     int64_t get_int(int64_t column_ind) const;
+    int64_t get_int(const std::string& name) const;
 
     /**
      * Check if field is null.
@@ -140,6 +142,7 @@ public:
      * @return Value as boolean. Returns true if the field contains '1'.
      */
     bool get_bool(int64_t column_ind) const;
+    bool get_bool(const std::string& name) const;
 
     /**
      * Has a parsing error occurred during current row?
