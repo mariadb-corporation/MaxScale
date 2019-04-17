@@ -176,10 +176,15 @@ public:
         mxb_assert(peek(canonical_stmt) == nullptr);
         mxb_assert(this_unit.classifier);
 
+        // 0xffffff is the maximum packet size, 4 is for packet header and 1 is for command byte. These are
+        // MariaDB/MySQL protocol specific values that are also defined in <maxscale/protocol/mysql.h> but
+        // should not be exposed to the core.
+        constexpr int64_t max_entry_size = 0xffffff - 5;
+
         int64_t cache_max_size = this_unit.cache_max_size() / config_get_global_options()->n_threads;
         int64_t size = canonical_stmt.size();
 
-        if (size <= cache_max_size)
+        if (size < max_entry_size && size <= cache_max_size)
         {
             int64_t required_space = (m_stats.size + size) - cache_max_size;
 
