@@ -79,6 +79,8 @@ extern const char CN_MONITOR_INTERVAL[];
 extern const char CN_SCRIPT[];
 extern const char CN_SCRIPT_TIMEOUT[];
 
+json_t* monitor_json_data(const mxs::Monitor* monitor, const char* host);
+
 /**
  * The monitor API version number. Any change to the monitor module API
  * must change these versions using the rules defined in modinfo.h
