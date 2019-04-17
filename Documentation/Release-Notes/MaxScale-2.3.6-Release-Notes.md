@@ -21,6 +21,7 @@ maintenance mode. This causes idle connections to be closed immediately.
 
 For more information, read the
 [REST-API](../REST-API/Resources-Server.md#set-server-state) documentation for
+the `set` endpoint.
 
 ## Bug fixes
 
