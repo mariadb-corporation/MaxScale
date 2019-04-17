@@ -679,7 +679,9 @@ _qc_sqlite_.
 #### `query_classifier_cache_size`
 
 Specifies the maximum size of the query classifier cache. The default limit is
-40% of total system memory.
+15% of total system memory starting with MaxScale 2.3.7. In older versions the
+default limit was 40% of total system memory. This feature was added in MaxScale
+2.3.0.
 
 When the query classifier cache has been enabled, MaxScale will, after a
 statement has been parsed, store the classification result using the
