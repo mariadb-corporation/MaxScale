@@ -7,7 +7,7 @@ wsrep_on=ON
 # Row binary log format is required by Galera
 binlog_format=ROW
 
-log-bin
+log-bin=mar-bin
 
 # InnoDB is currently the only storage engine supported by Galera
 default-storage-engine=innodb
