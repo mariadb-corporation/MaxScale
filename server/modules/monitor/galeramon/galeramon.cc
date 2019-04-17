@@ -115,6 +115,8 @@ json_t* GaleraMonitor::diagnostics_json() const
             json_object_set_new(obj, "gtid_current_pos", json_string(it->second.gtid_current_pos.c_str()));
             json_object_set_new(obj, "gtid_binlog_pos", json_string(it->second.gtid_binlog_pos.c_str()));
             json_object_set_new(obj, "read_only", json_boolean(it->second.read_only));
+            json_object_set_new(obj, "server_id", json_integer(it->second.server_id));
+            json_object_set_new(obj, "master_id", json_integer(it->second.master_id));
             json_array_append_new(arr, obj);
         }
     }
@@ -152,7 +154,8 @@ bool GaleraMonitor::has_sufficient_permissions()
 
 void get_gtid(MonitorServer* srv, GaleraNode* info)
 {
-    if (mxs_mysql_query(srv->con, "SELECT @@gtid_current_pos, @@gtid_binlog_pos, @@read_only") == 0)
+    if (mxs_mysql_query(srv->con,
+                        "SELECT @@gtid_current_pos, @@gtid_binlog_pos, @@read_only, @@server_id") == 0)
     {
         if (auto result = mysql_store_result(srv->con))
         {
@@ -163,6 +166,23 @@ void get_gtid(MonitorServer* srv, GaleraNode* info)
                 info->gtid_current_pos = res.get_string(0);
                 info->gtid_binlog_pos = res.get_string(1);
                 info->read_only = res.get_bool(2);
+                info->server_id = res.get_int(3);
+            }
+        }
+    }
+}
+
+void get_slave_status(MonitorServer* srv, GaleraNode* info)
+{
+    if (mxs_mysql_query(srv->con, "SHOW SLAVE STATUS") == 0)
+    {
+        if (auto result = mysql_store_result(srv->con))
+        {
+            mxq::QueryResult res(result);
+
+            if (res.next_row() && res.get_string("Slave_SQL_Running") == "Yes")
+            {
+                info->master_id = res.get_int("Master_Server_Id");
             }
         }
     }
@@ -259,6 +279,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
         mysql_free_result(result);
 
         get_gtid(monitored_server, &info);
+        get_slave_status(monitored_server, &info);
         monitored_server->server->node_id = info.joined ? info.local_index : -1;
 
         m_info[monitored_server] = info;
@@ -326,6 +347,18 @@ void GaleraMonitor::post_tick()
             }
 
             is_cluster++;
+        }
+        else if (int master_id = m_info[ptr].master_id)
+        {
+            ptr->clear_pending_status(repl_bits);
+
+            if (std::any_of(m_info.begin(), m_info.end(), [master_id](decltype(m_info)::const_reference r) {
+                                return r.first->pending_status & SERVER_JOINED
+                                && r.second.server_id == master_id;
+                            }))
+            {
+                ptr->set_pending_status(SERVER_SLAVE);
+            }
         }
         else
         {

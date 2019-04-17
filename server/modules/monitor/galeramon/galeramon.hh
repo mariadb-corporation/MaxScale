@@ -33,6 +33,8 @@ struct GaleraNode
     std::string gtid_binlog_pos;
     std::string gtid_current_pos;
     bool        read_only = false;
+    int         master_id;
+    int         server_id;
 };
 
 typedef std::unordered_map<mxs::MonitorServer*, GaleraNode> NodeMap;
