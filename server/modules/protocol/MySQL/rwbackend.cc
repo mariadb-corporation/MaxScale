@@ -75,6 +75,15 @@ uint32_t RWBackend::get_ps_handle(uint32_t id) const
 
 bool RWBackend::write(GWBUF* buffer, response_type type)
 {
+    uint32_t len = mxs_mysql_get_packet_len(buffer);
+    bool was_large_query = m_large_query;
+    m_large_query = len == MYSQL_PACKET_LENGTH_MAX;
+
+    if (was_large_query)
+    {
+        return mxs::Backend::write(buffer, Backend::NO_RESPONSE);
+    }
+
     if (type == mxs::Backend::EXPECT_RESPONSE)
     {
         /** The server will reply to this command */

@@ -1176,9 +1176,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
      * will do the replacement of PS IDs which must not be done if we are
      * continuing an ongoing query.
      */
-    bool success = !m_qc.large_query() ?
-        target->write(send_buf, response) :
-        target->continue_write(send_buf);
+    bool success = target->write(send_buf, response);
 
     if (success)
     {

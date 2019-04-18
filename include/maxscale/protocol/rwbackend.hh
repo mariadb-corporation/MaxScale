@@ -115,21 +115,6 @@ public:
      */
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
 
-    /**
-     * Continue a previously started write
-     *
-     * This should only be used when RWBackend::write has been called to start
-     * a new query.
-     *
-     * @param buffer Buffer to write
-     *
-     * @return True if writing was successful
-     */
-    bool continue_write(GWBUF* buffer)
-    {
-        return mxs::Backend::write(buffer, Backend::NO_RESPONSE);
-    }
-
     void close(close_type type = CLOSE_NORMAL);
 
     // For COM_STMT_FETCH processing
@@ -181,6 +166,7 @@ private:
     bool             m_local_infile_requested;  /**< Whether a LOCAL INFILE was requested */
     ResponseStat     m_response_stat;
     uint64_t         m_num_coldefs = 0;
+    bool             m_large_query = false;
 
     inline bool is_opening_cursor() const
     {
