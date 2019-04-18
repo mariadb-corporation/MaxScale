@@ -953,6 +953,24 @@ DCB* Listener::accept_one_dcb()
 
     if ((c_sock = accept_one_connection(fd(), (struct sockaddr*)&client_conn)) >= 0)
     {
+        /* client IP in string representation */
+        char ipbuf[INET6_ADDRSTRLEN + 1] = "localhost";
+        void* ptr = nullptr;
+
+        if (client_conn.ss_family == AF_INET)
+        {
+            ptr = &((struct sockaddr_in*)&client_conn)->sin_addr;
+        }
+        else if (client_conn.ss_family == AF_INET6)
+        {
+            ptr = &((struct sockaddr_in6*)&client_conn)->sin6_addr;
+        }
+
+        if (ptr)
+        {
+            inet_ntop(client_conn.ss_family, ptr, ipbuf, INET6_ADDRSTRLEN);
+        }
+
         configure_network_socket(c_sock, client_conn.ss_family);
 
         mxs::Session* session = new(std::nothrow) mxs::Session(m_self);
@@ -975,37 +993,9 @@ DCB* Listener::accept_one_dcb()
         else
         {
             session->set_client_dcb(client_dcb);
+            memcpy(&client_dcb->ip, &client_conn, sizeof(client_conn));
             client_dcb->fd = c_sock;
-
-            // get client address
-            if (client_conn.ss_family == AF_UNIX)
-            {
-                // client address
-                client_dcb->ip.ss_family = AF_UNIX;
-                client_dcb->remote = MXS_STRDUP_A("localhost");
-            }
-            else
-            {
-                /* client IP in raw data*/
-                memcpy(&client_dcb->ip, &client_conn, sizeof(client_conn));
-                /* client IP in string representation */
-                client_dcb->remote = (char*)MXS_CALLOC(INET6_ADDRSTRLEN + 1, sizeof(char));
-
-                if (client_dcb->remote)
-                {
-                    void* ptr;
-                    if (client_dcb->ip.ss_family == AF_INET)
-                    {
-                        ptr = &((struct sockaddr_in*)&client_dcb->ip)->sin_addr;
-                    }
-                    else
-                    {
-                        ptr = &((struct sockaddr_in6*)&client_dcb->ip)->sin6_addr;
-                    }
-
-                    inet_ntop(client_dcb->ip.ss_family, ptr, client_dcb->remote, INET6_ADDRSTRLEN);
-                }
-            }
+            client_dcb->remote = MXS_STRDUP_A(ipbuf);
 
             /** Allocate DCB specific authentication data */
             if (m_auth_func.create
