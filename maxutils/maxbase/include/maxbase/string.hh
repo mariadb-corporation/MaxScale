@@ -28,6 +28,20 @@
  */
 const char* mxb_strerror(int error);
 
+/**
+ * Generate std::string to_string(const T&) for any type T for which there is a
+ * function std::ostream& operator<<(std::ostream&, const T&) declared.
+ */
+template<class T,
+         typename std::remove_reference<decltype(operator<<(*(std::ostream*)(0), *(T*)(0)))>::type* =
+             nullptr>
+std::string to_string(const T& t)
+{
+    std::ostringstream os;
+    os << t;
+    return os.str();
+}
+
 namespace maxbase
 {
 
