@@ -17,6 +17,7 @@ add_library(maxbase STATIC
   workertask.cc
   average.cc
   random.cc
+  host.cc
   )
 
 if(HAVE_SYSTEMD)
