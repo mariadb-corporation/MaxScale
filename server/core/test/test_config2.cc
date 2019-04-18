@@ -238,12 +238,15 @@ int test_enum(config::Enum<Enum>& value)
 
 int test_path(config::Path& value)
 {
+    char path[PATH_MAX];
+    getcwd(path, sizeof(path));
+
     static const TestEntry<config::Path::value_type> entries[] =
     {
-        { ".",    true, "." },
-        { "/tmp", true, "/tmp" },
+        {path, true, path},
+        {"/tmp", true, "/tmp"},
 
-        { "non-existent", false }
+        {"non-existent", false}
     };
 
     return test(value, entries, elements_in_array(entries));
