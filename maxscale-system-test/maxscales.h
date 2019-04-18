@@ -289,7 +289,16 @@ public:
     int get_maxadmin_param(int m, const char* command, const char* param, char* result);
 
     /**
+     * @brief get_backend_servers_num Gets number of backend servers configure for service
+     * @param m Number of Maxscale node
+     * @param service Name of service to ask
+     * @return number of backend servers
+     */
+    int get_backend_servers_num(int m, const char* service);
+
+    /**
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
+     * @param m Number of Maxscale node
      * @return memory size in kilobytes
      */
     long unsigned get_maxscale_memsize(int m = 0);

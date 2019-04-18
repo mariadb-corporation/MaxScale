@@ -482,6 +482,23 @@ public:
      */
     void limit_nodes(int new_N);
 
+    /**
+     * @brief cnf_servers Generates backend servers description for maxscale.cnf
+     * @return Servers description including IPs, ports
+     */
+    std::string cnf_servers();
+
+    /**
+     * @brief cnf_servers_line Generates list of backend servers for serivces definition in maxscale.cnf
+     * @return List of servers, e.g server1,server2,server3,...
+     */
+    std::string cnf_servers_line();
+
+    /**
+     * @brief cnf_server_name Prefix for backend server name ('server', 'gserver')
+     */
+    std::string cnf_server_name;
+
 private:
 
     bool check_master_node(MYSQL* conn);

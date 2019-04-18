@@ -774,6 +774,11 @@ void TestConnections::process_template(int m, const char* template_name, const c
                 system(str);
             }
 
+            sprintf(str, "sed -i \"s/###%s###/%s/\" maxscale.cnf", mdn[j]->cnf_server_name.c_str(), mdn[j]->cnf_servers().c_str());
+            system(str);
+            sprintf(str, "sed -i \"s/###%s_line###/%s/\" maxscale.cnf", mdn[j]->cnf_server_name.c_str(), mdn[j]->cnf_servers_line().c_str());
+            system(str);
+
             mdn[j]->connect();
             execute_query(mdn[j]->nodes[0], (char *) "CREATE DATABASE IF NOT EXISTS test");
             mdn[j]->close_connections();

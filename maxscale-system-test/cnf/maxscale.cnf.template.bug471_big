@@ -5,7 +5,7 @@ log_warning=1
 [MySQL Monitor]
 type=monitor
 module=mysqlmon
-servers=server1,server3,server4
+servers=server1,server3,server4,server5,server6,server7,server8,server9,server10,server11,server12,server13,server14,server15
 user=maxskysql
 password= skysql
 
@@ -77,28 +77,4 @@ protocol=maxscaled
 
 socket=default
 
-
-[server1]
-type=server
-address=###node_server_IP_1###
-port=###node_server_port_1###
-protocol=MySQLBackend
-
-[server2]
-type=server
-address=###node_server_IP_2###
-port=###node_server_port_2###
-protocol=MySQLBackend
-
-[server3]
-type=server
-address=###node_server_IP_3###
-port=###node_server_port_3###
-protocol=MySQLBackend
-
-[server4]
-type=server
-address=###node_server_IP_4###
-port=###node_server_port_4###
-protocol=MySQLBackend
-
+###server###

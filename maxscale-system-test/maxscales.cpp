@@ -332,6 +332,21 @@ int Maxscales::get_maxadmin_param(int m, const char* command, const char* param,
     return exit_code;
 }
 
+int Maxscales::get_backend_servers_num(int m, const char* service)
+{
+    char* buf;
+    int exit_code;
+    int i = 0;
+
+    buf = ssh_node_output_f(m, true, &exit_code, "maxadmin show service %s | grep Name: | grep Protocol: | wc -l", service);
+    if (buf && !exit_code)
+    {
+        sscanf(buf, "%d", &i);
+    }
+    return i;
+}
+
+
 
 long unsigned Maxscales::get_maxscale_memsize(int m)
 {

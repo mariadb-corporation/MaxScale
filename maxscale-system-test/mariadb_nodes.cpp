@@ -51,6 +51,15 @@ Mariadb_nodes::Mariadb_nodes(const char *pref, const char *test_cwd, bool verbos
     truncate_mariadb_logs();
     flush_hosts();
     close_active_connections();
+    cnf_server_name = std::string(prefix);
+    if (strcmp(prefix, "node") == 0)
+    {
+        cnf_server_name = std::string("server");
+    }
+    if (strcmp(prefix, "galera") == 0)
+    {
+        cnf_server_name = std::string("gserver");
+    }
 }
 
 Mariadb_nodes::~Mariadb_nodes()
@@ -1452,4 +1461,33 @@ void Mariadb_nodes::limit_nodes(int new_N)
         fix_replication();
         sleep(10);
     }
+}
+
+std::string Mariadb_nodes::cnf_servers()
+{
+    std::string s;
+    for (int i = 0; i < N; i++)
+    {
+        s += std::string("\\n[") +
+                cnf_server_name +
+                std::to_string(i + 1) +
+                std::string("]\\ntype=server\\naddress=") +
+                std::string(IP[i]) +
+                std::string("\\nport=") +
+                std::to_string(port[i]) +
+                std::string("\\nprotocol=MySQLBackend\\n");
+    }
+    return s;
+}
+
+std::string Mariadb_nodes::cnf_servers_line()
+{
+    std::string s = cnf_server_name + std::to_string(1);
+    for (int i = 1; i < N; i++)
+    {
+        s += std::string(",") +
+                cnf_server_name +
+                std::to_string(i + 1);
+    }
+    return s;
 }
