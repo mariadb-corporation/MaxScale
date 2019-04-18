@@ -1444,15 +1444,20 @@ int Mariadb_nodes::prepare_servers()
 
 void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
 {
+    replicate_from(slave, IP[master], port[master], type);
+}
+
+void Mariadb_nodes::replicate_from(int slave, const std::string& host, uint16_t port, const char* type)
+{
     std::stringstream change_master;
-    change_master << "CHANGE MASTER TO MASTER_HOST = '" << IP[master]
-                  << "', MASTER_PORT = " << port[master] << ", MASTER_USE_GTID = " << type << ", "
-                                                                                "MASTER_USER='repl', MASTER_PASSWORD='repl';";
+    change_master << "CHANGE MASTER TO MASTER_HOST = '" << host
+                  << "', MASTER_PORT = " << port << ", MASTER_USE_GTID = "
+                  << type << ", MASTER_USER='repl', MASTER_PASSWORD='repl';";
 
     if (verbose)
     {
-        std::cout << "Server " << slave + 1 << " starting to replicate from server " << master + 1
-                  << std::endl;
+        std::cout << "Server " << slave + 1
+                  << " starting to replicate from server " << master + 1 << std::endl;
         std::cout << "Query is '" << change_master.str() << "'" << std::endl;
     }
 

@@ -946,6 +946,9 @@ add_test_executable(mxs2417_ignore_persisted_cnf.cpp mxs2417_ignore_persisted_cn
 # MXS-1662: PAM admin authentication
 add_test_executable(mxs1662_pam_admin.cpp mxs1662_pam_admin mxs1662_pam_admin LABELS REPL_BACKEND)
 
+# MXS-2441: Add support for read-only slaves to galeramon
+add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_galera_slaves LABELS REPL_BACKEND GALERA_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################

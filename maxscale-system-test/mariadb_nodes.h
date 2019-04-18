@@ -477,6 +477,9 @@ public:
      */
     void replicate_from(int slave, int master, const char* type = "current_pos");
 
+    // Replicates from a host and a port instead of a known server
+    void replicate_from(int slave, const std::string& host, uint16_t port, const char* type = "current_pos");
+
 private:
 
     bool check_master_node(MYSQL* conn);
