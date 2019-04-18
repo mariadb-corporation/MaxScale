@@ -413,6 +413,24 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
+    if ((maxscale::restart_galera) && (galera))
+    {
+        galera->stop_nodes();
+        galera->start_replication();
+    }
+
+    if (maxscale::check_nodes)
+    {
+        if (repl && !repl->fix_replication())
+        {
+            exit(BROKEN_VM_FAUILT);
+        }
+        if (galera && !galera->fix_replication())
+        {
+            exit(BROKEN_VM_FAUILT);
+        }
+    }
+
     if (repl && maxscale::required_repl_version.length())
     {
         int ver_repl_required = get_int_version(maxscale::required_repl_version);
@@ -440,24 +458,6 @@ TestConnections::TestConnections(int argc, char* argv[])
             tprintf("Required version: %s", maxscale::required_galera_version.c_str());
             tprintf("Galera version: %s", ver_galera.c_str());
             exit(0);
-        }
-    }
-
-    if ((maxscale::restart_galera) && (galera))
-    {
-        galera->stop_nodes();
-        galera->start_replication();
-    }
-
-    if (maxscale::check_nodes)
-    {
-        if (repl && !repl->fix_replication())
-        {
-            exit(BROKEN_VM_FAUILT);
-        }
-        if (galera && !galera->fix_replication())
-        {
-            exit(BROKEN_VM_FAUILT);
         }
     }
 
@@ -605,7 +605,8 @@ void TestConnections::read_mdbci_info()
     target = readenv("target", "develop");
 
     mdbci_config_name = readenv("mdbci_config_name", "local");
-    vm_path = std::string(mdbci_vm_path) + std::string(mdbci_config_name);
+    vm_path = std::string(mdbci_vm_path) + "/" + std::string(mdbci_config_name);
+
     if (mdbci_config_name != NULL)
     {
         std::ifstream nc_file;
@@ -2191,6 +2192,13 @@ int TestConnections::call_mdbci(const char * options)
         tprintf("MDBCI failed to bring up virtual machines");
         return 1;
     }
+
+    std::string team_keys = readenv("team_keys", "~/.ssh/id_rsa.pub");
+    system((std::string("mdbci public_keys --key ") +
+            team_keys +
+            std::string(" ") +
+            std::string(mdbci_config_name)).c_str() );
+
     read_env();
     if (repl)
     {

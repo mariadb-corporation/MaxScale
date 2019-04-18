@@ -18,8 +18,6 @@
 #include <errno.h>
 #include <getopt.h>
 
-// #include <version.h>
-
 
 /**
  * @brief Connect to the MaxScale server

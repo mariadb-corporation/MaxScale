@@ -135,6 +135,28 @@ exports.builder = function(yargs) {
                 return updateValue(host, 'maxscale', 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
+        .command('user <name> <password>', 'Alter admin user passwords', function(yargs) {
+            return yargs.epilog('Changes the password for a user. To change the user type, destroy the user and then create it again.')
+                .usage('Usage: alter user <name> <password>')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+
+                var user = {
+                    'data': {
+                        'id': argv.name,
+                        'type': 'inet',
+                        'attributes': {
+                            'password': argv.password
+                        }
+                    }
+                }
+
+                return getJson(host, 'users/inet/' + argv.name)
+                    .then((res) => user.data.attributes.account = res.data.attributes.account)
+                    .then(() => doRequest(host, 'users/inet/' + argv.name, null, {method: 'DELETE'}))
+                    .then(() => doRequest(host, 'users/inet', null, {method: 'POST', body: user}))
+            })
+        })
         .usage('Usage: alter <command>')
         .help()
         .command('*', 'the default command', {}, function(argv) {

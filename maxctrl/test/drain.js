@@ -15,5 +15,10 @@ describe("Draining servers", function() {
             .should.eventually.have.string("Maintenance")
     })
 
+    it('does not drain non-existent server', function() {
+        return doCommand('drain server not-a-server')
+            .should.be.rejected
+    })
+
     after(stopMaxScale)
 });

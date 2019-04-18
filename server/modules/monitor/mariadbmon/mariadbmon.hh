@@ -177,6 +177,10 @@ private:
                                              * Causes a topology rebuild on the current tick. */
     bool m_cluster_modified = false;        /* Has a cluster operation been performed this loop? Prevents
                                              * other operations during this tick. */
+
+    /* Counter for temporary automatic cluster operation disabling. */
+    int cluster_operation_disable_timer = 0;
+
     CycleMap  m_cycles;                     /* Map from cycle number to cycle member servers */
     CycleInfo m_master_cycle_status;        /* Info about master server cycle from previous round */
 
@@ -212,6 +216,7 @@ private:
     // Cluster operations additional settings
     std::string m_replication_user;             /* Replication user for CHANGE MASTER TO-commands */
     std::string m_replication_password;         /* Replication password for CHANGE MASTER TO-commands */
+    bool        m_replication_ssl = false;      /* Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
     bool        m_handle_event_scheduler = true;/* Should failover/switchover enable/disable any scheduled
                                                  * events on the servers during promote/demote? */
     uint32_t    m_failover_timeout = 10;        /* Time limit in seconds for failover */
@@ -295,6 +300,9 @@ private:
     bool switchover_perform(SwitchoverParams& operation);
     bool failover_perform(FailoverParams& op);
 
+    void delay_auto_cluster_ops();
+    bool can_perform_cluster_ops();
+
     // Methods used by failover/switchover/rejoin
     MariaDBServer* select_promotion_target(MariaDBServer* current_master, OperationType op,
                                            Log log_mode, json_t** error_out);
@@ -318,8 +326,6 @@ private:
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
     void        wait_cluster_stabilization(GeneralOpData& op, const ServerArray& slaves,
                                            const MariaDBServer* new_master);
-    void report_and_disable(const std::string& operation, const std::string& setting_name,
-                            bool* setting_var);
 
     // Rejoin methods
     bool     cluster_can_be_joined();
@@ -327,8 +333,6 @@ private:
     bool     server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output);
     uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
 
-    // Other methods
-    void disable_setting(const std::string& setting);
     bool check_sql_files();
     void enforce_read_only_on_slaves();
     void log_master_changes();

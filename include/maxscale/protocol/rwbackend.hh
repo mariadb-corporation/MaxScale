@@ -156,6 +156,7 @@ private:
     bool             m_local_infile_requested;  /**< Whether a LOCAL INFILE was requested */
     ResponseStat     m_response_stat;
     uint64_t         m_num_coldefs = 0;
+    bool             m_skip_next = false;
 
     inline bool is_opening_cursor() const
     {

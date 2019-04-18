@@ -2064,6 +2064,10 @@ string MariaDBServer::generate_change_master_cmd(GeneralOpData& op, const SlaveS
                                 slave_conn.name.c_str(),
                                 slave_conn.master_host.c_str(), slave_conn.master_port);
     change_cmd += "MASTER_USE_GTID = current_pos, ";
+    if (op.replication_ssl)
+    {
+        change_cmd += "MASTER_SSL = 1, ";
+    }
     change_cmd += string_printf("MASTER_USER = '%s', ", op.replication_user.c_str());
     const char MASTER_PW[] = "MASTER_PASSWORD = '%s';";
 #if defined (SS_DEBUG)

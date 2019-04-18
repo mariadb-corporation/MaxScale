@@ -108,5 +108,17 @@ describe("Alter Commands", function() {
             .should.be.rejected
     })
 
+    it('creates user', function() {
+        return verifyCommand('create user testuser test', 'users/inet/testuser')
+    })
+
+    it('alters the password of a user', function() {
+        return verifyCommand('alter user testuser test2', 'users/inet/testuser')
+    })
+
+    it('destroys the altered user', function() {
+        return doCommand('destroy user testuser')
+    })
+
     after(stopMaxScale)
 });

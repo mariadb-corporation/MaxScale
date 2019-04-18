@@ -26,8 +26,6 @@
 #include <maxscale/routingworker.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.hh>
-// TODO: For monitor_add_parameters
-#include "../../../core/internal/monitor.h"
 
 using std::string;
 using maxscale::string_printf;
@@ -54,9 +52,7 @@ static const char CN_MASTER_FAILURE_TIMEOUT[] = "master_failure_timeout";
 // Replication credentials parameters for failover/switchover/join
 static const char CN_REPLICATION_USER[] = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
-
-static const char DIAG_ERROR[] = "Internal error, could not print diagnostics. "
-                                 "Check log for more information.";
+static const char CN_REPLICATION_MASTER_SSL[] = "replication_master_ssl";
 
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstance(monitor)
@@ -227,6 +223,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_switchover_on_low_disk_space = config_get_bool(params, CN_SWITCHOVER_ON_LOW_DISK_SPACE);
     m_maintenance_on_low_disk_space = config_get_bool(params, CN_MAINTENANCE_ON_LOW_DISK_SPACE);
     m_handle_event_scheduler = config_get_bool(params, CN_HANDLE_EVENTS);
+    m_replication_ssl = config_get_bool(params, CN_REPLICATION_MASTER_SSL);
 
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
@@ -441,6 +438,11 @@ void MariaDBMonitor::tick()
         mon_srv->mon_prev_status = status;
     }
 
+    if (cluster_operation_disable_timer > 0)
+    {
+        cluster_operation_disable_timer--;
+    }
+
     // Query all servers for their status.
     for (MariaDBServer* server : m_servers)
     {
@@ -458,7 +460,7 @@ void MariaDBMonitor::tick()
         update_topology();
         m_cluster_topology_changed = false;
         // If cluster operations are enabled, check topology support and disable if needed.
-        if (m_auto_failover || m_switchover_on_low_disk_space)
+        if (m_auto_failover || m_switchover_on_low_disk_space || m_auto_rejoin)
         {
             check_cluster_operations_support();
         }
@@ -531,16 +533,16 @@ void MariaDBMonitor::process_state_changes()
         }
     }
 
-    if (!config_get_global_options()->passive)
+    if (can_perform_cluster_ops())
     {
-        if (m_auto_failover && !m_cluster_modified)
+        if (m_auto_failover)
         {
             handle_auto_failover();
         }
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (m_auto_rejoin && !m_cluster_modified && cluster_can_be_joined())
+        if (m_auto_rejoin && cluster_can_be_joined() && can_perform_cluster_ops())
         {
             // Check if any servers should be autojoined to the cluster and try to join them.
             handle_auto_rejoin();
@@ -549,13 +551,13 @@ void MariaDBMonitor::process_state_changes()
         /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
          * perform this if cluster has been modified this loop since it may not be clear which server
          * should be a slave. */
-        if (m_enforce_read_only_slaves && !m_cluster_modified)
+        if (m_enforce_read_only_slaves && can_perform_cluster_ops())
         {
             enforce_read_only_on_slaves();
         }
 
         /* Check if the master server is on low disk space and act on it. */
-        if (m_switchover_on_low_disk_space && !m_cluster_modified)
+        if (m_switchover_on_low_disk_space && can_perform_cluster_ops())
         {
             handle_low_disk_space_master();
         }
@@ -682,25 +684,6 @@ void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
     update_master_cycle_info();
     m_warn_current_master_invalid = true;
     m_warn_have_better_master = true;
-}
-
-/**
- * Set a monitor config parameter to "false". The effect persists over stopMonitor/startMonitor but not
- * MaxScale restart. Only use on boolean config settings.
- *
- * @param setting_name Setting to disable
- */
-void MariaDBMonitor::disable_setting(const std::string& setting)
-{
-    Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
-
-    worker->execute([=]() {
-                        MXS_CONFIG_PARAMETER p = {};
-                        p.name = const_cast<char*>(setting.c_str());
-                        p.value = const_cast<char*>("false");
-                        monitor_add_parameters(m_monitor, &p);
-                    },
-                    EXECUTE_AUTO);
 }
 
 /**
@@ -1066,6 +1049,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_STRING
+            },
+            {
+                CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
                 CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,   "true"

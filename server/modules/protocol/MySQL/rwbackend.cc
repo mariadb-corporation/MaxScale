@@ -296,6 +296,17 @@ void RWBackend::process_packets(GWBUF* result)
         auto end = std::next(it, len);
         uint8_t cmd = *it;
 
+        // Ignore the tail end of a large packet large packet. Only resultsets can generate packets this large
+        // and we don't care what the contents are and thus it is safe to ignore it.
+        bool skip_next = m_skip_next;
+        m_skip_next = len == GW_MYSQL_MAX_PACKET_LEN;
+
+        if (skip_next)
+        {
+            it = end;
+            continue;
+        }
+
         switch (m_reply_state)
         {
         case REPLY_STATE_START:
