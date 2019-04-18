@@ -186,6 +186,16 @@ public:
         return m_type;
     }
 
+    /**
+     * Mark authentication as failed
+     *
+     * This updates the number of failures that have occurred from this host. If the number of authentications
+     * exceeds a certain value, any attempts to connect from the remote in quesion will be rejected.
+     *
+     * @param remote The address where the connection originated
+     */
+    void mark_auth_as_failed(const std::string& remote);
+
     // Functions that are temporarily public
     bool          create_listener_config(const char* filename);
     struct users* users() const;

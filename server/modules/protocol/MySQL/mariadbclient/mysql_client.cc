@@ -818,6 +818,8 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
     {
         protocol->protocol_auth_state = MXS_AUTH_STATE_FAILED;
         mysql_client_auth_error_handling(dcb, auth_val, next_sequence);
+        mxb_assert(dcb->session->listener);
+        dcb->session->listener->mark_auth_as_failed(dcb->remote);
         /**
          * Close DCB and which will release MYSQL_session
          */

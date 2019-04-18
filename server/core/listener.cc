@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 
 #include <algorithm>
+#include <chrono>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -40,12 +41,65 @@
 #include "internal/modules.hh"
 #include "internal/session.hh"
 
+using Clock = std::chrono::steady_clock;
+using std::chrono::seconds;
+
 static std::list<SListener> all_listeners;
 static std::mutex listener_lock;
 
 static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
 static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
+
+// TODO: Make these configurable
+constexpr int MAX_FAILURES = 25;
+constexpr int BLOCK_TIME = 60;
+
+namespace
+{
+class RateLimit
+{
+public:
+    void auth_failed(const std::string& remote)
+    {
+        auto& u = m_failures[remote];
+        u.last_failure = Clock::now();
+        u.failures++;
+    }
+
+    bool is_blocked(const std::string& remote)
+    {
+        bool rval = false;
+        auto it = m_failures.find(remote);
+
+        if (it != m_failures.end())
+        {
+            auto& u = it->second;
+
+            if (Clock::now() - u.last_failure > seconds(BLOCK_TIME))
+            {
+                u.last_failure = Clock::now();
+                u.failures = 0;
+            }
+
+            rval = u.failures >= MAX_FAILURES;
+        }
+
+        return rval;
+    }
+
+private:
+    struct Failure
+    {
+        Clock::time_point last_failure = Clock::now();
+        uint32_t          failures = 0;
+    };
+
+    std::unordered_map<std::string, Failure> m_failures;
+};
+
+thread_local RateLimit rate_limit;
+}
 
 Listener::Listener(SERVICE* service, const std::string& name, const std::string& address,
                    uint16_t port, const std::string& protocol, const std::string& authenticator,
@@ -968,6 +1022,12 @@ static ClientConn accept_one_connection(int fd)
         }
 
         configure_network_socket(conn.fd, conn.addr.ss_family);
+
+        if (rate_limit.is_blocked(conn.host))
+        {
+            close(conn.fd);
+            conn.fd = -1;
+        }
     }
     else if (errno != EAGAIN && errno != EWOULDBLOCK)
     {
@@ -1176,4 +1236,9 @@ void Listener::accept_connections()
                             }, mxs::RoutingWorker::EXECUTE_AUTO);
         }
     }
+}
+
+void Listener::mark_auth_as_failed(const std::string& remote)
+{
+    rate_limit.auth_failed(remote);
 }
