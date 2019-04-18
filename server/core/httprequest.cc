@@ -82,21 +82,12 @@ HttpRequest::~HttpRequest()
 {
 }
 
-bool HttpRequest::validate_api_version()
+void HttpRequest::fix_api_version()
 {
-    bool rval = false;
-
-    if (m_resource_parts.empty())
-    {
-        rval = true;
-    }
-    else if (m_resource_parts[0] == MXS_REST_API_VERSION)
+    if (!m_resource_parts.empty() && m_resource_parts[0] == MXS_REST_API_VERSION)
     {
         m_resource_parts.pop_front();
-        rval = true;
     }
-
-    return rval;
 }
 
 namespace

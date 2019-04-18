@@ -285,7 +285,7 @@ public:
      *
      * @return True if prefix is present and was successfully removed
      */
-    bool validate_api_version();
+    void fix_api_version();
 
 private:
 

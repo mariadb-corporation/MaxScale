@@ -119,11 +119,8 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     HttpResponse reply(MHD_HTTP_NOT_FOUND);
 
     MXS_DEBUG("Request:\n%s", request.to_string().c_str());
-
-    if (request.validate_api_version())
-    {
-        reply = resource_handle_request(request);
-    }
+    request.fix_api_version();
+    reply = resource_handle_request(request);
 
     string data;
 

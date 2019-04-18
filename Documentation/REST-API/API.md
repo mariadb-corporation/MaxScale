@@ -74,6 +74,9 @@ fields can be added, old ones can be removed and the meaning of existing fields
 can change. The aim is to be as backwards compatible as reasonably possible
 without sacrificing the clarity and functionality of the API.
 
+Since MaxScale 2.4.0, the use of the version prefix `/v1/` is optional: if the
+prefix is not used, the latest API version is used.
+
 ### Resource Relationships
 
 All resources return complete JSON objects. The returned objects can have a
