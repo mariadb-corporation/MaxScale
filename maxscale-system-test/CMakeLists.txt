@@ -942,6 +942,9 @@ add_test_executable(mxs2326_hint_clone.cpp mxs2326_hint_clone mxs2326_hint_clone
 # MXS-2417: Ignore persisted configs with load_persisted_configs=false
 add_test_executable(mxs2417_ignore_persisted_cnf.cpp mxs2417_ignore_persisted_cnf mxs2417_ignore_persisted_cnf LABELS REPL_BACKEND)
 
+# MXS-2450: Crash on COM_CHANGE_USER with disable_sescmd_history=true
+add_test_executable(mxs2450_change_user_crash.cpp mxs2450_change_user_crash mxs2450_change_user_crash LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
