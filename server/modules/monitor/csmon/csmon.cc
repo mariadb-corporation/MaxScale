@@ -56,17 +56,22 @@ static std::string do_query(MXS_MONITORED_SERVER* srv, const char* query)
 // Returns a numeric version similar to mysql_get_server_version
 int get_cs_version(MXS_MONITORED_SERVER* srv)
 {
-    // GCC 4.8 appears to have a broken std::regex_constants::ECMAScript that doesn't support brackets
-    std::regex re("Columnstore \\([0-9]*\\)[.]\\([0-9]*\\)[.]\\([0-9]*\\)-[0-9]*",
-                  std::regex_constants::basic);
-    std::string result = do_query(srv, "SELECT @@version_comment");
-    std::smatch match;
     int rval = 0;
+    std::string prefix = "Columnstore ";
+    std::string result = do_query(srv, "SELECT @@version_comment");
+    auto pos = result.find(prefix);
 
-    if (std::regex_match(result, match, re) && match.size() == 4)
+    if (pos != std::string::npos)
     {
-        rval = atoi(match[1].str().c_str()) * 10000 + atoi(match[2].str().c_str()) * 100
-            + atoi(match[3].str().c_str());
+        std::istringstream os(result.substr(pos + prefix.length()));
+        int major = 0, minor = 0, patch = 0;
+        char dot;
+        os >> major;
+        os >> dot;
+        os >> minor;
+        os >> dot;
+        os >> patch;
+        rval = major * 10000 + minor * 100 + patch;
     }
 
     return rval;

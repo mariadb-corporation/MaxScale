@@ -679,7 +679,9 @@ _qc_sqlite_.
 #### `query_classifier_cache_size`
 
 Specifies the maximum size of the query classifier cache. The default limit is
-40% of total system memory.
+15% of total system memory starting with MaxScale 2.3.7. In older versions the
+default limit was 40% of total system memory. This feature was added in MaxScale
+2.3.0.
 
 When the query classifier cache has been enabled, MaxScale will, after a
 statement has been parsed, store the classification result using the
@@ -855,7 +857,7 @@ than `0`, this configuration setting will not have an effect.
 #### `writeq_high_water`
 
 High water mark for network write buffer. Controls when network traffic
-throtting is started. The parameter accepts size type values.
+throtting is started. The parameter accepts [size type values](#sizes).
 
 More specifically, if the client side write queue is above this value, it will
 block traffic coming from backend servers. If the backend side write queue is
@@ -869,7 +871,7 @@ throtting is enabled. By default, traffic throttling is disabled.
 
 Low water mark for network write buffer. Once the traffic throttling is enabled,
 it will only be disabled when the write queue is below `writeq_low_water`. The
-parameter accepts size type values. The minimum allowed size is 512
+parameter accepts [size type values](#sizes). The minimum allowed size is 512
 bytes. `writeq_high_water` must always be greater than `writeq_low_water`.
 
 #### `load_persisted_configs`

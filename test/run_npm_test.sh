@@ -12,6 +12,21 @@ then
     exit 1
 fi
 
+# Prevent failures in case if Docker is not available
+command -v docker
+if [ $? != 0 ]
+then
+    echo "Docker is not available, skipping the test"
+    exit 0
+fi
+
+command -v docker-compose
+if [ $? != 0 ]
+then
+    echo "docker-compose is not available, skipping the test"
+    exit 0
+fi
+
 srcdir=$1
 testsrc=$2
 testdir=$3

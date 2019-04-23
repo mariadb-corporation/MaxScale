@@ -34,6 +34,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
+#include <maxscale/routingworker.hh>
 
 std::pair<std::string, std::string> get_avrofile_and_gtid(std::string file);
 
@@ -239,22 +240,14 @@ bool file_in_dir(const char* dir, const char* file)
 }
 
 /**
- * @brief The client callback for sending data
- *
- * @param dcb Client DCB
- * @param reason Why the callback was called
- * @param userdata Data provided when the callback was added
- * @return Always 0
+ * Queue the client callback for execution
  */
-int avro_client_callback(DCB* dcb, DCB_REASON reason, void* userdata)
+void AvroSession::queue_client_callback()
 {
-    if (reason == DCB_REASON_DRAINED)
-    {
-        AvroSession* client = static_cast<AvroSession*>(userdata);
-        client->client_callback();
-    }
-
-    return 0;
+    auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    worker->execute([this]() {
+                        client_callback();
+                    }, mxs::RoutingWorker::EXECUTE_QUEUED);
 }
 
 /**
@@ -338,11 +331,7 @@ void AvroSession::process_command(GWBUF* queue)
 
             if (file_in_dir(router->avrodir.c_str(), avro_binfile.c_str()))
             {
-                /* set callback routine for data sending */
-                dcb_add_callback(dcb, DCB_REASON_DRAINED, avro_client_callback, this);
-
-                /* Add fake event that will call the avro_client_callback() routine */
-                poll_fake_write_event(dcb);
+                queue_client_callback();
             }
             else
             {
@@ -734,7 +723,7 @@ void AvroSession::client_callback()
 
     if (next_file || read_more)
     {
-        poll_fake_write_event(dcb);
+        queue_client_callback();
     }
 }
 

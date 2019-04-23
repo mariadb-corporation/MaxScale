@@ -2850,7 +2850,7 @@ void config_set_global_defaults()
     gateway.peer_password[0] = '\0';
     gateway.log_target = MXB_LOG_TARGET_DEFAULT;
 
-    gateway.qc_cache_properties.max_size = get_total_memory() * 0.4;
+    gateway.qc_cache_properties.max_size = get_total_memory() * 0.15;
 
     if (gateway.qc_cache_properties.max_size == 0)
     {

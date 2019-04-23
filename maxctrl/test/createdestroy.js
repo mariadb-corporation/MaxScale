@@ -18,6 +18,18 @@ describe("Create/Destroy Commands", function() {
             .should.be.rejected
     })
 
+    it('monitor without parameters fails due to missing user parameter', function() {
+        return verifyCommand('create monitor my-monitor mysqlmon', 'monitors/my-monitor')
+            .should.be.rejected
+    })
+
+    it('destroy monitor created without parameters', function() {
+        return doCommand('destroy monitor my-monitor')
+            .should.be.fulfilled
+            .then(() => doCommand('show monitor my-monitor'))
+            .should.be.rejected
+    })
+
     it('will not destroy the same monitor again', function() {
         return doCommand('destroy monitor my-monitor')
             .should.be.rejected
@@ -35,6 +47,11 @@ describe("Create/Destroy Commands", function() {
 
     it('will not create monitor with bad options', function() {
         return doCommand('create monitor my-monitor mysqlmon --this-is-not-an-option')
+            .should.be.rejected
+    })
+
+    it('will not create monitor with malformed parameters', function() {
+        return doCommand('create monitor my-monitor mariadbmon not-a-param')
             .should.be.rejected
     })
 
