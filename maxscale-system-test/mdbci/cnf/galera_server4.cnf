@@ -7,7 +7,7 @@ wsrep_on=ON
 # Row binary log format is required by Galera
 binlog_format=ROW
 
-log-bin
+log-bin=mar-bin
 
 # InnoDB is currently the only storage engine supported by Galera
 default-storage-engine=innodb
@@ -15,9 +15,6 @@ innodb_file_per_table
 
 # To avoid issues with 'bulk mode inserts' using autoincrement fields
 innodb_autoinc_lock_mode=2
-
-# Required to prevent deadlocks on parallel transaction execution
-innodb_locks_unsafe_for_binlog=1
 
 # Query Cache is not supported by Galera wsrep replication
 query_cache_size=0
@@ -86,9 +83,6 @@ wsrep_auto_increment_control=1
 
 # Retry autoinc insert, when the insert failed for "duplicate key error"
 wsrep_drupal_282555_workaround=0
-
-# Enable "strictly synchronous" semantics for read operations
-wsrep_causal_reads=1
 
 # Command to call when node status or cluster membership changes.
 # Will be passed all or some of the following options:

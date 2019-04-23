@@ -166,12 +166,10 @@ exports.builder = function(yargs) {
                 }
             }
 
-            if (argv.params) {
-                var err = validateParams(argv, argv.params)
-                if (err) {
-                    return Promise.reject(err)
-                }
+            var err = false;
 
+            if (argv.params) {
+                err = validateParams(argv, argv.params)
                 monitor.data.attributes.parameters = argv.params.reduce(to_obj, {})
             }
 
@@ -189,6 +187,9 @@ exports.builder = function(yargs) {
             }
 
             maxctrl(argv, function(host) {
+                if (err) {
+                    return Promise.reject(err)
+                }
                 return doRequest(host, 'monitors', null, {method: 'POST', body: monitor})
             })
         })

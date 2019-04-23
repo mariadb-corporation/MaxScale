@@ -10,6 +10,7 @@ user=maxskysql
 password= skysql
 detect_stale_master=0
 monitor_interval=1000
+assume_unique_hostnames=false
 
 [RW-Split-Router]
 type=service
@@ -18,6 +19,7 @@ servers=server1, server2, server3, server4
 user=maxskysql
 password=skysql
 slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
+max_slave_replication_lag=1
 
 [Read-Connection-Router-Slave]
 type=service

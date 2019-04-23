@@ -513,6 +513,7 @@ int dcb_read(DCB* dcb,
              GWBUF** head,
              int maxbytes)
 {
+    mxb_assert(dcb->owner == RoutingWorker::get_current());
     int nsingleread = 0;
     int nreadtotal = 0;
 
@@ -853,6 +854,7 @@ static int dcb_log_errors_SSL(DCB* dcb, int ret)
  */
 int dcb_write(DCB* dcb, GWBUF* queue)
 {
+    mxb_assert(dcb->owner == RoutingWorker::get_current());
     dcb->writeqlen += gwbuf_length(queue);
     // The following guarantees that queue is not NULL
     if (!dcb_write_parameter_check(dcb, queue))
@@ -2825,6 +2827,7 @@ public:
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
         if (dcb_is_still_valid(m_dcb, rworker.id()) && m_dcb->m_uid == m_uid)
         {
+            mxb_assert(m_dcb->owner == RoutingWorker::get_current());
             m_dcb->fakeq = m_buffer;
             dcb_handler(m_dcb, m_ev);
         }
@@ -2845,6 +2848,7 @@ static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
 {
     if (dcb == this_thread.current_dcb)
     {
+        mxb_assert(dcb->owner == RoutingWorker::get_current());
         // If the fake event is added to the current DCB, we arrange for
         // it to be handled immediately in dcb_handler() when the handling
         // of the current events are done...
