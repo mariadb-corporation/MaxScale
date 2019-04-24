@@ -567,6 +567,11 @@ moment the rejoining server lost connection, the rejoining server cannot
 continue replication. This is an issue if the master has changed and
 the new master does not have *log_slave_updates* on.
 
+If an automatic cluster operation such as auto-failover or auto-rejoin fails,
+all cluster modifying operations are disabled for `failcount` monitor iterations,
+after which the operation may be retried. Similar logic applies if the cluster is
+unsuitable for such operations, e.g. replication is not using GTID.
+
 ### External master support
 
 The monitor detects if a server in the cluster is replicating from an external
@@ -599,11 +604,6 @@ will automatically elect a new master if the old master goes down and stays down
 a number of iterations given in `failcount`. Failover will not take place when
 MaxScale is configured as a passive instance. For details on how MaxScale
 behaves in passive mode, see the documentation on `failover_timeout` below.
-
-If an attempt at failover fails or multiple master servers are detected, an
-error is logged and automatic failover is disabled. If this happens, the cluster
-must be fixed manually and the failover needs to be re-enabled via the REST API
-or MaxAdmin.
 
 The monitor user must have the SUPER and RELOAD privileges for failover to work.
 
