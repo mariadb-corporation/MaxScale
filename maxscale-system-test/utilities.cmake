@@ -122,3 +122,5 @@ find_program(HAVE_PHP php)
 if (NOT HAVE_PHP)
   message(FATAL_ERROR "Could not find php. Add -DHAVE_PHP=Y to CMake invocation ignore this.")
 endif()
+
+find_package(CURL REQUIRED)

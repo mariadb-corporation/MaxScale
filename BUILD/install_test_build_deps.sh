@@ -21,7 +21,8 @@ then
                  git wget build-essential \
                  libssl-dev mariadb-client php perl \
                  coreutils libjansson-dev zlib1g-dev \
-                 mariadb-test python python-pip cmake libpam0g-dev
+                 mariadb-test python python-pip cmake \
+                 libpam0g-dev libsqlite3-dev
   sudo apt-get install -y --force-yes openjdk-8-jdk
   if [ $? != 0 ]
   then
@@ -50,7 +51,8 @@ EOL
     sudo zypper -n install gcc gcc-c++ \
                  libopenssl-devel libgcrypt-devel MariaDB-devel MariaDB-test \
                  php perl coreutils libjansson-devel python python-pip \
-                 cmake pam-devel openssl-devel python-devel libjansson-devel
+                 cmake pam-devel openssl-devel python-devel libjansson-devel \
+                 sqlite3 sqlite3-devel libcurl-devel
     sudo zypper -n install java-1_8_0-openjdk
   else
   # YUM!
@@ -68,7 +70,8 @@ EOL
                  libgcrypt-devel \
                  openssl-devel mariadb-devel mariadb-test \
                  php perl coreutils python python-pip \
-                 cmake pam-devel python-devel jansson-devel
+                 cmake pam-devel python-devel jansson-devel \
+                 sqlite sqlite-devel libcurl-devel
     sudo yum install -y --nogpgcheck java-1.8.0-openjdk
     sudo yum install -y --nogpgcheck centos-release-scl
     sudo yum install -y --nogpgcheck devtoolset-7-gcc*
