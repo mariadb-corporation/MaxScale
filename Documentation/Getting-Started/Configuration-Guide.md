@@ -1773,13 +1773,6 @@ Server databases. This implementation is tailored for the MariaDB MaxScale to
 MySQL Database traffic and is not a general purpose implementation of the MySQL
 protocol.
 
-##### `telnetd`
-
-The telnetd protocol module is used for connections to MariaDB MaxScale itself
-for the purposes of creating interactive user sessions with the MariaDB MaxScale
-instance itself. Currently this is used in conjunction with a special router
-implementation, the debugcli.
-
 ##### `maxscaled`
 
 The protocol used used by the maxadmin client application in order to connect to

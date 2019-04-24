@@ -47,6 +47,11 @@ administrative users, recreate the user.
 
 ## Dropped Features
 
+### `debugcli` and `telnetd`
+
+The `debugcli` router and the `telnetd` protocol module it uses have been
+removed.
+
 ## New Features
 
 ### Servers can be drained
