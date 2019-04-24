@@ -52,6 +52,15 @@ administrative users, recreate the user.
 The `debugcli` router and the `telnetd` protocol module it uses have been
 removed.
 
+### `ndbclustermon`
+
+The `ndbclustermon` module has been removed.
+
+### `mmmon`
+
+The `mmmon` module has been removed as the `mariadbmon` monitor largely does
+what it used to do.
+
 ## New Features
 
 ### Servers can be drained

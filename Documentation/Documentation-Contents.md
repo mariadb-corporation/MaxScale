@@ -110,11 +110,6 @@ Module specific documentation.
  - [Aurora Monitor](Monitors/Aurora-Monitor.md)
  - [Clustrix Monitor](Monitors/Clustrix-Monitor.md)
 
-Legacy monitors that have been deprecated.
-
- - [Multi-Master Monitor](Monitors/MM-Monitor.md)
- - [MySQL Cluster Monitor](Monitors/NDB-Cluster-Monitor.md)
-
 ## Protocols
 
 Documentation for MaxScale protocol modules.
