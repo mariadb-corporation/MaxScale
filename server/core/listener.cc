@@ -82,7 +82,7 @@ public:
                 u.failures = 0;
             }
 
-            rval = u.failures >= MAX_FAILURES;
+            rval = u.failures >= config_get_global_options()->max_auth_failures;
         }
 
         return rval;
@@ -92,7 +92,7 @@ private:
     struct Failure
     {
         Clock::time_point last_failure = Clock::now();
-        uint32_t          failures = 0;
+        int               failures = 0;
     };
 
     std::unordered_map<std::string, Failure> m_failures;

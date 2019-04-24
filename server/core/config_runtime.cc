@@ -523,12 +523,12 @@ bool runtime_enable_server_ssl(Server* server,
  * @param value String value
  * @return 0 on error, otherwise a positive integer
  */
-static long get_positive_int(const char* value)
+static int get_positive_int(const char* value)
 {
     char* endptr;
     long ival = strtol(value, &endptr, 10);
 
-    if (*endptr == '\0' && ival > 0)
+    if (*endptr == '\0' && ival > 0 && ival < std::numeric_limits<int>::max())
     {
         return ival;
     }
@@ -605,7 +605,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     }
     else if (strcmp(key, CN_PORT) == 0)
     {
-        if (long ival = get_positive_int(value))
+        if (int ival = get_positive_int(value))
         {
             server->update_port(ival);
         }
@@ -1087,6 +1087,22 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             rval = false;
             config_runtime_error("%s can have the values 'never', 'on_close' or 'on_error'.",
                                  CN_DUMP_LAST_STATEMENTS);
+        }
+    }
+    else if (key == CN_MAX_AUTH_FAILURES)
+    {
+        if (int intval = get_positive_int(value))
+        {
+            MXS_NOTICE("Updated '%s' from %d to %d",
+                       CN_MAX_AUTH_FAILURES,
+                       cnf.max_auth_failures,
+                       intval);
+            cnf.max_auth_failures = intval;
+            rval = true;
+        }
+        else
+        {
+            config_runtime_error("Invalid value for '%s': %s", CN_MAX_AUTH_FAILURES, value);
         }
     }
     else if (config_can_modify_at_runtime(key.c_str()))

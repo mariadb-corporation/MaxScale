@@ -32,6 +32,7 @@
 #define DEFAULT_QUERY_RETRY_TIMEOUT 5       /**< Timeout for query retries */
 #define MIN_WRITEQ_HIGH_WATER       4096UL  /**< Min high water mark of dcb write queue */
 #define MIN_WRITEQ_LOW_WATER        512UL   /**< Min low water mark of dcb write queue */
+#define DEFAULT_MAX_AUTH_FAILURES   10      /**< Max allowed authentication failures */
 
 /**
  * Maximum length for configuration parameter value.
