@@ -20,3 +20,7 @@ add_test(test_semaphore test_semaphore)
 add_executable(test_worker test_worker.cc)
 target_link_libraries(test_worker maxbase pthread rt)
 add_test(test_worker test_worker)
+
+add_executable(test_host_class test_host_class.cc)
+target_link_libraries(test_host_class maxbase pthread rt)
+add_test(test_host_class test_host_class)
