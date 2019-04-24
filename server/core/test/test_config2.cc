@@ -238,8 +238,8 @@ int test_enum(config::Enum<Enum>& value)
 
 int test_path(config::Path& value)
 {
-    char path[PATH_MAX];
-    char* strpath = getcwd(path, sizeof(path));
+    static char path[PATH_MAX];
+    static char* strpath = getcwd(path, sizeof(path));
 
     static const TestEntry<config::Path::value_type> entries[] =
     {
