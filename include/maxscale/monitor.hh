@@ -129,18 +129,14 @@ enum mxs_monitor_event_t
     SYNCED_UP_EVENT   = (1 << 7),   /**< synced_up */
     DONOR_DOWN_EVENT  = (1 << 8),   /**< donor_down */
     DONOR_UP_EVENT    = (1 << 9),   /**< donor_up */
-    NDB_DOWN_EVENT    = (1 << 10),  /**< ndb_down */
-    NDB_UP_EVENT      = (1 << 11),  /**< ndb_up */
-    LOST_MASTER_EVENT = (1 << 12),  /**< lost_master */
-    LOST_SLAVE_EVENT  = (1 << 13),  /**< lost_slave */
-    LOST_SYNCED_EVENT = (1 << 14),  /**< lost_synced */
-    LOST_DONOR_EVENT  = (1 << 15),  /**< lost_donor */
-    LOST_NDB_EVENT    = (1 << 16),  /**< lost_ndb */
-    NEW_MASTER_EVENT  = (1 << 17),  /**< new_master */
-    NEW_SLAVE_EVENT   = (1 << 18),  /**< new_slave */
-    NEW_SYNCED_EVENT  = (1 << 19),  /**< new_synced */
-    NEW_DONOR_EVENT   = (1 << 20),  /**< new_donor */
-    NEW_NDB_EVENT     = (1 << 21),  /**< new_ndb */
+    LOST_MASTER_EVENT = (1 << 10),  /**< lost_master */
+    LOST_SLAVE_EVENT  = (1 << 11),  /**< lost_slave */
+    LOST_SYNCED_EVENT = (1 << 12),  /**< lost_synced */
+    LOST_DONOR_EVENT  = (1 << 13),  /**< lost_donor */
+    NEW_MASTER_EVENT  = (1 << 14),  /**< new_master */
+    NEW_SLAVE_EVENT   = (1 << 15),  /**< new_slave */
+    NEW_SYNCED_EVENT  = (1 << 16),  /**< new_synced */
+    NEW_DONOR_EVENT   = (1 << 17),  /**< new_donor */
 };
 
 enum credentials_approach_t

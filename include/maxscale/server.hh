@@ -42,21 +42,21 @@ extern const char* DEFAULT_RANK;
  * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
  */
 // Bits used by most monitors
-#define SERVER_RUNNING              (1 << 0)   /**<< The server is up and running */
-#define SERVER_MAINT                (1 << 1)   /**<< Server is in maintenance mode */
-#define SERVER_AUTH_ERROR           (1 << 2)   /**<< Authentication error from monitor */
-#define SERVER_MASTER               (1 << 3)   /**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE                (1 << 4)   /**<< The server is a slave, i.e. can handle reads */
-#define SERVER_DRAINING             (1 << 5)   /**<< The server is being drained, i.e. no new connection should be created. */
-#define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)   /**<< The disk space of the server is exhausted */
+#define SERVER_RUNNING              (1 << 0)    /**<< The server is up and running */
+#define SERVER_MAINT                (1 << 1)    /**<< Server is in maintenance mode */
+#define SERVER_AUTH_ERROR           (1 << 2)    /**<< Authentication error from monitor */
+#define SERVER_MASTER               (1 << 3)    /**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE                (1 << 4)    /**<< The server is a slave, i.e. can handle reads */
+#define SERVER_DRAINING             (1 << 5)    /**<< The server is being drained, i.e. no new connection
+                                                 * should be created. */
+#define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)    /**<< The disk space of the server is exhausted */
 // Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER  (1 << 16)  /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY                (1 << 17)  /**<< Server is a relay */
-#define SERVER_WAS_MASTER           (1 << 18)  /**<< Server was a master but lost all slaves. */
+#define SERVER_SLAVE_OF_EXT_MASTER (1 << 16)    /**<< Server is slave of a non-monitored master */
+#define SERVER_RELAY               (1 << 17)    /**<< Server is a relay */
+#define SERVER_WAS_MASTER          (1 << 18)    /**<< Server was a master but lost all slaves. */
 // Bits used by other monitors
-#define SERVER_JOINED               (1 << 19)  /**<< The server is joined in a Galera cluster */
-#define SERVER_NDB                  (1 << 20)  /**<< The server is part of a MySQL cluster setup */
-#define SERVER_MASTER_STICKINESS    (1 << 21)  /**<< Server Master stickiness */
+#define SERVER_JOINED            (1 << 19)      /**<< The server is joined in a Galera cluster */
+#define SERVER_MASTER_STICKINESS (1 << 20)      /**<< Server Master stickiness */
 
 inline bool status_is_connectable(uint64_t status)
 {
@@ -106,11 +106,6 @@ inline bool status_is_relay(uint64_t status)
 inline bool status_is_joined(uint64_t status)
 {
     return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_JOINED);
-}
-
-inline bool status_is_ndb(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_NDB | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_NDB);
 }
 
 inline bool status_is_slave_of_ext_master(uint64_t status)
@@ -429,19 +424,9 @@ public:
         return status_is_joined(status);
     }
 
-    /**
-     * Is the server a SQL node in MySQL Cluster?
-     *
-     * @return True, if server is running and with NDB status.
-     */
-    bool is_ndb() const
-    {
-        return status_is_ndb(status);
-    }
-
     bool is_in_cluster() const
     {
-        return (status & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED | SERVER_NDB)) != 0;
+        return (status & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED)) != 0;
     }
 
     bool is_slave_of_ext_master() const

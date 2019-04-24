@@ -159,11 +159,11 @@ const char* monitor_state_to_string(monitor_state_t state)
 }
 
 /** Server type specific bits */
-const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB;
+const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED;
 
 /** All server bits */
 const uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
-                                 | SERVER_JOINED | SERVER_NDB;
+    | SERVER_JOINED;
 
 const char journal_name[] = "monitor.dat";
 const char journal_template[] = "%s/%s/%s";
@@ -1226,12 +1226,7 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
     case UP_EVENT:
         rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT :
             (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
-            (present
-             & SERVER_JOINED) ? SYNCED_UP_EVENT :
-            (present
-             & SERVER_NDB) ?
-            NDB_UP_EVENT
-                           :
+            (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
             SERVER_UP_EVENT;
         break;
 
@@ -1239,10 +1234,6 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
             (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
             (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
-            (prev
-             & SERVER_NDB) ?
-            NDB_DOWN_EVENT
-                           :
             SERVER_DOWN_EVENT;
         break;
 
@@ -1250,22 +1241,13 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
             (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
             (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
-            (prev
-             & SERVER_NDB) ?
-            LOST_NDB_EVENT
-                           :
             UNDEFINED_EVENT;
         break;
 
     case NEW_EVENT:
         rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
             (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
-            (present
-             & SERVER_JOINED) ? NEW_SYNCED_EVENT :
-            (present
-             & SERVER_NDB) ?
-            NEW_NDB_EVENT
-                           :
+            (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
             UNDEFINED_EVENT;
         break;
 

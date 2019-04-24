@@ -643,7 +643,6 @@ string SERVER::status_to_string(uint64_t flags, int nConnections)
     const string relay = "Relay Master";
     const string slave = "Slave";
     const string synced = "Synced";
-    const string ndb = "NDB";
     const string slave_ext = "Slave of External Server";
     const string sticky = "Master Stickiness";
     const string auth_err = "Auth Error";
@@ -683,7 +682,6 @@ string SERVER::status_to_string(uint64_t flags, int nConnections)
 
     // The following Galera and Cluster bits may be combined with master/slave.
     concatenate_if(status_is_joined(flags), synced);
-    concatenate_if(status_is_ndb(flags), ndb);
     // May be combined with other MariaDB monitor flags.
     concatenate_if(flags & SERVER_SLAVE_OF_EXT_MASTER, slave_ext);
 
@@ -847,16 +845,15 @@ uint64_t SERVER::status_from_string(const char* str)
         uint64_t    bit;
     } ServerBits[] =
     {
-        {"running",     SERVER_RUNNING      },
-        {"master",      SERVER_MASTER       },
-        {"slave",       SERVER_SLAVE        },
-        {"synced",      SERVER_JOINED       },
-        {"ndb",         SERVER_NDB          },
-        {"maintenance", SERVER_MAINT        },
-        {"maint",       SERVER_MAINT        },
-        {"stale",       SERVER_WAS_MASTER   },
-        {"drain",       SERVER_DRAINING     },
-        {NULL,          0                   }
+        {"running", SERVER_RUNNING},
+        {"master", SERVER_MASTER},
+        {"slave", SERVER_SLAVE},
+        {"synced", SERVER_JOINED},
+        {"maintenance", SERVER_MAINT},
+        {"maint", SERVER_MAINT},
+        {"stale", SERVER_WAS_MASTER},
+        {"drain", SERVER_DRAINING},
+        {NULL, 0}
     };
 
     for (int i = 0; ServerBits[i].str; i++)
