@@ -300,6 +300,8 @@ public:
 
     static bool connection_is_ok(mxs_connect_result_t connect_result);
 
+    static std::string get_server_monitor(const SERVER* server);
+
     /*
      * Convert a monitor event (enum) to string.
      *
@@ -531,21 +533,8 @@ protected:
 private:
     friend class ::MonitorManager;
 
-    /**
-     * @brief Add a server to a monitor.
-     *
-     * Add a server to a monitor, provided the server is not currently
-     * being monitored by any monitor. Before adding the server to the
-     * monitor, the monitor is stopped if it is running and after the
-     * addition it is restarted if it was running.
-     *
-     * @param server   A server.
-     *
-     * @return True, if the monitor was added, false otherwise.
-     */
-    void add_server(SERVER* server);
-
-    void remove_server(SERVER* server);
+    bool add_server(SERVER* server);
+    void remove_all_servers();
 
     /**
      * Starts the monitor. If the monitor requires polling of the servers, it should create

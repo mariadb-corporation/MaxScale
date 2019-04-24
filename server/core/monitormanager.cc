@@ -210,10 +210,7 @@ void MonitorManager::deactivate_monitor(Monitor* monitor)
     // "servers"-setting of the base monitor. Directly manipulate monitor field for now, later use a dtor
     // to cleanly "deactivate" inherited objects.
     stop_monitor(monitor);
-    while (!monitor->m_servers.empty())
-    {
-        monitor->remove_server(monitor->m_servers.front()->server);
-    }
+    monitor->remove_all_servers();
     this_unit.move_to_deactivated_list(monitor);
 }
 
@@ -309,18 +306,12 @@ std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
 Monitor* MonitorManager::server_is_monitored(const SERVER* server)
 {
     Monitor* rval = nullptr;
-    this_unit.foreach_monitor([&rval, server](Monitor* monitor) {
-        Guard guard(monitor->m_lock);
-        for (MonitorServer* db : monitor->m_servers)
-        {
-            if (db->server == server)
-            {
-                rval = monitor;
-                break;
-            }
-        }
-        return (rval == nullptr);
-    });
+    auto mon_name = Monitor::get_server_monitor(server);
+    if (!mon_name.empty())
+    {
+        rval = find_monitor(mon_name.c_str());
+        mxb_assert(rval);
+    }
     return rval;
 }
 

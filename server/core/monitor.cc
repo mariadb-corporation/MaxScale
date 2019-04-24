@@ -87,6 +87,81 @@ const char CN_SCRIPT_TIMEOUT[] = "script_timeout";
 namespace
 {
 
+/**
+    * Is the current thread either the main thread or the runtime admin thread?
+    *
+    * @return True if running in an admin thread
+    */
+bool is_admin_thread()
+{
+    mxb::Worker* current = mxb::Worker::get_current();
+    return (current == nullptr || current == mxs_rworker_get(MXS_RWORKER_MAIN));
+}
+
+class ThisUnit
+{
+public:
+
+    /**
+     * Mark a monitor as the monitor of the server. A server may only be monitored by one monitor.
+     *
+     * @param server Server to claim. The name is not checked to be a valid server name.
+     * @param new_owner Monitor which claims the server
+     * @param existing_owner If server is already monitored, the owning monitor name is written here
+     * @return True if success, false if server was claimed by another monitor
+     */
+    bool claim_server(const string& server, const string& new_owner, string* existing_owner)
+    {
+        mxb_assert(is_admin_thread());
+        bool claim_success = false;
+        auto iter = m_server_owners.find(server);
+        if (iter != m_server_owners.end())
+        {
+            // Server is already claimed by a monitor.
+            *existing_owner = iter->second;
+        }
+        else
+        {
+            m_server_owners[server] = new_owner;
+            claim_success = true;
+        }
+        return claim_success;
+    }
+
+    /**
+     * Mark a server as unmonitored.
+     *
+     * @param server The server name
+     */
+    void release_server(const string& server)
+    {
+        mxb_assert(is_admin_thread());
+        auto iter = m_server_owners.find(server);
+        mxb_assert(iter != m_server_owners.end());
+        m_server_owners.erase(iter);
+    }
+
+
+    string claimed_by(const string& server)
+    {
+        mxb_assert(is_admin_thread());
+        string rval;
+        auto iter = m_server_owners.find(server);
+        if (iter != m_server_owners.end())
+        {
+            rval = iter->second;
+        }
+        return rval;
+    }
+
+private:
+    // Global map of servername->monitorname. Not mutexed, as this should only be accessed
+    // from the admin thread.
+    std::map<string, string> m_server_owners;
+};
+
+ThisUnit this_unit;
+
 const char* monitor_state_to_string(monitor_state_t state)
 {
     switch (state)
@@ -460,34 +535,20 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 
     // The monitor serverlist has already been checked to be valid. Empty value is ok too.
     // First, remove all servers.
-    while (!m_servers.empty())
-    {
-        SERVER* remove = m_servers.front()->server;
-        remove_server(remove);
-    }
+    remove_all_servers();
 
     auto servers_temp = params->get_server_list(CN_SERVERS);
     bool error = false;
     for (auto elem : servers_temp)
     {
-        // TODO: Monitor should not access MonitorManager.
-        Monitor* srv_monitored_by = MonitorManager::server_is_monitored(elem);
-        if (srv_monitored_by)
+        if (!add_server(elem))
         {
-            mxb_assert(srv_monitored_by != this);
-            MXS_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
-                      elem->name(), srv_monitored_by->name());
             error = true;
-        }
-        else
-        {
-            add_server(elem);
         }
     }
 
     /* The previous config values were normal types and were checked by the config manager
      * to be correct. The following is a complicated type and needs to be checked separately. */
-
     auto threshold_string = params->get_string(CN_DISK_SPACE_THRESHOLD);
     if (!set_disk_space_threshold(threshold_string))
     {
@@ -517,19 +578,30 @@ Monitor::~Monitor()
 }
 
 /**
- * @brief Add a server to the monitor.
- *
- * It is assumed that the monitor is currently not running and that the
- * server is not currently being monitored.
+ * Add a server to the monitor. Fails if server is already monitored.
  *
  * @param server  A server
+ * @return True if server was added
  */
-void Monitor::add_server(SERVER* server)
+bool Monitor::add_server(SERVER* server)
 {
-    mxb_assert(state() != MONITOR_STATE_RUNNING);
-    auto new_server = new MonitorServer(server, m_settings.disk_space_limits);
-    m_servers.push_back(new_server);
-    server_added(server);
+    // This should only be called from the admin thread while the monitor is stopped.
+    mxb_assert(state() == MONITOR_STATE_STOPPED && is_admin_thread());
+    bool success = false;
+    string existing_owner;
+    if (this_unit.claim_server(server->name(), m_name, &existing_owner))
+    {
+        auto new_server = new MonitorServer(server, m_settings.disk_space_limits);
+        m_servers.push_back(new_server);
+        server_added(server);
+        success = true;
+    }
+    else
+    {
+        MXS_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
+                  server->name(), existing_owner.c_str());
+    }
+    return success;
 }
 
 void Monitor::server_added(SERVER* server)
@@ -543,45 +615,20 @@ void Monitor::server_removed(SERVER* server)
 }
 
 /**
- * Remove a server from a monitor.
- *
- * @param mon           The Monitor instance
- * @param server        The Server to remove
+ * Remove all servers from the monitor.
  */
-
-/**
- * @brief Remove a server from the monitor.
- *
- * It is assumed that the monitor is currently not running.
- *
- * @param server  A server
- */
-void Monitor::remove_server(SERVER* server)
+void Monitor::remove_all_servers()
 {
-    mxb_assert(state() != MONITOR_STATE_RUNNING);
-
-    MonitorServer* ptr = nullptr;
-
-    using Guard = std::unique_lock<std::mutex>;
-    Guard guard(m_lock);
-
-    for (auto it = m_servers.begin(); it != m_servers.end(); ++it)
+    // This should only be called from the admin thread while the monitor is stopped.
+    mxb_assert(state() == MONITOR_STATE_STOPPED && is_admin_thread());
+    for (auto mon_server : m_servers)
     {
-        if ((*it)->server == server)
-        {
-            ptr = *it;
-            m_servers.erase(it);
-            break;
-        }
+        mxb_assert(this_unit.claimed_by(mon_server->server->name()) == m_name);
+        this_unit.release_server(mon_server->server->name());
+        server_removed(mon_server->server);
+        delete mon_server;
     }
-
-    guard.unlock();
-
-    if (ptr)
-    {
-        delete ptr;
-        server_removed(server);
-    }
+    m_servers.clear();
 }
 
 void Monitor::show(DCB* dcb)
@@ -1223,6 +1270,11 @@ mxs_connect_result_t MonitorServer::ping_or_connect(const ConnectionSettings& se
 bool Monitor::connection_is_ok(mxs_connect_result_t connect_result)
 {
     return connect_result == MONITOR_CONN_EXISTING_OK || connect_result == MONITOR_CONN_NEWCONN_OK;
+}
+
+string Monitor::get_server_monitor(const SERVER* server)
+{
+    return this_unit.claimed_by(server->name());
 }
 
 /**
