@@ -64,6 +64,182 @@
         }
   },
 
+  "node_004" :
+  {
+        "hostname" : "node004",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server5.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_005" :
+  {
+        "hostname" : "node005",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server6.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_006" :
+  {
+        "hostname" : "node006",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server7.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_007" :
+  {
+        "hostname" : "node007",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server8.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_008" :
+  {
+        "hostname" : "node008",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server9.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_009" :
+  {
+        "hostname" : "node009",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server10.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_010" :
+  {
+        "hostname" : "node010",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server11.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_011" :
+  {
+        "hostname" : "node011",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server12.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_012" :
+  {
+        "hostname" : "node012",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server13.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_013" :
+  {
+        "hostname" : "node013",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server14.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_014" :
+  {
+        "hostname" : "node013",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "labels" : [
+                "BIG_REPL_BACKEND"
+        ],
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server15.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
   "galera_000" :
   {
         "hostname" : "galera000",

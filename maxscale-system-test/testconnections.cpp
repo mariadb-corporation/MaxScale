@@ -284,6 +284,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     const char * labels_string = NULL;
     template_name = get_template_name(test_name, &labels_string);
+    tprintf("testname: '%s', template: '%s'", test_name, template_name);
     labels = strstr(labels_string, "LABELS;");
     if (!labels)
     {
@@ -787,6 +788,11 @@ void TestConnections::process_template(int m, const char* template_name, const c
                         mdn[j]->prefix, i + 1, mdn[j]->port[i]);
                 system(str);
             }
+
+            sprintf(str, "sed -i \"s/###%s###/%s/\" maxscale.cnf", mdn[j]->cnf_server_name.c_str(), mdn[j]->cnf_servers().c_str());
+            system(str);
+            sprintf(str, "sed -i \"s/###%s_line###/%s/\" maxscale.cnf", mdn[j]->cnf_server_name.c_str(), mdn[j]->cnf_servers_line().c_str());
+            system(str);
 
             mdn[j]->connect();
             execute_query(mdn[j]->nodes[0], (char *) "CREATE DATABASE IF NOT EXISTS test");

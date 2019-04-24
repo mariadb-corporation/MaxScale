@@ -152,6 +152,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
+    Test->repl->limit_nodes(Test->maxscales->get_backend_servers_num(0, "RW-Split-Router"));
     Test->set_timeout(10);
 
     Test->repl->connect();

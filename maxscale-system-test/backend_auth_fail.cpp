@@ -10,7 +10,7 @@ int main(int argc, char** argv)
 {
     MYSQL* mysql[1000];
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->stop_timeout();
+
     Test->repl->execute_query_all_nodes((char*) "set global max_connections = 10;");
 
     for (int x = 0; x < 3; x++)
@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 
     // Wait for the connections to clean up
     Test->stop_timeout();
-    sleep(5);
+    sleep(2 * Test->repl->N);
 
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;
