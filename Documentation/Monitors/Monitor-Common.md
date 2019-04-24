@@ -247,14 +247,10 @@ slave_down  |A Slave server has gone down
 slave_up    |A Slave server has come up
 server_down |A server with no assigned role has gone down
 server_up   |A server with no assigned role has come up
-ndb_down    |A MySQL Cluster node has gone down
-ndb_up      |A MySQL Cluster node has come up
 lost_master |A server lost Master status
 lost_slave  |A server lost Slave status
-lost_ndb    |A MySQL Cluster node lost node membership
 new_master  |A new Master was detected
 new_slave   |A new Slave was detected
-new_ndb     |A new MySQL Cluster node was found
 
 ### `journal_max_age`
 

@@ -21,7 +21,8 @@
 
 ## Reference
 
- - [MaxAdmin - Admin Interface](Reference/MaxAdmin.md)
+ - [MaxCtrl - Command Line Admin Interface](Reference/MaxCtrl.md)
+ - [MaxAdmin - Legacy Admin Interface](Reference/MaxAdmin.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
  - [MaxBinlogCheck](Reference/MaxBinlogCheck.md)
  - [MaxScale REST API](REST-API/API.md)
@@ -69,8 +70,8 @@ of their use.
  - [Schemarouter](Routers/SchemaRouter.md)
  - [Cat](Routers/Cat.md)
 
-There are also two diagnostic routing modules. The CLI is for MaxAdmin and
-the Debug CLI client for Telnet.
+The legacy diagnostic routing module MaxAdmin has been deprecated: avoid using
+it.
 
  - [CLI](Routers/CLI.md)
 
@@ -108,11 +109,6 @@ Module specific documentation.
  - [ColumnStore Monitor](Monitors/ColumnStore-Monitor.md)
  - [Aurora Monitor](Monitors/Aurora-Monitor.md)
  - [Clustrix Monitor](Monitors/Clustrix-Monitor.md)
-
-Legacy monitors that have been deprecated.
-
- - [Multi-Master Monitor](Monitors/MM-Monitor.md)
- - [MySQL Cluster Monitor](Monitors/NDB-Cluster-Monitor.md)
 
 ## Protocols
 

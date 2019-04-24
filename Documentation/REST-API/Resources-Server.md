@@ -567,7 +567,6 @@ the request. The value of `state` must be one of the following values.
 |maintenance| Server is put into maintenance |
 |running    | Server is up and running       |
 |synced     | Server is a Galera node        |
-|ndb        | Server is a NDBCluster node    |
 |stale      | Server is a stale Master       |
 
 For example, to set the server _db-server-1_ into maintenance mode, a request to

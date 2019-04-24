@@ -137,15 +137,10 @@ bool RCR::configure(MXS_CONFIG_PARAMETER* params)
             bitmask |= (SERVER_JOINED);
             bitvalue |= SERVER_JOINED;
         }
-        else if (!strcasecmp(opt.c_str(), "ndb"))
-        {
-            bitmask |= (SERVER_NDB);
-            bitvalue |= SERVER_NDB;
-        }
         else
         {
             MXS_ERROR("Unsupported router option \'%s\' for readconnroute. "
-                      "Expected router options are [slave|master|synced|ndb|running]",
+                      "Expected router options are [slave|master|synced|running]",
                       opt.c_str());
             ok = false;
         }

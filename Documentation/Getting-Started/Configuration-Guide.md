@@ -1773,13 +1773,6 @@ Server databases. This implementation is tailored for the MariaDB MaxScale to
 MySQL Database traffic and is not a general purpose implementation of the MySQL
 protocol.
 
-##### `telnetd`
-
-The telnetd protocol module is used for connections to MariaDB MaxScale itself
-for the purposes of creating interactive user sessions with the MariaDB MaxScale
-instance itself. Currently this is used in conjunction with a special router
-implementation, the debugcli.
-
 ##### `maxscaled`
 
 The protocol used used by the maxadmin client application in order to connect to
@@ -1940,14 +1933,6 @@ Simple sharding on database level:
 Binary log server:
 * [Binlogrouter](../Routers/Binlogrouter.md)
 
-## Diagnostic modules
-
-These modules are used for diagnostic purposes and can tell about the status of
-MariaDB MaxScale and the cluster it is monitoring.
-
-* [MaxAdmin Module](../Routers/CLI.md)
-* [Telnet Module](../Routers/Debug-CLI.md)
-
 ## Monitor Modules
 
 Monitor modules are used by MariaDB MaxScale to internally monitor the state of
@@ -1963,8 +1948,6 @@ which sets the status of each server via MaxAdmin is needed.
 
 * [MariaDB Monitor](../Monitors/MariaDB-Monitor.md)
 * [Galera Monitor](../Monitors/Galera-Monitor.md)
-* [NDBCluster Monitor](../Monitors/NDB-Cluster-Monitor.md)
-* [Multi-Master Monitor](../Monitors/MM-Monitor.md)
 
 ## Filter Modules
 
@@ -2033,9 +2016,6 @@ password=61DD955512C39A4A8BC4BB1E5F116705
 Read the following documents for different methods of altering the MaxScale
 configuration at runtime.
 
-* MaxAdmin
-  * [Runtime Configuration Changes](../Reference/MaxAdmin.md#runtime-configuration-changes)
-
 * MaxCtrl
   * [`create`](../Reference/MaxCtrl.md#create)
   * [`destroy`](../Reference/MaxCtrl.md#destroy)
@@ -2044,6 +2024,9 @@ configuration at runtime.
   * [`alter`](../Reference/MaxCtrl.md#alter)
 
 * [REST API](../REST-API/API.md) documentation
+
+* MaxAdmin
+  * [Runtime Configuration Changes](../Reference/MaxAdmin.md#runtime-configuration-changes)
 
 All changes to the configuration are persisted as individual configuration files
 in `/var/lib/maxscale/maxscale.cnf.d/`. These files are applied after the main
