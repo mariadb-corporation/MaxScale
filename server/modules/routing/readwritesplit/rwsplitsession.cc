@@ -565,6 +565,91 @@ void RWSplitSession::close_stale_connections()
     }
 }
 
+namespace
+{
+
+// TODO: It is not OK that knowledge about Clustrix is embedded into RWS.
+// TODO: The capacity for recovery should be abstracted into SERVER, of
+// TODO: which there then would be backend specific concrete specializations.
+
+const int CLUSTRIX_ERROR_CODE = 1;
+
+// NOTE: Keep these alphabetically ordered!
+const char CLUSTRIX_ERROR_1[] = "[16389] Group change during GTM operation";
+
+const struct ClustrixError
+{
+    const void* message;
+    int len;
+
+    bool operator == (const ClustrixError& rhs) const
+    {
+        return len == rhs.len && memcmp(message, rhs.message, len) == 0;
+    }
+
+    bool operator < (const ClustrixError& rhs) const
+    {
+        int rv = memcmp(message, rhs.message, std::min(len, rhs.len));
+
+        if (rv == 0)
+        {
+            rv = len - rhs.len;
+        }
+
+        return rv < 0 ? true : false;
+    }
+} clustrix_errors[] =
+{
+    { CLUSTRIX_ERROR_1, sizeof(CLUSTRIX_ERROR_1) - 1 }
+};
+
+const int nClustrix_errors = sizeof(clustrix_errors) / sizeof(clustrix_errors[0]);
+
+bool is_manageable_clustrix_error(GWBUF* writebuf)
+{
+    bool rv = false;
+
+    if (MYSQL_IS_ERROR_PACKET(GWBUF_DATA(writebuf)))
+    {
+        uint8_t* pData = GWBUF_DATA(writebuf);
+        uint8_t data[MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pData)];
+
+        if (!GWBUF_IS_CONTIGUOUS(writebuf))
+        {
+            gwbuf_copy_data(writebuf, 0, sizeof(data), data);
+            pData = data;
+        }
+
+        uint16_t code = MYSQL_GET_ERRCODE(pData);
+
+        if (code == CLUSTRIX_ERROR_CODE)
+        {
+            // May be a recoverable error.
+            uint8_t* pMessage;
+            uint16_t nMessage;
+            extract_error_message(pData, &pMessage, &nMessage);
+
+            if (std::binary_search(clustrix_errors, clustrix_errors + nClustrix_errors,
+                                   ClustrixError { pMessage, nMessage }))
+            {
+                if (mxb_log_is_priority_enabled(LOG_INFO))
+                {
+                    char message[nMessage + 1];
+                    memcpy(message, pMessage, nMessage);
+                    message[nMessage] = 0;
+
+                    MXS_INFO("A recoverable Clustrix error: %s", message);
+                }
+                rv = true;
+            }
+        }
+    }
+
+    return rv;
+}
+
+}
+
 void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
 {
     DCB* client_dcb = backend_dcb->session->client_dcb;
@@ -601,10 +686,21 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         return;     // Nothing to route, return
     }
 
+    backend->process_reply(writebuf);
+
+    if (m_config.transaction_replay && is_manageable_clustrix_error(writebuf))
+    {
+        // writebuf was an error that can be handled by replaying the transaction.
+        m_expected_responses--;
+
+        start_trx_replay();
+        gwbuf_free(writebuf);
+        session_reset_server_bookkeeping(m_pSession);
+        return;
+    }
+
     // Track transaction contents and handle ROLLBACK with aggressive transaction load balancing
     manage_transactions(backend, writebuf);
-
-    backend->process_reply(writebuf);
 
     if (backend->reply_is_complete())
     {
