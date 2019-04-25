@@ -106,8 +106,7 @@ json_t* mxs_logs_to_json(const char* host);
             break; \
         } \
         thread_local std::ostringstream os; \
-        os.clear(); \
-        os.seekp(0); \
+        os.str(std::string()); \
         os << mxs_msg_str__; \
         mxb_log_message(CMXSLOGLEVEL__, MXB_MODULE_NAME, __FILE__, __LINE__, \
                         __func__, "%s", os.str().c_str()); \
