@@ -189,11 +189,11 @@ private:
     bool route_stored_query();
     void close_stale_connections();
 
-    mxs::SRWBackend get_hinted_backend(char* name);
+    mxs::SRWBackend get_hinted_backend(const char* name);
     mxs::SRWBackend get_slave_backend(int max_rlag);
     mxs::SRWBackend get_master_backend();
     mxs::SRWBackend get_last_used_backend();
-    mxs::SRWBackend get_target_backend(backend_type_t btype, char* name, int max_rlag);
+    mxs::SRWBackend get_target_backend(backend_type_t btype, const char* name, int max_rlag);
 
     bool handle_target_is_all(route_target_t route_target,
                               GWBUF* querybuf,

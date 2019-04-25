@@ -597,7 +597,7 @@ static inline bool rpl_lag_is_ok(SRWBackend& backend, int max_rlag)
     return max_rlag == MXS_RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
 }
 
-SRWBackend RWSplitSession::get_hinted_backend(char* name)
+SRWBackend RWSplitSession::get_hinted_backend(const char* name)
 {
     SRWBackend rval;
 
@@ -735,15 +735,15 @@ SRWBackend RWSplitSession::get_last_used_backend()
  *
  * @param rses     Pointer to router client session
  * @param btype    Backend type
- * @param name     Name of the backend which is primarily searched. May be NULL.
+ * @param name     Name of the requested backend. May be NULL if any name is accepted.
  * @param max_rlag Maximum replication lag
  * @param target   The target backend
  *
  * @return True if a backend was found
  */
 SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
-                                              char* name,
-                                              int   max_rlag)
+                                              const char* name,
+                                              int max_rlag)
 {
     /** Check whether using target_node as target SLAVE */
     if (m_target_node && session_trx_is_read_only(m_client->session))
@@ -752,13 +752,11 @@ SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
     }
 
     SRWBackend rval;
-
-    if (name)   /*< Choose backend by name from a hint */
+    if (name)
     {
-        btype = BE_SLAVE;
+        // Choose backend by name from a hint
         rval = get_hinted_backend(name);
     }
-
     else if (btype == BE_SLAVE)
     {
         rval = get_slave_backend(max_rlag);
@@ -767,7 +765,6 @@ SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
     {
         rval = get_master_backend();
     }
-
     return rval;
 }
 
@@ -808,82 +805,73 @@ int RWSplitSession::get_max_replication_lag()
  */
 SRWBackend RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t route_target)
 {
-    char* named_server = NULL;
-    int rlag_max = MXS_RLAG_UNDEFINED;
+    const char rlag_hint_tag[] = "max_slave_replication_lag";
+    const int comparelen = sizeof(rlag_hint_tag);
+    int config_max_rlag = get_max_replication_lag(); // From router configuration.
+    SRWBackend target;
 
-    HINT* hint = querybuf->hint;
-
-    while (hint != NULL)
+    for (HINT* hint = querybuf->hint; !target && hint; hint = hint->next)
     {
         if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
         {
-            /**
-             * Set the name of searched
-             * backend server.
-             */
-            named_server = (char*)hint->data;
-            MXS_INFO("Hint: route to server '%s'", named_server);
-        }
-        else if (hint->type == HINT_PARAMETER
-                 && (strncasecmp((char*)hint->data,
-                                 "max_slave_replication_lag",
-                                 strlen("max_slave_replication_lag")) == 0))
-        {
-            int val = (int)strtol((char*)hint->value, (char**)NULL, 10);
-
-            if (val != 0 || errno == 0)
+            // Set the name of searched backend server.
+            const char* named_server = (char*)hint->data;
+            MXS_INFO("Hint: route to server '%s'.", named_server);
+            target = get_target_backend(BE_UNDEFINED, named_server, config_max_rlag);
+            if (!target)
             {
-                /** Set max. acceptable replication lag value for backend srv */
-                rlag_max = val;
-                MXS_INFO("Hint: max_slave_replication_lag=%d", rlag_max);
+                // Target may differ from the requested name if the routing target is locked, e.g. by a trx.
+                // Target is null only if not locked and named server was not found or was invalid.
+                if (mxb_log_is_priority_enabled(LOG_INFO))
+                {
+                    char* status = nullptr;
+                    for (const auto& a : m_backends)
+                    {
+                        if (strcmp(a->server()->name, named_server) == 0)
+                        {
+                            status = server_status(a->server());
+                            break;
+                        }
+                    }
+                    MXS_INFO("Was supposed to route to named server %s but couldn't find the server in a "
+                             "suitable state. Server state: %s",
+                             named_server, status ? status : "Could not find server");
+                    MXS_FREE(status);
+                }
             }
         }
-        hint = hint->next;
-    }   /*< while */
-
-    if (rlag_max == MXS_RLAG_UNDEFINED)     /*< no rlag max hint, use config */
-    {
-        rlag_max = get_max_replication_lag();
+        else if (hint->type == HINT_PARAMETER
+                 && (strncasecmp((char*)hint->data, rlag_hint_tag, comparelen) == 0))
+        {
+            const char* str_val = (char*)hint->value;
+            int hint_max_rlag = (int)strtol(str_val, (char**)NULL, 10);
+            if (hint_max_rlag != 0 || errno == 0)
+            {
+                MXS_INFO("Hint: %s=%d", rlag_hint_tag, hint_max_rlag);
+                target = get_target_backend(BE_SLAVE, nullptr, hint_max_rlag);
+                if (!target)
+                {
+                    MXS_INFO("Was supposed to route to server with replication lag "
+                             "at most %d but couldn't find such a slave.", hint_max_rlag);
+                }
+            }
+            else
+            {
+                MXS_ERROR("Hint: Could not parse value of %s: '%s' is not a valid number.",
+                          rlag_hint_tag, str_val);
+            }
+        }
     }
-
-    /** target may be master or slave */
-    backend_type_t btype = route_target & TARGET_SLAVE ? BE_SLAVE : BE_MASTER;
-
-    /**
-     * Search backend server by name or replication lag.
-     * If it fails, then try to find valid slave or master.
-     */
-    SRWBackend target = get_target_backend(btype, named_server, rlag_max);
 
     if (!target)
     {
-        if (TARGET_IS_NAMED_SERVER(route_target))
-        {
-            char* status = nullptr;
+        // If no target so far, pick any available. TODO: should this be error instead?
+        // Erroring here is more appropriate when namedserverfilter allows setting multiple target types
+        // e.g. target=server1,->slave
 
-            for (const auto& a : m_backends)
-            {
-                if (strcmp(a->server()->name, named_server) == 0)
-                {
-                    status = server_status(a->server());
-                    break;
-                }
-            }
-
-            MXS_INFO("Was supposed to route to named server %s but couldn't find the server in a "
-                     "suitable state. Server state: %s", named_server,
-                     status ? status : "Could not find server");
-            MXS_FREE(status);
-        }
-        else if (TARGET_IS_RLAG_MAX(route_target))
-        {
-            MXS_INFO("Was supposed to route to server with "
-                     "replication lag at most %d but couldn't "
-                     "find such a slave.",
-                     rlag_max);
-        }
+        backend_type_t btype = route_target & TARGET_SLAVE ? BE_SLAVE : BE_MASTER;
+        target = get_target_backend(btype, NULL, config_max_rlag);
     }
-
     return target;
 }
 
