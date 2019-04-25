@@ -424,6 +424,44 @@ std::pair<int, int> get_slave_counts(mxs::PRWBackends& backends, mxs::RWBackend*
 void close_all_connections(mxs::PRWBackends& backends);
 
 /**
+ * Extract the SQL state from an error packet.
+ *
+ * @param pBuffer  Pointer to an error packet.
+ * @param ppState  On return will point to the state in @c pBuffer.
+ * @param pnState  On return the pointed to value will be 6.
+ */
+inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint16_t* pnState)
+{
+    mxb_assert(MYSQL_IS_ERROR_PACKET(pBuffer));
+
+    // The payload starts with a one byte command followed by a two byte error code,
+    // followed by a 1 byte sql state marker and 5 bytes of sql state. In this context
+    // the marker and the state itself are combined.
+    *ppState = pBuffer + MYSQL_HEADER_LEN + 1 + 2;
+    *pnState = 6;
+}
+
+/**
+ * Extract the message from an error packet.
+ *
+ * @param pBuffer    Pointer to an error packet.
+ * @param ppMessage  On return will point to the start of the message in @c pBuffer.
+ * @param pnMessage  On return the pointed to value will be the length of the message.
+ */
+inline void extract_error_message(uint8_t* pBuffer, uint8_t** ppMessage, uint16_t* pnMessage)
+{
+    mxb_assert(MYSQL_IS_ERROR_PACKET(pBuffer));
+
+    int packet_len = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer);
+
+    // The payload starts with a one byte command followed by a two byte error code,
+    // followed by a 1 byte sql state marker and 5 bytes of sql state, followed by
+    // a message until the end of the packet.
+    *ppMessage = pBuffer + MYSQL_HEADER_LEN + 1 + 2 + 1 + 5;
+    *pnMessage = packet_len - MYSQL_HEADER_LEN - 1 - 2 - 1 - 5;
+}
+
+/**
  * Utility function for extracting error messages from buffers
  *
  * @param buffer Buffer containing an error

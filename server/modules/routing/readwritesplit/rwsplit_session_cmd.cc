@@ -28,7 +28,6 @@ using namespace maxscale;
  * Functions for session command handling
  */
 
-
 std::string extract_error(GWBUF* buffer)
 {
     std::string rval;
@@ -36,17 +35,20 @@ std::string extract_error(GWBUF* buffer)
     if (MYSQL_IS_ERROR_PACKET(((uint8_t*)GWBUF_DATA(buffer))))
     {
         size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
-        char replybuf[replylen];
-        gwbuf_copy_data(buffer, 0, sizeof(replybuf), (uint8_t*)replybuf);
-        std::string err;
-        std::string msg;
+        uint8_t replybuf[replylen];
+        gwbuf_copy_data(buffer, 0, sizeof(replybuf), replybuf);
 
-        /**
-         * The payload starts with a one byte command followed by a two byte error code, a six byte state and
-         * a human-readable string that spans the rest of the packet.
-         */
-        err.append(replybuf + MYSQL_HEADER_LEN + 3, 6);
-        msg.append(replybuf + MYSQL_HEADER_LEN + 3 + 6, replylen - MYSQL_HEADER_LEN - 3 - 6);
+        uint8_t* pState;
+        uint16_t nState;
+        extract_error_state(replybuf, &pState, &nState);
+
+        uint8_t* pMessage;
+        uint16_t nMessage;
+        extract_error_message(replybuf, &pMessage, &nMessage);
+
+        std::string err(reinterpret_cast<const char*>(pState), nState);
+        std::string msg(reinterpret_cast<const char*>(pMessage), nMessage);
+
         rval = err + ": " + msg;
     }
 
