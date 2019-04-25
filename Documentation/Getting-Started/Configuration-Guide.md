@@ -950,6 +950,17 @@ configurations volatile (i.e. they are lost when maxscale is restarted), use
 the current runtime state of MaxScale. This makes problem analysis easier if an
 unexpected outage happens.
 
+#### `max_auth_failures`
+
+The maximum number of authentication failures that are tolerated before a host
+is temporarily blocked. The default value is 10 failures. After a host is
+blocked, connections from it are rejected for 60 seconds.
+
+Note that the configured value is not a hard limit. The number of tolerated
+failures is between `max_auth_failures` and `threads * max_auth_failures` where
+`max_auth_failures` is the configured value of this parameter and `threads` is
+the number of configured threads.
+
 ### REST API Configuration
 
 The MaxScale REST API is an HTTP interface that provides JSON format data
