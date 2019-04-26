@@ -4,17 +4,16 @@
 #include <string>
 #include "envv.h"
 
-Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose, bool use_valgrind,
+Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose,
                      std::string network_config)
 {
     strcpy(prefix, pref);
     this->verbose = verbose;
-    this->use_valgrind = use_valgrind;
     valgring_log_num = 0;
     strcpy(test_dir, test_cwd);
     this->network_config = network_config;
     read_env();
-    if (use_valgrind)
+    if (this->use_valgrind)
     {
         for (int i = 0; i < N; i++)
         {
@@ -59,6 +58,13 @@ int Maxscales::read_env()
 
             N_ports[0] = 3;
         }
+    }
+
+    use_valgrind = readenv_bool("use_valgrind", false);
+    use_callgrind = readenv_bool("use_callgrind", false);
+    if (use_callgrind)
+    {
+        use_valgrind = true;
     }
 
     return 0;
@@ -211,10 +217,23 @@ int Maxscales::start_maxscale(int m)
     int res;
     if (use_valgrind)
     {
-        res = ssh_node_f(m, false,
-                         "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
-                         "--log-file=/%s/valgrind%02d.log --trace-children=yes "
-                         "--track-origins=yes /usr/bin/maxscale", maxscale_log_dir[m], valgring_log_num);
+        if (use_callgrind)
+        {
+            res = ssh_node_f(m, false,
+                             "sudo --user=maxscale valgrind -d "
+                             "--log-file=/%s/valgrind%02d.log --trace-children=yes "
+                             " --tool=callgrind --callgrind-out-file=/%s/callgrind%02d.log "
+                             " /usr/bin/maxscale",
+                             maxscale_log_dir[m], valgring_log_num,
+                             maxscale_log_dir[m], valgring_log_num);
+        }
+        else
+        {
+            res = ssh_node_f(m, false,
+                             "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
+                             "--log-file=/%s/valgrind%02d.log --trace-children=yes "
+                             "--track-origins=yes /usr/bin/maxscale", maxscale_log_dir[m], valgring_log_num);
+        }
         valgring_log_num++;
     }
     else

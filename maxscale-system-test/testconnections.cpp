@@ -127,7 +127,6 @@ TestConnections::TestConnections(int argc, char* argv[])
     , no_vm_revert(true)
     , threads(4)
     , use_ipv6(false)
-    , use_valgrind(false)
 {
     std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
@@ -372,7 +371,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         galera = NULL;
     }
 
-    maxscales = new Maxscales("maxscale", test_dir, verbose, use_valgrind, network_config);
+    maxscales = new Maxscales("maxscale", test_dir, verbose, network_config);
 
     bool maxscale_ok = maxscales->check_nodes();
     bool repl_ok = no_repl || repl_future.get();
@@ -502,7 +501,7 @@ TestConnections::~TestConnections()
         // galera->disable_ssl();
     }
 
-    if (use_valgrind)
+    if (maxscales->use_valgrind)
     {
         // stop all Maxscales to get proper Valgrind logs
         for (int i = 0; i < maxscales->N; i++)
@@ -665,7 +664,6 @@ void TestConnections::read_env()
     revert_snapshot_command = readenv("revert_snapshot_command",
                                       "mdbci snapshot revert --path-to-nodes %s --snapshot-name ", mdbci_config_name);
     no_vm_revert = readenv_bool("no_vm_revert", true);
-    use_valgrind = readenv_bool("use_valgrind", false);
 }
 
 void TestConnections::print_env()
@@ -1459,7 +1457,7 @@ int TestConnections::find_connected_slave1(int m)
 
 int TestConnections::check_maxscale_processes(int m, int expected)
 {
-    const char* ps_cmd = use_valgrind ?
+    const char* ps_cmd = maxscales->use_valgrind ?
         "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
         "ps -C maxscale | grep maxscale | wc -l";
 
