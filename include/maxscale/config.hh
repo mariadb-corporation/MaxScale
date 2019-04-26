@@ -477,10 +477,10 @@ struct MXS_CONFIG
     unsigned int pollsleep;                             /**< Wait time in blocking polls */
     int          syslog;                                /**< Log to syslog */
     int          maxlog;                                /**< Log to MaxScale's own logs */
-    unsigned int auth_conn_timeout;                     /**< Connection timeout for the user
+    time_t       auth_conn_timeout;                     /**< Connection timeout for the user
                                                          * authentication */
-    unsigned int auth_read_timeout;                     /**< Read timeout for the user authentication */
-    unsigned int auth_write_timeout;                    /**< Write timeout for the user authentication */
+    time_t       auth_read_timeout;                     /**< Read timeout for the user authentication */
+    time_t       auth_write_timeout;                    /**< Write timeout for the user authentication */
     bool         skip_permission_checks;                /**< Skip service and monitor permission checks */
     int32_t      passive;                               /**< True if MaxScale is in passive mode */
     int64_t      promoted_at;                           /**< Time when this Maxscale instance was

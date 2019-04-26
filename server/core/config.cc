@@ -238,7 +238,7 @@ static pcre2_code* compile_regex_string(const char* regex_string,
                                         uint32_t* output_ovector_size);
 static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUnit);
 static bool get_seconds(const char* zName, const char* zValue, std::chrono::seconds* pSeconds);
-static bool get_seconds(const char* zName, const char* zValue, unsigned int* pSeconds);
+static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds);
 
 
 int         config_get_ifaddr(unsigned char* output);
@@ -2487,15 +2487,8 @@ static int handle_global_item(const char* name, const char* value)
     }
     else if (strcmp(name, CN_QUERY_RETRY_TIMEOUT) == 0)
     {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval > 0)
+        if (!get_seconds(name, value, &gateway.query_retry_timeout))
         {
-            gateway.query_retry_timeout = intval;
-        }
-        else
-        {
-            MXS_ERROR("Invalid timeout value for '%s': %s", CN_QUERY_RETRY_TIMEOUT, value);
             return 0;
         }
     }
@@ -4723,9 +4716,9 @@ static bool create_global_config(const char* filename)
     }
 
     dprintf(file, "[maxscale]\n");
-    dprintf(file, "%s=%u\n", CN_AUTH_CONNECT_TIMEOUT, gateway.auth_conn_timeout);
-    dprintf(file, "%s=%u\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout);
-    dprintf(file, "%s=%u\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
+    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, gateway.auth_conn_timeout);
+    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout);
+    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
     dprintf(file, "%s=%u\n", CN_PASSIVE, gateway.passive);
 
@@ -5128,7 +5121,7 @@ static bool get_seconds(const char* zName, const char* zValue, std::chrono::seco
     return valid;
 }
 
-static bool get_seconds(const char* zName, const char* zValue, unsigned int* pSeconds)
+static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds)
 {
     std::chrono::seconds seconds;
 

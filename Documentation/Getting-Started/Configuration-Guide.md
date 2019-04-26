@@ -401,6 +401,12 @@ seconds.
 An interrupted query is retried for either the configured amount of attempts or
 until the configured timeout is reached.
 
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
+
 #### `passive`
 
 Controls whether MaxScale is a passive node in a cluster of multiple MaxScale

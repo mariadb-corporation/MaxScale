@@ -838,14 +838,14 @@ bool runtime_alter_maxscale(const char* name, const char* value)
 
     if (key == CN_AUTH_CONNECT_TIMEOUT)
     {
-        int intval = get_positive_int(value);
-        if (intval)
+        time_t timeout = get_positive_int(value);
+        if (timeout)
         {
-            MXS_NOTICE("Updated '%s' from %d to %d",
+            MXS_NOTICE("Updated '%s' from %ld to %ld",
                        CN_AUTH_CONNECT_TIMEOUT,
                        cnf.auth_conn_timeout,
-                       intval);
-            cnf.auth_conn_timeout = intval;
+                       timeout);
+            cnf.auth_conn_timeout = timeout;
             rval = true;
         }
         else
@@ -855,14 +855,14 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else if (key == CN_AUTH_READ_TIMEOUT)
     {
-        int intval = get_positive_int(value);
-        if (intval)
+        time_t timeout = get_positive_int(value);
+        if (timeout)
         {
-            MXS_NOTICE("Updated '%s' from %d to %d",
+            MXS_NOTICE("Updated '%s' from %ld to %ld",
                        CN_AUTH_READ_TIMEOUT,
                        cnf.auth_read_timeout,
-                       intval);
-            cnf.auth_read_timeout = intval;
+                       timeout);
+            cnf.auth_read_timeout = timeout;
             rval = true;
         }
         else
@@ -872,14 +872,14 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else if (key == CN_AUTH_WRITE_TIMEOUT)
     {
-        int intval = get_positive_int(value);
-        if (intval)
+        time_t timeout = get_positive_int(value);
+        if (timeout)
         {
-            MXS_NOTICE("Updated '%s' from %d to %d",
+            MXS_NOTICE("Updated '%s' from %ld to %ld",
                        CN_AUTH_WRITE_TIMEOUT,
                        cnf.auth_write_timeout,
-                       intval);
-            cnf.auth_write_timeout = intval;
+                       timeout);
+            cnf.auth_write_timeout = timeout;
             rval = true;
         }
         else
