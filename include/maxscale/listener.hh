@@ -271,9 +271,18 @@ private:
     /**
      * Accept a single client connection
      *
+     * @param fd The opened file descriptor to which the client is connected to
+     * @param addr The network information
+     * @param host The host where the client is connecting from
+     *
      * @return The new DCB or nullptr on error
      */
-    DCB* accept_one_dcb();
+    DCB* accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host);
+
+    /**
+     * Accept all available client connections
+     */
+    void accept_connections();
 
     /**
      * The file descriptor for accepting new connections
