@@ -24,6 +24,8 @@
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
+// For setting server status through monitor
+#include "../../../../core/internal/monitormanager.hh"
 
 /*
  * MySQL Protocol module for handling the protocol between the gateway
@@ -340,10 +342,16 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
               errcode,
               bufstr);
 
-    /** If the error is ER_HOST_IS_BLOCKED put the server into maintenace mode.
+    /** If the error is ER_HOST_IS_BLOCKED put the server into maintenance mode.
      * This will prevent repeated authentication failures. */
     if (errcode == ER_HOST_IS_BLOCKED)
     {
+        auto main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+        auto target_server = dcb->server;
+        main_worker->execute([target_server]() {
+            MonitorManager::set_server_status(target_server, SERVER_MAINT);
+        }, mxb::Worker::EXECUTE_AUTO);
+
         MXS_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
                   "this server out of maintenance mode. To avoid this problem in the future, set "
@@ -351,8 +359,6 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
                   dcb->server->name(),
                   dcb->server->address,
                   dcb->server->port);
-
-        mxs::server_set_status(dcb->server, SERVER_MAINT);
     }
     else if (errcode == ER_ACCESS_DENIED_ERROR
              || errcode == ER_DBACCESS_DENIED_ERROR

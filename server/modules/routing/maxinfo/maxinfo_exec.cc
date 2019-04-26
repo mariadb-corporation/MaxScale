@@ -325,7 +325,7 @@ void exec_set_server(DCB* dcb, MAXINFO_TREE* tree)
         if (status != 0)
         {
             std::string errmsgs;
-            if (mxs::server_set_status(server, status, &errmsgs))
+            if (MonitorManager::set_server_status(server, status, &errmsgs))
             {
                 maxinfo_send_ok(dcb);
             }
@@ -412,7 +412,7 @@ void exec_clear_server(DCB* dcb, MAXINFO_TREE* tree)
         if (status != 0)
         {
             std::string errmsgs;
-            if (mxs::server_clear_status(server, status, &errmsgs))
+            if (MonitorManager::clear_server_status(server, status, &errmsgs))
             {
                 maxinfo_send_ok(dcb);
             }

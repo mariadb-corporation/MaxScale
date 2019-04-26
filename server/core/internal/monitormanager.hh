@@ -140,6 +140,26 @@ public:
     static bool create_monitor_config(const mxs::Monitor* monitor, const char* filename);
 
     /**
+     * Set a status bit in the server. If the server is monitored, only some bits can be modified,
+     * and the modification goes through the monitor.
+     *
+     * @param bit           The bit to set for the server
+     * @param errmsg_out    Error output
+     * @return              True on success
+     */
+    static bool set_server_status(SERVER* srv, int bit, std::string* errmsg_out = NULL);
+
+    /**
+     * Clear a status bit in the server. If the server is monitored, only some bits can be modified,
+     * and the modification goes through the monitor.
+     *
+     * @param bit           The bit to clear for the server
+     * @param errmsg_out    Error output
+     * @return              True on success
+     */
+    static bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
+
+    /**
      * Waits until all running monitors have advanced one tick.
      */
     static void debug_wait_one_tick();

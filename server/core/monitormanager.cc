@@ -474,3 +474,39 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const 
 
     return rel;
 }
+
+bool MonitorManager::set_server_status(SERVER* srv, int bit, string* errmsg_out)
+{
+    mxb_assert(Monitor::is_admin_thread());
+    bool written = false;
+    Monitor* mon = MonitorManager::server_is_monitored(srv);
+    if (mon)
+    {
+        written = mon->set_server_status(srv, bit, errmsg_out);
+    }
+    else
+    {
+        /* Set the bit directly */
+        srv->set_status(bit);
+        written = true;
+    }
+    return written;
+}
+
+bool MonitorManager::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
+{
+    mxb_assert(Monitor::is_admin_thread());
+    bool written = false;
+    Monitor* mon = MonitorManager::server_is_monitored(srv);
+    if (mon)
+    {
+        written = mon->clear_server_status(srv, bit, errmsg_out);
+    }
+    else
+    {
+        /* Clear bit directly */
+        srv->clear_status(bit);
+        written = true;
+    }
+    return written;
+}

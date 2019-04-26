@@ -794,7 +794,7 @@ HttpResponse cb_set_server(const HttpRequest& request)
     if (opt)
     {
         string errmsg;
-        if (mxs::server_set_status(server, opt, &errmsg))
+        if (MonitorManager::set_server_status(server, opt, &errmsg))
         {
             if (status_is_in_maint(opt) && request.get_option(CN_FORCE) == CN_YES)
             {
@@ -821,7 +821,7 @@ HttpResponse cb_clear_server(const HttpRequest& request)
     if (opt)
     {
         string errmsg;
-        if (mxs::server_clear_status(server, opt, &errmsg))
+        if (MonitorManager::clear_server_status(server, opt, &errmsg))
         {
             return HttpResponse(MHD_HTTP_NO_CONTENT);
         }

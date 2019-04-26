@@ -528,26 +528,3 @@ private:
     maxbase::EMAverage m_response_time;         /**< Response time calculations for this server */
     std::mutex         m_average_write_mutex;   /**< Protects response time from concurrent writing */
 };
-
-namespace maxscale
-{
-
-/**
- * Set a status bit in the server. This should not be called from within a monitor. If the server is
- * monitored, only set the pending bit.
- *
- * @param bit           The bit to set for the server
- * @param errmsg_out    Error output
- */
-bool server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
-
-/**
- * Clear a status bit in the server under a lock. This ensures synchronization
- * with the server monitor thread. Calling this inside the monitor will likely
- * cause a deadlock. If the server is monitored, only clear the pending bit.
- *
- * @param bit           The bit to clear for the server
- * @param errmsg_out    Error output
- */
-bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
-}

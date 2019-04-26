@@ -922,46 +922,6 @@ bool Server::serialize() const
     return rval;
 }
 
-bool mxs::server_set_status(SERVER* srv, int bit, string* errmsg_out)
-{
-    bool written = false;
-    /* First check if the server is monitored. This isn't done under a lock
-     * but the race condition cannot cause significant harm. Monitors are never
-     * freed so the pointer stays valid. */
-    Monitor* mon = MonitorManager::server_is_monitored(srv);
-    if (mon)
-    {
-        written = mon->set_server_status(srv, bit, errmsg_out);
-    }
-    else
-    {
-        /* Set the bit directly */
-        srv->set_status(bit);
-        written = true;
-    }
-
-    return written;
-}
-
-bool mxs::server_clear_status(SERVER* srv, int bit, string* errmsg_out)
-{
-    // See server_set_status().
-    bool written = false;
-    Monitor* mon = MonitorManager::server_is_monitored(srv);
-    if (mon)
-    {
-        written = mon->clear_server_status(srv, bit, errmsg_out);
-    }
-    else
-    {
-        /* Clear bit directly */
-        srv->clear_status(bit);
-        written = true;
-    }
-
-    return written;
-}
-
 bool SERVER::is_mxs_service()
 {
     bool rval = false;
