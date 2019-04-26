@@ -22,6 +22,7 @@
 #include "internal/filter.hh"
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
+#include "internal/monitormanager.hh"
 #include "internal/server.hh"
 
 /** Size of the error buffer */

@@ -87,17 +87,6 @@ const char CN_SCRIPT_TIMEOUT[] = "script_timeout";
 namespace
 {
 
-/**
-    * Is the current thread either the main thread or the runtime admin thread?
-    *
-    * @return True if running in an admin thread
-    */
-bool is_admin_thread()
-{
-    mxb::Worker* current = mxb::Worker::get_current();
-    return (current == nullptr || current == mxs_rworker_get(MXS_RWORKER_MAIN));
-}
-
 class ThisUnit
 {
 public:
@@ -112,7 +101,7 @@ public:
      */
     bool claim_server(const string& server, const string& new_owner, string* existing_owner)
     {
-        mxb_assert(is_admin_thread());
+        mxb_assert(Monitor::is_admin_thread());
         bool claim_success = false;
         auto iter = m_server_owners.find(server);
         if (iter != m_server_owners.end())
@@ -135,7 +124,7 @@ public:
      */
     void release_server(const string& server)
     {
-        mxb_assert(is_admin_thread());
+        mxb_assert(Monitor::is_admin_thread());
         auto iter = m_server_owners.find(server);
         mxb_assert(iter != m_server_owners.end());
         m_server_owners.erase(iter);
@@ -144,7 +133,7 @@ public:
 
     string claimed_by(const string& server)
     {
-        mxb_assert(is_admin_thread());
+        mxb_assert(Monitor::is_admin_thread());
         string rval;
         auto iter = m_server_owners.find(server);
         if (iter != m_server_owners.end())
@@ -434,6 +423,36 @@ json_t* monitor_parameters_to_json(const Monitor* monitor)
                                   rval);
     return rval;
 }
+
+bool check_disk_space_exhausted(MonitorServer* pMs,
+                                const std::string& path,
+                                const maxscale::disk::SizesAndName& san,
+                                int32_t max_percentage)
+{
+    bool disk_space_exhausted = false;
+
+    int32_t used_percentage = ((san.total() - san.available()) / (double)san.total()) * 100;
+
+    if (used_percentage >= max_percentage)
+    {
+        MXS_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
+                  "mounted on the path %s has been used, and the limit it %d%%.",
+                  pMs->server->name(),
+                  pMs->server->address,
+                  used_percentage,
+                  path.c_str(),
+                  max_percentage);
+        disk_space_exhausted = true;
+    }
+
+    return disk_space_exhausted;
+}
+
+const char ERR_CANNOT_MODIFY[] =
+    "The server is monitored, so only the maintenance status can be "
+    "set/cleared manually. Status was not modified.";
+const char WRN_REQUEST_OVERWRITTEN[] =
+    "Previous maintenance request was not yet read by the monitor and was overwritten.";
 
 }
 
@@ -1277,6 +1296,12 @@ string Monitor::get_server_monitor(const SERVER* server)
     return this_unit.claimed_by(server->name());
 }
 
+bool Monitor::is_admin_thread()
+{
+    mxb::Worker* current = mxb::Worker::get_current();
+    return (current == nullptr || current == mxs_rworker_get(MXS_RWORKER_MAIN));
+}
+
 /**
  * Log an error about the failure to connect to a backend server and why it happened.
  *
@@ -1719,16 +1744,6 @@ bool Monitor::set_disk_space_threshold(const string& dst_setting)
     return rv;
 }
 
-namespace
-{
-
-const char ERR_CANNOT_MODIFY[] =
-    "The server is monitored, so only the maintenance status can be "
-    "set/cleared manually. Status was not modified.";
-const char WRN_REQUEST_OVERWRITTEN[] =
-    "Previous maintenance request was not yet read by the monitor and was overwritten.";
-}
-
 bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
     MonitorServer* msrv = get_monitored_server(srv);
@@ -1860,6 +1875,15 @@ void Monitor::populate_services()
     }
 }
 
+void Monitor::deactivate()
+{
+    if (state() == MONITOR_STATE_RUNNING)
+    {
+        stop();
+    }
+    remove_all_servers();
+}
+
 bool Monitor::check_disk_space_this_tick()
 {
     bool should_update_disk_space = false;
@@ -1987,34 +2011,6 @@ int64_t MonitorWorker::get_time_ms()
 bool MonitorServer::can_update_disk_space_status() const
 {
     return ok_to_check_disk_space && (!monitor_limits.empty() || server->have_disk_space_limits());
-}
-
-namespace
-{
-
-bool check_disk_space_exhausted(MonitorServer* pMs,
-                                const std::string& path,
-                                const maxscale::disk::SizesAndName& san,
-                                int32_t max_percentage)
-{
-    bool disk_space_exhausted = false;
-
-    int32_t used_percentage = ((san.total() - san.available()) / (double)san.total()) * 100;
-
-    if (used_percentage >= max_percentage)
-    {
-        MXS_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
-                  "mounted on the path %s has been used, and the limit it %d%%.",
-                  pMs->server->name(),
-                  pMs->server->address,
-                  used_percentage,
-                  path.c_str(),
-                  max_percentage);
-        disk_space_exhausted = true;
-    }
-
-    return disk_space_exhausted;
-}
 }
 
 void MonitorServer::update_disk_space_status()
@@ -2327,7 +2323,6 @@ bool MonitorWorker::immediate_tick_required() const
 {
     return false;
 }
-}
 
 MonitorServer::MonitorServer(SERVER* server, const SERVER::DiskSpaceLimits& monitor_limits)
     : server(server)
@@ -2341,4 +2336,6 @@ MonitorServer::~MonitorServer()
     {
         mysql_close(con);
     }
+}
+
 }

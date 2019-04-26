@@ -15,10 +15,13 @@
 
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.h>
+#include <maxscale/resultset.hh>
 
 #include "internal/config.hh"
 #include "internal/monitor.hh"
+#include "internal/monitormanager.hh"
 #include "internal/modules.hh"
+#include "internal/externcmd.hh"
 
 using maxscale::Monitor;
 using maxscale::MonitorServer;
@@ -88,6 +91,7 @@ ThisUnit this_unit;
 Monitor* MonitorManager::create_monitor(const string& name, const string& module,
                                         MXS_CONFIG_PARAMETER* params)
 {
+    mxb_assert(Monitor::is_admin_thread());
     MXS_MONITOR_API* api = (MXS_MONITOR_API*)load_module(module.c_str(), MODULE_MONITOR);
     if (!api)
     {
@@ -117,6 +121,7 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
 
 void MonitorManager::debug_wait_one_tick()
 {
+    mxb_assert(Monitor::is_admin_thread());
     using namespace std::chrono;
     std::map<Monitor*, uint64_t> ticks;
 
@@ -148,6 +153,8 @@ void MonitorManager::debug_wait_one_tick()
 
 void MonitorManager::destroy_all_monitors()
 {
+    mxb_assert(Monitor::is_admin_thread());
+
     auto monitors = this_unit.clear();
     for (auto monitor : monitors)
     {
@@ -158,9 +165,7 @@ void MonitorManager::destroy_all_monitors()
 
 void MonitorManager::start_monitor(Monitor* monitor)
 {
-    mxb_assert(monitor);
-
-    Guard guard(monitor->m_lock);
+    mxb_assert(Monitor::is_admin_thread());
 
     // Only start the monitor if it's stopped.
     if (monitor->state() == MONITOR_STATE_STOPPED)
@@ -174,6 +179,7 @@ void MonitorManager::start_monitor(Monitor* monitor)
 
 void MonitorManager::populate_services()
 {
+    mxb_assert(Monitor::is_admin_thread());
     this_unit.foreach_monitor([](Monitor* pMonitor) -> bool {
         pMonitor->populate_services();
         return true;
@@ -185,6 +191,7 @@ void MonitorManager::populate_services()
  */
 void MonitorManager::start_all_monitors()
 {
+    mxb_assert(Monitor::is_admin_thread());
     this_unit.foreach_monitor([](Monitor* monitor) {
         MonitorManager::start_monitor(monitor);
         return true;
@@ -193,9 +200,7 @@ void MonitorManager::start_all_monitors()
 
 void MonitorManager::stop_monitor(Monitor* monitor)
 {
-    mxb_assert(monitor);
-
-    Guard guard(monitor->m_lock);
+    mxb_assert(Monitor::is_admin_thread());
 
     /** Only stop the monitor if it is running */
     if (monitor->state() == MONITOR_STATE_RUNNING)
@@ -206,11 +211,10 @@ void MonitorManager::stop_monitor(Monitor* monitor)
 
 void MonitorManager::deactivate_monitor(Monitor* monitor)
 {
+    mxb_assert(Monitor::is_admin_thread());
     // This cannot be done with configure(), since other, module-specific config settings may depend on the
-    // "servers"-setting of the base monitor. Directly manipulate monitor field for now, later use a dtor
-    // to cleanly "deactivate" inherited objects.
-    stop_monitor(monitor);
-    monitor->remove_all_servers();
+    // "servers"-setting of the base monitor.
+    monitor->deactivate();
     this_unit.move_to_deactivated_list(monitor);
 }
 
@@ -219,6 +223,7 @@ void MonitorManager::deactivate_monitor(Monitor* monitor)
  */
 void MonitorManager::stop_all_monitors()
 {
+    mxb_assert(Monitor::is_admin_thread());
     this_unit.foreach_monitor([](Monitor* monitor) {
         MonitorManager::stop_monitor(monitor);
         return true;
@@ -232,6 +237,7 @@ void MonitorManager::stop_all_monitors()
  */
 void MonitorManager::show_all_monitors(DCB* dcb)
 {
+    mxb_assert(Monitor::is_admin_thread());
     this_unit.foreach_monitor([dcb](Monitor* monitor) {
         monitor_show(dcb, monitor);
         return true;
@@ -245,6 +251,7 @@ void MonitorManager::show_all_monitors(DCB* dcb)
  */
 void MonitorManager::monitor_show(DCB* dcb, Monitor* monitor)
 {
+    mxb_assert(Monitor::is_admin_thread());
     monitor->show(dcb);
 }
 
@@ -255,6 +262,7 @@ void MonitorManager::monitor_show(DCB* dcb, Monitor* monitor)
  */
 void MonitorManager::monitor_list(DCB* dcb)
 {
+    mxb_assert(Monitor::is_admin_thread());
     dcb_printf(dcb, "---------------------+---------------------\n");
     dcb_printf(dcb, "%-20s | Status\n", "Monitor");
     dcb_printf(dcb, "---------------------+---------------------\n");
@@ -294,6 +302,7 @@ Monitor* MonitorManager::find_monitor(const char* name)
  */
 std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
 {
+    mxb_assert(Monitor::is_admin_thread());
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
     this_unit.foreach_monitor([&set](Monitor* ptr) {
         const char* state = ptr->state() == MONITOR_STATE_RUNNING ? "Running" : "Stopped";
@@ -317,6 +326,7 @@ Monitor* MonitorManager::server_is_monitored(const SERVER* server)
 
 bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* filename)
 {
+    mxb_assert(Monitor::is_admin_thread());
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (file == -1)
     {
@@ -350,6 +360,7 @@ bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* f
 
 bool MonitorManager::monitor_serialize(const Monitor* monitor)
 {
+    mxb_assert(Monitor::is_admin_thread());
     bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename,
@@ -393,6 +404,7 @@ bool MonitorManager::monitor_serialize(const Monitor* monitor)
 // static
 bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG_PARAMETER& parameters)
 {
+    mxb_assert(Monitor::is_admin_thread());
     // Backup monitor parameters in case configure fails.
     auto orig = monitor->parameters;
     monitor->parameters.clear();

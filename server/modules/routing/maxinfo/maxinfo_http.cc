@@ -21,6 +21,7 @@
 
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/monitor.hh"
+#include "../../../core/internal/monitormanager.hh"
 #include "../../../core/internal/server.hh"
 #include "../../../core/internal/service.hh"
 #include "../../../core/internal/modules.hh"

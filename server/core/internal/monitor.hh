@@ -17,9 +17,6 @@
  */
 
 #include <maxscale/monitor.hh>
-#include <maxscale/resultset.hh>
-#include "externcmd.hh"
-#include "monitormanager.hh"
 
 #define MON_ARG_MAX 8192
 
@@ -48,29 +45,4 @@ static const MXS_ENUM_VALUE mxs_monitor_event_enum_values[] =
     {"new_synced", NEW_SYNCED_EVENT},
     {"new_donor", NEW_DONOR_EVENT},
     {NULL}
-};
-
-// RAII helper class for temprarily stopping monitors
-class MonitorStop
-{
-public:
-    MonitorStop(mxs::Monitor* monitor)
-        : m_monitor(monitor->state() == MONITOR_STATE_RUNNING ? monitor : nullptr)
-    {
-        if (m_monitor)
-        {
-            MonitorManager::stop_monitor(m_monitor);
-        }
-    }
-
-    ~MonitorStop()
-    {
-        if (m_monitor)
-        {
-            MonitorManager::start_monitor(m_monitor);
-        }
-    }
-
-private:
-    mxs::Monitor* m_monitor;
 };

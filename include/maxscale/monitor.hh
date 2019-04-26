@@ -37,7 +37,6 @@ class Monitor;
 struct DCB;
 struct json_t;
 struct EXTERNCMD;
-class MonitorManager;
 
 /**
  * @verbatim
@@ -302,6 +301,13 @@ public:
 
     static std::string get_server_monitor(const SERVER* server);
 
+    /**
+     * Is the current thread either the main thread or the runtime admin thread?
+     *
+     * @return True if running in an admin thread
+     */
+    static bool is_admin_thread();
+
     /*
      * Convert a monitor event (enum) to string.
      *
@@ -324,9 +330,27 @@ public:
     virtual bool configure(const MXS_CONFIG_PARAMETER* params);
 
     /**
+     * Starts the monitor. If the monitor requires polling of the servers, it should create
+     * a separate monitoring thread.
+     *
+     * @return True, if the monitor could be started, false otherwise.
+     */
+    virtual bool start() = 0;
+
+    /**
      * Stops the monitor.
      */
     void stop();
+
+    /**
+     * @brief The monitor should populate associated services.
+     */
+    virtual void populate_services();
+
+    /**
+     * Deactivate the monitor. Stops the monitor and removes all servers.
+     */
+    void deactivate();
 
     /**
      * Write diagnostic information to a DCB.
@@ -531,18 +555,9 @@ protected:
     Settings m_settings;
 
 private:
-    friend class ::MonitorManager;
 
     bool add_server(SERVER* server);
     void remove_all_servers();
-
-    /**
-     * Starts the monitor. If the monitor requires polling of the servers, it should create
-     * a separate monitoring thread.
-     *
-     * @return True, if the monitor could be started, false otherwise.
-     */
-    virtual bool start() = 0;
 
     /**
      * Launch a script
@@ -563,11 +578,6 @@ private:
      * @return Return value of the executed script or -1 on error.
      */
     int launch_command(MonitorServer* ptr, EXTERNCMD* cmd);
-
-    /**
-     * @brief The monitor should populate associated services.
-     */
-    virtual void populate_services();
 
     FILE* open_data_file(Monitor* monitor, char* path);
     int get_data_file_path(char* path) const;

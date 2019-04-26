@@ -14,6 +14,8 @@
 
 #include <maxscale/monitor.hh>
 
+class ResultSet;
+
 /**
  * This class contains internal monitor management functions that should not be exposed in the public
  * monitor class. It's a friend of MXS_MONITOR.
@@ -65,7 +67,10 @@ public:
     static mxs::Monitor* find_monitor(const char* name);
 
     /**
-     * @brief Populate services with the servers of the monitors.
+     * Populate services with the servers of the monitors. Should be called at the end of configuration file
+     * processing to ensure that services are notified of the servers a monitor has. During runtime, the
+     * normal add/remove server functions do the notifying. TODO: If a service is created at runtime, is
+     * it properly populated?
      */
     static void populate_services();
 
@@ -138,4 +143,29 @@ public:
      * Waits until all running monitors have advanced one tick.
      */
     static void debug_wait_one_tick();
+};
+
+// RAII helper class for temprarily stopping monitors
+class MonitorStop
+{
+public:
+    MonitorStop(mxs::Monitor* monitor)
+            : m_monitor(monitor->state() == MONITOR_STATE_RUNNING ? monitor : nullptr)
+    {
+        if (m_monitor)
+        {
+            MonitorManager::stop_monitor(m_monitor);
+        }
+    }
+
+    ~MonitorStop()
+    {
+        if (m_monitor)
+        {
+            MonitorManager::start_monitor(m_monitor);
+        }
+    }
+
+private:
+    mxs::Monitor* m_monitor;
 };
