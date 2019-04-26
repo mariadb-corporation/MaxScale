@@ -2609,19 +2609,26 @@ static int handle_global_item(const char* name, const char* value)
     else if (strcmp(name, CN_USERS_REFRESH_TIME) == 0)
     {
         char* endptr;
-        long users_refresh_time = strtol(value, &endptr, 0);
-        if (*endptr == '\0')
+        time_t users_refresh_time = strtol(value, &endptr, 0);
+
+        if (*endptr == '\0' && users_refresh_time < 0)
         {
-            if (users_refresh_time < 0)
+            MXS_NOTICE("Value of '%s' is less than 0, users will "
+                       "not be automatically refreshed.",
+                       CN_USERS_REFRESH_TIME);
+            // Strictly speaking they will be refreshed once every 68 years,
+            // but I just don't beleave the uptime will be that long.
+            users_refresh_time = INT32_MAX;
+        }
+        else
+        {
+            // Have to "parse" the value anew in case a suffix has been used.
+            if (!get_seconds(name, value, &users_refresh_time))
             {
-                MXS_NOTICE("Value of '%s' is less than 0, users will "
-                           "not be automatically refreshed.",
-                           CN_USERS_REFRESH_TIME);
-                // Strictly speaking they will be refreshed once every 68 years,
-                // but I just don't beleave the uptime will be that long.
-                users_refresh_time = INT32_MAX;
+                return 0;
             }
-            else if (users_refresh_time < USERS_REFRESH_TIME_MIN)
+
+            if (users_refresh_time < USERS_REFRESH_TIME_MIN)
             {
                 MXS_WARNING("%s is less than the allowed minimum value of %d for the "
                             "configuration option '%s', using the minimum value.",
@@ -2637,14 +2644,9 @@ static int handle_global_item(const char* name, const char* value)
                 // we later do arithmetic.
                 users_refresh_time = INT32_MAX;
             }
+        }
 
-            gateway.users_refresh_time = users_refresh_time;
-        }
-        else
-        {
-            MXS_ERROR("%s is an invalid value for '%s'.", value, CN_USERS_REFRESH_TIME);
-            return 0;
-        }
+        gateway.users_refresh_time = users_refresh_time;
     }
     else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
     {

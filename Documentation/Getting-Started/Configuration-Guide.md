@@ -871,8 +871,14 @@ that can be changed. The minimum allowed value is 10 seconds. A negative
 value disables the refreshing entirelly. Note that using `maxadmin` it is
 possible to explicitly cause the users of a service to be reloaded.
 ```
-users_refresh_time=120
+users_refresh_time=120s
 ```
+
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 #### `retain_last_statements`
 
