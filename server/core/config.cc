@@ -237,6 +237,8 @@ static pcre2_code* compile_regex_string(const char* regex_string,
                                         uint32_t options,
                                         uint32_t* output_ovector_size);
 static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUnit);
+static bool get_seconds(const char* zName, const char* zValue, std::chrono::seconds* pSeconds);
+static bool get_seconds(const char* zName, const char* zValue, unsigned int* pSeconds);
 
 
 int         config_get_ifaddr(unsigned char* output);
@@ -2392,43 +2394,22 @@ static int handle_global_item(const char* name, const char* value)
     }
     else if (strcmp(name, CN_AUTH_CONNECT_TIMEOUT) == 0)
     {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval > 0)
+        if (!get_seconds(name, value, &gateway.auth_conn_timeout))
         {
-            gateway.auth_conn_timeout = intval;
-        }
-        else
-        {
-            MXS_ERROR("Invalid timeout value for 'auth_connect_timeout': %s", value);
             return 0;
         }
     }
     else if (strcmp(name, CN_AUTH_READ_TIMEOUT) == 0)
     {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval > 0)
+        if (!get_seconds(name, value, &gateway.auth_read_timeout))
         {
-            gateway.auth_read_timeout = intval;
-        }
-        else
-        {
-            MXS_ERROR("Invalid timeout value for 'auth_read_timeout': %s", value);
             return 0;
         }
     }
     else if (strcmp(name, CN_AUTH_WRITE_TIMEOUT) == 0)
     {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval > 0)
+        if (!get_seconds(name, value, &gateway.auth_write_timeout))
         {
-            gateway.auth_write_timeout = intval;
-        }
-        else
-        {
-            MXS_ERROR("Invalid timeout value for 'auth_write_timeout': %s", value);
             return 0;
         }
     }
@@ -5112,6 +5093,53 @@ static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUn
     // When the validity is checked, it does not matter how the value
     // should be interpreted, so any mxs::config::DurationInterpretation is fine.
     return get_suffixed_duration(zValue, mxs::config::INTERPRET_AS_SECONDS, nullptr, pUnit);
+}
+
+static bool get_seconds(const char* zName, const char* zValue, std::chrono::seconds* pSeconds)
+{
+    bool valid = false;
+
+    mxs::config::DurationUnit unit;
+    std::chrono::seconds seconds;
+    if (get_suffixed_duration(zValue, &seconds, &unit))
+    {
+        switch (unit)
+        {
+        case mxs::config::DURATION_IN_MILLISECONDS:
+            MXS_ERROR("Currently the granularity of `%s` is seconds. The value cannot "
+                      "be specified in milliseconds.", zName);
+            valid = false;
+            break;
+
+        case mxs::config::DURATION_IN_DEFAULT:
+            MXS_WARNING("Specifying durations without a suffix denoting the unit "
+                        "has been deprecated: %s=%s. Use the suffixes 'h' (hour), "
+                        "'m' (minute) 's' (second) or 'ms' (milliseconds).", zName, zValue);
+        default:
+            *pSeconds = seconds;
+            valid = true;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Invalid timeout value for '%s': %s", zName, zValue);
+    }
+
+    return valid;
+}
+
+static bool get_seconds(const char* zName, const char* zValue, unsigned int* pSeconds)
+{
+    std::chrono::seconds seconds;
+
+    bool valid = get_seconds(zName, zValue, &seconds);
+
+    if (valid)
+    {
+        *pSeconds = seconds.count();
+    }
+
+    return valid;
 }
 
 bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* pDisk_space_threshold,

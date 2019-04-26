@@ -336,8 +336,14 @@ backend server before aborting the authentication process. The default is 3
 seconds.
 
 ```
-auth_connect_timeout=10
+auth_connect_timeout=10s
 ```
+
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 #### `auth_read_timeout`
 
@@ -350,8 +356,14 @@ connection to the backend servers is slow, it is a good idea to increase this
 value. The default is 1 second.
 
 ```
-auth_read_timeout=10
+auth_read_timeout=10s
 ```
+
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 #### `auth_write_timeout`
 
@@ -360,8 +372,14 @@ when user authentication data is fetched. Currently MariaDB MaxScale does not
 write or modify the data in the backend server. The default is 2 seconds.
 
 ```
-auth_write_timeout=10
+auth_write_timeout=10s
 ```
+
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 #### `query_retries`
 

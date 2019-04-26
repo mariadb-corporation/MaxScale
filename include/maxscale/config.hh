@@ -673,7 +673,7 @@ inline bool config_is_valid_name(const std::string& name, std::string* reason = 
 bool check_path_parameter(const MXS_MODULE_PARAM* params, const char* value);
 
 /**
- * Converts a string into a duration, intepreting in a case-insensitive manner
+ * Converts a string into milliseconds, intepreting in a case-insensitive manner
  * an 'h'-suffix to indicate hours, an 'm'-suffix to indicate minutes, an
  * 's'-suffix to indicate seconds and an 'ms'-suffix to indicate milliseconds.
  *
@@ -690,3 +690,56 @@ bool get_suffixed_duration(const char* zValue,
                            mxs::config::DurationInterpretation interpretation,
                            std::chrono::milliseconds* pDuration,
                            mxs::config::DurationUnit* pUnit = nullptr);
+
+/**
+ * Converts a string into milliseconds, intepreting in a case-insensitive manner
+ * an 'h'-suffix to indicate hours, an 'm'-suffix to indicate minutes, an
+ * 's'-suffix to indicate seconds and an 'ms'-suffix to indicate milliseconds.
+ *
+ * A value lacking a specific suffix will be interpreted as milliseconds.
+ *
+ * @param zValue     A numerical string, possibly suffixed by 'h', 'm',
+ *                   's' or 'ms'.
+ * @param pDuration  Pointer, if non-NULL, where the result is stored.
+ * @param pUnit      Pointer, if non-NULL, where the detected unit is stored.
+ *
+ * @return True on success, false on invalid input in which case @c pUnit and
+ *         @c pDuration will not be modified.
+ */
+inline bool get_suffixed_duration(const char* zValue,
+                                  std::chrono::milliseconds* pDuration,
+                                  mxs::config::DurationUnit* pUnit = nullptr)
+{
+    return get_suffixed_duration(zValue, mxs::config::INTERPRET_AS_MILLISECONDS, pDuration, pUnit);
+}
+
+/**
+ * Converts a string into seconds, intepreting in a case-insensitive manner
+ * an 'h'-suffix to indicate hours, an 'm'-suffix to indicate minutes, an
+ * 's'-suffix to indicate seconds and an 'ms'-suffix to indicate milliseconds.
+ *
+ * A value lacking a specific suffix will be interpreted as seconds.
+ *
+ * @param zValue     A numerical string, possibly suffixed by 'h', 'm',
+ *                   's' or 'ms'.
+ * @param pDuration  Pointer, if non-NULL, where the result is stored.
+ * @param pUnit      Pointer, if non-NULL, where the detected unit is stored.
+ *
+ * @return True on success, false on invalid input in which case @c pUnit and
+ *         @c pDuration will not be modified.
+ */
+inline bool get_suffixed_duration(const char* zValue,
+                                  std::chrono::seconds* pDuration,
+                                  mxs::config::DurationUnit* pUnit = nullptr)
+{
+    std::chrono::milliseconds ms;
+
+    bool rv = get_suffixed_duration(zValue, mxs::config::INTERPRET_AS_SECONDS, &ms, pUnit);
+
+    if (rv)
+    {
+        *pDuration = std::chrono::duration_cast<std::chrono::seconds>(ms);
+    }
+
+    return rv;
+}
