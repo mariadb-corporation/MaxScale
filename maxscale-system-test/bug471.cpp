@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
     char server_id[256];
     char server_id_d[256];
 
-    char hint_sql[64];
+    char hint_sql[80];
 
     for (int i = 1; i < 25; i++)
     {
