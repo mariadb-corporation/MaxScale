@@ -3068,68 +3068,24 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
 int poll_add_dcb(DCB* dcb)
 {
     dcb_sanity_check(dcb);
-
-    uint32_t events = poll_events;
-
-    /** Choose new state and worker thread ID according to the role of DCB. */
-    dcb_state_t new_state;
-    RoutingWorker* owner = nullptr;
-
-    if (dcb->role == DCB::Role::CLIENT)
-    {
-        if (strcasecmp(dcb->service->router_name(), "cli") == 0
-            || strcasecmp(dcb->service->router_name(), "maxinfo") == 0)
-        {
-            // If the DCB refers to an accepted maxadmin/maxinfo socket, we force it
-            // to the main thread. That's done in order to prevent a deadlock
-            // that may happen if there are multiple concurrent administrative calls,
-            // handled by different worker threads.
-            // See: https://jira.mariadb.org/browse/MXS-1805 and https://jira.mariadb.org/browse/MXS-1833
-            owner = RoutingWorker::get(RoutingWorker::MAIN);
-        }
-        else if (dcb->state == DCB_STATE_NOPOLLING)
-        {
-            // This DCB was removed and added back to epoll. Assign it to the same worker it started with.
-            owner = static_cast<RoutingWorker*>(dcb->owner);
-        }
-        else
-        {
-            // Assign to current worker
-            owner = RoutingWorker::get_current();
-        }
-
-        new_state = DCB_STATE_POLLING;
-        dcb->owner = owner;
-    }
-    else
-    {
-        mxb_assert(dcb->role == DCB::Role::BACKEND);
-        mxb_assert(RoutingWorker::get_current_id() != -1);
-        mxb_assert(RoutingWorker::get_current() == dcb->owner);
-
-        new_state = DCB_STATE_POLLING;
-        owner = static_cast<RoutingWorker*>(dcb->owner);
-    }
+    int rc = 0;
+    RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
+    mxb_assert(owner == RoutingWorker::get_current());
 
     /**
      * Assign the new state before adding the DCB to the worker and store the
      * old state in case we need to revert it.
      */
     dcb_state_t old_state = dcb->state;
-    dcb->state = new_state;
+    dcb->state = DCB_STATE_POLLING;
 
-    int rc = 0;
-
-    if (!dcb_add_to_worker(owner, dcb, events))
+    if (!dcb_add_to_worker(owner, dcb, poll_events))
     {
         /**
          * We failed to add the DCB to a worker. Revert the state so that it
-         * will be treated as a DCB in the correct state. As this will involve
-         * cleanup, ensure that the current thread is the owner, as otherwise
-         * debug asserts will be triggered.
+         * will be treated as a DCB in the correct state.
          */
         dcb->state = old_state;
-        dcb->owner = RoutingWorker::get_current();
         rc = -1;
     }
 

@@ -65,7 +65,11 @@ Listener::Listener(SERVICE* service, const std::string& name, const std::string&
     , m_proto_func(*(MXS_PROTOCOL*)load_module(protocol.c_str(), MODULE_PROTOCOL))
     , m_auth_func(*(MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR))
 {
-    if (m_address[0] == '/')
+    if (strcasecmp(service->router_name(), "cli") == 0 || strcasecmp(service->router_name(), "maxinfo") == 0)
+    {
+        m_type = Type::MAIN_WORKER;
+    }
+    else if (m_address[0] == '/')
     {
         m_type = Type::UNIX_SOCKET;
     }
@@ -1160,7 +1164,10 @@ void Listener::accept_connections()
         }
         else
         {
-            auto worker = mxs::RoutingWorker::pick_worker();
+            auto worker = type() == Type::MAIN_WORKER ?
+                mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN) :
+                mxs::RoutingWorker::pick_worker();
+
             worker->execute([this, conn]() {
                                 if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
                                 {

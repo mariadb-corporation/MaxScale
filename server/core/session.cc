@@ -169,12 +169,11 @@ bool session_start(MXS_SESSION* session)
 
 void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
 {
+    mxb_assert(dcb->owner == session->client_dcb->owner);
     mxb_assert(dcb->role == DCB::Role::BACKEND);
 
     mxb::atomic::add(&session->refcount, 1);
     dcb->session = session;
-    /** Move this DCB under the same thread */
-    dcb->owner = session->client_dcb->owner;
 
     Session* ses = static_cast<Session*>(session);
     ses->link_backend_dcb(dcb);

@@ -412,6 +412,7 @@ bool RoutingWorker::add_shared_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
     ev.events = events;
     ev.data.ptr = pData;
 
+    // The main worker takes ownership of all shared fds
     pData->owner = RoutingWorker::get(RoutingWorker::MAIN);
 
     if (epoll_ctl(this_unit.epoll_listener_fd, EPOLL_CTL_ADD, fd, &ev) != 0)

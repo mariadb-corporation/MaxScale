@@ -45,7 +45,8 @@ public:
     {
         UNIX_SOCKET,    // UNIX domain socket shared between workers
         SHARED_TCP,     // TCP listening socket shared between workers
-        UNIQUE_TCP      // Unique TCP listening socket for each worker
+        UNIQUE_TCP,     // Unique TCP listening socket for each worker
+        MAIN_WORKER,    // Listener that always moves the execution to the main worker
     };
 
     /**
