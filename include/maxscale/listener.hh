@@ -296,6 +296,16 @@ private:
     void accept_connections();
 
     /**
+     * Reject a client connection
+     *
+     * Writes an error message to the fd if the protocol supports it and then closes it.
+     *
+     * @param fd   The file descriptor to close
+     * @param host The host where the connection originated from
+     */
+    void reject_connection(int fd, const char* host);
+
+    /**
      * The file descriptor for accepting new connections
      *
      * @return The worker-local file descriptor

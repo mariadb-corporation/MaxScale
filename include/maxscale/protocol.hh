@@ -167,7 +167,18 @@ struct MXS_PROTOCOL
      *
      * @return JSON representation of the DCB
      */
-    json_t* (*diagnostics_json)(DCB * dcb);
+    json_t* (* diagnostics_json)(DCB* dcb);
+
+    /**
+     * Get rejection message
+     *
+     * The protocol should return an error indicating that access to MaxScale has been temporarily suspended.
+     *
+     * @param host The host that is blocked
+     *
+     * @return A buffer containing the error message
+     */
+    GWBUF* (* reject)(const char* host);
 };
 
 /**
@@ -175,7 +186,7 @@ struct MXS_PROTOCOL
  * the MXS_PROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_PROTOCOL_VERSION {2, 0, 0}
+#define MXS_PROTOCOL_VERSION {2, 1, 0}
 
 /**
  * Specifies capabilities specific for protocol.

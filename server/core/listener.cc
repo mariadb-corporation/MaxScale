@@ -1022,12 +1022,6 @@ static ClientConn accept_one_connection(int fd)
         }
 
         configure_network_socket(conn.fd, conn.addr.ss_family);
-
-        if (rate_limit.is_blocked(conn.host))
-        {
-            close(conn.fd);
-            conn.fd = -1;
-        }
     }
     else if (errno != EAGAIN && errno != EWOULDBLOCK)
     {
@@ -1211,11 +1205,33 @@ uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_
     return MXB_POLL_ACCEPT;
 }
 
+void Listener::reject_connection(int fd, const char* host)
+{
+    if (m_proto_func.reject)
+    {
+        if (GWBUF* buf = m_proto_func.reject(host))
+        {
+            for (auto b = buf; b; b = b->next)
+            {
+                write(fd, GWBUF_DATA(b), GWBUF_LENGTH(b));
+            }
+            gwbuf_free(buf);
+        }
+    }
+
+    close(fd);
+}
+
 void Listener::accept_connections()
 {
     for (ClientConn conn = accept_one_connection(fd()); conn.fd != -1; conn = accept_one_connection(fd()))
     {
-        if (type() == Type::UNIQUE_TCP)
+
+        if (rate_limit.is_blocked(conn.host))
+        {
+            reject_connection(conn.fd, conn.host);
+        }
+        else if (type() == Type::UNIQUE_TCP)
         {
             if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
             {

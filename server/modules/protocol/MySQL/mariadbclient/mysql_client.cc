@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <sstream>
 
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.hh>
@@ -78,8 +79,10 @@ static spec_com_res_t handle_query_kill(DCB* dcb,
                                         spec_com_res_t current,
                                         bool is_complete,
                                         unsigned int packet_len);
-static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user);
-static void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
+static bool   parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user);
+static void   parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
+static GWBUF* gw_reject_connection(const char* host);
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -88,49 +91,45 @@ static void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
  *
  * @return The module object
  */
-
-extern "C"
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-
-    MXS_MODULE* MXS_CREATE_MODULE()
+    static MXS_PROTOCOL MyObject =
     {
-        static MXS_PROTOCOL MyObject =
-        {
-            gw_read_client_event,                   /* Read - EPOLLIN handler        */
-            gw_MySQLWrite_client,                   /* Write - data from gateway     */
-            gw_write_client_event,                  /* WriteReady - EPOLLOUT handler */
-            gw_error_client_event,                  /* Error - EPOLLERR handler      */
-            gw_client_hangup_event,                 /* HangUp - EPOLLHUP handler     */
-            gw_MySQLAccept,                         /* Accept                        */
-            NULL,                                   /* Connect                       */
-            gw_client_close,                        /* Close                         */
-            NULL,                                   /* Authentication                */
-            gw_default_auth,                        /* Default authenticator         */
-            gw_connection_limit,                    /* Send error connection limit   */
-            NULL,
-            NULL
-        };
+        gw_read_client_event,                       /* Read - EPOLLIN handler        */
+        gw_MySQLWrite_client,                       /* Write - data from gateway     */
+        gw_write_client_event,                      /* WriteReady - EPOLLOUT handler */
+        gw_error_client_event,                      /* Error - EPOLLERR handler      */
+        gw_client_hangup_event,                     /* HangUp - EPOLLHUP handler     */
+        gw_MySQLAccept,                             /* Accept                        */
+        NULL,                                       /* Connect                       */
+        gw_client_close,                            /* Close                         */
+        NULL,                                       /* Authentication                */
+        gw_default_auth,                            /* Default authenticator         */
+        gw_connection_limit,                        /* Send error connection limit   */
+        NULL,
+        NULL,
+        gw_reject_connection
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
+        MXS_PROTOCOL_VERSION,
+        "The client to MaxScale MySQL protocol implementation",
+        "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        process_init,
+        process_finish,
+        thread_init,
+        thread_finish,
         {
-            MXS_MODULE_API_PROTOCOL,
-            MXS_MODULE_GA,
-            MXS_PROTOCOL_VERSION,
-            "The client to MaxScale MySQL protocol implementation",
-            "V1.1.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            process_init,
-            process_finish,
-            thread_init,
-            thread_finish,
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
 }
 /*lint +e14 */
 
@@ -2121,4 +2120,11 @@ static void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
     }
     MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->trx_state));
     MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
+}
+
+static GWBUF* gw_reject_connection(const char* host)
+{
+    std::stringstream ss;
+    ss << "Host '" << host << "' is temporarily blocked due to too many authentication failures.";
+    return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", ss.str().c_str());
 }
