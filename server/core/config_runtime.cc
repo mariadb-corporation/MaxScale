@@ -1089,20 +1089,20 @@ bool runtime_alter_maxscale(const char* name, const char* value)
                                  CN_DUMP_LAST_STATEMENTS);
         }
     }
-    else if (key == CN_MAX_AUTH_FAILURES)
+    else if (key == CN_MAX_AUTH_ERRORS_UNTIL_BLOCK)
     {
         if (int intval = get_positive_int(value))
         {
             MXS_NOTICE("Updated '%s' from %d to %d",
-                       CN_MAX_AUTH_FAILURES,
-                       cnf.max_auth_failures,
+                       CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
+                       cnf.max_auth_errors_until_block,
                        intval);
-            cnf.max_auth_failures = intval;
+            cnf.max_auth_errors_until_block = intval;
             rval = true;
         }
         else
         {
-            config_runtime_error("Invalid value for '%s': %s", CN_MAX_AUTH_FAILURES, value);
+            config_runtime_error("Invalid value for '%s': %s", CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, value);
         }
     }
     else if (config_can_modify_at_runtime(key.c_str()))

@@ -127,7 +127,7 @@ const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
 const char CN_LOCAL_ADDRESS[] = "local_address";
 const char CN_LOG_AUTH_WARNINGS[] = "log_auth_warnings";
 const char CN_LOG_THROTTLING[] = "log_throttling";
-const char CN_MAX_AUTH_FAILURES[] = "max_auth_failures";
+const char CN_MAX_AUTH_ERRORS_UNTIL_BLOCK[] = "max_auth_errors_until_block";
 const char CN_MAXSCALE[] = "maxscale";
 const char CN_MAX_CONNECTIONS[] = "max_connections";
 const char CN_MAX_RETRY_INTERVAL[] = "max_retry_interval";
@@ -2754,17 +2754,17 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if (strcmp(name, CN_MAX_AUTH_FAILURES) == 0)
+    else if (strcmp(name, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK) == 0)
     {
         char* endptr;
         int intval = strtol(value, &endptr, 0);
         if (*endptr == '\0' && intval > 0)
         {
-            gateway.max_auth_failures = intval;
+            gateway.max_auth_errors_until_block = intval;
         }
         else
         {
-            MXS_ERROR("Invalid value for '%s': %s", CN_MAX_AUTH_FAILURES, value);
+            MXS_ERROR("Invalid value for '%s': %s", CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, value);
             return 0;
         }
     }
@@ -2989,7 +2989,7 @@ void config_set_global_defaults()
     gateway.passive = false;
     gateway.promoted_at = 0;
     gateway.load_persisted_configs = true;
-    gateway.max_auth_failures = DEFAULT_MAX_AUTH_FAILURES;
+    gateway.max_auth_errors_until_block = DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK;
 
     gateway.peer_hosts[0] = '\0';
     gateway.peer_user[0] = '\0';
@@ -4725,7 +4725,7 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_RETAIN_LAST_STATEMENTS, json_integer(session_get_retain_last_statements()));
     json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
     json_object_set_new(param, CN_LOAD_PERSISTED_CONFIGS, json_boolean(cnf->load_persisted_configs));
-    json_object_set_new(param, CN_MAX_AUTH_FAILURES, json_integer(cnf->max_auth_failures));
+    json_object_set_new(param, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, json_integer(cnf->max_auth_errors_until_block));
 
     json_t* attr = json_object();
     time_t started = maxscale_started();

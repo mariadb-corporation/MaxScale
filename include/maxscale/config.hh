@@ -136,7 +136,7 @@ extern const char CN_LISTENERS[];
 extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
 extern const char CN_LOG_AUTH_WARNINGS[];
 extern const char CN_LOG_THROTTLING[];
-extern const char CN_MAX_AUTH_FAILURES[];
+extern const char CN_MAX_AUTH_ERRORS_UNTIL_BLOCK[];
 extern const char CN_MAX_CONNECTIONS[];
 extern const char CN_MAX_RETRY_INTERVAL[];
 extern const char CN_MAXSCALE[];
@@ -550,7 +550,7 @@ struct MXS_CONFIG
     char             peer_password[MAX_ADMIN_HOST_LEN]; /**< Password for maxscale-to-maxscale traffic */
     mxb_log_target_t log_target;                        /**< Log type */
     bool             load_persisted_configs;            /**< Load persisted configuration files on startup */
-    int              max_auth_failures;                 /**< Host is blocked once this limit is reached */
+    int              max_auth_errors_until_block;       /**< Host is blocked once this limit is reached */
 };
 
 /**

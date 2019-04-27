@@ -82,7 +82,7 @@ public:
                 u.failures = 0;
             }
 
-            rval = u.failures >= config_get_global_options()->max_auth_failures;
+            rval = u.failures >= config_get_global_options()->max_auth_errors_until_block;
         }
 
         return rval;
