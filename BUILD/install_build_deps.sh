@@ -82,22 +82,22 @@ else
     # Attempt to install systemd-devel, doesn't work on CentOS 6
     sudo yum install -y systemd-devel
 
+    # Enable the devtoolkit to get a newer compiler
+
+    # CentOS: install the centos-release-scl repo
+    # RHEL: enable the existing repo (seems to be rhui-REGION-rhel-server-rhscl on AWS)
+    sudo yum -y install centos-release-scl || \
+        sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
+
+    sudo yum -y install devtoolset-7-gcc-c++
+    source /opt/rh/devtoolset-7/enable
+
+    # Enable it by default
+    echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
+
     grep "release 6" /etc/redhat-release
-    if [ $? == 0 ]
+    if [ $? -ne 0 ]
     then
-        # Enable the devtoolkit to get a newer compiler
-
-        # CentOS: install the centos-release-scl repo
-        # RHEL: enable the existing repo (seems to be rhui-REGION-rhel-server-rhscl on AWS)
-        sudo yum -y install centos-release-scl || \
-            sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
-
-        sudo yum -y install devtoolset-7-gcc-c++
-        source /opt/rh/devtoolset-7/enable
-
-        # Enable it by default
-        echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
-    else
         # Installed for REST API and MaxCtrl unit tests
         sudo yum -y install docker epel-release
         sudo yum -y install docker-compose
