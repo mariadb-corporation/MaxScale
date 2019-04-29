@@ -1401,6 +1401,12 @@ default. To enable them, define the timeout in seconds in the service's
 configuration section. A value of zero is interpreted as no timeout, the same
 as if the parameter is not defined.
 
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
+
 **Warning:** If a connection is idle for longer than the configured connection
 timeout, it will be forcefully disconnected and a warning will be logged in the
 MaxScale log file. If you are performing long-running maintenance operations
@@ -1411,7 +1417,7 @@ Example:
 
 ```
 [Test-Service]
-connection_timeout=300
+connection_timeout=300s
 ```
 
 #### `max_connections`

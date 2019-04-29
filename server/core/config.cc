@@ -336,8 +336,9 @@ const MXS_MODULE_PARAM config_service_params[] =
     },
     {
         CN_CONNECTION_TIMEOUT,
-        MXS_MODULE_PARAM_COUNT,
-        "0"
+        MXS_MODULE_PARAM_DURATION,
+        "0",
+        MXS_MODULE_OPT_DURATION_S
     },
     {
         CN_AUTH_ALL_SERVERS,
