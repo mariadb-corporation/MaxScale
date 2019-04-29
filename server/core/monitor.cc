@@ -433,23 +433,27 @@ const char* Monitor::name() const
     return m_name.c_str();
 }
 
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+
 bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    m_settings.interval = params->get_integer(CN_MONITOR_INTERVAL);
-    m_settings.journal_max_age = params->get_integer(CN_JOURNAL_MAX_AGE);
-    m_settings.script_timeout = params->get_integer(CN_SCRIPT_TIMEOUT);
+    m_settings.interval = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
+    m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
+    m_settings.script_timeout = params->get_duration<seconds>(CN_SCRIPT_TIMEOUT).count();
     m_settings.script = params->get_string(CN_SCRIPT);
     m_settings.events = params->get_enum(CN_EVENTS, mxs_monitor_event_enum_values);
 
-    m_settings.conn_settings.read_timeout = params->get_integer(CN_BACKEND_READ_TIMEOUT);
-    m_settings.conn_settings.write_timeout = params->get_integer(CN_BACKEND_WRITE_TIMEOUT);
-    m_settings.conn_settings.connect_timeout = params->get_integer(CN_BACKEND_CONNECT_TIMEOUT);
-    m_settings.conn_settings.connect_attempts = params->get_integer(CN_BACKEND_CONNECT_ATTEMPTS);
-    m_settings.conn_settings.username = params->get_string(CN_USER);
-    m_settings.conn_settings.password = params->get_string(CN_PASSWORD);
+    MonitorServer::ConnectionSettings& conn_settings = m_settings.conn_settings;
+    conn_settings.read_timeout = params->get_duration<seconds>(CN_BACKEND_READ_TIMEOUT).count();
+    conn_settings.write_timeout = params->get_duration<seconds>(CN_BACKEND_WRITE_TIMEOUT).count();
+    conn_settings.connect_timeout = params->get_duration<seconds>(CN_BACKEND_CONNECT_TIMEOUT).count();
+    conn_settings.connect_attempts = params->get_integer(CN_BACKEND_CONNECT_ATTEMPTS);
+    conn_settings.username = params->get_string(CN_USER);
+    conn_settings.password = params->get_string(CN_PASSWORD);
 
     // Disk check interval is given in ms, duration is constructed from seconds.
-    auto dsc_interval = params->get_integer(CN_DISK_SPACE_CHECK_INTERVAL);
+    auto dsc_interval = params->get_duration<milliseconds>(CN_DISK_SPACE_CHECK_INTERVAL).count();
     // 0 implies disabling -> save negative value to interval.
     m_settings.disk_space_check_interval = (dsc_interval > 0) ?
             mxb::Duration(static_cast<double>(dsc_interval) / 1000) : mxb::Duration(-1);

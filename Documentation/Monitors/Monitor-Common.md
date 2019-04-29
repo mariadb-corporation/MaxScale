@@ -19,47 +19,67 @@ the `monitorpw` parameter, that value will be used instead.
 
 ### `monitor_interval`
 
-Defines, in milliseconds, how often the monitor updates the status of the
-servers. The default value is 2000 (2 seconds). Choose a lower value if servers
-should be queried more often. The smallest possible value is 100. If querying
-the servers takes longer than `monitor_interval`, the effective update rate is
-reduced.
+Defines how often the monitor updates the status of the
+servers. The default value is 2 seconds. Choose a lower value if servers
+should be queried more often. The smallest possible value is 100 milliseconds.
+If querying the servers takes longer than `monitor_interval`, the effective
+update rate is reduced.
 
 The default value of `monitor_interval` was updated from 10000 milliseconds to
 2000 milliseconds in MaxScale 2.2.0.
 
 ```
-monitor_interval=2500
+monitor_interval=2500ms
 ```
+
+The interval is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as milliseconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected.
 
 ### `backend_connect_timeout`
 
-This parameter controls the timeout for connecting to a monitored server. It is
-in seconds and the minimum value is 1 second. The default value for this
-parameter is 3 seconds.
+This parameter controls the timeout for connecting to a monitored server.
+The interval is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second. The minimum value is 1 second and
+the default value for this is 3 seconds.
 
 ```
-backend_connect_timeout=6
+backend_connect_timeout=6s
 ```
 
 ### `backend_write_timeout`
 
-This parameter controls the timeout for writing to a monitored server. It is in
-seconds and the minimum value is 1 second. The default value for this parameter
-is 3 seconds.
+This parameter controls the timeout for writing to a monitored server.
+The timeout is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second. The minimum value is 1 second and
+the default value for this is 3 seconds.
 
 ```
-backend_write_timeout=4
+backend_write_timeout=4s
 ```
 
 ### `backend_read_timeout`
 
-This parameter controls the timeout for reading from a monitored server. It is
-in seconds and the minimum value is 1 second. The default value for this
-parameter is 3 seconds.
+This parameter controls the timeout for reading from a monitored server.
+The timeout is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second. The minimum value is 1 second and
+the default value for this is 3 seconds.
 
 ```
-backend_read_timeout=2
+backend_read_timeout=2s
 ```
 
 ### `backend_connect_attempts`
@@ -161,10 +181,13 @@ at `/DbData` while both `server2` and `server3` have it mounted on
 
 ### `disk_space_check_interval`
 
-With this positive integer parameter it can be specified in milliseconds
-the minimum amount of time between disk space checks. The default value
-is `20000`, which means that the disk space situation will be checked
-once every 20 seconds.
+With this parameter it can be specified the minimum amount of time
+between disk space checks. The interval is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as milliseconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected.
+The default value is 0, which means that by default the disk space
+will not be checked.
 
 Note that as the checking is made as part of the regular monitor interval
 cycle, the disk space check interval is affected by the value of
@@ -172,7 +195,7 @@ cycle, the disk space check interval is affected by the value of
 `disk_space_check_interval` is smaller than that of `monitor_interval`,
 the checking will still take place at `monitor_interval` intervals.
 ```
-disk_space_check_interval=10000
+disk_space_check_interval=10000ms
 ```
 
 ### `script`
@@ -220,8 +243,12 @@ case-insensitive.
 
 ### `script_timeout`
 
-The timeout for the executed script in seconds. The default value is 90
-seconds.
+The timeout for the executed script. The interval is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second. The default value is 90 seconds.
 
 If the script execution exceeds the configured timeout, it is stopped by sending
 a SIGTERM signal to it. If the process does not stop, a SIGKILL signal will be
@@ -254,7 +281,12 @@ new_slave   |A new Slave was detected
 
 ### `journal_max_age`
 
-The maximum journal file age in seconds. The default value is 28800 seconds.
+The maximum journal file age. The interval is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the max age is seconds, a max age specified in milliseconds will be rejected,
+even if the duration is longer than a second. The default value is 28800 seconds.
 
 When the monitor starts, it reads any stored journal files. If the journal file
 is older than the value of _journal_max_age_, it will be removed and the monitor

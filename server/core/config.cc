@@ -522,13 +522,14 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     },
     {
         CN_MONITOR_INTERVAL,
-        MXS_MODULE_PARAM_COUNT,
-        "2000"
+        MXS_MODULE_PARAM_DURATION,
+        "2000ms"
     },
     {
         CN_BACKEND_CONNECT_TIMEOUT,
-        MXS_MODULE_PARAM_COUNT,
-        "3"
+        MXS_MODULE_PARAM_DURATION,
+        "3s",
+        MXS_MODULE_OPT_DURATION_S
     },
     {
         CN_BACKEND_READ_TIMEOUT,
@@ -537,8 +538,9 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     },
     {
         CN_BACKEND_WRITE_TIMEOUT,
-        MXS_MODULE_PARAM_COUNT,
-        "2"
+        MXS_MODULE_PARAM_DURATION,
+        "2s",
+        MXS_MODULE_OPT_DURATION_S
     },
     {
         CN_BACKEND_CONNECT_ATTEMPTS,
@@ -547,8 +549,9 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     },
     {
         CN_JOURNAL_MAX_AGE,
-        MXS_MODULE_PARAM_COUNT,
-        "28800"
+        MXS_MODULE_PARAM_DURATION,
+        "28800s",
+        MXS_MODULE_OPT_DURATION_S
     },
     {
         CN_DISK_SPACE_THRESHOLD,
@@ -556,8 +559,8 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     },
     {
         CN_DISK_SPACE_CHECK_INTERVAL,
-        MXS_MODULE_PARAM_COUNT,
-        "0"
+        MXS_MODULE_PARAM_DURATION,
+        "0ms"
     },
     {
         CN_SCRIPT,      // Cannot be a path type as the script may have parameters
@@ -565,8 +568,9 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     },
     {
         CN_SCRIPT_TIMEOUT,
-        MXS_MODULE_PARAM_COUNT,
-        "90"
+        MXS_MODULE_PARAM_DURATION,
+        "90s",
+        MXS_MODULE_OPT_DURATION_S
     },
     {
         CN_EVENTS,
