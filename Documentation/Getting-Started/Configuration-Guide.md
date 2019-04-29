@@ -586,17 +586,17 @@ a while.
 # A valid value looks like
 #       log_throttling = X, Y, Z
 #
-# where each value is a positive integer and X means the number of times a
-# specific error may be logged within a time period of Y milliseconds, before
-# the logging of that error is suppressed for Z milliseconds.
-log_throttling=8, 2000, 15000
+# where the first value X is a positive integer and means the number of times
+# a specific error may be logged within a duration of Y, before the logging
+# of that error is suppressed for a duration of Z.
+log_throttling=8, 2s, 15000ms
 ```
 
 In the example above, the logging of a particular error will be suppressed for
 15 seconds if the error has been logged 8 times in 2 seconds.
 
-The default is `10, 1000, 10000`, which means that if the same error is logged
-10 times in one second, the logging of that error is suppressed for the
+The default is `10, 1000ms, 10000ms`, which means that if the same error is
+logged 10 times in one second, the logging of that error is suppressed for the
 following 10 seconds.
 
 To disable log throttling, add an entry with an empty value
@@ -609,6 +609,9 @@ or one where any of the integers is 0.
 ```
 log_throttling=0, 0, 0
 ```
+The durations can be specified as documented [here](#durations). If no explicit
+unit is provided, the value is interpreted as milliseconds in MaxScale 2.4. In
+subsequent versions a value without a unit may be rejected.
 
 Note that *notice*, *info* and *debug* messages are never throttled.
 

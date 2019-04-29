@@ -239,6 +239,14 @@ static pcre2_code* compile_regex_string(const char* regex_string,
 static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUnit);
 static bool get_seconds(const char* zName, const char* zValue, std::chrono::seconds* pSeconds);
 static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds);
+static bool get_milliseconds(const char* zName,
+                             const char* zValue,
+                             const char* zDisplay_value,
+                             std::chrono::milliseconds* pMilliseconds);
+static bool get_milliseconds(const char* zName,
+                             const char* zValue,
+                             const char* zDisplay_value,
+                             time_t* pMilliseconds);
 
 
 int         config_get_ifaddr(unsigned char* output);
@@ -2536,10 +2544,12 @@ static int handle_global_item(const char* name, const char* value)
             else
             {
                 int c = atoi(count);
-                int w = atoi(window_ms);
-                int s = atoi(suppress_ms);
+                time_t w;
+                time_t s;
 
-                if ((c >= 0) && (w >= 0) && (s >= 0))
+                if (c >= 0
+                    && get_milliseconds(name, window_ms, value, &w)
+                    && get_milliseconds(name, suppress_ms, value, &s))
                 {
                     MXS_LOG_THROTTLING throttling;
                     throttling.count = c;
@@ -2551,8 +2561,8 @@ static int handle_global_item(const char* name, const char* value)
                 else
                 {
                     MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
-                              "The configuration entry `log_throttling` requires as value three positive "
-                              "integers (or 0).", value);
+                              "The configuration entry `log_throttling` requires as value one zero or "
+                              "positive integer and two durations.", value);
                     return 0;
                 }
             }
@@ -5148,6 +5158,57 @@ static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds)
     if (valid)
     {
         *pSeconds = seconds.count();
+    }
+
+    return valid;
+}
+
+static bool get_milliseconds(const char* zName,
+                             const char* zValue,
+                             const char* zDisplay_value,
+                             std::chrono::milliseconds* pMilliseconds)
+{
+    bool valid = false;
+
+    if (!zDisplay_value)
+    {
+        zDisplay_value = zValue;
+    }
+
+    mxs::config::DurationUnit unit;
+    std::chrono::milliseconds milliseconds;
+    if (get_suffixed_duration(zValue, &milliseconds, &unit))
+    {
+        if (unit == mxs::config::DURATION_IN_DEFAULT)
+        {
+            MXS_WARNING("Specifying durations without a suffix denoting the unit "
+                        "has been deprecated: %s=%s. Use the suffixes 'h' (hour), "
+                        "'m' (minute) 's' (second) or 'ms' (milliseconds).", zName, zDisplay_value);
+        }
+
+        *pMilliseconds = milliseconds;
+        valid = true;
+    }
+    else
+    {
+        MXS_ERROR("Invalid duration %s: %s=%s.", zName, zValue, zDisplay_value);
+    }
+
+    return valid;
+}
+
+static bool get_milliseconds(const char* zName,
+                             const char* zValue,
+                             const char* zDisplay_value,
+                             time_t* pMilliseconds)
+{
+    std::chrono::milliseconds milliseconds;
+
+    bool valid = get_milliseconds(zName, zValue, zDisplay_value, &milliseconds);
+
+    if (valid)
+    {
+        *pMilliseconds = milliseconds.count();
     }
 
     return valid;
