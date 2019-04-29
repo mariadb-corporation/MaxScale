@@ -1450,6 +1450,12 @@ seconds. The interval is incremented until the value of `max_retry_interval` is
 reached at which point the listener attempts to bind to the interface every
 `max_retry_interval` seconds.
 
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the interval is seconds, an interval specified in milliseconds will be rejected,
+even if the duration is longer than a second.
+
 #### `session_track_trx_state`
 
 Enable or disable session transaction state tracking by offloading it to the backend servers.

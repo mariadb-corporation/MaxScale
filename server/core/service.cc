@@ -214,7 +214,7 @@ Service::Service(const std::string& name,
     snprintf(weightby, sizeof(weightby), "%s", m_weightby.c_str());
     snprintf(version_string, sizeof(version_string), "%s", m_version_string.c_str());
 
-    max_retry_interval = params->get_integer(CN_MAX_RETRY_INTERVAL);
+    max_retry_interval = params->get_duration<std::chrono::seconds>(CN_MAX_RETRY_INTERVAL).count();
     users_from_all = params->get_bool(CN_AUTH_ALL_SERVERS);
     localhost_match_wildcard_host = params->get_bool(CN_LOCALHOST_MATCH_WILDCARD_HOST);
     retry_start = params->get_bool(CN_RETRY_ON_FAILURE);

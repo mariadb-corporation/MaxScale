@@ -334,8 +334,9 @@ const MXS_MODULE_PARAM config_service_params[] =
     },
     {
         CN_MAX_RETRY_INTERVAL,
-        MXS_MODULE_PARAM_COUNT,
-        "3600"
+        MXS_MODULE_PARAM_DURATION,
+        "3600s",
+        MXS_MODULE_OPT_DURATION_S
     },
     {
         CN_MAX_CONNECTIONS,
