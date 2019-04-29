@@ -13,12 +13,12 @@ module=galeramon
 servers=dbserv1, dbserv2, dbserv3
 user=monitor_user
 password=my_password
-monitor_interval=2000
+monitor_interval=2000ms
 ```
 
 The mandatory parameters are the object type, the monitor module to use, the
 list of servers to monitor and the username and password to use when connecting
-to the servers. The `monitor_interval` parameter controls how many milliseconds
+to the servers. The `monitor_interval` parameter controls for how long
 the monitor waits between each monitoring loop.
 
 This monitor module will assign one node within the Galera Cluster as the
