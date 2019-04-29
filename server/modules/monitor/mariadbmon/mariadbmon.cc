@@ -219,13 +219,13 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_detect_standalone_master = params->get_bool(CN_DETECT_STANDALONE_MASTER);
     m_assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
     m_failcount = params->get_integer(CN_FAILCOUNT);
-    m_failover_timeout = params->get_integer(CN_FAILOVER_TIMEOUT);
-    m_switchover_timeout = params->get_integer(CN_SWITCHOVER_TIMEOUT);
+    m_failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
+    m_switchover_timeout = params->get_duration<std::chrono::seconds>(CN_SWITCHOVER_TIMEOUT).count();
     m_auto_failover = params->get_bool(CN_AUTO_FAILOVER);
     m_auto_rejoin = params->get_bool(CN_AUTO_REJOIN);
     m_enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
     m_verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
-    m_master_failure_timeout = params->get_integer(CN_MASTER_FAILURE_TIMEOUT);
+    m_master_failure_timeout = params->get_duration<std::chrono::seconds>(CN_MASTER_FAILURE_TIMEOUT).count();
     m_promote_sql_file = params->get_string(CN_PROMOTION_SQL_FILE);
     m_demote_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
     m_switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
@@ -1008,10 +1008,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_AUTO_FAILOVER,                    MXS_MODULE_PARAM_BOOL,   "false"
             },
             {
-                CN_FAILOVER_TIMEOUT,                 MXS_MODULE_PARAM_COUNT,  "90"
+                CN_FAILOVER_TIMEOUT,                 MXS_MODULE_PARAM_DURATION, "90s",
+                MXS_MODULE_OPT_DURATION_S
             },
             {
-                CN_SWITCHOVER_TIMEOUT,               MXS_MODULE_PARAM_COUNT,  "90"
+                CN_SWITCHOVER_TIMEOUT,               MXS_MODULE_PARAM_DURATION,  "90s",
+                MXS_MODULE_OPT_DURATION_S
             },
             {
                 CN_REPLICATION_USER,                 MXS_MODULE_PARAM_STRING
@@ -1026,7 +1028,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,   "true"
             },
             {
-                CN_MASTER_FAILURE_TIMEOUT,           MXS_MODULE_PARAM_COUNT,  "10"
+                CN_MASTER_FAILURE_TIMEOUT,           MXS_MODULE_PARAM_DURATION, "10s",
+                MXS_MODULE_OPT_DURATION_S
             },
             {
                 CN_AUTO_REJOIN,                      MXS_MODULE_PARAM_BOOL,   "false"

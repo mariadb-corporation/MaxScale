@@ -676,10 +676,17 @@ settings when redirecting a slave connection.
 
 #### `failover_timeout` and `switchover_timeout`
 
-Time limit for failover and switchover operations, in seconds. The default
+Time limit for failover and switchover operations. The default
 values are 90 seconds for both. `switchover_timeout` is also used as the time
 limit for a rejoin operation. Rejoin should rarely time out, since it is a
 faster operation than switchover.
+
+The timeouts are specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeouts is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 If no successful failover/switchover takes place within the configured time
 period, a message is logged and automatic failover is disabled. This prevents
@@ -689,14 +696,20 @@ further automatic modifications to the misbehaving cluster.
 
 Enable additional master failure verification for automatic failover.
 `verify_master_failure` is a boolean value (default: true) which enables this
-feature and `master_failure_timeout` defines the timeout in seconds (default:
-10).
+feature and `master_failure_timeout` defines the timeout (default: 10 seconds).
+
+The master failure timeout is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 Failure verification is performed by checking whether the slave servers are
 still connected to the master and receiving events. An event is either a change
 in the *Gtid_IO_Pos*-field of the `SHOW SLAVE STATUS` output or a heartbeat
 event. Effectively, if a slave has received an event within
-`master_failure_timeout` seconds, the master is not considered down when
+`master_failure_timeout` duration, the master is not considered down when
 deciding whether to failover, even if MaxScale cannot connect to the master.
 `master_failure_timeout` should be longer than the `Slave_heartbeat_period` of
 the slave connection to be effective.
