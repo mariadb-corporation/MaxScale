@@ -5115,7 +5115,28 @@ static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUn
 {
     // When the validity is checked, it does not matter how the value
     // should be interpreted, so any mxs::config::DurationInterpretation is fine.
-    return get_suffixed_duration(zValue, mxs::config::INTERPRET_AS_SECONDS, nullptr, pUnit);
+    std::chrono::milliseconds duration;
+    mxs::config::DurationUnit unit;
+    bool valid = get_suffixed_duration(zValue, mxs::config::INTERPRET_AS_SECONDS, &duration, &unit);
+
+    if (valid)
+    {
+        if (unit == mxs::config::DURATION_IN_DEFAULT)
+        {
+            // "0" is a special case, as it means the same regardless of the
+            // unit and the presence of a unit.
+            if (duration.count() == 0)
+            {
+                // To prevent unnecessary complaints, we claim it was specified in
+                // seconds which is acceptable in all cases.
+                unit = mxs::config::DURATION_IN_SECONDS;
+            }
+        }
+
+        *pUnit = unit;
+    }
+
+    return valid;
 }
 
 static bool get_seconds(const char* zName, const char* zValue, std::chrono::seconds* pSeconds)
