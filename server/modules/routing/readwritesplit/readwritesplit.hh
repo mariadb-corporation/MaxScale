@@ -130,6 +130,8 @@ static const char gtid_wait_stmt[] =
 using BackendSelectFunction = std::function<mxs::PRWBackends::iterator (mxs::PRWBackends& sBackends)>;
 BackendSelectFunction get_backend_select_function(select_criteria_t);
 
+using std::chrono::seconds;
+
 struct Config
 {
     Config(MXS_CONFIG_PARAMETER* params)
@@ -147,15 +149,15 @@ struct Config
         , strict_multi_stmt(params->get_bool("strict_multi_stmt"))
         , strict_sp_calls(params->get_bool("strict_sp_calls"))
         , retry_failed_reads(params->get_bool("retry_failed_reads"))
-        , connection_keepalive(params->get_integer("connection_keepalive"))
-        , max_slave_replication_lag(params->get_integer("max_slave_replication_lag"))
+        , connection_keepalive(params->get_duration<seconds>("connection_keepalive").count())
+        , max_slave_replication_lag(params->get_duration<seconds>("max_slave_replication_lag").count())
         , rw_max_slave_conn_percent(0)
         , max_slave_connections(0)
         , causal_reads(params->get_bool("causal_reads"))
-        , causal_reads_timeout(params->get_string("causal_reads_timeout"))
+        , causal_reads_timeout(std::to_string(params->get_duration<seconds>("causal_reads_timeout").count()))
         , master_reconnection(params->get_bool("master_reconnection"))
         , delayed_retry(params->get_bool("delayed_retry"))
-        , delayed_retry_timeout(params->get_integer("delayed_retry_timeout"))
+        , delayed_retry_timeout(params->get_duration<seconds>("delayed_retry_timeout").count())
         , transaction_replay(params->get_bool("transaction_replay"))
         , trx_max_size(params->get_size("transaction_replay_max_size"))
         , optimistic_trx(params->get_bool("optimistic_trx"))

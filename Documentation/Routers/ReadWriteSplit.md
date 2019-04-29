@@ -89,7 +89,14 @@ can't be used for routing.
 
 This feature is disabled by default.
 
-	max_slave_replication_lag=<allowed lag in seconds>
+	max_slave_replication_lag=<allowed lag>
+
+The lag is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the lag is seconds, a lag specified in milliseconds will be rejected, even if
+the duration is longer than a second.
 
 The Readwritesplit-router does not detect the replication lag itself. A monitor
 such as the MariaDB-monitor for a Master/Slave-cluster is required. This option
@@ -135,6 +142,13 @@ master_failure_mode=fail_on_write
 Send keepalive pings to backend servers. This feature was introduced in MaxScale
 2.2.0. The default value is 300 seconds starting with 2.3.2 and for older
 versions the feature was disabled by default.
+
+The keepalive is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the keepalive is seconds, a keepalive specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 The parameter value is the interval in seconds between each keepalive ping. A
 keepalive ping will be sent to a backend server if the connection is idle and it
@@ -440,8 +454,15 @@ execution is an acceptable risk.
 
 ### `delayed_retry_timeout`
 
-The number of seconds to wait until an error is returned to the client when
+The duration to wait until an error is returned to the client when
 `delayed_retry` is enabled. The default value is 10 seconds.
+
+The timeout is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 ### `transaction_replay`
 
@@ -549,6 +570,13 @@ when the slave timed out.
 
 The timeout for the slave synchronization done by `causal_reads`. The
 default value is 10 seconds.
+
+The timeout is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 ### `lazy_connect`
 
