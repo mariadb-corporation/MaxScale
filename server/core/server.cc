@@ -255,7 +255,7 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
     server->port = params->get_integer(CN_PORT);
     server->extra_port = params->get_integer(CN_EXTRA_PORT);
     server->m_settings.persistpoolmax = params->get_integer(CN_PERSISTPOOLMAX);
-    server->m_settings.persistmaxtime = params->get_integer(CN_PERSISTMAXTIME);
+    server->m_settings.persistmaxtime = params->get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
     server->proxy_protocol = params->get_bool(CN_PROXY_PROTOCOL);
     server->is_active = true;
     server->m_auth_instance = auth_instance;

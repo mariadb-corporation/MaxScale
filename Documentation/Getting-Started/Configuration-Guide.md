@@ -1573,8 +1573,14 @@ discarded will not be retained, but disconnected and discarded.
 
 #### `persistmaxtime`
 
-The `persistmaxtime` parameter defaults to zero but can be set to an integer
-value indicating a number of seconds. A DCB placed in the persistent pool for a
+The `persistmaxtime` parameter defaults to zero but can be set to a duration
+as documented [here](#durations). If no explicit unit is provided, the value
+is interpreted as seconds in MaxScale 2.4. In subsequent versions a value
+without a unit may be rejected. Note that since the granularity of the
+parameter is seconds, a value specified in milliseconds will be rejected,
+even if the duration is longer than a second.
+
+A DCB placed in the persistent pool for a
 server will only be reused if the elapsed time since it joined the pool is less
 than the given value. Otherwise, the DCB will be discarded and the connection
 closed.

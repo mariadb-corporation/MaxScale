@@ -645,8 +645,9 @@ const MXS_MODULE_PARAM config_server_params[] =
     },
     {
         CN_PERSISTMAXTIME,
-        MXS_MODULE_PARAM_COUNT,
-        "0"
+        MXS_MODULE_PARAM_DURATION,
+        "0",
+        MXS_MODULE_OPT_DURATION_S
     },
     {
         CN_PROXY_PROTOCOL,
