@@ -65,11 +65,11 @@ ThrottleFilter* ThrottleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* 
 {
     int max_qps = pParams->get_integer(MAX_QPS_CFG);
     int sample_msecs =
-        pParams->get_duration(SAMPLING_DURATION_CFG, mxs::config::INTERPRET_AS_MILLISECONDS).count();
+        pParams->get_duration<std::chrono::milliseconds>(SAMPLING_DURATION_CFG).count();
     int throttle_msecs =
-        pParams->get_duration(THROTTLE_DURATION_CFG, mxs::config::INTERPRET_AS_MILLISECONDS).count();
+        pParams->get_duration<std::chrono::milliseconds>(THROTTLE_DURATION_CFG).count();
     int cont_msecs =
-        pParams->get_duration(CONTINUOUS_DURATION_CFG, mxs::config::INTERPRET_AS_MILLISECONDS).count();
+        pParams->get_duration<std::chrono::milliseconds>(CONTINUOUS_DURATION_CFG).count();
     bool config_ok = true;
 
     if (max_qps < 2)

@@ -90,9 +90,7 @@ public:
         if (new_instance)
         {
             new_instance->m_count = params->get_integer("count");
-            new_instance->m_time = params->get_duration("time", mxs::config::INTERPRET_AS_SECONDS).count();
-            // The window is in seconds.
-            new_instance->m_time = std::lround(new_instance->m_time / 1000.0);
+            new_instance->m_time = params->get_duration<std::chrono::seconds>("time").count();
             new_instance->m_match = params->get_string(PARAM_MATCH);
             new_instance->m_nomatch = params->get_string(PARAM_IGNORE);
 

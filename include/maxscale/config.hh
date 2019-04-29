@@ -339,8 +339,26 @@ public:
      *
      * @return Duration in milliseconds; 0 if the parameter is not found.
      */
-    std::chrono::milliseconds get_duration(const std::string& key,
-                                           mxs::config::DurationInterpretation interpretation) const;
+    std::chrono::milliseconds get_duration_in_ms(const std::string& key,
+                                                 mxs::config::DurationInterpretation interpretation) const;
+
+    /**
+     * @brief Get a duration in a specific unit.
+     *
+     * @param key  Parameter name
+     *
+     * @return The duration in the desired unit.
+     *
+     * @note The type the function is specialized with dictates how values without a
+     *       suffix should be interpreted; if @c std::chrono::seconds, they will be
+     *       interpreted as seconds, if @c std::chrono::milliseconds, they will be
+     *       interpreted as milliseconds.
+     *
+     * @note There is no default implementation, but only specializations for
+     *       @c std::chrono::seconds and @c std::chrono::milliseconds.
+     */
+    template<class T>
+    T get_duration(const std::string& key) const = delete;
 
     /**
      * @brief Get a service value
@@ -440,6 +458,22 @@ public:
 private:
     ContainerType m_contents;
 };
+
+template<>
+inline std::chrono::milliseconds
+MXS_CONFIG_PARAMETER::get_duration<std::chrono::milliseconds>(const std::string& key) const
+{
+    return get_duration_in_ms(key, mxs::config::INTERPRET_AS_MILLISECONDS);
+}
+
+template<>
+inline std::chrono::seconds
+MXS_CONFIG_PARAMETER::get_duration<std::chrono::seconds>(const std::string& key) const
+{
+    std::chrono::milliseconds ms = get_duration_in_ms(key, mxs::config::INTERPRET_AS_SECONDS);
+    return std::chrono::duration_cast<std::chrono::seconds>(ms);
+}
+
 
 /**
  * The config context structure, used to build the configuration

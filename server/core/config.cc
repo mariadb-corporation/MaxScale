@@ -1947,8 +1947,9 @@ uint64_t MXS_CONFIG_PARAMETER::get_size(const std::string& key) const
     return intval;
 }
 
-std::chrono::milliseconds MXS_CONFIG_PARAMETER::get_duration(const std::string& key,
-                                                             mxs::config::DurationInterpretation interpretation)
+std::chrono::milliseconds
+MXS_CONFIG_PARAMETER::get_duration_in_ms(const std::string& key,
+                                         mxs::config::DurationInterpretation interpretation)
 const
 {
     string value = get_string(key);
