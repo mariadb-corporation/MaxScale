@@ -952,6 +952,9 @@ add_test_executable(mxs1662_pam_admin.cpp mxs1662_pam_admin mxs1662_pam_admin LA
 # MXS-2441: Add support for read-only slaves to galeramon
 add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_galera_slaves LABELS REPL_BACKEND GALERA_BACKEND)
 
+# MXS-2414: Block host after repeated authentication failures
+add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################

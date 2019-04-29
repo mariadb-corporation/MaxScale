@@ -342,6 +342,12 @@ public:
         return change_user(m_user, m_pw, m_db);
     }
 
+    void set_credentials(const std::string& user, const std::string pw)
+    {
+        m_user = user;
+        m_pw = pw;
+    }
+
 private:
     std::string m_host;
     int         m_port;
