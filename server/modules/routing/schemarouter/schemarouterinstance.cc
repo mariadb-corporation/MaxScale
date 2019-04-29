@@ -34,7 +34,7 @@ using std::string;
 namespace schemarouter
 {
 
-#define DEFAULT_REFRESH_INTERVAL "300"
+#define DEFAULT_REFRESH_INTERVAL "300s"
 
 /**
  * @file schemarouter.c The entry points for the simple sharding router module.
@@ -294,14 +294,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                                   /* Thread init. */
         NULL,                                                   /* Thread finish. */
         {
-            {"ignore_databases",                              MXS_MODULE_PARAM_STRING  },
-            {"ignore_databases_regex",                        MXS_MODULE_PARAM_STRING  },
-            {"max_sescmd_history",                            MXS_MODULE_PARAM_COUNT, "0"},
-            {"disable_sescmd_history",                        MXS_MODULE_PARAM_BOOL, "false"},
-            {"refresh_databases",                             MXS_MODULE_PARAM_BOOL, "true"},
-            {"refresh_interval",                              MXS_MODULE_PARAM_COUNT, DEFAULT_REFRESH_INTERVAL},
-            {"debug",                                         MXS_MODULE_PARAM_BOOL, "false"},
-            {"preferred_server",                              MXS_MODULE_PARAM_SERVER  },
+            {"ignore_databases",       MXS_MODULE_PARAM_STRING },
+            {"ignore_databases_regex", MXS_MODULE_PARAM_STRING },
+            {"max_sescmd_history",     MXS_MODULE_PARAM_COUNT,    "0"},
+            {"disable_sescmd_history", MXS_MODULE_PARAM_BOOL,     "false"},
+            {"refresh_databases",      MXS_MODULE_PARAM_BOOL,     "true"},
+            {"refresh_interval",       MXS_MODULE_PARAM_DURATION, DEFAULT_REFRESH_INTERVAL,
+             MXS_MODULE_OPT_DURATION_S },
+            {"debug",                  MXS_MODULE_PARAM_BOOL,     "false"},
+            {"preferred_server",       MXS_MODULE_PARAM_SERVER },
             {MXS_END_MODULE_PARAMS}
         }
     };

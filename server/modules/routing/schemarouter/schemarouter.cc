@@ -19,7 +19,7 @@ namespace schemarouter
 {
 
 Config::Config(MXS_CONFIG_PARAMETER* conf)
-    : refresh_min_interval(conf->get_integer("refresh_interval"))
+    : refresh_min_interval(conf->get_duration<std::chrono::seconds>("refresh_interval").count())
     , refresh_databases(conf->get_bool("refresh_databases"))
     , debug(conf->get_bool("debug"))
     , ignore_regex(conf->get_compiled_regex("ignore_databases_regex", 0, NULL).release())

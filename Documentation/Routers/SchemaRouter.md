@@ -200,6 +200,13 @@ change the database i.e. `USE ...` queries.
 
 The minimum interval between database map refreshes in seconds.
 
+The interval is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the intervaltimeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
+
 ## Limitations
 
 1. Cross-database queries (e.g. `SELECT column FROM database1.table UNION select column
