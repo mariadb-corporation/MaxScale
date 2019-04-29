@@ -211,10 +211,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
              DEF_LONG_BURST},
             {"burstsize",                                MXS_MODULE_PARAM_SIZE,
              DEF_BURST_SIZE},
-            {"heartbeat",                                MXS_MODULE_PARAM_COUNT,
-             BLR_HEARTBEAT_DEFAULT_INTERVAL},
-            {"connect_retry",                            MXS_MODULE_PARAM_COUNT,
-             BLR_MASTER_CONNECT_RETRY},
+            {"heartbeat",                                MXS_MODULE_PARAM_DURATION,
+             BLR_HEARTBEAT_DEFAULT_INTERVAL "s",
+             MXS_MODULE_OPT_DURATION_S
+            },
+            {"connect_retry",                            MXS_MODULE_PARAM_DURATION,
+             BLR_MASTER_CONNECT_RETRY "s",
+             MXS_MODULE_OPT_DURATION_S
+            },
             {"master_retry_count",                       MXS_MODULE_PARAM_COUNT,
              BLR_MASTER_RETRY_COUNT},
             {"send_slave_heartbeat",                     MXS_MODULE_PARAM_BOOL,
@@ -345,8 +349,8 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     inst->long_burst = params->get_integer("longburst");
     inst->burst_size = params->get_size("burstsize");
     inst->binlogdir = params->get_c_str_copy("binlogdir");
-    inst->heartbeat = params->get_integer("heartbeat");
-    inst->retry_interval = params->get_integer("connect_retry");
+    inst->heartbeat = params->get_duration<std::chrono::seconds>("heartbeat").count();
+    inst->retry_interval = params->get_duration<std::chrono::seconds>("connect_retry").count();
     inst->retry_limit = params->get_integer("master_retry_count");
     inst->ssl_cert_verification_depth = params->get_integer("ssl_cert_verification_depth");
     inst->mariadb10_compat = params->get_bool("mariadb10-compatibility");

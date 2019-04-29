@@ -173,8 +173,14 @@ it is also possible to use the parameter `passwd`.
 
 #### `heartbeat`
 
-This defines the value of the heartbeat interval in seconds for the connection
-to the master. The default value for the heartbeat period is every 5 minutes.
+This defines the value of the heartbeat interval for the connection
+to the master. The duration can be specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit
+unit is provided, the value is interpreted as seconds in MaxScale 2.4. In
+subsequent versions a value without a unit may be rejected. Note that since
+the granularity of the parameter is seconds, a value specified in milliseconds
+will be rejected, even if the duration is longer than a second.
+The default value for the heartbeat period is every 5 minutes.
 
 MariaDB MaxScale requests the master to ensure that a binlog event is sent at
 least every heartbeat period. If there are no real binlog events to send the
@@ -390,9 +396,14 @@ disconnected or not reachable.
 Default value is 1000.
 
 #### `connect_retry`
-The option sets the time interval for a new connection retry to master server,
-default value is 60 seconds.
-
+The option sets the time interval for a new connection retry to master server.
+The duration can be specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit
+unit is provided, the value is interpreted as seconds in MaxScale 2.4. In
+subsequent versions a value without a unit may be rejected. Note that since
+the granularity of the parameter is seconds, a value specified in milliseconds
+will be rejected, even if the duration is longer than a second.
+The default value is 60 seconds.
 
 **A complete example** of a service entry for a binlog router service would be as
 follows.
