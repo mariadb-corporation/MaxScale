@@ -51,7 +51,7 @@ module=auroramon
 servers=cluster-1,cluster-2,cluster-3
 user=aurora
 password=borealis
-monitor_interval=2500
+monitor_interval=2500ms
 ```
 
 The servers _cluster-1_, _cluster-2_ and _cluster-3_ are the unique Aurora
