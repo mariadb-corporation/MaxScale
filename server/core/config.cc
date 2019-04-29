@@ -4484,13 +4484,27 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                     {
                         valid = true;
 
-                        if (unit == mxs::config::DURATION_IN_DEFAULT)
+                        switch (unit)
                         {
+                        case mxs::config::DURATION_IN_MILLISECONDS:
+                            if (params[i].options & MXS_MODULE_OPT_DURATION_S)
+                            {
+                                MXS_ERROR("Currently the granularity of '%s' is seconds. The value "
+                                          "cannot be specified in milliseconds.", params[i].name);
+                                valid = false;
+                            }
+                            break;
+
+                        case mxs::config::DURATION_IN_DEFAULT:
                             MXS_WARNING("Specifying durations without a suffix denoting the unit "
                                         "has been deprecated: '%s=%s'. Use the suffixes 'h' (hour), "
                                         "'m' (minute) 's' (second) or 'ms' (milliseconds). "
                                         "For instance, '%s=%ss' or '%s=%sms.",
                                         key, value, key, value, key, value);
+                            break;
+
+                        default:
+                            break;
                         }
                     }
                 }

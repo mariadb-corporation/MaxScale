@@ -44,6 +44,7 @@ int test_validity()
         {"p7", MXS_MODULE_PARAM_SERVICE,  "my-service"            },
         {"p8", MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_ENUM_UNIQUE, enum_values},
         {"p9", MXS_MODULE_PARAM_DURATION, "4711s"                 },
+        {"p10", MXS_MODULE_PARAM_DURATION, "4711s", MXS_MODULE_OPT_DURATION_S },
         {MXS_END_MODULE_PARAMS}
     };
 
@@ -107,6 +108,7 @@ int test_validity()
     TEST(config_param_is_valid(params, "p9", "4711S", &ctx));
     TEST(config_param_is_valid(params, "p9", "4711MS", &ctx));
     TEST(!config_param_is_valid(params, "p9", "4711q", &ctx));
+    TEST(!config_param_is_valid(params, "p10", "4711ms", &ctx));
 
     /** Service parameter */
     CONFIG_CONTEXT svc("test-service");
