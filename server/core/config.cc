@@ -247,7 +247,7 @@ static bool get_milliseconds(const char* zName,
                              const char* zValue,
                              const char* zDisplay_value,
                              time_t* pMilliseconds);
-
+static void log_duration_suffix_warning(const char* zName, const char* zValue);
 
 int         config_get_ifaddr(unsigned char* output);
 static int  config_get_release_string(char* release);
@@ -4513,11 +4513,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                             break;
 
                         case mxs::config::DURATION_IN_DEFAULT:
-                            MXS_WARNING("Specifying durations without a suffix denoting the unit "
-                                        "has been deprecated: '%s=%s'. Use the suffixes 'h' (hour), "
-                                        "'m' (minute) 's' (second) or 'ms' (milliseconds). "
-                                        "For instance, '%s=%ss' or '%s=%sms.",
-                                        key, value, key, value, key, value);
+                            log_duration_suffix_warning(key, value);
                             break;
 
                         default:
@@ -5143,6 +5139,14 @@ static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUn
     return valid;
 }
 
+static void log_duration_suffix_warning(const char* zName, const char* zValue)
+{
+    MXS_INFO("Specifying durations without a suffix denoting the unit "
+             "is strongly discouraged as it will be deprecated in the "
+             "future: %s=%s. Use the suffixes 'h' (hour), 'm' (minute), "
+             "'s' (second) or 'ms' (milliseconds).", zName, zValue);
+}
+
 static bool get_seconds(const char* zName, const char* zValue, std::chrono::seconds* pSeconds)
 {
     bool valid = false;
@@ -5160,9 +5164,7 @@ static bool get_seconds(const char* zName, const char* zValue, std::chrono::seco
             break;
 
         case mxs::config::DURATION_IN_DEFAULT:
-            MXS_WARNING("Specifying durations without a suffix denoting the unit "
-                        "has been deprecated: %s=%s. Use the suffixes 'h' (hour), "
-                        "'m' (minute) 's' (second) or 'ms' (milliseconds).", zName, zValue);
+            log_duration_suffix_warning(zName, zValue);
         default:
             *pSeconds = seconds;
             valid = true;
@@ -5170,7 +5172,7 @@ static bool get_seconds(const char* zName, const char* zValue, std::chrono::seco
     }
     else
     {
-        MXS_ERROR("Invalid timeout value for '%s': %s", zName, zValue);
+        MXS_ERROR("Invalid duration %s: %s=%s", zValue, zName, zValue);
     }
 
     return valid;
@@ -5208,9 +5210,7 @@ static bool get_milliseconds(const char* zName,
     {
         if (unit == mxs::config::DURATION_IN_DEFAULT)
         {
-            MXS_WARNING("Specifying durations without a suffix denoting the unit "
-                        "has been deprecated: %s=%s. Use the suffixes 'h' (hour), "
-                        "'m' (minute) 's' (second) or 'ms' (milliseconds).", zName, zDisplay_value);
+            log_duration_suffix_warning(zName, zDisplay_value);
         }
 
         *pMilliseconds = milliseconds;

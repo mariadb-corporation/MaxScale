@@ -3383,8 +3383,8 @@ void write_master_config(FILE* config_file, const ChangeMasterConfig& config)
         fprintf(config_file, "master_tls_version=%s\n", config.ssl_version.c_str());
     }
 
-    fprintf(config_file, "master_heartbeat_period=%ds\n", config.heartbeat_period);
-    fprintf(config_file, "master_connect_retry=%ds\n", config.connect_retry);
+    fprintf(config_file, "master_heartbeat_period=%d\n", config.heartbeat_period);
+    fprintf(config_file, "master_connect_retry=%d\n", config.connect_retry);
 }
 }
 

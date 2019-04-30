@@ -128,7 +128,8 @@ Please see the
 [configuration guide](../Getting-Started/Configuration-Guide.md#durations)
 for details.
 
-_Not_ providing an explicit unit has been deprecated in MaxScale 2.4.
+_Not_ providing an explicit unit is strongly discouraged as it will be
+deprecated in MaxScale 2.5.
 
 ### Query Classifier Cache
 
