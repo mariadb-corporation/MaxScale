@@ -164,9 +164,10 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
             *ppPacket = NULL;
         }
 
-        if (m_expected_responses == 0
+        if (m_expected_responses == 0 && !m_config.disable_sescmd_history
             && (command == MXS_COM_CHANGE_USER || command == MXS_COM_RESET_CONNECTION))
         {
+            mxb_assert_message(!m_sescmd_list.empty(), "Must have stored session commands");
             mxb_assert_message(m_slave_responses.empty(), "All responses should've been processed");
             // This is the last session command to finish that resets the session state, reset the history
             MXS_INFO("Resetting session command history (length: %lu)", m_sescmd_list.size());

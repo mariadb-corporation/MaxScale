@@ -687,11 +687,6 @@ public:
     int call_mdbci(const char *options);
 
     /**
-     * @brief use_valrind if true Maxscale will be executed under Valgrind
-     */
-    bool use_valgrind;
-
-    /**
      * @brief resinstall_maxscales Remove Maxscale form all nodes and installs new ones
      * (to be used for run_test_snapshot)
      * @return 0 in case of success
