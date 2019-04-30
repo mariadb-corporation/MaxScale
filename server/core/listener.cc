@@ -51,8 +51,6 @@ static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
 static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
 
-// TODO: Make these configurable
-constexpr int MAX_FAILURES = 25;
 constexpr int BLOCK_TIME = 60;
 
 namespace
