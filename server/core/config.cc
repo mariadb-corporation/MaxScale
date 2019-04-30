@@ -534,8 +534,9 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     },
     {
         CN_BACKEND_READ_TIMEOUT,
-        MXS_MODULE_PARAM_COUNT,
-        "1"
+        MXS_MODULE_PARAM_DURATION,
+        "1s",
+        MXS_MODULE_OPT_DURATION_S
     },
     {
         CN_BACKEND_WRITE_TIMEOUT,
