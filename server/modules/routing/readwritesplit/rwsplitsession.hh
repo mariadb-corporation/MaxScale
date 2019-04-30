@@ -343,6 +343,7 @@ private:
     mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction. */
     Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
     mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
+    int64_t     m_num_trx_replays = 0;          /**< How many times trx replay has been attempted */
 
     otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
 

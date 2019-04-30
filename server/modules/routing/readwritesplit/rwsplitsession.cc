@@ -406,6 +406,7 @@ void RWSplitSession::trx_replay_next_stmt()
         // No more statements to execute
         m_is_replay_active = false;
         mxb::atomic::add(&m_router->stats().n_trx_replay, 1, mxb::atomic::RELAXED);
+        m_num_trx_replays = 0;
 
         if (!m_replayed_trx.empty())
         {
@@ -882,7 +883,7 @@ bool RWSplitSession::start_trx_replay()
 {
     bool rval = false;
 
-    if (m_config.transaction_replay && m_can_replay_trx)
+    if (m_config.transaction_replay && m_can_replay_trx && m_num_trx_replays < m_config.trx_max_attempts)
     {
         if (!m_is_replay_active)
         {
@@ -950,6 +951,7 @@ bool RWSplitSession::start_trx_replay()
                                "transaction had no statements and no query was interrupted");
         }
 
+        ++m_num_trx_replays;
         rval = true;
     }
 
