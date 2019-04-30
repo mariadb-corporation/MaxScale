@@ -51,7 +51,6 @@ static MXS_CONFIG_PARAMETER* params = new MXS_CONFIG_PARAMETER;
  */
 static int test1()
 {
-    int result;
     std::string status;
 
     /* Server tests */
@@ -62,7 +61,7 @@ static int test1()
     fprintf(stderr, "\t..done\nTest Parameter for Server.");
     mxb_assert_message(server->get_custom_parameter("name").empty(),
                        "Parameter should be empty when not set");
-    server->set_parameter("name", "value");
+    server->set_custom_parameter("name", "value");
     std::string buf = server->get_custom_parameter("name");
     mxb_assert_message(buf == "value", "Parameter should be returned correctly");
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");

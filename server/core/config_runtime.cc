@@ -576,92 +576,111 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
         return false;
     }
 
-    const MXS_MODULE* mod = get_module(server->protocol().c_str(), MODULE_PROTOCOL);
+    bool is_normal_parameter = !server->is_custom_parameter(key);
 
-    // As servers allow unknown parameters, we must only validate known parameters
-    if (param_is_known(config_server_params, mod->parameters, key)
-        && !param_is_valid(config_server_params, mod->parameters, key, value))
+    // Only validate known parameters as custom parameters cannot be validated.
+    if (is_normal_parameter)
     {
-        config_runtime_error("Invalid value for parameter '%s': %s", key, value);
-        return false;
-    }
-
-    if (strcmp(key, CN_DISK_SPACE_THRESHOLD) == 0)
-    {
-        // This cannot be safely modified during runtime since the monitor thread could be reading the
-        // value. TODO: To enable this, the threshold value needs to be moved to the private Server-class
-        // so that locking can be enforced on any access.
-        config_runtime_error("The server parameter '%s' cannot be modified during runtime.",
-                             CN_DISK_SPACE_THRESHOLD);
-        return false;
+        const MXS_MODULE* mod = get_module(server->protocol().c_str(), MODULE_PROTOCOL);
+        if (!param_is_valid(config_server_params, mod->parameters, key, value))
+        {
+            config_runtime_error("Invalid value for parameter '%s': %s", key, value);
+            return false;
+        }
     }
 
     std::lock_guard<std::mutex> guard(crt_lock);
-    server->set_parameter(key, value);
 
-    if (strcmp(key, CN_ADDRESS) == 0 || strcmp(key, CN_SOCKET) == 0)
+    bool setting_changed = false;
+    if (is_normal_parameter)
     {
-        server->server_update_address(value);
-    }
-    else if (strcmp(key, CN_PORT) == 0)
-    {
-        if (int ival = get_positive_int(value))
+        // Only some normal parameters can be changed runtime. The key/value-combination has already
+        // been checked to be valid.
+        if (strcmp(key, CN_ADDRESS) == 0 || strcmp(key, CN_SOCKET) == 0)
         {
-            server->update_port(ival);
+            server->server_update_address(value);
+            setting_changed = true;
         }
-    }
-    else if (strcmp(key, CN_EXTRA_PORT) == 0)
-    {
-        server->update_extra_port(atoi(value));
-    }
-    else if (strcmp(key, CN_MONITORUSER) == 0)
-    {
-        server->set_monitor_user(value);
-    }
-    else if (strcmp(key, CN_MONITORPW) == 0)
-    {
-        server->set_monitor_password(value);
-    }
-    else if (strcmp(key, CN_PERSISTPOOLMAX) == 0)
-    {
-        if (is_valid_integer(value))
+        else if (strcmp(key, CN_PORT) == 0)
         {
-            server->set_persistpoolmax(atoi(value));
+            if (int ival = get_positive_int(value))
+            {
+                server->update_port(ival);
+                setting_changed = true;
+            }
         }
-    }
-    else if (strcmp(key, CN_PERSISTMAXTIME) == 0)
-    {
-        if (is_valid_integer(value))
+        else if (strcmp(key, CN_EXTRA_PORT) == 0)
         {
-            server->set_persistmaxtime(atoi(value));
+            server->update_extra_port(atoi(value));
+            setting_changed = true;
         }
-    }
-    if (strcmp(key, CN_RANK) == 0)
-    {
-        auto v = config_enum_to_value(value, rank_values);
-
-        if (v != MXS_UNKNOWN_ENUM_VALUE)
+        else if (strcmp(key, CN_MONITORUSER) == 0)
         {
-            server->set_rank(v);
+            server->set_monitor_user(value);
+            setting_changed = true;
+        }
+        else if (strcmp(key, CN_MONITORPW) == 0)
+        {
+            server->set_monitor_password(value);
+            setting_changed = true;
+        }
+        else if (strcmp(key, CN_PERSISTPOOLMAX) == 0)
+        {
+            if (is_valid_integer(value))
+            {
+                server->set_persistpoolmax(atoi(value));
+                setting_changed = true;
+            }
+        }
+        else if (strcmp(key, CN_PERSISTMAXTIME) == 0)
+        {
+            if (is_valid_integer(value))
+            {
+                server->set_persistmaxtime(atoi(value));
+                setting_changed = true;
+            }
+        }
+        else if (strcmp(key, CN_RANK) == 0)
+        {
+            auto v = config_enum_to_value(value, rank_values);
+            if (v != MXS_UNKNOWN_ENUM_VALUE)
+            {
+                server->set_rank(v);
+                setting_changed = true;
+            }
+            else
+            {
+                config_runtime_error("Invalid value for '%s': %s", CN_RANK, value);
+            }
         }
         else
         {
-            config_runtime_error("Invalid value for '%s': %s", CN_RANK, value);
+            // Was a recognized parameter but runtime modification is not supported.
+            config_runtime_error("Server parameter '%s' cannot be modified during runtime. A similar "
+                                 "effect can be produced by destroying the server and recreating it "
+                                 "with the new settings.", key);
+        }
+
+        if (setting_changed)
+        {
+            // Successful modification of a normal parameter, write to text storage.
+            server->set_normal_parameter(key, value);
         }
     }
     else
     {
-        /**
-         * It's likely that this parameter is used as a weighting parameter.
-         * We need to update the weights of services that use this.
-         */
+        // This is a custom parameter and may be used for weighting. Update the weights of services.
+        server->set_custom_parameter(key, value);
         service_update_weights();
+        setting_changed = true;
     }
 
-    server->serialize();
-    MXS_NOTICE("Updated server '%s': %s=%s", server->name(), key, value);
-
-    return true;
+    if (setting_changed)
+    {
+        server->serialize();
+        MXS_NOTICE("Updated server '%s': %s=%s", server->name(), key, value);
+    }
+    return setting_changed;
 }
 
 static bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,

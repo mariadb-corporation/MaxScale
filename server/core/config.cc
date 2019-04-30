@@ -2212,6 +2212,11 @@ void MXS_CONFIG_PARAMETER::clear()
     m_contents.clear();
 }
 
+bool MXS_CONFIG_PARAMETER::empty() const
+{
+    return m_contents.empty();
+}
+
 MXS_CONFIG_PARAMETER::ContainerType::const_iterator MXS_CONFIG_PARAMETER::begin() const
 {
     return m_contents.begin();
@@ -3817,34 +3822,24 @@ void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
                                    const MXS_MODULE_PARAM* module_params,
                                    json_t* output)
 {
-    // Create a map of the config values to ease their extraction
-    std::unordered_map<std::string, std::string> params;
-
-    for (const auto& elem : *parameters)
-    {
-        params[elem.first] = elem.second;
-    }
-
     for (const auto* param_info : {basic_params, module_params})
     {
         for (int i = 0; param_info[i].name; i++)
         {
-            if (ignored_params.count(param_info[i].name) == 0
-                && !json_object_get(output, param_info[i].name))
+            const string param_name = param_info[i].name;
+            if (ignored_params.count(param_name) == 0 && !json_object_get(output, param_name.c_str()))
             {
-                if (params.count(param_info[i].name) > 0)
+                if (parameters->contains(param_name))
                 {
-                    const string name = param_info[i].name;
-                    const string value = params[name];
-                    json_object_set_new(output, name.c_str(),
-                                        param_value_to_json(&param_info[i], name,
-                                                            value));
+                    const string value = parameters->get_string(param_name);
+                    json_object_set_new(output, param_name.c_str(),
+                                        param_value_to_json(&param_info[i], param_name, value));
                 }
                 else
                 {
                     // The parameter was not set in config and does not have a default value.
                     // Print a null value.
-                    json_object_set_new(output, param_info[i].name, json_null());
+                    json_object_set_new(output, param_name.c_str(), json_null());
                 }
             }
         }

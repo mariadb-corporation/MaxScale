@@ -451,6 +451,7 @@ public:
     void remove(const std::string& key);
 
     void clear();
+    bool empty() const;
 
     ContainerType::const_iterator begin() const;
     ContainerType::const_iterator end() const;

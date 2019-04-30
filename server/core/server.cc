@@ -122,34 +122,6 @@ ThisUnit this_unit;
 
 const char ERR_TOO_LONG_CONFIG_VALUE[] = "The new value for %s is too long. Maximum length is %i characters.";
 
-// Converts Server::ConfigParam to MXS_CONFIG_PARAM and keeps them in the same order. Required for some
-// functions taking MXS_CONFIG_PARAMs as arguments.
-class ParamAdaptor
-{
-public:
-    ParamAdaptor(const std::vector<Server::ConfigParameter>& parameters)
-    {
-        m_params = new MXS_CONFIG_PARAMETER;
-        for (const auto& elem : parameters)
-        {
-            m_params->set(elem.name, elem.value);
-        }
-    }
-
-    ~ParamAdaptor()
-    {
-        delete m_params;
-    }
-
-    operator MXS_CONFIG_PARAMETER*()
-    {
-        return m_params;
-    }
-
-private:
-    MXS_CONFIG_PARAMETER* m_params = nullptr;
-};
-
 /**
  * Write to char array by first zeroing any extra space. This reduces effects of concurrent reading.
  * Concurrent writing should be prevented by the caller.
@@ -273,14 +245,14 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         server->set_monitor_password(monpw);
     }
 
+    server->m_settings.all_parameters = *params;
     for (auto p : *params)
     {
-        const string name = p.first;
-        const string value = p.second;
-        server->m_settings.all_parameters.push_back({name, value});
-        if (server->is_custom_parameter(name))
+        const string& param_name = p.first;
+        const string& param_value = p.second;
+        if (server->is_custom_parameter(param_name))
         {
-            server->set_parameter(name, value);
+            server->set_custom_parameter(param_name, param_value);
         }
     }
 
@@ -522,7 +494,7 @@ void Server::print_to_dcb(DCB* dcb) const
         for (const auto& elem : server->m_settings.all_parameters)
         {
             dcb_printf(dcb, "\t                                       %s\t%s\n",
-                       elem.name.c_str(), elem.value.c_str());
+                       elem.first.c_str(), elem.second.c_str());
         }
     }
     dcb_printf(dcb, "\tNumber of connections:               %d\n", server->stats.n_connections);
@@ -757,37 +729,23 @@ string Server::monitor_password() const
     return m_settings.monpw;
 }
 
-void Server::set_parameter(const string& name, const string& value)
+void Server::set_custom_parameter(const string& name, const string& value)
 {
-    // Set/add the parameter in both containers
-    bool found = false;
-    for (auto& elem : m_settings.all_parameters)
-    {
-        if (name == elem.name)
-        {
-            found = true;
-            elem.value = value;     // Update
-            break;
-        }
-    }
-    if (!found)
-    {
-        m_settings.all_parameters.push_back({name, value});
-    }
-    std::lock_guard<std::mutex> guard(m_settings.lock);
-    m_settings.custom_parameters[name] = value;
+    // Set/add the parameter in both containers.
+    m_settings.all_parameters.set(name, value);
+    Guard guard(m_settings.lock);
+    m_settings.custom_parameters.set(name, value);
 }
 
 string Server::get_custom_parameter(const string& name) const
 {
-    string rval;
-    std::lock_guard<std::mutex> guard(m_settings.lock);
-    auto iter = m_settings.custom_parameters.find(name);
-    if (iter != m_settings.custom_parameters.end())
-    {
-        rval = iter->second;
-    }
-    return rval;
+    Guard guard(m_settings.lock);
+    return m_settings.custom_parameters.get_string(name);
+}
+
+void Server::set_normal_parameter(const std::string& name, const std::string& value)
+{
+    m_settings.all_parameters.set(name, value);
 }
 
 /**
@@ -898,15 +856,19 @@ bool Server::create_server_config(const Server* server, const char* filename)
     // TODO: Check for return values on all of the dprintf calls
     const MXS_MODULE* mod = get_module(server->m_settings.protocol.c_str(), MODULE_PROTOCOL);
     string config = generate_config_string(server->name(),
-                                           *ParamAdaptor(server->m_settings.all_parameters),
+                                           server->m_settings.all_parameters,
                                            config_server_params,
                                            mod->parameters);
 
-    // Print custom parameters
-    for (const auto& elem : server->m_settings.custom_parameters)
+    // Print custom parameters. The generate_config_string()-call doesn't print them.
     {
-        config += elem.first + "=" + elem.second + "\n";
+        Guard guard(server->m_settings.lock);
+        for (const auto& elem : server->m_settings.custom_parameters)
+        {
+            config += elem.first + "=" + elem.second + "\n";
+        }
     }
+
 
     if (dprintf(file, "%s", config.c_str()) == -1)
     {
@@ -1029,18 +991,21 @@ json_t* Server::server_json_attributes(const Server* server)
     json_t* params = json_object();
 
     const MXS_MODULE* mod = get_module(server->m_settings.protocol.c_str(), MODULE_PROTOCOL);
-    config_add_module_params_json(ParamAdaptor(server->m_settings.all_parameters),
+    config_add_module_params_json(&server->m_settings.all_parameters,
                                   {CN_TYPE},
                                   config_server_params,
                                   mod->parameters,
                                   params);
 
     // Add weighting parameters that weren't added by config_add_module_params_json
-    for (const auto& elem : server->m_settings.custom_parameters)
     {
-        if (!json_object_get(params, elem.first.c_str()))
+        Guard guard(server->m_settings.lock);
+        for (const auto& elem : server->m_settings.custom_parameters)
         {
-            json_object_set_new(params, elem.first.c_str(), json_string(elem.second.c_str()));
+            if (!json_object_get(params, elem.first.c_str()))
+            {
+                json_object_set_new(params, elem.first.c_str(), json_string(elem.second.c_str()));
+            }
         }
     }
 

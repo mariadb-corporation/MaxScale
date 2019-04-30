@@ -36,12 +36,6 @@ public:
         m_settings.authenticator = authenticator;
     }
 
-    struct ConfigParameter
-    {
-        std::string name;
-        std::string value;
-    };
-
     long persistpoolmax() const
     {
         return m_settings.persistpoolmax;
@@ -186,10 +180,10 @@ public:
     static Server* find_by_unique_name(const std::string& name);
 
     /**
-     * Test if name is a normal server setting name.
+     * Test if name is not a normal server setting name.
      *
      * @param name Name to check
-     * @return True if name is a standard parameter
+     * @return True if name is not a standard parameter
      */
     bool is_custom_parameter(const std::string& name) const;
 
@@ -241,15 +235,16 @@ public:
     static json_t* server_json_attributes(const Server* server);
 
     /**
-     * @brief Set server parameter
+     * Set server custom parameter.
      *
-     * @param server Server to update
      * @param name   Parameter to set
      * @param value  Value of parameter
      */
-    void set_parameter(const std::string& name, const std::string& value);
+    void set_custom_parameter(const std::string& name, const std::string& value);
 
     std::string get_custom_parameter(const std::string& name) const override;
+
+    void set_normal_parameter(const std::string& name, const std::string& value);
 
     /**
      * @brief Serialize a server to a file
@@ -330,7 +325,7 @@ private:
 
         /** All config settings in text form. This is only read and written from the admin thread
          *  so no need for locking. */
-        std::vector<ConfigParameter> all_parameters;
+        MXS_CONFIG_PARAMETER all_parameters;
 
         std::string protocol;       /**< Backend protocol module name. Does not change so needs no locking. */
         std::string authenticator;  /**< Authenticator module name. Does not change so needs no locking. */
@@ -347,9 +342,9 @@ private:
          *  by mutex. */
         DiskSpaceLimits disk_space_limits;
 
-        /** Additional custom parameters which may affect routing decisions or the monitor module.
+        /** Additional custom parameters which may affect routing decisions or a monitor.
          *  Can be queried from modules at any time so access must be protected by mutex. */
-        std::map<std::string, std::string> custom_parameters;
+        MXS_CONFIG_PARAMETER custom_parameters;
     };
 
     /**
