@@ -268,6 +268,9 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
     case MXS_MODULE_PARAM_REGEX:
         return "regular expression";
 
+    case MXS_MODULE_PARAM_DURATION:
+        return "duration";
+
     default:
         mxb_assert(!true);
         return "unknown";
