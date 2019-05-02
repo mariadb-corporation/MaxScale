@@ -232,8 +232,16 @@ int main(int argc, char** argv)
     /** Set datadir to /tmp */
     set_datadir(MXS_STRDUP_A("/tmp"));
 
-    /* Unlink any existing password file before running this test */
+    /* Unlink any existing password files before running this test */
     sprintf(buf, "%s/maxadmin-users", get_datadir());
+    if (!is_valid_posix_path(buf))
+    {
+        exit(1);
+    }
+
+    unlink(buf);
+
+    sprintf(buf, "%s/passwd", get_datadir());
     if (!is_valid_posix_path(buf))
     {
         exit(1);
