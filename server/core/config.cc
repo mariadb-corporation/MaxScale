@@ -70,6 +70,8 @@
 using std::set;
 using std::string;
 using maxscale::Monitor;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
 
 const char CN_ACCOUNT[] = "account";
 const char CN_ADDRESS[] = "address";
@@ -3766,6 +3768,14 @@ void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params)
     }
 }
 
+template<class T>
+inline int64_t duration_to_int(const string& value)
+{
+    T duration;
+    get_suffixed_duration(value.c_str(), &duration);
+    return duration.count();
+}
+
 /**
  * Convert a config value to a json object.
  *
@@ -3784,6 +3794,13 @@ json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& na
     case MXS_MODULE_PARAM_INT:
         rval = json_integer(strtol(value.c_str(), NULL, 10));
         break;
+
+    case MXS_MODULE_PARAM_DURATION:
+        rval = json_integer((param_info->options & MXS_MODULE_OPT_DURATION_S) ?
+                            duration_to_int<seconds>(value) :
+                            duration_to_int<milliseconds>(value));
+        break;
+
 
     case MXS_MODULE_PARAM_BOOL:
         rval = json_boolean(config_truth_value(value.c_str()));
