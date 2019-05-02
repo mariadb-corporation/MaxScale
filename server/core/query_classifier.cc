@@ -96,9 +96,11 @@ class QCInfoCache;
 static thread_local struct
 {
     QCInfoCache* pInfo_cache;
+    uint32_t     options;
 } this_thread =
 {
-    nullptr
+    nullptr,
+    0
 };
 
 
@@ -147,7 +149,8 @@ public:
         {
             const Entry& entry = i->second;
 
-            if (entry.sql_mode == this_unit.qc_sql_mode)
+            if ((entry.sql_mode == this_unit.qc_sql_mode) &&
+                (entry.options == this_thread.options))
             {
                 mxb_assert(this_unit.classifier);
                 this_unit.classifier->qc_info_dup(entry.pInfo);
@@ -157,7 +160,7 @@ public:
             }
             else
             {
-                // If the sql_mode has changed, we discard the existing result.
+                // If the sql_mode or options has changed, we discard the existing result.
                 erase(i);
 
                 ++m_stats.misses;
@@ -197,7 +200,7 @@ public:
             {
                 this_unit.classifier->qc_info_dup(pInfo);
 
-                m_infos.emplace(canonical_stmt, Entry(pInfo, this_unit.qc_sql_mode));
+                m_infos.emplace(canonical_stmt, Entry(pInfo, this_unit.qc_sql_mode, this_thread.options));
 
                 ++m_stats.inserts;
                 m_stats.size += size;
@@ -213,14 +216,16 @@ public:
 private:
     struct Entry
     {
-        Entry(QC_STMT_INFO* pInfo, qc_sql_mode_t sql_mode)
+        Entry(QC_STMT_INFO* pInfo, qc_sql_mode_t sql_mode, uint32_t options)
             : pInfo(pInfo)
             , sql_mode(sql_mode)
+            , options(options)
         {
         }
 
         QC_STMT_INFO* pInfo;
         qc_sql_mode_t sql_mode;
+        uint32_t      options;
     };
 
     typedef std::unordered_map<std::string, Entry> InfosByStmt;
@@ -1280,6 +1285,29 @@ void qc_set_sql_mode(qc_sql_mode_t sql_mode)
     {
         this_unit.qc_sql_mode = sql_mode;
     }
+}
+
+uint32_t qc_get_options()
+{
+    QC_TRACE();
+    mxb_assert(this_unit.classifier);
+
+    return this_unit.classifier->qc_get_options();
+}
+
+bool qc_set_options(uint32_t options)
+{
+    QC_TRACE();
+    mxb_assert(this_unit.classifier);
+
+    int32_t rv = this_unit.classifier->qc_set_options(options);
+
+    if (rv == QC_RESULT_OK)
+    {
+        this_thread.options = options;
+    }
+
+    return rv == QC_RESULT_OK;
 }
 
 void qc_get_cache_properties(QC_CACHE_PROPERTIES* properties)

@@ -31,6 +31,16 @@ typedef enum qc_init_kind
 } qc_init_kind_t;
 
 /**
+ * qc_option_t defines options that affect the classification.
+ */
+enum qc_option_t
+{
+    QC_OPTION_STRING_ARG_AS_FIELD = (1 << 0),  /*< Report a string argument to a function as a field. */
+};
+
+const uint32_t QC_OPTION_MASK = QC_OPTION_STRING_ARG_AS_FIELD;
+
+/**
  * qc_sql_mode_t specifies what should be assumed of the statements
  * that will be parsed.
  */
@@ -441,6 +451,22 @@ typedef struct query_classifier
      * @param info  The info to be closed.
      */
     void (* qc_info_close)(QC_STMT_INFO* info);
+
+    /**
+     * Gets the options of the *calling* thread.
+     *
+     * @return Bit mask of values from qc_option_t.
+     */
+    uint32_t (* qc_get_options)();
+
+    /**
+     * Sets the options for the *calling* thread.
+     *
+     * @param options Bits from qc_option_t.
+     *
+     * @return QC_RESULT_OK if @c options is valid, otherwise QC_RESULT_ERROR.
+     */
+    int32_t (* qc_set_options)(uint32_t options);
 } QUERY_CLASSIFIER;
 
 /**
@@ -951,5 +977,21 @@ json_t* qc_get_cache_stats_as_json();
  * @return The corresponding string.
  */
 const char* qc_result_to_string(qc_parse_result_t result);
+
+/**
+ * Gets the options of the *calling* thread.
+ *
+ * @return Bit mask of values from qc_option_t.
+ */
+uint32_t qc_get_options();
+
+/**
+ * Sets the options for the *calling* thread.
+ *
+ * @param options Bits from qc_option_t.
+ *
+ * @return true if the options were valid, false otherwise.
+ */
+bool qc_set_options(uint32_t options);
 
 MXS_END_DECLS

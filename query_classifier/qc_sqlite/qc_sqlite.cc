@@ -156,6 +156,7 @@ static thread_local struct
     bool             initialized;           // Whether the thread specific data has been initialized.
     sqlite3*         pDb;                   // Thread specific database handle.
     qc_sql_mode_t    sql_mode;              // What sql_mode is used.
+    uint32_t         options;               // Options affecting classification.
     QcSqliteInfo*    pInfo;                 // The information for the current statement being classified.
     uint64_t         version;               // Encoded version number
     uint32_t         version_major;
@@ -1139,6 +1140,13 @@ public:
                 {
                     zColumn = (char*)"*";
                 }
+            }
+        }
+        else if (pExpr->op == TK_STRING)
+        {
+            if (this_thread.options & QC_OPTION_STRING_ARG_AS_FIELD)
+            {
+                zColumn = pExpr->u.zToken;
             }
         }
 
@@ -4541,6 +4549,8 @@ static int32_t       qc_sqlite_get_sql_mode(qc_sql_mode_t* sql_mode);
 static int32_t       qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode);
 static QC_STMT_INFO* qc_sqlite_info_dup(QC_STMT_INFO* info);
 static void          qc_sqlite_info_close(QC_STMT_INFO* info);
+static uint32_t      qc_sqlite_get_options();
+static int32_t       qc_sqlite_set_options(uint32_t options);
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 {
@@ -5223,6 +5233,27 @@ void qc_sqlite_info_close(QC_STMT_INFO* info)
     static_cast<QcSqliteInfo*>(info)->dec_ref();
 }
 
+uint32_t qc_sqlite_get_options()
+{
+    return this_thread.options;
+}
+
+int32_t qc_sqlite_set_options(uint32_t options)
+{
+    int32_t rv = QC_RESULT_OK;
+
+    if ((options & ~QC_OPTION_MASK) == 0)
+    {
+        this_thread.options = options;
+    }
+    else
+    {
+        rv = QC_RESULT_ERROR;
+    }
+
+    return rv;
+}
+
 /**
  * EXPORTS
  */
@@ -5258,6 +5289,8 @@ extern "C"
             qc_sqlite_set_sql_mode,
             qc_sqlite_info_dup,
             qc_sqlite_info_close,
+            qc_sqlite_get_options,
+            qc_sqlite_set_options
         };
 
         static MXS_MODULE info =

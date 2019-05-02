@@ -195,6 +195,7 @@ static struct
 static thread_local struct
 {
     qc_sql_mode_t sql_mode;
+    uint32_t      options;
     NAME_MAPPING* function_name_mappings;
     // The version information is not used; the embedded library parses according
     // to the version of the embedded library it has been linked with. However, we
@@ -203,6 +204,7 @@ static thread_local struct
 } this_thread =
 {
     QC_SQL_MODE_DEFAULT,
+    0,
     function_name_mappings_default,
     0
 };
@@ -2475,6 +2477,19 @@ static void add_function_field_usage(st_select_lex* select,
             add_function_field_usage(select, static_cast<Item_field*>(item), fi);
             break;
 
+        case Item::STRING_ITEM:
+            if (this_thread.options & QC_OPTION_STRING_ARG_AS_FIELD)
+            {
+                String* s = item->val_str();
+                int len = s->length();
+                char tmp[len + 1];
+                memcpy(tmp, s->ptr(), len);
+                tmp[len] = 0;
+
+                add_function_field_usage(nullptr, nullptr, tmp, fi);
+            }
+            break;
+
         default:
             // mxb_assert(!true);
             ;
@@ -3526,6 +3541,27 @@ int32_t qc_mysql_set_sql_mode(qc_sql_mode_t sql_mode)
     return rv;
 }
 
+uint32_t qc_mysql_get_options()
+{
+    return this_thread.options;
+}
+
+int32_t qc_mysql_set_options(uint32_t options)
+{
+    int32_t rv = QC_RESULT_OK;
+
+    if ((options & ~QC_OPTION_MASK) == 0)
+    {
+        this_thread.options = options;
+    }
+    else
+    {
+        rv = QC_RESULT_ERROR;
+    }
+
+    return rv;
+}
+
 /**
  * EXPORTS
  */
@@ -3561,6 +3597,8 @@ extern "C"
             qc_mysql_set_sql_mode,
             nullptr,    // qc_info_dup not supported.
             nullptr,    // qc_info_close not supported.
+            qc_mysql_get_options,
+            qc_mysql_set_options
         };
 
         static MXS_MODULE info =
