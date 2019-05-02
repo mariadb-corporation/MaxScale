@@ -318,6 +318,9 @@ add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1
 # https://jira.mariadb.org/browse/MXS-1493
 add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS mysqlmon REPL_BACKEND)
 
+# MXS-2456: Cap transaction replay attempts
+add_test_executable(mxs2456_trx_replay_cap.cpp mxs2456_trx_replay_cap mxs2456_trx_replay_cap LABELS REPL_BACKEND)
+
 ############################################
 # END: Tests that require GTID             #
 ############################################
