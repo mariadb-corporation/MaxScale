@@ -27,6 +27,10 @@ project(MaxScale)
 # Set the installation layout
 include(${CMAKE_SOURCE_DIR}/cmake/install_layout.cmake)
 
+# Configure RPATH
+# (it has to be before any executable generation)
+include(cmake/rpath.cmake)
+
 # Do the platform check
 include(cmake/CheckPlatform.cmake)
 
@@ -91,8 +95,6 @@ else()
   message(WARNING "Could not find git, MaxScale commit ID will not be resolved. Will use 'source-build' for commit ID.")
   set(MAXSCALE_COMMIT "source-build")
 endif()
-
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBDIR})
 
 # Make sure the release notes for this release are present if it is a stable one
 if(${MAXSCALE_VERSION} MATCHES "-stable")
