@@ -129,6 +129,48 @@ private:
 };
 
 thread_local DbfwThread* this_thread = NULL;
+
+// TODO: In 2.4 move to query_classifier.hh.
+class EnableOption
+{
+public:
+    EnableOption(const EnableOption&) = delete;
+    EnableOption& operator=(const EnableOption&) = delete;
+
+    EnableOption(uint32_t option)
+        : m_option(option)
+        , m_options(0)
+        , m_disable(false)
+    {
+        if (m_option)
+        {
+            m_options = qc_get_options();
+
+            if (!(m_options & m_option))
+            {
+                uint32_t options = (m_options | m_option);
+                MXB_AT_DEBUG(bool rv = )qc_set_options(options);
+                mxb_assert(rv);
+                m_disable = true;
+            }
+        }
+    }
+
+    ~EnableOption()
+    {
+        if (m_disable)
+        {
+            MXB_AT_DEBUG(bool rv = )qc_set_options(m_options);
+            mxb_assert(rv);
+        }
+    }
+
+private:
+    uint32_t m_option;
+    uint32_t m_options;
+    bool     m_disable;
+};
+
 }
 
 bool        parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
@@ -584,6 +626,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 "block",
                 MXS_MODULE_OPT_ENUM_UNIQUE,
                 action_values
+            },
+            {
+                "treat_string_arg_as_field",
+                MXS_MODULE_PARAM_BOOL,
+                "true"
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -1200,6 +1247,7 @@ int global_version = 1;
 Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
     : m_action((enum fw_actions)config_get_enum(params, "action", action_values))
     , m_log_match(0)
+    , m_treat_string_arg_as_field(config_get_bool(params, "treat_string_arg_as_field"))
     , m_filename(config_get_string(params, "rules"))
     , m_version(atomic_add(&global_version, 1))
 {
@@ -1469,6 +1517,8 @@ int DbfwSession::routeQuery(GWBUF* buffer)
     }
     else
     {
+        uint32_t option = m_instance->treat_string_arg_as_field() ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
+        EnableOption enable(option);
         GWBUF* analyzed_queue = buffer;
 
         // QUERY_TYPE_PREPARE_STMT need not be handled separately as the

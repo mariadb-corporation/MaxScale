@@ -48,6 +48,7 @@ GWBUF* create_parse_error_response()
     return create_error_response(zMessage);
 }
 
+// TODO: In 2.4 move to query_classifier.hh.
 class EnableOption
 {
 public:

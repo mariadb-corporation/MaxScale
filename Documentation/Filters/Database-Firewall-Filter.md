@@ -146,6 +146,16 @@ query itself is logged. The log messages are logged at the notice level.
 Log all queries that do not match a rule. The matched user and the query is
 logged. The log messages are logged at the notice level.
 
+#### `treat_string_arg_as_field`
+This optional parameter specifies how the database firewall should treat
+strings used as arguments to functions. If true, they will be handled
+as fields, which will cause fields to be masked even if `ANSI_QUOTES` has
+been enabled and `"` is used instead of backtick.
+```
+treat_string_arg_as_field=false
+```
+The default value is `true`.
+
 ## Rule syntax
 
 The rules are defined by using the following syntax:
