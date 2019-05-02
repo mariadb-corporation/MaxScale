@@ -145,6 +145,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 Config::require_fully_parsed_default,
                 MXS_MODULE_OPT_NONE,
             },
+            {
+                Config::treat_string_arg_as_field_name,
+                MXS_MODULE_PARAM_BOOL,
+                Config::treat_string_arg_as_field_default,
+                MXS_MODULE_OPT_NONE
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
