@@ -925,7 +925,18 @@ void ClustrixMonitor::update_http_urls()
         health_urls.push_back(url);
     }
 
-    m_health_urls.swap(health_urls);
+    if (m_health_urls != health_urls)
+    {
+        if (m_delayed_http_check_id != 0)
+        {
+            cancel_delayed_call(m_delayed_http_check_id);
+            m_delayed_http_check_id = 0;
+        }
+
+        m_http.reset();
+
+        m_health_urls.swap(health_urls);
+    }
 }
 
 bool ClustrixMonitor::perform_softfail(SERVER* pServer, json_t** ppError)
