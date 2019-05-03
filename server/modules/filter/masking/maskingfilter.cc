@@ -188,23 +188,17 @@ MaskingFilter* MaskingFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pP
 
         if (config.treat_string_arg_as_field())
         {
-            MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s. "
-                       "As a consequence, the query classifier cache must be disabled.",
-                       zName);
-
             QC_CACHE_PROPERTIES cache_properties;
             qc_get_cache_properties(&cache_properties);
 
             if (cache_properties.max_size != 0)
             {
+                MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
+                           "disabling the query classifier cache.",
+                           zName);
+
                 cache_properties.max_size = 0;
                 qc_set_cache_properties(&cache_properties);
-
-                MXS_NOTICE("Query classifier cache disabled.");
-            }
-            else
-            {
-                MXS_NOTICE("The query classifier cache was disabled already.");
             }
         }
     }

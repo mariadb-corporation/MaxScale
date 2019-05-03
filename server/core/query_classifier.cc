@@ -1321,6 +1321,11 @@ bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
 
     if (properties->max_size >= 0)
     {
+        if (properties->max_size == 0)
+        {
+            MXS_NOTICE("Query classifier cache disabled.");
+        }
+
         this_unit.set_cache_max_size(properties->max_size);
         rv = true;
     }
