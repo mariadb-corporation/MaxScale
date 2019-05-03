@@ -74,8 +74,6 @@ void test_one_ps(TestConnections& test, const char* zQuery, Expect expect)
 
 void run(TestConnections& test)
 {
-    init(test);
-
     MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
 
     int rv;
@@ -130,6 +128,38 @@ void run(TestConnections& test)
     test_one(test, "select * FROM (select * from masking_auto_firewall) tbl", Expect::FAILURE);
 }
 
+void run_ansi_quotes(TestConnections& test)
+{
+    // This SHOULD go through as we have 'treat_string_arg_as_field=false"
+    test_one(test, "select concat(\"a\") from masking_auto_firewall", Expect::SUCCESS);
+
+    Connection c = test.maxscales->rwsplit();
+    c.connect();
+
+    test.expect(c.query("SET @@SQL_MODE = CONCAT(@@SQL_MODE, ',ANSI_QUOTES')"),
+                "Could not turn on 'ANSI_QUOTES'");
+
+    // This SHOULD still go through as we still have 'treat_string_arg_as_field=false"
+    test_one(test, "select concat(\"a\") from masking_auto_firewall", Expect::SUCCESS);
+
+    // Let's turn on 'treat_string_arg_as_field=true'
+    test.maxscales->ssh_node(0,
+                             "sed -i -e "
+                             "'s/treat_string_arg_as_field=false/treat_string_arg_as_field=true/' "
+                             "/etc/maxscale.cnf",
+                             true);
+    // and restart MaxScale
+    test.maxscales->restart();
+
+    // This should NOT go through as we have 'treat_string_arg_as_field=true" and ANSI_QUOTES.
+    test_one(test, "select concat(\"a\") from masking_auto_firewall", Expect::FAILURE);
+
+    // Have to reconnect as we restarted MaxScale.
+    c.connect();
+    test.expect(c.query("SET @@SQL_MODE = REPLACE(@@SQL_MODE, 'ANSI_QUOTES', '')"),
+                "Could not turn off 'ANSI_QUOTES'");
+}
+
 }
 
 int main(int argc, char* argv[])
@@ -151,7 +181,9 @@ int main(int argc, char* argv[])
 
             if (test.maxscales->connect_rwsplit() == 0)
             {
+                init(test);
                 run(test);
+                run_ansi_quotes(test);
             }
             else
             {

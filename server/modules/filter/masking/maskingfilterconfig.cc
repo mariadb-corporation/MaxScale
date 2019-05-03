@@ -17,14 +17,15 @@
 namespace
 {
 
-const char config_name_check_subqueries[]       = "check_subqueries";
-const char config_name_check_unions[]           = "check_unions";
-const char config_name_check_user_variables[]   = "check_user_variables";
-const char config_name_large_payload[]          = "large_payload";
-const char config_name_prevent_function_usage[] = "prevent_function_usage";
-const char config_name_require_fully_parsed[]   = "require_fully_parsed";
-const char config_name_rules[]                  = "rules";
-const char config_name_warn_type_mismatch[]     = "warn_type_mismatch";
+const char config_name_check_subqueries[]          = "check_subqueries";
+const char config_name_check_unions[]              = "check_unions";
+const char config_name_check_user_variables[]      = "check_user_variables";
+const char config_name_large_payload[]             = "large_payload";
+const char config_name_prevent_function_usage[]    = "prevent_function_usage";
+const char config_name_require_fully_parsed[]      = "require_fully_parsed";
+const char config_name_rules[]                     = "rules";
+const char config_name_warn_type_mismatch[]        = "warn_type_mismatch";
+const char config_name_treat_string_arg_as_field[] = "treat_string_arg_as_field";
 
 
 const char config_value_abort[]  = "abort";
@@ -105,7 +106,11 @@ const char* MaskingFilterConfig::check_subqueries_default = config_value_true;
 const char* MaskingFilterConfig::require_fully_parsed_name = config_name_require_fully_parsed;
 const char* MaskingFilterConfig::require_fully_parsed_default = config_name_require_fully_parsed;
 
-
+/*
+ * PARAM treat_string_arg_as_field
+ */
+const char* MaskingFilterConfig::treat_string_arg_as_field_name = config_name_treat_string_arg_as_field;
+const char* MaskingFilterConfig::treat_string_arg_as_field_default = config_value_true;
 /*
  * MaskingFilterConfig
  */
@@ -160,4 +165,10 @@ bool MaskingFilterConfig::get_check_subqueries(const MXS_CONFIG_PARAMETER* pPara
 bool MaskingFilterConfig::get_require_fully_parsed(const MXS_CONFIG_PARAMETER* pParams)
 {
     return pParams->get_bool(require_fully_parsed_name);
+}
+
+// static
+bool MaskingFilterConfig::get_treat_string_arg_as_field(const MXS_CONFIG_PARAMETER* pParams)
+{
+    return pParams->get_bool(treat_string_arg_as_field_name);
 }

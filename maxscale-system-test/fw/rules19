@@ -1,0 +1,2 @@
+rule test19 match function concat columns x1
+users %@% match any rules test19

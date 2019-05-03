@@ -128,6 +128,48 @@ private:
 };
 
 thread_local DbfwThread* this_thread = NULL;
+
+// TODO: In 2.4 move to query_classifier.hh.
+class EnableOption
+{
+public:
+    EnableOption(const EnableOption&) = delete;
+    EnableOption& operator=(const EnableOption&) = delete;
+
+    EnableOption(uint32_t option)
+        : m_option(option)
+        , m_options(0)
+        , m_disable(false)
+    {
+        if (m_option)
+        {
+            m_options = qc_get_options();
+
+            if (!(m_options & m_option))
+            {
+                uint32_t options = (m_options | m_option);
+                MXB_AT_DEBUG(bool rv = )qc_set_options(options);
+                mxb_assert(rv);
+                m_disable = true;
+            }
+        }
+    }
+
+    ~EnableOption()
+    {
+        if (m_disable)
+        {
+            MXB_AT_DEBUG(bool rv = )qc_set_options(m_options);
+            mxb_assert(rv);
+        }
+    }
+
+private:
+    uint32_t m_option;
+    uint32_t m_options;
+    bool     m_disable;
+};
+
 }
 
 bool        parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
@@ -583,6 +625,16 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 "block",
                 MXS_MODULE_OPT_ENUM_UNIQUE,
                 action_values
+            },
+            {
+                "treat_string_arg_as_field",
+                MXS_MODULE_PARAM_BOOL,
+                "true"
+            },
+            {
+                "treat_string_as_field",
+                MXS_MODULE_PARAM_BOOL,
+                "true"
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -1199,6 +1251,8 @@ int global_version = 1;
 Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
     : m_action((enum fw_actions)params->get_enum("action", action_values))
     , m_log_match(0)
+    , m_treat_string_as_field(params->get_bool("treat_string_as_field"))
+    , m_treat_string_arg_as_field(params->get_bool("treat_string_arg_as_field"))
     , m_filename(params->get_string("rules"))
     , m_version(atomic_add(&global_version, 1))
 {
@@ -1227,6 +1281,26 @@ Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
     if (process_rule_file(file, &rules, &users))
     {
         rval = new(std::nothrow) Dbfw(pParams);
+
+        if (rval)
+        {
+            if (rval->treat_string_as_field() || rval->treat_string_arg_as_field())
+            {
+                QC_CACHE_PROPERTIES cache_properties;
+                qc_get_cache_properties(&cache_properties);
+
+                if (cache_properties.max_size != 0)
+                {
+                    MXS_NOTICE("The parameter 'treat_string_arg_as_field' or(and) "
+                               "'treat_string_as_field' is enabled for %s, "
+                               "disabling the query classifier cache.",
+                               zName);
+
+                    cache_properties.max_size = 0;
+                    qc_set_cache_properties(&cache_properties);
+                }
+            }
+        }
     }
 
     return rval;
@@ -1468,6 +1542,19 @@ int DbfwSession::routeQuery(GWBUF* buffer)
     }
     else
     {
+        uint32_t option = 0;
+
+        if (m_instance->treat_string_as_field())
+        {
+            option |= QC_OPTION_STRING_AS_FIELD;
+        }
+
+        if (m_instance->treat_string_arg_as_field())
+        {
+            option |= QC_OPTION_STRING_ARG_AS_FIELD;
+        }
+
+        EnableOption enable(option);
         GWBUF* analyzed_queue = buffer;
 
         // QUERY_TYPE_PREPARE_STMT need not be handled separately as the

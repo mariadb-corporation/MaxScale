@@ -96,6 +96,26 @@ Please see the configuration parameter
 [require_fully_parsed](#require_fully_parsed)
 for how to change the default behaviour.
 
+From MaxScale 2.3.7 onwards, the masking filter will treat any strings
+passed to functions as if they were fields. The reason is that as the
+MaxScale query classifier is not aware of whether `ANSI_QUOTES` is
+enabled or not, it is possible to bypass the masking by turning that
+option on.
+```
+mysql> set @@sql_mode = 'ANSI_QUOTES';
+mysql> select concat("ssn") from managers;
+```
+Before this change, the content of the field `ssn` would have been
+returned in clear text even if the column should have been masked.
+
+Note that this change will mean that there may be false positives
+if `ANSI_QUOTES` is not enabled and a string argument happens to
+be the same as the name of a field to be masked.
+
+Please see the configuration parameter
+[treat_string_arg_as_field(#treat_string_arg_as_field)
+for how to change the default behaviour.
+
 ## Limitations
 
 The masking filter can _only_ be used for masking columns of the following
@@ -214,6 +234,17 @@ Note that if this parameter is set to false, then `prevent_function_usage`,
 `check_user_variables`, `check_unions` and `check_subqueries` are rendered
 less effective, as it with a statement that can not be fully parsed may be
 possible to bypass the protection that they are intended to provide.
+
+#### `treat_string_arg_as_field`
+
+This optional parameter specifies how the masking filter should treat
+strings used as arguments to functions. If true, they will be handled
+as fields, which will cause fields to be masked even if `ANSI_QUOTES` has
+been enabled and `"` is used instead of backtick.
+```
+treat_string_arg_as_field=false
+```
+The default value is `true`.
 
 #### `check_user_variables`
 

@@ -145,6 +145,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 Config::require_fully_parsed_default,
                 MXS_MODULE_OPT_NONE,
             },
+            {
+                Config::treat_string_arg_as_field_name,
+                MXS_MODULE_PARAM_BOOL,
+                Config::treat_string_arg_as_field_default,
+                MXS_MODULE_OPT_NONE
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -179,6 +185,22 @@ MaskingFilter* MaskingFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pP
     if (sRules.get())
     {
         pFilter = new MaskingFilter(config, sRules);
+
+        if (config.treat_string_arg_as_field())
+        {
+            QC_CACHE_PROPERTIES cache_properties;
+            qc_get_cache_properties(&cache_properties);
+
+            if (cache_properties.max_size != 0)
+            {
+                MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
+                           "disabling the query classifier cache.",
+                           zName);
+
+                cache_properties.max_size = 0;
+                qc_set_cache_properties(&cache_properties);
+            }
+        }
     }
 
     return pFilter;

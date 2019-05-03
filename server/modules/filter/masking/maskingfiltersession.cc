@@ -48,6 +48,47 @@ GWBUF* create_parse_error_response()
     return create_error_response(zMessage);
 }
 
+// TODO: In 2.4 move to query_classifier.hh.
+class EnableOption
+{
+public:
+    EnableOption(const EnableOption&) = delete;
+    EnableOption& operator=(const EnableOption&) = delete;
+
+    EnableOption(uint32_t option)
+        : m_option(option)
+        , m_options(0)
+        , m_disable(false)
+    {
+        if (m_option)
+        {
+            m_options = qc_get_options();
+
+            if (!(m_options & m_option))
+            {
+                uint32_t options = (m_options | m_option);
+                MXB_AT_DEBUG(bool rv = )qc_set_options(options);
+                mxb_assert(rv);
+                m_disable = true;
+            }
+        }
+    }
+
+    ~EnableOption()
+    {
+        if (m_disable)
+        {
+            MXB_AT_DEBUG(bool rv = )qc_set_options(m_options);
+            mxb_assert(rv);
+        }
+    }
+
+private:
+    uint32_t m_option;
+    uint32_t m_options;
+    bool     m_disable;
+};
+
 }
 
 MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter)
@@ -127,6 +168,9 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
 {
     bool rv = false;
 
+    uint32_t option = m_filter.config().treat_string_arg_as_field() ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
+    EnableOption enable(option);
+
     if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED
         || !m_filter.config().require_fully_parsed())
     {
@@ -165,6 +209,9 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
 bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
 {
     bool rv = false;
+
+    uint32_t option = m_filter.config().treat_string_arg_as_field() ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
+    EnableOption enable(option);
 
     if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED
         || !m_filter.config().require_fully_parsed())

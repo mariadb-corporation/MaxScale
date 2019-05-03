@@ -23,6 +23,7 @@ module=masking
 rules=/home/vagrant/masking_auto_firewall.json
 warn_type_mismatch=always
 large_payload=ignore
+treat_string_arg_as_field=false
 
 [RWS]
 type=service

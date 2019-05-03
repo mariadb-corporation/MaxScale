@@ -225,6 +225,26 @@ public:
     fw_actions get_action() const;
 
     /**
+     * Should strings be treated as fields?
+     *
+     * @return True, if they should, false otherwise.
+     */
+    bool treat_string_as_field() const
+    {
+        return m_treat_string_as_field;
+    }
+
+    /**
+     * Should string args be treated as fields?
+     *
+     * @return True, if they should, false otherwise.
+     */
+    bool treat_string_arg_as_field() const
+    {
+        return m_treat_string_arg_as_field;
+    }
+
+    /**
      * Get logging option bitmask
      *
      * @return the logging option bitmask
@@ -267,6 +287,8 @@ public:
 private:
     fw_actions         m_action;    /*< Default operation mode, defaults to deny */
     int                m_log_match; /*< Log matching and/or non-matching queries */
+    bool               m_treat_string_as_field;
+    bool               m_treat_string_arg_as_field;
     mutable std::mutex m_lock;      /*< Instance spinlock */
     std::string        m_filename;  /*< Path to the rule file */
     int                m_version;   /*< Latest rule file version, incremented on reload */
