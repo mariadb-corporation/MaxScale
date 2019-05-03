@@ -632,6 +632,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_PARAM_BOOL,
                 "true"
             },
+            {
+                "treat_string_as_field",
+                MXS_MODULE_PARAM_BOOL,
+                "true"
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -1247,6 +1252,7 @@ int global_version = 1;
 Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
     : m_action((enum fw_actions)config_get_enum(params, "action", action_values))
     , m_log_match(0)
+    , m_treat_string_as_field(config_get_bool(params, "treat_string_as_field"))
     , m_treat_string_arg_as_field(config_get_bool(params, "treat_string_arg_as_field"))
     , m_filename(config_get_string(params, "rules"))
     , m_version(atomic_add(&global_version, 1))
@@ -1276,6 +1282,32 @@ Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
     if (process_rule_file(file, &rules, &users))
     {
         rval = new(std::nothrow) Dbfw(pParams);
+
+        if (rval)
+        {
+            if (rval->treat_string_as_field() || rval->treat_string_arg_as_field())
+            {
+                MXS_NOTICE("The parameter 'treat_string_arg_as_field' and/or "
+                           "'treat_string_as_field' is enabled for %s. "
+                           "As a consequence, the query classifier cache must be disabled.",
+                           zName);
+
+                QC_CACHE_PROPERTIES cache_properties;
+                qc_get_cache_properties(&cache_properties);
+
+                if (cache_properties.max_size != 0)
+                {
+                    cache_properties.max_size = 0;
+                    qc_set_cache_properties(&cache_properties);
+
+                    MXS_NOTICE("Query classifier cache disabled.");
+                }
+                else
+                {
+                    MXS_NOTICE("The query classifier cache was disabled already.");
+                }
+            }
+        }
     }
 
     return rval;
@@ -1517,7 +1549,18 @@ int DbfwSession::routeQuery(GWBUF* buffer)
     }
     else
     {
-        uint32_t option = m_instance->treat_string_arg_as_field() ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
+        uint32_t option = 0;
+
+        if (m_instance->treat_string_as_field())
+        {
+            option |= QC_OPTION_STRING_AS_FIELD;
+        }
+
+        if (m_instance->treat_string_arg_as_field())
+        {
+            option |= QC_OPTION_STRING_ARG_AS_FIELD;
+        }
+
         EnableOption enable(option);
         GWBUF* analyzed_queue = buffer;
 

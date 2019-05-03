@@ -146,15 +146,31 @@ query itself is logged. The log messages are logged at the notice level.
 Log all queries that do not match a rule. The matched user and the query is
 logged. The log messages are logged at the notice level.
 
+#### `treat_string_as_field`
+This optional parameter specifies how the database firewall should treat
+strings. If true, they will be handled as fields, which will cause column
+blocking rules to match even if `ANSI_QUOTES` has been enabled and `"` is
+used instead of backtick.
+```
+treat_string_as_field=false
+```
+The default value is `true`.
+
+Note that this may cause a false positive, if a "true" string contains the
+name of a column to be blocked.
+
 #### `treat_string_arg_as_field`
 This optional parameter specifies how the database firewall should treat
 strings used as arguments to functions. If true, they will be handled
-as fields, which will cause fields to be masked even if `ANSI_QUOTES` has
-been enabled and `"` is used instead of backtick.
+as fields, which will cause function column blocking rules to match even
+even if `ANSI_QUOTES` has been enabled and `"` is used instead of backtick.
 ```
 treat_string_arg_as_field=false
 ```
 The default value is `true`.
+
+Note that this may cause a false positive, if a "true" string contains the
+name of a column to be blocked.
 
 ## Rule syntax
 
