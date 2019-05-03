@@ -288,8 +288,11 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 {
     int rv = 0;
 
+    MXS_CONFIG_PARAMETER parameters;
+    parameters.set("max_retry_interval", "10s");
+    parameters.set("connection_timeout", "10s");
 
-    auto service = service_alloc("service", "readconnroute", nullptr);
+    auto service = service_alloc("service", "readconnroute", &parameters);
     auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
     mock::Client client("bob", "127.0.0.1");
     mock::Session session(&client, listener);
