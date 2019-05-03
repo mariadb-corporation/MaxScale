@@ -780,17 +780,27 @@ private:
             // delay is very short and the execution time for the function very long,
             // then we will not succeed with that and the function will simply be
             // invoked as frequently as possible.
-            m_at += m_delay;
+            int64_t now = WorkerLoad::get_time_ms();
+            int64_t then = m_at + m_delay;
+
+            if (now > then)
+            {
+                m_at = now;
+            }
+            else
+            {
+                m_at = then;
+            }
             return rv;
         }
 
     protected:
         DelayedCall(int32_t delay, int32_t id)
             : m_id(id)
-            , m_delay(delay)
-            , m_at(get_at(delay))
+            , m_delay(delay >= 0 ? delay : 0)
+            , m_at(get_at(m_delay))
         {
-            mxb_assert(delay > 0);
+            mxb_assert(delay >= 0);
         }
 
         virtual bool do_call(Worker::Call::action_t action) = 0;
@@ -798,13 +808,11 @@ private:
     private:
         static int64_t get_at(int32_t delay)
         {
-            mxb_assert(delay > 0);
+            mxb_assert(delay >= 0);
 
-            struct timespec ts;
-            MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC, &ts);
-            mxb_assert(rv == 0);
+            int64_t now = WorkerLoad::get_time_ms();
 
-            return delay + (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+            return now + delay;
         }
 
     private:
