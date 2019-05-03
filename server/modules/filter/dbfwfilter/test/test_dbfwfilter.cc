@@ -768,8 +768,12 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             const char* zHost = c.zHost ? c.zHost : DEFAULT_HOST;
 
             mock::Client client(zUser, zHost);
-            auto service = service_alloc("service", "readconnroute", nullptr);
-            auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
+            MXS_CONFIG_PARAMETER parameters;
+            parameters.set("max_retry_interval", "10s");
+            parameters.set("connection_timeout", "10s");
+            auto service = service_alloc("service", "readconnroute", &parameters);
+            auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306,
+                                             "", "", nullptr);
             mock::Session session(&client, listener);
             mock::OkBackend backend;
             mock::RouterSession router_session(&backend, &session);
