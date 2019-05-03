@@ -36,9 +36,10 @@ typedef enum qc_init_kind
 enum qc_option_t
 {
     QC_OPTION_STRING_ARG_AS_FIELD = (1 << 0),  /*< Report a string argument to a function as a field. */
+    QC_OPTION_STRING_AS_FIELD     = (1 << 1),  /*< Report strings as fields. */
 };
 
-const uint32_t QC_OPTION_MASK = QC_OPTION_STRING_ARG_AS_FIELD;
+const uint32_t QC_OPTION_MASK = QC_OPTION_STRING_ARG_AS_FIELD | QC_OPTION_STRING_AS_FIELD;
 
 /**
  * qc_sql_mode_t specifies what should be assumed of the statements

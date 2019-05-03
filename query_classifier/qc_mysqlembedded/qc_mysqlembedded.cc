@@ -2268,15 +2268,12 @@ static void unalias_names(st_select_lex* select,
 }
 
 static void add_field_info(parsing_info_t* info,
-                           st_select_lex*  select,
                            const char* database,
                            const char* table,
                            const char* column,
                            List<Item>* excludep)
 {
     mxb_assert(column);
-
-    unalias_names(select, database, table, &database, &table);
 
     QC_FIELD_INFO item = {(char*)database, (char*)table, (char*)column};
 
@@ -2351,6 +2348,20 @@ static void add_field_info(parsing_info_t* info,
             field_infos[info->field_infos_len++] = item;
         }
     }
+}
+
+static void add_field_info(parsing_info_t* info,
+                           st_select_lex*  select,
+                           const char* database,
+                           const char* table,
+                           const char* column,
+                           List<Item>* excludep)
+{
+    mxb_assert(column);
+
+    unalias_names(select, database, table, &database, &table);
+
+    add_field_info(info, database, table, column, excludep);
 }
 
 static void add_function_field_usage(const char* database,
@@ -3060,6 +3071,19 @@ static void update_field_infos(parsing_info_t* pi,
                 MXS_ERROR("Unknown subselect type: %d", subselect_item->substype());
                 break;
             }
+        }
+        break;
+
+    case Item::STRING_ITEM:
+        if (this_thread.options & QC_OPTION_STRING_AS_FIELD)
+        {
+            String* s = item->val_str();
+            int len = s->length();
+            char tmp[len + 1];
+            memcpy(tmp, s->ptr(), len);
+            tmp[len] = 0;
+
+            add_field_info(pi, nullptr, nullptr, tmp, excludep);
         }
         break;
 

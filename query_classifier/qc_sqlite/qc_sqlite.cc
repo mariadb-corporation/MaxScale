@@ -832,6 +832,14 @@ public:
             update_field_infos_from_expr(pAliases, context, pExpr, pExclude);
             break;
 
+        case TK_STRING: // select "a" ..., for @@sql_mode containing 'ANSI_QUOTES'
+            if (this_thread.options & QC_OPTION_STRING_AS_FIELD)
+            {
+                const char* zColumn = pExpr->u.zToken;
+                update_field_infos_from_column(pAliases, context, zColumn, pExclude);
+            }
+            break;
+
         case TK_VARIABLE:
             {
                 if (zToken[0] == '@')
@@ -1181,6 +1189,17 @@ public:
             {
                 update_field_info(pAliases, context, zDatabase, zTable, zColumn, pExclude);
             }
+        }
+    }
+
+    void update_field_infos_from_column(QcAliases* pAliases,
+                                        uint32_t context,
+                                        const char* zColumn,
+                                        const ExprList* pExclude)
+    {
+        if (must_check_sequence_related_functions() || must_collect_fields())
+        {
+            update_field_info(pAliases, context, nullptr, nullptr, zColumn, pExclude);
         }
     }
 
