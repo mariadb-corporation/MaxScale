@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
                                 Test->maxscales->access_homedir[0]);
 
     sprintf(rules_dir, "%s/fw/", test_dir);
-    int N = 18;
+    int N = 19;
     int i;
 
     for (i = 1; i < N + 1; i++)
