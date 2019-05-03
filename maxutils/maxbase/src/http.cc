@@ -491,6 +491,11 @@ Async::Async()
 {
 }
 
+void Async::reset()
+{
+    m_sImp = std::make_shared<ReadyImp>();
+}
+
 Async get_async(const std::vector<std::string>& urls,
                 const Config& config)
 {

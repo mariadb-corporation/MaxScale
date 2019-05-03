@@ -175,7 +175,7 @@ public:
     };
 
     /**
-     * Defalt constructor creates an asynchronous operation whose status is ERROR.
+     * Defalt constructor creates an asynchronous operation whose status is READY.
      */
     Async();
 
@@ -203,6 +203,11 @@ public:
         m_sImp.swap(sImp);
         return *this;
     }
+
+    /**
+     * Resets the instance so that it becomes as if it would have been default constructed.
+     */
+    void reset();
 
     /**
      * Return the status of the operation.
