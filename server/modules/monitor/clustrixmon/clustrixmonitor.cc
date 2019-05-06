@@ -14,6 +14,7 @@
 #include "clustrixmonitor.hh"
 #include <algorithm>
 #include <set>
+#include <maxbase/string.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
@@ -42,6 +43,21 @@ const int DEFAULT_HEALTH_PORT = 3581;
 // Change this, if the schema is changed.
 const int SCHEMA_VERSION = 1;
 
+static const char SQL_BN_CREATE[] =
+    "CREATE TABLE IF NOT EXISTS bootstrap_nodes "
+    "(ip CARCHAR(255), mysql_port INT)";
+
+static const char SQL_BN_INSERT_FORMAT[] =
+    "INSERT INTO bootstrap_nodes (ip, mysql_port) "
+    "VALUES %s";
+
+static const char SQL_BN_DELETE[] =
+    "DELETE FROM bootstrap_nodes";
+
+static const char SQL_BN_SELECT[] =
+    "SELECT ip, mysql_port FROM bootstrap_nodes";
+
+
 static const char SQL_DN_CREATE[] =
     "CREATE TABLE IF NOT EXISTS dynamic_nodes "
     "(id INT PRIMARY KEY, ip VARCHAR(255), mysql_port INT, health_port INT)";
@@ -52,6 +68,9 @@ static const char SQL_DN_UPSERT_FORMAT[] =
 
 static const char SQL_DN_DELETE_FORMAT[] =
     "DELETE FROM dynamic_nodes WHERE id = %d";
+
+static const char SQL_DN_DELETE[] =
+    "DELETE FROM dynamic_nodes";
 
 static const char SQL_DN_SELECT[] =
     "SELECT ip, mysql_port FROM dynamic_nodes";
@@ -83,7 +102,12 @@ namespace
 bool create_schema(sqlite3* pDb)
 {
     char* pError = nullptr;
-    int rv = sqlite3_exec(pDb, SQL_DN_CREATE, nullptr, nullptr, &pError);
+    int rv = sqlite3_exec(pDb, SQL_BN_CREATE, nullptr, nullptr, &pError);
+
+    if (rv == SQLITE_OK)
+    {
+        rv = sqlite3_exec(pDb, SQL_DN_CREATE, nullptr, nullptr, &pError);
+    }
 
     if (rv != SQLITE_OK)
     {
@@ -170,6 +194,8 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     {
         return false;
     }
+
+    check_bootstrap_servers();
 
     m_health_urls.clear();
     m_nodes.clear();
@@ -643,6 +669,115 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
     return refreshed;
 }
 
+void ClustrixMonitor::check_bootstrap_servers()
+{
+    HostPortPairs nodes;
+    char* pError = nullptr;
+    int rv = sqlite3_exec(m_pDb, SQL_BN_SELECT, select_cb, &nodes, &pError);
+
+    if (rv == SQLITE_OK)
+    {
+        set<string> prev_bootstrap_servers;
+
+        for (const auto& node : nodes)
+        {
+            string s = node.first + ":" + std::to_string(node.second);
+            prev_bootstrap_servers.insert(s);
+        }
+
+        set<string> current_bootstrap_servers;
+
+        for (const auto* pMs : m_servers)
+        {
+            SERVER* pServer = pMs->server;
+
+            string s = string(pServer->address) + ":" + std::to_string(pServer->port);
+            current_bootstrap_servers.insert(s);
+        }
+
+        if (prev_bootstrap_servers == current_bootstrap_servers)
+        {
+            MXS_NOTICE("Current bootstrap servers are the same as the ones used on "
+                       "previous run, using persisted connection information.");
+        }
+        else
+        {
+            MXS_NOTICE("Current bootstrap servers (%s) are different than the ones "
+                       "used on the previous run (%s), NOT using persistent connection "
+                       "information.",
+                       mxb::join(current_bootstrap_servers, ", ").c_str(),
+                       mxb::join(prev_bootstrap_servers, ", ").c_str());
+
+            if (remove_persisted_information())
+            {
+                persist_bootstrap_servers();
+            }
+        }
+    }
+    else
+    {
+        MXS_WARNING("Could not lookup earlier bootstrap servers: %s", pError ? pError : "Unknown error");
+    }
+}
+
+bool ClustrixMonitor::remove_persisted_information()
+{
+    char* pError = nullptr;
+    int rv;
+
+    int rv1 = sqlite3_exec(m_pDb, SQL_BN_DELETE, nullptr, nullptr, &pError);
+    if (rv1 != SQLITE_OK)
+    {
+        MXS_ERROR("Could not delete persisted bootstrap nodes: %s", pError ? pError : "Unknown error");
+    }
+
+    int rv2 = sqlite3_exec(m_pDb, SQL_DN_DELETE, nullptr, nullptr, &pError);
+    if (rv2 != SQLITE_OK)
+    {
+        MXS_ERROR("Could not delete persisted dynamic nodes: %s", pError ? pError : "Unknown error");
+    }
+
+    return rv1 == SQLITE_OK && rv2 == SQLITE_OK;
+}
+
+void ClustrixMonitor::persist_bootstrap_servers()
+{
+    string values;
+
+    for (const auto* pMs : m_servers)
+    {
+        if (!values.empty())
+        {
+            values += ", ";
+        }
+
+        SERVER* pServer = pMs->server;
+        string value;
+        value += string("'") + pServer->address + string("'");
+        value += ", ";
+        value += std::to_string(pServer->port);
+
+        values += "(";
+        values += value;
+        values += ")";
+    }
+
+    if (!values.empty())
+    {
+        char insert[sizeof(SQL_BN_INSERT_FORMAT) + values.length()];
+        sprintf(insert, SQL_BN_INSERT_FORMAT, values.c_str());
+
+        char* pError = nullptr;
+        int rv = sqlite3_exec(m_pDb, insert, nullptr, nullptr, &pError);
+
+        if (rv != SQLITE_OK)
+        {
+            MXS_ERROR("Could not persist information about current bootstrap nodes: %s",
+                      pError ? pError : "Unknown error");
+        }
+    }
+}
+
 void ClustrixMonitor::check_cluster(Clustrix::Softfailed softfailed)
 {
     if (m_pHub_con)
@@ -802,14 +937,14 @@ void ClustrixMonitor::update_server_statuses()
 {
     mxb_assert(!m_servers.empty());
 
-    for (auto ms : m_servers)
+    for (auto* pMs : m_servers)
     {
-        ms->stash_current_status();
+        pMs->stash_current_status();
 
         auto it = find_if(m_nodes.begin(), m_nodes.end(),
-                          [ms](const std::pair<int,ClustrixNode>& element) -> bool {
+                          [pMs](const std::pair<int,ClustrixNode>& element) -> bool {
                               const ClustrixNode& info = element.second;
-                              return ms->server->address == info.ip();
+                              return pMs->server->address == info.ip();
                           });
 
         if (it != m_nodes.end())
@@ -818,16 +953,16 @@ void ClustrixMonitor::update_server_statuses()
 
             if (info.is_running())
             {
-                ms->set_pending_status(SERVER_MASTER | SERVER_RUNNING);
+                pMs->set_pending_status(SERVER_MASTER | SERVER_RUNNING);
             }
             else
             {
-                ms->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
+                pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
             }
         }
         else
         {
-            ms->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
+            pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
         }
     }
 }

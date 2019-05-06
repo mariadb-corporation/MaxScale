@@ -110,6 +110,10 @@ private:
 
     void tick() override;
 
+    void check_bootstrap_servers();
+    bool remove_persisted_information();
+    void persist_bootstrap_servers();
+
     void check_cluster(Clustrix::Softfailed softfailed);
     void check_hub(Clustrix::Softfailed softfailed);
     void choose_hub(Clustrix::Softfailed softfailed);
