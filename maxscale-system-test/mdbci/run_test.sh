@@ -56,12 +56,6 @@ export mdbci_config_name=`echo ${mdbci_config_name} | sed "s/?//g"`
 export provider=`mdbci show provider $box --silent 2> /dev/null`
 export backend_box=${backend_box:-"centos_7_"$provider}
 
-export sshuser=`mdbci ssh --command 'whoami' --silent $mdbci_config_name/maxscale_000 2> /dev/null | tr -d '\r'`
-export IP=`mdbci show network $mdbci_config_name/maxscale_000 --silent 2> /dev/null`
-export sshkey=`mdbci show keyfile $mdbci_config_name/maxscale_000 --silent 2> /dev/null | sed 's/"//g'`
-export scpopt="-i $sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectTimeout=120 "
-export sshopt="$scpopt $sshuser@$IP"
-
 mdbci destroy ${mdbci_config_name}
 
 . ${script_dir}/configure_log_dir.sh
@@ -69,16 +63,6 @@ mdbci destroy ${mdbci_config_name}
 ulimit -c unlimited
 
 cd ${script_dir}/../../
-
-if [[ "$name" =~ '-gcov' ]]
-then
-    echo "Building MaxScale from source on maxscale_000"
-    rsync -avz --delete -e "ssh $scpopt" ${script_dir}/../../ $sshuser@$IP:/tmp/MaxScale/
-    ssh $sshopt "/tmp/MaxScale/BUILD/install_build_deps.sh"
-    ssh $sshopt "mkdir /tmp/build && cd /tmp/build && cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr -DGCOV=Y && make && sudo make install"
-    ssh $sshopt "sudo chmod -R a+rwx /tmp/build"
-    ssh $sshopt "sudo systemctl daemon-reload"
-fi
 
 mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
@@ -94,6 +78,28 @@ if [ $? == 0 ] ; then
     fi
 fi
 
+# Build MaxScale locally on the VM
+if [[ "$name" =~ '-gcov' ]]
+then
+    echo "Building MaxScale from source on maxscale_000"
+
+    # Start the MaxScale machine by running the sanity check test
+    ctest -V -R sanity_check || exit 1
+
+    # Configure SSH options
+    export sshuser=`mdbci ssh --command 'whoami' --silent $mdbci_config_name/maxscale_000 2> /dev/null | tr -d '\r'`
+    export IP=`mdbci show network $mdbci_config_name/maxscale_000 --silent 2> /dev/null`
+    export sshkey=`mdbci show keyfile $mdbci_config_name/maxscale_000 --silent 2> /dev/null | sed 's/"//g'`
+    export scpopt="-i $sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectTimeout=120 "
+    export sshopt="$scpopt $sshuser@$IP"
+
+    rsync -az --delete -e "ssh $scpopt" ${script_dir}/../../ $sshuser@$IP:/tmp/MaxScale/
+    ssh $sshopt "/tmp/MaxScale/BUILD/install_build_deps.sh"
+    ssh $sshopt "mkdir /tmp/build && cd /tmp/build && cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr -DGCOV=Y && make && sudo make install"
+    ssh $sshopt "sudo chmod -R a+rwx /tmp/build"
+    ssh $sshopt "sudo systemctl daemon-reload"
+fi
+
 if [ ! -z "${named_test}" ] ; then
     eval ${named_test}
 else
@@ -103,7 +109,7 @@ fi
 if [[ "$name" =~ '-gcov' ]]
 then
     ssh $sshopt 'cd /tmp/build && lcov --gcov-tool=$(command -v gcov) -c -d . -o lcov.info && genhtml -o /tmp/gcov-report/ lcov.info'
-    rsync -avz --delete -e "ssh $scpopt" $sshuser@$IP:/tmp/gcov-report/ ./${logs_publish_dir}
+    rsync -az --delete -e "ssh $scpopt" $sshuser@$IP:/tmp/gcov-report/ ./${logs_publish_dir}
 fi
 
 cp core.* ${logs_publish_dir}
