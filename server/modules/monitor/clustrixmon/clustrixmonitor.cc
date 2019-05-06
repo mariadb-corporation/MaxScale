@@ -561,22 +561,31 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                                 SERVER* pServer = SERVER::find_by_unique_name(server_name);
                                 mxb_assert(pServer);
 
-                                if (softfailed)
+                                if (pServer)
                                 {
-                                    pServer->set_status(SERVER_DRAINING);
+                                    if (softfailed)
+                                    {
+                                        pServer->set_status(SERVER_DRAINING);
+                                    }
+
+                                    const ClustrixMembership& membership = mit->second;
+                                    int health_check_threshold = m_config.health_check_threshold();
+
+                                    ClustrixNode node(this, membership, ip, mysql_port, health_port,
+                                                      health_check_threshold, pServer);
+
+                                    m_nodes.insert(make_pair(id, node));
+
+                                    // New server, so it needs to be added to all services that
+                                    // use this monitor for defining its cluster of servers.
+                                    service_add_server(this, pServer);
                                 }
-
-                                const ClustrixMembership& membership = mit->second;
-                                int health_check_threshold = m_config.health_check_threshold();
-
-                                ClustrixNode node(this, membership, ip, mysql_port, health_port,
-                                                  health_check_threshold, pServer);
-
-                                m_nodes.insert(make_pair(id, node));
-
-                                // New server, so it needs to be added to all services that
-                                // use this monitor for defining its cluster of servers.
-                                service_add_server(this, pServer);
+                                else
+                                {
+                                    MXS_ERROR("%s: Created server %s (at %s:%d) could not be "
+                                              "looked up using its name.",
+                                              name(), server_name.c_str(), ip.c_str(), mysql_port);
+                                }
                             }
                             else
                             {
