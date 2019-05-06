@@ -357,7 +357,7 @@ int Nodes::read_basic_env()
             }
             else
             {
-                access_homedir[i] = (char *) malloc(strlen(access_user[i] + 9));
+                access_homedir[i] = (char *) malloc(strlen(access_user[i]) + 9);
                 sprintf(access_homedir[i], "/home/%s/", access_user[i]);
             }
 
