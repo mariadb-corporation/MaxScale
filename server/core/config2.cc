@@ -58,7 +58,6 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 
     return rv;
 }
-
 }
 
 namespace config
@@ -176,7 +175,7 @@ bool Specification::configure(Configuration& configuration, const MXS_CONFIG_PAR
             const Param* pParam = find_param(name.c_str());
             config::Type* pValue = configuration.find_value(name.c_str());
 
-            mxb_assert(pValue && pParam); // Should have been validated.
+            mxb_assert(pValue && pParam);   // Should have been validated.
             mxb_assert(&pValue->parameter() == pParam);
 
             if (pParam && pValue)
@@ -791,5 +790,4 @@ std::string ParamString::to_string(value_type value) const
     ss << "\"" << value << "\"";
     return ss.str();
 }
-
 }

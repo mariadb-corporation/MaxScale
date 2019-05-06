@@ -155,15 +155,15 @@ const char* monitor_state_to_string(monitor_state_t state)
 {
     switch (state)
     {
-        case MONITOR_STATE_RUNNING:
-            return "Running";
+    case MONITOR_STATE_RUNNING:
+        return "Running";
 
-        case MONITOR_STATE_STOPPED:
-            return "Stopped";
+    case MONITOR_STATE_STOPPED:
+        return "Stopped";
 
-        default:
-            mxb_assert(false);
-            return "Unknown";
+    default:
+        mxb_assert(false);
+        return "Unknown";
     }
 }
 
@@ -192,11 +192,11 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
     if (rename(src, dest) == -1)
     {
         rval = false;
-                MXS_ERROR("Failed to rename journal file '%s' to '%s': %d, %s",
-                          src,
-                          dest,
-                          errno,
-                          mxs_strerror(errno));
+        MXS_ERROR("Failed to rename journal file '%s' to '%s': %d, %s",
+                  src,
+                  dest,
+                  errno,
+                  mxs_strerror(errno));
     }
 
     return rval;
@@ -209,7 +209,7 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
  * @param path Output where the path is stored
  * @return Opened file or NULL on error
  */
- FILE* open_tmp_file(Monitor* monitor, char* path)
+FILE* open_tmp_file(Monitor* monitor, char* path)
 {
     int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name(), "");
     int max_bytes = PATH_MAX - (int)sizeof(journal_name);
@@ -223,7 +223,7 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
 
         if (fd == -1)
         {
-                    MXS_ERROR("Failed to open file '%s': %d, %s", path, errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to open file '%s': %d, %s", path, errno, mxs_strerror(errno));
         }
         else
         {
@@ -232,10 +232,10 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
     }
     else
     {
-                MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
-                          "length of %d bytes",
-                          nbytes,
-                          max_bytes);
+        MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
+                  "length of %d bytes",
+                  nbytes,
+                  max_bytes);
     }
 
     return rval;
@@ -263,7 +263,7 @@ void store_data(Monitor* monitor, MonitorServer* master, uint8_t* data, uint32_t
     /** Store the states of all servers */
     for (MonitorServer* db : monitor->m_servers)
     {
-        *ptr++ = (char)SVT_SERVER;                              // Value type
+        *ptr++ = (char)SVT_SERVER;                                  // Value type
         memcpy(ptr, db->server->name(), strlen(db->server->name()));// Name of the server
         ptr += strlen(db->server->name());
         *ptr++ = '\0';      // Null-terminate the string
@@ -383,7 +383,7 @@ bool process_data_file(Monitor* monitor, MonitorServer** master,
         /** All values contain a null terminated string */
         if (!has_null_terminator(ptr, crc_ptr))
         {
-                    MXS_ERROR("Possible corrupted journal file (no null terminator found). Ignoring.");
+            MXS_ERROR("Possible corrupted journal file (no null terminator found). Ignoring.");
             return false;
         }
 
@@ -392,17 +392,17 @@ bool process_data_file(Monitor* monitor, MonitorServer** master,
 
         switch (type)
         {
-            case SVT_SERVER:
-                ptr = process_server(monitor, ptr, crc_ptr);
-                break;
+        case SVT_SERVER:
+            ptr = process_server(monitor, ptr, crc_ptr);
+            break;
 
-            case SVT_MASTER:
-                ptr = process_master(monitor, master, ptr, crc_ptr);
-                break;
+        case SVT_MASTER:
+            ptr = process_master(monitor, master, ptr, crc_ptr);
+            break;
 
-            default:
-                        MXS_ERROR("Possible corrupted journal file (unknown stored value). Ignoring.");
-                return false;
+        default:
+            MXS_ERROR("Possible corrupted journal file (unknown stored value). Ignoring.");
+            return false;
         }
         mxb_assert(prevptr != ptr);
         MXB_AT_DEBUG(prevptr = ptr);
@@ -453,7 +453,6 @@ const char ERR_CANNOT_MODIFY[] =
     "set/cleared manually. Status was not modified.";
 const char WRN_REQUEST_OVERWRITTEN[] =
     "Previous maintenance request was not yet read by the monitor and was overwritten.";
-
 }
 
 json_t* monitor_json_data(const Monitor* monitor, const char* host)
@@ -550,7 +549,7 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
     auto dsc_interval = params->get_duration<milliseconds>(CN_DISK_SPACE_CHECK_INTERVAL).count();
     // 0 implies disabling -> save negative value to interval.
     m_settings.disk_space_check_interval = (dsc_interval > 0) ?
-            mxb::Duration(static_cast<double>(dsc_interval) / 1000) : mxb::Duration(-1);
+        mxb::Duration(static_cast<double>(dsc_interval) / 1000) : mxb::Duration(-1);
 
     // The monitor serverlist has already been checked to be valid. Empty value is ok too.
     // First, remove all servers.
@@ -1235,7 +1234,7 @@ mxs_connect_result_t Monitor::ping_or_connect_to_db(const MonitorServer::Connect
     {
         string uname = sett.username;
         string passwd = sett.password;
-        const Server& srv = static_cast<const Server&>(server); // Clean this up later.
+        const Server& srv = static_cast<const Server&>(server);     // Clean this up later.
         string server_specific_monuser = srv.monitor_user();
         if (!server_specific_monuser.empty())
         {
@@ -1299,7 +1298,7 @@ string Monitor::get_server_monitor(const SERVER* server)
 bool Monitor::is_admin_thread()
 {
     mxb::Worker* current = mxb::Worker::get_current();
-    return (current == nullptr || current == mxs_rworker_get(MXS_RWORKER_MAIN));
+    return current == nullptr || current == mxs_rworker_get(MXS_RWORKER_MAIN);
 }
 
 /**
@@ -1477,7 +1476,7 @@ FILE* Monitor::open_data_file(Monitor* monitor, char* path)
 
 void Monitor::store_server_journal(MonitorServer* master)
 {
-    auto monitor = this; // TODO: cleanup later
+    auto monitor = this;    // TODO: cleanup later
     /** Calculate how much memory we need to allocate */
     uint32_t size = MMB_LEN_SCHEMA_VERSION + MMB_LEN_CRC32;
 
@@ -1542,7 +1541,7 @@ void Monitor::store_server_journal(MonitorServer* master)
 
 void Monitor::load_server_journal(MonitorServer** master)
 {
-    auto monitor = this; // TODO: cleanup later
+    auto monitor = this;    // TODO: cleanup later
     char path[PATH_MAX];
     FILE* file = open_data_file(monitor, path);
 
@@ -1974,7 +1973,7 @@ bool MonitorWorker::start()
     bool started = false;
     if (m_checked)
     {
-        m_loop_called = get_time_ms() - m_settings.interval; // Next tick should happen immediately.
+        m_loop_called = get_time_ms() - m_settings.interval;    // Next tick should happen immediately.
         if (!Worker::start())
         {
             MXS_ERROR("Failed to start worker for monitor '%s'.", name());
@@ -2015,7 +2014,7 @@ bool MonitorServer::can_update_disk_space_status() const
 
 void MonitorServer::update_disk_space_status()
 {
-    auto pMs = this; // TODO: Clean
+    auto pMs = this;    // TODO: Clean
     std::map<std::string, disk::SizesAndName> info;
 
     int rv = disk::get_info_by_path(pMs->con, &info);
@@ -2145,7 +2144,6 @@ void MonitorWorkerSimple::pre_loop()
 
 void MonitorWorkerSimple::post_loop()
 {
-
 }
 
 void MonitorWorkerSimple::pre_tick()
@@ -2337,5 +2335,4 @@ MonitorServer::~MonitorServer()
         mysql_close(con);
     }
 }
-
 }

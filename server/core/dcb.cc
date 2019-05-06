@@ -78,8 +78,9 @@ namespace
 
 static struct
 {
-    DCB** all_dcbs;         /** #workers sized array of pointers to DCBs where dcbs are listed. */
-    bool  check_timeouts;   /** Should session timeouts be checked. */
+    DCB** all_dcbs;     /**< #workers sized array of pointers to DCBs where dcbs are listed. */
+
+    bool                  check_timeouts;   /**< Should session timeouts be checked. */
     std::atomic<uint64_t> uid_generator {0};
 } this_unit;
 
@@ -2841,7 +2842,7 @@ private:
     DCB*     m_dcb;
     GWBUF*   m_buffer;
     uint32_t m_ev;
-    uint64_t m_uid; /**< DCB UID guarantees we deliver the event to the correct DCB */
+    uint64_t m_uid;     /**< DCB UID guarantees we deliver the event to the correct DCB */
 };
 
 static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
@@ -3171,7 +3172,8 @@ static int upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdat
     }
     else if (reason == DCB_REASON_LOW_WATER)
     {
-        MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data", client_dcb->user, client_dcb->remote);
+        MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data", client_dcb->user,
+                 client_dcb->remote);
         worker->add_fd(client_dcb->fd, poll_events, (MXB_POLL_DATA*)client_dcb);
         client_dcb->state = DCB_STATE_POLLING;
     }

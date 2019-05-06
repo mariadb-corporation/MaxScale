@@ -149,8 +149,8 @@ public:
         {
             Entry& entry = i->second;
 
-            if ((entry.sql_mode == this_unit.qc_sql_mode) &&
-                (entry.options == this_thread.options))
+            if ((entry.sql_mode == this_unit.qc_sql_mode)
+                && (entry.options == this_thread.options))
             {
                 mxb_assert(this_unit.classifier);
                 this_unit.classifier->qc_info_dup(entry.pInfo);
@@ -418,8 +418,8 @@ private:
 
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               qc_sql_mode_t sql_mode,
-              const char*   plugin_name,
-              const char*   plugin_args)
+              const char* plugin_name,
+              const char* plugin_args)
 {
     QC_TRACE();
     mxb_assert(!this_unit.classifier);
@@ -468,8 +468,8 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 
 bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
              qc_sql_mode_t sql_mode,
-             const char*   plugin_name,
-             const char*   plugin_args)
+             const char* plugin_name,
+             const char* plugin_args)
 {
     QC_TRACE();
 
@@ -1606,7 +1606,6 @@ json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry
 
     return pSelf;
 }
-
 }
 
 std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
@@ -1620,8 +1619,8 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
     // parallel and then coalesced here.
 
     mxs::RoutingWorker::execute_serially([&state]() {
-            qc_get_cache_state(state);
-        });
+                                             qc_get_cache_state(state);
+                                         });
 
     json_t* pData = json_array();
 

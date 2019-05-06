@@ -240,7 +240,7 @@ static pcre2_code* compile_regex_string(const char* regex_string,
                                         uint32_t options,
                                         uint32_t* output_ovector_size);
 static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUnit);
-static bool get_seconds(const char* zName, const char* zValue, std::chrono::seconds* pSeconds);
+static bool get_seconds(const char* zName, const char* zValue, seconds* pSeconds);
 static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds);
 static bool get_milliseconds(const char* zName,
                              const char* zValue,
@@ -1965,13 +1965,12 @@ uint64_t MXS_CONFIG_PARAMETER::get_size(const std::string& key) const
     return intval;
 }
 
-std::chrono::milliseconds
-MXS_CONFIG_PARAMETER::get_duration_in_ms(const std::string& key,
-                                         mxs::config::DurationInterpretation interpretation)
+milliseconds MXS_CONFIG_PARAMETER::get_duration_in_ms(const std::string& key,
+                                                      mxs::config::DurationInterpretation interpretation)
 const
 {
     string value = get_string(key);
-    std::chrono::milliseconds duration {0};
+    milliseconds duration {0};
     MXB_AT_DEBUG(bool rval = ) get_suffixed_duration(value.c_str(), interpretation, &duration);
     mxb_assert(rval);   // When this function is called, the validity of the value should have been checked.
     return duration;
@@ -2461,7 +2460,7 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
 
-        decltype(gateway.qc_cache_properties.max_size)max_size = int_value;
+        decltype(gateway.qc_cache_properties.max_size) max_size = int_value;
 
         if (max_size >= 0)
         {
@@ -4740,7 +4739,8 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_RETAIN_LAST_STATEMENTS, json_integer(session_get_retain_last_statements()));
     json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
     json_object_set_new(param, CN_LOAD_PERSISTED_CONFIGS, json_boolean(cnf->load_persisted_configs));
-    json_object_set_new(param, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, json_integer(cnf->max_auth_errors_until_block));
+    json_object_set_new(param, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
+                        json_integer(cnf->max_auth_errors_until_block));
 
     json_t* attr = json_object();
     time_t started = maxscale_started();
@@ -5064,7 +5064,7 @@ bool get_suffixed_size(const char* value, uint64_t* dest)
 
 bool get_suffixed_duration(const char* zValue,
                            mxs::config::DurationInterpretation interpretation,
-                           std::chrono::milliseconds* pDuration,
+                           milliseconds* pDuration,
                            mxs::config::DurationUnit* pUnit)
 {
     if (!isdigit(*zValue))
@@ -5077,7 +5077,7 @@ bool get_suffixed_duration(const char* zValue,
     char* zEnd;
     uint64_t value = strtoll(zValue, &zEnd, 10);
 
-    std::chrono::milliseconds duration;
+    milliseconds duration;
     mxs::config::DurationUnit unit = mxs::config::DURATION_IN_DEFAULT;
 
     switch (*zEnd)
@@ -5085,7 +5085,7 @@ bool get_suffixed_duration(const char* zValue,
     case 'H':
     case 'h':
         unit = mxs::config::DURATION_IN_HOURS;
-        duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::hours(value));
+        duration = std::chrono::duration_cast<milliseconds>(std::chrono::hours(value));
         ++zEnd;
         break;
 
@@ -5094,13 +5094,13 @@ bool get_suffixed_duration(const char* zValue,
         if (*(zEnd + 1) == 's' || *(zEnd + 1) == 'S')
         {
             unit = mxs::config::DURATION_IN_MILLISECONDS;
-            duration = std::chrono::milliseconds(value);
+            duration = milliseconds(value);
             ++zEnd;
         }
         else
         {
             unit = mxs::config::DURATION_IN_MINUTES;
-            duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::minutes(value));
+            duration = std::chrono::duration_cast<milliseconds>(std::chrono::minutes(value));
         }
         ++zEnd;
         break;
@@ -5108,18 +5108,18 @@ bool get_suffixed_duration(const char* zValue,
     case 'S':
     case 's':
         unit = mxs::config::DURATION_IN_SECONDS;
-        duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(value));
+        duration = std::chrono::duration_cast<milliseconds>(seconds(value));
         ++zEnd;
         break;
 
     case 0:
         if (interpretation == mxs::config::INTERPRET_AS_SECONDS)
         {
-            duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(value));
+            duration = std::chrono::duration_cast<milliseconds>(seconds(value));
         }
         else
         {
-            duration = std::chrono::milliseconds(value);
+            duration = milliseconds(value);
         }
         break;
 
@@ -5149,7 +5149,7 @@ static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUn
 {
     // When the validity is checked, it does not matter how the value
     // should be interpreted, so any mxs::config::DurationInterpretation is fine.
-    std::chrono::milliseconds duration;
+    milliseconds duration;
     mxs::config::DurationUnit unit;
     bool valid = get_suffixed_duration(zValue, mxs::config::INTERPRET_AS_SECONDS, &duration, &unit);
 
@@ -5181,12 +5181,12 @@ static void log_duration_suffix_warning(const char* zName, const char* zValue)
              "'s' (second) or 'ms' (milliseconds).", zName, zValue);
 }
 
-static bool get_seconds(const char* zName, const char* zValue, std::chrono::seconds* pSeconds)
+static bool get_seconds(const char* zName, const char* zValue, seconds* pSeconds)
 {
     bool valid = false;
 
     mxs::config::DurationUnit unit;
-    std::chrono::seconds seconds;
+    seconds seconds;
     if (get_suffixed_duration(zValue, &seconds, &unit))
     {
         switch (unit)
@@ -5199,6 +5199,7 @@ static bool get_seconds(const char* zName, const char* zValue, std::chrono::seco
 
         case mxs::config::DURATION_IN_DEFAULT:
             log_duration_suffix_warning(zName, zValue);
+
         default:
             *pSeconds = seconds;
             valid = true;
@@ -5214,7 +5215,7 @@ static bool get_seconds(const char* zName, const char* zValue, std::chrono::seco
 
 static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds)
 {
-    std::chrono::seconds seconds;
+    seconds seconds;
 
     bool valid = get_seconds(zName, zValue, &seconds);
 
@@ -5229,7 +5230,7 @@ static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds)
 static bool get_milliseconds(const char* zName,
                              const char* zValue,
                              const char* zDisplay_value,
-                             std::chrono::milliseconds* pMilliseconds)
+                             milliseconds* pMilliseconds)
 {
     bool valid = false;
 
@@ -5239,7 +5240,7 @@ static bool get_milliseconds(const char* zName,
     }
 
     mxs::config::DurationUnit unit;
-    std::chrono::milliseconds milliseconds;
+    milliseconds milliseconds;
     if (get_suffixed_duration(zValue, &milliseconds, &unit))
     {
         if (unit == mxs::config::DURATION_IN_DEFAULT)
@@ -5263,7 +5264,7 @@ static bool get_milliseconds(const char* zName,
                              const char* zDisplay_value,
                              time_t* pMilliseconds)
 {
-    std::chrono::milliseconds milliseconds;
+    milliseconds milliseconds;
 
     bool valid = get_milliseconds(zName, zValue, zDisplay_value, &milliseconds);
 

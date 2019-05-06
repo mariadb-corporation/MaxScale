@@ -73,8 +73,8 @@ static inline size_t request_data_length(MHD_Connection* connection)
 
 static bool modifies_data(const string& method)
 {
-    return (method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT
-            || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH);
+    return method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT
+           || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH;
 }
 
 static void send_auth_error(MHD_Connection* connection)
@@ -223,7 +223,7 @@ int handle_client(void* cls,
                   const char* version,
                   const char* upload_data,
                   size_t* upload_data_size,
-                  void**  con_cls)
+                  void** con_cls)
 
 {
     if (*con_cls == NULL)

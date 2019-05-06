@@ -711,7 +711,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
 
 bool validate_param(const MXS_MODULE_PARAM* basic,
                     const MXS_MODULE_PARAM* module,
-                    MXS_CONFIG_PARAMETER*   params)
+                    MXS_CONFIG_PARAMETER* params)
 {
     bool rval = std::all_of(params->begin(), params->end(),
                             [basic, module](const std::pair<std::string, std::string>& p) {
@@ -955,7 +955,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
 
         if (get_suffixed_size(value, &max_size))
         {
-            decltype(QC_CACHE_PROPERTIES::max_size)new_size = max_size;
+            decltype(QC_CACHE_PROPERTIES::max_size) new_size = max_size;
 
             if (new_size >= 0)
             {
@@ -1529,7 +1529,7 @@ static MXS_CONFIG_PARAMETER extract_parameters_from_json(json_t* json)
 
 static bool extract_ordered_relations(json_t* json,
                                       StringVector& relations,
-                                      const char*   relation_type,
+                                      const char* relation_type,
                                       JsonValidator relation_check)
 {
     bool rval = true;

@@ -42,7 +42,7 @@ void RouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
 }
 
 void RouterSession::handleError(GWBUF* pMessage,
-                                DCB*   pProblem,
+                                DCB* pProblem,
                                 mxs_error_action_t action,
                                 bool* pSuccess)
 {

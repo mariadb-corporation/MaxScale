@@ -587,7 +587,7 @@ static bool is_zero_date(struct tm* tm)
 {
     // Detects 1970-01-01 00:00:00
     return tm->tm_sec == 0 && tm->tm_min == 0 && tm->tm_hour == 0
-        && tm->tm_mday == 1 && tm->tm_mon == 0 && tm->tm_year == 70;
+           && tm->tm_mday == 1 && tm->tm_mon == 0 && tm->tm_year == 70;
 }
 
 void format_temporal_value(char* str, size_t size, uint8_t type, struct tm* tm)

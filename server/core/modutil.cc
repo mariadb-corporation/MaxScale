@@ -45,7 +45,7 @@ static const char* sub_single = "$1.";
 static const char* sub_escape = "\\.";
 
 static void modutil_reply_routing_error(DCB* backend_dcb,
-                                        int  error,
+                                        int error,
                                         const char* state,
                                         char* errstr,
                                         uint32_t flags);
@@ -467,9 +467,9 @@ GWBUF* modutil_create_mysql_err_msg(int packet_number,
  *
  */
 int modutil_send_mysql_err_packet(DCB* dcb,
-                                  int  packet_number,
-                                  int  in_affected_rows,
-                                  int  mysql_errno,
+                                  int packet_number,
+                                  int in_affected_rows,
+                                  int mysql_errno,
                                   const char* sqlstate_msg,
                                   const char* mysql_message)
 {
@@ -807,7 +807,7 @@ void modutil_reply_auth_error(DCB* backend_dcb,
  * @param flags         GWBUF type flags
  */
 static void modutil_reply_routing_error(DCB* backend_dcb,
-                                        int  error,
+                                        int error,
                                         const char* state,
                                         char* errstr,
                                         uint32_t flags)

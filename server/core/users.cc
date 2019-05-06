@@ -134,7 +134,7 @@ public:
 
     bool check_permissions(const std::string& user,
                            const std::string& password,
-                           user_account_type  perm) const
+                           user_account_type perm) const
     {
         std::lock_guard<std::mutex> guard(m_lock);
         UserMap::const_iterator it = m_data.find(user);

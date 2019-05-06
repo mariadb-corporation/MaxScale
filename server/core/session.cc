@@ -600,7 +600,8 @@ bool dcb_iter_cb(DCB* dcb, void* data)
         char buf[20];
         snprintf(buf, sizeof(buf), "%p", ses);
 
-        set->add_row({buf, ses->client_dcb->remote, ses->service->name(), session_state_to_string(ses->state)});
+        set->add_row({buf, ses->client_dcb->remote, ses->service->name(),
+                      session_state_to_string(ses->state)});
     }
 
     return true;
@@ -855,7 +856,7 @@ uint64_t session_get_current_id()
 }
 
 bool session_add_variable(MXS_SESSION* session,
-                          const char*  name,
+                          const char* name,
                           session_variable_handler_t handler,
                           void* context)
 {
@@ -864,17 +865,17 @@ bool session_add_variable(MXS_SESSION* session,
 }
 
 char* session_set_variable_value(MXS_SESSION* session,
-                                 const char*  name_begin,
-                                 const char*  name_end,
-                                 const char*  value_begin,
-                                 const char*  value_end)
+                                 const char* name_begin,
+                                 const char* name_end,
+                                 const char* value_begin,
+                                 const char* value_end)
 {
     Session* pSession = static_cast<Session*>(session);
     return pSession->set_variable_value(name_begin, name_end, value_begin, value_end);
 }
 
 bool session_remove_variable(MXS_SESSION* session,
-                             const char*  name,
+                             const char* name,
                              void** context)
 {
     Session* pSession = static_cast<Session*>(session);

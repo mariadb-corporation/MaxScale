@@ -183,28 +183,29 @@ public:
         , m_terminate(false)
     {
         m_thread = std::thread([this] {
-                uint32_t interval = mxs::RoutingWorker::s_watchdog_interval.secs();
-                timespec timeout = { interval, 0 };
+                                   uint32_t interval = mxs::RoutingWorker::s_watchdog_interval.secs();
+                                   timespec timeout = {interval, 0};
 
-                while (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
-                {
-                    // We will wakeup when someone wants the notifier to run,
-                    // or when MaxScale is going down.
-                    m_sem_start.wait();
+                                   while (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
+                                   {
+                                        // We will wakeup when someone wants the notifier to run,
+                                        // or when MaxScale is going down.
+                                       m_sem_start.wait();
 
-                    if (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
-                    {
-                        // If MaxScale is not going down...
-                        do
-                        {
-                            // we check the systemd watchdog...
-                            m_owner.check_systemd_watchdog();
-                        } while (!m_sem_stop.timedwait(timeout));
-                        // until the semaphore is actually posted, which it will be
-                        // once the notification should stop.
-                    }
-                }
-            });
+                                       if (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
+                                       {
+                                            // If MaxScale is not going down...
+                                           do
+                                           {
+                                                // we check the systemd watchdog...
+                                               m_owner.check_systemd_watchdog();
+                                           }
+                                           while (!m_sem_stop.timedwait(timeout));
+                                            // until the semaphore is actually posted, which it will be
+                                            // once the notification should stop.
+                                       }
+                                   }
+                               });
     }
 
     ~WatchdogNotifier()
@@ -774,7 +775,7 @@ size_t RoutingWorker::execute_serially(Task& task)
     return n;
 }
 
-//static
+// static
 size_t RoutingWorker::execute_serially(std::function<void()> func)
 {
     Semaphore sem;

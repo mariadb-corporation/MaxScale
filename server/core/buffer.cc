@@ -249,7 +249,7 @@ GWBUF* gwbuf_deep_clone(const GWBUF* buf)
     return gwbuf_deep_clone_portion(buf, gwbuf_length(buf));
 }
 
-static GWBUF *gwbuf_clone_portion(GWBUF* buf,
+static GWBUF* gwbuf_clone_portion(GWBUF* buf,
                                   size_t start_offset,
                                   size_t length)
 {

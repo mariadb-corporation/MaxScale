@@ -220,7 +220,7 @@ QueryClassifier::RouteInfo::RouteInfo()
 }
 
 QueryClassifier::RouteInfo::RouteInfo(uint32_t target,
-                                      uint8_t  command,
+                                      uint8_t command,
                                       uint32_t type_mask,
                                       uint32_t stmt_id)
     : m_target(target)

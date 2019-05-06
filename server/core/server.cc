@@ -68,7 +68,7 @@ const char CN_RANK[] = "rank";
 
 const MXS_ENUM_VALUE rank_values[] =
 {
-    {"primary", 1},
+    {"primary",   1},
     {"secondary", 2},
     {NULL}
 };
@@ -180,7 +180,6 @@ void careful_strcpy(char* dest, size_t max_len, const std::string& source)
     // the necessary null, should the new string be shorter than the old.
     strncpy(dest, source.c_str(), new_len);
 }
-
 }
 
 Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
@@ -372,14 +371,14 @@ Server* Server::find_by_unique_name(const string& name)
 {
     Server* rval = nullptr;
     this_unit.foreach_server([&rval, name](Server* server) {
-        if (server->is_active && server->m_name == name)
-        {
-            rval = server;
-            return false;
-        }
-        return true;
-    }
-    );
+                                 if (server->is_active && server->m_name == name)
+                                 {
+                                     rval = server;
+                                     return false;
+                                 }
+                                 return true;
+                             }
+                             );
     return rval;
 }
 
@@ -409,23 +408,23 @@ void Server::printServer()
 void Server::printAllServers()
 {
     this_unit.foreach_server([](Server* server) {
-        if (server->server_is_active())
-        {
-            server->printServer();
-        }
-        return true;
-    });
+                                 if (server->server_is_active())
+                                 {
+                                     server->printServer();
+                                 }
+                                 return true;
+                             });
 }
 
 void Server::dprintAllServers(DCB* dcb)
 {
     this_unit.foreach_server([dcb](Server* server) {
-        if (server->is_active)
-        {
-            Server::dprintServer(dcb, server);
-        }
-        return true;
-    });
+                                 if (server->is_active)
+                                 {
+                                     Server::dprintServer(dcb, server);
+                                 }
+                                 return true;
+                             });
 }
 
 void Server::dprintAllServersJson(DCB* dcb)
@@ -590,7 +589,7 @@ void Server::dprintPersistentDCBs(DCB* pdcb, const Server* server)
 void Server::dListServers(DCB* dcb)
 {
     const string horizontalLine =
-    "-------------------+-----------------+-------+-------------+--------------------\n";
+        "-------------------+-----------------+-------+-------------+--------------------\n";
     string message;
     // Estimate the likely size of the string. Should be enough for 5 servers.
     message.reserve((4 + 5) * horizontalLine.length());
@@ -601,16 +600,17 @@ void Server::dListServers(DCB* dcb)
 
     bool have_servers = false;
     this_unit.foreach_server([&message, &have_servers](Server* server) {
-        if (server->server_is_active())
-        {
-            have_servers = true;
-            string stat = server->status_string();
-            message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
-                                          server->name(), server->address, server->port,
-                                          server->stats.n_current, stat.c_str());
-        }
-        return true;
-    });
+                                 if (server->server_is_active())
+                                 {
+                                     have_servers = true;
+                                     string stat = server->status_string();
+                                     message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
+                                                                   server->name(), server->address,
+                                                                   server->port,
+                                                                   server->stats.n_current, stat.c_str());
+                                 }
+                                 return true;
+                             });
 
     if (have_servers)
     {
@@ -766,7 +766,7 @@ void Server::set_parameter(const string& name, const string& value)
         if (name == elem.name)
         {
             found = true;
-            elem.value = value; // Update
+            elem.value = value;     // Update
             break;
         }
     }
@@ -798,17 +798,18 @@ string Server::get_custom_parameter(const string& name) const
 std::unique_ptr<ResultSet> Server::getList()
 {
     std::unique_ptr<ResultSet> set =
-            ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
+        ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
 
     this_unit.foreach_server([&set](Server* server) {
-        if (server->server_is_active())
-        {
-            string stat = server->status_string();
-            set->add_row({server->name(), server->address, std::to_string(server->port),
-                          std::to_string(server->stats.n_current), stat});
-        }
-        return true;
-    });
+                                 if (server->server_is_active())
+                                 {
+                                     string stat = server->status_string();
+                                     set->add_row({server->name(), server->address,
+                                                   std::to_string(server->port),
+                                                   std::to_string(server->stats.n_current), stat});
+                                 }
+                                 return true;
+                             });
 
     return set;
 }
@@ -846,15 +847,15 @@ uint64_t SERVER::status_from_string(const char* str)
         uint64_t    bit;
     } ServerBits[] =
     {
-        {"running", SERVER_RUNNING},
-        {"master", SERVER_MASTER},
-        {"slave", SERVER_SLAVE},
-        {"synced", SERVER_JOINED},
-        {"maintenance", SERVER_MAINT},
-        {"maint", SERVER_MAINT},
-        {"stale", SERVER_WAS_MASTER},
-        {"drain", SERVER_DRAINING},
-        {NULL, 0}
+        {"running",     SERVER_RUNNING   },
+        {"master",      SERVER_MASTER    },
+        {"slave",       SERVER_SLAVE     },
+        {"synced",      SERVER_JOINED    },
+        {"maintenance", SERVER_MAINT     },
+        {"maint",       SERVER_MAINT     },
+        {"stale",       SERVER_WAS_MASTER},
+        {"drain",       SERVER_DRAINING  },
+        {NULL,          0                }
     };
 
     for (int i = 0; ServerBits[i].str; i++)
@@ -1134,12 +1135,12 @@ json_t* Server::server_list_to_json(const char* host)
 {
     json_t* data = json_array();
     this_unit.foreach_server([data, host](Server* server) {
-        if (server->server_is_active())
-        {
-            json_array_append_new(data, server_to_json_data(server, host));
-        }
-        return true;
-    });
+                                 if (server->server_is_active())
+                                 {
+                                     json_array_append_new(data, server_to_json_data(server, host));
+                                 }
+                                 return true;
+                             });
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 

@@ -192,7 +192,8 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
         if (!mysql && extra_port > 0)
         {
             mysql = mysql_real_connect(con, server->address, user, passwd, NULL, extra_port, NULL, 0);
-            MXS_WARNING("Could not connect with normal port to server '%s', using extra_port", server->name());
+            MXS_WARNING("Could not connect with normal port to server '%s', using extra_port",
+                        server->name());
         }
     }
 
@@ -388,10 +389,9 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
     }
     return rval;
 }
-
 }
 
-#if defined(SS_DEBUG)
+#if defined (SS_DEBUG)
 /**
  * Return decoded MySQL response packet.
  *
@@ -408,7 +408,7 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
  *
  * @return The packet decoded into a descriptive string.
  */
-char *dbg_decode_response(GWBUF* pPacket)
+char* dbg_decode_response(GWBUF* pPacket)
 {
     uint8_t header[MYSQL_HEADER_LEN + 1];
 
@@ -424,7 +424,7 @@ char *dbg_decode_response(GWBUF* pPacket)
         command = MYSQL_GET_COMMAND(header);
     }
 
-    const int buflen = 1024; // Should be enough.
+    const int buflen = 1024;    // Should be enough.
 
     thread_local char buffer[buflen];
 
