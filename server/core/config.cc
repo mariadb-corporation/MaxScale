@@ -4172,17 +4172,22 @@ int create_new_listener(CONFIG_CONTEXT* obj)
             address = "";
         }
 
-        if (auto l = listener_find_by_config(socket, address, port))
+        if (socket_defined)
         {
-            string socket_type = socket_defined ? "socket" : "port";
-            string socket_definition = socket_defined ? socket : obj->m_parameters.get_string(CN_PORT);
+            if (auto l = listener_find_by_socket(socket))
+            {
+                MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                          "listener '%s' already listens on socket %s.",
+                          obj->name(), service->name(), l->name(), socket.c_str());
+                return 1;
+            }
+        }
+        else if (auto l = listener_find_by_address(address, port))
+        {
             MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                      "listener '%s' already listens on the %s %s.",
-                      obj->name(),
-                      service->name(),
-                      l->name(),
-                      socket_type.c_str(),
-                      socket_definition.c_str());
+                      "listener '%s' already listens on port %s.",
+                      obj->name(), service->name(), l->name(),
+                      obj->m_parameters.get_string(CN_PORT).c_str());
             return 1;
         }
 

@@ -350,17 +350,23 @@ SListener listener_find(const std::string& name);
 std::vector<SListener> listener_find_by_service(const SERVICE* service);
 
 /**
- * Find listener by configuration
+ * Find listener by socket
  *
- * @param socket  Optional path to a socket file
- * @param address Address where the listener listens
- * @param port    The port on which the listener listens
+ * @param socket  Path to a socket file
  *
  * @return The matching listener if one was found
  */
-SListener listener_find_by_config(const std::string& socket,
-                                  const std::string& address,
-                                  unsigned short port);
+SListener listener_find_by_socket(const std::string& socket);
+
+/**
+ * Find listener by address and port
+ *
+ * @param address Network address
+ * @param port    Network port
+ *
+ * @return The matching listener if one was found
+ */
+SListener listener_find_by_address(const std::string& address, unsigned short port);
 
 int  listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
 void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& cert,

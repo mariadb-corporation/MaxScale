@@ -338,9 +338,24 @@ static bool is_all_iface(const std::string& a, const std::string& b)
     return addresses.count(a) || addresses.count(b);
 }
 
-SListener listener_find_by_config(const std::string& socket,
-                                  const std::string& address,
-                                  unsigned short port)
+SListener listener_find_by_socket(const std::string& socket)
+{
+    SListener rval;
+    std::lock_guard<std::mutex> guard(listener_lock);
+
+    for (const auto& listener : all_listeners)
+    {
+        if (listener->address() == socket)
+        {
+            rval = listener;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+SListener listener_find_by_address(const std::string& address, unsigned short port)
 {
     SListener rval;
     std::lock_guard<std::mutex> guard(listener_lock);
@@ -348,8 +363,7 @@ SListener listener_find_by_config(const std::string& socket,
     for (const auto& listener : all_listeners)
     {
         if (port == listener->port()
-            && (listener->address() == address || listener->address() == socket
-                || is_all_iface(listener->address(), address)))
+            && (listener->address() == address || is_all_iface(listener->address(), address)))
         {
             rval = listener;
             break;

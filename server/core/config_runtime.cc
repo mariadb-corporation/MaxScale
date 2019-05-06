@@ -1172,7 +1172,7 @@ bool runtime_create_listener(Service* service,
     {
         config_runtime_error("Listener '%s' already exists", name);
     }
-    else if (SListener l = listener_find_by_config("", addr, u_port))
+    else if (SListener l = listener_find_by_address(addr, u_port))
     {
         config_runtime_error("Listener '%s' already listens on [%s]:%u", l->name(), addr, u_port);
     }
