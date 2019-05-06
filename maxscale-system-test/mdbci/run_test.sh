@@ -70,7 +70,7 @@ ulimit -c unlimited
 
 cd ${script_dir}/../../
 
-if [[ "$cmake_flags" =~ "GCOV=Y" ]]
+if [[ "$name" =~ '-gcov' ]]
 then
     echo "Building MaxScale from source on maxscale_000"
     rsync -avz --delete -e "ssh $scpopt" ${script_dir}/../../ $sshuser@$IP:/tmp/MaxScale/
@@ -100,9 +100,9 @@ else
     ctest -VV ${test_set}
 fi
 
-if [[ "$cmake_flags" =~ "GCOV=Y" ]]
+if [[ "$name" =~ '-gcov' ]]
 then
-    ssh $sshopt "cd /tmp/build && lcov --gcov-tool=$(command -v gcov) -c -d . -o lcov.info && genhtml -o /tmp/gcov-report/ lcov.info"
+    ssh $sshopt 'cd /tmp/build && lcov --gcov-tool=$(command -v gcov) -c -d . -o lcov.info && genhtml -o /tmp/gcov-report/ lcov.info'
     rsync -avz --delete -e "ssh $scpopt" $sshuser@$IP:/tmp/gcov-report/ ./${logs_publish_dir}
 fi
 
