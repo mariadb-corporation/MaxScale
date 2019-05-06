@@ -42,19 +42,20 @@ const int DEFAULT_HEALTH_PORT = 3581;
 // Change this, if the schema is changed.
 const int SCHEMA_VERSION = 1;
 
-static const char SQL_CREATE[] =
-    "CREATE TABLE IF NOT EXISTS clustrix_nodes "
+static const char SQL_DN_CREATE[] =
+    "CREATE TABLE IF NOT EXISTS dynamic_nodes "
     "(id INT PRIMARY KEY, ip VARCHAR(255), mysql_port INT, health_port INT)";
 
-static const char SQL_UPSERT_FORMAT[] =
-    "INSERT OR REPLACE INTO clustrix_nodes (id, ip, mysql_port, health_port) "
+static const char SQL_DN_UPSERT_FORMAT[] =
+    "INSERT OR REPLACE INTO dynamic_nodes (id, ip, mysql_port, health_port) "
     "VALUES (%d, '%s', %d, %d)";
 
-static const char SQL_DELETE_FORMAT[] =
-    "DELETE FROM clustrix_nodes WHERE id = %d";
+static const char SQL_DN_DELETE_FORMAT[] =
+    "DELETE FROM dynamic_nodes WHERE id = %d";
 
-static const char SQL_SELECT[] =
-    "SELECT ip, mysql_port FROM clustrix_nodes";
+static const char SQL_DN_SELECT[] =
+    "SELECT ip, mysql_port FROM dynamic_nodes";
+
 
 using HostPortPair  = std::pair<std::string, int>;
 using HostPortPairs = std::vector<HostPortPair>;
@@ -82,7 +83,7 @@ namespace
 bool create_schema(sqlite3* pDb)
 {
     char* pError = nullptr;
-    int rv = sqlite3_exec(pDb, SQL_CREATE, nullptr, nullptr, &pError);
+    int rv = sqlite3_exec(pDb, SQL_DN_CREATE, nullptr, nullptr, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -146,7 +147,7 @@ ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& modul
 
     path += "/";
     path += name;
-    path += "/clustrix_nodes-";
+    path += "/clustrix_nodes-v";
     path += std::to_string(SCHEMA_VERSION);
     path += ".db";
 
@@ -397,7 +398,7 @@ bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checke
 
     HostPortPairs nodes;
     char* pError = nullptr;
-    int rv = sqlite3_exec(m_pDb, SQL_SELECT, select_cb, &nodes, &pError);
+    int rv = sqlite3_exec(m_pDb, SQL_DN_SELECT, select_cb, &nodes, &pError);
 
     if (rv == SQLITE_OK)
     {
@@ -1051,14 +1052,14 @@ void ClustrixMonitor::persist(const ClustrixNode& node)
         return;
     }
 
-    char sql_upsert[sizeof(SQL_UPSERT_FORMAT) + 10 + node.ip().length() + 10 + 10];
+    char sql_upsert[sizeof(SQL_DN_UPSERT_FORMAT) + 10 + node.ip().length() + 10 + 10];
 
     int id = node.id();
     const char* zIp = node.ip().c_str();
     int mysql_port = node.mysql_port();
     int health_port = node.health_port();
 
-    sprintf(sql_upsert, SQL_UPSERT_FORMAT, id, zIp, mysql_port, health_port);
+    sprintf(sql_upsert, SQL_DN_UPSERT_FORMAT, id, zIp, mysql_port, health_port);
 
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_upsert, nullptr, nullptr, &pError) == SQLITE_OK)
@@ -1080,11 +1081,11 @@ void ClustrixMonitor::unpersist(const ClustrixNode& node)
         return;
     }
 
-    char sql_delete[sizeof(SQL_UPSERT_FORMAT) + 10];
+    char sql_delete[sizeof(SQL_DN_UPSERT_FORMAT) + 10];
 
     int id = node.id();
 
-    sprintf(sql_delete, SQL_DELETE_FORMAT, id);
+    sprintf(sql_delete, SQL_DN_DELETE_FORMAT, id);
 
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_delete, nullptr, nullptr, &pError) == SQLITE_OK)
