@@ -97,9 +97,9 @@ else
     grep "release 6" /etc/redhat-release
     if [ $? -ne 0 ]
     then
-        # Installed for REST API and MaxCtrl unit tests
+        # EPEL is installed for REST API and MaxCtrl unit tests (docker-compose etc.) and GCOV report generation (lcov)
         sudo yum -y install docker epel-release
-        sudo yum -y install docker-compose
+        sudo yum -y install docker-compose lcov
         sudo groupadd docker
         sudo usermod -a -G docker `whoami`
         sudo sed -i 's/--selinux-enabled/--selinux-enabled=false/' /etc/sysconfig/docker

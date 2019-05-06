@@ -141,8 +141,7 @@ if(CMAKE_VERSION VERSION_GREATER 2.6)
 endif()
 
 if(GCOV)
-  set(FLAGS "${FLAGS} -fprofile-arcs -ftest-coverage" CACHE STRING "Compilation flags"  FORCE)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
+  set(FLAGS "${FLAGS} --coverage -O0 -g" CACHE STRING "Compilation flags"  FORCE)
 endif()
 
 if(PROFILE)
