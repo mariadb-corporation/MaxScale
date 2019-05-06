@@ -56,8 +56,10 @@ static int test1()
             "testpoll : Initialise the polling system.");
     init_test_env(NULL);
     fprintf(stderr, "\t..done\nAdd a DCB");
-
-    auto service = service_alloc("service", "readconnroute", nullptr);
+    MXS_CONFIG_PARAMETER parameters;
+    parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
+    parameters.set(CN_CONNECTION_TIMEOUT, "10s");
+    auto service = service_alloc("service", "readconnroute", &parameters);
     auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
     auto session = new mxs::Session(listener);
     dcb = dcb_alloc(DCB::Role::CLIENT, session);

@@ -65,12 +65,12 @@ extern int   blr_test_handle_change_master(ROUTER_INSTANCE* router, char* comman
 
 static struct option long_options[] =
 {
-    {"debug",   no_argument,     0,               'd'          },
-    {"verbose", no_argument,     0,               'v'          },
-    {"version", no_argument,     0,               'V'          },
-    {"fix",     no_argument,     0,               'f'          },
-    {"help",    no_argument,     0,               '?'          },
-    {0,         0,               0,               0            }
+    {"debug",   no_argument, 0, 'd'},
+    {"verbose", no_argument, 0, 'v'},
+    {"version", no_argument, 0, 'V'},
+    {"fix",     no_argument, 0, 'f'},
+    {"help",    no_argument, 0, '?'},
+    {0,         0,           0, 0  }
 };
 
 int main(int argc, char** argv)
@@ -113,6 +113,8 @@ int main(int argc, char** argv)
 
     CONFIG_CONTEXT ctx {(char*)""};
     config_add_defaults(&ctx, get_module("binlogrouter", MODULE_ROUTER)->parameters);
+    ctx.m_parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
+    ctx.m_parameters.set(CN_CONNECTION_TIMEOUT, "10s");
 
     const char* options = "server_id=3,heartbeat=200,binlogdir=/tmp/my_dir,"
                           "transaction_safety=1,master_version=5.6.99-common,"
@@ -138,11 +140,11 @@ int main(int argc, char** argv)
 
     MXS_CONFIG_PARAMETER params;
     params.set_from_list({
-                             {"address", "_none_"},
-                             {"port", "3306"},
-                             {"protocol", "MySQLBackend"},
-                             {"authenticator", "MySQLBackendAuth"}
-                         }, config_server_params);
+        {"address", "_none_"},
+        {"port", "3306"},
+        {"protocol", "MySQLBackend"},
+        {"authenticator", "MySQLBackendAuth"}
+    }, config_server_params);
 
     Server* server = Server::server_alloc("binlog_router_master_host", &params);
     if (server == NULL)

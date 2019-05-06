@@ -409,6 +409,16 @@ int test_domain_matching(const char* actual_module,
     char* libdir = MXS_STRDUP_A("../../modules/monitor/mariadbmon/");
     set_libdir(libdir);
     MXS_CONFIG_PARAMETER params;
+    params.set("monitor_interval", "1s");
+    params.set("backend_connect_timeout", "1s");
+    params.set("backend_read_timeout", "1s");
+    params.set("backend_write_timeout", "1s");
+    params.set("journal_max_age", "1s");
+    params.set("script_timeout", "1s");
+    params.set(CN_DISK_SPACE_CHECK_INTERVAL, "1s");
+    params.set("failover_timeout", "1s");
+    params.set("switchover_timeout", "1s");
+    params.set("master_failure_timeout", "1s");
     params.set(CN_USER, "dummy");
     params.set(CN_PASSWORD, "dummy");
     MonitorManager::create_monitor(name, actual_module, &params);

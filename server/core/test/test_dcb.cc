@@ -50,7 +50,10 @@ static int test1()
     DCB* dcb;
     /* Single buffer tests */
     fprintf(stderr, "testdcb : creating buffer with type DCB::Role::INTERNAL");
-    auto service = service_alloc("service", "readconnroute", nullptr);
+    MXS_CONFIG_PARAMETER parameters;
+    parameters.set("max_retry_interval", "10s");
+    parameters.set("connection_timeout", "10s");
+    auto service = service_alloc("service", "readconnroute", &parameters);
     auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
     auto session = new mxs::Session(listener);
     dcb = dcb_alloc(DCB::Role::INTERNAL, session);
