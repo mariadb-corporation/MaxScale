@@ -438,19 +438,19 @@ void session_put_ref(MXS_SESSION* session);
  *
  * @param session Session to convert
  * @param host    Hostname of this server
- *
+ * @param rdns    Attempt reverse DNS on client ip address
  * @return New JSON object or NULL on error
  */
-json_t* session_to_json(const MXS_SESSION* session, const char* host);
+json_t* session_to_json(const MXS_SESSION* session, const char* host, bool rdns);
 
 /**
  * @brief Convert all sessions to JSON
  *
  * @param host Hostname of this server
- *
+ * @param rdns Attempt reverse DNS on client ip addresses
  * @return A JSON array with all sessions
  */
-json_t* session_list_to_json(const char* host);
+json_t* session_list_to_json(const char* host, bool rdns);
 
 /**
  * Qualify the session for connection pooling

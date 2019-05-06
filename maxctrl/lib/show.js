@@ -174,18 +174,30 @@ exports.builder = function(yargs) {
                                 'the session is connected and the `Connection IDs` ' +
                                 'field lists the IDs for those connections.')
                 .usage('Usage: show session <session>')
+                .group([rDnsOption.shortname], 'Options:')
+                .option(rDnsOption.shortname, rDnsOption.definition)
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getResource(host, 'sessions/' + argv.session, session_fields)
+                var resource = 'sessions/' + argv.session
+                if (argv[this.rDnsOption.shortname]) {
+                    resource += '?' + this.rDnsOption.optionOn
+                }
+                return getResource(host, resource, session_fields)
             })
         })
         .command('sessions', 'Show all sessions', function(yargs) {
             return yargs.epilog('Show detailed information about all sessions. ' +
                                 'See `help show session` for more details.')
                 .usage('Usage: show sessions')
+                .group([rDnsOption.shortname], 'Options:')
+                .option(rDnsOption.shortname, rDnsOption.definition)
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollectionAsResource(host, 'sessions/', session_fields)
+                var resource = 'sessions/'
+                if (argv[this.rDnsOption.shortname]) {
+                    resource += '?' + this.rDnsOption.optionOn
+                }
+                return getCollectionAsResource(host, resource, session_fields)
             })
         })
         .command('filter <filter>', 'Show filter', function(yargs) {

@@ -16,6 +16,8 @@
 #include <ostream>
 #include <vector>
 #include <algorithm>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 namespace
 {
@@ -222,4 +224,52 @@ std::istream& operator>>(std::istream& is, Host& host)
     host = Host(input);
     return is;
 }
+
+bool reverse_dns(const std::string& ip, std::string* output)
+{
+    sockaddr_storage socket_address;
+    memset(&socket_address, 0, sizeof(socket_address));
+    socklen_t slen = 0;
+
+    if (is_valid_ipv4(ip))
+    {
+        // Casts between the different sockaddr-types should work.
+        int family = AF_INET;
+        auto sa_in = reinterpret_cast<sockaddr_in*>(&socket_address);
+        if (inet_pton(family, ip.c_str(), &sa_in->sin_addr) == 1)
+        {
+            sa_in->sin_family = family;
+            slen = sizeof(sockaddr_in);
+        }
+    }
+    else if (is_valid_ipv6(ip))
+    {
+        int family = AF_INET6;
+        auto sa_in6 = reinterpret_cast<sockaddr_in6*>(&socket_address);
+        if (inet_pton(family, ip.c_str(), &sa_in6->sin6_addr) == 1)
+        {
+            sa_in6->sin6_family = family;
+            slen = sizeof(sockaddr_in6);
+        }
+    }
+
+    bool success = false;
+    if (slen > 0)
+    {
+        char host[NI_MAXHOST];
+        auto sa = reinterpret_cast<sockaddr*>(&socket_address);
+        if (getnameinfo(sa, slen, host, sizeof(host), nullptr, 0, NI_NAMEREQD) == 0)
+        {
+            *output = host;
+            success = true;
+        }
+    }
+
+    if (!success)
+    {
+        *output = ip;
+    }
+    return success;
+}
+
 }

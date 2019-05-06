@@ -27,6 +27,7 @@
 #include <sstream>
 
 #include <maxbase/atomic.hh>
+#include <maxbase/host.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/dcb.hh>
@@ -714,7 +715,7 @@ uint64_t session_get_next_id()
     return mxb::atomic::add(&this_unit.next_session_id, 1, mxb::atomic::RELAXED);
 }
 
-json_t* session_json_data(const Session* session, const char* host)
+json_t* session_json_data(const Session* session, const char* host, bool rdns)
 {
     json_t* data = json_object();
 
@@ -761,7 +762,17 @@ json_t* session_json_data(const Session* session, const char* host)
 
     if (session->client_dcb->remote)
     {
-        json_object_set_new(attr, "remote", json_string(session->client_dcb->remote));
+        string result_address;
+        auto remote = session->client_dcb->remote;
+        if (rdns)
+        {
+            maxbase::reverse_dns(remote, &result_address);
+        }
+        else
+        {
+            result_address = remote;
+        }
+        json_object_set_new(attr, "remote", json_string(result_address.c_str()));
     }
 
     struct tm result;
@@ -798,18 +809,26 @@ json_t* session_json_data(const Session* session, const char* host)
     return data;
 }
 
-json_t* session_to_json(const MXS_SESSION* session, const char* host)
+json_t* session_to_json(const MXS_SESSION* session, const char* host, bool rdns)
 {
     stringstream ss;
     ss << MXS_JSON_API_SESSIONS << session->ses_id;
     const Session* s = static_cast<const Session*>(session);
-    return mxs_json_resource(host, ss.str().c_str(), session_json_data(s, host));
+    return mxs_json_resource(host, ss.str().c_str(), session_json_data(s, host, rdns));
 }
 
 struct SessionListData
 {
-    json_t*     json;
-    const char* host;
+    SessionListData(const char* host, bool rdns)
+        : json(json_array())
+        , host(host)
+        , rdns(rdns)
+    {
+    }
+
+    json_t*     json {nullptr};
+    const char* host {nullptr};
+    bool        rdns {false};
 };
 
 bool seslist_cb(DCB* dcb, void* data)
@@ -818,15 +837,15 @@ bool seslist_cb(DCB* dcb, void* data)
     {
         SessionListData* d = (SessionListData*)data;
         Session* session = static_cast<Session*>(dcb->session);
-        json_array_append_new(d->json, session_json_data(session, d->host));
+        json_array_append_new(d->json, session_json_data(session, d->host, d->rdns));
     }
 
     return true;
 }
 
-json_t* session_list_to_json(const char* host)
+json_t* session_list_to_json(const char* host, bool rdns)
 {
-    SessionListData data = {json_array(), host};
+    SessionListData data(host, rdns);
     dcb_foreach(seslist_cb, &data);
     return mxs_json_resource(host, MXS_JSON_API_SESSIONS, data.json);
 }

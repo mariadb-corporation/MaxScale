@@ -409,6 +409,16 @@ module.exports = function() {
     this.error = function(err) {
         return Promise.reject(colors.red('Error: ') +  err)
     }
+
+    this.rDnsOption = {
+        shortname: 'rdns',
+        optionOn: 'rdns=true',
+        definition : {
+            describe: 'Reverse DNS on client IP. May slow MaxScale down.',
+            type: 'bool',
+            default: false
+        }
+    }
 }
 
 

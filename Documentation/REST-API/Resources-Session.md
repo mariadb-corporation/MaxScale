@@ -15,6 +15,10 @@ GET /v1/sessions/:id
 Get a single session. _:id_ must be a valid session ID. The session ID is the
 same that is exposed to the client as the connection ID.
 
+This endpoint also supports the `rdns=true` parameter, which instructs MaxScale to
+perform reverse DNS on the client IP address. As this requires communicating with
+an external server, the operation may be expensive.
+
 #### Response
 
 `Status: 200 OK`
