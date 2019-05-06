@@ -148,7 +148,6 @@ static struct option long_options[] =
 
 static bool syslog_configured = false;
 static bool maxlog_configured = false;
-static bool log_to_shm_configured = false;
 static volatile sig_atomic_t last_signal = 0;
 static bool unload_modules_at_exit = true;
 static std::string redirect_output_to;
@@ -1531,12 +1530,6 @@ int main(int argc, char** argv)
             {
                 cnf->log_target = MXB_LOG_TARGET_FS;
             }
-            else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
-            {
-                // Removed in 2.3
-                cnf->log_target = MXB_LOG_TARGET_FS;
-                fprintf(stderr, "Warning: Use of `--log=shm` is deprecated. Data will be logged to file.\n");
-            }
             else if (strncasecmp(optarg, "stdout", PATH_MAX) == 0)
             {
                 cnf->log_target = MXB_LOG_TARGET_STDOUT;
@@ -2846,13 +2839,6 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         else if (strcmp(name, CN_LOG_AUGMENTATION) == 0)
         {
             set_log_augmentation(value);
-        }
-        else if (strcmp(name, CN_LOG_TO_SHM) == 0)
-        {
-            fprintf(stderr,
-                    "Warning: '%s' has been removed in MaxScale 2.3.0 "
-                    "and will be ignored\n",
-                    CN_LOG_TO_SHM);
         }
         else if (strcmp(name, CN_SUBSTITUTE_VARIABLES) == 0)
         {

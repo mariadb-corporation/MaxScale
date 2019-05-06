@@ -312,8 +312,7 @@ location where the log files are stored.
                 "log_warning": true,
                 "log_notice": true,
                 "log_info": true,
-                "log_debug": false,
-                "log_to_shm": false
+                "log_debug": false
             },
             "log_file": "/home/markusjm/build/log/maxscale/maxscale.log",
             "log_priorities": [
@@ -336,8 +335,7 @@ PATCH /v1/maxscale/logs
 ```
 
 Update logging parameters. The request body must define updated values for the
-`data.attributes.parameters` object. All logging parameters apart from
-`log_to_shm` can be altered at runtime.
+`data.attributes.parameters` object. All logging parameters can be altered at runtime.
 
 #### Response
 

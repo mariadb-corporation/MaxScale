@@ -1,7 +1,6 @@
 [maxscale]
 threads=###threads###
 log_warning=1
-log_to_shm=1
 log_debug=1
 
 [MySQL-Monitor]

@@ -216,7 +216,6 @@ extern const char CN_MODULE_CONFIGDIR[] = "module_configdir";
 extern const char CN_SYSLOG[] = "syslog";
 extern const char CN_MAXLOG[] = "maxlog";
 extern const char CN_LOG_AUGMENTATION[] = "log_augmentation";
-extern const char CN_LOG_TO_SHM[] = "log_to_shm";
 
 typedef struct duplicate_context
 {
@@ -738,7 +737,6 @@ const char* config_pre_parse_global_params[] =
     CN_SYSLOG,
     CN_MAXLOG,
     CN_LOG_AUGMENTATION,
-    CN_LOG_TO_SHM,
     CN_SUBSTITUTE_VARIABLES,
     NULL
 };

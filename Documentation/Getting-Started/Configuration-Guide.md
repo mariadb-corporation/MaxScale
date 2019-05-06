@@ -484,12 +484,12 @@ disable use the value 0.
 
 #### `log_to_shm`
 
-**Note:** This parameter is deprecated and it is ignored by MaxScale versions
-  2.3.0 and newer. If you want to store the log in shared memory, define the
-  directory with `logdir` in `/dev/shm`.
+**Note:** This parameter has been removed in 2.4.0: do not use it
 
-In older MaxScale versions, the actual log file was created in `/dev/shm` and a
-symbolic link to that file was stored in place of the normal MaxScale log.
+In older MaxScale versions, the actual log file was created in `/dev/shm` and
+a symbolic link to that file was stored in place of the normal MaxScale log.
+If you want to store the log in shared memory, define the directory with
+`logdir` in `/dev/shm`.
 
 #### `log_warning`
 

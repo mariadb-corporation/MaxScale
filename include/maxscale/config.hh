@@ -224,7 +224,6 @@ extern const char CN_MODULE_CONFIGDIR[];
 extern const char CN_SYSLOG[];
 extern const char CN_MAXLOG[];
 extern const char CN_LOG_AUGMENTATION[];
-extern const char CN_LOG_TO_SHM[];
 
 namespace maxscale
 {
