@@ -90,7 +90,6 @@ else
         sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
 
     sudo yum -y install devtoolset-7-gcc-c++
-    source /opt/rh/devtoolset-7/enable
 
     # Enable it by default
     echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
@@ -107,7 +106,6 @@ else
         sudo systemctl start docker
     fi
   fi
-
 fi
 
 # cmake
