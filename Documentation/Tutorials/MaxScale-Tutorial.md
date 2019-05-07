@@ -35,6 +35,7 @@ GRANT SELECT ON mysql.db TO 'maxscale'@'%';
 GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'%';
 GRANT SELECT ON mysql.roles_mapping TO 'maxscale'@'%';
 GRANT SHOW DATABASES ON *.* TO 'maxscale'@'%';
+GRANT REPLICATION CLIENT ON *.* TO 'maxscale'@'%';
 
 -- MariaDB from 10.2.2 to 10.2.10 requires extra grants
 GRANT SELECT ON mysql.* TO 'maxscale'@'%';
