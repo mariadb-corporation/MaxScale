@@ -1209,6 +1209,10 @@ void Session::dump_statements() const
         {
             const QueryInfo& info = *i;
             GWBUF* pBuffer = info.query().get();
+            timespec ts = info.time_completed();
+            struct tm *tm = localtime(&ts.tv_sec);
+            char timestamp[20];
+            strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", tm);
 
             const char* pCmd;
             char* pStmt;
@@ -1219,14 +1223,14 @@ void Session::dump_statements() const
             {
                 if (id != 0)
                 {
-                    MXS_NOTICE("Stmt %d: %.*s", n, len, pStmt);
+                    MXS_NOTICE("Stmt %d(%s): %.*s", n, timestamp, len, pStmt);
                 }
                 else
                 {
                     // We are in a context where we do not have a current session, so we need to
                     // log the session id ourselves.
 
-                    MXS_NOTICE("(%" PRIu64 ") Stmt %d: %.*s", ses_id, n, len, pStmt);
+                    MXS_NOTICE("(%" PRIu64 ") Stmt %d(%s): %.*s", ses_id, n, timestamp, len, pStmt);
                 }
 
                 if (deallocate)
