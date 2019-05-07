@@ -136,6 +136,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     , binlog_master_gtid(false)
     , binlog_slave_gtid(false)
     , no_galera(false)
+    , no_clustrix(false)
     , no_vm_revert(true)
     , threads(4)
     , use_ipv6(false)
@@ -320,7 +321,6 @@ TestConnections::TestConnections(int argc, char* argv[])
         {
             exit(MDBCI_FAUILT);
         }
-
     }
 
     if (mdbci_labels.find(std::string("REPL_BACKEND")) == std::string::npos)
@@ -338,6 +338,15 @@ TestConnections::TestConnections(int argc, char* argv[])
         if (verbose)
         {
             tprintf("No need to use Galera");
+        }
+    }
+
+    if (mdbci_labels.find(std::string("CLUSTRIX_BACKEND")) == std::string::npos)
+    {
+        no_clustrix = true;
+        if (verbose)
+        {
+            tprintf("No need to use Clustrix");
         }
     }
 
@@ -384,6 +393,20 @@ TestConnections::TestConnections(int argc, char* argv[])
     else
     {
         galera = NULL;
+    }
+
+    if (!no_clustrix)
+    {
+        clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, network_config);
+        //galera->use_ipv6 = use_ipv6;
+        clustrix->use_ipv6 = false;
+        clustrix->take_snapshot_command = take_snapshot_command;
+        clustrix->revert_snapshot_command = revert_snapshot_command;
+        clustrix->start_cluster();
+    }
+    else
+    {
+        clustrix = NULL;
     }
 
     maxscales = new Maxscales("maxscale", test_dir, verbose, network_config);
@@ -757,12 +780,13 @@ void TestConnections::process_template(int m, const char* template_name, const c
     sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", threads);
     system(str);
 
-    Mariadb_nodes * mdn[2];
+    Mariadb_nodes * mdn[3];
     char * IPcnf;
     mdn[0] = repl;
     mdn[1] = galera;
+    mdn[2] = clustrix;
     int i, j;
-    int mdn_n = galera ? 2 : 1;
+    int mdn_n = 3;
 
     for (j = 0; j < mdn_n; j++)
     {
@@ -2220,7 +2244,6 @@ int TestConnections::call_mdbci(const char * options)
             team_keys +
             std::string(" ") +
             std::string(mdbci_config_name)).c_str() );
-
     read_env();
     if (repl)
     {

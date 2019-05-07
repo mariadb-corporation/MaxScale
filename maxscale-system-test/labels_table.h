@@ -16,6 +16,7 @@ const labels_table_t labels_table [] __attribute__((unused)) =
     {"GALERA_BACKEND", "GALERA_BACKEND"},
     {"TWO_MAXSCALES", "SECOND_MAXSCALE"},
     {"COLUMNSTORE_BACKEND", "COLUMNSTORE_BACKEND"},
+    {"CLUSTRIX_BACKEND", "CLUSTRIX_BACKEND"},
 };
 
 /**

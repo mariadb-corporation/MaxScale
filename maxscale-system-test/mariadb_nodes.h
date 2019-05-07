@@ -490,7 +490,7 @@ public:
      * @brief cnf_servers Generates backend servers description for maxscale.cnf
      * @return Servers description including IPs, ports
      */
-    std::string cnf_servers();
+    virtual std::string cnf_servers();
 
     /**
      * @brief cnf_servers_line Generates list of backend servers for serivces definition in maxscale.cnf

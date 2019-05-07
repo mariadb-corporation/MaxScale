@@ -51,7 +51,7 @@ Mariadb_nodes::Mariadb_nodes(const char *pref, const char *test_cwd, bool verbos
     truncate_mariadb_logs();
     flush_hosts();
     close_active_connections();
-    cnf_server_name = std::string(prefix);
+    cnf_server_name = std::string(prefix) + std::string("_server");
     if (strcmp(prefix, "node") == 0)
     {
         cnf_server_name = std::string("server");

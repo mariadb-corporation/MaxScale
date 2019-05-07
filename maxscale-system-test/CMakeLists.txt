@@ -28,7 +28,7 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
   blob_test.cpp keepalived_func.cpp tcp_connection.cpp base/stopwatch.cpp fw_copy_rules.cpp
-  labels_table.cpp envv.cpp
+  labels_table.cpp envv.cpp clustrix_nodes.cpp
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
 target_link_libraries(testcore ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt maxbase)
@@ -1127,8 +1127,21 @@ set_tests_properties(bug587_1_big PROPERTIES TIMEOUT 3600)
 set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 
 ############################################
-# END: tests with 15 machines backend    #
+# END: tests with 15 machines backend      #
 ############################################
+
+############################################
+# BEGIN: tests for Clustrix monitor        #
+############################################
+
+# creates Clustrix cluster and connect Maxscale to it
+add_test_executable(clustrix_mon.cpp clustrix_mon clustrix_mon LABELS CLUSTRIX_BACKEND UNSTABLE)
+set_tests_properties(clustrix_mon PROPERTIES TIMEOUT 7200)
+
+############################################
+# END: tests for Clustrix monitor          #
+############################################
+
 ###############################
 # DO NOT ADD TESTS AFTER THIS #
 ###############################
