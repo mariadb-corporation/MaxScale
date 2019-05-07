@@ -961,6 +961,9 @@ add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication 
 # PAM authentication
 add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
 
+# MXS-2350: On-demand connection creation
+add_test_executable(mxs2350_lazy_connect.cpp mxs2350_lazy_connect mxs2350_lazy_connect LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
