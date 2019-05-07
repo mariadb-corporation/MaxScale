@@ -176,7 +176,7 @@ private:
 
 private:
     Config                      m_config;
-    std::map<int, ClustrixNode> m_nodes;
+    std::map<int, ClustrixNode> m_nodes_by_id;
     std::vector<std::string>    m_health_urls;
     mxb::http::Async            m_http;
     uint32_t                    m_delayed_http_check_id { 0 };

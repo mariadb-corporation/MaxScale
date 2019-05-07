@@ -198,7 +198,7 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     check_bootstrap_servers();
 
     m_health_urls.clear();
-    m_nodes.clear();
+    m_nodes_by_id.clear();
 
     m_config.set_cluster_monitor_interval(pParams->get_integer(CLUSTER_MONITOR_INTERVAL_NAME));
     m_config.set_health_check_threshold(pParams->get_integer(HEALTH_CHECK_THRESHOLD_NAME));
@@ -373,7 +373,7 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
 
 bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
 {
-    for (auto it = m_nodes.begin(); !m_pHub_con && (it != m_nodes.end()); ++it)
+    for (auto it = m_nodes_by_id.begin(); !m_pHub_con && (it != m_nodes_by_id.end()); ++it)
     {
         auto& element = *it;
         ClustrixNode& node = element.second;
@@ -519,7 +519,7 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                 mxb_assert(mysql_field_count(pHub_con) == 5);
 
                 set<int> nids;
-                for (const auto& element : m_nodes)
+                for (const auto& element : m_nodes_by_id)
                 {
                     const ClustrixNode& node = element.second;
                     nids.insert(node.id());
@@ -540,10 +540,10 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                         // Monitor name ensures no clash with other Clustrix monitor instances.
                         string server_name = string("@@") + m_name + ":node-" + std::to_string(id);
 
-                        auto nit = m_nodes.find(id);
+                        auto nit = m_nodes_by_id.find(id);
                         auto mit = memberships.find(id);
 
-                        if (nit != m_nodes.end())
+                        if (nit != m_nodes_by_id.end())
                         {
                             // Existing node.
                             mxb_assert(SERVER::find_by_unique_name(server_name));
@@ -601,7 +601,7 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                                     ClustrixNode node(this, membership, ip, mysql_port, health_port,
                                                       health_check_threshold, pServer);
 
-                                    m_nodes.insert(make_pair(id, node));
+                                    m_nodes_by_id.insert(make_pair(id, node));
 
                                     // New server, so it needs to be added to all services that
                                     // use this monitor for defining its cluster of servers.
@@ -643,8 +643,8 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                 // state must be set accordingly.
                 for (const auto nid : nids)
                 {
-                    auto it = m_nodes.find(nid);
-                    mxb_assert(it != m_nodes.end());
+                    auto it = m_nodes_by_id.find(nid);
+                    mxb_assert(it != m_nodes_by_id.end());
 
                     ClustrixNode& node = it->second;
                     node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
@@ -828,7 +828,7 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
             mxb_assert(mysql_field_count(pHub_con) == 4);
 
             set<int> nids;
-            for (const auto& element : m_nodes)
+            for (const auto& element : m_nodes_by_id)
             {
                 const ClustrixNode& node = element.second;
                 nids.insert(node.id());
@@ -844,9 +844,9 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
                     int instance = row[2] ? atoi(row[2]) : -1;
                     string substate = row[3] ? row[3] : "unknown";
 
-                    auto it = m_nodes.find(nid);
+                    auto it = m_nodes_by_id.find(nid);
 
-                    if (it != m_nodes.end())
+                    if (it != m_nodes_by_id.end())
                     {
                         ClustrixNode& node = it->second;
 
@@ -878,12 +878,12 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
             // Deactivate all servers that are no longer members.
             for (const auto nid : nids)
             {
-                auto it = m_nodes.find(nid);
-                mxb_assert(it != m_nodes.end());
+                auto it = m_nodes_by_id.find(nid);
+                mxb_assert(it != m_nodes_by_id.end());
 
                 ClustrixNode& node = it->second;
                 node.deactivate_server();
-                m_nodes.erase(it);
+                m_nodes_by_id.erase(it);
             }
 
             rv = true;
@@ -922,7 +922,7 @@ void ClustrixMonitor::populate_from_bootstrap_servers()
 
         ClustrixNode node(this, membership, ip, mysql_port, health_port, health_check_threshold, pServer);
 
-        m_nodes.insert(make_pair(id, node));
+        m_nodes_by_id.insert(make_pair(id, node));
         ++id;
 
         // New server, so it needs to be added to all services that
@@ -941,13 +941,13 @@ void ClustrixMonitor::update_server_statuses()
     {
         pMs->stash_current_status();
 
-        auto it = find_if(m_nodes.begin(), m_nodes.end(),
+        auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
                           [pMs](const std::pair<int,ClustrixNode>& element) -> bool {
                               const ClustrixNode& info = element.second;
                               return pMs->server->address == info.ip();
                           });
 
-        if (it != m_nodes.end())
+        if (it != m_nodes_by_id.end())
         {
             const ClustrixNode& info = it->second;
 
@@ -1022,9 +1022,9 @@ bool ClustrixMonitor::check_http(Call::action_t action)
                 // There are as many results as there are nodes,
                 // and the results are in node order.
                 const vector<http::Result>& results = m_http.results();
-                mxb_assert(results.size() == m_nodes.size());
+                mxb_assert(results.size() == m_nodes_by_id.size());
 
-                auto it = m_nodes.begin();
+                auto it = m_nodes_by_id.begin();
 
                 for (const auto& result : results)
                 {
@@ -1062,7 +1062,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
 void ClustrixMonitor::update_http_urls()
 {
     vector<string> health_urls;
-    for (const auto& element : m_nodes)
+    for (const auto& element : m_nodes_by_id)
     {
         const ClustrixNode& node = element.second;
         string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
@@ -1118,12 +1118,12 @@ bool ClustrixMonitor::perform_operation(Operation operation,
 
     if (m_pHub_con)
     {
-        auto it = find_if(m_nodes.begin(), m_nodes.end(),
+        auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
                           [pServer] (const std::pair<int, ClustrixNode>& element) {
                               return element.second.server() == pServer;
                           });
 
-        if (it != m_nodes.end())
+        if (it != m_nodes_by_id.end())
         {
             ClustrixNode& node = it->second;
 
