@@ -12,6 +12,7 @@
  */
 #include <maxscale/ccdefs.hh>
 
+#include <algorithm>
 #include <cstdlib>
 #include <list>
 #include <string.h>
@@ -205,7 +206,29 @@ void Housekeeper::stop()
 void Housekeeper::add(const Task& task)
 {
     std::lock_guard<std::mutex> guard(m_lock);
-    m_tasks.push_back(task);
+
+    auto i = std::find_if(m_tasks.begin(), m_tasks.end(), Task::NameMatch(task.name));
+    if (i == m_tasks.end())
+    {
+        m_tasks.push_back(task);
+    }
+    else
+    {
+        const Task& existing = *i;
+
+        bool identical = false;
+        if (task.func == existing.func
+            && task.data == existing.data
+            && task.frequency == existing.frequency)
+        {
+            identical = true;
+        }
+
+        MXS_INFO("Housekeeper task `%s` added anew, all settings %s identical. "
+                 "Second attempt to add is ignored.",
+                 identical ? "ARE" : "are NOT",
+                 task.name.c_str());
+    }
 }
 
 void Housekeeper::remove(std::string name)
