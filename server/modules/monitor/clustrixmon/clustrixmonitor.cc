@@ -373,10 +373,9 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
 
 bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
 {
-    for (auto it = m_nodes_by_id.begin(); !m_pHub_con && (it != m_nodes_by_id.end()); ++it)
+    for (auto& kv : m_nodes_by_id)
     {
-        auto& element = *it;
-        ClustrixNode& node = element.second;
+        ClustrixNode& node = kv.second;
 
         if (node.can_be_used_as_hub(name(), m_settings.conn_settings, softfailed))
         {
@@ -385,6 +384,11 @@ bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::s
         }
 
         ips_checked.insert(node.ip());
+
+        if (m_pHub_con)
+        {
+            break;
+        }
     }
 
     return m_pHub_con != nullptr;
@@ -392,23 +396,26 @@ bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::s
 
 bool ClustrixMonitor::choose_bootstrap_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
 {
-    for (auto it = m_servers.begin(); !m_pHub_con && (it != m_servers.end()); ++it)
+    for (auto* pMs : m_servers)
     {
-        MonitorServer& ms = **it;
-
-        if (ips_checked.find(ms.server->address) == ips_checked.end())
+        if (ips_checked.find(pMs->server->address) == ips_checked.end())
         {
-            if (Clustrix::ping_or_connect_to_hub(name(), m_settings.conn_settings, softfailed, ms))
+            if (Clustrix::ping_or_connect_to_hub(name(), m_settings.conn_settings, softfailed, *pMs))
             {
-                m_pHub_con = ms.con;
-                m_pHub_server = ms.server;
+                m_pHub_con = pMs->con;
+                m_pHub_server = pMs->server;
             }
-            else if (ms.con)
+            else if (pMs->con)
             {
-                mysql_close(ms.con);
+                mysql_close(pMs->con);
             }
 
-            ms.con = nullptr;
+            pMs->con = nullptr;
+        }
+
+        if (m_pHub_con)
+        {
+            break;
         }
     }
 
@@ -519,9 +526,9 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                 mxb_assert(mysql_field_count(pHub_con) == 5);
 
                 set<int> nids;
-                for (const auto& element : m_nodes_by_id)
+                for (const auto& kv : m_nodes_by_id)
                 {
-                    const ClustrixNode& node = element.second;
+                    const ClustrixNode& node = kv.second;
                     nids.insert(node.id());
                 }
 
@@ -828,9 +835,9 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
             mxb_assert(mysql_field_count(pHub_con) == 4);
 
             set<int> nids;
-            for (const auto& element : m_nodes_by_id)
+            for (const auto& kv : m_nodes_by_id)
             {
-                const ClustrixNode& node = element.second;
+                const ClustrixNode& node = kv.second;
                 nids.insert(node.id());
             }
 
@@ -1062,9 +1069,9 @@ bool ClustrixMonitor::check_http(Call::action_t action)
 void ClustrixMonitor::update_http_urls()
 {
     vector<string> health_urls;
-    for (const auto& element : m_nodes_by_id)
+    for (const auto& kv : m_nodes_by_id)
     {
-        const ClustrixNode& node = element.second;
+        const ClustrixNode& node = kv.second;
         string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
 
         health_urls.push_back(url);
