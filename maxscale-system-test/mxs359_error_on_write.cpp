@@ -51,12 +51,21 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     self = &test;
 
-    Queries rw_ok({ {"INSERT INTO test.t1 VALUES (1)", true}, {"SELECT * FROM test.t1", true}});
-    Queries rw_err({ {"INSERT INTO test.t1 VALUES (1)", false}, {"SELECT * FROM test.t1", true}});
+    Queries rw_ok({{"INSERT INTO test.t1 VALUES (1)", true}, {"SELECT * FROM test.t1", true}});
+    Queries rw_err({{"INSERT INTO test.t1 VALUES (1)", false}, {"SELECT * FROM test.t1", true}});
+    Queries delayed_rw_err({{"INSERT INTO test.t1 VALUES (SLEEP(10))", false},
+                            {"SELECT * FROM test.t1", true}});
 
     Func block_master = [&test]() {
             test.repl->block_node(0);
             sleep(10);
+        };
+
+    Func delayed_block_master = [&test]() {
+            std::thread([&test]() {
+                            sleep(5);
+                            test.repl->block_node(0);
+                        }).detach();
         };
 
     Func unblock_master = [&test]() {
@@ -95,6 +104,15 @@ int main(int argc, char** argv)
                 {"Block master and check that writes fail", block_master, rw_err},
                 {"Unblock master and check that writes do not fail", unblock_master, rw_ok},
                 {"Change master and check that writes work", master_change, rw_ok},
+                {"Reset cluster", reset, {}}
+            }
+        },
+        {
+            "Master failure mid-query",
+            {
+                {"Check that writes work at startup", noop, rw_ok},
+                {"Do query and block master at the same time, check that write fails", delayed_block_master, delayed_rw_err},
+                {"Unblock master and check that writes do not fail", unblock_master, rw_ok},
                 {"Reset cluster", reset, {}}
             }
         }
