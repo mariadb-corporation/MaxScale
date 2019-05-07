@@ -250,3 +250,11 @@ constexpr int64_t MXS_UNKNOWN_ENUM_VALUE {-1};
  * @return The enum value or MXS_UNKNOWN_ENUM_VALUE on unknown value
  */
 int64_t config_enum_to_value(const std::string& key, const MXS_ENUM_VALUE* values);
+
+bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+                    const std::string& key, const std::string& value, std::string* error_out);
+
+bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, const char* key);
+
+bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+                    const char* key, const char* value);

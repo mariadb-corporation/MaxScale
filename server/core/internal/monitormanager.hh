@@ -116,16 +116,46 @@ public:
     static bool monitor_serialize(const mxs::Monitor* monitor);
 
     /**
-     * Attempt to reconfigure a monitor
-     *
-     * If the configuration fails, the old parameters are restored.
+     * Attempt to reconfigure a monitor. If the reconfiguration fails, the old parameters are restored.
+     * Should be only called from the admin thread.
      *
      * @param monitor    Monitor to reconfigure
      * @param parameters New parameters to apply
-     *
      * @return True if reconfiguration was successful
      */
     static bool reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG_PARAMETER& parameters);
+
+    /**
+     * Change one parameter in the monitor during runtime. Should only be called from the admin thread.
+     *
+     * @param monitor Monitor to reconfigure
+     * @param key Setting to change
+     * @param value New value
+     * @param error_out Error output
+     * @return True if reconfiguration was successful
+     */
+    static bool alter_monitor(mxs::Monitor* monitor, const std::string& key, const std::string& value,
+                              std::string* error_out);
+
+    /**
+     * Add server to monitor during runtime. Should only be called from the admin thread.
+     *
+     * @param mon Target monitor
+     * @param server Server to add
+     * @param error_out Error output
+     * @return True on success
+     */
+    static bool add_server_to_monitor(mxs::Monitor* mon, SERVER* server, std::string* error_out);
+
+    /**
+     * Remove a server from a monitor during runtime. Should only be called from the admin thread.
+     *
+     * @param mon Target monitor
+     * @param server Server to remove
+     * @param error_out Error output
+     * @return True on success
+     */
+    static bool remove_server_from_monitor(mxs::Monitor* mon, SERVER* server, std::string* error_out);
 
     /**
      * @brief Convert monitor to JSON
@@ -163,29 +193,4 @@ public:
      * Waits until all running monitors have advanced one tick.
      */
     static void debug_wait_one_tick();
-};
-
-// RAII helper class for temprarily stopping monitors
-class MonitorStop
-{
-public:
-    MonitorStop(mxs::Monitor* monitor)
-        : m_monitor(monitor->state() == MONITOR_STATE_RUNNING ? monitor : nullptr)
-    {
-        if (m_monitor)
-        {
-            MonitorManager::stop_monitor(m_monitor);
-        }
-    }
-
-    ~MonitorStop()
-    {
-        if (m_monitor)
-        {
-            MonitorManager::start_monitor(m_monitor);
-        }
-    }
-
-private:
-    mxs::Monitor* m_monitor;
 };

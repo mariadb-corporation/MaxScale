@@ -161,66 +161,6 @@ static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
     return {rval, params};
 }
 
-bool runtime_add_server(Monitor* mon, Server* server)
-{
-    using std::string;
-    mxb_assert(mon && server);
-    bool rval = false;
-
-    if (MonitorManager::server_is_monitored(server))
-    {
-        MXS_ERROR("Server '%s' is already monitored.", server->name());
-    }
-    else
-    {
-        // To keep monitor modifications straightforward, all changes should go through the same
-        // alter_monitor function. As the function accepts key-value combinations (so that they are easily
-        // serialized), construct the value here.
-        string serverlist = mon->parameters.get_string(CN_SERVERS);
-        if (serverlist.empty())
-        {
-            // Unusual.
-            serverlist += server->name();
-        }
-        else
-        {
-            serverlist += string(", ") + server->name();
-        }
-        rval = runtime_alter_monitor(mon, CN_SERVERS, serverlist.c_str());
-    }
-    return rval;
-}
-
-bool runtime_remove_server(Monitor* mon, Server* server)
-{
-    using std::string;
-    mxb_assert(mon && server);
-    bool rval = false;
-
-    if (MonitorManager::server_is_monitored(server) != mon)
-    {
-        config_runtime_error("Server '%s' is not monitored by '%s'.", server->name(), mon->name());
-    }
-    else
-    {
-        MonitorStop stop(mon);
-
-        // Construct the new server list
-        auto params = mon->parameters;
-        auto names = config_break_list_string(params.get_string(CN_SERVERS));
-        names.erase(std::remove(names.begin(), names.end(), server->name()));
-        std::string servers = mxb::join(names, ",");
-        params.set(CN_SERVERS, servers);
-
-        if (MonitorManager::reconfigure_monitor(mon, params))
-        {
-            rval = MonitorManager::monitor_serialize(mon);
-        }
-    }
-
-    return rval;
-}
-
 bool runtime_link_server(Server* server, const char* target)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
@@ -255,14 +195,14 @@ bool runtime_link_server(Server* server, const char* target)
     }
     else if (monitor)
     {
-        if (runtime_add_server(monitor, server))
+        std::string error_msg;
+        if (MonitorManager::add_server_to_monitor(monitor, server, &error_msg))
         {
-            MonitorManager::monitor_serialize(monitor);
             rval = true;
         }
         else
         {
-            config_runtime_error("Server '%s' is already monitored", server->name());
+            config_runtime_error("%s", error_msg.c_str());
         }
     }
 
@@ -303,9 +243,14 @@ bool runtime_unlink_server(Server* server, const char* target)
         }
         else if (monitor)
         {
-            if ((rval = runtime_remove_server(monitor, server)))
+            std::string error_msg;
+            if (MonitorManager::remove_server_from_monitor(monitor, server, &error_msg))
             {
-                MonitorManager::monitor_serialize(monitor);
+                rval = true;
+            }
+            else
+            {
+                config_runtime_error("%s", error_msg.c_str());
             }
         }
 
@@ -542,32 +487,6 @@ static inline bool is_valid_integer(const char* value)
     return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
 }
 
-bool param_is_known(const MXS_MODULE_PARAM* basic,
-                    const MXS_MODULE_PARAM* module,
-                    const char* key)
-{
-    std::unordered_set<std::string> names;
-
-    for (auto param : {basic, module})
-    {
-        for (int i = 0; param[i].name; i++)
-        {
-            names.insert(param[i].name);
-        }
-    }
-
-    return names.count(key);
-}
-
-bool param_is_valid(const MXS_MODULE_PARAM* basic,
-                    const MXS_MODULE_PARAM* module,
-                    const char* key,
-                    const char* value)
-{
-    return config_param_is_valid(basic, key, value, NULL)
-           || config_param_is_valid(module, key, value, NULL);
-}
-
 bool runtime_alter_server(Server* server, const char* key, const char* value)
 {
     if (!value[0])
@@ -706,25 +625,12 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
                     const char* key,
                     const char* value)
 {
-    bool rval = false;
-
-    if (!param_is_known(basic, module, key))
+    std::string error;
+    bool rval = validate_param(basic, module, key, value, &error);
+    if (!rval)
     {
-        config_runtime_error("Unknown parameter: %s", key);
+        config_runtime_error("%s", error.c_str());
     }
-    else if (!value[0])
-    {
-        config_runtime_error("Empty value for parameter: %s", key);
-    }
-    else if (!param_is_valid(basic, module, key, value))
-    {
-        config_runtime_error("Invalid parameter value for '%s': %s", key, value);
-    }
-    else
-    {
-        rval = true;
-    }
-
     return rval;
 }
 
@@ -745,39 +651,18 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     return rval;
 }
 
-bool do_alter_monitor(Monitor* monitor, const char* key, const char* value)
+bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
 {
-    mxb_assert(monitor->state() == MONITOR_STATE_STOPPED);
-    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
-
-    if (!validate_param(config_monitor_params, mod->parameters, key, value))
-    {
-        return false;
-    }
-
-    MXS_CONFIG_PARAMETER modified = monitor->parameters;
-    modified.set(key, value);
-
-    bool success = MonitorManager::reconfigure_monitor(monitor, modified);
-
+    std::string error_msg;
+    bool success = MonitorManager::alter_monitor(monitor, key, value, &error_msg);
     if (success)
     {
         MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name(), key, value);
     }
-
-    return success;
-}
-
-bool runtime_alter_monitor(Monitor* monitor, const char* key, const char* value)
-{
-    MonitorStop stop(monitor);
-    bool success = do_alter_monitor(monitor, key, value);
-
-    if (success)
+    else
     {
-        MonitorManager::monitor_serialize(monitor);
+        config_runtime_error("%s", error_msg.c_str());
     }
-
     return success;
 }
 
@@ -2627,20 +2512,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
         && validate_param(config_monitor_params, mod->parameters, &params)
         && server_relationship_to_parameter(new_json, &params))
     {
-        bool restart = (monitor->state() != MONITOR_STATE_STOPPED);
-        MonitorManager::stop_monitor(monitor);
-        auto old_params = monitor->parameters;
-
-        if (MonitorManager::reconfigure_monitor(monitor, params))
-        {
-            MonitorManager::monitor_serialize(monitor);
-            success = true;
-        }
-
-        if (restart)
-        {
-            MonitorManager::start_monitor(monitor);
-        }
+        success = MonitorManager::reconfigure_monitor(monitor, params);
     }
 
     return success;

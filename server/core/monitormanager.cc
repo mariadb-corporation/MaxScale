@@ -13,6 +13,7 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <maxbase/format.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.h>
 #include <maxscale/resultset.hh>
@@ -27,6 +28,7 @@ using maxscale::Monitor;
 using maxscale::MonitorServer;
 using Guard = std::lock_guard<std::mutex>;
 using std::string;
+using mxb::string_printf;
 
 namespace
 {
@@ -85,6 +87,9 @@ private:
 };
 
 ThisUnit this_unit;
+
+const char RECONFIG_FAILED[] = "Monitor reconfiguration failed when %s. Check log for more details.";
+
 }
 
 Monitor* MonitorManager::create_monitor(const string& name, const string& module,
@@ -403,22 +408,57 @@ bool MonitorManager::monitor_serialize(const Monitor* monitor)
     return rval;
 }
 
-// static
 bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG_PARAMETER& parameters)
 {
     mxb_assert(Monitor::is_admin_thread());
     // Backup monitor parameters in case configure fails.
     auto orig = monitor->parameters;
-    monitor->parameters.clear();
+    // Stop/start monitor if it's currently running. If monitor was stopped already, this is likely
+    // managed by the caller.
+    bool stopstart = (monitor->state() == MONITOR_STATE_RUNNING);
+    if (stopstart)
+    {
+        monitor->stop();
+    }
 
-    bool success = monitor->configure(&parameters);
+    bool success = false;
+    if (monitor->configure(&parameters))
+    {
+        // Serialization must also succeed.
+        success = MonitorManager::monitor_serialize(monitor);
+    }
 
     if (!success)
     {
+        // Try to restore old values, it should work.
         MXB_AT_DEBUG(bool check = ) monitor->configure(&orig);
         mxb_assert(check);
     }
 
+    if (stopstart && !monitor->start())
+    {
+        MXB_ERROR("Reconfiguration of monitor '%s' failed because monitor did not start.", monitor->name());
+    }
+    return success;
+}
+
+bool MonitorManager::alter_monitor(mxs::Monitor* monitor, const std::string& key, const std::string& value,
+                                   std::string* error_out)
+{
+    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
+    if (!validate_param(config_monitor_params, mod->parameters, key, value, error_out))
+    {
+        return false;
+    }
+
+    MXS_CONFIG_PARAMETER modified = monitor->parameters;
+    modified.set(key, value);
+
+    bool success = MonitorManager::reconfigure_monitor(monitor, modified);
+    if (!success)
+    {
+        *error_out = string_printf(RECONFIG_FAILED, "changing a parameter");
+    }
     return success;
 }
 
@@ -509,4 +549,83 @@ bool MonitorManager::clear_server_status(SERVER* srv, int bit, string* errmsg_ou
         written = true;
     }
     return written;
+}
+
+bool MonitorManager::add_server_to_monitor(mxs::Monitor* mon, SERVER* server, std::string* error_out)
+{
+    mxb_assert(Monitor::is_admin_thread());
+    bool success = false;
+    string server_monitor = Monitor::get_server_monitor(server);
+    if (!server_monitor.empty())
+    {
+        // Error, server is already monitored.
+        string error = string_printf("Server '%s' is already monitored by '%s', ",
+                                     server->name(), server_monitor.c_str());
+        error += (server_monitor == mon->name()) ? "cannot add again to the same monitor." :
+                 "cannot add to another monitor.";
+        *error_out = error;
+    }
+    else
+    {
+        // To keep monitor modifications straightforward, all changes should go through the same
+        // reconfigure-function. As the function accepts key-value combinations (so that they are easily
+        // serialized), construct the value here.
+        MXS_CONFIG_PARAMETER modified_params = mon->parameters;
+        string serverlist = modified_params.get_string(CN_SERVERS);
+        if (serverlist.empty())
+        {
+            // Unusual.
+            serverlist += server->name();
+        }
+        else
+        {
+            serverlist += string(", ") + server->name();
+        }
+        modified_params.set(CN_SERVERS, serverlist);
+        success = reconfigure_monitor(mon, modified_params);
+        if (!success)
+        {
+            *error_out = string_printf(RECONFIG_FAILED, "adding a server");
+        }
+    }
+    return success;
+}
+
+bool MonitorManager::remove_server_from_monitor(mxs::Monitor* mon, SERVER* server, std::string* error_out)
+{
+    mxb_assert(Monitor::is_admin_thread());
+    bool success = false;
+    string server_monitor = Monitor::get_server_monitor(server);
+    if (server_monitor != mon->name())
+    {
+        // Error, server is not monitored by given monitor.
+        string error;
+        if (server_monitor.empty())
+        {
+            error = string_printf("Server '%s' is not monitored by any monitor, ", server->name());
+        }
+        else
+        {
+            error = string_printf("Server '%s' is monitored by '%s', ",
+                                  server->name(), server_monitor.c_str());
+        }
+        error += string_printf("cannot remove it from '%s'.", mon->name());
+        *error_out = error;
+    }
+    else
+    {
+        // Construct the new server list
+        auto params = mon->parameters;
+        auto names = config_break_list_string(params.get_string(CN_SERVERS));
+        names.erase(std::remove(names.begin(), names.end(), server->name()));
+        std::string servers = mxb::join(names, ",");
+        params.set(CN_SERVERS, servers);
+        success = MonitorManager::reconfigure_monitor(mon, params);
+        if (!success)
+        {
+            *error_out = string_printf(RECONFIG_FAILED, "removing a server");
+        }
+    }
+
+    return success;
 }

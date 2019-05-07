@@ -5432,3 +5432,53 @@ int64_t config_enum_to_value(const std::string& value, const MXS_ENUM_VALUE* val
 
     return MXS_UNKNOWN_ENUM_VALUE;
 }
+
+bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+                    const string& key, const string& value, string* error_out)
+{
+    bool success = false;
+    string error_msg;
+    if (!param_is_known(basic, module, key.c_str()))
+    {
+        error_msg = mxb::string_printf("Unknown parameter: %s", key.c_str());
+    }
+    else if (!value[0])
+    {
+        error_msg = mxb::string_printf("Empty value for parameter: %s", key.c_str());
+    }
+    else if (!param_is_valid(basic, module, key.c_str(), value.c_str()))
+    {
+        error_msg = mxb::string_printf("Invalid parameter value for '%s': %s", key.c_str(), value.c_str());
+    }
+    else
+    {
+        success = true;
+    }
+
+    if (!success)
+    {
+        *error_out = error_msg;
+    }
+    return success;
+}
+
+bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, const char* key)
+{
+    std::unordered_set<std::string> names;
+
+    for (auto param : {basic, module})
+    {
+        for (int i = 0; param[i].name; i++)
+        {
+            names.insert(param[i].name);
+        }
+    }
+
+    return names.count(key);
+}
+
+bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+                    const char* key, const char* value)
+{
+    return config_param_is_valid(basic, key, value, NULL) || config_param_is_valid(module, key, value, NULL);
+}
