@@ -6,17 +6,12 @@
 
 #include "testconnections.h"
 
-int main(int argc, char** argv)
-{
-    Mariadb_nodes::require_gtid(true);
-    TestConnections::require_repl_version("10.3.8");
-    TestConnections test(argc, argv);
-    const int N_QUERIES = 100;
+static std::string master;
 
-    test.repl->execute_query_all_nodes("SET GLOBAL session_track_system_variables='last_gtid'");
-    test.repl->connect();
-    std::string master = get_row(test.repl->nodes[0], "SELECT @@server_id")[0];
-    test.repl->disconnect();
+void basic_test(TestConnections& test)
+{
+    test.tprintf("%s", __func__);
+    const int N_QUERIES = 100;
 
     test.maxscales->connect();
 
@@ -39,6 +34,52 @@ int main(int argc, char** argv)
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 
     test.maxscales->disconnect();
+}
+
+void master_retry_test(TestConnections& test)
+{
+    test.tprintf("%s", __func__);
+    const int MAX_QUERIES = 10000;
+    bool ok = false;
+
+    test.maxctrl("alter service RW-Split-Router causal_reads_timeout 1");
+
+    auto conn = test.maxscales->rwsplit();
+    test.expect(conn.connect(), "Connection should work");
+    conn.query("CREATE OR REPLACE TABLE test.t1(id INT)");
+
+
+    for (int i = 0; i < MAX_QUERIES; i++)
+    {
+        conn.query("INSERT INTO test.t1 VALUES (" + std::to_string(i) + ")");
+        conn.query("INSERT INTO test.t1 SELECT * FROM test.t1");
+        auto row = conn.row("SELECT @@server_id");
+
+        if (row[0] == master)
+        {
+            test.tprintf("Query number %d was retried on the master", i + 1);
+            ok = true;
+            break;
+        }
+    }
+
+    conn.query("DROP TABLE test.t1");
+    test.expect(ok, "Master should reply at least once");
+}
+
+int main(int argc, char** argv)
+{
+    Mariadb_nodes::require_gtid(true);
+    TestConnections::require_repl_version("10.3.8");
+    TestConnections test(argc, argv);
+
+    test.repl->execute_query_all_nodes("SET GLOBAL session_track_system_variables='last_gtid'");
+    test.repl->connect();
+    master = get_row(test.repl->nodes[0], "SELECT @@server_id")[0];
+    test.repl->disconnect();
+
+    basic_test(test);
+    master_retry_test(test);
 
     return test.global_result;
 }
