@@ -166,6 +166,7 @@ private:
     bool            create_one_connection();
     void            retry_query(GWBUF* querybuf, int delay = 1);
 
+    bool trx_is_starting();
     bool should_replace_master(mxs::RWBackend* target);
     void replace_master(mxs::RWBackend* target);
     bool should_migrate_trx(mxs::RWBackend* target);

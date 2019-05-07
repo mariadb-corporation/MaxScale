@@ -928,13 +928,19 @@ void RWSplitSession::log_master_routing_failure(bool found,
                 errmsg);
 }
 
+bool RWSplitSession::trx_is_starting()
+{
+    return session_trx_is_active(m_client->session)
+           && qc_query_is_type(m_qc.current_route_info().type_mask(), QUERY_TYPE_BEGIN_TRX);
+}
+
 bool RWSplitSession::should_replace_master(RWBackend* target)
 {
     return m_config.master_reconnection
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // We are not inside a transaction (also checks for autocommit=1)
-           (!session_trx_is_active(m_client->session) || m_is_replay_active)
+           (!session_trx_is_active(m_client->session) || trx_is_starting() || m_is_replay_active)
            &&   // We are not locked to the old master
            !is_locked_to_master();
 }
