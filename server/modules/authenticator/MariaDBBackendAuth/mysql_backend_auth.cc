@@ -22,7 +22,7 @@
  * server.
  */
 
-#define MXS_MODULE_NAME "MySQLBackendAuth"
+#define MXS_MODULE_NAME "MariaDBBackendAuth"
 
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.hh>
