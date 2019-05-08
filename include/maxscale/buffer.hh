@@ -78,6 +78,42 @@ public:
             return &m_i;
         }
 
+        /**
+         * Advance the iterator
+         *
+         * This provides similar behavior to random access iterators with operator+= but does it in
+         * non-constant time.
+         *
+         * @param i Number of steps to advance the iterator
+         */
+        void advance(int i)
+        {
+            mxb_assert(m_i != m_end);
+            mxb_assert(i >= 0);
+
+            while (m_i && m_i + i >= m_end)
+            {
+                i -= m_end - m_i;
+                m_pBuffer = m_pBuffer->next;
+
+                if (m_pBuffer)
+                {
+                    m_i = GWBUF_DATA(m_pBuffer);
+                    m_end = m_i + GWBUF_LENGTH(m_pBuffer);
+                }
+                else
+                {
+                    m_i = NULL;
+                    m_end = NULL;
+                }
+            }
+
+            if (m_i)
+            {
+                m_i += i;
+            }
+        }
+
     protected:
         iterator_base(buf_type pBuffer = NULL)
             : m_pBuffer(pBuffer)

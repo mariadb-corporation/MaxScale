@@ -196,19 +196,19 @@ Iter skip_encoded_int(Iter it)
     switch (*it)
     {
     case 0xfc:
-        std::advance(it, 3);
+        it.advance(3);
         break;
 
     case 0xfd:
-        std::advance(it, 4);
+        it.advance(4);
         break;
 
     case 0xfe:
-        std::advance(it, 9);
+        it.advance(9);
         break;
 
     default:
-        std::advance(it, 1);
+        ++it;
         break;
     }
 
@@ -293,7 +293,8 @@ void RWBackend::process_packets(GWBUF* result)
         len |= (*it++) << 16;
         ++it;   // Skip the sequence
         mxb_assert(it != buffer.end());
-        auto end = std::next(it, len);
+        auto end = it;
+        end.advance(len);
         uint8_t cmd = *it;
 
         // Ignore the tail end of a large packet large packet. Only resultsets can generate packets this large
