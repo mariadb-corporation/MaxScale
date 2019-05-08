@@ -13,7 +13,9 @@
 
 #include "rwsplitsession.hh"
 
+#include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
@@ -569,57 +571,36 @@ void RWSplitSession::close_stale_connections()
 namespace
 {
 
-inline bool is_transaction_rollback(uint8_t* pData)
-{
-    bool rv = false;
-
-    // The 'sql_state' of all transaction rollbacks is "40XXX". In an error
-    // packet, the 'sql_state' is found in the payload at offset 4, after the one
-    // byte 'header', the two byte 'error_code', and the 1 byte 'sql_state_marker'.
-    uint8_t* p = pData + MYSQL_HEADER_LEN + 1 + 2 + 1;
-
-    if (*p++ == '4' && *p == '0')
-    {
-        rv = true;
-
-        if (mxb_log_is_priority_enabled(LOG_INFO))
-        {
-            // p now points at the second byte of the 5 byte long 'sql_state'.
-            p += 4; // Now at the start of the human readable error message
-
-            uint8_t* end = pData + MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pData);
-            int len = end - p;
-            char message[len + 1];
-            memcpy(message, p, len);
-            message[len] = 0;
-
-            MXS_NOTICE("A retryable Clustrix error: %s", message);
-        }
-    }
-
-    return rv;
-}
-
 bool is_transaction_rollback(GWBUF* writebuf)
 {
     bool rv = false;
 
     if (MYSQL_IS_ERROR_PACKET(GWBUF_DATA(writebuf)))
     {
-        if (GWBUF_IS_CONTIGUOUS(writebuf))
-        {
-            rv = is_transaction_rollback(GWBUF_DATA(writebuf));
-        }
-        else
-        {
-            uint8_t* pData = GWBUF_DATA(writebuf);
-            int len = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pData);
-            uint8_t data[len];
+        mxs::Buffer buffer(writebuf);
+        auto it = buffer.begin();
+        it.advance(MYSQL_HEADER_LEN + 1 + 2 + 1);
 
-            gwbuf_copy_data(writebuf, 0, len, data);
+        if (*it++ == '4' && *it == '0')
+        {
+            rv = true;
 
-            rv = is_transaction_rollback(data);
+            if (mxb_log_is_priority_enabled(LOG_INFO))
+            {
+                // it now points at the second byte of the 5 byte long 'sql_state'.
+                it.advance(4); // And now at the start of the human readable error message.
+
+                auto end = buffer.begin();
+                end.advance(MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(writebuf)));
+                mxb_assert(end == buffer.end());
+
+                std::string message(it, end);
+
+                MXS_INFO("Transaction rollback, transaction can be retried: %s", message.c_str());
+            }
         }
+
+        buffer.release();
     }
 
     return rv;
