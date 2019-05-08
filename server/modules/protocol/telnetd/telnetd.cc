@@ -295,7 +295,6 @@ static int telnetd_accept(DCB* client_dcb)
         return 0;
     }
 
-    ssl_authenticate_client(client_dcb, client_dcb->authfunc.connectssl(client_dcb));
 
     dcb_printf(client_dcb, "MaxScale login: ");
 
