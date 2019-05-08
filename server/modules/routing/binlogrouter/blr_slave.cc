@@ -46,6 +46,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
+#include <maxscale/routingworker.hh>
 
 using std::string;
 using std::vector;
@@ -6306,7 +6307,11 @@ static int blr_slave_send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
     }
 
     /* Write the packet */
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, h_event);
+    mxs::RoutingWorker* worker = (mxs::RoutingWorker*)slave->dcb->owner;
+    worker->execute([slave, h_event]() {
+                        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, h_event);
+                    }, mxs::RoutingWorker::EXECUTE_AUTO);
+    return 1;
 }
 
 /**
