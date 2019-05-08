@@ -188,8 +188,13 @@ static void blr_start_master(void* data)
     pthread_mutex_unlock(&router->lock);
 
     // Create a temporary listener so we can create a session originating from it
-    auto listener = Listener::create(router->service, "binlogrouter_listener", "mariadbclient",
-                                     "127.0.0.1", 9999, "", "", nullptr);
+    MXS_CONFIG_PARAMETER listener_params;
+    listener_params.set(CN_ADDRESS, "127.0.0.1");
+    listener_params.set(CN_PORT, "9999");
+    listener_params.set(CN_PROTOCOL, "mariadbclient");
+    listener_params.set(CN_SERVICE, router->service->name());
+
+    auto listener = Listener::create("binlogrouter_listener", "mariadbclient", listener_params);
     mxb_assert(listener);
 
     // Load users now so that authentication will work for the fake client
@@ -1708,7 +1713,7 @@ bool blr_send_event(blr_thread_role_t role,
                     const char* binlog_name,
                     uint32_t binlog_pos,
                     ROUTER_SLAVE* slave,
-                    REP_HEADER*   hdr,
+                    REP_HEADER* hdr,
                     uint8_t* buf)
 {
     bool rval = true;

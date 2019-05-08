@@ -29,6 +29,7 @@
 #include <string>
 #include <unordered_set>
 
+#include <maxscale/maxadmin.h>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.hh>
 #include <maxscale/protocol.hh>
@@ -40,6 +41,7 @@
 
 #include "internal/modules.hh"
 #include "internal/session.hh"
+#include "internal/config.hh"
 
 using Clock = std::chrono::steady_clock;
 using std::chrono::seconds;
@@ -99,9 +101,16 @@ private:
 thread_local RateLimit rate_limit;
 }
 
-Listener::Listener(SERVICE* service, const std::string& name, const std::string& address,
-                   uint16_t port, const std::string& protocol, const std::string& authenticator,
-                   const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl)
+Listener::Listener(SERVICE* service,
+                   const std::string& name,
+                   const std::string& address,
+                   uint16_t port,
+                   const std::string& protocol,
+                   const std::string& authenticator,
+                   const std::string& auth_opts,
+                   void* auth_instance,
+                   SSL_LISTENER* ssl,
+                   const MXS_CONFIG_PARAMETER& params)
     : MXB_POLL_DATA{Listener::poll_handler}
     , m_name(name)
     , m_state(CREATED)
@@ -116,6 +125,7 @@ Listener::Listener(SERVICE* service, const std::string& name, const std::string&
     , m_service(service)
     , m_proto_func(*(MXS_PROTOCOL*)load_module(protocol.c_str(), MODULE_PROTOCOL))
     , m_auth_func(*(MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR))
+    , m_params(params)
 {
     if (strcasecmp(service->router_name(), "cli") == 0 || strcasecmp(service->router_name(), "maxinfo") == 0)
     {
@@ -145,15 +155,75 @@ Listener::~Listener()
     SSL_LISTENER_free(m_ssl);
 }
 
-SListener Listener::create(SERVICE* service,
-                           const std::string& name,
+SListener Listener::create(const std::string& name,
                            const std::string& protocol,
-                           const std::string& address,
-                           unsigned short port,
-                           const std::string& authenticator,
-                           const std::string& auth_options,
-                           SSL_LISTENER* ssl)
+                           const MXS_CONFIG_PARAMETER& params)
 {
+    bool port_defined = params.contains(CN_PORT);
+    bool socket_defined = params.contains(CN_SOCKET);
+    Service* service = static_cast<Service*>(params.get_service(CN_SERVICE));
+
+    if (port_defined && socket_defined)
+    {
+        MXS_ERROR("Creation of listener '%s' failed because both 'socket' and 'port' "
+                  "are defined. Only one of them is allowed.",
+                  name.c_str());
+        return nullptr;
+    }
+    else if ((!port_defined && !socket_defined) || !service)
+    {
+        MXS_ERROR("Listener '%s' is missing a required parameter. A Listener "
+                  "must have a service, protocol and port (or socket) defined.",
+                  name.c_str());
+        return nullptr;
+    }
+
+    // The conditionals just enforce defaults expected in the function.
+    auto port = port_defined ? params.get_integer(CN_PORT) : 0;
+    auto socket = socket_defined ? params.get_string(CN_SOCKET) : "";
+    auto address = socket_defined ? params.get_string(CN_SOCKET) : params.get_string(CN_ADDRESS);
+
+    // Remove this once maxadmin is removed
+    if (strcasecmp(protocol.c_str(), "maxscaled") == 0 && socket_defined
+        && socket == MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG)
+    {
+        socket = MAXADMIN_DEFAULT_SOCKET;
+        address = "";
+    }
+
+    if (socket_defined)
+    {
+        if (auto l = listener_find_by_socket(socket))
+        {
+            MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                      "listener '%s' already listens on socket %s.",
+                      name.c_str(), service->name(), l->name(), socket.c_str());
+            return nullptr;
+        }
+    }
+    else if (auto l = listener_find_by_address(address, port))
+    {
+        MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                  "listener '%s' already listens on port %s.",
+                  name.c_str(), service->name(), l->name(),
+                  params.get_string(CN_PORT).c_str());
+        return nullptr;
+    }
+
+    SSL_LISTENER* ssl_info = NULL;
+
+    if (!config_create_ssl(name.c_str(), params, true, &ssl_info))
+    {
+        return nullptr;
+    }
+
+    // These two values being NULL trigger the loading of the default
+    // authenticators that are specific to each protocol module
+    auto authenticator = params.get_string(CN_AUTHENTICATOR);
+    auto authenticator_options = params.get_string(CN_AUTHENTICATOR_OPTIONS);
+    int net_port = socket_defined ? 0 : port;
+
+
     const char* auth = !authenticator.empty() ? authenticator.c_str() :
         get_default_authenticator(protocol.c_str());
 
@@ -166,7 +236,7 @@ SListener Listener::create(SERVICE* service,
 
     void* auth_instance = NULL;
 
-    if (!authenticator_init(&auth_instance, auth, auth_options.c_str()))
+    if (!authenticator_init(&auth_instance, auth, authenticator_options.c_str()))
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for listener '%s'.",
                   auth, name.c_str());
@@ -179,7 +249,7 @@ SListener Listener::create(SERVICE* service,
     mxb_assert(proto_mod && auth_mod);
 
     SListener listener(new(std::nothrow) Listener(service, name, address, port, protocol, auth,
-                                                  auth_options, auth_instance, ssl));
+                                                  authenticator_options, auth_instance, ssl_info, params));
 
     if (listener)
     {

@@ -78,14 +78,14 @@ static int test1()
     mxb_assert_message(0 != service_isvalid(service), "Service must be valid after creation");
     mxb_assert_message(0 == strcmp("MyService", service->name()), "Service must have given name");
     fprintf(stderr, "\t..done\nAdding protocol testprotocol.");
-    mxb_assert_message(Listener::create(service,
-                                        "TestProtocol",
-                                        "mariadbclient",
-                                        "localhost",
-                                        9876,
-                                        "MySQLAuth",
-                                        "",
-                                        NULL),
+
+    MXS_CONFIG_PARAMETER listener_params;
+    listener_params.set(CN_ADDRESS, "localhost");
+    listener_params.set(CN_PORT, "9876");
+    listener_params.set(CN_PROTOCOL, "mariadbclient");
+    listener_params.set(CN_SERVICE, service->name());
+
+    mxb_assert_message(Listener::create("TestProtocol", "mariadbclient", listener_params),
                        "Add Protocol should succeed");
     mxb_assert_message(service_find_listener(service, "", "localhost", 9876),
                        "Service should have new protocol as requested");

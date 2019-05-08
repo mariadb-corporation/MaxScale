@@ -197,7 +197,7 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 
     SSL_LISTENER* ssl = NULL;
 
-    if (!config_create_ssl(name, params, false, &ssl))
+    if (!config_create_ssl(name, *params, false, &ssl))
     {
         MXS_ERROR("Unable to initialize SSL for server '%s'", name);
         return NULL;

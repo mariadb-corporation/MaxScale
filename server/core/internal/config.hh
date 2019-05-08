@@ -70,9 +70,9 @@ void config_set_global_defaults();
  */
 void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params);
 
-char*                 config_clean_string_list(const char* str);
-bool                  config_load(const char*);
-bool                  config_load_global(const char* filename);
+char* config_clean_string_list(const char* str);
+bool  config_load(const char*);
+bool  config_load_global(const char* filename);
 
 /**
  * @brief Creates an empty configuration context
@@ -140,7 +140,7 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
  * @return True on success, false on error
  */
 bool config_create_ssl(const char* name,
-                       MXS_CONFIG_PARAMETER* params,
+                       const MXS_CONFIG_PARAMETER& params,
                        bool require_cert,
                        SSL_LISTENER** dest);
 

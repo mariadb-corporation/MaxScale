@@ -2887,22 +2887,22 @@ static void free_ssl_structure(SSL_LISTENER* ssl)
 }
 
 bool config_create_ssl(const char* name,
-                       MXS_CONFIG_PARAMETER* params,
+                       const MXS_CONFIG_PARAMETER& params,
                        bool require_cert,
                        SSL_LISTENER** dest)
 {
     SSL_LISTENER* ssl = NULL;
 
     // The enum values convert to bool
-    int value = params->get_enum(CN_SSL, ssl_values);
+    int value = params.get_enum(CN_SSL, ssl_values);
     mxb_assert(value != -1);
 
     if (value)
     {
         bool error = false;
-        string ssl_cert = params->get_string(CN_SSL_CERT);
-        string ssl_key = params->get_string(CN_SSL_KEY);
-        string ssl_ca_cert = params->get_string(CN_SSL_CA_CERT);
+        string ssl_cert = params.get_string(CN_SSL_CERT);
+        string ssl_key = params.get_string(CN_SSL_KEY);
+        string ssl_ca_cert = params.get_string(CN_SSL_CA_CERT);
 
         if (ssl_ca_cert.empty())
         {
@@ -2942,12 +2942,12 @@ bool config_create_ssl(const char* name,
         ssl = (SSL_LISTENER*)MXS_CALLOC(1, sizeof(SSL_LISTENER));
         MXS_ABORT_IF_NULL(ssl);
 
-        int ssl_version = params->get_enum(CN_SSL_VERSION, ssl_version_values);
+        int ssl_version = params.get_enum(CN_SSL_VERSION, ssl_version_values);
 
         ssl->ssl_method_type = (ssl_method_type_t)ssl_version;
         ssl->ssl_init_done = false;
-        ssl->ssl_cert_verify_depth = params->get_integer(CN_SSL_CERT_VERIFY_DEPTH);
-        ssl->ssl_verify_peer_certificate = params->get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE);
+        ssl->ssl_cert_verify_depth = params.get_integer(CN_SSL_CERT_VERIFY_DEPTH);
+        ssl->ssl_verify_peer_certificate = params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE);
 
         listener_set_certificates(ssl, ssl_cert, ssl_key, ssl_ca_cert);
 
@@ -4130,86 +4130,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    int error_count = 0;
-
-    bool port_defined = obj->m_parameters.contains(CN_PORT);
-    bool socket_defined = obj->m_parameters.contains(CN_SOCKET);
-
-    if (port_defined && socket_defined)
-    {
-        MXS_ERROR("Creation of listener '%s' failed because both 'socket' and 'port' "
-                  "are defined. Only one of them is allowed.",
-                  obj->name());
-        error_count++;
-    }
-    else if (!port_defined && !socket_defined)
-    {
-        MXS_ERROR("Listener '%s' is missing a required parameter. A Listener "
-                  "must have a service, protocol and port (or socket) defined.",
-                  obj->name());
-        error_count++;
-    }
-    else
-    {
-        auto address = obj->m_parameters.get_string(CN_ADDRESS);
-        Service* service = static_cast<Service*>(obj->m_parameters.get_service(CN_SERVICE));
-        mxb_assert(service);
-
-        // The conditionals just enforce defaults expected in the function.
-        auto port = port_defined ? obj->m_parameters.get_integer(CN_PORT) : 0;
-        auto socket = socket_defined ? obj->m_parameters.get_string(CN_SOCKET) : "";
-
-        // Remove this once maxadmin is removed
-        if (strcasecmp(protocol.c_str(), "maxscaled") == 0 && socket_defined
-            && socket == MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG)
-        {
-            socket = MAXADMIN_DEFAULT_SOCKET;
-            address = "";
-        }
-
-        if (socket_defined)
-        {
-            if (auto l = listener_find_by_socket(socket))
-            {
-                MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                          "listener '%s' already listens on socket %s.",
-                          obj->name(), service->name(), l->name(), socket.c_str());
-                return 1;
-            }
-        }
-        else if (auto l = listener_find_by_address(address, port))
-        {
-            MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                      "listener '%s' already listens on port %s.",
-                      obj->name(), service->name(), l->name(),
-                      obj->m_parameters.get_string(CN_PORT).c_str());
-            return 1;
-        }
-
-        auto protocol = obj->m_parameters.get_string(CN_PROTOCOL);
-        SSL_LISTENER* ssl_info = NULL;
-
-        if (!config_create_ssl(obj->name(), &obj->m_parameters, true, &ssl_info))
-        {
-            return 1;
-        }
-
-        // These two values being NULL trigger the loading of the default
-        // authenticators that are specific to each protocol module
-        auto authenticator = obj->m_parameters.get_string(CN_AUTHENTICATOR);
-        auto authenticator_options = obj->m_parameters.get_string(CN_AUTHENTICATOR_OPTIONS);
-        int net_port = socket_defined ? 0 : port;
-
-        auto listener = Listener::create(service, obj->name(), protocol, socket_defined ? socket : address,
-                                         net_port, authenticator, authenticator_options, ssl_info);
-
-        if (!listener)
-        {
-            ++error_count;
-        }
-    }
-
-    return error_count;
+    return Listener::create(obj->name(), protocol, obj->m_parameters) ? 0 : 1;
 }
 
 /**

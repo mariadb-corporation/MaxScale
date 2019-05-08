@@ -141,7 +141,7 @@ string create_unique_select()
 
 int test(mock::Session& session,
          FilterModule::Session& filter_session,
-         mock::RouterSession&   router_session,
+         mock::RouterSession& router_session,
          const TEST_CASE& tc)
 {
     int rv = 0;
@@ -293,7 +293,15 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     parameters.set("connection_timeout", "10s");
 
     auto service = service_alloc("service", "readconnroute", &parameters);
-    auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
+
+    MXS_CONFIG_PARAMETER listener_params;
+    listener_params.set(CN_ADDRESS, "0.0.0.0");
+    listener_params.set(CN_PORT, "3306");
+    listener_params.set(CN_PROTOCOL, "mariadbclient");
+    listener_params.set(CN_SERVICE, service->name());
+
+    auto listener = Listener::create("listener", "mariadbclient", listener_params);
+
     mock::Client client("bob", "127.0.0.1");
     mock::Session session(&client, listener);
     mock::ResultSetBackend backend;

@@ -60,7 +60,15 @@ static int test1()
     parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     auto service = service_alloc("service", "readconnroute", &parameters);
-    auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306, "", "", nullptr);
+
+    MXS_CONFIG_PARAMETER listener_params;
+    listener_params.set(CN_ADDRESS, "0.0.0.0");
+    listener_params.set(CN_PORT, "3306");
+    listener_params.set(CN_PROTOCOL, "mariadbclient");
+    listener_params.set(CN_SERVICE, service->name());
+
+    auto listener = Listener::create("listener", "mariadbclient", listener_params);
+
     auto session = new mxs::Session(listener);
     dcb = dcb_alloc(DCB::Role::CLIENT, session);
 

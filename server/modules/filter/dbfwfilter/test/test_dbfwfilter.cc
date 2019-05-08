@@ -708,7 +708,7 @@ void log_error(const FW_TEST_CASE& c)
 
 int test(mock::Client& client,
          FilterModule::Session& filter_session,
-         mock::RouterSession&   router_session,
+         mock::RouterSession& router_session,
          const FW_TEST_CASE& c)
 {
     int rv = 0;
@@ -772,8 +772,15 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             parameters.set("max_retry_interval", "10s");
             parameters.set("connection_timeout", "10s");
             auto service = service_alloc("service", "readconnroute", &parameters);
-            auto listener = Listener::create(service, "listener", "mariadbclient", "0.0.0.0", 3306,
-                                             "", "", nullptr);
+
+            MXS_CONFIG_PARAMETER listener_params;
+            listener_params.set(CN_ADDRESS, "0.0.0.0");
+            listener_params.set(CN_PORT, "3306");
+            listener_params.set(CN_PROTOCOL, "mariadbclient");
+            listener_params.set(CN_SERVICE, service->name());
+
+            auto listener = Listener::create("listener", "mariadbclient", listener_params);
+
             mock::Session session(&client, listener);
             mock::OkBackend backend;
             mock::RouterSession router_session(&backend, &session);

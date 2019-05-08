@@ -52,25 +52,15 @@ public:
     /**
      * Create a new listener
      *
-     * @param service       Service where the listener points to
-     * @param name          Name of the listener
-     * @param protocol      Protocol module to use
-     * @param address       The address to listen with
-     * @param port          The port to listen on
-     * @param authenticator Name of the authenticator to be used
-     * @param auth_options  Authenticator options
-     * @param ssl           SSL configuration
+     * @param name     Name of the listener
+     * @param protocol Protocol module to use
+     * @param params   Parameters for the listener
      *
      * @return New listener or nullptr on error
      */
-    static SListener create(SERVICE* service,
-                            const std::string& name,
+    static SListener create(const std::string& name,
                             const std::string& protocol,
-                            const std::string& address,
-                            unsigned short port,
-                            const std::string& authenticator,
-                            const std::string& auth_options,
-                            SSL_LISTENER* ssl);
+                            const MXS_CONFIG_PARAMETER& params);
 
     /**
      * Destroy a listener
@@ -211,20 +201,21 @@ private:
         DESTROYED
     };
 
-    std::string       m_name;           /**< Name of the listener */
-    State             m_state;          /**< Listener state */
-    std::string       m_protocol;       /**< Protocol module to load */
-    uint16_t          m_port;           /**< Port to listen on */
-    std::string       m_address;        /**< Address to listen with */
-    std::string       m_authenticator;  /**< Name of authenticator */
-    std::string       m_auth_options;   /**< Authenticator options */
-    void*             m_auth_instance;  /**< Authenticator instance */
-    SSL_LISTENER*     m_ssl;            /**< Structure of SSL data or NULL */
-    struct users*     m_users;          /**< The user data for this listener */
-    SERVICE*          m_service;        /**< The service which used by this listener */
-    std::atomic<bool> m_active;         /**< True if the port has not been deleted */
-    MXS_PROTOCOL      m_proto_func;     /**< Preloaded protocol functions */
-    MXS_AUTHENTICATOR m_auth_func;      /**< Preloaded authenticator functions */
+    std::string          m_name;            /**< Name of the listener */
+    State                m_state;           /**< Listener state */
+    std::string          m_protocol;        /**< Protocol module to load */
+    uint16_t             m_port;            /**< Port to listen on */
+    std::string          m_address;         /**< Address to listen with */
+    std::string          m_authenticator;   /**< Name of authenticator */
+    std::string          m_auth_options;    /**< Authenticator options */
+    void*                m_auth_instance;   /**< Authenticator instance */
+    SSL_LISTENER*        m_ssl;             /**< Structure of SSL data or NULL */
+    struct users*        m_users;           /**< The user data for this listener */
+    SERVICE*             m_service;         /**< The service which used by this listener */
+    std::atomic<bool>    m_active;          /**< True if the port has not been deleted */
+    MXS_PROTOCOL         m_proto_func;      /**< Preloaded protocol functions */
+    MXS_AUTHENTICATOR    m_auth_func;       /**< Preloaded authenticator functions */
+    MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
 
     Type m_type;    /**< The type of the listener */
 
@@ -258,7 +249,8 @@ private:
      */
     Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
              const std::string& protocol, const std::string& authenticator,
-             const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl);
+             const std::string& auth_opts, void* auth_instance, SSL_LISTENER* ssl,
+             const MXS_CONFIG_PARAMETER& params);
 
     /**
      * Listen on a file descriptor shared between all workers

@@ -470,7 +470,7 @@ static SSL_LISTENER* create_ssl(const char* name,
             && (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth))
             && (!verify || config_add_param(obj, CN_SSL_VERIFY_PEER_CERTIFICATE, verify)))
         {
-            config_create_ssl(name, &obj->m_parameters, true, &rval);
+            config_create_ssl(name, obj->m_parameters, true, &rval);
         }
 
         config_context_free(obj);
@@ -1155,31 +1155,14 @@ bool runtime_create_listener(Service* service,
                              const char* ssl_depth,
                              const char* verify_ssl)
 {
-
-    if (addr == NULL || strcasecmp(addr, CN_DEFAULT) == 0)
-    {
-        addr = "::";
-    }
-    if (port == NULL || strcasecmp(port, CN_DEFAULT) == 0)
-    {
-        port = "3306";
-    }
     if (proto == NULL || strcasecmp(proto, CN_DEFAULT) == 0)
     {
         proto = "mariadbclient";
     }
 
-    if (!auth || strcasecmp(auth, CN_DEFAULT) == 0)
-    {
-        /** Use protocol default authenticator*/
-        auth = "";
-    }
-
-    if (!auth_opt || strcasecmp(auth_opt, CN_DEFAULT) == 0)
-    {
-        /** Don't pass options to the authenticator */
-        auth_opt = "";
-    }
+    MXS_CONFIG_PARAMETER params;
+    bool ok;
+    tie(ok, params) = load_defaults(proto, MODULE_PROTOCOL, CN_LISTENER);
 
     unsigned short u_port = atoi(port);
     bool rval = false;
@@ -1187,7 +1170,11 @@ bool runtime_create_listener(Service* service,
     std::lock_guard<std::mutex> guard(crt_lock);
     std::string reason;
 
-    if (listener_find(name))
+    if (!ok)
+    {
+        config_runtime_error("Failed to load module '%s'", proto);
+    }
+    else if (listener_find(name))
     {
         config_runtime_error("Listener '%s' already exists", name);
     }
@@ -1197,48 +1184,49 @@ bool runtime_create_listener(Service* service,
     }
     else if (config_is_valid_name(name, &reason))
     {
-        SSL_LISTENER* ssl = NULL;
-
-        if (ssl_key && ssl_cert && ssl_ca
-            && (ssl =
-                    create_ssl(name,
-                               ssl_key,
-                               ssl_cert,
-                               ssl_ca,
-                               ssl_version,
-                               ssl_depth,
-                               verify_ssl)) == NULL)
+        if (addr == NULL || strcasecmp(addr, CN_DEFAULT) == 0)
         {
-            MXS_ERROR("SSL initialization for listener '%s' failed.", name);
-            config_runtime_error("SSL initialization for listener '%s' failed.", name);
+            params.set(CN_ADDRESS, "::");
         }
-        else
+
+        if (port == NULL || strcasecmp(port, CN_DEFAULT) == 0)
         {
-            const char* print_addr = addr ? addr : "::";
-            auto listener = Listener::create(service, name, proto, addr, u_port, auth, auth_opt, ssl);
+            params.set(CN_PORT, "3306");
+        }
 
-            if (listener && listener_serialize(listener))
+        if (auth && strcasecmp(auth, CN_DEFAULT) != 0)
+        {
+            params.set(CN_AUTHENTICATOR, auth);
+        }
+
+        if (auth_opt && strcasecmp(auth_opt, CN_DEFAULT) != 0)
+        {
+            params.set(CN_AUTHENTICATOR_OPTIONS, auth_opt);
+        }
+
+        const char* print_addr = addr ? addr : "::";
+        auto listener = Listener::create(name, proto, params);
+
+        if (listener && listener_serialize(listener))
+        {
+            if (listener->listen())
             {
-                MXS_NOTICE("Created %slistener '%s' at %s:%s for service '%s'",
-                           ssl ? "TLS encrypted " : "", name, print_addr, port, service->name());
+                MXS_NOTICE("Created listener '%s' at %s:%u for service '%s'",
+                           name, listener->address(), listener->port(), service->name());
 
-                if (listener->listen())
-                {
-                    rval = true;
-                }
-                else
-                {
-                    MXS_ERROR("Listener '%s' was created but failed to start it.", name);
-                    config_runtime_error("Listener '%s' was created but failed to start it.", name);
-                    Listener::destroy(listener);
-                    mxb_assert(!listener_find(name));
-                }
+                rval = true;
             }
             else
             {
-                MXS_ERROR("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
-                config_runtime_error("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
+                config_runtime_error("Listener '%s' was created but failed to start it.", name);
+                Listener::destroy(listener);
+                mxb_assert(!listener_find(name));
             }
+        }
+        else
+        {
+            MXS_ERROR("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
+            config_runtime_error("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
         }
     }
     else
