@@ -69,11 +69,11 @@ static json_t* diagnostics_json(const MXS_ROUTER* instance);
 static void    clientReply(MXS_ROUTER* instance,
                            MXS_ROUTER_SESSION* router_session,
                            GWBUF* queue,
-                           DCB*   backend_dcb);
+                           DCB* backend_dcb);
 static void errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       DCB*   backend_dcb,
+                       DCB* backend_dcb,
                        mxs_error_action_t action,
                        bool* succp);
 
@@ -807,13 +807,13 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         extern const MXS_MODULE_PARAM config_server_params[];
         MXS_CONFIG_PARAMETER params;
         params.set_from_list({
-                                {"address", "_none_"},
-                                {"port", "3306"},
-                                {"protocol", "mariadbbackend"},
-                                {"authenticator", "MySQLBackendAuth"}
-                             }, config_server_params);
+            {"address", "_none_"},
+            {"port", "3306"},
+            {"protocol", "mariadbbackend"},
+            {"authenticator", "MySQLBackendAuth"}
+        }, config_server_params);
 
-        Server* server = Server::server_alloc("binlog_router_master_host", &params);
+        Server* server = Server::server_alloc("binlog_router_master_host", params);
 
         if (server == NULL)
         {
@@ -2326,7 +2326,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 static void clientReply(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* queue,
-                        DCB*   backend_dcb)
+                        DCB* backend_dcb)
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
 
@@ -2372,7 +2372,7 @@ static char* extract_message(GWBUF* errpkt)
 static void errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       DCB*   backend_dcb,
+                       DCB* backend_dcb,
                        mxs_error_action_t action,
                        bool* succp)
 {
@@ -2686,8 +2686,8 @@ int blr_ping(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue)
  *
  */
 int blr_send_custom_error(DCB* dcb,
-                          int  packet_number,
-                          int  affected_rows,
+                          int packet_number,
+                          int affected_rows,
                           const char* msg,
                           const char* statemsg,
                           unsigned int errcode)

@@ -359,7 +359,7 @@ bool runtime_create_server(const char* name,
                     parameters.set(CN_AUTHENTICATOR, authenticator);
                 }
 
-                Server* server = Server::server_alloc(name, &parameters);
+                Server* server = Server::server_alloc(name, parameters);
 
                 if (server && (!external || server->serialize()))
                 {

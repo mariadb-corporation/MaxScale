@@ -154,10 +154,10 @@ void careful_strcpy(char* dest, size_t max_len, const std::string& source)
 }
 }
 
-Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
+Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& params)
 {
-    auto monuser = params->get_string(CN_MONITORUSER);
-    auto monpw = params->get_string(CN_MONITORPW);
+    auto monuser = params.get_string(CN_MONITORUSER);
+    auto monpw = params.get_string(CN_MONITORPW);
 
     const char one_defined_err[] = "'%s is defined for server '%s', '%s' must also be defined.";
     if (!monuser.empty() && monpw.empty())
@@ -171,8 +171,8 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    auto protocol = params->get_string(CN_PROTOCOL);
-    auto authenticator = params->get_string(CN_AUTHENTICATOR);
+    auto protocol = params.get_string(CN_PROTOCOL);
+    auto authenticator = params.get_string(CN_AUTHENTICATOR);
 
     if (authenticator.empty())
     {
@@ -197,7 +197,7 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 
     SSL_LISTENER* ssl = NULL;
 
-    if (!config_create_ssl(name, *params, false, &ssl))
+    if (!config_create_ssl(name, params, false, &ssl))
     {
         MXS_ERROR("Unable to initialize SSL for server '%s'", name);
         return NULL;
@@ -214,8 +214,8 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    auto address = params->contains(CN_ADDRESS) ?
-        params->get_string(CN_ADDRESS) : params->get_string(CN_SOCKET);
+    auto address = params.contains(CN_ADDRESS) ?
+        params.get_string(CN_ADDRESS) : params.get_string(CN_SOCKET);
 
     careful_strcpy(server->address, MAX_ADDRESS_LEN, address.c_str());
     if (address.length() > MAX_ADDRESS_LEN)
@@ -224,18 +224,18 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
                     address.c_str(), MAX_ADDRESS_LEN);
     }
 
-    server->port = params->get_integer(CN_PORT);
-    server->extra_port = params->get_integer(CN_EXTRA_PORT);
-    server->m_settings.persistpoolmax = params->get_integer(CN_PERSISTPOOLMAX);
-    server->m_settings.persistmaxtime = params->get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
-    server->proxy_protocol = params->get_bool(CN_PROXY_PROTOCOL);
+    server->port = params.get_integer(CN_PORT);
+    server->extra_port = params.get_integer(CN_EXTRA_PORT);
+    server->m_settings.persistpoolmax = params.get_integer(CN_PERSISTPOOLMAX);
+    server->m_settings.persistmaxtime = params.get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
+    server->proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
     server->is_active = true;
     server->m_auth_instance = auth_instance;
     server->server_ssl = ssl;
     server->persistent = persistent;
     server->last_event = SERVER_UP_EVENT;
     server->status = SERVER_RUNNING;
-    server->m_settings.rank = params->get_enum(CN_RANK, rank_values);
+    server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
     mxb_assert(server->m_settings.rank > 0);
 
     if (!monuser.empty())
@@ -245,8 +245,8 @@ Server* Server::server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
         server->set_monitor_password(monpw);
     }
 
-    server->m_settings.all_parameters = *params;
-    for (auto p : *params)
+    server->m_settings.all_parameters = params;
+    for (auto p : params)
     {
         const string& param_name = p.first;
         const string& param_value = p.second;

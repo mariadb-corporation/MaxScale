@@ -4018,7 +4018,7 @@ int create_new_server(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    if (Server* server = Server::server_alloc(obj->name(), &obj->m_parameters))
+    if (Server* server = Server::server_alloc(obj->name(), obj->m_parameters))
     {
         auto disk_space_threshold = obj->m_parameters.get_string(CN_DISK_SPACE_THRESHOLD);
         if (!server->set_disk_space_threshold(disk_space_threshold))

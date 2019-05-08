@@ -55,7 +55,7 @@ static int test1()
 
     /* Server tests */
     fprintf(stderr, "testserver : creating server called MyServer");
-    Server* server = Server::server_alloc("uniquename", params);
+    Server* server = Server::server_alloc("uniquename", *params);
     mxb_assert_message(server, "Allocating the server should not fail");
 
     fprintf(stderr, "\t..done\nTest Parameter for Server.");
@@ -109,7 +109,7 @@ bool test_load_config(const char* input, Server* server)
             TEST(param->get_string("authenticator") == server->get_authenticator(),
                  "Server authenticators differ");
             TEST(param->get_integer("port") == server->port, "Server ports differ");
-            TEST(Server::server_alloc(obj->name(), &obj->m_parameters),
+            TEST(Server::server_alloc(obj->name(), obj->m_parameters),
                  "Failed to create server from loaded config");
             duplicate_context_finish(&dcontext);
             config_context_free(obj);
@@ -126,7 +126,7 @@ bool test_serialize()
     char old_config_name[] = "serialized-server.cnf.old";
     char* persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    Server* server = Server::server_alloc(name, params);
+    Server* server = Server::server_alloc(name, *params);
     TEST(server, "Server allocation failed");
 
     /** Make sure the files don't exist */
@@ -169,11 +169,11 @@ int main(int argc, char** argv)
     load_module("HTTPD", MODULE_PROTOCOL);
 
     params->set_from_list({
-                             {"address", "127.0.0.1"},
-                             {"port", "9876"},
-                             {"protocol", "HTTPD"},
-                             {"authenticator", "NullAuthAllow"}
-                          }, config_server_params);
+        {"address", "127.0.0.1"},
+        {"port", "9876"},
+        {"protocol", "HTTPD"},
+        {"authenticator", "NullAuthAllow"}
+    }, config_server_params);
     int result = 0;
 
     result += test1();

@@ -153,7 +153,7 @@ public:
      *
      * @return       The newly created server or NULL if an error occurred
      */
-    static Server* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params);
+    static Server* server_alloc(const char* name, const MXS_CONFIG_PARAMETER& params);
 
     /**
      * Creates a server without any configuration. This should be used in unit tests in place of
@@ -374,9 +374,9 @@ private:
         char    m_version_str[MAX_VERSION_LEN + 1] = {'\0'};/**< Server version string */
     };
 
-    const std::string  m_name;              /**< Server config name */
-    Settings           m_settings;          /**< Server settings */
-    VersionInfo        m_info;                /**< Server version and type information */
+    const std::string m_name;               /**< Server config name */
+    Settings          m_settings;           /**< Server settings */
+    VersionInfo       m_info;               /**< Server version and type information */
 
-    void* m_auth_instance = nullptr;  /**< Authenticator instance data */
+    void* m_auth_instance = nullptr;    /**< Authenticator instance data */
 };

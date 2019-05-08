@@ -146,7 +146,7 @@ int main(int argc, char** argv)
         {"authenticator", "MySQLBackendAuth"}
     }, config_server_params);
 
-    Server* server = Server::server_alloc("binlog_router_master_host", &params);
+    Server* server = Server::server_alloc("binlog_router_master_host", params);
     if (server == NULL)
     {
         printf("Failed to allocate 'server' object\n");
