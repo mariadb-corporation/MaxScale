@@ -93,3 +93,49 @@ int ssl_authenticate_check_status(DCB* dcb);
 
 // TODO: Move this to an internal ssl.h header
 void write_ssl_config(int fd, SSL_LISTENER* ssl);
+
+/**
+ * Set the maximum SSL/TLS version the listener will support
+ *
+ * @param ssl_listener Listener data to configure
+ * @param version SSL/TLS version string
+ *
+ * @return  0 on success, -1 on invalid version string
+ */
+int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
+
+/**
+ * Set the locations of the listener's SSL certificate, listener's private key
+ * and the CA certificate which both the client and the listener should trust.
+ *
+ * @param ssl_listener Listener data to configure
+ * @param cert SSL certificate
+ * @param key SSL private key
+ * @param ca_cert SSL CA certificate
+ */
+void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& cert,
+                               const std::string& key, const std::string& ca_cert);
+
+/**
+ * Initialize SSL configuration
+ *
+ * This sets up the generated RSA encryption keys, chooses the listener
+ * encryption level and configures the listener certificate, private key and
+ * certificate authority file.
+ *
+ * @note This function should not be called directly, use config_create_ssl() instead
+ *
+ * @todo Combine this with config_create_ssl() into one function
+ *
+ * @param ssl SSL configuration to initialize
+ *
+ * @return True on success, false on error
+ */
+bool SSL_LISTENER_init(SSL_LISTENER* ssl);
+
+/**
+ * Free an SSL_LISTENER
+ *
+ * @param ssl SSL_LISTENER to free
+ */
+void SSL_LISTENER_free(SSL_LISTENER* ssl);

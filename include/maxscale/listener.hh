@@ -359,31 +359,3 @@ SListener listener_find_by_socket(const std::string& socket);
  * @return The matching listener if one was found
  */
 SListener listener_find_by_address(const std::string& address, unsigned short port);
-
-int  listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
-void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& cert,
-                               const std::string& key, const std::string& ca_cert);
-
-/**
- * Initialize SSL configuration
- *
- * This sets up the generated RSA encryption keys, chooses the listener
- * encryption level and configures the listener certificate, private key and
- * certificate authority file.
- *
- * @note This function should not be called directly, use config_create_ssl() instead
- *
- * @todo Combine this with config_create_ssl() into one function
- *
- * @param ssl SSL configuration to initialize
- *
- * @return True on success, false on error
- */
-bool SSL_LISTENER_init(SSL_LISTENER* ssl);
-
-/**
- * Free an SSL_LISTENER
- *
- * @param ssl SSL_LISTENER to free
- */
-void SSL_LISTENER_free(SSL_LISTENER* ssl);
