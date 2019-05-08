@@ -13,6 +13,13 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-2410](https://jira.mariadb.org/browse/MXS-2410) Hangup delivered to wrong DCB
 * [MXS-2366](https://jira.mariadb.org/browse/MXS-2366) Wrong tarball RPATH
 
+## Changes to MariaDB-Monitor failover
+
+Failover is no longer disabled permanently if it or any other cluster operation fails.
+The disabling is now only temporary and lasts for 'failcount' monitor iterations. Check
+[MariaDB-Monitor documentation](../Monitors/MariaDB-Monitor.md#limitations-and-requirements)
+for more information.
+
 ## Known Issues and Limitations
 
 There are some limitations and known issues within this version of MaxScale.
