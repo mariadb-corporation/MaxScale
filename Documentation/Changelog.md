@@ -7,6 +7,9 @@
 * Servers can now be drained.
 * The servers of a service can now be defined using a monitor.
 * Durations can now be specified as hours, minutes, seconds or milliseconds.
+* MaxCtrl commands `list sessions`, `show sessions` and `show session <id>`
+  support reverse DNS lookup of client addresses. The conversion is activated
+  by adding the `--rdns`-option to the command.
 
 For more details, please refer to:
 
