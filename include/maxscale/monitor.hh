@@ -280,9 +280,6 @@ public:
     Monitor(const std::string& name, const std::string& module);
     virtual ~Monitor();
 
-    static const int STATUS_FLAG_NOCHECK = 0;
-    static const int STATUS_FLAG_CHECK = -1;
-
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection
      * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
@@ -328,6 +325,15 @@ public:
      * @return True, if the monitor could be started, false otherwise.
      */
     virtual bool configure(const MXS_CONFIG_PARAMETER* params);
+
+    /**
+     * Get text-form settings.
+     *
+     * @return Monitor configuration parameters
+     */
+    const MXS_CONFIG_PARAMETER& parameters() const;
+
+    int64_t ticks() const;
 
     /**
      * Starts the monitor. If the monitor requires polling of the servers, it should create
@@ -416,14 +422,7 @@ public:
 
     mutable std::mutex m_lock;
 
-    /** Set when admin requests a maintenance status change. */
-    int check_status_flag = STATUS_FLAG_NOCHECK;
-
-    uint64_t m_ticks {0};                           /**< Number of performed monitoring intervals */
-    uint8_t  m_journal_hash[SHA_DIGEST_LENGTH];     /**< SHA1 hash of the latest written journal */
-
-    MXS_CONFIG_PARAMETER        parameters;     /**< Configuration parameters */
-    std::vector<MonitorServer*> m_servers;      /**< Monitored servers */
+    std::vector<MonitorServer*> m_servers;       /**< Monitored servers */
 
 protected:
     /**
@@ -529,6 +528,8 @@ protected:
      */
     bool check_disk_space_this_tick();
 
+    bool server_status_request_waiting() const;
+
     /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
@@ -552,7 +553,10 @@ protected:
         MonitorServer::ConnectionSettings conn_settings;
     };
 
-    Settings m_settings;
+    const Settings& settings() const;
+
+    /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
+    std::atomic_int64_t m_ticks {0};
 
 private:
 
@@ -582,7 +586,12 @@ private:
     FILE* open_data_file(Monitor* monitor, char* path);
     int   get_data_file_path(char* path) const;
 
-    mxb::StopWatch m_disk_space_checked;    /**< When was disk space checked the last time */
+    mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
+    std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
+    uint8_t          m_journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
+
+    MXS_CONFIG_PARAMETER m_parameters;          /**< Configuration parameters in text form */
+    Settings             m_settings;            /**< Base class settings */
 };
 
 /**

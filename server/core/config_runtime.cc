@@ -2505,7 +2505,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
     mxb_assert(old_json.get());
     const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
 
-    auto params = monitor->parameters;
+    auto params = monitor->parameters();
     params.set_multiple(extract_parameters(new_json));
 
     if (is_valid_resource_body(new_json)

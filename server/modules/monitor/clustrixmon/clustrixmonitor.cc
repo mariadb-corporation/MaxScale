@@ -375,7 +375,7 @@ bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::s
     {
         ClustrixNode& node = kv.second;
 
-        if (node.can_be_used_as_hub(name(), m_settings.conn_settings, softfailed))
+        if (node.can_be_used_as_hub(name(), settings().conn_settings, softfailed))
         {
             m_pHub_con = node.release_connection();
             m_pHub_server = node.server();
@@ -398,7 +398,7 @@ bool ClustrixMonitor::choose_bootstrap_hub(Clustrix::Softfailed softfailed, std:
     {
         if (ips_checked.find(pMs->server->address) == ips_checked.end())
         {
-            if (Clustrix::ping_or_connect_to_hub(name(), m_settings.conn_settings, softfailed, *pMs))
+            if (Clustrix::ping_or_connect_to_hub(name(), settings().conn_settings, softfailed, *pMs))
             {
                 m_pHub_con = pMs->con;
                 m_pHub_server = pMs->server;
@@ -433,8 +433,8 @@ bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checke
 
     if (rv == SQLITE_OK)
     {
-        const std::string& username = m_settings.conn_settings.username;
-        const std::string& password = m_settings.conn_settings.password;
+        const std::string& username = settings().conn_settings.username;
+        const std::string& password = settings().conn_settings.password;
         char* zPassword = decrypt_password(password.c_str());
 
         auto it = nodes.begin();
@@ -806,7 +806,7 @@ void ClustrixMonitor::check_hub(Clustrix::Softfailed softfailed)
     mxb_assert(m_pHub_con);
     mxb_assert(m_pHub_server);
 
-    if (!Clustrix::ping_or_connect_to_hub(name(), m_settings.conn_settings, softfailed,
+    if (!Clustrix::ping_or_connect_to_hub(name(), settings().conn_settings, softfailed,
                                           *m_pHub_server, &m_pHub_con))
     {
         mysql_close(m_pHub_con);
@@ -998,7 +998,7 @@ void ClustrixMonitor::initiate_delayed_http_check()
 {
     mxb_assert(m_delayed_http_check_id == 0);
 
-    long max_delay_ms = m_settings.interval / 10;
+    long max_delay_ms = settings().interval / 10;
 
     long ms = m_http.wait_no_more_than();
 

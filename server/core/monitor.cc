@@ -16,6 +16,7 @@
  */
 #include <maxscale/monitor.hh>
 
+#include <atomic>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +31,6 @@
 #include <mutex>
 
 #include <maxscale/alloc.h>
-#include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/mariadb.hh>
@@ -416,7 +416,8 @@ json_t* monitor_parameters_to_json(const Monitor* monitor)
 {
     json_t* rval = json_object();
     const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
-    config_add_module_params_json(&monitor->parameters,
+    auto  mon_config = monitor->parameters();
+    config_add_module_params_json(&mon_config,
                                   {CN_TYPE, CN_MODULE, CN_SERVERS},
                                   config_monitor_params,
                                   mod->parameters,
@@ -468,7 +469,7 @@ json_t* monitor_json_data(const Monitor* monitor, const char* host)
 
         json_object_set_new(attr, CN_MODULE, json_string(monitor->m_module.c_str()));
         json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state())));
-        json_object_set_new(attr, CN_TICKS, json_integer(monitor->m_ticks));
+        json_object_set_new(attr, CN_TICKS, json_integer(monitor->ticks()));
 
         /** Monitor parameters */
         json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
@@ -578,11 +579,26 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
     if (!error)
     {
         // Store module name into parameter storage.
-        parameters.set(CN_MODULE, m_module);
+        m_parameters.set(CN_MODULE, m_module);
         // Add all config settings to text-mode storage. Needed for serialization.
-        parameters.set_multiple(*params);
+        m_parameters.set_multiple(*params);
     }
     return !error;
+}
+
+const MXS_CONFIG_PARAMETER& Monitor::parameters() const
+{
+    return m_parameters;
+}
+
+const Monitor::Settings& Monitor::settings() const
+{
+    return m_settings;
+}
+
+int64_t Monitor::ticks() const
+{
+    return m_ticks.load(std::memory_order_acquire);
 }
 
 Monitor::~Monitor()
@@ -653,7 +669,7 @@ void Monitor::show(DCB* dcb)
 {
     dcb_printf(dcb, "Name:                   %s\n", name());
     dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(state()));
-    dcb_printf(dcb, "Times monitored:        %lu\n", m_ticks);
+    dcb_printf(dcb, "Times monitored:        %lu\n", ticks());
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
     dcb_printf(dcb, "Connect Timeout:        %i seconds\n", m_settings.conn_settings.connect_timeout);
     dcb_printf(dcb, "Read Timeout:           %i seconds\n", m_settings.conn_settings.read_timeout);
@@ -1356,19 +1372,17 @@ void Monitor::check_maintenance_requests()
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
      * maintenance flag should be read-written atomically to prevent missing a value. */
-    int flags_changed = atomic_exchange_int(&check_status_flag, Monitor::STATUS_FLAG_NOCHECK);
-    if (flags_changed != Monitor::STATUS_FLAG_NOCHECK)
+    bool was_pending = m_status_change_pending.exchange(false, std::memory_order_acq_rel);
+    if (was_pending)
     {
         for (auto ptr : m_servers)
         {
-            // The only server status bit the admin may change is the [Maintenance] bit.
-            int admin_msg = atomic_exchange_int(&ptr->status_request,
-                                                MonitorServer::NO_CHANGE);
+            // The admin can only modify the [Maintenance] and [Drain] bits.
+            int admin_msg = atomic_exchange_int(&ptr->status_request, MonitorServer::NO_CHANGE);
 
             switch (admin_msg)
             {
             case MonitorServer::MAINT_ON:
-                // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
                 ptr->server->set_status(SERVER_MAINT);
                 break;
 
@@ -1692,13 +1706,13 @@ std::vector<MonitorServer*> Monitor::get_monitored_serverlist(const string& key,
 {
     std::vector<MonitorServer*> monitored_array;
     // Check that value exists.
-    if (!parameters.contains(key))
+    if (!m_parameters.contains(key))
     {
         return monitored_array;
     }
 
     string name_error;
-    auto servers = parameters.get_server_list(key, &name_error);
+    auto servers = m_parameters.get_server_list(key, &name_error);
     if (!servers.empty())
     {
         // All servers in the array must be monitored by the given monitor.
@@ -1793,7 +1807,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
             // Also set a flag so the next loop happens sooner.
-            atomic_store_int(&this->check_status_flag, Monitor::STATUS_FLAG_CHECK);
+            m_status_change_pending.store(true, std::memory_order_release);
         }
     }
     else
@@ -1851,7 +1865,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
             // Also set a flag so the next loop happens sooner.
-            atomic_store_int(&this->check_status_flag, Monitor::STATUS_FLAG_CHECK);
+            m_status_change_pending.store(true, std::memory_order_release);
         }
     }
     else
@@ -1896,6 +1910,11 @@ bool Monitor::check_disk_space_this_tick()
         m_disk_space_checked.restart();
     }
     return should_update_disk_space;
+}
+
+bool Monitor::server_status_request_waiting() const
+{
+    return m_status_change_pending.load(std::memory_order_acquire);
 }
 
 MonitorWorker::MonitorWorker(const string& name, const string& module)
@@ -1973,7 +1992,7 @@ bool MonitorWorker::start()
     bool started = false;
     if (m_checked)
     {
-        m_loop_called = get_time_ms() - m_settings.interval;    // Next tick should happen immediately.
+        m_loop_called = get_time_ms() - settings().interval;    // Next tick should happen immediately.
         if (!Worker::start())
         {
             MXS_ERROR("Failed to start worker for monitor '%s'.", name());
@@ -2168,7 +2187,7 @@ void MonitorWorkerSimple::tick()
             pMs->mon_prev_status = pMs->server->status;
             pMs->pending_status = pMs->server->status;
 
-            mxs_connect_result_t rval = pMs->ping_or_connect(m_settings.conn_settings);
+            mxs_connect_result_t rval = pMs->ping_or_connect(settings().conn_settings);
 
             if (connection_is_ok(rval))
             {
@@ -2289,9 +2308,9 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
     {
         int64_t now = get_time_ms();
         // Enough time has passed,
-        if ((now - m_loop_called > m_settings.interval)
-            // or maintenance flag is set,
-            || atomic_load_int(&this->check_status_flag) == Monitor::STATUS_FLAG_CHECK
+        if ((now - m_loop_called > settings().interval)
+            // or a server status change request is waiting,
+            || server_status_request_waiting()
             // or a monitor-specific condition is met.
             || immediate_tick_required())
         {
@@ -2300,7 +2319,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
             now = get_time_ms();
         }
 
-        int64_t ms_to_next_call = m_settings.interval - (now - m_loop_called);
+        int64_t ms_to_next_call = settings().interval - (now - m_loop_called);
         // ms_to_next_call will be negative, if the run_one_tick() call took
         // longer than one monitor interval.
         int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
@@ -2314,7 +2333,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
 void MonitorWorker::run_one_tick()
 {
     tick();
-    mxb::atomic::add(&m_ticks, 1, mxb::atomic::RELAXED);
+    m_ticks.fetch_add(1, std::memory_order_acq_rel);
 }
 
 bool MonitorWorker::immediate_tick_required() const

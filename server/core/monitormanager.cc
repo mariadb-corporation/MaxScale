@@ -127,34 +127,32 @@ void MonitorManager::debug_wait_one_tick()
 {
     mxb_assert(Monitor::is_admin_thread());
     using namespace std::chrono;
-    std::map<Monitor*, uint64_t> ticks;
+    std::map<Monitor*, int64_t> ticks;
 
     // Get tick values for all monitors
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
-                                  ticks[mon] = mxb::atomic::load(&mon->m_ticks);
-                                  return true;
-                              });
+        ticks[mon] = mon->ticks();
+        return true;
+    });
 
     // Wait for all running monitors to advance at least one tick.
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
-                                  if (mon->state() == MONITOR_STATE_RUNNING)
-                                  {
-                                      auto start = steady_clock::now();
-                                        // A monitor may have been added in between the two foreach-calls (not
-                                        // if config changes are
-                                        // serialized). Check if entry exists.
-                                      if (ticks.count(mon) > 0)
-                                      {
-                                          auto tick = ticks[mon];
-                                          while (mxb::atomic::load(&mon->m_ticks) == tick
-                                                 && (steady_clock::now() - start < seconds(60)))
-                                          {
-                                              std::this_thread::sleep_for(milliseconds(100));
-                                          }
-                                      }
-                                  }
-                                  return true;
-                              });
+        if (mon->state() == MONITOR_STATE_RUNNING)
+        {
+            auto start = steady_clock::now();
+            // A monitor may have been added in between the two foreach-calls (not if config changes are
+            // serialized). Check if entry exists.
+            if (ticks.count(mon) > 0)
+            {
+                auto tick = ticks[mon];
+                while (mon->ticks() == tick && (steady_clock::now() - start < seconds(60)))
+                {
+                    std::this_thread::sleep_for(milliseconds(100));
+                }
+            }
+      }
+      return true;
+  });
 }
 
 void MonitorManager::destroy_all_monitors()
@@ -351,7 +349,7 @@ bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* f
         const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
         mxb_assert(mod);
 
-        string config = generate_config_string(monitor->m_name, monitor->parameters,
+        string config = generate_config_string(monitor->m_name, monitor->parameters(),
                                                config_monitor_params, mod->parameters);
 
         if (dprintf(file, "%s", config.c_str()) == -1)
@@ -412,7 +410,7 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG
 {
     mxb_assert(Monitor::is_admin_thread());
     // Backup monitor parameters in case configure fails.
-    auto orig = monitor->parameters;
+    auto orig = monitor->parameters();
     // Stop/start monitor if it's currently running. If monitor was stopped already, this is likely
     // managed by the caller.
     bool stopstart = (monitor->state() == MONITOR_STATE_RUNNING);
@@ -451,7 +449,7 @@ bool MonitorManager::alter_monitor(mxs::Monitor* monitor, const std::string& key
         return false;
     }
 
-    MXS_CONFIG_PARAMETER modified = monitor->parameters;
+    MXS_CONFIG_PARAMETER modified = monitor->parameters();
     modified.set(key, value);
 
     bool success = MonitorManager::reconfigure_monitor(monitor, modified);
@@ -570,7 +568,7 @@ bool MonitorManager::add_server_to_monitor(mxs::Monitor* mon, SERVER* server, st
         // To keep monitor modifications straightforward, all changes should go through the same
         // reconfigure-function. As the function accepts key-value combinations (so that they are easily
         // serialized), construct the value here.
-        MXS_CONFIG_PARAMETER modified_params = mon->parameters;
+        MXS_CONFIG_PARAMETER modified_params = mon->parameters();
         string serverlist = modified_params.get_string(CN_SERVERS);
         if (serverlist.empty())
         {
@@ -615,7 +613,7 @@ bool MonitorManager::remove_server_from_monitor(mxs::Monitor* mon, SERVER* serve
     else
     {
         // Construct the new server list
-        auto params = mon->parameters;
+        auto params = mon->parameters();
         auto names = config_break_list_string(params.get_string(CN_SERVERS));
         names.erase(std::remove(names.begin(), names.end(), server->name()));
         std::string servers = mxb::join(names, ",");
