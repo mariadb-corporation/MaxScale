@@ -44,6 +44,7 @@ const char* const CN_HANDLE_EVENTS = "handle_events";
 static const char CN_AUTO_REJOIN[] = "auto_rejoin";
 static const char CN_FAILCOUNT[] = "failcount";
 static const char CN_ENFORCE_READONLY[] = "enforce_read_only_slaves";
+static const char CN_ENFORCE_SIMPLE_TOPOLOGY[] = "enforce_simple_topology";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
@@ -223,6 +224,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.auto_failover = params->get_bool(CN_AUTO_FAILOVER);
     m_settings.auto_rejoin = params->get_bool(CN_AUTO_REJOIN);
     m_settings.enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
+    m_settings.enforce_simple_topology = params->get_bool(CN_ENFORCE_SIMPLE_TOPOLOGY);
     m_verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
     m_master_failure_timeout = params->get_duration<std::chrono::seconds>(CN_MASTER_FAILURE_TIMEOUT).count();
     m_settings.shared.promotion_sql_file = params->get_string(CN_PROMOTION_SQL_FILE);
@@ -260,6 +262,25 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     {
         settings_ok = false;
     }
+
+    if (m_settings.enforce_simple_topology)
+    {
+        // This is a "mega-setting" which turns on several other features regardless of their individual
+        // settings.
+        auto warn_and_enable = [](bool* setting, const char* setting_name) {
+            const char setting_activated[] = "%s enables %s, overriding any existing setting or default.";
+            if (*setting == false)
+            {
+                *setting = true;
+                MXB_WARNING(setting_activated, CN_ENFORCE_SIMPLE_TOPOLOGY, setting_name);
+            }
+        };
+
+        warn_and_enable(&m_settings.shared.assume_unique_hostnames, CN_ASSUME_UNIQUE_HOSTNAMES);
+        warn_and_enable(&m_settings.auto_failover, CN_AUTO_FAILOVER);
+        warn_and_enable(&m_settings.auto_rejoin, CN_AUTO_REJOIN);
+    }
+
     if (!m_settings.shared.assume_unique_hostnames)
     {
         const char requires[] = "%s requires that %s is on.";
@@ -301,13 +322,14 @@ string MariaDBMonitor::diagnostics_to_string() const
     auto bool_to_zstr = [](bool val) -> const char* {
         return val ? "Enabled" : "Disabled";
     };
-    rval += string_printf("Automatic failover:     %s\n", bool_to_zstr(m_settings.auto_failover));
-    rval += string_printf("Failcount:              %i\n", m_settings.failcount);
-    rval += string_printf("Failover timeout:       %u\n", m_failover_timeout);
-    rval += string_printf("Switchover timeout:     %u\n", m_switchover_timeout);
-    rval += string_printf("Automatic rejoin:       %s\n", bool_to_zstr(m_settings.auto_rejoin));
-    rval += string_printf("Enforce read-only:      %s\n", bool_to_zstr(m_settings.enforce_read_only_slaves));
-    rval += string_printf("Detect stale master:    %s\n", bool_to_zstr(m_settings.detect_stale_master));
+    rval += string_printf("Automatic failover:      %s\n", bool_to_zstr(m_settings.auto_failover));
+    rval += string_printf("Failcount:               %i\n", m_settings.failcount);
+    rval += string_printf("Failover timeout:        %u\n", m_failover_timeout);
+    rval += string_printf("Switchover timeout:      %u\n", m_switchover_timeout);
+    rval += string_printf("Automatic rejoin:        %s\n", bool_to_zstr(m_settings.auto_rejoin));
+    rval += string_printf("Enforce read-only:       %s\n", bool_to_zstr(m_settings.enforce_read_only_slaves));
+    rval += string_printf("Enforce simple topology: %s\n", bool_to_zstr(m_settings.enforce_simple_topology));
+    rval += string_printf("Detect stale master:     %s\n", bool_to_zstr(m_settings.detect_stale_master));
     if (m_excluded_servers.size() > 0)
     {
         rval += string_printf("Non-promotable servers (failover): ");
@@ -1060,6 +1082,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 CN_ASSUME_UNIQUE_HOSTNAMES,          MXS_MODULE_PARAM_BOOL,      "true"
+            },
+            {
+                CN_ENFORCE_SIMPLE_TOPOLOGY,          MXS_MODULE_PARAM_BOOL,      "false"
             },
             {MXS_END_MODULE_PARAMS}
         }

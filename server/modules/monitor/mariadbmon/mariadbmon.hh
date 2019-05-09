@@ -220,6 +220,8 @@ private:
                                                      * on disk space to maintenance. */
         bool enforce_read_only_slaves {false};      /* If true, the monitor checks and enforces every tick
                                                      * that all slaves are in read-only-mode. */
+        bool enforce_simple_topology {false};       /* Can the monitor assume and enforce a simple, 1-master
+                                                     * and N slaves topology? Also allows unsafe failover */
 
         SharedSettings shared; /* Settings required by MariaDBServer objects */
     };
