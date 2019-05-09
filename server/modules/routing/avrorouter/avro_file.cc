@@ -377,7 +377,8 @@ bool notify_cb(DCB* dcb, void* data)
 
     if (dcb->service == service && dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
-        poll_fake_write_event(dcb);
+        auto session = (AvroSession*)dcb->session->router_session;
+        session->queue_client_callback();
     }
 
     return true;

@@ -170,6 +170,8 @@ public:
      */
     int routeQuery(GWBUF* buffer);
 
+    void queue_client_callback();
+
 private:
     AvroSession(Avro* instance, MXS_SESSION* session);
 
@@ -183,7 +185,6 @@ private:
     bool stream_data();
     void rotate_avro_file(std::string fullname);
     void client_callback();
-    void queue_client_callback();
 };
 
 void read_table_info(uint8_t* ptr,
