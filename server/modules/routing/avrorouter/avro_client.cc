@@ -244,7 +244,7 @@ bool file_in_dir(const char* dir, const char* file)
  */
 void AvroSession::queue_client_callback()
 {
-    auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    auto worker = static_cast<mxs::RoutingWorker*>(dcb->poll.owner);
     worker->execute([this]() {
                         client_callback();
                     }, mxs::RoutingWorker::EXECUTE_QUEUED);
