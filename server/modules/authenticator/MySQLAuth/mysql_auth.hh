@@ -206,6 +206,6 @@ int validate_mysql_user(MYSQL_AUTH* instance,
                         DCB* dcb,
                         MYSQL_session* session,
                         uint8_t* scramble,
-                        size_t   scramble_len);
+                        size_t scramble_len);
 
 MXS_END_DECLS

@@ -147,58 +147,58 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static modulecmd_arg_type_t args[] =
     {
-        static modulecmd_arg_type_t args[] =
+        {MODULECMD_ARG_SERVICE, "Service where the user is added"},
+        {MODULECMD_ARG_STRING,  "User to add"                    },
+        {MODULECMD_ARG_STRING,  "Password of the user"           }
+    };
+
+    modulecmd_register_command("cdc",
+                               "add_user",
+                               MODULECMD_TYPE_ACTIVE,
+                               cdc_add_new_user,
+                               3,
+                               args,
+                               "Add a new CDC user");
+
+    static MXS_AUTHENTICATOR MyObject =
+    {
+        NULL,                               /* No initialize entry point */
+        NULL,                               /* No create entry point */
+        cdc_auth_set_protocol_data,         /* Extract data into structure   */
+        cdc_auth_is_client_ssl_capable,     /* Check if client supports SSL  */
+        cdc_auth_authenticate,              /* Authenticate user credentials */
+        cdc_auth_free_client_data,          /* Free the client data held in DCB */
+        NULL,                               /* No destroy entry point */
+        cdc_replace_users,                  /* Load CDC users */
+        users_default_diagnostic,           /* Default diagnostic */
+        users_default_diagnostic_json,      /* Default diagnostic */
+        NULL                                /* No user reauthentication */
+    };
+
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
+        MXS_AUTHENTICATOR_VERSION,
+        "The CDC client to MaxScale authenticator implementation",
+        "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            {MODULECMD_ARG_SERVICE, "Service where the user is added"},
-            {MODULECMD_ARG_STRING,  "User to add"                    },
-            {MODULECMD_ARG_STRING,  "Password of the user"           }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        modulecmd_register_command("cdc",
-                                   "add_user",
-                                   MODULECMD_TYPE_ACTIVE,
-                                   cdc_add_new_user,
-                                   3,
-                                   args,
-                                   "Add a new CDC user");
-
-        static MXS_AUTHENTICATOR MyObject =
-        {
-            NULL,                           /* No initialize entry point */
-            NULL,                           /* No create entry point */
-            cdc_auth_set_protocol_data,     /* Extract data into structure   */
-            cdc_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-            cdc_auth_authenticate,          /* Authenticate user credentials */
-            cdc_auth_free_client_data,      /* Free the client data held in DCB */
-            NULL,                           /* No destroy entry point */
-            cdc_replace_users,              /* Load CDC users */
-            users_default_diagnostic,       /* Default diagnostic */
-            users_default_diagnostic_json,  /* Default diagnostic */
-            NULL                            /* No user reauthentication */
-        };
-
-        static MXS_MODULE info =
-        {
-            MXS_MODULE_API_AUTHENTICATOR,
-            MXS_MODULE_GA,
-            MXS_AUTHENTICATOR_VERSION,
-            "The CDC client to MaxScale authenticator implementation",
-            "V1.1.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
-
-        return &info;
-    }
+    return &info;
+}
 }
 
 /**

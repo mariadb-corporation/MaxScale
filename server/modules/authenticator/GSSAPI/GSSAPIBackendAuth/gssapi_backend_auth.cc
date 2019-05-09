@@ -226,41 +226,41 @@ extern "C"
 /**
  * Module handle entry point
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_AUTHENTICATOR MyObject =
     {
-        static MXS_AUTHENTICATOR MyObject =
-        {
-            NULL,                               /* No initialize entry point */
-            gssapi_backend_auth_alloc,          /* Allocate authenticator data */
-            gssapi_backend_auth_extract,        /* Extract data into structure   */
-            gssapi_backend_auth_connectssl,     /* Check if client supports SSL  */
-            gssapi_backend_auth_authenticate,   /* Authenticate user credentials */
-            NULL,                               /* Client plugin will free shared data */
-            gssapi_backend_auth_free,           /* Free authenticator data */
-            NULL,                               /* Load users from backend databases */
-            NULL,                               /* No diagnostic */
-            NULL,
-            NULL                            /* No user reauthentication */
-        };
+        NULL,                                   /* No initialize entry point */
+        gssapi_backend_auth_alloc,              /* Allocate authenticator data */
+        gssapi_backend_auth_extract,            /* Extract data into structure   */
+        gssapi_backend_auth_connectssl,         /* Check if client supports SSL  */
+        gssapi_backend_auth_authenticate,       /* Authenticate user credentials */
+        NULL,                                   /* Client plugin will free shared data */
+        gssapi_backend_auth_free,               /* Free authenticator data */
+        NULL,                                   /* Load users from backend databases */
+        NULL,                                   /* No diagnostic */
+        NULL,
+        NULL                                /* No user reauthentication */
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
+        MXS_AUTHENTICATOR_VERSION,
+        "GSSAPI backend authenticator",
+        "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_AUTHENTICATOR,
-            MXS_MODULE_GA,
-            MXS_AUTHENTICATOR_VERSION,
-            "GSSAPI backend authenticator",
-            "V1.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }

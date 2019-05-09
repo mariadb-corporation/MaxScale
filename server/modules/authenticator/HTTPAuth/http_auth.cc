@@ -57,43 +57,43 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_AUTHENTICATOR MyObject =
     {
-        static MXS_AUTHENTICATOR MyObject =
-        {
-            NULL,                           /* No initialize entry point */
-            NULL,                           /* No create entry point */
-            http_auth_set_protocol_data,    /* Extract data into structure   */
-            http_auth_is_client_ssl_capable,/* Check if client supports SSL  */
-            http_auth_authenticate,         /* Authenticate user credentials */
-            http_auth_free_client_data,     /* Free the client data held in DCB */
-            NULL,                           /* No destroy entry point */
-            users_default_loadusers,        /* Load generic users */
-            users_default_diagnostic,       /* Default user diagnostic */
-            users_default_diagnostic_json,  /* Default user diagnostic */
-            NULL                            /* No user reauthentication */
-        };
+        NULL,                               /* No initialize entry point */
+        NULL,                               /* No create entry point */
+        http_auth_set_protocol_data,        /* Extract data into structure   */
+        http_auth_is_client_ssl_capable,    /* Check if client supports SSL  */
+        http_auth_authenticate,             /* Authenticate user credentials */
+        http_auth_free_client_data,         /* Free the client data held in DCB */
+        NULL,                               /* No destroy entry point */
+        users_default_loadusers,            /* Load generic users */
+        users_default_diagnostic,           /* Default user diagnostic */
+        users_default_diagnostic_json,      /* Default user diagnostic */
+        NULL                                /* No user reauthentication */
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
+        MXS_AUTHENTICATOR_VERSION,
+        "The MaxScale HTTP BA authenticator",
+        "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_AUTHENTICATOR,
-            MXS_MODULE_GA,
-            MXS_AUTHENTICATOR_VERSION,
-            "The MaxScale HTTP BA authenticator",
-            "V1.1.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 /*lint +e14 */
 }
 

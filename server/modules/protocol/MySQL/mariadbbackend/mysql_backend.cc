@@ -57,7 +57,7 @@ static int gw_send_change_user_to_backend(char* dbname,
 static void gw_send_proxy_protocol_header(DCB* backend_dcb);
 static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    char* ip,
-                                   int   iplen,
+                                   int iplen,
                                    in_port_t* port_out);
 static bool gw_connection_established(DCB* dcb);
 json_t*     gw_json_diagnostics(DCB* dcb);
@@ -72,45 +72,45 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_PROTOCOL MyObject =
     {
-        static MXS_PROTOCOL MyObject =
-        {
-            gw_read_backend_event,          /* Read - EPOLLIN handler        */
-            gw_MySQLWrite_backend,          /* Write - data from gateway     */
-            gw_write_backend_event,         /* WriteReady - EPOLLOUT handler */
-            gw_error_backend_event,         /* Error - EPOLLERR handler      */
-            gw_backend_hangup,              /* HangUp - EPOLLHUP handler     */
-            NULL,                           /* Accept                        */
-            gw_create_backend_connection,   /* Connect                     */
-            gw_backend_close,               /* Close                         */
-            gw_change_user,                 /* Authentication                */
-            gw_backend_default_auth,        /* Default authenticator         */
-            NULL,                           /* Connection limit reached      */
-            gw_connection_established,
-            gw_json_diagnostics,
-        };
+        gw_read_backend_event,              /* Read - EPOLLIN handler        */
+        gw_MySQLWrite_backend,              /* Write - data from gateway     */
+        gw_write_backend_event,             /* WriteReady - EPOLLOUT handler */
+        gw_error_backend_event,             /* Error - EPOLLERR handler      */
+        gw_backend_hangup,                  /* HangUp - EPOLLHUP handler     */
+        NULL,                               /* Accept                        */
+        gw_create_backend_connection,       /* Connect                     */
+        gw_backend_close,                   /* Close                         */
+        gw_change_user,                     /* Authentication                */
+        gw_backend_default_auth,            /* Default authenticator         */
+        NULL,                               /* Connection limit reached      */
+        gw_connection_established,
+        gw_json_diagnostics,
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
+        MXS_PROTOCOL_VERSION,
+        "The MySQL to backend server protocol",
+        "V2.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_PROTOCOL,
-            MXS_MODULE_GA,
-            MXS_PROTOCOL_VERSION,
-            "The MySQL to backend server protocol",
-            "V2.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
 
 /**
@@ -1976,7 +1976,7 @@ static void gw_send_proxy_protocol_header(DCB* backend_dcb)
  */
 static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    char* ip,
-                                   int   iplen,
+                                   int iplen,
                                    in_port_t* port_out)
 {
     bool success = false;

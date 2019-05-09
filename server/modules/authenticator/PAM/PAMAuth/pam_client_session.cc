@@ -74,7 +74,6 @@ int user_services_cb(void* data, int columns, char** column_vals, char** column_
     }
     return 0;
 }
-
 }
 
 PamClientSession::PamClientSession(sqlite3* dbhandle, const PamInstance& instance)
@@ -137,8 +136,8 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
     }
 
     auto word_entry = [](size_t num) -> const char* {
-        return (num == 1) ? "entry" : "entries";
-    };
+            return (num == 1) ? "entry" : "entries";
+        };
 
     if (!services_out->empty())
     {
@@ -152,7 +151,7 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
         // Check if a matching anonymous user exists.
         const string anon_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename
             + " WHERE " + FIELD_USER + " = ''"
-            + " AND '" + dcb->remote + "' LIKE " + FIELD_HOST +
+            + " AND '" + dcb->remote + "' LIKE " + FIELD_HOST
             + " AND " + FIELD_PROXY + " = '1' ORDER BY authentication_string;";
         MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
 

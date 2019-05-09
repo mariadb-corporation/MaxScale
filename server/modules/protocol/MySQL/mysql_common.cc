@@ -155,7 +155,7 @@ GWBUF* mysql_create_com_quit(GWBUF* bufparam,
 }
 
 int mysql_send_com_quit(DCB* dcb,
-                        int  packet_number,
+                        int packet_number,
                         GWBUF* bufparam)
 {
     GWBUF* buf;
@@ -330,8 +330,8 @@ GWBUF* mysql_create_standard_error(int packet_number,
  * @return      0 on failure, 1 on success
  */
 int mysql_send_standard_error(DCB* dcb,
-                              int  packet_number,
-                              int  error_number,
+                              int packet_number,
+                              int error_number,
                               const char* error_message)
 {
     GWBUF* buf;
@@ -353,8 +353,8 @@ int mysql_send_standard_error(DCB* dcb,
  *
  */
 int mysql_send_custom_error(DCB* dcb,
-                            int  packet_number,
-                            int  in_affected_rows,
+                            int packet_number,
+                            int in_affected_rows,
                             const char* mysql_message)
 {
     GWBUF* buf;
@@ -377,8 +377,8 @@ int mysql_send_custom_error(DCB* dcb,
  *
  */
 int mysql_send_auth_error(DCB* dcb,
-                          int  packet_number,
-                          int  in_affected_rows,
+                          int packet_number,
+                          int in_affected_rows,
                           const char* mysql_message)
 {
     uint8_t* outbuf = NULL;
@@ -454,7 +454,7 @@ int mysql_send_auth_error(DCB* dcb,
 }
 
 char* create_auth_failed_msg(GWBUF* readbuf,
-                             char*  hostaddr,
+                             char* hostaddr,
                              uint8_t* sha1)
 {
     char* errstr;
@@ -485,9 +485,9 @@ char* create_auth_failed_msg(GWBUF* readbuf,
  */
 char* create_auth_fail_str(char* username,
                            char* hostaddr,
-                           bool  password,
+                           bool password,
                            char* db,
-                           int   errcode)
+                           int errcode)
 {
     char* errstr;
     const char* ferrstr;

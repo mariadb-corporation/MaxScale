@@ -242,10 +242,10 @@ int PamInstance::load_users(SERVICE* service)
                         MYSQL_ROW row;
                         while ((row = mysql_fetch_row(res)))
                         {
-                            add_pam_user(row[0], row[1], // user, host
-                                         row[2], row[3] && strcasecmp(row[3], "Y") == 0, // db, anydb
-                                         row[4], // pam service
-                                         false); // not a proxy
+                            add_pam_user(row[0], row[1],                                // user, host
+                                         row[2], row[3] && strcasecmp(row[3], "Y") == 0,// db, anydb
+                                         row[4],                                        // pam service
+                                         false);                                        // not a proxy
                         }
                         mysql_free_result(res);
                     }
@@ -357,13 +357,13 @@ bool PamInstance::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
 
         if (!anon_users_info.empty())
         {
-             MXS_INFO("Found %lu anonymous PAM user(s). Checking them for proxy grants.",
-                      anon_users_info.size());
+            MXS_INFO("Found %lu anonymous PAM user(s). Checking them for proxy grants.",
+                     anon_users_info.size());
         }
 
         for (const auto& elem : anon_users_info)
         {
-            string query =  "SHOW GRANTS FOR ''@'" + elem.first + "';";
+            string query = "SHOW GRANTS FOR ''@'" + elem.first + "';";
             // Check that the anon user has a proxy grant.
             if (mysql_query(conn, query.c_str()))
             {
@@ -381,9 +381,9 @@ bool PamInstance::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
                     {
                         if (row[0] && strncmp(row[0], GRANT_PROXY, sizeof(GRANT_PROXY) - 1) == 0)
                         {
-                            add_pam_user("", elem.first.c_str(), // user, host
-                                         NULL, false, // Unused
-                                         elem.second.c_str(), true); // service, proxy
+                            add_pam_user("", elem.first.c_str(),    // user, host
+                                         NULL, false,               // Unused
+                                         elem.second.c_str(), true);// service, proxy
                             break;
                         }
                     }

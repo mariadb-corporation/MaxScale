@@ -65,45 +65,45 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_PROTOCOL MyObject =
     {
-        static MXS_PROTOCOL MyObject =
-        {
-            httpd_read_event,   /**< Read - EPOLLIN handler        */
-            httpd_write,        /**< Write - data from gateway     */
-            httpd_write_event,  /**< WriteReady - EPOLLOUT handler */
-            httpd_error,        /**< Error - EPOLLERR handler      */
-            httpd_hangup,       /**< HangUp - EPOLLHUP handler     */
-            httpd_accept,       /**< Accept                        */
-            NULL,               /**< Connect                       */
-            httpd_close,        /**< Close                         */
-            NULL,               /**< Authentication                */
-            httpd_default_auth, /**< Default authenticator         */
-            NULL,               /**< Connection limit reached      */
-            NULL,
-            NULL,
-        };
+        httpd_read_event,       /**< Read - EPOLLIN handler        */
+        httpd_write,            /**< Write - data from gateway     */
+        httpd_write_event,      /**< WriteReady - EPOLLOUT handler */
+        httpd_error,            /**< Error - EPOLLERR handler      */
+        httpd_hangup,           /**< HangUp - EPOLLHUP handler     */
+        httpd_accept,           /**< Accept                        */
+        NULL,                   /**< Connect                       */
+        httpd_close,            /**< Close                         */
+        NULL,                   /**< Authentication                */
+        httpd_default_auth,     /**< Default authenticator         */
+        NULL,                   /**< Connection limit reached      */
+        NULL,
+        NULL,
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_IN_DEVELOPMENT,
+        MXS_PROTOCOL_VERSION,
+        "An experimental HTTPD implementation for use in administration",
+        "V1.2.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_PROTOCOL,
-            MXS_MODULE_IN_DEVELOPMENT,
-            MXS_PROTOCOL_VERSION,
-            "An experimental HTTPD implementation for use in administration",
-            "V1.2.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
 /*lint +e14 */
 

@@ -153,42 +153,42 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_AUTHENTICATOR MyObject =
     {
-        static MXS_AUTHENTICATOR MyObject =
-        {
-            NULL,                       /* No initialize entry point */
-            auth_backend_create,        /* Create authenticator */
-            auth_backend_extract,       /* Extract data into structure   */
-            auth_backend_ssl,           /* Check if client supports SSL  */
-            auth_backend_authenticate,  /* Authenticate user credentials */
-            NULL,                       /* The shared data is freed by the client DCB */
-            auth_backend_destroy,       /* Destroy authenticator */
-            NULL,                       /* We don't need to load users */
-            NULL,                       /* No diagnostic */
-            NULL,
-            NULL                    /* No user reauthentication */
-        };
+        NULL,                           /* No initialize entry point */
+        auth_backend_create,            /* Create authenticator */
+        auth_backend_extract,           /* Extract data into structure   */
+        auth_backend_ssl,               /* Check if client supports SSL  */
+        auth_backend_authenticate,      /* Authenticate user credentials */
+        NULL,                           /* The shared data is freed by the client DCB */
+        auth_backend_destroy,           /* Destroy authenticator */
+        NULL,                           /* We don't need to load users */
+        NULL,                           /* No diagnostic */
+        NULL,
+        NULL                        /* No user reauthentication */
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
+        MXS_AUTHENTICATOR_VERSION,
+        "The MySQL MaxScale to backend server authenticator",
+        "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_AUTHENTICATOR,
-            MXS_MODULE_GA,
-            MXS_AUTHENTICATOR_VERSION,
-            "The MySQL MaxScale to backend server authenticator",
-            "V1.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 /*lint +e14 */
 }

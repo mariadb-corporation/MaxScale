@@ -71,45 +71,45 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_PROTOCOL MyObject =
     {
-        static MXS_PROTOCOL MyObject =
-        {
-            cdc_read_event,     /* Read - EPOLLIN handler        */
-            cdc_write,          /* Write - data from gateway     */
-            cdc_write_event,    /* WriteReady - EPOLLOUT handler */
-            cdc_error,          /* Error - EPOLLERR handler      */
-            cdc_hangup,         /* HangUp - EPOLLHUP handler     */
-            cdc_accept,         /* Accept                        */
-            NULL,               /* Connect                       */
-            cdc_close,          /* Close                         */
-            NULL,               /* Authentication                */
-            cdc_default_auth,   /* default authentication */
-            NULL,
-            NULL,
-            NULL,
-        };
+        cdc_read_event,         /* Read - EPOLLIN handler        */
+        cdc_write,              /* Write - data from gateway     */
+        cdc_write_event,        /* WriteReady - EPOLLOUT handler */
+        cdc_error,              /* Error - EPOLLERR handler      */
+        cdc_hangup,             /* HangUp - EPOLLHUP handler     */
+        cdc_accept,             /* Accept                        */
+        NULL,                   /* Connect                       */
+        cdc_close,              /* Close                         */
+        NULL,                   /* Authentication                */
+        cdc_default_auth,       /* default authentication */
+        NULL,
+        NULL,
+        NULL,
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_IN_DEVELOPMENT,
+        MXS_PROTOCOL_VERSION,
+        "A Change Data Capture Listener implementation for use in binlog events retrieval",
+        "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_PROTOCOL,
-            MXS_MODULE_IN_DEVELOPMENT,
-            MXS_PROTOCOL_VERSION,
-            "A Change Data Capture Listener implementation for use in binlog events retrieval",
-            "V1.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
 
 /**

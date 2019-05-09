@@ -172,7 +172,7 @@ static char* get_mariadb_101_users_query(bool include_root)
  */
 static const char* get_password_column_name(const SERVER::Version& version)
 {
-    const char* rval = "password"; // Usual result, used in MariaDB.
+    const char* rval = "password";      // Usual result, used in MariaDB.
     auto major = version.major;
     auto minor = version.minor;
     if ((major == 5 && minor == 7) || (major == 8 && minor == 0))
@@ -254,9 +254,9 @@ int replace_mysql_users(Listener* listener, bool skip_local)
 
 static bool check_password(const char* output,
                            uint8_t* token,
-                           size_t   token_len,
+                           size_t token_len,
                            uint8_t* scramble,
-                           size_t   scramble_len,
+                           size_t scramble_len,
                            uint8_t* phase2_scramble)
 {
     uint8_t stored_token[SHA_DIGEST_LENGTH] = {};
@@ -365,7 +365,7 @@ int validate_mysql_user(MYSQL_AUTH* instance,
                         DCB* dcb,
                         MYSQL_session* session,
                         uint8_t* scramble,
-                        size_t   scramble_len)
+                        size_t scramble_len)
 {
     sqlite3* handle = get_handle(instance);
     const char* validate_query = instance->lower_case_table_names ?
@@ -782,7 +782,7 @@ static bool check_table_permissions(MYSQL* mysql,
  */
 static bool check_default_table_permissions(MYSQL* mysql,
                                             SERVICE* service,
-                                            SERVER*  server,
+                                            SERVER* server,
                                             const char* user)
 {
     bool rval = true;
@@ -839,7 +839,7 @@ static bool check_default_table_permissions(MYSQL* mysql,
  */
 static bool check_clustrix_table_permissions(MYSQL* mysql,
                                              SERVICE* service,
-                                             SERVER*  server,
+                                             SERVER* server,
                                              const char* user)
 {
     bool rval = true;
@@ -875,7 +875,7 @@ static bool check_clustrix_table_permissions(MYSQL* mysql,
  * are missing.
  */
 static bool check_server_permissions(SERVICE* service,
-                                     SERVER*  server,
+                                     SERVER* server,
                                      const char* user,
                                      const char* password)
 {
@@ -1120,7 +1120,7 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
 {
     SERVER* server = server_ref->server;
     auto server_version = server->version();
-    if (server_version.total == 0) // No monitor or the monitor hasn't ran yet.
+    if (server_version.total == 0)      // No monitor or the monitor hasn't ran yet.
     {
         mxs_mysql_update_server_version(server, con);
         server_version = server->version();

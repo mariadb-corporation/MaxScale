@@ -85,46 +85,46 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    MXS_INFO("Initialise Telnetd Protocol module.");
+
+    static MXS_PROTOCOL MyObject =
     {
-        MXS_INFO("Initialise Telnetd Protocol module.");
+        telnetd_read_event,             /**< Read - EPOLLIN handler        */
+        telnetd_write,                  /**< Write - data from gateway     */
+        telnetd_write_event,            /**< WriteReady - EPOLLOUT handler */
+        telnetd_error,                  /**< Error - EPOLLERR handler      */
+        telnetd_hangup,                 /**< HangUp - EPOLLHUP handler     */
+        telnetd_accept,                 /**< Accept                        */
+        NULL,                           /**< Connect                       */
+        telnetd_close,                  /**< Close                         */
+        NULL,                           /**< Authentication                */
+        telnetd_default_auth,           /**< Default authenticator         */
+        NULL,                           /**< Connection limit reached      */
+        NULL,
+        NULL,
+    };
 
-        static MXS_PROTOCOL MyObject =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
+        MXS_PROTOCOL_VERSION,
+        "A telnet deamon protocol for simple administration interface",
+        "V1.1.1",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            telnetd_read_event,         /**< Read - EPOLLIN handler        */
-            telnetd_write,              /**< Write - data from gateway     */
-            telnetd_write_event,        /**< WriteReady - EPOLLOUT handler */
-            telnetd_error,              /**< Error - EPOLLERR handler      */
-            telnetd_hangup,             /**< HangUp - EPOLLHUP handler     */
-            telnetd_accept,             /**< Accept                        */
-            NULL,                       /**< Connect                       */
-            telnetd_close,              /**< Close                         */
-            NULL,                       /**< Authentication                */
-            telnetd_default_auth,       /**< Default authenticator         */
-            NULL,                       /**< Connection limit reached      */
-            NULL,
-            NULL,
-        };
-
-        static MXS_MODULE info =
-        {
-            MXS_MODULE_API_PROTOCOL,
-            MXS_MODULE_GA,
-            MXS_PROTOCOL_VERSION,
-            "A telnet deamon protocol for simple administration interface",
-            "V1.1.1",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
-        return &info;
-    }
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+    return &info;
+}
 }
 /*lint +e14 */
 

@@ -166,47 +166,47 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    MXS_INFO("Initialise MaxScaled Protocol module.");
+
+    static MXS_PROTOCOL MyObject =
     {
-        MXS_INFO("Initialise MaxScaled Protocol module.");
+        maxscaled_read_event,           /**< Read - EPOLLIN handler        */
+        maxscaled_write,                /**< Write - data from gateway     */
+        maxscaled_write_event,          /**< WriteReady - EPOLLOUT handler */
+        maxscaled_error,                /**< Error - EPOLLERR handler      */
+        maxscaled_hangup,               /**< HangUp - EPOLLHUP handler     */
+        maxscaled_accept,               /**< Accept                        */
+        NULL,                           /**< Connect                       */
+        maxscaled_close,                /**< Close                         */
+        NULL,                           /**< Authentication                */
+        mxsd_default_auth,              /**< Default authenticator         */
+        NULL,                           /**< Connection limit reached      */
+        NULL,
+        NULL,
+    };
 
-        static MXS_PROTOCOL MyObject =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
+        MXS_PROTOCOL_VERSION,
+        "A maxscale protocol for the administration interface",
+        "V2.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            maxscaled_read_event,       /**< Read - EPOLLIN handler        */
-            maxscaled_write,            /**< Write - data from gateway     */
-            maxscaled_write_event,      /**< WriteReady - EPOLLOUT handler */
-            maxscaled_error,            /**< Error - EPOLLERR handler      */
-            maxscaled_hangup,           /**< HangUp - EPOLLHUP handler     */
-            maxscaled_accept,           /**< Accept                        */
-            NULL,                       /**< Connect                       */
-            maxscaled_close,            /**< Close                         */
-            NULL,                       /**< Authentication                */
-            mxsd_default_auth,          /**< Default authenticator         */
-            NULL,                       /**< Connection limit reached      */
-            NULL,
-            NULL,
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        static MXS_MODULE info =
-        {
-            MXS_MODULE_API_PROTOCOL,
-            MXS_MODULE_GA,
-            MXS_PROTOCOL_VERSION,
-            "A maxscale protocol for the administration interface",
-            "V2.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
-
-        return &info;
-    }
+    return &info;
+}
 }
 /*lint +e14 */
 

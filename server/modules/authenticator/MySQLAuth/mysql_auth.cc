@@ -48,7 +48,7 @@ static void  mysql_auth_destroy(void* data);
 
 static int combined_auth_check(DCB* dcb,
                                uint8_t* auth_token,
-                               size_t   auth_token_len,
+                               size_t auth_token_len,
                                MySQLProtocol* protocol,
                                char* username,
                                uint8_t* stage1_hash,
@@ -64,11 +64,11 @@ json_t* mysql_auth_diagnostic_json(const Listener* port);
 int mysql_auth_reauthenticate(DCB* dcb,
                               const char* user,
                               uint8_t* token,
-                              size_t   token_len,
+                              size_t token_len,
                               uint8_t* scramble,
-                              size_t   scramble_len,
+                              size_t scramble_len,
                               uint8_t* output_token,
-                              size_t   output_token_len);
+                              size_t output_token_len);
 
 extern "C"
 {
@@ -80,43 +80,43 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_AUTHENTICATOR MyObject =
     {
-        static MXS_AUTHENTICATOR MyObject =
-        {
-            mysql_auth_init,                    /* Initialize the authenticator */
-            NULL,                               /* Create entry point */
-            mysql_auth_set_protocol_data,       /* Extract data into structure   */
-            mysql_auth_is_client_ssl_capable,   /* Check if client supports SSL  */
-            mysql_auth_authenticate,            /* Authenticate user credentials */
-            mysql_auth_free_client_data,        /* Free the client data held in DCB */
-            NULL,                               /* Destroy entry point */
-            mysql_auth_load_users,              /* Load users from backend databases */
-            mysql_auth_diagnostic,
-            mysql_auth_diagnostic_json,
-            mysql_auth_reauthenticate       /* Handle COM_CHANGE_USER */
-        };
+        mysql_auth_init,                        /* Initialize the authenticator */
+        NULL,                                   /* Create entry point */
+        mysql_auth_set_protocol_data,           /* Extract data into structure   */
+        mysql_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
+        mysql_auth_authenticate,                /* Authenticate user credentials */
+        mysql_auth_free_client_data,            /* Free the client data held in DCB */
+        NULL,                                   /* Destroy entry point */
+        mysql_auth_load_users,                  /* Load users from backend databases */
+        mysql_auth_diagnostic,
+        mysql_auth_diagnostic_json,
+        mysql_auth_reauthenticate           /* Handle COM_CHANGE_USER */
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
+        MXS_AUTHENTICATOR_VERSION,
+        "The MySQL client to MaxScale authenticator implementation",
+        "V1.1.0",
+        ACAP_TYPE_ASYNC,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_AUTHENTICATOR,
-            MXS_MODULE_GA,
-            MXS_AUTHENTICATOR_VERSION,
-            "The MySQL client to MaxScale authenticator implementation",
-            "V1.1.0",
-            ACAP_TYPE_ASYNC,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
 
 static bool open_instance_database(const char* path, sqlite3** handle)
@@ -294,14 +294,14 @@ static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session
     gw_mysql_set_byte3(bufdata, payloadlen);
     bufdata += 3;
     *bufdata++ = client_data->next_sequence;
-    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST; // AuthSwitchRequest command
+    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;     // AuthSwitchRequest command
     memcpy(bufdata, plugin, sizeof(plugin));
     bufdata += sizeof(plugin);
     memcpy(bufdata, proto->scramble, GW_MYSQL_SCRAMBLE_SIZE);
     bufdata += GW_MYSQL_SCRAMBLE_SIZE;
     *bufdata = '\0';
     return buffer;
-};
+}
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
  *
@@ -448,8 +448,8 @@ static bool mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
      * contain required data. If the buffer is unexpectedly large (likely an erroneous or malicious client),
      * discard the packet as parsing it may cause overflow. The limit is just a guess, but it seems the
      * packets from most plugins are < 100 bytes. */
-    if ((!client_data->auth_switch_sent &&
-        (client_auth_packet_size >= MYSQL_AUTH_PACKET_BASE_SIZE && client_auth_packet_size < 1028))
+    if ((!client_data->auth_switch_sent
+         && (client_auth_packet_size >= MYSQL_AUTH_PACKET_BASE_SIZE && client_auth_packet_size < 1028))
         // If the client is replying to an AuthSwitchRequest, the length is predetermined.
         || (client_data->auth_switch_sent
             && (client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)))
@@ -461,8 +461,6 @@ static bool mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
         /* Packet is not big enough */
         return false;
     }
-
-
 }
 
 /**
@@ -497,7 +495,7 @@ static bool read_zstr(const uint8_t* client_auth_packet, size_t client_auth_pack
     {
         return false;
     }
-};
+}
 
 /**
  * @brief Transfer detailed data from the authentication request to the DCB.
@@ -558,8 +556,8 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
             client_data->auth_token_len = client_auth_packet[packet_length_used];
             packet_length_used++;
 
-            if (client_auth_packet_size <
-                (packet_length_used + client_data->auth_token_len))
+            if (client_auth_packet_size
+                < (packet_length_used + client_data->auth_token_len))
             {
                 /* Packet was too small to contain authentication token */
                 return false;
@@ -826,11 +824,11 @@ static int mysql_auth_load_users(Listener* port)
 int mysql_auth_reauthenticate(DCB* dcb,
                               const char* user,
                               uint8_t* token,
-                              size_t   token_len,
+                              size_t token_len,
                               uint8_t* scramble,
-                              size_t   scramble_len,
+                              size_t scramble_len,
                               uint8_t* output_token,
-                              size_t   output_token_len)
+                              size_t output_token_len)
 {
     MYSQL_session* client_data = (MYSQL_session*)dcb->data;
     MYSQL_session temp;

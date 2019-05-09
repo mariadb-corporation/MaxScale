@@ -158,41 +158,41 @@ extern "C"
 /**
  * Module handle entry point
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_AUTHENTICATOR MyObject =
     {
-        static MXS_AUTHENTICATOR MyObject =
-        {
-            pam_auth_init,              /* Initialize authenticator */
-            pam_auth_alloc,             /* Allocate authenticator data */
-            pam_auth_extract,           /* Extract data into structure   */
-            pam_auth_connectssl,        /* Check if client supports SSL  */
-            pam_auth_authenticate,      /* Authenticate user credentials */
-            pam_auth_free_data,         /* Free the client data held in DCB */
-            pam_auth_free,              /* Free authenticator data */
-            pam_auth_load_users,        /* Load database users */
-            pam_auth_diagnostic,        /* Default user diagnostic */
-            pam_auth_diagnostic_json,   /* Default user diagnostic */
-            NULL                        /* No user reauthentication */
-        };
+        pam_auth_init,                  /* Initialize authenticator */
+        pam_auth_alloc,                 /* Allocate authenticator data */
+        pam_auth_extract,               /* Extract data into structure   */
+        pam_auth_connectssl,            /* Check if client supports SSL  */
+        pam_auth_authenticate,          /* Authenticate user credentials */
+        pam_auth_free_data,             /* Free the client data held in DCB */
+        pam_auth_free,                  /* Free authenticator data */
+        pam_auth_load_users,            /* Load database users */
+        pam_auth_diagnostic,            /* Default user diagnostic */
+        pam_auth_diagnostic_json,       /* Default user diagnostic */
+        NULL                            /* No user reauthentication */
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
+        MXS_AUTHENTICATOR_VERSION,
+        "PAM authenticator",
+        "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_AUTHENTICATOR,
-            MXS_MODULE_GA,
-            MXS_AUTHENTICATOR_VERSION,
-            "PAM authenticator",
-            "V1.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
