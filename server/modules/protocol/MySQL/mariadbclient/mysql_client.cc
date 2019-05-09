@@ -193,7 +193,7 @@ static void thread_finish(void)
  */
 static char* gw_default_auth()
 {
-    return (char*)"MySQLAuth";
+    return (char*)"mariadbauth";
 }
 
 std::string get_version_string(SERVICE* service)

@@ -124,7 +124,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  */
 static char* gw_backend_default_auth()
 {
-    return const_cast<char*>("MySQLBackendAuth");
+    return const_cast<char*>("mariadbbackendauth");
 }
 /*lint +e14 */
 
