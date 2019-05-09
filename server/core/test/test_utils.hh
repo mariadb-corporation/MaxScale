@@ -40,7 +40,7 @@ void preload_module(const char* name, const char* path, const char* type)
     set_libdir(MXS_STRDUP(old_libdir.c_str()));
 }
 
-void init_test_env(char* __attribute((unused)) path = nullptr, uint32_t init_type = QC_INIT_BOTH)
+void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type = QC_INIT_BOTH)
 {
     config_get_global_options()->n_threads = 1;
 

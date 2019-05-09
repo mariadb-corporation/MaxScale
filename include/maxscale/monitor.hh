@@ -158,26 +158,26 @@ public:
     class ConnectionSettings
     {
     public:
-        std::string username;       /**< Monitor username */
-        std::string password;       /**< Monitor password */
-        int connect_timeout {1};    /**< Connect timeout in seconds for mysql_real_connect */
-        int write_timeout {1};      /**< Timeout in seconds for each attempt to write to the server.
-                                     *   There are retries and the total effective timeout value is two
-                                     *   times the option value. */
-        int read_timeout {1};       /**< Timeout in seconds to read from the server. There are retries
-                                     *   and the total effective timeout value is three times the
-                                     *   option value. */
-        int connect_attempts {1};   /**< How many times a connection is attempted */
+        std::string username;           /**< Monitor username */
+        std::string password;           /**< Monitor password */
+        int         connect_timeout {1};/**< Connect timeout in seconds for mysql_real_connect */
+        int         write_timeout {1};  /**< Timeout in seconds for each attempt to write to the server.
+                                         *   There are retries and the total effective timeout value is two
+                                         *   times the option value. */
+        int read_timeout {1};           /**< Timeout in seconds to read from the server. There are retries
+                                         *   and the total effective timeout value is three times the
+                                         *   option value. */
+        int connect_attempts {1};       /**< How many times a connection is attempted */
     };
 
     /**
      * Maintenance mode request constants.
      */
-    static const int NO_CHANGE         = 0;
-    static const int MAINT_OFF         = 1;
-    static const int MAINT_ON          = 2;
+    static const int NO_CHANGE = 0;
+    static const int MAINT_OFF = 1;
+    static const int MAINT_ON = 2;
     static const int BEING_DRAINED_OFF = 3;
-    static const int BEING_DRAINED_ON  = 4;
+    static const int BEING_DRAINED_ON = 4;
 
     MonitorServer(SERVER* server, const SERVER::DiskSpaceLimits& monitor_limits);
 
@@ -255,20 +255,20 @@ public:
      */
     void update_disk_space_status();
 
-    SERVER*         server = nullptr;      /**< The server being monitored */
-    MYSQL*          con = nullptr;         /**< The MySQL connection */
-    bool            log_version_err = true;
-    int             mon_err_count = 0;
+    SERVER* server = nullptr;       /**< The server being monitored */
+    MYSQL*  con = nullptr;          /**< The MySQL connection */
+    bool    log_version_err = true;
+    int     mon_err_count = 0;
 
-    uint64_t        mon_prev_status = -1;      /**< Status before starting the current monitor loop */
-    uint64_t        pending_status = 0;        /**< Status during current monitor loop */
+    uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
+    uint64_t pending_status = 0;        /**< Status during current monitor loop */
 
-    int             status_request = NO_CHANGE;  /**< Is admin requesting Maintenance=ON/OFF on the
-                                                   *  server? */
+    int status_request = NO_CHANGE;     /**< Is admin requesting Maintenance=ON/OFF on the
+                                         *  server? */
 private:
-    const SERVER::DiskSpaceLimits& monitor_limits; /**< Monitor-level disk-space limits */
+    const SERVER::DiskSpaceLimits& monitor_limits;      /**< Monitor-level disk-space limits */
 
-    bool ok_to_check_disk_space {true}; /**< Set to false if check fails */
+    bool ok_to_check_disk_space {true};     /**< Set to false if check fails */
 };
 
 /**
@@ -281,7 +281,7 @@ public:
     virtual ~Monitor();
 
     static const int STATUS_FLAG_NOCHECK = 0;
-    static const int STATUS_FLAG_CHECK   = -1;
+    static const int STATUS_FLAG_CHECK = -1;
 
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection
@@ -419,11 +419,11 @@ public:
     /** Set when admin requests a maintenance status change. */
     int check_status_flag = STATUS_FLAG_NOCHECK;
 
-    uint64_t m_ticks {0};                         /**< Number of performed monitoring intervals */
-    uint8_t  m_journal_hash[SHA_DIGEST_LENGTH];   /**< SHA1 hash of the latest written journal */
+    uint64_t m_ticks {0};                           /**< Number of performed monitoring intervals */
+    uint8_t  m_journal_hash[SHA_DIGEST_LENGTH];     /**< SHA1 hash of the latest written journal */
 
-    MXS_CONFIG_PARAMETER parameters;             /**< Configuration parameters */
-    std::vector<MonitorServer*> m_servers;       /**< Monitored servers */
+    MXS_CONFIG_PARAMETER        parameters;     /**< Configuration parameters */
+    std::vector<MonitorServer*> m_servers;      /**< Monitored servers */
 
 protected:
     /**
@@ -536,15 +536,15 @@ protected:
     class Settings
     {
     public:
-        int64_t     interval {0};        /**< Monitor interval in milliseconds */
+        int64_t interval {0};       /**< Monitor interval in milliseconds */
 
-        std::string script;              /**< Script triggered by events */
-        int         script_timeout {0};  /**< Timeout in seconds for the monitor scripts */
-        uint64_t    events {0};          /**< Bitfield of events which trigger the script */
+        std::string script;             /**< Script triggered by events */
+        int         script_timeout {0}; /**< Timeout in seconds for the monitor scripts */
+        uint64_t    events {0};         /**< Bitfield of events which trigger the script */
 
-        time_t      journal_max_age {0}; /**< Maximum age of journal file */
+        time_t journal_max_age {0};     /**< Maximum age of journal file */
 
-        SERVER::DiskSpaceLimits  disk_space_limits;     /**< Disk space thresholds */
+        SERVER::DiskSpaceLimits disk_space_limits;      /**< Disk space thresholds */
 
         // How often should a disk space check be made at most. Negative values imply disabling.
         maxbase::Duration disk_space_check_interval {-1};
@@ -580,7 +580,7 @@ private:
     int launch_command(MonitorServer* ptr, EXTERNCMD* cmd);
 
     FILE* open_data_file(Monitor* monitor, char* path);
-    int get_data_file_path(char* path) const;
+    int   get_data_file_path(char* path) const;
 
     mxb::StopWatch m_disk_space_checked;    /**< When was disk space checked the last time */
 };
@@ -806,7 +806,7 @@ protected:
      */
     virtual void post_tick();
 
-    MonitorServer* m_master {nullptr};     /**< Master server */
+    MonitorServer* m_master {nullptr};      /**< Master server */
 
 private:
     /**
@@ -836,7 +836,6 @@ private:
 
     void pre_loop() final;
     void post_loop() final;
-
 };
 
 /**

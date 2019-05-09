@@ -150,7 +150,7 @@ class MonitorStop
 {
 public:
     MonitorStop(mxs::Monitor* monitor)
-            : m_monitor(monitor->state() == MONITOR_STATE_RUNNING ? monitor : nullptr)
+        : m_monitor(monitor->state() == MONITOR_STATE_RUNNING ? monitor : nullptr)
     {
         if (m_monitor)
         {

@@ -60,7 +60,7 @@ bool runtime_create_server(const char* name,
                            const char* port,
                            const char* protocol,
                            const char* authenticator,
-                           bool        external = true);
+                           bool external = true);
 
 /**
  * @brief Destroy a server

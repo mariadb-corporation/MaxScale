@@ -35,7 +35,7 @@ public:
     public:
         RouteInfo();
         RouteInfo(uint32_t target,
-                  uint8_t  command,
+                  uint8_t command,
                   uint32_t type_mask,
                   uint32_t stmt_id);
 
@@ -348,7 +348,7 @@ private:
      */
     bool query_type_is_read_only(uint32_t qtype) const;
 
-    void process_routing_hints(HINT* pHints, uint32_t* target);
+    void     process_routing_hints(HINT* pHints, uint32_t* target);
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
     MXS_SESSION* session() const

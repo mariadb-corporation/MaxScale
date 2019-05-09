@@ -1229,7 +1229,7 @@ void Session::dump_statements() const
             const QueryInfo& info = *i;
             GWBUF* pBuffer = info.query().get();
             timespec ts = info.time_completed();
-            struct tm *tm = localtime(&ts.tv_sec);
+            struct tm* tm = localtime(&ts.tv_sec);
             char timestamp[20];
             strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", tm);
 

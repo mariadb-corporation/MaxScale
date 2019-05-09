@@ -312,7 +312,8 @@ template<typename T>
 class EqualPointees : public std::unary_function<T, bool>
 {
 public:
-    EqualPointees(const T& lhs) : m_ppLhs(&lhs)
+    EqualPointees(const T& lhs)
+        : m_ppLhs(&lhs)
     {
     }
     bool operator()(const T& pRhs)

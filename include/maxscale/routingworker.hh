@@ -655,10 +655,11 @@ private:
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
 
-    static maxbase::Duration  s_watchdog_interval;    /*< Duration between notifications, if any. */
-    static maxbase::TimePoint s_watchdog_next_check;  /*< Next time to notify systemd. */
-    std::atomic<bool>         m_alive;                /*< Set to true in epoll_tick(), false on notification. */
-    WatchdogNotifier*         m_pWatchdog_notifier;   /*< Watchdog notifier, if systemd enabled. */
+    static maxbase::Duration  s_watchdog_interval;  /*< Duration between notifications, if any. */
+    static maxbase::TimePoint s_watchdog_next_check;/*< Next time to notify systemd. */
+    std::atomic<bool>         m_alive;              /*< Set to true in epoll_tick(), false on
+                                                     * notification. */
+    WatchdogNotifier* m_pWatchdog_notifier;         /*< Watchdog notifier, if systemd enabled. */
 };
 
 using WatchdogWorkaround = RoutingWorker::WatchdogWorkaround;

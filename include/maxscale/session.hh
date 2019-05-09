@@ -504,7 +504,7 @@ uint64_t session_get_current_id();
  * @return True, if the variable could be added, false otherwise.
  */
 bool session_add_variable(MXS_SESSION* session,
-                          const char*  name,
+                          const char* name,
                           session_variable_handler_t handler,
                           void* context);
 
@@ -524,7 +524,7 @@ bool session_add_variable(MXS_SESSION* session,
  * @return True, if the variable existed, false otherwise.
  */
 bool session_remove_variable(MXS_SESSION* session,
-                             const char*  name,
+                             const char* name,
                              void** context);
 /**
  * @brief Set value of maxscale session variable.
@@ -542,10 +542,10 @@ bool session_remove_variable(MXS_SESSION* session,
  *       incoming statements.
  */
 char* session_set_variable_value(MXS_SESSION* session,
-                                 const char*  name_begin,
-                                 const char*  name_end,
-                                 const char*  value_begin,
-                                 const char*  value_end);
+                                 const char* name_begin,
+                                 const char* name_end,
+                                 const char* value_begin,
+                                 const char* value_end);
 
 /**
  * @brief Specify how many statements each session should retain for

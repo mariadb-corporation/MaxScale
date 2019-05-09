@@ -42,7 +42,6 @@ namespace
 {
 
 MXS_CONFIG_PARAMETER empty;
-
 }
 /**
  * test1    Filter creation, finding and deletion

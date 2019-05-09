@@ -172,7 +172,7 @@ typedef struct mxs_router_object
     void (* clientReply)(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* queue,
-                         DCB*   backend_dcb);
+                         DCB* backend_dcb);
 
     /**
      * @brief Called when a backend DCB has failed
@@ -188,7 +188,7 @@ typedef struct mxs_router_object
     void (* handleError)(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* errmsgbuf,
-                         DCB*   backend_dcb,
+                         DCB* backend_dcb,
                          mxs_error_action_t action,
                          bool* succp);
 
@@ -338,7 +338,7 @@ public:
      * @param pSuccess  On output, if false, the session will be terminated.
      */
     void handleError(GWBUF* pMessage,
-                     DCB*   pProblem,
+                     DCB* pProblem,
                      mxs_error_action_t action,
                      bool* pSuccess);
 
@@ -479,7 +479,7 @@ public:
     static void handleError(MXS_ROUTER* pInstance,
                             MXS_ROUTER_SESSION* pData,
                             GWBUF* pMessage,
-                            DCB*   pProblem,
+                            DCB* pProblem,
                             mxs_error_action_t action,
                             bool* pSuccess)
     {

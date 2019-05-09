@@ -35,16 +35,16 @@ int test_validity()
 
     MXS_MODULE_PARAM params[] =
     {
-        {"p1", MXS_MODULE_PARAM_INT,      "-123"                  },
-        {"p2", MXS_MODULE_PARAM_COUNT,    "123"                   },
-        {"p3", MXS_MODULE_PARAM_BOOL,     "true"                  },
-        {"p4", MXS_MODULE_PARAM_STRING,   "default"               },
-        {"p5", MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_NONE, enum_values},
-        {"p6", MXS_MODULE_PARAM_PATH,     "/tmp", MXS_MODULE_OPT_PATH_F_OK},
-        {"p7", MXS_MODULE_PARAM_SERVICE,  "my-service"            },
-        {"p8", MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_ENUM_UNIQUE, enum_values},
-        {"p9", MXS_MODULE_PARAM_DURATION, "4711s"                 },
-        {"p10", MXS_MODULE_PARAM_DURATION, "4711s", MXS_MODULE_OPT_DURATION_S },
+        {"p1",  MXS_MODULE_PARAM_INT,      "-123"                   },
+        {"p2",  MXS_MODULE_PARAM_COUNT,    "123"                    },
+        {"p3",  MXS_MODULE_PARAM_BOOL,     "true"                   },
+        {"p4",  MXS_MODULE_PARAM_STRING,   "default"                },
+        {"p5",  MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_NONE, enum_values},
+        {"p6",  MXS_MODULE_PARAM_PATH,     "/tmp", MXS_MODULE_OPT_PATH_F_OK},
+        {"p7",  MXS_MODULE_PARAM_SERVICE,  "my-service"             },
+        {"p8",  MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_ENUM_UNIQUE, enum_values},
+        {"p9",  MXS_MODULE_PARAM_DURATION, "4711s"                  },
+        {"p10", MXS_MODULE_PARAM_DURATION, "4711s", MXS_MODULE_OPT_DURATION_S},
         {MXS_END_MODULE_PARAMS}
     };
 

@@ -36,9 +36,9 @@ class Buffer;
  */
 struct BUF_PROPERTY
 {
-    char*           name;
-    char*           value;
-    BUF_PROPERTY*   next;
+    char*         name;
+    char*         value;
+    BUF_PROPERTY* next;
 };
 
 enum gwbuf_type_t
@@ -60,7 +60,7 @@ enum gwbuf_type_t
 #define GWBUF_IS_REPLY_OK(b)           ((b)->gwbuf_type & GWBUF_TYPE_REPLY_OK)
 
 // True if the query is not initiated by the client but an internal replaying mechanism
-#define GWBUF_IS_REPLAYED(b)           ((b)->gwbuf_type & GWBUF_TYPE_REPLAYED)
+#define GWBUF_IS_REPLAYED(b) ((b)->gwbuf_type & GWBUF_TYPE_REPLAYED)
 
 // Track session state change response
 #define GWBUF_SHOULD_TRACK_STATE(b) ((b)->gwbuf_type & GWBUF_TYPE_TRACK_STATE)
@@ -115,15 +115,15 @@ struct SHARED_BUF
  */
 struct GWBUF
 {
-    GWBUF*         next;        /*< Next buffer in a linked chain of buffers */
-    GWBUF*         tail;        /*< Last buffer in a linked chain of buffers */
-    void*          start;       /*< Start of the valid data */
-    void*          end;         /*< First byte after the valid data */
-    SHARED_BUF*    sbuf;        /*< The shared buffer with the real data */
-    HINT*          hint;        /*< Hint data for this buffer */
-    BUF_PROPERTY*  properties;  /*< Buffer properties */
-    SERVER*        server;      /*< The target server where the buffer is executed */
-    uint32_t       gwbuf_type;  /*< buffer's data type information */
+    GWBUF*        next;         /*< Next buffer in a linked chain of buffers */
+    GWBUF*        tail;         /*< Last buffer in a linked chain of buffers */
+    void*         start;        /*< Start of the valid data */
+    void*         end;          /*< First byte after the valid data */
+    SHARED_BUF*   sbuf;         /*< The shared buffer with the real data */
+    HINT*         hint;         /*< Hint data for this buffer */
+    BUF_PROPERTY* properties;   /*< Buffer properties */
+    SERVER*       server;       /*< The target server where the buffer is executed */
+    uint32_t      gwbuf_type;   /*< buffer's data type information */
 #ifdef SS_DEBUG
     int owner;      /*< Owner of the thread, only for debugging */
 #endif

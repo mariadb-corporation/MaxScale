@@ -202,7 +202,7 @@ public:
     // Misc fields
     bool master_err_is_logged = false;      /**< If node failed, this indicates whether it is logged. Only
                                              * used by rwsplit. TODO: Move to rwsplit */
-    bool warn_ssl_not_enabled = true;       /**< SSL not used for an SSL enabled server */
+    bool      warn_ssl_not_enabled = true;  /**< SSL not used for an SSL enabled server */
     RLagState rlag_state = RLagState::NONE; /**< Is replication lag above or under limit? Used by rwsplit. */
 
     virtual ~SERVER() = default;
@@ -520,13 +520,13 @@ public:
 
 protected:
     SERVER()
-    : m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
+        : m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
     {
     }
 private:
-    static const int   DEFAULT_CHARSET = 0x08;   /**< The latin1 charset */
-    maxbase::EMAverage m_response_time;          /**< Response time calculations for this server */
-    std::mutex         m_average_write_mutex;    /**< Protects response time from concurrent writing */
+    static const int   DEFAULT_CHARSET = 0x08;  /**< The latin1 charset */
+    maxbase::EMAverage m_response_time;         /**< Response time calculations for this server */
+    std::mutex         m_average_write_mutex;   /**< Protects response time from concurrent writing */
 };
 
 namespace maxscale
@@ -550,5 +550,4 @@ bool server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
  * @param errmsg_out    Error output
  */
 bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
-
 }

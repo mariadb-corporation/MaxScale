@@ -138,7 +138,6 @@ namespace maxscale
  */
 std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
                                                 std::string* errmsg_out = NULL);
-
 }
 
 MXS_END_DECLS

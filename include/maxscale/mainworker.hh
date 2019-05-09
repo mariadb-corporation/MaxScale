@@ -54,7 +54,7 @@ public:
     void add_task(const std::string& name, TASKFN func, void* pData, int frequency);
     void remove_task(const std::string& name);
 
-    void show_tasks(DCB* pDcb) const;
+    void    show_tasks(DCB* pDcb) const;
     json_t* tasks_to_json(const char* zhost) const;
 
     static int64_t ticks();
@@ -75,7 +75,7 @@ private:
             , nextdue(time(0) + frequency)
             , id(0)
         {
-        };
+        }
 
         std::string name;
         TASKFN      func;
@@ -85,10 +85,9 @@ private:
         uint32_t    id;
     };
 
-    bool call_task(Worker::Call::action_t action, Task* pTask);
+    bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
     std::map<std::string, Task> m_tasks_by_name;
 };
-
 }

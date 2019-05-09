@@ -50,7 +50,7 @@ SFilterDef      filter_alloc(const char* name, const char* module, MXS_CONFIG_PA
 MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter_def, MXS_SESSION* session, MXS_DOWNSTREAM* downstream);
 void            filter_free(const SFilterDef& filter);
 int             filter_standard_parameter(const char* name);
-MXS_UPSTREAM*   filter_upstream(const SFilterDef&   filter_def,
+MXS_UPSTREAM*   filter_upstream(const SFilterDef& filter_def,
                                 MXS_FILTER_SESSION* fsession,
                                 MXS_UPSTREAM* upstream);
 

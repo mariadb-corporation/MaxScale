@@ -44,9 +44,9 @@ public:
         FILTER
     };
 
-    using ParamsByName   = std::map<std::string, Param*>;
+    using ParamsByName = std::map<std::string, Param*>;
     using const_iterator = ParamsByName::const_iterator;
-    using value_type     = ParamsByName::value_type;
+    using value_type = ParamsByName::value_type;
 
     /**
      * Constructor
@@ -291,7 +291,8 @@ public:
 
     bool set(Type& value, const std::string& value_as_string) const override;
 
-    bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
 private:
@@ -320,7 +321,8 @@ public:
 
     bool set(Type& value, const std::string& value_as_string) const override;
 
-    bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
 protected:
@@ -403,8 +405,8 @@ private:
         : ParamNumber(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_COUNT,
                       default_value,
                       min_value >= 0 ? min_value : 0,
-                      max_value <= std::numeric_limits<uint32_t>::max()
-                      ? max_value : std::numeric_limits<uint32_t>::max())
+                      max_value <= std::numeric_limits<uint32_t>::max() ?
+                      max_value : std::numeric_limits<uint32_t>::max())
     {
         mxb_assert(min_value >= 0);
         mxb_assert(max_value <= std::numeric_limits<uint32_t>::max());
@@ -473,10 +475,10 @@ private:
                  value_type max_value)
         : ParamNumber(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_INT,
                       default_value,
-                      min_value >= std::numeric_limits<int32_t>::min()
-                      ? min_value : std::numeric_limits<int32_t>::min(),
-                      max_value <= std::numeric_limits<int32_t>::max()
-                      ? max_value : std::numeric_limits<int32_t>::max())
+                      min_value >= std::numeric_limits<int32_t>::min() ?
+                      min_value : std::numeric_limits<int32_t>::min(),
+                      max_value <= std::numeric_limits<int32_t>::max() ?
+                      max_value : std::numeric_limits<int32_t>::max())
     {
         mxb_assert(min_value >= std::numeric_limits<int32_t>::min());
         mxb_assert(max_value <= std::numeric_limits<int32_t>::max());
@@ -517,7 +519,8 @@ public:
 
     bool set(Type& value, const std::string& value_as_string) const override;
 
-    bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
 
 private:
@@ -572,7 +575,8 @@ public:
 
     bool set(Type& value, const std::string& value_as_string) const override;
 
-    bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
     void populate(MXS_MODULE_PARAM& param) const;
@@ -601,11 +605,11 @@ public:
 
     enum Options
     {
-        X = MXS_MODULE_OPT_PATH_X_OK, // Execute permission required.
-        R = MXS_MODULE_OPT_PATH_R_OK, // Read permission required.
-        W = MXS_MODULE_OPT_PATH_W_OK, // Write permission required.
-        F = MXS_MODULE_OPT_PATH_F_OK, // File existence required.
-        C = MXS_MODULE_OPT_PATH_CREAT // Create path if does not exist.
+        X = MXS_MODULE_OPT_PATH_X_OK,   // Execute permission required.
+        R = MXS_MODULE_OPT_PATH_R_OK,   // Read permission required.
+        W = MXS_MODULE_OPT_PATH_W_OK,   // Write permission required.
+        F = MXS_MODULE_OPT_PATH_F_OK,   // File existence required.
+        C = MXS_MODULE_OPT_PATH_CREAT   // Create path if does not exist.
     };
 
     const uint32_t MASK = X | R | W | F | C;
@@ -636,7 +640,8 @@ public:
 
     bool set(Type& value, const std::string& value_as_string) const override;
 
-    bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
 
     void populate(MXS_MODULE_PARAM& param) const;
@@ -690,15 +695,16 @@ public:
 
     bool set(Type& value, const std::string& value_as_string) const override;
 
-    bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
 private:
     ParamSize(Specification* pSpecification,
-               const char* zName,
-               const char* zDescription,
-               Kind kind,
-               value_type default_value)
+              const char* zName,
+              const char* zDescription,
+              Kind kind,
+              value_type default_value)
         : Param(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_SIZE)
         , m_default_value(default_value)
     {
@@ -739,7 +745,8 @@ public:
 
     bool set(Type& value, const std::string& value_as_string) const override;
 
-    bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
 private:
@@ -771,9 +778,9 @@ using ParamBitMask = ParamCount;
 class Configuration
 {
 public:
-    using ValuesByName   = std::map<std::string, Type*>;
+    using ValuesByName = std::map<std::string, Type*>;
     using const_iterator = ValuesByName::const_iterator;
-    using value_type     = ValuesByName::value_type;
+    using value_type = ValuesByName::value_type;
 
     /**
      * Constructor
@@ -792,7 +799,7 @@ public:
      *
      * @return The corresponding @c Value or NULL if @c name is unknown.
      */
-    Type* find_value(const std::string& name);
+    Type*       find_value(const std::string& name);
     const Type* find_value(const std::string& name) const;
 
     /**
@@ -818,7 +825,7 @@ public:
      */
     size_t size() const;
 
-        /**
+    /**
      * @return Const iterator to first parameter.
      */
     const_iterator cbegin() const
@@ -856,7 +863,7 @@ class Type
 {
 public:
     Type(const Type& rhs) = delete;
-    Type& operator = (const Type&) = delete;
+    Type& operator=(const Type&) = delete;
 
     ~Type();
 
@@ -921,7 +928,7 @@ public:
     {
     }
 
-    This& operator = (const ConcreteType<This, ParamType>& rhs)
+    This& operator=(const ConcreteType<This, ParamType>& rhs)
     {
         // Only the value is copied, the parameter and the configuration
         // remains the same.
@@ -954,43 +961,43 @@ protected:
  *   ConcreteType  <-> ConcreteType
  */
 template<class This, class ParamType>
-inline bool operator == (const ConcreteType<This,ParamType>& lhs,
-                         const ConcreteType<This,ParamType>& rhs)
+inline bool operator==(const ConcreteType<This, ParamType>& lhs,
+                       const ConcreteType<This, ParamType>& rhs)
 {
     return lhs.get() == rhs.get();
 }
 
 template<class This, class ParamType>
-inline bool operator != (const ConcreteType<This,ParamType>& lhs,
-                         const ConcreteType<This,ParamType>& rhs)
+inline bool operator!=(const ConcreteType<This, ParamType>& lhs,
+                       const ConcreteType<This, ParamType>& rhs)
 {
     return lhs.get() != rhs.get();
 }
 
 template<class This, class ParamType>
-inline bool operator < (const ConcreteType<This,ParamType>& lhs,
-                        const ConcreteType<This,ParamType>& rhs)
+inline bool operator<(const ConcreteType<This, ParamType>& lhs,
+                      const ConcreteType<This, ParamType>& rhs)
 {
     return lhs.get() < rhs.get();
 }
 
 template<class This, class ParamType>
-inline bool operator > (const ConcreteType<This,ParamType>& lhs,
-                        const ConcreteType<This,ParamType>& rhs)
+inline bool operator>(const ConcreteType<This, ParamType>& lhs,
+                      const ConcreteType<This, ParamType>& rhs)
 {
     return lhs.get() > rhs.get();
 }
 
 template<class This, class ParamType>
-inline bool operator <= (const ConcreteType<This,ParamType>& lhs,
-                        const ConcreteType<This,ParamType>& rhs)
+inline bool operator<=(const ConcreteType<This, ParamType>& lhs,
+                       const ConcreteType<This, ParamType>& rhs)
 {
     return (lhs.get() < rhs.get()) || (lhs == rhs);
 }
 
 template<class This, class ParamType>
-inline bool operator >= (const ConcreteType<This,ParamType>& lhs,
-                        const ConcreteType<This,ParamType>& rhs)
+inline bool operator>=(const ConcreteType<This, ParamType>& lhs,
+                       const ConcreteType<This, ParamType>& rhs)
 {
     return (lhs.get() > rhs.get()) || (lhs == rhs);
 }
@@ -1001,43 +1008,43 @@ inline bool operator >= (const ConcreteType<This,ParamType>& lhs,
  *   ConcreteType  <-> ParamType::value_type
  */
 template<class This, class ParamType>
-inline bool operator == (const ConcreteType<This,ParamType>& lhs,
-                         const typename ParamType::value_type& rhs)
+inline bool operator==(const ConcreteType<This, ParamType>& lhs,
+                       const typename ParamType::value_type& rhs)
 {
     return lhs.get() == rhs;
 }
 
 template<class This, class ParamType>
-inline bool operator != (const ConcreteType<This,ParamType>& lhs,
-                         const typename ParamType::value_type& rhs)
+inline bool operator!=(const ConcreteType<This, ParamType>& lhs,
+                       const typename ParamType::value_type& rhs)
 {
     return lhs.get() != rhs;
 }
 
 template<class This, class ParamType>
-inline bool operator < (const ConcreteType<This,ParamType>& lhs,
-                        const typename ParamType::value_type& rhs)
+inline bool operator<(const ConcreteType<This, ParamType>& lhs,
+                      const typename ParamType::value_type& rhs)
 {
     return lhs.get() < rhs;
 }
 
 template<class This, class ParamType>
-inline bool operator > (const ConcreteType<This,ParamType>& lhs,
-                        const typename ParamType::value_type& rhs)
+inline bool operator>(const ConcreteType<This, ParamType>& lhs,
+                      const typename ParamType::value_type& rhs)
 {
     return lhs.get() > rhs;
 }
 
 template<class This, class ParamType>
-inline bool operator <= (const ConcreteType<This,ParamType>& lhs,
-                         const typename ParamType::value_type& rhs)
+inline bool operator<=(const ConcreteType<This, ParamType>& lhs,
+                       const typename ParamType::value_type& rhs)
 {
     return (lhs.get() < rhs) || (lhs.get() == rhs);
 }
 
 template<class This, class ParamType>
-inline bool operator >= (const ConcreteType<This,ParamType>& lhs,
-                         const typename ParamType::value_type& rhs)
+inline bool operator>=(const ConcreteType<This, ParamType>& lhs,
+                       const typename ParamType::value_type& rhs)
 {
     return (lhs.get() > rhs) || (lhs.get() == rhs);
 }
@@ -1048,43 +1055,43 @@ inline bool operator >= (const ConcreteType<This,ParamType>& lhs,
  *   ParamType::value_type <-> ConcreteType
  */
 template<class This, class ParamType>
-inline bool operator == (const typename ParamType::value_type& lhs,
-                         const ConcreteType<This,ParamType>& rhs)
+inline bool operator==(const typename ParamType::value_type& lhs,
+                       const ConcreteType<This, ParamType>& rhs)
 {
     return lhs == rhs.get();
 }
 
 template<class This, class ParamType>
-inline bool operator != (const typename ParamType::value_type& lhs,
-                         const ConcreteType<This,ParamType>& rhs)
+inline bool operator!=(const typename ParamType::value_type& lhs,
+                       const ConcreteType<This, ParamType>& rhs)
 {
     return lhs != rhs.get();
 }
 
 template<class This, class ParamType>
-inline bool operator < (const typename ParamType::value_type& lhs,
-                        const ConcreteType<This,ParamType>& rhs)
+inline bool operator<(const typename ParamType::value_type& lhs,
+                      const ConcreteType<This, ParamType>& rhs)
 {
     return lhs < rhs.get();
 }
 
 template<class This, class ParamType>
-inline bool operator > (const typename ParamType::value_type& lhs,
-                        const ConcreteType<This,ParamType>& rhs)
+inline bool operator>(const typename ParamType::value_type& lhs,
+                      const ConcreteType<This, ParamType>& rhs)
 {
     return lhs > rhs.get();
 }
 
 template<class This, class ParamType>
-inline bool operator <= (const typename ParamType::value_type& lhs,
-                         const ConcreteType<This,ParamType>& rhs)
+inline bool operator<=(const typename ParamType::value_type& lhs,
+                       const ConcreteType<This, ParamType>& rhs)
 {
     return (lhs < rhs.get()) || (lhs == rhs.get());
 }
 
 template<class This, class ParamType>
-inline bool operator >= (const typename ParamType::value_type& lhs,
-                         const ConcreteType<This,ParamType>& rhs)
+inline bool operator>=(const typename ParamType::value_type& lhs,
+                       const ConcreteType<This, ParamType>& rhs)
 {
     return (lhs > rhs.get()) || (lhs == rhs.get());
 }
@@ -1147,11 +1154,11 @@ class Bool : public ConcreteType<Bool, ParamBool>
 {
 public:
     Bool(Configuration* pConfiguration, const ParamBool* pParam)
-        : ConcreteType<Bool,ParamBool>(pConfiguration, pParam)
+        : ConcreteType<Bool, ParamBool>(pConfiguration, pParam)
     {
     }
 
-    explicit operator bool () const
+    explicit operator bool() const
     {
         return m_value;
     }
@@ -1176,18 +1183,18 @@ public:
 };
 
 /*
-template<class T>
-inline bool operator < (const Duration<T>& lhs, const Duration<T>& rhs)
-{
-    return lhs.get() < rhs.get();
-}
-
-template<class T>
-inline bool operator > (const Duration<T>& lhs, const Duration<T>& rhs)
-{
-    return lhs.get() > rhs.get();
-}
-*/
+ *  template<class T>
+ *  inline bool operator < (const Duration<T>& lhs, const Duration<T>& rhs)
+ *  {
+ *   return lhs.get() < rhs.get();
+ *  }
+ *
+ *  template<class T>
+ *  inline bool operator > (const Duration<T>& lhs, const Duration<T>& rhs)
+ *  {
+ *   return lhs.get() > rhs.get();
+ *  }
+ */
 
 /**
  * Enum
@@ -1230,13 +1237,13 @@ public:
 class Size : public ConcreteType<Size, ParamSize>
 {
 public:
-    Size(Configuration*  pConfiguration, const ParamSize* pParam)
+    Size(Configuration* pConfiguration, const ParamSize* pParam)
         : ConcreteType(pConfiguration, pParam)
     {
     }
 };
 
-inline Size::value_type operator / (const Size& lhs, Size::value_type rhs)
+inline Size::value_type operator/(const Size& lhs, Size::value_type rhs)
 {
     return lhs.get() / rhs;
 }
@@ -1380,7 +1387,7 @@ ParamEnum<T>::ParamEnum(Specification* pSpecification,
         m_enum_values.emplace_back(x);
     }
 
-    MXS_ENUM_VALUE end { NULL };
+    MXS_ENUM_VALUE end {NULL};
     m_enum_values.emplace_back(end);
 }
 
@@ -1446,7 +1453,7 @@ bool ParamEnum<T>::from_string(const std::string& value_as_string,
                                std::string* pMessage) const
 {
     auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
-                           [value_as_string](const std::pair<T,const char*>& elem) {
+                           [value_as_string](const std::pair<T, const char*>& elem) {
                                return value_as_string == elem.second;
                            });
 
@@ -1487,7 +1494,7 @@ template<class T>
 std::string ParamEnum<T>::to_string(value_type value) const
 {
     auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
-                           [value] (const std::pair<T, const char*>& entry) {
+                           [value](const std::pair<T, const char*>& entry) {
                                return entry.first == value;
                            });
 
@@ -1501,6 +1508,4 @@ void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
 
     param.accepted_values = &m_enum_values[0];
 }
-
 }
-

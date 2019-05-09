@@ -207,8 +207,8 @@ struct DCB : public MXB_POLL_DATA
         DCB* next = nullptr;        /**< Next DCB in owning thread's list */
         DCB* tail = nullptr;        /**< Last DCB in owning thread's list */
     }        thread;
-    uint32_t n_close = 0;           /** How many times dcb_close has been called. */
-    uint64_t m_uid; /**< Unique identifier for this DCB */
+    uint32_t n_close = 0;   /** How many times dcb_close has been called. */
+    uint64_t m_uid;         /**< Unique identifier for this DCB */
 };
 
 /**

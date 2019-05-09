@@ -22,13 +22,13 @@
 
 using namespace std;
 
-inline ostream& operator << (ostream& out, const std::chrono::seconds& x)
+inline ostream& operator<<(ostream& out, const std::chrono::seconds& x)
 {
     out << x.count();
     return out;
 }
 
-inline ostream& operator << (ostream& out, const std::chrono::milliseconds& x)
+inline ostream& operator<<(ostream& out, const std::chrono::milliseconds& x)
 {
     out << x.count();
     return out;
@@ -37,19 +37,19 @@ inline ostream& operator << (ostream& out, const std::chrono::milliseconds& x)
 config::Specification specification("test_module", config::Specification::FILTER);
 
 config::ParamBool
-param_bool(&specification,
-           "boolean_parameter",
-           "Specifies whether something is enabled.");
+    param_bool(&specification,
+               "boolean_parameter",
+               "Specifies whether something is enabled.");
 
 config::ParamCount
-param_count(&specification,
-            "count_parameter",
-            "Specifies the cardinality of something.");
+    param_count(&specification,
+                "count_parameter",
+                "Specifies the cardinality of something.");
 
 config::ParamInteger
-param_integer(&specification,
-              "integer_parameter",
-              "Specifies a number.");
+    param_integer(&specification,
+                  "integer_parameter",
+                  "Specifies a number.");
 
 config::ParamDuration<std::chrono::seconds>
 param_duration_1(&specification,
@@ -73,26 +73,26 @@ config::ParamEnum<Enum>
 param_enum(&specification,
            "enum_parameter",
            "Specifies a range of values.",
-           {
-               { ENUM_ONE, "one" },
-               { ENUM_TWO, "two" }
-           });
+{
+    {ENUM_ONE, "one"},
+    {ENUM_TWO, "two"}
+});
 
 config::ParamPath
-param_path(&specification,
-           "path_parameter",
-           "Specifies the path of something.",
-           config::ParamPath::F);
+    param_path(&specification,
+               "path_parameter",
+               "Specifies the path of something.",
+               config::ParamPath::F);
 
 config::ParamSize
-param_size(&specification,
-           "size_parameter",
-           "Specifies the size of something.");
+    param_size(&specification,
+               "size_parameter",
+               "Specifies the size of something.");
 
 config::ParamString
-param_string(&specification,
-             "string_parameter",
-             "Specifies the name of something.");
+    param_string(&specification,
+                 "string_parameter",
+                 "Specifies the name of something.");
 
 template<class T>
 struct TestEntry
@@ -102,7 +102,7 @@ struct TestEntry
     T           value;
 };
 
-#define elements_in_array(x) (sizeof(x)/sizeof(x[0]))
+#define elements_in_array(x) (sizeof(x) / sizeof(x[0]))
 
 template<class T>
 int test(T& value, const TestEntry<typename T::value_type>* pEntries, int nEntries)
@@ -151,17 +151,17 @@ int test_bool(config::Bool& value)
 {
     static const TestEntry<config::Bool::value_type> entries[] =
     {
-        { "1",     true, true },
-        { "0",     true, false },
-        { "true",  true, true },
-        { "false", true, false },
-        { "on",    true, true },
-        { "off",   true, false },
+        {"1",     true, true },
+        {"0",     true, false},
+        {"true",  true, true },
+        {"false", true, false},
+        {"on",    true, true },
+        {"off",   true, false},
 
-        { "2",     false },
-        { "truth", false },
-        { "%&",    false },
-        { "-1",    false },
+        {"2",     false},
+        {"truth", false},
+        {"%&",    false},
+        {"-1",    false},
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -171,13 +171,13 @@ int test_count(config::Count& value)
 {
     static const TestEntry<config::Count::value_type> entries[] =
     {
-        { "1",    true, 1 },
-        { "9999", true, 9999 },
-        { "0",    true, 0 },
+        {"1",    true, 1   },
+        {"9999", true, 9999},
+        {"0",    true, 0   },
 
-        { "0x45", false },
-        { "blah", false },
-        { "-1",   false },
+        {"0x45", false},
+        {"blah", false},
+        {"-1",   false},
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -187,16 +187,16 @@ int test_duration(config::Duration<std::chrono::seconds>& value)
 {
     static const TestEntry<config::Duration<std::chrono::seconds>::value_type> entries[] =
     {
-        { "1",      true, std::chrono::seconds { 1 } },
-        { "1ms",    true, std::chrono::seconds { 0 } },
-        { "1s",     true, std::chrono::seconds { 1 } },
-        { "1m",     true, std::chrono::seconds { 60 } },
-        { "1h",     true, std::chrono::seconds { 3600 } },
+        {"1",      true, std::chrono::seconds {1   }},
+        {"1ms",    true, std::chrono::seconds {0   }},
+        {"1s",     true, std::chrono::seconds {1   }},
+        {"1m",     true, std::chrono::seconds {60  }},
+        {"1h",     true, std::chrono::seconds {3600}},
 
-        { "1x",     false },
-        { "a",      false },
-        { "-",      false },
-        { "second", false }
+        {"1x",     false},
+        {"a",      false},
+        {"-",      false},
+        {"second", false}
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -206,16 +206,16 @@ int test_duration(config::Duration<std::chrono::milliseconds>& value)
 {
     static const TestEntry<config::Duration<std::chrono::milliseconds>::value_type> entries[] =
     {
-        { "1",      true, std::chrono::milliseconds { 1 } },
-        { "1ms",    true, std::chrono::milliseconds { 1 } },
-        { "1s",     true, std::chrono::milliseconds { 1000 } },
-        { "1m",     true, std::chrono::milliseconds { 60000 } },
-        { "1h",     true, std::chrono::milliseconds { 3600000 } },
+        {"1",      true, std::chrono::milliseconds {1      }},
+        {"1ms",    true, std::chrono::milliseconds {1      }},
+        {"1s",     true, std::chrono::milliseconds {1000   }},
+        {"1m",     true, std::chrono::milliseconds {60000  }},
+        {"1h",     true, std::chrono::milliseconds {3600000}},
 
-        { "1x",     false },
-        { "a",      false },
-        { "-",      false },
-        { "second", false }
+        {"1x",     false},
+        {"a",      false},
+        {"-",      false},
+        {"second", false}
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -225,12 +225,12 @@ int test_enum(config::Enum<Enum>& value)
 {
     static const TestEntry<Enum> entries[] =
     {
-        { "one",  true, ENUM_ONE },
-        { "two",  true, ENUM_TWO },
+        {"one",  true, ENUM_ONE},
+        {"two",  true, ENUM_TWO},
 
-        { "blah", false },
-        { "1",    false },
-        { "ones", false }
+        {"blah", false},
+        {"1",    false},
+        {"ones", false}
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -243,8 +243,8 @@ int test_path(config::Path& value)
 
     static const TestEntry<config::Path::value_type> entries[] =
     {
-        {strpath, true, strpath},
-        {"/tmp", true, "/tmp"},
+        {strpath,        true, strpath},
+        {"/tmp",         true, "/tmp" },
 
         {"non-existent", false}
     };
@@ -256,11 +256,11 @@ int test_size(config::Size& value)
 {
     static const TestEntry<config::Size::value_type> entries[] =
     {
-        { "0",   true, 0 },
-        { "100", true, 100 },
+        {"0",     true, 0  },
+        {"100",   true, 100},
 
-        { "-100",  false },
-        { "0x100", false },
+        {"-100",  false},
+        {"0x100", false},
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -270,13 +270,13 @@ int test_string(config::String& value)
 {
     static const TestEntry<config::String::value_type> entries[] =
     {
-        { "blah",     true, "blah" },
-        { "\"blah\"", true, "blah" },
-        { "'blah'",   true, "blah" },
-        { "123",      true, "123" },
-        { "`blah`",   true, "`blah`" },
+        {"blah",     true, "blah"  },
+        {"\"blah\"", true, "blah"  },
+        {"'blah'",   true, "blah"  },
+        {"123",      true, "123"   },
+        {"`blah`",   true, "`blah`"},
 
-        { "'blah\"",  false }
+        {"'blah\"",  false}
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -286,15 +286,15 @@ int test_integer(config::Integer& value)
 {
     static const TestEntry<config::Integer::value_type> entries[] =
     {
-        { "0",           true, 0 },
-        { "-1",          true, -1 },
-        { "1",           true, 1 },
-        { "-2147483648", true, -2147483648 },
-        { "2147483647",  true, 2147483647 },
+        {"0",           true, 0          },
+        {"-1",          true, -1         },
+        {"1",           true, 1          },
+        {"-2147483648", true, -2147483648},
+        {"2147483647",  true, 2147483647 },
 
-        { "-2147483649", false },
-        { "2147483648",  false },
-        { "0x10"  ,      false },
+        {"-2147483649", false},
+        {"2147483648",  false},
+        {"0x10",        false},
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -304,9 +304,9 @@ int main()
 {
     mxb::Log log;
 
-    for_each(specification.cbegin(), specification.cend(),[](const config::Specification::value_type& p) {
-            cout << p.second->documentation() << endl;
-        });
+    for_each(specification.cbegin(), specification.cend(), [](const config::Specification::value_type& p) {
+                 cout << p.second->documentation() << endl;
+             });
 
     cout << endl;
 

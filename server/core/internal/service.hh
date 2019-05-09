@@ -109,7 +109,7 @@ public:
     mutable std::mutex lock;
 
     // TODO: Make this private.
-    mxs::Monitor*    m_monitor { nullptr }; /**< A possibly associated monitor */
+    mxs::Monitor* m_monitor {nullptr};      /**< A possibly associated monitor */
 
     bool uses_cluster() const
     {

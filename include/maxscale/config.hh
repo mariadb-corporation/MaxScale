@@ -245,9 +245,7 @@ enum DurationUnit
     DURATION_IN_MILLISECONDS,
     DURATION_IN_DEFAULT
 };
-
 }
-
 }
 
 /**
@@ -485,10 +483,10 @@ class CONFIG_CONTEXT
 public:
     CONFIG_CONTEXT(const std::string& section = "");
 
-    std::string            m_name;            /**< The name of the object being configured */
-    MXS_CONFIG_PARAMETER   m_parameters;      /**< The list of parameter values */
-    bool                   m_was_persisted;   /**< True if this object was persisted */
-    CONFIG_CONTEXT*        m_next;            /**< Next pointer in the linked list */
+    std::string          m_name;            /**< The name of the object being configured */
+    MXS_CONFIG_PARAMETER m_parameters;      /**< The list of parameter values */
+    bool                 m_was_persisted;   /**< True if this object was persisted */
+    CONFIG_CONTEXT*      m_next;            /**< Next pointer in the linked list */
 
     const char* name() const
     {
@@ -514,11 +512,11 @@ struct MXS_CONFIG
     int          maxlog;                                /**< Log to MaxScale's own logs */
     time_t       auth_conn_timeout;                     /**< Connection timeout for the user
                                                          * authentication */
-    time_t       auth_read_timeout;                     /**< Read timeout for the user authentication */
-    time_t       auth_write_timeout;                    /**< Write timeout for the user authentication */
-    bool         skip_permission_checks;                /**< Skip service and monitor permission checks */
-    int32_t      passive;                               /**< True if MaxScale is in passive mode */
-    int64_t      promoted_at;                           /**< Time when this Maxscale instance was
+    time_t  auth_read_timeout;                          /**< Read timeout for the user authentication */
+    time_t  auth_write_timeout;                         /**< Write timeout for the user authentication */
+    bool    skip_permission_checks;                     /**< Skip service and monitor permission checks */
+    int32_t passive;                                    /**< True if MaxScale is in passive mode */
+    int64_t promoted_at;                                /**< Time when this Maxscale instance was
                                                         * promoted from a passive to an active */
     char                qc_name[PATH_MAX];              /**< The name of the query classifier to load */
     char*               qc_args;                        /**< Arguments for the query classifier */

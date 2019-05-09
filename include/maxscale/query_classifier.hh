@@ -34,8 +34,8 @@ enum qc_init_kind_t
  */
 enum qc_option_t
 {
-    QC_OPTION_STRING_ARG_AS_FIELD = (1 << 0),  /*< Report a string argument to a function as a field. */
-    QC_OPTION_STRING_AS_FIELD     = (1 << 1),  /*< Report strings as fields. */
+    QC_OPTION_STRING_ARG_AS_FIELD = (1 << 0),   /*< Report a string argument to a function as a field. */
+    QC_OPTION_STRING_AS_FIELD     = (1 << 1),   /*< Report strings as fields. */
 };
 
 const uint32_t QC_OPTION_MASK = QC_OPTION_STRING_ARG_AS_FIELD | QC_OPTION_STRING_AS_FIELD;
@@ -144,16 +144,16 @@ enum qc_parse_result_t
  */
 typedef enum qc_field_context
 {
-    QC_FIELD_UNION    = 1, /** The field appears on the right hand side in a UNION. */
-    QC_FIELD_SUBQUERY = 2 /** The field appears in a subquery. */
+    QC_FIELD_UNION    = 1,  /** The field appears on the right hand side in a UNION. */
+    QC_FIELD_SUBQUERY = 2   /** The field appears in a subquery. */
 } qc_field_context_t;
 
 struct QC_FIELD_INFO
 {
-    char* database; /** Present if the field is of the form "a.b.c", NULL otherwise. */
-    char* table;    /** Present if the field is of the form "a.b", NULL otherwise. */
-    char* column;   /** Always present. */
-    uint32_t context;  /** The context in which the field appears. */
+    char*    database;  /** Present if the field is of the form "a.b.c", NULL otherwise. */
+    char*    table;     /** Present if the field is of the form "a.b", NULL otherwise. */
+    char*    column;    /** Always present. */
+    uint32_t context;   /** The context in which the field appears. */
 };
 
 /**
@@ -453,7 +453,7 @@ struct QUERY_CLASSIFIER
      *
      * @return The same info that was provided as argument.
      */
-    QC_STMT_INFO* (*qc_info_dup)(QC_STMT_INFO * info);
+    QC_STMT_INFO* (* qc_info_dup)(QC_STMT_INFO* info);
 
     /**
      * Closes a dupped info object. After the info object has been closed, it must
@@ -486,7 +486,7 @@ struct QUERY_CLASSIFIER
      *
      * @return The result of the provided info.
      */
-    QC_STMT_RESULT (*qc_get_result_from_info)(const QC_STMT_INFO* info);
+    QC_STMT_RESULT (* qc_get_result_from_info)(const QC_STMT_INFO* info);
 };
 
 /**
@@ -531,8 +531,8 @@ struct QC_CACHE_STATS
  */
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               qc_sql_mode_t sql_mode,
-              const char*   plugin_name,
-              const char*   plugin_args);
+              const char* plugin_name,
+              const char* plugin_args);
 
 /**
  * Loads and setups the default query classifier, and performs
@@ -554,8 +554,8 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
  */
 bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
              qc_sql_mode_t sql_mode,
-             const char*   plugin_name,
-             const char*   plugin_args);
+             const char* plugin_name,
+             const char* plugin_args);
 
 /**
  * Performs thread and process finalization.

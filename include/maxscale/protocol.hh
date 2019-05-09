@@ -137,7 +137,7 @@ struct MXS_PROTOCOL
      *
      * @return The name of the default authenticator
      */
-    char* (*auth_default)();
+    char* (* auth_default)();
 
     /**
      * Handle connection limits
