@@ -155,31 +155,23 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
     return accepted;
 }
 
-ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
-                                 const std::string& sql_file, const SlaveStatusArray& conns_to_copy,
+ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
+                                 const SlaveStatusArray& conns_to_copy,
                                  const EventNameSet& events_to_enable)
     : target(target)
     , to_from_master(was_is_master)
-    , handle_events(handle_events)
-    , sql_file(sql_file)
     , conns_to_copy(conns_to_copy)
     , events_to_enable(events_to_enable)
 {
 }
 
-ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
-                                 const std::string& sql_file)
-    : ServerOperation(target, was_is_master, handle_events, sql_file,
-                      SlaveStatusArray()    /* empty */, EventNameSet()    /* empty */)
+ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master)
+    : ServerOperation(target, was_is_master, SlaveStatusArray()    /* empty */, EventNameSet()    /* empty */)
 {
 }
 
-GeneralOpData::GeneralOpData(const std::string& replication_user, const std::string& replication_password,
-                             bool replication_ssl, json_t** error, maxbase::Duration time_remaining)
-    : replication_user(replication_user)
-    , replication_password(replication_password)
-    , replication_ssl(replication_ssl)
-    , error_out(error)
+GeneralOpData::GeneralOpData(json_t** error, maxbase::Duration time_remaining)
+    : error_out(error)
     , time_remaining(time_remaining)
 {
 }

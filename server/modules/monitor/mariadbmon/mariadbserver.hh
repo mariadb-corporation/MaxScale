@@ -74,7 +74,7 @@ class MariaDBServer
 {
 public:
     MariaDBServer(mxs::MonitorServer* monitored_server, int config_index,
-                  bool assume_unique_hostnames, bool query_events);
+                  const SharedSettings& settings);
 
     class EventInfo
     {
@@ -139,19 +139,19 @@ public:
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
      * only written to once. */
     int m_replication_lag = SERVER::RLAG_UNDEFINED;
-    /* Copy of same field in monitor object. TODO: pass in struct when adding concurrent updating. */
-    bool m_assume_unique_hostnames = true;
+
     /* Has anything that could affect replication topology changed this iteration?
      * Causes: server id, slave connections, read-only. */
     bool m_topology_changed = true;
+
     /* Miscellaneous replication related settings. These are not normally queried from the server, call
      * 'update_replication_settings' before use. */
     ReplicationSettings m_rpl_settings;
 
-    bool         m_query_events;    /* Copy of monitor->m_handle_event_scheduler. TODO: move elsewhere */
-    EventNameSet m_enabled_events;  /* Enabled scheduled events */
+    EventNameSet m_enabled_events;               /* Enabled scheduled events */
+    bool         m_print_update_errormsg {true}; /* Should an update error be printed? */
 
-    bool m_print_update_errormsg = true;    /* Should an update error be printed? */
+    const SharedSettings& m_settings; /* Settings required for various operations */
 
     /**
      * Print server information to a json object.

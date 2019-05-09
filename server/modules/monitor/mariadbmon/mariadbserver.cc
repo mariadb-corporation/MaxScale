@@ -31,11 +31,10 @@ using Guard = std::lock_guard<std::mutex>;
 using maxscale::MonitorServer;
 
 MariaDBServer::MariaDBServer(MonitorServer* monitored_server, int config_index,
-                             bool assume_unique_hostnames, bool query_events)
+                             const SharedSettings& settings)
     : m_server_base(monitored_server)
     , m_config_index(config_index)
-    , m_assume_unique_hostnames(assume_unique_hostnames)
-    , m_query_events(query_events)
+    , m_settings(settings)
 {
     mxb_assert(monitored_server);
 }
@@ -872,7 +871,7 @@ void MariaDBServer::monitor_server()
         {
             query_ok = update_gtids(&errmsg);
         }
-        if (query_ok && m_query_events)
+        if (query_ok && m_settings.handle_event_scheduler)
         {
             query_ok = update_enabled_events();
         }
@@ -1210,7 +1209,7 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
     // connected to the parent. TODO: Use the information gathered in 'build_replication_graph'
     // to skip this function, as the contents are very similar.
     const SlaveStatus* rval = NULL;
-    if (m_assume_unique_hostnames)
+    if (m_settings.assume_unique_hostnames)
     {
         // Can simply compare host:port.
         SERVER* target_srv = target->m_server_base->server;
@@ -1535,7 +1534,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
             }
             else
             {
-                if (promotion.handle_events)
+                if (m_settings.handle_event_scheduler)
                 {
                     // TODO: Add query replying to enable_events
                     bool events_enabled = enable_events(promotion.events_to_enable, error_out);
@@ -1548,7 +1547,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
 
                 // Run promotion_sql_file if no errors so far.
-                const string& sql_file = promotion.sql_file;
+                const string& sql_file = m_settings.promotion_sql_file;
                 if (!promotion_error && !sql_file.empty())
                 {
                     bool file_ran_ok = run_sql_from_file(sql_file, error_out);
@@ -1630,7 +1629,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion)
             }
             else
             {
-                if (demotion.handle_events)
+                if (m_settings.handle_event_scheduler)
                 {
                     // TODO: Add query replying to enable_events
                     // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
@@ -1645,7 +1644,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion)
                 }
 
                 // Step 2c: Run demotion_sql_file if no errors so far.
-                const string& sql_file = demotion.sql_file;
+                const string& sql_file = m_settings.demotion_sql_file;
                 if (!demotion_error && !sql_file.empty())
                 {
                     bool file_ran_ok = run_sql_from_file(sql_file, error_out);
@@ -2087,18 +2086,18 @@ string MariaDBServer::generate_change_master_cmd(GeneralOpData& op, const SlaveS
                                 slave_conn.name.c_str(),
                                 slave_conn.master_host.c_str(), slave_conn.master_port);
     change_cmd += "MASTER_USE_GTID = current_pos, ";
-    if (op.replication_ssl)
+    if (m_settings.replication_ssl)
     {
         change_cmd += "MASTER_SSL = 1, ";
     }
-    change_cmd += string_printf("MASTER_USER = '%s', ", op.replication_user.c_str());
+    change_cmd += string_printf("MASTER_USER = '%s', ", m_settings.replication_user.c_str());
     const char MASTER_PW[] = "MASTER_PASSWORD = '%s';";
 #if defined (SS_DEBUG)
     string change_cmd_nopw = change_cmd;
     change_cmd_nopw += string_printf(MASTER_PW, "******");
     MXS_DEBUG("Change master command is '%s'.", change_cmd_nopw.c_str());
 #endif
-    change_cmd += string_printf(MASTER_PW, op.replication_password.c_str());
+    change_cmd += string_printf(MASTER_PW, m_settings.replication_password.c_str());
     return change_cmd;
 }
 

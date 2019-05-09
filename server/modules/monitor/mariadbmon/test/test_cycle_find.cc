@@ -152,7 +152,7 @@ int MariaDBMonitor::Test::run_tests()
 void MariaDBMonitor::Test::init_servers(int count)
 {
     clear_servers();
-    m_monitor->m_assume_unique_hostnames = m_use_hostnames;
+    m_monitor->m_settings.shared.assume_unique_hostnames = m_use_hostnames;
     mxb_assert(m_monitor->m_servers.empty() && m_monitor->m_servers_by_id.empty());
 
     for (int i = 1; i < count + 1; i++)
@@ -160,7 +160,7 @@ void MariaDBMonitor::Test::init_servers(int count)
         // Server contents mostly undefined
         auto base_server = Server::create_test_server();
         MonitorServer* mon_server = new MonitorServer(base_server, m_monitor->settings().disk_space_limits);
-        MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_use_hostnames, true);
+        MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_monitor->m_settings.shared);
 
         if (m_use_hostnames)
         {

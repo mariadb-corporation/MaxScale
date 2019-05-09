@@ -166,7 +166,7 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
  */
 void MariaDBMonitor::build_replication_graph()
 {
-    const bool use_hostnames = m_assume_unique_hostnames;
+    const bool use_hostnames = m_settings.shared.assume_unique_hostnames;
     // First, reset all node data.
     for (MariaDBServer* server : m_servers)
     {

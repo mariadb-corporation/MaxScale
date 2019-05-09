@@ -79,8 +79,7 @@ void MariaDBMonitor::reset_server_info()
     // Next, initialize the data.
     for (auto mon_server : Monitor::m_servers)
     {
-        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(),
-                                              m_assume_unique_hostnames, m_handle_event_scheduler));
+        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_settings.shared));
     }
 }
 
@@ -187,9 +186,9 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
         }
     }
 
-    m_replication_user = repl_user;
+    m_settings.shared.replication_user = repl_user;
     char* decrypted = decrypt_password(repl_pw.c_str());
-    m_replication_password = decrypted;
+    m_settings.shared.replication_password = decrypted;
     MXS_FREE(decrypted);
 
     return true;
@@ -217,7 +216,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.detect_stale_slave = params->get_bool("detect_stale_slave");
     m_settings.detect_standalone_master = params->get_bool(CN_DETECT_STANDALONE_MASTER);
     m_settings.ignore_external_masters = params->get_bool("ignore_external_masters");
-    m_assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
+    m_settings.shared.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
     m_settings.failcount = params->get_integer(CN_FAILCOUNT);
     m_failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
     m_switchover_timeout = params->get_duration<std::chrono::seconds>(CN_SWITCHOVER_TIMEOUT).count();
@@ -226,12 +225,12 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
     m_verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
     m_master_failure_timeout = params->get_duration<std::chrono::seconds>(CN_MASTER_FAILURE_TIMEOUT).count();
-    m_promote_sql_file = params->get_string(CN_PROMOTION_SQL_FILE);
-    m_demote_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
+    m_settings.shared.promotion_sql_file = params->get_string(CN_PROMOTION_SQL_FILE);
+    m_settings.shared.demotion_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
     m_settings.switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
     m_settings.maintenance_on_low_disk_space = params->get_bool(CN_MAINTENANCE_ON_LOW_DISK_SPACE);
-    m_handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);
-    m_replication_ssl = params->get_bool(CN_REPLICATION_MASTER_SSL);
+    m_settings.shared.handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);
+    m_settings.shared.replication_ssl = params->get_bool(CN_REPLICATION_MASTER_SSL);
 
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
@@ -261,7 +260,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     {
         settings_ok = false;
     }
-    if (!m_assume_unique_hostnames)
+    if (!m_settings.shared.assume_unique_hostnames)
     {
         const char requires[] = "%s requires that %s is on.";
         if (m_settings.auto_failover)
@@ -667,16 +666,18 @@ bool MariaDBMonitor::check_sql_files()
     const char ERRMSG[] = "%s ('%s') does not exist or cannot be accessed for reading: '%s'.";
 
     bool rval = true;
-    if (!m_promote_sql_file.empty() && access(m_promote_sql_file.c_str(), R_OK) != 0)
+    auto prom_file = m_settings.shared.promotion_sql_file;
+    if (!prom_file.empty() && access(prom_file.c_str(), R_OK) != 0)
     {
         rval = false;
-        MXS_ERROR(ERRMSG, CN_PROMOTION_SQL_FILE, m_promote_sql_file.c_str(), mxs_strerror(errno));
+        MXS_ERROR(ERRMSG, CN_PROMOTION_SQL_FILE, prom_file.c_str(), mxs_strerror(errno));
     }
 
-    if (!m_demote_sql_file.empty() && access(m_demote_sql_file.c_str(), R_OK) != 0)
+    auto dem_file = m_settings.shared.demotion_sql_file;
+    if (!dem_file.empty() && access(dem_file.c_str(), R_OK) != 0)
     {
         rval = false;
-        MXS_ERROR(ERRMSG, CN_DEMOTION_SQL_FILE, m_demote_sql_file.c_str(), mxs_strerror(errno));
+        MXS_ERROR(ERRMSG, CN_DEMOTION_SQL_FILE, dem_file.c_str(), mxs_strerror(errno));
     }
     return rval;
 }

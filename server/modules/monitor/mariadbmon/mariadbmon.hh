@@ -191,7 +191,7 @@ private:
     std::string m_external_master_host;                     /* External master host, for fail/switchover */
     int         m_external_master_port = PORT_UNKNOWN;      /* External master port */
 
-    // MariaDB-Monitor specific settings
+    // MariaDB-Monitor specific settings. These are only written to when configuring the monitor.
     class Settings
     {
     public:
@@ -220,28 +220,19 @@ private:
                                                      * on disk space to maintenance. */
         bool enforce_read_only_slaves {false};      /* If true, the monitor checks and enforces every tick
                                                      * that all slaves are in read-only-mode. */
+
+        SharedSettings shared; /* Settings required by MariaDBServer objects */
     };
 
     Settings m_settings;
 
-    bool m_assume_unique_hostnames {true};  /* Are server hostnames consistent between MaxScale and servers */
-
     // Cluster operations additional settings
-    std::string m_replication_user;             /* Replication user for CHANGE MASTER TO-commands */
-    std::string m_replication_password;         /* Replication password for CHANGE MASTER TO-commands */
-    bool        m_replication_ssl = false;      /* Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
-    bool        m_handle_event_scheduler = true;/* Should failover/switchover enable/disable any scheduled
-                                                 * events on the servers during promote/demote? */
     uint32_t    m_failover_timeout = 10;        /* Time limit in seconds for failover */
     uint32_t    m_switchover_timeout = 10;      /* Time limit in seconds for switchover */
     bool        m_verify_master_failure = true; /* Is master failure is verified via slaves? */
     int         m_master_failure_timeout = 10;  /* Master failure verification (via slaves) time in seconds */
     ServerArray m_excluded_servers;             /* Servers which cannot be autoselected when deciding which
                                                  * slave to promote during failover switchover. */
-    std::string m_promote_sql_file;             /* File with sql commands which are ran to a server being
-                                                 * promoted. */
-    std::string m_demote_sql_file;              /* File with sql commands which are ran to a server being
-                                                 * demoted. */
 
     // Fields controlling logging of various events. TODO: Check these
     bool m_log_no_master = true;                /* Should it be logged that there is no master? */

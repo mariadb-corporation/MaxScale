@@ -283,7 +283,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         if (!error)
         {
             MXB_NOTICE("read_only set on affected servers.");
-            if (m_handle_event_scheduler)
+            if (m_settings.shared.handle_event_scheduler)
             {
                 for (MariaDBServer* server : targets)
                 {
@@ -326,7 +326,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
                 // Point of no return, perform later steps even if an error occurs.
                 m_next_master = new_master;
 
-                if (m_handle_event_scheduler)
+                if (m_settings.shared.handle_event_scheduler)
                 {
                     if (old_master)
                     {
@@ -391,7 +391,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
 }
 
 /**
- * Generate a CHANGE MASTER TO-query.
+ * Generate a CHANGE MASTER TO-query. TODO: Use the version in MariaDBServer instead.
  *
  * @param master_host Master hostname/address
  * @param master_port Master port
@@ -403,11 +403,11 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
     change_cmd << "CHANGE MASTER TO MASTER_HOST = '" << master_host << "', ";
     change_cmd << "MASTER_PORT = " << master_port << ", ";
     change_cmd << "MASTER_USE_GTID = current_pos, ";
-    if (m_replication_ssl)
+    if (m_settings.shared.replication_ssl)
     {
         change_cmd << "MASTER_SSL = 1, ";
     }
-    change_cmd << "MASTER_USER = '" << m_replication_user << "', ";
+    change_cmd << "MASTER_USER = '" << m_settings.shared.replication_user << "', ";
     const char MASTER_PW[] = "MASTER_PASSWORD = '";
     const char END[] = "';";
 #if defined (SS_DEBUG)
@@ -416,7 +416,7 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
     change_cmd_nopw << MASTER_PW << "******" << END;
     MXS_DEBUG("Change master command is '%s'.", change_cmd_nopw.str().c_str());
 #endif
-    change_cmd << MASTER_PW << m_replication_password << END;
+    change_cmd << MASTER_PW << m_settings.shared.replication_password << END;
     return change_cmd.str();
 }
 
@@ -627,15 +627,13 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
             // the first phase of standalone rejoin is similar to switchover.
             maxbase::Duration time_limit((double)m_switchover_timeout);
-            GeneralOpData general(m_replication_user, m_replication_password, m_replication_ssl,
-                                  output, time_limit);
+            GeneralOpData general(output, time_limit);
 
             if (joinable->m_slave_status.empty())
             {
                 // Assume that server is an old master which was failed over. Even if this is not really
                 // the case, the following is unlikely to do damage.
-                ServerOperation demotion(joinable, true,    /* treat as old master */
-                                         m_handle_event_scheduler, m_demote_sql_file);
+                ServerOperation demotion(joinable, true);
                 if (joinable->demote(general, demotion))
                 {
                     MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
@@ -1416,10 +1414,8 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
             auto time_limit = maxbase::Duration((double)m_failover_timeout);
             bool promoting_to_master = (demotion_target == m_master);
             ServerOperation promotion(promotion_target, promoting_to_master,
-                                      m_handle_event_scheduler, m_promote_sql_file,
                                       demotion_target->m_slave_status, demotion_target->m_enabled_events);
-            GeneralOpData general(m_replication_user, m_replication_password, m_replication_ssl,
-                                  error_out, time_limit);
+            GeneralOpData general(error_out, time_limit);
             rval.reset(new FailoverParams(promotion, demotion_target, general));
         }
     }
@@ -1692,14 +1688,11 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
     {
         maxbase::Duration time_limit((double)m_switchover_timeout);
         bool master_swap = (demotion_target == m_master);
-        ServerOperation promotion(promotion_target, master_swap, m_handle_event_scheduler,
-                                  m_promote_sql_file,
+        ServerOperation promotion(promotion_target, master_swap,
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);
-        ServerOperation demotion(demotion_target, master_swap, m_handle_event_scheduler,
-                                 m_demote_sql_file, promotion_target->m_slave_status,
+        ServerOperation demotion(demotion_target, master_swap, promotion_target->m_slave_status,
                                  EventNameSet()    /* unused */);
-        GeneralOpData general(m_replication_user, m_replication_password, m_replication_ssl,
-                              error_out, time_limit);
+        GeneralOpData general(error_out, time_limit);
         rval.reset(new SwitchoverParams(promotion, demotion, general));
     }
     return rval;

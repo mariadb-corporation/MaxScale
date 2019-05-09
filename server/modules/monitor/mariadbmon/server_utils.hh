@@ -220,14 +220,10 @@ enum class OperationType
 class GeneralOpData
 {
 public:
-    const std::string replication_user;             // User for CHANGE MASTER TO ...
-    const std::string replication_password;         // Password for CHANGE MASTER TO ...
-    const bool        replication_ssl;              // MASTER_SSL=1 in CHANGE MASTER TO ...
     json_t** const    error_out;                    // Json error output
     maxbase::Duration time_remaining;               // How much time remains to complete the operation
 
-    GeneralOpData(const std::string& replication_user, const std::string& replication_password,
-                  bool replication_ssl, json_t** error, maxbase::Duration time_remaining);
+    GeneralOpData(json_t** error, maxbase::Duration time_remaining);
 };
 
 // Operation data which concerns a single server
@@ -236,16 +232,37 @@ class ServerOperation
 public:
     MariaDBServer* const   target;          // Target server
     const bool             to_from_master;  // Was the target a master / should it become one
-    const bool             handle_events;   // Should scheduled server events be disabled/enabled?
-    const std::string      sql_file;        // Path to file with SQL commands to run during op
     const SlaveStatusArray conns_to_copy;   // Slave connections the target should copy/merge
 
     const EventNameSet events_to_enable;    // Scheduled event names last seen on master.
 
-    ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
-                    const std::string& sql_file, const SlaveStatusArray& conns_to_copy,
+    ServerOperation(MariaDBServer* target, bool was_is_master,
+                    const SlaveStatusArray& conns_to_copy,
                     const EventNameSet& events_to_enable);
 
-    ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
-                    const std::string& sql_file);
+    ServerOperation(MariaDBServer* target, bool was_is_master);
+};
+
+// Settings shared between the MariaDB-Monitor and the MariaDB-Servers.
+// These are only written to when configuring the monitor.
+class SharedSettings
+{
+public:
+    // Required by cluster operations
+    std::string replication_user;         /**< Username for CHANGE MASTER TO-commands */
+    std::string replication_password;     /**< Password for CHANGE MASTER TO-commands */
+    bool        replication_ssl {false};  /**< Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
+
+    std::string promotion_sql_file;  /**< File with sql commands which are ran to a server being
+                                       *  promoted. */
+    std::string demotion_sql_file;   /**< File with sql commands which are ran to a server being
+                                       *  demoted. */
+
+    /* Should failover/switchover enable/disable any scheduled events on the servers during
+     * promotion/demotion? */
+    bool handle_event_scheduler {true};
+
+    // Miscellaneous settings
+    bool assume_unique_hostnames {true}; /**< Are server hostnames consistent between MaxScale and
+                                           *  servers */
 };
