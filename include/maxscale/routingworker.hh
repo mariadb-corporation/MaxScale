@@ -610,7 +610,7 @@ public:
                                           RoutingWorker::EXECUTE_AUTO);
 
         sem.wait_n(n);
-        return std::move(rval);
+        return rval;
     }
 
 private:
