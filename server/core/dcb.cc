@@ -1254,7 +1254,8 @@ void dcb_final_close(DCB* dcb)
             // This is now a DCB_ROLE_BACKEND_HANDLER.
             // TODO: Make decisions according to the role and assert
             // TODO: that what the role implies is preset.
-            mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
+            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
+            mxb_assert(rc > 0);
         }
 
         if (dcb->fd > 0)
@@ -1357,7 +1358,8 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         dcb->nextpersistent = dcb->server->persistent[owner->id()];
         dcb->server->persistent[owner->id()] = dcb;
         mxb::atomic::add(&dcb->server->stats.n_persistent, 1);
-        mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
+        MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
+        mxb_assert(rc > 0);
         return true;
     }
     else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER && dcb->server)
