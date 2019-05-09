@@ -191,29 +191,41 @@ private:
     std::string m_external_master_host;                     /* External master host, for fail/switchover */
     int         m_external_master_port = PORT_UNKNOWN;      /* External master port */
 
-    /* The default setting values given here may not be the actual defaults given by
-     * the module configuration. */
+    // MariaDB-Monitor specific settings
+    class Settings
+    {
+    public:
+        /* The default setting values given here may not be the actual defaults given by
+         * the module configuration. */
 
-    // Replication topology detection settings.
-    bool m_detect_stale_master = true;      /* Allow stale masters. TODO: Remove this */
-    bool m_detect_stale_slave = true;       /* Allow stale slaves: a running slave behind a downed
-                                             * master/relay is still a valid slave */
-    bool m_detect_standalone_master = true; /* Allow writes to a master without any slaves.
-                                             * TODO: think about removing */
-    bool m_ignore_external_masters = false; /* Ignore masters outside of the monitor configuration.
-                                             * TODO: requires work */
-    bool m_assume_unique_hostnames = true;  /* Are server hostnames consistent between MaxScale and servers */
-    int  m_failcount = 1;                   /* Number of ticks master must be down before it's considered
-                                             * totally down, allowing failover or master change. */
+        // Replication topology detection settings.
 
-    // Cluster operations activation settings
-    bool m_auto_failover = false;                   /* Automatic master failover enabled? */
-    bool m_auto_rejoin = false;                     /* Automatic rejoin enabled? */
-    bool m_switchover_on_low_disk_space = false;    /* Automatically switch over a master low on disk space */
-    bool m_maintenance_on_low_disk_space = false;   /* Automatically set slave and unreplicating servers low
+        bool detect_stale_master {true};      /* Allow stale masters. TODO: Remove this */
+        bool detect_stale_slave {true};       /* Allow stale slaves: a running slave behind a downed
+                                               * master/relay is still a valid slave */
+        bool detect_standalone_master {true}; /* Allow writes to a master without any slaves.
+                                               * TODO: think about removing */
+        bool ignore_external_masters {false}; /* Ignore masters outside of the monitor configuration.
+                                               * TODO: requires work */
+
+        int failcount {1};  /* Number of ticks master must be down before it's considered
+                             * totally down, allowing failover or master change. */
+
+        // Cluster operations activation settings
+
+        bool auto_failover {false};                 /* Automatic master failover enabled? */
+        bool auto_rejoin {false};                   /* Automatic rejoin enabled? */
+        bool switchover_on_low_disk_space {false};  /* Automatically switch over a master low on disk space */
+        bool maintenance_on_low_disk_space {false}; /* Automatically set slave and unreplicating servers low
                                                      * on disk space to maintenance. */
-    bool m_enforce_read_only_slaves = false;        /* If true, the monitor checks and enforces every tick
+        bool enforce_read_only_slaves {false};      /* If true, the monitor checks and enforces every tick
                                                      * that all slaves are in read-only-mode. */
+    };
+
+    Settings m_settings;
+
+    bool m_assume_unique_hostnames {true};  /* Are server hostnames consistent between MaxScale and servers */
+
     // Cluster operations additional settings
     std::string m_replication_user;             /* Replication user for CHANGE MASTER TO-commands */
     std::string m_replication_password;         /* Replication password for CHANGE MASTER TO-commands */

@@ -1445,9 +1445,10 @@ void MariaDBMonitor::handle_auto_failover()
     Duration event_age;
     Duration delay_time;
 
-    if (m_failcount > 1 && m_warn_master_down)
+    const auto failcount = m_settings.failcount;
+    if (failcount > 1 && m_warn_master_down)
     {
-        int monitor_passes = m_failcount - master_down_count;
+        int monitor_passes = failcount - master_down_count;
         MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
                     "begins.",
                     (monitor_passes > 1) ? monitor_passes : 1);
@@ -1461,7 +1462,7 @@ void MariaDBMonitor::handle_auto_failover()
                    "seconds ago. Delaying failover for at least %.1f seconds.",
                    connected_slave->name(), m_master->name(), event_age.secs(), delay_time.secs());
     }
-    else if (master_down_count >= m_failcount)
+    else if (master_down_count >= failcount)
     {
         // Failover is required, but first we should check if preconditions are met.
         Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
@@ -1861,13 +1862,14 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
 
 void MariaDBMonitor::delay_auto_cluster_ops()
 {
-    if (m_auto_failover || m_auto_rejoin || m_enforce_read_only_slaves || m_switchover_on_low_disk_space)
+    if (m_settings.auto_failover || m_settings.auto_rejoin || m_settings.enforce_read_only_slaves
+        || m_settings.switchover_on_low_disk_space)
     {
         const char DISABLING_AUTO_OPS[] = "Disabling automatic cluster operations for %i monitor ticks.";
-        MXS_NOTICE(DISABLING_AUTO_OPS, m_failcount);
+        MXS_NOTICE(DISABLING_AUTO_OPS, m_settings.failcount);
     }
     // + 1 because the start of next tick subtracts 1.
-    cluster_operation_disable_timer = m_failcount + 1;
+    cluster_operation_disable_timer = m_settings.failcount + 1;
 }
 
 bool MariaDBMonitor::can_perform_cluster_ops()

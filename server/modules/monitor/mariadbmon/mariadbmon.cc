@@ -213,23 +213,23 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
         return false;
     }
 
-    m_detect_stale_master = params->get_bool("detect_stale_master");
-    m_detect_stale_slave = params->get_bool("detect_stale_slave");
-    m_ignore_external_masters = params->get_bool("ignore_external_masters");
-    m_detect_standalone_master = params->get_bool(CN_DETECT_STANDALONE_MASTER);
+    m_settings.detect_stale_master = params->get_bool("detect_stale_master");
+    m_settings.detect_stale_slave = params->get_bool("detect_stale_slave");
+    m_settings.detect_standalone_master = params->get_bool(CN_DETECT_STANDALONE_MASTER);
+    m_settings.ignore_external_masters = params->get_bool("ignore_external_masters");
     m_assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
-    m_failcount = params->get_integer(CN_FAILCOUNT);
+    m_settings.failcount = params->get_integer(CN_FAILCOUNT);
     m_failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
     m_switchover_timeout = params->get_duration<std::chrono::seconds>(CN_SWITCHOVER_TIMEOUT).count();
-    m_auto_failover = params->get_bool(CN_AUTO_FAILOVER);
-    m_auto_rejoin = params->get_bool(CN_AUTO_REJOIN);
-    m_enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
+    m_settings.auto_failover = params->get_bool(CN_AUTO_FAILOVER);
+    m_settings.auto_rejoin = params->get_bool(CN_AUTO_REJOIN);
+    m_settings.enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
     m_verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
     m_master_failure_timeout = params->get_duration<std::chrono::seconds>(CN_MASTER_FAILURE_TIMEOUT).count();
     m_promote_sql_file = params->get_string(CN_PROMOTION_SQL_FILE);
     m_demote_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
-    m_switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
-    m_maintenance_on_low_disk_space = params->get_bool(CN_MAINTENANCE_ON_LOW_DISK_SPACE);
+    m_settings.switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
+    m_settings.maintenance_on_low_disk_space = params->get_bool(CN_MAINTENANCE_ON_LOW_DISK_SPACE);
     m_handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);
     m_replication_ssl = params->get_bool(CN_REPLICATION_MASTER_SSL);
 
@@ -264,17 +264,17 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     if (!m_assume_unique_hostnames)
     {
         const char requires[] = "%s requires that %s is on.";
-        if (m_auto_failover)
+        if (m_settings.auto_failover)
         {
             MXB_ERROR(requires, CN_AUTO_FAILOVER, CN_ASSUME_UNIQUE_HOSTNAMES);
             settings_ok = false;
         }
-        if (m_switchover_on_low_disk_space)
+        if (m_settings.switchover_on_low_disk_space)
         {
             MXB_ERROR(requires, CN_SWITCHOVER_ON_LOW_DISK_SPACE, CN_ASSUME_UNIQUE_HOSTNAMES);
             settings_ok = false;
         }
-        if (m_auto_rejoin)
+        if (m_settings.auto_rejoin)
         {
             MXB_ERROR(requires, CN_AUTO_REJOIN, CN_ASSUME_UNIQUE_HOSTNAMES);
             settings_ok = false;
@@ -299,14 +299,16 @@ string MariaDBMonitor::diagnostics_to_string() const
     string rval;
     rval.reserve(1000);     // Enough for basic output.
 
-    rval += string_printf("Automatic failover:     %s\n", m_auto_failover ? "Enabled" : "Disabled");
-    rval += string_printf("Failcount:              %d\n", m_failcount);
+    auto bool_to_zstr = [](bool val) -> const char* {
+        return val ? "Enabled" : "Disabled";
+    };
+    rval += string_printf("Automatic failover:     %s\n", bool_to_zstr(m_settings.auto_failover));
+    rval += string_printf("Failcount:              %i\n", m_settings.failcount);
     rval += string_printf("Failover timeout:       %u\n", m_failover_timeout);
     rval += string_printf("Switchover timeout:     %u\n", m_switchover_timeout);
-    rval += string_printf("Automatic rejoin:       %s\n", m_auto_rejoin ? "Enabled" : "Disabled");
-    rval += string_printf("Enforce read-only:      %s\n", m_enforce_read_only_slaves ? "Enabled" :
-                          "Disabled");
-    rval += string_printf("Detect stale master:    %s\n", m_detect_stale_master ? "Enabled" : "Disabled");
+    rval += string_printf("Automatic rejoin:       %s\n", bool_to_zstr(m_settings.auto_rejoin));
+    rval += string_printf("Enforce read-only:      %s\n", bool_to_zstr(m_settings.enforce_read_only_slaves));
+    rval += string_printf("Detect stale master:    %s\n", bool_to_zstr(m_settings.detect_stale_master));
     if (m_excluded_servers.size() > 0)
     {
         rval += string_printf("Non-promotable servers (failover): ");
@@ -429,7 +431,7 @@ void MariaDBMonitor::tick()
         update_topology();
         m_cluster_topology_changed = false;
         // If cluster operations are enabled, check topology support and disable if needed.
-        if (m_auto_failover || m_switchover_on_low_disk_space || m_auto_rejoin)
+        if (m_settings.auto_failover || m_settings.switchover_on_low_disk_space || m_settings.auto_rejoin)
         {
             check_cluster_operations_support();
         }
@@ -448,7 +450,7 @@ void MariaDBMonitor::tick()
 
     /* Set low disk space slaves to maintenance. This needs to happen after roles have been assigned.
      * Is not a real cluster operation, since nothing on the actual backends is changed. */
-    if (m_maintenance_on_low_disk_space)
+    if (m_settings.maintenance_on_low_disk_space)
     {
         set_low_disk_slaves_maintenance();
     }
@@ -504,14 +506,14 @@ void MariaDBMonitor::process_state_changes()
 
     if (can_perform_cluster_ops())
     {
-        if (m_auto_failover)
+        if (m_settings.auto_failover)
         {
             handle_auto_failover();
         }
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (m_auto_rejoin && cluster_can_be_joined() && can_perform_cluster_ops())
+        if (m_settings.auto_rejoin && cluster_can_be_joined() && can_perform_cluster_ops())
         {
             // Check if any servers should be autojoined to the cluster and try to join them.
             handle_auto_rejoin();
@@ -520,13 +522,13 @@ void MariaDBMonitor::process_state_changes()
         /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
          * perform this if cluster has been modified this loop since it may not be clear which server
          * should be a slave. */
-        if (m_enforce_read_only_slaves && can_perform_cluster_ops())
+        if (m_settings.enforce_read_only_slaves && can_perform_cluster_ops())
         {
             enforce_read_only_on_slaves();
         }
 
         /* Check if the master server is on low disk space and act on it. */
-        if (m_switchover_on_low_disk_space && can_perform_cluster_ops())
+        if (m_settings.switchover_on_low_disk_space && can_perform_cluster_ops())
         {
             handle_low_disk_space_master();
         }

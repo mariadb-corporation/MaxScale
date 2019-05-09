@@ -490,7 +490,7 @@ void MariaDBMonitor::assign_server_roles()
     // Check the the master node, label it as the [Master] if
     // 1) the node has slaves, even if their slave sql threads are stopped
     // 2) or detect standalone master is on.
-    if (m_master && (!m_master->m_node.children.empty() || m_detect_standalone_master))
+    if (m_master && (!m_master->m_node.children.empty() || m_settings.detect_standalone_master))
     {
         if (m_master->is_running())
         {
@@ -508,7 +508,7 @@ void MariaDBMonitor::assign_server_roles()
                 m_master->set_status(SERVER_MASTER | SERVER_WAS_MASTER);
             }
         }
-        else if (m_detect_stale_master && (m_master->had_status(SERVER_WAS_MASTER)))
+        else if (m_settings.detect_stale_master && (m_master->had_status(SERVER_WAS_MASTER)))
         {
             // The master is not running but it was the master last round and
             // may have running slaves who have up-to-date events.
@@ -520,7 +520,7 @@ void MariaDBMonitor::assign_server_roles()
         assign_slave_and_relay_master(m_master);
     }
 
-    if (!m_ignore_external_masters)
+    if (!m_settings.ignore_external_masters)
     {
         // Do a sweep through all the nodes in the cluster (even the master) and mark external slaves.
         for (MariaDBServer* server : m_servers)
@@ -563,7 +563,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
     QueueElement start = {start_node, start_node->is_running()};
     open_set.push(start);
     int next_index = NodeData::INDEX_FIRST;
-    const bool allow_stale_slaves = m_detect_stale_slave;
+    const bool allow_stale_slaves = m_settings.detect_stale_slave;
 
     while (!open_set.empty())
     {
@@ -695,12 +695,12 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
     else if (m_master->is_down())
     {
         // These two conditionals are separate since cases 4&5 should not apply if master is down.
-        if (m_master->m_server_base->mon_err_count > m_failcount && running_slaves(m_master) == 0)
+        if (m_master->m_server_base->mon_err_count > m_settings.failcount && running_slaves(m_master) == 0)
         {
             rval = false;
             reason = string_printf("it has been down over %d (failcount) monitor updates and "
                                    "it does not have any running slaves",
-                                   m_failcount);
+                                   m_settings.failcount);
         }
     }
     // 4) The master was a non-replicating master (not in a cycle) but now has a slave connection.
