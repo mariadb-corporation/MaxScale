@@ -1249,7 +1249,7 @@ void dcb_final_close(DCB* dcb)
             dcb_stop_polling_and_shutdown(dcb);
         }
 
-        if (dcb->server)
+        if (dcb->server && dcb->persistentstart == 0)
         {
             // This is now a DCB_ROLE_BACKEND_HANDLER.
             // TODO: Make decisions according to the role and assert
