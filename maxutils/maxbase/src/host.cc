@@ -271,5 +271,4 @@ bool reverse_dns(const std::string& ip, std::string* output)
     }
     return success;
 }
-
 }

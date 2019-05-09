@@ -95,5 +95,4 @@ std::string string_printf(const char* format, ...)
     }
     return rval;
 }
-
 }

@@ -55,7 +55,8 @@ namespace
 struct TimePointLessEqual
 {
     TimePoint lhs;
-    TimePointLessEqual(TimePoint tp) : lhs(tp)
+    TimePointLessEqual(TimePoint tp)
+        : lhs(tp)
     {
     }
     bool operator()(const EventCount::Timestamp& rhs) const
@@ -134,7 +135,8 @@ namespace
 struct MatchEventId
 {
     std::string event_id;
-    MatchEventId(const std::string& id) : event_id(id)
+    MatchEventId(const std::string& id)
+        : event_id(id)
     {
     }
     bool operator()(const EventCount& stats) const

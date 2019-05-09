@@ -32,7 +32,7 @@ class ConversationData
 public:
     string m_client;
     string m_password;
-    int m_counter {0};
+    int    m_counter {0};
     string m_expected_msg;
 
     ConversationData(const string& client, const string& password, const string& expected_msg)
@@ -97,7 +97,6 @@ int conversation_func(int num_msg,
     }
     return rval;
 }
-
 }
 
 namespace maxbase
@@ -123,25 +122,25 @@ PamResult pam_authenticate(const string& user, const string& password, const str
         pam_status = pam_authenticate(pam_handle, 0);
         switch (pam_status)
         {
-            case PAM_SUCCESS:
-                authenticated = true;
-                MXB_DEBUG("pam_authenticate returned success.");
-                break;
+        case PAM_SUCCESS:
+            authenticated = true;
+            MXB_DEBUG("pam_authenticate returned success.");
+            break;
 
-            case PAM_USER_UNKNOWN:
-            case PAM_AUTH_ERR:
-                // Normal failure, username or password was wrong.
-                result.type = PamResult::Result::WRONG_USER_PW;
-                result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(), service.c_str(),
-                                                  pam_strerror(pam_handle, pam_status));
-                break;
+        case PAM_USER_UNKNOWN:
+        case PAM_AUTH_ERR:
+            // Normal failure, username or password was wrong.
+            result.type = PamResult::Result::WRONG_USER_PW;
+            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(), service.c_str(),
+                                              pam_strerror(pam_handle, pam_status));
+            break;
 
-            default:
-                // More exotic error
-                result.type = PamResult::Result::MISC_ERROR;
-                result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(),  service.c_str(),
-                                                  pam_strerror(pam_handle, pam_status));
-                break;
+        default:
+            // More exotic error
+            result.type = PamResult::Result::MISC_ERROR;
+            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(), service.c_str(),
+                                              pam_strerror(pam_handle, pam_status));
+            break;
         }
     }
     else
@@ -156,20 +155,19 @@ PamResult pam_authenticate(const string& user, const string& password, const str
         pam_status = pam_acct_mgmt(pam_handle, 0);
         switch (pam_status)
         {
-            case PAM_SUCCESS:
-                result.type = PamResult::Result::SUCCESS;
-                break;
+        case PAM_SUCCESS:
+            result.type = PamResult::Result::SUCCESS;
+            break;
 
-            default:
-                // Credentials have already been checked to be ok, so this is a somewhat unexpected error.
-                result.type = PamResult::Result::ACCOUNT_INVALID;
-                result.error = mxb::string_printf(PAM_ACC_ERR_MSG, user.c_str(), service.c_str(),
-                                                  pam_strerror(pam_handle, pam_status));
-                break;
+        default:
+            // Credentials have already been checked to be ok, so this is a somewhat unexpected error.
+            result.type = PamResult::Result::ACCOUNT_INVALID;
+            result.error = mxb::string_printf(PAM_ACC_ERR_MSG, user.c_str(), service.c_str(),
+                                              pam_strerror(pam_handle, pam_status));
+            break;
         }
     }
     pam_end(pam_handle, pam_status);
     return result;
 }
-
 }

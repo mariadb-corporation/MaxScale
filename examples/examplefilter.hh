@@ -87,8 +87,8 @@ private:
     ExampleFilter(const MXS_CONFIG_PARAMETER* pParams);
 
     // The fields are specific to ExampleFilter.
-    std::atomic<int> m_total_queries {0}; /**< How many queries has this filter seen */
-    std::atomic<int> m_total_replies {0}; /**< How many replies has this filter seen */
+    std::atomic<int> m_total_queries {0};   /**< How many queries has this filter seen */
+    std::atomic<int> m_total_replies {0};   /**< How many replies has this filter seen */
 
-    bool m_collect_global_counts {false}; /**< Should sessions manipulate the total counts */
+    bool m_collect_global_counts {false};   /**< Should sessions manipulate the total counts */
 };

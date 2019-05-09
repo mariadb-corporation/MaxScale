@@ -117,7 +117,7 @@ size_t header_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 CURL* get_easy_curl(const std::string& url,
                     const std::string& user, const std::string& password,
                     const Config& config,
-                    Result *pRes,
+                    Result* pRes,
                     char* pErrbuf)
 {
     CURL* pCurl = curl_easy_init();
@@ -126,8 +126,10 @@ CURL* get_easy_curl(const std::string& url,
     if (pCurl)
     {
         checked_curl_setopt(pCurl, CURLOPT_NOSIGNAL, 1);
-        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout_s);// For connection phase
-        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout_s);               // For data transfer phase
+        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout_s);   // For connection
+                                                                                        // phase
+        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout_s);                  // For data transfer
+                                                                                        // phase
         checked_curl_setopt(pCurl, CURLOPT_ERRORBUFFER, pErrbuf);
         checked_curl_setopt(pCurl, CURLOPT_WRITEFUNCTION, write_callback);
         checked_curl_setopt(pCurl, CURLOPT_WRITEDATA, &pRes->body);
@@ -169,7 +171,7 @@ struct Context
     }
 
     mxb::http::Result* pResult;
-    Errbuf *           pErrbuf;
+    Errbuf*            pErrbuf;
 };
 
 class ReadyImp : public Async::Imp
@@ -228,7 +230,7 @@ public:
         for (auto& item : m_curls)
         {
             CURL* pCurl = item.first;
-            MXB_AT_DEBUG(CURLMcode rv =) curl_multi_remove_handle(m_pCurlm, pCurl);
+            MXB_AT_DEBUG(CURLMcode rv = ) curl_multi_remove_handle(m_pCurlm, pCurl);
             mxb_assert(rv == CURLM_OK);
             curl_easy_cleanup(pCurl);
         }
@@ -440,7 +442,6 @@ private:
     int                                      m_still_running;
     long                                     m_wait_no_more_than;
 };
-
 }
 
 
@@ -546,7 +547,7 @@ Result get(const std::string& url, const std::string& user, const std::string& p
     {
     case CURLE_OK:
         {
-            long code = 0; // needs to be a long
+            long code = 0;      // needs to be a long
             curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
             res.code = code;
         }
@@ -614,7 +615,5 @@ const char* to_string(Async::status_t status)
     mxb_assert(!true);
     return "Unknown";
 }
-
 }
-
 }

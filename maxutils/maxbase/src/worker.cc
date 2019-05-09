@@ -111,7 +111,7 @@ uint64_t WorkerLoad::get_time_ms()
     int rv = clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
     if (rv != 0)
     {
-        mxb_assert(errno == EINVAL); // CLOCK_MONOTONIC_COARSE not supported.
+        mxb_assert(errno == EINVAL);    // CLOCK_MONOTONIC_COARSE not supported.
         rv = clock_gettime(CLOCK_MONOTONIC, &t);
         mxb_assert(rv == 0);
     }

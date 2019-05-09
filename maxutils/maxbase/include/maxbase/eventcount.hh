@@ -58,7 +58,8 @@ public:
     {
         TimePoint time_point;
         int       count;
-        Timestamp(TimePoint p, int c) : time_point(p)
+        Timestamp(TimePoint p, int c)
+            : time_point(p)
             , count(c)
         {
         }

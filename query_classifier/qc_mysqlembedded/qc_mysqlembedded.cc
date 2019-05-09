@@ -2361,7 +2361,7 @@ static void add_field_info(parsing_info_t* info,
 }
 
 static void add_field_info(parsing_info_t* info,
-                           st_select_lex*  select,
+                           st_select_lex* select,
                            const char* database,
                            const char* table,
                            const char* column,
@@ -2575,7 +2575,7 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
 }
 
 static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
-                                           st_select_lex*  select,
+                                           st_select_lex* select,
                                            const char* name,
                                            Item** items,
                                            int n_items)
@@ -2630,7 +2630,7 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
 }
 
 static void add_field_info(parsing_info_t* pi,
-                           st_select_lex*  select,
+                           st_select_lex* select,
                            Item_field* item,
                            List<Item>* excludep)
 {
@@ -2727,7 +2727,7 @@ static void add_field_info(parsing_info_t* pi,
 }
 
 static void add_field_info(parsing_info_t* pi,
-                           st_select_lex*  select,
+                           st_select_lex* select,
                            Item* item,
                            List<Item>* excludep)
 {
@@ -2822,7 +2822,7 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
 }
 
 static void update_field_infos(parsing_info_t* pi,
-                               st_select_lex*  select,
+                               st_select_lex* select,
                                collect_source_t source,
                                Item* item,
                                List<Item>* excludep)
@@ -2914,7 +2914,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             char func_name[strlen(f) + 3 + 1];      // strlen(substring) - strlen(substr) from below.
             strcpy(func_name, f);
-            mxb::trim(func_name);    // Sometimes the embedded parser leaves leading and trailing whitespace.
+            mxb::trim(func_name);   // Sometimes the embedded parser leaves leading and trailing whitespace.
 
             // Non native functions are surrounded by back-ticks, let's remove them.
             remove_surrounding_back_ticks(func_name);
@@ -3603,57 +3603,57 @@ int32_t qc_mysql_set_options(uint32_t options)
 extern "C"
 {
 
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static QUERY_CLASSIFIER qc =
     {
-        static QUERY_CLASSIFIER qc =
-        {
-            qc_mysql_setup,
-            qc_mysql_process_init,
-            qc_mysql_process_end,
-            qc_mysql_thread_init,
-            qc_mysql_thread_end,
-            qc_mysql_parse,
-            qc_mysql_get_type_mask,
-            qc_mysql_get_operation,
-            qc_mysql_get_created_table_name,
-            qc_mysql_is_drop_table_query,
-            qc_mysql_get_table_names,
-            NULL,
-            qc_mysql_query_has_clause,
-            qc_mysql_get_database_names,
-            qc_mysql_get_prepare_name,
-            qc_mysql_get_field_info,
-            qc_mysql_get_function_info,
-            qc_mysql_get_preparable_stmt,
-            qc_mysql_set_server_version,
-            qc_mysql_get_server_version,
-            qc_mysql_get_sql_mode,
-            qc_mysql_set_sql_mode,
-            nullptr,    // qc_info_dup not supported.
-            nullptr,    // qc_info_close not supported.
-            qc_mysql_get_options,
-            qc_mysql_set_options,
-            nullptr,    // qc_get_result_from_info not supported
-        };
+        qc_mysql_setup,
+        qc_mysql_process_init,
+        qc_mysql_process_end,
+        qc_mysql_thread_init,
+        qc_mysql_thread_end,
+        qc_mysql_parse,
+        qc_mysql_get_type_mask,
+        qc_mysql_get_operation,
+        qc_mysql_get_created_table_name,
+        qc_mysql_is_drop_table_query,
+        qc_mysql_get_table_names,
+        NULL,
+        qc_mysql_query_has_clause,
+        qc_mysql_get_database_names,
+        qc_mysql_get_prepare_name,
+        qc_mysql_get_field_info,
+        qc_mysql_get_function_info,
+        qc_mysql_get_preparable_stmt,
+        qc_mysql_set_server_version,
+        qc_mysql_get_server_version,
+        qc_mysql_get_sql_mode,
+        qc_mysql_set_sql_mode,
+        nullptr,        // qc_info_dup not supported.
+        nullptr,        // qc_info_close not supported.
+        qc_mysql_get_options,
+        qc_mysql_set_options,
+        nullptr,        // qc_get_result_from_info not supported
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_QUERY_CLASSIFIER,
+        MXS_MODULE_GA,
+        MXS_QUERY_CLASSIFIER_VERSION,
+        "Query classifier based upon MySQL Embedded",
+        "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &qc,
+        qc_mysql_process_init,
+        qc_mysql_process_end,
+        qc_mysql_thread_init,
+        qc_mysql_thread_end,
         {
-            MXS_MODULE_API_QUERY_CLASSIFIER,
-            MXS_MODULE_GA,
-            MXS_QUERY_CLASSIFIER_VERSION,
-            "Query classifier based upon MySQL Embedded",
-            "V1.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &qc,
-            qc_mysql_process_init,
-            qc_mysql_process_end,
-            qc_mysql_thread_init,
-            qc_mysql_thread_end,
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }

@@ -44,15 +44,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         DESC,
         "V1.0.0",
-        RCAP_TYPE_STMT_INPUT,                   // See getCapabilities() below
-        &ExampleFilter::s_object,               // This is defined in the MaxScale filter template
-        NULL,                                   /* Process init. */
-        NULL,                                   /* Process finish. */
-        NULL,                                   /* Thread init. */
-        NULL,                                   /* Thread finish. */
+        RCAP_TYPE_STMT_INPUT,       // See getCapabilities() below
+        &ExampleFilter::s_object,   // This is defined in the MaxScale filter template
+        NULL,                       /* Process init. */
+        NULL,                       /* Process finish. */
+        NULL,                       /* Thread init. */
+        NULL,                       /* Thread finish. */
         {
-            {"an_example_parameter",          MXS_MODULE_PARAM_STRING, "a-default-value"},
-            {CN_COUNT_GLOBALS,                MXS_MODULE_PARAM_BOOL,   "true"},
+            {"an_example_parameter",MXS_MODULE_PARAM_STRING,    "a-default-value"},
+            {CN_COUNT_GLOBALS,    MXS_MODULE_PARAM_BOOL,      "true"           },
             {MXS_END_MODULE_PARAMS}
         }
     };

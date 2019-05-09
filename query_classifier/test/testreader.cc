@@ -225,7 +225,7 @@ namespace maxscale
 {
 
 TestReader::TestReader(istream& in,
-                       size_t   line)
+                       size_t line)
     : m_in(in)
     , m_line(line)
     , m_delimiter(";")

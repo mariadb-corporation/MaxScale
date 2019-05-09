@@ -51,17 +51,17 @@ public:
         return prev;
     }
 
-    bool operator == (const intrusive_slist_iterator& rhs) const
+    bool operator==(const intrusive_slist_iterator& rhs) const
     {
         return m_pT == rhs.m_pT;
     }
 
-    bool operator != (const intrusive_slist_iterator& rhs) const
+    bool operator!=(const intrusive_slist_iterator& rhs) const
     {
         return !(m_pT == rhs.m_pT);
     }
 
-    T& operator * () const
+    T& operator*() const
     {
         mxb_assert(m_pT);
         return *m_pT;
@@ -70,5 +70,4 @@ public:
 private:
     T* m_pT;
 };
-
 }

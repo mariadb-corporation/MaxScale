@@ -19,7 +19,7 @@ namespace maxbase
 
 // static
 void Semaphore::get_current_timespec(time_t seconds,
-                                     long   nseconds,
+                                     long nseconds,
                                      timespec* pTs)
 {
     mxb_assert(nseconds <= 999999999);

@@ -192,45 +192,45 @@ static const char* get_token_symbol(int token);
 extern "C"
 {
 
-    extern void exposed_sqlite3ExprDelete(sqlite3* db, Expr* pExpr);
-    extern void exposed_sqlite3ExprListDelete(sqlite3* db, ExprList* pList);
-    extern void exposed_sqlite3IdListDelete(sqlite3* db, IdList* pList);
-    extern void exposed_sqlite3SrcListDelete(sqlite3* db, SrcList* pList);
-    extern void exposed_sqlite3SelectDelete(sqlite3* db, Select* p);
+extern void exposed_sqlite3ExprDelete(sqlite3* db, Expr* pExpr);
+extern void exposed_sqlite3ExprListDelete(sqlite3* db, ExprList* pList);
+extern void exposed_sqlite3IdListDelete(sqlite3* db, IdList* pList);
+extern void exposed_sqlite3SrcListDelete(sqlite3* db, SrcList* pList);
+extern void exposed_sqlite3SelectDelete(sqlite3* db, Select* p);
 
-    extern void exposed_sqlite3BeginTrigger(Parse* pParse,
-                                            Token* pName1,
-                                            Token* pName2,
-                                            int tr_tm,
-                                            int op,
-                                            IdList* pColumns,
-                                            SrcList* pTableName,
-                                            Expr* pWhen,
-                                            int   isTemp,
-                                            int   noErr);
-    extern void exposed_sqlite3FinishTrigger(Parse* pParse,
-                                             TriggerStep* pStepList,
-                                             Token* pAll);
-    extern int exposed_sqlite3Dequote(char* z);
-    extern int exposed_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*);
-    extern void exposed_sqlite3Insert(Parse* pParse,
-                                      SrcList* pTabList,
-                                      Select*  pSelect,
-                                      IdList*  pColumns,
-                                      int onError);
-    extern int  exposed_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest);
-    extern void exposed_sqlite3StartTable(Parse* pParse,/* Parser context */
-                                          Token* pName1,/* First part of the name of the table or view */
-                                          Token* pName2,/* Second part of the name of the table or view */
-                                          int isTemp,   /* True if this is a TEMP table */
-                                          int isView,   /* True if this is a VIEW */
-                                          int isVirtual,/* True if this is a VIRTUAL table */
-                                          int noErr);   /* Do nothing if table already exists */
-    extern void exposed_sqlite3Update(Parse* pParse,
-                                      SrcList* pTabList,
-                                      ExprList* pChanges,
-                                      Expr* pWhere,
-                                      int   onError);
+extern void exposed_sqlite3BeginTrigger(Parse* pParse,
+                                        Token* pName1,
+                                        Token* pName2,
+                                        int tr_tm,
+                                        int op,
+                                        IdList* pColumns,
+                                        SrcList* pTableName,
+                                        Expr* pWhen,
+                                        int isTemp,
+                                        int noErr);
+extern void exposed_sqlite3FinishTrigger(Parse* pParse,
+                                         TriggerStep* pStepList,
+                                         Token* pAll);
+extern int  exposed_sqlite3Dequote(char* z);
+extern int  exposed_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*);
+extern void exposed_sqlite3Insert(Parse* pParse,
+                                  SrcList* pTabList,
+                                  Select* pSelect,
+                                  IdList* pColumns,
+                                  int onError);
+extern int  exposed_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest);
+extern void exposed_sqlite3StartTable(Parse* pParse,    /* Parser context */
+                                      Token* pName1,    /* First part of the name of the table or view */
+                                      Token* pName2,    /* Second part of the name of the table or view */
+                                      int isTemp,       /* True if this is a TEMP table */
+                                      int isView,       /* True if this is a VIEW */
+                                      int isVirtual,    /* True if this is a VIRTUAL table */
+                                      int noErr);       /* Do nothing if table already exists */
+extern void exposed_sqlite3Update(Parse* pParse,
+                                  SrcList* pTabList,
+                                  ExprList* pChanges,
+                                  Expr* pWhere,
+                                  int onError);
 }
 
 /**
@@ -843,7 +843,7 @@ public:
             update_field_infos_from_expr(pAliases, context, pExpr, pExclude);
             break;
 
-        case TK_STRING: // select "a" ..., for @@sql_mode containing 'ANSI_QUOTES'
+        case TK_STRING:     // select "a" ..., for @@sql_mode containing 'ANSI_QUOTES'
             if (this_thread.options & QC_OPTION_STRING_AS_FIELD)
             {
                 const char* zColumn = pExpr->u.zToken;
@@ -1268,7 +1268,10 @@ public:
 
                 if (pSrc->a[i].pSelect)
                 {
-                    update_field_infos_from_select(aliases, context | QC_FIELD_SUBQUERY, pSrc->a[i].pSelect, pExclude);
+                    update_field_infos_from_select(aliases,
+                                                   context | QC_FIELD_SUBQUERY,
+                                                   pSrc->a[i].pSelect,
+                                                   pExclude);
                 }
 
 #ifdef QC_COLLECT_NAMES_FROM_USING
@@ -1460,8 +1463,8 @@ public:
     }
 
     static void update_function_fields(const QcAliases* pAliases,
-                                       const ExprList*  pEList,
-                                       const ExprList*  pExclude,
+                                       const ExprList* pEList,
+                                       const ExprList* pExclude,
                                        vector<QC_FIELD_INFO>& fields)
     {
         for (int i = 0; i < pEList->nExpr; ++i)
@@ -1613,16 +1616,18 @@ public:
         }
     }
 
-    void mxs_sqlite3BeginTrigger(Parse* pParse,       /* The parse context of the CREATE TRIGGER statement */
-                                 Token* pName1,       /* The name of the trigger */
-                                 Token* pName2,       /* The name of the trigger */
-                                 int tr_tm,           /* One of TK_BEFORE, TK_AFTER, TK_INSTEAD */
-                                 int op,              /* One of TK_INSERT, TK_UPDATE, TK_DELETE */
-                                 IdList* pColumns,    /* column list if this is an UPDATE OF trigger */
-                                 SrcList* pTableName, /* The name of the table/view the trigger applies to */
-                                 Expr* pWhen,         /* WHEN clause */
-                                 int   isTemp,        /* True if the TEMPORARY keyword is present */
-                                 int   noErr)         /* Suppress errors if the trigger already exists */
+    void mxs_sqlite3BeginTrigger(Parse* pParse,         /* The parse context of the CREATE TRIGGER statement
+                                                         * */
+                                 Token* pName1,         /* The name of the trigger */
+                                 Token* pName2,         /* The name of the trigger */
+                                 int tr_tm,             /* One of TK_BEFORE, TK_AFTER, TK_INSTEAD */
+                                 int op,                /* One of TK_INSERT, TK_UPDATE, TK_DELETE */
+                                 IdList* pColumns,      /* column list if this is an UPDATE OF trigger */
+                                 SrcList* pTableName,   /* The name of the table/view the trigger applies to
+                                                         * */
+                                 Expr* pWhen,           /* WHEN clause */
+                                 int isTemp,            /* True if the TEMPORARY keyword is present */
+                                 int noErr)             /* Suppress errors if the trigger already exists */
     {
         mxb_assert(this_thread.initialized);
 
@@ -1670,7 +1675,7 @@ public:
                                 ExprList* pList,    /* A list of columns to be indexed */
                                 int onError,        /* OE_Abort, OE_Ignore, OE_Replace, or OE_None */
                                 Token* pStart,      /* The CREATE token that begins this statement */
-                                Expr*  pPIWhere,    /* WHERE clause for partial indices */
+                                Expr* pPIWhere,     /* WHERE clause for partial indices */
                                 int sortOrder,      /* Sort order of primary key when pList==NULL */
                                 int ifNotExist)     /* Omit error if index already exists */
     {
@@ -1699,7 +1704,7 @@ public:
                                Token* pName1,       /* The token that holds the name of the view */
                                Token* pName2,       /* The token that holds the name of the view */
                                ExprList* pCNames,   /* Optional list of view column names */
-                               Select*   pSelect,   /* A SELECT statement that will become the new view */
+                               Select* pSelect,     /* A SELECT statement that will become the new view */
                                int isTemp,          /* TRUE for a TEMPORARY view */
                                int noErr)           /* Suppress error messages if VIEW already exists */
     {
@@ -1868,8 +1873,8 @@ public:
 
     void mxs_sqlite3Insert(Parse* pParse,
                            SrcList* pTabList,
-                           Select*  pSelect,
-                           IdList*  pColumns,
+                           Select* pSelect,
+                           IdList* pColumns,
                            int onError,
                            ExprList* pSet)
     {
@@ -2109,7 +2114,7 @@ public:
     void maxscaleAlterTable(Parse* pParse,              /* Parser context. */
                             mxs_alter_t command,
                             SrcList* pSrc,              /* The table to rename. */
-                            Token*   pName)             /* The new table name (RENAME). */
+                            Token* pName)               /* The new table name (RENAME). */
     {
         mxb_assert(this_thread.initialized);
 
@@ -3431,78 +3436,78 @@ public:
 extern "C"
 {
 
-    extern void mxs_sqlite3AlterFinishAddColumn(Parse*, Token*);
-    extern void mxs_sqlite3AlterBeginAddColumn(Parse*, SrcList*);
-    extern void mxs_sqlite3Analyze(Parse*, SrcList*);
-    extern void mxs_sqlite3BeginTransaction(Parse*, int token, int type);
-    extern void mxs_sqlite3CommitTransaction(Parse*);
-    extern void mxs_sqlite3CreateIndex(Parse*,
-                                       Token*,
-                                       Token*,
-                                       SrcList*,
-                                       ExprList*,
-                                       int,
-                                       Token*,
-                                       Expr*,
-                                       int,
-                                       int);
-    extern void mxs_sqlite3BeginTrigger(Parse*,
-                                        Token*,
-                                        Token*,
-                                        int,
-                                        int,
-                                        IdList*,
-                                        SrcList*,
-                                        Expr*,
-                                        int,
-                                        int);
-    extern void mxs_sqlite3FinishTrigger(Parse*, TriggerStep*, Token*);
-    extern void mxs_sqlite3CreateView(Parse*, Token*, Token*, Token*, ExprList*, Select*, int, int);
-    extern void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcList* pUsing);
-    extern void mxs_sqlite3DropIndex(Parse*, SrcList*, SrcList*, int);
-    extern void mxs_sqlite3DropTable(Parse*, SrcList*, int, int, int);
-    extern void mxs_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*, SrcList*);
-    extern void mxs_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int, ExprList*);
-    extern void mxs_sqlite3RollbackTransaction(Parse*);
-    extern void mxs_sqlite3Savepoint(Parse* pParse, int op, Token* pName);
-    extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
-    extern void mxs_sqlite3StartTable(Parse*, Token*, Token*, int, int, int, int);
-    extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
+extern void mxs_sqlite3AlterFinishAddColumn(Parse*, Token*);
+extern void mxs_sqlite3AlterBeginAddColumn(Parse*, SrcList*);
+extern void mxs_sqlite3Analyze(Parse*, SrcList*);
+extern void mxs_sqlite3BeginTransaction(Parse*, int token, int type);
+extern void mxs_sqlite3CommitTransaction(Parse*);
+extern void mxs_sqlite3CreateIndex(Parse*,
+                                   Token*,
+                                   Token*,
+                                   SrcList*,
+                                   ExprList*,
+                                   int,
+                                   Token*,
+                                   Expr*,
+                                   int,
+                                   int);
+extern void mxs_sqlite3BeginTrigger(Parse*,
+                                    Token*,
+                                    Token*,
+                                    int,
+                                    int,
+                                    IdList*,
+                                    SrcList*,
+                                    Expr*,
+                                    int,
+                                    int);
+extern void mxs_sqlite3FinishTrigger(Parse*, TriggerStep*, Token*);
+extern void mxs_sqlite3CreateView(Parse*, Token*, Token*, Token*, ExprList*, Select*, int, int);
+extern void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcList* pUsing);
+extern void mxs_sqlite3DropIndex(Parse*, SrcList*, SrcList*, int);
+extern void mxs_sqlite3DropTable(Parse*, SrcList*, int, int, int);
+extern void mxs_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*, SrcList*);
+extern void mxs_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int, ExprList*);
+extern void mxs_sqlite3RollbackTransaction(Parse*);
+extern void mxs_sqlite3Savepoint(Parse* pParse, int op, Token* pName);
+extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
+extern void mxs_sqlite3StartTable(Parse*, Token*, Token*, int, int, int, int);
+extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 
-    extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
+extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
 
-    extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
-    extern void maxscaleCall(Parse*, SrcList* pName, ExprList* pExprList);
-    extern void maxscaleCheckTable(Parse*, SrcList* pTables);
-    extern void maxscaleCreateSequence(Parse*, Token* pDatabase, Token* pTable);
-    extern void maxscaleDeclare(Parse* pParse);
-    extern void maxscaleDeallocate(Parse*, Token* pName);
-    extern void maxscaleDo(Parse*, ExprList* pEList);
-    extern void maxscaleDrop(Parse*, int what, Token* pDatabase, Token* pName);
-    extern void maxscaleExecute(Parse*, Token* pName, int type_mask);
-    extern void maxscaleExecuteImmediate(Parse*, Token* pName, ExprSpan* pExprSpan, int type_mask);
-    extern void maxscaleExplain(Parse*, Token* pNext);
-    extern void maxscaleFlush(Parse*, Token* pWhat);
-    extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
-    extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
-    extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
-    extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
-    extern void maxscalePrivileges(Parse*, int kind);
-    extern void maxscaleRenameTable(Parse*, SrcList* pTables);
-    extern void maxscaleReset(Parse*, int what);
-    extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
-    extern void maxscaleShow(Parse*, MxsShow* pShow);
-    extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
-    extern void maxscaleUse(Parse*, Token*);
+extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
+extern void maxscaleCall(Parse*, SrcList* pName, ExprList* pExprList);
+extern void maxscaleCheckTable(Parse*, SrcList* pTables);
+extern void maxscaleCreateSequence(Parse*, Token* pDatabase, Token* pTable);
+extern void maxscaleDeclare(Parse* pParse);
+extern void maxscaleDeallocate(Parse*, Token* pName);
+extern void maxscaleDo(Parse*, ExprList* pEList);
+extern void maxscaleDrop(Parse*, int what, Token* pDatabase, Token* pName);
+extern void maxscaleExecute(Parse*, Token* pName, int type_mask);
+extern void maxscaleExecuteImmediate(Parse*, Token* pName, ExprSpan* pExprSpan, int type_mask);
+extern void maxscaleExplain(Parse*, Token* pNext);
+extern void maxscaleFlush(Parse*, Token* pWhat);
+extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
+extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
+extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
+extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
+extern void maxscalePrivileges(Parse*, int kind);
+extern void maxscaleRenameTable(Parse*, SrcList* pTables);
+extern void maxscaleReset(Parse*, int what);
+extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
+extern void maxscaleShow(Parse*, MxsShow* pShow);
+extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
+extern void maxscaleUse(Parse*, Token*);
 
-    extern void maxscale_update_function_info(const char* name, const Expr* pExpr);
-    // 'unsigned int' and not 'uint32_t' because 'uint32_t' is unknown in sqlite3 context.
-    extern void maxscale_set_type_mask(unsigned int type_mask);
+extern void maxscale_update_function_info(const char* name, const Expr* pExpr);
+// 'unsigned int' and not 'uint32_t' because 'uint32_t' is unknown in sqlite3 context.
+extern void maxscale_set_type_mask(unsigned int type_mask);
 
-    extern int  maxscaleComment();
-    extern int  maxscaleKeyword(int token);
-    extern void maxscaleSetStatusCap(int cap);
-    extern int  maxscaleTranslateKeyword(int token);
+extern int  maxscaleComment();
+extern int  maxscaleKeyword(int token);
+extern void maxscaleSetStatusCap(int cap);
+extern int  maxscaleTranslateKeyword(int token);
 }
 
 /**
@@ -4021,8 +4026,8 @@ void mxs_sqlite3BeginTrigger(Parse* pParse,         /* The parse context of the 
                              IdList* pColumns,      /* column list if this is an UPDATE OF trigger */
                              SrcList* pTableName,   /* The name of the table/view the trigger applies to */
                              Expr* pWhen,           /* WHEN clause */
-                             int   isTemp,          /* True if the TEMPORARY keyword is present */
-                             int   noErr)           /* Suppress errors if the trigger already exists */
+                             int isTemp,            /* True if the TEMPORARY keyword is present */
+                             int noErr)             /* Suppress errors if the trigger already exists */
 {
     QC_TRACE();
 
@@ -4058,7 +4063,7 @@ void mxs_sqlite3CreateIndex(Parse* pParse,      /* All information about this pa
                             ExprList* pList,    /* A list of columns to be indexed */
                             int onError,        /* OE_Abort, OE_Ignore, OE_Replace, or OE_None */
                             Token* pStart,      /* The CREATE token that begins this statement */
-                            Expr*  pPIWhere,    /* WHERE clause for partial indices */
+                            Expr* pPIWhere,     /* WHERE clause for partial indices */
                             int sortOrder,      /* Sort order of primary key when pList==NULL */
                             int ifNotExist)     /* Omit error if index already exists */
 {
@@ -4084,7 +4089,7 @@ void mxs_sqlite3CreateView(Parse* pParse,       /* The parsing context */
                            Token* pName1,       /* The token that holds the name of the view */
                            Token* pName2,       /* The token that holds the name of the view */
                            ExprList* pCNames,   /* Optional list of view column names */
-                           Select*   pSelect,   /* A SELECT statement that will become the new view */
+                           Select* pSelect,     /* A SELECT statement that will become the new view */
                            int isTemp,          /* TRUE for a TEMPORARY view */
                            int noErr)           /* Suppress error messages if VIEW already exists */
 {
@@ -4165,8 +4170,8 @@ void mxs_sqlite3FinishTrigger(Parse* pParse,            /* Parser context */
 
 void mxs_sqlite3Insert(Parse* pParse,
                        SrcList* pTabList,
-                       Select*  pSelect,
-                       IdList*  pColumns,
+                       Select* pSelect,
+                       IdList* pColumns,
                        int onError,
                        ExprList* pSet)
 {
@@ -4293,7 +4298,7 @@ void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect, int sub_selec
 void maxscaleAlterTable(Parse* pParse,              /* Parser context. */
                         mxs_alter_t command,
                         SrcList* pSrc,              /* The table to rename. */
-                        Token*   pName)             /* The new table name (RENAME). */
+                        Token* pName)               /* The new table name (RENAME). */
 {
     QC_TRACE();
 
@@ -5323,57 +5328,57 @@ QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo)
 extern "C"
 {
 
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static QUERY_CLASSIFIER qc =
     {
-        static QUERY_CLASSIFIER qc =
-        {
-            qc_sqlite_setup,
-            qc_sqlite_process_init,
-            qc_sqlite_process_end,
-            qc_sqlite_thread_init,
-            qc_sqlite_thread_end,
-            qc_sqlite_parse,
-            qc_sqlite_get_type_mask,
-            qc_sqlite_get_operation,
-            qc_sqlite_get_created_table_name,
-            qc_sqlite_is_drop_table_query,
-            qc_sqlite_get_table_names,
-            NULL,
-            qc_sqlite_query_has_clause,
-            qc_sqlite_get_database_names,
-            qc_sqlite_get_prepare_name,
-            qc_sqlite_get_field_info,
-            qc_sqlite_get_function_info,
-            qc_sqlite_get_preparable_stmt,
-            qc_sqlite_set_server_version,
-            qc_sqlite_get_server_version,
-            qc_sqlite_get_sql_mode,
-            qc_sqlite_set_sql_mode,
-            qc_sqlite_info_dup,
-            qc_sqlite_info_close,
-            qc_sqlite_get_options,
-            qc_sqlite_set_options,
-            qc_sqlite_get_result_from_info,
-        };
+        qc_sqlite_setup,
+        qc_sqlite_process_init,
+        qc_sqlite_process_end,
+        qc_sqlite_thread_init,
+        qc_sqlite_thread_end,
+        qc_sqlite_parse,
+        qc_sqlite_get_type_mask,
+        qc_sqlite_get_operation,
+        qc_sqlite_get_created_table_name,
+        qc_sqlite_is_drop_table_query,
+        qc_sqlite_get_table_names,
+        NULL,
+        qc_sqlite_query_has_clause,
+        qc_sqlite_get_database_names,
+        qc_sqlite_get_prepare_name,
+        qc_sqlite_get_field_info,
+        qc_sqlite_get_function_info,
+        qc_sqlite_get_preparable_stmt,
+        qc_sqlite_set_server_version,
+        qc_sqlite_get_server_version,
+        qc_sqlite_get_sql_mode,
+        qc_sqlite_set_sql_mode,
+        qc_sqlite_info_dup,
+        qc_sqlite_info_close,
+        qc_sqlite_get_options,
+        qc_sqlite_set_options,
+        qc_sqlite_get_result_from_info,
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_QUERY_CLASSIFIER,
+        MXS_MODULE_GA,
+        MXS_QUERY_CLASSIFIER_VERSION,
+        "Query classifier using sqlite.",
+        "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &qc,
+        qc_sqlite_process_init,
+        qc_sqlite_process_end,
+        qc_sqlite_thread_init,
+        qc_sqlite_thread_end,
         {
-            MXS_MODULE_API_QUERY_CLASSIFIER,
-            MXS_MODULE_GA,
-            MXS_QUERY_CLASSIFIER_VERSION,
-            "Query classifier using sqlite.",
-            "V1.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &qc,
-            qc_sqlite_process_init,
-            qc_sqlite_process_end,
-            qc_sqlite_thread_init,
-            qc_sqlite_thread_end,
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }

@@ -19,7 +19,6 @@ namespace
 {
 
 thread_local char errbuf[512];      // Enough for all errors
-
 }
 
 const char* mxb_strerror(int error)
@@ -73,5 +72,4 @@ char* trim(char* str)
 {
     return ltrim(rtrim(str));
 }
-
 }

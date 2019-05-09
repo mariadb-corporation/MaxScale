@@ -38,5 +38,4 @@ std::string to_binary_size(int64_t size);
  * @return The result string
  */
 std::string string_printf(const char* format, ...) mxb_attribute((format (printf, 1, 2)));
-
 }

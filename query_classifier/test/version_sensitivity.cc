@@ -70,10 +70,9 @@ int test()
     string valid_json("SELECT Json_Array(56, 3.1416, 'My name is \"Foo\"', NULL)");
     string invalid_json("SELECT Json_Foo(56, 3.1416, 'My name is \"Foo\"', NULL)");
 
-    auto encode_version = [](const SERVER::Version& sv) -> uint64_t
-    {
-        return sv.major * 10000 + sv.minor * 100 + sv.patch;
-    };
+    auto encode_version = [](const SERVER::Version& sv) -> uint64_t {
+            return sv.major * 10000 + sv.minor * 100 + sv.patch;
+        };
 
     SERVER::Version sv;
     // pre-Json

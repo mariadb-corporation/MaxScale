@@ -117,5 +117,4 @@ inline bool operator!=(const Host& l, const Host& r)
  * @return True on success
  */
 bool reverse_dns(const std::string& ip, std::string* output);
-
 }

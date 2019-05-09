@@ -154,7 +154,7 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
 {
     bool loaded = false;
     size_t len = strlen(name);
-    char libdir[len + 3 + 1]; // Extra for ../
+    char libdir[len + 3 + 1];   // Extra for ../
 
     sprintf(libdir, "../%s", name);
 
@@ -204,8 +204,8 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
 }
 
 bool get_classifiers(qc_sql_mode_t sql_mode,
-                     const char*   zName1,
-                     const char*   zArgs1,
+                     const char* zName1,
+                     const char* zArgs1,
                      QUERY_CLASSIFIER** ppClassifier1,
                      const char* zName2,
                      const char* zArgs2,
@@ -594,7 +594,7 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
                              GWBUF* pCopy1,
                              QUERY_CLASSIFIER* pClassifier2,
                              GWBUF* pCopy2,
-                             bool   full)
+                             bool full)
 {
     bool success = false;
     const char* HEADING;

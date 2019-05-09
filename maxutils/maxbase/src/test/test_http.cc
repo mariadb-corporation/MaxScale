@@ -103,8 +103,8 @@ int test_multi_http()
 {
     cout << __func__ << endl;
 
-    vector<string> urls = { "http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz" };
-    vector<bool> expected_successes = { true, true, false };
+    vector<string> urls = {"http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz"};
+    vector<bool> expected_successes = {true, true, false};
     vector<mxb::http::Result> results = mxb::http::get(urls);
 
     int rv = check_results(urls, expected_successes, results);
@@ -118,8 +118,8 @@ int test_async_http()
 
     int rv = EXIT_FAILURE;
 
-    vector<string> urls = { "http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz" };
-    vector<bool> expected_successes = { true, true, false };
+    vector<string> urls = {"http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz"};
+    vector<bool> expected_successes = {true, true, false};
     mxb::http::Async http = mxb::http::get_async(urls);
 
     while (http.perform(0) == mxb::http::Async::PENDING)
@@ -148,7 +148,6 @@ int test_async_http()
 
     return rv == EXIT_FAILURE ? 1 : 0;
 }
-
 }
 
 uint64_t time_since_epoch_ms()

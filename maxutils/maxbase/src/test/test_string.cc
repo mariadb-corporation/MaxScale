@@ -116,7 +116,6 @@ int test_rtrim()
     cout << "rtrim()" << endl;
     return test(rtrim_testcases, n_rtrim_testcases, mxb::rtrim);
 }
-
 }
 
 int main(int argc, char* argv[])

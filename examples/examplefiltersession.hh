@@ -70,9 +70,9 @@ private:
     // Used in the create function
     ExampleFilterSession(MXS_SESSION* pSession, ExampleFilter& filter);
 
-    ExampleFilter& m_filter;   /**< Shared filter data */
+    ExampleFilter& m_filter;    /**< Shared filter data */
 
-    uint64_t m_session_id {0}; /**< Session id */
-    int      m_queries {0};    /**< How many queries has this session seen */
-    int      m_replies {0};    /**< How many replies has this session seen */
+    uint64_t m_session_id {0};  /**< Session id */
+    int      m_queries {0};     /**< How many queries has this session seen */
+    int      m_replies {0};     /**< How many replies has this session seen */
 };

@@ -42,15 +42,15 @@ struct WORKER_STATISTICS
         N_QUEUE_TIMES = 30
     };
 
-    int64_t n_read = 0;         /*< Number of read events   */
-    int64_t n_write = 0;        /*< Number of write events  */
-    int64_t n_error = 0;        /*< Number of error events  */
-    int64_t n_hup = 0;          /*< Number of hangup events */
-    int64_t n_accept = 0;       /*< Number of accept events */
-    int64_t n_polls = 0;        /*< Number of poll cycles   */
-    int64_t n_pollev = 0;       /*< Number of polls returning events */
-    int64_t evq_avg = 0;        /*< Average event queue length */
-    int64_t evq_max = 0;        /*< Maximum event queue length */
+    int64_t                                 n_read = 0;     /*< Number of read events   */
+    int64_t                                 n_write = 0;    /*< Number of write events  */
+    int64_t                                 n_error = 0;    /*< Number of error events  */
+    int64_t                                 n_hup = 0;      /*< Number of hangup events */
+    int64_t                                 n_accept = 0;   /*< Number of accept events */
+    int64_t                                 n_polls = 0;    /*< Number of poll cycles   */
+    int64_t                                 n_pollev = 0;   /*< Number of polls returning events */
+    int64_t                                 evq_avg = 0;    /*< Average event queue length */
+    int64_t                                 evq_max = 0;    /*< Maximum event queue length */
     int64_t                                 maxqtime = 0;
     int64_t                                 maxexectime = 0;
     std::array<int64_t, MAXNFDS>            n_fds {};   /*< Number of wakeups with particular n_fds value */
@@ -249,12 +249,12 @@ class Worker : public MXB_WORKER
     Worker& operator=(const Worker&) = delete;
 
 public:
-    using STATISTICS     = WORKER_STATISTICS;
-    using Task           = WorkerTask;
+    using STATISTICS = WORKER_STATISTICS;
+    using Task = WorkerTask;
     using DisposableTask = WorkerDisposableTask;
-    using Load           = WorkerLoad;
-    using Timer          = WorkerTimer;
-    using RandomEngine   = maxbase::XorShiftRandom;
+    using Load = WorkerLoad;
+    using Timer = WorkerTimer;
+    using RandomEngine = maxbase::XorShiftRandom;
 
     /**
      * A delegating timer that delegates the timer tick handling

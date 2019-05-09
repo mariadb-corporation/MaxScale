@@ -57,28 +57,28 @@ public:
 
 enum
 {
-    DEFAULT_CONNECT_TIMEOUT = 10, // @see https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-    DEFAULT_TIMEOUT = 10          // @see https://curl.haxx.se/libcurl/c/CURLOPT_TIMEOUT.html
+    DEFAULT_CONNECT_TIMEOUT = 10,   // @see https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
+    DEFAULT_TIMEOUT         = 10    // @see https://curl.haxx.se/libcurl/c/CURLOPT_TIMEOUT.html
 };
 
 struct Config
 {
     int connect_timeout_s = DEFAULT_CONNECT_TIMEOUT;
-    int timeout_s         = DEFAULT_TIMEOUT;
+    int timeout_s = DEFAULT_TIMEOUT;
 };
 
 struct Result
 {
     enum
     {
-        ERROR                = -1, // Some non-specific error occurred.
-        COULDNT_RESOLVE_HOST = -2, // The specified host cold not be resolved.
-        OPERATION_TIMEDOUT   = -3  // The operation timed out.
+        ERROR                = -1,  // Some non-specific error occurred.
+        COULDNT_RESOLVE_HOST = -2,  // The specified host cold not be resolved.
+        OPERATION_TIMEDOUT   = -3   // The operation timed out.
     };
 
-    int                                code = 0; // HTTP response code
-    std::string                        body;     // Response body
-    std::map<std::string, std::string> headers;  // Headers attached to the response
+    int                                code = 0;// HTTP response code
+    std::string                        body;    // Response body
+    std::map<std::string, std::string> headers; // Headers attached to the response
 };
 
 /**
@@ -156,9 +156,9 @@ class Async
 public:
     enum status_t
     {
-        READY,  // The result is ready.
-        ERROR,  // The operation has failed.
-        PENDING // The operation is pending.
+        READY,      // The result is ready.
+        ERROR,      // The operation has failed.
+        PENDING     // The operation is pending.
     };
 
     class Imp
@@ -197,7 +197,7 @@ public:
      *
      * @return *this.
      */
-    Async& operator = (const Async& rhs)
+    Async& operator=(const Async& rhs)
     {
         std::shared_ptr<Imp> sImp(rhs.m_sImp);
         m_sImp.swap(sImp);
@@ -307,7 +307,5 @@ Async get_async(const std::vector<std::string>& urls,
 Async get_async(const std::vector<std::string>& urls,
                 const std::string& user, const std::string& password,
                 const Config& config = Config());
-
 }
-
 }

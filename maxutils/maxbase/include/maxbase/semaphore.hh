@@ -285,7 +285,7 @@ public:
      *            and in the latter `EINTR.
      */
     bool timedwait(time_t seconds,
-                   long   nseconds,
+                   long nseconds,
                    signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
         timespec ts;
@@ -316,7 +316,7 @@ public:
      */
     size_t timedwait_n(size_t n_wait,
                        time_t seconds,
-                       long   nseconds,
+                       long nseconds,
                        signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
         timespec ts;

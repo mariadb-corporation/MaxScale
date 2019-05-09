@@ -117,7 +117,7 @@ bool QueryResult::next_row()
     if (m_rowdata)
     {
         m_current_row_ind++;
-        m_error = ConversionError(); // Reset error
+        m_error = ConversionError();    // Reset error
         return true;
     }
     else
@@ -333,5 +333,4 @@ bool QueryResult::ConversionError::error() const
 {
     return !m_target_type.empty();
 }
-
 }
