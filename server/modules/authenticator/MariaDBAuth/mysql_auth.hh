@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "MySQLAuth"
+#define MXS_MODULE_NAME "MariaDBAuth"
 
 #include <maxscale/ccdefs.hh>
 
