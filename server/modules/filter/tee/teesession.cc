@@ -21,7 +21,7 @@
 
 TeeSession::TeeSession(MXS_SESSION* session,
                        LocalClient* client,
-                       pcre2_code*  match,
+                       pcre2_code* match,
                        pcre2_match_data* md_match,
                        pcre2_code* exclude,
                        pcre2_match_data* md_exclude)

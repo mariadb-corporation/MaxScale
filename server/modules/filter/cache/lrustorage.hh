@@ -43,7 +43,7 @@ protected:
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
-                                GWBUF**  ppValue) const;
+                                GWBUF** ppValue) const;
 
     /**
      * @see Storage::put_value
@@ -89,15 +89,15 @@ private:
     };
 
     cache_result_t access_value(access_approach_t approach,
-                                const CACHE_KEY&  key,
+                                const CACHE_KEY& key,
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
-                                GWBUF**  ppValue) const;
+                                GWBUF** ppValue) const;
 
     cache_result_t peek_value(const CACHE_KEY& key,
                               uint32_t flags,
-                              GWBUF**  ppValue) const
+                              GWBUF** ppValue) const
     {
         return access_value(APPROACH_PEEK, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue);
     }

@@ -27,11 +27,11 @@
 using namespace std;
 
 TestStorage::TestStorage(ostream* pOut,
-                         size_t   threads,
-                         size_t   seconds,
-                         size_t   items,
-                         size_t   min_size,
-                         size_t   max_size)
+                         size_t threads,
+                         size_t seconds,
+                         size_t items,
+                         size_t min_size,
+                         size_t max_size)
     : m_out(*pOut)
     , m_threads(threads)
     , m_seconds(seconds)

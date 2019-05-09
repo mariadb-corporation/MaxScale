@@ -83,66 +83,66 @@ extern "C"
  *
  * @return The module object.
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_FILTER_OBJECT object =
     {
-        static MXS_FILTER_OBJECT object =
-        {
-            createInstance,
-            newSession,
-            closeSession,
-            freeSession,
-            setDownstream,
-            setUpstream,
-            routeQuery,
-            clientReply,
-            diagnostics,
-            diagnostics_json,
-            getCapabilities,
-            NULL,   // No destroyInstance
-        };
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostics,
+        diagnostics_json,
+        getCapabilities,
+        NULL,       // No destroyInstance
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_IN_DEVELOPMENT,
+        MXS_FILTER_VERSION,
+        "A filter that is capable of limiting the resultset number of rows.",
+        "V1.0.0",
+        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT,
+        &object,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_FILTER,
-            MXS_MODULE_IN_DEVELOPMENT,
-            MXS_FILTER_VERSION,
-            "A filter that is capable of limiting the resultset number of rows.",
-            "V1.0.0",
-            RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT,
-            &object,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
             {
-                {
-                    "max_resultset_rows",
-                    MXS_MODULE_PARAM_COUNT,
-                    MAXROWS_DEFAULT_MAX_RESULTSET_ROWS
-                },
-                {
-                    "max_resultset_size",
-                    MXS_MODULE_PARAM_SIZE,
-                    MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
-                },
-                {
-                    "debug",
-                    MXS_MODULE_PARAM_COUNT,
-                    MAXROWS_DEFAULT_DEBUG
-                },
-                {
-                    "max_resultset_return",
-                    MXS_MODULE_PARAM_ENUM,
-                    "empty",
-                    MXS_MODULE_OPT_ENUM_UNIQUE,
-                    return_option_values
-                },
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+                "max_resultset_rows",
+                MXS_MODULE_PARAM_COUNT,
+                MAXROWS_DEFAULT_MAX_RESULTSET_ROWS
+            },
+            {
+                "max_resultset_size",
+                MXS_MODULE_PARAM_SIZE,
+                MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
+            },
+            {
+                "debug",
+                MXS_MODULE_PARAM_COUNT,
+                MAXROWS_DEFAULT_DEBUG
+            },
+            {
+                "max_resultset_return",
+                MXS_MODULE_PARAM_ENUM,
+                "empty",
+                MXS_MODULE_OPT_ENUM_UNIQUE,
+                return_option_values
+            },
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
 
 /* Implementation */

@@ -263,78 +263,84 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_FILTER_OBJECT MyObject =
     {
-        static MXS_FILTER_OBJECT MyObject =
-        {
-            createInstance,
-            newSession,
-            closeSession,
-            freeSession,
-            setDownstream,
-            setUpstream,
-            routeQuery,
-            clientReply,
-            diagnostic,
-            diagnostic_json,
-            getCapabilities,
-            NULL,   // No destroyInstance
-        };
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        diagnostic_json,
+        getCapabilities,
+        NULL,       // No destroyInstance
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_ALPHA_RELEASE,
+        MXS_FILTER_VERSION,
+        "A RabbitMQ query logging filter",
+        "V1.0.2",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
+        &MyObject,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
-            MXS_MODULE_API_FILTER,
-            MXS_MODULE_ALPHA_RELEASE,
-            MXS_FILTER_VERSION,
-            "A RabbitMQ query logging filter",
-            "V1.0.2",
-            RCAP_TYPE_CONTIGUOUS_INPUT,
-            &MyObject,
-            NULL,                               /* Process init. */
-            NULL,                               /* Process finish. */
-            NULL,                               /* Thread init. */
-            NULL,                               /* Thread finish. */
+            {"hostname",                  MXS_MODULE_PARAM_STRING,  "localhost"       },
+            {"username",                  MXS_MODULE_PARAM_STRING,  "guest"           },
+            {"password",                  MXS_MODULE_PARAM_STRING,  "guest"           },
+            {"vhost",                     MXS_MODULE_PARAM_STRING,  "/"               },
+            {"port",                      MXS_MODULE_PARAM_COUNT,   "5672"            },
+            {"exchange",                  MXS_MODULE_PARAM_STRING,  "default_exchange"},
+            {"key",                       MXS_MODULE_PARAM_STRING,  "key"             },
+            {"queue",                     MXS_MODULE_PARAM_STRING},
+            {"exchange_type",             MXS_MODULE_PARAM_STRING,  "direct"          },
+            {"logging_source_user",       MXS_MODULE_PARAM_STRING},
+            {"logging_source_host",       MXS_MODULE_PARAM_STRING},
+            {"logging_schema",            MXS_MODULE_PARAM_STRING},
+            {"logging_object",            MXS_MODULE_PARAM_STRING},
+            {"logging_log_all",           MXS_MODULE_PARAM_BOOL,    "false"           },
+            {"logging_strict",            MXS_MODULE_PARAM_BOOL,    "true"            },
             {
-                {"hostname",                  MXS_MODULE_PARAM_STRING,
-                 "localhost"},
-                {"username",                  MXS_MODULE_PARAM_STRING,
-                 "guest"},
-                {"password",                  MXS_MODULE_PARAM_STRING,
-                 "guest"},
-                {"vhost",                     MXS_MODULE_PARAM_STRING,
-                 "/"},
-                {"port",                      MXS_MODULE_PARAM_COUNT,
-                 "5672"},
-                {"exchange",                  MXS_MODULE_PARAM_STRING,
-                 "default_exchange"},
-                {"key",                       MXS_MODULE_PARAM_STRING,
-                 "key"},
-                {"queue",                     MXS_MODULE_PARAM_STRING},
-                {"ssl_client_certificate",    MXS_MODULE_PARAM_PATH,   NULL,
-                 MXS_MODULE_OPT_PATH_R_OK},
-                {"ssl_client_key",            MXS_MODULE_PARAM_PATH,   NULL,
-                 MXS_MODULE_OPT_PATH_R_OK},
-                {"ssl_CA_cert",               MXS_MODULE_PARAM_PATH,   NULL,
-                 MXS_MODULE_OPT_PATH_R_OK},
-                {"exchange_type",             MXS_MODULE_PARAM_STRING,
-                 "direct"},
-                {"logging_trigger",           MXS_MODULE_PARAM_ENUM,   "all",
-                 MXS_MODULE_OPT_NONE,
-                 trigger_values},
-                {"logging_source_user",       MXS_MODULE_PARAM_STRING},
-                {"logging_source_host",       MXS_MODULE_PARAM_STRING},
-                {"logging_schema",            MXS_MODULE_PARAM_STRING},
-                {"logging_object",            MXS_MODULE_PARAM_STRING},
-                {"logging_log_all",           MXS_MODULE_PARAM_BOOL,
-                 "false"},
-                {"logging_strict",            MXS_MODULE_PARAM_BOOL,
-                 "true"},
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+                "ssl_client_certificate",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_R_OK
+            },
+            {
+                "ssl_client_key",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_R_OK
+            },
+            {
+                "ssl_CA_cert",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_R_OK},
 
-        return &info;
-    }
+            {
+                "logging_trigger",
+                MXS_MODULE_PARAM_ENUM,
+                "all",
+                MXS_MODULE_OPT_NONE,
+                trigger_values
+            },
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+
+    return &info;
+}
 }
 
 /**

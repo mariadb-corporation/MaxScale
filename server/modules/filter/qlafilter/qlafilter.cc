@@ -204,7 +204,7 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
 
 QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session)
 {
-    auto my_session = new (std::nothrow) QlaFilterSession(*this, session);
+    auto my_session = new(std::nothrow) QlaFilterSession(*this, session);
     if (my_session)
     {
         if (!my_session->prepare())
@@ -311,7 +311,7 @@ void QlaInstance::diagnostics(DCB* dcb) const
     }
     if (!m_settings.exclude.empty())
     {
-         output += string_printf("\t\tExclude queries that match     %s\n", m_settings.exclude.c_str());
+        output += string_printf("\t\tExclude queries that match     %s\n", m_settings.exclude.c_str());
     }
 
     output += string_printf("\t\tColumn separator     %s\n", m_settings.separator.c_str());
@@ -878,7 +878,6 @@ void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
     {
         auto my_instance = static_cast<QlaInstance*>(instance);
         my_instance->diagnostics(dcb);
-
     }
 }
 
@@ -910,7 +909,6 @@ bool cb_log(const MODULECMD_ARG* argv, json_t** output)
 
     return instance->read_to_json(start, end, output);
 }
-
 }
 
 /**

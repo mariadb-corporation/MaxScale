@@ -74,7 +74,7 @@ public:
                                    uint32_t flags,
                                    uint32_t soft_ttl,
                                    uint32_t hard_ttl,
-                                   GWBUF**  ppResult)
+                                   GWBUF** ppResult)
     {
         mxb_assert(pCache_storage);
         mxb_assert(pKey);

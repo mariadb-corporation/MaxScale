@@ -39,7 +39,6 @@ const MXS_ENUM_VALUE option_values[] =
     {"extended",   PCRE2_EXTENDED},
     {NULL}
 };
-
 }
 
 class CCRFilter;
@@ -62,7 +61,7 @@ private:
     CCRFilter&        m_instance;
     int               m_hints_left = 0;             /* Number of hints left to add to queries */
     time_t            m_last_modification = 0;      /* Time of the last data modifying operation */
-    pcre2_match_data* m_md = nullptr;                  /* PCRE2 match data */
+    pcre2_match_data* m_md = nullptr;               /* PCRE2 match data */
 
     enum CcrHintValue
     {
@@ -183,8 +182,8 @@ private:
     int m_count = 0;    /* Number of hints to add after each operation that modifies data. */
 
     LagStats    m_stats;
-    pcre2_code* re = nullptr;          /* Compiled regex text of match */
-    pcre2_code* nore = nullptr;        /* Compiled regex text of ignore */
+    pcre2_code* re = nullptr;       /* Compiled regex text of match */
+    pcre2_code* nore = nullptr;     /* Compiled regex text of ignore */
     uint32_t    ovector_size = 0;   /* PCRE2 match data ovector size */
 };
 
@@ -343,16 +342,22 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.1.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
         &CCRFilter::s_object,
-        NULL,                       /* Process init. */
-        NULL,                       /* Process finish. */
-        NULL,                       /* Thread init. */
-        NULL,                       /* Thread finish. */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
-            {"count",              MXS_MODULE_PARAM_COUNT, "0"},
-            {"time",               MXS_MODULE_PARAM_DURATION, "60s"},
-            {PARAM_MATCH,          MXS_MODULE_PARAM_REGEX},
-            {PARAM_IGNORE,         MXS_MODULE_PARAM_REGEX},
-            {"options",            MXS_MODULE_PARAM_ENUM, "ignorecase", MXS_MODULE_OPT_NONE, option_values},
+            {"count",                 MXS_MODULE_PARAM_COUNT,     "0"  },
+            {"time",                  MXS_MODULE_PARAM_DURATION,  "60s"},
+            {PARAM_MATCH,             MXS_MODULE_PARAM_REGEX},
+            {PARAM_IGNORE,            MXS_MODULE_PARAM_REGEX},
+            {
+                "options",
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };

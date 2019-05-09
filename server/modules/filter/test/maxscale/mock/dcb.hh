@@ -46,8 +46,8 @@ public:
      * @param pHandler  Optional handler.
      */
     Dcb(MXS_SESSION* pSession,
-        const char*  zUser,
-        const char*  zHost,
+        const char* zUser,
+        const char* zHost,
         Handler* pHandler = NULL);
     ~Dcb();
 

@@ -112,7 +112,7 @@ public:
      */
     cache_result_t get_key(const char* zDefault_db,
                            const GWBUF* pQuery,
-                           CACHE_KEY*   pKey) const;
+                           CACHE_KEY* pKey) const;
 
     /**
      * Returns a key for the statement. Does not take the current config
@@ -126,7 +126,7 @@ public:
      */
     static cache_result_t get_default_key(const char* zDefault_db,
                                           const GWBUF* pQuery,
-                                          CACHE_KEY*   pKey);
+                                          CACHE_KEY* pKey);
 
     /**
      * See @Storage::get_value
@@ -135,7 +135,7 @@ public:
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
-                                     GWBUF**  ppValue) const = 0;
+                                     GWBUF** ppValue) const = 0;
 
     /**
      * See @Storage::put_value

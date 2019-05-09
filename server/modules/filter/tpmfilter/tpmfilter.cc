@@ -160,51 +160,51 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static const char description[] = "Transaction Performance Monitoring filter";
+    static MXS_FILTER_OBJECT MyObject =
     {
-        static const char description[] = "Transaction Performance Monitoring filter";
-        static MXS_FILTER_OBJECT MyObject =
-        {
-            createInstance,
-            newSession,
-            closeSession,
-            freeSession,
-            setDownstream,
-            setUpstream,
-            routeQuery,
-            clientReply,
-            diagnostic,
-            diagnostic_json,
-            getCapabilities,
-            destroyInstance
-        };
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        diagnostic_json,
+        getCapabilities,
+        destroyInstance
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_GA,
+        MXS_FILTER_VERSION,
+        description,
+        "V1.0.1",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
+        &MyObject,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
-            MXS_MODULE_API_FILTER,
-            MXS_MODULE_GA,
-            MXS_FILTER_VERSION,
-            description,
-            "V1.0.1",
-            RCAP_TYPE_CONTIGUOUS_INPUT,
-            &MyObject,
-            NULL,
-            NULL,
-            NULL,
-            NULL,
-            {
-                {"named_pipe",         MXS_MODULE_PARAM_STRING,  DEFAULT_NAMED_PIPE     },
-                {"filename",           MXS_MODULE_PARAM_STRING,  DEFAULT_FILE_NAME      },
-                {"delimiter",          MXS_MODULE_PARAM_STRING,  DEFAULT_LOG_DELIMITER  },
-                {"query_delimiter",    MXS_MODULE_PARAM_STRING,  DEFAULT_QUERY_DELIMITER},
-                {"source",             MXS_MODULE_PARAM_STRING},
-                {"user",               MXS_MODULE_PARAM_STRING},
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {"named_pipe",         MXS_MODULE_PARAM_STRING,  DEFAULT_NAMED_PIPE     },
+            {"filename",           MXS_MODULE_PARAM_STRING,  DEFAULT_FILE_NAME      },
+            {"delimiter",          MXS_MODULE_PARAM_STRING,  DEFAULT_LOG_DELIMITER  },
+            {"query_delimiter",    MXS_MODULE_PARAM_STRING,  DEFAULT_QUERY_DELIMITER},
+            {"source",             MXS_MODULE_PARAM_STRING},
+            {"user",               MXS_MODULE_PARAM_STRING},
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
 
 /**

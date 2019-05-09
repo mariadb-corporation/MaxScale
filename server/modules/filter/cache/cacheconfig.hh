@@ -42,7 +42,7 @@ public:
     ~CacheConfig();
 
     CacheConfig(const CacheConfig&) = delete;
-    CacheConfig& operator = (const CacheConfig&) = delete;
+    CacheConfig& operator=(const CacheConfig&) = delete;
 
     using milliseconds = std::chrono::milliseconds;
 
@@ -60,9 +60,9 @@ public:
     config::Enum<cache_selects_t>      selects;
     config::Enum<cache_in_trxs_t>      cache_in_trxs;
     config::Bool                       enabled;
-    char*                              zStorage_options { nullptr}; /**< Raw options for storage module. */
-    char**                             storage_argv { nullptr };    /**< Cooked options for storage module. */
-    int                                storage_argc { 0 };          /**< Number of cooked options. */
+    char*                              zStorage_options {nullptr};  /**< Raw options for storage module. */
+    char**                             storage_argv {nullptr};      /**< Cooked options for storage module. */
+    int                                storage_argc {0};            /**< Number of cooked options. */
 
     static const config::Specification& specification()
     {
@@ -73,7 +73,7 @@ private:
     bool configure() override;
 
 private:
-    static config::Specification                   s_specification;
+    static config::Specification s_specification;
 
     static config::ParamString                     s_storage;
     static config::ParamString                     s_storage_options;

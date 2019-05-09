@@ -45,7 +45,7 @@ cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
-                                       GWBUF**  ppValue) const
+                                       GWBUF** ppValue) const
 {
     std::lock_guard<std::mutex> guard(m_lock);
 

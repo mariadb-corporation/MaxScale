@@ -50,7 +50,7 @@ CachePT::CachePT(const std::string& name,
                  const CacheConfig* pConfig,
                  const std::vector<SCacheRules>& rules,
                  SStorageFactory sFactory,
-                 const Caches&   caches)
+                 const Caches& caches)
     : Cache(name, pConfig, rules, sFactory)
     , m_caches(caches)
 {
@@ -131,7 +131,7 @@ cache_result_t CachePT::get_value(const CACHE_KEY& key,
                                   uint32_t flags,
                                   uint32_t soft_ttl,
                                   uint32_t hard_ttl,
-                                  GWBUF**  ppValue) const
+                                  GWBUF** ppValue) const
 {
     return thread_cache().get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }

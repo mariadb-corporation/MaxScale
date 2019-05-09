@@ -43,7 +43,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                                           /* Thread init. */
         NULL,                                                           /* Thread finish. */
         {
-            {MAX_QPS_CFG,                                               MXS_MODULE_PARAM_INT },
+            {MAX_QPS_CFG,                                               MXS_MODULE_PARAM_INT      },
             {SAMPLING_DURATION_CFG,                                     MXS_MODULE_PARAM_DURATION, "250ms"},
             {THROTTLE_DURATION_CFG,                                     MXS_MODULE_PARAM_DURATION },
             {CONTINUOUS_DURATION_CFG,                                   MXS_MODULE_PARAM_DURATION, "2000ms"},
@@ -57,7 +57,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 namespace throttle
 {
 
-ThrottleFilter::ThrottleFilter(const ThrottleConfig& config) : m_config(config)
+ThrottleFilter::ThrottleFilter(const ThrottleConfig& config)
+    : m_config(config)
 {
 }
 

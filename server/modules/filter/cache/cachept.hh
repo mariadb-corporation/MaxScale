@@ -36,7 +36,7 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF**  ppValue) const;
+                             GWBUF** ppValue) const;
 
     cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue);
 
@@ -50,7 +50,7 @@ private:
             const CacheConfig* pConfig,
             const std::vector<SCacheRules>& rules,
             SStorageFactory sFactory,
-            const Caches&   caches);
+            const Caches& caches);
 
     static CachePT* Create(const std::string& name,
                            const CacheConfig* pConfig,

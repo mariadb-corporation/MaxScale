@@ -56,7 +56,7 @@ cache_result_t CacheSimple::get_value(const CACHE_KEY& key,
                                       uint32_t flags,
                                       uint32_t soft_ttl,
                                       uint32_t hard_ttl,
-                                      GWBUF**  ppValue) const
+                                      GWBUF** ppValue) const
 {
     return m_pStorage->get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }

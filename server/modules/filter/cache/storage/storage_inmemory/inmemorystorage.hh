@@ -37,7 +37,7 @@ public:
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
-                                     GWBUF**  ppResult) = 0;
+                                     GWBUF** ppResult) = 0;
     virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF& value) = 0;
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
@@ -55,7 +55,7 @@ protected:
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
-                                GWBUF**  ppResult);
+                                GWBUF** ppResult);
     cache_result_t do_put_value(const CACHE_KEY& key, const GWBUF& value);
     cache_result_t do_del_value(const CACHE_KEY& key);
 

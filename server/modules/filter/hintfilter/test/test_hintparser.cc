@@ -36,7 +36,7 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
         if (it == expected.end())
         {
             std::cout << "Too much output: " << std::string(output.first, output.second) << std::endl;
-            errors++;;
+            errors++;
             break;
         }
 
@@ -46,12 +46,12 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
         if (have != need)
         {
             std::cout << "Need " << need << " bytes but only have " << have << std::endl;
-            errors++;;
+            errors++;
         }
         else if (!std::equal(output.first, output.second, it->begin()))
         {
             std::cout << "Output not equal to expected output" << std::endl;
-            errors++;;
+            errors++;
         }
 
         if (!rval)
@@ -69,7 +69,7 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
     {
         std::cout << "Not enough output, need " << std::distance(it, expected.end())
                   << " more comments" << std::endl;
-        errors++;;
+        errors++;
     }
 }
 
@@ -93,7 +93,7 @@ void test_parse(const std::string& input, int expected_type)
     else if (hint && hint->type != expected_type)
     {
         std::cout << "Expected hint of type " << expected_type << " but got type "
-            << (int)hint->type << ": " << input << std::endl;
+                  << (int)hint->type << ": " << input << std::endl;
         errors++;
     }
 

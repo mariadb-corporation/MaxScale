@@ -107,7 +107,7 @@ private:
     Backend*               m_pBackend;
     FilterModule::Session* m_pUpstream_filter_session;
 
-    maxscale::mock::Session*   m_pSession;
+    maxscale::mock::Session* m_pSession;
 };
 }
 }

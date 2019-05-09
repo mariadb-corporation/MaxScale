@@ -17,24 +17,23 @@
 namespace
 {
 
-const char config_name_check_subqueries[]          = "check_subqueries";
-const char config_name_check_unions[]              = "check_unions";
-const char config_name_check_user_variables[]      = "check_user_variables";
-const char config_name_large_payload[]             = "large_payload";
-const char config_name_prevent_function_usage[]    = "prevent_function_usage";
-const char config_name_require_fully_parsed[]      = "require_fully_parsed";
-const char config_name_rules[]                     = "rules";
-const char config_name_warn_type_mismatch[]        = "warn_type_mismatch";
+const char config_name_check_subqueries[] = "check_subqueries";
+const char config_name_check_unions[] = "check_unions";
+const char config_name_check_user_variables[] = "check_user_variables";
+const char config_name_large_payload[] = "large_payload";
+const char config_name_prevent_function_usage[] = "prevent_function_usage";
+const char config_name_require_fully_parsed[] = "require_fully_parsed";
+const char config_name_rules[] = "rules";
+const char config_name_warn_type_mismatch[] = "warn_type_mismatch";
 const char config_name_treat_string_arg_as_field[] = "treat_string_arg_as_field";
 
 
-const char config_value_abort[]  = "abort";
+const char config_value_abort[] = "abort";
 const char config_value_always[] = "always";
 const char config_value_ignore[] = "ignore";
-const char config_value_never[]  = "never";
+const char config_value_never[] = "never";
 
 const char config_value_true[] = "true";
-
 }
 
 /*

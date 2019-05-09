@@ -124,7 +124,7 @@ json_t* Cache::show_json() const
 
 cache_result_t Cache::get_key(const char* zDefault_db,
                               const GWBUF* pQuery,
-                              CACHE_KEY*   pKey) const
+                              CACHE_KEY* pKey) const
 {
     // TODO: Take config into account.
     return get_default_key(zDefault_db, pQuery, pKey);
@@ -133,7 +133,7 @@ cache_result_t Cache::get_key(const char* zDefault_db,
 // static
 cache_result_t Cache::get_default_key(const char* zDefault_db,
                                       const GWBUF* pQuery,
-                                      CACHE_KEY*   pKey)
+                                      CACHE_KEY* pKey)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(pQuery));
 
@@ -211,7 +211,7 @@ json_t* Cache::do_get_info(uint32_t what) const
 }
 
 
-//static
+// static
 uint64_t Cache::time_ms()
 {
     timespec t;
@@ -219,7 +219,7 @@ uint64_t Cache::time_ms()
     int rv = clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
     if (rv != 0)
     {
-        mxb_assert(errno == EINVAL); // CLOCK_MONOTONIC_COARSE not supported.
+        mxb_assert(errno == EINVAL);    // CLOCK_MONOTONIC_COARSE not supported.
         rv = clock_gettime(CLOCK_MONOTONIC, &t);
         mxb_assert(rv == 0);
     }

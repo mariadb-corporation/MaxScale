@@ -148,7 +148,7 @@ public:
             if (!(m_options & m_option))
             {
                 uint32_t options = (m_options | m_option);
-                MXB_AT_DEBUG(bool rv = )qc_set_options(options);
+                MXB_AT_DEBUG(bool rv = ) qc_set_options(options);
                 mxb_assert(rv);
                 m_disable = true;
             }
@@ -159,7 +159,7 @@ public:
     {
         if (m_disable)
         {
-            MXB_AT_DEBUG(bool rv = )qc_set_options(m_options);
+            MXB_AT_DEBUG(bool rv = ) qc_set_options(m_options);
             mxb_assert(rv);
         }
     }
@@ -169,7 +169,6 @@ private:
     uint32_t m_options;
     bool     m_disable;
 };
-
 }
 
 bool        parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
@@ -1799,8 +1798,8 @@ static char* create_parse_error(Dbfw* my_instance,
 bool rule_matches(Dbfw* my_instance,
                   DbfwSession* my_session,
                   GWBUF* queue,
-                  SRule  rule,
-                  char*  query)
+                  SRule rule,
+                  char* query)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
     char* msg = NULL;

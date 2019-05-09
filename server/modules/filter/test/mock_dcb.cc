@@ -31,8 +31,8 @@ namespace mock
 {
 
 Dcb::Dcb(MXS_SESSION* pSession,
-         const char*  zUser,
-         const char*  zHost,
+         const char* zUser,
+         const char* zHost,
          Handler* pHandler)
     : DCB(DCB::Role::CLIENT, pSession)
     , m_user(zUser)

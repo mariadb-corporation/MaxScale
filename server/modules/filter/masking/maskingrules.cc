@@ -187,7 +187,7 @@ public:
 private:
     AccountRegexp(const string& user,
                   const string& host,
-                  pcre2_code*   pCode)
+                  pcre2_code* pCode)
         : m_user(user)
         , m_host(host)
         , m_pCode(pCode)
@@ -692,7 +692,7 @@ static bool rule_get_common_values(json_t* pRule,
                                    std::string* column,
                                    std::string* table,
                                    std::string* database,
-                                   const char*  rule_type)
+                                   const char* rule_type)
 {
     // Get database, table && column
     json_t* pDatabase = json_object_get(pRule, KEY_DATABASE);
@@ -745,7 +745,7 @@ bool rule_get_values(json_t* pRule,
                      std::string* column,
                      std::string* table,
                      std::string* database,
-                     const char*  rule_type)
+                     const char* rule_type)
 {
     json_t* pKeyObj;
     // Get Key object based on 'rule_type' param
@@ -1174,8 +1174,8 @@ bool MaskingRules::Rule::matches_account(const char* zUser,
 template<class FillIter, class OutIter>
 inline void fill_buffer(FillIter f_first,
                         FillIter f_last,
-                        OutIter  o_first,
-                        OutIter  o_last)
+                        OutIter o_first,
+                        OutIter o_last)
 {
     FillIter pFill = f_first;
     while (o_first != o_last)
@@ -1471,8 +1471,8 @@ const MaskingRules::Rule* MaskingRules::get_rule_for(const QC_FIELD_INFO& field_
 bool MaskingRules::has_rule_for(const char* zUser, const char* zHost) const
 {
     auto i = std::find_if(m_rules.begin(), m_rules.end(), [zUser, zHost](SRule sRule) {
-            return sRule->matches_account(zUser, zHost);
-        });
+                              return sRule->matches_account(zUser, zHost);
+                          });
 
     return i != m_rules.end();
 }

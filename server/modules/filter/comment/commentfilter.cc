@@ -50,7 +50,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-CommentFilter::CommentFilter(std::string comment) : m_comment(comment)
+CommentFilter::CommentFilter(std::string comment)
+    : m_comment(comment)
 {
     MXS_INFO("Comment filter with comment [%s] created.", m_comment.c_str());
 }

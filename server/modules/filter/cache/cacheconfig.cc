@@ -41,7 +41,7 @@ config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_hard_ttl(
     "used before it is discarded and the result is fetched from the backend. "
     "See also 'soft_ttl'.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::milliseconds { 0 }
+    std::chrono::milliseconds {0}
     );
 
 config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_soft_ttl(
@@ -51,7 +51,7 @@ config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_soft_ttl(
     "used before the first client querying for the result is used for refreshing "
     "the cached data from the backend. See also 'hard_ttl'.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::milliseconds { 0 }
+    std::chrono::milliseconds {0}
     );
 
 config::ParamCount CacheConfig::s_max_resultset_rows(
@@ -107,10 +107,10 @@ config::ParamEnum<cache_thread_model_t> CacheConfig::s_thread_model(
     &s_specification,
     "cached_data",
     "An enumeration option specifying how data is shared between threads.",
-    {
-        { CACHE_THREAD_MODEL_MT, "shared" },
-        { CACHE_THREAD_MODEL_ST, "thread_specific" }
-    },
+{
+    {CACHE_THREAD_MODEL_MT, "shared"},
+    {CACHE_THREAD_MODEL_ST, "thread_specific"}
+},
     CACHE_THREAD_MODEL_ST
     );
 
@@ -119,10 +119,10 @@ config::ParamEnum<cache_selects_t> CacheConfig::s_selects(
     "selects",
     "An enumeration option specifying what approach the cache should take with "
     "respect to SELECT statements.",
-    {
-        { CACHE_SELECTS_ASSUME_CACHEABLE, "assume_cacheable" },
-        { CACHE_SELECTS_VERIFY_CACHEABLE, "verify_cacheable" }
-    },
+{
+    {CACHE_SELECTS_ASSUME_CACHEABLE, "assume_cacheable"},
+    {CACHE_SELECTS_VERIFY_CACHEABLE, "verify_cacheable"}
+},
     CACHE_SELECTS_ASSUME_CACHEABLE
     );
 
@@ -131,11 +131,11 @@ config::ParamEnum<cache_in_trxs_t> CacheConfig::s_cache_in_trxs(
     "cache_in_transactions",
     "An enumeration option specifying how the cache should behave when there "
     "are active transactions.",
-    {
-        { CACHE_IN_TRXS_NEVER, "never" },
-        { CACHE_IN_TRXS_READ_ONLY, "read_only_transactions" },
-        { CACHE_IN_TRXS_ALL, "all_transactions" }
-    },
+{
+    {CACHE_IN_TRXS_NEVER, "never"},
+    {CACHE_IN_TRXS_READ_ONLY, "read_only_transactions"},
+    {CACHE_IN_TRXS_ALL, "all_transactions"}
+},
     CACHE_IN_TRXS_ALL
     );
 
@@ -224,7 +224,7 @@ bool CacheConfig::configure()
     if (this->soft_ttl > this->hard_ttl)
     {
         MXS_WARNING("The value of 'soft_ttl' must be less than or equal to that of 'hard_ttl'. "
-                        "Setting 'soft_ttl' to the same value as 'hard_ttl'.");
+                    "Setting 'soft_ttl' to the same value as 'hard_ttl'.");
         this->soft_ttl = this->hard_ttl;
     }
 

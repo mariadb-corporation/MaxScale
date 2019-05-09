@@ -67,7 +67,7 @@ public:
             if (!(m_options & m_option))
             {
                 uint32_t options = (m_options | m_option);
-                MXB_AT_DEBUG(bool rv = )qc_set_options(options);
+                MXB_AT_DEBUG(bool rv = ) qc_set_options(options);
                 mxb_assert(rv);
                 m_disable = true;
             }
@@ -78,7 +78,7 @@ public:
     {
         if (m_disable)
         {
-            MXB_AT_DEBUG(bool rv = )qc_set_options(m_options);
+            MXB_AT_DEBUG(bool rv = ) qc_set_options(m_options);
             mxb_assert(rv);
         }
     }
@@ -88,7 +88,6 @@ private:
     uint32_t m_options;
     bool     m_disable;
 };
-
 }
 
 MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter)
@@ -580,19 +579,19 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
     SMaskingRules sRules = m_filter.rules();
 
     auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-        const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+            const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
 
-        return pRule ? true : false;
-    };
+            return pRule ? true : false;
+        };
 
     auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
-        const QC_FIELD_INFO* begin = function_info.fields;
-        const QC_FIELD_INFO* end = begin + function_info.n_fields;
+            const QC_FIELD_INFO* begin = function_info.fields;
+            const QC_FIELD_INFO* end = begin + function_info.n_fields;
 
-        auto i = std::find_if(begin, end, pred1);
+            auto i = std::find_if(begin, end, pred1);
 
-        return i != end;
-    };
+            return i != end;
+        };
 
     const QC_FUNCTION_INFO* pInfos;
     size_t nInfos;
@@ -627,20 +626,20 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     SMaskingRules sRules = m_filter.rules();
 
     auto pred = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-        bool rv = false;
+            bool rv = false;
 
-        if (strcmp(field_info.column, "*") == 0)
-        {
-            // If "*" is used, then we must block if there is any rule for the current user.
-            rv = sRules->has_rule_for(zUser, zHost);
-        }
-        else
-        {
-            rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
-        }
+            if (strcmp(field_info.column, "*") == 0)
+            {
+                // If "*" is used, then we must block if there is any rule for the current user.
+                rv = sRules->has_rule_for(zUser, zHost);
+            }
+            else
+            {
+                rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+            }
 
-        return rv;
-    };
+            return rv;
+        };
 
     const QC_FIELD_INFO* pInfos;
     size_t nInfos;
@@ -701,23 +700,23 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
     }
 
     auto pred = [&sRules, mask, zUser, zHost](const QC_FIELD_INFO& field_info) {
-        bool rv = false;
+            bool rv = false;
 
-        if (field_info.context & mask)
-        {
-            if (strcmp(field_info.column, "*") == 0)
+            if (field_info.context & mask)
             {
-                // If "*" is used, then we must block if there is any rule for the current user.
-                rv = sRules->has_rule_for(zUser, zHost);
+                if (strcmp(field_info.column, "*") == 0)
+                {
+                    // If "*" is used, then we must block if there is any rule for the current user.
+                    rv = sRules->has_rule_for(zUser, zHost);
+                }
+                else
+                {
+                    rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+                }
             }
-            else
-            {
-                rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
-            }
-        }
 
-        return rv;
-    };
+            return rv;
+        };
 
     const QC_FIELD_INFO* pInfos;
     size_t nInfos;

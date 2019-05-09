@@ -313,6 +313,6 @@ char* create_error(const char* format, ...);
 bool rule_matches(Dbfw* my_instance,
                   DbfwSession* my_session,
                   GWBUF* queue,
-                  SRule  rule,
-                  char*  query);
+                  SRule rule,
+                  char* query);
 bool rule_is_active(SRule rule);

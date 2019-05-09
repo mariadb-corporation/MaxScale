@@ -878,7 +878,7 @@ bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVecto
 }
 
 void RegexHintFilter::set_source_addresses(const std::string& input_host_names,
-                                           SourceHostVector&  source_hosts,
+                                           SourceHostVector& source_hosts,
                                            StringVector& hostnames)
 {
     std::string host_names(input_host_names);

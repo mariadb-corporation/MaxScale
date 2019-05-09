@@ -87,26 +87,26 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_MODULE info =
     {
-        static MXS_MODULE info =
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_ALPHA_RELEASE,
+        MXS_FILTER_VERSION,
+        "A hint parsing filter",
+        "V1.0.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
+        &HintInstance::s_object,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_FILTER,
-            MXS_MODULE_ALPHA_RELEASE,
-            MXS_FILTER_VERSION,
-            "A hint parsing filter",
-            "V1.0.0",
-            RCAP_TYPE_CONTIGUOUS_INPUT,
-            &HintInstance::s_object,
-            NULL,   /* Process init. */
-            NULL,   /* Process finish. */
-            NULL,   /* Thread init. */
-            NULL,   /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }

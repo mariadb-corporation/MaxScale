@@ -47,7 +47,6 @@ extern "C"
 #include <lua.h>
 #include <lualib.h>
 #include <string.h>
-
 }
 
 #include <mutex>
@@ -87,46 +86,46 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_FILTER_OBJECT MyObject =
     {
-        static MXS_FILTER_OBJECT MyObject =
-        {
-            createInstance,
-            newSession,
-            closeSession,
-            freeSession,
-            setDownstream,
-            setUpstream,
-            routeQuery,
-            clientReply,
-            diagnostic,
-            diagnostic_json,
-            getCapabilities,
-            NULL,   // No destroyInstance
-        };
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        diagnostic_json,
+        getCapabilities,
+        NULL,       // No destroyInstance
+    };
 
-        static MXS_MODULE info =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_EXPERIMENTAL,
+        MXS_FILTER_VERSION,
+        "Lua Filter",
+        "V1.0.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
+        &MyObject,
+        NULL,                       /* Process init. */
+        NULL,                       /* Process finish. */
+        NULL,                       /* Thread init. */
+        NULL,                       /* Thread finish. */
         {
-            MXS_MODULE_API_FILTER,
-            MXS_MODULE_EXPERIMENTAL,
-            MXS_FILTER_VERSION,
-            "Lua Filter",
-            "V1.0.0",
-            RCAP_TYPE_CONTIGUOUS_INPUT,
-            &MyObject,
-            NULL,                       /* Process init. */
-            NULL,                       /* Process finish. */
-            NULL,                       /* Thread init. */
-            NULL,                       /* Thread finish. */
-            {
-                {"global_script",      MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
-                {"session_script",     MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {"global_script",      MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {"session_script",     MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
 
 static int id_pool = 0;

@@ -97,47 +97,47 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+
+    static MXS_FILTER_OBJECT MyObject =
     {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        diagnostic_json,
+        getCapabilities,
+        NULL,
+    };
 
-        static MXS_FILTER_OBJECT MyObject =
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_EXPERIMENTAL,
+        MXS_FILTER_VERSION,
+        "Data streaming filter",
+        "1.0.0",
+        RCAP_TYPE_TRANSACTION_TRACKING,
+        &MyObject,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
-            createInstance,
-            newSession,
-            closeSession,
-            freeSession,
-            setDownstream,
-            setUpstream,
-            routeQuery,
-            clientReply,
-            diagnostic,
-            diagnostic_json,
-            getCapabilities,
-            NULL,
-        };
+            {"source",                 MXS_MODULE_PARAM_STRING },
+            {"user",                   MXS_MODULE_PARAM_STRING },
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        static MXS_MODULE info =
-        {
-            MXS_MODULE_API_FILTER,
-            MXS_MODULE_EXPERIMENTAL,
-            MXS_FILTER_VERSION,
-            "Data streaming filter",
-            "1.0.0",
-            RCAP_TYPE_TRANSACTION_TRACKING,
-            &MyObject,
-            NULL,
-            NULL,
-            NULL,
-            NULL,
-            {
-                {"source",                 MXS_MODULE_PARAM_STRING },
-                {"user",                   MXS_MODULE_PARAM_STRING },
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
-
-        return &info;
-    }
+    return &info;
+}
 }
 
 /**

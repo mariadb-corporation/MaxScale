@@ -20,8 +20,8 @@
 extern "C"
 {
 
-    CACHE_STORAGE_API* CacheGetStorageAPI()
-    {
-        return &StorageModule<InMemoryStorage>::s_api;
-    }
+CACHE_STORAGE_API* CacheGetStorageAPI()
+{
+    return &StorageModule<InMemoryStorage>::s_api;
+}
 }

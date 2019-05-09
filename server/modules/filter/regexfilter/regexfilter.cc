@@ -58,13 +58,13 @@ static char* regex_replace(const char* sql,
  */
 struct RegexInstance
 {
-    char*             source;       /*< Source address to restrict matches */
-    char*             user;         /*< User name to restrict matches */
-    char*             match;        /*< Regular expression to match */
-    char*             replace;      /*< Replacement text */
-    pcre2_code*       re;           /*< Compiled regex text */
-    FILE*             logfile;      /*< Log file */
-    bool              log_trace;    /*< Whether messages should be printed to tracelog */
+    char*       source;         /*< Source address to restrict matches */
+    char*       user;           /*< User name to restrict matches */
+    char*       match;          /*< Regular expression to match */
+    char*       replace;        /*< Replacement text */
+    pcre2_code* re;             /*< Compiled regex text */
+    FILE*       logfile;        /*< Log file */
+    bool        log_trace;      /*< Whether messages should be printed to tracelog */
 };
 
 /**
@@ -72,10 +72,10 @@ struct RegexInstance
  */
 struct RegexSession
 {
-    MXS_DOWNSTREAM  down;   /* The downstream filter */
-    pthread_mutex_t lock;
-    int             no_change;      /* No. of unchanged requests */
-    int             replacements;   /* No. of changed requests */
+    MXS_DOWNSTREAM    down; /* The downstream filter */
+    pthread_mutex_t   lock;
+    int               no_change;    /* No. of unchanged requests */
+    int               replacements; /* No. of changed requests */
     pcre2_match_data* match_data;   /*< Matching data used by the compiled regex */
 };
 
@@ -100,73 +100,73 @@ extern "C"
  *
  * @return The module object
  */
-    MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_FILTER_OBJECT MyObject =
     {
-        static MXS_FILTER_OBJECT MyObject =
-        {
-            createInstance,
-            newSession,
-            closeSession,
-            freeSession,
-            setDownstream,
-            NULL,   // No Upstream requirement
-            routeQuery,
-            NULL,   // No clientReply
-            diagnostic,
-            diagnostic_json,
-            getCapabilities,
-            NULL,   // No destroyInstance
-        };
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        NULL,       // No Upstream requirement
+        routeQuery,
+        NULL,       // No clientReply
+        diagnostic,
+        diagnostic_json,
+        getCapabilities,
+        NULL,       // No destroyInstance
+    };
 
-        static const char description[] = "A query rewrite filter that uses regular "
-                                          "expressions to rewrite queries";
-        static MXS_MODULE info =
+    static const char description[] = "A query rewrite filter that uses regular "
+                                      "expressions to rewrite queries";
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_GA,
+        MXS_FILTER_VERSION,
+        description,
+        "V1.1.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
+        &MyObject,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
-            MXS_MODULE_API_FILTER,
-            MXS_MODULE_GA,
-            MXS_FILTER_VERSION,
-            description,
-            "V1.1.0",
-            RCAP_TYPE_CONTIGUOUS_INPUT,
-            &MyObject,
-            NULL,
-            NULL,
-            NULL,
-            NULL,
             {
-                {
-                    "match",
-                    MXS_MODULE_PARAM_STRING,
-                    NULL,
-                    MXS_MODULE_OPT_REQUIRED
-                },
-                {
-                    "replace",
-                    MXS_MODULE_PARAM_STRING,
-                    NULL,
-                    MXS_MODULE_OPT_REQUIRED
-                },
-                {
-                    "options",
-                    MXS_MODULE_PARAM_ENUM,
-                    "ignorecase",
-                    MXS_MODULE_OPT_NONE,
-                    option_values
-                },
-                {
-                    "log_trace",
-                    MXS_MODULE_PARAM_BOOL,
-                    "false"
-                },
-                {"source",                  MXS_MODULE_PARAM_STRING },
-                {"user",                    MXS_MODULE_PARAM_STRING },
-                {"log_file",                MXS_MODULE_PARAM_STRING },
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+                "match",
+                MXS_MODULE_PARAM_STRING,
+                NULL,
+                MXS_MODULE_OPT_REQUIRED
+            },
+            {
+                "replace",
+                MXS_MODULE_PARAM_STRING,
+                NULL,
+                MXS_MODULE_OPT_REQUIRED
+            },
+            {
+                "options",
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
+            },
+            {
+                "log_trace",
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
+            {"source",                  MXS_MODULE_PARAM_STRING },
+            {"user",                    MXS_MODULE_PARAM_STRING },
+            {"log_file",                MXS_MODULE_PARAM_STRING },
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
-        return &info;
-    }
+    return &info;
+}
 }
 
 /**
@@ -247,7 +247,7 @@ bool matching_connection(RegexInstance* my_instance, MXS_SESSION* session)
     {
         rval = false;
     }
-    else if (my_instance->user &&  strcmp(session_get_user(session), my_instance->user) != 0)
+    else if (my_instance->user && strcmp(session_get_user(session), my_instance->user) != 0)
     {
         rval = false;
     }

@@ -76,7 +76,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
                                         uint32_t flags,
                                         uint32_t soft_ttl,
                                         uint32_t hard_ttl,
-                                        GWBUF**  ppValue) const
+                                        GWBUF** ppValue) const
 {
     return access_value(APPROACH_GET, key, flags, soft_ttl, hard_ttl, ppValue);
 }
@@ -220,11 +220,11 @@ cache_result_t LRUStorage::do_get_items(uint64_t* pItems) const
 }
 
 cache_result_t LRUStorage::access_value(access_approach_t approach,
-                                        const CACHE_KEY&  key,
+                                        const CACHE_KEY& key,
                                         uint32_t flags,
                                         uint32_t soft_ttl,
                                         uint32_t hard_ttl,
-                                        GWBUF**  ppValue) const
+                                        GWBUF** ppValue) const
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 

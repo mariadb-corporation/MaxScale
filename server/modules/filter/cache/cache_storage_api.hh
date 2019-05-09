@@ -231,7 +231,7 @@ typedef struct cache_storage_api
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
-                                GWBUF**  result);
+                                GWBUF** result);
 
     /**
      * Put a value to the cache.

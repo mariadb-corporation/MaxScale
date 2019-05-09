@@ -32,7 +32,6 @@ const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 #if INMEMORY_KEY_LENGTH > CACHE_KEY_MAXLEN
 #error storage_inmemory key is too long.
 #endif
-
 }
 
 InMemoryStorage::InMemoryStorage(const string& name, const CACHE_STORAGE_CONFIG& config)
@@ -137,7 +136,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
                                              uint32_t flags,
                                              uint32_t soft_ttl,
                                              uint32_t hard_ttl,
-                                             GWBUF**  ppResult)
+                                             GWBUF** ppResult)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 

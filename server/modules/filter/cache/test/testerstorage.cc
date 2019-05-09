@@ -26,14 +26,14 @@ unsigned int millisleep(unsigned int milliseconds)
     unsigned int seconds = milliseconds / 1000;
     milliseconds -= (seconds * 1000);
 
-    timespec req = { seconds, milliseconds * 1000000 };
-    timespec rem = { 0, 0 };
+    // Parentheses required by uncrustify, otherwise it'll think it's a pointer
+    timespec req = {seconds, (milliseconds * 1000000)};
+    timespec rem = {0, 0};
 
     nanosleep(&req, &rem);
 
     return rem.tv_sec * 1000 + rem.tv_nsec / 1000000;
 }
-
 }
 
 //
