@@ -1319,9 +1319,13 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         && (dcb->server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
         && !(dcb->flags & DCBF_HUNG)
-        && dcb_persistent_clean_count(dcb, owner->id(), false) < dcb->server->persistpoolmax
-        && mxb::atomic::load(&dcb->server->stats.n_persistent) < dcb->server->persistpoolmax)
+        && dcb_persistent_clean_count(dcb, owner->id(), false) < dcb->server->persistpoolmax)
     {
+        if (!mxb::atomic::add_limited(&dcb->server->stats.n_persistent, 1, (int)dcb->server->persistpoolmax))
+        {
+            return false;
+        }
+
         DCB_CALLBACK* loopcallback;
         MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->user);
         dcb->was_persistent = false;
@@ -1357,7 +1361,6 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
 
         dcb->nextpersistent = dcb->server->persistent[owner->id()];
         dcb->server->persistent[owner->id()] = dcb;
-        mxb::atomic::add(&dcb->server->stats.n_persistent, 1);
         MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
         mxb_assert(rc > 0);
         return true;
