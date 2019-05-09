@@ -42,7 +42,6 @@ bool handle_unsoftfail(const MODULECMD_ARG* args, json_t** error_out)
 
     return pMon->unsoftfail(pServer, error_out);
 }
-
 }
 
 /**

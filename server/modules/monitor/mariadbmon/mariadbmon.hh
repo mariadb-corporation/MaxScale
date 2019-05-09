@@ -203,7 +203,7 @@ private:
     bool m_ignore_external_masters = false; /* Ignore masters outside of the monitor configuration.
                                              * TODO: requires work */
     bool m_assume_unique_hostnames = true;  /* Are server hostnames consistent between MaxScale and servers */
-    int m_failcount = 1;                    /* Number of ticks master must be down before it's considered
+    int  m_failcount = 1;                   /* Number of ticks master must be down before it's considered
                                              * totally down, allowing failover or master change. */
 
     // Cluster operations activation settings
@@ -291,8 +291,8 @@ private:
     void handle_auto_rejoin();
 
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
-                                                maxbase::Duration*   event_age_out,
-                                                maxbase::Duration*   delay_out);
+                                                maxbase::Duration* event_age_out,
+                                                maxbase::Duration* delay_out);
     std::unique_ptr<SwitchoverParams> switchover_prepare(SERVER* new_master, SERVER* current_master,
                                                          Log log_mode, json_t** error_out);
     std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, json_t** error_out);

@@ -148,8 +148,8 @@ public:
      * 'update_replication_settings' before use. */
     ReplicationSettings m_rpl_settings;
 
-    bool         m_query_events; /* Copy of monitor->m_handle_event_scheduler. TODO: move elsewhere */
-    EventNameSet m_enabled_events; /* Enabled scheduled events */
+    bool         m_query_events;    /* Copy of monitor->m_handle_event_scheduler. TODO: move elsewhere */
+    EventNameSet m_enabled_events;  /* Enabled scheduled events */
 
     bool m_print_update_errormsg = true;    /* Should an update error be printed? */
 

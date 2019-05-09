@@ -58,25 +58,25 @@ protected:
     void post_tick();
 
 private:
-    int           m_disableMasterFailback;      /**< Monitor flag for Galera Cluster Master failback */
-    int           m_availableWhenDonor;         /**< Monitor flag for Galera Cluster Donor availability */
-    bool          m_disableMasterRoleSetting;   /**< Monitor flag to disable setting master role */
-    bool          m_root_node_as_master;        /**< Whether we require that the Master should
-                                                 * have a wsrep_local_index of 0 */
-    bool m_use_priority;                        /**< Use server priorities */
-    bool m_set_donor_nodes;                     /**< set the wrep_sst_donor variable with an
-                                                 * ordered list of nodes */
-    std::string m_cluster_uuid;                 /**< The Cluster UUID */
-    bool        m_log_no_members;               /**< Should we log if no member are found. */
-    NodeMap     m_info;                         /**< Contains Galera Cluster variables of all nodes */
-    int         m_cluster_size;                 /**< How many nodes in the cluster */
+    int  m_disableMasterFailback;       /**< Monitor flag for Galera Cluster Master failback */
+    int  m_availableWhenDonor;          /**< Monitor flag for Galera Cluster Donor availability */
+    bool m_disableMasterRoleSetting;    /**< Monitor flag to disable setting master role */
+    bool m_root_node_as_master;         /**< Whether we require that the Master should
+                                         * have a wsrep_local_index of 0 */
+    bool m_use_priority;                /**< Use server priorities */
+    bool m_set_donor_nodes;             /**< set the wrep_sst_donor variable with an
+                                         * ordered list of nodes */
+    std::string m_cluster_uuid;         /**< The Cluster UUID */
+    bool        m_log_no_members;       /**< Should we log if no member are found. */
+    NodeMap     m_info;                 /**< Contains Galera Cluster variables of all nodes */
+    int         m_cluster_size;         /**< How many nodes in the cluster */
 
     GaleraMonitor(const std::string& name, const std::string& module);
 
     bool detect_cluster_size(const int n_nodes,
                              const char* candidate_uuid,
-                             const int   candidate_size);
-    mxs::MonitorServer*   get_candidate_master();
-    void                  set_galera_cluster();
-    void                  update_sst_donor_nodes(int is_cluster);
+                             const int candidate_size);
+    mxs::MonitorServer* get_candidate_master();
+    void                set_galera_cluster();
+    void                update_sst_donor_nodes(int is_cluster);
 };

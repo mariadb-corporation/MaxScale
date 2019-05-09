@@ -74,7 +74,7 @@ static uint64_t            getCapabilities(MXS_ROUTER* instance);
 static void                handleError(MXS_ROUTER* instance,
                                        MXS_ROUTER_SESSION* router_session,
                                        GWBUF* errbuf,
-                                       DCB*   backend_dcb,
+                                       DCB* backend_dcb,
                                        mxs_error_action_t action,
                                        bool* succp);
 
@@ -263,7 +263,7 @@ static void freeSession(MXS_ROUTER* router_instance,
 static void handleError(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* errbuf,
-                        DCB*   backend_dcb,
+                        DCB* backend_dcb,
                         mxs_error_action_t action,
                         bool* succp)
 

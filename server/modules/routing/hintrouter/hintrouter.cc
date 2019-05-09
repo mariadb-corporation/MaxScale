@@ -34,7 +34,7 @@ static const char MAX_SLAVES[] = "max_slaves";
 
 HintRouter::HintRouter(SERVICE* pService,
                        HINT_TYPE default_action,
-                       string&   default_server,
+                       string& default_server,
                        int max_slaves)
     : maxscale::Router<HintRouter, HintRouterSession>(pService)
     , m_routed_to_master(0)
@@ -191,7 +191,7 @@ json_t* HintRouter::diagnostics_json() const
 }
 
 Dcb HintRouter::connect_to_backend(MXS_SESSION* session,
-                                   SERVER_REF*  sref,
+                                   SERVER_REF* sref,
                                    HintRouterSession::BackendMap* all_backends)
 {
     Dcb result(NULL);

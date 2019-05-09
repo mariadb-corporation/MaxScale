@@ -204,7 +204,7 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
 
 SERVER* SchemaRouterSession::resolve_query_target(GWBUF* pPacket,
                                                   uint32_t type,
-                                                  uint8_t  command,
+                                                  uint8_t command,
                                                   enum route_target& route_target)
 {
     SERVER* target = NULL;
@@ -604,7 +604,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 }
 
 void SchemaRouterSession::handleError(GWBUF* pMessage,
-                                      DCB*   pProblem,
+                                      DCB* pProblem,
                                       mxs_error_action_t action,
                                       bool* pSuccess)
 {

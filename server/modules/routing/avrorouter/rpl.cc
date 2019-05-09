@@ -613,7 +613,7 @@ Rpl::Rpl(SERVICE* service,
          SRowEventHandler handler,
          pcre2_code* match,
          pcre2_code* exclude,
-         gtid_pos_t  gtid)
+         gtid_pos_t gtid)
     : m_handler(handler)
     , m_service(service)
     , m_binlog_checksum(0)

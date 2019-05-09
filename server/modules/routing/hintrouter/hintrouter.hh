@@ -44,7 +44,7 @@ public:
 private:
     HintRouter(SERVICE* pService,
                HINT_TYPE default_action,
-               string&   default_server,
+               string& default_server,
                int max_slaves);
 
     HINT_TYPE    m_default_action;
@@ -56,6 +56,6 @@ private:
     HintRouter& operator=(const HintRouter&);
 
     static Dcb connect_to_backend(MXS_SESSION* session,
-                                  SERVER_REF*  sref,
+                                  SERVER_REF* sref,
                                   HintRouterSession::BackendMap* all_backends);
 };

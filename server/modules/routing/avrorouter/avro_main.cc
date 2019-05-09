@@ -218,7 +218,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 static void clientReply(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* queue,
-                        DCB*   backend_dcb)
+                        DCB* backend_dcb)
 {
     /** We should never end up here */
     mxb_assert(false);
@@ -241,7 +241,7 @@ static void clientReply(MXS_ROUTER* instance,
 static void errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       DCB*   backend_dcb,
+                       DCB* backend_dcb,
                        mxs_error_action_t action,
                        bool* succp)
 {
@@ -493,6 +493,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL
     };
 
+    auto caps = RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_AUTH;
+
     static MXS_MODULE info =
     {
         MXS_MODULE_API_ROUTER,
@@ -500,12 +502,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "Binlogrouter",
         "V1.0.0",
-        RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_AUTH,
+        caps,
         &MyObject,
-        NULL,                                       /* Process init. */
-        NULL,                                       /* Process finish. */
-        NULL,                                       /* Thread init. */
-        NULL,                                       /* Thread finish. */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
             {
                 "binlogdir",
@@ -525,17 +527,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_X_OK
                 | MXS_MODULE_OPT_PATH_CREAT
             },
-            {"source", MXS_MODULE_PARAM_SERVICE},
-            {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
-            {"group_rows", MXS_MODULE_PARAM_COUNT, "1000"},
-            {"group_trx", MXS_MODULE_PARAM_COUNT, "1"},
-            {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
-            {"block_size", MXS_MODULE_PARAM_SIZE, "0"},
-            {"codec", MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
-            {"match", MXS_MODULE_PARAM_REGEX},
-            {"exclude", MXS_MODULE_PARAM_REGEX},
-            {"server_id", MXS_MODULE_PARAM_STRING, "1234"},
-            {"gtid_start_pos", MXS_MODULE_PARAM_STRING},
+            {"source",                MXS_MODULE_PARAM_SERVICE},
+            {"filestem",              MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
+            {"group_rows",            MXS_MODULE_PARAM_COUNT, "1000"},
+            {"group_trx",             MXS_MODULE_PARAM_COUNT, "1"},
+            {"start_index",           MXS_MODULE_PARAM_COUNT, "1"},
+            {"block_size",            MXS_MODULE_PARAM_SIZE, "0"},
+            {"codec",                 MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
+            {"match",                 MXS_MODULE_PARAM_REGEX  },
+            {"exclude",               MXS_MODULE_PARAM_REGEX  },
+            {"server_id",             MXS_MODULE_PARAM_STRING, "1234"},
+            {"gtid_start_pos",        MXS_MODULE_PARAM_STRING },
             {MXS_END_MODULE_PARAMS}
         }
     };

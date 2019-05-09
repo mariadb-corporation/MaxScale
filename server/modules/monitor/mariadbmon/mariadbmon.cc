@@ -297,7 +297,7 @@ void MariaDBMonitor::diagnostics(DCB* dcb) const
 string MariaDBMonitor::diagnostics_to_string() const
 {
     string rval;
-    rval.reserve(1000); // Enough for basic output.
+    rval.reserve(1000);     // Enough for basic output.
 
     rval += string_printf("Automatic failover:     %s\n", m_auto_failover ? "Enabled" : "Disabled");
     rval += string_printf("Failcount:              %d\n", m_failcount);
@@ -398,8 +398,8 @@ void MariaDBMonitor::tick()
     const auto& conn_settings = m_settings.conn_settings;
 
     auto update_task = [should_update_disk_space, conn_settings](MariaDBServer* server) {
-        server->update_server(should_update_disk_space, conn_settings);
-    };
+            server->update_server(should_update_disk_space, conn_settings);
+        };
 
     // Asynchronously query all servers for their status.
     std::vector<std::future<void>> futures;
@@ -975,40 +975,40 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                       /* Thread finish. */
         {
             {
-                "detect_replication_lag",            MXS_MODULE_PARAM_BOOL,   "false"
+                "detect_replication_lag",            MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                "detect_stale_master",               MXS_MODULE_PARAM_BOOL,   "true"
+                "detect_stale_master",               MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                "detect_stale_slave",                MXS_MODULE_PARAM_BOOL,   "true"
+                "detect_stale_slave",                MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                "mysql51_replication",               MXS_MODULE_PARAM_BOOL,   "false",
+                "mysql51_replication",               MXS_MODULE_PARAM_BOOL,      "false",
                 MXS_MODULE_OPT_DEPRECATED
             },
             {
-                "multimaster",                       MXS_MODULE_PARAM_BOOL,   "false",
+                "multimaster",                       MXS_MODULE_PARAM_BOOL,      "false",
                 MXS_MODULE_OPT_DEPRECATED
             },
             {
-                CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,   "true"
+                CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,  "5"
+                CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,     "5"
             },
             {
-                "allow_cluster_recovery",            MXS_MODULE_PARAM_BOOL,   "true",
+                "allow_cluster_recovery",            MXS_MODULE_PARAM_BOOL,      "true",
                 MXS_MODULE_OPT_DEPRECATED
             },
             {
-                "ignore_external_masters",           MXS_MODULE_PARAM_BOOL,   "false"
+                "ignore_external_masters",           MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_AUTO_FAILOVER,                    MXS_MODULE_PARAM_BOOL,   "false"
+                CN_AUTO_FAILOVER,                    MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_FAILOVER_TIMEOUT,                 MXS_MODULE_PARAM_DURATION, "90s",
+                CN_FAILOVER_TIMEOUT,                 MXS_MODULE_PARAM_DURATION,  "90s",
                 MXS_MODULE_OPT_DURATION_S
             },
             {
@@ -1022,20 +1022,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_STRING
             },
             {
-                CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,   "false"
+                CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,   "true"
+                CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_MASTER_FAILURE_TIMEOUT,           MXS_MODULE_PARAM_DURATION, "10s",
+                CN_MASTER_FAILURE_TIMEOUT,           MXS_MODULE_PARAM_DURATION,  "10s",
                 MXS_MODULE_OPT_DURATION_S
             },
             {
-                CN_AUTO_REJOIN,                      MXS_MODULE_PARAM_BOOL,   "false"
+                CN_AUTO_REJOIN,                      MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_ENFORCE_READONLY,                 MXS_MODULE_PARAM_BOOL,   "false"
+                CN_ENFORCE_READONLY,                 MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
                 CN_NO_PROMOTE_SERVERS,               MXS_MODULE_PARAM_SERVERLIST
@@ -1047,16 +1047,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_DEMOTION_SQL_FILE,                MXS_MODULE_PARAM_PATH
             },
             {
-                CN_SWITCHOVER_ON_LOW_DISK_SPACE,     MXS_MODULE_PARAM_BOOL,   "false"
+                CN_SWITCHOVER_ON_LOW_DISK_SPACE,     MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_MAINTENANCE_ON_LOW_DISK_SPACE,    MXS_MODULE_PARAM_BOOL,   "true"
+                CN_MAINTENANCE_ON_LOW_DISK_SPACE,    MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,   "true"
+                CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_ASSUME_UNIQUE_HOSTNAMES,         MXS_MODULE_PARAM_BOOL,    "true"
+                CN_ASSUME_UNIQUE_HOSTNAMES,          MXS_MODULE_PARAM_BOOL,      "true"
             },
             {MXS_END_MODULE_PARAMS}
         }

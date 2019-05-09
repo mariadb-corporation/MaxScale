@@ -96,7 +96,7 @@ static int blr_slave_replay(ROUTER_INSTANCE* router,
                             GWBUF* master);
 static void blr_slave_send_error(ROUTER_INSTANCE* router,
                                  ROUTER_SLAVE* slave,
-                                 const char*   msg);
+                                 const char* msg);
 static int blr_slave_send_timestamp(ROUTER_INSTANCE* router,
                                     ROUTER_SLAVE* slave);
 static int blr_slave_register(ROUTER_INSTANCE* router,
@@ -135,7 +135,7 @@ static int blr_slave_send_fieldcount(ROUTER_INSTANCE* router,
                                      int count);
 static int blr_slave_send_columndef(ROUTER_INSTANCE* router,
                                     ROUTER_SLAVE* slave,
-                                    const char*   name,
+                                    const char* name,
                                     int type,
                                     int len,
                                     uint8_t seqno);
@@ -158,9 +158,9 @@ static int blr_stop_slave(ROUTER_INSTANCE* router,
 static int blr_start_slave(ROUTER_INSTANCE* router,
                            ROUTER_SLAVE* slave);
 static void blr_slave_send_error_packet(ROUTER_SLAVE* slave,
-                                        const char*   msg,
-                                        unsigned int  err_num,
-                                        const char*   status);
+                                        const char* msg,
+                                        unsigned int err_num,
+                                        const char* status);
 static int blr_apply_change_master(ROUTER_INSTANCE* router,
                                    int index,
                                    const ChangeMasterConfig& new_config,
@@ -199,17 +199,17 @@ static int blr_handle_change_master_token(char* input,
                                           ChangeMasterOptions* config);
 static int blr_slave_send_var_value(ROUTER_INSTANCE* router,
                                     ROUTER_SLAVE* slave,
-                                    const char*   variable,
-                                    const char*   value,
+                                    const char* variable,
+                                    const char* value,
                                     int column_type);
 static int blr_slave_send_variable(ROUTER_INSTANCE* router,
                                    ROUTER_SLAVE* slave,
-                                   const char*   variable,
-                                   const char*   value,
+                                   const char* variable,
+                                   const char* value,
                                    int column_type);
 static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE* router,
                                                      ROUTER_SLAVE* slave,
-                                                     const char*   name,
+                                                     const char* name,
                                                      int type,
                                                      int len,
                                                      uint8_t seqno);
@@ -224,20 +224,20 @@ static int blr_slave_handle_variables(ROUTER_INSTANCE* router,
                                       char* stmt);
 static int blr_slave_send_warning_message(ROUTER_INSTANCE* router,
                                           ROUTER_SLAVE* slave,
-                                          const char*   message);
+                                          const char* message);
 static int blr_slave_show_warnings(ROUTER_INSTANCE* router,
                                    ROUTER_SLAVE* slave);
 static int blr_slave_send_status_variable(ROUTER_INSTANCE* router,
                                           ROUTER_SLAVE* slave,
-                                          const char*   variable,
-                                          const char*   value,
+                                          const char* variable,
+                                          const char* value,
                                           int column_type);
 static int blr_slave_handle_status_variables(ROUTER_INSTANCE* router,
                                              ROUTER_SLAVE* slave,
                                              char* stmt);
 static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE* router,
                                                        ROUTER_SLAVE* slave,
-                                                       const char*   name,
+                                                       const char* name,
                                                        int type,
                                                        int len,
                                                        uint8_t seqno);
@@ -257,7 +257,7 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE* router,
                                           char* select_stmt);
 static GWBUF* blr_build_fake_rotate_event(ROUTER_SLAVE* slave,
                                           unsigned long pos,
-                                          const char*   filename,
+                                          const char* filename,
                                           unsigned long serverid);
 static int blr_send_connect_fake_rotate(ROUTER_INSTANCE* router,
                                         ROUTER_SLAVE* slave);
@@ -267,11 +267,11 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
                                    unsigned long req_pos);
 
 static int blr_send_fake_gtid_list(ROUTER_SLAVE* slave,
-                                   const char*   gtid,
+                                   const char* gtid,
                                    uint32_t serverid);
 static bool blr_handle_maxwell_stmt(ROUTER_INSTANCE* router,
                                     ROUTER_SLAVE* slave,
-                                    const char*   maxwell_stmt);
+                                    const char* maxwell_stmt);
 static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
                                  ROUTER_SLAVE* slave,
                                  char* show_stmt);
@@ -293,7 +293,7 @@ static inline void blr_get_file_fullpath(const char* binlog_file,
                                          const char* f_prefix);
 static int blr_show_binary_logs(ROUTER_INSTANCE* router,
                                 ROUTER_SLAVE* slave,
-                                const char*   extra_data);
+                                const char* extra_data);
 
 extern bool blr_parse_gtid(const char* gtid, MARIADB_GTID_ELEMS* info);
 static int  binary_logs_select_cb(void* data,
@@ -307,8 +307,8 @@ static int blr_slave_send_id_ro(ROUTER_INSTANCE* router,
                                 ROUTER_SLAVE* slave);
 static bool blr_handle_complex_select(ROUTER_INSTANCE* router,
                                       ROUTER_SLAVE* slave,
-                                      const char*   col1,
-                                      const char*   coln);
+                                      const char* col1,
+                                      const char* coln);
 extern bool blr_is_current_binlog(ROUTER_INSTANCE* router,
                                   ROUTER_SLAVE* slave);
 extern bool blr_compare_binlogs(const ROUTER_INSTANCE* router,
@@ -319,7 +319,7 @@ static bool blr_purge_binary_logs(ROUTER_INSTANCE* router,
                                   ROUTER_SLAVE* slave,
                                   char* purge_stmt);
 static int binary_logs_find_file_cb(void* data,
-                                    int   cols,
+                                    int cols,
                                     char** values,
                                     char** names);
 static void blr_log_config_changes(ROUTER_INSTANCE* router,
@@ -334,18 +334,18 @@ static void blr_abort_change_master(ROUTER_INSTANCE* router,
                                     const MasterServerConfig& current_master,
                                     const char* error);
 static void blr_slave_abort_dump_request(ROUTER_SLAVE* slave,
-                                         const char*   errmsg);
+                                         const char* errmsg);
 static bool blr_binlog_change_check(const ROUTER_INSTANCE* router,
                                     const ChangeMasterConfig& new_config,
                                     char* error);
 static bool blr_change_binlog_name(ROUTER_INSTANCE* router,
                                    const char* log_file,
                                    char** new_logfile,
-                                   char*  error);
+                                   char* error);
 static bool blr_change_binlog_name(ROUTER_INSTANCE* router,
                                    const std::string& log_file,
                                    char** new_logfile,
-                                   char*  error);
+                                   char* error);
 static bool blr_apply_changes(ROUTER_INSTANCE* router,
                               const ChangeMasterConfig& new_config,
                               char* new_logfile,
@@ -3427,7 +3427,7 @@ static int blr_slave_send_fieldcount(ROUTER_INSTANCE* router,
  */
 static int blr_slave_send_columndef(ROUTER_INSTANCE* router,
                                     ROUTER_SLAVE* slave,
-                                    const char*   name,
+                                    const char* name,
                                     int type,
                                     int len,
                                     uint8_t seqno)
@@ -4127,9 +4127,9 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
  * @param status    The error status
  */
 static void blr_slave_send_error_packet(ROUTER_SLAVE* slave,
-                                        const char*   msg,
-                                        unsigned int  err_num,
-                                        const char*   status)
+                                        const char* msg,
+                                        unsigned int err_num,
+                                        const char* status)
 {
     GWBUF* pkt;
     unsigned char* data;
@@ -5400,8 +5400,8 @@ static std::string* blr_validate_change_master_option(const char* option, Change
  */
 static int blr_slave_send_var_value(ROUTER_INSTANCE* router,
                                     ROUTER_SLAVE* slave,
-                                    const char*   variable,
-                                    const char*   value,
+                                    const char* variable,
+                                    const char* value,
                                     int column_type)
 {
     GWBUF* pkt;
@@ -5453,8 +5453,8 @@ static int blr_slave_send_var_value(ROUTER_INSTANCE* router,
  */
 static int blr_slave_send_variable(ROUTER_INSTANCE* router,
                                    ROUTER_SLAVE* slave,
-                                   const char*   variable,
-                                   const char*   value,
+                                   const char* variable,
+                                   const char* value,
                                    int column_type)
 {
     GWBUF* pkt;
@@ -5543,7 +5543,7 @@ static int blr_slave_send_variable(ROUTER_INSTANCE* router,
  */
 static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE* router,
                                                      ROUTER_SLAVE* slave,
-                                                     const char*   name,
+                                                     const char* name,
                                                      int type,
                                                      int len,
                                                      uint8_t seqno)
@@ -5782,7 +5782,7 @@ static int blr_slave_handle_variables(ROUTER_INSTANCE* router,
 
 static int blr_slave_send_warning_message(ROUTER_INSTANCE* router,
                                           ROUTER_SLAVE* slave,
-                                          const char*   message)
+                                          const char* message)
 {
     GWBUF* pkt;
     uint8_t* ptr;
@@ -5996,8 +5996,8 @@ static int blr_slave_handle_status_variables(ROUTER_INSTANCE* router,
  */
 static int blr_slave_send_status_variable(ROUTER_INSTANCE* router,
                                           ROUTER_SLAVE* slave,
-                                          const char*   variable,
-                                          const char*   value,
+                                          const char* variable,
+                                          const char* value,
                                           int column_type)
 {
     GWBUF* pkt;
@@ -6091,7 +6091,7 @@ static int blr_slave_send_status_variable(ROUTER_INSTANCE* router,
  */
 static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE* router,
                                                        ROUTER_SLAVE* slave,
-                                                       const char*   name,
+                                                       const char* name,
                                                        int type,
                                                        int len,
                                                        uint8_t seqno)
@@ -6935,7 +6935,7 @@ static int blr_send_connect_fake_rotate(ROUTER_INSTANCE* router,
  */
 static GWBUF* blr_build_fake_rotate_event(ROUTER_SLAVE* slave,
                                           unsigned long pos,
-                                          const char*   filename,
+                                          const char* filename,
                                           unsigned long serverid)
 {
     GWBUF* r_event;
@@ -7286,7 +7286,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE* router,
  *
  */
 static GWBUF* blr_build_fake_gtid_list_event(ROUTER_SLAVE* slave,
-                                             const char*   gtid,
+                                             const char* gtid,
                                              uint32_t serverid)
 {
     int len;
@@ -7391,7 +7391,7 @@ static GWBUF* blr_build_fake_gtid_list_event(ROUTER_SLAVE* slave,
  * @return            Non-zero if data has been sent
  */
 static int blr_send_fake_gtid_list(ROUTER_SLAVE* slave,
-                                   const char*   gtid,
+                                   const char* gtid,
                                    uint32_t serverid)
 {
     /* Build Fake GTID_LIST Event */
@@ -7416,7 +7416,7 @@ static int blr_send_fake_gtid_list(ROUTER_SLAVE* slave,
  */
 static bool blr_handle_maxwell_stmt(ROUTER_INSTANCE* router,
                                     ROUTER_SLAVE* slave,
-                                    const char*   maxwell_stmt)
+                                    const char* maxwell_stmt)
 {
     static const char mysql_connector_results_charset_query[] = "SET character_set_results = NULL";
     static const char maxwell_server_id_query[] = "SELECT @@server_id as server_id";
@@ -8526,7 +8526,7 @@ static inline void blr_get_file_fullpath(const char* binlog_file,
  */
 static int blr_show_binary_logs(ROUTER_INSTANCE* router,
                                 ROUTER_SLAVE* slave,
-                                const char*   extra_data)
+                                const char* extra_data)
 {
     char current_file[BINLOG_FNAMELEN];
     uint64_t current_pos = 0;
@@ -8730,7 +8730,7 @@ GWBUF* blr_create_result_row(const char* val1,
  * @return          0 on success, 1 otherwise
  */
 static int binary_logs_select_cb(void* data,
-                                 int   cols,
+                                 int cols,
                                  char** values,
                                  char** names)
 {
@@ -8897,8 +8897,8 @@ static int blr_slave_send_id_ro(ROUTER_INSTANCE* router,
  */
 static bool blr_handle_complex_select(ROUTER_INSTANCE* router,
                                       ROUTER_SLAVE* slave,
-                                      const char*   col1,
-                                      const char*   coln)
+                                      const char* col1,
+                                      const char* coln)
 {
     /* Strip leading spaces */
     while (isspace(*coln))
@@ -8931,7 +8931,7 @@ static bool blr_handle_complex_select(ROUTER_INSTANCE* router,
  * @return          0 on success, 1 otherwise
  */
 static int binary_logs_find_file_cb(void* data,
-                                    int   cols,
+                                    int cols,
                                     char** values,
                                     char** names)
 {
@@ -8956,7 +8956,7 @@ static int binary_logs_find_file_cb(void* data,
  * @return          0 on success, 1 otherwise
  */
 static int binary_logs_purge_cb(void* data,
-                                int   cols,
+                                int cols,
                                 char** values,
                                 char** names)
 {
@@ -9394,7 +9394,7 @@ static void blr_abort_change_master(ROUTER_INSTANCE* router,
  * @param errmsg    Error message to send and log
  */
 static void blr_slave_abort_dump_request(ROUTER_SLAVE* slave,
-                                         const char*   errmsg)
+                                         const char* errmsg)
 {
     MXS_ERROR("Slave %lu requests COM_BINLOG_DUMP: %s. Aborting.",
               (unsigned long)slave->serverid,
@@ -9496,7 +9496,7 @@ static bool blr_binlog_change_check(const ROUTER_INSTANCE* router,
 static bool blr_change_binlog_name(ROUTER_INSTANCE* router,
                                    const char* binlog_file,
                                    char** new_logfile,
-                                   char*  error)
+                                   char* error)
 {
     bool ret = true;
 
@@ -9540,7 +9540,7 @@ static bool blr_change_binlog_name(ROUTER_INSTANCE* router,
 static bool blr_change_binlog_name(ROUTER_INSTANCE* router,
                                    const std::string& binlog_file,
                                    char** new_logfile,
-                                   char*  error)
+                                   char* error)
 {
     return blr_change_binlog_name(router,
                                   binlog_file.empty() ? nullptr : binlog_file.c_str(),

@@ -240,7 +240,7 @@ public:
     const std::string      sql_file;        // Path to file with SQL commands to run during op
     const SlaveStatusArray conns_to_copy;   // Slave connections the target should copy/merge
 
-    const EventNameSet events_to_enable; // Scheduled event names last seen on master.
+    const EventNameSet events_to_enable;    // Scheduled event names last seen on master.
 
     ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
                     const std::string& sql_file, const SlaveStatusArray& conns_to_copy,
@@ -248,5 +248,4 @@ public:
 
     ServerOperation(MariaDBServer* target, bool was_is_master, bool handle_events,
                     const std::string& sql_file);
-
 };

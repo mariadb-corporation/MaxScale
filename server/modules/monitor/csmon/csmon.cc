@@ -145,12 +145,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &maxscale::MonitorApi<CsMonitor>::s_api,
-        NULL,   /* Process init. */
-        NULL,   /* Process finish. */
-        NULL,   /* Thread init. */
-        NULL,   /* Thread finish. */
+        NULL,                                   /* Process init. */
+        NULL,                                   /* Process finish. */
+        NULL,                                   /* Thread init. */
+        NULL,                                   /* Thread finish. */
         {
-            {"primary", MXS_MODULE_PARAM_SERVER},
+            {"primary",                         MXS_MODULE_PARAM_SERVER},
             {MXS_END_MODULE_PARAMS}
         }
     };

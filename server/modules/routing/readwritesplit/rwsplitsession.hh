@@ -122,7 +122,7 @@ public:
      * @param pSuccess  On output, if false, the session will be terminated.
      */
     void handleError(GWBUF* pMessage,
-                     DCB*   pProblem,
+                     DCB* pProblem,
                      mxs_error_action_t action,
                      bool* pSuccess);
 

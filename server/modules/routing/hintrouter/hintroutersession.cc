@@ -55,7 +55,7 @@ private:
 }
 
 HintRouterSession::HintRouterSession(MXS_SESSION* pSession,
-                                     HintRouter*  pRouter,
+                                     HintRouter* pRouter,
                                      const BackendMap& backends)
     : maxscale::RouterSession(pSession)
     , m_router(pRouter)
@@ -152,7 +152,7 @@ void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
 }
 
 void HintRouterSession::handleError(GWBUF* pMessage,
-                                    DCB*   pProblem,
+                                    DCB* pProblem,
                                     mxs_error_action_t action,
                                     bool* pSuccess)
 {

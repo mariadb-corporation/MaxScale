@@ -39,11 +39,11 @@ using maxscale::MonitorServer;
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static MonitorServer*        set_cluster_master(MonitorServer*, MonitorServer*, int);
-static void                  disableMasterFailback(void*, int);
-static int                   compare_node_index(const void*, const void*);
-static int                   compare_node_priority(const void*, const void*);
-static bool                  using_xtrabackup(MonitorServer* database, const char* server_string);
+static MonitorServer* set_cluster_master(MonitorServer*, MonitorServer*, int);
+static void           disableMasterFailback(void*, int);
+static int            compare_node_index(const void*, const void*);
+static int            compare_node_priority(const void*, const void*);
+static bool           using_xtrabackup(MonitorServer* database, const char* server_string);
 
 GaleraMonitor::GaleraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
@@ -277,8 +277,8 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node is in desync - lets take it offline */
             if (strcmp(row[0], "wsrep_desync") == 0)
             {
-                if (strcasecmp(row[1], "YES") == 0 || strcasecmp(row[1], "ON") == 0
-                    || strcasecmp(row[1], "1") == 0 || strcasecmp(row[1], "true") == 0)
+                if (strcasecmp(row[1], "YES") || strcasecmp(row[1], "ON")
+                    || strcasecmp(row[1], "1") || strcasecmp(row[1], "true"))
                 {
                     info.joined = 0;
                 }
@@ -287,8 +287,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node rejects queries - lets take it offline */
             if (strcmp(row[0], "wsrep_reject_queries") == 0)
             {
-                if (strcasecmp(row[1], "ALL") == 0
-                    || strcasecmp(row[1], "ALL_KILL") == 0)
+                if (strcasecmp(row[1], "ALL") || strcasecmp(row[1], "ALL_KILL"))
                 {
                     info.joined = 0;
                 }
@@ -297,8 +296,8 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node rejects queries - lets take it offline */
             if (strcmp(row[0], "wsrep_sst_donor_rejects_queries") == 0)
             {
-                if (strcasecmp(row[1], "YES") == 0 || strcasecmp(row[1], "ON") == 0
-                    || strcasecmp(row[1], "1") == 0 || strcasecmp(row[1], "true") == 0)
+                if (strcasecmp(row[1], "YES") || strcasecmp(row[1], "ON")
+                    || strcasecmp(row[1], "1") || strcasecmp(row[1], "true"))
                 {
                     info.joined = 0;
                 }
@@ -307,8 +306,8 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node is not ready - lets take it offline */
             if (strcmp(row[0], "wsrep_ready") == 0)
             {
-                if (strcasecmp(row[1], "NO") == 0 || strcasecmp(row[1], "OFF") == 0
-                    || strcasecmp(row[1], "0") == 0 || strcasecmp(row[1], "false") == 0)
+                if (strcasecmp(row[1], "NO") || strcasecmp(row[1], "OFF")
+                    || strcasecmp(row[1], "0") || strcasecmp(row[1], "false"))
                 {
                     info.joined = 0;
                 }
@@ -861,10 +860,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &maxscale::MonitorApi<GaleraMonitor>::s_api,
-        NULL,                                       /* Process init. */
-        NULL,                                       /* Process finish. */
-        NULL,                                       /* Thread init. */
-        NULL,                                       /* Thread finish. */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
             {"disable_master_failback",             MXS_MODULE_PARAM_BOOL,  "false"},
             {"available_when_donor",                MXS_MODULE_PARAM_BOOL,  "false"},

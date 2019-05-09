@@ -120,5 +120,4 @@ inline bool ping_or_connect_to_hub(const char* zName,
 {
     return ping_or_connect_to_hub(zName, settings, softfailed, *ms.server, &ms.con);
 }
-
 }

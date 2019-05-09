@@ -76,7 +76,7 @@ private:
     int                m_instance;
 };
 
-inline std::ostream& operator << (std::ostream& out, const ClustrixMembership& x)
+inline std::ostream& operator<<(std::ostream& out, const ClustrixMembership& x)
 {
     x.print(out);
     return out;

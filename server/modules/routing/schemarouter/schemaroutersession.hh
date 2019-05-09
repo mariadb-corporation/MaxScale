@@ -115,7 +115,7 @@ public:
      * @param pSuccess  On output, if false, the session will be terminated.
      */
     void handleError(GWBUF* pMessage,
-                     DCB*   pProblem,
+                     DCB* pProblem,
                      mxs_error_action_t action,
                      bool* pSuccess);
 private:
@@ -138,7 +138,7 @@ private:
     void    process_sescmd_response(SSRBackend& bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket,
                                  uint32_t type,
-                                 uint8_t  command,
+                                 uint8_t command,
                                  enum route_target& route_target);
 
     /** Shard mapping functions */

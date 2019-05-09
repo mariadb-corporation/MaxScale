@@ -737,7 +737,7 @@ RWBackend* RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
 {
     const char rlag_hint_tag[] = "max_slave_replication_lag";
     const int comparelen = sizeof(rlag_hint_tag);
-    int config_max_rlag = get_max_replication_lag(); // From router configuration.
+    int config_max_rlag = get_max_replication_lag();    // From router configuration.
     RWBackend* target = nullptr;
 
     for (HINT* hint = querybuf->hint; !target && hint; hint = hint->next)

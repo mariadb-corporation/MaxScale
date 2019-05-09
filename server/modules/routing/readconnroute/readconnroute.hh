@@ -64,7 +64,7 @@ public:
      * @param pSuccess Pointer where the result of the error handling is stored
      */
     void handleError(GWBUF* pMessage,
-                     DCB*   pProblem,
+                     DCB* pProblem,
                      mxs_error_action_t action,
                      bool* pSuccess);
 

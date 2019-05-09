@@ -21,8 +21,8 @@
 #include "clustrixmembership.hh"
 #include "clustrixnode.hh"
 
-class ClustrixMonitor : public maxscale::MonitorWorker,
-                        private ClustrixNode::Persister
+class ClustrixMonitor : public maxscale::MonitorWorker
+                      , private ClustrixNode::Persister
 {
     ClustrixMonitor(const ClustrixMonitor&) = delete;
     ClustrixMonitor& operator=(const ClustrixMonitor&) = delete;
@@ -36,7 +36,7 @@ public:
             , m_dynamic_node_detection(DEFAULT_DYNAMIC_NODE_DETECTION_VALUE)
             , m_health_check_port(DEFAULT_HEALTH_CHECK_PORT_VALUE)
         {
-        };
+        }
 
         long cluster_monitor_interval() const
         {
@@ -179,9 +179,9 @@ private:
     std::map<int, ClustrixNode> m_nodes_by_id;
     std::vector<std::string>    m_health_urls;
     mxb::http::Async            m_http;
-    uint32_t                    m_delayed_http_check_id { 0 };
-    long                        m_last_cluster_check    { 0 };
-    SERVER*                     m_pHub_server           { nullptr };
-    MYSQL*                      m_pHub_con              { nullptr };
-    sqlite3*                    m_pDb                   { nullptr };
+    uint32_t                    m_delayed_http_check_id {0};
+    long                        m_last_cluster_check {0};
+    SERVER*                     m_pHub_server {nullptr};
+    MYSQL*                      m_pHub_con {nullptr};
+    sqlite3*                    m_pDb {nullptr};
 };

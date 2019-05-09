@@ -520,8 +520,8 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
     int conflicts = 0;
     auto redirection_helper =
         [this, &general, &conflicts, &successes, &fails](ServerArray& redirect_these,
-                                                    const MariaDBServer* from, const MariaDBServer* to,
-                                                    ServerArray* redirected) {
+                                                         const MariaDBServer* from, const MariaDBServer* to,
+                                                         ServerArray* redirected) {
             for (MariaDBServer* redirectable : redirect_these)
             {
                 mxb_assert(redirected != NULL);
@@ -634,7 +634,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             {
                 // Assume that server is an old master which was failed over. Even if this is not really
                 // the case, the following is unlikely to do damage.
-                ServerOperation demotion(joinable, true,  /* treat as old master */
+                ServerOperation demotion(joinable, true,    /* treat as old master */
                                          m_handle_event_scheduler, m_demote_sql_file);
                 if (joinable->demote(general, demotion))
                 {
@@ -1101,7 +1101,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
  * @return The selected promotion target or NULL if no valid candidates
  */
 MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target,
-                                                       OperationType  op,
+                                                       OperationType op,
                                                        Log log_mode,
                                                        json_t** error_out)
 {
@@ -1696,7 +1696,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);
         ServerOperation demotion(demotion_target, master_swap, m_handle_event_scheduler,
                                  m_demote_sql_file, promotion_target->m_slave_status,
-                                 EventNameSet() /* unused */);
+                                 EventNameSet()    /* unused */);
         GeneralOpData general(m_replication_user, m_replication_password, m_replication_ssl,
                               error_out, time_limit);
         rval.reset(new SwitchoverParams(promotion, demotion, general));
@@ -1868,13 +1868,12 @@ void MariaDBMonitor::delay_auto_cluster_ops()
     }
     // + 1 because the start of next tick subtracts 1.
     cluster_operation_disable_timer = m_failcount + 1;
-
 }
 
 bool MariaDBMonitor::can_perform_cluster_ops()
 {
-    return (!config_get_global_options()->passive && cluster_operation_disable_timer <= 0 &&
-            !m_cluster_modified);
+    return !config_get_global_options()->passive && cluster_operation_disable_timer <= 0
+           && !m_cluster_modified;
 }
 
 MariaDBMonitor::SwitchoverParams::SwitchoverParams(const ServerOperation& promotion,

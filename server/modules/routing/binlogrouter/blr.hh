@@ -1109,7 +1109,7 @@ extern bool blr_send_event(blr_thread_role_t role,
                            const char* binlog_name,
                            uint32_t binlog_pos,
                            ROUTER_SLAVE* slave,
-                           REP_HEADER*   hdr,
+                           REP_HEADER* hdr,
                            uint8_t* buf);
 
 extern const char* blr_get_encryption_algorithm(int);

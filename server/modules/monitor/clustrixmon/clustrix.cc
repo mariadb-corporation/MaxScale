@@ -21,11 +21,10 @@ namespace
 {
 
 const char CN_DYNAMIC[] = "dynamic";
-const char CN_NORMAL[]  = "normal";
-const char CN_QUORUM[]  = "quorum";
-const char CN_STATIC[]  = "static";
+const char CN_NORMAL[] = "normal";
+const char CN_QUORUM[] = "quorum";
+const char CN_STATIC[] = "static";
 const char CN_UNKNOWN[] = "unknown";
-
 }
 
 std::string Clustrix::to_string(Clustrix::Status status)

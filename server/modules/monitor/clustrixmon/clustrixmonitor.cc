@@ -76,7 +76,7 @@ static const char SQL_DN_SELECT[] =
     "SELECT ip, mysql_port FROM dynamic_nodes";
 
 
-using HostPortPair  = std::pair<std::string, int>;
+using HostPortPair = std::pair<std::string, int>;
 using HostPortPairs = std::vector<HostPortPair>;
 
 // sqlite3 callback.
@@ -93,7 +93,6 @@ int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 
     return 0;
 }
-
 }
 
 namespace
@@ -150,7 +149,6 @@ sqlite3* open_or_create_db(const std::string& path)
 
     return pDb;
 }
-
 }
 
 ClustrixMonitor::ClustrixMonitor(const string& name, const string& module, sqlite3* pDb)
@@ -164,7 +162,7 @@ ClustrixMonitor::~ClustrixMonitor()
     sqlite3_close_v2(m_pDb);
 }
 
-//static
+// static
 ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& module)
 {
     string path = get_datadir();
@@ -224,9 +222,9 @@ bool ClustrixMonitor::softfail(SERVER* pServer, json_t** ppError)
     if (is_running())
     {
         call([this, pServer, ppError, &rv]() {
-                rv = perform_softfail(pServer, ppError);
-            },
-            EXECUTE_QUEUED);
+                 rv = perform_softfail(pServer, ppError);
+             },
+             EXECUTE_QUEUED);
     }
     else
     {
@@ -246,9 +244,9 @@ bool ClustrixMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
     if (is_running())
     {
         call([this, pServer, ppError, &rv]() {
-                rv = perform_unsoftfail(pServer, ppError);
-            },
-            EXECUTE_QUEUED);
+                 rv = perform_unsoftfail(pServer, ppError);
+             },
+             EXECUTE_QUEUED);
     }
     else
     {
@@ -317,17 +315,17 @@ void ClustrixMonitor::tick()
 
     case http::Async::ERROR:
         MXS_WARNING("%s: Health check round ended with general error.", name());
-	make_health_check();
-	break;
+        make_health_check();
+        break;
 
     case http::Async::READY:
         update_server_statuses();
 
         if (!m_health_urls.empty())
         {
-	    make_health_check();
-	}
-	break;
+            make_health_check();
+        }
+        break;
     }
 
     flush_server_status();
@@ -903,7 +901,7 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
     else
     {
         MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-		  name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
+                  name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
     }
 
     return rv;
@@ -949,7 +947,7 @@ void ClustrixMonitor::update_server_statuses()
         pMs->stash_current_status();
 
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [pMs](const std::pair<int,ClustrixNode>& element) -> bool {
+                          [pMs](const std::pair<int, ClustrixNode>& element) -> bool {
                               const ClustrixNode& info = element.second;
                               return pMs->server->address == info.ip();
                           });
@@ -983,16 +981,16 @@ void ClustrixMonitor::make_health_check()
     switch (m_http.status())
     {
     case http::Async::PENDING:
-	initiate_delayed_http_check();
-	break;
+        initiate_delayed_http_check();
+        break;
 
     case http::Async::ERROR:
-	MXS_ERROR("%s: Could not initiate health check.", name());
-	break;
+        MXS_ERROR("%s: Could not initiate health check.", name());
+        break;
 
     case http::Async::READY:
-	MXS_INFO("%s: Health check available immediately.", name());
-	break;
+        MXS_INFO("%s: Health check available immediately.", name());
+        break;
     }
 }
 
@@ -1035,7 +1033,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
 
                 for (const auto& result : results)
                 {
-                    bool running = (result.code == 200); // HTTP OK
+                    bool running = (result.code == 200);    // HTTP OK
 
                     ClustrixNode& node = it->second;
 
@@ -1126,7 +1124,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
     if (m_pHub_con)
     {
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [pServer] (const std::pair<int, ClustrixNode>& element) {
+                          [pServer](const std::pair<int, ClustrixNode>& element) {
                               return element.second.server() == pServer;
                           });
 
@@ -1137,7 +1135,8 @@ bool ClustrixMonitor::perform_operation(Operation operation,
             const char ZQUERY_FORMAT[] = "ALTER CLUSTER %s %d";
 
             int id = node.id();
-            char zQuery[sizeof(ZQUERY_FORMAT) + sizeof(ZUNSOFTFAIL) + UINTLEN(id)]; // ZUNSOFTFAIL is longer
+            // ZUNSOFTFAIL is longer
+            char zQuery[sizeof(ZQUERY_FORMAT) + sizeof(ZUNSOFTFAIL) + UINTLEN(id)];
 
             sprintf(zQuery, ZQUERY_FORMAT, zOperation, id);
 

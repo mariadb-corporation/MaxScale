@@ -36,7 +36,7 @@ public:
     typedef BackendArray::size_type         size_type;
 
     HintRouterSession(MXS_SESSION* pSession,
-                      HintRouter*  pRouter,
+                      HintRouter* pRouter,
                       const BackendMap& backends
                       );
 
@@ -49,7 +49,7 @@ public:
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
     void handleError(GWBUF* pMessage,
-                     DCB*   pProblem,
+                     DCB* pProblem,
                      mxs_error_action_t action,
                      bool* pSuccess);
 

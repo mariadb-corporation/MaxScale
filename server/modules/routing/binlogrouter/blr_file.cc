@@ -194,7 +194,7 @@ static int blr_aes_create_tail_for_cbc(uint8_t* output,
                                        unsigned int key_len);
 static int blr_binlog_event_check(ROUTER_INSTANCE* router,
                                   unsigned long pos,
-                                  REP_HEADER*   hdr,
+                                  REP_HEADER* hdr,
                                   char* binlogname,
                                   char* errmsg);
 
@@ -207,7 +207,7 @@ bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE* router,
 bool blr_get_last_file(ROUTER_INSTANCE* router,
                        MARIADB_GTID_INFO* result);
 static int gtid_file_select_cb(void* data,
-                               int   cols,
+                               int cols,
                                char** values,
                                char** names);
 bool blr_compare_binlogs(const ROUTER_INSTANCE* router,
@@ -824,7 +824,7 @@ void blr_file_flush(ROUTER_INSTANCE* router)
  * @return           True if BLFILE can be reused, false otherwise
  */
 static bool inline blr_is_same_slave_file(const BLFILE* file,
-                                          const char*   binlog,
+                                          const char* binlog,
                                           const MARIADB_GTID_INFO* info,
                                           bool s_tree)
 {
@@ -968,7 +968,7 @@ BLFILE* blr_open_binlog(ROUTER_INSTANCE* router,
 GWBUF* blr_read_binlog(ROUTER_INSTANCE* router,
                        BLFILE* file,
                        unsigned long pos,
-                       REP_HEADER*   hdr,
+                       REP_HEADER* hdr,
                        char* errmsg,
                        const SLAVE_ENCRYPTION_CTX* enc_ctx)
 {
@@ -4219,7 +4219,7 @@ static int blr_aes_create_tail_for_cbc(uint8_t* output,
  * 1 ok, 0 err */
 static int blr_binlog_event_check(ROUTER_INSTANCE* router,
                                   unsigned long pos,
-                                  REP_HEADER*   hdr,
+                                  REP_HEADER* hdr,
                                   char* binlogname,
                                   char* errmsg)
 {
@@ -4436,7 +4436,7 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE* inst)
  * @return          0 on success, 1 otherwise
  */
 static int gtid_select_cb(void* data,
-                          int   cols,
+                          int cols,
                           char** values,
                           char** names)
 {
@@ -4486,7 +4486,7 @@ static int gtid_select_cb(void* data,
  * @return   True if with found GTID or false
  */
 bool blr_fetch_mariadb_gtid(ROUTER_SLAVE* slave,
-                            const char*   gtid,
+                            const char* gtid,
                             MARIADB_GTID_INFO* result)
 {
     char* errmsg = NULL;
@@ -4710,7 +4710,7 @@ bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE* router,
  * @return          0 on success, 1 otherwise
  */
 static int gtid_file_select_cb(void* data,
-                               int   cols,
+                               int cols,
                                char** values,
                                char** names)
 {

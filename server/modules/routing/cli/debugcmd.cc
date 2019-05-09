@@ -953,10 +953,10 @@ static void inet_add_user(DCB*, char* user, char* password);
 static void inet_add_admin_user(DCB*, char* user, char* password);
 
 static void cmd_AddServer(DCB* dcb, Server* server,
-                          char*   v1, char*   v2, char*   v3,
-                          char*   v4, char*   v5, char*   v6,
-                          char*   v7, char*   v8, char*   v9,
-                          char*   v10, char*   v11)
+                          char* v1, char* v2, char* v3,
+                          char* v4, char* v5, char* v6,
+                          char* v7, char* v8, char* v9,
+                          char* v10, char* v11)
 {
     char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
@@ -1063,10 +1063,10 @@ struct subcommand addoptions[] =
 static void telnetdRemoveUser(DCB*, char* user);
 
 static void cmd_RemoveServer(DCB* dcb, Server* server,
-                             char*   v1, char*   v2, char*   v3,
-                             char*   v4, char*   v5, char*   v6,
-                             char*   v7, char*   v8, char*   v9,
-                             char*   v10, char*   v11)
+                             char* v1, char* v2, char* v3,
+                             char* v4, char* v5, char* v6,
+                             char* v7, char* v8, char* v9,
+                             char* v10, char* v11)
 {
     char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
@@ -1482,11 +1482,11 @@ struct subcommand destroyoptions[] =
  * required complexity would probably negate any benefits.
  */
 static void alterServer(DCB* dcb, Server* server,
-                        char*   v1, char*   v2, char*   v3,
-                        char*   v4, char*   v5, char*   v6,
-                        char*   v7, char*   v8, char*   v9,
-                        char*   v10, char*   v11, char*   v12,
-                        char*   v13)
+                        char* v1, char* v2, char* v3,
+                        char* v4, char* v5, char* v6,
+                        char* v7, char* v8, char* v9,
+                        char* v10, char* v11, char* v12,
+                        char* v13)
 {
     char* values[] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13};
     const int items = sizeof(values) / sizeof(values[0]);

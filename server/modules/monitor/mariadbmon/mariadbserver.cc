@@ -220,7 +220,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
             }
             else if (errmsg_out)
             {
-                *errmsg_out = error_msg; // The error string already has all required info.
+                *errmsg_out = error_msg;    // The error string already has all required info.
             }
         }
     }
@@ -450,7 +450,7 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
             m_gtid_current_pos = GtidList();
             m_gtid_binlog_pos = GtidList();
         }
-    } // If query failed, do not update gtid:s.
+    }   // If query failed, do not update gtid:s.
     return rval;
 }
 
@@ -524,7 +524,6 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
 
                 m_gtid_domain_id = domain_id_parsed;
             }
-
         }
     }
     return rval;
@@ -682,7 +681,7 @@ string MariaDBServer::diagnostics() const
     const char fmt_int64[] = "%-23s %" PRIi64 "\n";
 
     string rval;
-    rval.reserve(300); // Enough for most common ouput.
+    rval.reserve(300);      // Enough for most common ouput.
 
     rval += string_printf(fmt_string, "Server:", name());
     rval += string_printf(fmt_int64, "Server ID:", m_server_id);
@@ -743,7 +742,7 @@ json_t* MariaDBServer::to_json() const
 bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out)
 {
     mxb_assert(reason_out);
-    mxb_assert(is_usable()); // The server must be running.
+    mxb_assert(is_usable());    // The server must be running.
 
     bool can_replicate = false;
     if (m_gtid_current_pos.empty())
@@ -923,7 +922,7 @@ void MariaDBServer::update_server_version()
     auto srv = m_server_base->server;
     mxs_mysql_update_server_version(srv, conn);
 
-    m_srv_type = server_type::UNKNOWN; // TODO: Use type information in SERVER directly
+    m_srv_type = server_type::UNKNOWN;      // TODO: Use type information in SERVER directly
     auto base_server_type = srv->type();
     MYSQL_RES* result;
     if (base_server_type == SERVER::Type::CLUSTRIX)
@@ -954,12 +953,12 @@ void MariaDBServer::update_server_version()
             if (base_server_type == SERVER::Type::MARIADB && major >= 10)
             {
                 // 10.0.2 or 10.1.X or greater than 10
-                if (((minor == 0 && patch >= 2)  || minor >= 1) || major > 10)
+                if (((minor == 0 && patch >= 2) || minor >= 1) || major > 10)
                 {
                     m_capabilities.gtid = true;
                 }
                 // 10.1.2 (10.1.1 has limited support, not enough) or 10.2.X or greater than 10
-                if (((minor == 1 && patch >= 2)  || minor >= 2) || major > 10)
+                if (((minor == 1 && patch >= 2) || minor >= 2) || major > 10)
                 {
                     m_capabilities.max_statement_time = true;
                 }
@@ -1219,8 +1218,8 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
         int target_port = target_srv->port;
         for (const SlaveStatus& ss : m_slave_status)
         {
-            if (ss.master_host == target_host && ss.master_port == target_port &&
-                ss.slave_sql_running && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
+            if (ss.master_host == target_host && ss.master_port == target_port
+                && ss.slave_sql_running && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
             {
                 rval = &ss;
                 break;
@@ -1268,17 +1267,17 @@ bool MariaDBServer::enable_events(const EventNameSet& event_names, json_t** erro
 
     // Helper function which enables a disabled event if that event name is found in the events-set.
     ManipulatorFunc enabler = [this, event_names, &found_disabled_events, &events_enabled](
-            const EventInfo& event, json_t** error_out) {
-        if (event_names.count(event.name) > 0
-            && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
-        {
-            found_disabled_events++;
-            if (alter_event(event, "ENABLE", error_out))
+        const EventInfo& event, json_t** error_out) {
+            if (event_names.count(event.name) > 0
+                && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
             {
-                events_enabled++;
+                found_disabled_events++;
+                if (alter_event(event, "ENABLE", error_out))
+                {
+                    events_enabled++;
+                }
             }
-        }
-    };
+        };
 
     bool rval = false;
     if (events_foreach(enabler, error_out))
@@ -1517,7 +1516,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
     else if (type == OperationType::FAILOVER)
     {
         stopped = remove_slave_conns(general, {*master_conn});
-        master_conn = NULL; // The connection pointed to may no longer exist.
+        master_conn = NULL;     // The connection pointed to may no longer exist.
     }
 
     if (stopped)
@@ -1911,8 +1910,8 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
                     if (my_slave_conn.seen_connected && my_slave_conn.master_server_id == master_id)
                     {
                         accepted = false;
-                        const char format[] = "its Master_Server_Id (%" PRIi64 ") matches an existing "
-                                              "slave connection on '%s'.";
+                        const char format[] = "its Master_Server_Id (%" PRIi64
+                            ") matches an existing slave connection on '%s'.";
                         ignore_reason = string_printf(format, master_id, name());
                     }
                     else if (my_slave_conn.master_host == slave_conn.master_host
@@ -2161,9 +2160,9 @@ bool MariaDBServer::update_enabled_events()
                                     "Status = 'ENABLED';", &error_msg);
     if (event_info.get() == NULL)
     {
-                MXS_ERROR("Could not query events of '%s': %s Event handling can be disabled by "
-                          "setting '%s' to false.",
-                          name(), error_msg.c_str(), CN_HANDLE_EVENTS);
+        MXS_ERROR("Could not query events of '%s': %s Event handling can be disabled by "
+                  "setting '%s' to false.",
+                  name(), error_msg.c_str(), CN_HANDLE_EVENTS);
         return false;
     }
 
@@ -2176,7 +2175,7 @@ bool MariaDBServer::update_enabled_events()
     while (event_info->next_row())
     {
         string full_name = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
-        full_names.insert(full_name); // Ignore duplicates, they shouldn't exists.
+        full_names.insert(full_name);   // Ignore duplicates, they shouldn't exists.
     }
 
     m_enabled_events = std::move(full_names);

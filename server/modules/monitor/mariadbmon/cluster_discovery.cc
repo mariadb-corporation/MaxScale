@@ -76,7 +76,7 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
  * @param next_cycle Index of next found cycle
  */
 void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
-                                           ServerArray*   stack,
+                                           ServerArray* stack,
                                            int* next_ind,
                                            int* next_cycle)
 {
