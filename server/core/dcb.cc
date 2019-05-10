@@ -1188,12 +1188,13 @@ void dcb_final_close(DCB* dcb)
             dcb_stop_polling_and_shutdown(dcb);
         }
 
-        if (dcb->server)
+        if (dcb->server && dcb->persistentstart == 0)
         {
             // This is now a DCB::Role::BACKEND_HANDLER.
             // TODO: Make decisions according to the role and assert
             // TODO: that what the role implies is preset.
-            mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
+            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
+            mxb_assert(rc > 0);
         }
 
         if (dcb->fd != DCBFD_CLOSED)
@@ -1249,9 +1250,13 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         && server->persistpoolmax()
         && (server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
-        && dcb_persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax()
-        && mxb::atomic::load(&server->stats.n_persistent) < server->persistpoolmax())
+        && dcb_persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax())
     {
+        if (!mxb::atomic::add_limited(&server->stats.n_persistent, 1, (int)server->persistpoolmax()))
+        {
+            return false;
+        }
+
         DCB_CALLBACK* loopcallback;
         MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->user);
         dcb->was_persistent = false;
@@ -1277,8 +1282,8 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
 
         dcb->nextpersistent = server->persistent[owner->id()];
         server->persistent[owner->id()] = dcb;
-        mxb::atomic::add(&dcb->server->stats.n_persistent, 1);
-        mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
+        MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&server->stats.n_current, -1, mxb::atomic::RELAXED);
+        mxb_assert(rc > 0);
         return true;
     }
 

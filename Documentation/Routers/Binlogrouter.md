@@ -427,12 +427,17 @@ encryption_key_file=/var/binlogs/enc_key.txt
 From MaxScale 2.3 onwards it is possible to specify secondary masters that
 the binlog router can use in case the connection to the default master fails.
 
-**Note:** This is _only_ supported in conjunction with a Galera cluster and
-provided the following holds:
-* `@@log_slave_updates` is enabled on all servers,
-* all nodes in the Galera cluster have the *same* `server_id`, and
-* all nodes in the Galera cluster use the *same* basename for the
-  binlog files (specified in the server config file with `log_bin=basename`).
+**Note:** This is _only_ supported in a Galera Cluster environment in which:
+
+   * _Wsrep GTID mode_ is enabled in the cluster.
+   * _All_ of the requirements for wsrep GTID mode are met by the cluster.
+
+_Wsrep GTID mode_ is also imperfect, so this secondary master functionality is
+only guaranteed to work if GTIDs have not become inconsistent within the cluster.
+
+See
+[Wsrep GTID Mode](https://mariadb.com/kb/en/library/using-mariadb-gtids-with-mariadb-galera-cluster/#wsrep-gtid-mode)
+for more information.
 
 The initial setup is performed exactly like when there is but one default master.
 ```

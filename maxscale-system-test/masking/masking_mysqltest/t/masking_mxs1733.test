@@ -14,4 +14,3 @@ create table masking_mxs1733 (email TEXT);
 insert into masking_mxs1733 values ("john@example.com");
 
 select * from masking_mxs1733;
-select * from masking_mxs1733 UNION select * from masking_mxs1733;

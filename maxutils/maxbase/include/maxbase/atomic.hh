@@ -70,5 +70,55 @@ void store(T* t, R v, int mode = SEQ_CST)
 {
     __atomic_store_n(t, v, mode);
 }
+
+/**
+ * Perform atomic compare and exchange operation
+ *
+ * @param ptr           Variable where the value is stored
+ * @param expected      Expected value of the variable
+ * @param desired       The desired new value of the variable
+ * @param success_model On success, this memory model is used
+ * @param fail_model    On failure, this memory model is used
+ *
+ * @return True if value was exchanged, false if exchange failed
+ */
+template<class T>
+bool compare_exchange(T* ptr, T* expected, T desired, int success_model = ACQ_REL, int fail_model = ACQUIRE)
+{
+    return __atomic_compare_exchange_n(ptr, expected, desired, true, success_model, fail_model);
+}
+
+/**
+ * Add to a value if it doesn't exceed a limit
+ *
+ * If the value of `ptr` + `value` is less than or equal to `limit`, the value is atomically added.
+ *
+ * @param ptr   Pointer to value to add to
+ * @param value Value to add
+ * @param limit Upper limit that is not exceeded
+ *
+ * @return True if value was modified, false if the addition failed.
+ */
+template<class T>
+bool add_limited(T* ptr, T value, T limit)
+{
+    T expected;
+    T next_value;
+
+    do
+    {
+        expected = mxb::atomic::load(ptr, mxb::atomic::ACQUIRE);
+
+        if (limit < expected + value)
+        {
+            return false;
+        }
+
+        next_value = expected + value;
+    }
+    while (!mxb::atomic::compare_exchange(ptr, &expected, next_value));
+
+    return true;
+}
 }
 }
