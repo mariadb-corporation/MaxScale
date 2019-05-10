@@ -183,9 +183,12 @@ SListener Listener::create(const std::string& name,
     if (strcasecmp(protocol.c_str(), "maxscaled") == 0 && socket_defined
         && socket == MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG)
     {
-        socket = MAXADMIN_DEFAULT_SOCKET;
-        address = "";
+        socket_defined = true;
+        address = MAXADMIN_DEFAULT_SOCKET;
+        socket = address;
     }
+
+    mxb_assert(!address.empty());
 
     if (socket_defined)
     {

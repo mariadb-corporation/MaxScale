@@ -1141,6 +1141,20 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     return rval;
 }
 
+// Helper for runtime_create_listener
+inline void set_if_not_null(MXS_CONFIG_PARAMETER& params, const char* name,
+                            const char* value, const char* dflt = nullptr)
+{
+    if ((!value || strcasecmp(value, CN_DEFAULT) == 0) && dflt)
+    {
+        params.set(name, dflt);
+    }
+    else if (value)
+    {
+        params.set(name, value);
+    }
+}
+
 bool runtime_create_listener(Service* service,
                              const char* name,
                              const char* addr,
@@ -1163,12 +1177,41 @@ bool runtime_create_listener(Service* service,
     MXS_CONFIG_PARAMETER params;
     bool ok;
     tie(ok, params) = load_defaults(proto, MODULE_PROTOCOL, CN_LISTENER);
+    params.set(CN_SERVICE, service->name());
+    set_if_not_null(params, CN_AUTHENTICATOR, auth);
+    set_if_not_null(params, CN_AUTHENTICATOR_OPTIONS, auth_opt);
+    bool use_socket = (addr && *addr == '/');
+
+    if (use_socket)
+    {
+        params.set(CN_SOCKET, addr);
+    }
+    else
+    {
+        set_if_not_null(params, CN_PORT, port, "3306");
+        set_if_not_null(params, CN_ADDRESS, addr, "::");
+    }
+
+    if (ssl_key || ssl_cert || ssl_ca)
+    {
+        params.set(CN_SSL, CN_REQUIRED);
+        set_if_not_null(params, CN_SSL_KEY, ssl_key);
+        set_if_not_null(params, CN_SSL_CERT, ssl_cert);
+        set_if_not_null(params, CN_SSL_CA_CERT, ssl_ca);
+        set_if_not_null(params, CN_SSL_VERSION, ssl_version);
+        set_if_not_null(params, CN_SSL_CERT_VERIFY_DEPTH, ssl_depth);
+        set_if_not_null(params, CN_SSL_VERIFY_PEER_CERTIFICATE, verify_ssl);
+    }
 
     unsigned short u_port = atoi(port);
     bool rval = false;
 
     std::lock_guard<std::mutex> guard(crt_lock);
     std::string reason;
+
+    SListener old_listener = use_socket ?
+        listener_find_by_address(params.get_string(CN_ADDRESS), params.get_integer(CN_PORT)) :
+        listener_find_by_socket(params.get_string(CN_SOCKET));
 
     if (!ok)
     {
@@ -1178,33 +1221,13 @@ bool runtime_create_listener(Service* service,
     {
         config_runtime_error("Listener '%s' already exists", name);
     }
-    else if (SListener l = listener_find_by_address(addr, u_port))
+    else if (old_listener)
     {
-        config_runtime_error("Listener '%s' already listens on [%s]:%u", l->name(), addr, u_port);
+        config_runtime_error("Listener '%s' already listens on [%s]:%u", old_listener->name(),
+                             old_listener->address(), old_listener->port());
     }
     else if (config_is_valid_name(name, &reason))
     {
-        if (addr == NULL || strcasecmp(addr, CN_DEFAULT) == 0)
-        {
-            params.set(CN_ADDRESS, "::");
-        }
-
-        if (port == NULL || strcasecmp(port, CN_DEFAULT) == 0)
-        {
-            params.set(CN_PORT, "3306");
-        }
-
-        if (auth && strcasecmp(auth, CN_DEFAULT) != 0)
-        {
-            params.set(CN_AUTHENTICATOR, auth);
-        }
-
-        if (auth_opt && strcasecmp(auth_opt, CN_DEFAULT) != 0)
-        {
-            params.set(CN_AUTHENTICATOR_OPTIONS, auth_opt);
-        }
-
-        const char* print_addr = addr ? addr : "::";
         auto listener = Listener::create(name, proto, params);
 
         if (listener && listener_serialize(listener))
@@ -1225,8 +1248,8 @@ bool runtime_create_listener(Service* service,
         }
         else
         {
-            MXS_ERROR("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
-            config_runtime_error("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
+            config_runtime_error("Failed to create listener '%s'. Read the MaxScale error log "
+                                 "for more details.", name);
         }
     }
     else
