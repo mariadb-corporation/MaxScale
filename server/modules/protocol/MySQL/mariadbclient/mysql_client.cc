@@ -1475,7 +1475,13 @@ static void gw_process_one_new_client(DCB* client_dcb)
                         }
                         else
                         {
-                            MySQLSendHandshake(client_dcb);
+                            // It's possible that the DCB isn't owned by the chosen worker if it's a
+                            // maxadmin/maxinfo service. In this case the execution must be moved to the
+                            // owning worker.
+                            auto worker = static_cast<mxs::RoutingWorker*>(client_dcb->poll.owner);
+                            worker->execute([=]() {
+                                                MySQLSendHandshake(client_dcb);
+                                            }, mxs::RoutingWorker::EXECUTE_AUTO);
                         }
                     }, mxs::RoutingWorker::EXECUTE_AUTO);
 }
