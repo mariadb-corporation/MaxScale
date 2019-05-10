@@ -446,10 +446,10 @@ void MariaDBMonitor::tick()
         }
     }
 
-    // Topology needs to be rechecked if it has changed or if master is down.
-    if (m_cluster_topology_changed || (m_master && m_master->is_down()))
+    update_topology();
+
+    if (m_cluster_topology_changed)
     {
-        update_topology();
         m_cluster_topology_changed = false;
         // If cluster operations are enabled, check topology support and disable if needed.
         if (m_settings.auto_failover || m_settings.switchover_on_low_disk_space || m_settings.auto_rejoin)
@@ -675,7 +675,7 @@ void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
     mxb::atomic::store(&m_master, new_master, mxb::atomic::RELAXED);
     update_master_cycle_info();
     m_warn_current_master_invalid = true;
-    m_warn_have_better_master = true;
+    m_warn_cannot_find_master = true;
 }
 
 /**

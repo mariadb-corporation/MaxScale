@@ -32,3 +32,14 @@ void DelimitedPrinter::cat(string& target, const string& addition)
     target += m_current_separator + addition;
     m_current_separator = m_separator;
 }
+
+void DelimitedPrinter::cat(const std::string& addition)
+{
+    cat(m_message, addition);
+    m_current_separator = m_separator;
+}
+
+std::string DelimitedPrinter::message() const
+{
+    return m_message;
+}

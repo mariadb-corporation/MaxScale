@@ -300,100 +300,142 @@ MariaDBServer* MariaDBMonitor::find_best_reach_server(const ServerArray& candida
     return best_reach;
 }
 
-static string disqualify_reasons_to_string(MariaDBServer* disqualified)
-{
-    string reasons;
-    string separator;
-    const string word_and = " and ";
-    if (disqualified->is_in_maintenance())
-    {
-        reasons += separator + "in maintenance";
-        separator = word_and;
-    }
-    if (disqualified->is_down())
-    {
-        reasons += separator + "down";
-        separator = word_and;
-    }
-    if (disqualified->is_read_only())
-    {
-        reasons += separator + "in read_only mode";
-    }
-    return reasons;
-}
-
 /**
  * Find the best master server in the cluster. This method should only be called when the monitor
  * is starting, a cluster operation (e.g. failover) has occurred or the user has changed something on
  * the current master making it unsuitable. Because of this, the method can be quite vocal and not
  * consider the previous master.
  *
+ * @param req_running Should non-running candidates be accepted
  * @param msg_out Message output. Includes explanations on why potential candidates were not selected.
  * @return The master with most slaves
  */
-MariaDBServer* MariaDBMonitor::find_topology_master_server(string* msg_out)
+MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_running, string* msg_out)
 {
     /* Finding the best master server may get somewhat tricky if the graph is complicated. The general
      * criteria for the best master is that it reaches the most slaves (possibly in multiple layers and
      * cycles). To avoid having to calculate this reachability (doable by a recursive search) to all nodes,
      * let's use the knowledge that the best master is either a server with no masters (external ones don't
-     * count) or is part of a cycle with no out-cycle masters. The server must be running and writable
-     * to be eligible. */
-    string messages;
-    string separator;
-    const char disq[] = "is not a valid master candidate because it is ";
+     * count) or is part of a cycle with no out-cycle masters.
+     *
+     * Master candidates must be writable and not in maintenance to be eligible. Running candidates are
+     * preferred. A downed candidate is accepted only if no current master exists. A downed master can
+     * be failovered later. */
+
     ServerArray master_candidates;
-    for (MariaDBServer* server : m_servers)
-    {
-        if (server->m_node.parents.empty())
-        {
-            if (server->is_usable() && !server->is_read_only())
-            {
-                master_candidates.push_back(server);
-            }
-            else
-            {
-                string reasons = disqualify_reasons_to_string(server);
-                messages += separator + "'" + server->name() + "' " + disq + reasons + ".";
-                separator = "\n";
-            }
-        }
-    }
 
-    // For each cycle, it's enough to take one sample server, as all members of a cycle have the same reach.
-    for (auto& iter : m_cycles)
-    {
-        ServerArray& cycle_members = iter.second;
-        // Check that no server in the cycle is replicating from outside the cycle. This requirement is
-        // analogous with the same requirement for non-cycle servers.
-        if (!cycle_has_master_server(cycle_members))
+    // Helper function for finding normal master candidates.
+    auto search_outside_cycles = [this, &master_candidates](RequireRunning req_running,
+                                                            DelimitedPrinter& topo_messages) {
+        for (MariaDBServer* server : m_servers)
         {
-            MariaDBServer* sample_server = find_master_inside_cycle(cycle_members);
-            if (sample_server)
+            if (server->m_node.parents.empty())
             {
-                master_candidates.push_back(sample_server);
-            }
-            else
-            {
-                // No single server in the cycle was viable.
-                const char no_valid_servers[] = "No valid master server could be found in the cycle with "
-                                                "servers";
-                string server_names = monitored_servers_to_string(cycle_members);
-                messages += separator + no_valid_servers + " '" + server_names + "'.";
-                separator = "\n";
-
-                for (MariaDBServer* disqualified_server : cycle_members)
+                string why_not;
+                if (is_candidate_valid(server, req_running, &why_not))
                 {
-                    string reasons = disqualify_reasons_to_string(disqualified_server);
-                    messages += separator + "'" + disqualified_server->name() + "' " + disq + reasons + ".";
-                    separator = "\n";
+                    master_candidates.push_back(server);
+                }
+                else
+                {
+                    topo_messages.cat(why_not);
                 }
             }
         }
+    };
+
+    // Helper function for finding master candidates inside cycles.
+    auto search_inside_cycles = [this, &master_candidates](RequireRunning req_running,
+                                                           DelimitedPrinter& topo_messages) {
+        // For each cycle, it's enough to take one sample server, as all members of a cycle have the
+        // same reach. The sample server needs to be valid, though.
+        for (auto& iter : m_cycles)
+        {
+            ServerArray& cycle_members = iter.second;
+            // Check that no server in the cycle is replicating from outside the cycle. This requirement is
+            // analogous with the same requirement for non-cycle servers.
+            if (!cycle_has_master_server(cycle_members))
+            {
+                // Find a valid candidate from the cycle.
+                MariaDBServer* cycle_cand = nullptr;
+                for (MariaDBServer* elem : cycle_members)
+                {
+                    mxb_assert(elem->m_node.cycle != NodeData::CYCLE_NONE);
+                    if (is_candidate_valid(elem, req_running))
+                    {
+                        cycle_cand = elem;
+                        break;
+                    }
+                }
+                if (cycle_cand)
+                {
+                    master_candidates.push_back(cycle_cand);
+                }
+                else
+                {
+                    // No single server in the cycle was viable. Go through the cycle again and construct
+                    // a message explaining why.
+                    string server_names = monitored_servers_to_string(cycle_members);
+                    string msg_start = string_printf("No valid master server could be found in the cycle with "
+                                                     "servers %s:", server_names.c_str());
+                    DelimitedPrinter cycle_invalid_msg("\n");
+                    cycle_invalid_msg.cat(msg_start);
+                    for (MariaDBServer* elem : cycle_members)
+                    {
+                        string server_msg;
+                        is_candidate_valid(elem, req_running, &server_msg);
+                        cycle_invalid_msg.cat(server_msg);
+                    }
+                    cycle_invalid_msg.cat(""); // Adds a linebreak
+                    topo_messages.cat(cycle_invalid_msg.message());
+                }
+            }
+        }
+    };
+
+    // Normally, do not accept downed servers as master.
+    DelimitedPrinter topo_messages_reject_down("\n");
+    search_outside_cycles(RequireRunning::REQUIRED, topo_messages_reject_down);
+    search_inside_cycles(RequireRunning::REQUIRED, topo_messages_reject_down);
+
+    MariaDBServer* best_candidate = nullptr;
+    string messages;
+    if (!master_candidates.empty())
+    {
+        // Found one or more candidates. Select the best one and output the messages.
+        best_candidate = find_best_reach_server(master_candidates);
+        messages = topo_messages_reject_down.message();
+    }
+    else if (req_running == RequireRunning::OPTIONAL)
+    {
+        // If no candidate was found and the caller allows, we get desperate and allow a downed server
+        // to be selected. This is required for the case when MaxScale is started while the master is
+        // already down. Failover may be able to fix the situation if settings allow it or
+        // if activated manually.
+        DelimitedPrinter topo_messages_accept_down("\n");
+        search_outside_cycles(RequireRunning::OPTIONAL, topo_messages_accept_down);
+        search_inside_cycles(RequireRunning::OPTIONAL, topo_messages_accept_down);
+        if (!master_candidates.empty())
+        {
+            // Found one or more candidates which are down. Select the best one. Instead of the original
+            // messages, output the messages without complaints that a server is down. The caller
+            // should detect and explain that a non-running server was selected.
+            best_candidate = find_best_reach_server(master_candidates);
+            messages = topo_messages_accept_down.message();
+        }
+        else
+        {
+            // Still no luck. Output the messages from the first run since these explain if any potential
+            // candidates were down.
+            messages = topo_messages_reject_down.message();
+        }
     }
 
-    *msg_out = messages;
-    return master_candidates.empty() ? NULL : find_best_reach_server(master_candidates);
+    if (msg_out)
+    {
+        *msg_out = messages;
+    }
+    return best_candidate;
 }
 
 /**
@@ -405,7 +447,6 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(string* msg_out)
  */
 void MariaDBMonitor::calculate_node_reach(MariaDBServer* search_root)
 {
-    mxb_assert(search_root && search_root->m_node.reach == NodeData::REACH_UNKNOWN);
     // Reset indexes since they will be reused.
     reset_node_index_info();
 
@@ -448,27 +489,6 @@ int MariaDBMonitor::running_slaves(MariaDBServer* search_root)
 
     topology_DFS(search_root, visitor);
     return n_running_slaves;
-}
-
-/**
- * Check which node in a cycle should be the master. The node must be running without read_only.
- *
- * @param cycle The cycle index
- * @return The selected node
- */
-MariaDBServer* MariaDBMonitor::find_master_inside_cycle(ServerArray& cycle_members)
-{
-    /* For a cycle, all servers are equally good in a sense. The question is just if the server is up
-     * and writable. */
-    for (MariaDBServer* server : cycle_members)
-    {
-        mxb_assert(server->m_node.cycle != NodeData::CYCLE_NONE);
-        if (server->is_usable() && !server->is_read_only())
-        {
-            return server;
-        }
-    }
-    return NULL;
 }
 
 /**
@@ -779,13 +799,21 @@ bool MariaDBMonitor::cycle_has_master_server(ServerArray& cycle_servers)
 
 void MariaDBMonitor::update_topology()
 {
-    m_servers_by_id.clear();
-    for (auto server : m_servers)
+    if (m_cluster_topology_changed)
     {
-        m_servers_by_id[server->m_server_id] = server;
+        // Server IDs may have changed.
+        m_servers_by_id.clear();
+        for (auto server : m_servers)
+        {
+            if (server->m_server_id != SERVER_ID_UNKNOWN)
+            {
+                m_servers_by_id[server->m_server_id] = server;
+            }
+        }
+
+        build_replication_graph();
+        find_graph_cycles();
     }
-    build_replication_graph();
-    find_graph_cycles();
 
     /* Check if a failover/switchover was performed last loop and the master should change.
      * In this case, update the master and its cycle info here. */
@@ -795,113 +823,133 @@ void MariaDBMonitor::update_topology()
         m_next_master = NULL;
     }
 
-    // Find the server that looks like it would be the best master. It does not yet overwrite the
-    // current master.
-    string topology_messages;
-    MariaDBServer* master_candidate = find_topology_master_server(&topology_messages);
-    // If the 'master_candidate' is a valid server but different from the current master,
-    // a change may be necessary. It will only happen if the current master is no longer usable.
-    bool have_better = (master_candidate && master_candidate != m_master);
-    bool current_still_best = (master_candidate && master_candidate == m_master);
+    if (m_cluster_topology_changed || !m_master || !m_master->is_usable())
+    {
+        update_master();
+    }
 
+}
+void MariaDBMonitor::update_master()
+{
     // Check if current master is still valid.
     string reason_not_valid;
     bool current_is_ok = master_is_valid(&reason_not_valid);
 
     if (current_is_ok)
     {
+        // Current master is still ok. If topology has changed, check which server looks like the best master
+        // and alert if it's not the current master. Don't change yet.
         m_warn_current_master_invalid = true;
-        // Update master cycle info in case it has changed.
-        update_master_cycle_info();
-        if (have_better)
+        if (m_cluster_topology_changed)
         {
-            // Master is still valid but it is no longer the best master. Print a warning. This
-            // may be a continuous situation so only print once.
-            if (m_warn_have_better_master)
+            // Update master cycle info in case it has changed.
+            update_master_cycle_info();
+            MariaDBServer* master_cand = find_topology_master_server(RequireRunning::REQUIRED);
+            // master_cand can be null if e.g. current master is down.
+            if (master_cand && (master_cand != m_master))
             {
+                // This is unlikely to be printed continuously because of the topology-change requirement.
                 MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
                             "Master will change when '%s' is no longer a valid master.",
-                            master_candidate->name(),
-                            m_master->name(),
-                            m_master->name());
-                m_warn_have_better_master = false;
+                            master_cand->name(), m_master->name(), m_master->name());
             }
         }
     }
-    else
+    else if (m_master)
     {
-        // Current master is faulty or does not exist
-        m_warn_have_better_master = true;
-        if (have_better)
+        // Current master is faulty and swapping to a better, running server is allowed.
+        string topology_messages;
+        MariaDBServer* master_cand = find_topology_master_server(RequireRunning::REQUIRED,
+                                                                 &topology_messages);
+        m_warn_cannot_find_master = true;
+        if (master_cand)
         {
-            // We have an alternative. Swap master. The messages give the impression
-            // that new master selection has not yet happened, but this is just for clarity.
-            const char sel_new_master[] = "Selecting new master server.";
-            if (m_master)
+            if (master_cand != m_master)
             {
+                // We have another master to swap to. The messages give the impression that new master
+                // selection has not yet happened, but this is just for clarity for the user.
                 mxb_assert(!reason_not_valid.empty());
-                MXS_WARNING("The current master server '%s' is no longer valid because %s. %s",
-                            m_master->name(),
-                            reason_not_valid.c_str(),
-                            sel_new_master);
-            }
-            else
-            {
-                // This typically happens only when starting from scratch.
-                MXS_NOTICE("%s", sel_new_master);
-            }
+                MXS_WARNING("The current master server '%s' is no longer valid because %s. "
+                            "Selecting new master server.",
+                            m_master->name(), reason_not_valid.c_str());
 
-            // At this point, print messages explaining why any/other possible master servers weren't picked.
-            if (!topology_messages.empty())
-            {
-                MXS_WARNING("%s", topology_messages.c_str());
-            }
-
-            MXS_NOTICE("Setting '%s' as master.", master_candidate->name());
-            // Change the master, even though this may break replication.
-            assign_new_master(master_candidate);
-        }
-        else if (current_still_best)
-        {
-            // Tried to find another master but the current one is still the best.
-            MXS_WARNING("Attempted to find a replacement for the current master server '%s' because %s, "
-                        "but '%s' is still the best master server.",
-                        m_master->name(),
-                        reason_not_valid.c_str(),
-                        m_master->name());
-
-            if (!topology_messages.empty())
-            {
-                MXS_WARNING("%s", topology_messages.c_str());
-            }
-            // The following updates some data on the master.
-            assign_new_master(master_candidate);
-        }
-        else
-        {
-            // No alternative master. Keep current status and print warnings.
-            // This situation may stick so only print the messages once.
-            if (m_warn_current_master_invalid)
-            {
-                if (m_master)
+                // At this point, print messages explaining why any/other possible master servers
+                // weren't picked.
+                if (!topology_messages.empty())
                 {
-                    mxb_assert(!reason_not_valid.empty());
-                    MXS_WARNING("The current master server '%s' is no longer valid because %s, "
-                                "but there is no valid alternative to swap to.",
-                                m_master->name(),
-                                reason_not_valid.c_str());
+                    MXS_WARNING("%s", topology_messages.c_str());
                 }
-                else
-                {
-                    MXS_WARNING("No valid master server found.");
-                }
+
+                MXS_NOTICE("Setting '%s' as master.", master_cand->name());
+                // Change the master, even though this may break replication.
+                assign_new_master(master_cand);
+            }
+            else if (m_cluster_topology_changed)
+            {
+                // Tried to find another master but the current one is still the best. This is typically
+                // caused by a topology change. The check on 'm_cluster_topology_changed' should stop this
+                // message from printing repeatedly.
+                MXS_WARNING("Attempted to find a replacement for the current master server '%s' because %s, "
+                            "but '%s' is still the best master server.",
+                            m_master->name(), reason_not_valid.c_str(), m_master->name());
 
                 if (!topology_messages.empty())
                 {
                     MXS_WARNING("%s", topology_messages.c_str());
                 }
-                m_warn_current_master_invalid = false;
+                // The following updates some data on the master.
+                assign_new_master(master_cand);
             }
+        }
+        else if (m_warn_current_master_invalid)
+        {
+            // No alternative master. Keep current status and print warnings.
+            // This situation may stick so only print the messages once.
+            mxb_assert(!reason_not_valid.empty());
+            MXS_WARNING("The current master server '%s' is no longer valid because %s, "
+                        "but there is no valid alternative to swap to.",
+                        m_master->name(), reason_not_valid.c_str());
+            if (!topology_messages.empty())
+            {
+                MXS_WARNING("%s", topology_messages.c_str());
+            }
+            m_warn_current_master_invalid = false;
+        }
+    }
+    else
+    {
+        // This happens only when starting from scratch before a master has been selected.
+        // Accept either a running or downed master, preferring running servers.
+        string topology_messages;
+        MariaDBServer* master_cand = find_topology_master_server(RequireRunning::OPTIONAL,
+                                                                 &topology_messages);
+        if (master_cand)
+        {
+            MXS_NOTICE("Selecting new master server.");
+            if (master_cand->is_down())
+            {
+                const char msg[] = "No running master candidates detected and no master currently set. "
+                                   "Accepting a non-running server as master.";
+                MXS_WARNING("%s", msg);
+            }
+
+            if (!topology_messages.empty())
+            {
+                MXS_WARNING("%s", topology_messages.c_str());
+            }
+
+            MXS_NOTICE("Setting '%s' as master.", master_cand->name());
+            assign_new_master(master_cand);
+        }
+        else if (m_warn_cannot_find_master)
+        {
+            // No current master and could not select another. This situation may stick so only print once.
+            MXS_WARNING("Tried to find a master but no valid master server found.");
+            if (!topology_messages.empty())
+            {
+                MXS_WARNING("%s", topology_messages.c_str());
+            }
+            m_warn_cannot_find_master = false;
         }
     }
 }
@@ -920,3 +968,33 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
         }
     }
 }
+
+bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, string* why_not)
+{
+    bool is_valid = true;
+    DelimitedPrinter reasons(" and ");
+    if (cand->is_in_maintenance())
+    {
+        is_valid = false;
+        reasons.cat("in maintenance");
+    }
+
+    if (cand->is_read_only())
+    {
+        is_valid = false;
+        reasons.cat("in read_only mode");
+    }
+
+    if (req_running == RequireRunning::REQUIRED && cand->is_down())
+    {
+        is_valid = false;
+        reasons.cat("down");
+    }
+
+    if (!is_valid && why_not)
+    {
+        *why_not = string_printf("'%s' is not a valid master candidate because it is %s.",
+                                 cand->name(), reasons.message().c_str());
+    }
+    return is_valid;
+};

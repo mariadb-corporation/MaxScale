@@ -52,7 +52,6 @@ NodeData::NodeData()
 void NodeData::reset_results()
 {
     cycle = CYCLE_NONE;
-    reach = REACH_UNKNOWN;
     parents.clear();
     children.clear();
     external_masters.clear();

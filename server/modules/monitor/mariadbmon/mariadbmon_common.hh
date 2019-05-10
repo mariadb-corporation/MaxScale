@@ -61,7 +61,18 @@ public:
      * @param addition String to add. The delimiter is printed before the addition.
      */
     void cat(std::string& target, const std::string& addition);
+
+    /**
+     * Add to internal string.
+     *
+     * @param addition The string to add.
+     */
+    void cat(const std::string& addition);
+
+    std::string message() const;
+
 private:
     const std::string m_separator;
     std::string       m_current_separator;
+    std::string       m_message;
 };

@@ -119,6 +119,12 @@ private:
         ON
     };
 
+    enum class RequireRunning
+    {
+        REQUIRED,
+        OPTIONAL
+    };
+
     class SwitchoverParams
     {
     public:
@@ -239,7 +245,7 @@ private:
     // Fields controlling logging of various events. TODO: Check these
     bool m_log_no_master = true;                /* Should it be logged that there is no master? */
     bool m_warn_current_master_invalid = true;  /* Print warning if current master is not valid? */
-    bool m_warn_have_better_master = true;      /* Print warning if the current master is not the best one? */
+    bool m_warn_cannot_find_master = true;      /* Print warning if a master cannot be found? */
     bool m_warn_master_down = true;             /* Print warning that failover may happen soon? */
     bool m_warn_failover_precond = true;        /* Print failover preconditions error message? */
     bool m_warn_switchover_precond = true;      /* Print switchover preconditions error message? */
@@ -267,6 +273,7 @@ private:
     // Cluster discovery and status assignment methods, top levels
     void update_topology();
     void build_replication_graph();
+    void update_master();
     void assign_new_master(MariaDBServer* new_master);
     void find_graph_cycles();
     bool master_is_valid(std::string* reason_out);
@@ -274,8 +281,7 @@ private:
     void assign_slave_and_relay_master(MariaDBServer* start_node);
     void check_cluster_operations_support();
 
-    MariaDBServer* find_topology_master_server(std::string* msg_out);
-    MariaDBServer* find_master_inside_cycle(ServerArray& cycle_servers);
+    MariaDBServer* find_topology_master_server(RequireRunning req_running, std::string* msg_out = nullptr);
     MariaDBServer* find_best_reach_server(const ServerArray& candidates);
 
     // Cluster discovery and status assignment methods, low level
@@ -286,6 +292,7 @@ private:
     void update_gtid_domain();
     void update_external_master();
     void update_master_cycle_info();
+    bool is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, std::string* why_not = nullptr);
 
     // Cluster operation launchers
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
