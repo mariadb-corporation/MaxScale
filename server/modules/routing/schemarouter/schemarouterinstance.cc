@@ -280,7 +280,7 @@ uint64_t SchemaRouter::getCapabilities()
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static auto caps = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG;
+    static uint64_t caps = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG;
     static auto desc = "A database sharding router for simple sharding";
     static MXS_MODULE info =
     {

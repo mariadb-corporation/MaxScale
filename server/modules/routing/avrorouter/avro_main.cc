@@ -493,7 +493,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL
     };
 
-    auto caps = RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_AUTH;
+    static uint64_t caps = RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_AUTH;
 
     static MXS_MODULE info =
     {
