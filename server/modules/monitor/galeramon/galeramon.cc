@@ -277,37 +277,41 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node is in desync - lets take it offline */
             if (strcmp(row[0], "wsrep_desync") == 0)
             {
-              if (strcasecmp(row[1],"YES") || strcasecmp(row[1],"ON") || strcasecmp(row[1],"1") || strcasecmp(row[1],"true"))
-              {
-                info.joined = 0;
-              }
+                if (strcasecmp(row[1], "YES") == 0 || strcasecmp(row[1], "ON") == 0
+                    || strcasecmp(row[1], "1") == 0 || strcasecmp(row[1], "true") == 0)
+                {
+                    info.joined = 0;
+                }
             }
 
             /* Node rejects queries - lets take it offline */
             if (strcmp(row[0], "wsrep_reject_queries") == 0)
             {
-              if (strcasecmp(row[1],"ALL") || strcasecmp(row[1],"ALL_KILL"))
-              {
-                info.joined = 0;
-              }
+                if (strcasecmp(row[1], "ALL") == 0
+                    || strcasecmp(row[1], "ALL_KILL") == 0)
+                {
+                    info.joined = 0;
+                }
             }
 
             /* Node rejects queries - lets take it offline */
             if (strcmp(row[0], "wsrep_sst_donor_rejects_queries") == 0)
             {
-              if (strcasecmp(row[1],"YES") || strcasecmp(row[1],"ON") || strcasecmp(row[1],"1") || strcasecmp(row[1],"true"))
-              {
-                info.joined = 0;
-              }
+                if (strcasecmp(row[1], "YES") == 0 || strcasecmp(row[1], "ON") == 0
+                    || strcasecmp(row[1], "1") == 0 || strcasecmp(row[1], "true") == 0)
+                {
+                    info.joined = 0;
+                }
             }
 
             /* Node is not ready - lets take it offline */
             if (strcmp(row[0], "wsrep_ready") == 0)
             {
-              if (strcasecmp(row[1],"NO") || strcasecmp(row[1],"OFF") || strcasecmp(row[1],"0") || strcasecmp(row[1],"false"))
-              {
-                info.joined = 0;
-              }
+                if (strcasecmp(row[1], "NO") == 0 || strcasecmp(row[1], "OFF") == 0
+                    || strcasecmp(row[1], "0") == 0 || strcasecmp(row[1], "false") == 0)
+                {
+                    info.joined = 0;
+                }
             }
 
             if (strcmp(row[0], "wsrep_cluster_state_uuid") == 0 && row[1] && *row[1])

@@ -2368,7 +2368,7 @@ bool pid_is_maxscale(int pid)
 
     if (file && std::getline(file, line))
     {
-        if (line == "maxscale")
+        if (line == "maxscale" && pid != getpid())
         {
             rval = true;
         }

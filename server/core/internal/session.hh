@@ -136,6 +136,11 @@ public:
             return m_sQuery;
         }
 
+        timespec time_completed() const
+        {
+            return m_completed;
+        }
+
         void book_server_response(SERVER* pServer, bool final_response);
         void book_as_complete();
         void reset_server_bookkeeping();

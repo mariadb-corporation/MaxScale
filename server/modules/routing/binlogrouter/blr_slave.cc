@@ -46,6 +46,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
+#include <maxscale/routingworker.hh>
 
 using std::string;
 using std::vector;
@@ -241,7 +242,7 @@ static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE* router,
                                                        int len,
                                                        uint8_t seqno);
 static bool blr_send_slave_heartbeat(void* inst);
-static int  blr_slave_send_heartbeat(ROUTER_INSTANCE* router,
+static void blr_slave_send_heartbeat(ROUTER_INSTANCE* router,
                                      ROUTER_SLAVE* slave);
 static int blr_set_master_ssl(ROUTER_INSTANCE* router,
                               const ChangeMasterConfig& config,
@@ -6204,13 +6205,11 @@ static bool blr_send_slave_heartbeat(void* inst)
                        sptr->heartbeat,
                        (unsigned long)sptr->lastReply);
 
-            if (blr_slave_send_heartbeat(router, sptr))
-            {
-                /* Set last event */
-                sptr->lastEventReceived = HEARTBEAT_EVENT;
-                /* Set last time */
-                sptr->lastReply = t_now;
-            }
+            blr_slave_send_heartbeat(router, sptr);
+            /* Set last event */
+            sptr->lastEventReceived = HEARTBEAT_EVENT;
+            /* Set last time */
+            sptr->lastReply = t_now;
         }
 
         sptr = sptr->next;
@@ -6228,7 +6227,7 @@ static bool blr_send_slave_heartbeat(void* inst)
  * @param slave     The current slave connection
  * @return          Number of bytes sent or 0 in case of failure
  */
-static int blr_slave_send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+static void send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
     REP_HEADER hdr;
     GWBUF* h_event;
@@ -6255,10 +6254,7 @@ static int blr_slave_send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
      *
      * Total = 5 bytes + len
      */
-    if ((h_event = gwbuf_alloc(MYSQL_HEADER_LEN + 1 + len)) == NULL)
-    {
-        return 0;
-    }
+    h_event = gwbuf_alloc(MYSQL_HEADER_LEN + 1 + len);
 
     /* The OK/Err byte is part of payload */
     hdr.payload_len = len + 1;
@@ -6306,7 +6302,18 @@ static int blr_slave_send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
     }
 
     /* Write the packet */
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, h_event);
+    mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(slave->dcb->owner);
+    worker->execute([slave, h_event]() {
+                        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, h_event);
+                    }, mxs::RoutingWorker::EXECUTE_AUTO);
+}
+
+static void blr_slave_send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+    mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(slave->dcb->owner);
+    worker->execute([router, slave]() {
+                        send_heartbeat(router, slave);
+                    }, mxs::RoutingWorker::EXECUTE_AUTO);
 }
 
 /**

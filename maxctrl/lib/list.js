@@ -115,9 +115,15 @@ exports.builder = function(yargs) {
         .command('sessions', 'List sessions', function(yargs) {
             return yargs.epilog('List all client sessions.')
                 .usage('Usage: list sessions')
+                .group([rDnsOption.shortname], 'Options:')
+                .option(rDnsOption.shortname, rDnsOption.definition)
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'sessions',[
+                var resource = 'sessions'
+                if (argv[this.rDnsOption.shortname]) {
+                    resource += '?' + this.rDnsOption.optionOn
+                }
+                return getCollection(host, resource,[
                     {'Id': 'id'},
                     {'User': 'attributes.user'},
                     {'Host': 'attributes.remote'},

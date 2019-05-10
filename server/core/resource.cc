@@ -178,6 +178,12 @@ bool Resource::requires_body() const
 namespace
 {
 
+bool option_rdns_is_on(const HttpRequest& request)
+{
+    return request.get_option("rdns") == "true";
+}
+
+
 static bool drop_path_part(std::string& path)
 {
     size_t pos = path.find_last_of('/');
@@ -622,7 +628,8 @@ HttpResponse cb_get_monitor(const HttpRequest& request)
 
 HttpResponse cb_all_sessions(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, session_list_to_json(request.host()));
+    bool rdns = option_rdns_is_on(request);
+    return HttpResponse(MHD_HTTP_OK, session_list_to_json(request.host(), rdns));
 }
 
 HttpResponse cb_get_session(const HttpRequest& request)
@@ -632,7 +639,8 @@ HttpResponse cb_get_session(const HttpRequest& request)
 
     if (session)
     {
-        json_t* json = session_to_json(session, request.host());
+        bool rdns = option_rdns_is_on(request);
+        json_t* json = session_to_json(session, request.host(), rdns);
         session_put_ref(session);
         return HttpResponse(MHD_HTTP_OK, json);
     }
