@@ -488,9 +488,9 @@ int main(int argc, char* argv[])
             {
                 if (setup_blr(test, pMaxscale, gtid, approach))
                 {
-                    int slave_index = test.galera->N - 1;     // We use the last slave.
+                    int slave_index = test.repl->N - 1;     // We use the last slave.
 
-                    Mariadb_nodes& ms = *test.galera;
+                    Mariadb_nodes& ms = *test.repl;
                     ms.connect(slave_index);
 
                     MYSQL* pSlave = ms.nodes[slave_index];

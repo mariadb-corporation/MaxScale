@@ -362,7 +362,7 @@ add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND rea
 
 # MXS-1980: Support Galera cluster nodes as masters for Binlog Router
 # https://jira.mariadb.org/browse/MXS-1980
-add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_ids mxs1980_blr_galera_server_ids LABELS binlogrouter GALERA_BACKEND)
+add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_ids mxs1980_blr_galera_server_ids LABELS binlogrouter GALERA_BACKEND REPL_BACKEND)
 
 ############################################
 # END: Galera tests                        #
