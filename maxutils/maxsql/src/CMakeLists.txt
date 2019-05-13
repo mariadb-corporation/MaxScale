@@ -1,5 +1,6 @@
 add_library(maxsql STATIC
   mariadb.cc
+  packet_tracker.cc
   )
 
 target_link_libraries(maxsql maxbase ${MARIADB_CONNECTOR_LIBRARIES})
