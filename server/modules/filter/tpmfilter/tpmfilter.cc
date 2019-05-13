@@ -62,6 +62,7 @@
 #include <maxscale/server.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mysql.hh>
 
 /* The maximum size for query statements in a transaction (64MB) */
 static size_t sql_size_limit = 64 * 1024 * 1024;
@@ -464,77 +465,83 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
     {
         if ((ptr = modutil_get_SQL(queue)) != NULL)
         {
-            uint32_t query_type = qc_get_type_mask(queue);
-            int query_len = strlen(ptr);
-            my_session->query_end = false;
+            uint8_t* data = (uint8_t*) GWBUF_DATA(queue);
+            uint8_t command = MYSQL_GET_COMMAND(data);
 
-            /* check for commit and rollback */
-            if (query_type & QUERY_TYPE_COMMIT)
+            if (command == MXS_COM_QUERY)
             {
-                my_session->query_end = true;
-            }
-            else if (query_type & QUERY_TYPE_ROLLBACK)
-            {
-                my_session->query_end = true;
-                my_session->sql_index = 0;
-            }
+                uint32_t query_type = qc_get_type_mask(queue);
+                int query_len = strlen(ptr);
+                my_session->query_end = false;
 
-            /* for normal sql statements */
-            if (!my_session->query_end)
-            {
-                /* check and expand buffer size first. */
-                size_t new_sql_size = my_session->max_sql_size;
-                size_t len = my_session->sql_index + strlen(ptr) + my_instance->query_delimiter_size + 1;
-
-                /* if the total length of query statements exceeds the maximum limit, print an error and
-                 * return */
-                if (len > sql_size_limit)
+                /* check for commit and rollback */
+                if (query_type & QUERY_TYPE_COMMIT)
                 {
-                    MXS_ERROR("The size of query statements exceeds the maximum buffer limit of 64MB.");
-                    goto retblock;
+                    my_session->query_end = true;
+                }
+                else if (query_type & QUERY_TYPE_ROLLBACK)
+                {
+                    my_session->query_end = true;
+                    my_session->sql_index = 0;
                 }
 
-                /* double buffer size until the buffer fits the query */
-                while (len > new_sql_size)
+                /* for normal sql statements */
+                if (!my_session->query_end)
                 {
-                    new_sql_size *= 2;
-                }
-                if (new_sql_size > my_session->max_sql_size)
-                {
-                    char* new_sql = (char*)MXS_CALLOC(new_sql_size, sizeof(char));
-                    if (new_sql == NULL)
+                    /* check and expand buffer size first. */
+                    size_t new_sql_size = my_session->max_sql_size;
+                    size_t len = my_session->sql_index + strlen(ptr) + my_instance->query_delimiter_size + 1;
+
+                    /* if the total length of query statements exceeds the maximum limit, print an error and
+                    * return */
+                    if (len > sql_size_limit)
                     {
-                        MXS_ERROR("Memory allocation failure.");
+                        MXS_ERROR("The size of query statements exceeds the maximum buffer limit of 64MB.");
                         goto retblock;
                     }
-                    memcpy(new_sql, my_session->sql, my_session->sql_index);
-                    MXS_FREE(my_session->sql);
-                    my_session->sql = new_sql;
-                    my_session->max_sql_size = new_sql_size;
-                }
 
-                /* first statement */
-                if (my_session->sql_index == 0)
-                {
-                    memcpy(my_session->sql, ptr, strlen(ptr));
-                    my_session->sql_index += strlen(ptr);
-                    gettimeofday(&my_session->current_start, NULL);
+                    /* double buffer size until the buffer fits the query */
+                    while (len > new_sql_size)
+                    {
+                        new_sql_size *= 2;
+                    }
+                    if (new_sql_size > my_session->max_sql_size)
+                    {
+                        char* new_sql = (char*)MXS_CALLOC(new_sql_size, sizeof(char));
+                        if (new_sql == NULL)
+                        {
+                            MXS_ERROR("Memory allocation failure.");
+                            goto retblock;
+                        }
+                        memcpy(new_sql, my_session->sql, my_session->sql_index);
+                        MXS_FREE(my_session->sql);
+                        my_session->sql = new_sql;
+                        my_session->max_sql_size = new_sql_size;
+                    }
+
+                    /* first statement */
+                    if (my_session->sql_index == 0)
+                    {
+                        memcpy(my_session->sql, ptr, strlen(ptr));
+                        my_session->sql_index += strlen(ptr);
+                        gettimeofday(&my_session->current_start, NULL);
+                    }
+                    /* otherwise, append the statement with semicolon as a statement delimiter */
+                    else
+                    {
+                        /* append a query delimiter */
+                        memcpy(my_session->sql + my_session->sql_index,
+                               my_instance->query_delimiter,
+                               my_instance->query_delimiter_size);
+                        /* append the next query statement */
+                        memcpy(my_session->sql + my_session->sql_index + my_instance->query_delimiter_size,
+                               ptr,
+                               strlen(ptr));
+                        /* set new pointer for the buffer */
+                        my_session->sql_index += (my_instance->query_delimiter_size + strlen(ptr));
+                    }
+                    gettimeofday(&my_session->last_statement_start, NULL);
                 }
-                /* otherwise, append the statement with semicolon as a statement delimiter */
-                else
-                {
-                    /* append a query delimiter */
-                    memcpy(my_session->sql + my_session->sql_index,
-                           my_instance->query_delimiter,
-                           my_instance->query_delimiter_size);
-                    /* append the next query statement */
-                    memcpy(my_session->sql + my_session->sql_index + my_instance->query_delimiter_size,
-                           ptr,
-                           strlen(ptr));
-                    /* set new pointer for the buffer */
-                    my_session->sql_index += (my_instance->query_delimiter_size + strlen(ptr));
-                }
-                gettimeofday(&my_session->last_statement_start, NULL);
             }
         }
     }
