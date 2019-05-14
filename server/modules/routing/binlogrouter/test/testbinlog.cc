@@ -100,9 +100,9 @@ int main(int argc, char** argv)
     set_libdir(MXS_STRDUP_A(".."));
     load_module("binlogrouter", MODULE_ROUTER);
     set_libdir(MXS_STRDUP_A("../../../protocol/MySQL/mariadbbackend/"));
-    load_module("MySQLBackend", MODULE_PROTOCOL);
-    set_libdir(MXS_STRDUP_A("../../../authenticator/MySQLBackendAuth/"));
-    load_module("MySQLBackendAuth", MODULE_AUTHENTICATOR);
+    load_module("mariadbbackend", MODULE_PROTOCOL);
+    set_libdir(MXS_STRDUP_A("../../../authenticator/MariaDBBackendAuth/"));
+    load_module("mysqlbackendauth", MODULE_AUTHENTICATOR);
     set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
     load_module("qc_sqlite", MODULE_QUERY_CLASSIFIER);
 
@@ -142,8 +142,8 @@ int main(int argc, char** argv)
     params.set_from_list({
         {"address", "_none_"},
         {"port", "3306"},
-        {"protocol", "MySQLBackend"},
-        {"authenticator", "MySQLBackendAuth"}
+        {"protocol", "MariaDBBackend"},
+        {"authenticator", "mariadbbackendauth"}
     }, config_server_params);
 
     Server* server = Server::server_alloc("binlog_router_master_host", params);
