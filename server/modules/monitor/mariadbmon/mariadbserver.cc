@@ -29,6 +29,7 @@ using maxbase::StopWatch;
 using maxsql::QueryResult;
 using Guard = std::lock_guard<std::mutex>;
 using maxscale::MonitorServer;
+using ConnectResult = maxscale::MonitorServer::ConnectResult;
 
 MariaDBServer::MariaDBServer(MonitorServer* monitored_server, int config_index,
                              const SharedSettings& settings)
@@ -2191,13 +2192,13 @@ void MariaDBServer::update_server(bool time_to_update_disk_space,
 {
     auto server = this;
     MonitorServer* mon_srv = server->m_server_base;
-    mxs_connect_result_t conn_status = mon_srv->ping_or_connect(conn_settings);
+    ConnectResult conn_status = mon_srv->ping_or_connect(conn_settings);
     MYSQL* conn = mon_srv->con;     // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 
     if (mxs::Monitor::connection_is_ok(conn_status))
     {
         server->set_status(SERVER_RUNNING);
-        if (conn_status == MONITOR_CONN_NEWCONN_OK)
+        if (conn_status == ConnectResult::NEWCONN_OK)
         {
             // Is a new connection or a reconnection. Check server version.
             server->update_server_version();
@@ -2207,7 +2208,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space,
             || server->m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
         {
             // Check permissions if permissions failed last time or if this is a new connection.
-            if (server->had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
+            if (server->had_status(SERVER_AUTH_ERROR) || conn_status == ConnectResult::NEWCONN_OK)
             {
                 server->check_permissions();
             }

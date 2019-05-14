@@ -84,34 +84,11 @@ extern const char CN_SCRIPT_TIMEOUT[];
  */
 #define MXS_MONITOR_VERSION {5, 0, 0}
 
-/**
- * Specifies capabilities specific for monitor.
- *
- * @see enum routing_capability
- *
- * @note The values of the capabilities here *must* be between 0x0001 0000 0000 0000
- *       and 0x0080 0000 0000 0000, that is, bits 48 to 55.
- */
-enum monitor_capability_t
-{
-    MCAP_TYPE_NONE = 0x0    // TODO: remove once monitor capabilities are defined
-};
-
 // Monitor state enum
 enum monitor_state_t
 {
     MONITOR_STATE_STOPPED,
     MONITOR_STATE_RUNNING,
-};
-
-/* Return type of mon_ping_or_connect_to_db(). */
-enum mxs_connect_result_t
-{
-    MONITOR_CONN_EXISTING_OK,   /* Existing connection was ok and server replied to ping. */
-    MONITOR_CONN_NEWCONN_OK,    /* No existing connection or no ping reply. New connection created
-                                 * successfully. */
-    MONITOR_CONN_REFUSED,       /* No existing connection or no ping reply. Server refused new connection. */
-    MONITOR_CONN_TIMEOUT        /* No existing connection or no ping reply. Timeout on new connection. */
 };
 
 /** Monitor events */
@@ -138,12 +115,6 @@ enum mxs_monitor_event_t
     NEW_DONOR_EVENT   = (1 << 17),  /**< new_donor */
 };
 
-enum credentials_approach_t
-{
-    CREDENTIALS_INCLUDE,
-    CREDENTIALS_EXCLUDE,
-};
-
 namespace maxscale
 {
 
@@ -166,6 +137,16 @@ public:
                                          *   and the total effective timeout value is three times the
                                          *   option value. */
         int connect_attempts {1};       /**< How many times a connection is attempted */
+    };
+
+    /* Return type of mon_ping_or_connect_to_db(). */
+    enum class ConnectResult
+    {
+        OLDCONN_OK,    /* Existing connection was ok and server replied to ping. */
+        NEWCONN_OK,    /* No existing connection or no ping reply. New connection created
+                        * successfully. */
+        REFUSED,       /* No existing connection or no ping reply. Server refused new connection. */
+        TIMEOUT        /* No existing connection or no ping reply. Timeout on new connection. */
     };
 
     /**
@@ -203,7 +184,7 @@ public:
 
     bool status_changed();
     bool should_print_fail_status();
-    void log_connect_error(mxs_connect_result_t rval);
+    void log_connect_error(ConnectResult rval);
 
     /**
      * Report query error to log.
@@ -218,7 +199,7 @@ public:
      * @param settings Connection settings
      * @return Connection status.
      */
-    mxs_connect_result_t ping_or_connect(const ConnectionSettings& settings);
+    ConnectResult ping_or_connect(const ConnectionSettings& settings);
 
     const char* get_event_name();
 
@@ -289,10 +270,10 @@ public:
      *                    valid or NULL.
      * @return Connection status.
      */
-    static mxs_connect_result_t ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett,
-                                                      SERVER& server, MYSQL** ppConn);
+    static MonitorServer::ConnectResult
+    ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server, MYSQL** ppConn);
 
-    static bool connection_is_ok(mxs_connect_result_t connect_result);
+    static bool connection_is_ok(MonitorServer::ConnectResult connect_result);
 
     static std::string get_server_monitor(const SERVER* server);
 
@@ -405,22 +386,10 @@ public:
      */
     bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
 
-    /**
-     * Create a list of running servers
-     *
-     * @param dest Destination where the string is appended, must be null terminated
-     * @param len Length of @c dest
-     * @param approach Whether credentials should be included or not.
-     */
-    void append_node_names(char* dest, int len, int status,
-                           credentials_approach_t approach = CREDENTIALS_EXCLUDE);
-
     void show(DCB* dcb);
 
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */
-
-    mutable std::mutex m_lock;
 
     std::vector<MonitorServer*> m_servers;       /**< Monitored servers */
 
@@ -582,6 +551,22 @@ private:
      * @return Return value of the executed script or -1 on error.
      */
     int launch_command(MonitorServer* ptr, EXTERNCMD* cmd);
+
+    enum class CredentialsApproach
+    {
+        INCLUDE,
+        EXCLUDE,
+    };
+
+    /**
+     * Create a list of running servers
+     *
+     * @param dest Destination where the string is appended, must be null terminated
+     * @param len Length of @c dest
+     * @param approach Whether credentials should be included or not.
+     */
+    void append_node_names(char* dest, int len, int status,
+                           CredentialsApproach approach = CredentialsApproach::EXCLUDE);
 
     FILE* open_data_file(Monitor* monitor, char* path);
     int   get_data_file_path(char* path) const;

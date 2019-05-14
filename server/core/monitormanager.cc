@@ -343,20 +343,16 @@ bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* f
         return false;
     }
 
+    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
+    mxb_assert(mod);
+
+    string config = generate_config_string(monitor->m_name, monitor->parameters(),
+                                           config_monitor_params, mod->parameters);
+
+    if (dprintf(file, "%s", config.c_str()) == -1)
     {
-        Guard guard(monitor->m_lock);
-
-        const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
-        mxb_assert(mod);
-
-        string config = generate_config_string(monitor->m_name, monitor->parameters(),
-                                               config_monitor_params, mod->parameters);
-
-        if (dprintf(file, "%s", config.c_str()) == -1)
-        {
-            MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
-        }
+        MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
     }
 
     close(file);
@@ -484,29 +480,28 @@ json_t* MonitorManager::monitor_list_to_json(const char* host)
 
 json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const char* host)
 {
+    mxb_assert(Monitor::is_admin_thread());
     std::vector<std::string> names;
     this_unit.foreach_monitor([&names, server](Monitor* mon) {
-                                  Guard guard(mon->m_lock);
-                                  for (MonitorServer* db : mon->m_servers)
-                                  {
-                                      if (db->server == server)
-                                      {
-                                          names.push_back(mon->m_name);
-                                          break;
-                                      }
-                                  }
-                                  return true;
-                              });
+        // The serverlist of an individual monitor should not change while a monitor is running.
+        for (MonitorServer* db : mon->m_servers)
+        {
+            if (db->server == server)
+            {
+                names.push_back(mon->m_name);
+                break;
+            }
+        }
+        return true;
+    });
 
     json_t* rel = NULL;
     if (!names.empty())
     {
         rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
-
-        for (std::vector<std::string>::iterator it = names.begin();
-             it != names.end(); it++)
+        for (auto& name : names)
         {
-            mxs_json_add_relation(rel, it->c_str(), CN_MONITORS);
+            mxs_json_add_relation(rel, name.c_str(), CN_MONITORS);
         }
     }
 

@@ -72,6 +72,7 @@ using std::set;
 using Guard = std::lock_guard<std::mutex>;
 using maxscale::Monitor;
 using maxscale::MonitorServer;
+using ConnectResult = maxscale::MonitorServer::ConnectResult;
 
 const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
 const char CN_BACKEND_CONNECT_TIMEOUT[] = "backend_connect_timeout";
@@ -926,7 +927,7 @@ const char* MonitorServer::get_event_name()
     return Monitor::get_event_name((mxs_monitor_event_t) server->last_event);
 }
 
-void Monitor::append_node_names(char* dest, int len, int status, credentials_approach_t approach)
+void Monitor::append_node_names(char* dest, int len, int status, CredentialsApproach approach)
 {
     const char* separator = "";
     // Some extra space for port and separator
@@ -938,7 +939,7 @@ void Monitor::append_node_names(char* dest, int len, int status, credentials_app
         Server* server = static_cast<Server*>((*iter)->server);
         if (status == 0 || server->status & status)
         {
-            if (approach == CREDENTIALS_EXCLUDE)
+            if (approach == CredentialsApproach::EXCLUDE)
             {
                 snprintf(arr,
                          sizeof(arr),
@@ -1102,7 +1103,7 @@ int Monitor::launch_command(MonitorServer* ptr, EXTERNCMD* cmd)
     if (externcmd_matches(cmd, "$CREDENTIALS"))
     {
         // We provide the credentials for _all_ servers.
-        append_node_names(nodelist, sizeof(nodelist), 0, CREDENTIALS_INCLUDE);
+        append_node_names(nodelist, sizeof(nodelist), 0, CredentialsApproach::INCLUDE);
         externcmd_substitute_arg(cmd, "[$]CREDENTIALS", nodelist);
     }
 
@@ -1231,8 +1232,8 @@ int Monitor::launch_script(MonitorServer* ptr)
     return rv;
 }
 
-mxs_connect_result_t Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett,
-                                                    SERVER& server, MYSQL** ppConn)
+MonitorServer::ConnectResult
+Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server, MYSQL** ppConn)
 {
     mxb_assert(ppConn);
     auto pConn = *ppConn;
@@ -1241,13 +1242,13 @@ mxs_connect_result_t Monitor::ping_or_connect_to_db(const MonitorServer::Connect
         /** Return if the connection is OK */
         if (mysql_ping(pConn) == 0)
         {
-            return MONITOR_CONN_EXISTING_OK;
+            return ConnectResult::OLDCONN_OK;
         }
         /** Otherwise close the handle. */
         mysql_close(pConn);
     }
 
-    mxs_connect_result_t conn_result = MONITOR_CONN_REFUSED;
+    ConnectResult conn_result = ConnectResult::REFUSED;
     if ((pConn = mysql_init(NULL)) != nullptr)
     {
         string uname = sett.username;
@@ -1276,14 +1277,14 @@ mxs_connect_result_t Monitor::ping_or_connect_to_db(const MonitorServer::Connect
 
             if (result)
             {
-                conn_result = MONITOR_CONN_NEWCONN_OK;
+                conn_result = ConnectResult::NEWCONN_OK;
                 break;
             }
         }
 
-        if (conn_result == MONITOR_CONN_REFUSED && difftime(end, start) >= sett.connect_timeout)
+        if (conn_result == ConnectResult::REFUSED && difftime(end, start) >= sett.connect_timeout)
         {
-            conn_result = MONITOR_CONN_TIMEOUT;
+            conn_result = ConnectResult::TIMEOUT;
         }
         MXS_FREE(dpwd);
     }
@@ -1292,7 +1293,7 @@ mxs_connect_result_t Monitor::ping_or_connect_to_db(const MonitorServer::Connect
     return conn_result;
 }
 
-mxs_connect_result_t MonitorServer::ping_or_connect(const ConnectionSettings& settings)
+ConnectResult MonitorServer::ping_or_connect(const ConnectionSettings& settings)
 {
     return Monitor::ping_or_connect_to_db(settings, *server, &con);
 }
@@ -1303,9 +1304,9 @@ mxs_connect_result_t MonitorServer::ping_or_connect(const ConnectionSettings& se
  * @param connect_result Return value of mon_ping_or_connect_to_db
  * @return True of connection is ok
  */
-bool Monitor::connection_is_ok(mxs_connect_result_t connect_result)
+bool Monitor::connection_is_ok(ConnectResult connect_result)
 {
-    return connect_result == MONITOR_CONN_EXISTING_OK || connect_result == MONITOR_CONN_NEWCONN_OK;
+    return connect_result == ConnectResult::OLDCONN_OK || connect_result == ConnectResult::NEWCONN_OK;
 }
 
 string Monitor::get_server_monitor(const SERVER* server)
@@ -1324,12 +1325,12 @@ bool Monitor::is_admin_thread()
  *
  * @param rval Return value of mon_ping_or_connect_to_db
  */
-void MonitorServer::log_connect_error(mxs_connect_result_t rval)
+void MonitorServer::log_connect_error(ConnectResult rval)
 {
     mxb_assert(!Monitor::connection_is_ok(rval));
     const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
     const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
-    MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ? TIMED_OUT : REFUSED,
+    MXS_ERROR(rval == ConnectResult::TIMEOUT ? TIMED_OUT : REFUSED,
               server->name(),
               server->address,
               server->port,
@@ -2189,7 +2190,7 @@ void MonitorWorkerSimple::tick()
             pMs->mon_prev_status = pMs->server->status;
             pMs->pending_status = pMs->server->status;
 
-            mxs_connect_result_t rval = pMs->ping_or_connect(settings().conn_settings);
+            ConnectResult rval = pMs->ping_or_connect(settings().conn_settings);
 
             if (connection_is_ok(rval))
             {
