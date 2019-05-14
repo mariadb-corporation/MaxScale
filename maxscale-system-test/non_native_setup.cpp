@@ -12,7 +12,7 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     if (argc < 3)
     {
@@ -26,10 +26,7 @@ int main(int argc, char *argv[])
         std::string(" ") +
         std::string(argv[1]);
 
-    int local_argc = argc - 1;
-    char** local_argv = &argv[1];
-
-    TestConnections test(local_argc, local_argv);
+    TestConnections test(argc, argv);
     sleep(3);
     setenv("src_dir", test_dir, 1);
 
