@@ -61,5 +61,5 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
 
     preload_module("mariadbclient", "server/modules/protocol/MySQL/mariadbclient/", MODULE_PROTOCOL);
     preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);
-    preload_module("mysqlauth", "/server/modules/authenticator/MySQLAuth/", MODULE_AUTHENTICATOR);
+    preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/", MODULE_AUTHENTICATOR);
 }
