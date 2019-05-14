@@ -773,9 +773,11 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             parameters.set("connection_timeout", "10s");
             auto service = service_alloc("service", "readconnroute", &parameters);
 
+            static int port = 3306;
+
             MXS_CONFIG_PARAMETER listener_params;
             listener_params.set(CN_ADDRESS, "0.0.0.0");
-            listener_params.set(CN_PORT, "3306");
+            listener_params.set(CN_PORT, std::to_string(port++).c_str());
             listener_params.set(CN_PROTOCOL, "mariadbclient");
             listener_params.set(CN_SERVICE, service->name());
 
