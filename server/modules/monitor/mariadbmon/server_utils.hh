@@ -84,6 +84,7 @@ inline bool operator==(const Gtid& lhs, const Gtid& rhs)
 class GtidList
 {
 public:
+    using DomainList = std::vector<uint32_t>;
 
     // Used with events_ahead()
     enum substraction_mode_t
@@ -155,6 +156,13 @@ public:
      * @return The gtid within the list. If domain is not found, an invalid gtid is returned.
      */
     Gtid get_gtid(uint32_t domain) const;
+
+    /**
+     * Return all of the domains in this GtidList.
+     *
+     * @return Array of domains
+     */
+    DomainList domains() const;
 
 private:
     std::vector<Gtid> m_triplets;

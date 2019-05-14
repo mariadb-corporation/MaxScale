@@ -1121,7 +1121,7 @@ bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
     return demotable;
 }
 
-bool MariaDBServer::can_be_demoted_failover(string* reason_out)
+bool MariaDBServer::can_be_demoted_failover(FailoverType failover_mode, string* reason_out)
 {
     bool demotable = false;
     string reason;
@@ -1134,9 +1134,9 @@ bool MariaDBServer::can_be_demoted_failover(string* reason_out)
     {
         reason = "it is running.";
     }
-    else if (m_gtid_binlog_pos.empty())
+    else if (failover_mode == FailoverType::SAFE && m_gtid_binlog_pos.empty())
     {
-        reason = "it does not have a 'gtid_binlog_pos'.";
+        reason = "it does not have a 'gtid_binlog_pos' and unsafe failover is disabled.";
     }
     else
     {

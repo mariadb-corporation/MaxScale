@@ -406,3 +406,13 @@ Gtid GtidList::get_gtid(uint32_t domain) const
     }
     return rval;
 }
+
+GtidList::DomainList GtidList::domains() const
+{
+    DomainList rval;
+    for (auto& gtid : m_triplets)
+    {
+        rval.push_back(gtid.m_domain);
+    }
+    return rval;
+}

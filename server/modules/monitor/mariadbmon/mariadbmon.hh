@@ -316,14 +316,16 @@ private:
     bool can_perform_cluster_ops();
 
     // Methods used by failover/switchover/rejoin
-    MariaDBServer* select_promotion_target(MariaDBServer* current_master, OperationType op,
-                                           Log log_mode, json_t** error_out);
+    MariaDBServer* select_promotion_target(MariaDBServer* demotion_target, OperationType op, Log log_mode,
+                                           int64_t* gtid_domain_out, json_t** error_out);
     bool is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
                              const MariaDBServer* demotion_target, uint32_t gtid_domain,
                              std::string* reason_out = NULL);
     bool server_is_excluded(const MariaDBServer* server);
     bool check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target,
-                                json_t** error_out);
+                                int64_t cluster_gtid_domain, json_t** error_out);
+    int64_t guess_gtid_domain(MariaDBServer* demotion_target, const ServerArray& candidates,
+                              int* id_missing_out) const;
 
     ServerArray get_redirectables(const MariaDBServer* old_master, const MariaDBServer* ignored_slave);
     int         redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,

@@ -1090,18 +1090,18 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
 /**
  * Select a promotion target for failover/switchover. Looks at the slaves of 'demotion_target' and selects
  * the server with the most up-do-date event or, if events are equal, the one with the best settings and
- * status.
+ * status. When comparing, also selects the domain id used for comparing gtids.
  *
  * @param demotion_target The former master server/relay
  * @param op Switchover or failover
  * @param log_mode Print log or operate silently
+ * @param gtid_domain_out Output for selected gtid domain id guess
  * @param error_out Error output
  * @return The selected promotion target or NULL if no valid candidates
  */
-MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target,
-                                                       OperationType op,
-                                                       Log log_mode,
-                                                       json_t** error_out)
+MariaDBServer*
+MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, OperationType op, Log log_mode,
+                                        int64_t* gtid_domain_out, json_t** error_out)
 {
     /* Select a new master candidate. Selects the one with the latest event in relay log.
      * If multiple slaves have same number of events, select the one with most processed events. */
@@ -1156,33 +1156,56 @@ MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_t
         }
     }
 
-    MariaDBServer* current_best = NULL;
+    MariaDBServer* current_best = nullptr;
+    string current_best_reason;
+    int64_t gtid_domain = m_master_gtid_domain;
     if (candidates.empty())
     {
-        PRINT_ERROR_IF(log_mode,
-                       error_out,
+        PRINT_ERROR_IF(log_mode, error_out,
                        "No suitable promotion candidate found:\n%s",
                        all_reasons.c_str());
     }
     else
     {
+        if (gtid_domain == GTID_DOMAIN_UNKNOWN && m_settings.enforce_simple_topology)
+        {
+            // Need to guess the domain id. This only happens when failovering without having seen
+            // the master running.
+            int id_missing_count = 0;
+            // Guaranteed to give a value if candidates are ok.
+            gtid_domain = guess_gtid_domain(demotion_target, candidates, &id_missing_count);
+            mxb_assert(gtid_domain != GTID_DOMAIN_UNKNOWN);
+            if (log_mode == Log::ON)
+            {
+                MXS_WARNING("Gtid-domain id of '%s' is unknown, attempting to guess it by looking at "
+                            "gtid:s of candidates.", m_master->name());
+                if (id_missing_count > 0)
+                {
+                    MXS_WARNING("Guessed domain id %" PRIi64 ", which is missing on %i candidates. "
+                                "This may cause faulty promotion target selection.",
+                                gtid_domain, id_missing_count);
+                }
+                else
+                {
+                    MXS_WARNING("Guessed domain id %" PRIi64 ", which is on all candidates.", gtid_domain);
+                }
+            }
+        }
+
+        // Check which candidate is best. Default select the first.
         current_best = candidates.front();
         candidates.erase(candidates.begin());
         if (!all_reasons.empty() && log_mode == Log::ON)
         {
             MXS_WARNING("Some servers were disqualified for promotion:\n%s", all_reasons.c_str());
         }
-    }
-
-    // Check which candidate is best
-    string current_best_reason;
-    int64_t gtid_domain = m_master_gtid_domain;
-    for (MariaDBServer* cand : candidates)
-    {
-        if (is_candidate_better(cand, current_best, demotion_target, gtid_domain, &current_best_reason))
+        for (MariaDBServer* cand : candidates)
         {
-            // Select the server for promotion, for now.
-            current_best = cand;
+            if (is_candidate_better(cand, current_best, demotion_target, gtid_domain, &current_best_reason))
+            {
+                // Select the server for promotion, for now.
+                current_best = cand;
+            }
         }
     }
 
@@ -1211,13 +1234,21 @@ MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_t
         }
     }
 
-    if (current_best && log_mode == Log::ON)
+    if (current_best)
     {
-        // If there was a specific reason this server was selected, print it now. If the first candidate
-        // was chosen (likely all servers were equally good), do not print.
-        string msg = string_printf("Selected '%s'", current_best->name());
-        msg += current_best_reason.empty() ? "." : (" because " + current_best_reason);
-        MXS_NOTICE("%s", msg.c_str());
+        if (gtid_domain_out)
+        {
+            *gtid_domain_out = gtid_domain;
+        }
+
+        if (log_mode == Log::ON)
+        {
+            // If there was a specific reason this server was selected, print it now.
+            // If the first candidate was chosen (likely all servers were equally good), do not print.
+            string msg = string_printf("Selected '%s'", current_best->name());
+            msg += current_best_reason.empty() ? "." : (" because " + current_best_reason);
+            MXS_NOTICE("%s", msg.c_str());
+        }
     }
     return current_best;
 }
@@ -1326,6 +1357,8 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
     // Check that the cluster has a non-functional master server and that one of the slaves of
     // that master can be promoted. TODO: add support for demoting a relay server.
     MariaDBServer* demotion_target = NULL;
+    auto failover_mode = m_settings.enforce_simple_topology ? MariaDBServer::FailoverType::RISKY :
+                                                              MariaDBServer::FailoverType::SAFE;
     // Autoselect current master as demotion target.
     string demotion_msg;
     if (m_master == NULL)
@@ -1333,7 +1366,7 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
         const char msg[] = "Can not select a demotion target for failover: cluster does not have a master.";
         PRINT_ERROR_IF(log_mode, error_out, msg);
     }
-    else if (!m_master->can_be_demoted_failover(&demotion_msg))
+    else if (!m_master->can_be_demoted_failover(failover_mode, &demotion_msg))
     {
         const char msg[] = "Can not select '%s' as a demotion target for failover because %s";
         PRINT_ERROR_IF(log_mode, error_out, msg, m_master->name(), demotion_msg.c_str());
@@ -1344,11 +1377,12 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
     }
 
     MariaDBServer* promotion_target = NULL;
+    int64_t gtid_domain_id = GTID_DOMAIN_UNKNOWN;
     if (demotion_target)
     {
         // Autoselect best server for promotion.
         MariaDBServer* promotion_candidate = select_promotion_target(demotion_target, OperationType::FAILOVER,
-                                                                     log_mode, error_out);
+                                                                     log_mode, &gtid_domain_id, error_out);
         if (promotion_candidate)
         {
             promotion_target = promotion_candidate;
@@ -1362,7 +1396,7 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
     bool gtid_ok = false;
     if (demotion_target)
     {
-        gtid_ok = check_gtid_replication(log_mode, demotion_target, error_out);
+        gtid_ok = check_gtid_replication(log_mode, demotion_target, gtid_domain_id, error_out);
     }
 
     unique_ptr<FailoverParams> rval;
@@ -1662,10 +1696,8 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         else
         {
             // Autoselect. More involved than the autoselecting the demotion target.
-            MariaDBServer* promotion_candidate = select_promotion_target(demotion_target,
-                                                                         op_type,
-                                                                         log_mode,
-                                                                         error_out);
+            MariaDBServer* promotion_candidate = select_promotion_target(demotion_target, op_type,
+                                                                         log_mode, nullptr, error_out);
             if (promotion_candidate)
             {
                 promotion_target = promotion_candidate;
@@ -1680,7 +1712,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
     bool gtid_ok = false;
     if (demotion_target)
     {
-        gtid_ok = check_gtid_replication(log_mode, demotion_target, error_out);
+        gtid_ok = check_gtid_replication(log_mode, demotion_target, m_master_gtid_domain, error_out);
     }
 
     unique_ptr<SwitchoverParams> rval;
@@ -1792,17 +1824,17 @@ void MariaDBMonitor::handle_auto_rejoin()
  *
  * @param log_mode Logging mode
  * @param demotion_target The server whose slaves should be checked
+ * @param cluster_gtid_domain Cluster gtid domain
  * @param error_out Error output
  * @return True if gtid is used
  */
 bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target,
-                                            json_t** error_out)
+                                            int64_t cluster_gtid_domain, json_t** error_out)
 {
     bool gtid_domain_ok = false;
-    if (m_master_gtid_domain == GTID_DOMAIN_UNKNOWN)
+    if (cluster_gtid_domain == GTID_DOMAIN_UNKNOWN)
     {
-        PRINT_ERROR_IF(log_mode,
-                       error_out,
+        PRINT_ERROR_IF(log_mode, error_out,
                        "Cluster gtid domain is unknown. This is usually caused by the cluster never "
                        "having a master server while MaxScale was running.");
     }
@@ -1869,6 +1901,58 @@ bool MariaDBMonitor::can_perform_cluster_ops()
 {
     return !config_get_global_options()->passive && cluster_operation_disable_timer <= 0
            && !m_cluster_modified;
+}
+
+/**
+ * Guess the best gtid id by looking at promotion candidates.
+ *
+ * @param demotion_target Server being demoted
+ * @param candidates List of candidates
+ * @param id_missing_out If the selected domain id is not on all slaves, the number of missing slaves is
+ * written here.
+ * @return The guessed id. -1 if no candidates.
+ */
+int64_t MariaDBMonitor::guess_gtid_domain(MariaDBServer* demotion_target, const ServerArray& candidates,
+                                          int* id_missing_out) const
+{
+    // Because gtid:s can be complicated, this guess is not an exact science. In most cases, however, the
+    // correct answer is obvious. As a general rule, select the domain id which is in most candidates.
+    using IdToCount = std::map<int64_t, int>;
+    IdToCount id_to_count; // How many of each domain id was found.
+    for (const auto& cand : candidates)
+    {
+        auto& gtid_io_pos = cand->slave_connection_status(demotion_target)->gtid_io_pos; // Must exist.
+        GtidList::DomainList domains = gtid_io_pos.domains();
+        for (auto domain : domains)
+        {
+            if (id_to_count.count(domain) == 0)
+            {
+                id_to_count[domain] = 1;
+            }
+            else
+            {
+                id_to_count[domain]++;
+            }
+        }
+    }
+
+    int64_t best_domain = GTID_DOMAIN_UNKNOWN;
+    int best_count = 0;
+    for (auto elem : id_to_count)
+    {
+        // In a tie, prefer the smaller domain id.
+        if (elem.second > best_count || (elem.second == best_count && elem.first < best_domain))
+        {
+            best_domain = elem.first;
+            best_count = elem.second;
+        }
+    }
+
+    if (best_domain != GTID_DOMAIN_UNKNOWN && best_count < (int)candidates.size())
+    {
+        *id_missing_out = candidates.size() - best_count;
+    }
+    return best_domain;
 }
 
 MariaDBMonitor::SwitchoverParams::SwitchoverParams(const ServerOperation& promotion,

@@ -314,14 +314,19 @@ public:
      */
     bool can_be_demoted_switchover(std::string* reason_out);
 
+    enum class FailoverType
+    {
+        SAFE,
+        RISKY
+    };
     /**
      * Check if the server can be demoted by failover.
      *
-     * @param operation Switchover or failover
+     * @param failover_mode Is failover with guessed gtid domain allowed
      * @param reason_out Output explaining why server cannot be demoted
      * @return True if server can be demoted
      */
-    bool can_be_demoted_failover(std::string* reason_out);
+    bool can_be_demoted_failover(FailoverType failover_mode, std::string* reason_out);
 
     /**
      * Check if the server can be promoted by switchover or failover.
