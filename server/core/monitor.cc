@@ -596,7 +596,7 @@ const Monitor::Settings& Monitor::settings() const
     return m_settings;
 }
 
-int64_t Monitor::ticks() const
+long Monitor::ticks() const
 {
     return m_ticks.load(std::memory_order_acquire);
 }
@@ -669,7 +669,7 @@ void Monitor::show(DCB* dcb)
 {
     dcb_printf(dcb, "Name:                   %s\n", name());
     dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(state()));
-    dcb_printf(dcb, "Times monitored:        %lu\n", ticks());
+    dcb_printf(dcb, "Times monitored:        %li\n", ticks());
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
     dcb_printf(dcb, "Connect Timeout:        %i seconds\n", m_settings.conn_settings.connect_timeout);
     dcb_printf(dcb, "Read Timeout:           %i seconds\n", m_settings.conn_settings.read_timeout);

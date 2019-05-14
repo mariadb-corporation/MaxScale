@@ -333,7 +333,7 @@ public:
      */
     const MXS_CONFIG_PARAMETER& parameters() const;
 
-    int64_t ticks() const;
+    long ticks() const;
 
     /**
      * Starts the monitor. If the monitor requires polling of the servers, it should create
@@ -556,7 +556,7 @@ protected:
     const Settings& settings() const;
 
     /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
-    std::atomic_int64_t m_ticks {0};
+    std::atomic_long m_ticks {0};
 
 private:
 

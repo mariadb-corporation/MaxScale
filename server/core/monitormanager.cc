@@ -127,7 +127,7 @@ void MonitorManager::debug_wait_one_tick()
 {
     mxb_assert(Monitor::is_admin_thread());
     using namespace std::chrono;
-    std::map<Monitor*, int64_t> ticks;
+    std::map<Monitor*, long> ticks;
 
     // Get tick values for all monitors
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
