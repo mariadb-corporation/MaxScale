@@ -1413,6 +1413,8 @@ int gw_MySQLAccept(DCB* dcb)
     {
         MySQLSendHandshake(dcb);
     }
+
+    return 1;
 }
 
 static int gw_error_client_event(DCB* dcb)
