@@ -29,6 +29,23 @@ static void             gwbuf_free_one(GWBUF* buf);
 static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf,
                                                    buffer_object_t* bufobj);
 
+#if defined(SS_DEBUG)
+inline void invalidate_tail_pointers(GWBUF* head)
+{
+    if (head && head->next)
+    {
+        GWBUF* link = head->next;
+        while (link != head->tail)
+        {
+            link->tail = reinterpret_cast<GWBUF*>(0xdeadbeef);
+            link = link->next;
+        }
+    }
+}
+#else
+inline void invalidate_tail_pointers(GWBUF* head) {}
+#endif
+
 /**
  * Allocate a new gateway buffer structure of size bytes.
  *
@@ -218,6 +235,8 @@ GWBUF* gwbuf_clone(GWBUF* buf)
         {
             rval->tail = clonebuf;
         }
+
+        invalidate_tail_pointers(rval);
     }
 
     return rval;
@@ -333,6 +352,9 @@ GWBUF* gwbuf_split(GWBUF** buf, size_t length)
         }
 
         *buf = buffer;
+
+        invalidate_tail_pointers(*buf);
+        invalidate_tail_pointers(head);
     }
 
     return head;
@@ -475,6 +497,8 @@ GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
     head->tail->next = tail;
     head->tail = tail->tail;
 
+    invalidate_tail_pointers(head);
+
     return head;
 }
 
@@ -499,6 +523,8 @@ GWBUF* gwbuf_consume(GWBUF* head, unsigned int length)
             gwbuf_free_one(tmp);
         }
     }
+
+    invalidate_tail_pointers(head);
 
     mxb_assert(head == NULL || (head->end >= head->start));
     return head;
