@@ -412,19 +412,6 @@ bool process_data_file(Monitor* monitor, MonitorServer** master,
     return true;
 }
 
-json_t* monitor_parameters_to_json(const Monitor* monitor)
-{
-    json_t* rval = json_object();
-    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
-    auto  mon_config = monitor->parameters();
-    config_add_module_params_json(&mon_config,
-                                  {CN_TYPE, CN_MODULE, CN_SERVERS},
-                                  config_monitor_params,
-                                  mod->parameters,
-                                  rval);
-    return rval;
-}
-
 bool check_disk_space_exhausted(MonitorServer* pMs,
                                 const std::string& path,
                                 const maxscale::disk::SizesAndName& san,
@@ -454,50 +441,6 @@ const char ERR_CANNOT_MODIFY[] =
     "set/cleared manually. Status was not modified.";
 const char WRN_REQUEST_OVERWRITTEN[] =
     "Previous maintenance request was not yet read by the monitor and was overwritten.";
-}
-
-json_t* monitor_json_data(const Monitor* monitor, const char* host)
-{
-    json_t* rval = json_object();
-    json_t* attr = json_object();
-    json_t* rel = json_object();
-
-    {
-        Guard guard(monitor->m_lock);
-        json_object_set_new(rval, CN_ID, json_string(monitor->name()));
-        json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
-
-        json_object_set_new(attr, CN_MODULE, json_string(monitor->m_module.c_str()));
-        json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state())));
-        json_object_set_new(attr, CN_TICKS, json_integer(monitor->ticks()));
-
-        /** Monitor parameters */
-        json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
-
-        if (monitor->state() == MONITOR_STATE_RUNNING)
-        {
-            json_t* diag = monitor->diagnostics_json();
-            if (diag)
-            {
-                json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
-            }
-        }
-
-        if (!monitor->m_servers.empty())
-        {
-            json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
-            for (MonitorServer* db : monitor->m_servers)
-            {
-                mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
-            }
-            json_object_set_new(rel, CN_SERVERS, mon_rel);
-        }
-    }
-
-    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
-    json_object_set_new(rval, CN_ATTRIBUTES, attr);
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->name()));
-    return rval;
 }
 
 namespace maxscale
@@ -696,6 +639,65 @@ void Monitor::show(DCB* dcb)
         dcb_printf(dcb, " (no diagnostics)\n");
     }
     dcb_printf(dcb, "\n");
+}
+
+json_t* Monitor::to_json(const char* host) const
+{
+    // This function mostly reads settings-type data, which is only written to by the admin thread,
+    // The rest is safe to read without mutexes.
+    mxb_assert(Monitor::is_admin_thread());
+    json_t* rval = json_object();
+    json_t* attr = json_object();
+    json_t* rel = json_object();
+
+    auto my_name = name();
+    json_object_set_new(rval, CN_ID, json_string(my_name));
+    json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
+
+    json_object_set_new(attr, CN_MODULE, json_string(m_module.c_str()));
+    auto my_state = state();
+    json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(my_state)));
+    json_object_set_new(attr, CN_TICKS, json_integer(ticks()));
+
+    /** Monitor parameters */
+    json_object_set_new(attr, CN_PARAMETERS, parameters_to_json());
+
+    if (my_state == MONITOR_STATE_RUNNING)
+    {
+        json_t* diag = diagnostics_json();
+        if (diag)
+        {
+            json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
+        }
+    }
+
+    if (!m_servers.empty())
+    {
+        json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
+        for (MonitorServer* db : m_servers)
+        {
+            mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
+        }
+        json_object_set_new(rel, CN_SERVERS, mon_rel);
+    }
+
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+    json_object_set_new(rval, CN_ATTRIBUTES, attr);
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, my_name));
+    return rval;
+}
+
+json_t* Monitor::parameters_to_json() const
+{
+    json_t* rval = json_object();
+    const MXS_MODULE* mod = get_module(m_module.c_str(), MODULE_MONITOR);
+    auto  my_config = parameters();
+    config_add_module_params_json(&my_config,
+                                  {CN_TYPE, CN_MODULE, CN_SERVERS},
+                                  config_monitor_params,
+                                  mod->parameters,
+                                  rval);
+    return rval;
 }
 
 bool Monitor::test_permissions(const string& query)

@@ -78,8 +78,6 @@ extern const char CN_MONITOR_INTERVAL[];
 extern const char CN_SCRIPT[];
 extern const char CN_SCRIPT_TIMEOUT[];
 
-json_t* monitor_json_data(const mxs::Monitor* monitor, const char* host);
-
 /**
  * The monitor API version number. Any change to the monitor module API
  * must change these versions using the rules defined in modinfo.h
@@ -358,6 +356,8 @@ public:
      */
     void deactivate();
 
+    json_t* to_json(const char* host) const;
+
     /**
      * Write diagnostic information to a DCB.
      *
@@ -585,6 +585,7 @@ private:
 
     FILE* open_data_file(Monitor* monitor, char* path);
     int   get_data_file_path(char* path) const;
+    json_t* parameters_to_json() const;
 
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */

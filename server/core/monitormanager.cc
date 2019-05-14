@@ -464,20 +464,20 @@ json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host
 {
     string self = MXS_JSON_API_MONITORS;
     self += monitor->m_name;
-    return mxs_json_resource(host, self.c_str(), monitor_json_data(monitor, host));
+    return mxs_json_resource(host, self.c_str(), monitor->to_json(host));
 }
 
 json_t* MonitorManager::monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();
     this_unit.foreach_monitor([rval, host](Monitor* mon) {
-                                  json_t* json = monitor_json_data(mon, host);
-                                  if (json)
-                                  {
-                                      json_array_append_new(rval, json);
-                                  }
-                                  return true;
-                              });
+        json_t* json = mon->to_json(host);
+        if (json)
+        {
+            json_array_append_new(rval, json);
+        }
+        return true;
+    });
 
     return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
 }
