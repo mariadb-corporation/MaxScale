@@ -20,6 +20,7 @@
 #include <set>
 #include <string>
 #include <sstream>
+#include <my_config.h>
 #include <maxscale/paths.h>
 #include <maxscale/log.hh>
 #include <maxscale/protocol/mysql.hh>
