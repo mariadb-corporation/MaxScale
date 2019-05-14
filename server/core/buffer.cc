@@ -214,6 +214,10 @@ GWBUF* gwbuf_clone(GWBUF* buf)
             gwbuf_free(rval);
             rval = NULL;
         }
+        else
+        {
+            rval->tail = clonebuf;
+        }
     }
 
     return rval;

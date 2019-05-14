@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include <maxbase/assert.h>
+#include <maxbase/log.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/hint.h>
@@ -443,6 +444,18 @@ void test_clone()
 
     gwbuf_free(clone);
     gwbuf_free(original);
+
+    original = nullptr;
+    original = gwbuf_append(original, gwbuf_alloc_and_load(1, "1"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(2, "12"));
+
+    clone = gwbuf_clone(original);
+    clone = gwbuf_append(clone, gwbuf_alloc_and_load(3, "123"));
+
+    mxb_assert(gwbuf_length(clone) == 1 + 2 + 3);
+
+    gwbuf_free(clone);
+    gwbuf_free(original);
 }
 
 /**
@@ -570,6 +583,8 @@ static int test1()
 
 int main(int argc, char** argv)
 {
+    mxb::Log log;
+
     int result = 0;
 
     result += test1();
