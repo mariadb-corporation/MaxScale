@@ -21,9 +21,11 @@ Table of Contents
 * [Routing Logic](#routing-logic)
 * [Configuration](#configuration)
 * [Router Parameters](#router-parameters)
+   * [ignore_tables](#ignore_tables)
+   * [ignore_tables_regex](#ignore_tables_regex)
+   * [preferred_server](#preferred_server)
    * [ignore_databases](#ignore_databases)
    * [ignore_databases_regex](#ignore_databases_regex)
-   * [preferred_server](#preferred_server)
 * [Table Family Sharding](#table-family-sharding)
 * [Router Options](#router-options)
    * [max_sescmd_history](#max_sescmd_history)
@@ -77,11 +79,11 @@ type=service
 router=schemarouter
 servers=server1,server2
 user=myuser
-passwd=mypwd
+password=mypwd
 ```
 
 The module generates the list of databases based on the servers parameter
-using the connecting client's credentials. The user and passwd parameters
+using the connecting client's credentials. The user and password parameters
 define the credentials that are used to fetch the authentication data from
 the database servers. The credentials used only require the same grants as
 mentioned in the configuration documentation.
@@ -117,15 +119,28 @@ MaxScale's hostname.
 
 ## Router Parameters
 
-### `ignore_databases`
 
-List of databases to ignore when checking for duplicate databases.
+### `ignore_tables`
 
-### `ignore_databases_regex`
+List of full table names (e.g. db1.t1) to ignore when checking for duplicate tables.
+
+### `ignore_tables_regex`
 
 A
 [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
 that is matched against database names when checking for duplicate databases.
+
+To ignore any duplicate tables in the database the following regex can be used:
+
+```
+[Shard-Router]
+type=service
+router=schemarouter
+servers=server1,server2
+user=myuser
+password=mypwd
+ignore_tables_regex=^db1
+```
 
 ### `preferred_server`
 
@@ -148,10 +163,18 @@ type=service
 router=schemarouter
 servers=server1,server2
 user=myuser
-passwd=mypwd
+password=mypwd
 refresh_databases=true
 refresh_interval=60
 ```
+### `ignore_databases`
+
+This parameter has been deprecated, use [ignore_tables](#ignore_tables) instead.
+
+### `ignore_databases_regex`
+
+This parameter has been deprecated, use [ignore_tables_regex](#ignore_tables_regex) instead.
+
 
 ## Table Family Sharding
 
