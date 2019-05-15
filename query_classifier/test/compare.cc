@@ -20,7 +20,6 @@
 #include <set>
 #include <string>
 #include <sstream>
-#include <my_config.h>
 #include <maxscale/paths.h>
 #include <maxscale/log.hh>
 #include <maxscale/protocol/mysql.hh>
@@ -38,10 +37,14 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
+#if !defined(MYSQL_VERSION_MAJOR)
+#define USING_MARIADB_103
+#else
 #if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR == 3
 #define USING_MARIADB_103
 #else
 #undef USING_MARIADB_103
+#endif
 #endif
 
 namespace
