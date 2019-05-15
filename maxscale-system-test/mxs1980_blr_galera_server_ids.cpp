@@ -287,7 +287,7 @@ void setup_galera(TestConnections& test)
         gc.stash_server_settings(i);
         // https://mariadb.com/kb/en/library/using-mariadb-gtids-with-mariadb-galera-cluster/#wsrep-gtid-mode
         gc.add_server_setting(i, "wsrep_gtid_mode=ON");
-        gc.add_server_setting(i, "wsrep_gtid_domain_id=13");
+        gc.add_server_setting(i, "wsrep_gtid_domain_id=0");
         gc.add_server_setting(i, "gtid_domain_id=0");
         gc.add_server_setting(i, "log_slave_updates=1");
         gc.add_server_setting(i, "log_bin=galera-cluster");

@@ -70,17 +70,20 @@ bool should_log_error()
 
 struct this_unit
 {
-    std::string ident;
+    static const int MAX_IDENT_LEN = 256;
+
+    // Don't change to std::string. Order of destruction issue with logger.cc:this_unit.
+    char ident[MAX_IDENT_LEN + 1];
 } this_unit;
 
 std::string get_ident()
 {
-    if (this_unit.ident.empty())
+    if (!this_unit.ident[0])
     {
 #ifdef __GNUC__
-        this_unit.ident = program_invocation_short_name;
+        return program_invocation_short_name;
 #else
-        this_unit.ident = "The Program";
+        return "The Program";
 #endif
     }
 
@@ -98,7 +101,15 @@ namespace maxbase
 // static
 void Logger::set_ident(const std::string& ident)
 {
-    this_unit.ident = ident;
+    int len = ident.length();
+
+    if (len > this_unit.MAX_IDENT_LEN)
+    {
+        len = this_unit.MAX_IDENT_LEN;
+    }
+
+    this_unit.ident[len] = 0;
+    memcpy(this_unit.ident, ident.c_str(), len);
 }
 
 std::unique_ptr<Logger> FileLogger::create(const std::string& filename)
