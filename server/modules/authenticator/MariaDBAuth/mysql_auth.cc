@@ -121,6 +121,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 static bool open_instance_database(const char* path, sqlite3** handle)
 {
+    // This only opens database in memory if path is exactly ":memory:"
+    // To use the URI filename SQLITE_OPEN_URI flag needs to be used.
     int rc = sqlite3_open_v2(path, handle, db_flags, NULL);
 
     if (rc != SQLITE_OK)
