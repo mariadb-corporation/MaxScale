@@ -22,16 +22,39 @@ Config::Config(MXS_CONFIG_PARAMETER* conf)
     : refresh_min_interval(conf->get_duration<std::chrono::seconds>("refresh_interval").count())
     , refresh_databases(conf->get_bool("refresh_databases"))
     , debug(conf->get_bool("debug"))
-    , ignore_regex(conf->get_compiled_regex("ignore_databases_regex", 0, NULL).release())
-    , ignore_match_data(ignore_regex ? pcre2_match_data_create_from_pattern(ignore_regex, NULL) : NULL)
+    , ignore_regex(NULL)
+    , ignore_match_data(NULL)
     , preferred_server(conf->get_server("preferred_server"))
 {
+    // TODO: Don't process this in the router
+    if (conf->contains(CN_IGNORE_TABLES_REGEX))
+    {
+        ignore_regex = conf->get_compiled_regex(CN_IGNORE_TABLES_REGEX, 0, NULL).release();
+        ignore_match_data = pcre2_match_data_create_from_pattern(ignore_regex, NULL);
+    }
+    else if (conf->contains(CN_IGNORE_DATABASES_REGEX))
+    {
+        MXS_WARNING("Parameter '%s' has been deprecated, use '%s' instead.",
+                CN_IGNORE_DATABASES_REGEX, CN_IGNORE_TABLES_REGEX);
+        ignore_regex = conf->get_compiled_regex(CN_IGNORE_DATABASES_REGEX, 0, NULL).release();
+        ignore_match_data = pcre2_match_data_create_from_pattern(ignore_regex, NULL);
+    }
+
     ignored_dbs.insert("mysql");
     ignored_dbs.insert("information_schema");
     ignored_dbs.insert("performance_schema");
 
-    // TODO: Don't process this in the router
-    std::string ignored_dbs_str = conf->get_string("ignore_databases");
+    std::string ignored_dbs_str = conf->get_string(CN_IGNORE_TABLES);
+    if (ignored_dbs_str.empty())
+    {
+        ignored_dbs_str = conf->get_string(CN_IGNORE_DATABASES);
+        if (!ignored_dbs_str.empty())
+        {
+            MXS_WARNING("Parameter '%s' has been deprecated, use '%s' instead.",
+                    CN_IGNORE_DATABASES, CN_IGNORE_TABLES);
+        }
+    }
+
     if (!ignored_dbs_str.empty())
     {
         for (const auto& a : mxs::strtok(ignored_dbs_str, ", \t"))

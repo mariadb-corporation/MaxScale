@@ -32,6 +32,11 @@
 #include <maxscale/backend.hh>
 #include <maxscale/protocol/rwbackend.hh>
 
+const char* const CN_IGNORE_DATABASES = "ignore_databases";
+const char* const CN_IGNORE_DATABASES_REGEX = "ignore_databases_regex";
+const char* const CN_IGNORE_TABLES = "ignore_tables";
+const char* const CN_IGNORE_TABLES_REGEX = "ignore_tables_regex";
+
 namespace schemarouter
 {
 /**

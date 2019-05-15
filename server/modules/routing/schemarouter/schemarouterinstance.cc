@@ -296,11 +296,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         {
-            {"ignore_databases",              MXS_MODULE_PARAM_STRING },
-            {"ignore_databases_regex",        MXS_MODULE_PARAM_STRING },
-            {"max_sescmd_history",            MXS_MODULE_PARAM_COUNT, "0"},
-            {"disable_sescmd_history",        MXS_MODULE_PARAM_BOOL, "false"},
-            {"refresh_databases",             MXS_MODULE_PARAM_BOOL, "true"},
+            {CN_IGNORE_TABLES,                 MXS_MODULE_PARAM_STRING },
+            {CN_IGNORE_TABLES_REGEX,           MXS_MODULE_PARAM_STRING },
+            {CN_IGNORE_DATABASES,              MXS_MODULE_PARAM_STRING },
+            {CN_IGNORE_DATABASES_REGEX,        MXS_MODULE_PARAM_STRING },
+            {"max_sescmd_history",             MXS_MODULE_PARAM_COUNT, "0"},
+            {"disable_sescmd_history",         MXS_MODULE_PARAM_BOOL, "false"},
+            {"refresh_databases",              MXS_MODULE_PARAM_BOOL, "true"},
             {
                 "refresh_interval",
                 MXS_MODULE_PARAM_DURATION,
