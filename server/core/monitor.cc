@@ -152,22 +152,6 @@ private:
 
 ThisUnit this_unit;
 
-const char* monitor_state_to_string(monitor_state_t state)
-{
-    switch (state)
-    {
-    case MONITOR_STATE_RUNNING:
-        return "Running";
-
-    case MONITOR_STATE_STOPPED:
-        return "Stopped";
-
-    default:
-        mxb_assert(false);
-        return "Unknown";
-    }
-}
-
 /** Server type specific bits */
 const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED;
 
@@ -545,6 +529,11 @@ long Monitor::ticks() const
     return m_ticks.load(std::memory_order_acquire);
 }
 
+const char* Monitor::state_string() const
+{
+    return is_running() ? "Running" : "Stopped";
+}
+
 Monitor::~Monitor()
 {
     for (auto server : m_servers)
@@ -564,7 +553,7 @@ Monitor::~Monitor()
 bool Monitor::add_server(SERVER* server)
 {
     // This should only be called from the admin thread while the monitor is stopped.
-    mxb_assert(state() == MONITOR_STATE_STOPPED && is_admin_thread());
+    mxb_assert(!is_running() && is_admin_thread());
     bool success = false;
     string existing_owner;
     if (this_unit.claim_server(server->name(), m_name, &existing_owner))
@@ -598,7 +587,7 @@ void Monitor::server_removed(SERVER* server)
 void Monitor::remove_all_servers()
 {
     // This should only be called from the admin thread while the monitor is stopped.
-    mxb_assert(state() == MONITOR_STATE_STOPPED && is_admin_thread());
+    mxb_assert(!is_running() && is_admin_thread());
     for (auto mon_server : m_servers)
     {
         mxb_assert(this_unit.claimed_by(mon_server->server->name()) == m_name);
@@ -612,7 +601,7 @@ void Monitor::remove_all_servers()
 void Monitor::show(DCB* dcb)
 {
     dcb_printf(dcb, "Name:                   %s\n", name());
-    dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(state()));
+    dcb_printf(dcb, "State:                  %s\n", state_string());
     dcb_printf(dcb, "Times monitored:        %li\n", ticks());
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
     dcb_printf(dcb, "Connect Timeout:        %i seconds\n", m_settings.conn_settings.connect_timeout);
@@ -631,7 +620,7 @@ void Monitor::show(DCB* dcb)
 
     dcb_printf(dcb, "\n");
 
-    if (state() == MONITOR_STATE_RUNNING)
+    if (is_running())
     {
         diagnostics(dcb);
     }
@@ -656,14 +645,13 @@ json_t* Monitor::to_json(const char* host) const
     json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
 
     json_object_set_new(attr, CN_MODULE, json_string(m_module.c_str()));
-    auto my_state = state();
-    json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(my_state)));
+    json_object_set_new(attr, CN_STATE, json_string(state_string()));
     json_object_set_new(attr, CN_TICKS, json_integer(ticks()));
 
     /** Monitor parameters */
     json_object_set_new(attr, CN_PARAMETERS, parameters_to_json());
 
-    if (my_state == MONITOR_STATE_RUNNING)
+    if (is_running())
     {
         json_t* diag = diagnostics_json();
         if (diag)
@@ -1750,7 +1738,7 @@ std::vector<MonitorServer*> Monitor::get_monitored_serverlist(const string& key,
 
 bool Monitor::set_disk_space_threshold(const string& dst_setting)
 {
-    mxb_assert(state() == MONITOR_STATE_STOPPED);
+    mxb_assert(!is_running());
     SERVER::DiskSpaceLimits new_dst;
     bool rv = config_parse_disk_space_threshold(&new_dst, dst_setting.c_str());
     if (rv)
@@ -1774,7 +1762,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 
     bool written = false;
 
-    if (state() == MONITOR_STATE_RUNNING)
+    if (is_running())
     {
         /* This server is monitored, in which case modifying any other status bit than Maintenance is
          * disallowed. */
@@ -1837,7 +1825,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 
     bool written = false;
 
-    if (state() == MONITOR_STATE_RUNNING)
+    if (is_running())
     {
         if (bit & ~(SERVER_MAINT | SERVER_DRAINING))
         {
@@ -1883,7 +1871,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 
 void Monitor::populate_services()
 {
-    mxb_assert(state() == MONITOR_STATE_STOPPED);
+    mxb_assert(!is_running());
 
     for (MonitorServer* pMs : m_servers)
     {
@@ -1893,7 +1881,7 @@ void Monitor::populate_services()
 
 void Monitor::deactivate()
 {
-    if (state() == MONITOR_STATE_RUNNING)
+    if (is_running())
     {
         stop();
     }
@@ -1933,21 +1921,16 @@ MonitorWorker::~MonitorWorker()
 {
 }
 
-monitor_state_t MonitorWorker::state() const
+bool MonitorWorker::is_running() const
 {
-    bool running = (Worker::state() != Worker::STOPPED);
-
-    return running ? MONITOR_STATE_RUNNING : MONITOR_STATE_STOPPED;
+    return (Worker::state() != Worker::STOPPED);
 }
 
 void MonitorWorker::do_stop()
 {
-    // This should only be called by monitor_stop(). NULL worker is allowed since the main worker may
-    // not exist during program start/stop.
-    mxb_assert(mxs_rworker_get_current() == NULL
-               || mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    mxb_assert(Worker::state() != Worker::STOPPED);
-    mxb_assert(state() != MONITOR_STATE_STOPPED);
+    // This should only be called by monitor_stop().
+    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(is_running());
     mxb_assert(m_thread_running.load() == true);
 
     Worker::shutdown();
@@ -1968,10 +1951,8 @@ bool MonitorWorker::start()
 {
     // This should only be called by monitor_start(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.
-    mxb_assert(mxs_rworker_get_current() == NULL
-               || mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    mxb_assert(Worker::state() == Worker::STOPPED);
-    mxb_assert(state() == MONITOR_STATE_STOPPED);
+    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(!is_running());
     mxb_assert(m_thread_running.load() == false);
 
     if (journal_is_stale())

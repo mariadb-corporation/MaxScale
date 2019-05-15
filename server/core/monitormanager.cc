@@ -137,7 +137,7 @@ void MonitorManager::debug_wait_one_tick()
 
     // Wait for all running monitors to advance at least one tick.
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
-        if (mon->state() == MONITOR_STATE_RUNNING)
+        if (mon->is_running())
         {
             auto start = steady_clock::now();
             // A monitor may have been added in between the two foreach-calls (not if config changes are
@@ -150,19 +150,18 @@ void MonitorManager::debug_wait_one_tick()
                     std::this_thread::sleep_for(milliseconds(100));
                 }
             }
-      }
-      return true;
+        }
+        return true;
   });
 }
 
 void MonitorManager::destroy_all_monitors()
 {
     mxb_assert(Monitor::is_admin_thread());
-
     auto monitors = this_unit.clear();
     for (auto monitor : monitors)
     {
-        mxb_assert(monitor->state() == MONITOR_STATE_STOPPED);
+        mxb_assert(!monitor->is_running());
         delete monitor;
     }
 }
@@ -172,7 +171,7 @@ void MonitorManager::start_monitor(Monitor* monitor)
     mxb_assert(Monitor::is_admin_thread());
 
     // Only start the monitor if it's stopped.
-    if (monitor->state() == MONITOR_STATE_STOPPED)
+    if (!monitor->is_running())
     {
         if (!monitor->start())
         {
@@ -207,7 +206,7 @@ void MonitorManager::stop_monitor(Monitor* monitor)
     mxb_assert(Monitor::is_admin_thread());
 
     /** Only stop the monitor if it is running */
-    if (monitor->state() == MONITOR_STATE_RUNNING)
+    if (monitor->is_running())
     {
         monitor->stop();
     }
@@ -272,11 +271,9 @@ void MonitorManager::monitor_list(DCB* dcb)
     dcb_printf(dcb, "---------------------+---------------------\n");
 
     this_unit.foreach_monitor([dcb](Monitor* ptr) {
-                                  dcb_printf(dcb, "%-20s | %s\n",
-                                             ptr->name(),
-                                             ptr->state() == MONITOR_STATE_RUNNING ? "Running" : "Stopped");
-                                  return true;
-                              });
+        dcb_printf(dcb, "%-20s | %s\n", ptr->name(), ptr->state_string());
+        return true;
+    });
 
     dcb_printf(dcb, "---------------------+---------------------\n");
 }
@@ -310,10 +307,9 @@ std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
     mxb_assert(Monitor::is_admin_thread());
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
     this_unit.foreach_monitor([&set](Monitor* ptr) {
-                                  const char* state = ptr->state() == MONITOR_STATE_RUNNING ? "Running" : "Stopped";
-                                  set->add_row({ptr->m_name, state});
-                                  return true;
-                              });
+        set->add_row({ptr->m_name, ptr->state_string()});
+        return true;
+    });
     return set;
 }
 
@@ -409,7 +405,7 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG
     auto orig = monitor->parameters();
     // Stop/start monitor if it's currently running. If monitor was stopped already, this is likely
     // managed by the caller.
-    bool stopstart = (monitor->state() == MONITOR_STATE_RUNNING);
+    bool stopstart = monitor->is_running();
     if (stopstart)
     {
         monitor->stop();

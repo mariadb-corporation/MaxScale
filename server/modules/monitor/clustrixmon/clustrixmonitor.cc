@@ -208,7 +208,7 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 
 void ClustrixMonitor::populate_services()
 {
-    mxb_assert(state() == MONITOR_STATE_STOPPED);
+    mxb_assert(!is_running());
 
     // The servers that the Clustrix monitor has been configured with are
     // only used for bootstrapping and services will not be populated

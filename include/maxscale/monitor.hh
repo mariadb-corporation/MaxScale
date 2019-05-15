@@ -84,13 +84,6 @@ extern const char CN_SCRIPT_TIMEOUT[];
  */
 #define MXS_MONITOR_VERSION {5, 0, 0}
 
-// Monitor state enum
-enum monitor_state_t
-{
-    MONITOR_STATE_STOPPED,
-    MONITOR_STATE_RUNNING,
-};
-
 /** Monitor events */
 enum mxs_monitor_event_t
 {
@@ -292,7 +285,19 @@ public:
      */
     static const char* get_event_name(mxs_monitor_event_t event);
 
-    virtual monitor_state_t state() const = 0;
+    /**
+     * Is the monitor running?
+     *
+     * @return True if monitor is running.
+     */
+    virtual bool is_running() const = 0;
+
+    /**
+     * Get running state as string.
+     *
+     * @return "Running" or "Stopped"
+     */
+    const char* state_string() const;
 
     const char* name() const;
 
@@ -592,28 +597,7 @@ public:
 
     virtual ~MonitorWorker();
 
-    /**
-     * @brief Current state of the monitor.
-     *
-     * Since the state is written to by the admin thread, the value returned in other threads cannot be fully
-     * trusted. The state should only be read in the admin thread or operations launched by the admin thread.
-     *
-     * @return @c MONITOR_STATE_RUNNING if the monitor is running,
-     *         @c MONITOR_STATE_STOPPED if the monitor is stopped.
-     */
-    monitor_state_t state() const override final;
-
-    /**
-     * @brief Find out whether the monitor is running.
-     *
-     * @return True, if the monitor is running, false otherwise.
-     *
-     * @see state().
-     */
-    bool is_running() const
-    {
-        return state() == MONITOR_STATE_RUNNING;
-    }
+    bool is_running() const final;
 
     /**
      * @brief Starts the monitor.
