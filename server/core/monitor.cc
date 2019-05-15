@@ -246,7 +246,7 @@ void store_data(Monitor* monitor, MonitorServer* master, uint8_t* data, uint32_t
     *ptr++ = MMB_SCHEMA_VERSION;
 
     /** Store the states of all servers */
-    for (MonitorServer* db : monitor->m_servers)
+    for (MonitorServer* db : monitor->servers())
     {
         *ptr++ = (char)SVT_SERVER;                                  // Value type
         memcpy(ptr, db->server->name(), strlen(db->server->name()));// Name of the server
@@ -299,7 +299,7 @@ static bool has_null_terminator(const char* data, const char* end)
  */
 const char* process_server(Monitor* monitor, const char* data, const char* end)
 {
-    for (MonitorServer* db : monitor->m_servers)
+    for (MonitorServer* db : monitor->servers())
     {
         if (strcmp(db->server->name(), data) == 0)
         {
@@ -328,7 +328,7 @@ const char* process_master(Monitor* monitor, MonitorServer** master,
 {
     if (master)
     {
-        for (MonitorServer* db : monitor->m_servers)
+        for (MonitorServer* db : monitor->servers())
         {
             if (strcmp(db->server->name(), data) == 0)
             {
@@ -691,8 +691,7 @@ json_t* Monitor::parameters_to_json() const
 
 bool Monitor::test_permissions(const string& query)
 {
-    auto monitor = this;
-    if (monitor->m_servers.empty() || config_get_global_options()->skip_permission_checks)
+    if (m_servers.empty() || config_get_global_options()->skip_permission_checks)
     {
         return true;
     }
@@ -700,13 +699,13 @@ bool Monitor::test_permissions(const string& query)
     char* dpasswd = decrypt_password(m_settings.conn_settings.password.c_str());
     bool rval = false;
 
-    for (MonitorServer* mondb : monitor->m_servers)
+    for (MonitorServer* mondb : m_servers)
     {
         if (!connection_is_ok(mondb->ping_or_connect(m_settings.conn_settings)))
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
-                      monitor->name(),
+                      name(),
                       mondb->server->name(),
                       mondb->server->address,
                       mondb->server->port,
@@ -751,7 +750,7 @@ bool Monitor::test_permissions(const string& query)
             if (res == NULL)
             {
                 MXS_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
-                          monitor->name(),
+                          name(),
                           mysql_error(mondb->con));
             }
             else
@@ -1908,6 +1907,11 @@ bool Monitor::server_status_request_waiting() const
     return m_status_change_pending.load(std::memory_order_acquire);
 }
 
+const Monitor::ServerVector& Monitor::servers() const
+{
+    return m_servers;
+}
+
 MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)
     , m_thread_running(false)
@@ -2129,7 +2133,7 @@ bool MonitorWorker::has_sufficient_permissions()
 
 void MonitorWorker::flush_server_status()
 {
-    for (MonitorServer* pMs : m_servers)
+    for (MonitorServer* pMs : servers())
     {
         if (!pMs->server->is_in_maint())
         {
@@ -2164,7 +2168,7 @@ void MonitorWorkerSimple::tick()
 
     const bool should_update_disk_space = check_disk_space_this_tick();
 
-    for (MonitorServer* pMs : m_servers)
+    for (MonitorServer* pMs : servers())
     {
         if (!pMs->server->is_in_maint())
         {

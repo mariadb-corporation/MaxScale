@@ -104,7 +104,7 @@ json_t* GaleraMonitor::diagnostics_json() const
 
     json_t* arr = json_array();
 
-    for (auto ptr : m_servers)
+    for (auto ptr : servers())
     {
         auto it = m_info.find(ptr);
 
@@ -361,7 +361,7 @@ void GaleraMonitor::post_tick()
 
     m_master = set_cluster_master(m_master, candidate_master, m_disableMasterFailback);
 
-    for (auto ptr : m_servers)
+    for (auto ptr : servers())
     {
         const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
         if ((ptr->pending_status & SERVER_JOINED) && !m_disableMasterRoleSetting)
@@ -487,7 +487,7 @@ MonitorServer* GaleraMonitor::get_candidate_master()
     int minval = INT_MAX;
     int currval;
     /* set min_id to the lowest value of moitor_servers->server->node_id */
-    for (auto moitor_servers : m_servers)
+    for (auto moitor_servers : servers())
     {
         if (!moitor_servers->server->is_in_maint()
             && (moitor_servers->pending_status & SERVER_JOINED))
@@ -603,7 +603,6 @@ static MonitorServer* set_cluster_master(MonitorServer* current_master,
  */
 void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 {
-    MonitorServer* ptr;
     MYSQL_ROW row;
     MYSQL_RES* result;
     bool ignore_priority = true;
@@ -631,7 +630,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     strcpy(donor_list, DONOR_LIST_SET_VAR);
 
     /* Create an array of slave nodes */
-    for (auto ptr : m_servers)
+    for (auto ptr : servers())
     {
         if ((ptr->pending_status & SERVER_JOINED) && (ptr->pending_status & SERVER_SLAVE))
         {

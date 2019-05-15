@@ -480,7 +480,7 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const 
     std::vector<std::string> names;
     this_unit.foreach_monitor([&names, server](Monitor* mon) {
         // The serverlist of an individual monitor should not change while a monitor is running.
-        for (MonitorServer* db : mon->m_servers)
+        for (MonitorServer* db : mon->servers())
         {
             if (db->server == server)
             {

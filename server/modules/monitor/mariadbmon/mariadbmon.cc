@@ -78,7 +78,7 @@ void MariaDBMonitor::reset_server_info()
     clear_server_info();
 
     // Next, initialize the data.
-    for (auto mon_server : Monitor::m_servers)
+    for (auto mon_server : servers())
     {
         m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_settings.shared));
     }

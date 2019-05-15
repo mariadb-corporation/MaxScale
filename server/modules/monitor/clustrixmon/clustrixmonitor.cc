@@ -394,7 +394,7 @@ bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::s
 
 bool ClustrixMonitor::choose_bootstrap_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
 {
-    for (auto* pMs : m_servers)
+    for (auto* pMs : servers())
     {
         if (ips_checked.find(pMs->server->address) == ips_checked.end())
         {
@@ -692,7 +692,7 @@ void ClustrixMonitor::check_bootstrap_servers()
 
         set<string> current_bootstrap_servers;
 
-        for (const auto* pMs : m_servers)
+        for (const auto* pMs : servers())
         {
             SERVER* pServer = pMs->server;
 
@@ -749,7 +749,7 @@ void ClustrixMonitor::persist_bootstrap_servers()
 {
     string values;
 
-    for (const auto* pMs : m_servers)
+    for (const auto* pMs : servers())
     {
         if (!values.empty())
         {
@@ -911,7 +911,7 @@ void ClustrixMonitor::populate_from_bootstrap_servers()
 {
     int id = 1;
 
-    for (auto ms : m_servers)
+    for (auto ms : servers())
     {
         SERVER* pServer = ms->server;
 
@@ -940,9 +940,9 @@ void ClustrixMonitor::populate_from_bootstrap_servers()
 
 void ClustrixMonitor::update_server_statuses()
 {
-    mxb_assert(!m_servers.empty());
+    mxb_assert(!servers().empty());
 
-    for (auto* pMs : m_servers)
+    for (auto* pMs : servers())
     {
         pMs->stash_current_status();
 

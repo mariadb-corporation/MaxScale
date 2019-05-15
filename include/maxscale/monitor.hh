@@ -249,6 +249,8 @@ private:
 class Monitor
 {
 public:
+    using ServerVector = std::vector<MonitorServer*>;
+
     Monitor(const std::string& name, const std::string& module);
     virtual ~Monitor();
 
@@ -300,6 +302,8 @@ public:
     const char* state_string() const;
 
     const char* name() const;
+
+    const ServerVector& servers() const;
 
     /**
      * Configure the monitor. Called by monitor creation and altering code. Any inheriting classes
@@ -395,8 +399,6 @@ public:
 
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */
-
-    std::vector<MonitorServer*> m_servers;       /**< Monitored servers */
 
 protected:
     /**
@@ -581,8 +583,9 @@ private:
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
     uint8_t          m_journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
 
-    MXS_CONFIG_PARAMETER m_parameters;          /**< Configuration parameters in text form */
-    Settings             m_settings;            /**< Base class settings */
+    ServerVector         m_servers;      /**< Monitored servers */
+    MXS_CONFIG_PARAMETER m_parameters;   /**< Configuration parameters in text form */
+    Settings             m_settings;     /**< Base class settings */
 };
 
 /**
