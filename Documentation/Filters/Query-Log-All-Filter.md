@@ -23,28 +23,6 @@ password=mypasswd
 filters=MyLogFilter
 ```
 
-## Filter Options
-
-The QLA filter accepts the following options.
-
- Option | Description
- -------| -----------
- ignorecase | Use case-insensitive matching
- case | Use case-sensitive matching
- extended | Use extended regular expression syntax (ERE)
-
-To use multiple filter options, list them in a comma-separated list. If no
-options are given, default will be used. Multiple options can be enabled
-simultaneously.
-
-```
-options=case,extended
-```
-
-**Note**: older the version of the QLA filter in 0.7 of MariaDB MaxScale used
-the `options` to define the location of the log files. This functionality is not
-supported anymore and the `filebase` parameter should be used instead.
-
 ## Filter Parameters
 
 The QLA filter has one mandatory parameter, `filebase`, and a number of optional
@@ -60,24 +38,17 @@ added to the filename for each written session file. For unified log files,
 filebase=/tmp/SqlQueryLog
 ```
 
-The filebase may also be set as the filter option. If both option and parameter
-are set, the parameter setting will be used and the filter option ignored.
+### `match`, `exclude` and `options`
 
-### `match` and `exclude`
-
-These optional parameters limit logging on a query level. The parameter values
-are regular expressions which are matched against the SQL query text. Only SQL
-statements that match the regular expression in *match* but do not match the
-*exclude* expression are logged.
+These
+[regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+limit which queries are logged.
 
 ```
 match=select.*from.*customer.*where
 exclude=^insert
+options=case,extended
 ```
-
-*match* is checked before *exclude*. If *match* is empty, all queries are
-considered matching. If *exclude* is empty, no query is exluded. If both are
-empty, all queries are logged.
 
 ### `user` and `source`
 

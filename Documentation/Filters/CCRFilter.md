@@ -35,22 +35,6 @@ comment. The `match`-comment typically has no effect, since write queries by
 default trigger the filter anyway. It can be used to override an ignore-type
 regular expression that would othewise prevent triggering.
 
-## Filter Options
-
-The CCR filter accepts the following options.
-
-|Option     |Description                                 |
-|-----------|--------------------------------------------|
-|ignorecase |Use case-insensitive matching (default)     |
-|case       |Use case-sensitive matching                 |
-|extended   |Use extended regular expression syntax (ERE)|
-
-To use multiple filter options, list them in a comma-separated list.
-
-```
-options=case,extended
-```
-
 ## Filter Parameters
 
 The CCR filter has no mandatory parameters.
@@ -81,27 +65,17 @@ the counter reaches zero, the statements are routed normally. If a new data
 modifying SQL statement is processed, the counter is reset to the value of
 _count_.
 
-### `match`
+### `match`, `ignore` and `options`
 
-An optional parameter that can be used to control which statements trigger the
-statement re-routing. The parameter value is a regular expression that is used
-to match against the SQL text. Only non-SELECT statements are inspected. If this
-parameter is defined, *only* matching SQL-queries will trigger the filter
-(assuming no ccr hint comments in the query).
+These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+control which statements trigger statement re-routing. Only non-SELECT statements are
+inspected. For CCRFilter, the *exclude*-parameter is instead named *ignore*, yet works
+similarly.
 
 ```
 match=.*INSERT.*
-```
-
-### `ignore`
-
-An optional parameter that can be used to control which statements don't trigger
-the statement re-routing. This does the opposite of the _match_ parameter. The
-parameter value is a regular expression that is used to match against the SQL
-text. Only non-SELECT statements are inspected.
-
-```
 ignore=.*UPDATE.*
+options=case,extended
 ```
 
 ## Example Configuration

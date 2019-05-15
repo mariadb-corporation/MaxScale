@@ -28,27 +28,29 @@ password=mypasswd
 filters=MyRegexfilter
 ```
 
-## Filter Options
-
-The Regex filter accepts the options ignorecase or case. These define if the pattern text should take the case of the string it is matching against into consideration or not.
-
 ## Filter Parameters
 
-The Regex filter requires two mandatory parameters to be defined.
+The Regex filter has two mandatory parameters: *match* and *replace*.
 
-### `match`
+### `match`, `options`
 
-A parameter that can be used to match text in the SQL statement which should be replaced.
+*match* is a
+[PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
+which defines the text in the SQL statements that is replaced.
+
+The *options*-parameter affects how the patterns are compiled as
+[usual](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters).
+Regex filter does not support the `extended`-option.
 
 ```
 match=TYPE[	]*=
+options=case
 ```
-
-If the filter option ignorecase is used all regular expressions are evaluated with the option to ignore the case of the text, therefore a match option of select will match both type, TYPE and any form of the word with upper or lowercase characters.
 
 ### `replace`
 
-The replace parameter defines the text that should replace the text in the SQL text which matches the match.
+This is the text that should replace the part of the SQL-query matching the pattern
+defined in *match*.
 
 ```
 replace=ENGINE =

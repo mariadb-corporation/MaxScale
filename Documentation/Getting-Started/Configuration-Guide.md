@@ -247,16 +247,66 @@ max_size=1000000M
 max_size=1000G
 max_size=1T
 ```
+
 #### Regular Expressions
 
-When a regular expression (regex) parameter is accepted, the pattern string
-should be enclosed in slashes e.g. `match=/^select/` defines the pattern
-`^select`. The slashes allow whitespace to be read from the ends of the regex
-string contrary to a normal string parameter and are removed before compiling
-the pattern. For backwards compatibility, the slashes are not yet mandatory.
-Omitting them is, however, deprecated and will be rejected in the next release
-of MaxScale. Currently, *QLAFilter* accepts parameters in regular expression
-form.
+Many modules have settings which accept a regular expression. In most cases, these
+settings are named either *match* or *exclude*, and are used to filter users or queries.
+MaxScale uses the [PCRE2-library](https://www.pcre.org/current/doc/html/) for matching
+regular expressions.
+
+When writing a regular expression (regex) type parameter to a MaxScale configuration file,
+the pattern string should be enclosed in slashes e.g. `^select` -> `match=/^select/`. This
+clarifies where the pattern begins and ends, even if it includes whitespace. Without
+slashes the configuration loader trims the pattern from the ends. The slashes are removed
+before compiling the pattern. For backwards compatibility, the slashes are not yet
+mandatory. Omitting them is, however, deprecated and will be rejected in a future release
+of MaxScale. Currently, *binlogfilter*, *ccrfilter*, *qlafilter*, *tee* and *avrorouter*
+accept parameters in this type of regular expression form. Some other modules may not
+handle the slashes yet correctly.
+
+PCRE2 supports a complicated regular expression
+[syntax](https://www.pcre.org/current/doc/html/pcre2syntax.html). MaxScale typically uses
+regular expressions simply, only checking whether the pattern and subject match at some
+point. For example, using the QLAFilter and setting `match=/SELECT/` causes the filter to
+accept any query with the text "SELECT" somewhere within. To force the pattern to only
+match at the beginning of the query, set `match=/^SELECT/`. To only match the end, set
+`match=/SELECT$/`.
+
+Modules which accept regular expression parameters also often accept options which affect
+how the patterns are compiled. Typically, this setting is called *options* and accepts
+values such as `ignorecase`, `case` and `extended`. `ignorecase` causes the regular
+expression matcher to ignore letter case, and is often on by default. `extended` ignores
+whitespace in the pattern. `case` turns on case-sensitive matching. These settings can
+also be defined in the pattern itself, so they can be used even in modules without
+pattern compilation settings. The pattern settings are `(?i)` for `ignorecase` and `(?x)`
+for `extended`. See the
+[PCRE2 api documentation](https://www.pcre.org/current/doc/html/pcre2api.html#SEC20)
+for more information.
+
+##### Standard regular expression settings for filters
+
+Many filters use the settings *match*, *exclude* and *options*. Since these settings are
+used in a similar way across these filters, the settings are explained here. The
+documentation of the filters link here and describe any exceptions to this
+generalized explanation.
+
+These settings typically limit the queries the filter module acts on. *match* and
+*exclude* define PCRE2 regular expression patterns while *options* affects how both of the
+patterns are compiled. *options* works as explained above, accepting the values
+`ignorecase`, `case` and `extended`, with `ignorecase` being the default.
+
+The queries are matched as they arrive to the filter on their way to a routing module. If
+*match* is defined, the filter only acts on queries matching that pattern. If *match* is
+not defined, all queries are considered to match.
+
+If *exclude* is defined, the filter only acts on queries not matching that pattern. If
+*exclude* is not defined, nothing is excluded.
+
+If both are defined, the query needs to match *match* but not match *exclude*.
+
+Even if a filter does not act on a query, the query is not lost. The query is simply
+passed on to the next module in the processing chain as if the filter was not there.
 
 ### Global Settings
 

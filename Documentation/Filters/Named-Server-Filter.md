@@ -50,23 +50,29 @@ filters=NamedServerFilter
 
 ## Filter Parameters
 
-The NamedServerFilter requires two mandatory parameters.
+NamedServerFilter requires at least one *matchXY* - *targetXY* pair.
 
-### `matchXY`
+### `matchXY`, `options`
 
-Regular expression the SQL-query is matched against. XY must be a number in the
-range 01 - 25. Each *match* setting must have a similarly indexed *target*
-setting.
+*matchXY* defines a
+[PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
+against which the incoming SQL query is matched. *XY* must be a number in the range
+01 - 25. Each *match*-setting pairs with a similarly indexed *target*- setting. If one is
+defined, the other must be defined as well. If a query matches the pattern, the filter
+attaches a routing hint defined by the *target*-setting to the query. The
+*options*-parameter affects how the patterns are compiled as
+[usual](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters).
 
 ```
 match01=^SELECT
+options=case,extended
 ```
 
 ### `targetXY`
 
-This is the hint which will be attached to the queries matching the regex. If a
-compatible router is used in the service the query will be routed accordingly.
-The target can be one of the following:
+The hint which is attached to the queries matching the regular expression defined by
+*matchXY*. If a compatible router is used in the service the query will be routed
+accordingly. The target can be one of the following:
 
  * a server name (adds a `HINT_ROUTE_TO_NAMED_SERVER` hint)
  * a list of server names, comma-separated (adds several
@@ -115,26 +121,7 @@ names is simply left as is and routed straight through.
 user=john
 ```
 
-## Filter Options
-
-The named server filter accepts the following options.
-
-|Option    |Description                                 |
-|----------|--------------------------------------------|
-|ignorecase|Use case-insensitive matching (default)     |
-|case      |Use case-sensitive matching                 |
-|extended  |Ignore white space and # comments           |
-
-To use multiple filter options, list them in a comma-separated list.
-
-```
-options=case,extended
-```
-
-**Note:** The *ignorecase* and *case* options are mutually exclusive and only
-one of them should be used.
-
-## Notes
+## Additional remarks
 
 The maximum number of accepted *match* - *target* pairs may be higher and can
 change if other features are added to the filter. A minimum of 25 is guaranteed
@@ -143,7 +130,7 @@ for now.
 In the configuration, the indexed match and target settings may be in any order
 and may skip numbers. During SQL-query matching, however, the regexes are tested
 in ascending order: match01, match02, match03 and so on. As soon as a match is
-found for a qiven query, the routing hints are written and the packet is
+found for a given query, the routing hints are written and the packet is
 forwarded to the next filter or router. Any possibly remaining match regexes are
 ignored. This means the *match* - *target* pairs should be indexed in priority
 order, or, if priority is not a factor, in order of decreasing match

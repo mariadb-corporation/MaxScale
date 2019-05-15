@@ -318,10 +318,11 @@ rule examplerule match not_function columns ssn
 
 #### `regex`
 
-This rule blocks all queries matching a regex enclosed in single or double
-quotes.  The regex string expects a PCRE2 syntax regular expression. For more
-information about the PCRE2 syntax, read the [PCRE2
-documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
+This rule blocks all queries matching the regular expression. The regex string expects a
+PCRE2 syntax regular expression. For more information about PCRE2 syntax, read the
+[PCRE2 documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html). Unlike
+typical MaxScale regex parameters, the value should be enclosed in single or double
+quotes, not in `/.../`. Any compilation options must be included in the pattern itself.
 
 ##### Example
 

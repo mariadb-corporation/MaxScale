@@ -7,7 +7,7 @@ This filter was introduced in MariaDB MaxScale 2.3.0.
 The `binlogfilter` can be combined with a `binlogrouter` service to selectively
 replicate the binary log events to slave servers.
 
-The filter uses two parameters, `match` and `exclude`, to decide which events
+The filter uses two parameters, *match* and *exclude*, to decide which events
 are replicated. If a binlog event does not match or is excluded, the event is
 replaced with an empty data event. The empty event is always 35 bytes which
 translates to a space reduction in most cases.
@@ -18,32 +18,24 @@ that there are no ambiguities in the event filtering.
 
 ## Configuration
 
-Both the `match` and `exclude` parameters are optional. If neither of them is
-defined, the filter does nothing and all events are replicated.
+### `match` and `exclude`
+
+Both the *match* and *exclude* parameters are optional and work mostly as other
+[typical regular expression parameters](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters).
+If neither of them is defined, the filter does nothing and all events are replicated. This
+filter does not accept regular expression options as a separate parameter, such settings
+must be defined in the patterns themselves. See the
+[PCRE2 api documentation](https://www.pcre.org/current/doc/html/pcre2api.html#SEC20) for
+more information.
 
 The two parameters are matched against the database and table name concatenated
 with a period.  For example, the string the patterns are matched against for the
 database `test` and table `t1` is `test.t1`.
 
 For statement based replication, the pattern is matched against all the tables
-in the statements. If any of the tables matches the `match` pattern, the event
-is replicated. If any of the tables matches the `exclude` pattern, the event is
+in the statements. If any of the tables matches the *match* pattern, the event
+is replicated. If any of the tables matches the *exclude* pattern, the event is
 not replicated.
-
-
-### `match`
-
-A [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
-that is matched against the database and table name. If the pattern matches, the
-event is replicated to the slave. If no `match` parameter is defined, all events
-are considered to match.
-
-### `exclude`
-
-A [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
-that is matched against the database and table name. If the pattern matches, the
-event is excluded and is not replicated to the slave. If no `exclude` pattern is
-defined, the event filtering is controlled completely by the `match` parameter.
 
 ## Example Configuration
 
