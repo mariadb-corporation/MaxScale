@@ -197,7 +197,7 @@ extern GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data);
 /**
  * Free a chain of gateway buffers
  *
- * @param buf  The head of the list of buffers to free
+ * @param buf  The head of the list of buffers to free, can be NULL.
  */
 extern void gwbuf_free(GWBUF* buf);
 
@@ -208,8 +208,7 @@ extern void gwbuf_free(GWBUF* buf);
  *
  * @param buf  The GWBUF to be cloned.
  *
- * @return The cloned GWBUF, or NULL if @buf was NULL or if any part
- *         of @buf could not be cloned.
+ * @return The cloned GWBUF, or NULL if any part of @buf could not be cloned.
  */
 extern GWBUF* gwbuf_clone(GWBUF* buf);
 
@@ -240,9 +239,8 @@ extern GWBUF* gwbuf_deep_clone(const GWBUF* buf);
  *         -1 if @c lhs is less than @c rhs, and
  *          1 if @c lhs is more than @c rhs.
  *
- * @attention A NULL @c GWBUF is considered to be less than a non-NULL one,
- *            and a shorter @c GWBUF less than a longer one. Otherwise the
- *            the sign of the return value is determined by the sign of the
+ * @attention A shorter @c GWBUF less than a longer one. Otherwise the
+ *            sign of the return value is determined by the sign of the
  *            difference between the first pair of bytes (interpreted as
  *            unsigned char) that differ in lhs and rhs.
  */
@@ -251,11 +249,8 @@ extern int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs);
 /**
  * Append a buffer onto a linked list of buffer structures.
  *
- * This call should be made with the caller holding the lock for the linked
- * list.
- *
- * @param head  The current head of the linked list
- * @param tail  The new buffer to make the tail of the linked list
+ * @param head  The current head of the linked list or NULL.
+ * @param tail  Another buffer to make the tail of the linked list
  *
  * @return The new head of the linked list
  */

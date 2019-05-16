@@ -42,8 +42,42 @@ inline void invalidate_tail_pointers(GWBUF* head)
         }
     }
 }
+
+inline void ensure_at_head(const GWBUF* buf)
+{
+    mxb_assert(buf->tail != reinterpret_cast<GWBUF*>(0xdeadbeef));
+}
+
+inline void ensure_owned(const GWBUF* buf)
+{
+    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+}
+
+inline bool validate_buffer(const GWBUF* buf)
+{
+    mxb_assert(buf);
+    ensure_at_head(buf);
+    ensure_owned(buf);
+    return true;
+}
+
 #else
-inline void invalidate_tail_pointers(GWBUF* head) {}
+inline void invalidate_tail_pointers(GWBUF* head)
+{
+}
+
+inline void ensure_at_head(const GWBUF* head)
+{
+}
+
+inline void ensure_owned(const GWBUF* head)
+{
+}
+
+inline bool validate_buffer(const GWBUF* head)
+{
+    return true;
+}
 #endif
 
 /**
@@ -117,9 +151,10 @@ GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data)
  */
 void gwbuf_free(GWBUF* buf)
 {
+    mxb_assert(!buf || validate_buffer(buf));
+
     while (buf)
     {
-        mxb_assert(buf->owner == RoutingWorker::get_current_id());
         GWBUF* nextbuf = buf->next;
         gwbuf_free_one(buf);
         buf = nextbuf;
@@ -133,6 +168,8 @@ void gwbuf_free(GWBUF* buf)
  */
 static void gwbuf_free_one(GWBUF* buf)
 {
+    ensure_owned(buf);
+
     --buf->sbuf->refcount;
 
     if (buf->sbuf->refcount == 0)
@@ -204,14 +241,8 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
 
 GWBUF* gwbuf_clone(GWBUF* buf)
 {
-    mxb_assert(buf);
+    validate_buffer(buf);
 
-    if (!buf)
-    {
-        return NULL;
-    }
-
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
     GWBUF* rval = gwbuf_clone_one(buf);
 
     if (rval)
@@ -244,7 +275,7 @@ GWBUF* gwbuf_clone(GWBUF* buf)
 
 static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
 {
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    ensure_owned(buf);
     GWBUF* rval = NULL;
 
     if (buf)
@@ -269,6 +300,7 @@ static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
 
 GWBUF* gwbuf_deep_clone(const GWBUF* buf)
 {
+    validate_buffer(buf);
     return gwbuf_deep_clone_portion(buf, gwbuf_length(buf));
 }
 
@@ -276,7 +308,7 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
                                   size_t start_offset,
                                   size_t length)
 {
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    ensure_owned(buf);
     mxb_assert(start_offset + length <= GWBUF_LENGTH(buf));
 
     GWBUF* clonebuf = (GWBUF*)MXS_MALLOC(sizeof(GWBUF));
@@ -306,6 +338,7 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
 
 GWBUF* gwbuf_split(GWBUF** buf, size_t length)
 {
+    validate_buffer(*buf);
     GWBUF* head = NULL;
 
     if (length > 0 && buf && *buf)
@@ -313,7 +346,7 @@ GWBUF* gwbuf_split(GWBUF** buf, size_t length)
         GWBUF* buffer = *buf;
         GWBUF* orig_tail = buffer->tail;
         head = buffer;
-        mxb_assert(buffer->owner == RoutingWorker::get_current_id());
+        ensure_owned(buffer);
 
         /** Handle complete buffers */
         while (buffer && length && length >= GWBUF_LENGTH(buffer))
@@ -409,71 +442,53 @@ static inline bool gwbuf_get_byte(const GWBUF** buf, size_t* offset, uint8_t* b)
 
 int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
 {
+    validate_buffer(lhs);
+    validate_buffer(rhs);
+
     int rv;
 
-    if ((lhs == NULL) && (rhs == NULL))
+    size_t llen = gwbuf_length(lhs);
+    size_t rlen = gwbuf_length(rhs);
+
+    if (llen < rlen)
     {
-        rv = 0;
-    }
-    else if (lhs == NULL)
-    {
-        mxb_assert(rhs);
         rv = -1;
     }
-    else if (rhs == NULL)
+    else if (rlen < llen)
     {
-        mxb_assert(lhs);
         rv = 1;
     }
     else
     {
-        mxb_assert(lhs->owner == RoutingWorker::get_current_id()
-                   && rhs->owner == RoutingWorker::get_current_id());
-        mxb_assert(lhs && rhs);
+        mxb_assert(llen == rlen);
 
-        size_t llen = gwbuf_length(lhs);
-        size_t rlen = gwbuf_length(rhs);
+        rv = 0;
+        size_t i = 0;
+        size_t loffset = 0;
+        size_t roffset = 0;
 
-        if (llen < rlen)
+        while ((rv == 0) && (i < llen))
+        {
+            uint8_t lc = 0;
+            uint8_t rc = 0;
+
+            MXB_AT_DEBUG(bool rv1 = ) gwbuf_get_byte(&lhs, &loffset, &lc);
+            MXB_AT_DEBUG(bool rv2 = ) gwbuf_get_byte(&rhs, &roffset, &rc);
+
+            mxb_assert(rv1 && rv2);
+
+            rv = (int)lc - (int)rc;
+
+            ++i;
+        }
+
+        if (rv < 0)
         {
             rv = -1;
         }
-        else if (rlen < llen)
+        else if (rv > 0)
         {
             rv = 1;
-        }
-        else
-        {
-            mxb_assert(llen == rlen);
-
-            rv = 0;
-            size_t i = 0;
-            size_t loffset = 0;
-            size_t roffset = 0;
-
-            while ((rv == 0) && (i < llen))
-            {
-                uint8_t lc = 0;
-                uint8_t rc = 0;
-
-                MXB_AT_DEBUG(bool rv1 = ) gwbuf_get_byte(&lhs, &loffset, &lc);
-                MXB_AT_DEBUG(bool rv2 = ) gwbuf_get_byte(&rhs, &roffset, &rc);
-
-                mxb_assert(rv1 && rv2);
-
-                rv = (int)lc - (int)rc;
-
-                ++i;
-            }
-
-            if (rv < 0)
-            {
-                rv = -1;
-            }
-            else if (rv > 0)
-            {
-                rv = 1;
-            }
         }
     }
 
@@ -482,16 +497,12 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
 
 GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
 {
-    mxb_assert(!head || head->owner == RoutingWorker::get_current_id());
-    mxb_assert(!tail || tail->owner == RoutingWorker::get_current_id());
+    mxb_assert(!head || validate_buffer(head));
+    mxb_assert(validate_buffer(tail));
 
     if (!head)
     {
         return tail;
-    }
-    else if (!tail)
-    {
-        return head;
     }
 
     head->tail->next = tail;
@@ -504,6 +515,8 @@ GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
 
 GWBUF* gwbuf_consume(GWBUF* head, unsigned int length)
 {
+    validate_buffer(head);
+
     while (head && length > 0)
     {
         mxb_assert(head->owner == RoutingWorker::get_current_id());
@@ -532,11 +545,13 @@ GWBUF* gwbuf_consume(GWBUF* head, unsigned int length)
 
 unsigned int gwbuf_length(const GWBUF* head)
 {
+    validate_buffer(head);
+
     int rval = 0;
 
     while (head)
     {
-        mxb_assert(head->owner == RoutingWorker::get_current_id());
+        ensure_owned(head);
         rval += GWBUF_LENGTH(head);
         head = head->next;
     }
@@ -546,11 +561,13 @@ unsigned int gwbuf_length(const GWBUF* head)
 
 int gwbuf_count(const GWBUF* head)
 {
+    validate_buffer(head);
+
     int result = 0;
 
     while (head)
     {
-        mxb_assert(head->owner == RoutingWorker::get_current_id());
+        ensure_owned(head);
         result++;
         head = head->next;
     }
@@ -560,7 +577,8 @@ int gwbuf_count(const GWBUF* head)
 
 GWBUF* gwbuf_rtrim(GWBUF* head, unsigned int n_bytes)
 {
-    mxb_assert(head->owner == RoutingWorker::get_current_id());
+    validate_buffer(head);
+
     GWBUF* rval = head;
     GWBUF_RTRIM(head, n_bytes);
 
@@ -574,6 +592,7 @@ GWBUF* gwbuf_rtrim(GWBUF* head, unsigned int n_bytes)
 
 void gwbuf_set_type(GWBUF* buf, uint32_t type)
 {
+    validate_buffer(buf);
     /** Set type consistenly to all buffers on the list */
     while (buf != NULL)
     {
@@ -588,7 +607,8 @@ void gwbuf_add_buffer_object(GWBUF* buf,
                              void* data,
                              void (* donefun_fp)(void*))
 {
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    validate_buffer(buf);
+
     buffer_object_t* newb = (buffer_object_t*)MXS_MALLOC(sizeof(buffer_object_t));
     MXS_ABORT_IF_NULL(newb);
 
@@ -610,7 +630,8 @@ void gwbuf_add_buffer_object(GWBUF* buf,
 
 void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
 {
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    validate_buffer(buf);
+
     buffer_object_t* bo = buf->sbuf->bufobj;
 
     while (bo != NULL && bo->bo_id != id)
@@ -626,7 +647,7 @@ void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
  */
 static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* bufobj)
 {
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    ensure_owned(buf);
     buffer_object_t* next = bufobj->bo_next;
     /** Call corresponding clean-up function to clean buffer object's data */
     bufobj->bo_donefun_fp(bufobj->bo_data);
@@ -636,7 +657,8 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
 
 bool gwbuf_add_property(GWBUF* buf, const char* name, const char* value)
 {
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    validate_buffer(buf);
+
     char* my_name = MXS_STRDUP(name);
     char* my_value = MXS_STRDUP(value);
     BUF_PROPERTY* prop = (BUF_PROPERTY*)MXS_MALLOC(sizeof(BUF_PROPERTY));
@@ -659,7 +681,8 @@ bool gwbuf_add_property(GWBUF* buf, const char* name, const char* value)
 
 char* gwbuf_get_property(GWBUF* buf, const char* name)
 {
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    validate_buffer(buf);
+
     BUF_PROPERTY* prop = buf->properties;
 
     while (prop && strcmp(prop->name, name) != 0)
@@ -672,8 +695,7 @@ char* gwbuf_get_property(GWBUF* buf, const char* name)
 
 GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 {
-    mxb_assert_message(orig != NULL, "gwbuf_make_contiguous: NULL buffer");
-    mxb_assert(orig->owner == RoutingWorker::get_current_id());
+    validate_buffer(orig);
 
     if (orig->next == NULL)
     {
@@ -701,6 +723,7 @@ GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 
 size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest)
 {
+    validate_buffer(buffer);
     uint32_t buflen;
 
     /** Skip unrelated buffers */
@@ -751,6 +774,7 @@ size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t
 
 uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset)
 {
+    validate_buffer(buffer);
     uint8_t* rval = NULL;
     // Ignore NULL buffer and walk past empty or too short buffers.
     while (buffer && (GWBUF_LENGTH(buffer) <= offset))
@@ -771,7 +795,7 @@ uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset)
 
 static std::string dump_one_buffer(GWBUF* buffer)
 {
-    mxb_assert(buffer->owner == RoutingWorker::get_current_id());
+    ensure_owned(buffer);
     std::string rval;
     int len = GWBUF_LENGTH(buffer);
     uint8_t* data = GWBUF_DATA(buffer);
@@ -800,6 +824,7 @@ static std::string dump_one_buffer(GWBUF* buffer)
 
 void gwbuf_hexdump(GWBUF* buffer, int log_level)
 {
+    validate_buffer(buffer);
     mxb_assert(buffer->owner == RoutingWorker::get_current_id());
     std::stringstream ss;
 

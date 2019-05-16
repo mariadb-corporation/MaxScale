@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <maxbase/log.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/buffer.hh>
@@ -227,13 +228,16 @@ void test_multiple_sql_packets1()
         tail = gwbuf_alloc_and_load(sizeof(resultset) - i, resultset + i);
         head = gwbuf_append(head, tail);
         complete = modutil_get_complete_packets(&head);
-        int headlen = gwbuf_length(head);
+        int headlen = head ? gwbuf_length(head) : 0;
         int completelen = complete ? gwbuf_length(complete) : 0;
         mxb_assert_message(headlen + completelen == sizeof(resultset),
                            "Both buffers should sum up to sizeof(resutlset) bytes");
         uint8_t databuf[sizeof(resultset)];
         gwbuf_copy_data(complete, 0, completelen, databuf);
-        gwbuf_copy_data(head, 0, headlen, databuf + completelen);
+        if (head)
+        {
+            gwbuf_copy_data(head, 0, headlen, databuf + completelen);
+        }
         mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
         gwbuf_free(head);
         gwbuf_free(complete);
@@ -259,13 +263,16 @@ void test_multiple_sql_packets1()
     mxb_assert_message(gwbuf_length(complete) == sizeof(resultset),
                        "Complete should be sizeof(resulset) bytes long");
 
-    unsigned int headlen = gwbuf_length(head);
+    unsigned int headlen = head ? gwbuf_length(head) : 0;
     unsigned int completelen = complete ? gwbuf_length(complete) : 0;
     uint8_t databuf[sizeof(resultset)];
     mxb_assert_message(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
                        "Expected data should be readable");
-    mxb_assert_message(gwbuf_copy_data(head, 0, headlen, databuf + completelen) == headlen,
-                       "Expected data should be readable");
+    if (head)
+    {
+        mxb_assert_message(gwbuf_copy_data(head, 0, headlen, databuf + completelen) == headlen,
+                           "Expected data should be readable");
+    }
     mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
 
     /** Fragmented buffer split into multiple chains and then reassembled as a complete resultset */
@@ -635,6 +642,8 @@ void test_bypass_whitespace()
 
 int main(int argc, char** argv)
 {
+    mxb::Log log;
+
     int result = 0;
 
     result += test1();

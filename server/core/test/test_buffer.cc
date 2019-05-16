@@ -199,10 +199,6 @@ void test_split()
     gwbuf_free(newbuf);
 
     /** Bad parameter tests */
-    GWBUF* ptr = NULL;
-    mxb_assert_message(gwbuf_split(NULL, 0) == NULL, "gwbuf_split with NULL parameter should return NULL");
-    mxb_assert_message(gwbuf_split(&ptr, 0) == NULL,
-                       "gwbuf_split with pointer to a NULL value should return NULL");
     buffer = gwbuf_alloc(10);
     mxb_assert_message(gwbuf_split(&buffer, 0) == NULL, "gwbuf_split with length of 0 should return NULL");
     mxb_assert_message(gwbuf_length(buffer) == 10, "Buffer should be 10 bytes");
@@ -330,23 +326,13 @@ void test_compare()
 
     fprintf(stderr, "testbuffer : testing GWBUF comparisons\n");
 
-    GWBUF* lhs = NULL;
-    GWBUF* rhs = NULL;
-
-    // Both NULL
-    mxb_assert(gwbuf_compare(lhs, rhs) == 0);
-
-    // Either (but not both) NULL
-    lhs = gwbuf_alloc_and_load(10, data);
-    mxb_assert(gwbuf_compare(lhs, rhs) > 0);
-    mxb_assert(gwbuf_compare(rhs, lhs) < 0);
+    GWBUF* lhs = gwbuf_alloc_and_load(10, data);
 
     // The same array
     mxb_assert(gwbuf_compare(lhs, lhs) == 0);
 
     // Identical array
-    gwbuf_free(rhs);
-    rhs = gwbuf_alloc_and_load(10, data);
+    GWBUF* rhs = gwbuf_alloc_and_load(10, data);
     mxb_assert(gwbuf_compare(lhs, rhs) == 0);
 
     // One shorter

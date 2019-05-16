@@ -556,6 +556,8 @@ static size_t get_complete_packets_length(GWBUF* buffer)
     size_t offset = 0;
     size_t total = 0;
 
+    GWBUF* tail = buffer ? buffer->tail : nullptr;
+
     while (buffer && gwbuf_copy_data(buffer, offset, 3, packet_len) == 3)
     {
         uint32_t len = gw_mysql_get_byte3(packet_len) + MYSQL_HEADER_LEN;
@@ -577,6 +579,13 @@ static size_t get_complete_packets_length(GWBUF* buffer)
                 read_len -= buflen;
                 buffer = buffer->next;
                 buflen = buffer ? GWBUF_LENGTH(buffer) : 0;
+            }
+
+            // TODO: Fix GWBUF interface so that this function can be written without
+            // TODO: knowledge about the internals of GWBUF.
+            if (buffer)
+            {
+                buffer->tail = tail;
             }
 
             /** Either the buffer ended with a complete packet or the buffer
