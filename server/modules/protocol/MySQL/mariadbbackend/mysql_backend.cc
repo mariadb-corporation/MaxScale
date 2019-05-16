@@ -729,7 +729,7 @@ static inline bool collecting_resultset(MySQLProtocol* proto, uint64_t capabilit
  */
 static inline bool not_ok_packet(const GWBUF* buffer)
 {
-    uint8_t* data = GWBUF_DATA(buffer);
+    const uint8_t* data = GWBUF_DATA(buffer);
 
     return data[4] != MYSQL_REPLY_OK
            ||   // Should be more than 7 bytes of payload

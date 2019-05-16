@@ -133,42 +133,58 @@ struct GWBUF
  * Macros to access the data in the buffers
  */
 /*< First valid, unconsumed byte in the buffer */
-#define GWBUF_DATA(b) ((uint8_t*)(b)->start)
+inline uint8_t* gwbuf_link_data(GWBUF* b)
+{
+    return static_cast<uint8_t*>(b->start);
+}
+
+inline const uint8_t* gwbuf_link_data(const GWBUF* b)
+{
+    return static_cast<uint8_t*>(b->start);
+}
+
+#define GWBUF_DATA(b) gwbuf_link_data(b)
 
 /*< Number of bytes in the individual buffer */
-#define GWBUF_LENGTH(b) ((size_t)((char*)(b)->end - (char*)(b)->start))
+inline size_t gwbuf_link_length(const GWBUF* b)
+{
+    return (size_t)((char*)b->end - (char*)b->start);
+}
 
-/*< Return the byte at offset byte from the start of the unconsumed portion of the buffer */
-#define GWBUF_DATA_CHAR(b, byte) (GWBUF_LENGTH(b) < ((byte) + 1) ? -1 : *(((char*)(b)->start) + 4))
-
-/*< Check that the data in a buffer has the SQL marker*/
-#define GWBUF_IS_SQL(b) (0x03 == GWBUF_DATA_CHAR(b, 4))
+#define GWBUF_LENGTH(b) gwbuf_link_length(b)
 
 /*< Check whether the buffer is contiguous*/
 #define GWBUF_IS_CONTIGUOUS(b) (((b) == NULL) || ((b)->next == NULL))
 
 /*< True if all bytes in the buffer have been consumed */
-#define GWBUF_EMPTY(b) ((char*)(b)->start >= (char*)(b)->end)
+inline bool gwbuf_link_empty(const GWBUF* b)
+{
+    return ((char*)b->start >= (char*)b->end);
+}
+
+#define GWBUF_EMPTY(b) gwbuf_link_empty(b)
 
 /*< Consume a number of bytes in the buffer */
-#define GWBUF_CONSUME(b, \
-                      bytes) ((b)->start = bytes \
-                                  > ((char*)(b)->end \
-                                     - (char*)(b)->start) ? (b)->end : (void*)((char*)(b)->start + (bytes)));
+inline void gwbuf_link_consume(GWBUF* b, unsigned int bytes)
+{
+    b->start = bytes > ((char*)b->end - (char*)b->start) ? b->end : (void*)((char*)b->start + bytes);
+}
 
-/*< Check if a given pointer is within the buffer */
-#define GWBUF_POINTER_IN_BUFFER \
-    (ptr, b) \
-    ((char*)(ptr) >= (char*)(b)->start && (char*)(ptr) < (char*)(b)->end)
+#define GWBUF_CONSUME(b, bytes) gwbuf_link_consume(b, bytes)
 
-/*< Consume a complete buffer */
-#define GWBUF_CONSUME_ALL(b) gwbuf_consume((b), GWBUF_LENGTH((b)))
+inline void gwbuf_link_rtrim(GWBUF* b, unsigned int bytes)
+{
+    b->end = bytes > ((char*)b->end - (char*)b->start) ? b->start : (void*)((char*)b->end - bytes);
+}
 
-#define GWBUF_RTRIM(b, bytes) \
-    ((b)->end = bytes > ((char*)(b)->end - (char*)(b)->start) ? (b)->start   \
-                                                              : (void*)((char*)(b)->end - (bytes)));
+#define GWBUF_RTRIM(b, bytes) gwbuf_link_rtrim(b, bytes)
 
-#define GWBUF_TYPE(b) (b)->gwbuf_type
+inline uint32_t gwbuf_type(const GWBUF* b)
+{
+    return b->gwbuf_type;
+}
+#define GWBUF_TYPE(b) gwbuf_type(b)
+
 /*<
  * Function prototypes for the API to maniplate the buffers
  */
