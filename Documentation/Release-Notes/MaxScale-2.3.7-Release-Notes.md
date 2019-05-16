@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.3.7 Release Notes
+# MariaDB MaxScale 2.3.7 Release Notes -- 2019-05-16
 
 Release 2.3.7 is a GA release.
 
@@ -14,7 +14,6 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
-* [MXS-2475](https://jira.mariadb.org/browse/MXS-2475) Fix mxs1980_blr_galera_server_ids
 * [MXS-2474](https://jira.mariadb.org/browse/MXS-2474) Housekeeper allows the registration of the same task multiple times
 * [MXS-2472](https://jira.mariadb.org/browse/MXS-2472) BinlogRouter's "Using secondary masters" documentation is incomplete
 * [MXS-2457](https://jira.mariadb.org/browse/MXS-2457) MaxScale Mask Filter incorrectly handles ANSI_QUOTES
