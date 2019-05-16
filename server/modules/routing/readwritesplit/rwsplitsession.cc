@@ -225,6 +225,14 @@ bool RWSplitSession::route_stored_query()
         auto query = std::move(m_query_queue.front());
         m_query_queue.pop_front();
 
+        if (!query.get())
+        {
+            MXS_ALERT("MXS-2464: Query in query queue unexpectedly null. Queue has %lu queries left.",
+                      m_query_queue.size());
+            mxb_assert(!true);
+            continue;
+        }
+
         /** Store the query queue locally for the duration of the routeQuery call.
          * This prevents recursive calls into this function. */
         decltype(m_query_queue) temp_storage;
