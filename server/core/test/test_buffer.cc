@@ -589,5 +589,5 @@ int main(int argc, char** argv)
 
     result += test1();
 
-    exit(result);
+    return result;
 }
