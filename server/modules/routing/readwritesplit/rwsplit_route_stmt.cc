@@ -202,7 +202,12 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
 
     SRWBackend target;
 
-    if (TARGET_IS_ALL(route_target))
+    if (command == MXS_COM_STMT_EXECUTE && stmt_id == 0)
+    {
+        // Unknown prepared statement ID
+        succp = send_unknown_ps_error(extract_binary_ps_id(querybuf));
+    }
+    else if (TARGET_IS_ALL(route_target))
     {
         succp = handle_target_is_all(route_target, querybuf, command, qtype);
     }

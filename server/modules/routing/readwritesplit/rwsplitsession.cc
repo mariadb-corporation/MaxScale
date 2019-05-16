@@ -1221,3 +1221,11 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
 
     return rv;
 }
+
+bool RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
+{
+    std::stringstream ss;
+    ss << "Unknown prepared statement handler (" << stmt_id << ") given to MaxScale";
+    GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
+    return m_client->func.write(m_client, err);
+}
