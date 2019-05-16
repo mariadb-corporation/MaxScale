@@ -3240,6 +3240,7 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE* inst)
         return false;
     }
 
+    MXS_INFO("Opened GTID maps SQLite database: %s", dbpath);
     char* errmsg;
     /* Create the gtid_maps table */
     int rc = sqlite3_exec(inst->gtid_maps,
