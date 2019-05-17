@@ -489,6 +489,17 @@ that exceeds this limit will not be replayed. The default size limit is 1
 MiB. Read [the configuration guide](../Getting-Started/Configuration-Guide.md#sizes)
 for more details on size type parameters in MaxScale.
 
+### `transaction_replay_attempts`
+
+The upper limit on how many times a transaction replay is attempted before
+giving up. The default value is 5.
+
+A transaction replay failure can happen if the server where the transaction is
+being replayed fails while the replay is in progress. In practice this parameter
+controls how many server and network failures a single transaction replay
+tolerates. If a transaction is replayed successfully, the counter for failed
+attempts is reset.
+
 ### `optimistic_trx`
 
 Enable optimistic transaction execution. This parameter controls whether normal

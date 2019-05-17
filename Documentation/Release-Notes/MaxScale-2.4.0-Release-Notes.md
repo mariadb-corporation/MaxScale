@@ -156,6 +156,24 @@ For more information, read the
 [REST-API](../REST-API/Resources-Server.md#set-server-state) documentation for
 the `set` endpoint.
 
+### Readwritesplit
+
+For more information on the readwritesplit router, refer to the
+[documentation](../Routers/ReadWriteSplit.md).
+
+#### `transaction_replay_attempts`
+
+The new `transaction_replay_attempts` parameter controls how many errors the
+transaction replay mechanism tolerates before giving up on the replay
+attempt. The number of transaction replay attemps is now capped to a default
+value of 5.
+
+#### `lazy_connect`
+
+Lazy connection creation delays the opening of all connections until they are
+needed. This reduces the load that is placed on the backend servers when the
+client connections are short. This feature is disabled by default.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.4.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.4.0)
