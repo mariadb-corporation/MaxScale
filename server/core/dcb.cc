@@ -697,7 +697,7 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
 {
     GWBUF* buffer;
     int nsingleread = 0, nreadtotal = 0;
-    int start_length = gwbuf_length(*head);
+    int start_length = *head ? gwbuf_length(*head) : 0;
 
     if (dcb->fd == DCBFD_CLOSED)
     {
@@ -730,7 +730,7 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
         }
     }
 
-    mxb_assert(gwbuf_length(*head) == (size_t)(start_length + nreadtotal));
+    mxb_assert((*head ? gwbuf_length(*head) : 0) == (size_t)(start_length + nreadtotal));
 
     return nsingleread < 0 ? nsingleread : nreadtotal;
 }
