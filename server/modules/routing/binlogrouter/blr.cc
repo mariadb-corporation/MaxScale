@@ -824,29 +824,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             return NULL;
         }
 
-        mxs::SSLContext* ssl_cfg;
-        /* Allocate SSL struct for backend connection */
-        if ((ssl_cfg =
-                 static_cast<mxs::SSLContext*>(MXS_CALLOC(1, sizeof(mxs::SSLContext)))) == NULL)
-        {
-            MXS_ERROR("%s: Error allocating memory for SSL struct in createInstance",
-                      inst->service->name());
-
-            MXS_FREE(service->dbref);
-            sqlite3_close_v2(inst->gtid_maps);
-            free_instance(inst);
-            return NULL;
-        }
-
-        /* Set some SSL defaults */
-        ssl_cfg->ssl_init_done = false;
-        ssl_cfg->ssl_method_type = SERVICE_SSL_TLS_MAX;
-        ssl_cfg->ssl_cert_verify_depth = 9;
-        ssl_cfg->ssl_verify_peer_certificate = true;
-
-        /** Set SSL pointer in in server struct */
-        server->server_ssl = ssl_cfg;
-
         /* Add server to service backend list */
         serviceAddBackend(inst->service, server);
 
@@ -1502,11 +1479,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
     /* SSL options */
     if (router_inst->ssl_enabled)
     {
-        dcb_printf(dcb, "\tMaster SSL is ON:\n");
-        if (router_inst->service->dbref->server && router_inst->service->dbref->server->server_ssl)
-        {
-            dcb_printf(dcb, "%s", router_inst->service->dbref->server->server_ssl->to_string().c_str());
-        }
+        dcb_printf(dcb, "%s", router_inst->service->dbref->server->server_ssl->to_string().c_str());
     }
 
     /* Binlog Encryption options */

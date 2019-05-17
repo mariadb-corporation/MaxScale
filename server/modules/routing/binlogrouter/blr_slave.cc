@@ -4841,8 +4841,6 @@ static char* blr_set_master_logfile(ROUTER_INSTANCE* router,
  */
 static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* curr_master)
 {
-    mxs::SSLContext* server_ssl;
-
     curr_master->port = router->service->dbref->server->port;
     curr_master->host = router->service->dbref->server->address;
     curr_master->pos = router->current_pos;
@@ -4854,23 +4852,23 @@ static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* c
     /* SSL options */
     if (router->service->dbref->server->server_ssl)
     {
-        server_ssl = router->service->dbref->server->server_ssl;
+        auto server_ssl = router->service->dbref->server->server_ssl;
         curr_master->ssl_enabled = router->ssl_enabled;
         if (router->ssl_version)
         {
             curr_master->ssl_version = router->ssl_version;
         }
-        if (server_ssl->ssl_key)
+        if (!server_ssl->ssl_key().empty())
         {
-            curr_master->ssl_key = server_ssl->ssl_key;
+            curr_master->ssl_key = server_ssl->ssl_key();
         }
-        if (server_ssl->ssl_cert)
+        if (!server_ssl->ssl_cert().empty())
         {
-            curr_master->ssl_cert = server_ssl->ssl_cert;
+            curr_master->ssl_cert = server_ssl->ssl_cert();
         }
-        if (server_ssl->ssl_ca_cert)
+        if (!server_ssl->ssl_ca().empty())
         {
-            curr_master->ssl_ca = server_ssl->ssl_ca_cert;
+            curr_master->ssl_ca = server_ssl->ssl_ca();
         }
     }
     /* Connect options */
@@ -6330,126 +6328,67 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
                               const ChangeMasterConfig& config,
                               char* error_message)
 {
-    mxs::SSLContext* server_ssl = NULL;
-    int updated = 0;
+    bool updated = 0;
 
     if (config.ssl_enabled)
     {
         router->ssl_enabled = config.ssl_enabled;
-        updated++;
     }
 
-    if (router->ssl_enabled == false)
+    if (router->ssl_enabled)
     {
-        /* Free SSL struct */
-        blr_free_ssl_data(router);
-    }
-    else
-    {
-        /* Check for existing SSL struct */
-        if (router->service->dbref->server->server_ssl)
+        MXS_CONFIG_PARAMETER params;
+        params.set_from_list({
+            {CN_SSL, CN_REQUIRED},
+            {CN_SSL_KEY, config.ssl_key},
+            {CN_SSL_CERT, config.ssl_cert},
+            {CN_SSL_CA_CERT, config.ssl_ca},
+            {CN_SSL_VERSION, config.ssl_version},
+            {CN_SSL_CERT_VERIFY_DEPTH, "9"},
+            {CN_SSL_VERIFY_PEER_CERTIFICATE, "true"}
+        });
+
+        auto ssl = mxs::SSLContext::create(params);
+
+        if (ssl)
         {
-            server_ssl = router->service->dbref->server->server_ssl;
-            server_ssl->ssl_init_done = false;
+            updated = 1;
+            delete router->service->dbref->server->server_ssl;
+            router->service->dbref->server->server_ssl = ssl;
+
+            /* Update options in router fields */
+            if (!config.ssl_key.empty())
+            {
+                mxb_assert((config.ssl_key.front() != '\'') && (config.ssl_key.front() != '"'));
+                MXS_FREE(router->ssl_key);
+                router->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
+            }
+            if (!config.ssl_ca.empty())
+            {
+                mxb_assert((config.ssl_ca.front() != '\'') && (config.ssl_ca.front() != '"'));
+                MXS_FREE(router->ssl_ca);
+                router->ssl_ca = MXS_STRDUP_A(config.ssl_ca.c_str());
+            }
+            if (!config.ssl_cert.empty())
+            {
+                mxb_assert((config.ssl_cert.front() != '\'') && (config.ssl_cert.front() != '"'));
+                MXS_FREE(router->ssl_cert);
+                router->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
+            }
+            if (!config.ssl_version.empty())
+            {
+                mxb_assert((config.ssl_version.front() != '\'') && (config.ssl_version.front() != '"'));
+                MXS_FREE(router->ssl_version);
+                router->ssl_version = MXS_STRDUP_A(config.ssl_version.c_str());
+            }
         }
         else
         {
-            /* Allocate SSL struct for backend connection */
-            server_ssl = static_cast<mxs::SSLContext*>(MXS_CALLOC(1, sizeof(mxs::SSLContext)));
-            if (server_ssl == NULL)
-            {
-                router->ssl_enabled = false;
-
-                /* Report back the error */
-                snprintf(error_message,
-                         BINLOG_ERROR_MSG_LEN,
-                         "CHANGE MASTER TO: Error allocating memory for SSL struct"
-                         " in blr_set_master_ssl");
-
-                return -1;
-            }
-
-            /* Set some SSL defaults */
-            server_ssl->ssl_init_done = false;
-            server_ssl->ssl_method_type = SERVICE_SSL_TLS_MAX;
-            server_ssl->ssl_cert_verify_depth = 9;
-
-            /* Set the pointer */
-            router->service->dbref->server->server_ssl = server_ssl;
+            updated = -1;
         }
     }
 
-    /* Update options in router fields and in server_ssl struct, if present */
-    if (!config.ssl_key.empty())
-    {
-        mxb_assert((config.ssl_key.front() != '\'') && (config.ssl_key.front() != '"'));
-
-        if (server_ssl)
-        {
-            MXS_FREE(server_ssl->ssl_key);
-            server_ssl->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
-        }
-        MXS_FREE(router->ssl_key);
-        router->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
-        updated++;
-    }
-    if (!config.ssl_ca.empty())
-    {
-        mxb_assert((config.ssl_ca.front() != '\'') && (config.ssl_ca.front() != '"'));
-
-        if (server_ssl)
-        {
-            MXS_FREE(server_ssl->ssl_ca_cert);
-            server_ssl->ssl_ca_cert = MXS_STRDUP_A(config.ssl_ca.c_str());
-        }
-        MXS_FREE(router->ssl_ca);
-        router->ssl_ca = MXS_STRDUP_A(config.ssl_ca.c_str());
-        updated++;
-    }
-    if (!config.ssl_cert.empty())
-    {
-        mxb_assert((config.ssl_cert.front() != '\'') && (config.ssl_cert.front() != '"'));
-
-        if (server_ssl)
-        {
-            MXS_FREE(server_ssl->ssl_cert);
-            server_ssl->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
-        }
-        MXS_FREE(router->ssl_cert);
-        router->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
-        updated++;
-    }
-
-    if (!config.ssl_version.empty() && server_ssl)
-    {
-        mxb_assert((config.ssl_version.front() != '\'') && (config.ssl_version.front() != '"'));
-
-        if (!config.ssl_version.empty())
-        {
-            if (listener_set_ssl_version(server_ssl, config.ssl_version.c_str()) != 0)
-            {
-                /* Report back the error */
-                snprintf(error_message,
-                         BINLOG_ERROR_MSG_LEN,
-                         "Unknown parameter value for 'ssl_version': %s",
-                         config.ssl_version.c_str());
-                return -1;
-            }
-            /* Set provided ssl_version in router SSL cfg anyway */
-            MXS_FREE(router->ssl_version);
-            router->ssl_version = MXS_STRDUP_A(config.ssl_version.c_str());
-            updated++;
-        }
-    }
-
-    if (updated)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+    return updated;
 }
 
 /**
