@@ -4,6 +4,8 @@ This document provides an overview of the **readconnroute** router module
 and its intended use case scenarios. It also displays all router
 configuration parameters with their descriptions.
 
+[TOC]
+
 ## Overview
 
 The readconnroute router provides simple and lightweight load balancing
@@ -45,11 +47,6 @@ the list of servers is processed in from first entry to last. This means
 that if two servers with equal weight and status are found, the one that's
 listed first in the _servers_ parameter for the service is chosen.
 
-## Limitations
-
-For a list of readconnroute limitations, please read the
-[Limitations](../About/Limitations.md) document.
-
 ## Examples
 
 The most common use for the readconnroute is to provide either a read or
@@ -74,3 +71,9 @@ slave servers.
 
 For more complex examples of the readconnroute router, take a look at the
 examples in the [Tutorials](../Tutorials) folder.
+
+## Limitations
+
+* Sending of binary data with `LOAD DATA LOCAL INFILE` is not supported.
+
+* The router will never reconnect to the server it initially connected to.

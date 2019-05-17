@@ -723,3 +723,91 @@ executed session command for the duration of the session. Applications that use
 long-running sessions might cause MariaDB MaxScale to consume a growing amount
 of memory unless the sessions are closed. This can be solved by adjusting the
 value of `max_sescmd_history`.
+
+## Limitations
+
+Read queries are routed to the master server in the following situations:
+
+* query is executed inside an open transaction
+* statement includes a stored procedure or an UDF call
+* if there are multiple statements inside one query e.g.
+  `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
+
+### JDBC Batched Statements
+
+Readwritesplit does not support pipelining of JDBC batched statements. This is
+caused by the fact that readwritesplit executes the statements one at a time to
+track the state of the response.
+
+#### Limitations in multi-statement handling
+
+When a multi-statement query is executed through the readwritesplit router, it
+will always be routed to the master. See
+[`strict_multi_stmt`](../Routers/ReadWriteSplit.md#strict_multi_stmt) for more
+details.
+
+#### Limitations in client session handling
+
+Some of the queries that a client sends are routed to all backends instead of
+just to one. These queries include `USE <db name>` and `SET autocommit=0`, among
+many others. Readwritesplit sends a copy of these queries to each backend server
+and forwards the master's reply to the client. Below is a list of MySQL commands
+which are classified as session commands.
+
+```
+COM_INIT_DB (USE <db name> creates this)
+COM_CHANGE_USER
+COM_STMT_CLOSE
+COM_STMT_SEND_LONG_DATA
+COM_STMT_RESET
+COM_STMT_PREPARE
+COM_QUIT (no response, session is closed)
+COM_REFRESH
+COM_DEBUG
+COM_PING
+SQLCOM_CHANGE_DB (USE ... statements)
+SQLCOM_DEALLOCATE_PREPARE
+SQLCOM_PREPARE
+SQLCOM_SET_OPTION
+SELECT ..INTO variable|OUTFILE|DUMPFILE
+SET autocommit=1|0
+```
+
+Prior to MaxScale 2.3.0, session commands that were 2²⁴ - 1 bytes or longer were
+not supported and caused the session to be closed.
+
+There is a possibility for misbehavior. If `USE mytable` is executed in one of
+the slaves and fails, it may be due to replication lag rather than the database
+not existing. Thus, the same command may produce different result in different
+backend servers. The slaves which fail to execute a session command will be
+dropped from the active list of slaves for this session to guarantee a
+consistent session state across all the servers used by the session. In
+addition, the server will not be used again for routing for the duration of the
+session.
+
+The above-mentioned behavior for user variables can be partially controlled with
+the configuration parameter `use_sql_variables_in`:
+
+```
+use_sql_variables_in=[master|all] (default: all)
+```
+
+**WARNING**
+
+If a SELECT query modifies a user variable when the `use_sql_variables_in`
+parameter is set to `all`, it will not be routed and the client will receive an
+error. A log message is written into the log further explaining the reason for
+the error. Here is an example use of a SELECT query which modifies a user
+variable and how MariaDB MaxScale responds to it.
+
+```
+MySQL [(none)]> set @id=1;
+Query OK, 0 rows affected (0.00 sec)
+
+MySQL [(none)]> SELECT @id := @id + 1 FROM test.t1;
+ERROR 1064 (42000): Routing query to backend failed. See the error log for further details.
+```
+
+Allow user variable modification in SELECT queries by setting
+`use_sql_variables_in=master`. This will route all queries that use user
+variables to the master.

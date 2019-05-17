@@ -22,37 +22,7 @@ should be used to communicate with the avrorouter and currently it is the only
 supported protocol. The clients can request either Avro or JSON format data
 streams from a database table.
 
-Table of Contents
-=================
-
-* [Configuration](#configuration)
-   * [Router Parameters](#router-parameters)
-      * [source](#source)
-      * [codec](#codec)
-      * [match](#match)
-      * [exclude](#exclude)
-   * [Router Options](#router-options)
-      * [General Options](#general-options)
-         * [binlogdir](#binlogdir)
-         * [avrodir](#avrodir)
-         * [filestem](#filestem)
-         * [start_index](#start_index)
-      * [Avro file options](#avro-file-options)
-         * [group_trx](#group_trx)
-         * [group_rows](#group_rows)
-         * [block_size](#block_size)
-* [Module commands](#module-commands)
-   * [avrorouter::convert SERVICE {start | stop}](#avrorouterconvert-service-start--stop)
-   * [avrorouter::purge SERVICE](#avrorouterpurge-service)
-* [Files Created by the Avrorouter](#files-created-by-the-avrorouter)
-* [Resetting the Conversion Process](#resetting-the-conversion-process)
-* [Stopping the Avrorouter](#stopping-the-avrorouter)
-* [Example Client](#example-client)
-* [Avro Schema Generator](#avro-schema-generator)
-   * [Python Schema Generator](#python-schema-generator)
-   * [Go Schema Generator](#go-schema-generator)
-* [Examples](#examples)
-* [Building Avrorouter](#building-avrorouter)
+[TOC]
 
 ## Configuration
 
@@ -444,3 +414,15 @@ configuring the Avro C library.
 For more details about building MaxScale from source, please refer to the
 [Building MaxScale from Source Code](../Getting-Started/Building-MaxScale-from-Source-Code.md)
 document.
+
+## Limitations
+
+The avrorouter does not support the following data types, conversions or SQL statements:
+
+* BIT
+* Fields CAST from integer types to string types
+* [CREATE TABLE ... AS SELECT statements](https://mariadb.com/kb/en/library/create-table/#create-select)
+
+The avrorouter does not do any crash recovery. This means that the avro files
+need to be removed or truncated to valid block lengths before starting the
+avrorouter.

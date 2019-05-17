@@ -9,37 +9,7 @@ logs. You can switch to a new master server without the slaves noticing that the
 actual master server has changed. This allows for a more highly available
 replication setup where replication is high-priority.
 
-Table of Contents
-=================
-
-* [Configuration](#configuration)
-   * [Mandatory Router Parameters](#mandatory-router-parameters)
-   * [Router Parameters](#router-parameters)
-      * [binlogdir](#binlogdir)
-      * [server_id](#server_id)
-      * [master_id](#master_id)
-      * [uuid](#uuid)
-      * [master_uuid](#master_uuid)
-      * [master_version](#master_version)
-      * [master_hostname](#master_hostname)
-      * [slave_hostname](#slave_hostname)
-      * [user](#user)
-      * [password](#password)
-      * [heartbeat](#heartbeat)
-      * [burstsize](#burstsize)
-      * [mariadb10-compatibility](#mariadb10-compatibility)
-      * [transaction_safety](#transaction_safety)
-      * [send_slave_heartbeat](#send_slave_heartbeat)
-      * [semisync](#semisync)
-      * [ssl_cert_verification_depth](#ssl_cert_verification_depth)
-      * [encrypt_binlog](#encrypt_binlog)
-      * [encryption_algorithm](#encryption_algorithm)
-      * [encryption_key_file](#encryption_key_file)
-      * [mariadb10_master_gtid](#mariadb10_master_gtid)
-      * [master_retry_count](#master_retry_count)
-      * [connect_retry](#connect_retry)
-   * [Using secondary masters](#using-secondary-masters)
-* [Examples](#examples)
+[TOC]
 
 ## Configuration
 
