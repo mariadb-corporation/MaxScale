@@ -148,7 +148,7 @@ Listener::~Listener()
         users_free(m_users);
     }
 
-    SSL_LISTENER_free(m_ssl);
+    delete m_ssl;
 }
 
 SListener Listener::create(const std::string& name,
@@ -479,7 +479,7 @@ bool Listener::create_listener_config(const char* filename)
 
     if (m_ssl)
     {
-        write_ssl_config(file, m_ssl);
+        dprintf(file, "%s", m_ssl->serialize().c_str());
     }
 
     ::close(file);
@@ -540,15 +540,7 @@ json_t* Listener::to_json() const
 
     if (m_ssl)
     {
-        json_t* ssl = json_object();
-
-        const char* ssl_method = ssl_method_type_to_string(m_ssl->ssl_method_type);
-        json_object_set_new(ssl, "ssl_version", json_string(ssl_method));
-        json_object_set_new(ssl, "ssl_cert", json_string(m_ssl->ssl_cert));
-        json_object_set_new(ssl, "ssl_ca_cert", json_string(m_ssl->ssl_ca_cert));
-        json_object_set_new(ssl, "ssl_key", json_string(m_ssl->ssl_key));
-
-        json_object_set_new(param, "ssl", ssl);
+        json_object_set_new(param, "ssl", m_ssl->to_json());
     }
 
     json_t* attr = json_object();

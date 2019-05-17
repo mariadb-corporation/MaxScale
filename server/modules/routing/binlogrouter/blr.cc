@@ -81,7 +81,6 @@ static uint64_t getCapabilities(MXS_ROUTER* instance);
 static int      blr_load_dbusers(const ROUTER_INSTANCE* router);
 static int      blr_check_binlog(ROUTER_INSTANCE* router);
 void            blr_master_close(ROUTER_INSTANCE*);
-void            blr_free_ssl_data(ROUTER_INSTANCE* inst);
 static void     destroyInstance(MXS_ROUTER* instance);
 bool            blr_extract_key(const char* linebuf,
                                 int nline,
@@ -915,20 +914,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     {
         MXS_INFO("%s: Replicating from master with SSL", service->name());
     }
-    else
-    {
-        MXS_DEBUG("%s: Replicating from master without SSL", service->name());
-        /* Free the SSL struct because is not needed if MASTER_SSL = 0
-         * Provided options, if any, are kept in inst->ssl_* vars
-         * SHOW SLAVE STATUS can display those values
-         */
-
-        /* Note: SSL struct in server should be freed by server_free() */
-        if (service->dbref && service->dbref->server)
-        {
-            blr_free_ssl_data(inst);
-        }
-    }
 
     if (inst->master_state == BLRM_UNCONNECTED)
     {
@@ -959,8 +944,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
 
             if (service->dbref && service->dbref->server)
             {
-                /* Free SSL data */
-                blr_free_ssl_data(inst);
                 MXS_FREE(service->dbref);
                 service->dbref = NULL;
             }
@@ -1522,18 +1505,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
         dcb_printf(dcb, "\tMaster SSL is ON:\n");
         if (router_inst->service->dbref->server && router_inst->service->dbref->server->server_ssl)
         {
-            dcb_printf(dcb,
-                       "\t\tMaster SSL CA cert: %s\n",
-                       router_inst->service->dbref->server->server_ssl->ssl_ca_cert);
-            dcb_printf(dcb,
-                       "\t\tMaster SSL Cert:    %s\n",
-                       router_inst->service->dbref->server->server_ssl->ssl_cert);
-            dcb_printf(dcb,
-                       "\t\tMaster SSL Key:     %s\n",
-                       router_inst->service->dbref->server->server_ssl->ssl_key);
-            dcb_printf(dcb,
-                       "\t\tMaster SSL tls_ver: %s\n",
-                       router_inst->ssl_version ? router_inst->ssl_version : "MAX");
+            dcb_printf(dcb, "%s", router_inst->service->dbref->server->server_ssl->to_string().c_str());
         }
     }
 
@@ -2011,22 +1983,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
     /* SSL options */
     if (router_inst->ssl_enabled)
     {
-        json_t* obj = json_object();
-
-        json_object_set_new(obj,
-                            "ssl_ca_cert",
-                            json_string(router_inst->service->dbref->server->server_ssl->ssl_ca_cert));
-        json_object_set_new(obj,
-                            "ssl_cert",
-                            json_string(router_inst->service->dbref->server->server_ssl->ssl_cert));
-        json_object_set_new(obj,
-                            "ssl_key",
-                            json_string(router_inst->service->dbref->server->server_ssl->ssl_key));
-        json_object_set_new(obj,
-                            "ssl_version",
-                            json_string(router_inst->ssl_version ? router_inst->ssl_version : "MAX"));
-
-        json_object_set_new(rval, "master_ssl", obj);
+        json_object_set_new(rval, "master_ssl", router_inst->service->dbref->server->server_ssl->to_json());
     }
 
     /* Binlog Encryption options */
@@ -2932,31 +2889,6 @@ const char* blr_get_event_description(ROUTER_INSTANCE* router, uint8_t event)
     }
 
     return event_desc;
-}
-
-/**
- * Free SSL struct in server struct
- *
- * @param inst   The router instance
- */
-void blr_free_ssl_data(ROUTER_INSTANCE* inst)
-{
-    mxs::SSLContext* server_ssl;
-
-    if (inst->service->dbref->server->server_ssl)
-    {
-        server_ssl = inst->service->dbref->server->server_ssl;
-
-        /*
-         * Free SSL struct
-         * Note: SSL struct in server should be freed by server_free()
-         */
-        MXS_FREE(server_ssl->ssl_key);
-        MXS_FREE(server_ssl->ssl_ca_cert);
-        MXS_FREE(server_ssl->ssl_cert);
-        MXS_FREE(inst->service->dbref->server->server_ssl);
-        inst->service->dbref->server->server_ssl = NULL;
-    }
 }
 
 /**

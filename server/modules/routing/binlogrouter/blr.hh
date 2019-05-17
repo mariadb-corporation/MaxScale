@@ -1103,7 +1103,6 @@ const char* blr_get_event_description(ROUTER_INSTANCE* router, uint8_t event);
 void        blr_file_append(ROUTER_INSTANCE* router, char* file);
 void        blr_cache_response(ROUTER_INSTANCE* router, char* response, GWBUF* buf);
 const char* blr_last_event_description(ROUTER_INSTANCE* router);
-void        blr_free_ssl_data(ROUTER_INSTANCE* inst);
 
 extern bool blr_send_event(blr_thread_role_t role,
                            const char* binlog_name,

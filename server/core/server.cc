@@ -210,7 +210,7 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
     {
         delete server;
         MXS_FREE(persistent);
-        SSL_LISTENER_free(ssl);
+        delete ssl;
         return NULL;
     }
 
@@ -528,24 +528,7 @@ void Server::print_to_dcb(DCB* dcb) const
     }
     if (server->server_ssl)
     {
-        mxs::SSLContext* l = server->server_ssl;
-        dcb_printf(dcb,
-                   "\tSSL initialized:                     %s\n",
-                   l->ssl_init_done ? "yes" : "no");
-        dcb_printf(dcb,
-                   "\tSSL method type:                     %s\n",
-                   ssl_method_type_to_string(l->ssl_method_type));
-        dcb_printf(dcb, "\tSSL certificate verification depth:  %d\n", l->ssl_cert_verify_depth);
-        dcb_printf(dcb, "\tSSL peer verification :  %s\n", l->ssl_verify_peer_certificate ? "true" : "false");
-        dcb_printf(dcb,
-                   "\tSSL certificate:                     %s\n",
-                   l->ssl_cert ? l->ssl_cert : "null");
-        dcb_printf(dcb,
-                   "\tSSL key:                             %s\n",
-                   l->ssl_key ? l->ssl_key : "null");
-        dcb_printf(dcb,
-                   "\tSSL CA certificate:                  %s\n",
-                   l->ssl_ca_cert ? l->ssl_ca_cert : "null");
+        dcb_printf(dcb, "%s", server->server_ssl->to_string().c_str());
     }
     if (server->proxy_protocol)
     {

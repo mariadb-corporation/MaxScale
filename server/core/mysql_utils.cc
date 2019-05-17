@@ -155,11 +155,11 @@ char* mxs_lestr_consume(uint8_t** c, size_t* size)
 
 MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, const char* passwd)
 {
-    mxs::SSLContext* listener = server->server_ssl;
+    mxs::SSLContext* ssl = server->server_ssl;
 
-    if (listener)
+    if (ssl)
     {
-        mysql_ssl_set(con, listener->ssl_key, listener->ssl_cert, listener->ssl_ca_cert, NULL, NULL);
+        mysql_ssl_set(con, ssl->ssl_key(), ssl->ssl_cert(), ssl->ssl_ca(), NULL, NULL);
     }
 
     char yes = 1;
@@ -204,7 +204,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
         mysql_get_character_set_info(mysql, &cs_info);
         server->charset = cs_info.number;
 
-        if (listener && mysql_get_ssl_cipher(con) == NULL)
+        if (ssl && mysql_get_ssl_cipher(con) == NULL)
         {
             if (server->warn_ssl_not_enabled)
             {

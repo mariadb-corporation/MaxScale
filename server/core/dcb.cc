@@ -2120,7 +2120,9 @@ int dcb_count_by_usage(DCB_USAGE usage)
  */
 static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
 {
-    if ((dcb->ssl = SSL_new(ssl->ctx)) == NULL)
+    dcb->ssl = ssl->open();
+
+    if (!dcb->ssl)
     {
         MXS_ERROR("Failed to initialize SSL for connection.");
         return -1;

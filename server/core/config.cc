@@ -2856,29 +2856,12 @@ bool config_can_modify_at_runtime(const char* name)
     return static_params.count(name);
 }
 
-/**
- * Free an SSL structure
- *
- * @param ssl SSL structure to free
- */
-static void free_ssl_structure(mxs::SSLContext* ssl)
-{
-    if (ssl)
-    {
-        SSL_CTX_free(ssl->ctx);
-        MXS_FREE(ssl->ssl_key);
-        MXS_FREE(ssl->ssl_cert);
-        MXS_FREE(ssl->ssl_ca_cert);
-        MXS_FREE(ssl);
-    }
-}
-
 bool config_create_ssl(const char* name,
                        const MXS_CONFIG_PARAMETER& params,
                        bool require_cert,
                        mxs::SSLContext** dest)
 {
-    mxs::SSLContext* ssl = NULL;
+    bool ok = true;
 
     // The enum values convert to bool
     int value = params.get_enum(CN_SSL, ssl_values);
@@ -2886,71 +2869,43 @@ bool config_create_ssl(const char* name,
 
     if (value)
     {
-        bool error = false;
-        string ssl_cert = params.get_string(CN_SSL_CERT);
-        string ssl_key = params.get_string(CN_SSL_KEY);
-        string ssl_ca_cert = params.get_string(CN_SSL_CA_CERT);
-
-        if (ssl_ca_cert.empty())
+        if (!params.contains(CN_SSL_CA_CERT))
         {
             MXS_ERROR("CA Certificate missing for '%s'."
                       "Please provide the path to the certificate authority "
                       "certificate by adding the ssl_ca_cert=<path> parameter",
                       name);
-            error = true;
+            ok = false;
         }
 
         if (require_cert)
         {
-            if (ssl_cert.empty())
+            if (!params.contains(CN_SSL_CERT))
             {
                 MXS_ERROR("Server certificate missing for listener '%s'."
                           "Please provide the path to the server certificate by adding "
                           "the ssl_cert=<path> parameter",
                           name);
-                error = true;
+                ok = false;
             }
 
-            if (ssl_key.empty())
+            if (!params.contains(CN_SSL_KEY))
             {
                 MXS_ERROR("Server private key missing for listener '%s'. "
                           "Please provide the path to the server certificate key by "
                           "adding the ssl_key=<path> parameter",
                           name);
-                error = true;
+                ok = false;
             }
         }
 
-        if (error)
+        if (ok)
         {
-            return false;
-        }
-
-        ssl = (mxs::SSLContext*)MXS_CALLOC(1, sizeof(mxs::SSLContext));
-        MXS_ABORT_IF_NULL(ssl);
-
-        int ssl_version = params.get_enum(CN_SSL_VERSION, ssl_version_values);
-
-        ssl->ssl_method_type = (ssl_method_type_t)ssl_version;
-        ssl->ssl_init_done = false;
-        ssl->ssl_cert_verify_depth = params.get_integer(CN_SSL_CERT_VERIFY_DEPTH);
-        ssl->ssl_verify_peer_certificate = params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE);
-
-        listener_set_certificates(ssl, ssl_cert, ssl_key, ssl_ca_cert);
-
-        mxb_assert(access(ssl_ca_cert.c_str(), F_OK) == 0);
-        mxb_assert(ssl_cert.empty() || access(ssl_cert.c_str(), F_OK) == 0);
-        mxb_assert(ssl_key.empty() || access(ssl_key.c_str(), F_OK) == 0);
-
-        if (!SSL_LISTENER_init(ssl))
-        {
-            SSL_LISTENER_free(ssl);
-            return false;
+            *dest = mxs::SSLContext::create(params);
         }
     }
 
-    *dest = ssl;
-    return true;
+    return ok;
 }
 
 void config_set_global_defaults()

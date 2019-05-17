@@ -3453,16 +3453,6 @@ int blr_file_write_master_config(ROUTER_INSTANCE* router, char* error)
     mxb_assert(current.user == router->user);
     mxb_assert(current.password == router->password);
 
-    if (router->ssl_enabled)
-    {
-        mxb_assert(current.ssl_enabled);
-        mxb_assert(current.ssl_ca == router->service->dbref->server->server_ssl->ssl_ca_cert);
-        mxb_assert(current.ssl_cert == router->service->dbref->server->server_ssl->ssl_cert);
-        mxb_assert(current.ssl_key == router->service->dbref->server->server_ssl->ssl_key);
-    }
-
-    mxb_assert(!router->ssl_version || (current.ssl_version == router->ssl_version));
-
     mxb_assert(current.heartbeat_period == (int)router->heartbeat);
     mxb_assert(current.connect_retry == router->retry_interval);
 #endif
