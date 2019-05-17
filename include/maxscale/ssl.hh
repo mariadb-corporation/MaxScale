@@ -19,13 +19,17 @@
  */
 
 #include <maxscale/ccdefs.hh>
+
 #include <maxscale/protocol.hh>
+#include <maxscale/modinfo.h>
+
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/dh.h>
 
 struct DCB;
+class MXS_CONFIG_PARAMETER;
 
 enum ssl_method_type_t
 {
@@ -42,6 +46,9 @@ enum ssl_method_type_t
     SERVICE_SSL_UNKNOWN
 };
 
+const char*       ssl_method_type_to_string(ssl_method_type_t method_type);
+ssl_method_type_t string_to_ssl_method_type(const char* str);
+
 /**
  * Return codes for SSL authentication checks
  */
@@ -49,78 +56,81 @@ enum ssl_method_type_t
 #define SSL_ERROR_CLIENT_NOT_SSL 1
 #define SSL_ERROR_ACCEPT_FAILED  2
 
+extern const MXS_ENUM_VALUE ssl_version_values[];
+
 namespace maxscale
 {
 
 /**
- * The ssl_listener structure is used to aggregate the SSL configuration items
- * and data for a particular listener
+ * The SSLContext is used to aggregate the SSL configuration and data for a particular object.
  */
-struct SSLContext
+class SSLContext
 {
-    SSL_CTX*    ctx;
-    SSL_METHOD* method;     /**<  SSLv3 or TLS1.0/1.1/1.2 methods
-                             * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
+public:
+    /**
+     * Create a new SSL configuration
+     *
+     * @param params Parameters from which the SSL configuration is created from
+     *
+     * @return A new SSL configuration or nullptr on error
+     */
+    static SSLContext* create(const MXS_CONFIG_PARAMETER& params);
 
-    int               ssl_cert_verify_depth;/**< SSL certificate verification depth */
-    ssl_method_type_t ssl_method_type;      /**< Which of the SSLv3 or TLS1.0/1.1/1.2 methods to use */
+    /**
+     * Serialize the SSL configuration into a INI file section
+     *
+     * @return SSLContext as a INI file section
+     */
+    std::string serialize();
 
-    char* ssl_cert;                     /**< SSL certificate */
-    char* ssl_key;                      /**< SSL private key */
-    char* ssl_ca_cert;                  /**< SSL CA certificate */
-    bool  ssl_init_done;                /**< If SSL has already been initialized for this service */
-    bool  ssl_verify_peer_certificate;  /**< Enable peer certificate verification */
+    /**
+     * Opens a new OpenSSL session for this configuration context
+     */
+    SSL* open()
+    {
+        return SSL_new(m_ctx);
+    }
+
+    // Private key
+    const char* ssl_key() const
+    {
+        return m_key.c_str();
+    }
+
+    // Public cert
+    const char* ssl_cert() const
+    {
+        return m_cert.c_str();
+    }
+
+    // Certificate authority
+    const char* ssl_ca() const
+    {
+        return m_ca.c_str();
+    }
+
+    // Convert to JSON representation
+    json_t* to_json() const;
+
+    // Convert to human readable string representation
+    std::string to_string() const;
+
+    ~SSLContext();
+
+private:
+    SSL_CTX*    m_ctx = nullptr;
+    SSL_METHOD* m_method = nullptr;         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
+                                             * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
+
+    std::string       m_key;            /**< SSL private key */
+    std::string       m_cert;           /**< SSL certificate */
+    std::string       m_ca;             /**< SSL CA certificate */
+    ssl_method_type_t m_version;        /**< Which TLS version to use */
+    int               m_verify_depth;   /**< SSL certificate verification depth */
+    bool              m_verify_peer;    /**< Enable peer certificate verification */
+
+    SSLContext(const std::string& key, const std::string& cert, const std::string& ca,
+               ssl_method_type_t version, int verify_depth, bool verify_peer_cert);
+    bool init();
 };
 }
-
-const char*       ssl_method_type_to_string(ssl_method_type_t method_type);
-ssl_method_type_t string_to_ssl_method_type(const char* str);
-
-// TODO: Move this to an internal ssl.h header
-void write_ssl_config(int fd, mxs::SSLContext* ssl);
-
-/**
- * Set the maximum SSL/TLS version the listener will support
- *
- * @param ssl_listener Listener data to configure
- * @param version SSL/TLS version string
- *
- * @return  0 on success, -1 on invalid version string
- */
-int listener_set_ssl_version(mxs::SSLContext* ssl_listener, const char* version);
-
-/**
- * Set the locations of the listener's SSL certificate, listener's private key
- * and the CA certificate which both the client and the listener should trust.
- *
- * @param ssl_listener Listener data to configure
- * @param cert SSL certificate
- * @param key SSL private key
- * @param ca_cert SSL CA certificate
- */
-void listener_set_certificates(mxs::SSLContext* ssl_listener, const std::string& cert,
-                               const std::string& key, const std::string& ca_cert);
-
-/**
- * Initialize SSL configuration
- *
- * This sets up the generated RSA encryption keys, chooses the listener
- * encryption level and configures the listener certificate, private key and
- * certificate authority file.
- *
- * @note This function should not be called directly, use config_create_ssl() instead
- *
- * @todo Combine this with config_create_ssl() into one function
- *
- * @param ssl SSL configuration to initialize
- *
- * @return True on success, false on error
- */
-bool SSL_LISTENER_init(mxs::SSLContext* ssl);
-
-/**
- * Free an SSL_LISTENER
- *
- * @param ssl mxs::SSLContext to free
- */
-void SSL_LISTENER_free(mxs::SSLContext* ssl);

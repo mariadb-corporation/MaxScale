@@ -36,7 +36,80 @@
 
 static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
-static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
+
+const MXS_ENUM_VALUE ssl_version_values[] =
+{
+    {"MAX",    1},
+#ifndef OPENSSL_1_1
+    {"TLSv10", 1},
+#endif
+#ifdef OPENSSL_1_0
+    {"TLSv11", 1},
+    {"TLSv12", 1},
+#endif
+    {NULL}
+};
+
+static RSA* create_rsa(int bits)
+{
+#ifdef OPENSSL_1_1
+    BIGNUM* bn = BN_new();
+    BN_set_word(bn, RSA_F4);
+    RSA* rsa = RSA_new();
+    RSA_generate_key_ex(rsa, bits, bn, NULL);
+    BN_free(bn);
+    return rsa;
+#else
+    return RSA_generate_key(bits, RSA_F4, NULL, NULL);
+#endif
+}
+
+/**
+ * The RSA key generation callback function for OpenSSL.
+ * @param s SSL structure
+ * @param is_export Not used
+ * @param keylength Length of the key
+ * @return Pointer to RSA structure
+ */
+static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
+{
+    RSA* rsa_tmp = NULL;
+
+    switch (keylength)
+    {
+    case 512:
+        if (rsa_512)
+        {
+            rsa_tmp = rsa_512;
+        }
+        else
+        {
+            /* generate on the fly, should not happen in this example */
+            rsa_tmp = create_rsa(keylength);
+            rsa_512 = rsa_tmp;      /* Remember for later reuse */
+        }
+        break;
+
+    case 1024:
+        if (rsa_1024)
+        {
+            rsa_tmp = rsa_1024;
+        }
+        break;
+
+    default:
+        /* Generating a key on the fly is very costly, so use what is there */
+        if (rsa_1024)
+        {
+            rsa_tmp = rsa_1024;
+        }
+        else
+        {
+            rsa_tmp = rsa_512;      /* Use at least a shorter key */
+        }
+    }
+    return rsa_tmp;
+}
 
 /**
  * Returns an enum ssl_method_type value as string.
@@ -98,97 +171,6 @@ ssl_method_type_t string_to_ssl_method_type(const char* str)
     return SERVICE_SSL_UNKNOWN;
 }
 
-void write_ssl_config(int fd, mxs::SSLContext* ssl)
-{
-    if (ssl)
-    {
-        dprintf(fd, "ssl=required\n");
-
-        if (ssl->ssl_cert)
-        {
-            dprintf(fd, "ssl_cert=%s\n", ssl->ssl_cert);
-        }
-
-        if (ssl->ssl_key)
-        {
-            dprintf(fd, "ssl_key=%s\n", ssl->ssl_key);
-        }
-
-        if (ssl->ssl_ca_cert)
-        {
-            dprintf(fd, "ssl_ca_cert=%s\n", ssl->ssl_ca_cert);
-        }
-        if (ssl->ssl_cert_verify_depth)
-        {
-            dprintf(fd, "ssl_cert_verify_depth=%d\n", ssl->ssl_cert_verify_depth);
-        }
-
-        dprintf(fd,
-                "ssl_verify_peer_certificate=%s\n",
-                ssl->ssl_verify_peer_certificate ? "true" : "false");
-
-        const char* version = ssl_method_type_to_string(ssl->ssl_method_type);
-        dprintf(fd, "ssl_version=%s\n", version);
-    }
-}
-
-int listener_set_ssl_version(mxs::SSLContext* ssl_listener, const char* version)
-{
-    if (strcasecmp(version, "MAX") == 0)
-    {
-        ssl_listener->ssl_method_type = SERVICE_SSL_TLS_MAX;
-    }
-#ifndef OPENSSL_1_1
-    else if (strcasecmp(version, "TLSV10") == 0)
-    {
-        ssl_listener->ssl_method_type = SERVICE_TLS10;
-    }
-#else
-#endif
-#ifdef OPENSSL_1_0
-    else if (strcasecmp(version, "TLSV11") == 0)
-    {
-        ssl_listener->ssl_method_type = SERVICE_TLS11;
-    }
-    else if (strcasecmp(version, "TLSV12") == 0)
-    {
-        ssl_listener->ssl_method_type = SERVICE_TLS12;
-    }
-#endif
-    else
-    {
-        return -1;
-    }
-    return 0;
-}
-
-void listener_set_certificates(mxs::SSLContext* ssl_listener, const std::string& cert,
-                               const std::string& key, const std::string& ca_cert)
-{
-    MXS_FREE(ssl_listener->ssl_cert);
-    ssl_listener->ssl_cert = !cert.empty() ? MXS_STRDUP_A(cert.c_str()) : nullptr;
-
-    MXS_FREE(ssl_listener->ssl_key);
-    ssl_listener->ssl_key = !key.empty() ? MXS_STRDUP_A(key.c_str()) : nullptr;
-
-    MXS_FREE(ssl_listener->ssl_ca_cert);
-    ssl_listener->ssl_ca_cert = !ca_cert.empty() ? MXS_STRDUP_A(ca_cert.c_str()) : nullptr;
-}
-
-RSA* create_rsa(int bits)
-{
-#ifdef OPENSSL_1_1
-    BIGNUM* bn = BN_new();
-    BN_set_word(bn, RSA_F4);
-    RSA* rsa = RSA_new();
-    RSA_generate_key_ex(rsa, bits, bn, NULL);
-    BN_free(bn);
-    return rsa;
-#else
-    return RSA_generate_key(bits, RSA_F4, NULL, NULL);
-#endif
-}
-
 // thread-local non-POD types are not supported with older versions of GCC
 static thread_local std::string* ssl_errbuf;
 
@@ -214,112 +196,127 @@ static const char* get_ssl_errors()
     return ssl_errbuf->c_str();
 }
 
-/**
- * The RSA key generation callback function for OpenSSL.
- * @param s SSL structure
- * @param is_export Not used
- * @param keylength Length of the key
- * @return Pointer to RSA structure
- */
-static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
+namespace maxscale
 {
-    RSA* rsa_tmp = NULL;
 
-    switch (keylength)
+// static
+SSLContext* SSLContext::create(const MXS_CONFIG_PARAMETER& params)
+{
+    mxb_assert(access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
+    mxb_assert(params.get_string(CN_SSL_CERT).empty()
+               || access(params.get_string(CN_SSL_CERT).c_str(), F_OK) == 0);
+    mxb_assert(params.get_string(CN_SSL_KEY).empty()
+               || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
+
+    SSLContext* ssl = new(std::nothrow) SSLContext(params.get_string(CN_SSL_KEY),
+                                                   params.get_string(CN_SSL_CERT),
+                                                   params.get_string(CN_SSL_CA_CERT),
+                                                   (ssl_method_type_t)params.get_enum(CN_SSL_VERSION,
+                                                                                      ssl_version_values),
+                                                   params.get_integer(CN_SSL_CERT_VERIFY_DEPTH),
+                                                   params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE));
+
+    if (ssl && !ssl->init())
     {
-    case 512:
-        if (rsa_512)
-        {
-            rsa_tmp = rsa_512;
-        }
-        else
-        {
-            /* generate on the fly, should not happen in this example */
-            rsa_tmp = create_rsa(keylength);
-            rsa_512 = rsa_tmp;      /* Remember for later reuse */
-        }
-        break;
-
-    case 1024:
-        if (rsa_1024)
-        {
-            rsa_tmp = rsa_1024;
-        }
-        break;
-
-    default:
-        /* Generating a key on the fly is very costly, so use what is there */
-        if (rsa_1024)
-        {
-            rsa_tmp = rsa_1024;
-        }
-        else
-        {
-            rsa_tmp = rsa_512;      /* Use at least a shorter key */
-        }
+        delete ssl;
+        ssl = nullptr;
     }
-    return rsa_tmp;
+
+    return ssl;
 }
 
-bool SSL_LISTENER_init(mxs::SSLContext* ssl)
+SSLContext::SSLContext(const std::string& key, const std::string& cert, const std::string& ca,
+                       ssl_method_type_t version, int verify_depth, bool verify_peer)
+    : m_key(key)
+    , m_cert(cert)
+    , m_ca(ca)
+    , m_version(version)
+    , m_verify_depth(verify_depth)
+    , m_verify_peer(verify_peer)
 {
-    mxb_assert(!ssl->ssl_init_done);
+}
+
+std::string SSLContext::serialize()
+{
+    std::stringstream ss;
+    ss << "ssl=required\n";
+
+    if (!m_cert.empty())
+    {
+        ss << "ssl_cert=" << m_cert << "\n";
+    }
+
+    if (!m_key.empty())
+    {
+        ss << "ssl_key=" << m_key << "\n";
+    }
+
+    mxb_assert(!m_ca.empty());
+    ss << "ssl_ca_cert=" << m_ca << "\n";
+    ss << "ssl_version=" << ssl_method_type_to_string(m_version) << "\n";
+    ss << "ssl_cert_verify_depth=" << m_verify_depth << "\n";
+    ss << "ssl_verify_peer_certificate=" << (m_verify_peer ? "true" : "false") << "\n";
+    return ss.str();
+}
+
+bool SSLContext::init()
+{
     bool rval = true;
 
-    switch (ssl->ssl_method_type)
+    switch (m_version)
     {
 #ifndef OPENSSL_1_1
     case SERVICE_TLS10:
-        ssl->method = (SSL_METHOD*)TLSv1_method();
+        method = (SSL_METHOD*)TLSv1_method();
         break;
 
 #endif
 #ifdef OPENSSL_1_0
     case SERVICE_TLS11:
-        ssl->method = (SSL_METHOD*)TLSv1_1_method();
+        m_method = (SSL_METHOD*)TLSv1_1_method();
         break;
 
     case SERVICE_TLS12:
-        ssl->method = (SSL_METHOD*)TLSv1_2_method();
+        m_method = (SSL_METHOD*)TLSv1_2_method();
         break;
 
 #endif
     /** Rest of these use the maximum available SSL/TLS methods */
     case SERVICE_SSL_MAX:
-        ssl->method = (SSL_METHOD*)SSLv23_method();
+        m_method = (SSL_METHOD*)SSLv23_method();
         break;
 
     case SERVICE_TLS_MAX:
-        ssl->method = (SSL_METHOD*)SSLv23_method();
+        m_method = (SSL_METHOD*)SSLv23_method();
         break;
 
     case SERVICE_SSL_TLS_MAX:
-        ssl->method = (SSL_METHOD*)SSLv23_method();
+        m_method = (SSL_METHOD*)SSLv23_method();
         break;
 
     default:
-        ssl->method = (SSL_METHOD*)SSLv23_method();
+        m_method = (SSL_METHOD*)SSLv23_method();
         break;
     }
 
-    SSL_CTX* ctx = SSL_CTX_new(ssl->method);
+    m_ctx = SSL_CTX_new(m_method);
 
-    if (ctx == NULL)
+    if (m_ctx == NULL)
     {
         MXS_ERROR("SSL context initialization failed: %s", get_ssl_errors());
         return false;
     }
 
-    SSL_CTX_set_default_read_ahead(ctx, 0);
+    SSL_CTX_set_default_read_ahead(m_ctx, 0);
 
     /** Enable all OpenSSL bug fixes */
-    SSL_CTX_set_options(ctx, SSL_OP_ALL);
+    SSL_CTX_set_options(m_ctx, SSL_OP_ALL);
 
     /** Disable SSLv3 */
-    SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
+    SSL_CTX_set_options(m_ctx, SSL_OP_NO_SSLv3);
 
     // Disable session cache
-    SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
+    SSL_CTX_set_session_cache_mode(m_ctx, SSL_SESS_CACHE_OFF);
 
     //
     // Note: This is not safe if SSL initialization is done concurrently
@@ -328,82 +325,94 @@ bool SSL_LISTENER_init(mxs::SSLContext* ssl)
     if (rsa_512 == NULL && (rsa_512 = create_rsa(512)) == NULL)
     {
         MXS_ERROR("512-bit RSA key generation failed.");
-        rval = false;
+        return false;
     }
     else if (rsa_1024 == NULL && (rsa_1024 = create_rsa(1024)) == NULL)
     {
         MXS_ERROR("1024-bit RSA key generation failed.");
-        rval = false;
+        return false;
     }
     else
     {
         mxb_assert(rsa_512 && rsa_1024);
-        SSL_CTX_set_tmp_rsa_callback(ctx, tmp_rsa_callback);
+        SSL_CTX_set_tmp_rsa_callback(m_ctx, tmp_rsa_callback);
     }
 
-    mxb_assert(ssl->ssl_ca_cert);
+    mxb_assert(!m_ca.empty());
 
     /* Load the CA certificate into the SSL_CTX structure */
-    if (!SSL_CTX_load_verify_locations(ctx, ssl->ssl_ca_cert, NULL))
+    if (!SSL_CTX_load_verify_locations(m_ctx, m_ca.c_str(), NULL))
     {
         MXS_ERROR("Failed to set Certificate Authority file");
-        rval = false;
+        return false;
     }
 
-    if (ssl->ssl_cert && ssl->ssl_key)
+    if (!m_cert.empty() && !m_key.empty())
     {
         /** Load the server certificate */
-        if (SSL_CTX_use_certificate_chain_file(ctx, ssl->ssl_cert) <= 0)
+        if (SSL_CTX_use_certificate_chain_file(m_ctx, m_cert.c_str()) <= 0)
         {
             MXS_ERROR("Failed to set server SSL certificate: %s", get_ssl_errors());
-            rval = false;
+            return false;
         }
 
         /* Load the private-key corresponding to the server certificate */
-        if (SSL_CTX_use_PrivateKey_file(ctx, ssl->ssl_key, SSL_FILETYPE_PEM) <= 0)
+        if (SSL_CTX_use_PrivateKey_file(m_ctx, m_key.c_str(), SSL_FILETYPE_PEM) <= 0)
         {
             MXS_ERROR("Failed to set server SSL key: %s", get_ssl_errors());
-            rval = false;
+            return false;
         }
 
         /* Check if the server certificate and private-key matches */
-        if (!SSL_CTX_check_private_key(ctx))
+        if (!SSL_CTX_check_private_key(m_ctx))
         {
             MXS_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
-            rval = false;
+            return false;
         }
     }
 
     /* Set to require peer (client) certificate verification */
-    if (ssl->ssl_verify_peer_certificate)
+    if (m_verify_peer)
     {
-        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+        SSL_CTX_set_verify(m_ctx, SSL_VERIFY_PEER, NULL);
     }
 
     /* Set the verification depth */
-    SSL_CTX_set_verify_depth(ctx, ssl->ssl_cert_verify_depth);
+    SSL_CTX_set_verify_depth(m_ctx, m_verify_depth);
 
-    if (rval)
-    {
-        ssl->ssl_init_done = true;
-        ssl->ctx = ctx;
-    }
-    else
-    {
-        SSL_CTX_free(ctx);
-    }
-
-    return rval;
+    return true;
 }
 
-void SSL_LISTENER_free(mxs::SSLContext* ssl)
+json_t* SSLContext::to_json() const
 {
-    if (ssl)
-    {
-        SSL_CTX_free(ssl->ctx);
-        MXS_FREE(ssl->ssl_ca_cert);
-        MXS_FREE(ssl->ssl_cert);
-        MXS_FREE(ssl->ssl_key);
-        MXS_FREE(ssl);
-    }
+    json_t* ssl = json_object();
+    const char* ssl_method = ssl_method_type_to_string(m_version);
+
+    json_object_set_new(ssl, "ssl_version", json_string(ssl_method));
+    json_object_set_new(ssl, "ssl_cert", json_string(m_cert.c_str()));
+    json_object_set_new(ssl, "ssl_ca_cert", json_string(m_ca.c_str()));
+    json_object_set_new(ssl, "ssl_key", json_string(m_key.c_str()));
+
+    return ssl;
+}
+
+std::string SSLContext::to_string() const
+{
+    std::stringstream ss;
+
+    ss << "\tSSL initialized:                     yes\n"
+       << "\tSSL method type:                     " << ssl_method_type_to_string(m_version) << "\n"
+       << "\tSSL certificate verification depth:  " << m_verify_depth << "\n"
+       << "\tSSL peer verification :              " << (m_verify_peer ? "true" : "false") << "\n"
+       << "\tSSL certificate:                     " << m_cert << "\n"
+       << "\tSSL key:                             " << m_key << "\n"
+       << "\tSSL CA certificate:                  " << m_ca << "\n";
+
+    return ss.str();
+}
+
+SSLContext::~SSLContext()
+{
+    SSL_CTX_free(m_ctx);
+}
 }
