@@ -181,9 +181,9 @@ public:
                                      * routing sessions. */
 
     // Base variables
-    bool          is_active = false;        /**< Server is active and has not been "destroyed" */
-    SSL_LISTENER* server_ssl = nullptr;     /**< SSL data */
-    uint8_t       charset = DEFAULT_CHARSET;/**< Character set. Read from backend and sent to client. */
+    bool             is_active = false;         /**< Server is active and has not been "destroyed" */
+    mxs::SSLContext* server_ssl = nullptr;      /**< SSL data */
+    uint8_t          charset = DEFAULT_CHARSET; /**< Character set. Read from backend and sent to client. */
 
     // Statistics and events
     ConnStats stats;            /**< The server statistics, e.g. number of connections */

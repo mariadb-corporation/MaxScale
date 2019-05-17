@@ -825,10 +825,10 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             return NULL;
         }
 
-        SSL_LISTENER* ssl_cfg;
+        mxs::SSLContext* ssl_cfg;
         /* Allocate SSL struct for backend connection */
         if ((ssl_cfg =
-                 static_cast<SSL_LISTENER*>(MXS_CALLOC(1, sizeof(SSL_LISTENER)))) == NULL)
+                 static_cast<mxs::SSLContext*>(MXS_CALLOC(1, sizeof(mxs::SSLContext)))) == NULL)
         {
             MXS_ERROR("%s: Error allocating memory for SSL struct in createInstance",
                       inst->service->name());
@@ -2941,7 +2941,7 @@ const char* blr_get_event_description(ROUTER_INSTANCE* router, uint8_t event)
  */
 void blr_free_ssl_data(ROUTER_INSTANCE* inst)
 {
-    SSL_LISTENER* server_ssl;
+    mxs::SSLContext* server_ssl;
 
     if (inst->service->dbref->server->server_ssl)
     {

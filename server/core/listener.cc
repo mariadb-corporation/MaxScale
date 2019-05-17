@@ -105,7 +105,7 @@ Listener::Listener(SERVICE* service,
                    const std::string& authenticator,
                    const std::string& auth_opts,
                    void* auth_instance,
-                   SSL_LISTENER* ssl,
+                   mxs::SSLContext* ssl,
                    const MXS_CONFIG_PARAMETER& params)
     : MXB_POLL_DATA{Listener::poll_handler}
     , m_name(name)
@@ -209,7 +209,7 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    SSL_LISTENER* ssl_info = NULL;
+    mxs::SSLContext* ssl_info = NULL;
 
     if (!config_create_ssl(name.c_str(), params, true, &ssl_info))
     {
@@ -618,7 +618,7 @@ void* Listener::auth_instance() const
     return m_auth_instance;
 }
 
-SSL_LISTENER* Listener::ssl() const
+mxs::SSLContext* Listener::ssl() const
 {
     return m_ssl;
 }

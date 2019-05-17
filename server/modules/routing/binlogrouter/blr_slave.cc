@@ -4841,7 +4841,7 @@ static char* blr_set_master_logfile(ROUTER_INSTANCE* router,
  */
 static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* curr_master)
 {
-    SSL_LISTENER* server_ssl;
+    mxs::SSLContext* server_ssl;
 
     curr_master->port = router->service->dbref->server->port;
     curr_master->host = router->service->dbref->server->address;
@@ -6330,7 +6330,7 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
                               const ChangeMasterConfig& config,
                               char* error_message)
 {
-    SSL_LISTENER* server_ssl = NULL;
+    mxs::SSLContext* server_ssl = NULL;
     int updated = 0;
 
     if (config.ssl_enabled)
@@ -6355,7 +6355,7 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
         else
         {
             /* Allocate SSL struct for backend connection */
-            server_ssl = static_cast<SSL_LISTENER*>(MXS_CALLOC(1, sizeof(SSL_LISTENER)));
+            server_ssl = static_cast<mxs::SSLContext*>(MXS_CALLOC(1, sizeof(mxs::SSLContext)));
             if (server_ssl == NULL)
             {
                 router->ssl_enabled = false;

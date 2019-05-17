@@ -394,15 +394,15 @@ bool runtime_destroy_server(Server* server)
     return rval;
 }
 
-static SSL_LISTENER* create_ssl(const char* name,
-                                const char* key,
-                                const char* cert,
-                                const char* ca,
-                                const char* version,
-                                const char* depth,
-                                const char* verify)
+static mxs::SSLContext* create_ssl(const char* name,
+                                   const char* key,
+                                   const char* cert,
+                                   const char* ca,
+                                   const char* version,
+                                   const char* depth,
+                                   const char* verify)
 {
-    SSL_LISTENER* rval = NULL;
+    mxs::SSLContext* rval = NULL;
     CONFIG_CONTEXT* obj = config_context_create(name);
 
     if (obj)
@@ -437,13 +437,11 @@ bool runtime_enable_server_ssl(Server* server,
     if (key && cert && ca)
     {
         std::lock_guard<std::mutex> guard(crt_lock);
-        SSL_LISTENER* ssl = create_ssl(server->name(), key, cert, ca, version, depth, verify);
+        mxs::SSLContext* ssl = create_ssl(server->name(), key, cert, ca, version, depth, verify);
 
         if (ssl)
         {
-            /** TODO: Properly discard old SSL configurations.This could cause the
-             * loss of a pointer if two update operations are done at the same time.*/
-            ssl->next = server->server_ssl;
+            // TODO: Properly discard old SSL configurations
 
             /** Sync to prevent reads on partially initialized server_ssl */
             atomic_synchronize();

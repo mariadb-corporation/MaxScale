@@ -142,7 +142,7 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
 bool config_create_ssl(const char* name,
                        const MXS_CONFIG_PARAMETER& params,
                        bool require_cert,
-                       SSL_LISTENER** dest);
+                       mxs::SSLContext** dest);
 
 /**
  * @brief Check if all SSL parameters are defined

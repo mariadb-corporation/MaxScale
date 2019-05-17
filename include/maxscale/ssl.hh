@@ -49,11 +49,14 @@ enum ssl_method_type_t
 #define SSL_ERROR_CLIENT_NOT_SSL 1
 #define SSL_ERROR_ACCEPT_FAILED  2
 
+namespace maxscale
+{
+
 /**
  * The ssl_listener structure is used to aggregate the SSL configuration items
  * and data for a particular listener
  */
-struct SSL_LISTENER
+struct SSLContext
 {
     SSL_CTX*    ctx;
     SSL_METHOD* method;     /**<  SSLv3 or TLS1.0/1.1/1.2 methods
@@ -67,9 +70,8 @@ struct SSL_LISTENER
     char* ssl_ca_cert;                  /**< SSL CA certificate */
     bool  ssl_init_done;                /**< If SSL has already been initialized for this service */
     bool  ssl_verify_peer_certificate;  /**< Enable peer certificate verification */
-
-    SSL_LISTENER* next;     /**< Next SSL configuration, currently used to store obsolete configurations */
 };
+}
 
 int               ssl_authenticate_client(DCB* dcb, bool is_capable);
 bool              ssl_is_connection_healthy(DCB* dcb);
@@ -92,7 +94,7 @@ ssl_method_type_t string_to_ssl_method_type(const char* str);
 int ssl_authenticate_check_status(DCB* dcb);
 
 // TODO: Move this to an internal ssl.h header
-void write_ssl_config(int fd, SSL_LISTENER* ssl);
+void write_ssl_config(int fd, mxs::SSLContext* ssl);
 
 /**
  * Set the maximum SSL/TLS version the listener will support
@@ -102,7 +104,7 @@ void write_ssl_config(int fd, SSL_LISTENER* ssl);
  *
  * @return  0 on success, -1 on invalid version string
  */
-int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
+int listener_set_ssl_version(mxs::SSLContext* ssl_listener, const char* version);
 
 /**
  * Set the locations of the listener's SSL certificate, listener's private key
@@ -113,7 +115,7 @@ int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
  * @param key SSL private key
  * @param ca_cert SSL CA certificate
  */
-void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& cert,
+void listener_set_certificates(mxs::SSLContext* ssl_listener, const std::string& cert,
                                const std::string& key, const std::string& ca_cert);
 
 /**
@@ -131,11 +133,11 @@ void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& ce
  *
  * @return True on success, false on error
  */
-bool SSL_LISTENER_init(SSL_LISTENER* ssl);
+bool SSL_LISTENER_init(mxs::SSLContext* ssl);
 
 /**
  * Free an SSL_LISTENER
  *
- * @param ssl SSL_LISTENER to free
+ * @param ssl mxs::SSLContext to free
  */
-void SSL_LISTENER_free(SSL_LISTENER* ssl);
+void SSL_LISTENER_free(mxs::SSLContext* ssl);

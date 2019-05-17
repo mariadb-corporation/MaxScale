@@ -254,7 +254,7 @@ ssl_method_type_t string_to_ssl_method_type(const char* str)
     return SERVICE_SSL_UNKNOWN;
 }
 
-void write_ssl_config(int fd, SSL_LISTENER* ssl)
+void write_ssl_config(int fd, mxs::SSLContext* ssl)
 {
     if (ssl)
     {
@@ -320,7 +320,7 @@ int ssl_authenticate_check_status(DCB* dcb)
     return rval;
 }
 
-int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version)
+int listener_set_ssl_version(mxs::SSLContext* ssl_listener, const char* version)
 {
     if (strcasecmp(version, "MAX") == 0)
     {
@@ -350,7 +350,7 @@ int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version)
     return 0;
 }
 
-void listener_set_certificates(SSL_LISTENER* ssl_listener, const std::string& cert,
+void listener_set_certificates(mxs::SSLContext* ssl_listener, const std::string& cert,
                                const std::string& key, const std::string& ca_cert)
 {
     MXS_FREE(ssl_listener->ssl_cert);
@@ -449,7 +449,7 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
     return rsa_tmp;
 }
 
-bool SSL_LISTENER_init(SSL_LISTENER* ssl)
+bool SSL_LISTENER_init(mxs::SSLContext* ssl)
 {
     mxb_assert(!ssl->ssl_init_done);
     bool rval = true;
@@ -584,7 +584,7 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
     return rval;
 }
 
-void SSL_LISTENER_free(SSL_LISTENER* ssl)
+void SSL_LISTENER_free(mxs::SSLContext* ssl)
 {
     if (ssl)
     {

@@ -2874,7 +2874,7 @@ bool config_can_modify_at_runtime(const char* name)
  *
  * @param ssl SSL structure to free
  */
-static void free_ssl_structure(SSL_LISTENER* ssl)
+static void free_ssl_structure(mxs::SSLContext* ssl)
 {
     if (ssl)
     {
@@ -2889,9 +2889,9 @@ static void free_ssl_structure(SSL_LISTENER* ssl)
 bool config_create_ssl(const char* name,
                        const MXS_CONFIG_PARAMETER& params,
                        bool require_cert,
-                       SSL_LISTENER** dest)
+                       mxs::SSLContext** dest)
 {
-    SSL_LISTENER* ssl = NULL;
+    mxs::SSLContext* ssl = NULL;
 
     // The enum values convert to bool
     int value = params.get_enum(CN_SSL, ssl_values);
@@ -2939,7 +2939,7 @@ bool config_create_ssl(const char* name,
             return false;
         }
 
-        ssl = (SSL_LISTENER*)MXS_CALLOC(1, sizeof(SSL_LISTENER));
+        ssl = (mxs::SSLContext*)MXS_CALLOC(1, sizeof(mxs::SSLContext));
         MXS_ABORT_IF_NULL(ssl);
 
         int ssl_version = params.get_enum(CN_SSL_VERSION, ssl_version_values);

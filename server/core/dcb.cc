@@ -101,7 +101,7 @@ static void        dcb_stop_polling_and_shutdown(DCB* dcb);
 static bool        dcb_maybe_add_persistent(DCB*);
 static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int nreadtotal);
-static int         dcb_create_SSL(DCB* dcb, SSL_LISTENER* ssl);
+static int         dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl);
 static int         dcb_read_SSL(DCB* dcb, GWBUF** head);
 static GWBUF*      dcb_basic_read(DCB* dcb,
                                   int bytesavailable,
@@ -2118,7 +2118,7 @@ int dcb_count_by_usage(DCB_USAGE usage)
  * @param       dcb
  * @return      -1 on error, 0 otherwise.
  */
-static int dcb_create_SSL(DCB* dcb, SSL_LISTENER* ssl)
+static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
 {
     if ((dcb->ssl = SSL_new(ssl->ctx)) == NULL)
     {

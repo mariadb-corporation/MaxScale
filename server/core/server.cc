@@ -195,7 +195,7 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         return NULL;
     }
 
-    SSL_LISTENER* ssl = NULL;
+    mxs::SSLContext* ssl = NULL;
 
     if (!config_create_ssl(name, params, false, &ssl))
     {
@@ -528,7 +528,7 @@ void Server::print_to_dcb(DCB* dcb) const
     }
     if (server->server_ssl)
     {
-        SSL_LISTENER* l = server->server_ssl;
+        mxs::SSLContext* l = server->server_ssl;
         dcb_printf(dcb,
                    "\tSSL initialized:                     %s\n",
                    l->ssl_init_done ? "yes" : "no");
