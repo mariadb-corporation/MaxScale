@@ -159,7 +159,8 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 
     if (ssl)
     {
-        mysql_ssl_set(con, ssl->ssl_key(), ssl->ssl_cert(), ssl->ssl_ca(), NULL, NULL);
+        mysql_ssl_set(con, ssl->ssl_key().c_str(), ssl->ssl_cert().c_str(), ssl->ssl_ca().c_str(),
+                      NULL, NULL);
     }
 
     char yes = 1;

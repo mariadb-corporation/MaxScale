@@ -92,21 +92,21 @@ public:
     }
 
     // Private key
-    const char* ssl_key() const
+    const std::string& ssl_key() const
     {
-        return m_key.c_str();
+        return m_key;
     }
 
     // Public cert
-    const char* ssl_cert() const
+    const std::string& ssl_cert() const
     {
-        return m_cert.c_str();
+        return m_cert;
     }
 
     // Certificate authority
-    const char* ssl_ca() const
+    const std::string& ssl_ca() const
     {
-        return m_ca.c_str();
+        return m_ca;
     }
 
     // Convert to JSON representation

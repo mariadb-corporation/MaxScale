@@ -438,7 +438,7 @@ public:
      */
     void set_multiple(const MXS_CONFIG_PARAMETER& source);
 
-    void set_from_list(std::vector<std::pair<const char*, const char*>> list,
+    void set_from_list(std::vector<std::pair<std::string, std::string>> list,
                        const MXS_MODULE_PARAM* module_params = NULL);
 
     /**

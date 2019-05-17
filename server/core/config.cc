@@ -2167,7 +2167,7 @@ void MXS_CONFIG_PARAMETER::set_multiple(const MXS_CONFIG_PARAMETER& source)
     }
 }
 
-void MXS_CONFIG_PARAMETER::set_from_list(std::vector<std::pair<const char*, const char*>> list,
+void MXS_CONFIG_PARAMETER::set_from_list(std::vector<std::pair<std::string, std::string>> list,
                                          const MXS_MODULE_PARAM* module_params)
 {
     // Add custom values.
