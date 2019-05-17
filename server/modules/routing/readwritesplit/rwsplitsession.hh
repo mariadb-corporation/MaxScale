@@ -175,6 +175,9 @@ private:
                                     mxs::RWBackend* old_master,
                                     mxs::RWBackend* curr_master);
 
+    // Send unknown prepared statement ID error to client
+    bool send_unknown_ps_error(uint32_t stmt_id);
+
     GWBUF* handle_causal_read_reply(GWBUF* writebuf, mxs::RWBackend* backend);
     GWBUF* add_prefix_wait_gtid(SERVER* server, GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);

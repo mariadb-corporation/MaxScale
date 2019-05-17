@@ -514,6 +514,20 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
+    if (mdbci_call_needed)
+    {
+        int ec;
+        char * ver = maxscales->ssh_node_output(0, "maxscale --version-full", false, &ec);
+        if (ec)
+        {
+            tprintf("Error retrival of Maxscale version info");
+        }
+        else
+        {
+            tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", ver);
+        }
+    }
+
     char str[1024];
     sprintf(str, "mkdir -p LOGS/%s", test_name);
     call_system(str);

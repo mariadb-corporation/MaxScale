@@ -193,6 +193,14 @@ bool RWSplitSession::route_stored_query()
         auto query = std::move(m_query_queue.front());
         m_query_queue.pop_front();
 
+        if (!query.get())
+        {
+            MXS_ALERT("MXS-2464: Query in query queue unexpectedly null. Queue has %lu queries left.",
+                      m_query_queue.size());
+            mxb_assert(!true);
+            continue;
+        }
+
         /** Store the query queue locally for the duration of the routeQuery call.
          * This prevents recursive calls into this function. */
         decltype(m_query_queue) temp_storage;
@@ -1266,4 +1274,12 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
     }
 
     return rv;
+}
+
+bool RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
+{
+    std::stringstream ss;
+    ss << "Unknown prepared statement handler (" << stmt_id << ") given to MaxScale";
+    GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
+    return m_client->func.write(m_client, err);
 }
