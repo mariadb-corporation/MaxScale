@@ -2862,6 +2862,7 @@ bool config_create_ssl(const char* name,
                        mxs::SSLContext** dest)
 {
     bool ok = true;
+    *dest = nullptr;
 
     // The enum values convert to bool
     int value = params.get_enum(CN_SSL, ssl_values);

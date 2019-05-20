@@ -238,7 +238,7 @@ SSLContext::SSLContext(const std::string& key, const std::string& cert, const st
 
 std::string SSLContext::serialize() const
 {
-    std::stringstream ss;
+    std::ostringstream ss;
     ss << "ssl=required\n";
 
     if (!m_cert.empty())
@@ -267,7 +267,7 @@ bool SSLContext::init()
     {
 #ifndef OPENSSL_1_1
     case SERVICE_TLS10:
-        method = (SSL_METHOD*)TLSv1_method();
+        m_method = (SSL_METHOD*)TLSv1_method();
         break;
 
 #endif
@@ -398,7 +398,7 @@ json_t* SSLContext::to_json() const
 
 std::string SSLContext::to_string() const
 {
-    std::stringstream ss;
+    std::ostringstream ss;
 
     ss << "\tSSL initialized:                     yes\n"
        << "\tSSL method type:                     " << ssl_method_type_to_string(m_version) << "\n"
