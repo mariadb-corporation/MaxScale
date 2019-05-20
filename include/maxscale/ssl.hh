@@ -81,12 +81,12 @@ public:
      *
      * @return SSLContext as a INI file section
      */
-    std::string serialize();
+    std::string serialize() const;
 
     /**
      * Opens a new OpenSSL session for this configuration context
      */
-    SSL* open()
+    SSL* open() const
     {
         return SSL_new(m_ctx);
     }

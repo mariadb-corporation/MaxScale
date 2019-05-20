@@ -236,7 +236,7 @@ SSLContext::SSLContext(const std::string& key, const std::string& cert, const st
 {
 }
 
-std::string SSLContext::serialize()
+std::string SSLContext::serialize() const
 {
     std::stringstream ss;
     ss << "ssl=required\n";
