@@ -27,7 +27,9 @@ class ComResponse;
 class PacketTracker
 {
 public:
-    enum class State {FirstPacket, Field, FieldEof, ComFieldList, Row, Done, ErrorPacket, Error};
+    enum class State {FirstPacket, Field, FieldEof, Row,
+                      ComFieldList, ComStatistics, ComStmtFetch,
+                      Done, ErrorPacket, Error};
 
     PacketTracker() = default;
     explicit PacketTracker(GWBUF* pQuery);      // Track this query
@@ -38,16 +40,19 @@ public:
 
 private:
     // State functions.
-    State first_packet(const ComResponse& com_packet);
-    State field(const ComResponse& com_packet);
-    State field_eof(const ComResponse& com_packet);
-    State com_field_list(const ComResponse& com_packet);
-    State row(const ComResponse& com_packet);
-    State expect_no_more(const ComResponse& com_packet);        // states: Done, ErrorPacket, Error
+    State first_packet(const ComResponse& response);
+    State field(const ComResponse& response);
+    State field_eof(const ComResponse& response);
+    State row(const ComResponse& response);
+    State com_field_list(const ComResponse& response);
+    State com_statistics(const ComResponse& response);
+    State com_stmt_fetch(const ComResponse& response);
+
+    State expect_no_more(const ComResponse& response);          // states: Done, ErrorPacket, Error
 
     State m_state = State::Error;
-    bool  m_client_packet_bool = false;
-    bool  m_server_packet_bool = false;
+    bool  m_client_packet_internal = false;
+    bool  m_server_packet_internal = false;
 
     int m_command;
     int m_total_fields;

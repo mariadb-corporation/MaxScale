@@ -817,6 +817,12 @@ public:
         return m_command;
     }
 
+    bool server_will_respond() const
+    {
+        return m_command != MXS_COM_STMT_SEND_LONG_DATA     // what?
+               && m_command != MXS_COM_QUIT
+               && m_command != MXS_COM_STMT_CLOSE;
+    }
 private:
     uint8_t m_command;
 };
