@@ -524,7 +524,13 @@ int gw_read_client_event(DCB* dcb)
     {
         dcb_close(dcb);
     }
-    if (0 == (nbytes_read = gwbuf_length(read_buffer)))
+
+    if (read_buffer)
+    {
+        nbytes_read = gwbuf_length(read_buffer);
+    }
+
+    if (nbytes_read == 0)
     {
         return return_code;
     }
