@@ -434,7 +434,11 @@ bool runtime_enable_server_ssl(Server* server,
 {
     bool rval = false;
 
-    if (key && cert && ca)
+    if (server->ssl_context())
+    {
+        config_runtime_error("Server '%s' already configured to use SSL.", server->name());
+    }
+    else if (key && cert && ca)
     {
         std::lock_guard<std::mutex> guard(crt_lock);
         mxs::SSLContext* ssl = create_ssl(server->name(), key, cert, ca, version, depth, verify);
