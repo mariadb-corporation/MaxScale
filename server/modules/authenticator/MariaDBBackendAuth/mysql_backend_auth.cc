@@ -140,7 +140,7 @@ static int auth_backend_authenticate(DCB* dcb)
  */
 static bool auth_backend_ssl(DCB* dcb)
 {
-    return dcb->server->server_ssl != NULL;
+    return dcb->server->ssl_context() != NULL;
 }
 
 extern "C"

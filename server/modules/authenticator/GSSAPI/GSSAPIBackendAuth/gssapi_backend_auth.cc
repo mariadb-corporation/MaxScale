@@ -191,7 +191,7 @@ static bool gssapi_backend_auth_extract(DCB* dcb, GWBUF* buffer)
  */
 static bool gssapi_backend_auth_connectssl(DCB* dcb)
 {
-    return dcb->server->server_ssl != NULL;
+    return dcb->server->ssl_context() != NULL;
 }
 
 /**

@@ -28,8 +28,11 @@
 class Server : public SERVER
 {
 public:
-    Server(const std::string& name, const std::string& protocol = "", const std::string& authenticator = "")
-        : SERVER()
+    Server(const std::string& name,
+           const std::string& protocol = "",
+           const std::string& authenticator = "",
+           mxs::SSLContext* ssl = nullptr)
+        : SERVER(ssl)
         , m_name(name)
     {
         m_settings.protocol = protocol;

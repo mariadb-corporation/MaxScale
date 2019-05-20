@@ -203,7 +203,7 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         return NULL;
     }
 
-    Server* server = new(std::nothrow) Server(name, protocol, authenticator);
+    Server* server = new(std::nothrow) Server(name, protocol, authenticator, ssl);
     DCB** persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
     if (!server || !persistent)
@@ -231,7 +231,6 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
     server->proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
     server->is_active = true;
     server->m_auth_instance = auth_instance;
-    server->server_ssl = ssl;
     server->persistent = persistent;
     server->last_event = SERVER_UP_EVENT;
     server->status = SERVER_RUNNING;
@@ -526,9 +525,9 @@ void Server::print_to_dcb(DCB* dcb) const
                                                                 + server->stats.n_from_pool + 1);
         dcb_printf(dcb, "\tPool availability:                   %0.2lf%%\n", d * 100.0);
     }
-    if (server->server_ssl)
+    if (server->ssl_context())
     {
-        dcb_printf(dcb, "%s", server->server_ssl->to_string().c_str());
+        dcb_printf(dcb, "%s", server->ssl_context()->to_string().c_str());
     }
     if (server->proxy_protocol)
     {

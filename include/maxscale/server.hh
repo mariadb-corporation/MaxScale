@@ -181,9 +181,8 @@ public:
                                      * routing sessions. */
 
     // Base variables
-    bool             is_active = false;         /**< Server is active and has not been "destroyed" */
-    mxs::SSLContext* server_ssl = nullptr;      /**< SSL data */
-    uint8_t          charset = DEFAULT_CHARSET; /**< Character set. Read from backend and sent to client. */
+    bool    is_active = false;          /**< Server is active and has not been "destroyed" */
+    uint8_t charset = DEFAULT_CHARSET;  /**< Character set. Read from backend and sent to client. */
 
     // Statistics and events
     ConnStats stats;            /**< The server statistics, e.g. number of connections */
@@ -518,13 +517,26 @@ public:
      */
     void response_time_add(double ave, int num_samples);
 
+    mxs::SSLContext* ssl_context() const
+    {
+        return m_ssl_context;
+    }
+
+    void set_ssl_context(mxs::SSLContext* ssl)
+    {
+        m_ssl_context = ssl;
+    }
+
 protected:
-    SERVER()
-        : m_response_time(maxbase::EMAverage {0.04, 0.35, 500})
+    SERVER(mxs::SSLContext* ssl_context = nullptr)
+        : m_response_time{0.04, 0.35, 500}
+        , m_ssl_context{ssl_context}
     {
     }
+
 private:
     static const int   DEFAULT_CHARSET = 0x08;  /**< The latin1 charset */
     maxbase::EMAverage m_response_time;         /**< Response time calculations for this server */
     std::mutex         m_average_write_mutex;   /**< Protects response time from concurrent writing */
+    mxs::SSLContext*   m_ssl_context;           /**< SSL context */
 };

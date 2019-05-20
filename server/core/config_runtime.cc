@@ -441,11 +441,7 @@ bool runtime_enable_server_ssl(Server* server,
 
         if (ssl)
         {
-            // TODO: Properly discard old SSL configurations
-
-            /** Sync to prevent reads on partially initialized server_ssl */
-            atomic_synchronize();
-            server->server_ssl = ssl;
+            server->set_ssl_context(ssl);
 
             if (server->serialize())
             {
@@ -1902,7 +1898,7 @@ static bool validate_ssl_json(json_t* params, object_type type)
 
 static bool process_ssl_parameters(Server* server, json_t* params)
 {
-    mxb_assert(server->server_ssl == NULL);
+    mxb_assert(server->ssl_context() == NULL);
     bool rval = true;
 
     if (have_ssl_json(params))

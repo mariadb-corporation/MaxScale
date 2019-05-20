@@ -1477,9 +1477,9 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
     }
 
     /* SSL options */
-    if (router_inst->ssl_enabled)
+    if (auto ssl = router_inst->service->dbref->server->ssl_context())
     {
-        dcb_printf(dcb, "%s", router_inst->service->dbref->server->server_ssl->to_string().c_str());
+        dcb_printf(dcb, "%s", ssl->to_string().c_str());
     }
 
     /* Binlog Encryption options */
@@ -1954,9 +1954,9 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
     min5 /= 5.0;
 
     /* SSL options */
-    if (router_inst->ssl_enabled)
+    if (auto ssl = router_inst->service->dbref->server->ssl_context())
     {
-        json_object_set_new(rval, "master_ssl", router_inst->service->dbref->server->server_ssl->to_json());
+        json_object_set_new(rval, "master_ssl", ssl->to_json());
     }
 
     /* Binlog Encryption options */

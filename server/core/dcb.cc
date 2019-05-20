@@ -2227,10 +2227,10 @@ int dcb_connect_SSL(DCB* dcb)
     int ssl_rval;
     int return_code;
 
-    if ((NULL == dcb->server || NULL == dcb->server->server_ssl)
-        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->server->server_ssl) != 0))
+    if ((NULL == dcb->server || NULL == dcb->server->ssl_context())
+        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->server->ssl_context()) != 0))
     {
-        mxb_assert((NULL != dcb->server) && (NULL != dcb->server->server_ssl));
+        mxb_assert((NULL != dcb->server) && (NULL != dcb->server->ssl_context()));
         return -1;
     }
     dcb->ssl_state = SSL_HANDSHAKE_REQUIRED;
