@@ -154,7 +154,13 @@ inline size_t gwbuf_link_length(const GWBUF* b)
 #define GWBUF_LENGTH(b) gwbuf_link_length(b)
 
 /*< Check whether the buffer is contiguous*/
-#define GWBUF_IS_CONTIGUOUS(b) (((b) == NULL) || ((b)->next == NULL))
+inline bool gwbuf_is_contiguous(const GWBUF* b)
+{
+    mxb_assert(b);
+    return b->next == nullptr;
+}
+
+#define GWBUF_IS_CONTIGUOUS(b) gwbuf_is_contiguous(b)
 
 /*< True if all bytes in the buffer have been consumed */
 inline bool gwbuf_link_empty(const GWBUF* b)
