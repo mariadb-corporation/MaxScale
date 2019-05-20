@@ -78,14 +78,15 @@ int user_services_cb(void* data, int columns, char** column_vals, char** column_
 /** Used by the PAM conversation function */
 struct ConversationData
 {
-    DCB*   m_client;
-    int    m_counter;
-    string m_password;
+    int    m_calls {0};     // How many times the conversation function has been called?
+    string m_client;        // Client username
+    string m_password;      // Password to give to first password prompt
+    string m_client_remote; // Client address
 
-    ConversationData(DCB* client, int counter, const string& password)
+    ConversationData(const string& client, const string& password, const string& client_remote)
         : m_client(client)
-        , m_counter(counter)
         , m_password(password)
+        , m_client_remote(client_remote)
     {
     }
 };
@@ -97,50 +98,74 @@ struct ConversationData
  * http://www.linux-pam.org/Linux-PAM-html/adg-interface-of-app-expected.html#adg-pam_conv
  * for more information.
  */
-int conversation_func(int num_msg,
-                      const struct pam_message** msg,
-                      struct pam_response** resp_out,
+int conversation_func(int num_msg, const struct pam_message** messages, struct pam_response** responses_out,
                       void* appdata_ptr)
 {
     MXS_DEBUG("Entering PAM conversation function.");
-    int rval = PAM_CONV_ERR;
     ConversationData* data = static_cast<ConversationData*>(appdata_ptr);
-    if (data->m_counter > 1)
+
+    // The responses are saved as an array of structures. This is unlike the input messages, which is an
+    // array of pointers to struct. Each message should have an answer, even if empty.
+    auto responses = static_cast<pam_response*>(MXS_CALLOC(num_msg, sizeof(pam_response)));
+    if (!responses)
     {
-        MXS_ERROR("Multiple calls to conversation function for client '%s'. %s",
-                  data->m_client->user,
-                  GENERAL_ERRMSG);
+        return PAM_BUF_ERR;
     }
-    else if (num_msg == 1)
+
+    bool conv_error = false;
+    for (int i = 0; i < num_msg; i++)
     {
-        pam_message first = *msg[0];
-        if ((first.msg_style != PAM_PROMPT_ECHO_OFF && first.msg_style != PAM_PROMPT_ECHO_ON)
-            || PASSWORD != first.msg)
+        const pam_message* message = messages[i]; // This may crash on Solaris, see PAM documentation.
+        pam_response* response = &responses[i];
+        int msg_type = message->msg_style;
+        // In an ideal world, these messages would be sent to the client instead of the log. The problem
+        // is that the messages should be sent with the AuthSwitchRequest-packet, requiring the blocking
+        // PAM api to work with worker-threads. Not worth the trouble unless really required.
+        if (msg_type == PAM_ERROR_MSG)
         {
-            MXS_ERROR("Unexpected PAM message: type='%d', contents='%s'",
-                      first.msg_style,
-                      first.msg);
+            MXB_WARNING("Error message from PAM api: %s", message->msg);
+        }
+        else if (msg_type == PAM_TEXT_INFO)
+        {
+            MXB_NOTICE("Message from PAM api: '%s'", message->msg);
+        }
+        else if (msg_type == PAM_PROMPT_ECHO_ON || msg_type == PAM_PROMPT_ECHO_OFF)
+        {
+            // PAM system is asking for something. We only know how to answer the password question,
+            // anything else is an error.
+            if (message->msg == PASSWORD)
+            {
+                response->resp = MXS_STRDUP(data->m_password.c_str());
+                // retcode should be already 0.
+            }
+            else
+            {
+                MXB_ERROR("Unexpected prompt from PAM api: '%s'. Only '%s' is allowed.",
+                          message->msg, PASSWORD.c_str());
+                conv_error = true;
+            }
         }
         else
         {
-            pam_response* response = static_cast<pam_response*>(MXS_MALLOC(sizeof(pam_response)));
-            if (response)
-            {
-                response->resp_retcode = 0;
-                response->resp = MXS_STRDUP(data->m_password.c_str());
-                *resp_out = response;
-                rval = PAM_SUCCESS;
-            }
+            // Faulty PAM system or perhaps different api version.
+            MXB_ERROR("Unknown PAM message type '%i'.", msg_type);
+            conv_error = true;
+            mxb_assert(!true);
         }
+    }
+
+    data->m_calls++;
+    if (conv_error)
+    {
+        // On error, the response output should not be set.
+        MXS_FREE(responses);
+        return PAM_CONV_ERR;
     }
     else
     {
-        MXS_ERROR("Conversation function received '%d' messages from API. Only "
-                  "singular messages are supported.",
-                  num_msg);
+        *responses_out = responses;
+        return PAM_SUCCESS;
     }
-    data->m_counter++;
-    return rval;
 }
 
 /**
@@ -149,15 +174,16 @@ int conversation_func(int num_msg,
  * @param user Username
  * @param password Password
  * @param service Which PAM service is the user logging to
- * @param client Client DCB
- * @return True if username & password are ok
+ * @param client_remote Client address. Used for log messages.
+ * @return True if username & password are ok and account is valid.
  */
-bool validate_pam_password(const string& user, const string& password, const string& service, DCB* client)
+bool validate_pam_password(const string& user, const string& password, const string& service,
+                           const string& client_remote)
 {
     const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication for user '%s': '%s'.";
     const char PAM_AUTH_ERR_MSG[] = "Pam authentication for user '%s' failed: '%s'.";
     const char PAM_ACC_ERR_MSG[] = "Pam account check for user '%s' failed: '%s'.";
-    ConversationData appdata(client, 0, password);
+    ConversationData appdata(user, password, client_remote);
     pam_conv conv_struct = {conversation_func, &appdata};
     bool authenticated = false;
     bool account_ok = false;
@@ -414,7 +440,7 @@ int PamClientSession::authenticate(DCB* dcb)
                             {
                                 *iter = "mysql";
                             }
-                            if (validate_pam_password(ses->user, password, *iter, dcb))
+                            if (validate_pam_password(ses->user, password, *iter, dcb->remote))
                             {
                                 authenticated = true;
                             }

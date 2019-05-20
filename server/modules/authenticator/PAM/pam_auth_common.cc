@@ -22,5 +22,4 @@ const std::string DIALOG = "dialog";
 const int DIALOG_SIZE = DIALOG.length() + 1;
 /* First query from server */
 const std::string PASSWORD = "Password: ";
-const char GENERAL_ERRMSG[] = "Only simple password-based PAM authentication with one call "
-                              "to the conversation function is supported.";
+

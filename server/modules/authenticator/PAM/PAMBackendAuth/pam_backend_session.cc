@@ -17,8 +17,11 @@
 namespace
 {
 /**
- * Check that the AuthSwitchRequest packet is as expected. Inverse of
+ * Check that the AuthSwitchRequest packet is as expected. Partially an inverse of
  * create_auth_change_packet() in pam_auth.cc.
+ *
+ * To deal with arbitrary messages in the packet, this needs to mirror also the server
+ * plugin code.
  *
  * @param dcb Backend DCB
  * @param buffer Buffer containing an AuthSwitchRequest packet
@@ -27,59 +30,124 @@ namespace
 bool check_auth_switch_request(DCB* dcb, GWBUF* buffer)
 {
     /**
+     * The server PAM plugin sends data usually once, at the moment it gets a prompt-type message
+     * from the api. The "message"-segment may contain multiple messages from the api separated by \n.
+     * MaxScale should ignore this text and search for "Password: " near the end of the message. If
+     * server sends more data, authentication ends in error, but this should only happen if the server
+     * asks multiple questions.
+     *
      * The AuthSwitchRequest packet:
      * 4 bytes     - Header
      * 0xfe        - Command byte
-     * string[NUL] - Auth plugin name
-     * byte        - Message type
-     * string[EOF] - Message
+     * string[NUL] - Auth plugin name, should be "dialog"
+     * byte        - Message type, 2 or 4
+     * string[EOF] - Message(s)
+     *
+     * Authenticators receive complete packets from protocol.
      */
-    /** We know how long the packet should be in the simple case. */
-    unsigned int expected_buflen = MYSQL_HEADER_LEN + 1 + DIALOG_SIZE + 1 + PASSWORD.length();
-    uint8_t data[expected_buflen];
-    size_t copied = gwbuf_copy_data(buffer, 0, expected_buflen, data);
 
-    /* Check that this is an AuthSwitchRequest. */
-    if ((copied <= MYSQL_HEADER_LEN) || (data[MYSQL_HEADER_LEN] != MYSQL_REPLY_AUTHSWITCHREQUEST))
-    {
-        /** Server responded with something we did not expect. If it's an OK packet,
-         * it's possible that the server authenticated us as the anonymous user. This
-         * means that the server is not secure. */
-        bool was_ok_packet = copied > MYSQL_HEADER_LEN
-            && data[MYSQL_HEADER_LEN + 1] == MYSQL_REPLY_OK;
-        MXS_ERROR("Server '%s' returned an unexpected authentication response.%s",
-                  dcb->server->name,
-                  was_ok_packet ?
-                  " Authentication was complete before it even started, "
-                  "anonymous users might not be disabled." : "");
-        return false;
-    }
-    unsigned int buflen = gwbuf_length(buffer);
-    if (buflen != expected_buflen)
-    {
-        MXS_ERROR("Length of server AuthSwitchRequest packet was '%u', expected '%u'. %s",
-                  buflen,
-                  expected_buflen,
-                  GENERAL_ERRMSG);
-        return false;
-    }
+    // Smallest buffer that is parsed, header + cmd byte.
+    int min_readable_buflen = MYSQL_HEADER_LEN + 1;
+    // The buffer should be small, don't accept big messages since it most likely means a complicated auth
+    // scheme.
+    const int MAX_BUFLEN = 2000;
 
-    /* Check that the server is using the "dialog" plugin and asking for the password. */
-    uint8_t* plugin_name_loc = data + MYSQL_HEADER_LEN + 1;
-    uint8_t* msg_type_loc = plugin_name_loc + DIALOG_SIZE;
-    uint8_t msg_type = *msg_type_loc;
-    uint8_t* msg_loc = msg_type_loc + 1;
+    // Smallest buffer with every packet component, although the components may be wrong.
+    int min_msg_buflen = min_readable_buflen + 3;
+    // Smallest buffer with all expected data.
+    int min_acceptable_buflen = MYSQL_HEADER_LEN + 1 + DIALOG_SIZE + 1 + PASSWORD.length();
 
     bool rval = false;
-    if ((DIALOG == (char*)plugin_name_loc)
-        && (msg_type == DIALOG_ECHO_ENABLED || msg_type == DIALOG_ECHO_DISABLED)
-        && PASSWORD.compare(0, PASSWORD.length(), (char*)msg_loc, PASSWORD.length()) == 0)
+    const char* srv_name = dcb->server->name;
+    int buflen = gwbuf_length(buffer);
+    if (buflen <= min_readable_buflen || buflen > MAX_BUFLEN)
     {
-        rval = true;
+        MXB_ERROR("Authentication start packet from '%s' is %i bytes. Expected length of packet is "
+                  "between %i and %i.", srv_name, buflen, min_acceptable_buflen, MAX_BUFLEN);
+        // Lengths between min_readable_buflen and min_acceptable_buflen are checked below.
     }
     else
     {
-        MXS_ERROR("AuthSwitchRequest packet contents unexpected. %s", GENERAL_ERRMSG);
+        uint8_t data[buflen + 1]; // + 1 to ensure that the end has a zero.
+        data[buflen] = 0;
+        gwbuf_copy_data(buffer, 0, buflen, data);
+        uint8_t cmdbyte = data[MYSQL_HEADER_LEN];
+        if (cmdbyte == MYSQL_REPLY_AUTHSWITCHREQUEST)
+        {
+            bool malformed_packet = false;
+            // Correct packet type.
+            if (buflen >= min_msg_buflen)
+            {
+                // Buffer is long enough to contain at least some of the fields. Try to read plugin name.
+                const char* ptr = reinterpret_cast<char*>(data) + min_readable_buflen;
+                const char* end = reinterpret_cast<char*>(data) + buflen;
+                if (strcmp(ptr, DIALOG.c_str()) == 0)
+                {
+                    // Correct plugin.
+                    ptr += DIALOG_SIZE;
+                    if (end - ptr >= 2) // message type + message
+                    {
+                        int msg_type = *ptr++;
+                        if (msg_type == DIALOG_ECHO_ENABLED || msg_type == DIALOG_ECHO_DISABLED)
+                        {
+                            // The rest of the buffer contains a message.
+                            // The server separates messages with linebreaks. Search for the last.
+                            const char* linebrk_pos = strrchr(ptr, '\n');
+                            if (linebrk_pos)
+                            {
+                                int msg_len = linebrk_pos - ptr;
+                                MXS_INFO("Server '%s' PAM plugin sent messages: '%.*s'",
+                                         srv_name, msg_len, ptr);
+                                ptr = linebrk_pos + 1;
+                            }
+
+                            if (ptr == PASSWORD)
+                            {
+                                rval = true;
+                            }
+                            else
+                            {
+                                MXB_ERROR("'%s' asked for '%s' when '%s was expected.",
+                                          srv_name, ptr, PASSWORD.c_str());
+                            }
+                        }
+                        else
+                        {
+                            malformed_packet = true;
+                        }
+                    }
+                    else
+                    {
+                        malformed_packet = true;
+                    }
+                }
+                else
+                {
+                    MXB_ERROR("'%s' asked for authentication plugin '%s' when '%s' was expected.",
+                              srv_name, ptr, DIALOG.c_str());
+                }
+            }
+            else
+            {
+                malformed_packet = true;
+            }
+
+            if (malformed_packet)
+            {
+                MXB_ERROR("Received malformed AuthSwitchRequest-packet from '%s'.", srv_name);
+            }
+        }
+        else if (cmdbyte == MYSQL_REPLY_OK)
+        {
+            // Authentication is already done? Maybe the server authenticated us as the anonymous user. This
+            // is quite insecure. */
+            MXB_ERROR("Authentication to '%s' was complete before it even started, "
+                      "anonymous users may be enabled.", srv_name);
+        }
+        else
+        {
+            MXB_ERROR("Expected AuthSwitchRequest-packet from '%s' but received %#x.", srv_name, cmdbyte);
+        }
     }
     return rval;
 }
@@ -98,7 +166,6 @@ PamBackendSession::PamBackendSession()
  */
 bool PamBackendSession::send_client_password(DCB* dcb)
 {
-    bool rval = false;
     MYSQL_session* ses = (MYSQL_session*)dcb->session->client_dcb->data;
     size_t buflen = MYSQL_HEADER_LEN + ses->auth_token_len;
     uint8_t bufferdata[buflen];
@@ -123,15 +190,13 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
         /** Read authentication response */
         if (mxs_mysql_is_ok_packet(buffer))
         {
-            MXS_DEBUG("pam_backend_auth_extract received ok packet from '%s'.",
-                      dcb->server->name);
+            MXS_DEBUG("pam_backend_auth_extract received ok packet from '%s'.", dcb->server->name);
             m_state = PAM_AUTH_OK;
             rval = true;
         }
         else
         {
-            MXS_ERROR("Expected ok from server but got something else. Authentication"
-                      " failed.");
+            MXS_ERROR("Expected ok from server but got something else. Authentication failed.");
         }
     }
 
