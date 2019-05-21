@@ -1057,6 +1057,16 @@ bool runtime_create_listener(Service* service,
         proto = "mariadbclient";
     }
 
+    if (auth && strcasecmp(auth, CN_DEFAULT) == 0)
+    {
+        // The protocol default authenticator is used
+        auth = nullptr;
+    }
+    if (auth_opt && strcasecmp(auth_opt, CN_DEFAULT) == 0)
+    {
+        auth_opt = nullptr;
+    }
+
     MXS_CONFIG_PARAMETER params;
     bool ok;
     tie(ok, params) = load_defaults(proto, MODULE_PROTOCOL, CN_LISTENER);
