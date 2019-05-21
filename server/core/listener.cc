@@ -116,7 +116,7 @@ Listener::Listener(SERVICE* service,
     , m_authenticator(authenticator)
     , m_auth_options(auth_opts)
     , m_auth_instance(auth_instance)
-    , m_ssl(ssl)
+    , m_ssl_context(ssl)
     , m_users(nullptr)
     , m_service(service)
     , m_proto_func(*(MXS_PROTOCOL*)load_module(protocol.c_str(), MODULE_PROTOCOL))
@@ -147,8 +147,6 @@ Listener::~Listener()
     {
         users_free(m_users);
     }
-
-    delete m_ssl;
 }
 
 SListener Listener::create(const std::string& name,
@@ -477,9 +475,9 @@ bool Listener::create_listener_config(const char* filename)
         dprintf(file, "authenticator_options=%s\n", m_auth_options.c_str());
     }
 
-    if (m_ssl)
+    if (m_ssl_context)
     {
-        dprintf(file, "%s", m_ssl->serialize().c_str());
+        dprintf(file, "%s", m_ssl_context->serialize().c_str());
     }
 
     ::close(file);
@@ -538,9 +536,9 @@ json_t* Listener::to_json() const
     json_object_set_new(param, "authenticator", json_string(m_authenticator.c_str()));
     json_object_set_new(param, "auth_options", json_string(m_auth_options.c_str()));
 
-    if (m_ssl)
+    if (m_ssl_context)
     {
-        json_object_set_new(param, "ssl", m_ssl->to_json());
+        json_object_set_new(param, "ssl", m_ssl_context->to_json());
     }
 
     json_t* attr = json_object();
@@ -610,9 +608,9 @@ void* Listener::auth_instance() const
     return m_auth_instance;
 }
 
-mxs::SSLContext* Listener::ssl() const
+mxs::SSLContext* Listener::ssl_context() const
 {
-    return m_ssl;
+    return m_ssl_context.get();
 }
 
 const char* Listener::state() const

@@ -241,7 +241,8 @@ std::string get_version_string(SERVICE* service)
  */
 bool ssl_required_by_dcb(DCB* dcb)
 {
-    return NULL != dcb->session->listener && NULL != dcb->session->listener->ssl();
+    mxb_assert(dcb->session->listener);
+    return dcb->session->listener->ssl_context();
 }
 
 /**
@@ -256,9 +257,7 @@ bool ssl_required_by_dcb(DCB* dcb)
  */
 bool ssl_required_but_not_negotiated(DCB* dcb)
 {
-    return NULL != dcb->session->listener
-           && NULL != dcb->session->listener->ssl()
-           && SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state;
+    return ssl_required_by_dcb(dcb) && SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state;
 }
 
 /**
@@ -717,7 +716,7 @@ static void check_packet(DCB* dcb, GWBUF* buf, int bytes)
     if (bytes == MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         /** This is an SSL request packet */
-        mxb_assert(dcb->session->listener->ssl());
+        mxb_assert(dcb->session->listener->ssl_context());
         mxb_assert(buflen == bytes && pktlen >= buflen);
     }
     else
@@ -744,9 +743,7 @@ bool ssl_is_connection_healthy(DCB* dcb)
      * then everything is as we wish. Otherwise, either there is a problem or
      * more to be done.
      */
-    return NULL == dcb->session->listener
-           || NULL == dcb->session->listener->ssl()
-           || dcb->ssl_state == SSL_ESTABLISHED;
+    return !dcb->session->listener->ssl_context() || dcb->ssl_state == SSL_ESTABLISHED;
 }
 
 /* Looks to be redundant - can remove include for ioctl too */
@@ -789,7 +786,7 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
     const char* remote = dcb->remote ? dcb->remote : "";
     const char* service = (dcb->service && dcb->service->name()) ? dcb->service->name() : "";
 
-    if (NULL == dcb->session->listener || NULL == dcb->session->listener->ssl())
+    if (!dcb->session->listener->ssl_context())
     {
         /* Not an SSL connection on account of listener configuration */
         return SSL_AUTH_CHECKS_OK;

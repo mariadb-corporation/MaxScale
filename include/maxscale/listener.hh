@@ -146,7 +146,7 @@ public:
     /**
      * The mxs::SSLContext object
      */
-    mxs::SSLContext* ssl() const;
+    mxs::SSLContext* ssl_context() const;
 
     /**
      * Convert to JSON
@@ -201,15 +201,17 @@ private:
         DESTROYED
     };
 
-    std::string          m_name;            /**< Name of the listener */
-    State                m_state;           /**< Listener state */
-    std::string          m_protocol;        /**< Protocol module to load */
-    uint16_t             m_port;            /**< Port to listen on */
-    std::string          m_address;         /**< Address to listen with */
-    std::string          m_authenticator;   /**< Name of authenticator */
-    std::string          m_auth_options;    /**< Authenticator options */
-    void*                m_auth_instance;   /**< Authenticator instance */
-    mxs::SSLContext*     m_ssl;             /**< Structure of SSL data or NULL */
+    std::string m_name;             /**< Name of the listener */
+    State       m_state;            /**< Listener state */
+    std::string m_protocol;         /**< Protocol module to load */
+    uint16_t    m_port;             /**< Port to listen on */
+    std::string m_address;          /**< Address to listen with */
+    std::string m_authenticator;    /**< Name of authenticator */
+    std::string m_auth_options;     /**< Authenticator options */
+    void*       m_auth_instance;    /**< Authenticator instance */
+
+    std::unique_ptr<mxs::SSLContext> m_ssl_context;     /**< SSL context */
+
     struct users*        m_users;           /**< The user data for this listener */
     SERVICE*             m_service;         /**< The service which used by this listener */
     std::atomic<bool>    m_active;          /**< True if the port has not been deleted */

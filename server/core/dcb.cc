@@ -2150,8 +2150,8 @@ static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    if (NULL == dcb->session->listener->ssl()
-        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->session->listener->ssl()) != 0))
+    if (!dcb->session->listener->ssl_context()
+        || (!dcb->ssl && dcb_create_SSL(dcb, dcb->session->listener->ssl_context()) != 0))
     {
         return -1;
     }
