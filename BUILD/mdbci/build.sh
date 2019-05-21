@@ -29,6 +29,7 @@ export platform=`${mdbci_dir}/mdbci show boxinfo --box-name=$box --field='platfo
 export platform_version=`${mdbci_dir}/mdbci show boxinfo --box-name=$box --field='platform_version' --silent`
 export dist_sfx="$platform"."$platform_version"
 export cmake_flags="${cmake_flags} -DPACKAGE=Y -DDISTRIB_SUFFIX=${dist_sfx}"
+export team_keys=${team_keys:-${HOME}/.ssh/id_rsa.pub}
 
 # prerare VM
 export provider=`${mdbci_dir}/mdbci show provider $box --silent 2> /dev/null`
@@ -73,8 +74,7 @@ $(<${script_dir}/templates/build.json.template)
 		exit 1
 	fi
 	echo "copying public keys to VM"
-	cp  ~/build-scripts/team_keys .
-	${mdbci_dir}/mdbci public_keys --key team_keys --silent $name
+	${mdbci_dir}/mdbci public_keys --key ${team_keys} --silent $name
 fi
 
 echo "Get VM info"
