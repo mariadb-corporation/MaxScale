@@ -4850,24 +4850,26 @@ static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* c
     curr_master->password = router->password;
     curr_master->filestem = router->fileroot;
     /* SSL options */
-    if (auto server_ssl = router->service->dbref->server->ssl_context())
+    auto server_ssl = router->service->dbref->server->ssl_config();
+
+    if (!server_ssl.empty())
     {
         curr_master->ssl_enabled = router->ssl_enabled;
         if (router->ssl_version)
         {
             curr_master->ssl_version = router->ssl_version;
         }
-        if (!server_ssl->ssl_key().empty())
+        if (!server_ssl.key.empty())
         {
-            curr_master->ssl_key = server_ssl->ssl_key();
+            curr_master->ssl_key = server_ssl.key;
         }
-        if (!server_ssl->ssl_cert().empty())
+        if (!server_ssl.cert.empty())
         {
-            curr_master->ssl_cert = server_ssl->ssl_cert();
+            curr_master->ssl_cert = server_ssl.cert;
         }
-        if (!server_ssl->ssl_ca().empty())
+        if (!server_ssl.ca.empty())
         {
-            curr_master->ssl_ca = server_ssl->ssl_ca();
+            curr_master->ssl_ca = server_ssl.ca;
         }
     }
     /* Connect options */

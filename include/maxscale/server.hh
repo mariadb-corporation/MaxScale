@@ -517,6 +517,11 @@ public:
      */
     void response_time_add(double ave, int num_samples);
 
+    const mxs::SSLConfig& ssl_config() const
+    {
+        return m_ssl_config;
+    }
+
     mxs::SSLContext* ssl_context() const
     {
         return m_ssl_context.get();
@@ -525,6 +530,7 @@ public:
     void set_ssl_context(std::unique_ptr<mxs::SSLContext> ssl)
     {
         m_ssl_context.swap(ssl);
+        m_ssl_config = m_ssl_context->config();
     }
 
 protected:
@@ -540,4 +546,5 @@ private:
     std::mutex         m_average_write_mutex;       /**< Protects response time from concurrent writing */
 
     std::unique_ptr<mxs::SSLContext> m_ssl_context;     /**< SSL context */
+    mxs::SSLConfig                   m_ssl_config;      /**< SSL configuration */
 };

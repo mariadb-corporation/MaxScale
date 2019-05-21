@@ -952,10 +952,8 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
     if (dcb->session == NULL
-        || (dcb->session->state != SESSION_STATE_CREATED
-            && dcb->session->state != SESSION_STATE_STARTED)
-        || (dcb->server->ssl_context()
-            && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
+        || (dcb->session->state != SESSION_STATE_CREATED && dcb->session->state != SESSION_STATE_STARTED)
+        || (dcb->server->ssl_context() && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
     }

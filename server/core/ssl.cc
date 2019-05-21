@@ -199,6 +199,17 @@ static const char* get_ssl_errors()
 namespace maxscale
 {
 
+
+SSLConfig::SSLConfig(const MXS_CONFIG_PARAMETER& params)
+    : key(params.get_string(CN_SSL_KEY))
+    , cert(params.get_string(CN_SSL_CERT))
+    , ca(params.get_string(CN_SSL_CA_CERT))
+    , version((ssl_method_type_t)params.get_enum(CN_SSL_VERSION, ssl_version_values))
+    , verify_depth(params.get_integer(CN_SSL_CERT_VERIFY_DEPTH))
+    , verify_peer(params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE))
+{
+}
+
 // static
 std::unique_ptr<SSLContext> SSLContext::create(const MXS_CONFIG_PARAMETER& params)
 {
@@ -208,13 +219,7 @@ std::unique_ptr<SSLContext> SSLContext::create(const MXS_CONFIG_PARAMETER& param
     mxb_assert(params.get_string(CN_SSL_KEY).empty()
                || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
 
-    std::unique_ptr<SSLContext> ssl(
-        new(std::nothrow) SSLContext(params.get_string(CN_SSL_KEY),
-                                     params.get_string(CN_SSL_CERT),
-                                     params.get_string(CN_SSL_CA_CERT),
-                                     (ssl_method_type_t)params.get_enum(CN_SSL_VERSION, ssl_version_values),
-                                     params.get_integer(CN_SSL_CERT_VERIFY_DEPTH),
-                                     params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE)));
+    std::unique_ptr<SSLContext> ssl(new(std::nothrow) SSLContext(SSLConfig(params)));
 
     if (ssl && !ssl->init())
     {
@@ -224,14 +229,8 @@ std::unique_ptr<SSLContext> SSLContext::create(const MXS_CONFIG_PARAMETER& param
     return ssl;
 }
 
-SSLContext::SSLContext(const std::string& key, const std::string& cert, const std::string& ca,
-                       ssl_method_type_t version, int verify_depth, bool verify_peer)
-    : m_key(key)
-    , m_cert(cert)
-    , m_ca(ca)
-    , m_version(version)
-    , m_verify_depth(verify_depth)
-    , m_verify_peer(verify_peer)
+SSLContext::SSLContext(const SSLConfig& cfg)
+    : m_cfg(cfg)
 {
 }
 
@@ -240,21 +239,21 @@ std::string SSLContext::serialize() const
     std::ostringstream ss;
     ss << "ssl=required\n";
 
-    if (!m_cert.empty())
+    if (!m_cfg.cert.empty())
     {
-        ss << "ssl_cert=" << m_cert << "\n";
+        ss << "ssl_cert=" << m_cfg.cert << "\n";
     }
 
-    if (!m_key.empty())
+    if (!m_cfg.key.empty())
     {
-        ss << "ssl_key=" << m_key << "\n";
+        ss << "ssl_key=" << m_cfg.key << "\n";
     }
 
-    mxb_assert(!m_ca.empty());
-    ss << "ssl_ca_cert=" << m_ca << "\n";
-    ss << "ssl_version=" << ssl_method_type_to_string(m_version) << "\n";
-    ss << "ssl_cert_verify_depth=" << m_verify_depth << "\n";
-    ss << "ssl_verify_peer_certificate=" << (m_verify_peer ? "true" : "false") << "\n";
+    mxb_assert(!m_cfg.ca.empty());
+    ss << "ssl_ca_cert=" << m_cfg.ca << "\n";
+    ss << "ssl_version=" << ssl_method_type_to_string(m_cfg.version) << "\n";
+    ss << "ssl_cert_verify_depth=" << m_cfg.verify_depth << "\n";
+    ss << "ssl_verify_peer_certificate=" << (m_cfg.verify_peer ? "true" : "false") << "\n";
     return ss.str();
 }
 
@@ -262,7 +261,7 @@ bool SSLContext::init()
 {
     bool rval = true;
 
-    switch (m_version)
+    switch (m_cfg.version)
     {
 #ifndef OPENSSL_1_1
     case SERVICE_TLS10:
@@ -337,26 +336,26 @@ bool SSLContext::init()
         SSL_CTX_set_tmp_rsa_callback(m_ctx, tmp_rsa_callback);
     }
 
-    mxb_assert(!m_ca.empty());
+    mxb_assert(!m_cfg.ca.empty());
 
     /* Load the CA certificate into the SSL_CTX structure */
-    if (!SSL_CTX_load_verify_locations(m_ctx, m_ca.c_str(), NULL))
+    if (!SSL_CTX_load_verify_locations(m_ctx, m_cfg.ca.c_str(), NULL))
     {
         MXS_ERROR("Failed to set Certificate Authority file");
         return false;
     }
 
-    if (!m_cert.empty() && !m_key.empty())
+    if (!m_cfg.cert.empty() && !m_cfg.key.empty())
     {
         /** Load the server certificate */
-        if (SSL_CTX_use_certificate_chain_file(m_ctx, m_cert.c_str()) <= 0)
+        if (SSL_CTX_use_certificate_chain_file(m_ctx, m_cfg.cert.c_str()) <= 0)
         {
             MXS_ERROR("Failed to set server SSL certificate: %s", get_ssl_errors());
             return false;
         }
 
         /* Load the private-key corresponding to the server certificate */
-        if (SSL_CTX_use_PrivateKey_file(m_ctx, m_key.c_str(), SSL_FILETYPE_PEM) <= 0)
+        if (SSL_CTX_use_PrivateKey_file(m_ctx, m_cfg.key.c_str(), SSL_FILETYPE_PEM) <= 0)
         {
             MXS_ERROR("Failed to set server SSL key: %s", get_ssl_errors());
             return false;
@@ -371,13 +370,13 @@ bool SSLContext::init()
     }
 
     /* Set to require peer (client) certificate verification */
-    if (m_verify_peer)
+    if (m_cfg.verify_peer)
     {
         SSL_CTX_set_verify(m_ctx, SSL_VERIFY_PEER, NULL);
     }
 
     /* Set the verification depth */
-    SSL_CTX_set_verify_depth(m_ctx, m_verify_depth);
+    SSL_CTX_set_verify_depth(m_ctx, m_cfg.verify_depth);
 
     return true;
 }
@@ -385,12 +384,12 @@ bool SSLContext::init()
 json_t* SSLContext::to_json() const
 {
     json_t* ssl = json_object();
-    const char* ssl_method = ssl_method_type_to_string(m_version);
+    const char* ssl_method = ssl_method_type_to_string(m_cfg.version);
 
     json_object_set_new(ssl, "ssl_version", json_string(ssl_method));
-    json_object_set_new(ssl, "ssl_cert", json_string(m_cert.c_str()));
-    json_object_set_new(ssl, "ssl_ca_cert", json_string(m_ca.c_str()));
-    json_object_set_new(ssl, "ssl_key", json_string(m_key.c_str()));
+    json_object_set_new(ssl, "ssl_cert", json_string(m_cfg.cert.c_str()));
+    json_object_set_new(ssl, "ssl_ca_cert", json_string(m_cfg.ca.c_str()));
+    json_object_set_new(ssl, "ssl_key", json_string(m_cfg.key.c_str()));
 
     return ssl;
 }
@@ -400,12 +399,12 @@ std::string SSLContext::to_string() const
     std::ostringstream ss;
 
     ss << "\tSSL initialized:                     yes\n"
-       << "\tSSL method type:                     " << ssl_method_type_to_string(m_version) << "\n"
-       << "\tSSL certificate verification depth:  " << m_verify_depth << "\n"
-       << "\tSSL peer verification :              " << (m_verify_peer ? "true" : "false") << "\n"
-       << "\tSSL certificate:                     " << m_cert << "\n"
-       << "\tSSL key:                             " << m_key << "\n"
-       << "\tSSL CA certificate:                  " << m_ca << "\n";
+       << "\tSSL method type:                     " << ssl_method_type_to_string(m_cfg.version) << "\n"
+       << "\tSSL certificate verification depth:  " << m_cfg.verify_depth << "\n"
+       << "\tSSL peer verification :              " << (m_cfg.verify_peer ? "true" : "false") << "\n"
+       << "\tSSL certificate:                     " << m_cfg.cert << "\n"
+       << "\tSSL key:                             " << m_cfg.key << "\n"
+       << "\tSSL CA certificate:                  " << m_cfg.ca << "\n";
 
     return ss.str();
 }

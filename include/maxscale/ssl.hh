@@ -61,6 +61,26 @@ extern const MXS_ENUM_VALUE ssl_version_values[];
 namespace maxscale
 {
 
+// SSL configuration
+struct SSLConfig
+{
+    SSLConfig() = default;
+    SSLConfig(const MXS_CONFIG_PARAMETER& params);
+
+    // CA must always be defined for non-empty configurations
+    bool empty() const
+    {
+        return ca.empty();
+    }
+
+    std::string       key;                              /**< SSL private key */
+    std::string       cert;                             /**< SSL certificate */
+    std::string       ca;                               /**< SSL CA certificate */
+    ssl_method_type_t version = SERVICE_SSL_TLS_MAX;    /**< Which TLS version to use */
+    int               verify_depth = 9;                 /**< SSL certificate verification depth */
+    bool              verify_peer = true;               /**< Enable peer certificate verification */
+};
+
 /**
  * The SSLContext is used to aggregate the SSL configuration and data for a particular object.
  */
@@ -91,22 +111,10 @@ public:
         return SSL_new(m_ctx);
     }
 
-    // Private key
-    const std::string& ssl_key() const
+    // SSL configuration
+    const SSLConfig& config() const
     {
-        return m_key;
-    }
-
-    // Public cert
-    const std::string& ssl_cert() const
-    {
-        return m_cert;
-    }
-
-    // Certificate authority
-    const std::string& ssl_ca() const
-    {
-        return m_ca;
+        return m_cfg;
     }
 
     // Convert to JSON representation
@@ -121,16 +129,9 @@ private:
     SSL_CTX*    m_ctx = nullptr;
     SSL_METHOD* m_method = nullptr;         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
                                              * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
+    SSLConfig m_cfg;
 
-    std::string       m_key;            /**< SSL private key */
-    std::string       m_cert;           /**< SSL certificate */
-    std::string       m_ca;             /**< SSL CA certificate */
-    ssl_method_type_t m_version;        /**< Which TLS version to use */
-    int               m_verify_depth;   /**< SSL certificate verification depth */
-    bool              m_verify_peer;    /**< Enable peer certificate verification */
-
-    SSLContext(const std::string& key, const std::string& cert, const std::string& ca,
-               ssl_method_type_t version, int verify_depth, bool verify_peer_cert);
+    SSLContext(const SSLConfig& cfg);
     bool init();
 };
 }
