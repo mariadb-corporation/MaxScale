@@ -1099,7 +1099,7 @@ public:
      */
     size_t length() const
     {
-        return gwbuf_length(m_pBuffer);
+        return m_pBuffer ? gwbuf_length(m_pBuffer) : 0;
     }
 
     /**

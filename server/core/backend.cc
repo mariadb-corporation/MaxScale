@@ -253,7 +253,7 @@ bool Backend::write_stored_command()
     mxb_assert(in_use());
     bool rval = false;
 
-    if (m_pending_cmd.length())
+    if (!m_pending_cmd.empty())
     {
         rval = write(m_pending_cmd.release());
 
