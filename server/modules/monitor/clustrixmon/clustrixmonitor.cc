@@ -18,6 +18,7 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
+#include <maxscale/sqlite3.h>
 #include "../../../core/internal/config_runtime.hh"
 #include "../../../core/internal/service.hh"
 
