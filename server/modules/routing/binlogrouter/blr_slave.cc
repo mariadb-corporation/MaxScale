@@ -6347,12 +6347,12 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
             {CN_SSL_VERIFY_PEER_CERTIFICATE, "true"}
         });
 
-        auto ssl = mxs::SSLContext::create(params);
+        std::unique_ptr<mxs::SSLContext> ssl(mxs::SSLContext::create(params));
 
         if (ssl)
         {
             updated = 1;
-            router->service->dbref->server->set_ssl_context(ssl);
+            router->service->dbref->server->set_ssl_context(std::move(ssl));
 
             /* Update options in router fields */
             if (!config.ssl_key.empty())

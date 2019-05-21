@@ -441,11 +441,12 @@ bool runtime_enable_server_ssl(Server* server,
     else if (key && cert && ca)
     {
         std::lock_guard<std::mutex> guard(crt_lock);
-        mxs::SSLContext* ssl = create_ssl(server->name(), key, cert, ca, version, depth, verify);
+        std::unique_ptr<mxs::SSLContext> ssl(create_ssl(server->name(), key, cert, ca,
+                                                        version, depth, verify));
 
         if (ssl)
         {
-            server->set_ssl_context(ssl);
+            server->set_ssl_context(std::move(ssl));
 
             if (server->serialize())
             {

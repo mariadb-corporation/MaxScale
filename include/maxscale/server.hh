@@ -519,12 +519,12 @@ public:
 
     mxs::SSLContext* ssl_context() const
     {
-        return m_ssl_context;
+        return m_ssl_context.get();
     }
 
-    void set_ssl_context(mxs::SSLContext* ssl)
+    void set_ssl_context(std::unique_ptr<mxs::SSLContext> ssl)
     {
-        m_ssl_context = ssl;
+        m_ssl_context.swap(ssl);
     }
 
 protected:
@@ -535,8 +535,9 @@ protected:
     }
 
 private:
-    static const int   DEFAULT_CHARSET = 0x08;  /**< The latin1 charset */
-    maxbase::EMAverage m_response_time;         /**< Response time calculations for this server */
-    std::mutex         m_average_write_mutex;   /**< Protects response time from concurrent writing */
-    mxs::SSLContext*   m_ssl_context;           /**< SSL context */
+    static const int   DEFAULT_CHARSET = 0x08;      /**< The latin1 charset */
+    maxbase::EMAverage m_response_time;             /**< Response time calculations for this server */
+    std::mutex         m_average_write_mutex;       /**< Protects response time from concurrent writing */
+
+    std::unique_ptr<mxs::SSLContext> m_ssl_context;     /**< SSL context */
 };
