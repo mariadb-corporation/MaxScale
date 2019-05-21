@@ -788,7 +788,7 @@ static int gw_read_and_write(DCB* dcb)
 {
     GWBUF* read_buffer = NULL;
     MXS_SESSION* session = dcb->session;
-    int nbytes_read;
+    int nbytes_read = 0;
     int return_code = 0;
 
     /* read available backend data */
@@ -800,7 +800,11 @@ static int gw_read_and_write(DCB* dcb)
         return 0;
     }
 
-    nbytes_read = gwbuf_length(read_buffer);
+    if (read_buffer)
+    {
+        nbytes_read = gwbuf_length(read_buffer);
+    }
+
     if (nbytes_read == 0)
     {
         mxb_assert(read_buffer == NULL);
