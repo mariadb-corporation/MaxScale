@@ -2150,8 +2150,8 @@ static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    if (!dcb->session->listener->ssl_context()
-        || (!dcb->ssl && dcb_create_SSL(dcb, dcb->session->listener->ssl_context()) != 0))
+    if (!dcb->session->listener->ssl().context()
+        || (!dcb->ssl && dcb_create_SSL(dcb, dcb->session->listener->ssl().context()) != 0))
     {
         return -1;
     }
@@ -2227,10 +2227,10 @@ int dcb_connect_SSL(DCB* dcb)
     int ssl_rval;
     int return_code;
 
-    if ((NULL == dcb->server || NULL == dcb->server->ssl_context())
-        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->server->ssl_context()) != 0))
+    if ((NULL == dcb->server || NULL == dcb->server->ssl().context())
+        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->server->ssl().context()) != 0))
     {
-        mxb_assert((NULL != dcb->server) && (NULL != dcb->server->ssl_context()));
+        mxb_assert((NULL != dcb->server) && (NULL != dcb->server->ssl().context()));
         return -1;
     }
     dcb->ssl_state = SSL_HANDSHAKE_REQUIRED;

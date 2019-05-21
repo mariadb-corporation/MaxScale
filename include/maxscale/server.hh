@@ -517,26 +517,20 @@ public:
      */
     void response_time_add(double ave, int num_samples);
 
-    const mxs::SSLConfig& ssl_config() const
+    const mxs::SSLProvider& ssl() const
     {
-        return m_ssl_config;
+        return m_ssl_provider;
     }
 
-    mxs::SSLContext* ssl_context() const
+    mxs::SSLProvider& ssl()
     {
-        return m_ssl_context.get();
-    }
-
-    void set_ssl_context(std::unique_ptr<mxs::SSLContext> ssl)
-    {
-        m_ssl_context.swap(ssl);
-        m_ssl_config = m_ssl_context->config();
+        return m_ssl_provider;
     }
 
 protected:
     SERVER(std::unique_ptr<mxs::SSLContext> ssl_context)
         : m_response_time{0.04, 0.35, 500}
-        , m_ssl_context{std::move(ssl_context)}
+        , m_ssl_provider{std::move(ssl_context)}
     {
     }
 
@@ -544,7 +538,5 @@ private:
     static const int   DEFAULT_CHARSET = 0x08;      /**< The latin1 charset */
     maxbase::EMAverage m_response_time;             /**< Response time calculations for this server */
     std::mutex         m_average_write_mutex;       /**< Protects response time from concurrent writing */
-
-    std::unique_ptr<mxs::SSLContext> m_ssl_context;     /**< SSL context */
-    mxs::SSLConfig                   m_ssl_config;      /**< SSL configuration */
+    mxs::SSLProvider   m_ssl_provider;
 };

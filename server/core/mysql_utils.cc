@@ -155,7 +155,7 @@ char* mxs_lestr_consume(uint8_t** c, size_t* size)
 
 MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, const char* passwd)
 {
-    auto ssl = server->ssl_config();
+    auto ssl = server->ssl().config();
 
     if (!ssl.empty())
     {

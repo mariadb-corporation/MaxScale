@@ -144,11 +144,6 @@ public:
     const char* state() const;
 
     /**
-     * The mxs::SSLContext object
-     */
-    mxs::SSLContext* ssl_context() const;
-
-    /**
      * Convert to JSON
      *
      * @return JSON representation of the object
@@ -191,6 +186,16 @@ public:
     struct users* users() const;
     void          set_users(struct users* u);
 
+    const mxs::SSLProvider& ssl() const
+    {
+        return m_ssl_provider;
+    }
+
+    mxs::SSLProvider& ssl()
+    {
+        return m_ssl_provider;
+    }
+
 private:
     enum State
     {
@@ -210,14 +215,13 @@ private:
     std::string m_auth_options;     /**< Authenticator options */
     void*       m_auth_instance;    /**< Authenticator instance */
 
-    std::unique_ptr<mxs::SSLContext> m_ssl_context;     /**< SSL context */
-
     struct users*        m_users;           /**< The user data for this listener */
     SERVICE*             m_service;         /**< The service which used by this listener */
     std::atomic<bool>    m_active;          /**< True if the port has not been deleted */
     MXS_PROTOCOL         m_proto_func;      /**< Preloaded protocol functions */
     MXS_AUTHENTICATOR    m_auth_func;       /**< Preloaded authenticator functions */
     MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
+    mxs::SSLProvider     m_ssl_provider;
 
     Type m_type;    /**< The type of the listener */
 

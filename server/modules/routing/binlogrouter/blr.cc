@@ -1477,7 +1477,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
     }
 
     /* SSL options */
-    if (auto ssl = router_inst->service->dbref->server->ssl_context())
+    if (auto ssl = router_inst->service->dbref->server->ssl().context())
     {
         dcb_printf(dcb, "%s", ssl->to_string().c_str());
     }
@@ -1954,7 +1954,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
     min5 /= 5.0;
 
     /* SSL options */
-    if (auto ssl = router_inst->service->dbref->server->ssl_context())
+    if (auto ssl = router_inst->service->dbref->server->ssl().context())
     {
         json_object_set_new(rval, "master_ssl", ssl->to_json());
     }

@@ -434,7 +434,7 @@ bool runtime_enable_server_ssl(Server* server,
 {
     bool rval = false;
 
-    if (server->ssl_context())
+    if (server->ssl().context())
     {
         config_runtime_error("Server '%s' already configured to use SSL.", server->name());
     }
@@ -446,7 +446,7 @@ bool runtime_enable_server_ssl(Server* server,
 
         if (ssl)
         {
-            server->set_ssl_context(std::move(ssl));
+            server->ssl().set_context(std::move(ssl));
 
             if (server->serialize())
             {
@@ -1903,7 +1903,7 @@ static bool validate_ssl_json(json_t* params, object_type type)
 
 static bool process_ssl_parameters(Server* server, json_t* params)
 {
-    mxb_assert(server->ssl_context() == NULL);
+    mxb_assert(server->ssl().context() == NULL);
     bool rval = true;
 
     if (have_ssl_json(params))

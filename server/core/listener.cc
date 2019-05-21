@@ -116,12 +116,12 @@ Listener::Listener(SERVICE* service,
     , m_authenticator(authenticator)
     , m_auth_options(auth_opts)
     , m_auth_instance(auth_instance)
-    , m_ssl_context(std::move(ssl))
     , m_users(nullptr)
     , m_service(service)
     , m_proto_func(*(MXS_PROTOCOL*)load_module(protocol.c_str(), MODULE_PROTOCOL))
     , m_auth_func(*(MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR))
     , m_params(params)
+    , m_ssl_provider(std::move(ssl))
 {
     if (strcasecmp(service->router_name(), "cli") == 0 || strcasecmp(service->router_name(), "maxinfo") == 0)
     {
@@ -476,9 +476,9 @@ bool Listener::create_listener_config(const char* filename)
         dprintf(file, "authenticator_options=%s\n", m_auth_options.c_str());
     }
 
-    if (m_ssl_context)
+    if (ssl().context())
     {
-        dprintf(file, "%s", m_ssl_context->serialize().c_str());
+        dprintf(file, "%s", ssl().context()->serialize().c_str());
     }
 
     ::close(file);
@@ -604,11 +604,6 @@ const MXS_AUTHENTICATOR& Listener::auth_func() const
 void* Listener::auth_instance() const
 {
     return m_auth_instance;
-}
-
-mxs::SSLContext* Listener::ssl_context() const
-{
-    return m_ssl_context.get();
 }
 
 const char* Listener::state() const

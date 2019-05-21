@@ -4850,7 +4850,7 @@ static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* c
     curr_master->password = router->password;
     curr_master->filestem = router->fileroot;
     /* SSL options */
-    auto server_ssl = router->service->dbref->server->ssl_config();
+    auto server_ssl = router->service->dbref->server->ssl().config();
 
     if (!server_ssl.empty())
     {
@@ -6354,7 +6354,7 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
         if (ssl)
         {
             updated = 1;
-            router->service->dbref->server->set_ssl_context(std::move(ssl));
+            router->service->dbref->server->ssl().set_context(std::move(ssl));
 
             /* Update options in router fields */
             if (!config.ssl_key.empty())

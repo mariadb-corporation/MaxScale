@@ -953,12 +953,12 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
 
     if (dcb->session == NULL
         || (dcb->session->state != SESSION_STATE_CREATED && dcb->session->state != SESSION_STATE_STARTED)
-        || (dcb->server->ssl_context() && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
+        || (dcb->server->ssl().context() && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
     }
 
-    bool with_ssl = dcb->server->ssl_context();
+    bool with_ssl = dcb->server->ssl().context();
     bool ssl_established = dcb->ssl_state == SSL_ESTABLISHED;
 
     MYSQL_session client;
