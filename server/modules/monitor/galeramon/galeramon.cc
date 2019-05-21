@@ -277,8 +277,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node is in desync - lets take it offline */
             if (strcmp(row[0], "wsrep_desync") == 0)
             {
-                if (strcasecmp(row[1], "YES") || strcasecmp(row[1], "ON")
-                    || strcasecmp(row[1], "1") || strcasecmp(row[1], "true"))
+                if (config_truth_value(row[1]))
                 {
                     info.joined = 0;
                 }
@@ -287,7 +286,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node rejects queries - lets take it offline */
             if (strcmp(row[0], "wsrep_reject_queries") == 0)
             {
-                if (strcasecmp(row[1], "ALL") || strcasecmp(row[1], "ALL_KILL"))
+                if (strcasecmp(row[1], "ALL") == 0 || strcasecmp(row[1], "ALL_KILL") == 0)
                 {
                     info.joined = 0;
                 }
@@ -296,8 +295,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node rejects queries - lets take it offline */
             if (strcmp(row[0], "wsrep_sst_donor_rejects_queries") == 0)
             {
-                if (strcasecmp(row[1], "YES") || strcasecmp(row[1], "ON")
-                    || strcasecmp(row[1], "1") || strcasecmp(row[1], "true"))
+                if (config_truth_value(row[1]))
                 {
                     info.joined = 0;
                 }
@@ -306,8 +304,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             /* Node is not ready - lets take it offline */
             if (strcmp(row[0], "wsrep_ready") == 0)
             {
-                if (strcasecmp(row[1], "NO") || strcasecmp(row[1], "OFF")
-                    || strcasecmp(row[1], "0") || strcasecmp(row[1], "false"))
+                if (!config_truth_value(row[1]))
                 {
                     info.joined = 0;
                 }
