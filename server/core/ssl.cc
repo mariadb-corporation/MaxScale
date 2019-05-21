@@ -200,7 +200,7 @@ namespace maxscale
 {
 
 // static
-SSLContext* SSLContext::create(const MXS_CONFIG_PARAMETER& params)
+std::unique_ptr<SSLContext> SSLContext::create(const MXS_CONFIG_PARAMETER& params)
 {
     mxb_assert(access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
     mxb_assert(params.get_string(CN_SSL_CERT).empty()
@@ -208,18 +208,17 @@ SSLContext* SSLContext::create(const MXS_CONFIG_PARAMETER& params)
     mxb_assert(params.get_string(CN_SSL_KEY).empty()
                || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
 
-    SSLContext* ssl = new(std::nothrow) SSLContext(params.get_string(CN_SSL_KEY),
-                                                   params.get_string(CN_SSL_CERT),
-                                                   params.get_string(CN_SSL_CA_CERT),
-                                                   (ssl_method_type_t)params.get_enum(CN_SSL_VERSION,
-                                                                                      ssl_version_values),
-                                                   params.get_integer(CN_SSL_CERT_VERIFY_DEPTH),
-                                                   params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE));
+    std::unique_ptr<SSLContext> ssl(
+        new(std::nothrow) SSLContext(params.get_string(CN_SSL_KEY),
+                                     params.get_string(CN_SSL_CERT),
+                                     params.get_string(CN_SSL_CA_CERT),
+                                     (ssl_method_type_t)params.get_enum(CN_SSL_VERSION, ssl_version_values),
+                                     params.get_integer(CN_SSL_CERT_VERIFY_DEPTH),
+                                     params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE)));
 
     if (ssl && !ssl->init())
     {
-        delete ssl;
-        ssl = nullptr;
+        ssl.reset();
     }
 
     return ssl;

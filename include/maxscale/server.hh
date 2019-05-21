@@ -528,9 +528,9 @@ public:
     }
 
 protected:
-    SERVER(mxs::SSLContext* ssl_context = nullptr)
+    SERVER(std::unique_ptr<mxs::SSLContext> ssl_context)
         : m_response_time{0.04, 0.35, 500}
-        , m_ssl_context{ssl_context}
+        , m_ssl_context{std::move(ssl_context)}
     {
     }
 

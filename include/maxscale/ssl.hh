@@ -74,7 +74,7 @@ public:
      *
      * @return A new SSL configuration or nullptr on error
      */
-    static SSLContext* create(const MXS_CONFIG_PARAMETER& params);
+    static std::unique_ptr<SSLContext> create(const MXS_CONFIG_PARAMETER& params);
 
     /**
      * Serialize the SSL configuration into a INI file section

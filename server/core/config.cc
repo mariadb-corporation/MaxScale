@@ -2859,7 +2859,7 @@ bool config_can_modify_at_runtime(const char* name)
 bool config_create_ssl(const char* name,
                        const MXS_CONFIG_PARAMETER& params,
                        bool require_cert,
-                       mxs::SSLContext** dest)
+                       std::unique_ptr<mxs::SSLContext>* dest)
 {
     bool ok = true;
     *dest = nullptr;

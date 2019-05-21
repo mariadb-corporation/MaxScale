@@ -31,8 +31,8 @@ public:
     Server(const std::string& name,
            const std::string& protocol = "",
            const std::string& authenticator = "",
-           mxs::SSLContext* ssl = nullptr)
-        : SERVER(ssl)
+           std::unique_ptr<mxs::SSLContext> ssl = {})
+        : SERVER(std::move(ssl))
         , m_name(name)
     {
         m_settings.protocol = protocol;

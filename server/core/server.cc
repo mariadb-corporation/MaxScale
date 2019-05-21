@@ -195,7 +195,7 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         return NULL;
     }
 
-    mxs::SSLContext* ssl = NULL;
+    std::unique_ptr<mxs::SSLContext> ssl;
 
     if (!config_create_ssl(name, params, false, &ssl))
     {
@@ -203,14 +203,13 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         return NULL;
     }
 
-    Server* server = new(std::nothrow) Server(name, protocol, authenticator, ssl);
+    Server* server = new(std::nothrow) Server(name, protocol, authenticator, std::move(ssl));
     DCB** persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
     if (!server || !persistent)
     {
         delete server;
         MXS_FREE(persistent);
-        delete ssl;
         return NULL;
     }
 

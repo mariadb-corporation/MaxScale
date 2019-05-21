@@ -394,15 +394,15 @@ bool runtime_destroy_server(Server* server)
     return rval;
 }
 
-static mxs::SSLContext* create_ssl(const char* name,
-                                   const char* key,
-                                   const char* cert,
-                                   const char* ca,
-                                   const char* version,
-                                   const char* depth,
-                                   const char* verify)
+static std::unique_ptr<mxs::SSLContext> create_ssl(const char* name,
+                                                   const char* key,
+                                                   const char* cert,
+                                                   const char* ca,
+                                                   const char* version,
+                                                   const char* depth,
+                                                   const char* verify)
 {
-    mxs::SSLContext* rval = NULL;
+    std::unique_ptr<mxs::SSLContext> rval;
     CONFIG_CONTEXT* obj = config_context_create(name);
 
     if (obj)

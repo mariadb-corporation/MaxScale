@@ -251,7 +251,7 @@ private:
      */
     Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
              const std::string& protocol, const std::string& authenticator,
-             const std::string& auth_opts, void* auth_instance, mxs::SSLContext* ssl,
+             const std::string& auth_opts, void* auth_instance, std::unique_ptr<mxs::SSLContext> ssl,
              const MXS_CONFIG_PARAMETER& params);
 
     /**
