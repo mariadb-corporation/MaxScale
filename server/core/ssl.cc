@@ -33,6 +33,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/service.hh>
+#include <maxscale/routingworker.hh>
 
 static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
@@ -196,9 +197,47 @@ static const char* get_ssl_errors()
     return ssl_errbuf->c_str();
 }
 
+class SSLProviderImp
+{
+public:
+    const mxs::SSLConfig& config() const;
+    mxs::SSLContext*      context() const;
+    void                  set_context(std::unique_ptr<mxs::SSLContext> ssl);
+
+    SSLProviderImp(std::unique_ptr<mxs::SSLContext>&& context);
+
+private:
+    mxs::rworker_local<std::shared_ptr<mxs::SSLContext>> m_context;     /**< SSL context */
+    mxs::SSLConfig                                       m_config;      /**< SSL configuration */
+};
+
+const mxs::SSLConfig& SSLProviderImp::config() const
+{
+    return m_config;
+}
+
+mxs::SSLContext* SSLProviderImp::context() const
+{
+    mxb_assert_message(mxs::RoutingWorker::get_current(), "Must be used on a RoutingWorker");
+    return m_context->get();
+}
+
+void SSLProviderImp::set_context(std::unique_ptr<mxs::SSLContext> ssl)
+{
+    mxb_assert_message(mxs::RoutingWorker::get_current()
+                       == mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN),
+                       "Must be only set on the main RoutingWorker");
+    m_config = ssl ? ssl->config() : mxs::SSLConfig {};
+    m_context.assign(std::move(ssl));
+}
+
+SSLProviderImp::SSLProviderImp(std::unique_ptr<mxs::SSLContext>&& context)
+    : m_context {std::move(context)}
+{
+}
+
 namespace maxscale
 {
-
 
 SSLConfig::SSLConfig(const MXS_CONFIG_PARAMETER& params)
     : key(params.get_string(CN_SSL_KEY))
@@ -412,5 +451,29 @@ std::string SSLContext::to_string() const
 SSLContext::~SSLContext()
 {
     SSL_CTX_free(m_ctx);
+}
+
+SSLProvider::SSLProvider(std::unique_ptr<mxs::SSLContext>&& ssl)
+    : m_imp(new SSLProviderImp(std::move(ssl)))
+{
+}
+
+SSLProvider::~SSLProvider()
+{
+}
+
+mxs::SSLContext* SSLProvider::context() const
+{
+    return m_imp->context();
+}
+
+const mxs::SSLConfig& SSLProvider::config() const
+{
+    return m_imp->config();
+}
+
+void SSLProvider::set_context(std::unique_ptr<mxs::SSLContext> ssl)
+{
+    m_imp->set_context(std::move(ssl));
 }
 }

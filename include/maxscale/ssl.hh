@@ -58,6 +58,9 @@ ssl_method_type_t string_to_ssl_method_type(const char* str);
 
 extern const MXS_ENUM_VALUE ssl_version_values[];
 
+// The concrete implementation of the SSLProvider class (hides the dependency on routingworker.hh)
+class SSLProviderImp;
+
 namespace maxscale
 {
 
@@ -133,5 +136,20 @@ private:
 
     SSLContext(const SSLConfig& cfg);
     bool init();
+};
+
+// A SSL connection provider (incoming or outgoing). Used by servers and listeners.
+class SSLProvider
+{
+public:
+    const mxs::SSLConfig& config() const;
+    mxs::SSLContext*      context() const;
+    void                  set_context(std::unique_ptr<mxs::SSLContext> ssl);
+
+    SSLProvider(std::unique_ptr<mxs::SSLContext>&& context);
+    ~SSLProvider();
+
+private:
+    std::unique_ptr<SSLProviderImp> m_imp;
 };
 }
