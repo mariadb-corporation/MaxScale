@@ -15,18 +15,24 @@
 #include "testconnections.h"
 #include <maxscale/jansson.hh>
 
-class MaxCtrl
+/**
+ * @class MaxRest
+ *
+ * MaxRest is a class that (eventually) provides the same functionality as
+ * the command line program maxctrl, but for use in programs.
+ */
+class MaxRest
 {
 public:
-    MaxCtrl(const MaxCtrl&) = delete;
-    MaxCtrl& operator=(const MaxCtrl&) = delete;
+    MaxRest(const MaxRest&) = delete;
+    MaxRest& operator=(const MaxRest&) = delete;
 
     /**
      * A class corresponding to a row in the output of 'maxctrl list servers'
      */
     struct Server
     {
-        Server(const MaxCtrl& maxctrl, json_t* pObject);
+        Server(const MaxRest& maxrest, json_t* pObject);
 
         std::string name;
         std::string address;
@@ -39,9 +45,9 @@ public:
      * Constructor
      *
      * @param pTest  The TestConnections instance. Must exist for the lifetime
-     *               of the MaxCtrl instance.
+     *               of the MaxRest instance.
      */
-    MaxCtrl(TestConnections* pTest);
+    MaxRest(TestConnections* pTest);
 
     /**
      * @return  The TestConnections instance used by this instance.
@@ -170,7 +176,7 @@ private:
 };
 
 template<>
-std::string MaxCtrl::get<std::string>(json_t* pObject, const std::string& path, Presence presence) const;
+std::string MaxRest::get<std::string>(json_t* pObject, const std::string& path, Presence presence) const;
 
 template<>
-int64_t MaxCtrl::get<int64_t>(json_t* pObject, const std::string& path, Presence presence) const;
+int64_t MaxRest::get<int64_t>(json_t* pObject, const std::string& path, Presence presence) const;

@@ -28,7 +28,7 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
   blob_test.cpp keepalived_func.cpp tcp_connection.cpp base/stopwatch.cpp fw_copy_rules.cpp
-  labels_table.cpp envv.cpp clustrix_nodes.cpp maxctrl.cc
+  labels_table.cpp envv.cpp clustrix_nodes.cpp maxrest.cc
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
 target_link_libraries(testcore ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt maxbase)

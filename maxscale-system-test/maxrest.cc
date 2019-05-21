@@ -11,35 +11,35 @@
  * Public License.
  */
 
-#include "maxctrl.hh"
+#include "maxrest.hh"
 
 using namespace std;
 
-MaxCtrl::Server::Server(const MaxCtrl& maxctrl, json_t* pObject)
-    : name       (maxctrl.get<string> (pObject, "id", Presence::MANDATORY))
-    , address    (maxctrl.get<string> (pObject, "attributes/parameters/address"))
-    , port       (maxctrl.get<int64_t>(pObject, "attributes/parameters/port"))
-    , connections(maxctrl.get<int64_t>(pObject, "attributes/statistics/connections"))
-    , state      (maxctrl.get<string> (pObject, "attributes/state"))
+MaxRest::Server::Server(const MaxRest& maxrest, json_t* pObject)
+    : name       (maxrest.get<string> (pObject, "id", Presence::MANDATORY))
+    , address    (maxrest.get<string> (pObject, "attributes/parameters/address"))
+    , port       (maxrest.get<int64_t>(pObject, "attributes/parameters/port"))
+    , connections(maxrest.get<int64_t>(pObject, "attributes/statistics/connections"))
+    , state      (maxrest.get<string> (pObject, "attributes/state"))
 {
 }
 
-MaxCtrl::MaxCtrl(TestConnections* pTest)
+MaxRest::MaxRest(TestConnections* pTest)
     : m_test(*pTest)
 {
 }
 
-unique_ptr<json_t> MaxCtrl::servers() const
+unique_ptr<json_t> MaxRest::servers() const
 {
     return curl("servers");
 }
 
-vector<MaxCtrl::Server> MaxCtrl::list_servers() const
+vector<MaxRest::Server> MaxRest::list_servers() const
 {
     return get_array<Server>(servers().get(), "data", Presence::MANDATORY);
 }
 
-json_t* MaxCtrl::get_object(json_t* pObject, const string& key, Presence presence) const
+json_t* MaxRest::get_object(json_t* pObject, const string& key, Presence presence) const
 {
     json_t* pValue = json_object_get(pObject, key.c_str());
 
@@ -51,7 +51,7 @@ json_t* MaxCtrl::get_object(json_t* pObject, const string& key, Presence presenc
     return pValue;
 }
 
-json_t* MaxCtrl::get_leaf_object(json_t* pObject, const string& key, Presence presence) const
+json_t* MaxRest::get_leaf_object(json_t* pObject, const string& key, Presence presence) const
 {
     auto i = key.find("/");
 
@@ -71,7 +71,7 @@ json_t* MaxCtrl::get_leaf_object(json_t* pObject, const string& key, Presence pr
     return pObject;
 }
 
-unique_ptr<json_t> MaxCtrl::parse(const string& json) const
+unique_ptr<json_t> MaxRest::parse(const string& json) const
 {
     json_error_t error;
     unique_ptr<json_t> sRoot(json_loads(json.c_str(), 0, &error));
@@ -84,7 +84,7 @@ unique_ptr<json_t> MaxCtrl::parse(const string& json) const
     return sRoot;
 }
 
-unique_ptr<json_t> MaxCtrl::curl(const string& path) const
+unique_ptr<json_t> MaxRest::curl(const string& path) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
     string command = "curl -u admin:mariadb " + url;
@@ -99,14 +99,14 @@ unique_ptr<json_t> MaxCtrl::curl(const string& path) const
     return parse(result.second);
 }
 
-void MaxCtrl::raise(const std::string& message) const
+void MaxRest::raise(const std::string& message) const
 {
     ++m_test.global_result;
     throw runtime_error(message);
 }
 
 template<>
-string MaxCtrl::get<string>(json_t* pObject, const string& key, Presence presence) const
+string MaxRest::get<string>(json_t* pObject, const string& key, Presence presence) const
 {
     json_t* pValue = get_leaf_object(pObject, key, presence);
 
@@ -119,7 +119,7 @@ string MaxCtrl::get<string>(json_t* pObject, const string& key, Presence presenc
 }
 
 template<>
-int64_t MaxCtrl::get<int64_t>(json_t* pObject, const string& key, Presence presence) const
+int64_t MaxRest::get<int64_t>(json_t* pObject, const string& key, Presence presence) const
 {
     json_t* pValue = get_leaf_object(pObject, key, presence);
 

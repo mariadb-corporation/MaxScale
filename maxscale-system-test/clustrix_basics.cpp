@@ -10,7 +10,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/jansson.hh>
 #include "testconnections.h"
-#include "maxctrl.hh"
+#include "maxrest.hh"
 
 using namespace std;
 
@@ -28,11 +28,11 @@ const set<string> bootstrap_servers =
 const std::string monitor_name = "Clustrix-Monitor";
 
 
-void check_for_servers(const MaxCtrl& maxctrl)
+void check_for_servers(const MaxRest& maxrest)
 {
-    TestConnections& test = maxctrl.test();
+    TestConnections& test = maxrest.test();
 
-    auto servers = maxctrl.list_servers();
+    auto servers = maxrest.list_servers();
 
     test.expect(servers.size() >= bootstrap_servers.size(),
                 "Expected at least %d servers.", (int)bootstrap_servers.size());
@@ -78,9 +78,9 @@ void check_for_servers(const MaxCtrl& maxctrl)
 
 void run_test(TestConnections& test)
 {
-    MaxCtrl maxctrl(&test);
+    MaxRest maxrest(&test);
 
-    check_for_servers(maxctrl);
+    check_for_servers(maxrest);
 }
 
 }
