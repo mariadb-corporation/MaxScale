@@ -1141,6 +1141,9 @@ set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 add_test_executable(clustrix_mon.cpp clustrix_mon clustrix_mon LABELS CLUSTRIX_BACKEND UNSTABLE)
 set_tests_properties(clustrix_mon PROPERTIES TIMEOUT 7200)
 
+add_test_executable(clustrix_basics.cpp clustrix_basics clustrix_basics LABELS CLUSTRIX_BACKEND)
+set_tests_properties(clustrix_basics PROPERTIES TIMEOUT 7200)
+
 ############################################
 # END: tests for Clustrix monitor          #
 ############################################
