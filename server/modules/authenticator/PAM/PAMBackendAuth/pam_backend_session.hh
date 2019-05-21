@@ -18,9 +18,10 @@
 
 class PamBackendSession
 {
-    PamBackendSession(const PamBackendSession& orig);
-    PamBackendSession& operator=(const PamBackendSession&);
 public:
+    PamBackendSession(const PamBackendSession& orig) = delete;
+    PamBackendSession& operator=(const PamBackendSession&) = delete;
+
     PamBackendSession();
     bool extract(DCB* dcb, GWBUF* buffer);
     int  authenticate(DCB* dcb);
@@ -28,6 +29,14 @@ public:
 private:
     bool send_client_password(DCB* dcb);
 
-    pam_auth_state m_state;     /**< Authentication state*/
-    uint8_t        m_sequence;  /**< The next packet seqence number */
+    enum class State
+    {
+        INIT,
+        RECEIVED_PROMT,
+        PW_SENT,
+        DONE
+    };
+
+    State   m_state {State::INIT}; /**< Authentication state*/
+    uint8_t m_sequence {0};  /**< The next packet sequence number */
 };
