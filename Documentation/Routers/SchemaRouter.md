@@ -123,8 +123,9 @@ List of databases to ignore when checking for duplicate databases.
 
 ### `ignore_databases_regex`
 
-Regular expression that is matched against database names when checking for
-duplicate databases.
+A
+[PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
+that is matched against database names when checking for duplicate databases.
 
 ### `preferred_server`
 

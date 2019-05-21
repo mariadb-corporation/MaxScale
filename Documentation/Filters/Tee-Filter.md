@@ -36,46 +36,14 @@ filters=DataMartFilter
 The tee filter requires a mandatory parameter to define the service to replicate
 statements to and accepts a number of optional parameters.
 
-### `match`
+### `match`, `exclude` and `options`
 
-An optional parameter used to limit the queries that will be replicated by the
-tee filter. The parameter value is a PCRE2 regular expression that is used to
-match against the SQL text. Only SQL statements that match the text passed as
-the value of this parameter will be sent to the service defined in the filter
-section.
+These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+limit the queries replicated by the tee filter.
 
 ```
 match=/insert.*into.*order*/
-```
-
-### `exclude`
-
-An optional parameter used to limit the queries that will be replicated by the
-tee filter. The parameter value is a PCRE2 regular expression that is used to
-match against the SQL text. Any SQL statements that match the text passed as the
-value of this parameter will be excluded from the replication stream.
-
-```
 exclude=/select.*from.*t1/
-```
-
-If both `match` and `exclude` parameters are defined, `exclude` takes
-precedence.
-
-### `options`
-
-The options parameter controls the regular expression options. The following
-options are accepted.
-
-|Option    |Description                                 |
-|----------|--------------------------------------------|
-|ignorecase|Use case-insensitive matching               |
-|case      |Use case-sensitive matching                 |
-|extended  |Use extended regular expression syntax (ERE)|
-
-To use multiple filter options, list them in a comma-separated list.
-
-```
 options=case,extended
 ```
 

@@ -9,7 +9,7 @@ Table of Contents
    * [Filter Parameters](#filter-parameters)
       * [filebase](#filebase)
       * [count](#count)
-      * [match](#match)
+      * [match, exclude and options](#match-exclude-and-options)
       * [exclude](#exclude)
       * [source](#source)
       * [user](#user)
@@ -44,22 +44,6 @@ password=mypasswd
 filters=MyLogFilter
 ```
 
-### Filter Options
-
-The top filter accepts the following options.
-
-|Option    |Description                                 |
-|----------|--------------------------------------------|
-|ignorecase|Use case-insensitive matching               |
-|case      |Use case-sensitive matching                 |
-|extended  |Use extended regular expression syntax (ERE)|
-
-To use multiple filter options, list them in a comma-separated list.
-
-```
-options=case,extended
-```
-
 ### Filter Parameters
 
 The top filter has one mandatory parameter, `filebase`, and a number of optional
@@ -88,35 +72,16 @@ count=30
 
 The default value for the number of statements recorded is 10.
 
-#### `match`
+#### `match`, `exclude` and `options`
 
-An optional parameter that can be used to limit the queries that will be logged
-by the top filter. The parameter value is a regular expression that is used to
-match against the SQL text. Only SQL statements that matches the text passed as
-the value of this parameter will be logged.
+These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+limit the queries logged by the top filter.
 
 ```
 match=select.*from.*customer.*where
-```
-
-All regular expressions are evaluated with the option to ignore the case of the
-text, therefore a match option of select will match both select, SELECT and any
-form of the word with upper or lowercase characters.
-
-#### `exclude`
-
-An optional parameter that can be used to limit the queries that will be logged
-by the top filter. The parameter value is a regular expression that is used to
-match against the SQL text. SQL statements that match the text passed as the
-value of this parameter will be excluded from the log output.
-
-```
 exclude=where
+options=case,extended
 ```
-
-All regular expressions are evaluated with the option to ignore the case of the
-text, therefore an exclude option of select will exclude statements that contain
-both where, WHERE or any form of the word with upper or lowercase characters.
 
 #### `source`
 

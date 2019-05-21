@@ -74,39 +74,11 @@ _deflate_. These are the mandatory compression algorithms required by the
 Avro specification. For more information about the compression types,
 refer to the [Avro specification](https://avro.apache.org/docs/current/spec.html#Required+Codecs).
 
-#### `match`
+#### `match` and `exclude`
 
-Only process events for tables that match this PCRE2 regular expression. See
-[Regular Expressions](../Getting-Started/Configuration-Guide.md#regular-expressions)
-for more information about regular expressions.
-
-This parameter was added in MaxScale 2.2.14.
-
-#### `exclude`
-
-Ignore events for tables that match this PCRE2 regular expression. This can be
-combined with the `match` parameter to implement table event filtering.
-
-This parameter was added in MaxScale 2.2.14.
-
-**Note:** Since the 2.1 version of MaxScale, all of the router options can also
-be defined as parameters.
-
-```
-[replication-router]
-type=service
-router=binlogrouter
-router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
-user=maxuser
-password=maxpwd
-
-[avro-router]
-type=service
-router=avrorouter
-binlogdir=/var/lib/mysql
-filestem=binlog
-avrodir=/var/lib/maxscale
-```
+These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+filter events for processing depending on table names. Avrorouter does not support the
+*options*-parameter for regular expressions.
 
 ### Router Options
 
@@ -171,6 +143,24 @@ beginning of the binary log file.
 currently, if used with Avrorouter, the option `mariadb10_master_gtid` must be
 set to off in the Binlog Server configuration in order to correclty read the
 binlog files.
+
+##### Example configuration
+
+```
+[replication-router]
+type=service
+router=binlogrouter
+router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
+user=maxuser
+password=maxpwd
+
+[avro-router]
+type=service
+router=avrorouter
+binlogdir=/var/lib/mysql
+filestem=binlog
+avrodir=/var/lib/maxscale
+```
 
 #### Avro file options
 
