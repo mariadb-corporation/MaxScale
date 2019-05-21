@@ -986,7 +986,7 @@ int dcb_drain_writeq(DCB* dcb)
          */
         if (stop_writing)
         {
-            dcb->writeq = gwbuf_append(local_writeq, dcb->writeq);
+            dcb->writeq = dcb->writeq ? gwbuf_append(local_writeq, dcb->writeq) : local_writeq;
             local_writeq = NULL;
         }
         else

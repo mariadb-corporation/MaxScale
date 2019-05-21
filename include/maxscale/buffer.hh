@@ -272,7 +272,7 @@ extern int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs);
  * Append a buffer onto a linked list of buffer structures.
  *
  * @param head  The current head of the linked list or NULL.
- * @param tail  Another buffer to make the tail of the linked list
+ * @param tail  Another buffer to make the tail of the linked list, must not be NULL
  *
  * @return The new head of the linked list
  */
