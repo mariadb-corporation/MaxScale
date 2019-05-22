@@ -87,3 +87,29 @@ int Clustrix_nodes::check_replication()
 
     return res;
 }
+
+string Clustrix_nodes::block_command(int node) const
+{
+    string command = Mariadb_nodes::block_command(node);
+
+    // Block health-check port as well.
+    command += ";";
+    command += "iptables -I INPUT -p tcp --dport 3581 -j REJECT";
+    command += ";";
+    command += "ip6tables -I INPUT -p tcp --dport 3581 -j REJECT";
+
+    return command;
+}
+
+string Clustrix_nodes::unblock_command(int node) const
+{
+    string command = Mariadb_nodes::unblock_command(node);
+
+    // Unblock health-check port as well.
+    command += ";";
+    command += "iptables -I INPUT -p tcp --dport 3581 -j ACCEPT";
+    command += ";";
+    command += "ip6tables -I INPUT -p tcp --dport 3581 -j ACCEPT";
+
+    return command;
+}

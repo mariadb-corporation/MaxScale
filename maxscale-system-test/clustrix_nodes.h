@@ -54,4 +54,7 @@ public:
      * @return 0 in case of success
      */
     int prepare_server(int i);
+
+    std::string block_command(int node) const override;
+    std::string unblock_command(int node) const override;
 };
