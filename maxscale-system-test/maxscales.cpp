@@ -99,7 +99,7 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
     {
         if (verbose)
         {
-            printf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(conn_rwsplit[m]));
+            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_rwsplit[m]));
         }
         rc = my_errno;
     }
@@ -136,7 +136,7 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
     {
         if (verbose)
         {
-            printf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(conn_master[m]));
+            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_master[m]));
         }
         rc = my_errno;
     }
@@ -173,7 +173,7 @@ int Maxscales::connect_readconn_slave(int m, const std::string& db)
     {
         if (verbose)
         {
-            printf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(conn_slave[m]));
+            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_slave[m]));
         }
         rc = my_errno;
     }

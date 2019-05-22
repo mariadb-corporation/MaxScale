@@ -120,7 +120,10 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Dropping user", Test->maxscales->user_name);
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER user@'%%';");
+
+    Test->maxscales->verbose = true;
     Test->check_maxscale_alive(0);
+    Test->maxscales->verbose = false;
 
     int rval = Test->global_result;
     delete Test;
