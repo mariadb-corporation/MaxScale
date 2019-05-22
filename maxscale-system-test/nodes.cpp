@@ -5,6 +5,7 @@
 #include <future>
 #include <functional>
 #include <algorithm>
+#include <signal.h>
 
 #include "envv.h"
 
@@ -189,8 +190,14 @@ int Nodes::ssh_node(int node, const char* ssh, bool sudo)
     {
         return WEXITSTATUS(rc);
     }
+    else if (WIFSIGNALED(rc) && WTERMSIG(rc) == SIGHUP)
+    {
+        // SIGHUP appears to happen for SSH connections
+        return 0;
+    }
     else
     {
+        std::cout << strerror(errno) << std::endl;
         return 256;
     }
 }
