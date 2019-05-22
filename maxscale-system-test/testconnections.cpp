@@ -402,7 +402,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         clustrix->use_ipv6 = false;
         clustrix->take_snapshot_command = take_snapshot_command;
         clustrix->revert_snapshot_command = revert_snapshot_command;
-        clustrix->start_cluster();
+        clustrix->fix_replication();
     }
     else
     {

@@ -31,21 +31,27 @@ public:
     }
 
     /**
-     * @brief install_clustrix
-     * @param m node index
-     * @return 0 in case of success
-     */
-    int install_clustrix(int m);
-
-    /**
      * @brief start_cluster Intstalls Clustrix on all nodes, configure license, form cluster
      * @return 0 in case of success
      */
-    int start_cluster();
+    int start_replication();
 
     /**
      * @brief cnf_servers Generate Clustrix servers description for maxscale.cnf
      * @return text for maxscale.cnf
      */
     std::string cnf_servers();
+
+    /**
+     * @brief check_replication Checks if Clustrix Cluster is up and running
+     * @return 0 if Clustrix Cluster is ok
+     */
+    int check_replication();
+
+    /**
+     * @brief install_clustrix
+     * @param m node index
+     * @return 0 in case of success
+     */
+    int prepare_server(int i);
 };

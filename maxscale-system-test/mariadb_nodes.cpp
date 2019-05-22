@@ -751,6 +751,7 @@ int Mariadb_nodes::check_replication()
 bool Mariadb_nodes::fix_replication()
 {
     bool rval = true;
+    int attempts = 25;
 
     if (check_replication())
     {
@@ -764,6 +765,12 @@ bool Mariadb_nodes::fix_replication()
             cout << "Starting replication" << endl;
             start_replication();
 
+            while (check_replication() && (attempts > 0))
+            {
+                cout << "Replication is still broken, waiting" << endl;
+                sleep(10);
+                attempts--;
+            }
             if (check_replication() == 0)
             {
                 cout << "Replication is fixed" << endl;
