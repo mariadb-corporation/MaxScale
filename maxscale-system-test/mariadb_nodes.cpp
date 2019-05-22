@@ -489,26 +489,50 @@ int Mariadb_nodes::clean_iptables(int node)
                       port[node]);
 }
 
+std::string Mariadb_nodes::block_command(int node) const
+{
+    const char FORMAT[] =
+        "iptables -I INPUT -p tcp --dport %d -j REJECT;"
+        "ip6tables -I INPUT -p tcp --dport %d -j REJECT";
+
+    char command[sizeof(FORMAT) + 20];
+
+    sprintf(command, FORMAT, port[node], port[node]);
+
+    return command;
+}
+
+std::string Mariadb_nodes::unblock_command(int node) const
+{
+    const char FORMAT[] =
+        "iptables -I INPUT -p tcp --dport %d -j ACCEPT;"
+        "ip6tables -I INPUT -p tcp --dport %d -j ACCEPT";
+
+    char command[sizeof(FORMAT) + 20];
+
+    sprintf(command, FORMAT, port[node], port[node]);
+
+    return command;
+}
+
 int Mariadb_nodes::block_node(int node)
 {
-    int local_result = 0;
+    std::string command = block_command(node);
 
-    local_result += ssh_node_f(node, true,
-                               "iptables -I INPUT -p tcp --dport %d -j REJECT;"
-                               "ip6tables -I INPUT -p tcp --dport %d -j REJECT",
-                               port[node], port[node]);
+    int local_result = 0;
+    local_result += ssh_node_f(node, true, "%s", command.c_str());
+
     blocked[node] = true;
     return local_result;
 }
 
 int Mariadb_nodes::unblock_node(int node)
 {
+    std::string command = unblock_command(node);
+
     int local_result = 0;
     local_result += clean_iptables(node);
-    local_result += ssh_node_f(node, true,
-                               "iptables -I INPUT -p tcp --dport %d -j ACCEPT;"
-                               "ip6tables -I INPUT -p tcp --dport %d -j ACCEPT",
-                               port[node], port[node]);
+    local_result += ssh_node_f(node, true, "%s", command.c_str());
 
     blocked[node] = false;
     return local_result;

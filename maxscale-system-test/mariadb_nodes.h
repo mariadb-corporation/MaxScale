@@ -241,6 +241,18 @@ public:
     void create_users(int node);
 
     /**
+     * @param node Index of node to block.
+     * @return The command used for blocking a node.
+     */
+    virtual std::string block_command(int node) const;
+
+    /**
+     * @param node Index of node to unblock.
+     * @return The command used for unblocking a node.
+     */
+    virtual std::string unblock_command(int node) const;
+
+    /**
      * @brif BlockNode setup firewall on a backend node to block MariaDB port
      * @param node Index of node to block
      * @return 0 in case of success
