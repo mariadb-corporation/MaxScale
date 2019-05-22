@@ -453,25 +453,6 @@ int mysql_send_auth_error(DCB* dcb,
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
-char* create_auth_failed_msg(GWBUF* readbuf,
-                             char* hostaddr,
-                             uint8_t* sha1)
-{
-    char* errstr;
-    char* uname = (char*)GWBUF_DATA(readbuf) + 5;
-    const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
-
-    /** -4 comes from 2X'%s' minus terminating char */
-    errstr = (char*)MXS_MALLOC(strlen(uname) + strlen(ferrstr) + strlen(hostaddr) + strlen("YES") - 6 + 1);
-
-    if (errstr != NULL)
-    {
-        sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES"));
-    }
-
-    return errstr;
-}
-
 /**
  * Create a message error string to send via MySQL ERR packet.
  *

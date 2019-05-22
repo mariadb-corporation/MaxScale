@@ -44,7 +44,6 @@ static void        backend_set_delayqueue(DCB* dcb, GWBUF* queue);
 static int         gw_change_user(DCB* backend_dcb, SERVER* server, MXS_SESSION* in_session, GWBUF* queue);
 static char*       gw_backend_default_auth();
 static GWBUF*      process_response_data(DCB* dcb, GWBUF** readbuf, int nbytes_to_process);
-extern char*       create_auth_failed_msg(GWBUF* readbuf, char* hostaddr, uint8_t* sha1);
 static bool        sescmd_response_complete(DCB* dcb);
 static void        gw_reply_on_error(DCB* dcb, mxs_auth_state_t state);
 static int         gw_read_and_write(DCB* dcb);
