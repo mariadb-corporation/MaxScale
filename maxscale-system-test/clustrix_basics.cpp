@@ -76,11 +76,69 @@ void check_for_servers(const MaxRest& maxrest)
                 mxb::join(dynamic_servers).c_str());
 }
 
+void expect_all_servers_to_be(const MaxRest& maxrest, const std::string& state)
+{
+    cout << "Expecting the state of all servers to be: " << state << endl;
+
+    TestConnections& test = maxrest.test();
+    auto servers = maxrest.list_servers();
+
+    for (const auto& server : servers)
+    {
+        cout << server.name << "(" << server.address << "): " << server.state << endl;
+        test.expect(server.state == state,
+                    "State of %s(%s) is '%s', expected '%s.",
+                    server.name.c_str(),
+                    server.address.c_str(),
+                    server.state.c_str(),
+                    state.c_str());
+    }
+}
+
+void check_state_change(const MaxRest& maxrest)
+{
+    TestConnections& test = maxrest.test();
+
+    expect_all_servers_to_be(maxrest, "Master, Running");
+    cout << endl;
+
+    int node = 0;
+    string address = test.clustrix->IP_private[node];
+
+    cout << "Blocking node: " << node << endl;
+    test.clustrix->block_node(node);
+
+    int cycles = 3;
+    cout << "Waiting for " << cycles << " monitor cycles." << endl;
+    test.maxscales->wait_for_monitor(cycles);
+
+    auto servers = maxrest.list_servers();
+
+    for (const auto& server : servers)
+    {
+        cout << server.name << "(" << server.address << "): " << server.state << endl;
+        if (server.address == address)
+        {
+            test.expect(server.state == "Down", "Blocked server was not 'Down' but '%s'.", server.state.c_str());
+        }
+    }
+
+    cout << endl;
+
+    test.clustrix->unblock_node(node);
+    cout << "Waiting for " << cycles << " monitor cycles." << endl;
+    test.maxscales->wait_for_monitor(cycles);
+
+    expect_all_servers_to_be(maxrest, "Master, Running");
+    cout << endl;
+}
+
 void run_test(TestConnections& test)
 {
     MaxRest maxrest(&test);
 
     check_for_servers(maxrest);
+    check_state_change(maxrest);
 }
 
 }
