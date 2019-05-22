@@ -43,16 +43,11 @@ type=filter
 module=qlafilter
 filebase=/tmp/QueryLog
 
-[Debug-Interface]
-type=service
-router=debugcli
-
 [RW-Split-Listener]
 type=listener
 service=RW-Split-Router
 protocol=MySQLClient
 port=4006
-#socket=/tmp/rwsplit.sock
 
 [Read-Connection-Listener-Slave]
 type=listener
@@ -66,12 +61,6 @@ service=Read-Connection-Router-Master
 protocol=MySQLClient
 port=4008
 
-[Debug-Listener]
-type=listener
-service=Debug-Interface
-protocol=telnetd
-port=4442
-
 [CLI]
 type=service
 router=cli
@@ -80,7 +69,6 @@ router=cli
 type=listener
 service=CLI
 protocol=maxscaled
-#address=localhost
 socket=default
 
 [server1]
