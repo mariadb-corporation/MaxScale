@@ -824,8 +824,10 @@ static bool check_default_table_permissions(MYSQL* mysql,
 
             for (MYSQL_ROW row = mysql_fetch_row(res); row; row = mysql_fetch_row(res))
             {
-                if (strcasestr(row[0], "SHOW DATABASES"))
+                if (strcasestr(row[0], "SHOW DATABASES") || strcasestr(row[0], "ALL PRIVILEGES ON *.*"))
                 {
+                    // GRANT ALL PRIVILEGES ON *.* will overwrite SHOW DATABASES so it needs to be checked
+                    // separately
                     found = true;
                     break;
                 }
