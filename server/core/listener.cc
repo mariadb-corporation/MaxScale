@@ -56,11 +56,11 @@ namespace
 class RateLimit
 {
 public:
-    void auth_failed(const std::string& remote)
+    bool auth_failed(const std::string& remote)
     {
         auto& u = m_failures[remote];
         u.last_failure = Clock::now();
-        u.failures++;
+        return ++u.failures >= config_get_global_options()->max_auth_errors_until_block;
     }
 
     bool is_blocked(const std::string& remote)
@@ -1039,5 +1039,9 @@ void Listener::accept_connections()
 
 void Listener::mark_auth_as_failed(const std::string& remote)
 {
-    rate_limit.auth_failed(remote);
+    if (rate_limit.auth_failed(remote))
+    {
+        MXS_NOTICE("Host '%s' blocked for %d seconds due to too many authentication failures.",
+                   remote.c_str(), BLOCK_TIME);
+    }
 }
