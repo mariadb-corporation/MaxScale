@@ -3066,6 +3066,15 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
     return "<unknown parameter name>";
 }
 
+static bool wrong_protocol_type(const std::string& type, const std::string& protocol)
+{
+    bool have_server_proto = strcasecmp(protocol.c_str(), "mariadbbackend") == 0
+        || strcasecmp(protocol.c_str(), "mysqlbackend") == 0;
+    bool have_server_type = type == CN_SERVER;
+
+    return have_server_proto != have_server_type;
+}
+
 /**
  * @brief Check that the configuration objects have valid parameters
  *
@@ -3107,6 +3116,14 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
 
         if (!mod)   // Error is logged in load_module
         {
+            rval = false;
+            continue;
+        }
+
+        // TODO: Separate the listener and server protocol objects, hard-coded checks are not good
+        if (wrong_protocol_type(type, config_get_string(obj->parameters, CN_PROTOCOL)))
+        {
+            MXS_ERROR("Wrong protocol module type for '%s'", obj->object);
             rval = false;
             continue;
         }
