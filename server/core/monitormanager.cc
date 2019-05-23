@@ -488,29 +488,13 @@ json_t* MonitorManager::monitor_list_to_json(const char* host)
 json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const char* host)
 {
     mxb_assert(Monitor::is_admin_thread());
-    std::string name;
-    this_unit.foreach_monitor(
-        [&name, server](Monitor* mon) {
-            // The serverlist of an individual monitor should not change while a
-            // monitor is running.
-            for (MonitorServer* db : mon->servers())
-            {
-                if (db->server == server)
-                {
-                    mxb_assert(name.empty());
-                    name = mon->m_name;
-                    break;
-                }
-            }
-            return true;
-        });
+    json_t* rel = nullptr;
 
-    json_t* rel = NULL;
-
-    if (!name.empty())
+    string mon_name = Monitor::get_server_monitor(server);
+    if (!mon_name.empty())
     {
         rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
-        mxs_json_add_relation(rel, name.c_str(), CN_MONITORS);
+        mxs_json_add_relation(rel, mon_name.c_str(), CN_MONITORS);
     }
 
     return rel;
