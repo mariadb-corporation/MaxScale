@@ -6336,7 +6336,7 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
         router->ssl_enabled = config.ssl_enabled;
     }
 
-    if (router->ssl_enabled)
+    if (router->ssl_enabled && !config.ssl_ca.empty() && !config.ssl_key.empty() && !config.ssl_cert.empty())
     {
         MXS_CONFIG_PARAMETER params;
         params.set_from_list({
@@ -6344,10 +6344,30 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
             {CN_SSL_KEY, config.ssl_key},
             {CN_SSL_CERT, config.ssl_cert},
             {CN_SSL_CA_CERT, config.ssl_ca},
-            {CN_SSL_VERSION, config.ssl_version},
             {CN_SSL_CERT_VERIFY_DEPTH, "9"},
             {CN_SSL_VERIFY_PEER_CERTIFICATE, "true"}
         });
+
+            if (!config.ssl_version.empty())
+            {
+                mxb_assert((config.ssl_version.front() != '\'') && (config.ssl_version.front() != '"'));
+                params.set(CN_SSL_VERSION, config.ssl_version);
+                MXS_FREE(router->ssl_version);
+                router->ssl_version = MXS_STRDUP_A(config.ssl_version.c_str());
+            }
+
+            /* Update options in router fields */
+                mxb_assert((config.ssl_key.front() != '\'') && (config.ssl_key.front() != '"'));
+                MXS_FREE(router->ssl_key);
+                router->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
+
+                mxb_assert((config.ssl_ca.front() != '\'') && (config.ssl_ca.front() != '"'));
+                MXS_FREE(router->ssl_ca);
+                router->ssl_ca = MXS_STRDUP_A(config.ssl_ca.c_str());
+
+                mxb_assert((config.ssl_cert.front() != '\'') && (config.ssl_cert.front() != '"'));
+                MXS_FREE(router->ssl_cert);
+                router->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
 
         std::unique_ptr<mxs::SSLContext> ssl(mxs::SSLContext::create(params));
 
@@ -6355,32 +6375,6 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
         {
             updated = 1;
             router->service->dbref->server->ssl().set_context(std::move(ssl));
-
-            /* Update options in router fields */
-            if (!config.ssl_key.empty())
-            {
-                mxb_assert((config.ssl_key.front() != '\'') && (config.ssl_key.front() != '"'));
-                MXS_FREE(router->ssl_key);
-                router->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
-            }
-            if (!config.ssl_ca.empty())
-            {
-                mxb_assert((config.ssl_ca.front() != '\'') && (config.ssl_ca.front() != '"'));
-                MXS_FREE(router->ssl_ca);
-                router->ssl_ca = MXS_STRDUP_A(config.ssl_ca.c_str());
-            }
-            if (!config.ssl_cert.empty())
-            {
-                mxb_assert((config.ssl_cert.front() != '\'') && (config.ssl_cert.front() != '"'));
-                MXS_FREE(router->ssl_cert);
-                router->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
-            }
-            if (!config.ssl_version.empty())
-            {
-                mxb_assert((config.ssl_version.front() != '\'') && (config.ssl_version.front() != '"'));
-                MXS_FREE(router->ssl_version);
-                router->ssl_version = MXS_STRDUP_A(config.ssl_version.c_str());
-            }
         }
         else
         {
