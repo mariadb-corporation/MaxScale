@@ -103,9 +103,9 @@ static int tokenize_arguments(const char* argstr, char** argv)
     return 0;
 }
 
-EXTERNCMD* externcmd_allocate(const char* argstr, uint32_t timeout)
+ExternalCmd* ExternalCmd::externcmd_allocate(const char* argstr, uint32_t timeout)
 {
-    EXTERNCMD* cmd = (EXTERNCMD*) MXS_MALLOC(sizeof(EXTERNCMD));
+    ExternalCmd* cmd = (ExternalCmd*) MXS_MALLOC(sizeof(ExternalCmd));
     char** argv = (char**) MXS_MALLOC(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX);
 
     if (argstr && cmd && argv)
@@ -147,7 +147,7 @@ EXTERNCMD* externcmd_allocate(const char* argstr, uint32_t timeout)
     return cmd;
 }
 
-void externcmd_free(EXTERNCMD* cmd)
+void ExternalCmd::externcmd_free(ExternalCmd* cmd)
 {
     if (cmd)
     {
@@ -225,8 +225,9 @@ static void log_output(const char* cmd, const std::string& str)
     }
 }
 
-int externcmd_execute(EXTERNCMD* cmd)
+int ExternalCmd::externcmd_execute()
 {
+    auto cmd = this;
     // Create a pipe where the command can print output
     int fd[2];
 
@@ -377,7 +378,7 @@ int externcmd_execute(EXTERNCMD* cmd)
     return rval;
 }
 
-bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* replace)
+bool externcmd_substitute_arg(ExternalCmd* cmd, const char* match, const char* replace)
 {
     int err;
     bool rval = true;
@@ -486,7 +487,7 @@ bool externcmd_can_execute(const char* argstr)
     return rval;
 }
 
-bool externcmd_matches(const EXTERNCMD* cmd, const char* match)
+bool externcmd_matches(const ExternalCmd* cmd, const char* match)
 {
     for (int i = 0; cmd->argv[i]; i++)
     {

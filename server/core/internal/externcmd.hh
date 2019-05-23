@@ -17,50 +17,44 @@
 
 #define MAXSCALE_EXTCMD_ARG_MAX 256
 
-MXS_BEGIN_DECLS
-
-struct EXTERNCMD
+class ExternalCmd
 {
+public:
+    /**
+     * Allocate a new external command.
+     *
+     * The name and parameters are copied into the external command structure so
+     * the original memory can be freed if needed.
+     *
+     * @param command Command to execute with the parameters
+     * @param timeout Command timeout in seconds
+     *
+     * @return Pointer to new external command struct or NULL if an error occurred
+     */
+    static ExternalCmd* externcmd_allocate(const char* argstr, uint32_t timeout);
+
+    /**
+     * Free a previously allocated external command
+     *
+     * @param cmd Command to free
+     */
+    static void externcmd_free(ExternalCmd* cmd);
+
+    /**
+     * Execute a command
+     *
+     * The output of the command must be freed by the caller by calling MXS_FREE.
+     *
+     * @return The return value of the executed command or -1 on error
+     */
+    int externcmd_execute();
+
     char** argv;        /**< Argument vector for the command, first being the
                          * actual command being executed */
     int      n_exec;    /**< Number of times executed */
     pid_t    child;     /**< PID of the child process */
     uint32_t timeout;   /**< Command timeout in seconds */
 };
-
-char* externcmd_extract_command(const char* argstr);
-
-/**
- * Allocate a new external command.
- *
- * The name and parameters are copied into the external command structure so
- * the original memory can be freed if needed.
- *
- * @param command Command to execute with the parameters
- * @param timeout Command timeout in seconds
- *
- * @return Pointer to new external command struct or NULL if an error occurred
- */
-EXTERNCMD* externcmd_allocate(const char* argstr, uint32_t timeout);
-
-
-/**
- * Free a previously allocated external command
- *
- * @param cmd Command to free
- */
-void externcmd_free(EXTERNCMD* cmd);
-
-/**
- * Execute a command
- *
- * The output of the command must be freed by the caller by calling MXS_FREE.
- *
- * @param cmd  Command to execute
- *
- * @return The return value of the executed command or -1 on error
- */
-int externcmd_execute(EXTERNCMD* cmd);
 
 /**
  * Substitute all occurrences of @c match with @c replace in the arguments for @c cmd
@@ -71,7 +65,7 @@ int externcmd_execute(EXTERNCMD* cmd);
  *
  * @return True if replacement was successful, false on error
  */
-bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* re, const char* replace);
+bool externcmd_substitute_arg(ExternalCmd* cmd, const char* re, const char* replace);
 
 /**
  * Check if a command can be executed
@@ -93,6 +87,4 @@ bool externcmd_can_execute(const char* argstr);
  *
  * @return True if the string matched
  */
-bool externcmd_matches(const EXTERNCMD* cmd, const char* match);
-
-MXS_END_DECLS
+bool externcmd_matches(const ExternalCmd* cmd, const char* match);

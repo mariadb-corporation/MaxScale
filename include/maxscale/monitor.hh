@@ -36,7 +36,7 @@ class Monitor;
 
 struct DCB;
 struct json_t;
-struct EXTERNCMD;
+struct ExternalCmd;
 
 /**
  * @verbatim
@@ -557,7 +557,7 @@ private:
      *
      * @return Return value of the executed script or -1 on error.
      */
-    int launch_command(MonitorServer* ptr, EXTERNCMD* cmd);
+    int launch_command(MonitorServer* ptr, ExternalCmd* cmd);
 
     enum class CredentialsApproach
     {

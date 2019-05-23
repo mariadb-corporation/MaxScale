@@ -1054,7 +1054,7 @@ std::string Monitor::child_nodes(MonitorServer* parent)
     return ss.str();
 }
 
-int Monitor::launch_command(MonitorServer* ptr, EXTERNCMD* cmd)
+int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
 {
     if (externcmd_matches(cmd, "$INITIATOR"))
     {
@@ -1124,7 +1124,7 @@ int Monitor::launch_command(MonitorServer* ptr, EXTERNCMD* cmd)
         externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
     }
 
-    int rv = externcmd_execute(cmd);
+    int rv = cmd->externcmd_execute();
 
     if (rv)
     {
@@ -1202,7 +1202,7 @@ int Monitor::launch_script(MonitorServer* ptr)
     char arg[strlen(script) + 1];
     strcpy(arg, script);
 
-    EXTERNCMD* cmd = externcmd_allocate(arg, m_settings.script_timeout);
+    ExternalCmd* cmd = ExternalCmd::externcmd_allocate(arg, m_settings.script_timeout);
 
     if (cmd == NULL)
     {
@@ -1214,7 +1214,7 @@ int Monitor::launch_script(MonitorServer* ptr)
 
     int rv = launch_command(ptr, cmd);
 
-    externcmd_free(cmd);
+    ExternalCmd::externcmd_free(cmd);
 
     return rv;
 }
