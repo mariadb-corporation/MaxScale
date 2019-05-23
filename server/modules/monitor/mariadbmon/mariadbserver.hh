@@ -197,9 +197,11 @@ public:
      *
      * @param query The query
      * @param errmsg_out Where to store an error message if query fails. Can be null.
+     * @param errno_out Error code output. Can be null.
      * @return Pointer to query results, or an empty pointer on failure
      */
-    std::unique_ptr<QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL);
+    std::unique_ptr<QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL,
+                                               unsigned int* errno_out = NULL);
 
     /**
      * execute_cmd_ex with query retry ON.
@@ -421,6 +423,15 @@ public:
      * @return True on success
      */
     bool create_start_slave(GeneralOpData& op, const SlaveStatus& slave_conn);
+
+    /**
+     * Kill the connections of any super-users except for the monitor itself.
+     *
+     * @param op Operation descriptor
+     * @return True on success. If super-users cannot be queried because of insufficient privileges,
+     * return true as it means the user does not want this feature.
+     */
+    bool kick_out_super_users(GeneralOpData& op);
 
     /**
      * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
