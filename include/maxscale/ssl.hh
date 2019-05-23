@@ -22,6 +22,7 @@
 
 #include <maxscale/protocol.hh>
 #include <maxscale/modinfo.h>
+#include <maxscale/routingworker.hh>
 
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
@@ -142,14 +143,14 @@ private:
 class SSLProvider
 {
 public:
+    SSLProvider(std::unique_ptr<mxs::SSLContext> context);
+
     const mxs::SSLConfig& config() const;
     mxs::SSLContext*      context() const;
     void                  set_context(std::unique_ptr<mxs::SSLContext> ssl);
 
-    SSLProvider(std::unique_ptr<mxs::SSLContext>&& context);
-    ~SSLProvider();
-
 private:
-    std::unique_ptr<SSLProviderImp> m_imp;
+    mxs::rworker_local<std::shared_ptr<mxs::SSLContext>> m_context;     /**< SSL context */
+    mxs::SSLConfig                                       m_config;      /**< SSL configuration */
 };
 }
