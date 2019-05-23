@@ -711,7 +711,7 @@ void ClustrixMonitor::check_bootstrap_servers()
             MXS_NOTICE("Current bootstrap servers are the same as the ones used on "
                        "previous run, using persisted connection information.");
         }
-        else
+        else if (!prev_bootstrap_servers.empty())
         {
             MXS_NOTICE("Current bootstrap servers (%s) are different than the ones "
                        "used on the previous run (%s), NOT using persistent connection "
