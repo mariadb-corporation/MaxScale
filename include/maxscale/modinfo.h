@@ -110,10 +110,8 @@ enum mxs_module_param_options
     MXS_MODULE_OPT_PATH_CREAT  = (1 << 5),  /**< PATH: Create path if it doesn't exist */
     MXS_MODULE_OPT_ENUM_UNIQUE = (1 << 6),  /**< ENUM: Only one value can be defined */
     MXS_MODULE_OPT_DURATION_S  = (1 << 7),  /**< DURATION: Cannot be specified in milliseconds */
-
-    /**< Parameter is deprecated: Causes a warning to be logged if the parameter
-     * is used but will not cause a configuration error. */
-    MXS_MODULE_OPT_DEPRECATED = (1 << 7),
+    MXS_MODULE_OPT_DEPRECATED  = (1 << 8),  /**< Parameter is deprecated: Causes a warning to be logged if the
+                                             * parameter is used but will not cause a configuration error. */
 };
 
 /** String to enum value mappings */
