@@ -146,6 +146,10 @@ sqlite3* open_or_create_db(const std::string& path)
     {
         MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
                   path.c_str(), sqlite3_errstr(rv));
+        MXS_ERROR("Could not open sqlite3 database for storing information "
+                  "about dynamically detected Clustrix nodes. The Clustrix "
+                  "monitor will remain dependant upon statically defined "
+                  "bootstrap nodes.");
     }
 
     return pDb;
@@ -170,19 +174,20 @@ ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& modul
 
     path += "/";
     path += name;
+
+    if (!mxs_mkdir_all(path.c_str(), 0744))
+    {
+        MXS_ERROR("Could not create the directory %s, MaxScale will not be "
+                  "able to create database for persisting connection "
+                  "information of dynamically detected Clustrix nodes.",
+                  path.c_str());
+    }
+
     path += "/clustrix_nodes-v";
     path += std::to_string(SCHEMA_VERSION);
     path += ".db";
 
     sqlite3* pDb = open_or_create_db(path);
-
-    if (!pDb)
-    {
-        MXS_WARNING("Could not open sqlite3 database for storing information "
-                    "about dynamically detected Clustrix nodes. The Clustrix "
-                    "monitor will remain dependant upon statically defined "
-                    "bootstrap nodes.");
-    }
 
     return new ClustrixMonitor(name, module, pDb);
 }
