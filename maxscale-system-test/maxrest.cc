@@ -29,14 +29,56 @@ MaxRest::MaxRest(TestConnections* pTest)
 {
 }
 
-unique_ptr<json_t> MaxRest::servers() const
+unique_ptr<json_t> MaxRest::v1_servers(const string& id) const
 {
-    return curl("servers");
+    string path("servers");
+    path += "/";
+    path += id;
+
+    return curl_get(path);
+}
+
+unique_ptr<json_t> MaxRest::v1_servers() const
+{
+    return curl_get("servers");
+}
+
+void MaxRest::v1_maxscale_modules(const string& module,
+                                  const string& command,
+                                  const string& instance,
+                                  const std::vector<string>& params) const
+{
+    string path("maxscale/modules");
+
+    path += "/";
+    path += module;
+    path += "/";
+    path += command;
+    path += "?";
+    path += instance;
+
+    if (!params.empty())
+    {
+        for (const auto& param : params)
+        {
+            path += "\\&";
+            path += param;
+        }
+    }
+
+    curl_post(path);
+}
+
+MaxRest::Server MaxRest::show_server(const std::string& id) const
+{
+    unique_ptr<json_t> sObject = v1_servers(id);
+    json_t* pData = get_object(sObject.get(), "data", Presence::MANDATORY);
+    return Server(*this, pData);
 }
 
 vector<MaxRest::Server> MaxRest::list_servers() const
 {
-    return get_array<Server>(servers().get(), "data", Presence::MANDATORY);
+    return get_array<Server>(v1_servers().get(), "data", Presence::MANDATORY);
 }
 
 json_t* MaxRest::get_object(json_t* pObject, const string& key, Presence presence) const
@@ -84,19 +126,49 @@ unique_ptr<json_t> MaxRest::parse(const string& json) const
     return sRoot;
 }
 
-unique_ptr<json_t> MaxRest::curl(const string& path) const
+unique_ptr<json_t> MaxRest::curl_get(const string& path) const
+{
+    return curl(GET, path);
+}
+
+unique_ptr<json_t> MaxRest::curl_post(const string& path) const
+{
+    return curl(POST, path);
+}
+
+unique_ptr<json_t> MaxRest::curl(Command command, const string& path) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
-    string command = "curl -u admin:mariadb " + url;
+    string curl_command = "curl -u admin:mariadb ";
 
-    auto result = m_test.maxscales->ssh_output(command.c_str(), 0, false);
+    switch (command)
+    {
+    case GET:
+        curl_command += "-X GET ";
+        break;
+
+    case POST:
+        curl_command += "-X POST ";
+        break;
+    }
+
+    curl_command += url;
+
+    auto result = m_test.maxscales->ssh_output(curl_command.c_str(), 0, false);
 
     if (result.first != 0)
     {
         raise("Invocation of curl failed: " + to_string(result.first));
     }
 
-    return parse(result.second);
+    unique_ptr<json_t> sRv;
+
+    if (!result.second.empty())
+    {
+        sRv = parse(result.second);
+    }
+
+    return sRv;
 }
 
 void MaxRest::raise(const std::string& message) const

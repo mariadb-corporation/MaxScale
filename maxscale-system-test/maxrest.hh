@@ -58,16 +58,57 @@ public:
     }
 
     /**
+     * @return The JSON object corresponding to /v1/servers/:id:
+     */
+    std::unique_ptr<json_t> v1_servers(const std::string& id) const;
+
+    /**
      * @return The JSON object corresponding to /v1/servers.
      */
-    std::unique_ptr<json_t> servers() const;
+    std::unique_ptr<json_t> v1_servers() const;
+
+    /**
+     * POST request to /v1/maxscale/modules/:module:/:command:?instance[&param...]
+     *
+     * @param module    Module name.
+     * @param command   The command.
+     * @param instance  The object instance to execute it on.
+     * @param params    Optional arguments.
+     */
+    void v1_maxscale_modules(const std::string& module,
+                             const std::string& command,
+                             const std::string& instance,
+                             const std::vector<std::string>& params = std::vector<std::string>()) const;
+
+    /**
+     * Call a module command.
+     *
+     * @param module    Module name.
+     * @param command   The command.
+     * @param instance  The object instance to execute it on.
+     * @param params    Optional arguments.
+     */
+    void call_command(const std::string& module,
+                      const std::string& command,
+                      const std::string& instance,
+                      const std::vector<std::string>& params = std::vector<std::string>()) const
+    {
+        return v1_maxscale_modules(module, command, instance, params);
+    }
 
     /**
      * The equivalent of 'maxctrl list servers'
      *
-     * @return The JSON resrouce /v1/servers as a vector of Server objects.
+     * @return The JSON resource /v1/servers as a vector of Server objects.
      */
     std::vector<Server> list_servers() const;
+
+    /**
+     * The equivalent of 'maxctrl show server'
+     *
+     * @return The JSON resource /v1/servers/:id: as a Server object.
+     */
+    Server show_server(const std::string& id) const;
 
     enum class Presence
     {
@@ -158,7 +199,7 @@ public:
     std::unique_ptr<json_t> parse(const std::string& json) const;
 
     /**
-     * Issue a curl request to the REST-API endpoint of the MaxScale running on
+     * Issue a curl GET to the REST-API endpoint of the MaxScale running on
      * the maxscale 0 VM instance.
      *
      * The path will be appended to "http://127.0.0.1:8989/v1/".
@@ -167,9 +208,30 @@ public:
      *
      * @return  The corresponding json_t object.
      */
-    std::unique_ptr<json_t> curl(const std::string& path) const;
+    std::unique_ptr<json_t> curl_get(const std::string& path) const;
+
+    /**
+     * Issue a curl POST to the REST-API endpoint of the MaxScale running on
+     * the maxscale 0 VM instance.
+     *
+     * The path will be appended to "http://127.0.0.1:8989/v1/".
+     *
+     * @param path  The path of the resource.
+     *
+     * @return  The corresponding json_t object.
+     */
+    std::unique_ptr<json_t> curl_post(const std::string& path) const;
 
     void raise(const std::string& message) const;
+
+private:
+    enum Command
+    {
+        GET,
+        POST
+    };
+
+    std::unique_ptr<json_t> curl(Command command, const std::string& path) const;
 
 private:
     TestConnections& m_test;
