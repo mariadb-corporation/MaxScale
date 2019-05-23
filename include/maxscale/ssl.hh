@@ -91,6 +91,9 @@ struct SSLConfig
 class SSLContext
 {
 public:
+    SSLContext& operator=(SSLContext&) = delete;
+    SSLContext(SSLContext&) = delete;
+
     /**
      * Create a new SSL configuration
      *
@@ -143,6 +146,9 @@ private:
 class SSLProvider
 {
 public:
+    SSLProvider& operator=(SSLProvider&) = delete;
+    SSLProvider(SSLProvider&) = delete;
+
     SSLProvider(std::unique_ptr<mxs::SSLContext> context);
 
     const mxs::SSLConfig& config() const;
