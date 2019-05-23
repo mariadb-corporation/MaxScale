@@ -27,6 +27,36 @@ const set<string> bootstrap_servers =
 
 const std::string monitor_name = "Clustrix-Monitor";
 
+void expect_all_servers_to_be(const MaxRest& maxrest, const std::string& state)
+{
+    cout << "Expecting the state of all servers to be: " << state << endl;
+
+    TestConnections& test = maxrest.test();
+    auto servers = maxrest.list_servers();
+
+    for (const auto& server : servers)
+    {
+        cout << server.name << "(" << server.address << "): " << server.state << endl;
+        test.expect(server.state.find(state) != string::npos,
+                    "State of %s(%s) is '%s', expected '%s.",
+                    server.name.c_str(),
+                    server.address.c_str(),
+                    server.state.c_str(),
+                    state.c_str());
+    }
+}
+
+void expect_server_to_be(const MaxRest& maxrest, const MaxRest::Server& server, const std::string& state)
+{
+    TestConnections& test = maxrest.test();
+    cout << "Expecting the state of '" << server.name << "' to be '" << state << "'." << endl;
+
+    test.expect(server.state.find(state) != string::npos,
+                "State of '%s' was not '%s', but '%s'.",
+                server.name.c_str(),
+                state.c_str(),
+                server.state.c_str());
+}
 
 void check_for_servers(const MaxRest& maxrest)
 {
@@ -76,25 +106,6 @@ void check_for_servers(const MaxRest& maxrest)
                 mxb::join(dynamic_servers).c_str());
 }
 
-void expect_all_servers_to_be(const MaxRest& maxrest, const std::string& state)
-{
-    cout << "Expecting the state of all servers to be: " << state << endl;
-
-    TestConnections& test = maxrest.test();
-    auto servers = maxrest.list_servers();
-
-    for (const auto& server : servers)
-    {
-        cout << server.name << "(" << server.address << "): " << server.state << endl;
-        test.expect(server.state == state,
-                    "State of %s(%s) is '%s', expected '%s.",
-                    server.name.c_str(),
-                    server.address.c_str(),
-                    server.state.c_str(),
-                    state.c_str());
-    }
-}
-
 void check_state_change(const MaxRest& maxrest)
 {
     TestConnections& test = maxrest.test();
@@ -119,7 +130,8 @@ void check_state_change(const MaxRest& maxrest)
         cout << server.name << "(" << server.address << "): " << server.state << endl;
         if (server.address == address)
         {
-            test.expect(server.state == "Down", "Blocked server was not 'Down' but '%s'.", server.state.c_str());
+            test.expect(server.state == "Down",
+                        "Blocked server was not 'Down' but '%s'.", server.state.c_str());
         }
     }
 
@@ -133,12 +145,35 @@ void check_state_change(const MaxRest& maxrest)
     cout << endl;
 }
 
+void check_softfailing(const MaxRest& maxrest)
+{
+    TestConnections& test = maxrest.test();
+
+    string id("@@Clustrix-Monitor:node-2"); // Just an arbitrary dynamic node.
+
+    MaxRest::Server before = maxrest.show_server(id);
+    expect_server_to_be(maxrest, before, "Master, Running");
+
+    cout << "Softfailing " << id << "." << endl;
+    maxrest.call_command("clustrixmon", "softfail", monitor_name, { "@@Clustrix-Monitor:node-2" });
+
+    MaxRest::Server during = maxrest.show_server(id);
+    expect_server_to_be(maxrest, during, "Drained");
+
+    cout << "Unsoftfailing " << id << "." << endl;
+    maxrest.call_command("clustrixmon", "unsoftfail", monitor_name, { "@@Clustrix-Monitor:node-2" });
+
+    MaxRest::Server after = maxrest.show_server(id);
+    expect_server_to_be(maxrest, after, "Master, Running");
+}
+
 void run_test(TestConnections& test)
 {
     MaxRest maxrest(&test);
 
     check_for_servers(maxrest);
     check_state_change(maxrest);
+    check_softfailing(maxrest);
 }
 
 }
