@@ -129,31 +129,33 @@ void MonitorManager::debug_wait_one_tick()
     std::map<Monitor*, long> ticks;
 
     // Get tick values for all monitors
-    this_unit.foreach_monitor([&ticks](Monitor* mon) {
-                                  ticks[mon] = mon->ticks();
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [&ticks](Monitor* mon) {
+            ticks[mon] = mon->ticks();
+            return true;
+        });
 
     // Wait for all running monitors to advance at least one tick.
-    this_unit.foreach_monitor([&ticks](Monitor* mon) {
-                                  if (mon->is_running())
-                                  {
-                                      auto start = steady_clock::now();
-                                        // A monitor may have been added in between the two foreach-calls (not
-                                        // if config changes are
-                                        // serialized). Check if entry exists.
-                                      if (ticks.count(mon) > 0)
-                                      {
-                                          auto tick = ticks[mon];
-                                          while (mon->ticks() == tick
-                                                 && (steady_clock::now() - start < seconds(60)))
-                                          {
-                                              std::this_thread::sleep_for(milliseconds(100));
-                                          }
-                                      }
-                                  }
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [&ticks](Monitor* mon) {
+            if (mon->is_running())
+            {
+                auto start = steady_clock::now();
+                // A monitor may have been added in between the two foreach-calls (not
+                // if config changes are
+                // serialized). Check if entry exists.
+                if (ticks.count(mon) > 0)
+                {
+                    auto tick = ticks[mon];
+                    while (mon->ticks() == tick
+                           && (steady_clock::now() - start < seconds(60)))
+                    {
+                        std::this_thread::sleep_for(milliseconds(100));
+                    }
+                }
+            }
+            return true;
+        });
 }
 
 void MonitorManager::destroy_all_monitors()
@@ -184,10 +186,11 @@ void MonitorManager::start_monitor(Monitor* monitor)
 void MonitorManager::populate_services()
 {
     mxb_assert(Monitor::is_admin_thread());
-    this_unit.foreach_monitor([](Monitor* pMonitor) -> bool {
-                                  pMonitor->populate_services();
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [](Monitor* pMonitor) -> bool {
+            pMonitor->populate_services();
+            return true;
+        });
 }
 
 /**
@@ -196,10 +199,11 @@ void MonitorManager::populate_services()
 void MonitorManager::start_all_monitors()
 {
     mxb_assert(Monitor::is_admin_thread());
-    this_unit.foreach_monitor([](Monitor* monitor) {
-                                  MonitorManager::start_monitor(monitor);
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [](Monitor* monitor) {
+            MonitorManager::start_monitor(monitor);
+            return true;
+        });
 }
 
 void MonitorManager::stop_monitor(Monitor* monitor)
@@ -228,10 +232,11 @@ void MonitorManager::deactivate_monitor(Monitor* monitor)
 void MonitorManager::stop_all_monitors()
 {
     mxb_assert(Monitor::is_admin_thread());
-    this_unit.foreach_monitor([](Monitor* monitor) {
-                                  MonitorManager::stop_monitor(monitor);
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [](Monitor* monitor) {
+            MonitorManager::stop_monitor(monitor);
+            return true;
+        });
 }
 
 /**
@@ -242,10 +247,11 @@ void MonitorManager::stop_all_monitors()
 void MonitorManager::show_all_monitors(DCB* dcb)
 {
     mxb_assert(Monitor::is_admin_thread());
-    this_unit.foreach_monitor([dcb](Monitor* monitor) {
-                                  monitor_show(dcb, monitor);
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [dcb](Monitor* monitor) {
+            monitor_show(dcb, monitor);
+            return true;
+        });
 }
 
 /**
@@ -271,10 +277,11 @@ void MonitorManager::monitor_list(DCB* dcb)
     dcb_printf(dcb, "%-20s | Status\n", "Monitor");
     dcb_printf(dcb, "---------------------+---------------------\n");
 
-    this_unit.foreach_monitor([dcb](Monitor* ptr) {
-                                  dcb_printf(dcb, "%-20s | %s\n", ptr->name(), ptr->state_string());
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [dcb](Monitor* ptr) {
+            dcb_printf(dcb, "%-20s | %s\n", ptr->name(), ptr->state_string());
+            return true;
+        });
 
     dcb_printf(dcb, "---------------------+---------------------\n");
 }
@@ -288,13 +295,14 @@ void MonitorManager::monitor_list(DCB* dcb)
 Monitor* MonitorManager::find_monitor(const char* name)
 {
     Monitor* rval = nullptr;
-    this_unit.foreach_monitor([&rval, name](Monitor* ptr) {
-                                  if (ptr->m_name == name)
-                                  {
-                                      rval = ptr;
-                                  }
-                                  return rval == nullptr;
-                              });
+    this_unit.foreach_monitor(
+        [&rval, name](Monitor* ptr) {
+            if (ptr->m_name == name)
+            {
+                rval = ptr;
+            }
+            return rval == nullptr;
+        });
     return rval;
 }
 
@@ -307,10 +315,11 @@ std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
 {
     mxb_assert(Monitor::is_admin_thread());
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
-    this_unit.foreach_monitor([&set](Monitor* ptr) {
-                                  set->add_row({ptr->m_name, ptr->state_string()});
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [&set](Monitor* ptr) {
+            set->add_row({ptr->m_name, ptr->state_string()});
+            return true;
+        });
     return set;
 }
 
@@ -463,14 +472,15 @@ json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host
 json_t* MonitorManager::monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();
-    this_unit.foreach_monitor([rval, host](Monitor* mon) {
-                                  json_t* json = mon->to_json(host);
-                                  if (json)
-                                  {
-                                      json_array_append_new(rval, json);
-                                  }
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [rval, host](Monitor* mon) {
+            json_t* json = mon->to_json(host);
+            if (json)
+            {
+                json_array_append_new(rval, json);
+            }
+            return true;
+        });
 
     return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
 }
@@ -479,19 +489,20 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const 
 {
     mxb_assert(Monitor::is_admin_thread());
     std::vector<std::string> names;
-    this_unit.foreach_monitor([&names, server](Monitor* mon) {
-                                    // The serverlist of an individual monitor should not change while a
-                                    // monitor is running.
-                                  for (MonitorServer* db : mon->servers())
-                                  {
-                                      if (db->server == server)
-                                      {
-                                          names.push_back(mon->m_name);
-                                          break;
-                                      }
-                                  }
-                                  return true;
-                              });
+    this_unit.foreach_monitor(
+        [&names, server](Monitor* mon) {
+            // The serverlist of an individual monitor should not change while a
+            // monitor is running.
+            for (MonitorServer* db : mon->servers())
+            {
+                if (db->server == server)
+                {
+                    names.push_back(mon->m_name);
+                    break;
+                }
+            }
+            return true;
+        });
 
     std::sort(names.begin(), names.end());
 
