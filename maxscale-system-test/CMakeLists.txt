@@ -1144,8 +1144,8 @@ set_tests_properties(clustrix_mon PROPERTIES TIMEOUT 7200)
 add_test_executable(clustrix_basics.cpp clustrix_basics clustrix_basics LABELS CLUSTRIX_BACKEND)
 set_tests_properties(clustrix_basics PROPERTIES TIMEOUT 7200)
 
-add_test_executable(clustrix_group_change.cpp clustrix_group_change clustrix_group_change LABELS CLUSTRIX_BACKEND)
-set_tests_properties(clustrix_group_change PROPERTIES TIMEOUT 7200)
+add_test_executable(clustrix_transaction_replay.cpp clustrix_transaction_replay clustrix_transaction_replay LABELS CLUSTRIX_BACKEND)
+set_tests_properties(clustrix_transaction_replay PROPERTIES TIMEOUT 7200)
 
 ############################################
 # END: tests for Clustrix monitor          #
