@@ -1801,6 +1801,8 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
         }
     }
 
+    std::sort(names.begin(), names.end());
+
     json_t* rel = NULL;
 
     if (!names.empty())

@@ -89,7 +89,6 @@ private:
 ThisUnit this_unit;
 
 const char RECONFIG_FAILED[] = "Monitor reconfiguration failed when %s. Check log for more details.";
-
 }
 
 Monitor* MonitorManager::create_monitor(const string& name, const string& module,
@@ -131,28 +130,30 @@ void MonitorManager::debug_wait_one_tick()
 
     // Get tick values for all monitors
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
-        ticks[mon] = mon->ticks();
-        return true;
-    });
+                                  ticks[mon] = mon->ticks();
+                                  return true;
+                              });
 
     // Wait for all running monitors to advance at least one tick.
     this_unit.foreach_monitor([&ticks](Monitor* mon) {
-        if (mon->is_running())
-        {
-            auto start = steady_clock::now();
-            // A monitor may have been added in between the two foreach-calls (not if config changes are
-            // serialized). Check if entry exists.
-            if (ticks.count(mon) > 0)
-            {
-                auto tick = ticks[mon];
-                while (mon->ticks() == tick && (steady_clock::now() - start < seconds(60)))
-                {
-                    std::this_thread::sleep_for(milliseconds(100));
-                }
-            }
-        }
-        return true;
-  });
+                                  if (mon->is_running())
+                                  {
+                                      auto start = steady_clock::now();
+                                        // A monitor may have been added in between the two foreach-calls (not
+                                        // if config changes are
+                                        // serialized). Check if entry exists.
+                                      if (ticks.count(mon) > 0)
+                                      {
+                                          auto tick = ticks[mon];
+                                          while (mon->ticks() == tick
+                                                 && (steady_clock::now() - start < seconds(60)))
+                                          {
+                                              std::this_thread::sleep_for(milliseconds(100));
+                                          }
+                                      }
+                                  }
+                                  return true;
+                              });
 }
 
 void MonitorManager::destroy_all_monitors()
@@ -271,9 +272,9 @@ void MonitorManager::monitor_list(DCB* dcb)
     dcb_printf(dcb, "---------------------+---------------------\n");
 
     this_unit.foreach_monitor([dcb](Monitor* ptr) {
-        dcb_printf(dcb, "%-20s | %s\n", ptr->name(), ptr->state_string());
-        return true;
-    });
+                                  dcb_printf(dcb, "%-20s | %s\n", ptr->name(), ptr->state_string());
+                                  return true;
+                              });
 
     dcb_printf(dcb, "---------------------+---------------------\n");
 }
@@ -307,9 +308,9 @@ std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
     mxb_assert(Monitor::is_admin_thread());
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
     this_unit.foreach_monitor([&set](Monitor* ptr) {
-        set->add_row({ptr->m_name, ptr->state_string()});
-        return true;
-    });
+                                  set->add_row({ptr->m_name, ptr->state_string()});
+                                  return true;
+                              });
     return set;
 }
 
@@ -463,13 +464,13 @@ json_t* MonitorManager::monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();
     this_unit.foreach_monitor([rval, host](Monitor* mon) {
-        json_t* json = mon->to_json(host);
-        if (json)
-        {
-            json_array_append_new(rval, json);
-        }
-        return true;
-    });
+                                  json_t* json = mon->to_json(host);
+                                  if (json)
+                                  {
+                                      json_array_append_new(rval, json);
+                                  }
+                                  return true;
+                              });
 
     return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
 }
@@ -479,17 +480,20 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const 
     mxb_assert(Monitor::is_admin_thread());
     std::vector<std::string> names;
     this_unit.foreach_monitor([&names, server](Monitor* mon) {
-        // The serverlist of an individual monitor should not change while a monitor is running.
-        for (MonitorServer* db : mon->servers())
-        {
-            if (db->server == server)
-            {
-                names.push_back(mon->m_name);
-                break;
-            }
-        }
-        return true;
-    });
+                                    // The serverlist of an individual monitor should not change while a
+                                    // monitor is running.
+                                  for (MonitorServer* db : mon->servers())
+                                  {
+                                      if (db->server == server)
+                                      {
+                                          names.push_back(mon->m_name);
+                                          break;
+                                      }
+                                  }
+                                  return true;
+                              });
+
+    std::sort(names.begin(), names.end());
 
     json_t* rel = NULL;
     if (!names.empty())
@@ -551,7 +555,7 @@ bool MonitorManager::add_server_to_monitor(mxs::Monitor* mon, SERVER* server, st
         string error = string_printf("Server '%s' is already monitored by '%s', ",
                                      server->name(), server_monitor.c_str());
         error += (server_monitor == mon->name()) ? "cannot add again to the same monitor." :
-                 "cannot add to another monitor.";
+            "cannot add to another monitor.";
         *error_out = error;
     }
     else
