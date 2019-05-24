@@ -32,6 +32,7 @@ public:
      */
     struct Server
     {
+        Server() = default;
         Server(const MaxRest& maxrest, json_t* pObject);
 
         std::string name;
