@@ -160,6 +160,17 @@ bool start_server(TestConnections& test, const std::string& name, int node, int 
     return started;
 }
 
+MaxRest::Server get_current_server(TestConnections& test, MYSQL* pMysql)
+{
+    Row row = get_row(pMysql, "SELECT iface_ip FROM system.nodeinfo WHERE nodeid=gtmnid()");
+
+    test.expect(row.size() == 1, "1 row expected, %d received.", (int)row.size());
+
+    string address = row[0];
+
+    return dynamic_by_address[address];
+}
+
 void run_test(TestConnections& test)
 {
     MaxRest maxrest(&test);
@@ -169,17 +180,13 @@ void run_test(TestConnections& test)
 
     MYSQL* pMysql = pMaxscales->conn_rwsplit[0];
 
-    // What node are we connected to?
-    Row row = get_row(pMysql, "SELECT iface_ip FROM system.nodeinfo WHERE nodeid=gtmnid()");
+    MaxRest::Server server = get_current_server(test, pMysql);
 
-    test.expect(row.size() == 1, "1 row expected, %d received.", (int)row.size());
+    string dynamic_name = server.name;
+    string static_name = static_by_address[server.address].name;
+    int node = node_by_address[server.address];
 
-    string ip = row[0];
-    string static_name = static_by_address[ip].name;
-    string dynamic_name = dynamic_by_address[ip].name;
-    int node = node_by_address[ip];
-
-    cout << "Connected to " << ip << ", which is "
+    cout << "Connected to " << server.address << ", which is "
          << dynamic_name << "(" << static_name << ") "
          << " running on node " << node << "."
          << endl;
@@ -200,6 +207,10 @@ void run_test(TestConnections& test)
         int timeout = 3 * 60;
         start_server(test, dynamic_name, node, timeout);
     }
+
+    MaxRest::Server server_after = get_current_server(test, pMysql);
+
+    test.expect(server.address != server_after.address, "Huh, server did not switch.");
 }
 
 }
