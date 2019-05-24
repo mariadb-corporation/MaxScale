@@ -75,24 +75,99 @@ void create_table(TestConnections& test, MYSQL* pMysql)
     test.try_query(pMysql, "INSERT INTO test.clustrix_tr VALUES (42)");
 }
 
-void setup(TestConnections& test, MYSQL* pMysql)
+void setup_database(TestConnections& test)
 {
+    MYSQL* pMysql = test.maxscales->open_rwsplit_connection();
+    test.expect(pMysql, "Could not open connection to rws.");
+
     drop_table(test, pMysql);
     create_table(test, pMysql);
+
+    mysql_close(pMysql);
+}
+
+bool stop_server(TestConnections& test, const std::string& name, int node)
+{
+    bool stopped = false;
+
+    Clustrix_nodes* pClustrix = test.clustrix;
+
+    auto rv = pClustrix->ssh_output("service clustrix stop", node, true);
+    test.expect(rv.first == 0, "Could not stop Clustrix on node %d.", node);
+
+    if (rv.first == 0)
+    {
+        MaxRest maxrest(&test);
+        MaxRest::Server server;
+
+        do
+        {
+            server = maxrest.show_server(name);
+
+            if (server.state.find("Down") == string::npos)
+            {
+                sleep(1);
+            }
+        }
+        while (server.state.find("Down") == string::npos);
+
+        cout << "Clustrix on node " << node << " is down." << endl;
+        stopped = true;
+    }
+
+    return stopped;
+}
+
+bool start_server(TestConnections& test, const std::string& name, int node, int timeout)
+{
+    bool started = false;
+
+    Clustrix_nodes* pClustrix = test.clustrix;
+
+    auto rv = pClustrix->ssh_output("service clustrix start", node, true);
+    test.expect(rv.first == 0, "Could not start Clustrix on node %d.", node);
+
+    if (rv.first == 0)
+    {
+        MaxRest maxrest(&test);
+        MaxRest::Server server;
+
+        time_t start = time(nullptr);
+        time_t end;
+
+        do
+        {
+            server = maxrest.show_server(name);
+
+            if (server.state.find("Down") != string::npos)
+            {
+                cout << "Still down..." << endl;
+                sleep(1);
+            }
+
+            end = time(nullptr);
+        }
+        while ((server.state.find("Down") != string::npos) && (end - start < timeout));
+
+        test.expect(end - start < timeout, "Clustrix node %d did not start.", node);
+
+        if (server.state.find("Master") != string::npos)
+        {
+            started = true;
+        }
+    }
+
+    return started;
 }
 
 void run_test(TestConnections& test)
 {
     MaxRest maxrest(&test);
 
-    collect_information(test);
-
     Maxscales* pMaxscales = test.maxscales;
     test.add_result(pMaxscales->connect_rwsplit(), "Could not connect to RWS.");
 
     MYSQL* pMysql = pMaxscales->conn_rwsplit[0];
-
-    setup(test, pMysql);
 
     // What node are we connected to?
     Row row = get_row(pMysql, "SELECT iface_ip FROM system.nodeinfo WHERE nodeid=gtmnid()");
@@ -105,61 +180,26 @@ void run_test(TestConnections& test)
     int node = node_by_address[ip];
 
     cout << "Connected to " << ip << ", which is "
-         << static_name << " and " << dynamic_name
+         << dynamic_name << "(" << static_name << ") "
          << " running on node " << node << "."
          << endl;
 
     test.try_query(pMysql, "BEGIN");
     test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
 
-    Clustrix_nodes* pClustrix = test.clustrix;
-
-    auto rv = pClustrix->ssh_output("service clustrix stop", node, true);
-    test.expect(rv.first == 0, "Could not stop Clustrix on node %d.", node);
-
-    MaxRest::Server server;
-
-    do
+    cout << "Stopping server " << dynamic_name << " on node " << node << "." << endl;
+    if (stop_server(test, dynamic_name, node))
     {
-        server = maxrest.show_server(dynamic_name);
+        // The server we were connected to is now down. If the following
+        // succeeds, then reconnect + transaction replay worked as specified.
+        test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
+        test.try_query(pMysql, "COMMIT");
 
-        if (server.state.find("Down") == string::npos)
-        {
-            sleep(1);
-        }
+        cout << "Starting Clustrix " << dynamic_name << " on node " << node << "." << endl;
+
+        int timeout = 3 * 60;
+        start_server(test, dynamic_name, node, timeout);
     }
-    while (server.state.find("Down") == string::npos);
-
-    cout << "Clustrix on node " << node << " is down." << endl;
-
-    // The server we were connected to is now down. If the following
-    // succeeds, then reconnect + transaction replay worked as specified.
-    test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
-    test.try_query(pMysql, "COMMIT");
-
-    cout << "Starting Clustrix on node " << node << "." << endl;
-    rv = pClustrix->ssh_output("service clustrix start", node, true);
-    test.expect(rv.first == 0, "Could not start Clustrix on node %d.", node);
-
-    time_t start = time(nullptr);
-    time_t end;
-    long max_wait = 3 * 60;
-
-    do
-    {
-        server = maxrest.show_server(dynamic_name);
-
-        if (server.state.find("Down") != string::npos)
-        {
-            cout << "Still down..." << endl;
-            sleep(1);
-        }
-
-        end = time(nullptr);
-    }
-    while ((server.state.find("Down") != string::npos) && (end - start < max_wait));
-
-    test.expect(end - start < max_wait, "Clustrix node %d did not start.", node);
 }
 
 }
@@ -170,6 +210,9 @@ int main(int argc, char* argv[])
 
     try
     {
+        collect_information(test);
+        setup_database(test);
+
         run_test(test);
     }
     catch (const std::exception& x)
