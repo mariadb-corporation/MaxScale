@@ -38,8 +38,16 @@ private:
                                StringVector* services_out);
     maxscale::Buffer create_auth_change_packet() const;
 
-    pam_auth_state     m_state;     /**< Authentication state*/
-    uint8_t            m_sequence;  /**< The next packet seqence number */
-    sqlite3* const     m_dbhandle;  /**< SQLite3 database handle */
-    const PamInstance& m_instance;  /**< Authenticator instance */
+    enum class State
+    {
+        INIT,
+        ASKED_FOR_PW,
+        PW_RECEIVED,
+        DONE
+    };
+
+    State              m_state {State::INIT};   /**< Authentication state*/
+    uint8_t            m_sequence {0};          /**< The next packet seqence number */
+    sqlite3* const     m_dbhandle;              /**< SQLite3 database handle */
+    const PamInstance& m_instance;              /**< Authenticator instance */
 };

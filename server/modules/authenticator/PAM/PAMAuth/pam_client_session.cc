@@ -77,9 +77,7 @@ int user_services_cb(void* data, int columns, char** column_vals, char** column_
 }
 
 PamClientSession::PamClientSession(sqlite3* dbhandle, const PamInstance& instance)
-    : m_state(PAM_AUTH_INIT)
-    , m_sequence(0)
-    , m_dbhandle(dbhandle)
+    : m_dbhandle(dbhandle)
     , m_instance(instance)
 {
 }
@@ -206,7 +204,7 @@ Buffer PamClientSession::create_auth_change_packet() const
     gw_mysql_set_byte3(pData, plen);
     pData += 3;
     *pData++ = m_sequence;
-    *pData++ = 0xfe;                            // AuthSwitchRequest command
+    *pData++ = MYSQL_REPLY_AUTHSWITCHREQUEST;
     memcpy(pData, DIALOG.c_str(), DIALOG_SIZE); // Plugin name
     pData += DIALOG_SIZE;
     *pData++ = DIALOG_ECHO_DISABLED;
@@ -223,7 +221,7 @@ int PamClientSession::authenticate(DCB* dcb)
     if (*ses->user)
     {
         rval = MXS_AUTH_FAILED;
-        if (m_state == PAM_AUTH_INIT)
+        if (m_state == State::INIT)
         {
             /** We need to send the authentication switch packet to change the
              * authentication to something other than the 'mysql_native_password'
@@ -231,11 +229,11 @@ int PamClientSession::authenticate(DCB* dcb)
             Buffer authbuf = create_auth_change_packet();
             if (authbuf.length() && dcb->func.write(dcb, authbuf.release()))
             {
-                m_state = PAM_AUTH_DATA_SENT;
+                m_state = State::ASKED_FOR_PW;
                 rval = MXS_AUTH_INCOMPLETE;
             }
         }
-        else if (m_state == PAM_AUTH_DATA_SENT)
+        else if (m_state == State::PW_RECEIVED)
         {
             /** We sent the authentication change packet + plugin name and the client
              * responded with the password. Try to continue authentication without more
@@ -275,8 +273,8 @@ int PamClientSession::authenticate(DCB* dcb)
                                 service = "mysql";
                             }
 
-                            mxb::PamResult res = mxb::pam_authenticate(ses->user, password, service,
-                                                                       PASSWORD);
+                            mxb::PamResult res = mxb::pam_authenticate(ses->user, password, dcb->remote,
+                                                                       service, PASSWORD);
                             if (res.type == mxb::PamResult::Result::SUCCESS)
                             {
                                 authenticated = true;
@@ -294,6 +292,7 @@ int PamClientSession::authenticate(DCB* dcb)
             {
                 rval = MXS_AUTH_SUCCEEDED;
             }
+            m_state = State::DONE;
         }
     }
     return rval;
@@ -307,20 +306,22 @@ bool PamClientSession::extract(DCB* dcb, GWBUF* buffer)
 
     switch (m_state)
     {
-    case PAM_AUTH_INIT:
-        // The buffer doesn't have any PAM-specific data yet
+        case State::INIT:
+        // The buffer doesn't have any PAM-specific data yet, as it's the normal HandShakeResponse.
         rval = true;
         break;
 
-    case PAM_AUTH_DATA_SENT:
+        case State::ASKED_FOR_PW:
+        // Client should have responses with password.
         if (store_client_password(dcb, buffer))
         {
+            m_state = State::PW_RECEIVED;
             rval = true;
         }
         break;
 
     default:
-        MXS_ERROR("Unexpected authentication state: %d", m_state);
+        MXS_ERROR("Unexpected authentication state: %d", static_cast<int>(m_state));
         mxb_assert(!true);
         break;
     }

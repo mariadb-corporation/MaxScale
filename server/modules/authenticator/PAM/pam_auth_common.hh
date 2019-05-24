@@ -21,7 +21,6 @@
 extern const std::string DIALOG;
 extern const std::string PASSWORD;
 extern const int DIALOG_SIZE;
-extern const char GENERAL_ERRMSG[];
 
 /** PAM authentication states */
 enum pam_auth_state
@@ -33,7 +32,7 @@ enum pam_auth_state
 };
 
 /* Magic numbers from server source
- *  https://github.com/MariaDB/server/blob/10.2/plugin/auth_pam/auth_pam.c */
+ * https://github.com/MariaDB/server/blob/10.2/plugin/auth_pam/auth_pam.c */
 enum dialog_plugin_msg_types
 {
     DIALOG_ECHO_ENABLED  = 2,

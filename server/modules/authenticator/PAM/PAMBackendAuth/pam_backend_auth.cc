@@ -20,8 +20,7 @@
 
 static void* pam_backend_auth_alloc(void* instance)
 {
-    PamBackendSession* pses = new(std::nothrow) PamBackendSession();
-    return pses;
+    return new(std::nothrow) PamBackendSession();
 }
 
 static void pam_backend_auth_free(void* data)

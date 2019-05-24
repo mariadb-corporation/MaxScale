@@ -15,6 +15,7 @@
 
 #include <security/pam_appl.h>
 #include <maxbase/alloc.h>
+#include <maxbase/assert.h>
 #include <maxbase/log.hh>
 #include <maxbase/format.hh>
 
@@ -23,21 +24,21 @@ using std::string;
 namespace
 {
 
-const char GENERAL_ERRMSG[] = "Only simple password-based PAM authentication with one call "
-                              "to the conversation function is supported.";
-
 /** Used by the PAM conversation function */
 class ConversationData
 {
 public:
+    int    m_counter {0};
     string m_client;
     string m_password;
-    int    m_counter {0};
+    string m_client_remote; // Client address
     string m_expected_msg;
 
-    ConversationData(const string& client, const string& password, const string& expected_msg)
+    ConversationData(const string& client, const string& password, const string& client_remote,
+                     const string& expected_msg)
         : m_client(client)
         , m_password(password)
+        , m_client_remote(client_remote)
         , m_expected_msg(expected_msg)
     {
     }
@@ -50,66 +51,91 @@ public:
  * http://www.linux-pam.org/Linux-PAM-html/adg-interface-of-app-expected.html#adg-pam_conv
  * for more information.
  */
-int conversation_func(int num_msg,
-                      const struct pam_message** msg,
-                      struct pam_response** resp_out,
+int conversation_func(int num_msg, const struct pam_message** messages, struct pam_response** responses_out,
                       void* appdata_ptr)
 {
     MXB_DEBUG("Entering PAM conversation function.");
-    int rval = PAM_CONV_ERR;
     ConversationData* data = static_cast<ConversationData*>(appdata_ptr);
-    data->m_counter++;
-    if (data->m_counter > 1)
+
+    // The responses are saved as an array of structures. This is unlike the input messages, which is an
+    // array of pointers to struct. Each message should have an answer, even if empty.
+    auto responses = static_cast<pam_response*>(MXS_CALLOC(num_msg, sizeof(pam_response)));
+    if (!responses)
     {
-        MXB_ERROR("Multiple calls to conversation function for client '%s'. %s",
-                  data->m_client.c_str(), GENERAL_ERRMSG);
+        return PAM_BUF_ERR;
     }
-    else if (num_msg != 1)
+
+    bool conv_error = false;
+    for (int i = 0; i < num_msg; i++)
     {
-        MXB_ERROR("Conversation function received '%d' messages from API. Only singular messages are "
-                  "supported.", num_msg);
-    }
-    else
-    {
-        pam_message first = *msg[0];
-        // Check that the first message from the PAM system is as expected.
-        if (first.msg_style != PAM_PROMPT_ECHO_OFF && first.msg_style != PAM_PROMPT_ECHO_ON)
+        const pam_message* message = messages[i]; // This may crash on Solaris, see PAM documentation.
+        pam_response* response = &responses[i];
+        int msg_type = message->msg_style;
+        // In an ideal world, these messages would be sent to the client instead of the log. The problem
+        // is that the messages should be sent with the AuthSwitchRequest-packet, requiring the blocking
+        // PAM api to work with worker-threads. Not worth the trouble unless really required.
+        if (msg_type == PAM_ERROR_MSG)
         {
-            MXB_ERROR("Unexpected PAM message type '%i' when '%i' or '%i' was expected.",
-                      first.msg_style, PAM_PROMPT_ECHO_OFF, PAM_PROMPT_ECHO_ON);
+            MXB_WARNING("Error message from PAM api: %s", message->msg);
         }
-        else if (!data->m_expected_msg.empty() && data->m_expected_msg != first.msg)
+        else if (msg_type == PAM_TEXT_INFO)
         {
-            MXB_ERROR("Unexpected PAM message contents '%s' when '%s' was expected.",
-                      first.msg, data->m_expected_msg.c_str());
+            MXB_NOTICE("Message from PAM api: '%s'", message->msg);
+        }
+        else if (msg_type == PAM_PROMPT_ECHO_ON || msg_type == PAM_PROMPT_ECHO_OFF)
+        {
+            auto exp = data->m_expected_msg;
+            // PAM system is asking for something. We only know how to answer the expected question,
+            // anything else is an error.
+            if (data->m_expected_msg.empty() || message->msg == data->m_expected_msg)
+            {
+                response->resp = MXS_STRDUP(data->m_password.c_str());
+                // retcode should be already 0.
+            }
+            else
+            {
+                MXB_ERROR("Unexpected prompt from PAM api: '%s'. Only '%s' is allowed.",
+                          message->msg, data->m_expected_msg.c_str());
+                conv_error = true;
+            }
         }
         else
         {
-            pam_response* response = static_cast<pam_response*>(MXS_MALLOC(sizeof(pam_response)));
-            if (response)
-            {
-                response->resp_retcode = 0;
-                response->resp = MXS_STRDUP(data->m_password.c_str());
-                *resp_out = response;
-                rval = PAM_SUCCESS;
-            }
+            // Faulty PAM system or perhaps different api version.
+            MXB_ERROR("Unknown PAM message type '%i'.", msg_type);
+            conv_error = true;
+            mxb_assert(!true);
+
         }
     }
-    return rval;
+
+    data->m_counter++;
+    if (conv_error)
+    {
+        // On error, the response output should not be set.
+        MXS_FREE(responses);
+        return PAM_CONV_ERR;
+    }
+    else
+    {
+        *responses_out = responses;
+        return PAM_SUCCESS;
+    }
 }
 }
 
 namespace maxbase
 {
 
-PamResult pam_authenticate(const string& user, const string& password, const string& service,
-                           const string& expected_msg)
+PamResult
+pam_authenticate(const std::string& user, const std::string& password, const std::string& client_remote,
+                 const std::string& service, const std::string& expected_msg)
 {
     const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication of user '%s': '%s'.";
     const char PAM_AUTH_ERR_MSG[] = "PAM authentication of user '%s' to service '%s' failed: '%s'.";
     const char PAM_ACC_ERR_MSG[] = "PAM account check of user '%s' to service '%s' failed: '%s'.";
 
-    ConversationData appdata(user, password, expected_msg);
+    ConversationData appdata(user, password, client_remote, expected_msg);
     pam_conv conv_struct = {conversation_func, &appdata};
 
     PamResult result;
@@ -169,5 +195,11 @@ PamResult pam_authenticate(const string& user, const string& password, const str
     }
     pam_end(pam_handle, pam_status);
     return result;
+}
+
+PamResult pam_authenticate(const string& user, const string& password, const string& service,
+                           const string& expected_msg)
+{
+    return pam_authenticate(user, password, "", service, expected_msg);
 }
 }
