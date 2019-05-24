@@ -15,30 +15,20 @@
 #include <maxscale/ccdefs.hh>
 #include <unistd.h>
 
-#define MAXSCALE_EXTCMD_ARG_MAX 256
-
 class ExternalCmd
 {
 public:
     /**
-     * Allocate a new external command.
-     *
-     * The name and parameters are copied into the external command structure so
-     * the original memory can be freed if needed.
+     * Create a new external command. The name and parameters are copied so
+     * the original memory can be freed.
      *
      * @param command Command to execute with the parameters
      * @param timeout Command timeout in seconds
-     *
      * @return Pointer to new external command struct or NULL if an error occurred
      */
-    static ExternalCmd* externcmd_allocate(const char* argstr, uint32_t timeout);
+    static ExternalCmd* create(const char* argstr, uint32_t timeout);
 
-    /**
-     * Free a previously allocated external command
-     *
-     * @param cmd Command to free
-     */
-    static void externcmd_free(ExternalCmd* cmd);
+    ~ExternalCmd();
 
     /**
      * Execute a command
@@ -49,23 +39,36 @@ public:
      */
     int externcmd_execute();
 
-    char** argv;        /**< Argument vector for the command, first being the
-                         * actual command being executed */
+    /**
+    * Substitute all occurrences of @c match with @c replace in the arguments.
+    *
+    * @param match Match string
+    * @param replace Replacement string
+    *
+    * @return True if replacement was successful, false on error
+    */
+    bool substitute_arg(const char* match, const char* replace);
+
+    /**
+     * Simple matching of string and command
+     *
+     * @param match String to search for
+     *
+     * @return True if the string matched
+     */
+    bool externcmd_matches(const char* match);
+
+    static const int MAX_ARGS {256};
+
+    char* argv[MAX_ARGS + 1] {}; /**< Arguments. First element is the command. */
+
+private:
     int      n_exec;    /**< Number of times executed */
     pid_t    child;     /**< PID of the child process */
     uint32_t timeout;   /**< Command timeout in seconds */
-};
 
-/**
- * Substitute all occurrences of @c match with @c replace in the arguments for @c cmd
- *
- * @param cmd External command
- * @param match Match string
- * @param replace Replacement string
- *
- * @return True if replacement was successful, false on error
- */
-bool externcmd_substitute_arg(ExternalCmd* cmd, const char* re, const char* replace);
+    int tokenize_arguments(const char* argstr);
+};
 
 /**
  * Check if a command can be executed
@@ -78,13 +81,3 @@ bool externcmd_substitute_arg(ExternalCmd* cmd, const char* re, const char* repl
  * @return True if the file was found and the use has execution permissions to it
  */
 bool externcmd_can_execute(const char* argstr);
-
-/**
- * Simple matching of string and command
- *
- * @param cmd Command where the match is searched from
- * @param match String to search for
- *
- * @return True if the string matched
- */
-bool externcmd_matches(const ExternalCmd* cmd, const char* match);

@@ -18,7 +18,6 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-#include <string>
 #include <thread>
 
 #include <maxbase/assert.h>
@@ -29,11 +28,9 @@
  * Tokenize a string into arguments suitable for a `execvp` call
  *
  * @param args Argument string
- * @param argv Array of char pointers to be filled with tokenized arguments
- *
  * @return 0 on success, -1 on error
  */
-static int tokenize_arguments(const char* argstr, char** argv)
+int ExternalCmd::tokenize_arguments(const char* argstr)
 {
     int i = 0;
     bool quoted = false;
@@ -47,7 +44,7 @@ static int tokenize_arguments(const char* argstr, char** argv)
     start = args;
     ptr = start;
 
-    while (*ptr != '\0' && i < MAXSCALE_EXTCMD_ARG_MAX)
+    while (*ptr != '\0' && i < MAX_ARGS)
     {
         if (escaped)
         {
@@ -103,60 +100,51 @@ static int tokenize_arguments(const char* argstr, char** argv)
     return 0;
 }
 
-ExternalCmd* ExternalCmd::externcmd_allocate(const char* argstr, uint32_t timeout)
+ExternalCmd* ExternalCmd::create(const char* argstr, uint32_t timeout)
 {
-    ExternalCmd* cmd = (ExternalCmd*) MXS_MALLOC(sizeof(ExternalCmd));
-    char** argv = (char**) MXS_MALLOC(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX);
-
-    if (argstr && cmd && argv)
+    auto cmd = new ExternalCmd;
+    bool success = false;
+    if (argstr && cmd)
     {
         cmd->timeout = timeout;
-        cmd->argv = argv;
-        if (tokenize_arguments(argstr, cmd->argv) == 0)
+        if (cmd->tokenize_arguments(argstr) == 0)
         {
-            if (access(cmd->argv[0], X_OK) != 0)
+            auto cmdname = cmd->argv[0];
+            if (access(cmdname, X_OK) != 0)
             {
-                if (access(cmd->argv[0], F_OK) != 0)
+                if (access(cmdname, F_OK) != 0)
                 {
-                    MXS_ERROR("Cannot find file: %s", cmd->argv[0]);
+                    MXS_ERROR("Cannot find file: %s", cmdname);
                 }
                 else
                 {
-                    MXS_ERROR("Cannot execute file '%s'. Missing "
-                              "execution permissions.",
-                              cmd->argv[0]);
+                    MXS_ERROR("Cannot execute file '%s'. Missing execution permissions.", cmdname);
                 }
-                externcmd_free(cmd);
-                cmd = NULL;
+            }
+            else
+            {
+                success = true;
             }
         }
         else
         {
-            MXS_ERROR("Failed to parse argument string for external command: %s",
-                      argstr);
-            externcmd_free(cmd);
-            cmd = NULL;
+            MXS_ERROR("Failed to parse argument string for external command: %s", argstr);
         }
     }
-    else
+
+    if (!success)
     {
-        MXS_FREE(cmd);
-        MXS_FREE(argv);
-        cmd = NULL;
+        delete cmd;
+        cmd = nullptr;
     }
     return cmd;
 }
 
-void ExternalCmd::externcmd_free(ExternalCmd* cmd)
+ExternalCmd::~ExternalCmd()
 {
-    if (cmd)
+    for (int i = 0; argv[i]; i++)
     {
-        for (int i = 0; cmd->argv[i]; i++)
-        {
-            MXS_FREE(cmd->argv[i]);
-        }
-        MXS_FREE(cmd->argv);
-        MXS_FREE(cmd);
+        MXS_FREE(argv[i]);
     }
 }
 
@@ -378,7 +366,7 @@ int ExternalCmd::externcmd_execute()
     return rval;
 }
 
-bool externcmd_substitute_arg(ExternalCmd* cmd, const char* match, const char* replace)
+bool ExternalCmd::substitute_arg(const char* match, const char* replace)
 {
     int err;
     bool rval = true;
@@ -386,15 +374,15 @@ bool externcmd_substitute_arg(ExternalCmd* cmd, const char* match, const char* r
     pcre2_code* re = pcre2_compile((PCRE2_SPTR) match, PCRE2_ZERO_TERMINATED, 0, &err, &errpos, NULL);
     if (re)
     {
-        for (int i = 0; cmd->argv[i] && rval; i++)
+        for (int i = 0; argv[i] && rval; i++)
         {
-            size_t size_orig = strlen(cmd->argv[i]);
+            size_t size_orig = strlen(argv[i]);
             size_t size_replace = strlen(replace);
             size_t size = MXS_MAX(size_orig, size_replace);
             char* dest = (char*)MXS_MALLOC(size);
             if (dest)
             {
-                mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, cmd->argv[i], replace, &dest, &size);
+                mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, argv[i], replace, &dest, &size);
 
                 switch (rc)
                 {
@@ -404,8 +392,8 @@ bool externcmd_substitute_arg(ExternalCmd* cmd, const char* match, const char* r
                     break;
 
                 case MXS_PCRE2_MATCH:
-                    MXS_FREE(cmd->argv[i]);
-                    cmd->argv[i] = dest;
+                    MXS_FREE(argv[i]);
+                    argv[i] = dest;
                     break;
 
                 case MXS_PCRE2_NOMATCH:
@@ -487,11 +475,11 @@ bool externcmd_can_execute(const char* argstr)
     return rval;
 }
 
-bool externcmd_matches(const ExternalCmd* cmd, const char* match)
+bool ExternalCmd::externcmd_matches(const char* match)
 {
-    for (int i = 0; cmd->argv[i]; i++)
+    for (int i = 0; argv[i]; i++)
     {
-        if (strstr(cmd->argv[i], match))
+        if (strstr(argv[i], match))
         {
             return true;
         }

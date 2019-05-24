@@ -1056,14 +1056,14 @@ std::string Monitor::child_nodes(MonitorServer* parent)
 
 int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
 {
-    if (externcmd_matches(cmd, "$INITIATOR"))
+    if (cmd->externcmd_matches("$INITIATOR"))
     {
         char initiator[strlen(ptr->server->address) + 24];      // Extra space for port
         snprintf(initiator, sizeof(initiator), "[%s]:%d", ptr->server->address, ptr->server->port);
-        externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
+        cmd->substitute_arg("[$]INITIATOR", initiator);
     }
 
-    if (externcmd_matches(cmd, "$PARENT"))
+    if (cmd->externcmd_matches("$PARENT"))
     {
         std::stringstream ss;
         MonitorServer* parent = find_parent_node(ptr);
@@ -1072,56 +1072,56 @@ int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
         {
             ss << "[" << parent->server->address << "]:" << parent->server->port;
         }
-        externcmd_substitute_arg(cmd, "[$]PARENT", ss.str().c_str());
+        cmd->substitute_arg("[$]PARENT", ss.str().c_str());
     }
 
-    if (externcmd_matches(cmd, "$CHILDREN"))
+    if (cmd->externcmd_matches("$CHILDREN"))
     {
-        externcmd_substitute_arg(cmd, "[$]CHILDREN", child_nodes(ptr).c_str());
+        cmd->substitute_arg("[$]CHILDREN", child_nodes(ptr).c_str());
     }
 
-    if (externcmd_matches(cmd, "$EVENT"))
+    if (cmd->externcmd_matches("$EVENT"))
     {
-        externcmd_substitute_arg(cmd, "[$]EVENT", ptr->get_event_name());
+        cmd->substitute_arg("[$]EVENT", ptr->get_event_name());
     }
 
     char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
 
-    if (externcmd_matches(cmd, "$CREDENTIALS"))
+    if (cmd->externcmd_matches("$CREDENTIALS"))
     {
         // We provide the credentials for _all_ servers.
         append_node_names(nodelist, sizeof(nodelist), 0, CredentialsApproach::INCLUDE);
-        externcmd_substitute_arg(cmd, "[$]CREDENTIALS", nodelist);
+        cmd->substitute_arg("[$]CREDENTIALS", nodelist);
     }
 
-    if (externcmd_matches(cmd, "$NODELIST"))
+    if (cmd->externcmd_matches("$NODELIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), SERVER_RUNNING);
-        externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
+        cmd->substitute_arg("[$]NODELIST", nodelist);
     }
 
-    if (externcmd_matches(cmd, "$LIST"))
+    if (cmd->externcmd_matches("$LIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), 0);
-        externcmd_substitute_arg(cmd, "[$]LIST", nodelist);
+        cmd->substitute_arg("[$]LIST", nodelist);
     }
 
-    if (externcmd_matches(cmd, "$MASTERLIST"))
+    if (cmd->externcmd_matches("$MASTERLIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), SERVER_MASTER);
-        externcmd_substitute_arg(cmd, "[$]MASTERLIST", nodelist);
+        cmd->substitute_arg("[$]MASTERLIST", nodelist);
     }
 
-    if (externcmd_matches(cmd, "$SLAVELIST"))
+    if (cmd->externcmd_matches("$SLAVELIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), SERVER_SLAVE);
-        externcmd_substitute_arg(cmd, "[$]SLAVELIST", nodelist);
+        cmd->substitute_arg("[$]SLAVELIST", nodelist);
     }
 
-    if (externcmd_matches(cmd, "$SYNCEDLIST"))
+    if (cmd->externcmd_matches("$SYNCEDLIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), SERVER_JOINED);
-        externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
+        cmd->substitute_arg("[$]SYNCEDLIST", nodelist);
     }
 
     int rv = cmd->externcmd_execute();
@@ -1202,7 +1202,7 @@ int Monitor::launch_script(MonitorServer* ptr)
     char arg[strlen(script) + 1];
     strcpy(arg, script);
 
-    ExternalCmd* cmd = ExternalCmd::externcmd_allocate(arg, m_settings.script_timeout);
+    ExternalCmd* cmd = ExternalCmd::create(arg, m_settings.script_timeout);
 
     if (cmd == NULL)
     {
@@ -1213,9 +1213,7 @@ int Monitor::launch_script(MonitorServer* ptr)
     }
 
     int rv = launch_command(ptr, cmd);
-
-    ExternalCmd::externcmd_free(cmd);
-
+    delete cmd;
     return rv;
 }
 
