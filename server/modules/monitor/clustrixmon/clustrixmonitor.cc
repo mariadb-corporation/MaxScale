@@ -189,7 +189,23 @@ ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& modul
 
     sqlite3* pDb = open_or_create_db(path);
 
-    return new ClustrixMonitor(name, module, pDb);
+    ClustrixMonitor* pThis = nullptr;
+
+    if (pDb)
+    {
+        // Even if the creation/opening of the sqlite3 database fails, we will still
+        // get a valid database handle.
+        pThis = new ClustrixMonitor(name, module, pDb);
+    }
+    else
+    {
+        // The handle will be null, *only* if the opening fails due to a memory
+        // allocation error.
+        MXS_ALERT("sqlite3 memory allocation failed, the Clustrix monitor "
+                  "cannot continue.");
+    }
+
+    return pThis;
 }
 
 bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
