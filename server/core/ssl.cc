@@ -422,7 +422,7 @@ SSLProvider::SSLProvider(std::unique_ptr<mxs::SSLContext> context)
 mxs::SSLContext* SSLProvider::context() const
 {
     mxb_assert_message(mxs::RoutingWorker::get_current(), "Must be used on a RoutingWorker");
-    return m_context->get();
+    return m_context.get();
 }
 
 const mxs::SSLConfig& SSLProvider::config() const
@@ -432,10 +432,8 @@ const mxs::SSLConfig& SSLProvider::config() const
 
 void SSLProvider::set_context(std::unique_ptr<mxs::SSLContext> ssl)
 {
-    mxb_assert_message(mxs::RoutingWorker::get_current()
-                       == mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN),
-                       "Must be only set on the main RoutingWorker");
-    m_config = ssl ? ssl->config() : mxs::SSLConfig {};
-    m_context.assign(std::move(ssl));
+    mxb_assert(ssl);
+    m_context = std::move(ssl);
+    m_config = m_context->config();
 }
 }

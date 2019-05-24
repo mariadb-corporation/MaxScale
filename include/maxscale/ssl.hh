@@ -151,12 +151,17 @@ public:
 
     SSLProvider(std::unique_ptr<mxs::SSLContext> context);
 
+    // Current configuration
     const mxs::SSLConfig& config() const;
-    mxs::SSLContext*      context() const;
-    void                  set_context(std::unique_ptr<mxs::SSLContext> ssl);
+
+    // The context or nullptr if no context is set
+    mxs::SSLContext* context() const;
+
+    // Set the context, argument must not be null
+    void set_context(std::unique_ptr<mxs::SSLContext> ssl);
 
 private:
-    mxs::rworker_local<std::shared_ptr<mxs::SSLContext>> m_context;     /**< SSL context */
-    mxs::SSLConfig                                       m_config;      /**< SSL configuration */
+    std::unique_ptr<mxs::SSLContext> m_context;     /**< SSL context */
+    mxs::SSLConfig                   m_config;      /**< SSL configuration */
 };
 }
