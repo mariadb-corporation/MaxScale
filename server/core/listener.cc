@@ -531,16 +531,13 @@ bool listener_serialize(const SListener& listener)
 json_t* Listener::to_json() const
 {
     json_t* param = json_object();
-    json_object_set_new(param, "address", json_string(m_address.c_str()));
-    json_object_set_new(param, "port", json_integer(m_port));
-    json_object_set_new(param, "protocol", json_string(m_protocol.c_str()));
-    json_object_set_new(param, "authenticator", json_string(m_authenticator.c_str()));
-    json_object_set_new(param, "auth_options", json_string(m_auth_options.c_str()));
 
-    if (m_ssl_context)
-    {
-        json_object_set_new(param, "ssl", m_ssl_context->to_json());
-    }
+    const MXS_MODULE* mod = get_module(m_protocol.c_str(), MODULE_PROTOCOL);
+    config_add_module_params_json(&m_params,
+                                  {CN_TYPE, CN_SERVICE},
+                                  config_server_params,
+                                  mod->parameters,
+                                  param);
 
     json_t* attr = json_object();
     json_object_set_new(attr, CN_STATE, json_string(state()));
