@@ -143,13 +143,20 @@ char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
 
     if (maxavro_read_integer(file, &len))
     {
-        key = MXS_MALLOC(len + 1);
-        if (key)
+        if (file->buffer_ptr + len < file->buffer_end)
         {
-            memcpy(key, file->buffer_ptr, len);
-            key[len] = '\0';
-            file->buffer_ptr += len;
-            *size = len;
+            key = MXS_MALLOC(len + 1);
+            if (key)
+            {
+                memcpy(key, file->buffer_ptr, len);
+                key[len] = '\0';
+                file->buffer_ptr += len;
+                *size = len;
+            }
+            else
+            {
+                file->last_error = MAXAVRO_ERR_MEMORY;
+            }
         }
         else
         {
