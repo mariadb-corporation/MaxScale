@@ -625,7 +625,7 @@ RoutingWorker* RoutingWorker::create(int epoll_listener_fd)
 
 void RoutingWorker::epoll_tick()
 {
-    dcb_process_idle_sessions(m_id);
+    dcb_process_timeouts(m_id);
 
     delete_zombies();
 

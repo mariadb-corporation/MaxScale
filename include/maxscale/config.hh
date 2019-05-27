@@ -158,6 +158,7 @@ extern const char CN_MONITOR_INTERVAL[];
 extern const char CN_MONITORS[];
 extern const char CN_MS_TIMESTAMP[];
 extern const char CN_NAME[];
+extern const char CN_NET_WRITE_TIMEOUT[];
 extern const char CN_NON_BLOCKING_POLLS[];
 extern const char CN_OPERATION[];
 extern const char CN_OPTIONS[];

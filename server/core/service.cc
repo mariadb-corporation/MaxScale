@@ -106,7 +106,7 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
-    if (service->conn_idle_timeout)
+    if (service->conn_idle_timeout || service->net_write_timeout)
     {
         dcb_enable_session_timeouts();
     }
@@ -220,6 +220,7 @@ Service::Service(const std::string& name,
     retry_start = params->get_bool(CN_RETRY_ON_FAILURE);
     enable_root = params->get_bool(CN_ENABLE_ROOT_USER);
     conn_idle_timeout = params->get_duration<std::chrono::seconds>(CN_CONNECTION_TIMEOUT).count();
+    net_write_timeout = params->get_duration<std::chrono::seconds>(CN_NET_WRITE_TIMEOUT).count();
     max_connections = params->get_integer(CN_MAX_CONNECTIONS);
     log_auth_warnings = params->get_bool(CN_LOG_AUTH_WARNINGS);
     strip_db_esc = params->get_bool(CN_STRIP_DB_ESC);
@@ -1904,6 +1905,7 @@ bool Service::is_basic_parameter(const std::string& name)
     {
         CN_AUTH_ALL_SERVERS,
         CN_CONNECTION_TIMEOUT,
+        CN_NET_WRITE_TIMEOUT,
         CN_ENABLE_ROOT_USER,
         CN_LOCALHOST_MATCH_WILDCARD_HOST,
         CN_LOG_AUTH_WARNINGS,
@@ -1956,6 +1958,15 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
         }
 
         mxb_assert(conn_idle_timeout >= 0);
+    }
+    else if (key == CN_NET_WRITE_TIMEOUT)
+    {
+        if ((net_write_timeout = std::stoi(value)))
+        {
+            dcb_enable_session_timeouts();
+        }
+
+        mxb_assert(net_write_timeout >= 0);
     }
     else if (key == CN_AUTH_ALL_SERVERS)
     {

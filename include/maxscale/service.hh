@@ -126,6 +126,7 @@ public:
                                                      * to escape at least the underscore
                                                      * character. */
     int64_t conn_idle_timeout;                      /**< Session timeout in seconds */
+    int64_t net_write_timeout;                      /**< Write timeout in seconds */
     char    weightby[MAX_SERVICE_WEIGHTBY_LEN];     /**< Service weighting parameter name
                                                      * */
     bool retry_start;                               /**< If starting of the service should

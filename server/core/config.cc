@@ -103,6 +103,7 @@ const char CN_CLASSIFICATION[] = "classification";
 const char CN_CLASSIFY[] = "classify";
 const char CN_CLUSTER[] = "cluster";
 const char CN_CONNECTION_TIMEOUT[] = "connection_timeout";
+const char CN_NET_WRITE_TIMEOUT[] = "net_write_timeout";
 const char CN_DATA[] = "data";
 const char CN_DEFAULT[] = "default";
 const char CN_DESCRIPTION[] = "description";
@@ -335,6 +336,12 @@ const MXS_MODULE_PARAM config_service_params[] =
     },
     {
         CN_CONNECTION_TIMEOUT,
+        MXS_MODULE_PARAM_DURATION,
+        "0",
+        MXS_MODULE_OPT_DURATION_S
+    },
+    {
+        CN_NET_WRITE_TIMEOUT,
         MXS_MODULE_PARAM_DURATION,
         "0",
         MXS_MODULE_OPT_DURATION_S

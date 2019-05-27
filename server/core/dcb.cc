@@ -164,6 +164,7 @@ DCB::DCB(Role role, MXS_SESSION* session)
     , low_water(config_writeq_low_water())
     , service(session->service)
     , last_read(mxs_clock())
+    , last_write(mxs_clock())
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
 {
     // TODO: Remove DCB::Role::INTERNAL to always have a valid listener
@@ -347,6 +348,7 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
             dcb->persistentstart = 0;
             dcb->was_persistent = true;
             dcb->last_read = mxs_clock();
+            dcb->last_write = mxs_clock();
             mxb::atomic::add(&server->stats.n_from_pool, 1, mxb::atomic::RELAXED);
             return dcb;
         }
@@ -984,6 +986,10 @@ int dcb_drain_writeq(DCB* dcb)
          * so the remaining data is put back at the front of the write
          * queue.
          */
+        if (written)
+        {
+            dcb->last_write = mxs_clock();
+        }
         if (stop_writing)
         {
             dcb->writeq = dcb->writeq ? gwbuf_append(local_writeq, dcb->writeq) : local_writeq;
@@ -2447,28 +2453,32 @@ void dcb_enable_session_timeouts()
 }
 
 /**
- * Close sessions that have been idle for too long.
+ * Close sessions that have been idle or write to the socket has taken for too long.
  *
- * If the time since a session last sent data is greater than the set value in the
- * service, it is disconnected. The connection timeout is disabled by default.
+ * If the time since a session last sent data is greater than the set connection_timeout
+ * value in the service, it is disconnected. If the time since last write
+ * to the socket is greater net_write_timeout the session is also disconnected.
+ * The timeouts are disabled by default.
  */
-void dcb_process_idle_sessions(int thr)
+void dcb_process_timeouts(int thr)
 {
     if (this_unit.check_timeouts && mxs_clock() >= this_thread.next_timeout_check)
     {
-        /** Because the resolution of the timeout is one second, we only need to
-         * check for it once per second. One heartbeat is 100 milliseconds. */
+        /** Because the resolutions of the timeouts is one second, we only need to
+         * check them once per second. One heartbeat is 100 milliseconds. */
         this_thread.next_timeout_check = mxs_clock() + 10;
 
         for (DCB* dcb = this_unit.all_dcbs[thr]; dcb; dcb = dcb->thread.next)
         {
-            if (dcb->role == DCB::Role::CLIENT)
+            if (dcb->role == DCB::Role::CLIENT && dcb->state == DCB_STATE_POLLING)
             {
                 SERVICE* service = dcb->session->service;
 
-                if (service->conn_idle_timeout && dcb->state == DCB_STATE_POLLING)
+                if (service->conn_idle_timeout)
                 {
                     int64_t idle = mxs_clock() - dcb->last_read;
+                    // Multiply by 10 to match conn_idle_timeout resolution
+                    // to the 100 millisecond tics.
                     int64_t timeout = service->conn_idle_timeout * 10;
 
                     if (idle > timeout)
@@ -2479,6 +2489,21 @@ void dcb_process_idle_sessions(int thr)
                                     (float)idle / 10.f);
                         dcb->session->close_reason = SESSION_CLOSE_TIMEOUT;
                         poll_fake_hangup_event(dcb);
+                    }
+                }
+
+                if (service->net_write_timeout && dcb->writeqlen > 0)
+                {
+                    int64_t idle = mxs_clock() - dcb->last_write;
+                    // Multiply by 10 to match net_write_timeout resolution
+                    // to the 100 millisecond tics.
+                    if (idle > dcb->service->net_write_timeout * 10)
+                    {
+                        MXS_WARNING("network write timed out for '%s'@%s, ",
+                                        dcb->user ? dcb->user : "<unknown>",
+                                        dcb->remote ? dcb->remote : "<unknown>");
+                            dcb->session->close_reason = SESSION_CLOSE_TIMEOUT;
+                            poll_fake_hangup_event(dcb);
                     }
                 }
             }

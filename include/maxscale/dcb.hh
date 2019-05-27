@@ -194,6 +194,7 @@ struct DCB : public MXB_POLL_DATA
     void*          authenticator_data = nullptr;/**< The authenticator data for this DCB */
     DCB_CALLBACK*  callbacks = nullptr;         /**< The list of callbacks for the DCB */
     int64_t        last_read = 0;               /**< Last time the DCB received data */
+    int64_t        last_write = 0;              /**< Last time the DCB sent data */
     struct SERVER* server = nullptr;            /**< The associated backend server */
     SSL*           ssl = nullptr;               /**< SSL struct for connection */
     bool           ssl_read_want_read = false;
@@ -285,7 +286,7 @@ int      dcb_accept_SSL(DCB* dcb);
 int      dcb_connect_SSL(DCB* dcb);
 int      dcb_listen(DCB* listener, const char* config);
 void     dcb_enable_session_timeouts();
-void     dcb_process_idle_sessions(int thr);
+void     dcb_process_timeouts(int thr);
 
 /**
  * @brief Append a buffer the DCB's readqueue
