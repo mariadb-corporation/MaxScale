@@ -48,7 +48,7 @@ void collect_information(TestConnections& test)
             static_by_address.insert(make_pair(server.address, server));
         }
 
-        if (!node_by_address.count(server.address) == 0)
+        if (node_by_address.count(server.address) == 0)
         {
             Clustrix_nodes* pClustrix = test.clustrix;
 
@@ -56,6 +56,7 @@ void collect_information(TestConnections& test)
             {
                 if (pClustrix->IP_private[i] == server.address)
                 {
+                    cout << server.address << " IS NODE " << i << endl;
                     node_by_address[server.address] = i;
                     break;
                 }
@@ -171,6 +172,26 @@ MaxRest::Server get_current_server(TestConnections& test, MYSQL* pMysql)
     return dynamic_by_address[address];
 }
 
+void test_transaction_replay(TestConnections& test, MYSQL* pMysql, const std::string& name, int node)
+{
+    test.try_query(pMysql, "BEGIN");
+    test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
+
+    cout << "Stopping server " << name << " on node " << node << "." << endl;
+    if (stop_server(test, name, node))
+    {
+        // The server we were connected to is now down. If the following
+        // succeeds, then reconnect + transaction replay worked as specified.
+        test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
+        test.try_query(pMysql, "COMMIT");
+
+        cout << "Starting Clustrix " << name << " on node " << node << "." << endl;
+
+        int timeout = 3 * 60;
+        start_server(test, name, node, timeout);
+    }
+}
+
 void run_test(TestConnections& test)
 {
     MaxRest maxrest(&test);
@@ -191,26 +212,38 @@ void run_test(TestConnections& test)
          << " running on node " << node << "."
          << endl;
 
-    test.try_query(pMysql, "BEGIN");
-    test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
+    // FIRST TEST: Take down the very node we are connected to.
+    //
+    // This requires MaxScale to open a new connection to another node,
+    // seed the session and replay the transaction.
+    test_transaction_replay(test, pMysql, dynamic_name, node);
 
-    cout << "Stopping server " << dynamic_name << " on node " << node << "." << endl;
-    if (stop_server(test, dynamic_name, node))
+    MaxRest::Server server2 = get_current_server(test, pMysql);
+
+    test.expect(server.address != server2.address, "Huh, server did not switch.");
+
+    server = server2;
+
+    for (const auto& kv : dynamic_by_address)
     {
-        // The server we were connected to is now down. If the following
-        // succeeds, then reconnect + transaction replay worked as specified.
-        test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
-        test.try_query(pMysql, "COMMIT");
-
-        cout << "Starting Clustrix " << dynamic_name << " on node " << node << "." << endl;
-
-        int timeout = 3 * 60;
-        start_server(test, dynamic_name, node, timeout);
+        if (kv.first != server.address)
+        {
+            server2 = kv.second;
+            break;
+        }
     }
 
-    MaxRest::Server server_after = get_current_server(test, pMysql);
+    node = node_by_address[server2.address];
 
-    test.expect(server.address != server_after.address, "Huh, server did not switch.");
+    // SECOND TEST: Take down another node but than the one we are connected to.
+    //              That will cause a  Clustrix Group Change event.
+    //
+    // This requires MaxScale to detect the error and replay the transaction.
+    test_transaction_replay(test, pMysql, server2.name, node);
+
+    server2 = get_current_server(test, pMysql);
+
+    test.expect(server.address == server2.address, "Huh, server has switched.");
 }
 
 }
