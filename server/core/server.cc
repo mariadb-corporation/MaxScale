@@ -524,9 +524,9 @@ void Server::print_to_dcb(DCB* dcb) const
                                                                 + server->stats.n_from_pool + 1);
         dcb_printf(dcb, "\tPool availability:                   %0.2lf%%\n", d * 100.0);
     }
-    if (server->ssl().context())
+    if (server->ssl().enabled())
     {
-        dcb_printf(dcb, "%s", server->ssl().context()->to_string().c_str());
+        dcb_printf(dcb, "%s", server->ssl().to_string().c_str());
     }
     if (server->proxy_protocol)
     {

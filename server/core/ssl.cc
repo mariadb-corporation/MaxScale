@@ -358,34 +358,6 @@ bool SSLContext::init()
     return true;
 }
 
-json_t* SSLContext::to_json() const
-{
-    json_t* ssl = json_object();
-    const char* ssl_method = ssl_method_type_to_string(m_cfg.version);
-
-    json_object_set_new(ssl, "ssl_version", json_string(ssl_method));
-    json_object_set_new(ssl, "ssl_cert", json_string(m_cfg.cert.c_str()));
-    json_object_set_new(ssl, "ssl_ca_cert", json_string(m_cfg.ca.c_str()));
-    json_object_set_new(ssl, "ssl_key", json_string(m_cfg.key.c_str()));
-
-    return ssl;
-}
-
-std::string SSLContext::to_string() const
-{
-    std::ostringstream ss;
-
-    ss << "\tSSL initialized:                     yes\n"
-       << "\tSSL method type:                     " << ssl_method_type_to_string(m_cfg.version) << "\n"
-       << "\tSSL certificate verification depth:  " << m_cfg.verify_depth << "\n"
-       << "\tSSL peer verification :              " << (m_cfg.verify_peer ? "true" : "false") << "\n"
-       << "\tSSL certificate:                     " << m_cfg.cert << "\n"
-       << "\tSSL key:                             " << m_cfg.key << "\n"
-       << "\tSSL CA certificate:                  " << m_cfg.ca << "\n";
-
-    return ss.str();
-}
-
 SSLContext::~SSLContext()
 {
     SSL_CTX_free(m_ctx);
@@ -412,5 +384,20 @@ void SSLProvider::set_context(std::unique_ptr<mxs::SSLContext> ssl)
     mxb_assert(ssl);
     m_context = std::move(ssl);
     m_config = m_context->config();
+}
+
+std::string SSLProvider::to_string() const
+{
+    std::ostringstream ss;
+
+    ss << "\tSSL initialized:                     yes\n"
+       << "\tSSL method type:                     " << ssl_method_type_to_string(m_config.version) << "\n"
+       << "\tSSL certificate verification depth:  " << m_config.verify_depth << "\n"
+       << "\tSSL peer verification :              " << (m_config.verify_peer ? "true" : "false") << "\n"
+       << "\tSSL certificate:                     " << m_config.cert << "\n"
+       << "\tSSL key:                             " << m_config.key << "\n"
+       << "\tSSL CA certificate:                  " << m_config.ca << "\n";
+
+    return ss.str();
 }
 }

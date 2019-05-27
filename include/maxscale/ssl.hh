@@ -117,12 +117,6 @@ public:
         return m_cfg;
     }
 
-    // Convert to JSON representation
-    json_t* to_json() const;
-
-    // Convert to human readable string representation
-    std::string to_string() const;
-
     ~SSLContext();
 
 private:
@@ -144,11 +138,20 @@ public:
 
     SSLProvider(std::unique_ptr<mxs::SSLContext> context);
 
+    // Return true if SSL is enabled
+    bool enabled() const
+    {
+        return m_context.get();
+    }
+
     // Current configuration
     const mxs::SSLConfig& config() const;
 
     // The context or nullptr if no context is set
     mxs::SSLContext* context() const;
+
+    // Convert to human readable string representation
+    std::string to_string() const;
 
     // Set the context, argument must not be null
     void set_context(std::unique_ptr<mxs::SSLContext> ssl);
