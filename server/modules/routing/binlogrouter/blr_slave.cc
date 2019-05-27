@@ -4286,7 +4286,7 @@ int validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, c
 
     int index = -1;
 
-    char custom_message[BINLOG_ERROR_MSG_LEN + 1];
+    char custom_message[BINLOG_ERROR_MSG_LEN];
 
     const char* message = DEFAULT_MESSAGE;
 
