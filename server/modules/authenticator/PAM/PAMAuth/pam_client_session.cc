@@ -113,6 +113,7 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
     }
 
     bool conv_error = false;
+    string userhost = data->m_client + "@" + data->m_client_remote;
     for (int i = 0; i < num_msg; i++)
     {
         const pam_message* message = messages[i]; // This may crash on Solaris, see PAM documentation.
@@ -123,11 +124,13 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
         // PAM api to work with worker-threads. Not worth the trouble unless really required.
         if (msg_type == PAM_ERROR_MSG)
         {
-            MXB_WARNING("Error message from PAM api: %s", message->msg);
+            MXB_WARNING("Error message from PAM api when authenticating '%s': '%s'",
+                        userhost.c_str(), message->msg);
         }
         else if (msg_type == PAM_TEXT_INFO)
         {
-            MXB_NOTICE("Message from PAM api: '%s'", message->msg);
+            MXB_NOTICE("Message from PAM api when authenticating '%s': '%s'",
+                       userhost.c_str(), message->msg);
         }
         else if (msg_type == PAM_PROMPT_ECHO_ON || msg_type == PAM_PROMPT_ECHO_OFF)
         {
@@ -140,8 +143,8 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
             }
             else
             {
-                MXB_ERROR("Unexpected prompt from PAM api: '%s'. Only '%s' is allowed.",
-                          message->msg, PASSWORD.c_str());
+                MXB_ERROR("Unexpected prompt from PAM api when authenticating '%s': '%s'. "
+                          "Only '%s' is allowed.", userhost.c_str(), message->msg, PASSWORD.c_str());
                 conv_error = true;
             }
         }

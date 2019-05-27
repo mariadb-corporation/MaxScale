@@ -14,18 +14,14 @@
 #include "pam_backend_session.hh"
 #include <maxscale/server.h>
 
-namespace
-{
-
 /**
  * Parse packet type and plugin name from packet data. Advances pointer.
  *
  * @param data Data from server. The pointer is advanced.
  * @param end Pointer to after the end of data
- * @param server_name Server name for logging
  * @return True if all expected fields were parsed
  */
-bool parse_authswitchreq(const uint8_t** data, const uint8_t* end, const char* server_name)
+bool PamBackendSession::parse_authswitchreq(const uint8_t** data, const uint8_t* end)
 {
     const uint8_t* ptr = *data;
     if (ptr >= end)
@@ -33,6 +29,7 @@ bool parse_authswitchreq(const uint8_t** data, const uint8_t* end, const char* s
         return false;
     }
 
+    const char* server_name = m_servername.c_str();
     bool success = false;
     uint8_t cmdbyte = *ptr++;
     if (cmdbyte == MYSQL_REPLY_AUTHSWITCHREQUEST)
@@ -49,8 +46,9 @@ bool parse_authswitchreq(const uint8_t** data, const uint8_t* end, const char* s
             }
             else
             {
-                MXB_ERROR("'%s' asked for authentication plugin '%s' when '%s' was expected.",
-                          server_name, plugin_name, DIALOG.c_str());
+                MXB_ERROR("'%s' asked for authentication plugin '%s' when authenticating '%s'. "
+                          "Only '%s' is supported.",
+                          server_name, plugin_name, m_clienthost.c_str(), DIALOG.c_str());
             }
         }
         else
@@ -62,8 +60,8 @@ bool parse_authswitchreq(const uint8_t** data, const uint8_t* end, const char* s
     {
         // Authentication is already done? Maybe the server authenticated us as the anonymous user. This
         // is quite insecure. */
-        MXB_ERROR("Authentication to '%s' was complete before it even started, anonymous users may "
-                  "be enabled.", server_name);
+        MXB_ERROR("Authentication of '%s' to '%s' was complete before it even started, anonymous users may "
+                  "be enabled.", m_clienthost.c_str(), server_name);
     }
     else
     {
@@ -82,10 +80,9 @@ bool parse_authswitchreq(const uint8_t** data, const uint8_t* end, const char* s
  *
  * @param data Data from server. The pointer is advanced.
  * @param end Pointer to after the end of data
- * @param server_name Server name for logging
  * @return True if all expected fields were parsed
  */
-bool parse_password_prompt(const uint8_t** data, const uint8_t* end, const char* server_name)
+bool PamBackendSession::parse_password_prompt(const uint8_t** data, const uint8_t* end)
 {
     const uint8_t* ptr = *data;
     if (end - ptr < 2) // Need at least message type + message
@@ -93,6 +90,7 @@ bool parse_password_prompt(const uint8_t** data, const uint8_t* end, const char*
         return false;
     }
 
+    const char* server_name = m_servername.c_str();
     bool success = false;
     int msg_type = *ptr++;
     if (msg_type == DIALOG_ECHO_ENABLED || msg_type == DIALOG_ECHO_DISABLED)
@@ -105,7 +103,8 @@ bool parse_password_prompt(const uint8_t** data, const uint8_t* end, const char*
         if (linebrk_pos)
         {
             int msg_len = linebrk_pos - messages;
-            MXS_INFO("PAM plugin of '%s' sent message: '%.*s'", server_name, msg_len, messages);
+            MXS_INFO("'%s' sent message when authenticating '%s': '%.*s'",
+                     server_name, m_clienthost.c_str(), msg_len, messages);
             prompt = linebrk_pos + 1;
         }
         else
@@ -119,12 +118,14 @@ bool parse_password_prompt(const uint8_t** data, const uint8_t* end, const char*
         }
         else
         {
-            MXB_ERROR("'%s' asked for '%s' when '%s was expected.", server_name, prompt, PASSWORD.c_str());
+            MXB_ERROR("'%s' asked for '%s' when authenticating '%s'. '%s' was expected.",
+                      server_name, prompt, m_clienthost.c_str(), PASSWORD.c_str());
         }
     }
     else
     {
-        MXB_ERROR("'%s' sent an unknown message type %i.", server_name, msg_type);
+        MXB_ERROR("'%s' sent an unknown message type %i when authenticating '%s'.",
+                  server_name, msg_type, m_clienthost.c_str());
     }
 
     if (success)
@@ -132,8 +133,6 @@ bool parse_password_prompt(const uint8_t** data, const uint8_t* end, const char*
         *data = ptr;
     }
     return success;
-}
-
 }
 
 PamBackendSession::PamBackendSession()
@@ -180,11 +179,18 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
      * Authenticators receive complete packets from protocol.
      */
 
+    const char* srv_name = dcb->server->name;
+    if (m_servername.empty())
+    {
+        m_servername = srv_name;
+        auto client_dcb = dcb->session->client_dcb;
+        m_clienthost = client_dcb->user + (std::string)"@" + client_dcb->remote;
+    }
+
     // Smallest buffer that is parsed, header + (cmd-byte/msg-type + message).
     const int min_readable_buflen = MYSQL_HEADER_LEN + 1 + 1;
     // The buffer should be reasonable size. Large buffers likely mean that the auth scheme is complicated.
     const int MAX_BUFLEN = 2000;
-    const char* srv_name = dcb->server->name;
     const int buflen = gwbuf_length(buffer);
     if (buflen <= min_readable_buflen || buflen > MAX_BUFLEN)
     {
@@ -206,10 +212,10 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
     {
         case State::INIT:
         // Server should have sent the AuthSwitchRequest + 1st prompt
-        if (parse_authswitchreq(&data_ptr, end_ptr, srv_name)
-            && parse_password_prompt(&data_ptr, end_ptr, srv_name))
+        if (parse_authswitchreq(&data_ptr, end_ptr)
+            && parse_password_prompt(&data_ptr, end_ptr))
         {
-            m_state = State::RECEIVED_PROMT;
+            m_state = State::RECEIVED_PROMPT;
             success = true;
         }
         else
@@ -238,9 +244,9 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
             {
                 // The packet may contain another prompt, try parse it. Currently, it's expected to be
                 // another "Password: ", in the future other setups may be supported.
-                if (parse_password_prompt(&data_ptr, end_ptr, srv_name))
+                if (parse_password_prompt(&data_ptr, end_ptr))
                 {
-                    m_state = State::RECEIVED_PROMT;
+                    m_state = State::RECEIVED_PROMPT;
                     success = true;
                 }
                 else
@@ -272,7 +278,7 @@ int PamBackendSession::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
 
-    if (m_state == State::RECEIVED_PROMT)
+    if (m_state == State::RECEIVED_PROMPT)
     {
         MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.", dcb->server->name);
         if (send_client_password(dcb))

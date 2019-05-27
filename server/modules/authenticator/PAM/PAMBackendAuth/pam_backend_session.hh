@@ -12,8 +12,6 @@
  */
 #pragma once
 #include "pam_backend_auth.hh"
-
-#include <stdint.h>
 #include "../pam_auth_common.hh"
 
 class PamBackendSession
@@ -28,15 +26,19 @@ public:
 
 private:
     bool send_client_password(DCB* dcb);
+    bool parse_authswitchreq(const uint8_t** data, const uint8_t* end);
+    bool parse_password_prompt(const uint8_t** data, const uint8_t* end);
 
     enum class State
     {
         INIT,
-        RECEIVED_PROMT,
+        RECEIVED_PROMPT,
         PW_SENT,
         DONE
     };
 
-    State   m_state {State::INIT}; /**< Authentication state*/
-    uint8_t m_sequence {0};  /**< The next packet sequence number */
+    State         m_state {State::INIT}; /**< Authentication state */
+    uint8_t       m_sequence {0};        /**< The next packet sequence number */
+    std::string   m_servername;          /**< Backend name, for logging */
+    std::string   m_clienthost;          /**< Client name & host, for logging */
 };
