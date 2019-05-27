@@ -472,20 +472,10 @@ bool Listener::create_listener_config(const char* filename)
     // TODO: Check for return values on all of the dprintf calls
     dprintf(file, "[%s]\n", m_name.c_str());
     dprintf(file, "type=listener\n");
-    dprintf(file, "protocol=%s\n", m_protocol.c_str());
-    dprintf(file, "service=%s\n", m_service->name());
-    dprintf(file, "address=%s\n", m_address.c_str());
-    dprintf(file, "port=%u\n", m_port);
-    dprintf(file, "authenticator=%s\n", m_authenticator.c_str());
 
-    if (!m_auth_options.empty())
+    for (const auto& p : m_params)
     {
-        dprintf(file, "authenticator_options=%s\n", m_auth_options.c_str());
-    }
-
-    if (ssl().context())
-    {
-        dprintf(file, "%s", ssl().context()->serialize().c_str());
+        dprintf(file, "%s=%s\n", p.first.c_str(), p.second.c_str());
     }
 
     ::close(file);

@@ -104,13 +104,6 @@ public:
     static std::unique_ptr<SSLContext> create(const MXS_CONFIG_PARAMETER& params);
 
     /**
-     * Serialize the SSL configuration into a INI file section
-     *
-     * @return SSLContext as a INI file section
-     */
-    std::string serialize() const;
-
-    /**
      * Opens a new OpenSSL session for this configuration context
      */
     SSL* open() const

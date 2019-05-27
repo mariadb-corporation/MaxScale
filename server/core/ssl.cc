@@ -234,29 +234,6 @@ SSLContext::SSLContext(const SSLConfig& cfg)
 {
 }
 
-std::string SSLContext::serialize() const
-{
-    std::ostringstream ss;
-    ss << "ssl=required\n";
-
-    if (!m_cfg.cert.empty())
-    {
-        ss << "ssl_cert=" << m_cfg.cert << "\n";
-    }
-
-    if (!m_cfg.key.empty())
-    {
-        ss << "ssl_key=" << m_cfg.key << "\n";
-    }
-
-    mxb_assert(!m_cfg.ca.empty());
-    ss << "ssl_ca_cert=" << m_cfg.ca << "\n";
-    ss << "ssl_version=" << ssl_method_type_to_string(m_cfg.version) << "\n";
-    ss << "ssl_cert_verify_depth=" << m_cfg.verify_depth << "\n";
-    ss << "ssl_verify_peer_certificate=" << (m_cfg.verify_peer ? "true" : "false") << "\n";
-    return ss.str();
-}
-
 bool SSLContext::init()
 {
     bool rval = true;
