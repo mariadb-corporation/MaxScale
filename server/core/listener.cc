@@ -532,7 +532,7 @@ json_t* Listener::to_json() const
     const MXS_MODULE* mod = get_module(m_protocol.c_str(), MODULE_PROTOCOL);
     config_add_module_params_json(&m_params,
                                   {CN_TYPE, CN_SERVICE},
-                                  config_server_params,
+                                  config_listener_params,
                                   mod->parameters,
                                   param);
 
