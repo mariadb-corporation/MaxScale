@@ -360,10 +360,11 @@ following:
 
 1. Prepare the old master for demotion:
       1. Stop any external replication.
-      2. Enable the *read\_only*-flag to stop writes.
-      3. Disable scheduled server events (if event handling is on).
-      4. Run the commands in `demotion_sql_file`.
-      5. Flush the binary log (FLUSH LOGS) so that all events are on disk.
+      2. Kill connections from super-users since *read\_only* does not affect them.
+      3. Enable the *read\_only*-flag to stop writes.
+      4. Disable scheduled server events (if event handling is on).
+      5. Run the commands in `demotion_sql_file`.
+      6. Flush the binary log (FLUSH LOGS) so that all events are on disk.
 2. Wait for the new master to catch up with the old master.
 3. Promote new master and redirect slaves as in failover steps 3 and 4. Also
 redirect the demoted old master.
