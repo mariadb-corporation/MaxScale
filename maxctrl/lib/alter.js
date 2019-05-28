@@ -70,37 +70,87 @@ function setFilters(host, argv){
     return doAsyncRequest(host, 'services/' + argv.service, null, {method: 'PATCH', body: payload})
 }
 
+function parseValue(value) {
+    if (value == 'null' || value == '') {
+        // JSON null (empty value not strictly null but we treat it like that)
+        return null
+    } else if (value == 'true') {
+        // JSON true
+        return true
+    } else if (value == 'false') {
+        // JSON false
+        return false
+    }
+
+    var n = Number(value)
+
+    if (!Number.isNaN(n)) {
+        return n
+    }
+
+    return value
+}
+
+function processArgs(key, value, extra) {
+    var arr = [key, value].concat(extra)
+
+    if (arr.length % 2 != 0) {
+        // Odd number of arguments, return null for error
+        return null
+    }
+
+    var keys = arr.filter((v, i) => i % 2 == 0)
+    var values = arr.filter((v, i) => i % 2 != 0)
+    var params = {}
+
+    keys.forEach((k, i) => {
+        params[k] = parseValue(values[i])
+    })
+
+    return params
+}
+
+function updateParams(host, resource, key, value, extra){
+    var params = processArgs(key, value, extra)
+
+    if (params) {
+        return updateValue(host, resource, 'data.attributes.parameters', params)
+    } else {
+        return error('No value defined for parameter `' + argv.params[argv.params.length - 1] + '`')
+    }
+}
+
 exports.command = 'alter <command>'
 exports.desc = 'Alter objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('server <server> <key> <value>', 'Alter server parameters', function(yargs) {
-            return yargs.epilog('To display the server parameters, execute `show server <server>`')
-            .usage('Usage: alter server <server> <key> <value>')
+        .command('server <server> <key> <value> [params...]', 'Alter server parameters', function(yargs) {
+            return yargs.epilog('To display the server parameters, execute `show server <server>`.')
+            .usage('Usage: alter server <server> <key> <value> ...')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'servers/' + argv.server, 'data.attributes.parameters.' + argv.key, argv.value)
+                return updateParams(host, 'servers/' + argv.server, argv.key, argv.value, argv.params)
             })
         })
-        .command('monitor <monitor> <key> <value>', 'Alter monitor parameters', function(yargs) {
+        .command('monitor <monitor> <key> <value> [params...]', 'Alter monitor parameters', function(yargs) {
             return yargs.epilog('To display the monitor parameters, execute `show monitor <monitor>`')
-            .usage('Usage: alter monitor <monitor> <key> <value>')
+            .usage('Usage: alter monitor <monitor> <key> <value> ...')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'monitors/' + argv.monitor, 'data.attributes.parameters.' + argv.key, argv.value)
+                return updateParams(host, 'monitors/' + argv.monitor, argv.key, argv.value, argv.params)
             })
         })
-        .command('service <service> <key> <value>', 'Alter service parameters', function(yargs) {
+        .command('service <service> <key> <value> [params...]', 'Alter service parameters', function(yargs) {
             return yargs.epilog('To display the service parameters, execute `show service <service>`. ' +
                                 'Some routers support runtime configuration changes to all parameters. ' +
                                 'Currently all readconnroute, readwritesplit and schemarouter parameters ' +
                                 'can be changed at runtime. In addition to module specific parameters, ' +
                                 'the following list of common service parameters can be altered at runtime:\n\n' + JSON.stringify(service_params, null, 4))
-            .usage('Usage: alter service <service> <key> <value>')
+            .usage('Usage: alter service <service> <key> <value> ...')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'services/' + argv.service, 'data.attributes.parameters.' + argv.key, argv.value)
+                return updateParams(host, 'services/' + argv.service, argv.key, argv.value, argv.params)
             })
         })
         .command('service-filters <service> [filters...]', 'Alter filters of a service', function(yargs) {
@@ -118,21 +168,21 @@ exports.builder = function(yargs) {
                 return setFilters(host, argv)
             })
         })
-        .command('logging <key> <value>', 'Alter logging parameters', function(yargs) {
+        .command('logging <key> <value> [params...]', 'Alter logging parameters', function(yargs) {
             return yargs.epilog('To display the logging parameters, execute `show logging`')
-                .usage('Usage: alter logging <key> <value>')
+                .usage('Usage: alter logging <key> <value> ...')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.' + argv.key, argv.value)
+                return updateParams(host, 'maxscale/logs', argv.key, argv.value, argv.params)
             })
         })
-        .command('maxscale <key> <value>', 'Alter MaxScale parameters', function(yargs) {
+        .command('maxscale <key> <value> [params...]', 'Alter MaxScale parameters', function(yargs) {
             return yargs.epilog('To display the MaxScale parameters, execute `show maxscale`. ' +
                                 'The following list of parameters can be altered at runtime:\n\n' + JSON.stringify(maxscale_params, null, 4))
-                .usage('Usage: alter maxscale <key> <value>')
+                .usage('Usage: alter maxscale <key> <value> ...')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'maxscale', 'data.attributes.parameters.' + argv.key, argv.value)
+                return updateParams(host, 'maxscale', argv.key, argv.value, argv.params)
             })
         })
         .command('user <name> <password>', 'Alter admin user passwords', function(yargs) {
@@ -158,6 +208,11 @@ exports.builder = function(yargs) {
             })
         })
         .usage('Usage: alter <command>')
+        .epilog('Multiple values can be updated at a time by providing the parameter ' +
+                'name followed by the new value. For example, the following command ' +
+                'would change both the `address` and the `port` parameter of a server:\n\n' +
+                '    alter server server1 address 127.0.0.1 port 3306\n\n' +
+                'All alter commands except `alter user` and `alter service-filters` support multiple parameters.')
         .help()
         .command('*', 'the default command', {}, function(argv) {
             maxctrl(argv, function(host) {
