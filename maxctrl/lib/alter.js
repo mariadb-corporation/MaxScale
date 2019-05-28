@@ -71,10 +71,7 @@ function setFilters(host, argv){
 }
 
 function parseValue(value) {
-    if (value == 'null' || value == '') {
-        // JSON null (empty value not strictly null but we treat it like that)
-        return null
-    } else if (value == 'true') {
+    if (value == 'true') {
         // JSON true
         return true
     } else if (value == 'false') {
@@ -94,8 +91,8 @@ function parseValue(value) {
 function processArgs(key, value, extra) {
     var arr = [key, value].concat(extra)
 
-    if (arr.length % 2 != 0) {
-        // Odd number of arguments, return null for error
+    if (arr.length % 2 != 0 || arr.findIndex(v => v == 'null' || v == '') != -1) {
+        // Odd number of arguments or invalid value, return null for error
         return null
     }
 
@@ -116,7 +113,11 @@ function updateParams(host, resource, key, value, extra){
     if (params) {
         return updateValue(host, resource, 'data.attributes.parameters', params)
     } else {
-        return error('No value defined for parameter `' + argv.params[argv.params.length - 1] + '`')
+        if (extra.length % 2 != 0) {
+            return error('No value defined for parameter `' + extra[extra.length - 1] + '`')
+        } else {
+            return error('Invalid value')
+        }
     }
 }
 

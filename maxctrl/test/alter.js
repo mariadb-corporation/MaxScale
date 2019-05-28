@@ -3,10 +3,40 @@ require('../test_utils.js')()
 describe("Alter Commands", function() {
     before(startMaxScale)
 
-    it('alter server', function() {
+    it('rejects null parameter', function() {
+        return doCommand('alter server server1 port null')
+            .should.be.rejected
+    })
+
+    it('rejects null parameters when multiple parameters are defined', function() {
+        return doCommand('alter server server1 port 3000 address null')
+            .should.be.rejected
+    })
+
+    it('rejects empty parameter name', function() {
+        var ctrl = require('../lib/core.js')
+        return ctrl.execute(['alter', 'server', 'server1', '', '127.0.0.1'])
+            .should.be.rejected
+    })
+
+    it('rejects empty value', function() {
+        var ctrl = require('../lib/core.js')
+        return ctrl.execute(['alter', 'server', 'server1', 'port', ''])
+            .should.be.rejected
+    })
+
+    it('alters server', function() {
         return verifyCommand('alter server server1 port 3004', 'servers/server1')
             .then(function(res) {
                 res.data.attributes.parameters.port.should.equal(3004)
+            })
+    })
+
+    it('alters server with multiple parameters', function() {
+        return verifyCommand('alter server server1 port 1234 address 1.2.3.4', 'servers/server1')
+            .then(function(res) {
+                res.data.attributes.parameters.port.should.equal(1234)
+                res.data.attributes.parameters.address.should.equal('1.2.3.4')
             })
     })
 
@@ -15,15 +45,28 @@ describe("Alter Commands", function() {
             .should.be.rejected
     })
 
+    it('will not alter server with missing value for parameter', function() {
+        return doCommand('alter server server1 port 3000 address')
+            .should.be.rejected
+    })
+
     it('will not alter nonexistent server', function() {
         return doCommand('alter server server123 port 3000')
             .should.be.rejected
     })
 
-    it('alter monitor', function() {
+    it('alters monitor', function() {
         return verifyCommand('alter monitor MariaDB-Monitor monitor_interval 1000', 'monitors/MariaDB-Monitor')
             .then(function(res) {
                 res.data.attributes.parameters.monitor_interval.should.equal(1000)
+            })
+    })
+
+    it('alters monitor with multiple parameters', function() {
+        return verifyCommand('alter monitor MariaDB-Monitor monitor_interval 1234 backend_read_timeout 1234', 'monitors/MariaDB-Monitor')
+            .then(function(res) {
+                res.data.attributes.parameters.monitor_interval.should.equal(1234)
+                res.data.attributes.parameters.backend_read_timeout.should.equal(1234)
             })
     })
 
@@ -32,15 +75,28 @@ describe("Alter Commands", function() {
             .should.be.rejected
     })
 
+    it('will not alter monitor with missing value for parameter', function() {
+        return doCommand('alter monitor MariaDB-Monitor user maxuser password')
+            .should.be.rejected
+    })
+
     it('will not alter nonexistent monitor', function() {
         return doCommand('alter monitor monitor123 monitor_interval 3000')
             .should.be.rejected
     })
 
-    it('alter service parameter', function() {
+    it('alters service', function() {
         return verifyCommand('alter service Read-Connection-Router user testuser', 'services/Read-Connection-Router')
             .then(function(res) {
                 res.data.attributes.parameters.user.should.equal("testuser")
+            })
+    })
+
+    it('alters service with multiple parameters', function() {
+        return verifyCommand('alter service Read-Connection-Router user testuser connection_timeout 123', 'services/Read-Connection-Router')
+            .then(function(res) {
+                res.data.attributes.parameters.user.should.equal("testuser")
+                res.data.attributes.parameters.connection_timeout.should.equal(123)
             })
     })
 
@@ -60,12 +116,17 @@ describe("Alter Commands", function() {
             .should.be.rejected
     })
 
+    it('will not alter service with missing value for parameter', function() {
+        return doCommand('alter service Read-Connection-Router user maxuser password')
+            .should.be.rejected
+    })
+
     it('will not alter non-existent service', function() {
         return doCommand('alter service not-a-service user maxuser')
             .should.be.rejected
     })
 
-    it('alter logging', function() {
+    it('alters logging', function() {
         return verifyCommand('alter logging maxlog false', 'maxscale/logs')
             .then(function() {
                 return verifyCommand('alter logging syslog false', 'maxscale/logs')
@@ -76,20 +137,46 @@ describe("Alter Commands", function() {
             })
     })
 
+    it('alters logging with multiple parameters', function() {
+        return verifyCommand('alter logging maxlog true syslog true', 'maxscale/logs')
+            .then(function(res) {
+                res.data.attributes.parameters.maxlog.should.equal(true)
+                res.data.attributes.parameters.syslog.should.equal(true)
+            })
+    })
+
     it('will not alter logging with bad parameter', function() {
         doCommand('alter logging some-parameter maybe')
             .should.be.rejectted
     })
 
-    it('alter maxscale', function() {
+    it('will not alter logging with missing value for parameter', function() {
+        return doCommand('alter logging maxlog false syslog')
+            .should.be.rejected
+    })
+
+    it('alters maxscale', function() {
         return verifyCommand('alter maxscale auth_connect_timeout 5', 'maxscale')
             .then(function(res) {
                 res.data.attributes.parameters.auth_connect_timeout.should.equal(5)
             })
     })
 
+    it('alters maxscale with multiple parameters', function() {
+        return verifyCommand('alter maxscale auth_connect_timeout 123 auth_read_timeout 123', 'maxscale')
+            .then(function(res) {
+                res.data.attributes.parameters.auth_connect_timeout.should.equal(123)
+                res.data.attributes.parameters.auth_read_timeout.should.equal(123)
+            })
+    })
+
     it('will not alter maxscale with bad parameter', function() {
         return doCommand('alter maxscale some_timeout 123')
+            .should.be.rejected
+    })
+
+    it('will not alter maxscale with missing value for parameter', function() {
+        return doCommand('alter maxscale auth_connect_timeout 5 auth_read_timeout')
             .should.be.rejected
     })
 
