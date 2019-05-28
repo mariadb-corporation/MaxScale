@@ -88,9 +88,9 @@ int Clustrix_nodes::check_replication()
     return res;
 }
 
-string Clustrix_nodes::block_command(int node) const
+std::string Clustrix_nodes::block_command(int node) const
 {
-    string command = Mariadb_nodes::block_command(node);
+    std::string command = Mariadb_nodes::block_command(node);
 
     // Block health-check port as well.
     command += ";";
@@ -101,9 +101,9 @@ string Clustrix_nodes::block_command(int node) const
     return command;
 }
 
-string Clustrix_nodes::unblock_command(int node) const
+std::string Clustrix_nodes::unblock_command(int node) const
 {
-    string command = Mariadb_nodes::unblock_command(node);
+    std::string command = Mariadb_nodes::unblock_command(node);
 
     // Unblock health-check port as well.
     command += ";";
