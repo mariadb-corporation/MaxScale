@@ -87,7 +87,36 @@ void setup_database(TestConnections& test)
     mysql_close(pMysql);
 }
 
-bool stop_server(TestConnections& test, const std::string& name, int node)
+bool wait_for_state(TestConnections& test, const std::string& name, int timeout, const std::string& state)
+{
+    MaxRest maxrest(&test);
+    MaxRest::Server server;
+
+    time_t start = time(nullptr);
+    time_t end;
+
+    do
+    {
+        server = maxrest.show_server(name);
+
+        if (server.state.find(state) == string::npos)
+        {
+            cout << name << " still not " << state << "..." << endl;
+            sleep(1);
+        }
+
+        end = time(nullptr);
+    }
+    while ((server.state.find(state) == string::npos) && (end - start < timeout));
+
+    test.expect(server.state.find(state) != string::npos,
+                "Clustrix node %s did not change state to %s within timeout of %d.",
+                name.c_str(), state.c_str(), timeout);
+
+    return server.state.find(state) != string::npos;
+}
+
+bool stop_server(TestConnections& test, const std::string& name, int node, int timeout)
 {
     bool stopped = false;
 
@@ -98,22 +127,11 @@ bool stop_server(TestConnections& test, const std::string& name, int node)
 
     if (rv.first == 0)
     {
-        MaxRest maxrest(&test);
-        MaxRest::Server server;
-
-        do
+        if (wait_for_state(test, name, timeout, "Down"))
         {
-            server = maxrest.show_server(name);
-
-            if (server.state.find("Down") == string::npos)
-            {
-                sleep(1);
-            }
+            cout << "Clustrix on node " << node << " is down." << endl;
+            stopped = true;
         }
-        while (server.state.find("Down") == string::npos);
-
-        cout << "Clustrix on node " << node << " is down." << endl;
-        stopped = true;
     }
 
     return stopped;
@@ -130,30 +148,9 @@ bool start_server(TestConnections& test, const std::string& name, int node, int 
 
     if (rv.first == 0)
     {
-        MaxRest maxrest(&test);
-        MaxRest::Server server;
-
-        time_t start = time(nullptr);
-        time_t end;
-
-        do
+        if (wait_for_state(test, name, timeout, "Master"))
         {
-            server = maxrest.show_server(name);
-
-            if (server.state.find("Down") != string::npos)
-            {
-                cout << "Still down..." << endl;
-                sleep(1);
-            }
-
-            end = time(nullptr);
-        }
-        while ((server.state.find("Down") != string::npos) && (end - start < timeout));
-
-        test.expect(end - start < timeout, "Clustrix node %d did not start.", node);
-
-        if (server.state.find("Master") != string::npos)
-        {
+            cout << "Clustrix on node " << node << " is up." << endl;
             started = true;
         }
     }
@@ -174,20 +171,24 @@ MaxRest::Server get_current_server(TestConnections& test, MYSQL* pMysql)
 
 void test_transaction_replay(TestConnections& test, MYSQL* pMysql, const std::string& name, int node)
 {
+    cout << "Beginning transaction..." << endl;
     test.try_query(pMysql, "BEGIN");
     test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
 
-    cout << "Stopping server " << name << " on node " << node << "." << endl;
-    if (stop_server(test, name, node))
+    cout << "Stopping server " << name << "(node " << node << ")." << endl;
+    int timeout;
+    timeout = 60; // Going down should be fast...
+    if (stop_server(test, name, node, timeout))
     {
         // The server we were connected to is now down. If the following
         // succeeds, then reconnect + transaction replay worked as specified.
+        cout << "Continuing transaction..." << endl;
         test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
         test.try_query(pMysql, "COMMIT");
 
-        cout << "Starting Clustrix " << name << " on node " << node << "." << endl;
+        cout << "Bring Clustrix " << name << "(node " << node << ") up again." << endl;
 
-        int timeout = 3 * 60;
+        timeout = 3 * 60; // Coming up takes time...
         start_server(test, name, node, timeout);
     }
 }
@@ -209,13 +210,14 @@ void run_test(TestConnections& test)
 
     cout << "Connected to " << server.address << ", which is "
          << dynamic_name << "(" << static_name << ") "
-         << " running on node " << node << "."
+         << "running on node " << node << "."
          << endl;
 
     // FIRST TEST: Take down the very node we are connected to.
     //
     // This requires MaxScale to open a new connection to another node,
     // seed the session and replay the transaction.
+    cout << "\nTESTING transaction replay when connected to node goes down." << endl;
     test_transaction_replay(test, pMysql, dynamic_name, node);
 
     MaxRest::Server server2 = get_current_server(test, pMysql);
@@ -239,6 +241,7 @@ void run_test(TestConnections& test)
     //              That will cause a  Clustrix Group Change event.
     //
     // This requires MaxScale to detect the error and replay the transaction.
+    cout << "\nTESTING transaction replay when group change error occurs." << endl;
     test_transaction_replay(test, pMysql, server2.name, node);
 
     server2 = get_current_server(test, pMysql);
