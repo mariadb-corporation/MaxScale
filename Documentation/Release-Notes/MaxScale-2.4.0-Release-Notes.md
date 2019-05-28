@@ -45,6 +45,12 @@ improvement over the older MD5 hashing algorithm. New users will use the
 stronger algorithm but old users will continue using the weaker one. To upgrade
 administrative users, recreate the user.
 
+### REST API - Server creation
+
+The `protocol` parameter must now always be defined when a server is
+created. The previously undocumented default value of `mariadbbackend` now must
+be explicitly defined when a server is created via the REST API.
+
 ## Dropped Features
 
 ### `debugcli` and `telnetd`

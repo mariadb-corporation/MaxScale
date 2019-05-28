@@ -241,6 +241,10 @@ least the following fields.
 * `data.type`
   * Type of the object, must be `servers`
 
+* `data.attributes.parameters.protocol`
+  * The [`protocol`](../Getting-Started/Configuration-Guide.md#protocol) to use.
+    Must be defined.
+
 * `data.attributes.parameters.address` OR `data.attributes.parameters.socket`
   * The [`address`](../Getting-Started/Configuration-Guide.md#address) or
     [`socket`](../Getting-Started/Configuration-Guide.md#socket) to use. Only
@@ -249,7 +253,6 @@ least the following fields.
 * `data.attributes.parameters.port`
   * The [`port`](../Getting-Started/Configuration-Guide.md#port) to use. Needs
     to be defined if the `address` field is defined.
-
 
 The following is the minimal required JSON object for defining a new server.
 
