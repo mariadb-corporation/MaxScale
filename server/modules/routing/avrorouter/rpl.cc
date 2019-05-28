@@ -1120,7 +1120,7 @@ static bool token_is_keyword(const char* tok, int len)
 {
     for (int i = 0; keywords[i]; i++)
     {
-        if (strncasecmp(keywords[i], tok, len) == 0)
+        if (strncasecmp(keywords[i], tok, len) == 0 && strlen(keywords[i]) == len)
         {
             return true;
         }
