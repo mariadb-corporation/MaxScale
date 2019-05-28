@@ -1444,7 +1444,11 @@ static MXS_CONFIG_PARAMETER extract_parameters_from_json(json_t* json)
 
         json_object_foreach(parameters, key, value)
         {
-            rval.set(key, json_string_value(value));
+            if (!json_is_null(value) && !json_is_array(value) && !json_is_object(value))
+            {
+                mxb_assert(!mxs::json_to_string(value).empty());
+                rval.set(key, mxs::json_to_string(value));
+            }
         }
     }
 
