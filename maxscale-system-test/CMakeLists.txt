@@ -948,6 +948,9 @@ add_test_executable(mxs2450_change_user_crash.cpp mxs2450_change_user_crash mxs2
 # PAM authentication
 add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
 
+# MXS-2520: Allow master reconnection on reads
+add_test_executable(mxs2520_master_read_reconnect.cpp mxs2520_master_read_reconnect mxs2520_master_read_reconnect LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
