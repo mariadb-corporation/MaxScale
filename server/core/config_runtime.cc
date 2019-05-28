@@ -1732,6 +1732,7 @@ static bool server_contains_required_fields(json_t* json)
     json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
     json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
     json_t* socket = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_SOCKET);
+    json_t* proto = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PROTOCOL);
     bool rval = false;
 
     if (!id)
@@ -1771,6 +1772,14 @@ static bool server_contains_required_fields(json_t* json)
     else if (port && !json_is_integer(port))
     {
         config_runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
+    }
+    else if (!proto)
+    {
+        config_runtime_error("No protocol defined at JSON path '%s'", MXS_JSON_PTR_PARAM_PROTOCOL);
+    }
+    else if (!json_is_string(proto))
+    {
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_PROTOCOL);
     }
     else
     {
@@ -1955,50 +1964,51 @@ static bool process_ssl_parameters(Server* server, json_t* params)
     return rval;
 }
 
-Server* runtime_create_server_from_json(json_t* json)
+bool runtime_create_server_from_json(json_t* json)
 {
-    Server* rval = NULL;
+    bool rval = false;
+    StringSet relations;
 
-    if (is_valid_resource_body(json) && server_contains_required_fields(json))
+    if (is_valid_resource_body(json) && server_contains_required_fields(json)
+        && extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_SERVICES, server_relation_is_valid)
+        && extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_MONITORS, server_relation_is_valid))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* protocol = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PROTOCOL));
+        mxb_assert(name && protocol);
 
-        // Either `address` or `socket` is defined, not both
-        json_t* addr = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
-        json_t* sock = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_SOCKET);
-        const char* address = addr ? json_string_value(addr) : json_string_value(sock);
-
-        /** The port needs to be in string format */
-        std::string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
-
-        /** Optional parameters */
-        const char* protocol = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
-        const char* authenticator = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
-
-        StringSet relations;
-
-        if (extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_SERVICES, server_relation_is_valid)
-            && extract_relations(json,
-                                 relations,
-                                 MXS_JSON_PTR_RELATIONSHIPS_MONITORS,
-                                 server_relation_is_valid))
+        if (Server::find_by_unique_name(name))
         {
-            if (runtime_create_server(name, address, port.c_str(), protocol, authenticator))
-            {
-                rval = Server::find_by_unique_name(name);
-                mxb_assert(rval);
-                json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-
-                if (!process_ssl_parameters(rval, param) || !link_server_to_objects(rval, relations))
-                {
-                    runtime_destroy_server(rval);
-                    rval = NULL;
-                }
-            }
+            config_runtime_error("Server '%s' already exists", name);
         }
         else
         {
-            config_runtime_error("Invalid relationships in request JSON");
+            MXS_CONFIG_PARAMETER params;
+            bool ok;
+            tie(ok, params) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
+
+            if (ok)
+            {
+                params.set_multiple(extract_parameters_from_json(json));
+
+                if (Server* server = Server::server_alloc(name, params))
+                {
+                    if (link_server_to_objects(server, relations) && server->serialize())
+                    {
+                        rval = true;
+                    }
+                    else
+                    {
+                        runtime_destroy_server(server);
+                    }
+                }
+
+                if (!rval)
+                {
+                    config_runtime_error("Failed to create server '%s', see error log for more details",
+                                         name);
+                }
+            }
         }
     }
 

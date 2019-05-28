@@ -274,9 +274,9 @@ bool runtime_destroy_service(Service* service);
  *
  * @param json JSON defining the server
  *
- * @return Created server or NULL on error
+ * @return True if server was created, false on error
  */
-Server* runtime_create_server_from_json(json_t* json);
+bool runtime_create_server_from_json(json_t* json);
 
 /**
  * @brief Alter a server using JSON
