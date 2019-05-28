@@ -181,9 +181,9 @@ public:
     /**
      * @brief get_nc_item Find variable in the MDBCI network_config file
      * @param item_name Name of the variable
-     * @return value of variable
+     * @return value of variable or empty value if not found
      */
-    char *get_nc_item(char * item_name);
+    std::string get_nc_item(const char* item_name);
 
     /**
      * @brief get_N Calculate the number of nodes discribed in the _netoek_config file
