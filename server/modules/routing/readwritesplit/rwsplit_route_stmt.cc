@@ -660,17 +660,19 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
     // then feed that list to compare.
     SRWBackendVector candidates;
     auto counts = get_slave_counts(m_backends, m_current_master);
+    // Slaves can be taken into use if we need more slave connections
+    bool need_slaves = counts.second < m_router->max_slave_count();
 
     for (auto& backend : m_backends)
     {
-        bool can_take_slave_into_use = backend->is_slave()
-            && !backend->in_use()
-            && can_recover_servers()
-            && backend->can_connect()
-            && counts.second < m_router->max_slave_count();
-
+        // We can take the current master back into use even for reads
+        bool my_master = backend == m_current_master;
+        bool can_take_into_use = !backend->in_use() && can_recover_servers() && backend->can_connect();
         bool master_or_slave = backend->is_master() || backend->is_slave();
-        bool is_usable = backend->in_use() || can_take_slave_into_use;
+
+        // The server is usable if it's already in use or it can be taken into use and we need either more
+        // slaves or a master.
+        bool is_usable = backend->in_use() || (can_take_into_use && (need_slaves || my_master));
         bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
 
         if (master_or_slave && is_usable)
@@ -812,7 +814,7 @@ SRWBackend RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
 {
     const char rlag_hint_tag[] = "max_slave_replication_lag";
     const int comparelen = sizeof(rlag_hint_tag);
-    int config_max_rlag = get_max_replication_lag(); // From router configuration.
+    int config_max_rlag = get_max_replication_lag();    // From router configuration.
     SRWBackend target;
 
     for (HINT* hint = querybuf->hint; !target && hint; hint = hint->next)
