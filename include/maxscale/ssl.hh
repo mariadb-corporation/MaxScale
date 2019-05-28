@@ -153,7 +153,7 @@ public:
     // Convert to human readable string representation
     std::string to_string() const;
 
-    // Set the context, argument must not be null
+    // NOTE: Do not use this, required by binlogrouter
     void set_context(std::unique_ptr<mxs::SSLContext> ssl);
 
 private:
