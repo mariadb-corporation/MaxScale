@@ -374,7 +374,7 @@ namespace maxscale
 {
 
 std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
-                                                std::string* errmsg_out)
+                                                std::string* errmsg_out, unsigned int* errno_out)
 {
     using mxq::QueryResult;
     std::unique_ptr<QueryResult> rval;
@@ -383,10 +383,19 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
     {
         rval = std::unique_ptr<QueryResult>(new QueryResult(result));
     }
-    else if (errmsg_out)
+    else
     {
-        *errmsg_out = mxb::string_printf("Query '%s' failed: '%s'.", query.c_str(), mysql_error(conn));
+        if (errmsg_out)
+        {
+            *errmsg_out = mxb::string_printf("Query '%s' failed: '%s'.", query.c_str(), mysql_error(conn));
+        }
+
+        if (errno_out)
+        {
+            *errno_out = mysql_errno(conn);
+        }
     }
+
     return rval;
 }
 }

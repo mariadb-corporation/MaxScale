@@ -134,10 +134,12 @@ namespace maxscale
  * @param conn Server connection
  * @param query The query
  * @param errmsg_out Where to store an error message if query fails. Can be null.
+ * @param errno_out Error code output. Can be null.
  * @return Pointer to query results, or an empty pointer on failure
  */
 std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
-                                                std::string* errmsg_out = NULL);
+                                                std::string* errmsg_out = nullptr,
+                                                unsigned int* errno_out = nullptr);
 }
 
 MXS_END_DECLS

@@ -73,9 +73,10 @@ uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn)
     return slave_conn.gtid_io_pos.events_ahead(m_gtid_current_pos, GtidList::MISSING_DOMAIN_IGNORE);
 }
 
-std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, std::string* errmsg_out)
+std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, string* errmsg_out,
+                                                          unsigned int* errno_out)
 {
-    return maxscale::execute_query(m_server_base->con, query, errmsg_out);
+    return maxscale::execute_query(m_server_base->con, query, errmsg_out, errno_out);
 }
 
 /**
@@ -1618,60 +1619,74 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion)
         {
             // The server should either be the master or be a standalone being rejoined.
             mxb_assert(is_master() || m_slave_status.empty());
-            StopWatch timer;
-            // Step 2a: Enabling read-only can take time if writes are on or table locks taken.
-            // TODO: use max_statement_time to be safe!
-            bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, general.time_remaining, error_out);
-            general.time_remaining -= timer.lap();
-            if (!ro_enabled)
+
+            // Step 2a: Remove [Master] from this server. This prevents compatible routers (RWS)
+            // from routing writes to this server. Writes in flight will go through, at least until
+            // read_only is set.
+            clear_status(SERVER_MASTER);
+            // Step 2b: If other users with SUPER privileges are on, kick them out now since
+            // read_only doesn't stop them from doing writes. This does not stop them from immediately
+            // logging back in but it's better than nothing. This also stops super-user writes going
+            // through MaxScale.
+            if (!kick_out_super_users(general))
             {
                 demotion_error = true;
             }
-            else
+
+            // Step 2c: Enabling read-only can take time if writes are on or table locks taken.
+            StopWatch timer;
+            if (!demotion_error)
             {
-                if (m_settings.handle_event_scheduler)
+                bool ro_enabled = set_read_only(ReadOnlySetting::ENABLE, general.time_remaining, error_out);
+                general.time_remaining -= timer.lap();
+                if (!ro_enabled)
                 {
-                    // TODO: Add query replying to enable_events
-                    // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
-                    // which could break external replication.
-                    bool events_disabled = disable_events(BinlogMode::BINLOG_OFF, error_out);
-                    general.time_remaining -= timer.lap();
-                    if (!events_disabled)
-                    {
-                        demotion_error = true;
-                        PRINT_MXS_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
-                    }
+                    demotion_error = true;
                 }
+            }
 
-                // Step 2c: Run demotion_sql_file if no errors so far.
-                const string& sql_file = m_settings.demotion_sql_file;
-                if (!demotion_error && !sql_file.empty())
+            if (!demotion_error && m_settings.handle_event_scheduler)
+            {
+                // TODO: Add query replying to enable_events
+                // Step 2b: Using BINLOG_OFF to avoid adding any gtid events,
+                // which could break external replication.
+                bool events_disabled = disable_events(BinlogMode::BINLOG_OFF, error_out);
+                general.time_remaining -= timer.lap();
+                if (!events_disabled)
                 {
-                    bool file_ran_ok = run_sql_from_file(sql_file, error_out);
-                    general.time_remaining -= timer.lap();
-                    if (!file_ran_ok)
-                    {
-                        demotion_error = true;
-                        PRINT_MXS_JSON_ERROR(error_out,
-                                             "Execution of file '%s' failed during demotion of server '%s'.",
-                                             sql_file.c_str(), name());
-                    }
+                    demotion_error = true;
+                    PRINT_MXS_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
                 }
+            }
 
-                if (!demotion_error)
+            // Step 2e: Run demotion_sql_file if no errors so far.
+            const string& sql_file = m_settings.demotion_sql_file;
+            if (!demotion_error && !sql_file.empty())
+            {
+                bool file_ran_ok = run_sql_from_file(sql_file, error_out);
+                general.time_remaining -= timer.lap();
+                if (!file_ran_ok)
                 {
-                    // Step 2d: FLUSH LOGS to ensure that all events have been written to binlog.
-                    string error_msg;
-                    bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", general.time_remaining,
-                                                               &error_msg);
-                    general.time_remaining -= timer.lap();
-                    if (!logs_flushed)
-                    {
-                        demotion_error = true;
-                        PRINT_MXS_JSON_ERROR(error_out,
-                                             "Failed to flush binary logs of '%s' during demotion: %s.",
-                                             name(), error_msg.c_str());
-                    }
+                    demotion_error = true;
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "Execution of file '%s' failed during demotion of server '%s'.",
+                                         sql_file.c_str(), name());
+                }
+            }
+
+            if (!demotion_error)
+            {
+                // Step 2f: FLUSH LOGS to ensure that all events have been written to binlog.
+                string error_msg;
+                bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", general.time_remaining,
+                                                           &error_msg);
+                general.time_remaining -= timer.lap();
+                if (!logs_flushed)
+                {
+                    demotion_error = true;
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "Failed to flush binary logs of '%s' during demotion: %s.",
+                                         name(), error_msg.c_str());
                 }
             }
         }
@@ -2248,4 +2263,68 @@ void MariaDBServer::update_server(bool time_to_update_disk_space,
     bool is_running = server->is_running();
     bool in_maintenance = server->is_in_maintenance();
     mon_srv->mon_err_count = (is_running || in_maintenance) ? 0 : mon_srv->mon_err_count + 1;
+}
+
+
+bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
+{
+    bool error = false;
+    Duration time_remaining = op.time_remaining;
+    auto error_out = op.error_out;
+    // Only select unique rows...
+    string get_ids_query = "SELECT DISTINCT * FROM ("
+                           // select conn id and username from live connections ...
+                           "SELECT P.id,P.user FROM information_schema.PROCESSLIST as P "
+                           // match with user information ...
+                           "INNER JOIN mysql.user as U ON (U.user = P.user) WHERE "
+                           // where the user has super-privileges, is not replicating ...
+                           "(U.Super_priv = 'Y' AND P.COMMAND != 'Binlog Dump' "
+                           // and is not the current user.
+                           "AND P.id != (SELECT CONNECTION_ID()))) as I;";
+
+    string error_msg;
+    unsigned int error_num = 0;
+    auto res = execute_query(get_ids_query, &error_msg, &error_num);
+    if (res)
+    {
+        int id_col = 0;
+        int user_col = 1;
+        while (res->next_row())
+        {
+            auto conn_id = res->get_int(id_col);
+            auto user = res->get_string(user_col);
+            string kill_query = mxb::string_printf("KILL SOFT CONNECTION %li;", conn_id);
+            StopWatch timer;
+            if (execute_cmd_time_limit(kill_query, time_remaining, &error_msg))
+            {
+                MXB_WARNING("Killed connection id %lu to '%s' from super-user '%s' to prevent writes.",
+                            conn_id, name(), user.c_str());
+            }
+            else
+            {
+                error = true;
+                PRINT_MXS_JSON_ERROR(error_out, "Could not kill connection %lu from super-user '%s': %s",
+                                     conn_id, user.c_str(), error_msg.c_str());
+            }
+            time_remaining -= timer.split();
+        }
+    }
+    else
+    {
+        // If query failed because of insufficient rights, don't consider this an error, just print a warning.
+        // Perhaps the user doesn't want the monitor doing this.
+        if (error_num == ER_DBACCESS_DENIED_ERROR || error_num == ER_TABLEACCESS_DENIED_ERROR
+            || error_num == ER_COLUMNACCESS_DENIED_ERROR)
+        {
+            MXB_WARNING("Insufficient rights to query logged in super-users for server '%s': %s Super-users "
+                        "may perform writes during the cluster manipulation operation.",
+                        name(), error_msg.c_str());
+        }
+        else
+        {
+            error = true;
+            PRINT_MXS_JSON_ERROR(error_out, "Could not query connected super-users: %s", error_msg.c_str());
+        }
+    }
+    return !error;
 }
