@@ -394,71 +394,6 @@ bool runtime_destroy_server(Server* server)
     return rval;
 }
 
-static std::unique_ptr<mxs::SSLContext> create_ssl(const char* name,
-                                                   const char* key,
-                                                   const char* cert,
-                                                   const char* ca,
-                                                   const char* version,
-                                                   const char* depth,
-                                                   const char* verify)
-{
-    std::unique_ptr<mxs::SSLContext> rval;
-    CONFIG_CONTEXT* obj = config_context_create(name);
-
-    if (obj)
-    {
-        if (config_add_param(obj, CN_SSL, CN_REQUIRED)
-            && (!key || config_add_param(obj, CN_SSL_KEY, key))
-            && (!cert || config_add_param(obj, CN_SSL_CERT, cert))
-            && config_add_param(obj, CN_SSL_CA_CERT, ca)
-            && (!version || config_add_param(obj, CN_SSL_VERSION, version))
-            && (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth))
-            && (!verify || config_add_param(obj, CN_SSL_VERIFY_PEER_CERTIFICATE, verify)))
-        {
-            config_create_ssl(name, obj->m_parameters, true, &rval);
-        }
-
-        config_context_free(obj);
-    }
-
-    return rval;
-}
-
-bool runtime_enable_server_ssl(Server* server,
-                               const char* key,
-                               const char* cert,
-                               const char* ca,
-                               const char* version,
-                               const char* depth,
-                               const char* verify)
-{
-    bool rval = false;
-
-    if (server->ssl().context())
-    {
-        config_runtime_error("Server '%s' already configured to use SSL.", server->name());
-    }
-    else if (key && cert && ca)
-    {
-        std::lock_guard<std::mutex> guard(crt_lock);
-        std::unique_ptr<mxs::SSLContext> ssl(create_ssl(server->name(), key, cert, ca,
-                                                        version, depth, verify));
-
-        if (ssl)
-        {
-            server->ssl().set_context(std::move(ssl));
-
-            if (server->serialize())
-            {
-                MXS_NOTICE("Enabled SSL for server '%s'", server->name());
-                rval = true;
-            }
-        }
-    }
-
-    return rval;
-}
-
 /**
  * @brief Convert a string value to a positive integer
  *
@@ -1907,56 +1842,6 @@ static bool validate_ssl_json(json_t* params, object_type type)
         if (ssl_version_str && string_to_ssl_method_type(ssl_version_str) == SERVICE_SSL_UNKNOWN)
         {
             config_runtime_error("Invalid value for '%s': %s", CN_SSL_VERSION, ssl_version_str);
-            rval = false;
-        }
-    }
-
-    return rval;
-}
-
-static bool process_ssl_parameters(Server* server, json_t* params)
-{
-    mxb_assert(server->ssl().context() == NULL);
-    bool rval = true;
-
-    if (have_ssl_json(params))
-    {
-        if (validate_ssl_json(params, OT_SERVER))
-        {
-            char buf[20];       // Enough to hold the string form of the ssl_cert_verify_depth
-            char buf_verify[20];// Enough to hold the string form of the ssl_verify_peer_certificate
-            const char* key = json_string_value(mxs_json_pointer(params, CN_SSL_KEY));
-            const char* cert = json_string_value(mxs_json_pointer(params, CN_SSL_CERT));
-            const char* ca = json_string_value(mxs_json_pointer(params, CN_SSL_CA_CERT));
-            const char* version = json_string_value(mxs_json_pointer(params, CN_SSL_VERSION));
-            const char* depth = NULL;
-            json_t* depth_json = mxs_json_pointer(params, CN_SSL_CERT_VERIFY_DEPTH);
-
-            if (depth_json)
-            {
-                snprintf(buf, sizeof(buf), "%lld", json_integer_value(depth_json));
-                depth = buf;
-            }
-
-            const char* verify = NULL;
-            json_t* verify_json = mxs_json_pointer(params, CN_SSL_VERIFY_PEER_CERTIFICATE);
-
-            if (verify_json)
-            {
-                snprintf(buf_verify, sizeof(buf), "%s", json_boolean_value(verify_json) ? "true" : "false");
-                verify = buf_verify;
-            }
-
-            if (!runtime_enable_server_ssl(server, key, cert, ca, version, depth, verify))
-            {
-                config_runtime_error("Failed to initialize SSL for server '%s'. See "
-                                     "error log for more details.",
-                                     server->name());
-                rval = false;
-            }
-        }
-        else
-        {
             rval = false;
         }
     }

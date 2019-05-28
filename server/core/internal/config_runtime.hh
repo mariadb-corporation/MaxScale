@@ -110,32 +110,6 @@ bool runtime_unlink_server(Server* server, const char* target);
 bool runtime_alter_server(Server* server, const char* key, const char* value);
 
 /**
- * @brief Enable SSL for a server
- *
- * The @c key , @c cert and @c ca parameters are required. @c version and @c depth
- * are optional.
- *
- * @note SSL cannot be disabled at runtime.
- *
- * @param server Server to configure
- * @param key Path to SSL private key
- * @param cert Path to SSL public certificate
- * @param ca Path to certificate authority
- * @param version Required SSL Version
- * @param depth Certificate verification depth
- * @param verify Verify peer certificate
- *
- * @return True if SSL was successfully enabled
- */
-bool runtime_enable_server_ssl(Server* server,
-                               const char* key,
-                               const char* cert,
-                               const char* ca,
-                               const char* version,
-                               const char* depth,
-                               const char* verify);
-
-/**
  * @brief Alter monitor parameters
  *
  * @param monitor Monitor to alter

@@ -1491,13 +1491,6 @@ static void alterServer(DCB* dcb, Server* server,
     char* values[] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13};
     const int items = sizeof(values) / sizeof(values[0]);
     CONFIG_CONTEXT* obj = NULL;
-    char* ssl_key = NULL;
-    char* ssl_cert = NULL;
-    char* ssl_ca = NULL;
-    char* ssl_version = NULL;
-    char* ssl_depth = NULL;
-    char* ssl_verify = NULL;
-    bool enable = false;
 
     for (int i = 0; i < items && values[i]; i++)
     {
@@ -1508,39 +1501,7 @@ static void alterServer(DCB* dcb, Server* server,
         {
             *value++ = '\0';
 
-            if (config_is_ssl_parameter(key))
-            {
-                if (strcmp("ssl_cert", key) == 0)
-                {
-                    ssl_cert = value;
-                }
-                else if (strcmp("ssl_ca_cert", key) == 0)
-                {
-                    ssl_ca = value;
-                }
-                else if (strcmp("ssl_key", key) == 0)
-                {
-                    ssl_key = value;
-                }
-                else if (strcmp("ssl_version", key) == 0)
-                {
-                    ssl_version = value;
-                }
-                else if (strcmp("ssl_cert_verify_depth", key) == 0)
-                {
-                    ssl_depth = value;
-                }
-                else if (strcmp("ssl_verify_peer_certificate", key) == 0)
-                {
-                    ssl_verify = value;
-                }
-                else
-                {
-                    enable = strcmp("ssl", key) == 0 && strcmp(value, "required") == 0;
-                    /** Must be 'ssl' */
-                }
-            }
-            else if (!runtime_alter_server(server, key, value))
+            if (!runtime_alter_server(server, key, value))
             {
                 dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
@@ -1548,33 +1509,6 @@ static void alterServer(DCB* dcb, Server* server,
         else
         {
             dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
-        }
-    }
-
-    if (enable || ssl_ca)
-    {
-        if (enable && ssl_ca)
-        {
-            /** We have SSL parameters, try to process them */
-            if (!runtime_enable_server_ssl(server,
-                                           ssl_key,
-                                           ssl_cert,
-                                           ssl_ca,
-                                           ssl_version,
-                                           ssl_depth,
-                                           ssl_verify))
-            {
-                dcb_printf(dcb,
-                           "Enabling SSL for server '%s' failed, see log "
-                           "for more details.\n",
-                           server->name());
-            }
-        }
-        else
-        {
-            dcb_printf(dcb,
-                       "Error: SSL configuration requires the following parameters:\n"
-                       "ssl=required ssl_ca_cert=PATH\n");
         }
     }
 }
