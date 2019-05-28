@@ -25,10 +25,10 @@
 #include <maxscale/pcre2.h>
 
 /**
- * Tokenize a string into arguments suitable for a `execvp` call
+ * Tokenize a string into arguments suitable for a `execvp` call.
  *
- * @param args Argument string
- * @return 0 on success, -1 on error
+ * @param argstr Argument string
+ * @return Number of arguments parsed from the string
  */
 int ExternalCmd::tokenize_arguments(const char* argstr)
 {
@@ -59,7 +59,7 @@ int ExternalCmd::tokenize_arguments(const char* argstr)
             else if (quoted && !escaped && *ptr == qc)      /** End of quoted string */
             {
                 *ptr = '\0';
-                argv[i++] = MXS_STRDUP_A(start);
+                argv[i++] = MXS_STRDUP(start);
                 read = false;
                 quoted = false;
             }
@@ -70,7 +70,7 @@ int ExternalCmd::tokenize_arguments(const char* argstr)
                     *ptr = '\0';
                     if (read)   /** New token */
                     {
-                        argv[i++] = MXS_STRDUP_A(start);
+                        argv[i++] = MXS_STRDUP(start);
                         read = false;
                     }
                 }
@@ -92,22 +92,20 @@ int ExternalCmd::tokenize_arguments(const char* argstr)
     }
     if (read)
     {
-        argv[i++] = MXS_STRDUP_A(start);
+        argv[i++] = MXS_STRDUP(start);
     }
 
-    argv[i] = NULL;
-
-    return 0;
+    argv[i] = nullptr;
+    return i;
 }
 
-ExternalCmd* ExternalCmd::create(const char* argstr, uint32_t timeout)
+ExternalCmd* ExternalCmd::create(const char* argstr, int timeout)
 {
-    auto cmd = new ExternalCmd;
+    auto cmd = new ExternalCmd(timeout);
     bool success = false;
     if (argstr && cmd)
     {
-        cmd->timeout = timeout;
-        if (cmd->tokenize_arguments(argstr) == 0)
+        if (cmd->tokenize_arguments(argstr) > 0)
         {
             auto cmdname = cmd->argv[0];
             if (access(cmdname, X_OK) != 0)
@@ -138,6 +136,11 @@ ExternalCmd* ExternalCmd::create(const char* argstr, uint32_t timeout)
         cmd = nullptr;
     }
     return cmd;
+}
+
+ExternalCmd::ExternalCmd(int timeout)
+    : m_timeout(timeout)
+{
 }
 
 ExternalCmd::~ExternalCmd()
@@ -215,7 +218,6 @@ static void log_output(const char* cmd, const std::string& str)
 
 int ExternalCmd::externcmd_execute()
 {
-    auto cmd = this;
     // Create a pipe where the command can print output
     int fd[2];
 
@@ -227,7 +229,7 @@ int ExternalCmd::externcmd_execute()
 
     int rval = 0;
     pid_t pid;
-
+    const char* cmdname = argv[0];
     // The SIGCHLD handler must be disabled before child process is forked,
     // otherwise we'll get an error
     pid = fork();
@@ -237,9 +239,7 @@ int ExternalCmd::externcmd_execute()
         close(fd[0]);
         close(fd[1]);
         MXS_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
-                  cmd->argv[0],
-                  errno,
-                  mxs_strerror(errno));
+                  cmdname, errno, mxs_strerror(errno));
         rval = -1;
     }
     else if (pid == 0)
@@ -251,7 +251,7 @@ int ExternalCmd::externcmd_execute()
         dup2(fd[1], STDERR_FILENO);
 
         // Execute the command
-        execvp(cmd->argv[0], cmd->argv);
+        execvp(argv[0], argv);
 
         // Close the write end of the pipe and exit
         close(fd[1]);
@@ -259,15 +259,13 @@ int ExternalCmd::externcmd_execute()
     }
     else
     {
-        MXS_INFO("Executing command '%s' in process %d", cmd->argv[0], pid);
-        cmd->child = pid;
-        cmd->n_exec++;
+        MXS_INFO("Executing command '%s' in process %d", cmdname, pid);
 
         std::string output;
         bool first_warning = true;
         bool again = true;
         uint64_t t = 0;
-        uint64_t t_max = cmd->timeout * 1000;
+        uint64_t t_max = m_timeout * 1000;
 
         // Close the write end of the pipe and make the read end non-blocking
         close(fd[1]);
@@ -291,13 +289,13 @@ int ExternalCmd::externcmd_execute()
                     t = 0;
                     if (first_warning)
                     {
-                        MXS_WARNING("Soft timeout for command '%s', sending SIGTERM", cmd->argv[0]);
+                        MXS_WARNING("Soft timeout for command '%s', sending SIGTERM", cmdname);
                         kill(pid, SIGTERM);
                         first_warning = false;
                     }
                     else
                     {
-                        MXS_ERROR("Hard timeout for command '%s', sending SIGKILL", cmd->argv[0]);
+                        MXS_ERROR("Hard timeout for command '%s', sending SIGKILL", cmdname);
                         kill(pid, SIGKILL);
                     }
                 }
@@ -322,9 +320,7 @@ int ExternalCmd::externcmd_execute()
                 else
                 {
                     rval = exit_status;
-                    MXS_ERROR("Command '%s' did not exit normally. Exit status: %d",
-                              cmd->argv[0],
-                              exit_status);
+                    MXS_ERROR("Command '%s' did not exit normally. Exit status: %d", cmdname, exit_status);
                 }
                 break;
             }
@@ -348,7 +344,7 @@ int ExternalCmd::externcmd_execute()
                     {
                         std::string line = output.substr(0, pos);
                         output.erase(0, pos + 1);
-                        log_output(cmd->argv[0], line);
+                        log_output(cmdname, line);
                     }
                 }
             }
@@ -356,7 +352,7 @@ int ExternalCmd::externcmd_execute()
 
         if (!output.empty())
         {
-            log_output(cmd->argv[0], output);
+            log_output(cmdname, output);
         }
 
         // Close the read end of the pipe and copy the data to the output parameter
@@ -448,30 +444,6 @@ static char* get_command(const char* str)
         }
     }
 
-    return rval;
-}
-
-bool externcmd_can_execute(const char* argstr)
-{
-    bool rval = false;
-    char* command = get_command(argstr);
-
-    if (command)
-    {
-        if (access(command, X_OK) == 0)
-        {
-            rval = true;
-        }
-        else if (access(command, F_OK) == 0)
-        {
-            MXS_ERROR("The executable cannot be executed: %s", command);
-        }
-        else
-        {
-            MXS_ERROR("The executable cannot be found: %s", command);
-        }
-        MXS_FREE(command);
-    }
     return rval;
 }
 

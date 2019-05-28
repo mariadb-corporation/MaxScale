@@ -22,11 +22,11 @@ public:
      * Create a new external command. The name and parameters are copied so
      * the original memory can be freed.
      *
-     * @param command Command to execute with the parameters
+     * @param argstr Command to execute with the parameters
      * @param timeout Command timeout in seconds
      * @return Pointer to new external command struct or NULL if an error occurred
      */
-    static ExternalCmd* create(const char* argstr, uint32_t timeout);
+    static ExternalCmd* create(const char* argstr, int timeout);
 
     ~ExternalCmd();
 
@@ -63,21 +63,9 @@ public:
     char* argv[MAX_ARGS + 1] {}; /**< Arguments. First element is the command. */
 
 private:
-    int      n_exec;    /**< Number of times executed */
-    pid_t    child;     /**< PID of the child process */
-    uint32_t timeout;   /**< Command timeout in seconds */
+    int m_timeout;   /**< Command timeout in seconds */
 
+    ExternalCmd(int timeout);
     int tokenize_arguments(const char* argstr);
 };
 
-/**
- * Check if a command can be executed
- *
- * Checks if the file being executed exists and if the current user has execution
- * permissions on the file.
- *
- * @param argstr Command to check, can contain arguments for the command
- *
- * @return True if the file was found and the use has execution permissions to it
- */
-bool externcmd_can_execute(const char* argstr);
