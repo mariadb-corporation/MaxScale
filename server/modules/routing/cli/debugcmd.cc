@@ -1643,18 +1643,8 @@ struct subcommand alteroptions[] =
         "port                        Server port\n"
         "monitoruser                 Monitor user for this server\n"
         "monitorpw                   Monitor password for this server\n"
-        "ssl                         Enable SSL, value must be 'required'\n"
-        "ssl_key                     Path to SSL private key\n"
-        "ssl_cert                    Path to SSL certificate\n"
-        "ssl_ca_cert                 Path to SSL CA certificate\n"
-        "ssl_version                 SSL version\n"
-        "ssl_cert_verify_depth       Certificate verification depth\n"
-        "ssl_verify_peer_certificate Peer certificate verification\n"
         "persistpoolmax              Persisted connection pool size\n"
         "persistmaxtime              Persisted connection maximum idle time\n"
-        "\n"
-        "To configure SSL for a newly created server, the 'ssl', 'ssl_cert',\n"
-        "'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.\n"
         "\n"
         "Example: alter server my-db-1 address=192.168.0.202 port=3307",
         {

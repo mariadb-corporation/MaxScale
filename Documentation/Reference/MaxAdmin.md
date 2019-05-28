@@ -1456,9 +1456,8 @@ You can alter server parameters with the `alter server` command. Any changes to
 the address or port of the server will take effect for new connections
 only. Changes to other parameters will take effect immediately.
 
-Please note that in order for SSL to be enabled for a created server, all of the
-required SSL parameters (`ssl`, `ssl_key`, `ssl_cert` and `ssl_ca_cert`) must be
-given in the same command.
+Please note that SSL cannot be enabled via MaxAdmin in MaxScale 2.4. Please use
+the MaxCtrl client or the REST API to create servers with SSL.
 
 ```
 alter server - Alter server parameters
@@ -1475,15 +1474,6 @@ address               Server address
 port                  Server port
 monuser               Monitor user for this server
 monpw                 Monitor password for this server
-ssl                   Enable SSL, value must be 'required'
-ssl_key               Path to SSL private key
-ssl_cert              Path to SSL certificate
-ssl_ca_cert           Path to SSL CA certificate
-ssl_version           SSL version
-ssl_cert_verify_depth Certificate verification depth
-
-To configure SSL for a newly created server, the 'ssl', 'ssl_cert',
-'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.
 
 Example: alter server my-db-1 address=192.168.0.202 port=3307
 ```
