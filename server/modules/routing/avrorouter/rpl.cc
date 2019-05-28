@@ -1116,7 +1116,7 @@ const char* keywords[] =
     NULL
 };
 
-static bool token_is_keyword(const char* tok, int len)
+static bool token_is_keyword(const char* tok, size_t len)
 {
     for (int i = 0; keywords[i]; i++)
     {
