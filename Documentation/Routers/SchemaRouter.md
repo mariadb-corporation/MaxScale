@@ -130,7 +130,8 @@ A
 [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
 that is matched against database names when checking for duplicate databases.
 
-To ignore any duplicate tables in the database the following regex can be used:
+The following configuration ignores duplicate tables in the databases `db1` and `db2`,
+and all tables starting with "t" in `db3`.
 
 ```
 [Shard-Router]
@@ -139,7 +140,7 @@ router=schemarouter
 servers=server1,server2
 user=myuser
 password=mypwd
-ignore_tables_regex=^db1
+ignore_tables_regex=^db1|^db2|^db3\.t
 ```
 
 ### `preferred_server`
