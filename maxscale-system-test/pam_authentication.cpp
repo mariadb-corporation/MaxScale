@@ -27,6 +27,7 @@ int main(int argc, char** argv)
 
     const char pam_user[] = "dduck";
     const char pam_pw[] = "313";
+    const char pam_config_name[] = "duckburg";
 
     const string add_user_cmd = (string)"useradd " + pam_user;
     const string add_pw_cmd = (string)"echo " + pam_user + ":" + pam_pw + " | chpasswd";
@@ -35,8 +36,27 @@ int main(int argc, char** argv)
     const string remove_user_cmd = (string)"userdel --remove " + pam_user;
     const string read_shadow_off = "chmod o-r /etc/shadow";
 
+    // To make most out of this test, use a custom pam service configuration. It needs to be written to
+    // all backends.
+
+    const string pam_config_file = (string)"/etc/pam.d/" + pam_config_name;
+    const string pam_message_file = "/tmp/messages.txt";
+    const string pam_config_contents =
+            "auth             optional        pam_echo.so file=" + pam_message_file + "\n"
+            "auth             required        pam_unix.so audit\n"
+            "auth             optional        pam_echo.so file=" + pam_message_file + "\n"
+            "auth             required        pam_unix.so audit\n"
+            "account          required        pam_unix.so audit\n";
+
+    const string pam_message_contents = "I know what you did last summer!";
+
+    const string create_pam_conf_cmd = "printf \"" + pam_config_contents + "\" > " + pam_config_file;
+    const string create_pam_message_cmd = "printf \"" + pam_message_contents + "\" > " + pam_message_file;
+    const string delete_pam_conf_cmd = "rm -f " + pam_config_file;
+    const string delete_pam_message_cmd = "rm -f " + pam_message_file;
+
     test.repl->connect();
-    // Prepare the backends for PAM authentication. Enable the plugin and create a user. Also, since
+    // Prepare the backends for PAM authentication. Enable the plugin and create a user. Also,
     // make /etc/shadow readable for all so that the server process can access it.
     for (int i = 0; i < test.repl->N; i++)
     {
@@ -45,6 +65,10 @@ int main(int argc, char** argv)
         test.repl->ssh_node_f(i, true, "%s", add_user_cmd.c_str());
         test.repl->ssh_node_f(i, true, "%s", add_pw_cmd.c_str());
         test.repl->ssh_node_f(i, true, "%s", read_shadow.c_str());
+
+        // Also, create the custom pam config and message file.
+        test.repl->ssh_node_f(i, true, "%s", create_pam_conf_cmd.c_str());
+        test.repl->ssh_node_f(i, true, "%s", create_pam_message_cmd.c_str());
     }
 
     // Also create the user on the node running MaxScale, as the MaxScale PAM plugin compares against
@@ -52,6 +76,8 @@ int main(int argc, char** argv)
     test.maxscales->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
     test.maxscales->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
     test.maxscales->ssh_node_f(0, true, "%s", read_shadow.c_str());
+    test.maxscales->ssh_node_f(0, true, "%s", create_pam_conf_cmd.c_str());
+    test.maxscales->ssh_node_f(0, true, "%s", create_pam_message_cmd.c_str());
 
     if (test.ok())
     {
@@ -137,23 +163,26 @@ int main(int argc, char** argv)
         test.maxscales->execute_maxadmin_command(0, "reload dbusers RWSplit-Router");
     };
 
+    const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED VIA pam USING '%s';";
     if (test.ok())
     {
         MYSQL* conn = test.repl->nodes[0];
         // Create the PAM user on the master, it will replicate. Use the standard password service for
         // authenticating.
-        test.try_query(conn, "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED VIA pam USING 'passwd';", pam_user);
+        test.try_query(conn, create_pam_user_fmt, pam_user, pam_config_name);
         test.try_query(conn, "GRANT SELECT ON *.* TO '%s'@'%%';", pam_user);
         test.try_query(conn, "FLUSH PRIVILEGES;");
         sleep(1);
         test.repl->sync_slaves();
         update_users();
+        get_output(test);
 
         // If ok so far, try logging in with PAM.
         if (test.ok())
         {
 	        cout << "Testing normal PAM user.\n";
             try_log_in(pam_user, pam_pw);
+            test.log_includes(0, pam_message_contents.c_str());
         }
 
         // Remove the created user.
@@ -175,18 +204,21 @@ int main(int argc, char** argv)
         // Create the anonymous catch-all user and allow it to proxy as the "proxy-target", meaning it
         // gets the target's privileges. Granting the proxy privilege is a bit tricky since only the local
         // root user can give it.
-        test.try_query(conn, "CREATE OR REPLACE USER ''@'%%' IDENTIFIED VIA pam USING 'passwd';");
-        test.repl->ssh_node_f(0, true, "echo \"GRANT PROXY ON '%s'@'%%' TO ''@'%%'; FLUSH PRIVILEGES;\" | mysql --user=root",
-                              dummy_user);
+        test.try_query(conn, create_pam_user_fmt, "", pam_config_name);
+        test.repl->ssh_node_f(0, true, "echo \"GRANT PROXY ON '%s'@'%%' TO ''@'%%'; FLUSH PRIVILEGES;\" | "
+                                       "mysql --user=root",
+                                       dummy_user);
         sleep(1);
         test.repl->sync_slaves();
         update_users();
+        get_output(test);
 
         if (test.ok())
         {
             // Again, try logging in with the same user.
 	        cout << "Testing anonymous proxy user.\n";
             try_log_in(pam_user, pam_pw);
+            test.log_includes(0, pam_message_contents.c_str());
         }
 
         // Remove the created users.
@@ -201,9 +233,13 @@ int main(int argc, char** argv)
         test.try_query(conn, "UNINSTALL SONAME 'auth_pam';");
         test.repl->ssh_node_f(i, true, "%s", remove_user_cmd.c_str());
         test.repl->ssh_node_f(i, true, "%s", read_shadow_off.c_str());
+        test.repl->ssh_node_f(i, true, "%s", delete_pam_conf_cmd.c_str());
+        test.repl->ssh_node_f(i, true, "%s", delete_pam_message_cmd.c_str());
     }
     test.maxscales->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
     test.maxscales->ssh_node_f(0, true, "%s", read_shadow_off.c_str());
+    test.maxscales->ssh_node_f(0, true, "%s", delete_pam_conf_cmd.c_str());
+    test.maxscales->ssh_node_f(0, true, "%s", delete_pam_message_cmd.c_str());
 
     test.repl->disconnect();
     return test.global_result;
