@@ -10,6 +10,7 @@
 * MaxCtrl commands `list sessions`, `show sessions` and `show session <id>`
   support reverse DNS lookup of client addresses. The conversion is activated
   by adding the `--rdns`-option to the command.
+* The database firewall filter and the masking filter have been deprecated.
 
 For more details, please refer to:
 

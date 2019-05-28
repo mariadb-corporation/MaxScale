@@ -1272,6 +1272,9 @@ Dbfw::~Dbfw()
 
 Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
+    MXS_WARNING("The database firewall filter has been DEPRECATED in MaxScale 2.4 "
+                "and it will be removed in a future release of MaxScale.");
+
     Dbfw* rval = NULL;
     RuleList rules;
     UserMap users;

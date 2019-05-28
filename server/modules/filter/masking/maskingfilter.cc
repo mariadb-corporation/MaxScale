@@ -77,8 +77,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                reload_argv,
                                "Reload masking filter rules");
 
-    MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);
-
     typedef MaskingFilter::Config Config;
 
     static MXS_MODULE info =
@@ -176,6 +174,9 @@ MaskingFilter::~MaskingFilter()
 // static
 MaskingFilter* MaskingFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
+    MXS_WARNING("The masking filter has been DEPRECATED in MaxScale 2.4 and "
+                "it will be removed in a future release of MaxScale.");
+
     MaskingFilter* pFilter = NULL;
 
     Config config(zName, pParams);

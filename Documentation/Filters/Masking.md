@@ -9,6 +9,10 @@ Table of Contents
 
 ## Overview
 
+The masking filter has been deprecated in MaxScale 2.4 and
+it will be removed in a future version of MaxScale. We advise against
+using it.
+
 With the _masking_ filter it is possible to obfuscate the returned
 value of a particular column.
 
@@ -40,6 +44,10 @@ the _ssn_ would be masked, as in
 | Bob   | XXX-XX-XXXX |
 ...
 ```
+
+Note that the masking filter should be viewed as a best-effort solution
+intended for protecting against accidental misuse rather than malicious
+attacks.
 
 ## Security
 
