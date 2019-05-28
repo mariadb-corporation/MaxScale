@@ -36,53 +36,7 @@ exports.desc = 'Create objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-    // Common options
-        .group(['protocol', 'authenticator', 'authenticator-options', 'tls-key',
-                'tls-cert', 'tls-ca-cert', 'tls-version', 'tls-cert-verify-depth'],
-               'Common create options:')
-        .option('protocol', {
-            describe: 'Protocol module name',
-            type: 'string'
-        })
-        .option('authenticator', {
-            describe: 'Authenticator module name',
-            type: 'string'
-        })
-        .option('authenticator-options', {
-            describe: 'Option string for the authenticator',
-            type: 'string'
-        })
-        .option('tls-key', {
-            describe: 'Path to TLS key',
-            type: 'string'
-        })
-        .option('tls-cert', {
-            describe: 'Path to TLS certificate',
-            type: 'string'
-        })
-        .option('tls-ca-cert', {
-            describe: 'Path to TLS CA certificate',
-            type: 'string'
-        })
-        .option('tls-version', {
-            describe: 'TLS version to use',
-            type: 'string'
-        })
-        .option('tls-cert-verify-depth', {
-            describe: 'TLS certificate verification depth',
-            type: 'string'
-        })
-
     // Create server
-        .group(['services', 'monitors'], 'Create server options:')
-        .option('services', {
-            describe: 'Link the created server to these services',
-            type: 'array'
-        })
-        .option('monitors', {
-            describe: 'Link the created server to these monitors',
-            type: 'array'
-        })
         .command('server <name> <host|socket> [port]', 'Create a new server', function(yargs) {
             return yargs.epilog('The created server will not be used by any services or monitors ' +
                                 'unless the --services or --monitors options are given. The list ' +
@@ -91,6 +45,50 @@ exports.builder = function(yargs) {
                                 'absolute path, the server will use a local UNIX domain socket ' +
                                 'connection. In this case the [port] argument is ignored.')
                 .usage('Usage: create server <name> <host|socket> [port]')
+                .group(['services', 'monitors', 'protocol', 'authenticator', 'authenticator-options',
+                        'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-version'], 'Create server options:')
+                .option('services', {
+                    describe: 'Link the created server to these services',
+                    type: 'array'
+                })
+                .option('monitors', {
+                    describe: 'Link the created server to these monitors',
+                    type: 'array'
+                })
+                .option('protocol', {
+                    describe: 'Protocol module name',
+                    type: 'string',
+                    default: 'mariadbbackend'
+                })
+                .option('authenticator', {
+                    describe: 'Authenticator module name',
+                    type: 'string'
+                })
+                .option('authenticator-options', {
+                    describe: 'Option string for the authenticator',
+                    type: 'string'
+                })
+                .option('tls-key', {
+                    describe: 'Path to TLS key',
+                    type: 'string'
+                })
+                .option('tls-cert', {
+                    describe: 'Path to TLS certificate',
+                    type: 'string'
+                })
+                .option('tls-ca-cert', {
+                    describe: 'Path to TLS CA certificate',
+                    type: 'string'
+                })
+                .option('tls-version', {
+                    describe: 'TLS version to use',
+                    type: 'string'
+                })
+                .option('tls-cert-verify-depth', {
+                    describe: 'TLS certificate verification depth',
+                    type: 'string'
+                })
+
         }, function(argv) {
             var server = {
                 'data': {
@@ -136,25 +134,26 @@ exports.builder = function(yargs) {
         })
 
     // Create monitor
-        .group(['servers', 'monitor-user', 'monitor-password'], 'Create monitor options:')
-        .option('servers', {
-            describe: 'Link the created monitor to these servers',
-            type: 'array'
-        })
-        .option('monitor-user', {
-            describe: 'Username for the monitor user',
-            type: 'string'
-        })
-        .option('monitor-password', {
-            describe: 'Password for the monitor user',
-            type: 'string'
-        })
         .command('monitor <name> <module> [params...]', 'Create a new monitor', function(yargs) {
             return yargs.epilog('The list of servers given with the --servers option should not ' +
                                 'contain any servers that are already monitored by another monitor. ' +
                                 'The last argument to this command is a list of key=value parameters ' +
                                 'given as the monitor parameters.')
                 .usage('Usage: create monitor <name> <module> [params...]')
+                .group(['servers', 'monitor-user', 'monitor-password'], 'Create monitor options:')
+                .option('servers', {
+                    describe: 'Link the created monitor to these servers',
+                    type: 'array'
+                })
+                .option('monitor-user', {
+                    describe: 'Username for the monitor user',
+                    type: 'string'
+                })
+                .option('monitor-password', {
+                    describe: 'Password for the monitor user',
+                    type: 'string'
+                })
+
         }, function(argv) {
 
             var monitor = {
@@ -195,20 +194,21 @@ exports.builder = function(yargs) {
         })
 
     // Create service
-        .group(['servers', 'filters'], 'Create service options:')
-        .option('servers', {
-            describe: 'Link the created service to these servers',
-            type: 'array'
-        })
-        .option('filters', {
-            describe: 'Link the created service to these filters',
-            type: 'array'
-        })
         .command('service <name> <router> <params...>', 'Create a new service', function(yargs) {
             return yargs.epilog('The last argument to this command is a list of key=value parameters ' +
                                 'given as the service parameters. If the --servers or --filters options ' +
                                 'are used, they must be defined after the service parameters.')
                 .usage('Usage: service <name> <router> <params...>')
+                .group(['servers', 'filters'], 'Create service options:')
+                .option('servers', {
+                    describe: 'Link the created service to these servers',
+                    type: 'array'
+                })
+                .option('filters', {
+                    describe: 'Link the created service to these filters',
+                    type: 'array'
+                })
+
         }, function(argv) {
             maxctrl(argv, function(host) {
 
@@ -274,15 +274,50 @@ exports.builder = function(yargs) {
         })
 
     // Create listener
-        .group(['interface'], 'Create listener options:')
-        .option('interface', {
-            describe: 'Interface to listen on',
-            type: 'string',
-            default: '::'
-        })
         .command('listener <service> <name> <port>', 'Create a new listener', function(yargs) {
             return yargs.epilog('The new listener will be taken into use immediately.')
                 .usage('Usage: create listener <service> <name> <port>')
+                .group(['interface', , 'protocol', 'authenticator', 'authenticator-options', 'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-version'],
+                       'Create listener options:')
+                .option('interface', {
+                    describe: 'Interface to listen on',
+                    type: 'string',
+                    default: '::'
+                })
+                .option('protocol', {
+                    describe: 'Protocol module name',
+                    type: 'string',
+                    default: 'mariadbclient'
+                })
+                .option('authenticator', {
+                    describe: 'Authenticator module name',
+                    type: 'string'
+                })
+                .option('authenticator-options', {
+                    describe: 'Option string for the authenticator',
+                    type: 'string'
+                })
+                .option('tls-key', {
+                    describe: 'Path to TLS key',
+                    type: 'string'
+                })
+                .option('tls-cert', {
+                    describe: 'Path to TLS certificate',
+                    type: 'string'
+                })
+                .option('tls-ca-cert', {
+                    describe: 'Path to TLS CA certificate',
+                    type: 'string'
+                })
+                .option('tls-version', {
+                    describe: 'TLS version to use',
+                    type: 'string'
+                })
+                .option('tls-cert-verify-depth', {
+                    describe: 'TLS certificate verification depth',
+                    type: 'string'
+                })
+
         }, function(argv) {
             maxctrl(argv, function(host) {
 
@@ -314,19 +349,19 @@ exports.builder = function(yargs) {
                 return doRequest(host, 'services/' + argv.service + '/listeners', null, {method: 'POST', body: listener})
             })
         })
-        .group(['type'], 'Create user options:')
-        .option('type', {
-            describe: 'Type of user to create',
-            type: 'string',
-            default: 'basic',
-            choices: ['admin', 'basic']
-        })
         .command('user <name> <password>', 'Create a new network user', function(yargs) {
             return yargs.epilog('The created user can be used with the MaxScale REST API as ' +
                                 'well as the MaxAdmin network interface. By default the created ' +
                                 'user will have read-only privileges. To make the user an ' +
                                 'administrative user, use the `--type=admin` option.')
                 .usage('Usage: create user <name> <password>')
+                .group(['type'], 'Create user options:')
+                .option('type', {
+                    describe: 'Type of user to create',
+                    type: 'string',
+                    default: 'basic',
+                    choices: ['admin', 'basic']
+                })
         }, function(argv) {
 
             var user = {
