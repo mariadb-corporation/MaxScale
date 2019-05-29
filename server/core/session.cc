@@ -130,6 +130,7 @@ static MXS_SESSION* session_alloc_body(SERVICE* service,
     session->router_session = NULL;
     session->stats.connect = time(0);
     session->service = service;
+    session->autocommit = config_get_global_options()->qc_sql_mode == QC_SQL_MODE_ORACLE;
     memset(&session->head, 0, sizeof(session->head));
     memset(&session->tail, 0, sizeof(session->tail));
     session->load_active = false;
