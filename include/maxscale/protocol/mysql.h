@@ -307,10 +307,9 @@ typedef enum
     MXS_COM_RESET_CONNECTION    = 31,
     MXS_COM_STMT_BULK_EXECUTE   = 0xfa,
     MXS_COM_MULTI               = 0xfe,
-    MXS_COM_END
+    MXS_COM_END,
+    MXS_COM_UNDEFINED = -1
 } mxs_mysql_cmd_t;
-
-static const mxs_mysql_cmd_t MXS_COM_UNDEFINED = (mxs_mysql_cmd_t) -1;
 
 /**
  * A GWBUF property with this name will contain the latest GTID in string form.
