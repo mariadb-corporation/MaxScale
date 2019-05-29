@@ -930,26 +930,20 @@ const char* MonitorServer::get_event_name()
     return Monitor::get_event_name((mxs_monitor_event_t) server->last_event);
 }
 
-void Monitor::append_node_names(char* dest, int len, int status, CredentialsApproach approach)
+string Monitor::gen_serverlist(int status, CredentialsApproach approach)
 {
-    const char* separator = "";
-    // Some extra space for port and separator
-    char arr[SERVER::MAX_MONUSER_LEN + SERVER::MAX_MONPW_LEN + SERVER::MAX_ADDRESS_LEN + 64];
-    dest[0] = '\0';
+    string rval;
+    rval.reserve(100 * m_servers.size());
 
-    for (auto iter = m_servers.begin(); iter != m_servers.end() && len; ++iter)
+    string separator;
+    for (auto mon_server : m_servers)
     {
-        Server* server = static_cast<Server*>((*iter)->server);
+        auto server = static_cast<Server*>(mon_server->server);
         if (status == 0 || server->status & status)
         {
             if (approach == CredentialsApproach::EXCLUDE)
             {
-                snprintf(arr,
-                         sizeof(arr),
-                         "%s[%s]:%d",
-                         separator,
-                         server->address,
-                         server->port);
+                rval += separator + mxb::string_printf("[%s]:%i", server->address, server->port);
             }
             else
             {
@@ -962,26 +956,13 @@ void Monitor::append_node_names(char* dest, int len, int status, CredentialsAppr
                     password = server->monitor_password();
                 }
 
-                snprintf(arr,
-                         sizeof(arr),
-                         "%s%s:%s@[%s]:%d",
-                         separator,
-                         user.c_str(),
-                         password.c_str(),
-                         server->address,
-                         server->port);
+                rval += separator + mxb::string_printf("%s:%s@[%s]:%d", user.c_str(), password.c_str(),
+                                                       server->address, server->port);
             }
-
             separator = ",";
-            int arrlen = strlen(arr);
-
-            if (arrlen < len)
-            {
-                strcat(dest, arr);
-                len -= arrlen;
-            }
         }
     }
+    return rval;
 }
 
 /**
@@ -1072,6 +1053,8 @@ std::string Monitor::child_nodes(MonitorServer* parent)
 
 int Monitor::launch_command(MonitorServer* ptr)
 {
+    m_scriptcmd->reset_substituted();
+
     // A generator function is ran only if the matching substitution keyword is found.
 
     auto gen_initiator = [ptr] {
@@ -1088,81 +1071,60 @@ int Monitor::launch_command(MonitorServer* ptr)
             return ss;
         };
 
-    auto cmd = m_scriptcmd.get();
-    cmd->reset_substituted();
-    cmd->match_substitute("$INITIATOR", gen_initiator);
-    cmd->match_substitute("$PARENT", gen_parent);
+    m_scriptcmd->match_substitute("$INITIATOR", gen_initiator);
+    m_scriptcmd->match_substitute("$PARENT", gen_parent);
 
-    cmd->match_substitute("$CHILDREN", [this, ptr] {
-                              return child_nodes(ptr);
+    m_scriptcmd->match_substitute("$CHILDREN", [this, ptr] {
+                                      return child_nodes(ptr);
+                                  });
+
+    m_scriptcmd->match_substitute("$EVENT", [ptr] {
+                                      return ptr->get_event_name();
+                                  });
+
+    m_scriptcmd->match_substitute("$CREDENTIALS", [this] {
+                                        // Provides credentials for all servers.
+                                      return gen_serverlist(0, CredentialsApproach::INCLUDE);
+                                  });
+
+    m_scriptcmd->match_substitute("$NODELIST", [this] {
+                              return gen_serverlist(SERVER_RUNNING);
                           });
 
-    cmd->match_substitute("$EVENT", [ptr] {
-                              return ptr->get_event_name();
+    m_scriptcmd->match_substitute("$LIST", [this] {
+                              return gen_serverlist(0);
                           });
 
-    char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
+    m_scriptcmd->match_substitute("$MASTERLIST", [this] {
+                              return gen_serverlist(SERVER_MASTER);
+                          });
 
-    if (cmd->externcmd_matches("$CREDENTIALS"))
+    m_scriptcmd->match_substitute("$SLAVELIST", [this] {
+                              return gen_serverlist(SERVER_SLAVE);
+                          });
+
+    m_scriptcmd->match_substitute("$SYNCEDLIST", [this] {
+                              return gen_serverlist(SERVER_JOINED);
+                          });
+
+    int rv = m_scriptcmd->externcmd_execute();
+    if (rv == 0)
     {
-        // We provide the credentials for _all_ servers.
-        append_node_names(nodelist, sizeof(nodelist), 0, CredentialsApproach::INCLUDE);
-        cmd->substitute_arg("$CREDENTIALS", nodelist);
+        MXS_NOTICE("Executed monitor script on event '%s'. Script was: '%s'",
+                   ptr->get_event_name(), m_scriptcmd->substituted());
     }
-
-    if (cmd->externcmd_matches("$NODELIST"))
+    else if (rv == -1)
     {
-        append_node_names(nodelist, sizeof(nodelist), SERVER_RUNNING);
-        cmd->substitute_arg("$NODELIST", nodelist);
-    }
-
-    if (cmd->externcmd_matches("$LIST"))
-    {
-        append_node_names(nodelist, sizeof(nodelist), 0);
-        cmd->substitute_arg("$LIST", nodelist);
-    }
-
-    if (cmd->externcmd_matches("$MASTERLIST"))
-    {
-        append_node_names(nodelist, sizeof(nodelist), SERVER_MASTER);
-        cmd->substitute_arg("$MASTERLIST", nodelist);
-    }
-
-    if (cmd->externcmd_matches("$SLAVELIST"))
-    {
-        append_node_names(nodelist, sizeof(nodelist), SERVER_SLAVE);
-        cmd->substitute_arg("$SLAVELIST", nodelist);
-    }
-
-    if (cmd->externcmd_matches("$SYNCEDLIST"))
-    {
-        append_node_names(nodelist, sizeof(nodelist), SERVER_JOINED);
-        cmd->substitute_arg("$SYNCEDLIST", nodelist);
-    }
-
-    int rv = cmd->externcmd_execute();
-
-    if (rv)
-    {
-        if (rv == -1)
-        {
-            // Internal error
-            MXS_ERROR("Failed to execute script on server state change event '%s'. Script was: '%s'",
-                      ptr->get_event_name(), cmd->substituted());
-        }
-        else
-        {
-            // Script returned a non-zero value
-            MXS_ERROR("Script returned %d on event '%s'. Script was: '%s'",
-                      rv, ptr->get_event_name(), cmd->substituted());
-        }
+        // Internal error
+        MXS_ERROR("Failed to execute script on server state change event '%s'. Script was: '%s'",
+                  ptr->get_event_name(), m_scriptcmd->substituted());
     }
     else
     {
-        MXS_NOTICE("Executed monitor script on event '%s'. Script was: '%s'",
-                   ptr->get_event_name(), cmd->substituted());
+        // Script returned a non-zero value
+        MXS_ERROR("Script returned %d on event '%s'. Script was: '%s'",
+                  rv, ptr->get_event_name(), m_scriptcmd->substituted());
     }
-
     return rv;
 }
 

@@ -554,14 +554,14 @@ private:
     };
 
     /**
-     * Create a list of running servers
+     * Create a list of server addresses and ports.
      *
-     * @param dest Destination where the string is appended, must be null terminated
-     * @param len Length of @c dest
+     * @param status Server status bitmask. At least one bit must match with a server for it to be included
+     * in the resulting list. 0 allows all servers regardless of status.
      * @param approach Whether credentials should be included or not.
+     * @return Comma-separated list
      */
-    void append_node_names(char* dest, int len, int status,
-                           CredentialsApproach approach = CredentialsApproach::EXCLUDE);
+    std::string gen_serverlist(int status, CredentialsApproach approach = CredentialsApproach::EXCLUDE);
 
     FILE* open_data_file(Monitor* monitor, char* path);
     int   get_data_file_path(char* path) const;

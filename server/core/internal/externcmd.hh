@@ -40,29 +40,16 @@ public:
     int externcmd_execute();
 
     /**
-    * Substitute all occurrences of @c match with @c replace in the arguments.
-    *
-    * @param match Match string
-    * @param replace Replacement string
-    */
-    void substitute_arg(const std::string& match, const std::string& replace);
-
-    /**
-     * Simple matching of string and command
-     *
-     * @param match String to search for
-     * @return True if the string matched
-     */
-    bool externcmd_matches(const std::string& match);
-
-    /**
      * If keyword is found in command script, replace keyword with output of generator function.
      *
      * @param keyword Keyword to replace
      * @param generator Function which generates the replacement string. Only ran if keyword was found.
      */
-    void match_substitute(const std::string& keyword, std::function<std::string(void)> generator);
+    void match_substitute(const std::string& keyword, const std::function<std::string(void)>& generator);
 
+    /**
+     * Reset substituted command to the unaltered command. Should be ran before a substitution pass begins.
+     */
     void reset_substituted();
 
     const char* substituted() const;
@@ -77,5 +64,13 @@ private:
     ExternalCmd(const std::string& script, int timeout);
 
     int tokenize_args(char* dest[], int dest_size);
+
+    /**
+     * Substitute all occurrences of @c match with @c replace in the arguments.
+     *
+     * @param match Match string
+     * @param replace Replacement string
+     */
+    void substitute_arg(const std::string& match, const std::string& replace);
 };
 

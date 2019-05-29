@@ -247,7 +247,7 @@ int ExternalCmd::externcmd_execute()
     {
         MXS_INFO("Executing command '%s' in process %d", cmdname, pid);
 
-        std::string output;
+        string output;
         bool first_warning = true;
         bool again = true;
         uint64_t t = 0;
@@ -319,8 +319,7 @@ int ExternalCmd::externcmd_execute()
                 // Read all available output
                 output.append(buf, n);
 
-                for (size_t pos = output.find("\n");
-                     pos != std::string::npos; pos = output.find("\n"))
+                for (size_t pos = output.find("\n"); pos != std::string::npos; pos = output.find("\n"))
                 {
                     if (pos == 0)
                     {
@@ -372,54 +371,9 @@ void ExternalCmd::substitute_arg(const std::string& match, const std::string& re
     }
 }
 
-/**
- * Get the name of the command being executed.
- *
- * This copies the command being executed into a new string.
- * @param str Command string, optionally with arguments
- * @return Command part of the string if arguments were defined
- */
-static char* get_command(const char* str)
+void ExternalCmd::match_substitute(const string& keyword, const std::function<string(void)>& generator)
 {
-    char* rval = NULL;
-    const char* start = str;
-
-    while (*start && isspace(*start))
-    {
-        start++;
-    }
-
-    const char* end = start;
-
-    while (*end && !isspace(*end))
-    {
-        end++;
-    }
-
-    size_t len = end - start;
-
-    if (len > 0)
-    {
-        rval = (char*)MXS_MALLOC(len + 1);
-
-        if (rval)
-        {
-            memcpy(rval, start, len);
-            rval[len] = '\0';
-        }
-    }
-
-    return rval;
-}
-
-bool ExternalCmd::externcmd_matches(const string& match)
-{
-    return m_orig_command.find(match) != string::npos;
-}
-
-void ExternalCmd::match_substitute(const std::string& keyword, std::function<std::string(void)> generator)
-{
-    if (externcmd_matches(keyword))
+    if (m_orig_command.find(keyword) != string::npos)
     {
         substitute_arg(keyword, generator());
     }
