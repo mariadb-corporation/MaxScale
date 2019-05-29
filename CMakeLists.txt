@@ -48,6 +48,7 @@ find_package(GSSAPI)
 find_package(SQLite)
 find_package(ASAN)
 find_package(TSAN)
+find_package(UBSAN)
 
 # Build PCRE2 so we always know the version
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
@@ -154,6 +155,9 @@ if (WITH_ASAN AND ASAN_FOUND)
 elseif (WITH_TSAN AND TSAN_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
+elseif (WITH_UBSAN AND UBSAN_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_GNU_SOURCE=1 ${FLAGS}")

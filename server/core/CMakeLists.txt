@@ -72,6 +72,8 @@ target_link_libraries(maxscale-common
 
 if(WITH_ASAN AND ASAN_FOUND)
   target_link_libraries(maxscale-common ${ASAN_LIBRARIES})
+elseif(WITH_UBSAN AND UBSAN_FOUND)
+  target_link_libraries(maxscale-common ${UBSAN_LIBRARIES})
 endif()
 
 find_library(HAVE_LIBDL NAMES dl)
