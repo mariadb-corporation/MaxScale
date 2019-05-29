@@ -13,8 +13,9 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <unistd.h>
+#include <functional>
 #include <memory>
+#include <unistd.h>
 
 class ExternalCmd
 {
@@ -50,10 +51,17 @@ public:
      * Simple matching of string and command
      *
      * @param match String to search for
-     *
      * @return True if the string matched
      */
-    bool externcmd_matches(const char* match);
+    bool externcmd_matches(const std::string& match);
+
+    /**
+     * If keyword is found in command script, replace keyword with output of generator function.
+     *
+     * @param keyword Keyword to replace
+     * @param generator Function which generates the replacement string. Only ran if keyword was found.
+     */
+    void match_substitute(const std::string& keyword, std::function<std::string(void)> generator);
 
     void reset_substituted();
 
@@ -62,9 +70,9 @@ public:
 private:
     static const int MAX_ARGS {256};
 
-    std::string m_command;              /**< Original command */
-    std::string m_command_substituted;  /**< Command with substitutions */
-    int         m_timeout;              /**< Command timeout in seconds */
+    std::string m_orig_command;        /**< Original command */
+    std::string m_subst_command;       /**< Command with substitutions */
+    int         m_timeout;             /**< Command timeout in seconds */
 
     ExternalCmd(const std::string& script, int timeout);
 

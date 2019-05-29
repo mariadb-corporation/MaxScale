@@ -33,8 +33,8 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
     bool escaped = false;
     char qc = 0;
 
-    char args[m_command_substituted.length() + 1];
-    strcpy(args, m_command_substituted.c_str());
+    char args[m_subst_command.length() + 1];
+    strcpy(args, m_subst_command.c_str());
     char* start = args;
     char* ptr = start;
     int i = 0;
@@ -130,8 +130,8 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
 }
 
 ExternalCmd::ExternalCmd(const std::string& script, int timeout)
-    : m_command(script)
-    , m_command_substituted(script)
+    : m_orig_command(script)
+    , m_subst_command(script)
     , m_timeout(timeout)
 {
 }
@@ -357,16 +357,16 @@ void ExternalCmd::substitute_arg(const std::string& match, const std::string& re
 {
     // The match may be in the subject multiple times. Find all locations.
     string::size_type next_search_begin = 0;
-    while (next_search_begin < m_command_substituted.length())
+    while (next_search_begin < m_subst_command.length())
     {
-        auto position = m_command_substituted.find(match, next_search_begin);
+        auto position = m_subst_command.find(match, next_search_begin);
         if (position == string::npos)
         {
-            next_search_begin = m_command_substituted.length();
+            next_search_begin = m_subst_command.length();
         }
         else
         {
-            m_command_substituted.replace(position, match.length(), replace);
+            m_subst_command.replace(position, match.length(), replace);
             next_search_begin = position + replace.length();
         }
     }
@@ -412,17 +412,25 @@ static char* get_command(const char* str)
     return rval;
 }
 
-bool ExternalCmd::externcmd_matches(const char* match)
+bool ExternalCmd::externcmd_matches(const string& match)
 {
-    return m_command.find(match) != string::npos;
+    return m_orig_command.find(match) != string::npos;
+}
+
+void ExternalCmd::match_substitute(const std::string& keyword, std::function<std::string(void)> generator)
+{
+    if (externcmd_matches(keyword))
+    {
+        substitute_arg(keyword, generator());
+    }
 }
 
 void ExternalCmd::reset_substituted()
 {
-    m_command_substituted = m_command;
+    m_subst_command = m_orig_command;
 }
 
 const char* ExternalCmd::substituted() const
 {
-    return m_command_substituted.c_str();
+    return m_subst_command.c_str();
 }

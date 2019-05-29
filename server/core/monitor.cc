@@ -42,6 +42,7 @@
 #include <maxscale/utils.hh>
 #include <maxscale/json_api.hh>
 #include <mysqld_error.h>
+#include <maxbase/format.hh>
 
 #include "internal/config.hh"
 #include "internal/externcmd.hh"
@@ -1071,37 +1072,34 @@ std::string Monitor::child_nodes(MonitorServer* parent)
 
 int Monitor::launch_command(MonitorServer* ptr)
 {
+    // A generator function is ran only if the matching substitution keyword is found.
+
+    auto gen_initiator = [ptr] {
+            return mxb::string_printf("[%s]:%d", ptr->server->address, ptr->server->port);
+        };
+
+    auto gen_parent = [this, ptr] {
+            string ss;
+            MonitorServer* parent = find_parent_node(ptr);
+            if (parent)
+            {
+                ss = mxb::string_printf("[%s]:%d", parent->server->address, parent->server->port);
+            }
+            return ss;
+        };
+
     auto cmd = m_scriptcmd.get();
     cmd->reset_substituted();
+    cmd->match_substitute("$INITIATOR", gen_initiator);
+    cmd->match_substitute("$PARENT", gen_parent);
 
-    if (cmd->externcmd_matches("$INITIATOR"))
-    {
-        char initiator[strlen(ptr->server->address) + 24];      // Extra space for port
-        snprintf(initiator, sizeof(initiator), "[%s]:%d", ptr->server->address, ptr->server->port);
-        cmd->substitute_arg("$INITIATOR", initiator);
-    }
+    cmd->match_substitute("$CHILDREN", [this, ptr] {
+                              return child_nodes(ptr);
+                          });
 
-    if (cmd->externcmd_matches("$PARENT"))
-    {
-        std::stringstream ss;
-        MonitorServer* parent = find_parent_node(ptr);
-
-        if (parent)
-        {
-            ss << "[" << parent->server->address << "]:" << parent->server->port;
-        }
-        cmd->substitute_arg("$PARENT", ss.str().c_str());
-    }
-
-    if (cmd->externcmd_matches("$CHILDREN"))
-    {
-        cmd->substitute_arg("$CHILDREN", child_nodes(ptr).c_str());
-    }
-
-    if (cmd->externcmd_matches("$EVENT"))
-    {
-        cmd->substitute_arg("$EVENT", ptr->get_event_name());
-    }
+    cmd->match_substitute("$EVENT", [ptr] {
+                              return ptr->get_event_name();
+                          });
 
     char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
 
