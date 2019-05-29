@@ -612,6 +612,10 @@ mysql_auth_set_client_data(
                             }
                         }
                     }
+                    else
+                    {
+                        client_data->correct_authenticator = true;
+                    }
                 }
             }
         }
