@@ -540,24 +540,12 @@ private:
     void remove_all_servers();
 
     /**
-     * Launch a script
-     *
-     * @param ptr     The server which has changed state
-     * @return Return value of the executed script or -1 on error
-     */
-    int launch_script(MonitorServer* ptr);
-
-    /**
-     * Launch a command
+     * Launch a command. All default script variables will be replaced.
      *
      * @param ptr  The server which has changed state
-     * @param cmd  The command to execute.
-     *
-     * @note All default script variables will be replaced.
-     *
      * @return Return value of the executed script or -1 on error.
      */
-    int launch_command(MonitorServer* ptr, ExternalCmd* cmd);
+    int launch_command(MonitorServer* ptr);
 
     enum class CredentialsApproach
     {
@@ -582,6 +570,8 @@ private:
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
     uint8_t          m_journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
+
+    std::unique_ptr<ExternalCmd> m_scriptcmd;   /**< External command representing the monitor script */
 
     ServerVector         m_servers;      /**< Monitored servers */
     MXS_CONFIG_PARAMETER m_parameters;   /**< Configuration parameters in text form */

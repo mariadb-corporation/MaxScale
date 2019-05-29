@@ -92,43 +92,39 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
     return i;
 }
 
-ExternalCmd* ExternalCmd::create(const char* argstr, int timeout)
+std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeout)
 {
-    auto cmd = new ExternalCmd(argstr, timeout);
     bool success = false;
-    if (argstr && cmd)
+    std::unique_ptr<ExternalCmd> cmd(new ExternalCmd(argstr, timeout));
+    char* argvec[1] {}; // Parse just one argument for testing file existence and permissions.
+    if (cmd->tokenize_args(argvec, 1) > 0)
     {
-        char* argvec[1] {}; // Parse just one argument for testing.
-        if (cmd->tokenize_args(argvec, 1) > 0)
+        const char* cmdname = argvec[0];
+        if (access(cmdname, X_OK) != 0)
         {
-            const char* cmdname = argvec[0];
-            if (access(cmdname, X_OK) != 0)
+            if (access(cmdname, F_OK) != 0)
             {
-                if (access(cmdname, F_OK) != 0)
-                {
-                    MXS_ERROR("Cannot find file: %s", cmdname);
-                }
-                else
-                {
-                    MXS_ERROR("Cannot execute file '%s'. Missing execution permissions.", cmdname);
-                }
+                MXS_ERROR("Cannot find file '%s'.", cmdname);
             }
             else
             {
-                success = true;
+                MXS_ERROR("Cannot execute file '%s'. Missing execution permissions.", cmdname);
             }
-            MXS_FREE(argvec[0]);
         }
         else
         {
-            MXS_ERROR("Failed to parse argument string for external command: %s", argstr);
+            success = true;
         }
+        MXS_FREE(argvec[0]);
+    }
+    else
+    {
+        MXS_ERROR("Failed to parse argument string '%s' for external command.", argstr.c_str());
     }
 
     if (!success)
     {
-        delete cmd;
-        cmd = nullptr;
+        cmd.reset();
     }
     return cmd;
 }
@@ -419,6 +415,11 @@ static char* get_command(const char* str)
 bool ExternalCmd::externcmd_matches(const char* match)
 {
     return m_command.find(match) != string::npos;
+}
+
+void ExternalCmd::reset_substituted()
+{
+    m_command_substituted = m_command;
 }
 
 const char* ExternalCmd::substituted() const

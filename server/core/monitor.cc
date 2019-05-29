@@ -462,8 +462,6 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
     m_settings.interval = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
     m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
-    m_settings.script_timeout = params->get_duration<seconds>(CN_SCRIPT_TIMEOUT).count();
-    m_settings.script = params->get_string(CN_SCRIPT);
     m_settings.events = params->get_enum(CN_EVENTS, mxs_monitor_event_enum_values);
 
     MonitorServer::ConnectionSettings& conn_settings = m_settings.conn_settings;
@@ -502,6 +500,23 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
         MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
                   CN_DISK_SPACE_THRESHOLD, name(), threshold_string.c_str());
         error = true;
+    }
+
+    m_settings.script_timeout = params->get_duration<seconds>(CN_SCRIPT_TIMEOUT).count();
+    m_settings.script = params->get_string(CN_SCRIPT);
+    if (m_settings.script.empty())
+    {
+        // Reset current external cmd if any.
+        m_scriptcmd.reset();
+    }
+    else
+    {
+        m_scriptcmd = ExternalCmd::create(m_settings.script, m_settings.script_timeout);
+        if (!m_scriptcmd)
+        {
+            MXS_ERROR("Failed to initialize script '%s'.", m_settings.script.c_str());
+            error = true;
+        }
     }
 
     if (!error)
@@ -1054,8 +1069,11 @@ std::string Monitor::child_nodes(MonitorServer* parent)
     return ss.str();
 }
 
-int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
+int Monitor::launch_command(MonitorServer* ptr)
 {
+    auto cmd = m_scriptcmd.get();
+    cmd->reset_substituted();
+
     if (cmd->externcmd_matches("$INITIATOR"))
     {
         char initiator[strlen(ptr->server->address) + 24];      // Extra space for port
@@ -1147,27 +1165,6 @@ int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
                    ptr->get_event_name(), cmd->substituted());
     }
 
-    return rv;
-}
-
-int Monitor::launch_script(MonitorServer* ptr)
-{
-    const char* script = m_settings.script.c_str();
-    char arg[strlen(script) + 1];
-    strcpy(arg, script);
-
-    ExternalCmd* cmd = ExternalCmd::create(arg, m_settings.script_timeout);
-
-    if (cmd == NULL)
-    {
-        MXS_ERROR("Failed to initialize script '%s'. See previous errors for the "
-                  "cause of this failure.",
-                  script);
-        return -1;
-    }
-
-    int rv = launch_command(ptr, cmd);
-    delete cmd;
     return rv;
 }
 
@@ -1381,9 +1378,9 @@ void Monitor::detect_handle_state_changes()
                 master_up = true;
             }
 
-            if (!m_settings.script.empty() && (event & m_settings.events))
+            if (m_scriptcmd && (event & m_settings.events))
             {
-                launch_script(ptr);
+                launch_command(ptr);
             }
         }
     }

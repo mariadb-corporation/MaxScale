@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <unistd.h>
+#include <memory>
 
 class ExternalCmd
 {
@@ -26,7 +27,7 @@ public:
      * @param timeout Command timeout in seconds
      * @return Pointer to new external command struct or NULL if an error occurred
      */
-    static ExternalCmd* create(const char* argstr, int timeout);
+    static std::unique_ptr<ExternalCmd> create(const std::string& argstr, int timeout);
 
     /**
      * Execute a command
@@ -54,15 +55,16 @@ public:
      */
     bool externcmd_matches(const char* match);
 
+    void reset_substituted();
+
     const char* substituted() const;
 
+private:
     static const int MAX_ARGS {256};
 
-private:
     std::string m_command;              /**< Original command */
     std::string m_command_substituted;  /**< Command with substitutions */
-
-    int m_timeout;    /**< Command timeout in seconds */
+    int         m_timeout;              /**< Command timeout in seconds */
 
     ExternalCmd(const std::string& script, int timeout);
 
