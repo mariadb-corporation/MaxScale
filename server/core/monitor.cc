@@ -1060,7 +1060,7 @@ int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
     {
         char initiator[strlen(ptr->server->address) + 24];      // Extra space for port
         snprintf(initiator, sizeof(initiator), "[%s]:%d", ptr->server->address, ptr->server->port);
-        cmd->substitute_arg("[$]INITIATOR", initiator);
+        cmd->substitute_arg("$INITIATOR", initiator);
     }
 
     if (cmd->externcmd_matches("$PARENT"))
@@ -1072,17 +1072,17 @@ int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
         {
             ss << "[" << parent->server->address << "]:" << parent->server->port;
         }
-        cmd->substitute_arg("[$]PARENT", ss.str().c_str());
+        cmd->substitute_arg("$PARENT", ss.str().c_str());
     }
 
     if (cmd->externcmd_matches("$CHILDREN"))
     {
-        cmd->substitute_arg("[$]CHILDREN", child_nodes(ptr).c_str());
+        cmd->substitute_arg("$CHILDREN", child_nodes(ptr).c_str());
     }
 
     if (cmd->externcmd_matches("$EVENT"))
     {
-        cmd->substitute_arg("[$]EVENT", ptr->get_event_name());
+        cmd->substitute_arg("$EVENT", ptr->get_event_name());
     }
 
     char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
@@ -1091,37 +1091,37 @@ int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
     {
         // We provide the credentials for _all_ servers.
         append_node_names(nodelist, sizeof(nodelist), 0, CredentialsApproach::INCLUDE);
-        cmd->substitute_arg("[$]CREDENTIALS", nodelist);
+        cmd->substitute_arg("$CREDENTIALS", nodelist);
     }
 
     if (cmd->externcmd_matches("$NODELIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), SERVER_RUNNING);
-        cmd->substitute_arg("[$]NODELIST", nodelist);
+        cmd->substitute_arg("$NODELIST", nodelist);
     }
 
     if (cmd->externcmd_matches("$LIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), 0);
-        cmd->substitute_arg("[$]LIST", nodelist);
+        cmd->substitute_arg("$LIST", nodelist);
     }
 
     if (cmd->externcmd_matches("$MASTERLIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), SERVER_MASTER);
-        cmd->substitute_arg("[$]MASTERLIST", nodelist);
+        cmd->substitute_arg("$MASTERLIST", nodelist);
     }
 
     if (cmd->externcmd_matches("$SLAVELIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), SERVER_SLAVE);
-        cmd->substitute_arg("[$]SLAVELIST", nodelist);
+        cmd->substitute_arg("$SLAVELIST", nodelist);
     }
 
     if (cmd->externcmd_matches("$SYNCEDLIST"))
     {
         append_node_names(nodelist, sizeof(nodelist), SERVER_JOINED);
-        cmd->substitute_arg("[$]SYNCEDLIST", nodelist);
+        cmd->substitute_arg("$SYNCEDLIST", nodelist);
     }
 
     int rv = cmd->externcmd_execute();
@@ -1131,66 +1131,20 @@ int Monitor::launch_command(MonitorServer* ptr, ExternalCmd* cmd)
         if (rv == -1)
         {
             // Internal error
-            MXS_ERROR("Failed to execute script '%s' on server state change event '%s'",
-                      cmd->argv[0],
-                      ptr->get_event_name());
+            MXS_ERROR("Failed to execute script on server state change event '%s'. Script was: '%s'",
+                      ptr->get_event_name(), cmd->substituted());
         }
         else
         {
             // Script returned a non-zero value
-            MXS_ERROR("Script '%s' returned %d on event '%s'",
-                      cmd->argv[0],
-                      rv,
-                      ptr->get_event_name());
+            MXS_ERROR("Script returned %d on event '%s'. Script was: '%s'",
+                      rv, ptr->get_event_name(), cmd->substituted());
         }
     }
     else
     {
-        mxb_assert(cmd->argv != NULL && cmd->argv[0] != NULL);
-        // Construct a string with the script + arguments
-        char* scriptStr = NULL;
-        int totalStrLen = 0;
-        bool memError = false;
-        for (int i = 0; cmd->argv[i]; i++)
-        {
-            totalStrLen += strlen(cmd->argv[i]) + 1;    // +1 for space and one \0
-        }
-        int spaceRemaining = totalStrLen;
-        if ((scriptStr = (char*)MXS_CALLOC(totalStrLen, sizeof(char))) != NULL)
-        {
-            char* currentPos = scriptStr;
-            // The script name should not begin with a space
-            int len = snprintf(currentPos, spaceRemaining, "%s", cmd->argv[0]);
-            currentPos += len;
-            spaceRemaining -= len;
-
-            for (int i = 1; cmd->argv[i]; i++)
-            {
-                if ((cmd->argv[i])[0] == '\0')
-                {
-                    continue;   // Empty argument, print nothing
-                }
-                len = snprintf(currentPos, spaceRemaining, " %s", cmd->argv[i]);
-                currentPos += len;
-                spaceRemaining -= len;
-            }
-            mxb_assert(spaceRemaining > 0);
-            *currentPos = '\0';
-        }
-        else
-        {
-            memError = true;
-            scriptStr = cmd->argv[0];   // print at least something
-        }
-
-        MXS_NOTICE("Executed monitor script '%s' on event '%s'",
-                   scriptStr,
-                   ptr->get_event_name());
-
-        if (!memError)
-        {
-            MXS_FREE(scriptStr);
-        }
+        MXS_NOTICE("Executed monitor script on event '%s'. Script was: '%s'",
+                   ptr->get_event_name(), cmd->substituted());
     }
 
     return rv;

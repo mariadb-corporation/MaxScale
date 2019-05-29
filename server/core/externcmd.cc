@@ -24,27 +24,22 @@
 #include <maxscale/alloc.h>
 #include <maxscale/pcre2.h>
 
-/**
- * Tokenize a string into arguments suitable for a `execvp` call.
- *
- * @param argstr Argument string
- * @return Number of arguments parsed from the string
- */
-int ExternalCmd::tokenize_arguments(const char* argstr)
+using std::string;
+
+int ExternalCmd::tokenize_args(char* dest[], int dest_size)
 {
-    int i = 0;
     bool quoted = false;
     bool read = false;
     bool escaped = false;
-    char* ptr, * start;
-    char args[strlen(argstr) + 1];
     char qc = 0;
 
-    strcpy(args, argstr);
-    start = args;
-    ptr = start;
+    char args[m_command_substituted.length() + 1];
+    strcpy(args, m_command_substituted.c_str());
+    char* start = args;
+    char* ptr = start;
+    int i = 0;
 
-    while (*ptr != '\0' && i < MAX_ARGS)
+    while (*ptr != '\0' && i < dest_size)
     {
         if (escaped)
         {
@@ -59,7 +54,7 @@ int ExternalCmd::tokenize_arguments(const char* argstr)
             else if (quoted && !escaped && *ptr == qc)      /** End of quoted string */
             {
                 *ptr = '\0';
-                argv[i++] = MXS_STRDUP(start);
+                dest[i++] = MXS_STRDUP(start);
                 read = false;
                 quoted = false;
             }
@@ -70,7 +65,7 @@ int ExternalCmd::tokenize_arguments(const char* argstr)
                     *ptr = '\0';
                     if (read)   /** New token */
                     {
-                        argv[i++] = MXS_STRDUP(start);
+                        dest[i++] = MXS_STRDUP(start);
                         read = false;
                     }
                 }
@@ -92,22 +87,21 @@ int ExternalCmd::tokenize_arguments(const char* argstr)
     }
     if (read)
     {
-        argv[i++] = MXS_STRDUP(start);
+        dest[i++] = MXS_STRDUP(start);
     }
-
-    argv[i] = nullptr;
     return i;
 }
 
 ExternalCmd* ExternalCmd::create(const char* argstr, int timeout)
 {
-    auto cmd = new ExternalCmd(timeout);
+    auto cmd = new ExternalCmd(argstr, timeout);
     bool success = false;
     if (argstr && cmd)
     {
-        if (cmd->tokenize_arguments(argstr) > 0)
+        char* argvec[1] {}; // Parse just one argument for testing.
+        if (cmd->tokenize_args(argvec, 1) > 0)
         {
-            auto cmdname = cmd->argv[0];
+            const char* cmdname = argvec[0];
             if (access(cmdname, X_OK) != 0)
             {
                 if (access(cmdname, F_OK) != 0)
@@ -123,6 +117,7 @@ ExternalCmd* ExternalCmd::create(const char* argstr, int timeout)
             {
                 success = true;
             }
+            MXS_FREE(argvec[0]);
         }
         else
         {
@@ -138,17 +133,11 @@ ExternalCmd* ExternalCmd::create(const char* argstr, int timeout)
     return cmd;
 }
 
-ExternalCmd::ExternalCmd(int timeout)
-    : m_timeout(timeout)
+ExternalCmd::ExternalCmd(const std::string& script, int timeout)
+    : m_command(script)
+    , m_command_substituted(script)
+    , m_timeout(timeout)
 {
-}
-
-ExternalCmd::~ExternalCmd()
-{
-    for (int i = 0; argv[i]; i++)
-    {
-        MXS_FREE(argv[i]);
-    }
 }
 
 static const char* skip_whitespace(const char* ptr)
@@ -220,20 +209,21 @@ int ExternalCmd::externcmd_execute()
 {
     // Create a pipe where the command can print output
     int fd[2];
-
     if (pipe(fd) == -1)
     {
         MXS_ERROR("Failed to open pipe: [%d] %s", errno, mxs_strerror(errno));
         return -1;
     }
 
+    // "execvp" takes its arguments as an array of tokens where the first element is the command.
+    char* argvec[MAX_ARGS + 1] {};
+    tokenize_args(argvec, MAX_ARGS);
+    const char* cmdname = argvec[0];
+
     int rval = 0;
-    pid_t pid;
-    const char* cmdname = argv[0];
     // The SIGCHLD handler must be disabled before child process is forked,
     // otherwise we'll get an error
-    pid = fork();
-
+    pid_t pid = fork();
     if (pid < 0)
     {
         close(fd[0]);
@@ -251,7 +241,7 @@ int ExternalCmd::externcmd_execute()
         dup2(fd[1], STDERR_FILENO);
 
         // Execute the command
-        execvp(argv[0], argv);
+        execvp(cmdname, argvec);
 
         // Close the write end of the pipe and exit
         close(fd[1]);
@@ -359,52 +349,31 @@ int ExternalCmd::externcmd_execute()
         close(fd[0]);
     }
 
+    // Free the token array.
+    for (int i = 0; i < MAX_ARGS && argvec[i]; i++)
+    {
+        MXS_FREE(argvec[i]);
+    }
     return rval;
 }
 
-bool ExternalCmd::substitute_arg(const char* match, const char* replace)
+void ExternalCmd::substitute_arg(const std::string& match, const std::string& replace)
 {
-    int err;
-    bool rval = true;
-    size_t errpos;
-    pcre2_code* re = pcre2_compile((PCRE2_SPTR) match, PCRE2_ZERO_TERMINATED, 0, &err, &errpos, NULL);
-    if (re)
+    // The match may be in the subject multiple times. Find all locations.
+    string::size_type next_search_begin = 0;
+    while (next_search_begin < m_command_substituted.length())
     {
-        for (int i = 0; argv[i] && rval; i++)
+        auto position = m_command_substituted.find(match, next_search_begin);
+        if (position == string::npos)
         {
-            size_t size_orig = strlen(argv[i]);
-            size_t size_replace = strlen(replace);
-            size_t size = MXS_MAX(size_orig, size_replace);
-            char* dest = (char*)MXS_MALLOC(size);
-            if (dest)
-            {
-                mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, argv[i], replace, &dest, &size);
-
-                switch (rc)
-                {
-                case MXS_PCRE2_ERROR:
-                    MXS_FREE(dest);
-                    rval = false;
-                    break;
-
-                case MXS_PCRE2_MATCH:
-                    MXS_FREE(argv[i]);
-                    argv[i] = dest;
-                    break;
-
-                case MXS_PCRE2_NOMATCH:
-                    MXS_FREE(dest);
-                    break;
-                }
-            }
+            next_search_begin = m_command_substituted.length();
         }
-        pcre2_code_free(re);
+        else
+        {
+            m_command_substituted.replace(position, match.length(), replace);
+            next_search_begin = position + replace.length();
+        }
     }
-    else
-    {
-        rval = false;
-    }
-    return rval;
 }
 
 /**
@@ -449,13 +418,10 @@ static char* get_command(const char* str)
 
 bool ExternalCmd::externcmd_matches(const char* match)
 {
-    for (int i = 0; argv[i]; i++)
-    {
-        if (strstr(argv[i], match))
-        {
-            return true;
-        }
-    }
+    return m_command.find(match) != string::npos;
+}
 
-    return false;
+const char* ExternalCmd::substituted() const
+{
+    return m_command_substituted.c_str();
 }

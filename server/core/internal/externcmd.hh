@@ -28,8 +28,6 @@ public:
      */
     static ExternalCmd* create(const char* argstr, int timeout);
 
-    ~ExternalCmd();
-
     /**
      * Execute a command
      *
@@ -44,10 +42,8 @@ public:
     *
     * @param match Match string
     * @param replace Replacement string
-    *
-    * @return True if replacement was successful, false on error
     */
-    bool substitute_arg(const char* match, const char* replace);
+    void substitute_arg(const std::string& match, const std::string& replace);
 
     /**
      * Simple matching of string and command
@@ -58,14 +54,18 @@ public:
      */
     bool externcmd_matches(const char* match);
 
+    const char* substituted() const;
+
     static const int MAX_ARGS {256};
 
-    char* argv[MAX_ARGS + 1] {}; /**< Arguments. First element is the command. */
-
 private:
-    int m_timeout;   /**< Command timeout in seconds */
+    std::string m_command;              /**< Original command */
+    std::string m_command_substituted;  /**< Command with substitutions */
 
-    ExternalCmd(int timeout);
-    int tokenize_arguments(const char* argstr);
+    int m_timeout;    /**< Command timeout in seconds */
+
+    ExternalCmd(const std::string& script, int timeout);
+
+    int tokenize_args(char* dest[], int dest_size);
 };
 
