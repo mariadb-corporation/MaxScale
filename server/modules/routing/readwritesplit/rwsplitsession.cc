@@ -187,6 +187,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         m_query_queue.emplace_back(querybuf);
         querybuf = NULL;
         rval = 1;
+        mxb_assert(m_expected_responses != 0);
 
         if (m_expected_responses == 0 && !route_stored_query())
         {
