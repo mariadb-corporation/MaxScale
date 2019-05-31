@@ -379,6 +379,7 @@ static inline uint32_t MYSQL_GET_PAYLOAD_LEN(const uint8_t* header)
 
 static inline uint32_t MYSQL_GET_PACKET_LEN(const GWBUF* buffer)
 {
+    mxb_assert(buffer);
     return MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
 }
 
@@ -629,6 +630,7 @@ void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db);
  */
 static inline uint8_t mxs_mysql_get_command(GWBUF* buffer)
 {
+    mxb_assert(buffer);
     if (GWBUF_LENGTH(buffer) > MYSQL_HEADER_LEN)
     {
         return GWBUF_DATA(buffer)[4];
@@ -652,6 +654,7 @@ static inline uint8_t mxs_mysql_get_command(GWBUF* buffer)
  */
 static inline uint32_t mxs_mysql_get_packet_len(GWBUF* buffer)
 {
+    mxb_assert(buffer);
     // The first three bytes of the packet header contain its length
     uint8_t buf[3];
     gwbuf_copy_data(buffer, 0, 3, buf);
