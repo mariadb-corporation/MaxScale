@@ -945,7 +945,7 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     m_expected_responses--;
                     errmsg += " Lost connection to master server while waiting for a result.";
 
-                    if (can_retry_query())
+                    if (m_current_query.get() && can_retry_query())
                     {
                         can_continue = true;
                         retry_query(m_current_query.release());
