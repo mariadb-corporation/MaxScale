@@ -747,6 +747,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         // Backend is still in use and has more session commands to execute
         if (backend->execute_session_command() && backend->is_waiting_result())
         {
+            MXS_INFO("%lu session commands left on '%s'", backend->session_command_count(), backend->name());
             m_expected_responses++;
         }
     }
@@ -881,6 +882,44 @@ bool RWSplitSession::start_trx_replay()
     return rval;
 }
 
+bool RWSplitSession::retry_master_query(SRWBackend& backend)
+{
+    bool can_continue = false;
+
+    if (backend->has_session_commands())
+    {
+        // Try to route the session command again. If the master is not available, the response will be
+        // returned from one of the slaves.
+
+        mxb_assert(!m_current_query.get());
+        mxb_assert(!m_sescmd_list.empty());
+        mxb_assert(m_sescmd_count >= 2);
+        MXS_INFO("Retrying session command due to master failure: %s",
+                 backend->next_session_command()->to_string().c_str());
+
+        // Before routing it, pop the failed session command off the list and decrement the number of
+        // executed session commands. This "overwrites" the existing command and prevents history duplication.
+        m_sescmd_list.pop_back();
+        --m_sescmd_count;
+
+        retry_query(backend->next_session_command()->deep_copy_buffer());
+        can_continue = true;
+    }
+    else if (m_current_query.get())
+    {
+        retry_query(m_current_query.release());
+        can_continue = true;
+    }
+    else
+    {
+        // This should never happen
+        mxb_assert_message(!true, "m_current_query is empty and no session commands being executed");
+        MXS_ERROR("Current query unexpectedly empty when trying to retry query on master");
+    }
+
+    return can_continue;
+}
+
 /**
  * @brief Router error handling routine
  *
@@ -945,10 +984,9 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     m_expected_responses--;
                     errmsg += " Lost connection to master server while waiting for a result.";
 
-                    if (m_current_query.get() && can_retry_query())
+                    if (can_retry_query())
                     {
-                        can_continue = true;
-                        retry_query(m_current_query.release());
+                        can_continue = retry_master_query(backend);
                     }
                     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
                     {
