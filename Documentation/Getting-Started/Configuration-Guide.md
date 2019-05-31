@@ -1261,7 +1261,7 @@ server.
 serversize=10
 ```
 
-The service would then have the parameter `weightby=serversize`. If there are 4
+The service would then have the parameter `weightby=serv_weight`. If there are 4
 servers defined in the service (serverA, serverB, serverC and serverD) with the
 serversize set as shown in the table below, the connections would balanced using
 the percentages in this table.
