@@ -316,6 +316,7 @@ public:
     Buffer(GWBUF* pBuffer)
         : m_pBuffer(pBuffer)
     {
+        mxb_assert(pBuffer);
     }
 
     /**
