@@ -440,6 +440,7 @@ static const char* BUILTIN_FUNCTIONS[] =
     "instr",
     "lcase",
     "left",
+    "lengthb",
     "length",
     "like",
     "load_file",

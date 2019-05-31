@@ -29,10 +29,10 @@
 #if defined (MYSQL_CLIENT)
 #undef MYSQL_CLIENT
 #endif
+#include <my_global.h>
 #include <my_config.h>
 #include <mysql.h>
 #include <my_sys.h>
-#include <my_global.h>
 #include <my_dbug.h>
 #include <my_base.h>
 // We need to get access to Item::str_value, which is protected. So we cheat.
@@ -44,7 +44,6 @@
 #include <sql_class.h>
 #include <sql_lex.h>
 #include <embedded_priv.h>
-#include <sql_class.h>
 #include <sql_lex.h>
 #include <sql_parse.h>
 #include <errmsg.h>
@@ -60,6 +59,7 @@
 
 #include <pthread.h>
 
+#define json_type mxs_json_type
 #include <maxbase/assert.h>
 #include <maxscale/log.hh>
 #include <maxscale/query_classifier.hh>
@@ -98,11 +98,15 @@ typedef struct name_mapping
 
 static NAME_MAPPING function_name_mappings_default[] =
 {
+    {"octet_length", "length"},
     {NULL, NULL}
 };
 
 static NAME_MAPPING function_name_mappings_oracle[] =
 {
+    {"octet_length",           "lengthb"},
+    {"decode_oracle",          "decode"},
+    {"char_length",            "length"},
     {"concat_operator_oracle", "concat"},
     {"case",                   "decode"},
     {NULL,                     NULL    }
@@ -179,6 +183,135 @@ inline void get_string_and_length(const char* cs, const char** s, size_t* length
     *length = cs ? strlen(cs) : 0;
 }
 #endif
+
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 4
+#define MARIADB_10_4
+
+class Expose_Lex_prepared_stmt
+{
+    Lex_ident_sys m_name; // Statement name (in all queries)
+    Item *m_code;         // PREPARE or EXECUTE IMMEDIATE source expression
+    List<Item> m_params;  // List of parameters for EXECUTE [IMMEDIATE]
+
+public:
+    static Item* code(Lex_prepared_stmt* lps)
+    {
+        return reinterpret_cast<Expose_Lex_prepared_stmt*>(lps)->m_code;
+    }
+};
+
+static_assert(sizeof(Lex_prepared_stmt) == sizeof(Expose_Lex_prepared_stmt),
+              "Update Expose_Lex_prepared_stmt, some member variable(s) is(are) missing.");
+
+#define QCME_STRING(name, s) LEX_CSTRING name { s, strlen(s) }
+
+inline int qcme_thd_set_db(THD* thd, LEX_CSTRING& s)
+{
+    return thd->set_db(&s);
+}
+
+inline bool qcme_item_is_int(Item* item)
+{
+    return
+        item->type() == Item::CONST_ITEM
+        && static_cast<Item_basic_value*>(item)->const_ptr_longlong();
+}
+
+inline bool qcme_item_is_string(Item* item)
+{
+    return
+        item->type() == Item::CONST_ITEM
+        && static_cast<Item_basic_value*>(item)->const_ptr_string();
+}
+
+inline const char* qcme_string_get(const LEX_CSTRING& s)
+{
+    return s.str && s.length ? s.str : (s.str != nullptr && *s.str == 0 ? s.str : nullptr);
+}
+
+#define QC_CF_IMPLICIT_COMMIT_BEGIN CF_IMPLICIT_COMMIT_BEGIN
+#define QC_CF_IMPLICIT_COMMIT_END   CF_IMPLICIT_COMMIT_END
+
+inline SELECT_LEX* qcme_get_first_select_lex(LEX* lex)
+{
+    return lex->first_select_lex();
+}
+
+inline const LEX_CSTRING& qcme_get_prepared_stmt_name(LEX* lex)
+{
+    Lex_prepared_stmt& prepared_stmt = lex->prepared_stmt;
+    return prepared_stmt.name();
+}
+
+inline Item* qcme_get_prepared_stmt_code(LEX* lex)
+{
+    return Expose_Lex_prepared_stmt::code(&lex->prepared_stmt);
+}
+
+extern "C"
+{
+
+void _db_flush_(void)
+{
+}
+
+}
+
+#else
+
+#define QCME_STRING(name, s) const char* name = s
+
+inline int qcme_thd_set_db(THD* thd, const char* s)
+{
+    return thd->set_db(s, strlen(s));
+}
+
+inline bool qcme_item_is_int(Item* item)
+{
+    return item->type() == Item::INT_ITEM;
+}
+
+inline bool qcme_item_is_string(Item* item)
+{
+    return item->type() == Item::STRING_ITEM;
+}
+
+inline const char* qcme_string_get(const char* s)
+{
+    return s;
+}
+
+#define QC_CF_IMPLICIT_COMMIT_BEGIN CF_IMPLICT_COMMIT_BEGIN
+#define QC_CF_IMPLICIT_COMMIT_END   CF_IMPLICIT_COMMIT_END
+
+inline SELECT_LEX* qcme_get_first_select_lex(LEX* lex)
+{
+    return &lex->select_lex;
+}
+
+#if MYSQL_VERSION_MINOR >= 3
+
+const LEX_CSTRING& qcme_get_prepared_stmt_name(LEX* lex)
+{
+    return lex->prepared_stmt_name;
+}
+
+inline Item* qcme_get_prepared_stmt_code(LEX* lex)
+{
+    return lex->prepared_stmt_code;
+}
+
+#else
+
+const LEX_STRING& qcme_get_prepared_stmt_name(LEX* lex)
+{
+    return lex->prepared_stmt_name;
+}
+
+#endif
+
+#endif
+
 
 static struct
 {
@@ -572,7 +705,8 @@ static bool create_parse_tree(THD* thd)
 {
     Parser_state parser_state;
     bool failp = FALSE;
-    const char* virtual_db = "skygw_virtual";
+
+    QCME_STRING(virtual_db, "skygw_virtual");
 
     if (parser_state.init(thd, thd->query(), thd->query_length()))
     {
@@ -586,7 +720,7 @@ static bool create_parse_tree(THD* thd)
      * Set some database to thd so that parsing won't fail because of
      * missing database. Then parse.
      */
-    failp = thd->set_db(virtual_db, strlen(virtual_db));
+    failp = qcme_thd_set_db(thd, virtual_db);
 
     if (failp)
     {
@@ -761,13 +895,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     {
         if (mxs_log_is_priority_enabled(LOG_INFO))
         {
-            if (sql_command_flags[lex->sql_command]
-                & CF_IMPLICT_COMMIT_BEGIN)
+            if (sql_command_flags[lex->sql_command] & QC_CF_IMPLICIT_COMMIT_BEGIN)
             {
                 MXS_INFO("Implicit COMMIT before executing the next command.");
             }
-            else if (sql_command_flags[lex->sql_command]
-                     & CF_IMPLICIT_COMMIT_END)
+            else if (sql_command_flags[lex->sql_command] & QC_CF_IMPLICIT_COMMIT_END)
             {
                 MXS_INFO("Implicit COMMIT after executing the next command.");
             }
@@ -1331,7 +1463,7 @@ static int is_autocommit_stmt(LEX* lex)
 
     if (item != NULL)   /*< found autocommit command */
     {
-        if (item->type() == Item::INT_ITEM)     /*< '0' or '1' */
+        if (qcme_item_is_int(item))
         {
             rc = item->val_int();
 
@@ -1340,7 +1472,7 @@ static int is_autocommit_stmt(LEX* lex)
                 rc = -1;
             }
         }
-        else if (item->type() == Item::STRING_ITEM)     /*< 'on' or 'off' */
+        else if (qcme_item_is_string(item))
         {
             String str(target, sizeof(target), system_charset_info);
             String* res = item->val_str(&str);
@@ -1562,26 +1694,26 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
 
                 if (fullnames)
                 {
-                    if (tbl->db
-                        && (strcmp(tbl->db, "skygw_virtual") != 0)
-                        && (strcmp(tbl->table_name, "*") != 0))
+                    if (qcme_string_get(tbl->db)
+                        && (strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
+                        && (strcmp(qcme_string_get(tbl->table_name), "*") != 0))
                     {
-                        catnm = (char*) calloc(strlen(tbl->db)
-                                               + strlen(tbl->table_name)
+                        catnm = (char*) calloc(strlen(qcme_string_get(tbl->db))
+                                               + strlen(qcme_string_get(tbl->table_name))
                                                + 2,
                                                sizeof(char));
-                        strcpy(catnm, tbl->db);
+                        strcpy(catnm, qcme_string_get(tbl->db));
                         strcat(catnm, ".");
-                        strcat(catnm, tbl->table_name);
+                        strcat(catnm, qcme_string_get(tbl->table_name));
                     }
                 }
 
                 if (!catnm)
                 {
                     // Sometimes the tablename is "*"; we exclude that.
-                    if (strcmp(tbl->table_name, "*") != 0)
+                    if (strcmp(qcme_string_get(tbl->table_name), "*") != 0)
                     {
-                        catnm = strdup(tbl->table_name);
+                        catnm = strdup(qcme_string_get(tbl->table_name));
                     }
                 }
 
@@ -1637,9 +1769,9 @@ int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, char** table_name)
     if (lex && (lex->sql_command == SQLCOM_CREATE_TABLE))
     {
         if (lex->create_last_non_select_table
-            && lex->create_last_non_select_table->table_name)
+            && qcme_string_get(lex->create_last_non_select_table->table_name))
         {
-            *table_name = strdup(lex->create_last_non_select_table->table_name);
+            *table_name = strdup(qcme_string_get(lex->create_last_non_select_table->table_name));
         }
     }
 
@@ -1867,7 +1999,9 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
 
     if (lex->sql_command == SQLCOM_CHANGE_DB || lex->sql_command == SQLCOM_SHOW_TABLES)
     {
-        if (lex->select_lex.db && (strcmp(lex->select_lex.db, "skygw_virtual") != 0))
+        SELECT_LEX* select_lex = qcme_get_first_select_lex(lex);
+        if (qcme_string_get(select_lex->db) &&
+            (strcmp(qcme_string_get(select_lex->db), "skygw_virtual") != 0))
         {
             if (i >= currsz)
             {
@@ -1883,7 +2017,7 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
                 currsz = currsz * 2 + 1;
             }
 
-            databases[i++] = strdup(lex->select_lex.db);
+            databases[i++] = strdup(qcme_string_get(select_lex->db));
         }
     }
     else
@@ -1907,7 +2041,8 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
 
                 // The database is sometimes an empty string. So as not to return
                 // an array of empty strings, we need to check for that possibility.
-                if ((strcmp(tbl->db, "skygw_virtual") != 0) && (*tbl->db != 0))
+                if ((strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0) &&
+                    (*qcme_string_get(tbl->db) != 0))
                 {
                     if (i >= currsz)
                     {
@@ -1925,14 +2060,14 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
 
                     int j = 0;
 
-                    while ((j < i) && (strcmp(tbl->db, databases[j]) != 0))
+                    while ((j < i) && (strcmp(qcme_string_get(tbl->db), databases[j]) != 0))
                     {
                         ++j;
                     }
 
                     if (j == i)     // Not found
                     {
-                        databases[i++] = strdup(tbl->db);
+                        databases[i++] = strdup(qcme_string_get(tbl->db));
                     }
                 }
 
@@ -2112,11 +2247,13 @@ int32_t qc_mysql_get_prepare_name(GWBUF* stmt, char** namep)
                     || (lex->sql_command == SQLCOM_EXECUTE)
                     || (lex->sql_command == SQLCOM_DEALLOCATE_PREPARE))
                 {
-                    name = (char*)malloc(lex->prepared_stmt_name.length + 1);
+                    // LEX_STRING or LEX_CSTRING
+                    const auto& prepared_stmt_name = qcme_get_prepared_stmt_name(lex);
+                    name = (char*)malloc(prepared_stmt_name.length + 1);
                     if (name)
                     {
-                        memcpy(name, lex->prepared_stmt_name.str, lex->prepared_stmt_name.length);
-                        name[lex->prepared_stmt_name.length] = 0;
+                        memcpy(name, prepared_stmt_name.str, prepared_stmt_name.length);
+                        name[prepared_stmt_name.length] = 0;
                     }
                 }
             }
@@ -2145,8 +2282,8 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                     const char* preparable_stmt;
                     size_t preparable_stmt_len;
 #if MYSQL_VERSION_MINOR >= 3
-                    preparable_stmt = lex->prepared_stmt_code->str_value.ptr();
-                    preparable_stmt_len = lex->prepared_stmt_code->str_value.length();
+                    preparable_stmt = qcme_get_prepared_stmt_code(lex)->str_value.ptr();
+                    preparable_stmt_len = qcme_get_prepared_stmt_code(lex)->str_value.length();
 #else
                     preparable_stmt = lex->prepared_stmt_code.str;
                     preparable_stmt_len = lex->prepared_stmt_code.length;
@@ -2169,24 +2306,66 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                         // Is followed by the statement.
                         char* s = (char*)GWBUF_DATA(preperable_packet) + 5;
 
-                        // We copy the statment, blindly replacing all '?':s with '0':s as
-                        // otherwise the parsing of the preparable statement as a regular
-                        // statement will not always succeed.
+                        // We copy the statment, blindly replacing all '?':s (always)
+                        // and ':N' (in Oracle mode) with '0':s as otherwise the parsing of the
+                        // preparable statement as a regular statement will not always succeed.
+                        qc_sql_mode_t sql_mode = this_thread.sql_mode;
                         const char* p = preparable_stmt;
-                        while (p < preparable_stmt + preparable_stmt_len)
+                        const char* end = preparable_stmt + preparable_stmt_len;
+                        while (p < end)
                         {
                             if (*p == '?')
                             {
                                 *s = '0';
+                            }
+                            else if (sql_mode == QC_SQL_MODE_ORACLE)
+                            {
+                                if (*p == ':' && p + 1 < end)
+                                {
+                                    // This may be an Oracle specific positional parameter.
+                                    char c = *(p + 1);
+                                    if (isalnum(c))
+                                    {
+                                        ++p;
+                                        // e.g. :4711 or :aaa
+                                        while (p + 1 < end && isalnum(*(p + 1)))
+                                        {
+                                            ++p;
+                                        }
+
+                                        *s = '0';
+                                    }
+                                    else if (c == '\'' || c == '\"')
+                                    {
+                                        // e.g. :"abc"
+                                        char quote = *p;
+                                        while (p + 1 < end && *(p + 1) != quote)
+                                        {
+                                            ++p;
+                                        }
+
+                                        *s = '0';
+                                    }
+                                }
+                                else
+                                {
+                                    *s = *p;
+                                }
                             }
                             else
                             {
                                 *s = *p;
                             }
 
-                            ++p;
+                            if (p != end)
+                            {
+                                ++p;
+                            }
+
                             ++s;
                         }
+
+                        *s = 0;
                     }
 
                     pi->preparable_stmt = preperable_packet;
@@ -2257,16 +2436,18 @@ static void unalias_names(st_select_lex* select,
 
             while ((*to_table == from_table) && tbl)
             {
-                if (tbl->alias
-                    && (strcasecmp(tbl->alias, from_table) == 0)
-                    && (strcasecmp(tbl->table_name, "*") != 0))
+                if (qcme_string_get(tbl->alias)
+                    && (strcasecmp(qcme_string_get(tbl->alias), from_table) == 0)
+                    && (strcasecmp(qcme_string_get(tbl->table_name), "*") != 0))
                 {
                     // The dummy default database "skygw_virtual" is not included.
-                    if (tbl->db && *tbl->db && (strcmp(tbl->db, "skygw_virtual") != 0))
+                    if (qcme_string_get(tbl->db)
+                        && *qcme_string_get(tbl->db)
+                        && (strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0))
                     {
-                        *to_database = (char*)tbl->db;
+                        *to_database = (char*)qcme_string_get(tbl->db);
                     }
-                    *to_table = (char*)tbl->table_name;
+                    *to_table = (char*)qcme_string_get(tbl->table_name);
                 }
 
                 tbl = tbl->next_local;
@@ -2498,22 +2679,24 @@ static void add_function_field_usage(st_select_lex* select,
             add_function_field_usage(select, static_cast<Item_field*>(item), fi);
             break;
 
-        case Item::STRING_ITEM:
-            if (this_thread.options & QC_OPTION_STRING_ARG_AS_FIELD)
-            {
-                String* s = item->val_str();
-                int len = s->length();
-                char tmp[len + 1];
-                memcpy(tmp, s->ptr(), len);
-                tmp[len] = 0;
-
-                add_function_field_usage(nullptr, nullptr, tmp, fi);
-            }
-            break;
-
         default:
-            // mxb_assert(!true);
-            ;
+            if (qcme_item_is_string(item))
+            {
+                if (this_thread.options & QC_OPTION_STRING_ARG_AS_FIELD)
+                {
+                    String* s = item->val_str();
+                    int len = s->length();
+                    char tmp[len + 1];
+                    memcpy(tmp, s->ptr(), len);
+                    tmp[len] = 0;
+
+                    add_function_field_usage(nullptr, nullptr, tmp, fi);
+                }
+            }
+            else
+            {
+                // mxb_assert(!true);
+            }
         }
     }
 }
@@ -3084,20 +3267,20 @@ static void update_field_infos(parsing_info_t* pi,
         }
         break;
 
-    case Item::STRING_ITEM:
-        if (this_thread.options & QC_OPTION_STRING_AS_FIELD)
-        {
-            String* s = item->val_str();
-            int len = s->length();
-            char tmp[len + 1];
-            memcpy(tmp, s->ptr(), len);
-            tmp[len] = 0;
-
-            add_field_info(pi, nullptr, nullptr, tmp, excludep);
-        }
-        break;
-
     default:
+        if (qcme_item_is_string(item))
+        {
+            if (this_thread.options & QC_OPTION_STRING_AS_FIELD)
+            {
+                String* s = item->val_str();
+                int len = s->length();
+                char tmp[len + 1];
+                memcpy(tmp, s->ptr(), len);
+                tmp[len] = 0;
+
+                add_field_info(pi, nullptr, nullptr, tmp, excludep);
+            }
+        }
         break;
     }
 }
@@ -3213,9 +3396,10 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             return QC_RESULT_OK;
         }
 
-        lex->current_select = &lex->select_lex;
+        SELECT_LEX* select_lex = qcme_get_first_select_lex(lex);
+        lex->current_select = select_lex;
 
-        update_field_infos(pi, lex, &lex->select_lex, NULL);
+        update_field_infos(pi, lex, select_lex, NULL);
 
         QC_FUNCTION_INFO* fi = NULL;
 

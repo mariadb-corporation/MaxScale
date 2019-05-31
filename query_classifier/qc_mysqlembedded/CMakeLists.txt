@@ -5,7 +5,7 @@ if (BUILD_QC_MYSQLEMBEDDED)
   foreach(DIR ${MYSQL_INCLUDE_DIR_ALL})
     include_directories(BEFORE ${DIR})
   endforeach()
-  include_directories(BEFORE ${MYSQL_EMBEDDED_INCLUDE_DIR}/..)
+  include_directories(AFTER ${MYSQL_EMBEDDED_INCLUDE_DIR}/..)
 
   add_library(qc_mysqlembedded SHARED qc_mysqlembedded.cc)
 
