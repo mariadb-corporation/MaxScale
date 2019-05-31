@@ -1084,6 +1084,7 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
 
         if (stored && m_config.retry_failed_reads)
         {
+            mxb_assert(m_expected_responses == 0);
             MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
             retry_query(stored, 0);
         }
