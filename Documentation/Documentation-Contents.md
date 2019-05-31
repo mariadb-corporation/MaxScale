@@ -49,6 +49,8 @@ These tutorials are for specific use cases and module combinations.
  - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
  - [RabbitMQ Setup and MariaDB MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
+ - [Clustrix Monitor Tutorial](Tutorials/Configuring-Clustrix-Monitor.md)
+ - [MaxScale Clustrix Tutorial](Tutorials/MaxScale-Clustrix-Tutorial.md)
 
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
