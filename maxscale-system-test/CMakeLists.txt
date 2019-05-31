@@ -204,6 +204,9 @@ add_test_executable(maxctrl_basic.cpp maxctrl_basic maxctrl_basic LABELS maxctrl
 # MXS-2167: Monitors should be able to use extra_port
 add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port LABELS REPL_BACKEND)
 
+# Test KILL QUERY functionality
+add_test_executable(kill_query.cpp kill_query replication LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: Tests that require GTID           #
 ############################################

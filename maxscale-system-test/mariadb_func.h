@@ -342,6 +342,11 @@ public:
         return change_user(m_user, m_pw, m_db);
     }
 
+    uint32_t thread_id() const
+    {
+        return mysql_thread_id(m_conn);
+    }
+
 private:
     std::string m_host;
     int         m_port;
