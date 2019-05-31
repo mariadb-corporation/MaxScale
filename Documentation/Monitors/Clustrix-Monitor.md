@@ -87,8 +87,12 @@ entire cluster. The default value is 60000 (1 minute), which should not
 be lowered as that may have an adverse effect on the Cluster itself.
 
 ```
-cluster_monitor_interval=120000
+cluster_monitor_interval=120000ms
 ```
+The interval is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as milliseconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected.
 
 ### `health_check_threshold`
 
