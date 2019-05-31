@@ -636,6 +636,10 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                             }
                         }
                     }
+                    else
+                    {
+                        client_data->correct_authenticator = true;
+                    }
                 }
             }
         }
