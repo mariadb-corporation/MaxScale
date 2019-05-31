@@ -53,6 +53,7 @@ void Backend::close(close_type type)
     {
         m_closed = true;
         m_closed_at = time(NULL);
+        m_session_commands.clear();
 
         if (in_use())
         {
