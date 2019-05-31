@@ -1937,11 +1937,12 @@ spec_com_res_t handle_query_kill(DCB* dcb,
             querybuf[copied_len] = '\0';
             kill_type_t kt = KT_CONNECTION;
             uint64_t thread_id = 0;
-            rval = RES_END;
             std::string user;
 
             if (parse_kill_query(querybuf, &thread_id, &kt, &user))
             {
+                rval = RES_END;
+
                 if (thread_id > 0)
                 {
                     mxs_mysql_execute_kill(dcb->session, thread_id, kt);
