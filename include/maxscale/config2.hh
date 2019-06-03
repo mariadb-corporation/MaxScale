@@ -41,7 +41,8 @@ class Specification
 public:
     enum Kind
     {
-        FILTER
+        FILTER,
+        MONITOR
     };
 
     using ParamsByName = std::map<std::string, Param*>;

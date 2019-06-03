@@ -29,6 +29,26 @@ const char* pzCore_filter_params[] = {
     nullptr,
 };
 
+const char* pzCore_monitor_params[] = {
+    CN_TYPE,
+    CN_MODULE,
+    CN_USER,
+    CN_PASSWORD,
+    CN_SERVERS,
+    CN_MONITOR_INTERVAL,
+    CN_BACKEND_CONNECT_TIMEOUT,
+    CN_BACKEND_READ_TIMEOUT,
+    CN_BACKEND_WRITE_TIMEOUT,
+    CN_BACKEND_CONNECT_ATTEMPTS,
+    CN_JOURNAL_MAX_AGE,
+    CN_DISK_SPACE_THRESHOLD,
+    CN_DISK_SPACE_CHECK_INTERVAL,
+    CN_SCRIPT,
+    CN_SCRIPT_TIMEOUT,
+    CN_EVENTS,
+    nullptr,
+};
+
 bool is_core_param(Specification::Kind kind, const std::string& param)
 {
     bool rv = false;
@@ -39,6 +59,10 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
     {
     case Specification::FILTER:
         pzCore_params = pzCore_filter_params;
+        break;
+
+    case Specification::MONITOR:
+        pzCore_params = pzCore_monitor_params;
         break;
 
     default:
