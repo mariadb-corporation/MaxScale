@@ -99,30 +99,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                       /* Process finish. */
         NULL,                                       /* Thread init. */
         NULL,                                       /* Thread finish. */
-        {
-            {
-                CLUSTER_MONITOR_INTERVAL_NAME,
-                MXS_MODULE_PARAM_COUNT,
-                DEFAULT_CLUSTER_MONITOR_INTERVAL_ZVALUE
-            },
-            {
-                HEALTH_CHECK_THRESHOLD_NAME,
-                MXS_MODULE_PARAM_COUNT,
-                DEFAULT_HEALTH_CHECK_THRESHOLD_ZVALUE
-            },
-            {
-                DYNAMIC_NODE_DETECTION_NAME,
-                MXS_MODULE_PARAM_BOOL,
-                DEFAULT_DYNAMIC_NODE_DETECTION_ZVALUE
-            },
-            {
-                HEALTH_CHECK_PORT_NAME,
-                MXS_MODULE_PARAM_COUNT,
-                DEFAULT_HEALTH_CHECK_PORT_ZVALUE
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
     };
+
+    ClustrixMonitor::Config::populate(info);
 
     return &info;
 }

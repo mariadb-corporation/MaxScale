@@ -38,6 +38,40 @@ using maxscale::MonitorServer;
 namespace
 {
 
+namespace clustrixmon
+{
+
+config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
+
+config::ParamDuration<std::chrono::milliseconds>
+cluster_monitor_interval(&specification,
+                         "cluster_monitor_interval",
+                         "How frequently the Clustrix monitor should perform a cluster check.",
+                         mxs::config::INTERPRET_AS_MILLISECONDS,
+                         std::chrono::milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
+
+config::ParamCount
+health_check_threshold(&specification,
+                       "health_check_threshold",
+                       "How many failed health port pings before node is assumed to be down.",
+                       DEFAULT_HEALTH_CHECK_THRESHOLD,
+                       1, std::numeric_limits<uint32_t>::max()); // min, max
+
+config::ParamBool
+dynamic_node_detection(&specification,
+                       "dynamic_node_detection",
+                       "Should cluster configuration be figured out at runtime.",
+                       DEFAULT_DYNAMIC_NODE_DETECTION);
+
+config::ParamInteger
+health_check_port(&specification,
+                  "health_check_port",
+                  "Port number for Clustrix health check.",
+                  DEFAULT_HEALTH_CHECK_PORT,
+                  0, std::numeric_limits<uint16_t>::max()); // min, max
+
+}
+
 const int DEFAULT_MYSQL_PORT = 3306;
 const int DEFAULT_HEALTH_PORT = 3581;
 
@@ -156,6 +190,26 @@ sqlite3* open_or_create_db(const std::string& path)
 }
 }
 
+ClustrixMonitor::Config::Config()
+    : m_configuration(&clustrixmon::specification)
+    , m_cluster_monitor_interval(&m_configuration, &clustrixmon::cluster_monitor_interval)
+    , m_health_check_threshold(&m_configuration, &clustrixmon::health_check_threshold)
+    , m_dynamic_node_detection(&m_configuration, &clustrixmon::dynamic_node_detection)
+    , m_health_check_port(&m_configuration, &clustrixmon::health_check_port)
+{
+}
+
+//static
+void ClustrixMonitor::Config::populate(MXS_MODULE& module)
+{
+    clustrixmon::specification.populate(module);
+}
+
+bool ClustrixMonitor::Config::configure(const MXS_CONFIG_PARAMETER& params)
+{
+    return clustrixmon::specification.configure(m_configuration, params);
+}
+
 ClustrixMonitor::ClustrixMonitor(const string& name, const string& module, sqlite3* pDb)
     : MonitorWorker(name, module)
     , m_pDb(pDb)
@@ -212,6 +266,11 @@ using std::chrono::milliseconds;
 
 bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
+    if (!clustrixmon::specification.validate(*pParams))
+    {
+        return false;
+    }
+
     if (!MonitorWorker::configure(pParams))
     {
         return false;
@@ -222,11 +281,9 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     m_health_urls.clear();
     m_nodes_by_id.clear();
 
-    long interval = pParams->get_duration<milliseconds>(CLUSTER_MONITOR_INTERVAL_NAME).count();
-    m_config.set_cluster_monitor_interval(interval);
-    m_config.set_health_check_threshold(pParams->get_integer(HEALTH_CHECK_THRESHOLD_NAME));
-    m_config.set_dynamic_node_detection(pParams->get_bool(DYNAMIC_NODE_DETECTION_NAME));
-    m_config.set_health_check_port(pParams->get_integer(HEALTH_CHECK_PORT_NAME));
+    // Since they were validated above, failure should not be an option now.
+    MXB_AT_DEBUG(bool configured=) m_config.configure(*pParams);
+    mxb_assert(configured);
 
     return true;
 }

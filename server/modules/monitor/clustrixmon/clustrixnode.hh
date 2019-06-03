@@ -233,7 +233,7 @@ private:
     std::string        m_ip;
     int                m_mysql_port {DEFAULT_MYSQL_PORT};
     int                m_health_port {DEFAULT_HEALTH_PORT};
-    int                m_health_check_threshold {DEFAULT_HEALTH_CHECK_THRESHOLD_VALUE};
+    int                m_health_check_threshold {DEFAULT_HEALTH_CHECK_THRESHOLD};
     int                m_nRunning {0};
     SERVER*            m_pServer {nullptr};
     MYSQL*             m_pCon {nullptr};

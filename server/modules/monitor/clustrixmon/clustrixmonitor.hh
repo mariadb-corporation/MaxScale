@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <sqlite3.h>
+#include <maxscale/config2.hh>
 #include <maxscale/monitor.hh>
 #include <maxbase/http.hh>
 #include "clustrixmembership.hh"
@@ -30,59 +31,38 @@ public:
     class Config
     {
     public:
-        Config()
-            : m_cluster_monitor_interval(DEFAULT_CLUSTER_MONITOR_INTERVAL_VALUE)
-            , m_health_check_threshold(DEFAULT_HEALTH_CHECK_THRESHOLD_VALUE)
-            , m_dynamic_node_detection(DEFAULT_DYNAMIC_NODE_DETECTION_VALUE)
-            , m_health_check_port(DEFAULT_HEALTH_CHECK_PORT_VALUE)
-        {
-        }
+        Config();
+
+        static void populate(MXS_MODULE& module);
+
+        bool configure(const MXS_CONFIG_PARAMETER& params);
 
         long cluster_monitor_interval() const
         {
-            return m_cluster_monitor_interval;
-        }
-
-        void set_cluster_monitor_interval(long l)
-        {
-            m_cluster_monitor_interval = l;
+            return m_cluster_monitor_interval.count();
         }
 
         long health_check_threshold() const
         {
-            return m_health_check_threshold;
-        }
-
-        void set_health_check_threshold(long l)
-        {
-            m_health_check_threshold = l;
+            return m_health_check_threshold.get();
         }
 
         bool dynamic_node_detection() const
         {
-            return m_dynamic_node_detection;
-        }
-
-        void set_dynamic_node_detection(bool b)
-        {
-            m_dynamic_node_detection = b;
+            return static_cast<bool>(m_dynamic_node_detection);
         }
 
         int health_check_port() const
         {
-            return m_health_check_port;
-        }
-
-        void set_health_check_port(int p)
-        {
-            m_health_check_port = p;
+            return m_health_check_port.get();
         }
 
     private:
-        long m_cluster_monitor_interval;
-        long m_health_check_threshold;
-        bool m_dynamic_node_detection;
-        int  m_health_check_port;
+        config::Configuration                       m_configuration;
+        config::Duration<std::chrono::milliseconds> m_cluster_monitor_interval;
+        config::Count                               m_health_check_threshold;
+        config::Bool                                m_dynamic_node_detection;
+        config::Integer                             m_health_check_port;
     };
 
     ~ClustrixMonitor();
