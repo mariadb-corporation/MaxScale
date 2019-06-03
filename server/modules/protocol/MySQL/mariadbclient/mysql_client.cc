@@ -229,6 +229,53 @@ std::string get_version_string(SERVICE* service)
     return rval;
 }
 
+uint8_t get_charset(SERVER_REF* servers)
+{
+    uint8_t rval = 0;
+
+    for (SERVER_REF* s = servers; s; s = s->next)
+    {
+        if (server_ref_is_active(s))
+        {
+            if (s->server->is_master())
+            {
+                // Master found, stop searching
+                rval = s->server->charset;
+                break;
+            }
+            else if (s->server->is_slave() || (s->server->is_running() && rval == 0))
+            {
+                // Slaves precede Running servers
+                rval = s->server->charset;
+            }
+        }
+    }
+
+    if (rval == 0)
+    {
+        // Charset 8 is latin1, the server default
+        rval = 8;
+    }
+
+    return rval;
+}
+
+bool supports_extended_caps(SERVER_REF* servers)
+{
+    bool rval = false;
+
+    for (SERVER_REF* s = servers; s; s = s->next)
+    {
+        if (s->active && s->server->is_active && s->server->version().total >= 100200)
+        {
+            rval = true;
+            break;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * @brief Check whether a DCB requires SSL.
  *
@@ -280,25 +327,13 @@ int MySQLSendHandshake(DCB* dcb)
     uint8_t mysql_plugin_data[13] = "";
     uint8_t mysql_server_capabilities_one[2];
     uint8_t mysql_server_capabilities_two[2];
-    uint8_t mysql_server_language = 8;
+    uint8_t mysql_server_language = get_charset(dcb->service->dbref);
     uint8_t mysql_server_status[2];
     uint8_t mysql_scramble_len = 21;
     uint8_t mysql_filler_ten[10] = {};
     /* uint8_t mysql_last_byte = 0x00; not needed */
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
-
-    bool is_maria = false;
-
-    if (dcb->service->dbref)
-    {
-        mysql_server_language = dcb->service->dbref->server->charset;
-
-        if (dcb->service->dbref->server->version().total >= 100200)
-        {
-            /** The backend servers support the extended capabilities */
-            is_maria = true;
-        }
-    }
+    bool is_maria = supports_extended_caps(dcb->service->dbref);
 
     MySQLProtocol* protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     GWBUF* buf;
@@ -2062,11 +2097,12 @@ spec_com_res_t handle_query_kill(DCB* dcb,
             querybuf[copied_len] = '\0';
             kill_type_t kt = KT_CONNECTION;
             uint64_t thread_id = 0;
-            rval = RES_END;
             std::string user;
 
             if (parse_kill_query(querybuf, &thread_id, &kt, &user))
             {
+                rval = RES_END;
+
                 if (thread_id > 0)
                 {
                     mxs_mysql_execute_kill(dcb->session, thread_id, kt);

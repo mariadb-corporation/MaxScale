@@ -199,6 +199,9 @@ add_test_executable(maxctrl_basic.cpp maxctrl_basic maxctrl_basic LABELS maxctrl
 # MXS-2167: Monitors should be able to use extra_port
 add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port LABELS REPL_BACKEND)
 
+# Test KILL QUERY functionality
+add_test_executable(kill_query.cpp kill_query replication LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: Tests that require GTID           #
 ############################################
@@ -963,6 +966,12 @@ add_test_executable(pam_authentication.cpp pam_authentication pam_authentication
 
 # MXS-2350: On-demand connection creation
 add_test_executable(mxs2350_lazy_connect.cpp mxs2350_lazy_connect mxs2350_lazy_connect LABELS REPL_BACKEND)
+
+# MXS-2520: Allow master reconnection on reads
+add_test_executable(mxs2520_master_read_reconnect.cpp mxs2520_master_read_reconnect mxs2520_master_read_reconnect LABELS REPL_BACKEND readwritesplit)
+
+# MXS-2464: Crash in route_stored_query with ReadWriteSplit
+add_test_executable(mxs2464_sescmd_reconnect.cpp mxs2464_sescmd_reconnect mxs2464_sescmd_reconnect LABELS REPL_BACKEND readwritesplit)
 
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #

@@ -92,7 +92,7 @@ generating the Unix user and password should be enough.
 
 ## Implementation details and limitations
 
-The PAM general authentication scheme is difficult for a proxy such as MaxScale.
+The general PAM authentication scheme is difficult for a proxy such as MaxScale.
 An application using the PAM interface needs to define a *conversation function*
 to allow the OS PAM modules to communicate with the client, possibly exchanging
 multiple messages. This works when a client logs in to a normal server, but not
@@ -101,25 +101,22 @@ MaxScale to successfully log into the servers, the messages and answers need to
 be predefined. This requirement denies the use of more exotic schemes such as
 one-time passwords or two-factor authentication.
 
-The current version of the MaxScale PAM authentication module only supports a
+The MaxScale PAM authentication module only supports a
 simple password exchange. On the client side, the authentication begins with
 MaxScale sending an AuthSwitchRequest packet. In addition to the command, the
 packet contains the client plugin name `dialog`, a message type byte `4` and the
 message `Password: `. In the next packet, the client should send the password,
 which MaxScale will forward to the PAM API running on the local machine. If the
-password is correct, an OK packet is sent to the client. No additional
-PAM-related messaging is allowed, as this would indicate a more complicated
-authentication scheme.
+password is correct, an OK packet is sent to the client. If the local PAM API asks
+for  additional credentials as is typical in two-factor authentication schemes,
+authentication fails. Informational messages such as password expiration
+notifications are allowed. These are simply printed to the log.
 
 On the backend side, MaxScale expects the servers to act as MaxScale did towards
 the client. The servers should send an AuthSwitchRequest packet as defined
 above, MaxScale responds with the password received by the client authenticator
-and finally backend replies with OK.
-
-## SSL support
-
-PAM Authenticator supports SSL connections from client to MaxScale, but not from
-MaxScale to backends.
+and finally backend replies with OK. Informational messages from backends are
+only printed to the info-log.
 
 ## Building the module
 

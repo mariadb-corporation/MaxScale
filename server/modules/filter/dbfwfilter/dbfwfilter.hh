@@ -305,7 +305,7 @@ class Rule;
 typedef std::shared_ptr<Rule> SRule;
 
 /** Helper function for strdup'ing in printf style */
-char* create_error(const char* format, ...);
+char* create_error(const char* format, ...) __attribute__ ((nonnull));
 
 /**
  * Check if a rule matches

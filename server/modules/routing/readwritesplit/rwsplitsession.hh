@@ -186,6 +186,7 @@ private:
     int             get_max_replication_lag();
     mxs::RWBackend* get_backend_from_dcb(DCB* dcb);
 
+    bool retry_master_query(mxs::RWBackend* backend);
     void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
     bool handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg);
     void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf);

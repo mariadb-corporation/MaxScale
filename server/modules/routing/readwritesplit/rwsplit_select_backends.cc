@@ -282,16 +282,20 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     auto counts = get_slave_counts(m_raw_backends, m_current_master);
     int best_priority {INT_MAX};
     auto current_rank = get_current_rank();
+    // Slaves can be taken into use if we need more slave connections
+    bool need_slaves = counts.second < m_router->max_slave_count();
 
     // Create a list of backends valid for read operations
     for (auto& backend : m_raw_backends)
     {
-        bool can_take_slave_into_use = !backend->in_use() && can_recover_servers()
-            && backend->can_connect() && counts.second < m_router->max_slave_count()
-            && (backend->is_slave() || backend->is_master());
-
+        // We can take the current master back into use even for reads
+        bool my_master = backend == m_current_master;
+        bool can_take_into_use = !backend->in_use() && can_recover_servers() && backend->can_connect();
         bool master_or_slave = backend->is_master() || backend->is_slave();
-        bool is_usable = backend->in_use() || can_take_slave_into_use;
+
+        // The server is usable if it's already in use or it can be taken into use and we need either more
+        // slaves or a master.
+        bool is_usable = backend->in_use() || (can_take_into_use && (need_slaves || my_master));
         bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
         int priority = get_backend_priority(backend, m_config.master_accept_reads);
         auto rank = backend->server()->rank();
