@@ -22,4 +22,9 @@ then
     then
         rm /lib/systemd/system/maxscale.service
     fi
+
+    if [ -f /etc/logrotate.d/maxscale_logrotate ]
+    then
+        rm /etc/logrotate.d/maxscale_logrotate
+    fi
 fi
