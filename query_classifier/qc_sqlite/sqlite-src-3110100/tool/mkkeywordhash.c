@@ -203,6 +203,7 @@ static Keyword aKeywordTable[] = {
   { "CONFLICT",         "TK_CONFLICT",     CONFLICT               },
 #endif
 #ifdef MAXSCALE
+  { "CONNECTION",       "TK_CONNECTION",   ALWAYS                 },
   { "CONCURRENT",       "TK_CONCURRENT",   ALWAYS                 },
 #endif
   { "CONSTRAINT",       "TK_CONSTRAINT",   ALWAYS                 },
@@ -260,6 +261,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "EXECUTE",          "TK_EXECUTE",      ALWAYS                 },
   { "EXCLUDE",          "TK_EXCLUDE",      ALWAYS                 },
+  { "EXTENDED",         "TK_EXTENDED",     ALWAYS                 },
 #endif
   { "EXISTS",           "TK_EXISTS",       ALWAYS                 },
   { "EXPLAIN",          "TK_EXPLAIN",      EXPLAIN                },
@@ -267,6 +269,7 @@ static Keyword aKeywordTable[] = {
   { "FAIL",             "TK_FAIL",         CONFLICT|TRIGGER       },
 #endif
 #ifdef MAXSCALE
+  { "FIELDS",           "TK_FIELDS",       ALWAYS                 },
   { "FIRST",            "TK_FIRST",        ALWAYS                 },
   { "FLUSH",            "TK_FLUSH",        ALWAYS                 },
   { "FOLLOWING",        "TK_FOLLOWING",    ALWAYS                 },
@@ -376,6 +379,7 @@ static Keyword aKeywordTable[] = {
 #endif
 #ifdef MAXSCALE
   { "PARTITION",        "TK_PARTITION",    ALWAYS                 },
+  { "PARTITIONS",       "TK_PARTITIONS",   ALWAYS                 },
   { "PERSISTENT",       "TK_PERSISTENT",   ALWAYS                 },
 #endif
 #ifndef MAXSCALE

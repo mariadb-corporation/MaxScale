@@ -117,7 +117,8 @@ extern void maxscaleDo(Parse*, ExprList* pEList);
 extern void maxscaleDrop(Parse*, int what, Token* pDatabase, Token* pName);
 extern void maxscaleExecute(Parse*, Token* pName, int type_mask);
 extern void maxscaleExecuteImmediate(Parse*, Token* pName, ExprSpan* pExprSpan, int type_mask);
-extern void maxscaleExplain(Parse*, Token* pNext);
+extern void maxscaleExplainTable(Parse*, SrcList* pList);
+extern void maxscaleExplain(Parse*);
 extern void maxscaleFlush(Parse*, Token* pWhat);
 extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
 extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
@@ -302,13 +303,16 @@ ecmd ::= oracle_assignment SEMI.
 explain_kw ::= EXPLAIN.  // Also covers DESCRIBE
 explain_kw ::= DESC.
 
-explain ::= explain_kw.             { pParse->explain = 1; }
+explain ::= explain_kw tbl_name(A). { pParse->explain = 1; maxscaleExplainTable(pParse, A); }
+explain_type ::= .
+explain_type ::= EXTENDED.
+explain_type ::= PARTITIONS.
 // deferred_id is defined later, after the id token_class has been defined.
-explain ::= explain_kw deferred_id(A). { maxscaleExplain(pParse, &A); }
-explain ::= explain_kw deferred_id(A) DOT deferred_id. { maxscaleExplain(pParse, &A); }
-ecmd ::= explain FOR(A) deferred_id INTEGER SEMI. { // FOR CONNECTION connection_id
+explain_type ::= FORMAT TK_EQ deferred_id. // FORMAT = {TRADITIONAL|JSON}
+
+explain ::= explain_kw explain_type FOR CONNECTION INTEGER. { // FOR CONNECTION connection_id
   pParse->explain = 1;
-  maxscaleExplain(pParse, &A);
+  maxscaleExplain(pParse);
 }
 %endif
 %ifndef SQLITE_OMIT_EXPLAIN
@@ -614,10 +618,10 @@ columnid(A) ::= nm(X). {
   // TODO: BINARY is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
   BINARY
-  /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/
+  /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/ CONNECTION
   DATA DATABASE DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
-  /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/
-  FIRST FLUSH /*FOR*/ FORMAT
+  /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/ EXTENDED
+  FIELDS FIRST FLUSH /*FOR*/ FORMAT
   GLOBAL
   // TODO: IF is a reserved word and should not automatically convert into an identifer.
   IF IMMEDIATE INITIALLY INSTEAD
@@ -627,7 +631,7 @@ columnid(A) ::= nm(X). {
   NAMES NEXT
   NO
   OF OFFSET OPEN
-  PREVIOUS
+  PARTITIONS PREVIOUS
   QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESTRICT ROLLBACK ROLLUP ROW
   SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SLAVE /*START*/ STATEMENT STATUS
@@ -3241,7 +3245,10 @@ like_or_where_opt ::= WHERE expr.
 
 %type show {MxsShow}
 
-show(A) ::= SHOW full_opt(X) COLUMNS from_or_in nm(Y) dbnm(Z) from_or_in_db_opt(W) like_or_where_opt . {
+columns_or_fields ::= COLUMNS.
+columns_or_fields ::= FIELDS.
+
+show(A) ::= SHOW full_opt(X) columns_or_fields from_or_in nm(Y) dbnm(Z) from_or_in_db_opt(W) like_or_where_opt . {
   A.what = MXS_SHOW_COLUMNS;
   A.data = X;
   if (Z.z) {
