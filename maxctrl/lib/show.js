@@ -303,6 +303,19 @@ exports.builder = function(yargs) {
                 ])
             })
         })
+        .command('dbusers <service>', 'Show database users of the service', function(yargs) {
+            return yargs.epilog('Show information about the database users of the service')
+                .usage('Usage: show dbusers <service>')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+                return getSubCollection(host, 'services/' + argv.service, 'attributes.listeners[]', [
+                    {'Users': 'attributes.authenticator_diagnostics[]'},
+                    {'Listener': 'id'},
+                    {'Authenticator': 'attributes.parameters.authenticator'}
+                ])
+            })
+        })
+
         .usage('Usage: show <command>')
         .help()
         .command('*', 'the default command', {}, function(argv) {
