@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mysql -u root --force $1 <<EOF >& /dev/null
+mysql --force $1 <<EOF >& /dev/null
 
 DROP USER IF EXISTS '$node_user'@'%';
 CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password';
