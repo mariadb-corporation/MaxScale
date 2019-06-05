@@ -684,13 +684,13 @@ private:
     uint8_t m_payload_offset;
 };
 
-std::ostream& operator<<(std::ostream& os, ComResponse::Type type)
+inline std::ostream& operator<<(std::ostream& os, ComResponse::Type type)
 {
     static const std::array<std::string, 6> type_names = {
         "Ok", "Err", "Eof", "LocalInfile", "Data"
     };
 
-    auto ind = size_t(type);
+    auto ind = static_cast<size_t>(type);
     return os << ((ind < type_names.size()) ? type_names[ind] : "UNKNOWN");
 }
 

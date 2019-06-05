@@ -11,9 +11,7 @@
  * Public License.
  */
 
-// TODO handle client split packets
-// TODO handle local infile
-// TODO do cursors need more special handling than ComStmtFetch has.
+// LIMITATION: local infile not handled yet.
 
 #include <maxsql/packet_tracker.hh>
 #include <maxsql/mysql_plus.hh>
@@ -38,10 +36,11 @@ std::ostream& operator<<(std::ostream& os, PacketTracker::State state)
 
 PacketTracker::PacketTracker(GWBUF* pPacket)
 {
-    ComRequest request(ComPacket(pPacket, &m_client_packet_internal));
+    ComRequest request(ComPacket(pPacket, &m_client_com_packet_internal));
     m_command = request.command();
+    m_expect_more_split_query_packets = request.is_split_leader();
 
-    MXS_SINFO("PacketTracker Command: " << STRPACKETTYPE(m_command));   // TODO remove or change to debug
+    MXS_SDEBUG("PacketTracker Command: " << STRPACKETTYPE(m_command));
 
     if (request.server_will_respond())
     {
@@ -70,7 +69,38 @@ PacketTracker::PacketTracker(GWBUF* pPacket)
     }
 }
 
-bool PacketTracker::expecting_more_packets() const
+bool PacketTracker::update_request(GWBUF* pPacket)
+{
+    MXS_SDEBUG("PacketTracker update_request: " << STRPACKETTYPE(m_command));
+    ComPacket com_packet(pPacket, &m_client_com_packet_internal);
+
+    if (!m_expect_more_split_query_packets)
+    {
+        MXS_SERROR("PacketTracker::update_request() called while not expecting splits");
+        mxb_assert(!true);
+        m_state = State::Error;
+    }
+    else if (!com_packet.is_split_continuation())
+    {
+        MXS_SERROR("PacketTracker::update_request() received a non-split packet");
+        mxb_assert(!true);
+        m_state = State::Error;
+    }
+
+    if (com_packet.is_split_trailer())
+    {
+        m_expect_more_split_query_packets = false;
+    }
+
+    return m_state != State::Error;
+}
+
+bool PacketTracker::expecting_request_packets() const
+{
+    return m_expect_more_split_query_packets;
+}
+
+bool PacketTracker::expecting_response_packets() const
 {
     switch (m_state)
     {
@@ -84,21 +114,29 @@ bool PacketTracker::expecting_more_packets() const
     }
 }
 
+bool PacketTracker::expecting_more_packets() const
+{
+    return expecting_response_packets() || expecting_request_packets();
+}
+
 static constexpr std::array<PacketTracker::State, 5> data_states {
-    PacketTracker::State::Field, PacketTracker::State::Row,
-    PacketTracker::State::ComFieldList, PacketTracker::State::ComStatistics,
+    PacketTracker::State::Field,
+    PacketTracker::State::Row,
+    PacketTracker::State::ComFieldList,
+    PacketTracker::State::ComStatistics,
     PacketTracker::State::ComStmtFetch
 };
 
-void PacketTracker::update(GWBUF* pPacket)
+void PacketTracker::update_response(GWBUF* pPacket)
 {
-    ComPacket com_packet(pPacket, &m_server_packet_internal);
+    ComPacket com_packet(pPacket, &m_server_com_packet_internal);
 
     bool expect_data_only = std::find(begin(data_states), end(data_states), m_state) != end(data_states);
     ComResponse response(com_packet, expect_data_only);
 
     if (response.is_split_continuation())
     {   // no state change, just more of the same data
+        MXS_SDEBUG("PacketTracker::update_response IGNORE trailing split packets");
         return;
     }
 
@@ -141,7 +179,7 @@ void PacketTracker::update(GWBUF* pPacket)
     case State::Done:
     case State::ErrorPacket:
     case State::Error:
-        m_state = expect_no_more(response);
+        m_state = expect_no_response_packets(response);
         break;
     }
 }
@@ -289,7 +327,7 @@ PacketTracker::State PacketTracker::com_stmt_fetch(const maxsql::ComResponse& re
     return new_state;
 }
 
-PacketTracker::State PacketTracker::expect_no_more(const ComResponse& response)
+PacketTracker::State PacketTracker::expect_no_response_packets(const ComResponse& response)
 {
     MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
     return State::Error;
