@@ -981,7 +981,8 @@ set names utf8;
 # MXS: qc_get_type              : ERR: QUERY_TYPE_WRITE != QUERY_TYPE_WRITE|QUERY_TYPE_COMMIT
 # MXS: qc_get_operation         : ERR: QUERY_OP_UNDEFINED != QUERY_OP_CREATE
 # MXS: qc_mysqlembedded sees the type as SQLCOM_END when figuring out the type.
-use имя_базы_в_кодировке_утф8_длиной_больше_чем_45;
+# MXS: use имя_базы_в_кодировке_утф8_длиной_больше_чем_45;
+# MXS: qc_get_database_names    : ERR: Ð != имя_базы_в_кодировке_утф8_длиной_больше_чем_45
 select database();
 use test;
 

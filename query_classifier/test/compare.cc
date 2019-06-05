@@ -37,10 +37,14 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
+#if !defined(MYSQL_VERSION_MAJOR)
+#define USING_MARIADB_103
+#else
 #if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR == 3
 #define USING_MARIADB_103
 #else
 #undef USING_MARIADB_103
+#endif
 #endif
 
 namespace
