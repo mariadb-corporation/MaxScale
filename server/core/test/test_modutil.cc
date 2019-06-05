@@ -34,7 +34,7 @@
 #include <string.h>
 
 #include <maxbase/log.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/buffer.hh>
 

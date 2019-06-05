@@ -38,7 +38,7 @@
 #include <maxscale/modinfo.h>
 #include "maxscaled.hh"
 #include <maxscale/maxadmin.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 /**
  * @file maxscaled.c - MaxScale administration protocol

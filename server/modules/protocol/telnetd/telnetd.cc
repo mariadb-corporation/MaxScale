@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>

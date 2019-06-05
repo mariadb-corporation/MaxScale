@@ -31,7 +31,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <cdc.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/event.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/modutil.hh>

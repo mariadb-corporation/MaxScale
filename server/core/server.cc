@@ -35,7 +35,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/ssl.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>
 #include <maxscale/json_api.hh>

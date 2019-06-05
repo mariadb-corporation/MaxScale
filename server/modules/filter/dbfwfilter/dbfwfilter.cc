@@ -74,7 +74,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/pcre2.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/utils.h>
 
 #include "rules.hh"

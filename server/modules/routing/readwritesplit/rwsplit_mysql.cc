@@ -25,7 +25,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 /**
  * Functions within the read-write split router that are specific to

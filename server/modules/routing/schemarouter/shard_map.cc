@@ -15,7 +15,7 @@
 
 #include <algorithm>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 Shard::Shard()
     : m_last_updated(time(NULL))

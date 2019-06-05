@@ -22,7 +22,7 @@
 #include <map>
 
 #include <maxsql/mariadb.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>

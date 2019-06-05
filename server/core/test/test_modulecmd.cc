@@ -16,7 +16,7 @@
  */
 
 #include <maxbase/maxbase.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/paths.h>
 #include <maxscale/modulecmd.hh>

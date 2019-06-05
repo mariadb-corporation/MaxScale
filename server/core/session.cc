@@ -28,7 +28,7 @@
 
 #include <maxbase/atomic.hh>
 #include <maxbase/host.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>

@@ -24,7 +24,7 @@
 
 #define MXS_MODULE_NAME "MariaDBBackendAuth"
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/authenticator.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>

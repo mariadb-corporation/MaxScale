@@ -26,7 +26,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/maxscale.h>
 #include <maxbase/worker.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>

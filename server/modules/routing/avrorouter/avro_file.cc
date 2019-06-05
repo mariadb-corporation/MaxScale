@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>

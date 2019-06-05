@@ -16,7 +16,7 @@
 
 #include <numeric>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>

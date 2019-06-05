@@ -18,7 +18,7 @@
 #include <inttypes.h>
 
 #include <maxbase/atomic.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>

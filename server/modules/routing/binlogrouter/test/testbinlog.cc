@@ -36,7 +36,7 @@
 #include <maxscale/dcb.hh>
 #include <time.h>
 #include <maxscale/paths.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/mainworker.hh>
 #include <maxscale/utils.hh>
 #include "../../../../core/internal/modules.hh"

@@ -24,7 +24,7 @@
 
 #include <maxscale/paths.h>
 #include <maxscale/random.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 #include "internal/secrets.hh"
 

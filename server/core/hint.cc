@@ -15,7 +15,7 @@
 #include <string.h>
 #include <maxbase/assert.h>
 #include <maxscale/hint.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 /**
  * @file hint.c generic support routines for hints.

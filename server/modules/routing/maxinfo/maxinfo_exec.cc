@@ -31,7 +31,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>

@@ -35,7 +35,7 @@
 
 #include <maxbase/assert.h>
 #include <maxscale/hint.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 /**
  * test1    Allocate table of users and mess around with it

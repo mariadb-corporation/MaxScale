@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "mariadbbackend"
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/limits.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>

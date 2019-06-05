@@ -21,7 +21,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/paths.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/routingworker.hh>
 
 #include <sys/stat.h>

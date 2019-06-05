@@ -30,7 +30,7 @@
 #include <vector>
 #include <mutex>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/mariadb.hh>

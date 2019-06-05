@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/random.h>

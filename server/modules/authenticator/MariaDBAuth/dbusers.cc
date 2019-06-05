@@ -21,7 +21,7 @@
 #include <netdb.h>
 #include <stdio.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>

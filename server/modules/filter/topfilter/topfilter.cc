@@ -45,7 +45,7 @@
 #include <sys/time.h>
 #include <regex.h>
 #include <maxbase/atomic.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 /*
  * The filter entry points

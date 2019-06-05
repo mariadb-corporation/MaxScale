@@ -13,7 +13,7 @@
 
 #include "user.hh"
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.hh>
 

@@ -19,7 +19,7 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/pcre2.hh>

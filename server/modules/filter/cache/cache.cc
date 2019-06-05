@@ -17,7 +17,7 @@
 #include <set>
 #include <string>
 #include <zlib.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.hh>

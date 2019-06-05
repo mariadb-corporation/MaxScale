@@ -13,7 +13,7 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/encryption.h>
 
 EVP_CIPHER_CTX* mxs_evp_cipher_ctx_alloc()

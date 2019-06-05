@@ -30,7 +30,7 @@
 #include <avro/errors.h>
 #include <maxbase/atomic.h>
 #include <maxbase/worker.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>

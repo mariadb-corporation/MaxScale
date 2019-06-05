@@ -77,7 +77,7 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 static int uid_gen;
 static int hktask_id = 0;

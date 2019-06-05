@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/utils.h>

@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/paths.h>
 
 #include "../internal/filter.hh"

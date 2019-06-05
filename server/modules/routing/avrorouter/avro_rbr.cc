@@ -15,7 +15,7 @@
 
 #include <maxscale/mysql_utils.hh>
 #include <jansson.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <strings.h>
 #include <signal.h>
 #include <maxscale/utils.h>

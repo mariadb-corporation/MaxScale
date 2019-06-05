@@ -13,7 +13,7 @@
 
 #include <maxscale/authenticator.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 #include "internal/modules.hh"
 /**

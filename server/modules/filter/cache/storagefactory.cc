@@ -16,7 +16,7 @@
 #include <dlfcn.h>
 #include <sys/param.h>
 #include <new>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/paths.h>
 #include "cachefilter.hh"
 #include "lrustoragest.hh"

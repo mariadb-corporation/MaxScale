@@ -20,7 +20,7 @@
 
 #include <maxbase/assert.h>
 #include <maxbase/jansson.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 namespace std
 {

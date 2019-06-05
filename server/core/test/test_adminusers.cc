@@ -23,7 +23,7 @@
 #include <string.h>
 #include <maxscale/paths.h>
 #include <maxscale/adminusers.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/utils.h>
 #include <maxscale/users.h>
 

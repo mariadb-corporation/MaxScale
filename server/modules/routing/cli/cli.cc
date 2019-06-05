@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxbase/atomic.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/poll.hh>

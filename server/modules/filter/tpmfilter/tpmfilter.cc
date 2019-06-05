@@ -55,7 +55,7 @@
 #include <regex.h>
 #include <thread>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>

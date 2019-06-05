@@ -40,7 +40,7 @@
 
 #include <atomic>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/atomic.hh>
 #include <maxscale/clock.h>

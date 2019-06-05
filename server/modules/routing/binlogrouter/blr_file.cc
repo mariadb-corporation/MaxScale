@@ -30,7 +30,7 @@
 
 #include <ini.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/encryption.h>

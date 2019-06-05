@@ -30,7 +30,7 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/config.hh>
 
 MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, const char* passwd)

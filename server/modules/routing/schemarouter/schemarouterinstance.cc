@@ -20,7 +20,7 @@
 #include <string.h>
 #include <strings.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.hh>

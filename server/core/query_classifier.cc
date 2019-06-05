@@ -17,7 +17,7 @@
 #include <atomic>
 #include <random>
 #include <unordered_map>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/format.hh>
 #include <maxscale/config.hh>

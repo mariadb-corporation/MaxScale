@@ -16,7 +16,7 @@
 #include <string>
 #include <sstream>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <sys/time.h>
 
 #include "internal/admin.hh"

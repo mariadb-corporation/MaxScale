@@ -22,7 +22,7 @@
 #include <sys/stat.h>
 #include <string>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/adminusers.h>
 #include <maxbase/pam_utils.hh>

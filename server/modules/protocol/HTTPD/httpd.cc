@@ -36,7 +36,7 @@
 
 #include "httpd.hh"
 #include <ctype.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/protocol.hh>
 #include <maxscale/modinfo.h>
 #include <maxscale/resultset.hh>

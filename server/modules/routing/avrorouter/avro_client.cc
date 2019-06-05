@@ -30,7 +30,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/version.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/routingworker.hh>

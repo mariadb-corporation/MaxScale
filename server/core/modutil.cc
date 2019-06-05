@@ -25,7 +25,7 @@
 #include <cctype>
 
 #include <maxsql/mariadb.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>

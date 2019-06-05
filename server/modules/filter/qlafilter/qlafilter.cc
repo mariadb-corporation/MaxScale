@@ -37,7 +37,7 @@
 #include <sstream>
 #include <string>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/format.hh>
 #include <maxscale/modinfo.h>

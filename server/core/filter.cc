@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/session.hh>
 #include <maxscale/service.hh>

@@ -17,7 +17,7 @@
 #include <iostream>
 #include <string>
 #include "../internal/query_classifier.hh"
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.hh>
 #include "../../../query_classifier/test/testreader.hh"

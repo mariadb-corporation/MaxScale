@@ -47,7 +47,7 @@
 #include <maxbase/maxbase.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxsql/mariadb.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>

@@ -20,7 +20,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <string>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/protocol/mysql.hh>

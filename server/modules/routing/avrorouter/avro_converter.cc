@@ -16,7 +16,7 @@
 #include <limits.h>
 
 #include <maxbase/assert.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 /**
  * @brief Allocate an Avro table

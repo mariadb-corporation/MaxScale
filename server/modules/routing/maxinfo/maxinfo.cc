@@ -33,7 +33,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/service.hh>
 #include <maxscale/server.hh>
 #include <maxscale/router.hh>

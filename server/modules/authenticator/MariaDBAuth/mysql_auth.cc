@@ -29,7 +29,7 @@
 
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/authenticator.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/event.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/paths.h>

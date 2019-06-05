@@ -17,7 +17,7 @@
 #include <sstream>
 
 #include <maxscale/adminusers.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/jansson.hh>

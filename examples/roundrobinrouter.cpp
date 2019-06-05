@@ -39,7 +39,7 @@
 #include <string>
 #include <iterator>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.h>

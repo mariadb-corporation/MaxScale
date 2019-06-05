@@ -28,7 +28,7 @@
 #include <mysql.h>
 #include <sys/epoll.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxscale/config.hh>
 #include <maxscale/clock.h>

@@ -18,7 +18,7 @@
 #include <sstream>
 
 #include <maxbase/assert.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/hint.h>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>

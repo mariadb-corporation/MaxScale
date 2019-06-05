@@ -27,7 +27,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/version.h>
 #include <maxscale/paths.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/protocol.hh>

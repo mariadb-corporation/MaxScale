@@ -15,7 +15,7 @@
 
 #include <inttypes.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 
 bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, uint32_t len, int semisync)
 {

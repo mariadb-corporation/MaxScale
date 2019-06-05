@@ -21,7 +21,7 @@
 #include <sstream>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/mysql_utils.hh>

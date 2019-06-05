@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/pcre2.h>
 
 #define test_assert(a, b) if (!(a)) {fprintf(stderr, b); return 1;}

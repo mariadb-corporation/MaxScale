@@ -16,7 +16,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <strings.h>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.h>

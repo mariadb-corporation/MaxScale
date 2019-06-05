@@ -19,7 +19,7 @@
 #include <string.h>
 #include <strings.h>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/modutil.hh>

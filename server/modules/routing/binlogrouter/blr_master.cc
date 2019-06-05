@@ -40,7 +40,7 @@
 
 #include <sstream>
 
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>

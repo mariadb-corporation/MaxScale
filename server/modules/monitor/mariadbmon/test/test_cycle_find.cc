@@ -20,7 +20,7 @@
 #include <vector>
 #include <maxbase/log.hh>
 #include <maxbase/maxbase.hh>
-#include <maxscale/alloc.h>
+#include <maxbase/alloc.h>
 #include "../../../../core/internal/server.hh"
 
 using std::string;
