@@ -66,7 +66,10 @@ MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
 
 MariaDBMonitor::~MariaDBMonitor()
 {
-    clear_server_info();
+    for (auto server : m_servers)
+    {
+        delete server;
+    }
 }
 
 /**
@@ -75,17 +78,6 @@ MariaDBMonitor::~MariaDBMonitor()
 void MariaDBMonitor::reset_server_info()
 {
     // If this monitor is being restarted, the server data needs to be freed.
-    clear_server_info();
-
-    // Next, initialize the data.
-    for (auto mon_server : servers())
-    {
-        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_settings.shared));
-    }
-}
-
-void MariaDBMonitor::clear_server_info()
-{
     for (auto server : m_servers)
     {
         delete server;
@@ -93,12 +85,17 @@ void MariaDBMonitor::clear_server_info()
     // All MariaDBServer*:s are now invalid, as well as any dependant data.
     m_servers.clear();
     m_servers_by_id.clear();
-    m_excluded_servers.clear();
     assign_new_master(NULL);
     m_next_master = NULL;
     m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
     m_external_master_host.clear();
     m_external_master_port = PORT_UNKNOWN;
+
+    // Next, initialize the data.
+    for (auto mon_server : servers())
+    {
+        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_settings.shared));
+    }
 }
 
 void MariaDBMonitor::reset_node_index_info()
@@ -219,14 +216,14 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.ignore_external_masters = params->get_bool("ignore_external_masters");
     m_settings.shared.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
     m_settings.failcount = params->get_integer(CN_FAILCOUNT);
-    m_failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
-    m_switchover_timeout = params->get_duration<std::chrono::seconds>(CN_SWITCHOVER_TIMEOUT).count();
+    m_settings.failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
+    m_settings.switchover_timeout = params->get_duration<std::chrono::seconds>(CN_SWITCHOVER_TIMEOUT).count();
     m_settings.auto_failover = params->get_bool(CN_AUTO_FAILOVER);
     m_settings.auto_rejoin = params->get_bool(CN_AUTO_REJOIN);
     m_settings.enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
     m_settings.enforce_simple_topology = params->get_bool(CN_ENFORCE_SIMPLE_TOPOLOGY);
-    m_verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
-    m_master_failure_timeout = params->get_duration<std::chrono::seconds>(CN_MASTER_FAILURE_TIMEOUT).count();
+    m_settings.verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
+    m_settings.master_failure_timeout = params->get_duration<std::chrono::seconds>(CN_MASTER_FAILURE_TIMEOUT).count();
     m_settings.shared.promotion_sql_file = params->get_string(CN_PROMOTION_SQL_FILE);
     m_settings.shared.demotion_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
     m_settings.switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
@@ -234,11 +231,12 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.shared.handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);
     m_settings.shared.replication_ssl = params->get_bool(CN_REPLICATION_MASTER_SSL);
 
+    m_settings.excluded_servers.clear();
+
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
     reset_server_info();
 
-    m_excluded_servers.clear();
     bool settings_ok = true;
     bool list_error = false;
     auto excluded = get_monitored_serverlist(CN_NO_PROMOTE_SERVERS, &list_error);
@@ -250,7 +248,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     {
         for (auto elem : excluded)
         {
-            m_excluded_servers.push_back(get_server(elem));
+            m_settings.excluded_servers.push_back(get_server(elem));
         }
     }
 
@@ -324,16 +322,16 @@ string MariaDBMonitor::diagnostics_to_string() const
     };
     rval += string_printf("Automatic failover:      %s\n", bool_to_zstr(m_settings.auto_failover));
     rval += string_printf("Failcount:               %i\n", m_settings.failcount);
-    rval += string_printf("Failover timeout:        %u\n", m_failover_timeout);
-    rval += string_printf("Switchover timeout:      %u\n", m_switchover_timeout);
+    rval += string_printf("Failover timeout:        %u\n", m_settings.failover_timeout);
+    rval += string_printf("Switchover timeout:      %u\n", m_settings.switchover_timeout);
     rval += string_printf("Automatic rejoin:        %s\n", bool_to_zstr(m_settings.auto_rejoin));
     rval += string_printf("Enforce read-only:       %s\n", bool_to_zstr(m_settings.enforce_read_only_slaves));
     rval += string_printf("Enforce simple topology: %s\n", bool_to_zstr(m_settings.enforce_simple_topology));
     rval += string_printf("Detect stale master:     %s\n", bool_to_zstr(m_settings.detect_stale_master));
-    if (m_excluded_servers.size() > 0)
+    if (!m_settings.excluded_servers.empty())
     {
         rval += string_printf("Non-promotable servers (failover): ");
-        rval += string_printf("%s\n", monitored_servers_to_string(m_excluded_servers).c_str());
+        rval += string_printf("%s\n", monitored_servers_to_string(m_settings.excluded_servers).c_str());
     }
 
     rval += string_printf("\nServer information:\n-------------------\n\n");

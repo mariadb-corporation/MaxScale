@@ -197,6 +197,16 @@ private:
     std::string m_external_master_host;                     /* External master host, for fail/switchover */
     int         m_external_master_port = PORT_UNKNOWN;      /* External master port */
 
+    // Fields controlling logging of various events. TODO: Check these
+    bool m_log_no_master {true};                /* Should it be logged that there is no master? */
+    bool m_warn_current_master_invalid {true};  /* Print warning if current master is not valid? */
+    bool m_warn_cannot_find_master {true};      /* Print warning if a master cannot be found? */
+    bool m_warn_master_down {true};             /* Print warning that failover may happen soon? */
+    bool m_warn_failover_precond {true};        /* Print failover preconditions error message? */
+    bool m_warn_switchover_precond {true};      /* Print switchover preconditions error message? */
+    bool m_warn_cannot_rejoin {true};           /* Print warning if auto_rejoin fails because of invalid
+                                                 * gtid:s? */
+
     // MariaDB-Monitor specific settings. These are only written to when configuring the monitor.
     class Settings
     {
@@ -229,35 +239,26 @@ private:
         bool enforce_simple_topology {false};       /* Can the monitor assume and enforce a simple, 1-master
                                                      * and N slaves topology? Also allows unsafe failover */
 
-        SharedSettings shared; /* Settings required by MariaDBServer objects */
+        // Cluster operations additional settings
+        int  failover_timeout {10};            /* Time limit in seconds for failover */
+        int  switchover_timeout {10};          /* Time limit in seconds for switchover */
+        bool verify_master_failure {true};     /* Is master failure is verified via slaves? */
+        int  master_failure_timeout {10};      /* Master failure verification (via slaves) time in seconds */
+
+        ServerArray excluded_servers;          /* Servers which cannot be autoselected when deciding which
+                                                * slave to promote during failover switchover. */
+
+        SharedSettings shared;                 /* Settings required by MariaDBServer objects */
     };
 
     Settings m_settings;
-
-    // Cluster operations additional settings
-    uint32_t    m_failover_timeout = 10;        /* Time limit in seconds for failover */
-    uint32_t    m_switchover_timeout = 10;      /* Time limit in seconds for switchover */
-    bool        m_verify_master_failure = true; /* Is master failure is verified via slaves? */
-    int         m_master_failure_timeout = 10;  /* Master failure verification (via slaves) time in seconds */
-    ServerArray m_excluded_servers;             /* Servers which cannot be autoselected when deciding which
-                                                 * slave to promote during failover switchover. */
-
-    // Fields controlling logging of various events. TODO: Check these
-    bool m_log_no_master = true;                /* Should it be logged that there is no master? */
-    bool m_warn_current_master_invalid = true;  /* Print warning if current master is not valid? */
-    bool m_warn_cannot_find_master = true;      /* Print warning if a master cannot be found? */
-    bool m_warn_master_down = true;             /* Print warning that failover may happen soon? */
-    bool m_warn_failover_precond = true;        /* Print failover preconditions error message? */
-    bool m_warn_switchover_precond = true;      /* Print switchover preconditions error message? */
-    bool m_warn_cannot_rejoin = true;           /* Print warning if auto_rejoin fails because of invalid
-                                                 * gtid:s? */
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
     bool configure(const MXS_CONFIG_PARAMETER* params) override;
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     void reset_server_info();
-    void clear_server_info();
+
     void reset_node_index_info();
     bool execute_manual_command(std::function<void ()> command, json_t** error_out);
     bool immediate_tick_required() const;

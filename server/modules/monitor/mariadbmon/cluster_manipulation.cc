@@ -626,7 +626,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             bool op_success = false;
             // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
             // the first phase of standalone rejoin is similar to switchover.
-            maxbase::Duration time_limit((double)m_switchover_timeout);
+            maxbase::Duration time_limit((double)m_settings.switchover_timeout);
             GeneralOpData general(output, time_limit);
 
             if (joinable->m_slave_status.empty())
@@ -1261,7 +1261,7 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
  */
 bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
 {
-    for (MariaDBServer* excluded : m_excluded_servers)
+    for (MariaDBServer* excluded : m_settings.excluded_servers)
     {
         if (excluded == server)
         {
@@ -1444,8 +1444,8 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
         }
         else
         {
-            // The Duration ctor taking a double interprets is as seconds.
-            auto time_limit = maxbase::Duration((double)m_failover_timeout);
+            // The Duration ctor taking a double interprets the value as seconds.
+            auto time_limit = maxbase::Duration((double)m_settings.failover_timeout);
             bool promoting_to_master = (demotion_target == m_master);
             ServerOperation promotion(promotion_target, promoting_to_master,
                                       demotion_target->m_slave_status, demotion_target->m_enabled_events);
@@ -1485,7 +1485,7 @@ void MariaDBMonitor::handle_auto_failover()
         m_warn_master_down = false;
     }
     // If master seems to be down, check if slaves are receiving events.
-    else if (m_verify_master_failure
+    else if (m_settings.verify_master_failure
              && (connected_slave = slave_receiving_events(m_master, &event_age, &delay_time)) != NULL)
     {
         MXS_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat event %.1f "
@@ -1589,7 +1589,7 @@ void MariaDBMonitor::check_cluster_operations_support()
 const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer* demotion_target,
                                                             Duration* event_age_out, Duration* delay_out)
 {
-    Duration event_timeout(static_cast<double>(m_master_failure_timeout));
+    Duration event_timeout(static_cast<double>(m_settings.master_failure_timeout));
     auto current_time = maxbase::Clock::now();
     maxbase::Clock::time_point recent_event_time = current_time - event_timeout;
 
@@ -1718,7 +1718,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
     unique_ptr<SwitchoverParams> rval;
     if (promotion_target && demotion_target && gtid_ok)
     {
-        maxbase::Duration time_limit((double)m_switchover_timeout);
+        maxbase::Duration time_limit((double)m_settings.switchover_timeout);
         bool master_swap = (demotion_target == m_master);
         ServerOperation promotion(promotion_target, master_swap,
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);
