@@ -17,7 +17,7 @@
 #include <memory>
 #include <mutex>
 #include <maxbase/stopwatch.hh>
-#include <maxsql/mariadb.hh>
+#include <maxsql/queryresult.hh>
 #include <maxscale/monitor.hh>
 #include "server_utils.hh"
 
