@@ -1654,7 +1654,7 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
         goto retblock;
     }
 
-    if (lex->describe || is_show_command(lex->sql_command))
+    if (lex->describe || (is_show_command(lex->sql_command) && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
     {
         goto retblock;
     }
@@ -1992,7 +1992,9 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
         goto retblock;
     }
 
-    if (lex->describe || (is_show_command(lex->sql_command) && !(lex->sql_command == SQLCOM_SHOW_TABLES)))
+    if (lex->describe || (is_show_command(lex->sql_command)
+                          && !(lex->sql_command == SQLCOM_SHOW_TABLES)
+                          && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
     {
         goto retblock;
     }

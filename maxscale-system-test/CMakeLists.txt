@@ -202,6 +202,9 @@ add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port
 # Test KILL QUERY functionality
 add_test_executable(kill_query.cpp kill_query replication LABELS REPL_BACKEND)
 
+# MXS-2250: DESCRIBE on temporary table should work.
+add_test_executable(mxs2250_describe_temp_table.cpp mxs2250_describe_temp_table mxs2250_describe_temp_table LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: Tests that require GTID           #
 ############################################
