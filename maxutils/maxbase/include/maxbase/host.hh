@@ -110,11 +110,21 @@ inline bool operator!=(const Host& l, const Host& r)
 }
 
 /**
+ * Perform DNS resolution on a hostname or text-form IP address.
+ *
+ * @param host Hostname to convert.
+ * @param addr_out Output buffer. The output is in IPv6-form as returned by "inet_ntop(AF_INET6, ...)".
+ * @param error_out Error output
+ * @return True if successful
+ */
+bool name_lookup(const std::string& host, std::string* addr_out, std::string* error_out = nullptr);
+
+/**
  * Perform reverse DNS on an IP address. This may involve network communication so can be slow.
  *
  * @param ip IP to convert to hostname
  * @param output Where to write the output. If operation fails, original IP is written.
  * @return True on success
  */
-bool reverse_dns(const std::string& ip, std::string* output);
+bool reverse_name_lookup(const std::string& ip, std::string* output);
 }

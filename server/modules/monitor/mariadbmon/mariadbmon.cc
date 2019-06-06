@@ -94,6 +94,8 @@ void MariaDBMonitor::reset_server_info()
     {
         m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_settings.shared));
     }
+
+    m_resolver = DNSResolver(); // Erases result cache.
 }
 
 void MariaDBMonitor::reset_node_index_info()
@@ -106,16 +108,37 @@ void MariaDBMonitor::reset_node_index_info()
 
 MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
 {
-    // TODO: Do this with a map lookup
-    // TODO: Add DNS check here.
     MariaDBServer* found = NULL;
-    for (MariaDBServer* server : m_servers)
+    // Phase 1: Direct string compare
+    for (auto server : m_servers)
     {
         EndPoint srv(server->m_server_base->server);
         if (srv == search_ep)
         {
             found = server;
             break;
+        }
+    }
+
+    if (!found)
+    {
+        // Phase 2: Was not found with simple string compare. Try DNS resolving for endpoints with
+        // matching ports.
+        string target_addr = m_resolver.resolve_server(search_ep.host());
+        if (!target_addr.empty())
+        {
+            for (auto server : m_servers)
+            {
+                if (server->m_server_base->server->port == search_ep.port())
+                {
+                    string server_addr = m_resolver.resolve_server(server->m_server_base->server->address);
+                    if (server_addr == target_addr)
+                    {
+                        found = server;
+                        break;
+                    }
+                }
+            }
         }
     }
     return found;

@@ -169,6 +169,21 @@ private:
         bool result_waiting = false;        /* Guard variable for has_result */
     };
 
+    class DNSResolver
+    {
+    public:
+        std::string resolve_server(const std::string& host);
+
+    private:
+        struct MapElement
+        {
+            std::string    address;
+            mxb::TimePoint timestamp;
+        };
+
+        std::unordered_map<std::string, MapElement> m_mapping; // hostname -> address cache
+    };
+
     ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
 
     // Server containers, mostly constant.
@@ -184,6 +199,8 @@ private:
                                              * Causes a topology rebuild on the current tick. */
     bool m_cluster_modified = false;        /* Has a cluster operation been performed this loop? Prevents
                                              * other operations during this tick. */
+
+    DNSResolver m_resolver;                 /* DNS-resolver with cache */
 
     /* Counter for temporary automatic cluster operation disabling. */
     int cluster_operation_disable_timer = 0;

@@ -11,13 +11,15 @@
  * Public License.
  */
 #include <maxbase/host.hh>
-#include <maxbase/string.hh>
 
 #include <ostream>
 #include <vector>
 #include <algorithm>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <maxbase/assert.h>
+#include <maxbase/format.hh>
+#include <maxbase/string.hh>
 
 namespace
 {
@@ -225,7 +227,54 @@ std::istream& operator>>(std::istream& is, Host& host)
     return is;
 }
 
-bool reverse_dns(const std::string& ip, std::string* output)
+bool name_lookup(const std::string& host, std::string* addr_out, std::string* error_out)
+{
+    addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET6;     /* Only return IPv6-addresses, possibly mapped from IPv4 */
+    hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
+    hints.ai_flags = AI_V4MAPPED;   /* Mapped IPv4 */
+    hints.ai_protocol = 0;          /* Any protocol */
+    hints.ai_canonname = NULL;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
+
+    addrinfo* results = nullptr;
+    bool success = false;
+    std::string error_msg;
+    int rv_addrinfo = getaddrinfo(host.c_str(), nullptr, &hints, &results);
+    if (rv_addrinfo == 0)
+    {
+        mxb_assert(results);
+        if (results)
+        {
+            // getaddrinfo may return multiple result addresses. Only consider the first.
+            char buf[INET6_ADDRSTRLEN];
+            if (inet_ntop(AF_INET6, results->ai_addr, buf, sizeof(buf)))
+            {
+                *addr_out = buf;
+                success = true;
+            }
+            else
+            {
+                error_msg = mxb::string_printf("inet_ntop() failed: '%s'.", strerror(errno));
+            }
+            freeaddrinfo(results);
+        }
+    }
+    else
+    {
+        error_msg = mxb::string_printf("getaddrinfo() failed: '%s'.", gai_strerror(rv_addrinfo));
+    }
+
+    if (error_out)
+    {
+        *error_out = error_msg;
+    }
+    return success;
+}
+
+bool reverse_name_lookup(const std::string& ip, std::string* output)
 {
     sockaddr_storage socket_address;
     memset(&socket_address, 0, sizeof(socket_address));

@@ -12,11 +12,13 @@
  */
 
 #include "mariadbmon.hh"
+
 #include <algorithm>
 #include <inttypes.h>
 #include <string>
 #include <queue>
 #include <maxbase/format.hh>
+#include <maxbase/host.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 
@@ -1002,3 +1004,35 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
     }
     return is_valid;
 };
+
+string MariaDBMonitor::DNSResolver::resolve_server(const string& host)
+{
+    auto now = mxb::Clock::now();
+    const auto MAX_AGE = mxb::Duration((double)5*60); // Refresh interval for cache entries.
+    auto recent_time = now - MAX_AGE;
+
+    string rval;
+    auto iter = m_mapping.find(host);
+
+    if (iter == m_mapping.end() || iter->second.timestamp < recent_time)
+    {
+        // Map did not have a record, or it was too old. In either case, generate a new one.
+        string addr;
+        string error_msg;
+        bool dns_success = mxb::name_lookup(host, &addr, &error_msg);
+        if (!dns_success)
+        {
+            MXB_ERROR("Could not resolve host '%s'. %s", host.c_str(), error_msg.c_str());
+        }
+        // If dns failed, addr will be empty. Add the element anyway to prevent repeated lookups.
+        MapElement newelem = {addr, now};
+        m_mapping[host] = newelem;
+        rval = addr;
+    }
+    else
+    {
+        // Return recent value.
+        rval = iter->second.address;
+    }
+    return rval;
+}
