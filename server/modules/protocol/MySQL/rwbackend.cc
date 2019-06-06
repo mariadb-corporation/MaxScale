@@ -358,6 +358,19 @@ void RWBackend::process_packets(GWBUF* result)
             }
             else if (cmd == MYSQL_REPLY_ERR)
             {
+                ++it;
+                uint16_t code = 0;
+                code |= (*it++);
+                code |= (*it++) << 8;
+                ++it;
+                auto sql_state_begin = it;
+                it.advance(5);
+                auto sql_state_end = it;
+                auto message_begin = it;
+                it.advance(len - (1 + 2 + 1 + 5));
+                auto message_end = it;
+
+                m_error.set(code, sql_state_begin, sql_state_end, message_begin, message_end);
                 set_reply_state(REPLY_STATE_DONE);
             }
             break;
@@ -376,8 +389,11 @@ void RWBackend::process_packets(GWBUF* result)
  */
 void RWBackend::process_reply(GWBUF* buffer)
 {
+    m_error.clear();
+
     if (current_command() == MXS_COM_STMT_FETCH)
     {
+        // TODO: m_error is not updated here.
         // If the server responded with an error, n_eof > 0
         if (consume_fetched_rows(buffer))
         {

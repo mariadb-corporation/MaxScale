@@ -60,6 +60,71 @@ class RWBackend : public mxs::Backend
     RWBackend& operator=(const RWBackend&);
 
 public:
+    class Error
+    {
+    public:
+        Error() = default;
+
+        explicit operator bool() const
+        {
+            return m_code != 0;
+        }
+
+        bool is_rollback() const
+        {
+            bool rv = false;
+
+            if (m_code != 0)
+            {
+                mxb_assert(m_sql_state.length() == 5);
+                // The 'sql_state' of all transaction rollbacks is "40XXX".
+                if (m_sql_state[0] == '4' && m_sql_state[1] == '0')
+                {
+                    rv = true;
+                }
+            }
+
+            return rv;
+        }
+
+        uint32_t code() const
+        {
+            return m_code;
+        }
+
+        const std::string& sql_state() const
+        {
+            return m_sql_state;
+        }
+
+        const std::string& message() const
+        {
+            return m_message;
+        }
+
+        template<class InputIterator>
+        void set(uint32_t code,
+                 InputIterator sql_state_begin, InputIterator sql_state_end,
+                 InputIterator message_begin, InputIterator message_end)
+        {
+            mxb_assert(std::distance(sql_state_begin, sql_state_end) == 5);
+            m_code = code;
+            m_sql_state.assign(sql_state_begin, sql_state_end);
+            m_message.assign(message_begin, message_end);
+        }
+
+        void clear()
+        {
+            m_code = 0;
+            m_sql_state.clear();
+            m_message.clear();
+        }
+
+    private:
+        uint16_t    m_code { 0 };
+        std::string m_sql_state;
+        std::string m_message;
+    };
 
     static SRWBackends from_servers(SERVER_REF* servers);
 
@@ -133,6 +198,16 @@ public:
     void process_reply(GWBUF* buffer);
 
     /**
+     * Updated during the call to @c process_reply().
+     *
+     * @return The current error state.
+     */
+    const Error& error() const
+    {
+        return m_error;
+    }
+
+    /**
      * Check whether the response from the server is complete
      *
      * @return True if no more results are expected from this server
@@ -168,6 +243,7 @@ private:
     uint64_t         m_num_coldefs = 0;
     bool             m_large_query = false;
     bool             m_skip_next = false;
+    Error            m_error;
 
     inline bool is_opening_cursor() const
     {
