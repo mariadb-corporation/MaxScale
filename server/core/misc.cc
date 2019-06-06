@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#include <maxscale/ccdefs.hh>
 #include <maxscale/maxscale.h>
 
 #include <time.h>
@@ -21,8 +22,18 @@
 #include "internal/maxscale.hh"
 #include "internal/service.hh"
 #include "internal/admin.hh"
+#include "internal/monitormanager.hh"
 
 static time_t started;
+
+namespace
+{
+    struct ThisUnit
+    {
+        std::atomic<const mxb::Worker*> admin_worker {nullptr};
+    };
+    ThisUnit this_unit;
+}
 
 void maxscale_reset_starttime(void)
 {
@@ -58,6 +69,9 @@ int maxscale_shutdown()
                     mxs::MainWorker::get().shutdown();
                 }
 
+                /*< Stop all monitors */
+                MonitorManager::stop_all_monitors();
+
                 mxs_admin_shutdown();
                 mxs::RoutingWorker::shutdown_all();
             };
@@ -80,3 +94,15 @@ void maxscale_start_teardown()
 {
     teardown_in_progress = true;
 }
+
+bool running_in_admin_thread()
+{
+    auto current_worker = mxb::Worker::get_current();
+    return current_worker == this_unit.admin_worker.load(std::memory_order_acquire);
+}
+
+void set_admin_worker(const mxb::Worker* admin_worker)
+{
+    this_unit.admin_worker.store(admin_worker, std::memory_order_release);
+}
+

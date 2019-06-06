@@ -18,8 +18,6 @@
 
 #include <maxscale/maxscale.h>
 
-MXS_BEGIN_DECLS
-
 /**
  * Initiate shutdown of MaxScale.
  *
@@ -39,4 +37,6 @@ void maxscale_reset_starttime(void);
 bool maxscale_teardown_in_progress();
 void maxscale_start_teardown();
 
-MXS_END_DECLS
+bool running_in_admin_thread();
+
+void set_admin_worker(const mxb::Worker* admin_worker);

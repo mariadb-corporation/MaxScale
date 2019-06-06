@@ -1442,10 +1442,15 @@ int main(int argc, char** argv)
                 rc = MAXSCALE_NOSERVICES;
                 maxscale_shutdown();
             }
-            else if (daemon_mode)
+            else
             {
-                // Successful start, notify the parent process that it can exit.
-                write_child_exit_code(daemon_pipe[1], rc);
+                if (daemon_mode)
+                {
+                    // Successful start, notify the parent process that it can exit.
+                    write_child_exit_code(daemon_pipe[1], rc);
+                }
+                /** Start all monitors */
+                MonitorManager::start_all_monitors();
             }
         };
 
@@ -2188,9 +2193,6 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    /** Start all monitors */
-    MonitorManager::start_all_monitors();
-
     if (cnf->config_check)
     {
         MXS_NOTICE("Configuration was successfully verified.");
@@ -2247,6 +2249,8 @@ int main(int argc, char** argv)
     worker = RoutingWorker::get(RoutingWorker::MAIN);
     mxb_assert(worker);
 
+    // Configuration read and items created. Changes should now come through the main routing worker.
+    set_admin_worker(worker);
     if (!worker->execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
     {
         const char* logerr = "Failed to queue startup task.";
@@ -2257,18 +2261,16 @@ int main(int argc, char** argv)
 
     main_worker->run();
 
-    /*< Stop all monitors */
-    MonitorManager::stop_all_monitors();
-
-    /*< Destroy all monitors */
-    MonitorManager::destroy_all_monitors();
-
     /*<
      * Wait for worker threads to exit.
      */
     RoutingWorker::join_workers();
-
     MXS_NOTICE("All workers have shut down.");
+
+    set_admin_worker(nullptr); // Main worker has quit, re-assign to non-worker.
+
+    /*< Destroy all monitors */
+    MonitorManager::destroy_all_monitors();
 
     maxscale_start_teardown();
 
