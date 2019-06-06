@@ -4,14 +4,14 @@
 
 for ((i=0;i<100;i++))
 do
-    mysql -ss -u root $1 -e 'show status like "wsrep_ready"' | grep 'ON' && break || sleep 1
+    mysql -ss $1 -e 'show status like "wsrep_ready"' | grep 'ON' && break || sleep 1
 done
 
 # The removal of the anonymous ''@'localhost' user is done in a somewhat crude
 # way. The proper way would be to do a secure installation or drop the users
 # with DROP USER statements.
 
-mysql -u root --force <<EOF
+mysql --force <<EOF
 
 DELETE FROM mysql.user WHERE user = '';
 

@@ -355,7 +355,7 @@ void Mariadb_nodes::create_users(int node)
     // Create users for replication as well as the users that are used by the tests
     sprintf(str, "%s/create_user.sh", test_dir);
     copy_to_node(node, str, access_homedir[node]);
-    ssh_node_f(node, false,
+    ssh_node_f(node, true,
                "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
                user_name, password, access_homedir[0], socket_cmd[0]);
 }
@@ -465,7 +465,7 @@ int Galera_nodes::start_galera()
     copy_to_node_legacy(str, "~/", 0);
 
     ssh_node_f(0,
-               false,
+               true,
                "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
                user_name,
                password,
