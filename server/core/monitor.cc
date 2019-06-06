@@ -606,11 +606,8 @@ void monitor_list(DCB* dcb)
     {
         if (ptr->active)
         {
-            dcb_printf(dcb,
-                       "%-20s | %s\n",
-                       ptr->name,
-                       ptr->state & MONITOR_STATE_RUNNING ?
-                       "Running" : "Stopped");
+            dcb_printf(dcb, "%-20s | %s\n",
+                       ptr->name, ptr->state == MONITOR_STATE_RUNNING ? "Running" : "Stopped");
         }
         ptr = ptr->next;
     }
