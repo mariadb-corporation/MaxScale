@@ -297,87 +297,85 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
  *
  * @return The packet decoded into a descriptive string.
  */
-char* dbg_decode_response(GWBUF* pPacket)
+const char* dbg_decode_response(GWBUF* pPacket)
 {
-    uint8_t header[MYSQL_HEADER_LEN + 1];
+    thread_local std::string rv;
 
-    gwbuf_copy_data(pPacket, 0, sizeof(header), header);
+    std::stringstream ss;
 
-    uint32_t payload_len = MYSQL_GET_PAYLOAD_LEN(header);
-    uint32_t packet_no = MYSQL_GET_PACKET_NO(header);
+    mxs::Buffer b(pPacket);
+    int nRemaining = b.length();
+    auto it = b.begin();
 
-    uint32_t command = std::numeric_limits<uint32_t>::max();
-
-    if (gwbuf_length(pPacket) > MYSQL_HEADER_LEN)
+    while (nRemaining > MYSQL_HEADER_LEN + 1)
     {
-        command = MYSQL_GET_COMMAND(header);
-    }
-
-    const int buflen = 1024;    // Should be enough.
-
-    thread_local char buffer[buflen];
-
-    int len = buflen;
-    char* z = buffer;
-
-    int l = snprintf(z, len, "Packet no: %u, Payload len: %u", packet_no, payload_len);
-
-    z += l;
-    len -= l;
-
-    switch (command)
-    {
-    case 0x00:
-        snprintf(z, len, ", Command : OK");
-        break;
-
-    case 0xff:
+        if (!ss.str().empty())
         {
-            l = snprintf(z, len, ", Command : ERR");
-            z += l;
-            len -= l;
-
-            uint8_t error[payload_len];
-
-            gwbuf_copy_data(pPacket, MYSQL_HEADER_LEN, payload_len, error);
-
-            uint32_t error_code = gw_mysql_get_byte2(&error[1]);
-
-            l = snprintf(z, len, ", Code: %u", error_code);
-            z += l;
-            len -= l;
-
-            const int message_index = 1 + 2 + 1 + 5;
-            uint8_t* pMessage = &error[message_index];
-
-            l = snprintf(z, len, ", Message : ");
-
-            z += l;
-            len -= l;
-
-            int message_len = payload_len - message_index;
-
-            if (message_len + 1 > len)
-            {
-                message_len = len - 1;
-            }
-
-            strncpy(z, (char*)pMessage, message_len);
-            z[message_len] = 0;
+            ss << "\n";
         }
-        break;
 
-    case 0xfb:
-        snprintf(z, len, ", Command : GET_MORE_CLIENT_DATA");
-        break;
+        uint8_t header[MYSQL_HEADER_LEN + 1];
 
-    case std::numeric_limits<uint32_t>::max():
-        break;
+        auto start = it;
+        auto end = std::next(it, sizeof(header));
+        std::copy(it, end, header);
+        it = end;
 
-    default:
-        snprintf(z, len, ", Command : Result Set");
+        uint32_t payload_len = MYSQL_GET_PAYLOAD_LEN(header);
+        uint32_t packet_len = MYSQL_HEADER_LEN + payload_len;
+        uint32_t packet_no = MYSQL_GET_PACKET_NO(header);
+        uint32_t command = MYSQL_GET_COMMAND(header);
+
+        ss << "Packet no: " << packet_no << ", Payload len: " << payload_len;
+
+        switch (command)
+        {
+        case 0x00:
+            ss << ", Command : OK";
+            break;
+
+        case 0xff:
+            {
+                ss << ", Command : ERR";
+
+                uint8_t error[payload_len];
+                error[0] = *it;
+
+                end = std::next(it, sizeof(error) - 1); // -1 due to the 1 in 'header' above.
+                std::copy(it, end, error + 1);
+
+                uint32_t error_code = gw_mysql_get_byte2(&error[1]);
+
+                ss << ", Code: " << error_code;
+
+                const int message_index = 1 + 2 + 1 + 5;
+                uint8_t* pMessage = &error[message_index];
+                int message_len = payload_len - message_index;
+
+                ss << ", Message : ";
+
+                ss.write(reinterpret_cast<const char*>(pMessage), message_len);
+            }
+            break;
+
+        case 0xfb:
+            ss << ", Command : GET_MORE_CLIENT_DATA";
+            break;
+
+        default:
+            ss << ", Command : Result Set";
+        }
+
+        it = std::next(start, MYSQL_HEADER_LEN + payload_len);
+
+        nRemaining -= MYSQL_HEADER_LEN;
+        nRemaining -= payload_len;
     }
 
-    return buffer;
+    b.release();
+
+    rv = ss.str();
+
+    return rv.c_str();
 }
 #endif
