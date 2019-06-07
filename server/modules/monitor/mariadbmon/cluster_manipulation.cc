@@ -354,22 +354,43 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
 
                 // Step 7: Set all slaves to replicate from the master.
                 // The following commands are only sent to slaves.
-                auto location = std::find(targets.begin(), targets.end(), new_master);
-                targets.erase(location);
-
-                // TODO: the following call does stop slave & reset slave again. Fix this later, although it
-                // doesn't cause error.
-                ServerArray dummy;
-                if ((size_t)redirect_slaves(new_master, targets, &dummy) == targets.size())
+                ServerArray slaves;
+                for (auto target : targets)
                 {
-                    // TODO: Properly check check slave IO/SQL threads.
-                    MXS_NOTICE("All slaves redirected successfully.");
+                    if (target != new_master)
+                    {
+                        slaves.push_back(target);
+                    }
                 }
-                else
+
+                if (!slaves.empty())
                 {
-                    error = true;
-                    PRINT_MXS_JSON_ERROR(error_out,
-                                         "Some servers were not redirected to '%s'.", new_master->name());
+                    SlaveStatus new_conn;
+                    SERVER* new_master_srv = new_master->m_server_base->server;
+                    new_conn.master_host = new_master_srv->address;
+                    new_conn.master_port = new_master_srv->port;
+                    GeneralOpData general(error_out, mxb::Duration(0.0)); // Expect this to complete quickly.
+                    size_t slave_conns_started = 0;
+                    for (auto slave : slaves)
+                    {
+                        if (slave->create_start_slave(general, new_conn))
+                        {
+                            slave_conns_started++;
+                        }
+                    }
+
+                    ServerArray dummy;
+                    if (slave_conns_started == slaves.size())
+                    {
+                        // TODO: Properly check slave IO/SQL threads.
+                        MXS_NOTICE("All slaves redirected successfully.");
+                    }
+                    else
+                    {
+                        error = true;
+                        PRINT_MXS_JSON_ERROR(error_out,
+                                             "Some servers were not redirected to '%s'.", new_master->name());
+                    }
                 }
             }
             else
@@ -418,33 +439,6 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
 #endif
     change_cmd << MASTER_PW << m_settings.shared.replication_password << END;
     return change_cmd.str();
-}
-
-/**
- * Redirects slaves to replicate from another master server.
- *
- * @param new_master The replication master
- * @param slaves An array of slaves
- * @param redirected_slaves A vector where to insert successfully redirected slaves.
- * @return The number of slaves successfully redirected.
- */
-int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
-                                    ServerArray* redirected_slaves)
-{
-    mxb_assert(redirected_slaves != NULL);
-    MXS_NOTICE("Redirecting slaves to new master.");
-    string change_cmd = generate_change_master_cmd(new_master->m_server_base->server->address,
-                                                   new_master->m_server_base->server->port);
-    int successes = 0;
-    for (MariaDBServer* slave : slaves)
-    {
-        if (slave->redirect_one_slave(change_cmd))
-        {
-            successes++;
-            redirected_slaves->push_back(slave);
-        }
-    }
-    return successes;
 }
 
 /**

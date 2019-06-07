@@ -329,8 +329,7 @@ private:
                               int* id_missing_out) const;
 
     ServerArray get_redirectables(const MariaDBServer* old_master, const MariaDBServer* ignored_slave);
-    int         redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
-                                ServerArray* redirected_slaves);
+
     int redirect_slaves_ex(GeneralOpData& op,
                            OperationType type,
                            const MariaDBServer* promotion_target,

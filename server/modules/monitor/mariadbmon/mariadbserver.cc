@@ -767,37 +767,6 @@ bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out
     return can_replicate;
 }
 
-bool MariaDBServer::redirect_one_slave(const string& change_cmd)
-{
-    bool success = false;
-    MYSQL* slave_conn = m_server_base->con;
-    const char* query = "STOP SLAVE;";
-    if (mxs_mysql_query(slave_conn, query) == 0)
-    {
-        query = "RESET SLAVE;";     // To erase any old I/O or SQL errors
-        if (mxs_mysql_query(slave_conn, query) == 0)
-        {
-            query = "CHANGE MASTER TO ...";     // Don't show the real query as it contains a password.
-            if (mxs_mysql_query(slave_conn, change_cmd.c_str()) == 0)
-            {
-                query = "START SLAVE;";
-                if (mxs_mysql_query(slave_conn, query) == 0)
-                {
-                    success = true;
-                    MXS_NOTICE("Slave '%s' redirected to new master.", name());
-                }
-            }
-        }
-    }
-
-    if (!success)
-    {
-        MXS_WARNING("Slave '%s' redirection failed: '%s'. Query: '%s'.",
-                    name(), mysql_error(slave_conn), query);
-    }
-    return success;
-}
-
 bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
 {
     MYSQL* conn = m_server_base->con;
