@@ -336,8 +336,7 @@ private:
                            const MariaDBServer* demotion_target,
                            ServerArray* redirected_to_promo,
                            ServerArray* redirected_to_demo);
-    bool        start_external_replication(MariaDBServer* new_master, json_t** err_out);
-    std::string generate_change_master_cmd(const std::string& master_host, int master_port);
+
     void        wait_cluster_stabilization(GeneralOpData& op, const ServerArray& slaves,
                                            const MariaDBServer* new_master);
 

@@ -347,11 +347,12 @@ public:
      * Enable any "SLAVESIDE_DISABLED" or "DISABLED events. Event scheduler is not touched. Only events
      * with names matching an element in the event_names set are enabled.
      *
+     * @param binlog_mode If OFF, binlog event creation is disabled for the session during method execution.
      * @param event_names Names of events that should be enabled
      * @param error_out Error output
      * @return True if all SLAVESIDE_DISABLED events were enabled
      */
-    bool enable_events(const EventNameSet& event_names, json_t** error_out);
+    bool enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, json_t** error_out);
 
     /**
      * Disable any "ENABLED" events. Event scheduler is not touched.

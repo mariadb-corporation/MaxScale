@@ -1229,7 +1229,7 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
     return NULL;
 }
 
-bool MariaDBServer::enable_events(const EventNameSet& event_names, json_t** error_out)
+bool MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, json_t** error_out)
 {
     int found_disabled_events = 0;
     int events_enabled = 0;
@@ -1248,6 +1248,17 @@ bool MariaDBServer::enable_events(const EventNameSet& event_names, json_t** erro
             }
         };
 
+    string error_msg;
+    if (binlog_mode == BinlogMode::BINLOG_OFF)
+    {
+        if (!execute_cmd("SET @@session.sql_log_bin=0;", &error_msg))
+        {
+            const char FMT[] = "Could not disable session binlog on '%s': %s Server events not enabled.";
+            PRINT_MXS_JSON_ERROR(error_out, FMT, name(), error_msg.c_str());
+            return false;
+        }
+    }
+
     bool rval = false;
     if (events_foreach(enabler, error_out))
     {
@@ -1259,6 +1270,12 @@ bool MariaDBServer::enable_events(const EventNameSet& event_names, json_t** erro
         {
             rval = true;
         }
+    }
+    if (binlog_mode == BinlogMode::BINLOG_OFF)
+    {
+        // Failure in re-enabling the session binlog doesn't really matter because we don't want the monitor
+        // generating binlog events anyway.
+        execute_cmd("SET @@session.sql_log_bin=1;");
     }
     return rval;
 }
@@ -1459,36 +1476,40 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
 bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, OperationType type,
                             const MariaDBServer* demotion_target)
 {
-    mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::FAILOVER);
+    mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::FAILOVER
+               || type == OperationType::UNDO_DEMOTION);
     json_t** const error_out = general.error_out;
-    // Function should only be called for a master-slave pair.
-    auto master_conn = slave_connection_status(demotion_target);
-    mxb_assert(master_conn);
-    if (master_conn == NULL)
+
+    StopWatch timer;
+    bool stopped = false;
+    if (type == OperationType::SWITCHOVER || type == OperationType::FAILOVER)
     {
-        PRINT_MXS_JSON_ERROR(error_out,
-                             "'%s' is not a slave of '%s' and cannot be promoted to its place.",
-                             name(), demotion_target->name());
-        return false;
+        // In normal circumstances, this should only be called for a master-slave pair.
+        auto master_conn = slave_connection_status(demotion_target);
+        mxb_assert(master_conn);
+        if (master_conn == NULL)
+        {
+            PRINT_MXS_JSON_ERROR(error_out,
+                                 "'%s' is not a slave of '%s' and cannot be promoted to its place.",
+                                 name(), demotion_target->name());
+            return false;
+        }
+
+        // Step 1: Stop & reset slave connections. If doing a failover, only remove the connection to demotion
+        // target. In case of switchover, remove other slave connections as well since the demotion target
+        // will take them over.
+        if (type == OperationType::SWITCHOVER)
+        {
+            stopped = remove_slave_conns(general, m_slave_status);
+        }
+        else if (type == OperationType::FAILOVER)
+        {
+            stopped = remove_slave_conns(general, {*master_conn});
+        }
     }
 
     bool success = false;
-    StopWatch timer;
-    // Step 1: Stop & reset slave connections. If doing a failover, only remove the connection to demotion
-    // target. In case of switchover, remove other slave connections as well since the demotion target
-    // will take them over.
-    bool stopped = false;
-    if (type == OperationType::SWITCHOVER)
-    {
-        stopped = remove_slave_conns(general, m_slave_status);
-    }
-    else if (type == OperationType::FAILOVER)
-    {
-        stopped = remove_slave_conns(general, {*master_conn});
-        master_conn = NULL;     // The connection pointed to may no longer exist.
-    }
-
-    if (stopped)
+    if (stopped || type == OperationType::UNDO_DEMOTION)
     {
         // Step 2: If demotion target is master, meaning this server will become the master,
         // enable writing and scheduled events. Also, run promotion_sql_file.
@@ -1507,7 +1528,8 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 if (m_settings.handle_event_scheduler)
                 {
                     // TODO: Add query replying to enable_events
-                    bool events_enabled = enable_events(promotion.events_to_enable, error_out);
+                    bool events_enabled = enable_events(BinlogMode::BINLOG_OFF, promotion.events_to_enable,
+                                                        error_out);
                     general.time_remaining -= timer.restart();
                     if (!events_enabled)
                     {
@@ -1559,6 +1581,18 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 {
                     PRINT_MXS_JSON_ERROR(error_out, "Could not merge slave connections from '%s' to '%s'.",
                                          demotion_target->name(), name());
+                }
+            }
+            else if (type == OperationType::UNDO_DEMOTION)
+            {
+                if (copy_slave_conns(general, promotion.conns_to_copy, nullptr))
+                {
+                    success = true;
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(error_out, "Could not restore slave connections of '%s' when "
+                                                    "reversing demotion.", name());
                 }
             }
         }
@@ -2001,12 +2035,25 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
         {
             // Any slave connection that was going to this server itself are instead directed
             // to the replacement server.
+            bool ok_to_copy = true;
             if (slave_conn.master_server_id == m_server_id)
             {
-                slave_conn.master_host = replacement->m_server_base->server->address;
-                slave_conn.master_port = replacement->m_server_base->server->port;
+                if (replacement)
+                {
+                    slave_conn.master_host = replacement->m_server_base->server->address;
+                    slave_conn.master_port = replacement->m_server_base->server->port;
+                }
+                else
+                {
+                    // This is only possible if replication is configured wrong and we are
+                    // undoing a switchover demotion.
+                    MXB_WARNING("Server id:s of '%s' and [%s]:%i are identical, not copying the connection "
+                                "to '%s'.",
+                                name(), slave_conn.master_host.c_str(), slave_conn.master_port, name());
+                }
             }
-            if (!create_start_slave(op, slave_conn))
+
+            if (ok_to_copy && !create_start_slave(op, slave_conn))
             {
                 start_slave_error = true;
             }

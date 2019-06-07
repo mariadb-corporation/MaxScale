@@ -222,7 +222,8 @@ using EventNameSet = std::unordered_set<std::string>;
 enum class OperationType
 {
     SWITCHOVER,
-    FAILOVER
+    FAILOVER,
+    UNDO_DEMOTION // Performed when switchover fails in its first stages.
 };
 
 class GeneralOpData

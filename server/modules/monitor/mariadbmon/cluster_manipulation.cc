@@ -330,7 +330,8 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
                 {
                     if (old_master)
                     {
-                        if (!new_master->enable_events(old_master->m_enabled_events, error_out))
+                        if (!new_master->enable_events(MariaDBServer::BinlogMode::BINLOG_ON,
+                                                       old_master->m_enabled_events, error_out))
                         {
                             error = true;
                             PRINT_MXS_JSON_ERROR(error_out, "Could not enable events on '%s': %s",
@@ -409,36 +410,6 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         rval = !error;
     }
     return rval;
-}
-
-/**
- * Generate a CHANGE MASTER TO-query. TODO: Use the version in MariaDBServer instead.
- *
- * @param master_host Master hostname/address
- * @param master_port Master port
- * @return Generated query
- */
-string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int master_port)
-{
-    std::stringstream change_cmd;
-    change_cmd << "CHANGE MASTER TO MASTER_HOST = '" << master_host << "', ";
-    change_cmd << "MASTER_PORT = " << master_port << ", ";
-    change_cmd << "MASTER_USE_GTID = current_pos, ";
-    if (m_settings.shared.replication_ssl)
-    {
-        change_cmd << "MASTER_SSL = 1, ";
-    }
-    change_cmd << "MASTER_USER = '" << m_settings.shared.replication_user << "', ";
-    const char MASTER_PW[] = "MASTER_PASSWORD = '";
-    const char END[] = "';";
-#if defined (SS_DEBUG)
-    std::stringstream change_cmd_nopw;
-    change_cmd_nopw << change_cmd.str();
-    change_cmd_nopw << MASTER_PW << "******" << END;
-    MXS_DEBUG("Change master command is '%s'.", change_cmd_nopw.str().c_str());
-#endif
-    change_cmd << MASTER_PW << m_settings.shared.replication_password << END;
-    return change_cmd.str();
 }
 
 /**
@@ -568,34 +539,6 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                     "out of %i.", fails, conflicts, successes, total);
     }
     return successes;
-}
-/**
- * Set the new master to replicate from the cluster external master.
- *
- * @param new_master The server being promoted
- * @param err_out Error output
- * @return True if new master accepted commands
- */
-bool MariaDBMonitor::start_external_replication(MariaDBServer* new_master, json_t** err_out)
-{
-    bool rval = false;
-    MYSQL* new_master_conn = new_master->m_server_base->con;
-    string change_cmd = generate_change_master_cmd(m_external_master_host, m_external_master_port);
-    if (mxs_mysql_query(new_master_conn, change_cmd.c_str()) == 0
-        && mxs_mysql_query(new_master_conn, "START SLAVE;") == 0)
-    {
-        MXS_NOTICE("New master starting replication from external master %s:%d.",
-                   m_external_master_host.c_str(),
-                   m_external_master_port);
-        rval = true;
-    }
-    else
-    {
-        PRINT_MXS_JSON_ERROR(err_out,
-                             "Could not start replication from external master: '%s'.",
-                             mysql_error(new_master_conn));
-    }
-    return rval;
 }
 
 /**
@@ -885,25 +828,20 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
 
         if (!catchup_and_promote_success)
         {
-            // Step 2 or 3 failed, try to undo step 2.
-            const char QUERY_UNDO[] = "SET GLOBAL read_only=0;";
-            if (mxs_mysql_query(demotion_target->m_server_base->con, QUERY_UNDO) == 0)
+            // Step 2 or 3 failed, try to undo step 1 by promoting the demotion target back to master.
+            // Reset the time limit since the last part may have used it all.
+            MXS_NOTICE("Attempting to undo changes to '%s'.", demotion_target->name());
+            const mxb::Duration demotion_undo_time_limit((double)m_settings.switchover_timeout);
+            GeneralOpData general_undo(op.general.error_out, demotion_undo_time_limit);
+            if (demotion_target->promote(general_undo, op.promotion, OperationType::UNDO_DEMOTION, nullptr))
             {
-                PRINT_MXS_JSON_ERROR(error_out, "read_only disabled on server '%s'.",
-                                     demotion_target->name());
+                MXS_NOTICE("'%s' restored to original status.", demotion_target->name());
             }
             else
             {
                 PRINT_MXS_JSON_ERROR(error_out,
-                                     "Could not disable read_only on server '%s': '%s'.",
-                                     demotion_target->name(),
-                                     mysql_error(demotion_target->m_server_base->con));
-            }
-
-            // Try to reactivate external replication if any.
-            if (m_external_master_port != PORT_UNKNOWN)
-            {
-                start_external_replication(promotion_target, error_out);
+                                     "Restoring of '%s' failed, cluster may be in an invalid state.",
+                                     demotion_target->name());
             }
         }
     }
