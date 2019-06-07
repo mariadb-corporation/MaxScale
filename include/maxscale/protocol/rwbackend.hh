@@ -218,7 +218,6 @@ public:
     }
 
     void process_packets(GWBUF* buffer);
-    void process_reply_start(mxs::Buffer::iterator it);
 
     // Controlled by the session
     ResponseStat& response_stat();
@@ -244,6 +243,10 @@ private:
     bool             m_large_query = false;
     bool             m_skip_next = false;
     Error            m_error;
+
+    void process_reply_start(mxs::Buffer::iterator it, uint32_t len);
+
+    void update_error(mxs::Buffer::iterator it, uint32_t len);
 
     inline bool is_opening_cursor() const
     {
