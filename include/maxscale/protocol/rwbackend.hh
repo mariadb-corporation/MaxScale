@@ -244,9 +244,19 @@ private:
     bool             m_skip_next = false;
     Error            m_error;
 
-    void process_reply_start(mxs::Buffer::iterator it, uint32_t len);
+    /**
+     * @param it   Iterator pointing to the command byte of an error packet.
+     * @param end  Iterator pointing one past the end of the error packet.
+     */
+    void process_reply_start(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
 
-    void update_error(mxs::Buffer::iterator it, uint32_t len);
+    /**
+     * Update @c m_error.
+     *
+     * @param it   Iterator that points to the first byte of the error code in an error packet.
+     * @param end  Iterator pointing one past the end of the error packet.
+     */
+    void update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
 
     inline bool is_opening_cursor() const
     {

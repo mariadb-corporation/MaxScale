@@ -241,7 +241,7 @@ bool is_last_eof(Iter it)
     return (status & SERVER_MORE_RESULTS_EXIST) == 0;
 }
 
-void RWBackend::process_reply_start(Iter it, uint32_t len)
+void RWBackend::process_reply_start(Iter it, mxs::Buffer::iterator end)
 {
     uint8_t cmd = *it;
     m_local_infile_requested = false;
@@ -264,7 +264,7 @@ void RWBackend::process_reply_start(Iter it, uint32_t len)
     case MYSQL_REPLY_ERR:
         // Nothing ever follows an error packet
         ++it;
-        update_error(it, len);
+        update_error(it, end);
         set_reply_state(REPLY_STATE_DONE);
         break;
 
@@ -321,7 +321,7 @@ void RWBackend::process_packets(GWBUF* result)
         switch (m_reply_state)
         {
         case REPLY_STATE_START:
-            process_reply_start(it, len);
+            process_reply_start(it, end);
             break;
 
         case REPLY_STATE_DONE:
@@ -361,7 +361,7 @@ void RWBackend::process_packets(GWBUF* result)
             else if (cmd == MYSQL_REPLY_ERR)
             {
                 ++it;
-                update_error(it, len);
+                update_error(it, end);
                 set_reply_state(REPLY_STATE_DONE);
             }
             break;
@@ -454,7 +454,7 @@ mxs::SRWBackends RWBackend::from_servers(SERVER_REF* servers)
     return backends;
 }
 
-void RWBackend::update_error(mxs::Buffer::iterator it, uint32_t len)
+void RWBackend::update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end)
 {
     uint16_t code = 0;
     code |= (*it++);
@@ -463,9 +463,8 @@ void RWBackend::update_error(mxs::Buffer::iterator it, uint32_t len)
     auto sql_state_begin = it;
     it.advance(5);
     auto sql_state_end = it;
-    auto message_begin = it;
-    it.advance(len - (1 + 2 + 1 + 5));
-    auto message_end = it;
+    auto message_begin = sql_state_end;
+    auto message_end = end;
 
     m_error.set(code, sql_state_begin, sql_state_end, message_begin, message_end);
 }
