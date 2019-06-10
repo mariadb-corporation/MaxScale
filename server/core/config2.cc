@@ -246,7 +246,7 @@ bool Specification::configure(Configuration& configuration, const MXS_CONFIG_PAR
 
     if (configured)
     {
-        configured = configuration.configure();
+        configured = configuration.post_configure(params);
     }
 
     return configured;
@@ -433,7 +433,7 @@ void Configuration::remove(Type* pValue)
     m_values.erase(it);
 }
 
-bool Configuration::configure()
+bool Configuration::post_configure(const MXS_CONFIG_PARAMETER& params)
 {
     return true;
 }

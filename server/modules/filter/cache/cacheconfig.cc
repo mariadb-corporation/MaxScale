@@ -176,7 +176,7 @@ CacheConfig::~CacheConfig()
     MXS_FREE(this->zStorage_options);
 }
 
-bool CacheConfig::configure()
+bool CacheConfig::post_configure(const MXS_CONFIG_PARAMETER&)
 {
     bool configured = true;
 
