@@ -19,6 +19,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/router.hh>
 
 class SmartRouterSession;
@@ -28,6 +29,30 @@ class SmartRouterSession;
 class SmartRouter : public mxs::Router<SmartRouter, SmartRouterSession>
 {
 public:
+    class Config : public config::Configuration
+    {
+    public:
+        Config();
+
+        Config(const Config&) = delete;
+        Config& operator=(const Config&) = delete;
+
+        static void populate(MXS_MODULE& module);
+
+        bool configure(const MXS_CONFIG_PARAMETER& params);
+
+        SERVER* master() const
+        {
+            return m_master.get();
+        }
+
+    private:
+        bool post_configure(const MXS_CONFIG_PARAMETER& params) override;
+
+    private:
+        config::Server  m_master;
+    };
+
     static SmartRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* pParams);
 
     SmartRouterSession* newSession(MXS_SESSION* pSession);
@@ -38,6 +63,14 @@ public:
     bool     configure(MXS_CONFIG_PARAMETER* pParams);
 
     SERVICE* service() const;
+
+    const Config& config() const
+    {
+        return m_config;
+    }
+
 private:
     SmartRouter(SERVICE* service);
+
+    Config m_config;
 };

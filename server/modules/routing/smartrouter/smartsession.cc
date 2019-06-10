@@ -121,6 +121,9 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
 {
     Clusters clusters;
 
+    SERVER* pMaster = pRouter->config().master();
+    // TODO: Use pMaster below.
+
     bool is_master = true;  // TODO this will be read from config
     int master_pos = 0;     //      and this will be initialized to the position of the master
 

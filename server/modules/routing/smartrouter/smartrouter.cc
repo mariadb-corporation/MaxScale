@@ -16,6 +16,23 @@
 
 #include <maxscale/modutil.hh>
 
+namespace
+{
+
+namespace smartquery
+{
+
+config::Specification specification(MXS_MODULE_NAME, config::Specification::ROUTER);
+
+config::ParamServer
+master(&specification,
+       "master",
+       "The server/cluster to be treated as master, that is, the one where updates are sent.");
+
+}
+
+}
+
 /**
  * The module entry point.
  *
@@ -43,13 +60,68 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
+    SmartRouter::Config::populate(info);
+
     return &info;
+}
+
+SmartRouter::Config::Config()
+    : config::Configuration(&smartquery::specification)
+    , m_master(this, &smartquery::master)
+{
+}
+
+void SmartRouter::Config::populate(MXS_MODULE& module)
+{
+    smartquery::specification.populate(module);
+}
+
+bool SmartRouter::Config::configure(const MXS_CONFIG_PARAMETER& params)
+{
+    return smartquery::specification.configure(*this, params);
+}
+
+bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
+{
+    bool rv = true;
+
+    auto servers = params.get_server_list(CN_SERVERS);
+    // TODO: Check that the servers are local ones.
+
+    auto it = std::find(servers.begin(), servers.end(), m_master.get());
+
+    if (it == servers.end())
+    {
+        rv = false;
+
+        std::string s;
+
+        for (auto server : servers)
+        {
+            if (!s.empty())
+            {
+                s+= ", ";
+            }
+
+            s += server->name();
+        }
+
+        MXS_ERROR("The master server %s, is not one of the servers (%s) of the service.",
+                  m_master.get()->name(), s.c_str());
+    }
+
+    return rv;
 }
 
 bool SmartRouter::configure(MXS_CONFIG_PARAMETER* pParams)
 {
-    // TODO ensure Servers are internal ones. Later TODO call routers directly.
-    return true;
+    if (!smartquery::specification.validate(*pParams))
+    {
+        return false;
+    }
+
+    // Since post_configure() has been overriden, this may fail.
+    return m_config.configure(*pParams);
 }
 
 SERVICE* SmartRouter::service() const
