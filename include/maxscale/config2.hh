@@ -42,7 +42,8 @@ public:
     enum Kind
     {
         FILTER,
-        MONITOR
+        MONITOR,
+        ROUTER
     };
 
     using ParamsByName = std::map<std::string, Param*>;

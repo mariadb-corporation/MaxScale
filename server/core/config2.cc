@@ -49,6 +49,28 @@ const char* pzCore_monitor_params[] = {
     nullptr,
 };
 
+const char* pzCore_router_params[] =
+{
+    CN_AUTH_ALL_SERVERS,
+    CN_CONNECTION_TIMEOUT,
+    CN_ENABLE_ROOT_USER,
+    CN_LOCALHOST_MATCH_WILDCARD_HOST,
+    CN_LOG_AUTH_WARNINGS,
+    CN_MAX_CONNECTIONS,
+    CN_MAX_RETRY_INTERVAL,
+    CN_NET_WRITE_TIMEOUT,
+    CN_PASSWORD,
+    CN_RETAIN_LAST_STATEMENTS,
+    CN_RETRY_ON_FAILURE,
+    CN_ROUTER,
+    CN_SERVERS,
+    CN_SESSION_TRACK_TRX_STATE,
+    CN_STRIP_DB_ESC,
+    CN_TYPE,
+    CN_USER,
+    nullptr
+};
+
 bool is_core_param(Specification::Kind kind, const std::string& param)
 {
     bool rv = false;
@@ -63,6 +85,10 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 
     case Specification::MONITOR:
         pzCore_params = pzCore_monitor_params;
+        break;
+
+    case Specification::ROUTER:
+        pzCore_params = pzCore_router_params;
         break;
 
     default:
