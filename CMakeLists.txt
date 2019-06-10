@@ -235,6 +235,7 @@ install_file(${CMAKE_SOURCE_DIR}/LICENSE-THIRDPARTY.TXT core)
 install_file(etc/lsyncd_example.conf core)
 install_manual(Documentation/maxscale.1 1 core)
 install_file(${CMAKE_SOURCE_DIR}/server/maxscale_binlogserver_template.cnf core)
+install_file(${CMAKE_SOURCE_DIR}/etc/logrotate.d/maxscale_logrotate core)
 
 # For devel package, these files are put to the base folder
 install_header(${CMAKE_SOURCE_DIR}/COPYRIGHT devel)

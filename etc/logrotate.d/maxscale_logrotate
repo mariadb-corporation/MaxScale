@@ -1,0 +1,11 @@
+/var/log/maxscale/maxscale.log {
+monthly
+rotate 5
+missingok
+nocompress
+sharedscripts
+postrotate
+kill -USR1 `cat /var/run/maxscale/maxscale.pid`
+endscript
+}
+
