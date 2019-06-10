@@ -176,14 +176,15 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
 
     if (authenticator.empty())
     {
-        authenticator = get_default_authenticator(protocol.c_str());
-        if (authenticator.empty())
+        const char* zAuthenticator = get_default_authenticator(protocol.c_str());
+        if (!zAuthenticator)
         {
             MXS_ERROR("No authenticator defined for server '%s' and no default "
                       "authenticator for protocol '%s'.",
                       name, protocol.c_str());
             return NULL;
         }
+        authenticator = zAuthenticator;
     }
 
     void* auth_instance = NULL;
