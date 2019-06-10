@@ -5001,9 +5001,24 @@ void dump_param_list(int file,
                      const MXS_MODULE_PARAM* common_params,
                      const MXS_MODULE_PARAM* module_params)
 {
+    // Generate a set which contains deprecated parameter names. These parameters are not printed.
+    set<string> deprecated_names;
+    for (auto param_def_list : {common_params, module_params})
+    {
+        const MXS_MODULE_PARAM* param_def = param_def_list;
+        for (int i = 0; param_def[i].name; i++)
+        {
+            if (param_def[i].options & MXS_MODULE_OPT_DEPRECATED)
+            {
+                deprecated_names.insert(param_def[i].name);
+            }
+        }
+    }
+
     for (auto p = list; p; p = p->next)
     {
-        if (ignored.count(p->name) == 0 && *p->value)
+        string param_name = p->name;
+        if (ignored.count(param_name) == 0 && deprecated_names.count(param_name) == 0 && *p->value)
         {
             if (dprintf(file, "%s=%s\n", p->name, p->value) == -1)
             {
