@@ -330,6 +330,9 @@ add_test_executable(verify_master_failure.cpp verify_master_failure verify_maste
 # MXS-2456: Cap transaction replay attempts
 add_test_executable(mxs2456_trx_replay_cap.cpp mxs2456_trx_replay_cap mxs2456_trx_replay_cap LABELS REPL_BACKEND)
 
+# MXS-2512: Enable transaction replay for additional rollback errors.
+add_test_executable(mxs2512_trx_replay_rollback.cpp mxs2512_trx_replay_rollback mxs2512_trx_replay_rollback LABELS readwritesplit REPL_BACKEND)
+
 ############################################
 # END: Tests that require GTID             #
 ############################################
