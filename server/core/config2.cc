@@ -673,6 +673,62 @@ void ParamPath::populate(MXS_MODULE_PARAM& param) const
 }
 
 /**
+ * ParamServer
+ */
+std::string ParamServer::type() const
+{
+    return "server";
+}
+
+std::string ParamServer::default_to_string() const
+{
+    return "";
+}
+
+bool ParamServer::validate(const std::string& value_as_string, std::string* pMessage) const
+{
+    value_type value;
+    return from_string(value_as_string, &value, pMessage);
+}
+
+bool ParamServer::set(Type& value, const std::string& value_as_string) const
+{
+    mxb_assert(&value.parameter() == this);
+
+    Server& server_value = static_cast<Server&>(value);
+
+    value_type x;
+    bool valid = from_string(value_as_string, &x);
+
+    if (valid)
+    {
+        server_value.set(x);
+    }
+
+    return valid;
+}
+
+bool ParamServer::from_string(const std::string& value_as_string,
+                              value_type* pValue,
+                              std::string* pMessage) const
+{
+    *pValue = SERVER::find_by_unique_name(value_as_string);
+
+    if (!*pValue && pMessage)
+    {
+        *pMessage = "Unknown server: ";
+        *pMessage += value_as_string;
+    }
+
+    return *pValue;
+}
+
+std::string ParamServer::to_string(value_type value) const
+{
+    return value->name();
+}
+
+/**
  * ParamSize
  */
 std::string ParamSize::type() const

@@ -666,6 +666,34 @@ private:
 };
 
 /**
+ * ParamServer
+ */
+class ParamServer : public Param
+{
+public:
+    using value_type = SERVER*;
+
+    ParamServer(Specification* pSpecification,
+                const char* zName,
+                const char* zDescription)
+        : Param(pSpecification, zName, zDescription, Param::MANDATORY, MXS_MODULE_PARAM_SERVER)
+    {
+    }
+
+    std::string type() const override;
+
+    std::string default_to_string() const override;
+
+    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
+
+    bool set(Type& value, const std::string& value_as_string) const override;
+
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
+    std::string to_string(value_type value) const;
+};
+
+/**
  * ParamSize
  */
 class ParamSize : public Param
@@ -1248,6 +1276,18 @@ inline Size::value_type operator/(const Size& lhs, Size::value_type rhs)
 {
     return lhs.get() / rhs;
 }
+
+/**
+ * Server
+ */
+class Server : public ConcreteType<Server, ParamServer>
+{
+public:
+    Server(Configuration* pConfiguration, const ParamServer* pParam)
+        : ConcreteType<Server, ParamServer>(pConfiguration, pParam)
+    {
+    }
+};
 
 /**
  * String

@@ -19,6 +19,8 @@
 #include <iostream>
 #include <maxbase/log.hh>
 #include <maxscale/config2.hh>
+#include "../internal/server.hh"
+#include "test_utils.hh"
 
 using namespace std;
 
@@ -45,11 +47,6 @@ config::ParamCount
     param_count(&specification,
                 "count_parameter",
                 "Specifies the cardinality of something.");
-
-config::ParamInteger
-    param_integer(&specification,
-                  "integer_parameter",
-                  "Specifies a number.");
 
 config::ParamDuration<std::chrono::seconds>
 param_duration_1(&specification,
@@ -78,11 +75,21 @@ param_enum(&specification,
     {ENUM_TWO, "two"}
 });
 
+config::ParamInteger
+    param_integer(&specification,
+                  "integer_parameter",
+                  "Specifies a number.");
+
 config::ParamPath
     param_path(&specification,
                "path_parameter",
                "Specifies the path of something.",
                config::ParamPath::F);
+
+config::ParamServer
+param_server(&specification,
+             "server_parameter",
+             "Specifies a server.");
 
 config::ParamSize
     param_size(&specification,
@@ -236,6 +243,24 @@ int test_enum(config::Enum<Enum>& value)
     return test(value, entries, elements_in_array(entries));
 }
 
+int test_integer(config::Integer& value)
+{
+    static const TestEntry<config::Integer::value_type> entries[] =
+    {
+        {"0",           true, 0          },
+        {"-1",          true, -1         },
+        {"1",           true, 1          },
+        {"-2147483648", true, -2147483648},
+        {"2147483647",  true, 2147483647 },
+
+        {"-2147483649", false},
+        {"2147483648",  false},
+        {"0x10",        false},
+    };
+
+    return test(value, entries, elements_in_array(entries));
+}
+
 int test_path(config::Path& value)
 {
     static char path[PATH_MAX];
@@ -247,6 +272,25 @@ int test_path(config::Path& value)
         {"/tmp",         true, "/tmp" },
 
         {"non-existent", false}
+    };
+
+    return test(value, entries, elements_in_array(entries));
+}
+
+int test_server(config::Server& value)
+{
+    MXS_CONFIG_PARAMETER params1;
+    params1.set(CN_PROTOCOL, "mariadbbackend");
+    params1.set(CN_PERSISTMAXTIME, "0");
+    params1.set(CN_RANK, "primary");
+
+    std::unique_ptr<Server> sServer1(Server::server_alloc("TheServer1", params1));
+    mxb_assert(sServer1.get());
+
+    const TestEntry<config::Server::value_type> entries[] =
+    {
+        { "TheServer1", true, sServer1.get() },
+        { "TheServer0", false },
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -282,27 +326,9 @@ int test_string(config::String& value)
     return test(value, entries, elements_in_array(entries));
 }
 
-int test_integer(config::Integer& value)
-{
-    static const TestEntry<config::Integer::value_type> entries[] =
-    {
-        {"0",           true, 0          },
-        {"-1",          true, -1         },
-        {"1",           true, 1          },
-        {"-2147483648", true, -2147483648},
-        {"2147483647",  true, 2147483647 },
-
-        {"-2147483649", false},
-        {"2147483648",  false},
-        {"0x10",        false},
-    };
-
-    return test(value, entries, elements_in_array(entries));
-}
-
 int main()
 {
-    mxb::Log log;
+    init_test_env();
 
     for_each(specification.cbegin(), specification.cend(), [](const config::Specification::value_type& p) {
                  cout << p.second->documentation() << endl;
@@ -331,17 +357,20 @@ int main()
     config::Enum<Enum> value_enum(&configuration, &param_enum);
     nErrors += test_enum(value_enum);
 
+    config::Integer value_integer(&configuration, &param_integer);
+    nErrors += test_integer(value_integer);
+
     config::Path value_path(&configuration, &param_path);
     nErrors += test_path(value_path);
+
+    config::Server value_server(&configuration, &param_server);
+    nErrors += test_server(value_server);
 
     config::Size value_size(&configuration, &param_size);
     nErrors += test_size(value_size);
 
     config::String value_string(&configuration, &param_string);
     nErrors += test_string(value_string);
-
-    config::Integer value_integer(&configuration, &param_integer);
-    nErrors += test_integer(value_integer);
 
     return nErrors ? EXIT_FAILURE : EXIT_SUCCESS;
 }
