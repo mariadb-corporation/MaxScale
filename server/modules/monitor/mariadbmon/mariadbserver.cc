@@ -1231,76 +1231,49 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
 
 bool MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, json_t** error_out)
 {
-    int found_disabled_events = 0;
-    int events_enabled = 0;
-
-    // Helper function which enables a disabled event if that event name is found in the events-set.
-    ManipulatorFunc enabler = [this, event_names, &found_disabled_events, &events_enabled](
-        const EventInfo& event, json_t** error_out) {
-            if (event_names.count(event.name) > 0
-                && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
-            {
-                found_disabled_events++;
-                if (alter_event(event, "ENABLE", error_out))
-                {
-                    events_enabled++;
-                }
-            }
-        };
-
-    string error_msg;
-    if (binlog_mode == BinlogMode::BINLOG_OFF)
-    {
-        if (!execute_cmd("SET @@session.sql_log_bin=0;", &error_msg))
+    EventStatusMapper mapper = [&event_names](const EventInfo& event) {
+        string rval;
+        if (event_names.count(event.name) > 0
+            && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
         {
-            const char FMT[] = "Could not disable session binlog on '%s': %s Server events not enabled.";
-            PRINT_MXS_JSON_ERROR(error_out, FMT, name(), error_msg.c_str());
-            return false;
+            rval = "ENABLE";
         }
-    }
+        return rval;
+    };
+    return alter_events(binlog_mode, mapper, error_out);
 
-    bool rval = false;
-    if (events_foreach(enabler, error_out))
-    {
-        if (found_disabled_events > 0)
-        {
-            warn_event_scheduler();
-        }
-        if (found_disabled_events == events_enabled)
-        {
-            rval = true;
-        }
-    }
-    if (binlog_mode == BinlogMode::BINLOG_OFF)
-    {
-        // Failure in re-enabling the session binlog doesn't really matter because we don't want the monitor
-        // generating binlog events anyway.
-        execute_cmd("SET @@session.sql_log_bin=1;");
-    }
-    return rval;
 }
 
 bool MariaDBServer::disable_events(BinlogMode binlog_mode, json_t** error_out)
 {
-    int found_enabled_events = 0;
-    int events_disabled = 0;
-    // Helper function which disables an enabled event.
-    ManipulatorFunc disabler = [this, &found_enabled_events, &events_disabled](const EventInfo& event,
-                                                                               json_t** error_out) {
-            if (event.status == "ENABLED")
-            {
-                found_enabled_events++;
-                if (alter_event(event, "DISABLE ON SLAVE", error_out))
-                {
-                    events_disabled++;
-                }
-            }
-        };
+    EventStatusMapper mapper = [](const EventInfo& event) {
+        string rval;
+        if (event.status == "ENABLED")
+        {
+            rval = "DISABLE ON SLAVE";
+        }
+        return rval;
+    };
+    return alter_events(binlog_mode, mapper, error_out);
+}
 
+/**
+ * Alter scheduled server events.
+ *
+ * @param binlog_mode Should binary logging be disabled while performing this task.
+ * @param mapper A function which takes an event and returns the requested event state. If empty is returned,
+ * event is not altered.
+ * @param error_out Error output
+ * @return True if all requested alterations succeeded.
+ */
+bool
+MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, json_t** error_out)
+{
     // If the server is rejoining the cluster, no events may be added to binlog. The ALTER EVENT query
     // itself adds events. To prevent this, disable the binlog for this method.
     string error_msg;
-    if (binlog_mode == BinlogMode::BINLOG_OFF)
+    const bool disable_binlog = (binlog_mode == BinlogMode::BINLOG_OFF);
+    if (disable_binlog)
     {
         if (!execute_cmd("SET @@session.sql_log_bin=0;", &error_msg))
         {
@@ -1310,28 +1283,44 @@ bool MariaDBServer::disable_events(BinlogMode binlog_mode, json_t** error_out)
         }
     }
 
+    int target_events = 0;
+    int events_altered = 0;
+    // Helper function which alters an event depending on the mapper-function.
+    EventManipulator alterer = [this, &target_events, &events_altered, &mapper](const EventInfo& event,
+                                                                               json_t** error_out) {
+        string target_state = mapper(event);
+        if (!target_state.empty())
+        {
+            target_events++;
+            if (alter_event(event, target_state, error_out))
+            {
+                events_altered++;
+            }
+        }
+    };
+
     bool rval = false;
-    if (events_foreach(disabler, error_out))
+    // TODO: For better error handling, this function should try to re-enable any disabled events if a later
+    // disable fails.
+    if (events_foreach(alterer, error_out))
     {
-        if (found_enabled_events > 0)
+        if (target_events > 0)
         {
             warn_event_scheduler();
         }
-        if (found_enabled_events == events_disabled)
+        if (target_events == events_altered)
         {
             rval = true;
         }
     }
 
-    if (binlog_mode == BinlogMode::BINLOG_OFF)
+    if (disable_binlog)
     {
         // Failure in re-enabling the session binlog doesn't really matter because we don't want the monitor
         // generating binlog events anyway.
         execute_cmd("SET @@session.sql_log_bin=1;");
     }
     return rval;
-    // TODO: For better error handling, this function should try to re-enable any disabled events if a later
-    // disable fails.
 }
 
 /**
@@ -1365,7 +1354,7 @@ void MariaDBServer::warn_event_scheduler()
  * @return True if event information could be read from information_schema.EVENTS. The return value does not
  * depend on the manipulator function.
  */
-bool MariaDBServer::events_foreach(ManipulatorFunc& func, json_t** error_out)
+bool MariaDBServer::events_foreach(EventManipulator& func, json_t** error_out)
 {
     string error_msg;
     // Get info about all scheduled events on the server.

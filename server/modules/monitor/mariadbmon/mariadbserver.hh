@@ -543,7 +543,8 @@ public:
     void set_status(uint64_t bits);
 
 private:
-    typedef std::function<void (const EventInfo&, json_t** error_out)> ManipulatorFunc;
+    using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
+    using EventStatusMapper = std::function<std::string (const EventInfo& event)>;
 
     enum class StopMode
     {
@@ -572,11 +573,6 @@ private:
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
 
-    void warn_event_scheduler();
-    bool events_foreach(ManipulatorFunc& func, json_t** error_out);
-    bool alter_event(const EventInfo& event, const std::string& target_status,
-                     json_t** error_out);
-
     bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
                          json_t** error_out);
 
@@ -592,4 +588,9 @@ private:
     std::string generate_change_master_cmd(GeneralOpData& op, const SlaveStatus& slave_conn);
 
     bool update_enabled_events();
+
+    bool alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, json_t** error_out);
+    void warn_event_scheduler();
+    bool events_foreach(EventManipulator& func, json_t** error_out);
+    bool alter_event(const EventInfo& event, const std::string& target_status, json_t** error_out);
 };
