@@ -241,7 +241,7 @@ bool is_last_eof(Iter it)
     return (status & SERVER_MORE_RESULTS_EXIST) == 0;
 }
 
-void RWBackend::process_reply_start(Iter it, mxs::Buffer::iterator end)
+void RWBackend::process_reply_start(Iter it, Iter end)
 {
     uint8_t cmd = *it;
     m_local_infile_requested = false;
@@ -454,7 +454,7 @@ mxs::SRWBackends RWBackend::from_servers(SERVER_REF* servers)
     return backends;
 }
 
-void RWBackend::update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end)
+void RWBackend::update_error(Iter it, Iter end)
 {
     uint16_t code = 0;
     code |= (*it++);
