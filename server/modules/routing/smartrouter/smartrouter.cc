@@ -86,11 +86,29 @@ bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
     bool rv = true;
 
     auto servers = params.get_server_list(CN_SERVERS);
-    // TODO: Check that the servers are local ones.
 
-    auto it = std::find(servers.begin(), servers.end(), m_master.get());
+    bool master_found = false;
 
-    if (it == servers.end())
+    for (SERVER* pServer : servers)
+    {
+        if (pServer == m_master.get())
+        {
+            master_found = true;
+        }
+
+        if (pServer->address[0] != '/')
+        {
+            if (strcmp(pServer->address, "127.0.0.1") == 0 || strcmp(pServer->address, "localhost"))
+            {
+                MXS_WARNING("The server %s, used by the smartrouter, is currently accessed "
+                            "using a TCP/IP socket (%s:%d). For better performance, a Unix "
+                            "domain socket should be used. See the 'socket' argument.",
+                            pServer->name(), pServer->address, pServer->port);
+            }
+        }
+    }
+
+    if (rv && !master_found)
     {
         rv = false;
 
