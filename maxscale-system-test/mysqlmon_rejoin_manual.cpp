@@ -60,14 +60,14 @@ int main(int argc, char** argv)
         print_gtids(test);
         cout << "Bringing old master back online..." << endl;
         test.repl->start_node(master_index, (char*) "");
-        test.maxscales->wait_for_monitor();
-        test.repl->connect();
+        test.maxscales->wait_for_monitor(2);
         get_output(test);
         test.tprintf("and manually rejoining it to cluster.");
         const char REJOIN_CMD[] = "maxadmin call command mariadbmon rejoin MySQL-Monitor server1";
         test.maxscales->ssh_node_output(0, REJOIN_CMD, true, &ec);
-        test.maxscales->wait_for_monitor();
+        test.maxscales->wait_for_monitor(2);
         get_output(test);
+        test.repl->connect();
 
         string gtid_old_master;
         test.repl->connect();
@@ -88,10 +88,9 @@ int main(int argc, char** argv)
                     "Old master did not successfully rejoin the cluster (%s != %s).",
                     gtid_final.c_str(), gtid_old_master.c_str());
         // Switch master back to server1 so last check is faster
-        int ec;
-        test.maxscales->ssh_node_output(0, "maxadmin call command mysqlmon switchover "
-                                        "MySQL-Monitor server1 server2", true, &ec);
-        test.maxscales->wait_for_monitor();
+        test.maxscales->ssh_node_output(0,
+                "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server2", true, &ec);
+        test.maxscales->wait_for_monitor(2);
         get_output(test);
         master_id = get_master_server_id(test);
         test.expect(master_id == old_master_id, "Switchover back to server1 failed.");
@@ -115,16 +114,17 @@ int main(int argc, char** argv)
             test.expect(row.empty() || row[0].empty(),
                         "server3 gtid is not empty as it should (%s).", row[0].c_str());
             cout << "Rejoining server3.\n";
-            test.maxscales->ssh_node_output(0, "maxadmin call command mysqlmon rejoin "
-                                            "MySQL-Monitor server3", true, &ec);
-            test.maxscales->wait_for_monitor();
+            test.maxscales->ssh_node_output(0,
+                    "maxadmin call command mysqlmon rejoin MySQL-Monitor server3", true, &ec);
+            test.maxscales->wait_for_monitor(2);
             get_output(test);
+            test.repl->connect();
             char result[100];
             test.repl->connect();
             if (find_field(conn, sstatus_query.c_str(), "Master_Host", result) == 0)
             {
                 test.expect(strcmp(result, test.repl->IP[0]) == 0,
-                            "server3 did not rejoin the cluster (%s != %s).", result, test.repl->IP[0]);
+                        "server3 did not rejoin the cluster (%s != %s).", result, test.repl->IP[0]);
             }
             else
             {
