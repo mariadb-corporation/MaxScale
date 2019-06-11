@@ -998,7 +998,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                       /* Thread finish. */
         {
             {
-                "detect_replication_lag",            MXS_MODULE_PARAM_BOOL,      "false"
+                "detect_replication_lag",            MXS_MODULE_PARAM_BOOL,      "false",
+                MXS_MODULE_OPT_DEPRECATED
             },
             {
                 "detect_stale_master",               MXS_MODULE_PARAM_BOOL,      "true"
@@ -1007,22 +1008,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 "detect_stale_slave",                MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                "mysql51_replication",               MXS_MODULE_PARAM_BOOL,      "false",
-                MXS_MODULE_OPT_DEPRECATED
-            },
-            {
-                "multimaster",                       MXS_MODULE_PARAM_BOOL,      "false",
-                MXS_MODULE_OPT_DEPRECATED
-            },
-            {
                 CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
                 CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,     "5"
-            },
-            {
-                "allow_cluster_recovery",            MXS_MODULE_PARAM_BOOL,      "true",
-                MXS_MODULE_OPT_DEPRECATED
             },
             {
                 "ignore_external_masters",           MXS_MODULE_PARAM_BOOL,      "false"
