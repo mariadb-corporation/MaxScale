@@ -49,7 +49,7 @@ public:
 
 
 private:
-    CacheFilter();
+    CacheFilter(const std::string& name);
 
     CacheFilter(const CacheFilter&);
     CacheFilter& operator=(const CacheFilter&);

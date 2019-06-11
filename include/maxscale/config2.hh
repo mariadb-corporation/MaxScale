@@ -815,9 +815,15 @@ public:
     /**
      * Constructor
      *
+     * @param name            The object (i.e. section name) of this configuration.
      * @param pSpecification  The specification this instance is a configuration of.
      */
-    Configuration(const Specification* pSpecification);
+    Configuration(const std::string& name, const Specification* pSpecification);
+
+    /**
+     * @return The The object (i.e. section name) of this configuration.
+     */
+    const std::string& name() const;
 
     /**
      * @return The specification of this configuration.
@@ -880,6 +886,7 @@ private:
     void remove(Type* pValue);
 
 private:
+    std::string          m_name;
     const Specification& m_specification;
     ValuesByName         m_values;
 };

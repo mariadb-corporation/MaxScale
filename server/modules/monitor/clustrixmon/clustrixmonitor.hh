@@ -31,7 +31,7 @@ public:
     class Config
     {
     public:
-        Config();
+        Config(const std::string& name);
 
         static void populate(MXS_MODULE& module);
 

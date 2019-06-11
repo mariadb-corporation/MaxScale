@@ -385,9 +385,15 @@ void Param::populate(MXS_MODULE_PARAM& param) const
 /**
  * class Configuration
  */
-Configuration::Configuration(const config::Specification* pSpecification)
-    : m_specification(*pSpecification)
+Configuration::Configuration(const std::string& name, const config::Specification* pSpecification)
+    : m_name(name)
+    , m_specification(*pSpecification)
 {
+}
+
+const std::string& Configuration::name() const
+{
+    return m_name;
 }
 
 const config::Specification& Configuration::specification() const

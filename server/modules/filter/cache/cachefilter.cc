@@ -144,7 +144,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // CacheFilter
 //
 
-CacheFilter::CacheFilter()
+CacheFilter::CacheFilter(const std::string& name)
+    : m_config(name)
 {
 }
 
@@ -155,7 +156,7 @@ CacheFilter::~CacheFilter()
 // static
 CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
 {
-    CacheFilter* pFilter = new CacheFilter;
+    CacheFilter* pFilter = new CacheFilter(zName);
 
     if (pFilter)
     {

@@ -338,7 +338,7 @@ int main()
 
     specification.document(cout);
 
-    config::Configuration configuration(&specification);
+    config::Configuration configuration("test", &specification);
 
     int nErrors = 0;
 

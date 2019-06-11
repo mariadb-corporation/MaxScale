@@ -32,7 +32,7 @@ public:
     class Config : public config::Configuration
     {
     public:
-        Config();
+        Config(const std::string& name);
 
         Config(const Config&) = delete;
         Config& operator=(const Config&) = delete;

@@ -190,8 +190,8 @@ sqlite3* open_or_create_db(const std::string& path)
 }
 }
 
-ClustrixMonitor::Config::Config()
-    : m_configuration(&clustrixmon::specification)
+ClustrixMonitor::Config::Config(const std::string& name)
+    : m_configuration(name, &clustrixmon::specification)
     , m_cluster_monitor_interval(&m_configuration, &clustrixmon::cluster_monitor_interval)
     , m_health_check_threshold(&m_configuration, &clustrixmon::health_check_threshold)
     , m_dynamic_node_detection(&m_configuration, &clustrixmon::dynamic_node_detection)
@@ -212,6 +212,7 @@ bool ClustrixMonitor::Config::configure(const MXS_CONFIG_PARAMETER& params)
 
 ClustrixMonitor::ClustrixMonitor(const string& name, const string& module, sqlite3* pDb)
     : MonitorWorker(name, module)
+    , m_config(name)
     , m_pDb(pDb)
 {
 }

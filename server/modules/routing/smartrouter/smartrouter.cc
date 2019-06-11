@@ -65,8 +65,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-SmartRouter::Config::Config()
-    : config::Configuration(&smartquery::specification)
+SmartRouter::Config::Config(const std::string& name)
+    : config::Configuration(name, &smartquery::specification)
     , m_master(this, &smartquery::master)
 {
 }
@@ -100,10 +100,10 @@ bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
         {
             if (strcmp(pServer->address, "127.0.0.1") == 0 || strcmp(pServer->address, "localhost"))
             {
-                MXS_WARNING("The server %s, used by the smartrouter, is currently accessed "
+                MXS_WARNING("The server %s, used by the smartrouter %s, is currently accessed "
                             "using a TCP/IP socket (%s:%d). For better performance, a Unix "
                             "domain socket should be used. See the 'socket' argument.",
-                            pServer->name(), pServer->address, pServer->port);
+                            pServer->name(), name().c_str(), pServer->address, pServer->port);
             }
         }
     }
@@ -124,8 +124,9 @@ bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
             s += server->name();
         }
 
-        MXS_ERROR("The master server %s, is not one of the servers (%s) of the service.",
-                  m_master.get()->name(), s.c_str());
+        MXS_ERROR("The master server %s of the smartrouter %s, is not one of the "
+                  "servers (%s) of the service.",
+                  m_master.get()->name(), name().c_str(), s.c_str());
     }
 
     return rv;
@@ -149,6 +150,7 @@ SERVICE* SmartRouter::service() const
 
 SmartRouter::SmartRouter(SERVICE* service)
     : mxs::Router<SmartRouter, SmartRouterSession>(service)
+    , m_config(service->name())
 {
 }
 

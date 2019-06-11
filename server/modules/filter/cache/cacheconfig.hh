@@ -38,7 +38,7 @@ const cache_thread_model CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
 class CacheConfig : public config::Configuration
 {
 public:
-    CacheConfig();
+    CacheConfig(const std::string& name);
     ~CacheConfig();
 
     CacheConfig(const CacheConfig&) = delete;

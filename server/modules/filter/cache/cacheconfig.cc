@@ -146,8 +146,8 @@ config::ParamBool CacheConfig::s_enabled(
     true
     );
 
-CacheConfig::CacheConfig()
-    : config::Configuration(&s_specification)
+CacheConfig::CacheConfig(const std::string& name)
+    : config::Configuration(name, &s_specification)
     , storage(this, &s_storage)
     , storage_options(this, &s_storage_options)
     , hard_ttl(this, &s_hard_ttl)
