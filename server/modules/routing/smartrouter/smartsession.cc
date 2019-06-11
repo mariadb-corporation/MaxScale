@@ -12,33 +12,15 @@
  */
 #include "smartsession.hh"
 #include "smartrouter.hh"
+#include "performance.hh"
 
 #include <maxscale/modutil.hh>
 #include <maxsql/mysql_plus.hh>
-
-// TO_REVIEW:
-// This is the base for Smart Router. It will currently route any normal query to all
-// configured routers and only use the first response to forward back to the client.
-// However, it should be reviewed as if it could actually be put in front of
-// several current routers (several readwritesplits and readconnroutes) and
-// succeed for anything but local infile.
-
-// TO_REVIEW. There is no need to go through the functionality with a very, very fine-comb at this point,
-//            maria-test will be used to do that. The idea is really to look for the totality of the
-//            router and how it will interact with the rest of the system.
-
-// TO_REVIEW routeQuery() and clientReply() are the obvious functions to check for correctness.
-
-// TO_REVIEW my use of mxs::QueryClassifier might be overly simple. The use should
-//           be as simple as possible, but no simpler.
-
 
 // TODO, missing error handling. I did not add overly many asserts, which make reading code harder.
 //       But please note any that may be missing.
 
 // TODO, for m_qc.target_is_all(), check that responses from all routers match.
-
-// TODO Smart Query is not here yet, this is just a stupid router-router.
 
 // COPY-PASTED error-extraction functions from rwsplit. TODO move to lib.
 inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint16_t* pnState)
@@ -194,10 +176,13 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     else
     {
         auto route_info = m_qc.update_route_info(mxs::QueryClassifier::CURRENT_TARGET_UNDEFINED, pBuf);
+
+        m_measurement = {maxbase::Clock::now(), maxscale::get_canonical(pBuf)};
+
         if (m_qc.target_is_all(route_info.target()))
         {
             MXS_SDEBUG("Write all");
-            ret = write_to_all(pBuf);
+            ret = write_to_all(pBuf, Mode::Query);
         }
         else if (m_qc.target_is_master(route_info.target()) || session_trx_is_active(m_pClient_dcb->session))
         {
@@ -206,9 +191,25 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
         }
         else
         {
-            // TODO: This is where canonical performance data will be used, and measurements initiated
-            //       Currently writing to all for clientReply testing purposes.
-            ret = write_to_all(pBuf);
+            std::string canonical = maxscale::get_canonical(pBuf);
+            auto perf = perf_find(canonical);
+
+            if (perf.is_valid())
+            {
+                MXS_SDEBUG("Route to " << perf.host() << " based on performance, canonical = "
+                                       << show_some(canonical));
+                ret = write_to_host(perf.host(), pBuf);
+            }
+            else if (modutil_is_SQL(pBuf))
+            {
+                MXS_SDEBUG("Start measurement");
+                ret = write_to_all(pBuf, Mode::MeasureQuery);
+            }
+            else
+            {
+                MXS_SWARNING("Could not determine target (non-sql query), goes to master");
+                ret = write_to_master(pBuf);
+            }
         }
     }
 
@@ -233,7 +234,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     cluster.tracker.update_response(pPacket);
 
     // these flags can all be true at the same time
-    bool first_response_packet = m_mode != Mode::CollectResults;
+    bool first_response_packet = (m_mode == Mode::Query || m_mode == Mode::MeasureQuery);
     bool last_packet_for_this_cluster = !cluster.tracker.expecting_response_packets();
     bool very_last_response_packet = !expecting_response_packets();     // last from all clusters
 
@@ -278,10 +279,19 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 
     if (first_response_packet)
     {
-        MXS_SDEBUG("Host " << cluster.host << " will be responding to the client");
+        maxbase::Duration query_dur = maxbase::Clock::now() - m_measurement.start;
+        MXS_SDEBUG("Host " << cluster.host << " will be responding to the client. "
+                           << "First packet received in time " << query_dur);
         cluster.is_replying_to_client = true;
-        m_mode = Mode::CollectResults;
         will_reply = true;      // tentatively, the packet might have to be delayed
+
+        if (m_mode == Mode::MeasureQuery)
+        {
+            perf_update(m_measurement.canonical, {cluster.host, query_dur});
+            // kill_all_others(cluster.host);
+        }
+
+        m_mode = Mode::CollectResults;
     }
 
     if (very_last_response_packet)
@@ -291,7 +301,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
         mxb_assert(cluster.is_replying_to_client || m_pDelayed_packet);
         if (m_pDelayed_packet)
         {
-            MXS_SDEBUG("Picking up delayed packet, discarding response from" << cluster.host);
+            MXS_SDEBUG("Picking up delayed packet, discarding response from " << cluster.host);
             gwbuf_free(pPacket);
             pPacket = m_pDelayed_packet;
             m_pDelayed_packet = nullptr;
@@ -384,7 +394,7 @@ bool SmartRouterSession::write_to_host(const maxbase::Host& host, GWBUF* pBuf)
     return cluster.pDcb->func.write(cluster.pDcb, pBuf);
 }
 
-bool SmartRouterSession::write_to_all(GWBUF* pBuf)
+bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
 {
     for (auto it = begin(m_clusters); it != end(m_clusters); ++it)
     {
@@ -397,7 +407,7 @@ bool SmartRouterSession::write_to_all(GWBUF* pBuf)
 
     if (expecting_response_packets())
     {
-        m_mode = Mode::Query;
+        m_mode = mode;
     }
 
     return true;    // TODO. What could possibly go wrong?
@@ -424,6 +434,24 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
 
     return true;    // TODO. What could possibly go wrong?
 }
+
+void SmartRouterSession::kill_all_others(const maxbase::Host& host)
+{
+    MySQLProtocol* pProt = static_cast<MySQLProtocol*>(m_pClient_dcb->protocol);
+    uint64_t mysql_thread_id = pProt->thread_id;
+
+    for (Cluster& cluster : m_clusters)
+    {
+        if (cluster.host == host || !cluster.tracker.expecting_response_packets())
+        {
+            continue;
+        }
+
+        MXS_SDEBUG("Queue " << cluster.host << " mysql_thread_id=" << mysql_thread_id << " for kill");
+        mxs_mysql_execute_kill(cluster.pDcb->session, mysql_thread_id, KT_QUERY);
+    }
+}
+
 
 void SmartRouterSession::handleError(GWBUF* pPacket,
                                      DCB* pProblem,

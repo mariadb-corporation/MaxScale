@@ -1,6 +1,7 @@
 add_library(smartrouter SHARED
 smartrouter.cc
 smartsession.cc
+performance.cc
 )
 
 target_link_libraries(smartrouter maxscale-common mysqlcommon)

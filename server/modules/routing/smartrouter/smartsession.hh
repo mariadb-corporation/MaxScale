@@ -50,7 +50,7 @@ public:
                      bool* pSuccess);
 
 private:
-    enum class Mode {Idle, Query, CollectResults};      // MeasureQuery
+    enum class Mode {Idle, Query, MeasureQuery, CollectResults};
 
     /** struct Cluster represents a cluster of mariadb servers as a Maxscale internal Server.
      *  TODO In the next iteration a directly callable "Thing" should be implemented (Router, Backend
@@ -90,8 +90,10 @@ private:
     // The write functions initialize Cluster flags and Cluster::ProtocolTracker.
     bool write_to_host(const maxbase::Host& host, GWBUF* pBuf);
     bool write_to_master(GWBUF* pBuf);
-    bool write_to_all(GWBUF* pBuf);
+    bool write_to_all(GWBUF* pBuf, Mode mode);
     bool write_split_packets(GWBUF* pBuf);
+
+    void kill_all_others(const maxbase::Host& host);
 
     bool expecting_request_packets() const;
     bool expecting_response_packets() const;
@@ -108,4 +110,10 @@ private:
     DCB*                 m_pClient_dcb;
     Clusters             m_clusters;
     mxs::QueryClassifier m_qc;
+    struct Measurement
+    {
+        maxbase::TimePoint start;
+        std::string        canonical;
+    };
+    Measurement m_measurement;
 };
