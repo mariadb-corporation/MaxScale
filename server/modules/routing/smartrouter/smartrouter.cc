@@ -19,7 +19,7 @@
 namespace
 {
 
-namespace smartquery
+namespace smartrouter
 {
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::ROUTER);
@@ -28,6 +28,13 @@ config::ParamServer
 master(&specification,
        "master",
        "The server/cluster to be treated as master, that is, the one where updates are sent.");
+
+config::ParamBool
+persist_performance_data(&specification,
+                         "persist_performance_data",
+                         "Persist performance data so that the smartrouter can use information "
+                         "collected during earlier runs.",
+                         true); // Default value
 
 }
 
@@ -66,19 +73,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 }
 
 SmartRouter::Config::Config(const std::string& name)
-    : config::Configuration(name, &smartquery::specification)
-    , m_master(this, &smartquery::master)
+    : config::Configuration(name, &smartrouter::specification)
+    , m_master(this, &smartrouter::master)
+    , m_persist_performance_data(this, &smartrouter::persist_performance_data)
 {
 }
 
 void SmartRouter::Config::populate(MXS_MODULE& module)
 {
-    smartquery::specification.populate(module);
+    smartrouter::specification.populate(module);
 }
 
 bool SmartRouter::Config::configure(const MXS_CONFIG_PARAMETER& params)
 {
-    return smartquery::specification.configure(*this, params);
+    return smartrouter::specification.configure(*this, params);
 }
 
 bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
@@ -134,7 +142,7 @@ bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
 
 bool SmartRouter::configure(MXS_CONFIG_PARAMETER* pParams)
 {
-    if (!smartquery::specification.validate(*pParams))
+    if (!smartrouter::specification.validate(*pParams))
     {
         return false;
     }

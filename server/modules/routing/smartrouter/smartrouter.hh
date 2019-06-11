@@ -46,11 +46,17 @@ public:
             return m_master.get();
         }
 
+        bool persist_performance_data() const
+        {
+            return static_cast<bool>(m_persist_performance_data);
+        }
+
     private:
         bool post_configure(const MXS_CONFIG_PARAMETER& params) override;
 
     private:
-        config::Server  m_master;
+        config::Server m_master;
+        config::Bool   m_persist_performance_data;
     };
 
     static SmartRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* pParams);
