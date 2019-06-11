@@ -122,10 +122,9 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
     Clusters clusters;
 
     SERVER* pMaster = pRouter->config().master();
-    // TODO: Use pMaster below.
 
-    bool is_master = true;  // TODO this will be read from config
-    int master_pos = 0;     //      and this will be initialized to the position of the master
+    int master_pos = -1;
+    int i = 0;
 
     for (SERVER_REF* ref = pRouter->service()->dbref; ref; ref = ref->next)
     {
@@ -139,17 +138,35 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
         DCB* dcb = dcb_connect(ref->server, pSession, ref->server->protocol().c_str());
         if (dcb)
         {
+            bool is_master = (ref->server == pMaster);
+
             clusters.push_back({ref, dcb, is_master});
-            is_master = false;      // TODO, will come from config, there must be exactly one!
+
+            if (is_master)
+            {
+                master_pos = i;
+            }
+
+            ++i;
         }
     }
 
-    if (master_pos)
-    {   // put the master first. There must be exactly one master cluster.
-        std::swap(clusters[0], clusters[master_pos]);
-    }
+    SmartRouterSession* pSess = nullptr;
 
-    SmartRouterSession* pSess = new SmartRouterSession(pRouter, pSession, std::move(clusters));
+    if (master_pos != -1)
+    {
+        if (master_pos > 0)
+        {   // put the master first. There must be exactly one master cluster.
+            std::swap(clusters[0], clusters[master_pos]);
+        }
+
+        pSess = new SmartRouterSession(pRouter, pSession, std::move(clusters));
+    }
+    else
+    {
+        MXS_ERROR("No master found for %s, smartrouter session cannot be created.",
+                  pRouter->config().name().c_str());
+    }
 
     return pSess;
 }
