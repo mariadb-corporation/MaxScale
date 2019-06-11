@@ -1075,7 +1075,7 @@ add_test_executable(mxs2057_systemd_watchdog.cpp mxs2057_systemd_watchdog mxs205
 #add_test_executable_notest(long_test.cpp long_test_big replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Tries INSERTs with size close to 0x0ffffff * N
-add_test_derived(different_size_rwsplit_big different_size_rwsplit replication LABELS readwritesplit UNSTABLE HEAVY REPL_BACKEND BIG_REPL_BACKEND UNSTABLE)
+add_test_derived(different_size_rwsplit_big different_size_rwsplit replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY )
 
 # Check how Maxscale works in case of one slave failure, only one slave is configured
 add_test_derived(slave_failover_big slave_failover replication.one_slave LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
@@ -1106,11 +1106,11 @@ add_test_derived(rwsplit_connect_big rwsplit_connect replication LABELS readwrit
 
 # Regression cases for the bug "Hint filter don't work if listed before regex filter in configuration file"
 # (different filter sequence and configuration, but the same test, see .cnf for details)
-add_test_derived(bug585_big bug587 bug585 LABELS regexfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE)
-add_test_derived(bug587_big bug587 bug587 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE)
-add_test_derived(bug587_1_big bug587 bug587_1 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE)
+add_test_derived(bug585_big bug587 bug585 LABELS regexfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
+add_test_derived(bug587_big bug587 bug587 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
+add_test_derived(bug587_1_big bug587 bug587_1 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
 # Regression case for the bug "Routing Hints route to server sometimes doesn't work"
-add_test_derived(bug471_big bug471 bug471_big LABELS readwritesplit hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE)
+add_test_derived(bug471_big bug471 bug471_big LABELS readwritesplit hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
 
 set_tests_properties(different_size_rwsplit_big PROPERTIES TIMEOUT 3600)
 set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
