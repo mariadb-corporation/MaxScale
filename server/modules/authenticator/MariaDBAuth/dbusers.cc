@@ -33,6 +33,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
+#include <maxscale/routingworker.hh>
 
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
@@ -1087,12 +1088,18 @@ static bool have_mdev13453_problem(MYSQL* con, SERVER* server)
     return rval;
 }
 
-bool query_and_process_users(const char* query,
-                             MYSQL* con,
-                             sqlite3* handle,
-                             SERVICE* service,
-                             int* users,
-                             server_category_t category)
+// Contains loaded user definitions, only used temporarily
+struct User
+{
+    std::string user;
+    std::string host;
+    std::string db;
+    bool        anydb;
+    std::string pw;
+};
+
+bool query_and_process_users(const char* query, MYSQL* con, SERVICE* service, int* users,
+                             std::vector<User>* userlist, server_category_t category)
 {
     // Clustrix does not have a mysql database. If non-clustrix we set the
     // default database in case CTEs are used.
@@ -1118,8 +1125,9 @@ bool query_and_process_users(const char* query,
                     merge_netmask(row[1]);
                 }
 
-                add_mysql_user(handle, row[0], row[1], row[2],
-                               row[3] && strcmp(row[3], "Y") == 0, row[4]);
+                userlist->push_back({row[0], row[1], row[2] ? row[2] : "",
+                                     row[3] && strcmp(row[3], "Y") == 0,
+                                     row[4] ? row[4] : ""});
                 (*users)++;
             }
 
@@ -1158,10 +1166,11 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
     char* query = get_users_query(server_version, service->enable_root, category);
 
     MYSQL_AUTH* instance = (MYSQL_AUTH*)listener->auth_instance();
-    sqlite3* handle = get_handle(instance);
     int users = 0;
+    std::vector<User> userlist;
+    std::vector<std::string> dblist;
 
-    bool rv = query_and_process_users(query, con, handle, service, &users, category);
+    bool rv = query_and_process_users(query, con, service, &users, &userlist, category);
 
     if (!rv && have_mdev13453_problem(con, server))
     {
@@ -1171,7 +1180,7 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
          */
         MXS_FREE(query);
         query = get_users_query(server_version, service->enable_root, SERVER_ROLES);
-        rv = query_and_process_users(query, con, handle, service, &users, SERVER_ROLES);
+        rv = query_and_process_users(query, con, service, &users, &userlist, SERVER_ROLES);
     }
 
     if (!rv)
@@ -1190,7 +1199,7 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(result)))
             {
-                add_database(handle, row[0]);
+                dblist.push_back(row[0]);
             }
 
             mysql_free_result(result);
@@ -1198,7 +1207,28 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
     }
     else
     {
+        rv = false;
         MXS_ERROR("Failed to load list of databases: %s", mysql_error(con));
+    }
+
+    if (rv)
+    {
+        auto func = [instance, userlist, dblist]() {
+                sqlite3* handle = get_handle(instance);
+
+                for (const auto& user : userlist)
+                {
+                    add_mysql_user(handle, user.user.c_str(), user.host.c_str(),
+                                   user.db.c_str(), user.anydb, user.pw.c_str());
+                }
+
+                for (const auto& db : dblist)
+                {
+                    add_database(handle, db.c_str());
+                }
+            };
+
+        mxs::RoutingWorker::broadcast(func, mxs::RoutingWorker::EXECUTE_AUTO);
     }
 
     return users;
