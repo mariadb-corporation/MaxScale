@@ -120,8 +120,7 @@ int check_file(const char* filename)
     return rval;
 }
 
-static struct option long_options[] =
-{
+static struct option long_options[] = {
     {"verbose", no_argument, 0, 'v'},
     {"dump",    no_argument, 0, 'd'},
     {"from",    no_argument, 0, 'f'},
@@ -170,10 +169,14 @@ int main(int argc, char** argv)
     }
 
     int rval = 0;
-    char pathbuf[PATH_MAX + 1];
+
     for (int i = optind; i < argc; i++)
     {
-        if (check_file(realpath(argv[i], pathbuf)))
+        char pathbuf[PATH_MAX + 1];
+        snprintf(pathbuf, sizeof(pathbuf), "%s", argv[i]);
+        realpath(argv[i], pathbuf);
+
+        if (check_file(pathbuf))
         {
             fprintf(stderr, "Failed to process file: %s\n", argv[i]);
             rval = 1;
