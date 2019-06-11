@@ -53,6 +53,7 @@ static int test1()
     MXS_CONFIG_PARAMETER parameters;
     parameters.set("max_retry_interval", "10s");
     parameters.set("connection_timeout", "10s");
+    parameters.set("net_write_timeout", "10s");
     auto service = service_alloc("service", "readconnroute", &parameters);
 
     MXS_CONFIG_PARAMETER listener_params;

@@ -115,6 +115,7 @@ int main(int argc, char** argv)
     config_add_defaults(&ctx, get_module("binlogrouter", MODULE_ROUTER)->parameters);
     ctx.m_parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     ctx.m_parameters.set(CN_CONNECTION_TIMEOUT, "10s");
+    ctx.m_parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
 
     const char* options = "server_id=3,heartbeat=200,binlogdir=/tmp/my_dir,"
                           "transaction_safety=1,master_version=5.6.99-common,"

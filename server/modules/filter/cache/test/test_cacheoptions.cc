@@ -293,6 +293,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     MXS_CONFIG_PARAMETER parameters;
     parameters.set("max_retry_interval", "10s");
     parameters.set("connection_timeout", "10s");
+    parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
 
     auto service = service_alloc("service", "readconnroute", &parameters);
 
