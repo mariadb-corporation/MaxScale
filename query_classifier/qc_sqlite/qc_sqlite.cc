@@ -878,9 +878,18 @@ public:
                         }
                     }
                 }
-                else if (zToken[0] != '?')
+                else
                 {
-                    MXS_WARNING("%s reported as VARIABLE.", zToken);
+                    // '?' is always accepted as a positional parameter.
+                    if (zToken[0] != '?')
+                    {
+                        // If the mode is Oracle then :N is accepted as well.
+                        if (zToken[0] != ':' || this_thread.sql_mode != QC_SQL_MODE_ORACLE)
+                        {
+                            // Everything else is unexpected, but harmless.
+                            MXS_WARNING("%s reported as VARIABLE.", zToken);
+                        }
+                    }
                 }
             }
             break;
