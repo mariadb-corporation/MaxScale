@@ -5252,12 +5252,16 @@ std::string generate_config_string(const std::string& instance_name, const MXS_C
         for (int i = 0; param_set[i].name; i++)
         {
             auto param_info = param_set + i;
-            string param_name = param_info->name;
-            if (parameters.contains(param_name))
+            // Do not print deprecated parameters.
+            if ((param_info->options & MXS_MODULE_OPT_DEPRECATED) == 0)
             {
-                // Parameter value in the container can be an empty string and still be printed.
-                string param_value = parameters.get_string(param_name);
-                output += param_name + "=" + param_value + "\n";
+                string param_name = param_info->name;
+                if (parameters.contains(param_name))
+                {
+                    // Parameter value in the container can be an empty string and still be printed.
+                    string param_value = parameters.get_string(param_name);
+                    output += param_name + "=" + param_value + "\n";
+                }
             }
         }
     }
