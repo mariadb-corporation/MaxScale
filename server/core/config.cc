@@ -1966,7 +1966,8 @@ const
     string value = get_string(key);
     milliseconds duration {0};
     MXB_AT_DEBUG(bool rval = ) get_suffixed_duration(value.c_str(), interpretation, &duration);
-    mxb_assert(rval);   // When this function is called, the validity of the value should have been checked.
+    // When this function is called, the validity of the value should have been checked.
+    mxb_assert_message(rval, "Invalid value for '%s': %s", key.c_str(), value.c_str());
     return duration;
 }
 

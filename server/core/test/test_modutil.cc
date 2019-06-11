@@ -285,19 +285,20 @@ void test_multiple_sql_packets1()
     mxb_assert_message(complete && head, "Both buffers should have data");
     mxb_assert_message(gwbuf_length(complete) + gwbuf_length(head) + gwbuf_length(quarter)
                        + gwbuf_length(half) == sizeof(resultset),
-                       "25% of data should be available");
+                       "a quarter of data should be available");
 
     quarter = gwbuf_append(gwbuf_append(complete, head), quarter);
     complete = modutil_get_complete_packets(&quarter);
     mxb_assert_message(gwbuf_length(complete) + gwbuf_length(quarter)
                        + gwbuf_length(half) == sizeof(resultset),
-                       "50% of data should be available");
+                       "half of data should be available");
 
     half = gwbuf_append(gwbuf_append(complete, quarter), half);
     complete = modutil_get_complete_packets(&half);
     mxb_assert_message(complete, "Complete should not be NULL");
     mxb_assert_message(half == NULL, "Old buffer should be NULL");
-    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset), "Complete should contain 100% of data");
+    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset),
+                       "Complete should contain all of the data");
 
     completelen = gwbuf_length(complete);
     mxb_assert_message(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
