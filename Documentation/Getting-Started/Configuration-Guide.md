@@ -1698,6 +1698,9 @@ logging warnings or take other actions (e.g. perform a switchover). This
 functionality will only work with MariaDB server versions 10.1.32, 10.2.14 and
 10.3.6 onwards, if the `DISKS` _information schema plugin_ has been installed.
 
+**NOTE**: In future MariaDB versions, the information will be available _only_ if
+the monitor user has the `FILE` privilege.
+
 A limit is specified as a path followed by a colon and a percentage specifying
 how full the corresponding disk may be, before action is taken. E.g. an entry like
 ```
