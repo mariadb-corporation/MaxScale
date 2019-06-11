@@ -173,8 +173,11 @@ int main(int argc, char** argv)
     for (int i = optind; i < argc; i++)
     {
         char pathbuf[PATH_MAX + 1];
-        snprintf(pathbuf, sizeof(pathbuf), "%s", argv[i]);
-        realpath(argv[i], pathbuf);
+
+        if (!realpath(argv[i], pathbuf))
+        {
+            snprintf(pathbuf, sizeof(pathbuf), "%s", argv[i]);
+        }
 
         if (check_file(pathbuf))
         {
