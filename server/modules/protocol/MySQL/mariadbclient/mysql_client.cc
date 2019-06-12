@@ -1987,13 +1987,8 @@ return_rc:
 static spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
 {
     spec_com_res_t rval = RES_CONTINUE;
-    bool is_complete = false;
-    unsigned int packet_len =
-        MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
-    if (gwbuf_length(read_buffer) == packet_len)
-    {
-        is_complete = true;
-    }
+    unsigned int packet_len = MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
+    bool is_complete = gwbuf_length(read_buffer) >= packet_len;
 
     /**
      * Handle COM_SET_OPTION. This seems to be only used by some versions of PHP.
