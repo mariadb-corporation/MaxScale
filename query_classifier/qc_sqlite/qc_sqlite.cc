@@ -1727,7 +1727,7 @@ public:
         const Token* pDatabase = pName2->z ? pName1 : NULL;
 
         char name[pName->n + 1];
-        strncpy(name, pName->z, pName->n);
+        memcpy(name, pName->z, pName->n);
         name[pName->n] = 0;
 
         QcAliases aliases;
@@ -1735,7 +1735,7 @@ public:
         if (pDatabase)
         {
             char database[pDatabase->n + 1];
-            strncpy(database, pDatabase->z, pDatabase->n);
+            memcpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
 
             update_names(database, name, NULL, &aliases);
@@ -1991,13 +1991,13 @@ public:
         const Token* pDatabase = pName2->z ? pName1 : NULL;
 
         char name[pName->n + 1];
-        strncpy(name, pName->z, pName->n);
+        memcpy(name, pName->z, pName->n);
         name[pName->n] = 0;
 
         if (pDatabase)
         {
             char database[pDatabase->n + 1];
-            strncpy(database, pDatabase->z, pDatabase->n);
+            memcpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
 
             update_names(database, name, NULL, NULL);
@@ -2194,14 +2194,14 @@ public:
 
         if (pDatabase)
         {
-            strncpy(database, pDatabase->z, pDatabase->n);
+            memcpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
 
             zDatabase = database;
         }
 
         char table[pTable->n + 1];
-        strncpy(table, pTable->z, pTable->n);
+        memcpy(table, pTable->z, pTable->n);
         table[pTable->n] = 0;
 
         update_names(zDatabase, table, NULL, NULL);
@@ -2302,14 +2302,14 @@ public:
 
                 if (pDatabase)
                 {
-                    strncpy(database, pDatabase->z, pDatabase->n);
+                    memcpy(database, pDatabase->z, pDatabase->n);
                     database[pDatabase->n] = 0;
 
                     zDatabase = database;
                 }
 
                 char table[pName->n + 1];
-                strncpy(table, pName->z, pName->n);
+                memcpy(table, pName->z, pName->n);
                 table[pName->n] = 0;
 
                 update_names(zDatabase, table, NULL, NULL);
@@ -2432,7 +2432,7 @@ public:
                 m_type_mask = QUERY_TYPE_WRITE;
 
                 char zName[pName->n + 1];
-                strncpy(zName, pName->z, pName->n);
+                memcpy(zName, pName->z, pName->n);
                 zName[pName->n] = 0;
 
                 update_names("*any*", zName, NULL, NULL);
@@ -3166,7 +3166,7 @@ public:
         char database[pDatabase ? pDatabase->n + 1 : 0];
         if (pDatabase)
         {
-            strncpy(database, pDatabase->z, pDatabase->n);
+            memcpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
             zDatabase = database;
         }
@@ -3176,7 +3176,7 @@ public:
         }
 
         char name[pName->n + 1];
-        strncpy(name, pName->z, pName->n);
+        memcpy(name, pName->z, pName->n);
         name[pName->n] = 0;
 
         update_names(zDatabase, name, NULL, NULL);
@@ -3375,7 +3375,7 @@ private:
 
         if (nDatabase)
         {
-            strncpy(fullname, zDatabase, nDatabase);
+            memcpy(fullname, zDatabase, nDatabase);
             fullname[nDatabase] = 0;
             strcat(fullname, ".");
         }
