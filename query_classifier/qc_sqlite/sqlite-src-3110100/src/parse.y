@@ -960,7 +960,18 @@ cmd ::= DROP VIEW ifexists(E) fullname(X). {
 
 //////////////////////// The SELECT statement /////////////////////////////////
 //
+%ifdef MAXSCALE
+%type pselect {Select*}
+%destructor pselect {sqlite3SelectDelete(pParse->db, $$);}
+
+pselect(A) ::= LP pselect(X) RP. { A = X; }
+pselect(A) ::= select(X). { A = X; }
+
+cmd ::= pselect(X). {
+%endif
+%ifndef MAXSCALE
 cmd ::= select(X).  {
+%endif
   SelectDest dest = {SRT_Output, 0, 0, 0, 0, 0};
 #ifdef MAXSCALE
   mxs_sqlite3Select(pParse, X, &dest);
