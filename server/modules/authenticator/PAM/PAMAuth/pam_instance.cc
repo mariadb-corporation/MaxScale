@@ -49,57 +49,30 @@ PamInstance* PamInstance::create(char** options)
 
     if (sqlite3_threadsafe() == 0)
     {
-        MXS_WARNING("SQLite3 was compiled with thread safety off. May cause "
-                    "corruption of in-memory database.");
+        MXB_WARNING("SQLite3 was compiled with thread safety off. May cause corruption of "
+                    "in-memory database.");
     }
 
-    bool error = false;
     /* This handle may be used from multiple threads, set full mutex. */
-    sqlite3* dbhandle = NULL;
     int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
                    SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
-    const char* filename = pam_db_fname.c_str();
-    if (sqlite3_open_v2(filename, &dbhandle, db_flags, NULL) != SQLITE_OK)
+    string sqlite_error;
+    PamInstance* instance = nullptr;
+    auto sqlite = SQLite::create(pam_db_fname, db_flags, &sqlite_error);
+    if (sqlite)
     {
-        // Even if the open failed, the handle may exist and an error message can be read.
-        if (dbhandle)
+        instance = new PamInstance(std::move(sqlite), pam_db_fname);
+        if (!instance->prepare_tables())
         {
-            MXS_ERROR(SQLITE_OPEN_FAIL, filename, sqlite3_errmsg(dbhandle));
+            delete instance;
+            instance = nullptr;
         }
-        else
-        {
-            // This means memory allocation failed.
-            MXS_ERROR(SQLITE_OPEN_OOM, filename);
-        }
-        error = true;
+    }
+    else
+    {
+        MXB_ERROR("Could not create PAM authenticator: %s", sqlite_error.c_str());
     }
 
-    char *err = NULL;
-    if (!error && sqlite3_exec(dbhandle, drop_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to drop table: '%s'", err);
-        sqlite3_free(err);
-        error = true;
-    }
-    if (!error && sqlite3_exec(dbhandle, create_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to create table: '%s'", err);
-        sqlite3_free(err);
-        error = true;
-    }
-
-    PamInstance *instance = NULL;
-    if (!error &&
-        ((instance = new (std::nothrow) PamInstance(dbhandle, pam_db_fname, pam_table_name)) == NULL))
-    {
-        error = true;
-    }
-
-    if (error)
-    {
-        // Close the handle even if never opened.
-        sqlite3_close_v2(dbhandle);
-    }
     return instance;
 }
 
@@ -110,11 +83,79 @@ PamInstance* PamInstance::create(char** options)
  * @param dbname Text-form name of @c dbhandle
  * @param tablename Name of table where authentication data is saved
  */
-PamInstance::PamInstance(sqlite3* dbhandle, const string& dbname, const string& tablename)
+PamInstance::PamInstance(SQLite::SSQLite dbhandle, const string& dbname)
     : m_dbname(dbname)
-    , m_tablename(tablename)
-    , m_dbhandle(dbhandle)
+    , m_tablename("pam_users")
+    , m_sqlite(std::move(dbhandle))
 {
+}
+
+bool PamInstance::prepare_tables()
+{
+    struct ColDef
+    {
+        enum class ColType {
+            BOOL,
+            TEXT,
+        };
+        string name;
+        ColType type;
+    };
+    using ColDefArray = std::vector<ColDef>;
+    using Type = ColDef::ColType;
+
+    /** Deletion statement for the in-memory table */
+    auto gen_drop_sql = [](const string& tblname) {
+        return "DROP TABLE IF EXISTS " + tblname + ";";
+    };
+
+    /** CREATE TABLE statement for the in-memory table */
+    auto gen_create_sql = [](const string& tblname, const ColDefArray& coldefs) {
+        string rval = "CREATE TABLE " + tblname + " (";
+        string sep;
+        for (const auto& coldef : coldefs)
+        {
+            string column_type;
+            switch (coldef.type)
+            {
+                case Type::BOOL:
+                    column_type = "BOOLEAN";
+                    break;
+                case Type::TEXT:
+                    column_type = "TINYTEXT";
+                    break;
+            }
+            rval += sep + coldef.name + " " + column_type;
+            sep = ",";
+        }
+        rval += "\n);";
+        return rval;
+    };
+
+    /** Table names and columns. The tables mostly match the ones in the server, but have only
+     *  a subset of columns. */
+
+    const string users = m_tablename;
+    const string drop_users_sql = gen_drop_sql(users);
+    // Sqlite3 doesn't require datatypes in the create-statement but it's good to have for clarity.
+    const ColDefArray users_coldef = {{FIELD_USER, Type::TEXT},
+                                      {FIELD_HOST, Type::TEXT},
+                                      {FIELD_DB, Type::TEXT},
+                                      {FIELD_ANYDB, Type::BOOL},
+                                      {FIELD_AUTHSTR, Type::TEXT},
+                                      {FIELD_PROXY, Type::BOOL}};
+    const string create_users_sql = gen_create_sql(users, users_coldef);
+
+    bool rval = false;
+    if (m_sqlite->exec(drop_users_sql) && m_sqlite->exec(create_users_sql))
+    {
+        rval = true;
+    }
+    else
+    {
+        MXB_ERROR("Failed to create sqlite3 table: %s", m_sqlite->error());
+    }
+    return rval;
 }
 
 /**
@@ -173,23 +214,21 @@ void PamInstance::add_pam_user(const char* user, const char* host, const char* d
             service_str.c_str(),
             proxy ? "1" : "0");
 
-    char* err;
-    if (sqlite3_exec(m_dbhandle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to insert user: %s", err);
-        sqlite3_free(err);
-    }
-    else
+    if (m_sqlite->exec(insert_sql))
     {
         if (proxy)
         {
-            MXS_INFO("Added anonymous PAM user ''@'%s' with proxy grants using service %s.",
+            MXB_INFO("Added anonymous PAM user ''@'%s' with proxy grants using service %s.",
                      host, service_str.c_str());
         }
         else
         {
-            MXS_INFO("Added normal PAM user '%s'@'%s' using service %s.", user, host, service_str.c_str());
+            MXB_INFO("Added normal PAM user '%s'@'%s' using service %s.", user, host, service_str.c_str());
         }
+    }
+    else
+    {
+        MXB_ERROR("Failed to insert user: %s", m_sqlite->error());
     }
 }
 
@@ -200,11 +239,9 @@ void PamInstance::delete_old_users()
 {
     /** Delete query used to clean up the database before loading new users */
     const string delete_query = "DELETE FROM " + m_tablename;
-    char* err;
-    if (sqlite3_exec(m_dbhandle, delete_query.c_str(), NULL, NULL, &err) != SQLITE_OK)
+    if (!m_sqlite->exec(delete_query))
     {
-        MXS_ERROR("Failed to delete old users: %s", err);
-        sqlite3_free(err);
+        MXB_ERROR("Failed to delete old users: %s", m_sqlite->error());
     }
 }
 
@@ -313,7 +350,7 @@ void PamInstance::diagnostic(DCB* dcb)
     json_decref(array);
 }
 
-static int diag_cb_json(void* data, int columns, char** row, char** field_names)
+static int diag_cb_json(json_t* data, int columns, char** row, char** field_names)
 {
     mxb_assert(columns == NUM_FIELDS);
     json_t* obj = json_object();
@@ -321,22 +358,18 @@ static int diag_cb_json(void* data, int columns, char** row, char** field_names)
     {
         json_object_set_new(obj, field_names[i], json_string(row[i]));
     }
-    json_t* arr = static_cast<json_t*>(data);
-    json_array_append_new(arr, obj);
+    json_array_append_new(data, obj);
     return 0;
 }
 
 json_t* PamInstance::diagnostic_json()
 {
     json_t* rval = json_array();
-    char* err;
     string select = "SELECT * FROM " + m_tablename + ";";
-    if (sqlite3_exec(m_dbhandle, select.c_str(), diag_cb_json, rval, &err) != SQLITE_OK)
+    if (!m_sqlite->exec(select, diag_cb_json, rval))
     {
-        MXS_ERROR("Failed to print users: %s", err);
-        sqlite3_free(err);
+        MXS_ERROR("Failed to print users: %s", m_sqlite->error());
     }
-
     return rval;
 }
 

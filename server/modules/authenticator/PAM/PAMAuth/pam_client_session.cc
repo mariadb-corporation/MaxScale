@@ -20,6 +20,8 @@
 using maxscale::Buffer;
 using std::string;
 
+using SSQLite = SQLite::SSQLite;
+
 namespace
 {
 /**
@@ -59,67 +61,44 @@ bool store_client_password(DCB* dcb, GWBUF* buffer)
  * @param column_names Column names
  * @return Always 0
  */
-int user_services_cb(void* data, int columns, char** column_vals, char** column_names)
+int user_services_cb(PamClientSession::StringVector* data, int columns, char** column_vals,
+                     char** column_names)
 {
     mxb_assert(columns == 1);
-    PamClientSession::StringVector* results = static_cast<PamClientSession::StringVector*>(data);
     if (column_vals[0])
     {
-        results->push_back(column_vals[0]);
+        data->push_back(column_vals[0]);
     }
     else
     {
         // Empty is a valid value.
-        results->push_back("");
+        data->push_back("");
     }
     return 0;
 }
 }
 
-PamClientSession::PamClientSession(sqlite3* dbhandle, const PamInstance& instance)
-    : m_dbhandle(dbhandle)
-    , m_instance(instance)
+PamClientSession::PamClientSession(const PamInstance& instance, SSQLite sqlite)
+    : m_instance(instance)
+    , m_sqlite(std::move(sqlite))
 {
-}
-
-PamClientSession::~PamClientSession()
-{
-    sqlite3_close_v2(m_dbhandle);
 }
 
 PamClientSession* PamClientSession::create(const PamInstance& inst)
 {
+    PamClientSession* rval = nullptr;
     // This handle is only used from one thread, can define no_mutex.
-    sqlite3* dbhandle = NULL;
-    bool error = false;
     int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_NOMUTEX;
-    const char* filename = inst.m_dbname.c_str();
-    if (sqlite3_open_v2(filename, &dbhandle, db_flags, NULL) == SQLITE_OK)
+    string sqlite_error;
+    auto sqlite = SQLite::create(inst.m_dbname, db_flags, &sqlite_error);
+    if (sqlite)
     {
-        sqlite3_busy_timeout(dbhandle, 1000);
+        sqlite->set_timeout(1000);
+        rval = new(std::nothrow) PamClientSession(inst, std::move(sqlite));
     }
     else
     {
-        if (dbhandle)
-        {
-            MXS_ERROR(SQLITE_OPEN_FAIL, filename, sqlite3_errmsg(dbhandle));
-        }
-        else
-        {
-            MXS_ERROR(SQLITE_OPEN_OOM, filename);
-        }
-        error = true;
-    }
-
-    PamClientSession* rval = NULL;
-    if (!error && ((rval = new (std::nothrow) PamClientSession(dbhandle, inst)) == NULL))
-    {
-        error = true;
-    }
-
-    if (error)
-    {
-        sqlite3_close_v2(dbhandle);
+        MXB_ERROR("Could not create PAM authenticator session: %s", sqlite_error.c_str());
     }
     return rval;
 }
@@ -142,11 +121,9 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
         + " AND " + FIELD_PROXY + " = '0' ORDER BY authentication_string;";
     MXS_DEBUG("PAM services search sql: '%s'.", services_query.c_str());
 
-    char* err;
-    if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb, services_out, &err) != SQLITE_OK)
+    if (!m_sqlite->exec(services_query, user_services_cb, services_out))
     {
-        MXS_ERROR("Failed to execute query: '%s'", err);
-        sqlite3_free(err);
+        MXS_ERROR("Failed to execute query: '%s'", m_sqlite->error());
     }
 
     auto word_entry = [](size_t num) -> const char* {
@@ -169,23 +146,22 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
             + " AND " + FIELD_PROXY + " = '1' ORDER BY authentication_string;";
         MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
 
-        if (sqlite3_exec(m_dbhandle, anon_query.c_str(), user_services_cb, services_out, &err) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to execute query: '%s'", err);
-            sqlite3_free(err);
-        }
-        else
+        if (m_sqlite->exec(anon_query, user_services_cb, services_out))
         {
             auto num_services = services_out->size();
             if (num_services == 0)
             {
-                MXS_INFO("Found no PAM user entries for '%s'@'%s'.", session->user, dcb->remote);
+                MXB_INFO("Found no PAM user entries for '%s'@'%s'.", session->user, dcb->remote);
             }
             else
             {
-                MXS_INFO("Found %lu matching anonymous PAM user %s for '%s'@'%s'.",
+                MXB_INFO("Found %lu matching anonymous PAM user %s for '%s'@'%s'.",
                          num_services, word_entry(num_services), session->user, dcb->remote);
             }
+        }
+        else
+        {
+            MXB_ERROR("Failed to execute query: '%s'", m_sqlite->error());
         }
     }
 }

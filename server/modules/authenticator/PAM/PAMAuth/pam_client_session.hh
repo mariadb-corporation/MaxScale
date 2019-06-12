@@ -23,16 +23,18 @@
 /** Client authenticator PAM-specific session data */
 class PamClientSession
 {
-    PamClientSession(const PamClientSession& orig);
-    PamClientSession& operator=(const PamClientSession&);
 public:
+    PamClientSession(const PamClientSession& orig) = delete;
+    PamClientSession& operator=(const PamClientSession&) = delete;
+
     typedef std::vector<std::string> StringVector;
     static PamClientSession* create(const PamInstance& inst);
-    ~PamClientSession();
+
     int  authenticate(DCB* client);
     bool extract(DCB* dcb, GWBUF* read_buffer);
+
 private:
-    PamClientSession(sqlite3* dbhandle, const PamInstance& instance);
+    PamClientSession(const PamInstance& instance, SQLite::SSQLite sqlite);
     void get_pam_user_services(const DCB* dcb,
                                const MYSQL_session* session,
                                StringVector* services_out);
@@ -46,8 +48,9 @@ private:
         DONE
     };
 
-    State              m_state {State::INIT};   /**< Authentication state*/
-    uint8_t            m_sequence {0};          /**< The next packet seqence number */
-    sqlite3* const     m_dbhandle;              /**< SQLite3 database handle */
-    const PamInstance& m_instance;              /**< Authenticator instance */
+    const PamInstance&    m_instance;              /**< Authenticator instance */
+    SQLite::SSQLite const m_sqlite;                /**< SQLite3 database handle */
+
+    State    m_state {State::INIT};   /**< Authentication state */
+    uint8_t  m_sequence {0};          /**< The next packet seqence number */
 };
