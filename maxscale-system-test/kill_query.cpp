@@ -8,15 +8,6 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->rwsplit();
-    conn.connect();
-    conn.query("CREATE OR REPLACE TABLE test.t1 (id LONGTEXT)");
-
-    for (int x = 0; x < 10; x++)
-    {
-        conn.query("INSERT INTO test.t1 VALUES (REPEAT('a', 5000000))");
-    }
-
     for (int i = 0; i < 3; i++)
     {
         auto a = test.maxscales->rwsplit();
@@ -25,12 +16,21 @@ int main(int argc, char* argv[])
 
         auto id = a.thread_id();
 
-        test.set_timeout(15);
         std::thread thr(
             [&]() {
-                // The ALTER should take longer than 15 seconds to complete so that a KILL is required to
+                const char* query =
+                    "BEGIN NOT ATOMIC "
+                    "  DECLARE v1 INT DEFAULT 5; "
+                    "  CREATE OR REPLACE TABLE test.t1(id INT); "
+                    "  WHILE v1 <> 0 DO "
+                    "    INSERT INTO test.t1 VALUES (1); "
+                    "    SET v1 = (SELECT COUNT(*) FROM test.t1); "
+                    "  END WHILE;"
+                    "END";
+
+                    // The ALTER should take longer than 15 seconds to complete so that a KILL is required to
                 // interrupt it.
-                test.expect(!a.query("ALTER TABLE test.t1 FORCE"), "ALTER should fail");
+                test.expect(!a.query(query), "Query should fail");
 
                 const char* expected = "Query execution was interrupted";
                 test.expect(strstr(a.error(), expected),
@@ -38,12 +38,17 @@ int main(int argc, char* argv[])
                             expected, a.error());
             });
 
+        // Wait for a few seconds to make sure the other thread has started executing the query before killing it.
+        sleep(5);
         test.expect(b.query("KILL QUERY " + std::to_string(id)), "KILL QUERY failed: %s", b.error());
-        thr.join();
 
+        test.set_timeout(15);
+        thr.join();
         test.stop_timeout();
     }
 
+    auto conn = test.maxscales->rwsplit();
+    conn.connect();
     conn.query("DROP TABLE test.t1");
 
     return test.global_result;
