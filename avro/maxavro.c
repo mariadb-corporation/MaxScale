@@ -144,7 +144,7 @@ char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
 
     if (maxavro_read_integer(file, &len))
     {
-        if (file->buffer_ptr + len < file->buffer_end)
+        if (file->buffer_ptr + len <= file->buffer_end)
         {
             key = MXS_MALLOC(len + 1);
             if (key)

@@ -70,6 +70,7 @@ int main(int argc, char** argv)
         get_output(test);
 
         string gtid_old_master;
+        test.repl->connect();
         if (find_field(test.repl->nodes[master_index], GTID_QUERY, GTID_FIELD, result_tmp) == 0)
         {
             gtid_old_master = result_tmp;
@@ -119,9 +120,10 @@ int main(int argc, char** argv)
             test.maxscales->wait_for_monitor();
             get_output(test);
             char result[100];
+            test.repl->connect();
             if (find_field(conn, sstatus_query.c_str(), "Master_Host", result) == 0)
             {
-		test.expect(strcmp(result, test.repl->IP[0]) == 0,
+                test.expect(strcmp(result, test.repl->IP[0]) == 0,
                             "server3 did not rejoin the cluster (%s != %s).", result, test.repl->IP[0]);
             }
             else
