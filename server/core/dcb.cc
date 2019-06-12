@@ -1598,7 +1598,7 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
     if (dcb->server)
     {
         string statusname = dcb->server->status_string();
-        if (!statusname.c_str())
+        if (!statusname.empty())
         {
             dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());
         }

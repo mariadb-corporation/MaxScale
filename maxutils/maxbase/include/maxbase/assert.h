@@ -54,7 +54,7 @@ MXB_BEGIN_DECLS
 #else /* SS_DEBUG */
 
 #define mxb_assert(exp)
-#define mxb_assert_message(exp, message)
+#define mxb_assert_message(exp, fmt, ...)
 
 #define MXB_AT_DEBUG(exp)
 

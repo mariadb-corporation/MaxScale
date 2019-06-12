@@ -61,7 +61,7 @@ MainWorker& MainWorker::get()
 void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int frequency)
 {
     execute([=]() {
-                mxb_assert_message(m_tasks_by_name.find(name) == m_tasks_by_name.end(), name.c_str());
+                mxb_assert_message(m_tasks_by_name.find(name) == m_tasks_by_name.end(), "%s", name.c_str());
 
                 Task task(name.c_str(), func, pData, frequency);
 
