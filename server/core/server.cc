@@ -810,6 +810,11 @@ uint64_t SERVER::status_from_string(const char* str)
 
 void Server::set_version(uint64_t version_num, const std::string& version_str)
 {
+    if (version_str != version_string())
+    {
+        MXS_NOTICE("Server '%s' version: %s", name(), version_str.c_str());
+    }
+
     m_info.set(version_num, version_str);
 }
 
