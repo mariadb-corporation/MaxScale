@@ -1445,8 +1445,6 @@ void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t
                                 (intptr_t)worker_func,
                                 (intptr_t) new ConnKillInfo(target_id, ss.str(), issuer));
     }
-
-    mxs_mysql_send_ok(issuer->client_dcb, 1, 0, NULL);
 }
 
 void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type)
@@ -1465,8 +1463,6 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
                                 (intptr_t)worker_func,
                                 (intptr_t) new UserKillInfo(user, ss.str(), issuer));
     }
-
-    mxs_mysql_send_ok(issuer->client_dcb, 1, 0, NULL);
 }
 
 /**

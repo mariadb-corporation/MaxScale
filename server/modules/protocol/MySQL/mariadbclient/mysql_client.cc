@@ -2030,6 +2030,7 @@ static spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int
             {
                 uint64_t process_id = gw_mysql_get_byte4(bytes);
                 mxs_mysql_execute_kill(dcb->session, process_id, KT_CONNECTION);
+                mxs_mysql_send_ok(dcb, 1, 0, NULL);
                 rval = RES_END;
             }
         }
@@ -2106,6 +2107,8 @@ spec_com_res_t handle_query_kill(DCB* dcb,
                 {
                     mxs_mysql_execute_kill_user(dcb->session, user.c_str(), kt);
                 }
+
+                mxs_mysql_send_ok(dcb, 1, 0, NULL);
             }
         }
     }
