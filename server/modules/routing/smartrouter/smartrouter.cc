@@ -25,19 +25,17 @@ namespace smartrouter
 config::Specification specification(MXS_MODULE_NAME, config::Specification::ROUTER);
 
 config::ParamServer
-master(&specification,
-       "master",
-       "The server/cluster to be treated as master, that is, the one where updates are sent.");
+    master(&specification,
+           "master",
+           "The server/cluster to be treated as master, that is, the one where updates are sent.");
 
 config::ParamBool
-persist_performance_data(&specification,
-                         "persist_performance_data",
-                         "Persist performance data so that the smartrouter can use information "
-                         "collected during earlier runs.",
-                         true); // Default value
-
+    persist_performance_data(&specification,
+                             "persist_performance_data",
+                             "Persist performance data so that the smartrouter can use information "
+                             "collected during earlier runs.",
+                             true);     // Default value
 }
-
 }
 
 /**
@@ -126,7 +124,7 @@ bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
         {
             if (!s.empty())
             {
-                s+= ", ";
+                s += ", ";
             }
 
             s += server->name();
@@ -197,4 +195,31 @@ json_t* SmartRouter::diagnostics_json() const
 uint64_t SmartRouter::getCapabilities()
 {
     return RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT;
+}
+
+PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
+{
+    std::unique_lock<std::mutex> guard(m_perf_mutex);
+    auto perf = m_performance.find(canonical);
+
+    if (perf.is_valid() && perf.age() > std::chrono::minutes(1))    // TODO to config, but not yet
+    {
+        m_performance.remove(canonical);
+        return PerformanceInfo();
+    }
+
+    return perf;
+}
+
+bool SmartRouter::perf_update(const std::string& canonical, const PerformanceInfo& perf)
+{
+    std::unique_lock<std::mutex> guard(m_perf_mutex);
+    auto ret = m_performance.insert(canonical, perf);
+
+    if (ret)
+    {
+        MXS_SDEBUG("Stored perf " << perf.duration() << ' ' << perf.host() << ' ' << show_some(canonical));
+    }
+
+    return ret;
 }

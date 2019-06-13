@@ -93,7 +93,8 @@ private:
     bool write_to_all(GWBUF* pBuf, Mode mode);
     bool write_split_packets(GWBUF* pBuf);
 
-    void kill_all_others(const maxbase::Host& host);
+    void kill_all_others_v1(const maxbase::Host& host);
+    void kill_all_others_v2(const maxbase::Host& host);
 
     bool expecting_request_packets() const;
     bool expecting_response_packets() const;
@@ -103,6 +104,8 @@ private:
     bool lock_to_master() override;
     bool is_locked_to_master() const override;
     bool supports_hint(HINT_TYPE hint_type) const override;
+
+    SmartRouter& m_router;
 
     Mode   m_mode = Mode::Idle;
     GWBUF* m_pDelayed_packet = nullptr;

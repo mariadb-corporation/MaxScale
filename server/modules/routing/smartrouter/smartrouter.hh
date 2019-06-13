@@ -18,6 +18,8 @@
  * @file Smart Router. Routes queries to the best router for the type of query.
  */
 
+#include "performance.hh"
+
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/router.hh>
@@ -75,8 +77,18 @@ public:
         return m_config;
     }
 
+    /** Thread safe find a PerformanceInfo. Some entry expiration handling is done here.
+     */
+    PerformanceInfo perf_find(const std::string& canonical);
+
+    /** Thread safe update/insert a PerformanceInfo. Some entry expiration handling is done here.
+     */
+    bool perf_update(const std::string& canonical, const PerformanceInfo& perf);
+
 private:
     SmartRouter(SERVICE* service);
 
-    Config m_config;
+    Config               m_config;
+    CanonicalPerformance m_performance;
+    std::mutex           m_perf_mutex;
 };

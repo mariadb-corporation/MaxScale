@@ -36,6 +36,7 @@ public:
     /** When was this PerformanceInfo created.
      */
     maxbase::TimePoint creation_time() const;
+
     /** Duration since this PerformanceInfo was created
      */
     maxbase::Duration age() const;
@@ -46,13 +47,14 @@ private:
     maxbase::TimePoint m_creation_time = maxbase::Clock::now();
 };
 
-/** class CanonicalPerformance holds the persistent performance
- *  info gathered thus far.
+/** class CanonicalPerformance holds the performance
+ *  info gathered since the start of Maxscale.
+ *  The Beta release will not perist to file.
  */
 class CanonicalPerformance
 {
 public:
-    CanonicalPerformance(const std::string& persistent_file);
+    explicit CanonicalPerformance();
 
     /** Insert if not already inserted and return true, else false. */
     bool insert(const std::string& canonical, const PerformanceInfo& perf);
@@ -64,22 +66,11 @@ public:
     PerformanceInfo find(const std::string& canonical);
 
     void clear();
-    void persist() const;
-
 private:
-    const std::string                                m_persistent_file;
     std::unordered_map<std::string, PerformanceInfo> m_perfs;
-    void read_persisted();
+
     mutable int m_nChanges;
 };
-
-// Threadsafe global singleton behind perf_find and perf_update.
-// perf_find, find existing performance info, handles expirations
-PerformanceInfo perf_find(const std::string& canonical);
-
-// Insert if not already inserted and return true, else false.
-// Will probably handle some expiration like work.
-bool perf_update(const std::string& canonical, const PerformanceInfo& perf);
 
 // For logging. Shortens str to nchars and adds "..." TODO move somewhere more appropriate
 std::string show_some(const std::string& str, int nchars = 70);
