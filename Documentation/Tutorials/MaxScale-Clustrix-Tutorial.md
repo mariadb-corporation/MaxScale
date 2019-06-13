@@ -102,6 +102,11 @@ dynamically. That is, when setup like this, the service will
 automatically adjust to any changes taking place in the Clustrix
 cluster.
 
+**NOTE** There is no need to specify any `router_options`, but the
+default `router_options=running` provides the desired behaviour.
+In particular do **not** specify `router_options=master` as that will
+cause only a _single_ node to be used.
+
 ### Listener
 
 To complete the configuration, a listener must be specified.
