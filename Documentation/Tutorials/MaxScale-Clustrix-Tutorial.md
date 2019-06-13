@@ -150,12 +150,18 @@ user=maxscale
 password=maxscale
 cluster=Clustrix-Service
 transaction_replay=true
+slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
 ```
 With this configuration, subject to the boundary conditions of
 transaction replaying, a client will neither notice group change
 events nor the disappearance of the very node the client is connected
 to. In that latter case, MaxScale will simply connect to another node
 and replay the current transaction (if one is active).
+
+**NOTE** It is vital to have
+`slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS`, as otherwise
+connections will **not** be distributed evenly across all Clustrix
+nodes.
 
 For detailed information about the transaction replay functionality,
 please refer to the _readwritesplit_
