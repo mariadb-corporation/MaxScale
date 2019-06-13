@@ -12,7 +12,6 @@ password= skysql
 monitor_interval=1000
 detect_standalone_master=true
 failcount=1
-allow_cluster_recovery=true
 auto_failover=true
 auto_rejoin=true
 replication_user=repl
