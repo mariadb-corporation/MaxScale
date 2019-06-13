@@ -315,9 +315,16 @@ void RWBackend::process_packets(GWBUF* result)
             break;
 
         case REPLY_STATE_DONE:
-            // This should never happen
-            MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u", cmd, len);
-            mxb_assert(!true);
+            if (cmd == MYSQL_REPLY_ERR)
+            {
+                // Unexpected error at the end of a resultset, possibly a killed connection
+            }
+            else
+            {
+                // This should never happen
+                MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u", cmd, len);
+                mxb_assert(!true);
+            }
             break;
 
         case REPLY_STATE_RSET_COLDEF:
