@@ -1113,34 +1113,23 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
         mxb_assert(m_expected_responses > 0);
         m_expected_responses--;
 
-        /**
-         * A query was sent through the backend and it is waiting for a reply.
-         * Try to reroute the statement to a working server or send an error
-         * to the client.
-         */
-        GWBUF* stored = m_current_query.release();
+        // Route stored queries if this was the last server we expected a response from
+        route_stored = m_expected_responses == 0;
 
-        if (stored && m_config.retry_failed_reads)
+        if (!backend->has_session_commands())
         {
-            mxb_assert(m_expected_responses == 0);
-            MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
-            retry_query(stored, 0);
-        }
-        else
-        {
-            gwbuf_free(stored);
-
-            if (!backend->has_session_commands())
+            // The backend was busy executing command and the client is expecting a response.
+            if (m_current_query.get() && m_config.retry_failed_reads)
             {
-                /** The backend was not executing a session command so the client
-                 * is expecting a response. Send an error so they know to proceed. */
-                m_client->func.write(m_client, gwbuf_clone(errmsg));
+                MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
+                route_stored = false;
+                retry_query(m_current_query.release(), 0);
             }
-
-            if (m_expected_responses == 0)
+            else
             {
-                // This was the last response, try to route pending queries
-                route_stored = true;
+                // Send an error so that the client knows to proceed.
+                m_client->func.write(m_client, gwbuf_clone(errmsg));
+                m_current_query.reset();
             }
         }
     }
