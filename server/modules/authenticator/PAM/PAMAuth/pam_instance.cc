@@ -56,7 +56,7 @@ PamInstance* PamInstance::create(char** options)
     bool error = false;
     /* This handle may be used from multiple threads, set full mutex. */
     sqlite3* dbhandle = NULL;
-    int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+    int db_flags = SQLITE_OPEN_URI | SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
         | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
     if (sqlite3_open_v2(pam_db_name.c_str(), &dbhandle, db_flags, NULL) != SQLITE_OK)
     {
