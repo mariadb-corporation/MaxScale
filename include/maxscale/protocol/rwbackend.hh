@@ -19,6 +19,7 @@
 #include <maxscale/backend.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/response_stat.hh>
+#include <maxscale/protocol/mysql.hh>
 
 namespace maxscale
 {
@@ -87,6 +88,21 @@ public:
             return rv;
         }
 
+        bool is_unexpected_error() const
+        {
+            switch (m_code)
+            {
+            case ER_CONNECTION_KILLED:
+            case ER_SERVER_SHUTDOWN:
+            case ER_NORMAL_SHUTDOWN:
+            case ER_SHUTDOWN_COMPLETE:
+                return true;
+
+            default:
+                return false;
+            }
+        }
+
         uint32_t code() const
         {
             return m_code;
@@ -121,7 +137,7 @@ public:
         }
 
     private:
-        uint16_t    m_code { 0 };
+        uint16_t    m_code {0};
         std::string m_sql_state;
         std::string m_message;
     };

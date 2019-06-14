@@ -580,29 +580,15 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
     DCB* client_dcb = backend_dcb->session->client_dcb;
     RWBackend* backend = get_backend_from_dcb(backend_dcb);
 
-    if (backend->get_reply_state() == REPLY_STATE_DONE)
+    if (backend->get_reply_state() == REPLY_STATE_DONE
+        && !connection_was_killed(writebuf)
+        && !server_is_shutting_down(writebuf))
     {
-        if (connection_was_killed(writebuf))
-        {
-            // The connection was killed, we can safely ignore it. When the TCP connection is
-            // closed, the router's error handling will sort it out.
-            gwbuf_free(writebuf);
-        }
-        else
-        {
-            /** If we receive an unexpected response from the server, the internal
-             * logic cannot handle this situation. Routing the reply straight to
-             * the client should be the safest thing to do at this point. */
-            log_unexpected_response(backend, writebuf, m_current_query.get());
-            MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
-        }
-        return;
-    }
-    else if (backend->get_reply_state() == REPLY_STATE_START && server_is_shutting_down(writebuf))
-    {
-        // The server is shutting down, ignore this error and wait for the TCP connection to die.
-        // This allows the query to be retried on another server without the client noticing it.
-        gwbuf_free(writebuf);
+        /** If we receive an unexpected response from the server, the internal
+         * logic cannot handle this situation. Routing the reply straight to
+         * the client should be the safest thing to do at this point. */
+        log_unexpected_response(backend, writebuf, m_current_query.get());
+        MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
         return;
     }
 
@@ -614,6 +600,19 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
     backend->process_reply(writebuf);
 
     const RWBackend::Error& error = backend->error();
+
+    if (error.is_unexpected_error())
+    {
+        // The server sent an error that we didn't expect: treat it as if the connection was closed. The
+        // client shouldn't see this error as we can replace the closed connection.
+
+        // TODO: Erase trailing packets
+        if (mxs_mysql_is_err_packet(writebuf))
+        {
+            gwbuf_free(writebuf);
+            return;
+        }
+    }
 
     if (error && m_config.transaction_replay && error.is_rollback())
     {

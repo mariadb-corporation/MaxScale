@@ -410,7 +410,7 @@ void RWBackend::process_reply(GWBUF* buffer)
         process_packets(buffer);
     }
 
-    if (get_reply_state() == REPLY_STATE_DONE)
+    if (get_reply_state() == REPLY_STATE_DONE && is_waiting_result())
     {
         ack_write();
     }
