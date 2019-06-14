@@ -148,7 +148,7 @@ type=service
 router=readwritesplit
 user=maxscale
 password=maxscale
-cluster=Clustrix-Service
+cluster=Clustrix
 transaction_replay=true
 slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
 ```
