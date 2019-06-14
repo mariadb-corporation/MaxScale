@@ -14,6 +14,7 @@
 #include "pam_auth.hh"
 
 #include <string>
+#include <maxsql/queryresult.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 
@@ -31,9 +32,11 @@ public:
     json_t* diagnostic_json();
 
     const std::string m_dbname;     /**< Name of the in-memory database */
-    const std::string m_tablename;  /**< The table where users are stored */
+
 
 private:
+    using QResult = std::unique_ptr<mxq::QueryResult>;
+
     PamInstance(SQLite::SSQLite dbhandle, const std::string& dbname);
     bool prepare_tables();
 
@@ -41,6 +44,6 @@ private:
                       const char* pam_service, bool proxy);
     void delete_old_users();
     bool fetch_anon_proxy_users(SERVER* server, MYSQL* conn);
-
+    void fill_user_arrays(QResult user_res, QResult db_res, QResult roles_mapping_res);
     SQLite::SSQLite const m_sqlite;      /**< SQLite3 database handle */
 };

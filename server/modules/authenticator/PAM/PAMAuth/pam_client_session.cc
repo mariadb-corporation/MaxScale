@@ -15,6 +15,7 @@
 
 #include <sstream>
 #include <maxbase/pam_utils.hh>
+#include <maxbase/format.hh>
 #include <maxscale/event.hh>
 
 using maxscale::Buffer;
@@ -76,6 +77,39 @@ int user_services_cb(PamClientSession::StringVector* data, int columns, char** c
     }
     return 0;
 }
+
+struct UserData
+{
+    string host;
+    string authentication_string;
+    string default_role;
+    bool anydb {false};
+};
+
+using UserDataArr = std::vector<UserData>;
+
+/**
+ * Helper callback for PamClientSession::get_pam_user_services(). See SQLite3
+ * documentation for more information.
+ *
+ * @param data Application data
+ * @param columns Number of columns, must be 1
+ * @param column_vals Column values
+ * @param column_names Column names
+ * @return Always 0
+ */
+int user_data_cb(UserDataArr* data, int columns, char** column_vals, char** column_names)
+{
+    mxb_assert(columns == 4);
+    UserData new_row;
+    new_row.host = column_vals[0];
+    new_row.authentication_string = column_vals[1];
+    new_row.default_role = column_vals[2];
+    new_row.anydb = (column_vals[3][0] == '1');
+    data->push_back(new_row);
+    return 0;
+}
+
 }
 
 PamClientSession::PamClientSession(const PamInstance& instance, SSQLite sqlite)
@@ -113,37 +147,52 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
 void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
                                              StringVector* services_out)
 {
-    string services_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename + " WHERE "
-        + FIELD_USER + " = '" + session->user + "'"
-        + " AND '" + dcb->remote + "' LIKE " + FIELD_HOST
-        + " AND (" + FIELD_ANYDB + " = '1' OR '" + session->db + "' IN ('information_schema', '') OR '"
-        + session->db + "' LIKE " + FIELD_DB + ")"
-        + " AND " + FIELD_PROXY + " = '0' ORDER BY authentication_string;";
-    MXS_DEBUG("PAM services search sql: '%s'.", services_query.c_str());
+    const char* user = session->user;
+    const char* host = dcb->remote;
+    const char* db = session->db;
+    // First search for a normal matching user.
+    const string columns = "host, authentication_string, default_role, anydb";
+    const string filter = "('%s' LIKE " + FIELD_HOST + ") AND (" + FIELD_IS_ROLE + " = 0)";
+    const string users_filter = "(" + FIELD_USER + " = '%s') AND " + filter;
 
-    if (!m_sqlite->exec(services_query, user_services_cb, services_out))
+    const string users_query_fmt = "SELECT " + columns + " FROM " + TABLE_USER + " WHERE "
+            + users_filter + ";";
+    string users_query = mxb::string_printf(users_query_fmt.c_str(), user, host);
+    UserDataArr matching_users;
+    m_sqlite->exec(users_query, user_data_cb, &matching_users);
+
+    // If any of the rows returned has a global priv we have a valid service name.
+    for (auto entry : matching_users)
     {
-        MXS_ERROR("Failed to execute query: '%s'", m_sqlite->error());
+        // TODO: Order entries according to https://mariadb.com/kb/en/library/create-user/
+        // -> User Name Component and only return one service.
+        if (entry.anydb)
+        {
+            services_out->push_back(entry.authentication_string);
+        }
+        // TODO: add support for roles
     }
-
     auto word_entry = [](size_t num) -> const char* {
-            return (num == 1) ? "entry" : "entries";
-        };
+           return (num == 1) ? "entry" : "entries";
+    };
 
-    if (!services_out->empty())
+    // TODO: Check database grants.
+
+    if (!matching_users.empty())
     {
-        auto num_services = services_out->size();
+        auto num_services = matching_users.size();
         MXS_INFO("Found %lu valid PAM user %s for '%s'@'%s'.",
-                 num_services, word_entry(num_services), session->user, dcb->remote);
+                 num_services, word_entry(num_services), user, host);
     }
     else
     {
         // No service found for user with correct username & host.
         // Check if a matching anonymous user exists.
-        const string anon_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename
-            + " WHERE " + FIELD_USER + " = ''"
-            + " AND '" + dcb->remote + "' LIKE " + FIELD_HOST
-            + " AND " + FIELD_PROXY + " = '1' ORDER BY authentication_string;";
+        const string anon_filter = "(" + FIELD_USER + " = '') AND " + filter + " AND ("
+                + FIELD_HAS_PROXY + " = '0')";
+        const string anon_query_fmt = string("SELECT authentication_string FROM ") + TABLE_USER
+            + " WHERE " + anon_filter + ";";
+        string anon_query = mxb::string_printf(anon_query_fmt.c_str(), host);
         MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
 
         if (m_sqlite->exec(anon_query, user_services_cb, services_out))

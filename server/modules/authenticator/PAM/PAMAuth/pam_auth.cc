@@ -22,12 +22,24 @@
 #include "../pam_auth_common.hh"
 
 using std::string;
+using SSQLite = SQLite::SSQLite;
+
+/** Table and column names. The names mostly match the ones in the server. */
+const string TABLE_USER = "user";
+const string TABLE_DB = "db";
+const string TABLE_ROLES_MAPPING = "roles_mapping";
+
 const string FIELD_USER = "user";
 const string FIELD_HOST = "host";
-const string FIELD_DB = "db";
-const string FIELD_ANYDB = "anydb";
 const string FIELD_AUTHSTR = "authentication_string";
-const string FIELD_PROXY = "proxy_grant";
+const string FIELD_DEF_ROLE = "default_role";
+const string FIELD_ANYDB = "anydb";
+const string FIELD_IS_ROLE = "is_role";
+const string FIELD_HAS_PROXY = "proxy_grant";
+
+const string FIELD_DB = "db";
+const string FIELD_ROLE = "role";
+
 const int NUM_FIELDS = 6;
 
 const char* SQLITE_OPEN_FAIL = "Failed to open SQLite3 handle for file '%s': '%s'";

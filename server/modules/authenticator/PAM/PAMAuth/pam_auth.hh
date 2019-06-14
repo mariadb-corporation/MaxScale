@@ -32,11 +32,18 @@ extern const string FIELD_HOST;
 extern const string FIELD_DB;
 extern const string FIELD_ANYDB;
 extern const string FIELD_AUTHSTR;
-extern const string FIELD_PROXY;
+extern const string FIELD_DEF_ROLE;
+extern const string FIELD_HAS_PROXY;
+extern const string FIELD_IS_ROLE;
+extern const string FIELD_ROLE;
 extern const int NUM_FIELDS;
 
 extern const char* SQLITE_OPEN_FAIL;
 extern const char* SQLITE_OPEN_OOM;
+
+extern const string TABLE_USER;
+extern const string TABLE_DB;
+extern const string TABLE_ROLES_MAPPING;
 
 struct sqlite3;
 
