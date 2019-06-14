@@ -645,6 +645,8 @@ public:
         const_iterator(const Buffer::iterator& rhs)
             : const_iterator_base_typedef(rhs.m_pBuffer)
         {
+            m_i = rhs.m_i;
+            m_end = rhs.m_end;
         }
 
         const_iterator& operator++()
@@ -1022,6 +1024,59 @@ public:
     {
         m_pBuffer = gwbuf_append(m_pBuffer, buffer.release());
         return *this;
+    }
+
+    iterator erase(const_iterator first, const_iterator last)
+    {
+        if (first == end())
+        {
+            // Nothing to do
+            return end();
+        }
+        else if (first == last)
+        {
+            // Empty range deletion is a no-op that must return a non-const version of the given iterators
+            iterator it = begin();
+            it.advance(std::distance(const_iterator(it), first));
+            mxb_assert(const_iterator(it) == first);
+            return it;
+        }
+        else if (first == begin() && last == end())
+        {
+            // Clear out the whole buffer
+            reset();
+            return end();
+        }
+
+        iterator rval;
+        const_iterator b = begin();
+        auto offset = std::distance(b, first);
+        auto num_bytes = std::distance(first, last);
+        mxb_assert(num_bytes > 0);
+
+        auto head = gwbuf_split(&m_pBuffer, offset);
+
+        if (m_pBuffer && (m_pBuffer = gwbuf_consume(m_pBuffer, num_bytes)))
+        {
+            if (head)
+            {
+                m_pBuffer = gwbuf_append(head, m_pBuffer);
+            }
+            else
+            {
+                mxb_assert(offset == 0);
+            }
+
+            rval = begin();
+            rval.advance(offset + 1);
+        }
+        else
+        {
+            m_pBuffer = head;
+            rval = end();
+        }
+
+        return rval;
     }
 
     /**
