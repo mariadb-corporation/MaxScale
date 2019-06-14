@@ -963,6 +963,9 @@ add_test_executable(mxs2520_master_read_reconnect.cpp mxs2520_master_read_reconn
 # MXS-2464: Crash in route_stored_query with ReadWriteSplit
 add_test_executable(mxs2464_sescmd_reconnect.cpp mxs2464_sescmd_reconnect mxs2464_sescmd_reconnect LABELS REPL_BACKEND readwritesplit)
 
+# MXS-2563: Failing debug assertion at rwsplitsession.cc:1129 : m_expected_responses == 0
+add_test_executable(mxs2563_concurrent_slave_failure.cpp mxs2563_concurrent_slave_failure mxs2563_concurrent_slave_failure LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
