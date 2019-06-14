@@ -535,10 +535,38 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf)
     }
 }
 
-static bool server_is_shutting_down(GWBUF* writebuf)
+namespace
+{
+
+bool server_is_shutting_down(GWBUF* writebuf)
 {
     uint64_t err = mxs_mysql_get_mysql_errno(writebuf);
     return err == ER_SERVER_SHUTDOWN || err == ER_NORMAL_SHUTDOWN || err == ER_SHUTDOWN_COMPLETE;
+}
+
+mxs::Buffer::iterator skip_packet(mxs::Buffer::iterator it)
+{
+    uint32_t len = *it++;
+    len |= (*it++) << 8;
+    len |= (*it++) << 16;
+    it.advance(len + 1);    // Payload length plus the fourth header byte (packet sequence)
+    return it;
+}
+
+GWBUF* erase_last_packet(GWBUF* input)
+{
+    mxs::Buffer buf(input);
+    auto it = buf.begin();
+    auto end = it;
+
+    while ((end = skip_packet(it)) != buf.end())
+    {
+        it = end;
+    }
+
+    buf.erase(it, end);
+    return buf.release();
+}
 }
 
 void RWSplitSession::close_stale_connections()
@@ -606,10 +634,9 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         // The server sent an error that we didn't expect: treat it as if the connection was closed. The
         // client shouldn't see this error as we can replace the closed connection.
 
-        // TODO: Erase trailing packets
-        if (mxs_mysql_is_err_packet(writebuf))
+        if (!(writebuf = erase_last_packet(writebuf)))
         {
-            gwbuf_free(writebuf);
+            // Nothing to route to the client
             return;
         }
     }
