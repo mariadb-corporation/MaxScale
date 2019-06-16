@@ -104,7 +104,7 @@ bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
 
         if (pServer->address[0] != '/')
         {
-            if (strcmp(pServer->address, "127.0.0.1") == 0 || strcmp(pServer->address, "localhost"))
+            if (strcmp(pServer->address, "127.0.0.1") == 0 || strcmp(pServer->address, "localhost") == 0)
             {
                 MXS_WARNING("The server %s, used by the smartrouter %s, is currently accessed "
                             "using a TCP/IP socket (%s:%d). For better performance, a Unix "
