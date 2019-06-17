@@ -1085,6 +1085,18 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                            "connect to '%s' within the time limit.";
         MXS_WARNING(MSG, fails, new_master->name(), repl_fails.size(), query_fails.size(),
                     unconfirmed.size(), new_master->name());
+
+        // If any of the unconfirmed slaves have error messages in their slave status, print them. They
+        // may explain what went wrong.
+        for (auto failed_slave : unconfirmed)
+        {
+            auto slave_conn = failed_slave->slave_connection_status_host_port(new_master);
+            if (slave_conn && !slave_conn->last_error.empty())
+            {
+                MXB_WARNING("%s did not connect because of error: '%s'",
+                            slave_conn->to_short_string().c_str(), slave_conn->last_error.c_str());
+            }
+        }
     }
     time_remaining -= timer.lap();
 }
