@@ -36,6 +36,14 @@ exports.builder = function(yargs) {
                 return getJson(host, 'servers')
                     .then((res) => {
 
+                        for (var s of res.data) {
+                            // Show the socket instead of the address
+                            if (!s.attributes.parameters.address && s.attributes.parameters.socket) {
+                                s.attributes.parameters.address = s.attributes.parameters.socket
+                                s.attributes.parameters.port = ''
+                            }
+                        }
+
                         // Build a set of unique monitors, flatten it into an array of strings and
                         // filter out any duplicate or undefined values (from servers that aren't
                         // monitored).
