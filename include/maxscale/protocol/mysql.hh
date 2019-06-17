@@ -700,6 +700,17 @@ typedef enum kill_type
 } kill_type_t;
 
 void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
+
+/** Send KILL to all but the keep_protocol_thread_id. If keep_protocol_thread_id==0, kill all.
+ *  TODO: The naming: issuer, target_id, protocol_thread_id is not very descriptive,
+ *        and really goes to the heart of explaining what the session_id/thread_id means in terms
+ *        of a service/server pipeline and the recursiveness of this call.
+ */
+void mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
+                                       uint64_t target_id,
+                                       uint64_t keep_protocol_thread_id,
+                                       kill_type_t type);
+
 void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
 
 MXS_END_DECLS

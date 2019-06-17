@@ -1347,13 +1347,15 @@ static bool kill_func(DCB* dcb, void* data);
 
 struct ConnKillInfo : public KillInfo
 {
-    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses)
+    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses, uint64_t keep_thread_id)
         : KillInfo(query, ses, kill_func)
         , target_id(id)
+        , keep_thread_id(keep_thread_id)
     {
     }
 
     uint64_t target_id;
+    uint64_t keep_thread_id;
 };
 
 static bool kill_user_func(DCB* dcb, void* data);
@@ -1372,11 +1374,12 @@ struct UserKillInfo : public KillInfo
 static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol);
 
-    if (dcb->session->ses_id == info->target_id && dcb->role == DCB::Role::BACKEND)
+    if (dcb->session->ses_id == info->target_id
+        && dcb->role == DCB::Role::BACKEND
+        && (info->keep_thread_id == 0 || proto->thread_id != info->keep_thread_id))
     {
-        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
-
         if (proto->thread_id)
         {
             // DCB is connected and we know the thread ID so we can kill it
@@ -1431,6 +1434,14 @@ static void worker_func(int thread_id, void* data)
 
 void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
 {
+    mxs_mysql_execute_kill_all_others(issuer, target_id, 0, type);
+}
+
+void mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
+                                       uint64_t target_id,
+                                       uint64_t keep_protocol_thread_id,
+                                       kill_type_t type)
+{
     const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";
     std::stringstream ss;
@@ -1443,7 +1454,10 @@ void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t
         mxb_worker_post_message(worker,
                                 MXB_WORKER_MSG_CALL,
                                 (intptr_t)worker_func,
-                                (intptr_t) new ConnKillInfo(target_id, ss.str(), issuer));
+                                (intptr_t) new ConnKillInfo(target_id,
+                                                            ss.str(),
+                                                            issuer,
+                                                            keep_protocol_thread_id));
     }
 }
 
