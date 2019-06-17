@@ -93,8 +93,7 @@ private:
     bool write_to_all(GWBUF* pBuf, Mode mode);
     bool write_split_packets(GWBUF* pBuf);
 
-    void kill_all_others_v1(const maxbase::Host& host);
-    void kill_all_others_v2(const maxbase::Host& host);
+    void kill_all_others(const Cluster& cluster);
 
     bool expecting_request_packets() const;
     bool expecting_response_packets() const;
