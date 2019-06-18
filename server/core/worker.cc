@@ -718,12 +718,17 @@ size_t Worker::execute_concurrently(Task& task)
 
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
+    // NOTE: No logging here, this function must be signal safe.
+    bool rval = false;
     ss_dassert(state() != Worker::STOPPED);
 
-    // NOTE: No logging here, this function must be signal safe.
-    MessageQueue::Message message(msg_id, arg1, arg2);
+    if (state() != Worker::STOPPED)
+    {
+        MessageQueue::Message message(msg_id, arg1, arg2);
+        rval = m_pQueue->post(message);
+    }
 
-    return m_pQueue->post(message);
+    return rval;
 }
 
 bool mxs_worker_post_message(MXS_WORKER* pWorker, uint32_t msg_id, intptr_t arg1, intptr_t arg2)
