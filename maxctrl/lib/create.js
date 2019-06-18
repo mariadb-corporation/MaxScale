@@ -200,7 +200,8 @@ exports.builder = function(yargs) {
         .command('service <name> <router> <params...>', 'Create a new service', function(yargs) {
             return yargs.epilog('The last argument to this command is a list of key=value parameters ' +
                                 'given as the service parameters. If the --servers or --filters options ' +
-                                'are used, they must be defined after the service parameters.')
+                                'are used, they must be defined after the service parameters.' +
+                                '\n\nNote that the `user` and `password` parameters must be defined.')
                 .usage('Usage: service <name> <router> <params...>')
         }, function(argv) {
             maxctrl(argv, function(host) {
