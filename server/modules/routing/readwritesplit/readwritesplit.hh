@@ -127,7 +127,7 @@ static const char gtid_wait_stmt[] =
 /** Function that returns a "score" for a server to enable comparison.
  *  Smaller numbers are better.
  */
-using BackendSelectFunction = std::function<mxs::PRWBackends::iterator (mxs::PRWBackends& sBackends)>;
+using BackendSelectFunction = mxs::PRWBackends::iterator (*)(mxs::PRWBackends& sBackends);
 BackendSelectFunction get_backend_select_function(select_criteria_t);
 
 using std::chrono::seconds;
@@ -409,8 +409,7 @@ inline bool can_continue_using_master(const mxs::RWBackend* current_master)
                                    && session_trx_is_active(current_master->dcb()->session));
 }
 
-mxs::RWBackend* get_root_master(const mxs::PRWBackends& backends, mxs::RWBackend* current_master,
-                                const BackendSelectFunction& func);
+mxs::RWBackend* get_root_master(const mxs::PRWBackends& backends, mxs::RWBackend* current_master);
 
 /**
  * Get total slave count and connected slave count

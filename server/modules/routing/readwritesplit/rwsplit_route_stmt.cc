@@ -637,7 +637,7 @@ RWBackend* RWSplitSession::get_master_backend()
 {
     RWBackend* rval = nullptr;
     /** get root master from available servers */
-    RWBackend* master = get_root_master(m_raw_backends, m_current_master, m_config.backend_select_fct);
+    RWBackend* master = get_root_master(m_raw_backends, m_current_master);
 
     if (master)
     {

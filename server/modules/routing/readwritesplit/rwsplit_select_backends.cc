@@ -396,8 +396,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
     }
 }
 
-RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_master,
-                           const BackendSelectFunction& func)
+RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_master)
 {
     if (current_master && current_master->in_use() && can_continue_using_master(current_master))
     {
@@ -427,7 +426,7 @@ RWBackend* get_root_master(const PRWBackends& backends, RWBackend* current_maste
         }
     }
 
-    auto it = func(candidates);
+    auto it = backend_cmp_global_conn(candidates);
     return it != candidates.end() ? *it : nullptr;
 }
 
@@ -467,7 +466,7 @@ bool RWSplitSession::open_connections()
         return true;    // No need to create connections
     }
 
-    RWBackend* master = get_root_master(m_raw_backends, m_current_master, m_config.backend_select_fct);
+    RWBackend* master = get_root_master(m_raw_backends, m_current_master);
 
     if ((!master || !master->can_connect()) && m_config.master_failure_mode == RW_FAIL_INSTANTLY)
     {
@@ -514,9 +513,11 @@ bool RWSplitSession::open_connections()
         }
     }
 
-    for (auto ite = m_config.backend_select_fct(candidates);
+    auto func = backend_cmp_global_conn;
+
+    for (auto ite = func(candidates);
          n_slaves < max_nslaves && !candidates.empty() && ite != candidates.end();
-         ite = m_config.backend_select_fct(candidates))
+         ite = func(candidates))
     {
         if (prepare_connection(*ite))
         {
