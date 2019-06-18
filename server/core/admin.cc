@@ -410,6 +410,7 @@ bool mxs_admin_init()
 void mxs_admin_shutdown()
 {
     MHD_stop_daemon(http_daemon);
+    MXS_NOTICE("Stopped MaxScale REST API");
 }
 
 bool mxs_admin_https_enabled()

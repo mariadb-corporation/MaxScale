@@ -2293,9 +2293,6 @@ int main(int argc, char **argv)
     /*< Stop all the monitors */
     monitorStopAll();
 
-    /** Stop administrative interface */
-    mxs_admin_shutdown();
-
     /*< Stop all the monitors */
     monitorStopAll();
 
@@ -2380,6 +2377,19 @@ return_main:
     return rc;
 } /*< End of main */
 
+class ShutdownTask: public Worker::DisposableTask
+{
+public:
+    void execute(mxs::Worker& w)
+    {
+        mxs_admin_shutdown();
+        service_shutdown();
+        Worker::shutdown_all();
+        hkshutdown();
+        log_flush_shutdown();
+    }
+};
+
 /*<
  * Shutdown MaxScale server
  */
@@ -2391,10 +2401,8 @@ int maxscale_shutdown()
 
     if (n == 0)
     {
-        service_shutdown();
-        Worker::shutdown_all();
-        hkshutdown();
-        log_flush_shutdown();
+        mxs::Worker* worker = Worker::get(0);
+        worker->post(std::auto_ptr<ShutdownTask>(new ShutdownTask), mxs::Worker::EXECUTE_QUEUED);
     }
 
     return n + 1;
