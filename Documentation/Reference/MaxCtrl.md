@@ -53,17 +53,17 @@ All command accept the following global options.
   --tsv           Print tab separated output          [boolean] [default: false]
 
 HTTPS/TLS Options:
-  -s, --secure              Enable HTTPS requests     [boolean] [default: false]
-  --tls-key                 Path to TLS private key                     [string]
-  --tls-cert                Path to TLS public certificate              [string]
-  --tls-ca-cert             Path to TLS CA certificate                  [string]
-  --tls-verify-server-cert  Whether to verify server TLS certificates
+  -s, --secure                  Enable HTTPS requests [boolean] [default: false]
+  --tls-key                     Path to TLS private key                 [string]
+  --tls-passphrase              Password for the TLS private key        [string]
+  --tls-cert                    Path to TLS public certificate          [string]
+  --tls-ca-cert                 Path to TLS CA certificate              [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates
                                                        [boolean] [default: true]
 
 Options:
-  --version         Show version number                                [boolean]
-  --tls-passphrase  Password for the TLS private key                    [string]
-  --help            Show help                                          [boolean]
+  --version  Show version number                                       [boolean]
+  --help     Show help                                                 [boolean]
 
 If no commands are given, maxctrl is started in interactive mode. Use `exit` to
 exit the interactive mode.
@@ -83,7 +83,7 @@ Commands:
   filters              List filters
   modules              List loaded modules
   threads              List threads
-  users                List created network users
+  users                List created users
   commands             List module commands
 
 ```
@@ -140,7 +140,8 @@ List all worker threads.
 
 `Usage: list users`
 
-List the users that can be used to connect to the MaxScale REST API.
+List network the users that can be used to connect to the MaxScale REST API as
+well as enabled local accounts.
 
 ### list commands
 
@@ -297,6 +298,10 @@ Usage: set <command>
 
 Commands:
   server <server> <state>  Set server state
+
+Set options:
+  --force  Forcefully close all connections to the target server
+                                                      [boolean] [default: false]
 
 ```
 
@@ -471,6 +476,8 @@ The last argument to this command is a list of key=value parameters given as the
 service parameters. If the --servers or --filters options are used, they must be
 defined after the service parameters.
 
+Note that the `user` and `password` parameters must be defined.
+
 ### create filter
 
 `Usage: filter <name> <module> [params...]`
@@ -610,7 +617,7 @@ Usage: start <command>
 Commands:
   service <name>  Start a service
   monitor <name>  Start a monitor
-  maxscale        Start MaxScale by starting all services
+  services        Start all services                         [aliases: maxscale]
 
 ```
 
@@ -626,9 +633,9 @@ This starts a service stopped by `stop service <name>`
 
 This starts a monitor stopped by `stop monitor <name>`
 
-### start maxscale
+### start services
 
-`Usage: start maxscale`
+`Usage: start [services|maxscale]`
 
 This command will execute the `start service` command for all services in
 MaxScale.
@@ -641,7 +648,7 @@ Usage: stop <command>
 Commands:
   service <name>  Stop a service
   monitor <name>  Stop a monitor
-  maxscale        Stop MaxScale by stopping all services
+  services        Stop all services                          [aliases: maxscale]
 
 ```
 
@@ -660,9 +667,9 @@ until they are closed.
 Stopping a monitor will pause the monitoring of the servers. This can be used to
 manually control server states with the `set server` command.
 
-### stop maxscale
+### stop services
 
-`Usage: stop maxscale`
+`Usage: stop [services|maxscale]`
 
 This command will execute the `stop service` command for all services in
 MaxScale.
@@ -679,6 +686,7 @@ Commands:
   service-filters <service> [filters...]  Alter filters of a service
   logging <key> <value>                   Alter logging parameters
   maxscale <key> <value>                  Alter MaxScale parameters
+  user <name> <password>                  Alter admin user passwords
 
 ```
 
@@ -698,8 +706,11 @@ To display the monitor parameters, execute `show monitor <monitor>`
 
 `Usage: alter service <service> <key> <value>`
 
-To display the service parameters, execute `show service <service>`. The
-following list of parameters can be altered at runtime:
+To display the service parameters, execute `show service <service>`. Some
+routers support runtime configuration changes to all parameters. Currently all
+readconnroute, readwritesplit and schemarouter parameters can be changed at
+runtime. In addition to module specific parameters, the following list of common
+service parameters can be altered at runtime:
 
 [
     "user",
@@ -712,7 +723,8 @@ following list of parameters can be altered at runtime:
     "strip_db_esc",
     "localhost_match_wildcard_host",
     "max_slave_connections",
-    "max_slave_replication_lag"
+    "max_slave_replication_lag",
+    "retain_last_statements"
 ]
 
 ### alter service-filters
@@ -747,8 +759,21 @@ of parameters can be altered at runtime:
     "auth_write_timeout",
     "admin_auth",
     "admin_log_auth_failures",
-    "passive"
+    "passive",
+    "ms_timestamp",
+    "skip_permission_checks",
+    "query_retries",
+    "query_retry_timeout",
+    "retain_last_statements",
+    "dump_last_statements"
 ]
+
+### alter user
+
+`Usage: alter user <name> <password>`
+
+Changes the password for a user. To change the user type, destroy the user and
+then create it again.
 
 ## rotate
 
