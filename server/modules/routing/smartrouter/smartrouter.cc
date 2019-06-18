@@ -197,29 +197,69 @@ uint64_t SmartRouter::getCapabilities()
     return RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT;
 }
 
+// Eviction schedule
+// Two reasons to evict, and re-measure canonicals.
+//   1. When connections are initially created there is more overhead in maxscale and at the server,
+//      which can (and does) lead to the wrong performance conclusions.
+//   2. Depending on the contents and number of rows in tables, different database engines
+//      have different performance advantages (InnoDb is always very fast for small tables).
+//
+// TODO make configurable, maybe.
+static std::array<maxbase::Duration, 4> eviction_schedules =
+{
+    std::chrono::minutes(2),
+    std::chrono::minutes(5),
+    std::chrono::minutes(10),
+    std::chrono::minutes(20)
+};
+
+// TODO need to add the default db to the key (or hash)
+
 PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
 {
     std::unique_lock<std::mutex> guard(m_perf_mutex);
-    auto perf = m_performance.find(canonical);
 
-    if (perf.is_valid() && perf.age() > std::chrono::minutes(1))    // TODO to config, but not yet
+    auto perf_it = m_perfs.find(canonical);
+    if (perf_it != end(m_perfs) && !perf_it->second.is_updating())
     {
-        m_performance.remove(canonical);
-        return PerformanceInfo();
+        if (perf_it->second.age() > eviction_schedules[perf_it->second.eviction_schedule()])
+        {
+            MXS_SINFO("Trigger re-measure, schedule "
+                      << eviction_schedules[perf_it->second.eviction_schedule()]
+                      << ", perf: " << perf_it->second.host()
+                      << ", " << perf_it->second.duration() << ", "
+                      << show_some(canonical));
+
+            // Not actually evicting, but trigger a re-measure only for this caller (this worker).
+            perf_it->second.set_updating(true);
+            perf_it = end(m_perfs);
+        }
     }
 
-    return perf;
+    return perf_it != end(m_perfs) ? perf_it->second : PerformanceInfo();
 }
 
-bool SmartRouter::perf_update(const std::string& canonical, const PerformanceInfo& perf)
+void SmartRouter::perf_update(const std::string& canonical, const PerformanceInfo& perf)
 {
     std::unique_lock<std::mutex> guard(m_perf_mutex);
-    auto ret = m_performance.insert(canonical, perf);
 
-    if (ret)
+    auto perf_it = m_perfs.find(canonical);
+    if (perf_it != end(m_perfs))
     {
-        MXS_SDEBUG("Stored perf " << perf.duration() << ' ' << perf.host() << ' ' << show_some(canonical));
-    }
+        MXS_SINFO("Update perf: from "
+                  << perf_it->second.host() << ", " << perf_it->second.duration()
+                  << " to " << perf.host() << ", " << perf.duration()
+                  << ", " << show_some(canonical));
 
-    return ret;
+        size_t schedule = perf_it->second.eviction_schedule();
+        perf_it->second = perf;
+        perf_it->second.set_eviction_schedule(std::min(++schedule, eviction_schedules.size() - 1));
+        perf_it->second.set_updating(false);
+    }
+    else
+    {
+        m_perfs.insert({canonical, perf});
+        MXS_SDEBUG("Stored new perf: " << perf.host() << ", " << perf.duration()
+                                       << ", " << show_some(canonical));
+    }
 }

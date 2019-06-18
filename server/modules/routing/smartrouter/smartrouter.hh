@@ -26,7 +26,7 @@
 
 class SmartRouterSession;
 
-/** class Smartrouter. Only defines the mxs::Router<> functions needed for all routers.
+/** class Smartrouter. Contains and manages the performance info.
  */
 class SmartRouter : public mxs::Router<SmartRouter, SmartRouterSession>
 {
@@ -83,12 +83,15 @@ public:
 
     /** Thread safe update/insert a PerformanceInfo. Some entry expiration handling is done here.
      */
-    bool perf_update(const std::string& canonical, const PerformanceInfo& perf);
+    void perf_update(const std::string& canonical, const PerformanceInfo& perf);
 
 private:
     SmartRouter(SERVICE* service);
 
-    Config               m_config;
-    CanonicalPerformance m_performance;
-    std::mutex           m_perf_mutex;
+    Config m_config;
+
+    using Perfs = std::unordered_map<std::string, PerformanceInfo>;
+
+    std::mutex m_perf_mutex;
+    Perfs      m_perfs;
 };

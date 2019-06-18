@@ -19,8 +19,8 @@
 
 #include <unordered_map>
 
-/** Class PerformanceInfo is a basic structure for storing a Host and Duration pair, along with
- *  the time it was created.
+/** PerformanceInfo is a class that on the one hand provides routeQuery() with performance/routing
+ *  information and on the other has data for class SmartRouter to manage the life-time of a measurment.
  */
 class PerformanceInfo
 {
@@ -40,36 +40,22 @@ public:
     /** Duration since this PerformanceInfo was created
      */
     maxbase::Duration age() const;
+
+    /** Managed and used only by class SmartRouter. */
+    void   set_eviction_schedule(size_t es);
+    size_t eviction_schedule() const;
+
+    /** Managed and used only by class SmartRouter. */
+    void set_updating(bool val);
+    bool is_updating() const;
 private:
     maxbase::Host     m_host;
     maxbase::Duration m_duration;
 
+    int  m_eviction_schedule = 0;
+    bool m_updating = false;
+
     maxbase::TimePoint m_creation_time = maxbase::Clock::now();
-};
-
-/** class CanonicalPerformance holds the performance
- *  info gathered since the start of Maxscale.
- *  The Beta release will not perist to file.
- */
-class CanonicalPerformance
-{
-public:
-    explicit CanonicalPerformance();
-
-    /** Insert if not already inserted and return true, else false. */
-    bool insert(const std::string& canonical, const PerformanceInfo& perf);
-
-    /** Remove if entry exists and return true, else false. */
-    bool remove(const std::string& canonical);
-
-    /** If entry does not exists, returned PerformanceInfo::is_valid()==false */
-    PerformanceInfo find(const std::string& canonical);
-
-    void clear();
-private:
-    std::unordered_map<std::string, PerformanceInfo> m_perfs;
-
-    mutable int m_nChanges;
 };
 
 // For logging. Shortens str to nchars and adds "..." TODO move somewhere more appropriate
@@ -105,4 +91,24 @@ inline maxbase::TimePoint PerformanceInfo::creation_time() const
 inline maxbase::Duration PerformanceInfo::age() const
 {
     return maxbase::Clock::now() - m_creation_time;
+}
+
+inline void PerformanceInfo::set_eviction_schedule(size_t es)
+{
+    m_eviction_schedule = es;
+}
+
+inline size_t PerformanceInfo::eviction_schedule() const
+{
+    return m_eviction_schedule;
+}
+
+inline void PerformanceInfo::set_updating(bool val)
+{
+    m_updating = val;
+}
+
+inline bool PerformanceInfo::is_updating() const
+{
+    return m_updating;
 }
