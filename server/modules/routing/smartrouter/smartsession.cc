@@ -451,7 +451,7 @@ bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
         auto& cluster = *it;
         cluster.tracker = maxsql::PacketTracker(pBuf);
         cluster.is_replying_to_client = false;
-        auto pBuf_send = (std::next(it) == end(m_clusters)) ? pBuf : gwbuf_clone(pBuf);
+        auto pBuf_send = (next(it) == end(m_clusters)) ? pBuf : gwbuf_clone(pBuf);
         if (!cluster.pDcb->func.write(cluster.pDcb, pBuf_send))
         {
             success = false;
@@ -484,7 +484,9 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
     {
         auto& cluster = **it;
 
-        auto pBuf_send = (std::next(it) == end(active)) ? pBuf : gwbuf_clone(pBuf);
+        cluster.tracker.update_request(pBuf);
+
+        auto pBuf_send = (next(it) == end(active)) ? pBuf : gwbuf_clone(pBuf);
         if (!cluster.pDcb->func.write(cluster.pDcb, pBuf_send))
         {
             success = false;
