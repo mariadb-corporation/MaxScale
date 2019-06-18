@@ -3731,8 +3731,10 @@ void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params)
         {
             if (params[i].default_value && !ctx->m_parameters.contains(params[i].name))
             {
-                bool rv = config_add_param(ctx, params[i].name, params[i].default_value);
-                MXS_ABORT_IF_FALSE(rv);
+                std::string key = params[i].name;
+                std::string value = params[i].default_value;
+                config_fix_param(params, key, &value);
+                ctx->m_parameters.set(key, value);
             }
         }
     }
