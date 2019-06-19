@@ -57,3 +57,9 @@ so it is adviseable to add suffixes to durations. For instance,
 some_param=60s
 some_param=60000ms
 ```
+
+## MariaDB-Monitor
+
+The following settings have been removed and cause a startup error
+if defined: `mysql51_replication`, `multimaster` and `allow_cluster_recovery`.
+
