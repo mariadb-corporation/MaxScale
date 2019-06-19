@@ -108,7 +108,7 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
             }
             else
             {
-                MXS_ERROR("Cannot execute file '%s'. Missing execution permissions.", cmdname);
+                MXS_ERROR("Cannot execute file '%s'. Missing execution permission.", cmdname);
             }
         }
         else
@@ -239,8 +239,21 @@ int ExternalCmd::externcmd_execute()
         // Execute the command
         execvp(cmdname, argvec);
 
-        // Close the write end of the pipe and exit
-        close(fd[1]);
+        // This is only reached if execvp failed to start the command. Print to the standard error stream.
+        // The message will be caught by the parent process.
+        int error = errno;
+        if (error == EACCES)
+        {
+            // This is the most likely error, handle separately.
+            fprintf(stderr, "error: Cannot execute file. File cannot be accessed or it is missing "
+                            "execution permission.");
+        }
+        else
+        {
+            fprintf(stderr, "error: Cannot execute file. 'execvp' error: '%s'", strerror(error));
+        }
+        fflush(stderr);
+        // Exit with error. The write end of the pipe should close by itself.
         _exit(1);
     }
     else
