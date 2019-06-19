@@ -316,7 +316,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 
         if (max_rlag != SERVER::RLAG_UNDEFINED)
         {
-            auto state = rlag_ok ? SERVER::RLagState::ABOVE_LIMIT : SERVER::RLagState::BELOW_LIMIT;
+            auto state = rlag_ok ? SERVER::RLagState::BELOW_LIMIT : SERVER::RLagState::ABOVE_LIMIT;
             backend->change_rlag_state(state, max_rlag);
         }
     }
