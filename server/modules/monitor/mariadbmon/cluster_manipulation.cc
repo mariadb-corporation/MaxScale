@@ -636,7 +636,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                 // the case, the following is unlikely to do damage.
                 ServerOperation demotion(joinable, true,  /* treat as old master */
                                          m_handle_event_scheduler, m_demote_sql_file);
-                if (joinable->demote(general, demotion))
+                if (joinable->demote(general, demotion, OperationType::REJOIN))
                 {
                     MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     // A slave connection description is required. As this is the only connection, no name
@@ -837,7 +837,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
 
     bool rval = false;
     // Step 1: Set read-only to on, flush logs, update gtid:s.
-    if (demotion_target->demote(op.general, op.demotion))
+    if (demotion_target->demote(op.general, op.demotion, OperationType::SWITCHOVER))
     {
         m_cluster_modified = true;
         bool catchup_and_promote_success = false;

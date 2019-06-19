@@ -216,7 +216,8 @@ using EventNameSet = std::unordered_set<std::string>;
 enum class OperationType
 {
     SWITCHOVER,
-    FAILOVER
+    FAILOVER,
+    REJOIN
 };
 
 class GeneralOpData
