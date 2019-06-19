@@ -1470,7 +1470,6 @@ static bool blr_check_last_master_event(void* inst)
                      "%s heartbeat",
                      router->service->name());
 
-            hktask_remove(task_name);
             router->heartbeat_task_active = false;
         }
 

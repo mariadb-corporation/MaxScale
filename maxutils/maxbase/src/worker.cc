@@ -1032,7 +1032,10 @@ bool Worker::cancel_delayed_call(uint32_t id)
     }
     else
     {
-        mxb_assert(!true);
+        mxb_assert_message(!true,
+                           "Attempt to remove delayed call using non-existent id %u. "
+                           "Calling hktask_remove() from the task function? Simply "
+                           "return false instead.", id);
         MXB_WARNING("Attempt to remove a delayed call, associated with non-existing id.");
     }
 
