@@ -2255,9 +2255,6 @@ int main(int argc, char** argv)
     mxb_assert(worker);
     worker->run();
 
-    /** Stop administrative interface */
-    mxs_admin_shutdown();
-
     /*< Stop all monitors */
     monitor_stop_all();
 
