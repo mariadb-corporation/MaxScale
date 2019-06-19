@@ -20,6 +20,7 @@
 
 #include "internal/maxscale.hh"
 #include "internal/service.hh"
+#include "internal/admin.hh"
 
 static time_t started;
 
@@ -51,12 +52,18 @@ int maxscale_shutdown()
 
     if (n == 0)
     {
-        if (mxs::MainWorker::created())
-        {
-            mxs::MainWorker::get().shutdown();
-        }
+        auto func = []() {
+                if (mxs::MainWorker::created())
+                {
+                    mxs::MainWorker::get().shutdown();
+                }
 
-        mxs::RoutingWorker::shutdown_all();
+                mxs_admin_shutdown();
+                mxs::RoutingWorker::shutdown_all();
+            };
+
+        auto w = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+        w->execute(func, nullptr, mxs::RoutingWorker::EXECUTE_QUEUED);
     }
 
     return n + 1;

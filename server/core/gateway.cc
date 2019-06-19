@@ -2248,9 +2248,6 @@ int main(int argc, char** argv)
 
     main_worker->run();
 
-    /** Stop administrative interface */
-    mxs_admin_shutdown();
-
     /*< Stop all monitors */
     MonitorManager::stop_all_monitors();
 
