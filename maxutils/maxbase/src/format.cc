@@ -58,10 +58,10 @@ const char* get_binary_size_suffix(int i)
 namespace maxbase
 {
 
-std::string to_binary_size(int64_t size)
+std::string to_binary_size(size_t size)
 {
     // Calculate log1024(size) and round it up
-    int idx = floor(log(size) / log(1024));
+    int idx = floor(log(size ? size : 1) / log(1024));
     double num = size / pow(1024, idx);
     char buf[200];      // Enough for all possible values
     snprintf(buf, sizeof(buf), "%.2lf%s", num, get_binary_size_suffix(idx));
