@@ -1559,6 +1559,31 @@ bool service_port_is_used(int port)
     return rval;
 }
 
+bool service_socket_is_used(const std::string& socket_path)
+{
+    bool rval = false;
+    LockGuard guard(this_unit.lock);
+
+    for (Service* service : this_unit.services)
+    {
+        for (const auto& listener : listener_find_by_service(service))
+        {
+            if (listener->address() == socket_path)
+            {
+                rval = true;
+                break;
+            }
+        }
+
+        if (rval)
+        {
+            break;
+        }
+    }
+
+    return rval;
+}
+
 static const char* service_state_to_string(int state)
 {
     switch (state)

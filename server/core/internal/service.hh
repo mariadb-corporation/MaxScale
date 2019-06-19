@@ -338,6 +338,14 @@ SListener service_find_listener(Service* service,
 bool service_port_is_used(int port);
 
 /**
+ * @brief Check if a MaxScale service listens on a Unix domain socket
+ *
+ * @param path The socket path to check
+ * @return True if a MaxScale service uses the socket
+ */
+bool service_socket_is_used(const std::string& socket_path);
+
+/**
  * @brief Check if the service has a listener with a matching name
  *
  * @param service Service to check

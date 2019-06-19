@@ -914,10 +914,17 @@ bool SERVER::is_mxs_service()
     bool rval = false;
 
     /** Do a coarse check for local server pointing to a MaxScale service */
-    if (strcmp(address, "127.0.0.1") == 0
-        || strcmp(address, "::1") == 0
-        || strcmp(address, "localhost") == 0
-        || strcmp(address, "localhost.localdomain") == 0)
+    if (address[0] == '/')
+    {
+        if (service_socket_is_used(address))
+        {
+            rval = true;
+        }
+    }
+    else if (strcmp(address, "127.0.0.1") == 0
+             || strcmp(address, "::1") == 0
+             || strcmp(address, "localhost") == 0
+             || strcmp(address, "localhost.localdomain") == 0)
     {
         if (service_port_is_used(port))
         {
