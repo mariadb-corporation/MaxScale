@@ -223,6 +223,7 @@ enum class OperationType
 {
     SWITCHOVER,
     FAILOVER,
+    REJOIN,
     UNDO_DEMOTION // Performed when switchover fails in its first stages.
 };
 

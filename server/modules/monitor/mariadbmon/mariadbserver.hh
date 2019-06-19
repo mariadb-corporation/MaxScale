@@ -384,10 +384,12 @@ public:
     /**
      * Demote this server. Removes all slave connections. If server was master, sets read_only.
      *
-     * @param op Cluster operation descriptor
+     * @param general General operation data
+     * @param demotion Demotion-specific settings
+     * @param type Which specific operation is this part of
      * @return True if successful
      */
-    bool demote(GeneralOpData& general, ServerOperation& op);
+    bool demote(GeneralOpData& general, ServerOperation& demotion, OperationType type);
 
     /**
      * Redirect the slave connection going to old master to replicate from new master.

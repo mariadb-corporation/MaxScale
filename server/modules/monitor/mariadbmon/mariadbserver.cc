@@ -1589,9 +1589,10 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
     return success;
 }
 
-bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion)
+bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, OperationType type)
 {
     mxb_assert(demotion.target == this);
+    mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::REJOIN);
     json_t** const error_out = general.error_out;
     bool success = false;
 
@@ -1620,7 +1621,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion)
             // read_only doesn't stop them from doing writes. This does not stop them from immediately
             // logging back in but it's better than nothing. This also stops super-user writes going
             // through MaxScale.
-            if (!kick_out_super_users(general))
+            if (type == OperationType::SWITCHOVER && !kick_out_super_users(general))
             {
                 demotion_error = true;
             }
