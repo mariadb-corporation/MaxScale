@@ -1178,6 +1178,12 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
      */
     bool success = target->write(send_buf, response);
 
+    if (orig_id)
+    {
+        // Put the original ID back in case we try to route the query again
+        replace_binary_ps_id(querybuf, orig_id);
+    }
+
     if (success)
     {
         if (store)
@@ -1219,12 +1225,6 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     }
     else
     {
-        if (orig_id)
-        {
-            // Put the original ID back in case we try to route the query again
-            replace_binary_ps_id(querybuf, orig_id);
-        }
-
         MXS_ERROR("Routing query failed.");
     }
 
