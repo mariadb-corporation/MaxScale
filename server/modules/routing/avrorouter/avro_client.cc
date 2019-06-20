@@ -586,6 +586,8 @@ GWBUF* read_avro_json_schema(std::string avrofile, std::string dir)
         std::stringstream ss;
         ss << file.rdbuf();
         std::string text = ss.str();
+        mxs::rtrim(text);
+        text += '\n';
         mxs::Buffer buffer(std::vector<uint8_t>(text.begin(), text.end()));
         rval = buffer.release();
     }
