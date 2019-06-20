@@ -120,8 +120,8 @@ uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer, uint16_t* n_par
 
     if (it != rses->ps_handles.end())
     {
-        rval = it->second >> 16;
-        *n_params = it->second & 0xffff;
+        rval = it->second >> 32;
+        *n_params = it->second & 0xffffffff;
     }
     else
     {
