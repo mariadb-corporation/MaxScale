@@ -78,7 +78,7 @@ void handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
 SRWBackend handle_hinted_target(RWSplitSession *rses, GWBUF *querybuf,
                                 route_target_t route_target);
 SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
-                                  uint8_t cmd, uint32_t id);
+                                  const GWBUF *query, const RouteInfo& info);
 bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
                              SRWBackend* dest);
 bool handle_got_target(RWSplit *inst, RWSplitSession *rses,

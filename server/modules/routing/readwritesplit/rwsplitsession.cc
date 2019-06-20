@@ -110,7 +110,7 @@ bool RWBackend::consume_fetched_rows(GWBUF* buffer)
     return m_expected_rows == 0;
 }
 
-uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer)
+uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer, uint16_t* n_params)
 {
     uint32_t rval = 0;
 
@@ -120,7 +120,8 @@ uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer)
 
     if (it != rses->ps_handles.end())
     {
-        rval = it->second;
+        rval = it->second >> 16;
+        *n_params = it->second & 0xffff;
     }
     else
     {
@@ -135,7 +136,8 @@ RouteInfo::RouteInfo(RWSplitSession* rses, GWBUF* buffer):
     target(TARGET_UNDEFINED),
     command(0xff),
     type(QUERY_TYPE_UNKNOWN),
-    stmt_id(0)
+    stmt_id(0),
+    n_params(0)
 {
     target = get_target_type(rses, buffer, &command, &type, &stmt_id);
 }

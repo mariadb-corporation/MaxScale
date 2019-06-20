@@ -93,7 +93,7 @@ void handle_connection_keepalive(RWSplit *inst, RWSplitSession *rses,
 }
 
 route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
-                               uint8_t* command, uint32_t* type, uint32_t* stmt_id)
+                               uint8_t* command, uint32_t* type, uint32_t* stmt_id, uint16_t* n_params)
 {
     route_target_t route_target = TARGET_MASTER;
     bool in_read_only_trx = rses->target_node && session_trx_is_read_only(rses->client_dcb->session);
@@ -161,7 +161,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
             }
             else if (is_ps_command(*command))
             {
-                *stmt_id = get_internal_ps_id(rses, buffer);
+                *stmt_id = get_internal_ps_id(rses, buffer, n_params);
                 *type = rses->ps_manager.get_type(*stmt_id);
             }
 
@@ -250,7 +250,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
         }
         else if (TARGET_IS_SLAVE(route_target))
         {
-            if ((target = handle_slave_is_target(inst, rses, command, stmt_id)))
+            if ((target = handle_slave_is_target(inst, rses, querybuf, info)))
             {
                 succp = true;
 
@@ -1000,26 +1000,65 @@ SRWBackend handle_hinted_target(RWSplitSession *rses, GWBUF *querybuf,
 }
 
 /**
+ * @brief Determine whether this stmt  is subsequent COM_STMT_EXECUTE
+ *
+ * @param cmd     command type 
+ * @param query   GWBUF including the query
+ * @param info    Route info
+ *
+ * return is subsequent COM_STMT_EXECUTE
+ */
+bool is_sub_stmt_exec(uint8_t cmd, const GWBUF *query, uint16_t n_params)
+{
+    if (cmd != COM_STMT_EXECUTE || n_params == 0)
+    {
+        return false;
+    }
+
+    bool rval = true;
+
+    /*https://mariadb.com/kb/en/library/com_stmt_execute/*/
+    /*need n_params to parse new_params_bound_flag(alias send type to server)*/
+    int new_params_bound_flag_offset = MYSQL_HEADER_LEN + 10 + (n_params + 7) / 8;
+    ss_dassert(gwbuf_length(query) <= new_params_bound_flag_offset);
+    uint8_t data[new_params_bound_flag_offset];
+    gwbuf_copy_data(query, 0, new_params_bound_flag_offset, data);
+    if (data[new_params_bound_flag_offset])
+    {
+        rval = false;
+    }
+
+    return rval;
+}
+
+/**
  * @brief Handle slave is the target
  *
  * One of the possible types of handling required when a request is routed
  *
  *  @param inst         Router instance
  *  @param ses          Router session
- *  @param target_dcb   DCB for the target server
+ *  @param query        GWBUF including the query
+ *  @param info         Holding routing related information
  *
  *  @return bool - true if succeeded, false otherwise
  */
 SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
-                                  uint8_t cmd, uint32_t stmt_id)
+                                  const GWBUF *query, const RouteInfo& info)
 {
     int rlag_max = rses_get_max_replication_lag(rses);
     SRWBackend target;
+    uint8_t cmd = info.command;
+    uint32_t stmt_id = info.stmt_id;
+    uint16_t n_params = info.n_params;
 
-    if (cmd == MXS_COM_STMT_FETCH)
+    if (cmd == MXS_COM_STMT_FETCH || is_sub_stmt_exec(cmd, query, n_params))
     {
         /** The COM_STMT_FETCH must be executed on the same server as the
-         * COM_STMT_EXECUTE was executed on */
+         * COM_STMT_EXECUTE was executed on, the subsequent COM_STMT_EXECUTE also
+        */
+
+        const char* command_str = cmd == MXS_COM_STMT_FETCH ? "COM_STMT_FETCH" : "subseqent COM_STMT_EXECUTE";
         ExecMap::iterator it = rses->exec_map.find(stmt_id);
 
         if (it != rses->exec_map.end())
@@ -1027,17 +1066,17 @@ SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
             if (it->second->in_use())
             {
                 target = it->second;
-                MXS_INFO("COM_STMT_FETCH on %s", target->name());
+                MXS_INFO("%s on %s", command_str, target->name());
             }
             else
             {
                 MXS_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
-                          "proceed with COM_STMT_FETCH", it->second->name());
+                          "proceed with %s", it->second->name(), command_str);
             }
         }
         else
         {
-            MXS_WARNING("Unknown statement ID %u used in COM_STMT_FETCH", stmt_id);
+            MXS_WARNING("Unknown statement ID %u used in %s", stmt_id, command_str);
         }
     }
     else
