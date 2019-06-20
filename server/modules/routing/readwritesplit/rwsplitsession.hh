@@ -32,7 +32,7 @@ enum reply_state_t
     rstostr((a)->get_reply_state()), rstostr(b));
 
 typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
-typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
+typedef std::map<uint32_t, uint64_t> ClientHandleMap;  /** External ID to internal ID */
 
 class RWBackend: public mxs::Backend
 {
@@ -171,6 +171,7 @@ struct RouteInfo
     uint8_t        command; /**< The command byte, 0xff for unknown commands */
     uint32_t       type;    /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
     uint32_t       stmt_id; /**< Prepared statement ID, 0 for unknown */
+    uint16_t       n_params; /**< Prepared statement params count */
 };
 
 /**
@@ -202,7 +203,8 @@ static inline const char* rstostr(reply_state_t state)
  *
  * @param rses   Router client session
  * @param buffer Buffer containing a binary protocol statement other than COM_STMT_PREPARE
+ * @param n_params statement parmas number
  *
  * @return The internal ID of the prepared statement that the buffer contents refer to
  */
-uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer);
+uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer, uint16_t* n_params);
