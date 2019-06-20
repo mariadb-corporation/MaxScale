@@ -696,7 +696,7 @@ json_t* Monitor::parameters_to_json() const
 {
     json_t* rval = json_object();
     const MXS_MODULE* mod = get_module(m_module.c_str(), MODULE_MONITOR);
-    auto  my_config = parameters();
+    auto my_config = parameters();
     config_add_module_params_json(&my_config,
                                   {CN_TYPE, CN_MODULE, CN_SERVERS},
                                   config_monitor_params,
@@ -1088,24 +1088,24 @@ int Monitor::launch_command(MonitorServer* ptr)
                                   });
 
     m_scriptcmd->match_substitute("$NODELIST", [this] {
-                              return gen_serverlist(SERVER_RUNNING);
-                          });
+                                      return gen_serverlist(SERVER_RUNNING);
+                                  });
 
     m_scriptcmd->match_substitute("$LIST", [this] {
-                              return gen_serverlist(0);
-                          });
+                                      return gen_serverlist(0);
+                                  });
 
     m_scriptcmd->match_substitute("$MASTERLIST", [this] {
-                              return gen_serverlist(SERVER_MASTER);
-                          });
+                                      return gen_serverlist(SERVER_MASTER);
+                                  });
 
     m_scriptcmd->match_substitute("$SLAVELIST", [this] {
-                              return gen_serverlist(SERVER_SLAVE);
-                          });
+                                      return gen_serverlist(SERVER_SLAVE);
+                                  });
 
     m_scriptcmd->match_substitute("$SYNCEDLIST", [this] {
-                              return gen_serverlist(SERVER_JOINED);
-                          });
+                                      return gen_serverlist(SERVER_JOINED);
+                                  });
 
     int rv = m_scriptcmd->externcmd_execute();
     if (rv == 0)
@@ -1836,7 +1836,7 @@ MonitorWorker::~MonitorWorker()
 
 bool MonitorWorker::is_running() const
 {
-    return (Worker::state() != Worker::STOPPED);
+    return Worker::state() != Worker::STOPPED && Worker::state() != Worker::FINISHED;
 }
 
 void MonitorWorker::do_stop()

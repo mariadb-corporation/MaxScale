@@ -301,6 +301,7 @@ public:
         STOPPED,
         POLLING,
         PROCESSING,
+        FINISHED
     };
 
     enum execute_mode_t
