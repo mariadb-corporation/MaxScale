@@ -66,11 +66,12 @@ of their use.
 
  - [Avrorouter](Routers/Avrorouter.md)
  - [Binlogrouter](Routers/Binlogrouter.md)
+ - [Cat](Routers/Cat.md)
  - [HintRouter](Routers/HintRouter.md)
  - [Read Connection Router](Routers/ReadConnRoute.md)
  - [Read Write Split](Routers/ReadWriteSplit.md)
  - [Schemarouter](Routers/SchemaRouter.md)
- - [Cat](Routers/Cat.md)
+ - [SmartRouter](Routers/SmartRouter.md)
 
 The legacy diagnostic routing module MaxAdmin has been deprecated: avoid using
 it.
