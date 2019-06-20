@@ -2566,7 +2566,11 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
     // not exist during program start/stop.
     mxb_assert(mxs_rworker_get_current() == NULL
                || mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    mxb_assert(Worker::state() == Worker::STOPPED);
+
+    // This can be a bit confusing as the workers are considered to be "finished" when the stop processing. A
+    // better distinction between workers that temporarily stop and permanently stop should be implemented.
+    mxb_assert(Worker::state() == Worker::STOPPED || Worker::state() == Worker::FINISHED);
+
     mxb_assert(monitor_state() == MONITOR_STATE_STOPPED);
     mxb_assert(m_thread_running.load() == false);
 

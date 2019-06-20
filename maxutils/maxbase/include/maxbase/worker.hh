@@ -300,7 +300,8 @@ public:
         IDLE,
         POLLING,
         PROCESSING,
-        ZPROCESSING
+        ZPROCESSING,
+        FINISHED
     };
 
     enum execute_mode_t

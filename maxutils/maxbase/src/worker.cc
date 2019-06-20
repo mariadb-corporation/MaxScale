@@ -523,9 +523,9 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 
     // TODO: Enable and fix this in develop and/or 2.4: The deletion of rworker_local is done after the
     // workers have stopped and it triggers this assertion.
-    // mxb_assert(state() != Worker::STOPPED);
+    // mxb_assert(state() != Worker::FINISHED);
 
-    if (state() != Worker::STOPPED)
+    if (state() != Worker::FINISHED)
     {
         MessageQueue::Message message(msg_id, arg1, arg2);
         rval = m_pQueue->post(message);
@@ -536,7 +536,7 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 
 void Worker::run(mxb::Semaphore* pSem)
 {
-    mxb_assert(m_state == STOPPED);
+    mxb_assert(m_state == STOPPED || m_state == FINISHED);
     this_thread.pCurrent_worker = this;
 
     if (pre_run())
@@ -550,7 +550,7 @@ void Worker::run(mxb::Semaphore* pSem)
 
         poll_waitevents();
 
-        m_state = STOPPED;
+        m_state = FINISHED;
 
         post_run();
         MXB_INFO("Worker %p has shut down.", this);
