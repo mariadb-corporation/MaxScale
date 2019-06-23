@@ -200,7 +200,7 @@ add_test_executable(maxctrl_basic.cpp maxctrl_basic maxctrl_basic LABELS maxctrl
 add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port LABELS REPL_BACKEND)
 
 # Test KILL QUERY functionality
-add_test_executable(kill_query.cpp kill_query replication LABELS REPL_BACKEND)
+add_test_executable(kill_query.cpp kill_query kill_query LABELS REPL_BACKEND)
 
 # MXS-2250: DESCRIBE on temporary table should work.
 add_test_executable(mxs2250_describe_temp_table.cpp mxs2250_describe_temp_table mxs2250_describe_temp_table LABELS REPL_BACKEND)
