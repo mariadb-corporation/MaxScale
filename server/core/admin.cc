@@ -190,7 +190,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                             user ? user : "", pw ? "using password" : "no password",
                             method, url);
             }
-            send_auth_error(connection);
+
             rval = false;
         }
         else if (!admin_user_is_inet_admin(user) && modifies_data(connection, method))
@@ -268,7 +268,7 @@ int handle_client(void *cls,
             // Authentication has failed, an error will be sent to the client
             rval = MHD_YES;
 
-            if (*upload_data_size)
+            if (*upload_data_size || (state == Client::INIT && request_data_length(connection)))
             {
                 // The client is uploading data, discard it so we can send the error
                 *upload_data_size = 0;
