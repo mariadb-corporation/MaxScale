@@ -81,22 +81,6 @@ The `ndbclustermon` module has been removed.
 The `mmmon` module has been removed as the `mariadbmon` monitor largely does
 what it used to do.
 
-## Deprecated Features
-
-### `dbfwfilter`
-
-The database firewall filter has been deprecated and it will be removed in a
-future version of MaxScale.
-
-We advise against using it.
-
-### `masking`
-
-The masking filter has been deprecated and it will be removed in a
-future version of MaxScale.
-
-We advise against using it.
-
 ## New Features
 
 ### Servers can be drained

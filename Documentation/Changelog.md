@@ -10,7 +10,6 @@
 * MaxCtrl commands `list sessions`, `show sessions` and `show session <id>`
   support reverse DNS lookup of client addresses. The conversion is activated
   by adding the `--rdns`-option to the command.
-* The database firewall filter and the masking filter have been deprecated.
 * The following MariaDB-Monitor settings have been removed and cause a startup error
   if defined: `mysql51_replication`, `multimaster` and `allow_cluster_recovery`. The
   setting `detect_replication_lag` is deprecated and is ignored.
