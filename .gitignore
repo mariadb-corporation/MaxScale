@@ -62,3 +62,9 @@ nbproject/
 .reviewboardrc
 # vscode
 .vscode
+
+# Qt Creator project files
+*.txt.user
+*.pro
+*.pro.user
+*.pri
