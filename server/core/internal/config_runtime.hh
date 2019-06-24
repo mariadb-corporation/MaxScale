@@ -387,6 +387,17 @@ bool runtime_create_user_from_json(json_t* json);
 bool runtime_remove_user(const char* id, enum user_type type);
 
 /**
+ * @brief Alter admin user password
+ *
+ * @param user Username
+ * @param type Type of the user
+ * @param json JSON defining the new user
+ *
+ * @return True if the user was altered successfully
+ */
+bool runtime_alter_user(const std::string& user, const std::string& type, json_t* json);
+
+/**
  * @brief Alter core MaxScale parameters from JSON
  *
  * @param new_json JSON defining the new core parameters

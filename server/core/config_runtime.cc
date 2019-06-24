@@ -2875,6 +2875,31 @@ bool runtime_remove_user(const char* id, enum user_type type)
     return rval;
 }
 
+bool runtime_alter_user(const std::string& user, const std::string& type, json_t* json)
+{
+    bool rval = false;
+    const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
+
+    if (!password)
+    {
+        config_runtime_error("No password provided");
+    }
+    else if (type != CN_INET)
+    {
+        config_runtime_error("Users of type '%s' cannot be altered", type.c_str());
+    }
+    else if (const char* err = admin_alter_inet_user(user.c_str(), password))
+    {
+        config_runtime_error("%s", err);
+    }
+    else
+    {
+        rval = true;
+    }
+
+    return rval;
+}
+
 bool validate_maxscale_json(json_t* json)
 {
     bool rval = false;

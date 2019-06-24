@@ -98,6 +98,17 @@ bool users_auth(USERS* users, const char* user, const char* password);
 bool users_find(USERS* users, const char* user);
 
 /**
+ * Change password for a user
+ *
+ * @param users    The users table
+ * @param user     User to alter
+ * @param password The new password for the user
+ *
+ * @return True if password was changed
+ */
+bool users_change_password(USERS* users, const char* user, const char* password);
+
+/**
  * Check if user is an administrator
  *
  * @param users    The users table

@@ -192,10 +192,6 @@ exports.builder = function(yargs) {
         }, function(argv) {
             maxctrl(argv, function(host) {
 
-                if (argv.u == argv.name) {
-                    return error('Cannot alter current user')
-                }
-
                 var user = {
                     'data': {
                         'id': argv.name,
@@ -206,10 +202,7 @@ exports.builder = function(yargs) {
                     }
                 }
 
-                return getJson(host, 'users/inet/' + argv.name)
-                    .then((res) => user.data.attributes.account = res.data.attributes.account)
-                    .then(() => doRequest(host, 'users/inet/' + argv.name, null, {method: 'DELETE'}))
-                    .then(() => doRequest(host, 'users/inet', null, {method: 'POST', body: user}))
+                return doRequest(host, 'users/inet/' + argv.name, null, {method: 'PATCH', body: user})
             })
         })
         .usage('Usage: alter <command>')
