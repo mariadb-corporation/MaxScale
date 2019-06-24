@@ -259,8 +259,14 @@ int secrets_write_keys(const char* dir)
     clean_up_pathname(secret_file);
 
     /* Open for writing | Create | Truncate the file for writing */
-    if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
+    if ((fd = open(secret_file, O_EXCL | O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
     {
+        if(errno == EEXIST)
+        {
+            fprintf(stderr, "Key [%s] already exists, remove it manually to create a new one. \n",
+                  secret_file);
+        }
+
         MXS_ERROR("failed opening secret "
                   "file [%s]. Error %d, %s.",
                   secret_file,
