@@ -11,6 +11,8 @@ configuration file.
 
 ## Section Names
 
+### Reserved Names
+
 Section and object names starting with `@@` are now reserved for
 internal use by MaxScale.
 
@@ -23,8 +25,10 @@ Those files are:
 * All nested configuration files; typically `/etc/maxscale.cnf.d/*`.
 * All dynamic configuration files; typically `/var/lib/maxscale/maxscale.cnd.d/*`.
 
-Further, whitespace in section names that was deprecated in MaxScale 2.2
-will now be rejected, which will cause the startup of MaxScale to fail.
+### Whitespace in Names
+
+Whitespace in section names that was deprecated in MaxScale 2.2 will now be
+rejected, which will cause the startup of MaxScale to fail.
 
 To prevent that, section names like
 ```
@@ -61,5 +65,28 @@ some_param=60000ms
 ## MariaDB-Monitor
 
 The following settings have been removed and cause a startup error
-if defined: `mysql51_replication`, `multimaster` and `allow_cluster_recovery`.
+if defined:
 
+* `mysql51_replication`
+* `multimaster`
+* `allow_cluster_recovery`.
+
+## ReadWriteSplit
+
+* If multiple masters are available for a readwritesplit service, the one with
+  the lowest connection count is selected.
+
+* If a master server is placed into maintenance mode, all open transactions are
+  allowed to gracefully finish before the session is closed. To forcefully close
+  the connections, use the `--force` option for `maxctrl set server`.
+
+* The `lazy_connect` feature can be used as a workaround to
+  [MXS-619](https://jira.mariadb.org/browse/MXS-619). It also reduces the
+  overall load on the system when connections are rapidly opened and closed.
+
+* Transaction replays now have a limit on how many times a replay is
+  attempted. The default values is five attempts and is controlled by the
+  `transaction_replay_attempts` parameter.
+
+* If transaction replay is enabled and a deadlock occurs (SQLSTATE 40XXX), the
+  transaction is automatically retried.
