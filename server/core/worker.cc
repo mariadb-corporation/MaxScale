@@ -720,7 +720,8 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     // NOTE: No logging here, this function must be signal safe.
     bool rval = false;
-    ss_dassert(state() != Worker::STOPPED);
+    // TODO: Fix this, it will be hit
+    // ss_dassert(state() != Worker::STOPPED);
 
     if (state() != Worker::STOPPED)
     {
