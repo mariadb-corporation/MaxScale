@@ -108,6 +108,11 @@ describe("Alter Commands", function() {
             .should.be.rejected
     })
 
+    it('rejects alteration to current user', function() {
+        return doCommand('-u bob -p bob alter user bob bob2')
+            .should.be.rejected
+    })
+
     it('creates user', function() {
         return verifyCommand('create user testuser test', 'users/inet/testuser')
     })

@@ -141,6 +141,10 @@ exports.builder = function(yargs) {
         }, function(argv) {
             maxctrl(argv, function(host) {
 
+                if (argv.u == argv.name) {
+                    return error('Cannot alter current user')
+                }
+
                 var user = {
                     'data': {
                         'id': argv.name,
