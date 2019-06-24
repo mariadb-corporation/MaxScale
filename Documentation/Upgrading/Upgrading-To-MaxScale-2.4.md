@@ -62,6 +62,12 @@ some_param=60s
 some_param=60000ms
 ```
 
+## Improved Admin User Encryption
+
+MaxScale 2.4 will use a SHA2-512 hash for new admin user passwords. To upgrade a
+user to use the better hashing algorithm, either recreate the user or use the
+`maxctrl alter user` command.
+
 ## MariaDB-Monitor
 
 The following settings have been removed and cause a startup error
