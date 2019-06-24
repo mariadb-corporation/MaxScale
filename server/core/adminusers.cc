@@ -138,6 +138,29 @@ static const char* admin_add_user(USERS** pusers,
     return ADMIN_SUCCESS;
 }
 
+static const char* admin_alter_user(USERS** pusers,
+                                    const char* fname,
+                                    const char* uname,
+                                    const char* password)
+{
+    if (*pusers == NULL)
+    {
+        *pusers = users_alloc();
+    }
+
+    if (!users_change_password(*pusers, uname, password))
+    {
+        return ADMIN_ERR_USERNOTFOUND;
+    }
+
+    if (!admin_dump_users(*pusers, fname))
+    {
+        return ADMIN_ERR_FILEOPEN;
+    }
+
+    return ADMIN_SUCCESS;
+}
+
 static const char* admin_remove_user(USERS* users, const char* fname, const char* uname)
 {
     if (!users_delete(users, uname))
@@ -435,6 +458,19 @@ bool admin_linux_account_enabled(const char* uname)
 const char* admin_add_inet_user(const char* uname, const char* password, enum user_account_type type)
 {
     return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, password, type);
+}
+
+/**
+ * Alter network user.
+ *
+ * @param uname    The user to alter
+ * @param password The new password
+ *
+ * @return NULL on success or an error string on failure.
+ */
+const char* admin_alter_inet_user(const char* uname, const char* password)
+{
+    return admin_alter_user(&inet_users, INET_USERS_FILE_NAME, uname, password);
 }
 
 /**

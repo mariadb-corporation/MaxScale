@@ -760,11 +760,25 @@ HttpResponse cb_monitor_wait(const HttpRequest& request)
     MonitorManager::debug_wait_one_tick();
     return HttpResponse(MHD_HTTP_OK);
 }
+
 HttpResponse cb_create_user(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
 
     if (runtime_create_user_from_json(request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_alter_user(const HttpRequest& request)
+{
+    auto user = request.last_uri_part();
+    auto type = request.uri_part(1);
+
+    if (runtime_alter_user(user, type, request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -1044,6 +1058,7 @@ public:
         m_patch.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
         m_patch.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
         m_patch.push_back(SResource(new Resource(cb_alter_qc, 2, "maxscale", "query_classifier")));
+        m_patch.push_back(SResource(new Resource(cb_alter_user, 3, "users", "inet", ":inetuser")));
 
         /** Update resource relationships directly */
         m_patch.push_back(SResource(new Resource(cb_alter_server_service_relationship,

@@ -195,11 +195,6 @@ describe("Alter Commands", function() {
             .should.be.rejected
     })
 
-    it('rejects alteration to current user', function() {
-        return doCommand('-u bob -p bob alter user bob bob2')
-            .should.be.rejected
-    })
-
     it('creates user', function() {
         return verifyCommand('create user testuser test', 'users/inet/testuser')
     })
@@ -210,6 +205,14 @@ describe("Alter Commands", function() {
 
     it('destroys the altered user', function() {
         return doCommand('destroy user testuser')
+    })
+
+    it('allows alteration to current user', function() {
+        return verifyCommand('create user bob bob --type=admin', 'users/inet/bob')
+            .then(() => doCommand('-u bob -p bob alter user bob bob2'))
+            .then(() => doCommand('-u bob -p bob2 alter user bob bob'))
+            .then(() => doCommand('-u bob -p bob list servers'))
+            .then(() => doCommand('-u bob -p bob destroy user bob'))
     })
 
     after(stopMaxScale)

@@ -327,6 +327,13 @@ bool users_find(USERS* users, const char* user)
     return u->get(user);
 }
 
+bool users_change_password(USERS* users, const char* user, const char* password)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    UserInfo info;
+    return u->get(user, &info) && u->remove(user) && u->add(user, password, info.permissions);
+}
+
 bool users_auth(USERS* users, const char* user, const char* password)
 {
     Users* u = reinterpret_cast<Users*>(users);
