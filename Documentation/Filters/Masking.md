@@ -41,6 +41,10 @@ the _ssn_ would be masked, as in
 ...
 ```
 
+Note that the masking filter should be viewed as a best-effort solution
+intended for protecting against accidental misuse rather than malicious
+attacks.
+
 ## Security
 
 From MaxScale 2.3 onwards, the masking filter will reject statements
