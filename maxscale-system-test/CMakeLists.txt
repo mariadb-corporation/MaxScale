@@ -985,6 +985,9 @@ add_test_executable(mxs2464_sescmd_reconnect.cpp mxs2464_sescmd_reconnect mxs246
 # MXS-2563: Failing debug assertion at rwsplitsession.cc:1129 : m_expected_responses == 0
 add_test_executable(mxs2563_concurrent_slave_failure.cpp mxs2563_concurrent_slave_failure mxs2563_concurrent_slave_failure LABELS REPL_BACKEND readwritesplit)
 
+# MXS-2521: COM_STMT_EXECUTE maybe return empty result
+add_test_executable(mxs2521_double_exec.cpp mxs2521_double_exec mxs2521_double_exec LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################

@@ -1355,6 +1355,8 @@ _5.5.5-MaxScale-Service_ being sent to the client.
 ### `weightby`
 
 **Note:** This parameter has been deprecated in MaxScale 2.3.2.
+[A rank mechanism](https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/Getting-Started/Configuration-Guide.md#rank)
+will be added in MaxScale 2.4 to allow better control over server usage.
 
 The weightby parameter is used in conjunction with server parameters in order to
 control the load balancing applied in the router in use by the service. This
@@ -2151,7 +2153,7 @@ configuration at runtime.
 
 * [REST API](../REST-API/API.md) documentation
 
-* MaxAdmin
+* MaxAdmin (deprecated)
   * [Runtime Configuration Changes](../Reference/MaxAdmin.md#runtime-configuration-changes)
 
 All changes to the configuration are persisted as individual configuration files
