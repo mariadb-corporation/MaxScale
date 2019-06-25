@@ -287,6 +287,9 @@ add_test_executable(mysqlmon_switchover_auto.cpp mysqlmon_switchover_auto mysqlm
 # MySQL Monitor series of failovers and rejoins
 add_test_executable(mysqlmon_failover_readonly.cpp mysqlmon_failover_readonly mysqlmon_failover_readonly LABELS mysqlmon REPL_BACKEND)
 
+# MariaDB-Monitor enforce_simple_topology
+add_test_executable(mysqlmon_enforce_simple.cpp mysqlmon_enforce_simple mysqlmon_enforce_simple LABELS mysqlmon REPL_BACKEND)
+
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
 add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
