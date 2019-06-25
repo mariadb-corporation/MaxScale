@@ -83,6 +83,23 @@ what it used to do.
 
 ## New Features
 
+### Clustrix Support
+
+MaxScale now contains support for Clustrix in the form of a Clustrix monitor
+that is capable of monitoring a Clustrix cluster.
+
+Please see the
+[documentation](../Monitors/Clustrix-Monitor.md) for details.
+
+### Smart Router
+
+MaxScale has now a new router _SmartRouter_ that is capable of routing a query
+to different kinds of backends, containing the same data, depending on which
+backend can best handle that particular kind of query.
+
+Please see the
+[documentation](../Routers/SmartRouter.md) for details.
+
 ### Servers can be drained
 
 It is now possible to drain a server, which means that existing
@@ -180,6 +197,11 @@ the `set` endpoint.
 
 For more information on the readwritesplit router, refer to the
 [documentation](../Routers/ReadWriteSplit.md).
+
+#### `transaction_replay`
+
+The transaction replay functionality will now also be applied in conjunction
+with server initiated transaction rollbacks.
 
 #### `transaction_replay_attempts`
 
