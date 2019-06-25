@@ -1,0 +1,64 @@
+#!/bin/bash
+#
+# Copyright (c) 2019 MariaDB Corporation Ab
+#
+#  Use of this software is governed by the Business Source License included
+#  in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+#
+#  Change Date: 2023-01-01
+#
+#  On the date above, in accordance with the Business Source License, use
+#  of this software will be governed by version 2 or later of the General
+#  Public License.
+#
+
+SCRIPT_PATH=$(dirname $(realpath $0))
+
+source $SCRIPT_PATH/maxscale-directories
+
+SCRIPT=$SCRIPT_PATH/check-change-date
+
+function print_usage_and_exit
+{
+    echo "check-maxscale-change-date date"
+    echo
+    echo "  date: The expected change date, e.g. 2023-01-01"
+
+    exit 1
+}
+
+function check
+{
+    for d in $MAXSCALE_DIRECTORIES
+    do
+        if [ ! -d $d ]
+        then
+            echo "error: The directory $d does not exist. Are you in the MaxScale root directory?"
+            exit 1
+        fi
+    done
+}
+
+function run
+{
+    local date=$1
+
+    for d in $MAXSCALE_DIRECTORIES
+    do
+        echo $d
+        (cd $d; $SCRIPT $date)
+    done
+}
+
+function main
+{
+    if [ $# -ne 1 ]
+    then
+        print_usage_and_exit
+    fi
+
+    check
+    run $1 $2
+}
+
+main $*
