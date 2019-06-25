@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+# Copyright (c) 2019 MariaDB Corporation Ab
+#
+#  Use of this software is governed by the Business Source License included
+#  in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+#
+#  Change Date: 2023-01-01
+#
+#  On the date above, in accordance with the Business Source License, use
+#  of this software will be governed by version 2 or later of the General
+#  Public License.
+#
+
+SCRIPT_PATH=$(dirname $(realpath $0))
+
+# DIRECTORIES should list all directories containing files to be updated.
+DIRECTORIES="avro client connectors Documentation examples include maxctrl maxscale-system-test maxutils plugins query_classifier rabbitmq_consumer script server"
+
+SCRIPT=$SCRIPT_PATH/update-change-date
+
+function print_usage_and_exit
+{
+    echo "update-maxscale-change-date from to"
+    echo
+    echo "  from: Old change date, e.g. 2022-01-01"
+    echo "  to  : New change date, e.g. 2023-07-01"
+
+    exit 1
+}
+
+function check
+{
+    for d in $DIRECTORIES
+    do
+        if [ ! -d $d ]
+        then
+            echo "error: The directory $d does not exist. Are you in the MaxScale root directory?"
+            exit 1
+        fi
+    done
+}
+
+function run
+{
+    local from=$1
+    local to=$2
+
+    for d in $DIRECTORIES
+    do
+        echo $d
+        (cd $d; $SCRIPT $from $to)
+    done
+}
+
+function main
+{
+    if [ $# -ne 2 ]
+    then
+        print_usage_and_exit
+    fi
+
+    check
+    run $1 $2
+}
+
+main $*
