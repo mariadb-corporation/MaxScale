@@ -293,6 +293,7 @@ void RWBackend::process_packets(GWBUF* result)
         len |= (*it++) << 16;
         ++it;   // Skip the sequence
         mxb_assert(it != buffer.end());
+        mxb_assert(std::distance(it, buffer.end()) >= len);
         auto end = it;
         end.advance(len);
         uint8_t cmd = *it;
