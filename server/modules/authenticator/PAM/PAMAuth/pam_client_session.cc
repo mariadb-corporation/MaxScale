@@ -13,7 +13,7 @@
 
 #include "pam_client_session.hh"
 
-#include <sstream>
+#include <set>
 #include <maxbase/pam_utils.hh>
 #include <maxbase/format.hh>
 #include <maxscale/event.hh>
@@ -52,18 +52,56 @@ bool store_client_password(DCB* dcb, GWBUF* buffer)
     return rval;
 }
 
-/**
- * Helper callback for PamClientSession::get_pam_user_services(). See SQLite3
- * documentation for more information.
- *
- * @param data Application data
- * @param columns Number of columns, must be 1
- * @param column_vals Column values
- * @param column_names Column names
- * @return Always 0
- */
-int user_services_cb(PamClientSession::StringVector* data, int columns, char** column_vals,
-                     char** column_names)
+struct UserData
+{
+    string host;
+    string authentication_string;
+    string default_role;
+    bool anydb {false};
+
+    static bool compare(const UserData& lhs, const UserData& rhs)
+    {
+        // Order entries according to https://mariadb.com/kb/en/library/create-user/
+        const string& lhost = lhs.host;
+        const string& rhost = rhs.host;
+        const char wildcards[] = "%_";
+        auto lwc_pos = lhost.find_first_of(wildcards);
+        auto rwc_pos = rhost.find_first_of(wildcards);
+        bool lwc = (lwc_pos != string::npos);
+        bool rwc = (rwc_pos != string::npos);
+
+        // The host without wc:s sorts earlier than the one with them. If both have wc:s, the one with the
+        // later wc wins. If neither have wildcards, use string order. This should be rare.
+        return ((!lwc && rwc) || (lwc && rwc && lwc_pos > rwc_pos) || (!lwc && !rwc && lhost < rhost));
+    }
+
+};
+
+using UserDataArr = std::vector<UserData>;
+
+int user_data_cb(UserDataArr* data, int columns, char** column_vals, char** column_names)
+{
+    mxb_assert(columns == 4);
+    UserData new_row;
+    new_row.host = column_vals[0];
+    new_row.authentication_string = column_vals[1];
+    new_row.default_role = column_vals[2];
+    new_row.anydb = (column_vals[3][0] == '1');
+    data->push_back(new_row);
+    return 0;
+}
+
+int anon_user_data_cb(UserDataArr* data, int columns, char** column_vals, char** column_names)
+{
+    mxb_assert(columns == 2);
+    UserData new_row;
+    new_row.host = column_vals[0];
+    new_row.authentication_string = column_vals[1];
+    data->push_back(new_row);
+    return 0;
+}
+
+int string_cb(PamClientSession::StringVector* data, int columns, char** column_vals, char** column_names)
 {
     mxb_assert(columns == 1);
     if (column_vals[0])
@@ -78,35 +116,9 @@ int user_services_cb(PamClientSession::StringVector* data, int columns, char** c
     return 0;
 }
 
-struct UserData
+int row_count_cb(int* data, int columns, char** column_vals, char** column_names)
 {
-    string host;
-    string authentication_string;
-    string default_role;
-    bool anydb {false};
-};
-
-using UserDataArr = std::vector<UserData>;
-
-/**
- * Helper callback for PamClientSession::get_pam_user_services(). See SQLite3
- * documentation for more information.
- *
- * @param data Application data
- * @param columns Number of columns, must be 1
- * @param column_vals Column values
- * @param column_names Column names
- * @return Always 0
- */
-int user_data_cb(UserDataArr* data, int columns, char** column_vals, char** column_names)
-{
-    mxb_assert(columns == 4);
-    UserData new_row;
-    new_row.host = column_vals[0];
-    new_row.authentication_string = column_vals[1];
-    new_row.default_role = column_vals[2];
-    new_row.anydb = (column_vals[3][0] == '1');
-    data->push_back(new_row);
+    (*data)++;
     return 0;
 }
 
@@ -149,68 +161,66 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
 {
     const char* user = session->user;
     const char* host = dcb->remote;
-    const char* db = session->db;
+    const string db = session->db;
     // First search for a normal matching user.
-    const string columns = "host, authentication_string, default_role, anydb";
+    const string columns = FIELD_HOST + ", " + FIELD_AUTHSTR + ", " + FIELD_DEF_ROLE + ", " + FIELD_ANYDB;
     const string filter = "('%s' LIKE " + FIELD_HOST + ") AND (" + FIELD_IS_ROLE + " = 0)";
     const string users_filter = "(" + FIELD_USER + " = '%s') AND " + filter;
-
     const string users_query_fmt = "SELECT " + columns + " FROM " + TABLE_USER + " WHERE "
             + users_filter + ";";
+
     string users_query = mxb::string_printf(users_query_fmt.c_str(), user, host);
     UserDataArr matching_users;
     m_sqlite->exec(users_query, user_data_cb, &matching_users);
 
-    // If any of the rows returned has a global priv we have a valid service name.
-    for (auto entry : matching_users)
-    {
-        // TODO: Order entries according to https://mariadb.com/kb/en/library/create-user/
-        // -> User Name Component and only return one service.
-        if (entry.anydb)
-        {
-            services_out->push_back(entry.authentication_string);
-        }
-        // TODO: add support for roles
-    }
-    auto word_entry = [](size_t num) -> const char* {
-           return (num == 1) ? "entry" : "entries";
-    };
-
-    // TODO: Check database grants.
-
     if (!matching_users.empty())
     {
-        auto num_services = matching_users.size();
-        MXS_INFO("Found %lu valid PAM user %s for '%s'@'%s'.",
-                 num_services, word_entry(num_services), user, host);
-    }
-    else
-    {
-        // No service found for user with correct username & host.
-        // Check if a matching anonymous user exists.
-        const string anon_filter = "(" + FIELD_USER + " = '') AND " + filter + " AND ("
-                + FIELD_HAS_PROXY + " = '0')";
-        const string anon_query_fmt = string("SELECT authentication_string FROM ") + TABLE_USER
-            + " WHERE " + anon_filter + ";";
-        string anon_query = mxb::string_printf(anon_query_fmt.c_str(), host);
-        MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
+        // Only consider the best matching userdata.
+        auto best_entry = *std::min_element(matching_users.begin(), matching_users.end(), UserData::compare);
 
-        if (m_sqlite->exec(anon_query, user_services_cb, services_out))
+        // Accept the user if the entry has a direct global privilege or if the user is not
+        // connecting to a specific database.
+        if (best_entry.anydb || db.empty()
+            // Check db-specific access.
+            || (user_can_access_db(user, best_entry.host, db))
+            // Check role-based access.
+            || (!best_entry.default_role.empty() && role_can_access_db(best_entry.default_role, db)))
         {
-            auto num_services = services_out->size();
-            if (num_services == 0)
-            {
-                MXB_INFO("Found no PAM user entries for '%s'@'%s'.", session->user, dcb->remote);
-            }
-            else
-            {
-                MXB_INFO("Found %lu matching anonymous PAM user %s for '%s'@'%s'.",
-                         num_services, word_entry(num_services), session->user, dcb->remote);
-            }
+            MXS_INFO("Found matching PAM user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
+                     user, best_entry.host.c_str(), user, host);
+            services_out->push_back(best_entry.authentication_string);
         }
         else
         {
-            MXB_ERROR("Failed to execute query: '%s'", m_sqlite->error());
+            MXS_INFO("Found matching PAM user '%s'@'%s' for client '%s'@'%s' but user does not have "
+                     "sufficient privileges.", user, best_entry.host.c_str(), user, host);
+        }
+    }
+    else
+    {
+        // No normal user entry found for the username.
+        // Check if a matching anonymous user exists. Privileges are not checked for anonymous users since
+        // the authenticator does not know the final mapped user. Roles are also not supported.
+        const string anon_columns = FIELD_HOST + ", " + FIELD_AUTHSTR;
+        const string anon_filter = "(" + FIELD_USER + " = '') AND " + filter + " AND ("
+                                   + FIELD_HAS_PROXY + " = '1')";
+        const string anon_query_fmt = "SELECT " + anon_columns + " FROM " + TABLE_USER
+                                      + " WHERE " + anon_filter + ";";
+        string anon_query = mxb::string_printf(anon_query_fmt.c_str(), host);
+        MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
+
+        UserDataArr anon_entries;
+        m_sqlite->exec(anon_query, anon_user_data_cb, &anon_entries);
+        if (anon_entries.empty())
+        {
+            MXB_INFO("Found no matching PAM user for client '%s'@'%s'.", user, host);
+        }
+        else
+        {
+            auto best_entry = *std::min_element(anon_entries.begin(), anon_entries.end(), UserData::compare);
+            MXB_INFO("Found matching anonymous PAM user ''@'%s' for client '%s'@'%s'.",
+                     best_entry.host.c_str(), user, host);
+            services_out->push_back(best_entry.authentication_string);
         }
     }
 }
@@ -366,4 +376,67 @@ bool PamClientSession::extract(DCB* dcb, GWBUF* buffer)
         break;
     }
     return rval;
+}
+
+bool PamClientSession::role_can_access_db(const std::string& role, const std::string& target_db)
+{
+    // Roles are tricky since one role may have access to other roles and so on. May need to perform
+    // multiple queries.
+    using StringSet = std::set<string>;
+    StringSet open_set; // roles which still need to be expanded.
+    StringSet closed_set; // roles which have been checked already.
+
+    const string role_anydb_query_fmt = "SELECT 1 FROM " + TABLE_USER + " WHERE ("
+            + FIELD_USER +" = '%s' AND " + FIELD_ANYDB + " = 1 AND " + FIELD_IS_ROLE + " = 1);";
+    const string role_map_query_fmt = "SELECT " + FIELD_ROLE + " FROM " + TABLE_ROLES_MAPPING + " WHERE ("
+            + FIELD_USER +" = '%s' AND " + FIELD_HOST + " = '');";
+
+    open_set.insert(role);
+    bool privilege_found = false;
+    while (!open_set.empty() && !privilege_found)
+    {
+        string current_role = *open_set.begin();
+        // First, check if role has global privilege.
+        int count = 0;
+        string role_anydb_query = mxb::string_printf(role_anydb_query_fmt.c_str(), current_role.c_str());
+        m_sqlite->exec(role_anydb_query.c_str(), row_count_cb, &count);
+        if (count > 0)
+        {
+            privilege_found = true;
+        }
+        // No global privilege, check db-level privilege.
+        else if (user_can_access_db(current_role, "", target_db))
+        {
+            privilege_found = true;
+        }
+        else
+        {
+            // The current role does not have access to db. Add linked roles to the open set.
+            string role_map_query = mxb::string_printf(role_map_query_fmt.c_str(), current_role.c_str());
+            StringVector linked_roles;
+            m_sqlite->exec(role_map_query, string_cb, &linked_roles);
+            for (const auto& linked_role : linked_roles)
+            {
+                if (open_set.count(linked_role) == 0 && closed_set.count(linked_role) == 0)
+                {
+                    open_set.insert(linked_role);
+                }
+            }
+        }
+
+        open_set.erase(current_role);
+        closed_set.insert(current_role);
+    }
+    return privilege_found;
+}
+
+bool PamClientSession::user_can_access_db(const std::string& user, const std::string& host,
+                                          const std::string& target_db)
+{
+    const string sql_fmt = "SELECT 1 FROM " + TABLE_DB
+            + " WHERE (user = '%s' AND host = '%s' AND db = '%s');";
+    string sql = mxb::string_printf(sql_fmt.c_str(), user.c_str(), host.c_str(), target_db.c_str());
+    int result = 0;
+    m_sqlite->exec(sql, row_count_cb, &result);
+    return result > 0;
 }

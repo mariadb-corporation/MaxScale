@@ -27,7 +27,7 @@ public:
     PamClientSession(const PamClientSession& orig) = delete;
     PamClientSession& operator=(const PamClientSession&) = delete;
 
-    typedef std::vector<std::string> StringVector;
+    using StringVector = std::vector<std::string>;
     static PamClientSession* create(const PamInstance& inst);
 
     int  authenticate(DCB* client);
@@ -38,6 +38,9 @@ private:
     void get_pam_user_services(const DCB* dcb,
                                const MYSQL_session* session,
                                StringVector* services_out);
+    bool user_can_access_db(const std::string& user, const std::string& host, const std::string& target_db);
+    bool role_can_access_db(const std::string& role, const std::string& target_db);
+
     maxscale::Buffer create_auth_change_packet() const;
 
     enum class State

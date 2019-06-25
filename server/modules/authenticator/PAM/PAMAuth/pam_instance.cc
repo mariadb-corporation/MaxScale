@@ -359,11 +359,12 @@ int PamInstance::load_users(SERVICE* service)
                     if (got_data)
                     {
                         fill_user_arrays(std::move(users_res), std::move(dbs_res), std::move(roles_res));
+                        fetch_anon_proxy_users(srv, mysql);
                         rval = MXS_AUTH_LOADUSERS_OK;
                     }
                     else
                     {
-                        MXB_ERROR("Failed to query server '%s' for PAM users: '%s'.",
+                        MXB_ERROR("Failed to query server '%s' for PAM users. %s",
                                   srv->name(), error_msg.c_str());
                     }
                 }
@@ -514,68 +515,53 @@ json_t* PamInstance::diagnostic_json()
 bool PamInstance::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
 {
     bool success = true;
-    const char ANON_USER_QUERY[] = "SELECT host,authentication_string FROM mysql.user WHERE "
-                                   "(plugin = 'pam' AND user = '');";
+    const char anon_user_query[] = "SELECT host FROM mysql.user WHERE (user = '' AND plugin = 'pam');";
 
-    const char GRANT_PROXY[] = "GRANT PROXY ON";
-
-    // Query for the anonymous user which is used with group mappings
-    if (mysql_query(conn, ANON_USER_QUERY))
+    // Query for anonymous users used with group mappings
+    string error_msg;
+    QResult anon_res;
+    if ((anon_res = mxs::execute_query(conn, anon_user_query, &error_msg)) == nullptr)
     {
-        MXS_ERROR("Failed to query server '%s' for anonymous PAM users: '%s'.",
-                  server->name(), mysql_error(conn));
+        MXS_ERROR("Failed to query server '%s' for anonymous PAM users. %s",
+                  server->name(), error_msg.c_str());
         success = false;
     }
     else
     {
-        // Temporary storage of host,authentication_string for anonymous pam users.
-        std::vector<std::pair<string, string>> anon_users_info;
-        MYSQL_RES* res = mysql_store_result(conn);
-        if (res)
+        auto anon_rows = anon_res->get_row_count();
+        if (anon_rows > 0)
         {
-            MYSQL_ROW row;
-            while ((row = mysql_fetch_row(res)))
-            {
-                string host = row[0] ? row[0] : "";
-                string auth_str = row[1] ? row[1] : "";
-                anon_users_info.push_back(std::make_pair(host, auth_str));
-            }
-            mysql_free_result(res);
+            MXS_INFO("Found %lu anonymous PAM user(s). Checking them for proxy grants.", anon_rows);
         }
 
-        if (!anon_users_info.empty())
+        while (anon_res->next_row())
         {
-            MXS_INFO("Found %lu anonymous PAM user(s). Checking them for proxy grants.",
-                     anon_users_info.size());
-        }
-
-        for (const auto& elem : anon_users_info)
-        {
-            string query = "SHOW GRANTS FOR ''@'" + elem.first + "';";
+            string entry_host = anon_res->get_string(0);
+            string query = mxb::string_printf("SHOW GRANTS FOR ''@'%s';", entry_host.c_str());
             // Check that the anon user has a proxy grant.
-            if (mysql_query(conn, query.c_str()))
+            QResult grant_res;
+            if ((grant_res = mxs::execute_query(conn, query, &error_msg)) == nullptr)
             {
-                MXS_ERROR("Failed to query server '%s' for grants of anonymous PAM user ''@'%s': '%s'.",
-                          server->name(), elem.first.c_str(), mysql_error(conn));
+                MXS_ERROR("Failed to query server '%s' for grants of anonymous PAM user ''@'%s'. %s",
+                          server->name(), entry_host.c_str(), error_msg.c_str());
                 success = false;
             }
             else
             {
-                if ((res = mysql_store_result(conn)))
+                const char grant_proxy[] = "GRANT PROXY ON";
+                // The user may have multiple proxy grants. Just one is enough.
+                const string update_query_fmt = "UPDATE " + TABLE_USER + " SET " + FIELD_HAS_PROXY
+                        + " = 1 WHERE (" + FIELD_USER + " = '') AND (" + FIELD_HOST + " = '%s');";
+                while (grant_res->next_row())
                 {
-                    // The user may have multiple proxy grants, but is only added once.
-                    MYSQL_ROW row;
-                    while ((row = mysql_fetch_row(res)))
+                    string grant = grant_res->get_string(0);
+                    if (grant.find(grant_proxy) != string::npos)
                     {
-                        if (row[0] && strncmp(row[0], GRANT_PROXY, sizeof(GRANT_PROXY) - 1) == 0)
-                        {
-                            add_pam_user("", elem.first.c_str(),    // user, host
-                                         NULL, false,               // Unused
-                                         elem.second.c_str(), true);// service, proxy
-                            break;
-                        }
+                        string update_query = mxb::string_printf(update_query_fmt.c_str(),
+                                                                 entry_host.c_str());
+                        m_sqlite->exec(update_query);
+                        break;
                     }
-                    mysql_free_result(res);
                 }
             }
         }
