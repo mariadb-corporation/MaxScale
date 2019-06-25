@@ -2,6 +2,11 @@
 
 ## MariaDB MaxScale 2.4
 
+* A Clustrix specific monitor has been added.
+* A new router, Smart Router, capable of routing a query to different
+  backends depending on the characteristics of the query has been added.
+* Transaction replaying is now performed also in conjunction with server
+  initiated transaction rollbacks.
 * Names starting with `@@` are reserved for use by MaxScale.
 * Names can no longer contain whitespace.
 * Servers can now be drained.
