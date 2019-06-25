@@ -380,8 +380,12 @@ int validate_mysql_user(MYSQL_AUTH* instance,
     const char* validate_query = instance->lower_case_table_names ?
         mysqlauth_validate_user_query_lower :
         mysqlauth_validate_user_query;
-    size_t len = strlen(validate_query) + 1 + strlen(session->user) * 2
-        + strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
+    size_t len = snprintf(NULL, 0, validate_query,
+                session->user,
+                dcb->remote,
+                dcb->remote,
+                session->db,
+                session->db);
     char sql[len + 1];
     int rval = MXS_AUTH_FAILED;
     char* err;
