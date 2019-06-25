@@ -50,7 +50,7 @@ function main
     run $1 $2
 
     echo
-    echo "Remeber to update LICENSE.TXT as well."
+    echo "Remember to update LICENSE.TXT as well."
 }
 
 main $*
