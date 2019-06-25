@@ -307,7 +307,7 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
     string services_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename + " WHERE "
         + FIELD_USER + " = '" + session->user + "'"
         + " AND '" + dcb->remote + "' LIKE " + FIELD_HOST
-        + " AND (" + FIELD_ANYDB + " = '1' OR '" + session->db + "' = '' OR '"
+        + " AND (" + FIELD_ANYDB + " = '1' OR '" + session->db + "' IN ('information_schema', '') OR '"
         + session->db + "' LIKE " + FIELD_DB + ")"
         + " AND " + FIELD_PROXY + " = '0' ORDER BY authentication_string;";
     MXS_DEBUG("PAM services search sql: '%s'.", services_query.c_str());

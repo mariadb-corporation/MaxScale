@@ -63,7 +63,7 @@ const char create_sql[] =
 /** The query that is executed when a user is authenticated */
 static const char gssapi_auth_query[] =
     "SELECT * FROM " GSSAPI_TABLE_NAME
-    " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
+    " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' IN ('information_schema', '') OR '%s' LIKE db)"
     " AND ('%s' = '%s' OR princ = '%s') LIMIT 1";
 
 /** Delete query used to clean up the database before loading new users */
