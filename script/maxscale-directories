@@ -1,0 +1,2 @@
+# MAXSCALE_DIRECTORIES should list all directories containing files to be updated.
+MAXSCALE_DIRECTORIES="avro client connectors Documentation examples include maxctrl maxscale-system-test maxutils plugins query_classifier rabbitmq_consumer script server"

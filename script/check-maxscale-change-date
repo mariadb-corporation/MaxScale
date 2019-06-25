@@ -16,14 +16,13 @@ SCRIPT_PATH=$(dirname $(realpath $0))
 
 source $SCRIPT_PATH/maxscale-directories
 
-SCRIPT=$SCRIPT_PATH/update-change-date
+SCRIPT=$SCRIPT_PATH/check-change-date
 
 function print_usage_and_exit
 {
-    echo "update-maxscale-change-date from to"
+    echo "check-maxscale-change-date date"
     echo
-    echo "  from: Old change date, e.g. 2022-01-01"
-    echo "  to  : New change date, e.g. 2023-07-01"
+    echo "  date: The expected change date, e.g. 2023-01-01"
 
     exit 1
 }
@@ -42,19 +41,18 @@ function check
 
 function run
 {
-    local from=$1
-    local to=$2
+    local date=$1
 
     for d in $MAXSCALE_DIRECTORIES
     do
         echo $d
-        (cd $d; $SCRIPT $from $to)
+        (cd $d; $SCRIPT $date)
     done
 }
 
 function main
 {
-    if [ $# -ne 2 ]
+    if [ $# -ne 1 ]
     then
         print_usage_and_exit
     fi
