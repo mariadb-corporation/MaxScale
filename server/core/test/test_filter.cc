@@ -11,17 +11,6 @@
  * Public License.
  */
 
-/**
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                 Description
- * 19-08-2014   Mark Riddoch        Initial implementation
- *
- * @endverbatim
- */
-
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
 #if !defined (SS_DEBUG)
 #define SS_DEBUG
