@@ -89,6 +89,10 @@ of MaxScale.
 
 We advise against using it.
 
+### Nagios Plugins
+
+MaxScale no longer ships the example scripts and configuration files for Nagios.
+
 ## New Features
 
 ### Clustrix Support
