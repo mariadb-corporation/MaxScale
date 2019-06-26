@@ -294,6 +294,8 @@ void RWBackend::process_packets(GWBUF* result)
 {
     mxs::Buffer buffer(result);
     auto it = buffer.begin();
+    MXB_AT_DEBUG(size_t total_len = buffer.length());
+    MXB_AT_DEBUG(size_t used_len = 0);
 
     while (it != buffer.end())
     {
@@ -303,7 +305,8 @@ void RWBackend::process_packets(GWBUF* result)
         len |= (*it++) << 16;
         ++it;   // Skip the sequence
         mxb_assert(it != buffer.end());
-        mxb_assert(std::distance(it, buffer.end()) >= len);
+        mxb_assert(used_len + len <= total_len);
+        MXB_AT_DEBUG(used_len += len);
         auto end = it;
         end.advance(len);
         uint8_t cmd = *it;
