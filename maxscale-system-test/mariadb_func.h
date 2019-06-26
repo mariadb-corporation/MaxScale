@@ -321,6 +321,11 @@ public:
         return get_row(m_conn, q);
     }
 
+    Result rows(const std::string& q) const
+    {
+        return get_result(m_conn, q);
+    }
+
     std::string field(std::string q, int idx = 0)
     {
         Row r = get_row(m_conn, q);
