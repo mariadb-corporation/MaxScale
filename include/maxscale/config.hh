@@ -114,6 +114,7 @@ extern const char CN_CACHE_SIZE[];
 extern const char CN_CACHE[];
 extern const char CN_CLASSIFICATION[];
 extern const char CN_CLASSIFY[];
+extern const char CN_CLUSTER[];
 extern const char CN_CONNECTION_TIMEOUT[];
 extern const char CN_DATA[];
 extern const char CN_DEFAULT[];
