@@ -295,7 +295,7 @@ void RWBackend::process_packets(GWBUF* result)
         len |= (*it++) << 16;
         ++it;   // Skip the sequence
         mxb_assert(it != buffer.end());
-        mxb_assert(used_len + len < total_len);
+        mxb_assert(used_len + len <= total_len);
         MXB_AT_DEBUG(used_len += len);
         auto end = it;
         end.advance(len);
