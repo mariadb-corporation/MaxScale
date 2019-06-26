@@ -2,6 +2,9 @@
 
 ## Overview
 
+The **mqfilter** has been deprecated in MaxScale 2.4 and it will be removed
+in a future version of MaxScale. We advise against using it.
+
 This filter is designed to extract queries and transform them into a canonical
 form e.g. `INSERT INTO database.table VALUES ("John Doe", "Downtown",100,50.0);`
 turns into `INSERT INTO database.table VALUES ("?", "?",?,?);`. The filter

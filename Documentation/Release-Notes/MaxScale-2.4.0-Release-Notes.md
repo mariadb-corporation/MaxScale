@@ -80,6 +80,15 @@ what it used to do.
 The `log_to_shm` parameter that was removed in 2.3 will be treated as an unknown
 parameter in 2.4.0.
 
+## Deprecated Features
+
+### `mqfilter`
+
+The `mqfilter` has been deprecated and it will be removed in a future version
+of MaxScale.
+
+We advise against using it.
+
 ## New Features
 
 ### Clustrix Support
