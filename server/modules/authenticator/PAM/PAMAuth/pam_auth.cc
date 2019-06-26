@@ -28,6 +28,9 @@ const string FIELD_ANYDB = "anydb";
 const string FIELD_AUTHSTR = "authentication_string";
 const int NUM_FIELDS = 5;
 
+const char* SQLITE_OPEN_FAIL = "Failed to open SQLite3 handle for file '%s': '%s'";
+const char* SQLITE_OPEN_OOM = "Failed to allocate memory for SQLite3 handle for file '%s'.";
+
 /**
  * Initialize PAM authenticator
  *

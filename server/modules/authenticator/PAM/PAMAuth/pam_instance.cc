@@ -17,11 +17,10 @@
 #include <string.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/log_manager.h>
+#include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/mysql_utils.h>
 
-#define DEFAULT_PAM_DATABASE_NAME "file:pam.db?mode=memory&cache=shared"
-#define DEFAULT_PAM_TABLE_NAME "pam_users"
 using std::string;
 
 /**
@@ -32,10 +31,12 @@ using std::string;
  */
 PamInstance* PamInstance::create(char **options)
 {
-    /** Name of the in-memory database */
-    const string pam_db_name = DEFAULT_PAM_DATABASE_NAME;
-    /** The table name where we store the users */
-    const string pam_table_name = DEFAULT_PAM_TABLE_NAME;
+    // Name of the in-memory database.
+    // TODO: Once Centos6 is no longer needed and Sqlite version 3.7+ can be assumed,
+    // use a memory-only db with a URI filename (e.g. file:pam.db?mode=memory&cache=shared)
+    const string pam_db_fname = string(get_cachedir()) + "/pam_db.sqlite3";
+    // The table name where we store the users
+    const string pam_table_name = "pam_users";
     /** CREATE TABLE statement for the in-memory table */
     const string create_sql = string("CREATE TABLE IF NOT EXISTS ") + pam_table_name +
                               " (" + FIELD_USER + " varchar(255), " + FIELD_HOST + " varchar(255), " +
@@ -49,15 +50,25 @@ PamInstance* PamInstance::create(char **options)
     bool error = false;
     /* This handle may be used from multiple threads, set full mutex. */
     sqlite3* dbhandle = NULL;
-    int db_flags = SQLITE_OPEN_URI | SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
+    int db_flags =  SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
                    SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
-    if (sqlite3_open_v2(pam_db_name.c_str(), &dbhandle, db_flags, NULL) != SQLITE_OK)
+    const char* filename = pam_db_fname.c_str();
+    if (sqlite3_open_v2(filename, &dbhandle, db_flags, NULL) != SQLITE_OK)
     {
-        MXS_ERROR("Failed to open SQLite3 handle.");
+        // Even if the open failed, the handle may exist and an error message can be read.
+        if (dbhandle)
+        {
+            MXS_ERROR(SQLITE_OPEN_FAIL, filename, sqlite3_errmsg(dbhandle));
+        }
+        else
+        {
+            // This means memory allocation failed.
+            MXS_ERROR(SQLITE_OPEN_OOM, filename);
+        }
         error = true;
     }
 
-    char *err;
+    char *err = NULL;
     if (!error && sqlite3_exec(dbhandle, create_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to create database: '%s'", err);
@@ -67,8 +78,14 @@ PamInstance* PamInstance::create(char **options)
 
     PamInstance *instance = NULL;
     if (!error &&
-        ((instance = new (std::nothrow) PamInstance(dbhandle, pam_db_name, pam_table_name)) == NULL))
+        ((instance = new (std::nothrow) PamInstance(dbhandle, pam_db_fname, pam_table_name)) == NULL))
     {
+        error = true;
+    }
+
+    if (error)
+    {
+        // Close the handle even if never opened.
         sqlite3_close_v2(dbhandle);
     }
     return instance;
