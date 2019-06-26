@@ -32,12 +32,6 @@ structures (i.e. different `--basedir` arguments). Normal use of MaxScale still
 detects multiple MaxScales trying to bind to the same ports. Almost always, this
 will not have any negative side-effects.
 
-### Maintenance mode and Readwritesplit
-
-Readwritesplit now allows open transactions to finish if the master is put into
-maintenance mode. To forcefully close all connections to a server use the
-`maxctrl set server <name> maintenance --force` command.
-
 ### Stronger hashing algorithm for admin user passwords
 
 The administrative user passwords are now stored as SHA2-512 hashes which is an
@@ -80,6 +74,11 @@ The `ndbclustermon` module has been removed.
 
 The `mmmon` module has been removed as the `mariadbmon` monitor largely does
 what it used to do.
+
+### `log_to_shm`
+
+The `log_to_shm` parameter that was removed in 2.3 will be treated as an unknown
+parameter in 2.4.0.
 
 ## New Features
 
@@ -142,6 +141,19 @@ default `fail_instantly`.
 
 Once the server has been drained, the state will be `Drained`.
 
+### `weightby` Replacement for Servers: `rank`
+
+The new [`rank`](../Getting-Started/Configuration-Guide.md#rank) parameter is
+the replacement for the deprecated `weightby` parameter. It allows explicit
+groupings of servers into primary and secondary groups. Servers configured with
+`rank=secondary` will only be used if no primary servers are available.
+
+### UNIX Domain Socket for Servers
+
+Servers can now use the
+[`socket`](../Getting-Started/Configuration-Guide.md#socket) parameter to define
+a local UNIX domain socket through which the connections will be created.
+
 ### Cluster
 
 The servers a service uses can now be specified using the `cluster`
@@ -183,7 +195,21 @@ The output shows the statements (the canonical version) in the cache,
 the number of times they have been encountered and how they have been
 classified.
 
-### REST API & MaxCtrl: Hard maintenance mode
+### Connection Attempt Throttling
+
+If a user fails to authenticate multiple times, the host from where the user is
+connecting from will be blocked for 60 seconds. See
+[`max_auth_errors_until_block`](../Getting-Started/Configuration-Guide.md#max_auth_errors_until_block)
+for more information.
+
+### REST API & MaxCtrl
+
+#### Default API Version
+
+The API version prefix is now optional and if not present, will be assumed to be
+the latest version which currently is `/v1`.
+
+#### Hard maintenance mode
 
 The new `--force` option for the `set server` command in MaxCtrl allows all
 connections to the server in question to be closed when it is set into
@@ -192,6 +218,15 @@ maintenance mode. This causes idle connections to be closed immediately.
 For more information, read the
 [REST-API](../REST-API/Resources-Server.md#set-server-state) documentation for
 the `set` endpoint.
+
+#### Command History
+
+The interactive mode for MaxCtrl now has command history.
+
+#### Multi-parameter Alter
+
+The `alter` commands in MaxCtrl now accept multiple key-value pairs in one
+command. See output of `maxctrl help alter` for more information.
 
 ### Readwritesplit
 
@@ -207,7 +242,7 @@ with server initiated transaction rollbacks.
 
 The new `transaction_replay_attempts` parameter controls how many errors the
 transaction replay mechanism tolerates before giving up on the replay
-attempt. The number of transaction replay attemps is now capped to a default
+attempt. The number of transaction replay attempts is now capped to a default
 value of 5.
 
 #### `lazy_connect`
@@ -215,6 +250,44 @@ value of 5.
 Lazy connection creation delays the opening of all connections until they are
 needed. This reduces the load that is placed on the backend servers when the
 client connections are short. This feature is disabled by default.
+
+#### Connection Selection
+
+The servers where new connections are created at the start of a session are now
+always use connection counts. This allows the use of
+`slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and
+`max_slave_connections=1`.
+
+#### Master Selection
+
+Readwritesplit will now load balance master connections in case there are
+multiple master servers. This is mainly of relevance only with Clustrix
+clusters.
+
+#### Maintenance mode
+
+Readwritesplit now allows open transactions to finish if the master is put into
+maintenance mode. To forcefully close all connections to a server use the
+`maxctrl set server <name> maintenance --force` command.
+
+### Galeramon
+
+#### Replicating Slaves
+
+If a slave server is replicating from a Galera node, galeramon will now
+correctly assign it the Slave status.
+
+#### GTID in `list servers`
+
+Galera nodes will now display their GTID positions in the output of
+`maxctrl list servers`.
+
+### Avrorouter Direct Replication
+
+By defining the `servers` parameter for the avrorouter service, the replication
+is done directly from a remote master server. This skips the binlogrouter
+definition completely making the conversion process faster and more space
+efficient.
 
 ## Bug fixes
 
