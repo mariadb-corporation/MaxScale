@@ -26,6 +26,8 @@
 #include <strings.h>
 #include <stdbool.h>
 #include <errmsg.h>
+#include <thread>
+#include <chrono>
 
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
@@ -251,6 +253,14 @@ int mxs_mysql_query_ex(MYSQL* conn, const char* query, int query_retries, time_t
          && mxs_mysql_is_net_error(mysql_errno(conn))
          && time(NULL) - start < query_retry_timeout; n++)
     {
+        if (n > 0)
+        {
+            // The first reconnection didn't work, wait for one second before attempting again. This
+            // should reduce the likelihood of transient problems causing state changes due to too many
+            // reconnection attemps in a short period of time.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+
         rc = mysql_query(conn, query);
     }
 
