@@ -185,7 +185,6 @@ if (BUILD_CDC)
 endif()
 
 add_subdirectory(maxutils)
-add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
 add_subdirectory(include/maxscale)
