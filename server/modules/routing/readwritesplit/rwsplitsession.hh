@@ -203,7 +203,7 @@ static inline const char* rstostr(reply_state_t state)
  *
  * @param rses   Router client session
  * @param buffer Buffer containing a binary protocol statement other than COM_STMT_PREPARE
- * @param n_params statement parmas number
+ * @param n_params Statement parmas count
  *
  * @return The internal ID of the prepared statement that the buffer contents refer to
  */

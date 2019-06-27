@@ -1002,7 +1002,7 @@ SRWBackend handle_hinted_target(RWSplitSession *rses, GWBUF *querybuf,
 /**
  * @brief Determine whether this stmt  is subsequent COM_STMT_EXECUTE
  *
- * @param cmd     command type 
+ * @param cmd     command type
  * @param query   GWBUF including the query
  * @param info    Route info
  *
@@ -1021,9 +1021,9 @@ bool is_sub_stmt_exec(uint8_t cmd, const GWBUF *query, uint16_t n_params)
     /*need n_params to parse new_params_bound_flag(alias send type to server)*/
     int new_params_bound_flag_offset = MYSQL_HEADER_LEN + 10 + (n_params + 7) / 8;
     ss_dassert((int)gwbuf_length(query) >= new_params_bound_flag_offset);
-    uint8_t data[new_params_bound_flag_offset];
-    gwbuf_copy_data(query, 0, new_params_bound_flag_offset, data);
-    if (data[new_params_bound_flag_offset])
+    uint8_t flag;
+    gwbuf_copy_data(query, new_params_bound_flag_offset, 1, &flag);
+    if (flag)
     {
         rval = false;
     }
