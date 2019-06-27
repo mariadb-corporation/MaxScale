@@ -947,6 +947,18 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
     SRWBackend& backend = get_backend_from_dcb(problem_dcb);
     mxb_assert(backend->in_use());
 
+    if (backend->reply_has_started())
+    {
+        MXS_ERROR("Server '%s' was lost in the middle of a resultset, cannot continue the session: %s",
+                  backend->name(), extract_error(errmsgbuf).c_str());
+
+        // This effectively causes an instant termination of the client connection and prevents any errors
+        // from being sent to the client (MXS-2562).
+        dcb_close(m_client);
+        *succp = true;
+        return;
+    }
+
     switch (action)
     {
     case ERRACT_NEW_CONNECTION:
