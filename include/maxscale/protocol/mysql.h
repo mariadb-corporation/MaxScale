@@ -142,14 +142,15 @@ typedef enum
  */
 typedef struct mysql_session
 {
-    uint8_t  client_sha1[MYSQL_SCRAMBLE_LEN];       /*< SHA1(password) */
-    char     user[MYSQL_USER_MAXLEN + 1];           /*< username       */
-    char     db[MYSQL_DATABASE_MAXLEN + 1];         /*< database       */
-    int      auth_token_len;                        /*< token length   */
-    uint8_t* auth_token;                            /*< token          */
-    bool     correct_authenticator;                 /*< is session using mysql_native_password? */
-    uint8_t  next_sequence;                         /*< Next packet sequence */
-    bool     auth_switch_sent;                      /*< Expecting a response to AuthSwitchRequest? */
+    uint8_t  client_sha1[MYSQL_SCRAMBLE_LEN];   /*< SHA1(password) */
+    char     user[MYSQL_USER_MAXLEN + 1];       /*< username       */
+    char     db[MYSQL_DATABASE_MAXLEN + 1];     /*< database       */
+    int      auth_token_len;                    /*< token length   */
+    uint8_t* auth_token;                        /*< token          */
+    bool     correct_authenticator;             /*< is session using mysql_native_password? */
+    uint8_t  next_sequence;                     /*< Next packet sequence */
+    bool     auth_switch_sent;                  /*< Expecting a response to AuthSwitchRequest? */
+    bool     changing_user;                     /*< True if a COM_CHANGE_USER is in progress */
 } MYSQL_session;
 
 /** Protocol packing macros. */

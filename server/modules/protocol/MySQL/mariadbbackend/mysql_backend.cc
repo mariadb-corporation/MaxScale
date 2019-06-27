@@ -916,6 +916,9 @@ static int gw_read_and_write(DCB* dcb)
              */
             GWBUF_DATA(read_buffer)[3] = 0x3;
             proto->changing_user = false;
+
+            auto s = (MYSQL_session*)session->client_dcb->data;
+            s->changing_user = false;
         }
     }
 

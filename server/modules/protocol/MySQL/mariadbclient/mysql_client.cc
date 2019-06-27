@@ -1594,7 +1594,15 @@ static int gw_client_hangup_event(DCB* dcb)
                 errmsg += ": " + extra;
             }
 
-            modutil_send_mysql_err_packet(dcb, 1, 0, 1927, "08S01", errmsg.c_str());
+            int seqno = 1;
+
+            if (dcb->data && ((MYSQL_session*)dcb->data)->changing_user)
+            {
+                // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
+                seqno = 3;
+            }
+
+            modutil_send_mysql_err_packet(dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
         }
         dcb_close(dcb);
     }
@@ -1797,6 +1805,10 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
             if (!proto->changing_user && proto->current_command == MXS_COM_CHANGE_USER)
             {
+                // Track the COM_CHANGE_USER progress at the session level
+                auto s = (MYSQL_session*)session->client_dcb->data;
+                s->changing_user = true;
+
                 changed_user = true;
                 send_auth_switch_request_packet(session->client_dcb);
 
