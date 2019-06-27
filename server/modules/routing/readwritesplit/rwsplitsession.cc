@@ -139,5 +139,5 @@ RouteInfo::RouteInfo(RWSplitSession* rses, GWBUF* buffer):
     stmt_id(0),
     n_params(0)
 {
-    target = get_target_type(rses, buffer, &command, &type, &stmt_id);
+    target = get_target_type(rses, buffer, &command, &type, &stmt_id, &n_params);
 }

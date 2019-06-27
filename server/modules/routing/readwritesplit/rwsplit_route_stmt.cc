@@ -92,8 +92,8 @@ void handle_connection_keepalive(RWSplit *inst, RWSplitSession *rses,
     ss_dassert(nserv < rses->rses_nbackends);
 }
 
-route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
-                               uint8_t* command, uint32_t* type, uint32_t* stmt_id, uint16_t* n_params)
+route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer, uint8_t* command,
+                               uint32_t* type, uint32_t* stmt_id, uint16_t* n_params)
 {
     route_target_t route_target = TARGET_MASTER;
     bool in_read_only_trx = rses->target_node && session_trx_is_read_only(rses->client_dcb->session);

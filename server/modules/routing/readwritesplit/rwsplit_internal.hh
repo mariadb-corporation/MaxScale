@@ -127,13 +127,14 @@ uint32_t determine_query_type(GWBUF *querybuf, int command);
 /**
  * @brief Get the routing requirements for a query
  *
- * @param rses Router client session
- * @param buffer Buffer containing the query
- * @param command Output parameter where the packet command is stored
- * @param type    Output parameter where the query type is stored
- * @param stmt_id Output parameter where statement ID, if the query is a binary protocol command, is stored
+ * @param rses     Router client session
+ * @param buffer   Buffer containing the query
+ * @param command  Output parameter where the packet command is stored
+ * @param type     Output parameter where the query type is stored
+ * @param stmt_id  Output parameter where statement ID, if the query is a binary protocol command, is stored
+ * @param n_params Pointer where the number of PS parameters is written
  *
  * @return The target type where this query should be routed
  */
 route_target_t get_target_type(RWSplitSession* rses, GWBUF* buffer, uint8_t* command,
-                               uint32_t* type, uint32_t* stmt_id);
+                               uint32_t* type, uint32_t* stmt_id, uint16_t* n_params);
