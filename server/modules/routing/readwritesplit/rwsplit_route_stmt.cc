@@ -822,10 +822,8 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     int rlag_max = get_max_replication_lag();
     RWBackend* target = nullptr;
 
-    if (cmd == MXS_COM_STMT_FETCH)
+    if (m_qc.is_ps_continuation())
     {
-        /** The COM_STMT_FETCH must be executed on the same server as the
-         * COM_STMT_EXECUTE was executed on */
         ExecMap::iterator it = m_exec_map.find(stmt_id);
 
         if (it != m_exec_map.end())

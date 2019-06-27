@@ -179,11 +179,11 @@ void Mariadb_nodes::read_env()
 
             // reading start_db_command
             sprintf(env_name, "%s_%03d_start_db_command", prefix, i);
-            start_db_command[i] = readenv(env_name, (char *) "service mysql start");
+            start_db_command[i] = readenv(env_name, (char *) "systemctl start mariadb || service mysql start");
 
             // reading stop_db_command
             sprintf(env_name, "%s_%03d_stop_db_command", prefix, i);
-            stop_db_command[i] = readenv(env_name, (char *) "service mysql stop");
+            stop_db_command[i] = readenv(env_name, (char *) "systemctl stop mariadb || service mysql stop");
 
             // reading cleanup_db_command
             sprintf(env_name, "%s_%03d_cleanup_db_command", prefix, i);
