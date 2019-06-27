@@ -1594,7 +1594,7 @@ static int gw_client_hangup_event(DCB* dcb)
                 errmsg += ": " + extra;
             }
 
-            modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", errmsg.c_str());
+            modutil_send_mysql_err_packet(dcb, 1, 0, 1927, "08S01", errmsg.c_str());
         }
         dcb_close(dcb);
     }
