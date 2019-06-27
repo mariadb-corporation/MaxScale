@@ -17,7 +17,8 @@
   by adding the `--rdns`-option to the command.
 * The following MariaDB-Monitor settings have been removed and cause a startup error
   if defined: `mysql51_replication`, `multimaster` and `allow_cluster_recovery`. The
-  setting `detect_replication_lag` is deprecated and is ignored.
+  setting `detect_replication_lag` is deprecated and ignored.
+* `enforce_simple_topology`-setting added to MariaDB-Monitor.
 * The mqfilter has been deprecated.
 
 For more details, please refer to:

@@ -75,6 +75,11 @@ The `ndbclustermon` module has been removed.
 The `mmmon` module has been removed as the `mariadbmon` monitor largely does
 what it used to do.
 
+### MariaDB-Monitor settings
+
+The following settings have been removed and cause a startup error
+if defined: `mysql51_replication`, `multimaster` and `allow_cluster_recovery`.
+
 ### `log_to_shm`
 
 The `log_to_shm` parameter that was removed in 2.3 will be treated as an unknown
@@ -301,6 +306,13 @@ By defining the `servers` parameter for the avrorouter service, the replication
 is done directly from a remote master server. This skips the binlogrouter
 definition completely making the conversion process faster and more space
 efficient.
+
+### `enforce_simple_topology`
+
+This MariaDB-Monitor setting allows the monitor greater freedom in managing the
+backend servers. Please see
+[MariaDB-Monitor documentation](../Monitors/MariaDB-Monitor.md#enforce_simple_topology)
+for more information.
 
 ## Bug fixes
 
