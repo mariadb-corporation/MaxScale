@@ -54,7 +54,7 @@ if(HAVE_SYSTEMD)
 elseif(NOT BUILD_SYSTEM_TESTS)
     # If systemd is in use, require libsystemd-dev to be installed
     if(NOT NOT_SYSTEMD_IS_RUNNING)
-        message( FATAL_ERROR "systemd is running: please install libsystemd-dev" )
+        message(FATAL_ERROR "systemd is running: please install libsystemd-dev (DEB) or systemd-devel (RPM)")
     endif()
 endif()
 

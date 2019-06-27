@@ -40,9 +40,6 @@ set(CPACK_RPM_USER_FILELIST "${IGNORED_DIRS}")
 if(TARGET_COMPONENT STREQUAL "core" OR TARGET_COMPONENT STREQUAL "all")
   set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postinst)
   set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postrm)
-
-  # Installing this prevents RPM from deleting the /var/lib/maxscale folder
-  install(DIRECTORY DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)
 endif()
 
 if(EXTRA_PACKAGE_DEPENDENCIES)

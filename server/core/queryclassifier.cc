@@ -75,6 +75,19 @@ uint32_t qc_mysql_extract_ps_id(GWBUF* buffer)
     return rval;
 }
 
+uint16_t qc_extract_ps_param_count(GWBUF* buffer)
+{
+    uint16_t rval = 0;
+    uint8_t params[MYSQL_PS_PARAMS_SIZE];
+
+    if (gwbuf_copy_data(buffer, MYSQL_PS_PARAMS_OFFSET, sizeof(params), params) == sizeof(params))
+    {
+        rval = gw_mysql_get_byte2(params);
+    }
+
+    return rval;
+}
+
 bool have_semicolon(const char* ptr, int len)
 {
     for (int i = 0; i < len; i++)
@@ -265,7 +278,7 @@ public:
             break;
 
         case MXS_COM_STMT_PREPARE:
-            m_binary_ps[id] = get_prepare_type(buffer);
+            m_binary_ps[id].type = get_prepare_type(buffer);
             break;
 
         default:
@@ -281,7 +294,7 @@ public:
 
         if (it != m_binary_ps.end())
         {
-            rval = it->second;
+            rval = it->second.type;
         }
         else
         {
@@ -342,8 +355,32 @@ public:
         }
     }
 
+    void set_param_count(uint32_t id, uint16_t param_count)
+    {
+        m_binary_ps[id].param_count = param_count;
+    }
+
+    uint16_t param_count(uint32_t id) const
+    {
+        uint16_t rval = 0;
+        auto it = m_binary_ps.find(id);
+
+        if (it != m_binary_ps.end())
+        {
+            rval = it->second.param_count;
+        }
+
+        return rval;
+    }
+
 private:
-    typedef std::unordered_map<uint32_t, uint32_t>    BinaryPSMap;
+    struct BinaryPS
+    {
+        uint32_t type = 0;
+        uint16_t param_count = 0;
+    };
+
+    typedef std::unordered_map<uint32_t, BinaryPS>    BinaryPSMap;
     typedef std::unordered_map<std::string, uint32_t> TextPSMap;
 
 private:
@@ -368,6 +405,7 @@ QueryClassifier::QueryClassifier(Handler* pHandler,
     , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
     , m_sPs_manager(new PSManager)
     , m_trx_is_read_only(true)
+    , m_ps_continuation(false)
 {
 }
 
@@ -622,9 +660,15 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
     return internal_id;
 }
 
-void QueryClassifier::ps_id_internal_put(uint32_t external_id, uint32_t internal_id)
+void QueryClassifier::ps_store_response(uint32_t internal_id, GWBUF* buffer)
 {
+    auto external_id = qc_mysql_extract_ps_id(buffer);
     m_ps_handles[external_id] = internal_id;
+
+    if (auto param_count = qc_extract_ps_param_count(buffer))
+    {
+        m_sPs_manager->set_param_count(internal_id, param_count);
+    }
 }
 
 void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
@@ -909,6 +953,38 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     return rv;
 }
 
+bool QueryClassifier::query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* buffer)
+{
+    bool rval = false;
+
+    if (cmd == COM_STMT_FETCH)
+    {
+        // COM_STMT_FETCH should always go to the same target as the COM_STMT_EXECUTE
+        rval = true;
+    }
+    else if (cmd == MXS_COM_STMT_EXECUTE)
+    {
+        if (auto params = m_sPs_manager->param_count(stmt_id))
+        {
+            size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((params + 7) / 8);
+            uint8_t have_types = 0;
+
+            if (gwbuf_copy_data(buffer, types_offset, 1, &have_types))
+            {
+                if (have_types == 0)
+                {
+                    // A previous COM_STMT_EXECUTE provided the field types, and this one relies on the
+                    // previous one. This means that this query must be routed to the same server where the
+                    // previous COM_STMT_EXECUTE was routed.
+                    rval = true;
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
 QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     QueryClassifier::current_target_t current_target,
     GWBUF* pBuffer)
@@ -1005,6 +1081,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             {
                 stmt_id = ps_id_internal_get(pBuffer);
                 type_mask = ps_get_type(stmt_id);
+                m_ps_continuation = query_continues_ps(command, stmt_id, pBuffer);
             }
 
             route_target = get_route_target(command, type_mask);
