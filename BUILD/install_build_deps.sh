@@ -14,9 +14,14 @@ if [ $? == 0 ]
 then
   # DEB-based distro
   install_libdir=/usr/lib
+  export DEBIAN_FRONTEND=noninteractive
   sudo apt-get update
 
-  sudo apt-get install -y --force-yes dpkg-dev git wget \
+  sudo dpkg-reconfigure libc6
+  sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
+       -o Dpkg::Options::=--force-confdef \
+       -y --force-yes \
+       install dpkg-dev git wget \
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
