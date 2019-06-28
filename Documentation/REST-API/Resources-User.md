@@ -282,3 +282,31 @@ The _:name_ part of the URI must be a valid user name.
 ```
 Status: 204 No Content
 ```
+
+### Update a network user
+
+```
+PATCH /v1/users/inet/:name
+```
+
+Update network user. Currently, only the password can be updated. This
+means that the request body must define the `data.attributes.password`
+field.
+
+Here is an example request body that updates the password.
+
+```javascript
+{
+    "data": {
+        "attributes": {
+            "password": "new-password"
+        }
+    }
+}
+```
+
+#### Response
+
+```
+Status: 204 No Content
+```

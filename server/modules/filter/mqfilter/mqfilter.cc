@@ -570,6 +570,9 @@ char** parse_optstr(const char* str, const char* tok, int* szstore)
  */
 static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
+    MXS_WARNING("The mqfilter has been DEPRECATED in MaxScale 2.4 "
+                "and it will be removed in a future release of MaxScale.");
+
     MQ_INSTANCE* my_instance = static_cast<MQ_INSTANCE*>(MXS_CALLOC(1, sizeof(MQ_INSTANCE)));
 
     if (my_instance)

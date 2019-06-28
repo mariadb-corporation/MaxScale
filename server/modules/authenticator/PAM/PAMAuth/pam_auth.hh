@@ -34,3 +34,6 @@ extern const string FIELD_ANYDB;
 extern const string FIELD_AUTHSTR;
 extern const string FIELD_PROXY;
 extern const int NUM_FIELDS;
+
+extern const char* SQLITE_OPEN_FAIL;
+extern const char* SQLITE_OPEN_OOM;

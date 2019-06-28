@@ -133,7 +133,7 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
     , handler(service, handler, params->get_compiled_regex("match", 0, NULL).release(),
               params->get_compiled_regex("exclude", 0, NULL).release())
 {
-    if (params->contains(CN_SERVERS))
+    if (params->contains(CN_SERVERS) || params->contains(CN_CLUSTER))
     {
         MXS_NOTICE("Replicating directly from a master server");
         cdc::Config cnf;

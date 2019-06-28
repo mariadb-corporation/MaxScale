@@ -1,5 +1,0 @@
-install_custom_file(nagios/check_maxscale_monitors.pl ${MAXSCALE_SHAREDIR}/plugins/nagios/ core)
-install_custom_file(nagios/check_maxscale_resources.pl ${MAXSCALE_SHAREDIR}/plugins/nagios/ core)
-install_custom_file(nagios/check_maxscale_threads.pl ${MAXSCALE_SHAREDIR}/plugins/nagios/ core)
-install_custom_file(nagios/maxscale_commands.cfg ${MAXSCALE_SHAREDIR}/plugins/nagios/ core)
-install_custom_file(nagios/server1.cfg ${MAXSCALE_SHAREDIR}/plugins/nagios/ core)

@@ -68,7 +68,7 @@ MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 
     Avro* router = Avro::create(service, handler);
 
-    if (router && !params->contains(CN_SERVERS))
+    if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
     {
         conversion_task_ctl(router, true);
     }
