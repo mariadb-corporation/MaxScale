@@ -112,7 +112,7 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
     }
 
     PamClientSession* rval = NULL;
-    if (!error && ((rval = new(std::nothrow) PamClientSession(dbhandle, inst)) == NULL))
+    if (!error && ((rval = new (std::nothrow) PamClientSession(dbhandle, inst)) == NULL))
     {
         error = true;
     }

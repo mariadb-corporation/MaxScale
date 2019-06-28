@@ -279,17 +279,20 @@ std::pair<std::string, std::string> get_avrofile_and_gtid(std::string file)
     auto first_dot = filename.find_first_of('.');
     auto last_dot = filename.find_last_of('.');
 
-    if (first_dot != std::string::npos
-        && last_dot != std::string::npos
-        && first_dot != last_dot)
+    if (!file.empty())
     {
-        // Exact file version specified e.g. test.t1.000002
-        filename += ".avro";
-    }
-    else
-    {
-        // No version specified, send first file
-        filename += ".000001.avro";
+        if (first_dot != std::string::npos
+            && last_dot != std::string::npos
+            && first_dot != last_dot)
+        {
+            // Exact file version specified e.g. test.t1.000002
+            filename += ".avro";
+        }
+        else
+        {
+            // No version specified, send first file
+            filename += ".000001.avro";
+        }
     }
 
     return std::make_pair(filename, gtid);
@@ -329,13 +332,17 @@ void AvroSession::process_command(GWBUF* queue)
 
             avro_binfile = file_and_gtid.first;
 
-            if (file_in_dir(router->avrodir.c_str(), avro_binfile.c_str()))
+            if (avro_binfile.empty())
             {
-                queue_client_callback();
+                dcb_printf(dcb, "ERR NO-FILE Filename not specified.\n");
+            }
+            else if (!file_in_dir(router->avrodir.c_str(), avro_binfile.c_str()))
+            {
+                dcb_printf(dcb, "ERR NO-FILE File '%s' not found.\n", avro_binfile.c_str());
             }
             else
             {
-                dcb_printf(dcb, "ERR NO-FILE File '%s' not found.\n", avro_binfile.c_str());
+                queue_client_callback();
             }
         }
         else
@@ -714,6 +721,7 @@ void AvroSession::client_callback()
 
     /** Stream the data to the client */
     bool read_more = stream_data();
+    mxb_assert(!avro_binfile.empty() && strstr(avro_binfile.c_str(), ".avro"));
     std::string filename = get_next_filename(avro_binfile, router->avrodir);
 
     bool next_file;

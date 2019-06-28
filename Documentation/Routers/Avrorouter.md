@@ -24,6 +24,44 @@ streams from a database table.
 
 [TOC]
 
+## Direct Replication Mode
+
+MaxScale 2.4.0 added a direct replication mode that connects the avrorouter
+directly to a MariaDB server. This mode is an improvement over the binlogrouter
+based replication as it provides a more space-efficient and faster conversion
+process.
+
+To enable the direct replication mode, add either the `servers` or the `cluster`
+parameter to the avrorouter service. The avrorouter will then use one of the
+servers as the replication source. In this mode the `source` parameter is
+ignored as there is no need for a source service.
+
+Here is a minimal avrorouter direct replication configuration:
+
+```
+[maxscale]
+threads=auto
+
+[server1]
+type=server
+address=127.0.0.1
+port=3306
+protocol=MariaDBBackend
+
+[cdc-service]
+type=service
+router=avrorouter
+servers=server1
+user=maxuser
+password=maxpwd
+
+[cdc-listener]
+type=listener
+service=cdc-service
+protocol=CDC
+port=4001
+```
+
 ## Configuration
 
 For information about common service parameters, refer to the
@@ -33,7 +71,8 @@ For information about common service parameters, refer to the
 
 #### `source`
 
-The source for the binary logs. This is an optional parameter.
+The source for the binary logs. This is an optional parameter and is ignored if
+the router is configured in direct replication mode.
 
 **Note:** If the `source` parameter is defined the values for `binlogdir` and
   `filestem` are only read from the source service. This means that the

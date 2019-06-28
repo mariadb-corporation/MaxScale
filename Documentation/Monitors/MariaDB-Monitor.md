@@ -30,6 +30,7 @@ Table of Contents
         * [auto_failover](#auto_failover)
         * [auto_rejoin](#auto_rejoin)
         * [switchover_on_low_disk_space](#switchover_on_low_disk_space)
+        * [enforce_simple_topology](#enforce_simple_topology)
         * [replication_user and replication_password](#replication_user-and-replication_password)
         * [failover_timeout and switchover_timeout](#failover_timeout-and-switchover_timeout)
         * [verify_master_failure and master_failure_timeout](#verify_master_failure-and-master_failure_timeout)
@@ -642,6 +643,23 @@ Also, [disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
 must be defined for the monitor.
 ```
 switchover_on_low_disk_space=true
+```
+
+#### `enforce_simple_topology`
+
+This setting tells the monitor to assume that the servers should be arranged in a
+1-master-N-slaves topology and the monitor should try to keep it that way. If
+`enforce_simple_topology` is enabled, the settings `assume_unique_hostnames`,
+`auto_failover` and `auto_rejoin` are also activated regardless of their individual
+settings.
+
+This setting also allows the monitor to perform a failover to a cluster where the master
+server has not been seen [Running]. This is usually the case when the master goes down
+before MaxScale is started. When using this feature, the monitor will guess the GTID
+domain id of the master from the slaves. For reliable results, the GTID:s of the cluster
+should be simple.
+```
+enforce_simple_topology=true
 ```
 
 #### `replication_user` and `replication_password`

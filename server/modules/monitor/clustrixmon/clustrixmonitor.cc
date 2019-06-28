@@ -178,11 +178,16 @@ sqlite3* open_or_create_db(const std::string& path)
     }
     else
     {
-        MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
-                  path.c_str(), sqlite3_errstr(rv));
+        if (pDb)
+        {
+            // Memory allocation failure is explained by the caller. Don't close the handle, as the
+            // caller will still use it even if open failed!!
+            MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
+                      path.c_str(), sqlite3_errmsg(pDb));
+        }
         MXS_ERROR("Could not open sqlite3 database for storing information "
                   "about dynamically detected Clustrix nodes. The Clustrix "
-                  "monitor will remain dependant upon statically defined "
+                  "monitor will remain dependent upon statically defined "
                   "bootstrap nodes.");
     }
 

@@ -56,8 +56,8 @@ PamInstance* PamInstance::create(char** options)
     bool error = false;
     /* This handle may be used from multiple threads, set full mutex. */
     sqlite3* dbhandle = NULL;
-    int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
-        | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
+    int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
+                   SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
     const char* filename = pam_db_fname.c_str();
     if (sqlite3_open_v2(filename, &dbhandle, db_flags, NULL) != SQLITE_OK)
     {
@@ -74,7 +74,7 @@ PamInstance* PamInstance::create(char** options)
         error = true;
     }
 
-    char* err = NULL;
+    char *err = NULL;
     if (!error && sqlite3_exec(dbhandle, drop_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to drop table: '%s'", err);
@@ -88,9 +88,9 @@ PamInstance* PamInstance::create(char** options)
         error = true;
     }
 
-    PamInstance* instance = NULL;
-    if (!error
-        && ((instance = new(std::nothrow) PamInstance(dbhandle, pam_db_fname, pam_table_name)) == NULL))
+    PamInstance *instance = NULL;
+    if (!error &&
+        ((instance = new (std::nothrow) PamInstance(dbhandle, pam_db_fname, pam_table_name)) == NULL))
     {
         error = true;
     }
