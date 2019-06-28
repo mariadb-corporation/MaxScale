@@ -1885,6 +1885,22 @@ void TestConnections::tprintf(const char* format, ...)
     fflush(stderr);
 }
 
+void TestConnections::log_printf(const char* format, ...)
+{
+    va_list argp;
+    va_start(argp, format);
+    int n = vsnprintf(nullptr, 0, format, argp);
+    va_end(argp);
+
+    va_start(argp, format);
+    char buf[n + 1];
+    vsnprintf(buf, sizeof(buf), format, argp);
+    va_end(argp);
+
+    maxscales->ssh_node_f(0, true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
+    tprintf("%s", buf);
+}
+
 int TestConnections::get_master_server_id(int m)
 {
     int master_id = -1;
