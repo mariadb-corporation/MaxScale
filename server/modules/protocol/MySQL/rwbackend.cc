@@ -88,6 +88,14 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
 
     if (mxs_mysql_is_ps_command(cmd))
     {
+        // We need to completely separate the buffer this backend owns and the one that the caller owns to
+        // prevent any modifications from affecting the one that was written through this backend. If the
+        // buffer gets placed into the write queue of the DCB, subsequent modifications to the original buffer
+        // would be propagated to the one this backend owns.
+        GWBUF* tmp = gwbuf_deep_clone(buffer);
+        gwbuf_free(buffer);
+        buffer = tmp;
+
         uint32_t id = mxs_mysql_extract_ps_id(buffer);
         BackendHandleMap::iterator it = m_ps_handles.find(id);
 
