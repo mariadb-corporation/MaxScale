@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.4.0 Release Notes
+# MariaDB MaxScale 2.4.0 Release Notes -- 2019-06-29
 
 Release 2.4.0 is a Beta release.
 
