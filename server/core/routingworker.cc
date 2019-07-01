@@ -446,6 +446,8 @@ bool mxs_worker_should_shutdown(MXB_WORKER* pWorker)
 
 RoutingWorker* RoutingWorker::get(int worker_id)
 {
+    mxb_assert(this_unit.initialized);
+
     if (worker_id == MAIN)
     {
         worker_id = this_unit.id_main_worker;
