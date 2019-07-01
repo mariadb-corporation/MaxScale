@@ -56,7 +56,7 @@ port = 4009
 [throttle]
 type = filter
 module = throttlefilter
-max_qps = 1000
+max_qps = 500
 throttling_duration = 10000
 sampling_duration = 250
 continuous_duration = 2000
