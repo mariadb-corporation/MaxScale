@@ -56,7 +56,8 @@ void run_test(TestConnections& test, TestCase test_case)
 
     mysql_stmt_close(stmt);
 
-    test.expect(mysql_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0, "Normal queries should work");
+    test.expect(mysql_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0,
+                "Normal queries should work: %s", mysql_error(test.maxscales->conn_rwsplit[0]));
 
     test.maxscales->disconnect();
 }
@@ -79,6 +80,7 @@ int main(int argc, char* argv[])
 
     test.try_query(test.maxscales->conn_rwsplit[0], "COMMIT");
     test.maxscales->disconnect();
+    test.repl->sync_slaves();
 
     vector<TestCase> tests =
     {
