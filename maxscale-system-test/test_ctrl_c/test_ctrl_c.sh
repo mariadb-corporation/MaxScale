@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo service maxscale stop
+sudo systemctl stop maxscale || sudo service maxscale stop
 
 hm=`pwd`
 $hm/start_killer.sh &
