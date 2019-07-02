@@ -197,14 +197,20 @@ public:
         return 0;
     }
 
-    const std::vector<Result>& results() const
+    const vector<Result>& results() const
     {
         return m_results;
+    }
+
+    const vector<string>& urls() const
+    {
+        return m_urls;
     }
 
 private:
     Async::status_t m_status;
     vector<Result>  m_results;
+    vector<string>  m_urls;
 };
 
 class HttpImp : public Async::Imp
@@ -247,6 +253,8 @@ public:
                     const Config& config)
     {
         mxb_assert(m_status == Async::ERROR);
+
+        m_urls = urls;
 
         m_results.reserve(urls.size());
         m_errbufs.reserve(urls.size());
@@ -417,9 +425,14 @@ public:
         return m_wait_no_more_than;
     }
 
-    const std::vector<Result>& results() const
+    const vector<Result>& results() const
     {
         return m_results;
+    }
+
+    const vector<string>& urls() const
+    {
+        return m_urls;
     }
 
 private:
@@ -441,6 +454,7 @@ private:
     unordered_map<CURL*, Context>            m_curls;
     int                                      m_still_running;
     long                                     m_wait_no_more_than;
+    vector<string>                           m_urls;
 };
 }
 
