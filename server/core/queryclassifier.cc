@@ -994,6 +994,9 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
     uint32_t stmt_id = 0;
 
+    // Reset for every classification
+    m_ps_continuation = false;
+
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
     bool in_read_only_trx =

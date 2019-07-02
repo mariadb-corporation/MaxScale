@@ -2348,12 +2348,6 @@ int TestConnections::reinstall_maxscales()
         maxscales->ssh_node(i, "yum remove maxscale -y", true);
         maxscales->ssh_node(i, "yum clean all", true);
 
-        sprintf(sys, "mdbci setup_repo --product maxscale_ci --product-version %s %s/%s_%03d",
-                target, mdbci_config_name, maxscales->prefix, i);
-        if (system(sys))
-        {
-            return 1;
-        }
         sprintf(sys, "mdbci install_product --product maxscale_ci --product-version %s %s/%s_%03d",
                 target, mdbci_config_name, maxscales->prefix, i);
         if (system(sys))

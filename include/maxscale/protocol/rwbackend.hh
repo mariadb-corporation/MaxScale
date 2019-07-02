@@ -233,6 +233,16 @@ public:
         return m_reply_state == REPLY_STATE_DONE;
     }
 
+    /**
+     * Check if a partial response has been received from the backend
+     *
+     * @return True if some parts of the reply have been received
+     */
+    bool reply_has_started() const
+    {
+        return m_reply_state != REPLY_STATE_START && m_reply_state != REPLY_STATE_DONE;
+    }
+
     void process_packets(GWBUF* buffer);
 
     // Controlled by the session
