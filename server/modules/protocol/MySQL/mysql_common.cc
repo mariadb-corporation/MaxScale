@@ -38,7 +38,7 @@ uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 MYSQL_session* mysql_session_alloc()
 {
     MYSQL_session* ses = (MYSQL_session*)MXS_CALLOC(1, sizeof(MYSQL_session));
-
+    ses->changing_user = false;
     return ses;
 }
 

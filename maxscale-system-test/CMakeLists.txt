@@ -991,6 +991,9 @@ add_test_executable(mxs2563_concurrent_slave_failure.cpp mxs2563_concurrent_slav
 # MXS-2521: COM_STMT_EXECUTE maybe return empty result
 add_test_executable(mxs2521_double_exec.cpp mxs2521_double_exec mxs2521_double_exec LABELS REPL_BACKEND readwritesplit)
 
+# MXS-2572: Add smartrouter tests.
+add_test_executable(sr_basics.cpp sr_basics sr_basics LABELS REPL_BACKEND)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################

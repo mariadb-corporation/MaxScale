@@ -235,12 +235,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
 
     RWBackend* target = nullptr;
 
-    if (command == MXS_COM_STMT_EXECUTE && stmt_id == 0)
-    {
-        // Unknown prepared statement ID
-        succp = send_unknown_ps_error(extract_binary_ps_id(querybuf));
-    }
-    else if (TARGET_IS_ALL(route_target))
+    if (TARGET_IS_ALL(route_target))
     {
         succp = handle_target_is_all(route_target, querybuf, command, qtype);
     }
@@ -281,6 +276,11 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             store_stmt = track_optimistic_trx(&querybuf);
             target = m_prev_target;
             succp = true;
+        }
+        else if (mxs_mysql_is_ps_command(command) && stmt_id == 0)
+        {
+            // Unknown prepared statement ID
+            succp = send_unknown_ps_error(extract_binary_ps_id(querybuf));
         }
         else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
         {

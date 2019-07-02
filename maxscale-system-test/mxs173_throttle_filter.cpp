@@ -15,7 +15,7 @@ DEFINE_EXCEPTION(Whoopsy);
 
 // TODO these should be read from maxscale.cnf. Maybe the test-lib should replace
 // any "###ENV_VAR###", with environment variables so that code and conf can share.
-constexpr int max_qps = 1000;
+constexpr int max_qps = 500;
 constexpr float throttling_duration = 10000 / 1000.0;
 constexpr float sampling_duration = 250 / 1000.0;
 constexpr float continuous_duration = 2000 / 1000.0;
@@ -132,7 +132,7 @@ void gauge_raw_speed(TestConnections& test)
         std::ostringstream os;
         os << "The raw speed is too slow, " << rs.qps
            << "qps, compared to max_qps = " << max_qps << "qps for accurate testing.";
-        test.add_result(1, "%s", os.str().c_str());
+        exit(0);
     }
 }
 
