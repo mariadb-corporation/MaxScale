@@ -956,8 +956,15 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
 bool QueryClassifier::query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* buffer)
 {
     bool rval = false;
+    uint8_t prev_cmd = m_route_info.command();
 
-    if (cmd == COM_STMT_FETCH)
+    if (prev_cmd == MXS_COM_STMT_SEND_LONG_DATA
+        && (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA))
+    {
+        // PS execution must be sent to the same server where the data was sent
+        rval = true;
+    }
+    else if (cmd == COM_STMT_FETCH)
     {
         // COM_STMT_FETCH should always go to the same target as the COM_STMT_EXECUTE
         rval = true;
