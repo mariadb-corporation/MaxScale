@@ -52,7 +52,7 @@ else
     sudo zypper -n update
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex \
-         pcre-devel git wget tcl libuuid-devel \
+         pcre-devel git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
          gnutls-devel libgcrypt-devel pam-devel
     sudo zypper -n install rpm-build
@@ -69,7 +69,7 @@ else
     sudo yum install -y --nogpgcheck gcc gcc-c++ ncurses-devel bison glibc-devel \
          libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
          libedit-devel systemtap-sdt-devel rpm-sign wget \
-         gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
+         gnupg pcre-devel flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel
 
@@ -124,22 +124,34 @@ sudo make install
 cd ../../
 
 # TCL
-mkdir tcl
-cd tcl
-wget -q --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-src.tar.gz
+# Methods allow to compare software versions according to semantic versioning
+verlte() {
+    [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
+}
 
-if [ $? != 0 ]
+verlt() {
+    [ "$1" = "$2" ] && return 1 || verlte $1 $2
+}
+
+system_tcl_version=$(tclsh <<< 'puts [info patchlevel]')
+if verlt "$system_tcl_version" "8.6.5"
 then
-    echo "Error getting tcl"
-    exit 1
+   mkdir tcl
+   cd tcl
+   wget -q --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-src.tar.gz
+
+   if [ $? != 0 ]
+   then
+       echo "Error getting tcl"
+       exit 1
+   fi
+
+   tar xzf tcl8.6.5-src.tar.gz
+   cd tcl8.6.5/unix
+   ./configure
+   sudo make install
+   cd ../../..
 fi
-
-tar xzf tcl8.6.5-src.tar.gz
-cd tcl8.6.5/unix
-./configure
-sudo make install
-cd ../../..
-
 
 # Jansson
 git clone https://github.com/akheron/jansson.git
