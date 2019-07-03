@@ -229,7 +229,9 @@ English and it uses the server's local timezone.
 #### ETag
 
 An identifier for a specific version of a resource. The value of this header
-changes whenever a resource is modified.
+changes whenever a resource is modified via the REST API. It will not change if
+an internal MaxScale event (e.g. server changing state or statistics being
+updated) causes a change.
 
 When the client sends the `If-Match` or `If-None-Match` header, the provided
 value should be the value of the `ETag` header of an earlier GET.
