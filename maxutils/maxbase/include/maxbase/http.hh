@@ -172,6 +172,8 @@ public:
         virtual long wait_no_more_than() const = 0;
 
         virtual const std::vector<Result>& results() const = 0;
+
+        virtual const std::vector<std::string>& urls() const = 0;
     };
 
     /**
@@ -256,6 +258,16 @@ public:
     const std::vector<Result>& results() const
     {
         return m_sImp->results();
+    }
+
+    /**
+     * The URLs the async operation was invoked with.
+     *
+     * @return Vector of urls.
+     */
+    const std::vector<std::string>& urls() const
+    {
+        return m_sImp->urls();
     }
 
 public:

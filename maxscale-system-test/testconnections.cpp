@@ -415,9 +415,11 @@ TestConnections::TestConnections(int argc, char* argv[])
     bool repl_ok = no_repl || repl_future.get();
     bool galera_ok = no_galera || galera_future.get();
     bool node_error = !maxscale_ok || !repl_ok || !galera_ok;
+    bool initialize = false;
 
     if (node_error || too_many_maxscales())
     {
+        initialize = true;
         tprintf("Recreating VMs: %s", node_error ? "node check failed" : "too many maxscales");
 
         if (call_mdbci("--recreate"))
@@ -426,16 +428,24 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (reinstall_maxscale && reinstall_maxscales())
+    if (reinstall_maxscale)
     {
-        tprintf("Failed to install Maxscale: target is %s", target);
-        exit(MDBCI_FAUILT);
+        initialize = true;
+
+        if (reinstall_maxscales())
+        {
+            tprintf("Failed to install Maxscale: target is %s", target);
+            exit(MDBCI_FAUILT);
+        }
     }
 
-    std::string src = std::string(test_dir) + "/mdbci/add_core_cnf.sh";
-    maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir[0]);
-    maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir[0],
-                          verbose ? "verbose" : "");
+    if (initialize)
+    {
+        std::string src = std::string(test_dir) + "/mdbci/add_core_cnf.sh";
+        maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir[0]);
+        maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir[0],
+                              verbose ? "verbose" : "");
+    }
 
 
     maxscales->use_ipv6 = use_ipv6;
@@ -1883,6 +1893,22 @@ void TestConnections::tprintf(const char* format, ...)
 
     fflush(stdout);
     fflush(stderr);
+}
+
+void TestConnections::log_printf(const char* format, ...)
+{
+    va_list argp;
+    va_start(argp, format);
+    int n = vsnprintf(nullptr, 0, format, argp);
+    va_end(argp);
+
+    va_start(argp, format);
+    char buf[n + 1];
+    vsnprintf(buf, sizeof(buf), format, argp);
+    va_end(argp);
+
+    maxscales->ssh_node_f(0, true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
+    tprintf("%s", buf);
 }
 
 int TestConnections::get_master_server_id(int m)
