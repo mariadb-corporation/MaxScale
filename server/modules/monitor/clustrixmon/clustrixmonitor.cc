@@ -408,11 +408,7 @@ void ClustrixMonitor::tick()
 
     case http::Async::READY:
         update_server_statuses();
-
-        if (!m_health_urls.empty())
-        {
-            make_health_check();
-        }
+        make_health_check();
         break;
     }
 
@@ -743,7 +739,6 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                     node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
                 }
 
-                update_http_urls();
                 cluster_checked();
             }
             else
@@ -757,6 +752,11 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
             MXS_ERROR("%s: Could not execute '%s' on %s: %s",
                       name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
         }
+
+        // Since we are here, the call above to check_cluster_membership() succeeded. As that
+        // function may change the content of m_nodes_by_ids, we must always update the urls,
+        // irrespective of whether the SQL of this function succeeds or not.
+        update_http_urls();
     }
 
     return refreshed;
@@ -1112,6 +1112,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
 
         case http::Async::READY:
             {
+                mxb_assert(m_health_urls == m_http.urls());
                 // There are as many results as there are nodes,
                 // and the results are in node order.
                 const vector<http::Result>& results = m_http.results();
