@@ -2844,6 +2844,7 @@ void config_set_global_defaults()
     gateway.passive = false;
     gateway.promoted_at = 0;
     gateway.load_persisted_configs = true;
+    gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
 
     gateway.peer_hosts[0] = '\0';
     gateway.peer_user[0] = '\0';
