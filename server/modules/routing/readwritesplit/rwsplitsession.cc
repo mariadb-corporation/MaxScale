@@ -440,14 +440,15 @@ void RWSplitSession::trx_replay_next_stmt()
             else
             {
                 MXS_INFO("Checksum mismatch, transaction replay failed. Closing connection.");
-                modutil_send_mysql_err_packet(m_client,
-                                              0,
-                                              0,
-                                              1927,
-                                              "08S01",
+                modutil_send_mysql_err_packet(m_client, 1, 0, 1927, "08S01",
                                               "Transaction checksum mismatch encountered "
                                               "when replaying transaction.");
                 poll_fake_hangup_event(m_client);
+
+                // Turn the replay flag back on to prevent queries from getting routed before the hangup we
+                // just added is processed. For example, this can happen if the error is sent and the client
+                // manages to send a COM_QUIT that gets processed before the fake hangup event.
+                m_is_replay_active = true;
             }
         }
         else

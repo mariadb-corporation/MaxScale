@@ -2945,6 +2945,7 @@ void config_set_global_defaults()
     gateway.promoted_at = 0;
     gateway.load_persisted_configs = true;
     gateway.max_auth_errors_until_block = DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK;
+    gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
 
     gateway.peer_hosts[0] = '\0';
     gateway.peer_user[0] = '\0';

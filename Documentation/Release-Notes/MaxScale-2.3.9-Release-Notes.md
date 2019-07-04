@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.3.9 Release Notes
+# MariaDB MaxScale 2.3.9 Release Notes -- 2019-07-04
 
 Release 2.3.9 is a GA release.
 
@@ -15,7 +15,9 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## Bug fixes
 
 * [MXS-2582](https://jira.mariadb.org/browse/MXS-2582) Intermittent unknown statement handler errors from backends
+* [MXS-2578](https://jira.mariadb.org/browse/MXS-2578) Maxscale RPM issue PCI Compliancy
 * [MXS-2575](https://jira.mariadb.org/browse/MXS-2575) PATCH with invalid credentials returns no result
+* [MXS-2574](https://jira.mariadb.org/browse/MXS-2574) maxctrl alter user doesn't work on current user
 * [MXS-2569](https://jira.mariadb.org/browse/MXS-2569) No newline sent with large schemas
 * [MXS-2563](https://jira.mariadb.org/browse/MXS-2563) Failing debug assertion at rwsplitsession.cc:1129 : m_expected_responses == 0
 * [MXS-2562](https://jira.mariadb.org/browse/MXS-2562) Oracle's MySQL Connector/ODBC gets packets out-of-order errors with .NET
