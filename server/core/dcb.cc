@@ -1955,6 +1955,7 @@ static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct SERVER* server)
 {
     RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
     int id = rworker->id();
+    DCB* old_current = this_thread.current_dcb;
 
     for (DCB* dcb = this_unit.all_dcbs[id]; dcb; dcb = dcb->thread.next)
     {
@@ -1962,11 +1963,14 @@ static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct SERVER* server)
         {
             if (!dcb->dcb_errhandle_called)
             {
+                this_thread.current_dcb = dcb;
                 dcb->func.hangup(dcb);
                 dcb->dcb_errhandle_called = true;
             }
         }
     }
+
+    this_thread.current_dcb = old_current;
 }
 
 /**
@@ -2500,10 +2504,10 @@ void dcb_process_timeouts(int thr)
                     if (idle > dcb->service->net_write_timeout * 10)
                     {
                         MXS_WARNING("network write timed out for '%s'@%s, ",
-                                        dcb->user ? dcb->user : "<unknown>",
-                                        dcb->remote ? dcb->remote : "<unknown>");
-                            dcb->session->close_reason = SESSION_CLOSE_TIMEOUT;
-                            poll_fake_hangup_event(dcb);
+                                    dcb->user ? dcb->user : "<unknown>",
+                                    dcb->remote ? dcb->remote : "<unknown>");
+                        dcb->session->close_reason = SESSION_CLOSE_TIMEOUT;
+                        poll_fake_hangup_event(dcb);
                     }
                 }
             }
