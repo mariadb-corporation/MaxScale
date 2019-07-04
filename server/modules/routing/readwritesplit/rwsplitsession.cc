@@ -175,24 +175,15 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
     }
     else
     {
-        /**
-         * We are already processing a request from the client. Store the
-         * new query and wait for the previous one to complete.
-         */
-        mxb_assert(m_expected_responses > 0 || !m_query_queue.empty());
+        // We are already processing a request from the client. Store the new query and wait for the previous
+        // one to complete.
         MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command",
-                 gwbuf_length(querybuf),
-                 GWBUF_DATA(querybuf)[4],
-                 m_expected_responses);
+                 gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], m_expected_responses);
+        mxb_assert(m_expected_responses > 0 || !m_query_queue.empty());
         m_query_queue.emplace_back(querybuf);
         querybuf = NULL;
         rval = 1;
         mxb_assert(m_expected_responses != 0);
-
-        if (m_expected_responses == 0 && !route_stored_query())
-        {
-            rval = 0;
-        }
     }
 
     if (querybuf != NULL)
