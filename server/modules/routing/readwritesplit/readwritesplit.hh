@@ -330,14 +330,6 @@ public:
     bool configure(MXS_CONFIG_PARAMETER* params);
 private:
 
-    // Update configuration
-    void    store_config(const Config& config);
-    void    update_local_config() const;
-    Config* get_local_config() const;
-
-    // Called when worker local data needs to be updated
-    static void update_config(void* data);
-
     SERVICE*                       m_service;   /**< Service where the router belongs*/
     mxs::rworker_local<Config>     m_config;
     Stats                          m_stats;
