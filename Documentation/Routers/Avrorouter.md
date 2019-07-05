@@ -62,12 +62,33 @@ protocol=CDC
 port=4001
 ```
 
+In direct replication mode, the avrorouter stores the latest replicated GTID in
+the `last_gtid.txt` file located in the `avrodir` (defaults to
+`/var/lib/maxscale`). To reset the replication process, stop MaxScale and remove
+the file.
+
 ## Configuration
 
 For information about common service parameters, refer to the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
 ### Router Parameters
+
+#### `gtid_start_pos`
+
+The GTID where avrorouter starts the replication from in direct replication
+mode. The parameter value must be in the MariaDB GTID format e.g. 0-1-123 where
+the first number is the replication domain, the second the server_id value of
+the server and the last is the GTID sequence number.
+
+This parameter has no effect in the traditional mode. If this parameter is
+defined, the replication will start from the implicit GTID that the master first
+serves.
+
+#### `server_id`
+
+The _server_id_ used when replicating from the master in direct
+replication mode. The default value is 1234.
 
 #### `source`
 
@@ -119,19 +140,7 @@ These [regular expression settings](../Getting-Started/Configuration-Guide.md#st
 filter events for processing depending on table names. Avrorouter does not support the
 *options*-parameter for regular expressions.
 
-### Router Options
-
-The avrorouter is configured with a comma-separated list of key-value pairs.
-Currently the router has one mandatory parameter, `binlogdir`. If no `source`
-parameter is defined, binlogdir needs to be manually defined in the router
-options. The following options should be given as a value to the
-`router_options` parameter.
-
-#### General Options
-
-These options control various file locations and names.
-
-##### `binlogdir`
+#### `binlogdir`
 
 The location of the binary log files. This is the first mandatory parameter
 and it defines where the module will read binlog files from. Read access to
@@ -141,7 +150,7 @@ If used in conjunction with the Binlog Server, the value of this option should
 be the same for both the Binlog Server and the avrorouter if the `source` parameter
 is not used.
 
-##### `avrodir`
+#### `avrodir`
 
 The location where the Avro files are stored. This is the second mandatory
 parameter and it governs where the converted files are stored. This directory
@@ -168,7 +177,7 @@ filestem=mybin,binlogdir=/var/lib/mysql/binlogs/
 
 The first binlog file the avrorouter would look for is `/var/lib/mysql/binlogs/mybin.000001`.
 
-##### `start_index`
+#### `start_index`
 
 The starting index number of the binlog file. The default value is 1.
 For the binlog _mysql-bin.000001_ the index would be 1, for _mysql-bin.000005_
@@ -201,7 +210,7 @@ filestem=binlog
 avrodir=/var/lib/maxscale
 ```
 
-#### Avro file options
+#### Avro File Related Parameters
 
 These options control how large the Avro file data blocks can get.
 Increasing or lowering the block size could have a positive effect
