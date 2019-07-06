@@ -1403,15 +1403,6 @@ static int gw_backend_close(DCB* dcb)
     /** Free protocol data */
     mysql_protocol_done(dcb);
 
-    /**
-     * If session state is SESSION_STATE_STOPPING, start closing client session.
-     * Otherwise only this backend connection is closed.
-     */
-    if (dcb->session && dcb->session->state == SESSION_STATE_STOPPING)
-    {
-        poll_fake_hangup_event(dcb->session->client_dcb);
-    }
-
     return 1;
 }
 
