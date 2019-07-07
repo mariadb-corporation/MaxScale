@@ -1550,18 +1550,9 @@ bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_thre
     return rv;
 }
 
-namespace
-{
-std::mutex ave_write_mutex;
-}
-
 void server_add_response_average(SERVER* srv, double ave, int num_samples)
 {
-    Server* server = static_cast<Server*>(srv);
-
-
-    std::lock_guard<std::mutex> guard(ave_write_mutex);
-    server->response_time_add(ave, num_samples);
+    static_cast<Server*>(srv)->response_time_add(ave, num_samples);
 }
 
 int server_response_time_num_samples(const SERVER* srv)
@@ -1589,8 +1580,10 @@ double server_response_time_average(const SERVER* srv)
 void Server::response_time_add(double ave, int num_samples)
 {
     constexpr double drift {1.1};
-    int current_max = m_response_time.sample_max();
     int new_max {0};
+
+    std::lock_guard<std::mutex> guard(m_lock);
+    int current_max = m_response_time.sample_max();
 
     // This server handles more samples than EMA max.
     // Increasing max allows all servers to be fairly compared.
