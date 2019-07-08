@@ -1433,8 +1433,10 @@ bool Service::refresh_users()
 
     MXS_CONFIG* config = config_get_global_options();
 
-    /* Check if refresh rate limit has been exceeded */
-    if (now < m_rate_limits[self].last + config->users_refresh_time)
+    /* Check if refresh rate limit has been exceeded. Also check whether we are in the middle of starting up.
+     * If so, allow repeated reloading of users. */
+    if (now > maxscale_started() + config->users_refresh_time
+        && now < m_rate_limits[self].last + config->users_refresh_time)
     {
         if (!m_rate_limits[self].warned)
         {
