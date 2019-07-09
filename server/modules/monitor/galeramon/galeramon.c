@@ -697,9 +697,15 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
                     }
                 }
             }
-            else if (moitor_servers->server->node_id >= 0 &&
-                     (!handle->use_priority || candidate_master == NULL))
+            else if (moitor_servers->server->node_id >= 0)
             {
+                if (handle->use_priority && candidate_master &&
+                    server_get_parameter_nolock(moitor_servers->server, "priority", buf, sizeof(buf)))
+                {
+                    // Current candidate has priority but this node doesn't, current candidate is better
+                    continue;
+                }
+
                 // Server priorities are not in use or no candidate has been found
                 if (min_id < 0 || moitor_servers->server->node_id < min_id)
                 {
