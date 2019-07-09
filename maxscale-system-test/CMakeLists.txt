@@ -969,6 +969,9 @@ add_test_executable(mxs2563_concurrent_slave_failure.cpp mxs2563_concurrent_slav
 # MXS-2521: COM_STMT_EXECUTE maybe return empty result
 add_test_executable(mxs2521_double_exec.cpp mxs2521_double_exec mxs2521_double_exec LABELS REPL_BACKEND readwritesplit)
 
+# MXS-2490: Direct execution doesn't work with MaxScale
+add_test_executable(mxs2490_ps_execute_direct.cpp mxs2490_ps_execute_direct replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################

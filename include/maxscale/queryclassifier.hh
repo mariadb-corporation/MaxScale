@@ -363,7 +363,7 @@ private:
      */
     bool query_type_is_read_only(uint32_t qtype) const;
 
-    void process_routing_hints(HINT* pHints, uint32_t* target);
+    void     process_routing_hints(HINT* pHints, uint32_t* target);
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
     MXS_SESSION* session() const
@@ -415,5 +415,8 @@ private:
     RouteInfo         m_route_info;
     bool              m_trx_is_read_only;
     bool              m_ps_continuation;
+
+    uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
+                                     * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/
 };
 }
