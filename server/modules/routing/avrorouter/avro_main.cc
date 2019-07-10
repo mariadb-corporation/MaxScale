@@ -536,7 +536,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {"codec",                 MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
             {"match",                 MXS_MODULE_PARAM_REGEX  },
             {"exclude",               MXS_MODULE_PARAM_REGEX  },
-            {"server_id",             MXS_MODULE_PARAM_STRING, "1234"},
+            {"server_id",             MXS_MODULE_PARAM_COUNT, "1234"},
             {"gtid_start_pos",        MXS_MODULE_PARAM_STRING },
             {MXS_END_MODULE_PARAMS}
         }

@@ -147,20 +147,15 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
     else
     {
         // Already busy executing a query, put the query in a queue and route it later
-        mxb_assert(m_expected_responses > 0 || !m_query_queue.empty());
         MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command: %s",
                  gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], m_expected_responses,
                  mxs::extract_sql(querybuf, 1024).c_str());
+        mxb_assert(m_expected_responses > 0 || !m_query_queue.empty());
 
         m_query_queue.emplace_back(querybuf);
         querybuf = NULL;
         rval = 1;
         mxb_assert(m_expected_responses != 0);
-
-        if (m_expected_responses == 0 && !route_stored_query())
-        {
-            rval = 0;
-        }
     }
 
     if (querybuf != NULL)

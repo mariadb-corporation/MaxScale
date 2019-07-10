@@ -644,6 +644,13 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
 
     // All COM_STMT type statements store the ID in the same place
     uint32_t external_id = mysql_extract_ps_id(pBuffer);
+
+    if (external_id == 0xffffffff)
+    {
+        // "Direct execution" that refers to the latest prepared statement
+        external_id = m_prev_ps_id;
+    }
+
     auto it = m_ps_handles.find(external_id);
 
     if (it != m_ps_handles.end())
@@ -663,6 +670,7 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
 void QueryClassifier::ps_store_response(uint32_t internal_id, GWBUF* buffer)
 {
     auto external_id = qc_mysql_extract_ps_id(buffer);
+    m_prev_ps_id = external_id;
     m_ps_handles[external_id] = internal_id;
 
     if (auto param_count = qc_extract_ps_param_count(buffer))

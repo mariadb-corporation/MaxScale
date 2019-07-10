@@ -31,7 +31,7 @@ For more information, please refer to the [Limitations](../About/Limitations.md)
 
 RPM and Debian packages are provided for supported the Linux distributions.
 
-Packages can be downloaded [here](https://mariadb.com/downloads/mariadb-tx/maxscale).
+Packages can be downloaded [here](https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale).
 
 ## Source Code
 
