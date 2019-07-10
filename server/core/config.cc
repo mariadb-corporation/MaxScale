@@ -2337,7 +2337,7 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
 
-        decltype(gateway.qc_cache_properties.max_size)max_size = int_value;
+        decltype(gateway.qc_cache_properties.max_size) max_size = int_value;
 
         if (max_size >= 0)
         {
@@ -2514,15 +2514,6 @@ static int handle_global_item(const char* name, const char* value)
                 // Strictly speaking they will be refreshed once every 68 years,
                 // but I just don't beleave the uptime will be that long.
                 users_refresh_time = INT32_MAX;
-            }
-            else if (users_refresh_time < USERS_REFRESH_TIME_MIN)
-            {
-                MXS_WARNING("%s is less than the allowed minimum value of %d for the "
-                            "configuration option '%s', using the minimum value.",
-                            value,
-                            USERS_REFRESH_TIME_MIN,
-                            CN_USERS_REFRESH_TIME);
-                users_refresh_time = USERS_REFRESH_TIME_MIN;
             }
 
             if (users_refresh_time > INT32_MAX)
