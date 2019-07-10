@@ -489,26 +489,30 @@ MonitorServer* GaleraMonitor::get_candidate_master()
         if (!moitor_servers->server->is_in_maint()
             && (moitor_servers->pending_status & SERVER_JOINED))
         {
-            if (m_use_priority)
+            std::string priority = moitor_servers->server->get_custom_parameter("priority");
+
+            if (m_use_priority && !priority.empty())
             {
-                std::string buf = moitor_servers->server->get_custom_parameter("priority");
-                if (!buf.empty())
+                /** The server has a priority  */
+                if ((currval = atoi(priority.c_str())) > 0)
                 {
-                    /** The server has a priority  */
-                    if ((currval = atoi(buf.c_str())) > 0)
+                    /** The priority is valid */
+                    if (currval < minval && currval > 0)
                     {
-                        /** The priority is valid */
-                        if (currval < minval && currval > 0)
-                        {
-                            minval = currval;
-                            candidate_master = moitor_servers;
-                        }
+                        minval = currval;
+                        candidate_master = moitor_servers;
                     }
                 }
             }
-            else if (moitor_servers->server->node_id >= 0
-                     && (!m_use_priority || candidate_master == NULL))
+            else if (moitor_servers->server->node_id >= 0)
             {
+                if (m_use_priority && candidate_master
+                    && !candidate_master->server->get_custom_parameter("priority").empty())
+                {
+                    // Current candidate has priority but this node doesn't, current candidate is better
+                    continue;
+                }
+
                 // Server priorities are not in use or no candidate has been found
                 if (min_id < 0 || moitor_servers->server->node_id < min_id)
                 {
