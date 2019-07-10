@@ -56,7 +56,7 @@ static void get_command_output(char* output, size_t size, const char* format, ..
     }
 }
 
-static void extract_file_and_line(const char* symbols, char* cmd, size_t size)
+static void extract_file_and_line(char* symbols, char* cmd, size_t size)
 {
     const char* filename_end = strchr(symbols, '(');
     const char* symname_end = strchr(symbols, ')');
@@ -116,6 +116,30 @@ static void extract_file_and_line(const char* symbols, char* cmd, size_t size)
             snprintf(symname, sizeof(symname), "%.*s", (int)(symname_end - symname_start), symname_start);
             get_command_output(cmd, size, "addr2line -e %s %s", filename, symname);
         }
+
+        const char prefix[] = "MaxScale/";
+
+        // Remove common source prefix
+        if (char* str = strstr(cmd, prefix))
+        {
+            str += sizeof(prefix) - 1;
+            memmove(cmd, str, strlen(cmd) - (str - cmd) + 1);
+        }
+
+        // Strip the directory name from the symbols (could this be useful?)
+        if (char* str = strrchr(symbols, '/'))
+        {
+            ++str;
+            memmove(symbols, str, strlen(symbols) - (str - symbols) + 1);
+        }
+
+        // Remove the address where the symbol is in memory (i.e. the [0xdeadbeef] that follows the
+        // (main+0xa1) part), we're only interested where it is in the library.
+        if (char* str = strchr(symbols, '['))
+        {
+            str--;
+            *str = '\0';
+        }
     }
 }
 }
@@ -129,12 +153,21 @@ void dump_stacktrace(std::function<void(const char*, const char*)> handler)
     int count = backtrace(addrs, 128);
     char** symbols = backtrace_symbols(addrs, count);
 
+    int rc = system("/bin/test -f /bin/nm -a -f /bin/addr2line");
+    bool do_extract = WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
+
     if (symbols)
     {
-        for (int n = 0; n < count; n++)
+        // Skip first five frames, they are inside the stacktrace printing function and signal handlers
+        for (int n = 4; n < count; n++)
         {
-            char cmd[PATH_MAX + 1024] = "<not found>";
-            extract_file_and_line(symbols[n], cmd, sizeof(cmd));
+            char cmd[PATH_MAX + 1024] = "<binutils not installed>";
+
+            if (do_extract)
+            {
+                extract_file_and_line(symbols[n], cmd, sizeof(cmd));
+            }
+
             handler(symbols[n], cmd);
         }
         free(symbols);

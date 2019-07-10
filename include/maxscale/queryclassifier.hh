@@ -415,5 +415,8 @@ private:
     RouteInfo         m_route_info;
     bool              m_trx_is_read_only;
     bool              m_ps_continuation;
+
+    uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
+                                     * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/
 };
 }

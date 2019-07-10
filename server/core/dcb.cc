@@ -958,6 +958,8 @@ static void dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno)
  */
 int dcb_drain_writeq(DCB* dcb)
 {
+    mxb_assert(dcb->owner == RoutingWorker::get_current());
+
     if (dcb->ssl_read_want_write)
     {
         /** The SSL library needs to write more data */
