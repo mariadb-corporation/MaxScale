@@ -743,7 +743,7 @@ std::unique_ptr<ResultSet> monitor_get_list()
 
     for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
     {
-        const char* state = ptr->state & MONITOR_STATE_RUNNING ? "Running" : "Stopped";
+        const char* state = ptr->state == MONITOR_STATE_RUNNING ? "Running" : "Stopped";
         set->add_row({ptr->name, state});
     }
 
