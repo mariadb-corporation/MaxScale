@@ -436,9 +436,15 @@ MXS_MONITORED_SERVER* GaleraMonitor::get_candidate_master()
                     }
                 }
             }
-            else if (moitor_servers->server->node_id >= 0
-                     && (!m_use_priority || candidate_master == NULL))
+            else if (moitor_servers->server->node_id >= 0)
             {
+                if (m_use_priority && candidate_master
+                    && server_get_parameter(candidate_master->server, "priority", buf, sizeof(buf)))
+                {
+                    // Current candidate has priority but this node doesn't, current candidate is better
+                    continue;
+                }
+
                 // Server priorities are not in use or no candidate has been found
                 if (min_id < 0 || moitor_servers->server->node_id < min_id)
                 {
