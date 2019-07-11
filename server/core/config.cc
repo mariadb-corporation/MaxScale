@@ -3734,12 +3734,11 @@ int create_new_service(CONFIG_CONTEXT* obj)
     config_add_defaults(obj, config_service_params);
     config_add_defaults(obj, module->parameters);
 
+    int error_count = 0;
     Service* service = service_alloc(obj->object, router, obj->parameters);
 
     if (service)
     {
-        int error_count = 0;
-
         for (auto& a : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
         {
             fix_object_name(a);
@@ -3771,9 +3770,10 @@ int create_new_service(CONFIG_CONTEXT* obj)
     else
     {
         MXS_ERROR("Service '%s' creation failed.", obj->object);
+        error_count++;
     }
 
-    return service ? 0 : 1;
+    return error_count;
 }
 
 /**
