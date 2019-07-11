@@ -2691,9 +2691,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
              * until it return 1 for success or -1 for error */
             if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
             {
-                return_code = (DCB::Role::CLIENT == dcb->role) ?
-                    dcb_accept_SSL(dcb) :
-                    dcb_connect_SSL(dcb);
+                return_code = dcb->ssl_handshake();
             }
             if (1 == return_code)
             {
@@ -3317,4 +3315,9 @@ const char* DCB::type()
         mxb_assert(!true);
         return "Unknown DCB";
     }
+}
+
+int DCB::ssl_handshake()
+{
+    return role == Role::CLIENT ? dcb_accept_SSL(this) : dcb_connect_SSL(this);
 }

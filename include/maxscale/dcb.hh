@@ -160,6 +160,8 @@ struct DCB : public MXB_POLL_DATA
      */
     const char* type();
 
+    int ssl_handshake();
+
     bool                    dcb_errhandle_called = false;   /**< this can be called only once */
     Role                    role;
     int                     fd = DCBFD_CLOSED;                  /**< The descriptor */
