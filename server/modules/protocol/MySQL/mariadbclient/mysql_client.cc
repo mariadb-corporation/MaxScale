@@ -1629,7 +1629,7 @@ return_1:
  */
 int gw_MySQLAccept(DCB* dcb)
 {
-    dcb->protocol = mysql_protocol_init(dcb, dcb->fd);
+    dcb->protocol = new(std::nothrow) MySQLProtocol(dcb);
     MXS_ABORT_IF_NULL(dcb->protocol);
 
     if (poll_add_dcb(dcb) == -1)
@@ -1671,19 +1671,18 @@ retblock:
 
 static int gw_client_close(DCB* dcb)
 {
-    mxb_assert(dcb->protocol);
+    MXS_SESSION* target = dcb->session;
 
-    if (mysql_protocol_done(dcb))
+    if (target->state == SESSION_STATE_STARTED || target->state == SESSION_STATE_STOPPING)
     {
-        MXS_SESSION* target = dcb->session;
-
-        if (target->state == SESSION_STATE_STARTED || target->state == SESSION_STATE_STOPPING)
-        {
-            MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->ses_id);
-            mxb_assert(removed);
-            session_close(target);
-        }
+        MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->ses_id);
+        mxb_assert(removed);
+        session_close(target);
     }
+
+    MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol);
+    mxb_assert(protocol);
+    delete protocol;
 
     return 1;
 }

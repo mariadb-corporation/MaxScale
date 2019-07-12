@@ -120,7 +120,7 @@ static bool null_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
     /** MXS-1026: This will just prevent a crash when the NullAuth authenticator
      * is used. This does not provide a way to use MaxScale with no authentication. */
     dcb->data = calloc(1, sizeof(MYSQL_session));
-    dcb->protocol = mysql_protocol_init(dcb, dcb->fd);
+    dcb->protocol = new(std::nothrow) MySQLProtocol(dcb);
     return true;
 }
 

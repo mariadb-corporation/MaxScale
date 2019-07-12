@@ -207,7 +207,6 @@ DCB::~DCB()
 
     MXS_FREE(remote);
     MXS_FREE(user);
-    MXS_FREE(protocol);
     gwbuf_free(delayq);
     gwbuf_free(writeq);
     gwbuf_free(readq);
@@ -308,6 +307,7 @@ static void dcb_stop_polling_and_shutdown(DCB* dcb)
     if (dcb->func.close != NULL)
     {
         dcb->func.close(dcb);
+        dcb->protocol = nullptr;
     }
 }
 

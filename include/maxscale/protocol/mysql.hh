@@ -322,29 +322,39 @@ static const char* const MXS_LAST_GTID = "last_gtid";
  * Protocol carries information from client side to backend side, such as
  * MySQL session command information and history of earlier session commands.
  */
-typedef struct
+struct MySQLProtocol
 {
-    int                    fd;                          /*< The socket descriptor */
-    DCB*                   owner_dcb;                   /*< The DCB of the socket we are running on */
-    mxs_mysql_cmd_t        current_command;             /*< Current command being executed */
-    mxs_auth_state_t       protocol_auth_state;         /*< Authentication status */
-    mysql_protocol_state_t protocol_state;              /*< Protocol struct status */
-    uint8_t                scramble[MYSQL_SCRAMBLE_LEN];/*< server scramble, created or received */
-    uint32_t               server_capabilities;         /*< server capabilities, created or received */
-    uint32_t               client_capabilities;         /*< client capabilities, created or received */
-    uint32_t               extra_capabilities;          /*< MariaDB 10.2 capabilities */
-    uint64_t               thread_id;                   /*< MySQL Thread ID. Send only 32bits in handshake. */
-    unsigned int           charset;                     /*< MySQL character set at connect time */
-    int                    ignore_replies;              /*< How many replies should be discarded */
-    GWBUF*                 stored_query;                /*< Temporarily stored queries */
-    bool                   collect_result;              /*< Collect the next result set as one buffer */
-    bool                   changing_user;
-    bool                   track_state;     /*< Track session state */
-    uint32_t               num_eof_packets; /*< Encountered eof packet number, used for check
-                                             * packet type */
-    bool large_query;                       /*< Whether to ignore the command byte of the next
-                                             * packet*/
-} MySQLProtocol;
+    MySQLProtocol(DCB* dcb)
+        : owner_dcb(dcb)
+    {
+    }
+
+    ~MySQLProtocol()
+    {
+        gwbuf_free(stored_query);
+    }
+
+    DCB* owner_dcb;     /*< The DCB associated with this protocol */
+
+    mxs_mysql_cmd_t        current_command = MXS_COM_UNDEFINED;         /*< Current command being executed */
+    mxs_auth_state_t       protocol_auth_state = MXS_AUTH_STATE_INIT;   /*< Authentication state */
+    mysql_protocol_state_t protocol_state = MYSQL_PROTOCOL_ACTIVE;      /*< Protocol state */
+
+    uint8_t  scramble[MYSQL_SCRAMBLE_LEN];  /*< server scramble, created or received */
+    uint32_t server_capabilities = 0;       /*< server capabilities, created or received */
+    uint32_t client_capabilities = 0;       /*< client capabilities, created or received */
+    uint32_t extra_capabilities = 0;        /*< MariaDB 10.2 capabilities */
+
+    uint64_t     thread_id = 0;             /*< Backend Thread ID */
+    unsigned int charset = 0x8;             /*< Connection character set (default latin1 )*/
+    int          ignore_replies = 0;        /*< How many replies should be discarded */
+    GWBUF*       stored_query = nullptr;    /*< Temporarily stored queries */
+    bool         collect_result = false;    /*< Collect the next result set as one buffer */
+    bool         changing_user = false;
+    bool         track_state = false;   /*< Track session state */
+    uint32_t     num_eof_packets = 0;   /*< Encountered eof packet number, used for check packet type */
+    bool         large_query = false;   /*< Whether to ignore the command byte of the next packet*/
+};
 
 typedef struct
 {
@@ -417,25 +427,6 @@ extern uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN];
  * @return New MySQL_session or NULL if memory allocation failed
  */
 MYSQL_session* mysql_session_alloc();
-
-/**
- * Create MySQL protocol structure
- *
- * @param dcb Owning DCB
- * @param fd  File descriptor of the DCB
- *
- * @return New protocol or NULL on error
- */
-MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
-
-/**
- * Free protocol object
- *
- * @param dcb Owner DCB
- *
- * @return True if protocol was closed
- */
-bool mysql_protocol_done(DCB* dcb);
 
 /**
  * Return a string representation of a MySQL protocol state.

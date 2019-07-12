@@ -42,51 +42,6 @@ MYSQL_session* mysql_session_alloc()
     return ses;
 }
 
-MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
-{
-    MySQLProtocol* p;
-
-    p = (MySQLProtocol*) MXS_CALLOC(1, sizeof(MySQLProtocol));
-    mxb_assert(p != NULL);
-
-    if (p == NULL)
-    {
-        goto return_p;
-    }
-    p->protocol_state = MYSQL_PROTOCOL_ALLOC;
-    p->protocol_auth_state = MXS_AUTH_STATE_INIT;
-    p->current_command = MXS_COM_UNDEFINED;
-    p->stored_query = NULL;
-    p->extra_capabilities = 0;
-    p->ignore_replies = 0;
-    p->collect_result = false;
-    p->changing_user = false;
-    p->num_eof_packets = 0;
-    p->large_query = false;
-    p->track_state = false;
-    /*< Assign fd with protocol */
-    p->fd = fd;
-    p->owner_dcb = dcb;
-    p->protocol_state = MYSQL_PROTOCOL_ACTIVE;
-return_p:
-    return p;
-}
-
-bool mysql_protocol_done(DCB* dcb)
-{
-    bool rval = false;
-    MySQLProtocol* p = (MySQLProtocol*)dcb->protocol;
-
-    if (p->protocol_state == MYSQL_PROTOCOL_ACTIVE)
-    {
-        gwbuf_free(p->stored_query);
-        p->protocol_state = MYSQL_PROTOCOL_DONE;
-        rval = true;
-    }
-
-    return rval;
-}
-
 const char* gw_mysql_protocol_state2string(int state)
 {
     switch (state)

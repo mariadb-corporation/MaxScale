@@ -6,7 +6,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mysql.hh>
 
-MySQLProtocol proto;
+MySQLProtocol proto(nullptr);
 
 static const uint8_t resultset1[] =
 {

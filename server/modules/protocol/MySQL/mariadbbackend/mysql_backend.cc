@@ -158,18 +158,11 @@ static int gw_create_backend_connection(DCB* backend_dcb,
                                         SERVER* server,
                                         MXS_SESSION* session)
 {
-    MySQLProtocol* protocol = NULL;
     int rv = -1;
     int fd = -1;
 
-    protocol = mysql_protocol_init(backend_dcb, -1);
-    mxb_assert(protocol != NULL);
-
-    if (protocol == NULL)
-    {
-        MXS_ERROR("Failed to create protocol object for backend connection.");
-        goto return_fd;
-    }
+    MySQLProtocol* protocol = new(std::nothrow) MySQLProtocol(backend_dcb);
+    MXS_ABORT_IF_NULL(protocol);
 
     /** Copy client flags to backend protocol */
     if (backend_dcb->session->client_dcb->protocol)
@@ -198,15 +191,7 @@ static int gw_create_backend_connection(DCB* backend_dcb,
     {
     case 0:
         mxb_assert(fd != DCBFD_CLOSED);
-        protocol->fd = fd;
         protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
-        MXS_DEBUG("Established "
-                  "connection to %s:%i, protocol fd %d client "
-                  "fd %d.",
-                  server->address,
-                  server->port,
-                  protocol->fd,
-                  session->client_dcb->fd);
 
         if (server->proxy_protocol)
         {
@@ -222,13 +207,6 @@ static int gw_create_backend_connection(DCB* backend_dcb,
          */
         mxb_assert(fd != DCBFD_CLOSED);
         protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
-        protocol->fd = fd;
-        MXS_DEBUG("Connection "
-                  "pending to %s:%i, protocol fd %d client fd %d.",
-                  server->address,
-                  server->port,
-                  protocol->fd,
-                  session->client_dcb->fd);
         break;
 
     default:
@@ -236,9 +214,8 @@ static int gw_create_backend_connection(DCB* backend_dcb,
         mxb_assert(fd == -1);
         mxb_assert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
         break;
-    }   /*< switch */
+    }
 
-return_fd:
     return fd;
 }
 
@@ -348,8 +325,8 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
         auto main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
         auto target_server = dcb->server;
         main_worker->execute([target_server]() {
-            MonitorManager::set_server_status(target_server, SERVER_MAINT);
-        }, mxb::Worker::EXECUTE_AUTO);
+                                 MonitorManager::set_server_status(target_server, SERVER_MAINT);
+                             }, mxb::Worker::EXECUTE_AUTO);
 
         MXS_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
@@ -1401,7 +1378,8 @@ static int gw_backend_close(DCB* dcb)
     mysql_send_com_quit(dcb, 0, quitbuf);
 
     /** Free protocol data */
-    mysql_protocol_done(dcb);
+    MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol);
+    delete protocol;
 
     return 1;
 }
