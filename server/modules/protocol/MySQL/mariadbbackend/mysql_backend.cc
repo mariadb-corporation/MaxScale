@@ -406,21 +406,9 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
          * is used which does not guarantee that the correct command is tracked if
          * something queues commands internally.
          */
-        if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
+        if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
         {
-            uint8_t* data = GWBUF_DATA(buffer);
-
-            if (!proto->large_query && !session_is_load_active(dcb->session))
-            {
-                proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(data);
-            }
-
-            /**
-             * If the buffer contains a large query, we have to skip the command
-             * byte extraction for the next packet. This way current_command always
-             * contains the latest command executed on this backend.
-             */
-            proto->large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
+            proto->track_query(buffer);
         }
         else if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
         {
@@ -801,9 +789,11 @@ static int gw_read_and_write(DCB* dcb)
         || proto->collect_result
         || proto->ignore_replies != 0)
     {
-        GWBUF* tmp = modutil_get_complete_packets(&read_buffer);
-        /* Put any residue into the read queue */
+        GWBUF* tmp = rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING) ?
+            proto->track_response(&read_buffer) :
+            modutil_get_complete_packets(&read_buffer);
 
+        // Store any partial packets in the DCB's read buffer
         dcb_readq_set(dcb, read_buffer);
 
         if (tmp == NULL)
@@ -1266,7 +1256,6 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
                       mxs::to_string(backend_protocol->protocol_auth_state));
 
             /** Store data until authentication is complete */
-            prepare_for_write(dcb, queue);
             backend_set_delayqueue(dcb, queue);
             rc = 1;
         }

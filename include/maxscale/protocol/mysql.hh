@@ -39,8 +39,6 @@
 #include <maxscale/session.hh>
 #include <maxscale/version.h>
 
-MXS_BEGIN_DECLS
-
 // Default version string sent to clients
 #define DEFAULT_VERSION_STRING "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"
 
@@ -319,11 +317,100 @@ static const char* const MXS_LAST_GTID = "last_gtid";
 /**
  * MySQL Protocol specific state data.
  *
- * Protocol carries information from client side to backend side, such as
- * MySQL session command information and history of earlier session commands.
+ * Tracks various parts of the network protocol e.g. the response state
  */
 struct MySQLProtocol
 {
+    class Error
+    {
+    public:
+        Error() = default;
+
+        explicit operator bool() const
+        {
+            return m_code != 0;
+        }
+
+        bool is_rollback() const
+        {
+            bool rv = false;
+
+            if (m_code != 0)
+            {
+                mxb_assert(m_sql_state.length() == 5);
+                // The 'sql_state' of all transaction rollbacks is "40XXX".
+                if (m_sql_state[0] == '4' && m_sql_state[1] == '0')
+                {
+                    rv = true;
+                }
+            }
+
+            return rv;
+        }
+
+        bool is_unexpected_error() const
+        {
+            switch (m_code)
+            {
+            case ER_CONNECTION_KILLED:
+            case ER_SERVER_SHUTDOWN:
+            case ER_NORMAL_SHUTDOWN:
+            case ER_SHUTDOWN_COMPLETE:
+                return true;
+
+            default:
+                return false;
+            }
+        }
+
+        uint32_t code() const
+        {
+            return m_code;
+        }
+
+        const std::string& sql_state() const
+        {
+            return m_sql_state;
+        }
+
+        const std::string& message() const
+        {
+            return m_message;
+        }
+
+        template<class InputIterator>
+        void set(uint32_t code,
+                 InputIterator sql_state_begin, InputIterator sql_state_end,
+                 InputIterator message_begin, InputIterator message_end)
+        {
+            mxb_assert(std::distance(sql_state_begin, sql_state_end) == 5);
+            m_code = code;
+            m_sql_state.assign(sql_state_begin, sql_state_end);
+            m_message.assign(message_begin, message_end);
+        }
+
+        void clear()
+        {
+            m_code = 0;
+            m_sql_state.clear();
+            m_message.clear();
+        }
+
+    private:
+        uint16_t    m_code {0};
+        std::string m_sql_state;
+        std::string m_message;
+    };
+
+    enum class ReplyState
+    {
+        START,          /**< Query sent to backend */
+        DONE,           /**< Complete reply received */
+        RSET_COLDEF,    /**< Resultset response, waiting for column definitions */
+        RSET_COLDEF_EOF,/**< Resultset response, waiting for EOF for column definitions */
+        RSET_ROWS       /**< Resultset response, waiting for rows */
+    };
+
     MySQLProtocol(DCB* dcb)
         : owner_dcb(dcb)
     {
@@ -334,6 +421,29 @@ struct MySQLProtocol
         gwbuf_free(stored_query);
     }
 
+    /**
+     * Track a client query
+     *
+     * Inspects the query and tracks the current command being executed. Also handles detection of
+     * multi-packet requests and the special handling that various commands need.
+     */
+    void track_query(GWBUF* buffer);
+
+    /**
+     * Processe a reply from a backend server
+     *
+     * This method collects all complete packets and updates the internal response state.
+     *
+     * @param buffer Pointer to buffer containing the raw response. Any partial packets will be left in this
+     *               buffer.
+     *
+     * @return All complete packets that were in `buffer`
+     */
+    GWBUF* track_response(GWBUF** buffer);
+
+    //
+    // Legacy public members
+    //
     DCB* owner_dcb;     /*< The DCB associated with this protocol */
 
     mxs_mysql_cmd_t        current_command = MXS_COM_UNDEFINED;         /*< Current command being executed */
@@ -354,6 +464,121 @@ struct MySQLProtocol
     bool         track_state = false;   /*< Track session state */
     uint32_t     num_eof_packets = 0;   /*< Encountered eof packet number, used for check packet type */
     bool         large_query = false;   /*< Whether to ignore the command byte of the next packet*/
+
+    //
+    // END Legacy public members
+    //
+
+    using Iter = mxs::Buffer::iterator;
+
+    inline ReplyState get_reply_state() const
+    {
+        return m_reply_state;
+    }
+
+    std::string reply_state_str() const
+    {
+        switch (m_reply_state)
+        {
+        case ReplyState::START:
+            return "START";
+
+        case ReplyState::DONE:
+            return "DONE";
+
+        case ReplyState::RSET_COLDEF:
+            return "COLDEF";
+
+        case ReplyState::RSET_COLDEF_EOF:
+            return "COLDEF_EOF";
+
+        case ReplyState::RSET_ROWS:
+            return "ROWS";
+
+        default:
+            return "UNKNOWN";
+        }
+    }
+
+    /**
+     * The current command
+     *
+     * @note This obsoletes the old public current_command member
+     */
+    inline uint8_t command() const
+    {
+        return m_command;
+    }
+
+    /**
+     * Updated during the call to @c process_reply().
+     *
+     * @return The current error state.
+     */
+    const Error& error() const
+    {
+        return m_error;
+    }
+
+    /**
+     * Check whether the response from the server is complete
+     *
+     * @return True if no more results are expected from this server
+     */
+    bool reply_is_complete() const
+    {
+        return m_reply_state == ReplyState::DONE;
+    }
+
+    /**
+     * Check if a partial response has been received from the backend
+     *
+     * @return True if some parts of the reply have been received
+     */
+    bool reply_has_started() const
+    {
+        return m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
+    }
+
+private:
+
+    ReplyState m_reply_state = ReplyState::DONE;
+    uint16_t   m_modutil_state;     /**< TODO: This is an ugly hack, replace it */
+    uint8_t    m_command = 0;
+    bool       m_opening_cursor = false;    /**< Whether we are opening a cursor */
+    uint32_t   m_expected_rows = 0;         /**< Number of rows a COM_STMT_FETCH is retrieving */
+    uint64_t   m_num_coldefs = 0;
+    bool       m_large_query = false;
+    bool       m_skip_next = false;
+    Error      m_error;
+
+    bool   consume_fetched_rows(GWBUF* buffer);
+    void   process_reply_start(Iter it, Iter end);
+    void   process_one_packet(Iter it, Iter end, uint32_t len);
+    GWBUF* process_packets(GWBUF** result);
+
+    /**
+     * Update @c m_error.
+     *
+     * @param it   Iterator that points to the first byte of the error code in an error packet.
+     * @param end  Iterator pointing one past the end of the error packet.
+     */
+    void update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
+
+    inline bool is_opening_cursor() const
+    {
+        return m_opening_cursor;
+    }
+
+    inline void set_cursor_opened()
+    {
+        m_opening_cursor = false;
+    }
+
+    inline void set_reply_state(ReplyState state)
+    {
+        m_reply_state = state;
+    }
 };
 
 typedef struct
@@ -704,5 +929,3 @@ void mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
                                        kill_type_t type);
 
 void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
-
-MXS_END_DECLS

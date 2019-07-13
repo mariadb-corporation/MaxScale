@@ -1857,11 +1857,13 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
 
-            /**
-             * Update the currently command being executed.
-             */
+            // Track the command being executed
+            proto->track_query(packetbuf);
+
             if (!proto->changing_user && !session_is_load_active(session))
             {
+                // Old command tracking code, still does some important work
+                // TODO: Move pool qualification somewhere else
                 update_current_command(session->client_dcb, packetbuf);
             }
 

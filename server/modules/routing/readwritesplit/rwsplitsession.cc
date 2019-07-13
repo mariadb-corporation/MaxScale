@@ -623,6 +623,11 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
 
     backend->process_reply(writebuf);
 
+    MySQLProtocol* p = (MySQLProtocol*)backend_dcb->protocol;
+    mxb_assert_message(backend->reply_state_str() == p->reply_state_str(),
+                       "RWBackend: %s != MySQLProtocol: %s",
+                       backend->reply_state_str(), p->reply_state_str().c_str());
+
     const RWBackend::Error& error = backend->error();
 
     if (error.is_unexpected_error())

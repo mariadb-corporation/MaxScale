@@ -1656,3 +1656,424 @@ mysql_tx_state_t parse_trx_state(const char* str)
 
     return (mysql_tx_state_t)s;
 }
+
+using Iter = MySQLProtocol::Iter;
+
+uint64_t get_encoded_int(Iter it)
+{
+    uint64_t len = *it++;
+
+    switch (len)
+    {
+    case 0xfc:
+        len = *it++;
+        len |= ((uint64_t)*it++) << 8;
+        break;
+
+    case 0xfd:
+        len = *it++;
+        len |= ((uint64_t)*it++) << 8;
+        len |= ((uint64_t)*it++) << 16;
+        break;
+
+    case 0xfe:
+        len = *it++;
+        len |= ((uint64_t)*it++) << 8;
+        len |= ((uint64_t)*it++) << 16;
+        len |= ((uint64_t)*it++) << 24;
+        len |= ((uint64_t)*it++) << 32;
+        len |= ((uint64_t)*it++) << 40;
+        len |= ((uint64_t)*it++) << 48;
+        len |= ((uint64_t)*it++) << 56;
+        break;
+
+    default:
+        break;
+    }
+
+    return len;
+}
+
+Iter skip_encoded_int(Iter it)
+{
+    switch (*it)
+    {
+    case 0xfc:
+        it.advance(3);
+        break;
+
+    case 0xfd:
+        it.advance(4);
+        break;
+
+    case 0xfe:
+        it.advance(9);
+        break;
+
+    default:
+        ++it;
+        break;
+    }
+
+    return it;
+}
+
+bool is_last_ok(Iter it)
+{
+    ++it;                       // Skip the command byte
+    it = skip_encoded_int(it);  // Affected rows
+    it = skip_encoded_int(it);  // Last insert ID
+    uint16_t status = *it++;
+    status |= (*it++) << 8;
+    return (status & SERVER_MORE_RESULTS_EXIST) == 0;
+}
+
+bool is_last_eof(Iter it)
+{
+    std::advance(it, 3);    // Skip the command byte and warning count
+    uint16_t status = *it++;
+    status |= (*it++) << 8;
+    return (status & SERVER_MORE_RESULTS_EXIST) == 0;
+}
+
+void MySQLProtocol::update_error(Iter it, Iter end)
+{
+    uint16_t code = 0;
+    code |= (*it++);
+    code |= (*it++) << 8;
+    ++it;
+    auto sql_state_begin = it;
+    it.advance(5);
+    auto sql_state_end = it;
+    auto message_begin = sql_state_end;
+    auto message_end = end;
+
+    m_error.set(code, sql_state_begin, sql_state_end, message_begin, message_end);
+}
+
+bool MySQLProtocol::consume_fetched_rows(GWBUF* buffer)
+{
+    // TODO: Get rid of this and do COM_STMT_FETCH processing properly by iterating over the packets and
+    //       splitting them
+
+    bool rval = false;
+    bool more = false;
+    int n_eof = modutil_count_signal_packets(buffer, 0, &more, (modutil_state*)&m_modutil_state);
+
+    // If the server responded with an error, n_eof > 0
+    if (n_eof > 0)
+    {
+        rval = true;
+    }
+    else
+    {
+        m_expected_rows -= modutil_count_packets(buffer);
+        mxb_assert(m_expected_rows >= 0);
+        rval = m_expected_rows == 0;
+    }
+
+    return rval;
+}
+
+void MySQLProtocol::process_reply_start(Iter it, Iter end)
+{
+    uint8_t cmd = *it;
+
+    switch (cmd)
+    {
+    case MYSQL_REPLY_OK:
+        if (is_last_ok(it))
+        {
+            // No more results
+            set_reply_state(ReplyState::DONE);
+        }
+        break;
+
+    case MYSQL_REPLY_LOCAL_INFILE:
+        // The client will send a request after this with the contents of the file which the server will
+        // respond to with either an OK or an ERR packet
+        session_set_load_active(owner_dcb->session, true);
+        set_reply_state(ReplyState::DONE);
+        break;
+
+    case MYSQL_REPLY_ERR:
+        // Nothing ever follows an error packet
+        ++it;
+        update_error(it, end);
+        set_reply_state(ReplyState::DONE);
+        break;
+
+    case MYSQL_REPLY_EOF:
+        // EOF packets are never expected as the first response
+        mxb_assert(!true);
+        break;
+
+    default:
+        if (command() == MXS_COM_FIELD_LIST)
+        {
+            // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
+            set_reply_state(ReplyState::RSET_ROWS);
+        }
+        else
+        {
+            // Start of a result set
+            m_num_coldefs = get_encoded_int(it);
+            set_reply_state(ReplyState::RSET_COLDEF);
+        }
+
+        break;
+    }
+}
+
+void MySQLProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
+{
+    uint8_t cmd = *it;
+
+    switch (m_reply_state)
+    {
+    case ReplyState::START:
+        process_reply_start(it, end);
+        break;
+
+    case ReplyState::DONE:
+        if (cmd == MYSQL_REPLY_ERR)
+        {
+            update_error(++it, end);
+        }
+        else
+        {
+            // This should never happen
+            MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u", cmd, len);
+            mxb_assert(!true);
+        }
+        break;
+
+    case ReplyState::RSET_COLDEF:
+        mxb_assert(m_num_coldefs > 0);
+        --m_num_coldefs;
+
+        if (m_num_coldefs == 0)
+        {
+            set_reply_state(ReplyState::RSET_COLDEF_EOF);
+            // Skip this state when DEPRECATE_EOF capability is supported
+        }
+        break;
+
+    case ReplyState::RSET_COLDEF_EOF:
+        mxb_assert(cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN);
+        set_reply_state(ReplyState::RSET_ROWS);
+
+        if (is_opening_cursor())
+        {
+            set_cursor_opened();
+            MXS_INFO("Cursor successfully opened");
+            set_reply_state(ReplyState::DONE);
+        }
+        break;
+
+    case ReplyState::RSET_ROWS:
+        if (cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
+        {
+            set_reply_state(is_last_eof(it) ? ReplyState::DONE : ReplyState::START);
+        }
+        else if (cmd == MYSQL_REPLY_ERR)
+        {
+            ++it;
+            update_error(it, end);
+            set_reply_state(ReplyState::DONE);
+        }
+        break;
+    }
+}
+
+GWBUF* MySQLProtocol::process_packets(GWBUF** result)
+{
+    mxs::Buffer buffer(*result);
+    auto it = buffer.begin();
+    size_t total_bytes = buffer.length();
+    size_t bytes_used = 0;
+
+    while (it != buffer.end())
+    {
+        size_t bytes_left = total_bytes - bytes_used;
+
+        if (bytes_left < MYSQL_HEADER_LEN)
+        {
+            // Partial header
+            break;
+        }
+
+        // Extract packet length and command byte
+        uint32_t len = *it++;
+        len |= (*it++) << 8;
+        len |= (*it++) << 16;
+        ++it;   // Skip the sequence
+
+        if (bytes_left < len + MYSQL_HEADER_LEN)
+        {
+            // Partial packet payload
+            break;
+        }
+
+        bytes_used += len + MYSQL_HEADER_LEN;
+
+        mxb_assert(it != buffer.end());
+        auto end = it;
+        end.advance(len);
+
+        // Ignore the tail end of a large packet large packet. Only resultsets can generate packets this large
+        // and we don't care what the contents are and thus it is safe to ignore it.
+        bool skip_next = m_skip_next;
+        m_skip_next = len == GW_MYSQL_MAX_PACKET_LEN;
+
+        if (!skip_next)
+        {
+            process_one_packet(it, end, len);
+        }
+
+        it = end;
+    }
+
+    buffer.release();
+    return gwbuf_split(result, bytes_used);
+}
+
+static inline bool complete_ps_response(GWBUF* buffer)
+{
+    mxb_assert(GWBUF_IS_CONTIGUOUS(buffer));
+    MXS_PS_RESPONSE resp;
+    bool rval = false;
+
+    if (mxs_mysql_extract_ps_response(buffer, &resp))
+    {
+        int expected_packets = 1;
+
+        if (resp.columns > 0)
+        {
+            // Column definition packets plus one for the EOF
+            expected_packets += resp.columns + 1;
+        }
+
+        if (resp.parameters > 0)
+        {
+            // Parameter definition packets plus one for the EOF
+            expected_packets += resp.parameters + 1;
+        }
+
+        int n_packets = modutil_count_packets(buffer);
+
+        MXS_DEBUG("Expecting %u packets, have %u", n_packets, expected_packets);
+
+        rval = n_packets == expected_packets;
+    }
+
+    return rval;
+}
+
+
+/**
+ * @brief Process a possibly partial response from the backend
+ *
+ * @param buffer  Buffer containing the response
+ */
+GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
+{
+    GWBUF* rval = nullptr;
+
+    m_error.clear();
+
+    if (command() == MXS_COM_STMT_FETCH)
+    {
+        // TODO: m_error is not updated here.
+        // If the server responded with an error, n_eof > 0
+
+        // COM_STMT_FETCH is used when a COM_STMT_EXECUTE opens a cursor and the result is read in chunks:
+        // https://mariadb.com/kb/en/library/com_stmt_fetch/
+        if (consume_fetched_rows(*buffer))
+        {
+            set_reply_state(ReplyState::DONE);
+        }
+        rval = modutil_get_complete_packets(buffer);
+    }
+    else if (command() == MXS_COM_STATISTICS)
+    {
+        // COM_STATISTICS returns a single string and thus requires special handling:
+        // https://mariadb.com/kb/en/library/com_statistics/#response
+        set_reply_state(ReplyState::DONE);
+        rval = modutil_get_complete_packets(buffer);
+    }
+    else if (command() == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
+    {
+        // Successful COM_STMT_PREPARE responses return a special OK packet:
+        // https://mariadb.com/kb/en/library/com_stmt_prepare/#com_stmt_prepare_ok
+
+        // TODO: Stream this result and don't collect it
+        if (complete_ps_response(*buffer))
+        {
+            rval = modutil_get_complete_packets(buffer);
+            set_reply_state(ReplyState::DONE);
+        }
+    }
+    else
+    {
+        // Normal result, process it one packet at a time
+        rval = process_packets(buffer);
+    }
+
+    return rval;
+}
+
+void MySQLProtocol::track_query(GWBUF* buffer)
+{
+    mxb_assert(gwbuf_is_contiguous(buffer));
+    uint8_t* data = GWBUF_DATA(buffer);
+
+    if (changing_user)
+    {
+        // User reauthentication in progress, ignore the contents
+        return;
+    }
+
+    if (session_is_load_active(owner_dcb->session))
+    {
+        if (MYSQL_GET_PAYLOAD_LEN(data) == 0)
+        {
+            MXS_INFO("Load data ended");
+            session_set_load_active(owner_dcb->session, false);
+            set_reply_state(ReplyState::START);
+        }
+    }
+    else if (!large_query)
+    {
+        m_command = MYSQL_GET_COMMAND(data);
+        current_command = (mxs_mysql_cmd_t) command();
+
+        MXS_INFO("%02hhx: %s", m_command, mxs::extract_sql(buffer).c_str());
+
+        if (mxs_mysql_command_will_respond(command()))
+        {
+            set_reply_state(ReplyState::START);
+        }
+
+        if (command() == MXS_COM_STMT_EXECUTE)
+        {
+            // Extract the flag byte after the statement ID
+            uint8_t flags = data[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
+
+            // Any non-zero flag value means that we have an open cursor
+            m_opening_cursor = flags != 0;
+        }
+        else if (command() == MXS_COM_STMT_FETCH)
+        {
+            // Number of rows to fetch is a 4 byte integer after the ID
+            m_expected_rows = gw_mysql_get_byte4(data + MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE);
+        }
+    }
+
+    /**
+     * If the buffer contains a large query, we have to skip the command
+     * byte extraction for the next packet. This way current_command always
+     * contains the latest command executed on this backend.
+     */
+    large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
+}

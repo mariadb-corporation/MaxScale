@@ -435,11 +435,12 @@ json_t* RWSplit::diagnostics_json() const
     return rval;
 }
 
+constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING | RCAP_TYPE_TRANSACTION_TRACKING
+    | RCAP_TYPE_SESSION_STATE_TRACKING | RCAP_TYPE_RUNTIME_CONFIG;
+
 uint64_t RWSplit::getCapabilities()
 {
-    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING
-           | RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING
-           | RCAP_TYPE_RUNTIME_CONFIG;
+    return CAPABILITIES;
 }
 
 bool RWSplit::configure(MXS_CONFIG_PARAMETER* params)
@@ -472,11 +473,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         description,
         "V1.1.0",
-        RCAP_TYPE_STMT_INPUT
-        | RCAP_TYPE_TRANSACTION_TRACKING
-        | RCAP_TYPE_PACKET_OUTPUT
-        | RCAP_TYPE_SESSION_STATE_TRACKING
-        | RCAP_TYPE_RUNTIME_CONFIG,
+        CAPABILITIES,
         &RWSplit::s_object,
         NULL,
         NULL,
