@@ -411,9 +411,99 @@ struct MySQLProtocol
         RSET_ROWS       /**< Resultset response, waiting for rows */
     };
 
+    class Reply
+    {
+    public:
+        ReplyState state() const
+        {
+            return m_reply_state;
+        }
+
+        std::string to_string() const
+        {
+            switch (m_reply_state)
+            {
+            case ReplyState::START:
+                return "START";
+
+            case ReplyState::DONE:
+                return "DONE";
+
+            case ReplyState::RSET_COLDEF:
+                return "COLDEF";
+
+            case ReplyState::RSET_COLDEF_EOF:
+                return "COLDEF_EOF";
+
+            case ReplyState::RSET_ROWS:
+                return "ROWS";
+
+            default:
+                return "UNKNOWN";
+            }
+        }
+
+        /**
+         * The latest command that was executed
+         */
+        uint8_t command() const
+        {
+            return m_command;
+        }
+
+        /**
+         * The actual server where the response came from
+         */
+        SERVER* server() const
+        {
+            return m_server;
+        }
+
+        /**
+         * Get latest error
+         *
+         * Evaluates to false if the response has no errors.
+         *
+         * @return The current error state.
+         */
+        const Error& error() const
+        {
+            return m_error;
+        }
+
+        /**
+         * Check whether the response from the server is complete
+         *
+         * @return True if no more results are expected from this server
+         */
+        bool is_complete() const
+        {
+            return m_reply_state == ReplyState::DONE;
+        }
+
+        /**
+         * Check if a partial response has been received from the backend
+         *
+         * @return True if some parts of the reply have been received
+         */
+        bool has_started() const
+        {
+            return m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
+        }
+
+    private:
+        SERVER*    m_server;
+        uint8_t    m_command;
+        ReplyState m_reply_state;
+        Error      m_error;
+
+        friend class MySQLProtocol;
+    };
+
     MySQLProtocol(DCB* dcb)
         : owner_dcb(dcb)
     {
+        m_reply.m_server = dcb->server;
     }
 
     ~MySQLProtocol()
@@ -440,6 +530,14 @@ struct MySQLProtocol
      * @return All complete packets that were in `buffer`
      */
     GWBUF* track_response(GWBUF** buffer);
+
+    /**
+     * Get the reply state object
+     */
+    const Reply& reply() const
+    {
+        return m_reply;
+    }
 
     //
     // Legacy public members
@@ -471,75 +569,6 @@ struct MySQLProtocol
 
     using Iter = mxs::Buffer::iterator;
 
-    inline ReplyState get_reply_state() const
-    {
-        return m_reply_state;
-    }
-
-    std::string reply_state_str() const
-    {
-        switch (m_reply_state)
-        {
-        case ReplyState::START:
-            return "START";
-
-        case ReplyState::DONE:
-            return "DONE";
-
-        case ReplyState::RSET_COLDEF:
-            return "COLDEF";
-
-        case ReplyState::RSET_COLDEF_EOF:
-            return "COLDEF_EOF";
-
-        case ReplyState::RSET_ROWS:
-            return "ROWS";
-
-        default:
-            return "UNKNOWN";
-        }
-    }
-
-    /**
-     * The current command
-     *
-     * @note This obsoletes the old public current_command member
-     */
-    inline uint8_t command() const
-    {
-        return m_command;
-    }
-
-    /**
-     * Updated during the call to @c process_reply().
-     *
-     * @return The current error state.
-     */
-    const Error& error() const
-    {
-        return m_error;
-    }
-
-    /**
-     * Check whether the response from the server is complete
-     *
-     * @return True if no more results are expected from this server
-     */
-    bool reply_is_complete() const
-    {
-        return m_reply_state == ReplyState::DONE;
-    }
-
-    /**
-     * Check if a partial response has been received from the backend
-     *
-     * @return True if some parts of the reply have been received
-     */
-    bool reply_has_started() const
-    {
-        return m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
-    }
-
 private:
 
     ReplyState m_reply_state = ReplyState::DONE;
@@ -551,6 +580,7 @@ private:
     bool       m_large_query = false;
     bool       m_skip_next = false;
     Error      m_error;
+    Reply      m_reply;
 
     bool   consume_fetched_rows(GWBUF* buffer);
     void   process_reply_start(Iter it, Iter end);
