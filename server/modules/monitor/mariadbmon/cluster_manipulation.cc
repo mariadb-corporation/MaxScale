@@ -366,10 +366,8 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
 
                 if (!slaves.empty())
                 {
-                    SlaveStatus new_conn;
                     SERVER* new_master_srv = new_master->m_server_base->server;
-                    new_conn.master_host = new_master_srv->address;
-                    new_conn.master_port = new_master_srv->port;
+                    SlaveStatus::Settings new_conn("", new_master_srv);
                     GeneralOpData general(error_out, mxb::Duration(0.0)); // Expect this to complete quickly.
                     size_t slave_conns_started = 0;
                     for (auto slave : slaves)
@@ -507,7 +505,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                 {
                     // No conflict, redirect as normal.
                     auto old_conn = redirectable->slave_connection_status(from);
-                    if (redirectable->redirect_existing_slave_conn(general, *old_conn, to))
+                    if (redirectable->redirect_existing_slave_conn(general, old_conn->settings, to))
                     {
                         successes++;
                         redirected->push_back(redirectable);
@@ -576,9 +574,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                     MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     // A slave connection description is required. As this is the only connection, no name
                     // is required.
-                    SlaveStatus new_conn;
-                    new_conn.master_host = master_server->address;
-                    new_conn.master_port = master_server->port;
+                    SlaveStatus::Settings new_conn("", master_server);
                     op_success = joinable->create_start_slave(general, new_conn);
                 }
                 else
@@ -595,7 +591,8 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                            name, master_name, master_name);
                 // Multisource replication does not get to this point.
                 mxb_assert(joinable->m_slave_status.size() == 1);
-                op_success = joinable->redirect_existing_slave_conn(general, joinable->m_slave_status[0],
+                op_success = joinable->redirect_existing_slave_conn(general,
+                                                                    joinable->m_slave_status[0].settings,
                                                                     m_master);
             }
 
@@ -713,6 +710,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
         else if (rejoin_cand->m_slave_status.size() == 1)
         {
             SlaveStatus* slave_status = &rejoin_cand->m_slave_status[0];
+
             // which is connected to master but it's the wrong one
             if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_YES
                 && slave_status->master_server_id != m_master->m_server_id)
@@ -721,11 +719,13 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
             }
             // or is disconnected but master host or port is wrong.
             else if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING
-                     && slave_status->slave_sql_running
-                     && (slave_status->master_host != m_master->m_server_base->server->address
-                         || slave_status->master_port != m_master->m_server_base->server->port))
+                     && slave_status->slave_sql_running)
             {
-                is_suspect = true;
+                EndPoint cluster_master_endpoint(m_master->m_server_base->server);
+                if (slave_status->settings.master_endpoint != cluster_master_endpoint)
+                {
+                    is_suspect = true;
+                }
             }
         }
 
@@ -948,7 +948,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                 {
                     // IO error on slave
                     MXS_WARNING("%s cannot start replication because of IO thread error: '%s'.",
-                                slave_conn->to_short_string().c_str(), slave_conn->last_error.c_str());
+                                slave_conn->settings.to_string().c_str(), slave_conn->last_error.c_str());
                     repl_fails.push_back(*iter);
                     iter = unconfirmed.erase(iter);
                 }
@@ -956,7 +956,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                 {
                     // SQL error on slave
                     MXS_WARNING("%s cannot start replication because of SQL thread error: '%s'.",
-                                slave_conn->to_short_string().c_str(), slave_conn->last_error.c_str());
+                                slave_conn->settings.to_string().c_str(), slave_conn->last_error.c_str());
                     repl_fails.push_back(*iter);
                     iter = unconfirmed.erase(iter);
                 }
@@ -1024,7 +1024,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
             if (slave_conn && !slave_conn->last_error.empty())
             {
                 MXB_WARNING("%s did not connect because of error: '%s'",
-                            slave_conn->to_short_string().c_str(), slave_conn->last_error.c_str());
+                            slave_conn->settings.to_string().c_str(), slave_conn->last_error.c_str());
             }
         }
     }
@@ -1503,7 +1503,7 @@ void MariaDBMonitor::check_cluster_operations_support()
                 {
                     supported = false;
                     auto reason = string_printf("%s is not using gtid-replication.",
-                                                slave_conn.to_short_string().c_str());
+                                                slave_conn.settings.to_string().c_str());
                     printer.cat(all_reasons, reason);
                 }
             }

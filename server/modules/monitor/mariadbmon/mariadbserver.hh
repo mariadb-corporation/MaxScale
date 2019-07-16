@@ -395,11 +395,11 @@ public:
      * Redirect the slave connection going to old master to replicate from new master.
      *
      * @param op Operation descriptor
-     * @param old_conn The connection which is redirected
+     * @param conn_settings The connection which is redirected
      * @param new_master The new master for the redirected connection
      * @return True on success
      */
-    bool redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus& old_conn,
+    bool redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus::Settings& conn_settings,
                                       const MariaDBServer* new_master);
 
     /**
@@ -422,10 +422,10 @@ public:
      * Create a new slave connection on the server and start it.
      *
      * @param op Operation descriptor
-     * @param slave_conn Existing connection to emulate
+     * @param conn_settings Existing connection to emulate
      * @return True on success
      */
-    bool create_start_slave(GeneralOpData& op, const SlaveStatus& slave_conn);
+    bool create_start_slave(GeneralOpData& op, const SlaveStatus::Settings& conn_settings);
 
     /**
      * Kill the connections of any super-users except for the monitor itself.
@@ -587,7 +587,7 @@ private:
 
     bool        set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
     bool        merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
-    std::string generate_change_master_cmd(GeneralOpData& op, const SlaveStatus& slave_conn);
+    std::string generate_change_master_cmd(const SlaveStatus::Settings& conn_settings);
 
     bool update_enabled_events();
 

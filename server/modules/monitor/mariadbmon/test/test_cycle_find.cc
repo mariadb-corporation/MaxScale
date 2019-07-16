@@ -213,13 +213,13 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
             break;
         }
 
-        SlaveStatus ss;
+        MariaDBServer* slave = get_server(slave_id);
+        SlaveStatus ss(slave->name());
         ss.slave_io_running = SlaveStatus::SLAVE_IO_YES;
         ss.slave_sql_running = true;
         if (m_use_hostnames)
         {
-            ss.master_host = create_hostname(master_id);
-            ss.master_port = master_id;
+            ss.settings.master_endpoint = EndPoint(create_hostname(master_id), master_id);
         }
         else
         {
@@ -227,7 +227,6 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
             ss.seen_connected = true;
         }
 
-        MariaDBServer* slave = get_server(slave_id);
         slave->m_slave_status.push_back(ss);
     }
 

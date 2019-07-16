@@ -310,10 +310,10 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     bool parse_error = false;
     while (result->next_row())
     {
-        SlaveStatus new_row;
-        new_row.owning_server = name();
-        new_row.master_host = result->get_string(i_master_host);
-        new_row.master_port = result->get_int(i_master_port);
+        SlaveStatus new_row(name());
+        new_row.settings.master_endpoint = EndPoint(result->get_string(i_master_host),
+                                                    result->get_int(i_master_port));
+
         string last_io_error = result->get_string(i_last_io_error);
         string last_sql_error = result->get_string(i_last_sql_error);
         new_row.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
@@ -337,7 +337,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 
         if (all_slaves_status)
         {
-            new_row.name = result->get_string(i_connection_name);
+            new_row.settings.name = result->get_string(i_connection_name);
             new_row.received_heartbeats = result->get_int(i_slave_rec_hbs);
 
             string using_gtid = result->get_string(i_using_gtid);
@@ -1003,7 +1003,7 @@ bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_sla
             // but the situations it would make a difference are so rare they can be ignored.
             if (new_row.slave_io_running != old_row.slave_io_running
                 || new_row.slave_sql_running != old_row.slave_sql_running
-                || new_row.master_host != old_row.master_host || new_row.master_port != old_row.master_port
+                || new_row.settings.master_endpoint != old_row.settings.master_endpoint
                 || new_row.master_server_id != old_row.master_server_id)
             {
                 rval = false;
@@ -1026,7 +1026,8 @@ const SlaveStatus* MariaDBServer::sstatus_find_previous_row(const SlaveStatus& s
 {
     // Helper function. Checks if the connection in the new row is to the same server than in the old row.
     auto compare_rows = [](const SlaveStatus& lhs, const SlaveStatus& rhs) -> bool {
-            return rhs.master_host == lhs.master_host && rhs.master_port == lhs.master_port;
+            return lhs.settings.name == rhs.settings.name
+                   && lhs.settings.master_endpoint == rhs.settings.master_endpoint;
         };
 
     // Usually the same slave connection can be found from the same index than in the previous slave
@@ -1182,13 +1183,11 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
     if (m_settings.assume_unique_hostnames)
     {
         // Can simply compare host:port.
-        SERVER* target_srv = target->m_server_base->server;
-        string target_host = target_srv->address;
-        int target_port = target_srv->port;
+        EndPoint target_endpoint(target->m_server_base->server);
         for (const SlaveStatus& ss : m_slave_status)
         {
-            if (ss.master_host == target_host && ss.master_port == target_port
-                && ss.slave_sql_running && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
+            if (ss.settings.master_endpoint == target_endpoint && ss.slave_sql_running
+                && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
             {
                 rval = &ss;
                 break;
@@ -1217,11 +1216,10 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
 
 const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaDBServer* target) const
 {
-    string target_host = target->m_server_base->server->address;
-    int target_port = target->m_server_base->server->port;
+    EndPoint target_endpoint(target->m_server_base->server);
     for (const SlaveStatus& ss : m_slave_status)
     {
-        if (ss.master_host == target_host && ss.master_port == target_port)
+        if (ss.settings.master_endpoint == target_endpoint)
         {
             return &ss;
         }
@@ -1438,18 +1436,19 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
 {
     string error_msg;
     bool error = false;
-    for (auto& sstatus : m_slave_status)
+    for (const auto& slave_conn : m_slave_status)
     {
-        auto stop = string_printf("STOP SLAVE '%s';", sstatus.name.c_str());
-        auto reset = string_printf("RESET SLAVE '%s' ALL;", sstatus.name.c_str());
+        auto conn_name = slave_conn.settings.name;
+        auto stop = string_printf("STOP SLAVE '%s';", conn_name.c_str());
+        auto reset = string_printf("RESET SLAVE '%s' ALL;", conn_name.c_str());
         if (!execute_cmd(stop, &error_msg) || !execute_cmd(reset, &error_msg))
         {
             error = true;
-            string log_message = sstatus.name.empty() ?
+            string log_message = conn_name.empty() ?
                 string_printf("Error when reseting the default slave connection of '%s': %s",
                               name(), error_msg.c_str()) :
                 string_printf("Error when reseting the slave connection '%s' of '%s': %s",
-                              sstatus.name.c_str(), name(), error_msg.c_str());
+                              conn_name.c_str(), name(), error_msg.c_str());
             PRINT_MXS_JSON_ERROR(error_out, "%s", log_message.c_str());
             break;
         }
@@ -1789,7 +1788,8 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
     bool stop_slave_error = false;
     for (size_t i = 0; !stop_slave_error && i < conns_to_remove.size(); i++)
     {
-        if (!stop_slave_conn(conns_to_remove[i].name, StopMode::RESET_ALL, time_remaining, error_out))
+        if (!stop_slave_conn(conns_to_remove[i].settings.name, StopMode::RESET_ALL, time_remaining,
+                             error_out))
         {
             stop_slave_error = true;
         }
@@ -1814,12 +1814,12 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
             std::set<string> connection_names;
             for (auto& slave_conn : m_slave_status)
             {
-                connection_names.insert(slave_conn.name);
+                connection_names.insert(slave_conn.settings.name);
             }
             int found = 0;
             for (auto& removed_conn : conns_to_remove_copy)
             {
-                if (connection_names.count(removed_conn.name) > 0)
+                if (connection_names.count(removed_conn.settings.name) > 0)
                 {
                     found++;
                 }
@@ -1889,8 +1889,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
     auto conn_can_be_merged = [this](const SlaveStatus& slave_conn, string* ignore_reason_out) -> bool {
             bool accepted = true;
             auto master_id = slave_conn.master_server_id;
-            string my_host = m_server_base->server->address;
-            int my_port = m_server_base->server->port;
+            EndPoint my_host_port(m_server_base->server);
             // The connection is only merged if it satisfies the copy-conditions. Merging has also
             // additional requirements.
             string ignore_reason;
@@ -1904,7 +1903,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
                 accepted = false;
                 ignore_reason = string_printf("it points to '%s' (according to server id:s).", name());
             }
-            else if (slave_conn.master_host == my_host && slave_conn.master_port == my_port)
+            else if (slave_conn.settings.master_endpoint == my_host_port)
             {
                 accepted = false;
                 ignore_reason = string_printf("it points to '%s' (according to master host:port).", name());
@@ -1921,14 +1920,14 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
                             ") matches an existing slave connection on '%s'.";
                         ignore_reason = string_printf(format, master_id, name());
                     }
-                    else if (my_slave_conn.master_host == slave_conn.master_host
-                             && my_slave_conn.master_port == slave_conn.master_port)
+                    else if (my_slave_conn.settings.master_endpoint == slave_conn.settings.master_endpoint)
                     {
                         accepted = false;
-                        ignore_reason = string_printf("its Master_Host (%s) and Master_Port (%i) match "
-                                                      "an existing slave connection on %s.",
-                                                      slave_conn.master_host.c_str(), slave_conn.master_port,
-                                                      name());
+                        const auto& endpoint = slave_conn.settings.master_endpoint;
+                        ignore_reason = string_printf(
+                                "its Master_Host (%s) and Master_Port (%i) match an existing "
+                                "slave connection on %s.",
+                                endpoint.host().c_str(), endpoint.port(), name());
                     }
                 }
             }
@@ -1944,29 +1943,29 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
     std::set<string> connection_names;
     for (const auto& conn : m_slave_status)
     {
-        connection_names.insert(conn.name);
+        connection_names.insert(conn.settings.name);
     }
 
     // Helper function which checks that a connection name is unique and modifies it if not.
-    auto check_modify_conn_name = [this, &connection_names](SlaveStatus* slave_conn) -> bool {
+    auto check_modify_conn_name = [this, &connection_names](SlaveStatus::Settings* conn_settings) -> bool {
             bool name_is_unique = false;
-            if (connection_names.count(slave_conn->name) > 0)
+            string conn_name = conn_settings->name;
+            if (connection_names.count(conn_name) > 0)
             {
                 // If the name is used, generate a name using the host:port of the master,
                 // it should be unique.
-                string second_try = string_printf("To [%s]:%i",
-                                                  slave_conn->master_host.c_str(), slave_conn->master_port);
+                string second_try = "To " + conn_settings->master_endpoint.to_string();
                 if (connection_names.count(second_try) > 0)
                 {
                     // Even this one exists, something is really wrong. Give up.
                     MXS_ERROR("Could not generate a unique connection name for '%s': both '%s' and '%s' are "
-                              "already taken.", name(), slave_conn->name.c_str(), second_try.c_str());
+                              "already taken.", name(), conn_name.c_str(), second_try.c_str());
                 }
                 else
                 {
                     MXS_WARNING("A slave connection with name '%s' already exists on '%s', using generated "
-                                "name '%s' instead.", slave_conn->name.c_str(), name(), second_try.c_str());
-                    slave_conn->name = second_try;
+                                "name '%s' instead.", conn_name.c_str(), name(), second_try.c_str());
+                    conn_settings->name = second_try;
                     name_is_unique = true;
                 }
             }
@@ -1985,11 +1984,12 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
         string ignore_reason;
         if (conn_can_be_merged(slave_conn, &ignore_reason))
         {
-            if (check_modify_conn_name(&slave_conn))
+            auto& conn_settings = slave_conn.settings;
+            if (check_modify_conn_name(&conn_settings))
             {
-                if (create_start_slave(op, slave_conn))
+                if (create_start_slave(op, conn_settings))
                 {
-                    connection_names.insert(slave_conn.name);
+                    connection_names.insert(conn_settings.name);
                 }
                 else
                 {
@@ -2005,7 +2005,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
         {
             mxb_assert(!ignore_reason.empty());
             MXS_WARNING("%s was ignored when promoting '%s' because %s",
-                        slave_conn.to_short_string().c_str(), name(), ignore_reason.c_str());
+                        slave_conn.settings.to_string().c_str(), name(), ignore_reason.c_str());
         }
     }
 
@@ -2023,27 +2023,27 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
         string reason_not_copied;
         if (slave_conn.should_be_copied(&reason_not_copied))
         {
-            // Any slave connection that was going to this server itself are instead directed
+            // Any slave connection that was going to this server itself is instead directed
             // to the replacement server.
             bool ok_to_copy = true;
             if (slave_conn.master_server_id == m_server_id)
             {
                 if (replacement)
                 {
-                    slave_conn.master_host = replacement->m_server_base->server->address;
-                    slave_conn.master_port = replacement->m_server_base->server->port;
+                    slave_conn.settings.master_endpoint = EndPoint(replacement->m_server_base->server);
                 }
                 else
                 {
                     // This is only possible if replication is configured wrong and we are
                     // undoing a switchover demotion.
-                    MXB_WARNING("Server id:s of '%s' and [%s]:%i are identical, not copying the connection "
+                    ok_to_copy = false;
+                    MXB_WARNING("Server id:s of '%s' and %s are identical, not copying the connection "
                                 "to '%s'.",
-                                name(), slave_conn.master_host.c_str(), slave_conn.master_port, name());
+                                name(), slave_conn.settings.master_endpoint.to_string().c_str(), name());
                 }
             }
 
-            if (ok_to_copy && !create_start_slave(op, slave_conn))
+            if (ok_to_copy && !create_start_slave(op, slave_conn.settings))
             {
                 start_slave_error = true;
             }
@@ -2051,44 +2051,44 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
         else
         {
             MXS_WARNING("%s was not copied to '%s' because %s",
-                        slave_conn.to_short_string().c_str(), name(), reason_not_copied.c_str());
+                        slave_conn.settings.to_string().c_str(), name(), reason_not_copied.c_str());
         }
     }
     return !start_slave_error;
 }
 
-bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus& slave_conn)
+bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Settings& conn_settings)
 {
     maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
     string error_msg;
     bool success = false;
-    SlaveStatus new_conn = slave_conn;
-    new_conn.owning_server = name();
-    string change_master = generate_change_master_cmd(op, new_conn);
+
+    SlaveStatus::Settings new_settings(conn_settings.name, conn_settings.master_endpoint, name());
+    string change_master = generate_change_master_cmd(new_settings);
     bool conn_created = execute_cmd_time_limit(change_master, time_remaining, &error_msg);
     time_remaining -= timer.restart();
     if (conn_created)
     {
-        string start_slave = string_printf("START SLAVE '%s';", new_conn.name.c_str());
+        string start_slave = string_printf("START SLAVE '%s';", new_settings.name.c_str());
         bool slave_started = execute_cmd_time_limit(start_slave, time_remaining, &error_msg);
         time_remaining -= timer.restart();
         if (slave_started)
         {
             success = true;
-            MXS_NOTICE("%s created and started.", new_conn.to_short_string().c_str());
+            MXS_NOTICE("%s created and started.", new_settings.to_string().c_str());
         }
         else
         {
             MXS_ERROR("%s could not be started: %s",
-                      new_conn.to_short_string().c_str(), error_msg.c_str());
+                      new_settings.to_string().c_str(), error_msg.c_str());
         }
     }
     else
     {
         // TODO: This may currently print out passwords.
         MXS_ERROR("%s could not be created: %s",
-                  new_conn.to_short_string().c_str(), error_msg.c_str());
+                  new_settings.to_string().c_str(), error_msg.c_str());
     }
     return success;
 }
@@ -2096,16 +2096,16 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus& sla
 /**
  * Generate a CHANGE MASTER TO-query.
  *
- * @param op Operation descriptor, required for username and password
- * @param slave_conn Existing slave connection to emulate
+ * @param conn_settings Existing slave connection settings to emulate
  * @return Generated query
  */
-string MariaDBServer::generate_change_master_cmd(GeneralOpData& op, const SlaveStatus& slave_conn)
+string MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_settings)
 {
     string change_cmd;
     change_cmd += string_printf("CHANGE MASTER '%s' TO MASTER_HOST = '%s', MASTER_PORT = %i, ",
-                                slave_conn.name.c_str(),
-                                slave_conn.master_host.c_str(), slave_conn.master_port);
+                                conn_settings.name.c_str(),
+                                conn_settings.master_endpoint.host().c_str(),
+                                conn_settings.master_endpoint.port());
     change_cmd += "MASTER_USE_GTID = current_pos, ";
     if (m_settings.replication_ssl)
     {
@@ -2122,8 +2122,9 @@ string MariaDBServer::generate_change_master_cmd(GeneralOpData& op, const SlaveS
     return change_cmd;
 }
 
-bool MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus& old_conn,
-                                                 const MariaDBServer* new_master)
+bool
+MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus::Settings& conn_settings,
+                                            const MariaDBServer* new_master)
 {
     auto error_out = op.error_out;
     maxbase::Duration& time_remaining = op.time_remaining;
@@ -2131,21 +2132,21 @@ bool MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveS
     bool success = false;
 
     // First, just stop the slave connection.
-    bool stopped = stop_slave_conn(old_conn.name, StopMode::STOP_ONLY, time_remaining, error_out);
+    string conn_name = conn_settings.name;
+    bool stopped = stop_slave_conn(conn_name, StopMode::STOP_ONLY, time_remaining, error_out);
     time_remaining -= timer.restart();
     if (stopped)
     {
-        SlaveStatus modified_conn = old_conn;
-        SERVER* target_server = new_master->m_server_base->server;
-        modified_conn.master_host = target_server->address;
-        modified_conn.master_port = target_server->port;
-        string change_master = generate_change_master_cmd(op, modified_conn);
+        SlaveStatus::Settings modified_settings = conn_settings;
+        modified_settings.master_endpoint = EndPoint(new_master->m_server_base->server);
+        string change_master = generate_change_master_cmd(modified_settings);
+
         string error_msg;
         bool changed = execute_cmd_time_limit(change_master, time_remaining, &error_msg);
         time_remaining -= timer.restart();
         if (changed)
         {
-            string start = string_printf("START SLAVE '%s';", old_conn.name.c_str());
+            string start = string_printf("START SLAVE '%s';", conn_name.c_str());
             bool started = execute_cmd_time_limit(start, time_remaining, &error_msg);
             time_remaining -= timer.restart();
             if (started)
@@ -2156,16 +2157,16 @@ bool MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveS
             {
                 PRINT_MXS_JSON_ERROR(error_out,
                                      "%s could not be started: %s",
-                                     modified_conn.to_short_string().c_str(), error_msg.c_str());
+                                     modified_settings.to_string().c_str(), error_msg.c_str());
             }
         }
         else
         {
             // TODO: This may currently print out passwords.
             PRINT_MXS_JSON_ERROR(error_out,
-                                 "%s could not be redirected to [%s]:%i: %s",
-                                 old_conn.to_short_string().c_str(),
-                                 modified_conn.master_host.c_str(), modified_conn.master_port,
+                                 "%s could not be redirected to %s: %s",
+                                 conn_settings.to_string().c_str(),
+                                 modified_settings.master_endpoint.to_string().c_str(),
                                  error_msg.c_str());
         }
     }   // 'stop_slave_conn' prints its own errors

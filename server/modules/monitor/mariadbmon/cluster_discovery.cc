@@ -189,7 +189,8 @@ void MariaDBMonitor::build_replication_graph()
                 bool is_external = false;
                 if (use_hostnames)
                 {
-                    found_master = get_server(slave_conn.master_host, slave_conn.master_port);
+                    found_master = get_server(slave_conn.settings.master_endpoint.host(),
+                                              slave_conn.settings.master_endpoint.port());
                     if (!found_master)
                     {
                         // Must be an external server.
