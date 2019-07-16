@@ -15,12 +15,14 @@
 
 #include <string>
 #include <string.h>
+#include <maxbase/format.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/mysql_utils.hh>
 
 using std::string;
+using mxq::QueryResult;
 
 /**
  * Create an instance.
@@ -34,72 +36,33 @@ PamInstance* PamInstance::create(char** options)
     // TODO: Once Centos6 is no longer needed and Sqlite version 3.7+ can be assumed,
     // use a memory-only db with a URI filename (e.g. file:pam.db?mode=memory&cache=shared)
     const string pam_db_fname = string(get_cachedir()) + "/pam_db.sqlite3";
-    // The table name where we store the users
-    const string pam_table_name = "pam_users";
-    /** Deletion statement for the in-memory table */
-    const string drop_sql = string("DROP TABLE IF EXISTS ") + pam_table_name + ";";
-    /** CREATE TABLE statement for the in-memory table */
-    const string create_sql = string("CREATE TABLE ") + pam_table_name
-        + " (" + FIELD_USER + " varchar(255), "
-        + FIELD_HOST + " varchar(255), "
-        + FIELD_DB + " varchar(255), "
-        + FIELD_ANYDB + " boolean, "
-        + FIELD_AUTHSTR + " text, "
-        + FIELD_PROXY + " boolean);";
 
     if (sqlite3_threadsafe() == 0)
     {
-        MXS_WARNING("SQLite3 was compiled with thread safety off. May cause "
-                    "corruption of in-memory database.");
+        MXB_WARNING("SQLite3 was compiled with thread safety off. May cause corruption of "
+                    "in-memory database.");
     }
 
-    bool error = false;
     /* This handle may be used from multiple threads, set full mutex. */
-    sqlite3* dbhandle = NULL;
     int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
                    SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
-    const char* filename = pam_db_fname.c_str();
-    if (sqlite3_open_v2(filename, &dbhandle, db_flags, NULL) != SQLITE_OK)
+    string sqlite_error;
+    PamInstance* instance = nullptr;
+    auto sqlite = SQLite::create(pam_db_fname, db_flags, &sqlite_error);
+    if (sqlite)
     {
-        // Even if the open failed, the handle may exist and an error message can be read.
-        if (dbhandle)
+        instance = new PamInstance(std::move(sqlite), pam_db_fname);
+        if (!instance->prepare_tables())
         {
-            MXS_ERROR(SQLITE_OPEN_FAIL, filename, sqlite3_errmsg(dbhandle));
+            delete instance;
+            instance = nullptr;
         }
-        else
-        {
-            // This means memory allocation failed.
-            MXS_ERROR(SQLITE_OPEN_OOM, filename);
-        }
-        error = true;
+    }
+    else
+    {
+        MXB_ERROR("Could not create PAM authenticator: %s", sqlite_error.c_str());
     }
 
-    char *err = NULL;
-    if (!error && sqlite3_exec(dbhandle, drop_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to drop table: '%s'", err);
-        sqlite3_free(err);
-        error = true;
-    }
-    if (!error && sqlite3_exec(dbhandle, create_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to create table: '%s'", err);
-        sqlite3_free(err);
-        error = true;
-    }
-
-    PamInstance *instance = NULL;
-    if (!error &&
-        ((instance = new (std::nothrow) PamInstance(dbhandle, pam_db_fname, pam_table_name)) == NULL))
-    {
-        error = true;
-    }
-
-    if (error)
-    {
-        // Close the handle even if never opened.
-        sqlite3_close_v2(dbhandle);
-    }
     return instance;
 }
 
@@ -110,11 +73,98 @@ PamInstance* PamInstance::create(char** options)
  * @param dbname Text-form name of @c dbhandle
  * @param tablename Name of table where authentication data is saved
  */
-PamInstance::PamInstance(sqlite3* dbhandle, const string& dbname, const string& tablename)
+PamInstance::PamInstance(SQLite::SSQLite dbhandle, const string& dbname)
     : m_dbname(dbname)
-    , m_tablename(tablename)
-    , m_dbhandle(dbhandle)
+    , m_sqlite(std::move(dbhandle))
 {
+}
+
+bool PamInstance::prepare_tables()
+{
+    struct ColDef
+    {
+        enum class ColType {
+            BOOL,
+            TEXT,
+        };
+        string name;
+        ColType type;
+    };
+    using ColDefArray = std::vector<ColDef>;
+    using Type = ColDef::ColType;
+
+    /** Deletion statement for the in-memory table */
+    auto gen_drop_sql = [](const string& tblname) {
+        return "DROP TABLE IF EXISTS " + tblname + ";";
+    };
+
+    /** CREATE TABLE statement for the in-memory table */
+    auto gen_create_sql = [](const string& tblname, const ColDefArray& coldefs) {
+        string rval = "CREATE TABLE " + tblname + " (";
+        string sep;
+        for (const auto& coldef : coldefs)
+        {
+            string column_type;
+            switch (coldef.type)
+            {
+                case Type::BOOL:
+                    column_type = "BOOLEAN";
+                    break;
+                case Type::TEXT:
+                    column_type = "TINYTEXT";
+                    break;
+            }
+            rval += sep + coldef.name + " " + column_type;
+            sep = ",";
+        }
+        rval += "\n);";
+        return rval;
+    };
+
+    auto drop_recreate_table = [gen_drop_sql, gen_create_sql](SQLite* db, const string& tblname,
+                                                              const ColDefArray& coldefs) {
+        bool rval = false;
+        string drop_query = gen_drop_sql(tblname);
+        string create_query = gen_create_sql(tblname, coldefs);
+        if (!db->exec(drop_query))
+        {
+            MXB_ERROR("Failed to delete sqlite3 table: %s", db->error());
+        }
+        else if (!db->exec(create_query))
+        {
+            MXB_ERROR("Failed to create sqlite3 table: %s", db->error());
+        }
+        else
+        {
+            rval = true;
+        }
+        return rval;
+    };
+
+    // Sqlite3 doesn't require datatypes in the create-statement but it's good to have for clarity.
+    const ColDefArray users_coldef = {{FIELD_USER, Type::TEXT},
+                                      {FIELD_HOST, Type::TEXT},
+                                      {FIELD_AUTHSTR, Type::TEXT},
+                                      {FIELD_DEF_ROLE, Type::TEXT},
+                                      {FIELD_ANYDB, Type::BOOL},
+                                      {FIELD_IS_ROLE, Type::BOOL},
+                                      {FIELD_HAS_PROXY, Type::BOOL}};
+    const ColDefArray dbs_coldef = {{FIELD_USER, Type::TEXT},
+                                    {FIELD_HOST, Type::TEXT},
+                                    {FIELD_DB, Type::TEXT}};
+    const ColDefArray roles_coldef = {{FIELD_USER, Type::TEXT},
+                                      {FIELD_HOST, Type::TEXT},
+                                      {FIELD_ROLE, Type::TEXT}};
+
+    bool rval = false;
+    auto sqlite = m_sqlite.get();
+    if (drop_recreate_table(sqlite, TABLE_USER, users_coldef)
+        && drop_recreate_table(sqlite, TABLE_DB, dbs_coldef)
+        && drop_recreate_table(sqlite, TABLE_ROLES_MAPPING, roles_coldef))
+    {
+        rval = true;
+    }
+    return rval;
 }
 
 /**
@@ -137,7 +187,7 @@ void PamInstance::add_pam_user(const char* user, const char* host, const char* d
      * no quotes around them. The quotes for strings are added in this function.
      */
     const string insert_sql_template =
-        "INSERT INTO " + m_tablename + " VALUES ('%s', '%s', %s, '%s', %s, '%s')";
+        "INSERT INTO " + TABLE_USER + " VALUES ('%s', '%s', %s, '%s', %s, '%s')";
 
     /** Used for NULL value creation in the INSERT query */
     const char NULL_TOKEN[] = "NULL";
@@ -173,23 +223,21 @@ void PamInstance::add_pam_user(const char* user, const char* host, const char* d
             service_str.c_str(),
             proxy ? "1" : "0");
 
-    char* err;
-    if (sqlite3_exec(m_dbhandle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to insert user: %s", err);
-        sqlite3_free(err);
-    }
-    else
+    if (m_sqlite->exec(insert_sql))
     {
         if (proxy)
         {
-            MXS_INFO("Added anonymous PAM user ''@'%s' with proxy grants using service %s.",
+            MXB_INFO("Added anonymous PAM user ''@'%s' with proxy grants using service %s.",
                      host, service_str.c_str());
         }
         else
         {
-            MXS_INFO("Added normal PAM user '%s'@'%s' using service %s.", user, host, service_str.c_str());
+            MXB_INFO("Added normal PAM user '%s'@'%s' using service %s.", user, host, service_str.c_str());
         }
+    }
+    else
+    {
+        MXB_ERROR("Failed to insert user: %s", m_sqlite->error());
     }
 }
 
@@ -199,12 +247,10 @@ void PamInstance::add_pam_user(const char* user, const char* host, const char* d
 void PamInstance::delete_old_users()
 {
     /** Delete query used to clean up the database before loading new users */
-    const string delete_query = "DELETE FROM " + m_tablename;
-    char* err;
-    if (sqlite3_exec(m_dbhandle, delete_query.c_str(), NULL, NULL, &err) != SQLITE_OK)
+    const string delete_query = "DELETE FROM " + TABLE_USER + ";";
+    if (!m_sqlite->exec(delete_query))
     {
-        MXS_ERROR("Failed to delete old users: %s", err);
-        sqlite3_free(err);
+        MXB_ERROR("Failed to delete old users: %s", m_sqlite->error());
     }
 }
 
@@ -218,71 +264,201 @@ void PamInstance::delete_old_users()
 int PamInstance::load_users(SERVICE* service)
 {
     /** Query that gets all users that authenticate via the pam plugin */
-    const char PAM_USERS_QUERY[] =
-        "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
-        "mysql.user AS u LEFT JOIN mysql.db AS d ON (u.user = d.user AND u.host = d.host) WHERE "
-        "(u.plugin = 'pam' AND (d.db IS NOT NULL OR u.select_priv = 'Y')) "
-        "UNION "
-        "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
-        "mysql.user AS u LEFT JOIN mysql.tables_priv AS t ON (u.user = t.user AND u.host = t.host) WHERE "
-        "(u.plugin = 'pam' AND t.db IS NOT NULL AND u.select_priv = 'N') "
-        "ORDER BY user";
-#if defined (SS_DEBUG)
-    const unsigned int PAM_USERS_QUERY_NUM_FIELDS = 5;
-#endif
+
+    string users_query, db_query, role_query;
+    auto prepare_queries = [&users_query, &db_query, &role_query](bool using_roles) {
+        string user_cols = "user, host, select_priv, insert_priv, update_priv, delete_priv, "
+                           "authentication_string";
+        string filter = "plugin = 'pam'";
+        if (using_roles)
+        {
+            user_cols += ", default_role, is_role";
+            filter += " OR is_role = 'Y'";     // If using roles, accept them as well.
+        }
+        else
+        {
+            user_cols += ", '' AS default_role, 'N' AS is_role"; // keeps the number of columns constant
+        }
+        users_query = mxb::string_printf("SELECT %s FROM mysql.user WHERE %s;",
+                                         user_cols.c_str(), filter.c_str());
+
+        string join_filter = "b.plugin = 'pam'";
+        if (using_roles)
+        {
+            // Roles do not have plugins, yet may affect authentication.
+            join_filter += " OR b.is_role = 'Y'";
+        }
+        const string inner_join = "INNER JOIN mysql.user AS b ON (a.user = b.user AND a.host = b.host "
+                                  "AND (" + join_filter + "))";
+
+        // Read database grants for pam users and roles. This is combined with table grants.
+        db_query = "SELECT DISTINCT * FROM ("
+                   // Select users/roles with general db-level privs ...
+                   "(SELECT a.user, a.host, a.db FROM mysql.db AS a " + inner_join + ") "
+                   "UNION "
+                   // and combine with table privs counting as db-level privs.
+                   "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a " + inner_join + ")) AS c;";
+
+        if (using_roles)
+        {
+            role_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a "
+                    + inner_join + ";";
+        }
+
+    };
 
     const char* user;
-    const char* password;
-    serviceGetUser(service, &user, &password);
+    const char* pw_crypt;
+    serviceGetUser(service, &user, &pw_crypt);
     int rval = MXS_AUTH_LOADUSERS_ERROR;
-    char* pw;
 
-    if ((pw = decrypt_password(password)))
+    char* pw_clear = decrypt_password(pw_crypt);
+    if (pw_clear)
     {
-        for (SERVER_REF* servers = service->dbref; servers; servers = servers->next)
+        bool found_valid_server = false;
+        bool got_data = false;
+        for (auto sref = service->dbref; sref && !got_data; sref = sref->next)
         {
-            MYSQL* mysql = mysql_init(NULL);
-            if (mxs_mysql_real_connect(mysql, servers->server, user, pw))
+            SERVER* srv = sref->server;
+            if (srv->is_active && srv->is_usable())
             {
-                if (mysql_query(mysql, PAM_USERS_QUERY))
+                bool using_roles = false;
+                auto version = srv->version();
+                // Default roles are in server version 10.1.1.
+                if (version.major > 10 || (version.major == 10 && (version.minor > 1
+                    || (version.minor == 1 && version.patch == 1))))
                 {
-                    MXS_ERROR("Failed to query server '%s' for PAM users: '%s'.",
-                              servers->server->name(), mysql_error(mysql));
+                    using_roles = true;
                 }
-                else
+                prepare_queries(using_roles);
+
+                found_valid_server = true;
+                MYSQL* mysql = mysql_init(NULL);
+                if (mxs_mysql_real_connect(mysql, srv, user, pw_clear))
                 {
-                    MYSQL_RES* res = mysql_store_result(mysql);
-                    delete_old_users();
-                    if (res)
+                    string error_msg;
+                    QResult users_res, dbs_res, roles_res;
+                    // Perform the queries. All must succeed on the same backend.
+                    // TODO: Think if it would be faster to do these queries concurrently.
+                    if (((users_res = mxs::execute_query(mysql, users_query, &error_msg)) != nullptr)
+                        && ((dbs_res = mxs::execute_query(mysql, db_query, &error_msg)) != nullptr))
                     {
-                        mxb_assert(mysql_num_fields(res) == PAM_USERS_QUERY_NUM_FIELDS);
-                        MYSQL_ROW row;
-                        while ((row = mysql_fetch_row(res)))
+                        if (using_roles)
                         {
-                            add_pam_user(row[0], row[1],                                // user, host
-                                         row[2], row[3] && strcasecmp(row[3], "Y") == 0,// db, anydb
-                                         row[4],                                        // pam service
-                                         false);                                        // not a proxy
+                            if ((roles_res = mxs::execute_query(mysql, role_query, &error_msg)) != nullptr)
+                            {
+                                got_data = true;
+                            }
                         }
-                        mysql_free_result(res);
+                        else
+                        {
+                            got_data = true;
+                        }
                     }
 
-                    if (fetch_anon_proxy_users(servers->server, mysql))
+                    if (got_data)
                     {
+                        fill_user_arrays(std::move(users_res), std::move(dbs_res), std::move(roles_res));
+                        fetch_anon_proxy_users(srv, mysql);
                         rval = MXS_AUTH_LOADUSERS_OK;
+                    }
+                    else
+                    {
+                        MXB_ERROR("Failed to query server '%s' for PAM users. %s",
+                                  srv->name(), error_msg.c_str());
                     }
                 }
                 mysql_close(mysql);
-
-                if (rval == MXS_AUTH_LOADUSERS_OK)
-                {
-                    break;
-                }
             }
         }
-        MXS_FREE(pw);
+
+        if (!found_valid_server)
+        {
+            MXB_ERROR("Service '%s' had no valid servers to query PAM users from.", service->name());
+        }
+        MXS_FREE(pw_clear);
     }
     return rval;
+}
+
+void PamInstance::fill_user_arrays(QResult user_res, QResult db_res, QResult roles_mapping_res)
+{
+    m_sqlite->exec("BEGIN");
+    // Delete any previous data.
+    const char delete_fmt[] = "DELETE FROM %s;";
+    for (const auto& tbl : {TABLE_USER, TABLE_DB, TABLE_ROLES_MAPPING})
+    {
+        string query = mxb::string_printf(delete_fmt, tbl.c_str());
+        m_sqlite->exec(query);
+    }
+
+    // TODO: use prepared stmt:s
+    if (user_res)
+    {
+        auto get_bool_enum = [&user_res](int64_t col_ind) {
+            string val = user_res->get_string(col_ind);
+            return (val == "Y" || val == "y");
+        };
+
+        auto get_bool_any = [&get_bool_enum](int64_t col_ind_min, int64_t col_ind_max) {
+            bool rval = false;
+            for (auto i = col_ind_min; i <= col_ind_max && !rval; i++)
+            {
+                bool val = get_bool_enum(i);
+                if (val)
+                {
+                    rval = true;
+                }
+            }
+            return rval;
+        };
+        // Input data order is: 0=user, 1=host, 2=select_priv, 3=insert_priv, 4=update_priv, 5=delete_priv,
+        // 6=authentication_string, 7=default_role, 8=is_role
+
+        // Output data order is: user, host, authentication_string, default_role, anydb, is_role, has_proxy.
+        // The proxy-part is sorted out later.
+        string insert_fmt = "INSERT INTO " + TABLE_USER + " VALUES ('%s', '%s', '%s', '%s', %i, %i, 0);";
+        while (user_res->next_row())
+        {
+            auto username = user_res->get_string(0);
+            auto host = user_res->get_string(1);
+            bool has_global_priv = get_bool_any(2, 5);
+            auto auth_string = user_res->get_string(6);
+            string default_role = user_res->get_string(7);
+            bool is_role = get_bool_enum(8);
+
+            m_sqlite->exec(mxb::string_printf(insert_fmt.c_str(), username.c_str(), host.c_str(),
+                                              auth_string.c_str(), default_role.c_str(), has_global_priv,
+                                              is_role));
+        }
+    }
+
+    if (db_res)
+    {
+        string insert_db_fmt = "INSERT INTO " + TABLE_DB + " VALUES ('%s', '%s', '%s');";
+        while (db_res->next_row())
+        {
+            auto username = db_res->get_string(0);
+            auto host = db_res->get_string(1);
+            auto datab = db_res->get_string(2);
+            m_sqlite->exec(mxb::string_printf(insert_db_fmt.c_str(),
+                           username.c_str(), host.c_str(), datab.c_str()));
+        }
+    }
+
+    if (roles_mapping_res)
+    {
+        string insert_roles_fmt = "INSERT INTO " + TABLE_ROLES_MAPPING + " VALUES ('%s', '%s', '%s');";
+        while (roles_mapping_res->next_row())
+        {
+            auto username = roles_mapping_res->get_string(0);
+            auto host = roles_mapping_res->get_string(1);
+            auto role = roles_mapping_res->get_string(2);
+            m_sqlite->exec(mxb::string_printf(insert_roles_fmt.c_str(),
+                                              username.c_str(), host.c_str(), role.c_str()));
+        }
+    }
+    m_sqlite->exec("COMMIT");
 }
 
 void PamInstance::diagnostic(DCB* dcb)
@@ -313,7 +489,7 @@ void PamInstance::diagnostic(DCB* dcb)
     json_decref(array);
 }
 
-static int diag_cb_json(void* data, int columns, char** row, char** field_names)
+static int diag_cb_json(json_t* data, int columns, char** row, char** field_names)
 {
     mxb_assert(columns == NUM_FIELDS);
     json_t* obj = json_object();
@@ -321,90 +497,71 @@ static int diag_cb_json(void* data, int columns, char** row, char** field_names)
     {
         json_object_set_new(obj, field_names[i], json_string(row[i]));
     }
-    json_t* arr = static_cast<json_t*>(data);
-    json_array_append_new(arr, obj);
+    json_array_append_new(data, obj);
     return 0;
 }
 
 json_t* PamInstance::diagnostic_json()
 {
     json_t* rval = json_array();
-    char* err;
-    string select = "SELECT * FROM " + m_tablename + ";";
-    if (sqlite3_exec(m_dbhandle, select.c_str(), diag_cb_json, rval, &err) != SQLITE_OK)
+    string select = "SELECT * FROM " + TABLE_USER + ";";
+    if (!m_sqlite->exec(select, diag_cb_json, rval))
     {
-        MXS_ERROR("Failed to print users: %s", err);
-        sqlite3_free(err);
+        MXS_ERROR("Failed to print users: %s", m_sqlite->error());
     }
-
     return rval;
 }
 
 bool PamInstance::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
 {
     bool success = true;
-    const char ANON_USER_QUERY[] = "SELECT host,authentication_string FROM mysql.user WHERE "
-                                   "(plugin = 'pam' AND user = '');";
+    const char anon_user_query[] = "SELECT host FROM mysql.user WHERE (user = '' AND plugin = 'pam');";
 
-    const char GRANT_PROXY[] = "GRANT PROXY ON";
-
-    // Query for the anonymous user which is used with group mappings
-    if (mysql_query(conn, ANON_USER_QUERY))
+    // Query for anonymous users used with group mappings
+    string error_msg;
+    QResult anon_res;
+    if ((anon_res = mxs::execute_query(conn, anon_user_query, &error_msg)) == nullptr)
     {
-        MXS_ERROR("Failed to query server '%s' for anonymous PAM users: '%s'.",
-                  server->name(), mysql_error(conn));
+        MXS_ERROR("Failed to query server '%s' for anonymous PAM users. %s",
+                  server->name(), error_msg.c_str());
         success = false;
     }
     else
     {
-        // Temporary storage of host,authentication_string for anonymous pam users.
-        std::vector<std::pair<string, string>> anon_users_info;
-        MYSQL_RES* res = mysql_store_result(conn);
-        if (res)
+        auto anon_rows = anon_res->get_row_count();
+        if (anon_rows > 0)
         {
-            MYSQL_ROW row;
-            while ((row = mysql_fetch_row(res)))
-            {
-                string host = row[0] ? row[0] : "";
-                string auth_str = row[1] ? row[1] : "";
-                anon_users_info.push_back(std::make_pair(host, auth_str));
-            }
-            mysql_free_result(res);
+            MXS_INFO("Found %lu anonymous PAM user(s). Checking them for proxy grants.", anon_rows);
         }
 
-        if (!anon_users_info.empty())
+        while (anon_res->next_row())
         {
-            MXS_INFO("Found %lu anonymous PAM user(s). Checking them for proxy grants.",
-                     anon_users_info.size());
-        }
-
-        for (const auto& elem : anon_users_info)
-        {
-            string query = "SHOW GRANTS FOR ''@'" + elem.first + "';";
+            string entry_host = anon_res->get_string(0);
+            string query = mxb::string_printf("SHOW GRANTS FOR ''@'%s';", entry_host.c_str());
             // Check that the anon user has a proxy grant.
-            if (mysql_query(conn, query.c_str()))
+            QResult grant_res;
+            if ((grant_res = mxs::execute_query(conn, query, &error_msg)) == nullptr)
             {
-                MXS_ERROR("Failed to query server '%s' for grants of anonymous PAM user ''@'%s': '%s'.",
-                          server->name(), elem.first.c_str(), mysql_error(conn));
+                MXS_ERROR("Failed to query server '%s' for grants of anonymous PAM user ''@'%s'. %s",
+                          server->name(), entry_host.c_str(), error_msg.c_str());
                 success = false;
             }
             else
             {
-                if ((res = mysql_store_result(conn)))
+                const char grant_proxy[] = "GRANT PROXY ON";
+                // The user may have multiple proxy grants. Just one is enough.
+                const string update_query_fmt = "UPDATE " + TABLE_USER + " SET " + FIELD_HAS_PROXY
+                        + " = 1 WHERE (" + FIELD_USER + " = '') AND (" + FIELD_HOST + " = '%s');";
+                while (grant_res->next_row())
                 {
-                    // The user may have multiple proxy grants, but is only added once.
-                    MYSQL_ROW row;
-                    while ((row = mysql_fetch_row(res)))
+                    string grant = grant_res->get_string(0);
+                    if (grant.find(grant_proxy) != string::npos)
                     {
-                        if (row[0] && strncmp(row[0], GRANT_PROXY, sizeof(GRANT_PROXY) - 1) == 0)
-                        {
-                            add_pam_user("", elem.first.c_str(),    // user, host
-                                         NULL, false,               // Unused
-                                         elem.second.c_str(), true);// service, proxy
-                            break;
-                        }
+                        string update_query = mxb::string_printf(update_query_fmt.c_str(),
+                                                                 entry_host.c_str());
+                        m_sqlite->exec(update_query);
+                        break;
                     }
-                    mysql_free_result(res);
                 }
             }
         }
