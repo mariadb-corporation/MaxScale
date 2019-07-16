@@ -903,6 +903,7 @@ static int gw_read_and_write(DCB* dcb)
         if (auth_change_requested(read_buffer)
             && handle_auth_change_response(read_buffer, proto, dcb))
         {
+            gwbuf_free(read_buffer);
             return 0;
         }
         else
