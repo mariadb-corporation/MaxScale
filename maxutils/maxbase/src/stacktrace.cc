@@ -71,7 +71,7 @@ static void extract_file_and_line(char* symbols, char* cmd, size_t size)
 
         const char* symname_start = filename_end + 1;
 
-        if (*symname_start != '+')
+        if (*symname_start != '+' && symname_start != symname_end)
         {
             // We have a string form symbol name and an offset, we need to
             // extract the symbol address
@@ -111,6 +111,17 @@ static void extract_file_and_line(char* symbols, char* cmd, size_t size)
         }
         else
         {
+            if (symname_start == symname_end)
+            {
+                // Symbol is of the format `./executable [0xdeadbeef]`
+                if (!(symname_start = strchr(symname_start, '['))
+                    || !(symname_end = strchr(symname_start, ']')))
+                {
+                    snprintf(cmd, size, "Unexpected symbol format");
+                    return;
+                }
+            }
+
             // Raw offset into library
             symname_start++;
             snprintf(symname, sizeof(symname), "%.*s", (int)(symname_end - symname_start), symname_start);
@@ -124,13 +135,6 @@ static void extract_file_and_line(char* symbols, char* cmd, size_t size)
         {
             str += sizeof(prefix) - 1;
             memmove(cmd, str, strlen(cmd) - (str - cmd) + 1);
-        }
-
-        // Strip the directory name from the symbols (could this be useful?)
-        if (char* str = strrchr(symbols, '/'))
-        {
-            ++str;
-            memmove(symbols, str, strlen(symbols) - (str - symbols) + 1);
         }
 
         // Remove the address where the symbol is in memory (i.e. the [0xdeadbeef] that follows the

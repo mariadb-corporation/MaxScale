@@ -2648,16 +2648,6 @@ static int handle_global_item(const char* name, const char* value)
                 return 0;
             }
 
-            if (users_refresh_time < USERS_REFRESH_TIME_MIN)
-            {
-                MXS_WARNING("%s is less than the allowed minimum value of %d for the "
-                            "configuration option '%s', using the minimum value.",
-                            value,
-                            USERS_REFRESH_TIME_MIN,
-                            CN_USERS_REFRESH_TIME);
-                users_refresh_time = USERS_REFRESH_TIME_MIN;
-            }
-
             if (users_refresh_time > INT32_MAX)
             {
                 // To ensure that there will be no overflows when
@@ -3856,11 +3846,11 @@ int create_new_service(CONFIG_CONTEXT* obj)
     config_add_defaults(obj, config_service_params);
     config_add_defaults(obj, module->parameters);
 
+    int error_count = 0;
     Service* service = service_alloc(obj->name(), router.c_str(), &obj->m_parameters);
 
     if (service)
     {
-        int error_count = 0;
 
         if (!servers.empty())
         {
@@ -3913,9 +3903,10 @@ int create_new_service(CONFIG_CONTEXT* obj)
     else
     {
         MXS_ERROR("Service '%s' creation failed.", obj->name());
+        error_count++;
     }
 
-    return service ? 0 : 1;
+    return error_count;
 }
 
 /**

@@ -831,18 +831,17 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
             if (it->second->in_use())
             {
                 target = it->second;
-                MXS_INFO("COM_STMT_FETCH on %s", target->name());
+                MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
             }
             else
             {
                 MXS_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
-                          "proceed with COM_STMT_FETCH",
-                          it->second->name());
+                          "proceed with %s", it->second->name(), STRPACKETTYPE(cmd));
             }
         }
         else
         {
-            MXS_WARNING("Unknown statement ID %u used in COM_STMT_FETCH", stmt_id);
+            MXS_WARNING("Unknown statement ID %u used in %s", stmt_id, STRPACKETTYPE(cmd));
         }
     }
     else
@@ -1226,13 +1225,14 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         MXS_ERROR("Routing query failed.");
     }
 
-    if (success && cmd == MXS_COM_STMT_EXECUTE && !is_locked_to_master())
+    if (success && !is_locked_to_master()
+        && (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA))
     {
         /** Track the targets of the COM_STMT_EXECUTE statements. This
          * information is used to route all COM_STMT_FETCH commands
          * to the same server where the COM_STMT_EXECUTE was done. */
         m_exec_map[m_qc.current_route_info().stmt_id()] = target;
-        MXS_INFO("COM_STMT_EXECUTE on %s: %s", target->name(), target->uri());
+        MXS_INFO("%s on %s: %s", STRPACKETTYPE(cmd), target->name(), target->uri());
     }
 
     return success;
