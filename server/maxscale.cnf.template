@@ -62,14 +62,6 @@ servers=server1
 user=myuser
 password=mypwd
 
-# This service enables the use of the MaxAdmin interface
-# MaxScale administration guide:
-# https://mariadb.com/kb/en/mariadb-maxscale-23-maxadmin-admin-interface/
-
-[MaxAdmin-Service]
-type=service
-router=cli
-
 # Listener definitions for the services
 #
 # These listeners represent the ports the
@@ -87,9 +79,3 @@ type=listener
 service=Read-Write-Service
 protocol=MariaDBClient
 port=4006
-
-[MaxAdmin-Listener]
-type=listener
-service=MaxAdmin-Service
-protocol=maxscaled
-socket=default

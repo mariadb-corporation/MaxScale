@@ -923,9 +923,10 @@ MaxScale will at startup load the users from the backend server, but if
 the authentication of a user fails, MaxScale assumes it is because a new
 user has been created and will thus refresh the users. By default, MaxScale
 will do that at most once per 30 seconds and with this configuration option
-that can be changed. The minimum allowed value is 10 seconds. A negative
+that can be changed. A value of 0 allows infinite refreshes and a negative
 value disables the refreshing entirelly. Note that using `maxadmin` it is
 possible to explicitly cause the users of a service to be reloaded.
+
 ```
 users_refresh_time=120s
 ```
@@ -935,6 +936,9 @@ is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
 versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
+
+In MaxScale 2.3.9 and older versions, the minimum allowed value was 10 seconds
+but, due to a bug, the default value was 0 which allowed infinite refreshes.
 
 ### `retain_last_statements`
 
