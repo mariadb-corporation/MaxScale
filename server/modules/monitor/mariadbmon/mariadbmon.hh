@@ -194,8 +194,6 @@ private:
     // Miscellaneous info
     int64_t m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;     /* gtid_domain_id most recently seen on
                                                              * the master */
-    std::string m_external_master_host;                     /* External master host, for fail/switchover */
-    int         m_external_master_port = PORT_UNKNOWN;      /* External master port */
 
     // Fields controlling logging of various events. TODO: Check these
     bool m_log_no_master {true};                /* Should it be logged that there is no master? */
@@ -291,7 +289,7 @@ private:
     int  running_slaves(MariaDBServer* search_root);
     bool cycle_has_master_server(ServerArray& cycle_servers);
     void update_gtid_domain();
-    void update_external_master();
+
     void update_master_cycle_info();
     bool is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, std::string* why_not = nullptr);
 

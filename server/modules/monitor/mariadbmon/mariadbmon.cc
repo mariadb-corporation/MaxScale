@@ -88,8 +88,6 @@ void MariaDBMonitor::reset_server_info()
     assign_new_master(NULL);
     m_next_master = NULL;
     m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
-    m_external_master_host.clear();
-    m_external_master_port = PORT_UNKNOWN;
 
     // Next, initialize the data.
     for (auto mon_server : servers())
@@ -464,7 +462,6 @@ void MariaDBMonitor::tick()
     {
         // Update cluster-wide values dependant on the current master.
         update_gtid_domain();
-        update_external_master();
     }
 
     /* Set low disk space slaves to maintenance. This needs to happen after roles have been assigned.
@@ -589,49 +586,6 @@ void MariaDBMonitor::update_gtid_domain()
                    m_master_gtid_domain, domain);
     }
     m_master_gtid_domain = domain;
-}
-
-void MariaDBMonitor::update_external_master()
-{
-    if (m_master->is_slave_of_ext_master())
-    {
-        mxb_assert(!m_master->m_slave_status.empty() && !m_master->m_node.external_masters.empty());
-        // TODO: Add support for multiple external masters.
-        auto& master_sstatus = m_master->m_slave_status[0];
-        if (master_sstatus.master_host != m_external_master_host
-            || master_sstatus.master_port != m_external_master_port)
-        {
-            const string new_ext_host = master_sstatus.master_host;
-            const int new_ext_port = master_sstatus.master_port;
-            if (m_external_master_port == PORT_UNKNOWN)
-            {
-                MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",
-                           new_ext_host.c_str(),
-                           new_ext_port);
-            }
-            else
-            {
-                MXS_NOTICE("The external master of the cluster has changed: %s:%d -> %s:%d.",
-                           m_external_master_host.c_str(),
-                           m_external_master_port,
-                           new_ext_host.c_str(),
-                           new_ext_port);
-            }
-            m_external_master_host = new_ext_host;
-            m_external_master_port = new_ext_port;
-        }
-    }
-    else
-    {
-        if (m_external_master_port != PORT_UNKNOWN)
-        {
-            MXS_NOTICE("Cluster lost the external master. Previous one was at: [%s]:%d",
-                       m_external_master_host.c_str(),
-                       m_external_master_port);
-        }
-        m_external_master_host.clear();
-        m_external_master_port = PORT_UNKNOWN;
-    }
 }
 
 void MariaDBMonitor::log_master_changes()
