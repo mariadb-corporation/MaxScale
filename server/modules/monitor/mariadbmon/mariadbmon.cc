@@ -104,14 +104,15 @@ void MariaDBMonitor::reset_node_index_info()
     }
 }
 
-MariaDBServer* MariaDBMonitor::get_server(const std::string& host, int port)
+MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
 {
     // TODO: Do this with a map lookup
+    // TODO: Add DNS check here.
     MariaDBServer* found = NULL;
     for (MariaDBServer* server : m_servers)
     {
-        SERVER* srv = server->m_server_base->server;
-        if (host == srv->address && srv->port == port)
+        EndPoint srv(server->m_server_base->server);
+        if (srv == search_ep)
         {
             found = server;
             break;
@@ -212,7 +213,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.detect_stale_slave = params->get_bool("detect_stale_slave");
     m_settings.detect_standalone_master = params->get_bool(CN_DETECT_STANDALONE_MASTER);
     m_settings.ignore_external_masters = params->get_bool("ignore_external_masters");
-    m_settings.shared.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
+    m_settings.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
     m_settings.failcount = params->get_integer(CN_FAILCOUNT);
     m_settings.failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
     m_settings.switchover_timeout = params->get_duration<std::chrono::seconds>(CN_SWITCHOVER_TIMEOUT).count();
@@ -272,12 +273,12 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
             }
         };
 
-        warn_and_enable(&m_settings.shared.assume_unique_hostnames, CN_ASSUME_UNIQUE_HOSTNAMES);
+        warn_and_enable(&m_settings.assume_unique_hostnames, CN_ASSUME_UNIQUE_HOSTNAMES);
         warn_and_enable(&m_settings.auto_failover, CN_AUTO_FAILOVER);
         warn_and_enable(&m_settings.auto_rejoin, CN_AUTO_REJOIN);
     }
 
-    if (!m_settings.shared.assume_unique_hostnames)
+    if (!m_settings.assume_unique_hostnames)
     {
         const char requires[] = "%s requires that %s is on.";
         if (m_settings.auto_failover)

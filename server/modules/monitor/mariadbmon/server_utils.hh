@@ -239,8 +239,10 @@ public:
 
     Settings settings;  /* User-defined settings for the slave connection. */
 
-    bool     seen_connected = false;                 /* Has this slave connection been seen connected,
-                                                      * meaning that the master server id is correct? */
+    /* If the master is a monitored server, it's written here. */
+    const MariaDBServer* master_server {nullptr};
+    /* Has this slave connection been seen connected, meaning that the master server id is correct? */
+    bool seen_connected = false;
 
     int64_t master_server_id = SERVER_ID_UNKNOWN;       /* The master's server_id value. Valid ids are
                                                          * 32bit unsigned. -1 is unread/error. */
@@ -320,8 +322,4 @@ public:
     /* Should failover/switchover enable/disable any scheduled events on the servers during
      * promotion/demotion? */
     bool handle_event_scheduler {true};
-
-    // Miscellaneous settings
-    bool assume_unique_hostnames {true}; /**< Are server hostnames consistent between MaxScale and
-                                           *  servers */
 };

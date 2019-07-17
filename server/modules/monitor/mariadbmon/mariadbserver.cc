@@ -369,6 +369,10 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             {
                 new_row.last_data_time = old_row->last_data_time;
             }
+
+            // Copy master server pointer from old row. If this line is not reached because old row does
+            // not exist, then the topology rebuild will set the master pointer.
+            new_row.master_server = old_row->master_server;
         }
 
         // Finally, set the connection status.
@@ -1004,6 +1008,7 @@ bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_sla
             if (new_row.slave_io_running != old_row.slave_io_running
                 || new_row.slave_sql_running != old_row.slave_sql_running
                 || new_row.settings.master_endpoint != old_row.settings.master_endpoint
+                || new_row.settings.name != old_row.settings.name
                 || new_row.master_server_id != old_row.master_server_id)
             {
                 rval = false;
@@ -1176,39 +1181,16 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
 
 const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* target) const
 {
+    mxb_assert(target);
     // The slave node may have several slave connections, need to find the one that is
-    // connected to the parent. TODO: Use the information gathered in 'build_replication_graph'
-    // to skip this function, as the contents are very similar.
+    // connected to the parent. Most of this has already been done in 'build_replication_graph'.
     const SlaveStatus* rval = NULL;
-    if (m_settings.assume_unique_hostnames)
+    for (const SlaveStatus& ss : m_slave_status)
     {
-        // Can simply compare host:port.
-        EndPoint target_endpoint(target->m_server_base->server);
-        for (const SlaveStatus& ss : m_slave_status)
+        if (ss.master_server == target)
         {
-            if (ss.settings.master_endpoint == target_endpoint && ss.slave_sql_running
-                && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
-            {
-                rval = &ss;
-                break;
-            }
-        }
-    }
-    else
-    {
-        // Compare server id:s instead. If the master's id is wrong (e.g. never updated) this gives a
-        // wrong result. Also gives wrong result if monitor has never seen the slave connection in the
-        // connected state.
-        auto target_id = target->m_server_id;
-        for (const SlaveStatus& ss : m_slave_status)
-        {
-            auto master_id = ss.master_server_id;
-            if (master_id > 0 && master_id == target_id && ss.slave_sql_running && ss.seen_connected
-                && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
-            {
-                rval = &ss;
-                break;
-            }
+            rval = &ss;
+            break;
         }
     }
     return rval;

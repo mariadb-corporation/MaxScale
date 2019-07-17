@@ -166,7 +166,7 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
  */
 void MariaDBMonitor::build_replication_graph()
 {
-    const bool use_hostnames = m_settings.shared.assume_unique_hostnames;
+    const bool use_hostnames = m_settings.assume_unique_hostnames;
     // First, reset all node data.
     for (MariaDBServer* server : m_servers)
     {
@@ -174,12 +174,13 @@ void MariaDBMonitor::build_replication_graph()
         server->m_node.reset_results();
     }
 
-    for (MariaDBServer* slave : m_servers)
+    for (auto slave : m_servers)
     {
         /* Check all slave connections of all servers. Connections are added even if one or both endpoints
          * are down or in maintenance. */
-        for (SlaveStatus& slave_conn : slave->m_slave_status)
+        for (auto& slave_conn : slave->m_slave_status)
         {
+            slave_conn.master_server = nullptr;
             /* IF THIS PART IS CHANGED, CHANGE THE COMPARISON IN 'sstatus_arrays_topology_equal'
              * (in MariaDBServer) accordingly so that any possible topology changes are detected. */
             if (slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO && slave_conn.slave_sql_running)
@@ -189,8 +190,7 @@ void MariaDBMonitor::build_replication_graph()
                 bool is_external = false;
                 if (use_hostnames)
                 {
-                    found_master = get_server(slave_conn.settings.master_endpoint.host(),
-                                              slave_conn.settings.master_endpoint.port());
+                    found_master = get_server(slave_conn.settings.master_endpoint);
                     if (!found_master)
                     {
                         // Must be an external server.
@@ -203,9 +203,11 @@ void MariaDBMonitor::build_replication_graph()
                      * trust the "Master_Server_Id"-field of the SHOW SLAVE STATUS output if
                      * the slave connection has been seen connected before. This means that
                      * the graph will miss slave-master relations that have not connected
-                     * while the monitor has been running. TODO: This data should be saved so
-                     * that monitor restarts do not lose this information. */
-                    if (slave_conn.seen_connected)
+                     * while the monitor has been running.
+                     *
+                     * TODO: This data should be saved so that monitor restarts do not lose
+                     * this information. */
+                    if (slave_conn.master_server_id >= 0 && slave_conn.seen_connected)
                     {
                         // Valid slave connection, find the MariaDBServer with the matching server id.
                         found_master = get_server(slave_conn.master_server_id);
@@ -227,6 +229,7 @@ void MariaDBMonitor::build_replication_graph()
                      * access later on. */
                     slave->m_node.parents.push_back(found_master);
                     found_master->m_node.children.push_back(slave);
+                    slave_conn.master_server = found_master;
                 }
                 else if (is_external)
                 {

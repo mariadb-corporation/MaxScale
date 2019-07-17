@@ -152,7 +152,7 @@ int MariaDBMonitor::Test::run_tests()
 void MariaDBMonitor::Test::init_servers(int count)
 {
     clear_servers();
-    m_monitor->m_settings.shared.assume_unique_hostnames = m_use_hostnames;
+    m_monitor->m_settings.assume_unique_hostnames = m_use_hostnames;
     mxb_assert(m_monitor->m_servers.empty() && m_monitor->m_servers_by_id.empty());
 
     for (int i = 1; i < count + 1; i++)
@@ -307,7 +307,7 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
 
 MariaDBServer* MariaDBMonitor::Test::get_server(int i)
 {
-    auto rval = m_use_hostnames ? m_monitor->get_server(create_hostname(i), i) :
+    auto rval = m_use_hostnames ? m_monitor->get_server(EndPoint(create_hostname(i), i)) :
         m_monitor->get_server(i);
     mxb_assert(rval);
     return rval;

@@ -221,6 +221,8 @@ private:
                                                * TODO: think about removing */
         bool ignore_external_masters {false}; /* Ignore masters outside of the monitor configuration.
                                                * TODO: requires work */
+        bool assume_unique_hostnames {true};  /* Are server hostnames consistent between MaxScale and
+                                               * servers */
 
         int failcount {1};  /* Number of ticks master must be down before it's considered
                              * totally down, allowing failover or master change. */
@@ -264,7 +266,7 @@ private:
     std::string diagnostics_to_string() const;
     json_t*     to_json() const;
 
-    MariaDBServer* get_server(const std::string& host, int port);
+    MariaDBServer* get_server(const EndPoint& search_ep);
     MariaDBServer* get_server(int64_t id);
     MariaDBServer* get_server(mxs::MonitorServer* mon_server);
     MariaDBServer* get_server(SERVER* server);
