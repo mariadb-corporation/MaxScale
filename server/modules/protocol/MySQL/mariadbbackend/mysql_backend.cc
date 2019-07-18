@@ -990,6 +990,15 @@ static int gw_read_and_write(DCB* dcb)
             stmt = read_buffer;
             read_buffer = NULL;
             gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
+
+            // TODO: Remove this and use RCAP_TYPE_REQUEST_TRACKING in maxrows
+            if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
+                && rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
+            {
+                GWBUF* tmp = proto->track_response(&stmt);
+                mxb_assert(stmt == nullptr);
+                stmt = tmp;
+            }
         }
         else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
                  && !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
@@ -1004,6 +1013,7 @@ static int gw_read_and_write(DCB* dcb)
                 stmt = gwbuf_make_contiguous(stmt);
             }
 
+            // TODO: Remove this and use RCAP_TYPE_REQUEST_TRACKING in maxrows
             if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
             {
                 GWBUF* tmp = proto->track_response(&stmt);
