@@ -1759,15 +1759,18 @@ bool MySQLProtocol::consume_fetched_rows(GWBUF* buffer)
     bool rval = false;
     bool more = false;
     int n_eof = modutil_count_signal_packets(buffer, 0, &more, (modutil_state*)&m_modutil_state);
+    int num_packets = modutil_count_packets(buffer);
 
     // If the server responded with an error, n_eof > 0
     if (n_eof > 0)
     {
+        m_reply.m_row_count += num_packets - 1;
         rval = true;
     }
     else
     {
-        m_expected_rows -= modutil_count_packets(buffer);
+        m_reply.m_row_count += num_packets;
+        m_expected_rows -= num_packets;
         mxb_assert(m_expected_rows >= 0);
         rval = m_expected_rows == 0;
     }
@@ -1881,6 +1884,10 @@ void MySQLProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
             ++it;
             update_error(it, end);
             set_reply_state(ReplyState::DONE);
+        }
+        else
+        {
+            ++m_reply.m_row_count;
         }
         break;
     }
@@ -2053,6 +2060,7 @@ void MySQLProtocol::track_query(GWBUF* buffer)
         m_command = MYSQL_GET_COMMAND(data);
         current_command = (mxs_mysql_cmd_t) m_command;
         m_reply.m_command = m_command;
+        m_reply.m_row_count = 0;
 
         MXS_INFO("%02hhx: %s", m_command, mxs::extract_sql(buffer).c_str());
 

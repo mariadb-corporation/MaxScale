@@ -492,11 +492,20 @@ struct MySQLProtocol
             return m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
         }
 
+        /**
+         * Number of rows read from the resultset
+         */
+        uint64_t rows_read() const
+        {
+            return m_row_count;
+        }
+
     private:
         SERVER*    m_server {nullptr};
         uint8_t    m_command {0};
         ReplyState m_reply_state {ReplyState::DONE};
         Error      m_error;
+        uint64_t   m_row_count {0};
 
         friend class MySQLProtocol;
     };
