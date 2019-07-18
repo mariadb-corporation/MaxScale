@@ -1027,7 +1027,6 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                 {
                     // We were expecting a response but we aren't going to get one
                     mxb_assert(m_expected_responses > 0);
-                    m_expected_responses--;
                     errmsg += " Lost connection to master server while waiting for a result.";
 
                     if (can_retry_query())
@@ -1041,6 +1040,14 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                          * the client to let it know that the query failed. */
                         can_continue = true;
                         send_readonly_error(m_client);
+                    }
+
+                    // Decrement the expected response count only if we know we can continue the sesssion.
+                    // This keeps the internal logic sound even if another query is routed before the session
+                    // is closed.
+                    if (can_continue)
+                    {
+                        m_expected_responses--;
                     }
                 }
 
