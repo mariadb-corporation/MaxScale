@@ -792,7 +792,8 @@ static int gw_read_and_write(DCB* dcb)
         GWBUF* tmp;
 
         if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
-            && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
+            && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
+            && !proto->ignore_replies)
         {
             tmp = proto->track_response(&read_buffer);
         }
