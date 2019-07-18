@@ -581,16 +581,13 @@ struct MySQLProtocol
 
 private:
 
-    ReplyState m_reply_state = ReplyState::DONE;
-    uint16_t   m_modutil_state;     /**< TODO: This is an ugly hack, replace it */
-    uint8_t    m_command = 0;
-    bool       m_opening_cursor = false;    /**< Whether we are opening a cursor */
-    uint32_t   m_expected_rows = 0;         /**< Number of rows a COM_STMT_FETCH is retrieving */
-    uint64_t   m_num_coldefs = 0;
-    bool       m_large_query = false;
-    bool       m_skip_next = false;
-    Error      m_error;
-    Reply      m_reply;
+    uint16_t m_modutil_state;           /**< TODO: This is an ugly hack, replace it */
+    bool     m_opening_cursor = false;  /**< Whether we are opening a cursor */
+    uint32_t m_expected_rows = 0;       /**< Number of rows a COM_STMT_FETCH is retrieving */
+    uint64_t m_num_coldefs = 0;
+    bool     m_large_query = false;
+    bool     m_skip_next = false;
+    Reply    m_reply;
 
     bool   consume_fetched_rows(GWBUF* buffer);
     void   process_reply_start(Iter it, Iter end);
@@ -617,7 +614,7 @@ private:
 
     inline void set_reply_state(ReplyState state)
     {
-        m_reply_state = state;
+        m_reply.m_reply_state = state;
     }
 };
 

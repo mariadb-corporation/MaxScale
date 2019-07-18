@@ -1748,7 +1748,7 @@ void MySQLProtocol::update_error(Iter it, Iter end)
     auto message_begin = sql_state_end;
     auto message_end = end;
 
-    m_error.set(code, sql_state_begin, sql_state_end, message_begin, message_end);
+    m_reply.m_error.set(code, sql_state_begin, sql_state_end, message_begin, message_end);
 }
 
 bool MySQLProtocol::consume_fetched_rows(GWBUF* buffer)
@@ -1812,7 +1812,7 @@ void MySQLProtocol::process_reply_start(Iter it, Iter end)
         break;
 
     default:
-        if (m_command == MXS_COM_FIELD_LIST)
+        if (m_reply.m_command == MXS_COM_FIELD_LIST)
         {
             // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
             set_reply_state(ReplyState::RSET_ROWS);
@@ -1832,7 +1832,7 @@ void MySQLProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
 {
     uint8_t cmd = *it;
 
-    switch (m_reply_state)
+    switch (m_reply.m_reply_state)
     {
     case ReplyState::START:
         process_reply_start(it, end);
@@ -1987,11 +1987,11 @@ GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
 {
     GWBUF* rval = nullptr;
 
-    m_error.clear();
+    m_reply.m_error.clear();
 
-    if (m_command == MXS_COM_STMT_FETCH)
+    if (m_reply.m_command == MXS_COM_STMT_FETCH)
     {
-        // TODO: m_error is not updated here.
+        // TODO: m_reply.m_error is not updated here.
         // If the server responded with an error, n_eof > 0
 
         // COM_STMT_FETCH is used when a COM_STMT_EXECUTE opens a cursor and the result is read in chunks:
@@ -2002,14 +2002,14 @@ GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
         }
         rval = modutil_get_complete_packets(buffer);
     }
-    else if (m_command == MXS_COM_STATISTICS)
+    else if (m_reply.m_command == MXS_COM_STATISTICS)
     {
         // COM_STATISTICS returns a single string and thus requires special handling:
         // https://mariadb.com/kb/en/library/com_statistics/#response
         set_reply_state(ReplyState::DONE);
         rval = modutil_get_complete_packets(buffer);
     }
-    else if (m_command == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
+    else if (m_reply.m_command == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
     {
         // Successful COM_STMT_PREPARE responses return a special OK packet:
         // https://mariadb.com/kb/en/library/com_stmt_prepare/#com_stmt_prepare_ok
@@ -2025,11 +2025,6 @@ GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
     {
         // Normal result, process it one packet at a time
         rval = process_packets(buffer);
-    }
-
-    if ((m_reply.m_reply_state = m_reply_state) == ReplyState::DONE && m_error)
-    {
-        m_reply.m_error = m_error;
     }
 
     return rval;
@@ -2057,19 +2052,18 @@ void MySQLProtocol::track_query(GWBUF* buffer)
     }
     else if (!large_query)
     {
-        m_command = MYSQL_GET_COMMAND(data);
-        current_command = (mxs_mysql_cmd_t) m_command;
-        m_reply.m_command = m_command;
+        m_reply.m_command = MYSQL_GET_COMMAND(data);
         m_reply.m_row_count = 0;
+        current_command = (mxs_mysql_cmd_t) m_reply.m_command;
 
-        MXS_INFO("%02hhx: %s", m_command, mxs::extract_sql(buffer).c_str());
+        MXS_INFO("%02hhx: %s", m_reply.m_command, mxs::extract_sql(buffer).c_str());
 
-        if (mxs_mysql_command_will_respond(m_command))
+        if (mxs_mysql_command_will_respond(m_reply.m_command))
         {
             set_reply_state(ReplyState::START);
         }
 
-        if (m_command == MXS_COM_STMT_EXECUTE)
+        if (m_reply.m_command == MXS_COM_STMT_EXECUTE)
         {
             // Extract the flag byte after the statement ID
             uint8_t flags = data[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
@@ -2077,7 +2071,7 @@ void MySQLProtocol::track_query(GWBUF* buffer)
             // Any non-zero flag value means that we have an open cursor
             m_opening_cursor = flags != 0;
         }
-        else if (m_command == MXS_COM_STMT_FETCH)
+        else if (m_reply.m_command == MXS_COM_STMT_FETCH)
         {
             // Number of rows to fetch is a 4 byte integer after the ID
             m_expected_rows = gw_mysql_get_byte4(data + MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE);
