@@ -21,6 +21,9 @@
 #include <netdb.h>
 #include <stdio.h>
 
+#include <algorithm>
+#include <vector>
+
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/maxscale.h>
@@ -143,7 +146,7 @@ enum server_category_t
     SERVER_CLUSTRIX
 };
 
-static int    get_users(Listener* listener, bool skip_local);
+static int    get_users(Listener* listener, bool skip_local, SERVER** srv);
 static MYSQL* gw_mysql_init(void);
 static int    gw_mysql_set_timeouts(MYSQL* handle);
 static char*  mysql_format_user_entry(void* data);
@@ -255,9 +258,9 @@ static char* get_users_query(const SERVER::Version& version, bool include_root, 
     return rval;
 }
 
-int replace_mysql_users(Listener* listener, bool skip_local)
+int replace_mysql_users(Listener* listener, bool skip_local, SERVER** srv)
 {
-    int i = get_users(listener, skip_local);
+    int i = get_users(listener, skip_local, srv);
     return i;
 }
 
@@ -1143,9 +1146,8 @@ bool query_and_process_users(const char* query, MYSQL* con, SERVICE* service, in
     return rval;
 }
 
-int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, Listener* listener)
+int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service, Listener* listener)
 {
-    SERVER* server = server_ref->server;
     auto server_version = server->version();
     if (server_version.total == 0)      // No monitor or the monitor hasn't ran yet.
     {
@@ -1238,6 +1240,28 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
     return users;
 }
 
+// Sorts candidates servers so that masters are before slaves which are before only running servers
+static std::vector<SERVER*> get_candidates(SERVICE* service, bool skip_local)
+{
+    std::vector<SERVER*> candidates;
+
+    for (auto server = service->dbref; server; server = server->next)
+    {
+        if (server_ref_is_active(server) && server->server->is_running()
+            && (!skip_local || !server->server->is_mxs_service()))
+        {
+            candidates.push_back(server->server);
+        }
+    }
+
+    std::sort(candidates.begin(), candidates.end(), [](SERVER* a, SERVER* b) {
+                  return (a->is_master() && !b->is_master())
+                  || (a->is_slave() && !b->is_slave() && !b->is_master());
+              });
+
+    return candidates;
+}
+
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
  * environment.
@@ -1246,7 +1270,7 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
  * @param users     The users table into which to load the users
  * @return          -1 on any error or the number of users inserted
  */
-static int get_users(Listener* listener, bool skip_local)
+static int get_users(Listener* listener, bool skip_local, SERVER** srv)
 {
     const char* service_user = NULL;
     const char* service_passwd = NULL;
@@ -1266,33 +1290,18 @@ static int get_users(Listener* listener, bool skip_local)
     sqlite3* handle = get_handle(instance);
     delete_mysql_users(handle);
 
-    SERVER_REF* server = service->dbref;
     int total_users = -1;
-    bool no_active_servers = true;
+    auto candidates = get_candidates(service, skip_local);
 
-    for (server = service->dbref; !maxscale_is_shutting_down() && server; server = server->next)
+    for (auto server : candidates)
     {
-        if (!server_ref_is_active(server) || !server->server->server_is_active()
-            || (skip_local && server->server->is_mxs_service())
-            || !server->server->is_running())
+        if (MYSQL* con = gw_mysql_init())
         {
-            continue;
-        }
-
-        no_active_servers = false;
-
-        MYSQL* con = gw_mysql_init();
-        if (con)
-        {
-            if (mxs_mysql_real_connect(con, server->server, service_user, dpwd) == NULL)
+            if (mxs_mysql_real_connect(con, server, service_user, dpwd) == NULL)
             {
-                MXS_ERROR("Failure loading users data from backend "
-                          "[%s:%i] for service [%s]. MySQL error %i, %s",
-                          server->server->address,
-                          server->server->port,
-                          service->name(),
-                          mysql_errno(con),
-                          mysql_error(con));
+                MXS_ERROR("Failure loading users data from backend [%s:%i] for service [%s]. "
+                          "MySQL error %i, %s", server->address, server->port, service->name(),
+                          mysql_errno(con), mysql_error(con));
                 mysql_close(con);
             }
             else
@@ -1302,6 +1311,7 @@ static int get_users(Listener* listener, bool skip_local)
 
                 if (users > total_users)
                 {
+                    *srv = server;
                     total_users = users;
                 }
 
@@ -1317,12 +1327,12 @@ static int get_users(Listener* listener, bool skip_local)
 
     MXS_FREE(dpwd);
 
-    if (no_active_servers)
+    if (candidates.empty())
     {
         // This service has no servers or all servers are local MaxScale services
         total_users = 0;
     }
-    else if (server == NULL && total_users == -1)
+    else if (*srv == nullptr && total_users == -1)
     {
         MXS_ERROR("Unable to get user data from backend database for service [%s]."
                   " Failed to connect to any of the backend databases.",

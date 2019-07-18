@@ -188,10 +188,11 @@ bool dbusers_save(sqlite3* src, const char* filename);
  *
  * @param service    The current service
  * @param skip_local Skip loading of users on local MaxScale services
+ * @param srv        Server where the users were loaded from (output)
  *
  * @return -1 on any error or the number of users inserted (0 means no users at all)
  */
-int replace_mysql_users(Listener* listener, bool skip_local);
+int replace_mysql_users(Listener* listener, bool skip_local, SERVER** srv);
 
 /**
  * @brief Verify the user has access to the database
