@@ -789,9 +789,17 @@ static int gw_read_and_write(DCB* dcb)
         || proto->collect_result
         || proto->ignore_replies != 0)
     {
-        GWBUF* tmp = rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING) ?
-            proto->track_response(&read_buffer) :
-            modutil_get_complete_packets(&read_buffer);
+        GWBUF* tmp;
+
+        if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
+            && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
+        {
+            tmp = proto->track_response(&read_buffer);
+        }
+        else
+        {
+            tmp = modutil_get_complete_packets(&read_buffer);
+        }
 
         // Store any partial packets in the DCB's read buffer
         dcb_readq_set(dcb, read_buffer);
@@ -986,12 +994,21 @@ static int gw_read_and_write(DCB* dcb)
         else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
                  && !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
         {
+            // TODO: Get rid of RCAP_TYPE_STMT_OUTPUT and rely on RCAP_TYPE_REQUEST_TRACKING to provide all
+            // the required information.
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
 
             if (!GWBUF_IS_CONTIGUOUS(stmt))
             {
                 // Make sure the buffer is contiguous
                 stmt = gwbuf_make_contiguous(stmt);
+            }
+
+            if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
+            {
+                GWBUF* tmp = proto->track_response(&stmt);
+                mxb_assert(stmt == nullptr);
+                stmt = tmp;
             }
         }
         else

@@ -439,6 +439,7 @@ struct MySQLProtocol
                 return "ROWS";
 
             default:
+                mxb_assert(!true);
                 return "UNKNOWN";
             }
         }
@@ -492,9 +493,9 @@ struct MySQLProtocol
         }
 
     private:
-        SERVER*    m_server;
-        uint8_t    m_command;
-        ReplyState m_reply_state;
+        SERVER*    m_server {nullptr};
+        uint8_t    m_command {0};
+        ReplyState m_reply_state {ReplyState::DONE};
         Error      m_error;
 
         friend class MySQLProtocol;
