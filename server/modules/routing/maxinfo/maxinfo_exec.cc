@@ -36,7 +36,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/maxscale.h>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/resultset.hh>
 #include <maxscale/router.hh>

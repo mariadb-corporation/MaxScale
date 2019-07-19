@@ -40,7 +40,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/format.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>

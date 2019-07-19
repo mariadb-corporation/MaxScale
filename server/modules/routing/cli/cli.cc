@@ -34,7 +34,7 @@
 #include <maxbase/atomic.h>
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>

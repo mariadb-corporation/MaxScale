@@ -16,7 +16,7 @@
 #include <memory>
 #include <deque>
 #include <maxscale/config.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 
 namespace maxscale
 {

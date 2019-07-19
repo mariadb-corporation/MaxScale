@@ -12,7 +12,7 @@
  */
 
 #include "clustrixmon.hh"
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modulecmd.hh>
 #include "clustrixmonitor.hh"
 

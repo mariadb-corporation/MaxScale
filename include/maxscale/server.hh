@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include <maxbase/average.hh>
 #include <maxscale/ssl.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 
 /**
  * Server configuration parameters names

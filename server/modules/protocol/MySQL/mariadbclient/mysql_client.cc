@@ -27,7 +27,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>

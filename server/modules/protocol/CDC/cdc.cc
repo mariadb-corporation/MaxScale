@@ -35,9 +35,9 @@
 #include <maxscale/ccdefs.hh>
 #include <cdc.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/protocol.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/poll.hh>
 
 #define ISspace(x) isspace((int)(x))

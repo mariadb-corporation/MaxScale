@@ -28,7 +28,7 @@
 
 #include <maxscale/authenticator.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <openssl/bio.h>

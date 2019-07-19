@@ -38,7 +38,7 @@
 #include <ctype.h>
 #include <maxbase/alloc.h>
 #include <maxscale/protocol.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/resultset.hh>
 
 #define ISspace(x) isspace((int)(x))

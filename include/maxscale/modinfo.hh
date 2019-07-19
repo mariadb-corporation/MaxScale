@@ -13,34 +13,30 @@
 #pragma once
 
 /**
- * @file modinfo.h The module information interface
+ * @file modinfo.hh The module information interface
  */
 
-#include <maxscale/cdefs.h>
-
+#include <maxscale/ccdefs.hh>
 #include <stdint.h>
-
 #include <maxbase/assert.h>
-
-MXS_BEGIN_DECLS
 
 /**
  * The status of the module. This gives some idea of the module
  * maturity.
  */
-typedef enum
+enum MXS_MODULE_STATUS
 {
     MXS_MODULE_IN_DEVELOPMENT = 0,
     MXS_MODULE_ALPHA_RELEASE,
     MXS_MODULE_BETA_RELEASE,
     MXS_MODULE_GA,
     MXS_MODULE_EXPERIMENTAL
-} MXS_MODULE_STATUS;
+};
 
 /**
  * The API implemented by the module
  */
-typedef enum
+enum MXS_MODULE_API
 {
     MXS_MODULE_API_PROTOCOL = 0,
     MXS_MODULE_API_ROUTER,
@@ -48,7 +44,7 @@ typedef enum
     MXS_MODULE_API_FILTER,
     MXS_MODULE_API_AUTHENTICATOR,
     MXS_MODULE_API_QUERY_CLASSIFIER,
-} MXS_MODULE_API;
+};
 
 /**
  * The module version structure.
@@ -65,12 +61,12 @@ typedef enum
  * Any change that is purely cosmetic and does not affect the calling
  * conventions of the API must increment only the patch version number.
  */
-typedef struct
+struct MXS_MODULE_VERSION
 {
     int major;
     int minor;
     int patch;
-} MXS_MODULE_VERSION;
+};
 
 enum mxs_module_param_type
 {
@@ -115,22 +111,22 @@ enum mxs_module_param_options
 };
 
 /** String to enum value mappings */
-typedef struct mxs_enum_value
+struct MXS_ENUM_VALUE
 {
     const char* name;       /**< Name of the enum value */
     uint64_t    enum_value; /**< The integer value of the enum */
-} MXS_ENUM_VALUE;
+};
 
 /** Module parameter declaration */
-typedef struct mxs_module_param
+struct MXS_MODULE_PARAM
 {
     const char*                name;            /**< Name of the parameter */
-    enum mxs_module_param_type type;            /**< Type of the parameter */
+    mxs_module_param_type      type;            /**< Type of the parameter */
     const char*                default_value;   /**< Default value for the parameter, NULL for no default
                                                  * value */
     uint64_t              options;              /**< Parameter options */
     const MXS_ENUM_VALUE* accepted_values;      /**< Only for enum values */
-} MXS_MODULE_PARAM;
+};
 
 /** Maximum number of parameters that modules can declare */
 #define MXS_MODULE_PARAM_MAX 64
@@ -138,7 +134,7 @@ typedef struct mxs_module_param
 /**
  * The module information structure
  */
-typedef struct mxs_module
+struct MXS_MODULE
 {
     MXS_MODULE_API     modapi;              /**< Module API type */
     MXS_MODULE_STATUS  status;              /**< Module development status */
@@ -147,6 +143,7 @@ typedef struct mxs_module
     const char*        version;             /**< Module version */
     uint64_t           module_capabilities; /**< Declared module capabilities */
     void*              module_object;       /**< Module type specific API implementation */
+
     /**
      * If non-NULL, this function is called once at process startup. If the
      * function fails, MariaDB MaxScale will not start.
@@ -180,7 +177,7 @@ typedef struct mxs_module
     void (* thread_finish)();
 
     MXS_MODULE_PARAM parameters[MXS_MODULE_PARAM_MAX + 1];      /**< Declared parameters */
-} MXS_MODULE;
+};
 
 /**
  * This should be the last value given to @c parameters. If the module has no
@@ -327,5 +324,3 @@ static inline const char* mxs_module_status_to_string(MXS_MODULE_STATUS type)
         return "Unknown";
     }
 }
-
-MXS_END_DECLS

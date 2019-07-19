@@ -26,7 +26,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/secrets.h>
 #include <maxsql/mariadb.hh>

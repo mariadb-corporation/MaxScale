@@ -39,7 +39,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/hint.h>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>

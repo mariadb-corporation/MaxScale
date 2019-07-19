@@ -34,7 +34,7 @@
 #include <maxbase/atomic.h>
 #include <telnetd.hh>
 #include <maxscale/adminusers.h>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 
 /**
  * @file telnetd.c - telnet daemon protocol module

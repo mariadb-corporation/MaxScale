@@ -57,7 +57,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/filter.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/server.hh>
 #include <maxbase/atomic.h>

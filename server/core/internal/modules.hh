@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/resultset.hh>
 
 /* Module types */

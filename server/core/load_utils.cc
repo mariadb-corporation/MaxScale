@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <string>
 
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/version.h>
 #include <maxscale/paths.h>
 #include <maxbase/alloc.h>

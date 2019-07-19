@@ -21,7 +21,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxscale/protocol.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/routingworker.hh>
 
 #include <openssl/crypto.h>

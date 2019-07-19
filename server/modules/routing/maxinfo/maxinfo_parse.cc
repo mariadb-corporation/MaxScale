@@ -34,7 +34,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
 #include <maxscale/router.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>

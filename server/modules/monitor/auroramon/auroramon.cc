@@ -21,7 +21,7 @@
 #include <mysqld_error.h>
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
 
 using maxscale::MonitorServer;

@@ -20,7 +20,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/config.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.hh>
 

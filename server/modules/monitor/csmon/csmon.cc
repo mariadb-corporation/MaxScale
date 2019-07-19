@@ -19,7 +19,7 @@
 #include <vector>
 #include <string>
 
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
 
 using maxscale::MonitorServer;

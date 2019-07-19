@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <string>
 
 class MaskingFilterConfig

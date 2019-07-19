@@ -16,7 +16,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/limits.h>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>

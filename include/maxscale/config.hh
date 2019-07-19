@@ -28,7 +28,7 @@
 #include <vector>
 
 #include <maxbase/jansson.h>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/pcre2.h>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/server.hh>

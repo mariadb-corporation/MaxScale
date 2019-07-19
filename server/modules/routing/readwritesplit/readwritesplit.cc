@@ -25,7 +25,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>

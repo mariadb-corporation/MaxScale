@@ -19,7 +19,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol/mysql.hh>

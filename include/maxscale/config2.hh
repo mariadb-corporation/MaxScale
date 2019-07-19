@@ -25,7 +25,7 @@
 #include <maxbase/assert.h>
 #include <maxbase/log.hh>
 #include <maxscale/config.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 
 namespace config
 {
