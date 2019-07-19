@@ -25,7 +25,7 @@
  * There are two "built in" commands, the help command and the quit
  * command.
  */
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <errno.h>
 #include <inttypes.h>

@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>

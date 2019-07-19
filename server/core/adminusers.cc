@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <stdio.h>
 #include <stdlib.h>

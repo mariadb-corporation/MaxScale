@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 #include "maxavro_internal.hh"
 #include <string.h>
 #include <maxbase/assert.h>

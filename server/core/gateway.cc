@@ -15,7 +15,7 @@
  * @file gateway.c - The entry point of MaxScale
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #ifdef HAVE_GLIBC
 #include <execinfo.h>

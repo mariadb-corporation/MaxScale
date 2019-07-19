@@ -12,10 +12,10 @@
  */
 #pragma once
 
-#include <maxscale/cdefs.h>
+#include <maxbase/cdefs.h>
 #include <maxbase/poll.h>
 
-MXS_BEGIN_DECLS
+MXB_BEGIN_DECLS
 
 typedef enum mxb_worker_msg_id_t
 {
