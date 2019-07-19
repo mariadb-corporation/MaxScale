@@ -428,6 +428,14 @@ static void sigfatal_handler(int i)
               cnf->sysname,
               cnf->release_string);
 
+    if (DCB* dcb = dcb_get_current())
+    {
+        if (dcb->session)
+        {
+            session_dump_statements(dcb->session);
+        }
+    }
+
     auto cb = [](const char* symbol, const char* cmd) {
             MXS_ALERT("  %s: %s", symbol, cmd);
         };
