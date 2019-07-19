@@ -85,7 +85,7 @@ static void         session_deliver_response(MXS_SESSION* session);
  * @param session  In reality an MXS_SESSION*.
  * @param data     The data to send to the client.
  */
-static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* data);
+static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* data, DCB* dcb);
 
 MXS_SESSION::MXS_SESSION(const SListener& listener)
     : state(SESSION_STATE_CREATED)
@@ -513,7 +513,7 @@ static int session_setup_filters(MXS_SESSION* ses)
  * @param       session         The session
  * @param       data            The buffer chain to write
  */
-int session_reply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* data)
+int session_reply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* data, DCB* dcb)
 {
     MXS_SESSION* the_session = (MXS_SESSION*)session;
 
@@ -559,7 +559,7 @@ bool session_route_query(MXS_SESSION* session, GWBUF* buffer)
     return rv;
 }
 
-bool session_route_reply(MXS_SESSION* session, GWBUF* buffer)
+bool session_route_reply(MXS_SESSION* session, GWBUF* buffer, DCB* dcb)
 {
     mxb_assert(session);
     mxb_assert(session->tail.clientReply);
@@ -568,7 +568,7 @@ bool session_route_reply(MXS_SESSION* session, GWBUF* buffer)
 
     bool rv;
 
-    if (session->tail.clientReply(session->tail.instance, session->tail.session, buffer) == 1)
+    if (session->tail.clientReply(session->tail.instance, session->tail.session, buffer, dcb) == 1)
     {
         rv = true;
     }
@@ -933,7 +933,8 @@ static void session_deliver_response(MXS_SESSION* session)
         mxb_assert(filter_session);
         mxb_assert(buffer);
 
-        session->response.up.clientReply(filter_instance, filter_session, buffer);
+        // TODO: Figure out what to do with the DCB argument
+        session->response.up.clientReply(filter_instance, filter_session, buffer, nullptr);
 
         session->response.up.instance = NULL;
         session->response.up.session = NULL;

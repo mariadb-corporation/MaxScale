@@ -158,14 +158,16 @@ typedef struct mxs_filter_object
      *
      * TODO: Document how clientReply should be used
      *
-     * @param instance Filter instance
-     * @param fsession Filter session
-     * @param queue    Response from the server
+     * @param instance    Filter instance
+     * @param fsession    Filter session
+     * @param queue       Response from the server
+     * @param backend_dcb The backend DCB where the response came from, should not be modified
      *
-     * @return If successful, the function returns 1. If an error occurs
-     * and the session should be closed, the function returns 0.
+     * @return If successful, the function returns 1. If an error occurs and the session should be closed, the
+     *         function returns 0.
      */
-    int32_t (* clientReply)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+    int32_t (* clientReply)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue,
+                            DCB* backend_dcb);
 
     /**
      * @brief Called for diagnostic output
@@ -343,9 +345,9 @@ public:
          *
          * @return Whatever the following component returns.
          */
-        int clientReply(GWBUF* pPacket)
+        int clientReply(GWBUF* pPacket, DCB* dcb)
         {
-            return m_data.clientReply(m_data.instance, m_data.session, pPacket);
+            return m_data.clientReply(m_data.instance, m_data.session, pPacket, dcb);
         }
 
         MXS_UPSTREAM m_data;
@@ -390,7 +392,7 @@ public:
      *
      * @param pPacket A client packet.
      */
-    int clientReply(GWBUF* pPacket);
+    int clientReply(GWBUF* pPacket, DCB* dcb);
 
     /**
      * Called for obtaining diagnostics about the filter session.
@@ -539,12 +541,12 @@ public:
         return rv;
     }
 
-    static int clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
+    static int clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket, DCB* dcb)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         int rv = 0;
-        MXS_EXCEPTION_GUARD(rv = pFilterSession->clientReply(pPacket));
+        MXS_EXCEPTION_GUARD(rv = pFilterSession->clientReply(pPacket, dcb));
 
         return rv;
     }

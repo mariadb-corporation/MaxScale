@@ -791,7 +791,7 @@ static int blr_slave_replay(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF*
             data += GWBUF_LENGTH(b);
         }
 
-        return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, clone);
+        return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, clone, nullptr);
     }
     else
     {
@@ -826,7 +826,7 @@ static void blr_slave_send_error(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, c
     encode_value(&data[5], 1064, 16);   // Error Code
     memcpy((char*)&data[7], "#42000", 6);
     memcpy(&data[13], msg, strlen(msg));    // Error Message
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 /*
@@ -887,7 +887,7 @@ static int blr_slave_send_timestamp(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
     ptr += ts_len;
     // EOF packet to terminate result
     memcpy(ptr, timestamp_eof, sizeof(timestamp_eof));
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 /**
@@ -927,7 +927,7 @@ static int blr_slave_send_maxscale_version(ROUTER_INSTANCE* router, ROUTER_SLAVE
     *ptr++ = vers_len;                          // Length of result string
     memcpy((char*)ptr, version, vers_len);      // Result string
     /*  ptr += vers_len;  Not required unless more data is to be added */
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
     return blr_slave_send_eof(router, slave, 5);
 }
 
@@ -968,7 +968,7 @@ static int blr_slave_send_server_id(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
     *ptr++ = id_len;                        // Length of result string
     memcpy((char*)ptr, server_id, id_len);  // Result string
     /* ptr += id_len; Not required unless more data is to be added */
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
     return blr_slave_send_eof(router, slave, 5);
 }
 
@@ -1022,7 +1022,7 @@ static int blr_slave_send_maxscale_variables(ROUTER_INSTANCE* router, ROUTER_SLA
     *ptr++ = vers_len;                          // Length of result string
     memcpy((char*)ptr, version, vers_len);      // Result string
     /* ptr += vers_len; Not required unless more data is to be added */
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
     return blr_slave_send_eof(router, slave, seqno++);
 }
 
@@ -1100,7 +1100,7 @@ static int blr_slave_send_master_status(ROUTER_INSTANCE* router, ROUTER_SLAVE* s
     *ptr++ = 0;     // Send 3 empty values
     *ptr++ = 0;
     *ptr++ = 0;
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
     return blr_slave_send_eof(router, slave, 9);
 }
 
@@ -1758,7 +1758,7 @@ static int blr_slave_send_slave_status(ROUTER_INSTANCE* router,
     // Trim the buffer to the actual size
     pkt = gwbuf_rtrim(pkt, len - actual_len);
 
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
     return blr_slave_send_eof(router, slave, seqno++);
 }
 
@@ -1826,7 +1826,7 @@ static int blr_slave_send_slave_hosts(ROUTER_INSTANCE* router, ROUTER_SLAVE* sla
             *ptr++ = strlen(slave_uuid);                        // Length of result string
             memcpy((char*)ptr, slave_uuid, strlen(slave_uuid)); // Result string
             ptr += strlen(slave_uuid);
-            MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+            MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
         }
         sptr = sptr->next;
     }
@@ -3255,7 +3255,7 @@ static int blr_slave_fake_rotate(ROUTER_INSTANCE* router,
                                           new_file,
                                           router->masterid);
 
-    int ret = r_event ? MXS_SESSION_ROUTE_REPLY(slave->dcb->session, r_event) : 0;
+    int ret = r_event ? MXS_SESSION_ROUTE_REPLY(slave->dcb->session, r_event, nullptr) : 0;
 
     /* Close binlog file on success */
     if (ret)
@@ -3382,7 +3382,7 @@ static uint32_t blr_slave_send_fde(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave,
                    event_size - BINLOG_EVENT_CRC_SIZE);
     encode_value(ptr, chksum, 32);
 
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, event);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, event, nullptr);
 }
 
 
@@ -3410,7 +3410,7 @@ static int blr_slave_send_fieldcount(ROUTER_INSTANCE* router,
     ptr += 3;
     *ptr++ = 0x01;              // Sequence number in response
     *ptr++ = count;             // Number of columns
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 
@@ -3474,7 +3474,7 @@ static int blr_slave_send_columndef(ROUTER_INSTANCE* router,
     *ptr++ = 0;
     *ptr++ = 0;
     *ptr++ = 0;
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 
@@ -3503,7 +3503,7 @@ static int blr_slave_send_eof(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, int 
     encode_value(ptr, 0, 16);       // No errors
     ptr += 2;
     encode_value(ptr, 2, 16);       // Autocommit enabled
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 /**
@@ -3570,7 +3570,7 @@ static int blr_slave_send_disconnected_server(ROUTER_INSTANCE* router,
     memcpy((char*)ptr, state, strlen(state));   // Result string
     /* ptr += strlen(state); Not required unless more data is to be added */
 
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
     return blr_slave_send_eof(router, slave, seqno++);
 }
 
@@ -3738,7 +3738,7 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
             memcpy((char*)ptr, state, strlen(state));           // Result string
             ptr += strlen(state);
 
-            MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+            MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 
             sptr->state = BLRS_UNREGISTERED;
             dcb_close_in_owning_thread(sptr->dcb);
@@ -3780,7 +3780,7 @@ static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     memcpy(GWBUF_DATA(pkt), ok_packet, sizeof(ok_packet));
 
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 /**
@@ -3829,7 +3829,7 @@ static int blr_slave_send_ok_message(ROUTER_INSTANCE* router,
         strcpy((char*)ptr, message);
     }
 
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 /**
@@ -4176,7 +4176,7 @@ static void blr_slave_send_error_packet(ROUTER_SLAVE* slave,
 
     memcpy(&data[13], msg, strlen(msg));        // Error Message
 
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
@@ -5435,7 +5435,7 @@ static int blr_slave_send_var_value(ROUTER_INSTANCE* router,
     memcpy((char*)ptr, value, vers_len);// Result string
 
     /* ptr += vers_len; Not required unless more data is added */
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 
     return blr_slave_send_eof(router, slave, 5);
 }
@@ -5519,7 +5519,7 @@ static int blr_slave_send_variable(ROUTER_INSTANCE* router,
     *ptr++ = vers_len;                  // Length of result string
     memcpy((char*)ptr, value, vers_len);// Result string with var value
     /* ptr += vers_len; Not required unless more data is added */
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 
     MXS_FREE(old_ptr);
 
@@ -5607,7 +5607,7 @@ static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE* router,
     *ptr++ = 0;
     *ptr++ = 0;
 
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 static char* bypass_change_master(char* input)
@@ -5820,7 +5820,7 @@ static int blr_slave_send_warning_message(ROUTER_INSTANCE* router,
     }
     slave->warning_msg = MXS_STRDUP_A(message);
 
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 /**
@@ -5911,7 +5911,7 @@ static int blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
             /* ptr += msg_len; Not required unless more data is added */
         }
 
-        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 
         return blr_slave_send_eof(router, slave, 7);
     }
@@ -6067,7 +6067,7 @@ static int blr_slave_send_status_variable(ROUTER_INSTANCE* router,
     memcpy((char*)ptr, value, vers_len);
 
     /* ptr += vers_len; Not required unless more data is added */
-    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 
     MXS_FREE(old_ptr);
 
@@ -6170,7 +6170,7 @@ static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE* router,
     *ptr++ = 0;
     *ptr++ = 0;
 
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
 }
 
 /**
@@ -6303,7 +6303,7 @@ static void send_heartbeat(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     /* Write the packet */
     mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(slave->dcb->owner);
     worker->execute([slave, h_event]() {
-                        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, h_event);
+                        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, h_event, nullptr);
                     }, mxs::RoutingWorker::EXECUTE_AUTO);
 }
 
@@ -6348,26 +6348,26 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
             {CN_SSL_VERIFY_PEER_CERTIFICATE, "true"}
         });
 
-            if (!config.ssl_version.empty())
-            {
-                mxb_assert((config.ssl_version.front() != '\'') && (config.ssl_version.front() != '"'));
-                params.set(CN_SSL_VERSION, config.ssl_version);
-                MXS_FREE(router->ssl_version);
-                router->ssl_version = MXS_STRDUP_A(config.ssl_version.c_str());
-            }
+        if (!config.ssl_version.empty())
+        {
+            mxb_assert((config.ssl_version.front() != '\'') && (config.ssl_version.front() != '"'));
+            params.set(CN_SSL_VERSION, config.ssl_version);
+            MXS_FREE(router->ssl_version);
+            router->ssl_version = MXS_STRDUP_A(config.ssl_version.c_str());
+        }
 
-            /* Update options in router fields */
-                mxb_assert((config.ssl_key.front() != '\'') && (config.ssl_key.front() != '"'));
-                MXS_FREE(router->ssl_key);
-                router->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
+        /* Update options in router fields */
+        mxb_assert((config.ssl_key.front() != '\'') && (config.ssl_key.front() != '"'));
+        MXS_FREE(router->ssl_key);
+        router->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
 
-                mxb_assert((config.ssl_ca.front() != '\'') && (config.ssl_ca.front() != '"'));
-                MXS_FREE(router->ssl_ca);
-                router->ssl_ca = MXS_STRDUP_A(config.ssl_ca.c_str());
+        mxb_assert((config.ssl_ca.front() != '\'') && (config.ssl_ca.front() != '"'));
+        MXS_FREE(router->ssl_ca);
+        router->ssl_ca = MXS_STRDUP_A(config.ssl_ca.c_str());
 
-                mxb_assert((config.ssl_cert.front() != '\'') && (config.ssl_cert.front() != '"'));
-                MXS_FREE(router->ssl_cert);
-                router->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
+        mxb_assert((config.ssl_cert.front() != '\'') && (config.ssl_cert.front() != '"'));
+        MXS_FREE(router->ssl_cert);
+        router->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
 
         std::unique_ptr<mxs::SSLContext> ssl(mxs::SSLContext::create(params));
 
@@ -6854,7 +6854,7 @@ static int blr_send_connect_fake_rotate(ROUTER_INSTANCE* router,
                                                  router->masterid);
 
     /* Send Fake Rotate Event or return 0*/
-    return r_event ? MXS_SESSION_ROUTE_REPLY(slave->dcb->session, r_event) : 0;
+    return r_event ? MXS_SESSION_ROUTE_REPLY(slave->dcb->session, r_event, nullptr) : 0;
 }
 
 /**
@@ -7333,7 +7333,7 @@ static int blr_send_fake_gtid_list(ROUTER_SLAVE* slave,
                                                      serverid);
 
     /* Send Fake GTID_LIST Event or return 0*/
-    return gl_event ? MXS_SESSION_ROUTE_REPLY(slave->dcb->session, gl_event) : 0;
+    return gl_event ? MXS_SESSION_ROUTE_REPLY(slave->dcb->session, gl_event, nullptr) : 0;
 }
 
 /**
@@ -8602,7 +8602,7 @@ static int blr_show_binary_logs(ROUTER_INSTANCE* router,
                                          pos,
                                          seqno)) != NULL)
         {
-            MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+            MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
             /* Increment sequence */
             seqno++;
         }
@@ -8744,7 +8744,7 @@ static int binary_logs_select_cb(void* data,
             /* Set last file name */
             data_set->last_file = MXS_STRDUP_A(values[0]);
             /* Write packet to client */
-            MXS_SESSION_ROUTE_REPLY(dcb->session, pkt);
+            MXS_SESSION_ROUTE_REPLY(dcb->session, pkt, nullptr);
             /* Set success */
             ret = 0;
         }
@@ -8809,7 +8809,7 @@ static int blr_slave_send_id_ro(ROUTER_INSTANCE* router,
                                      seqno++)) != NULL)
     {
         /* Write packet to client */
-        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
+        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt, nullptr);
     }
 
     /* Add the result set EOF and return */

@@ -95,7 +95,7 @@ static void setUpstream(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* fsession,
                         MXS_UPSTREAM* upstream);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue, DCB* dcb);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -1400,7 +1400,7 @@ unsigned int is_eof(void* p)
  * @param session       The filter session
  * @param reply         The response data
  */
-static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply)
+static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
 {
     MQ_SESSION* my_session = (MQ_SESSION*) session;
     MQ_INSTANCE* my_instance = (MQ_INSTANCE*) instance;
@@ -1531,7 +1531,8 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
 
     return my_session->up.clientReply(my_session->up.instance,
                                       my_session->up.session,
-                                      reply);
+                                      reply,
+                                      dcb);
 }
 
 /**

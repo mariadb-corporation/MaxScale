@@ -49,11 +49,11 @@ int ExampleFilterSession::routeQuery(GWBUF* pPacket)
     return mxs::FilterSession::routeQuery(pPacket);
 }
 
-int ExampleFilterSession::clientReply(GWBUF* pPacket)
+int ExampleFilterSession::clientReply(GWBUF* pPacket, DCB* dcb)
 {
     m_replies++;
     m_filter.reply_seen();
 
     // Pass the reply forward.
-    return mxs::FilterSession::clientReply(pPacket);
+    return mxs::FilterSession::clientReply(pPacket, dcb);
 }

@@ -67,9 +67,9 @@ int CommentFilterSession::routeQuery(GWBUF* pPacket)
     return pPacket ? mxs::FilterSession::routeQuery(pPacket) : 1;
 }
 
-int CommentFilterSession::clientReply(GWBUF* pPacket)
+int CommentFilterSession::clientReply(GWBUF* pPacket, DCB* dcb)
 {
-    return mxs::FilterSession::clientReply(pPacket);
+    return mxs::FilterSession::clientReply(pPacket, dcb);
 }
 // TODO this probably should be refactored in some way in case we add more variables
 string CommentFilterSession::parseComment(string comment)

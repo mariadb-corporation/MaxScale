@@ -163,7 +163,7 @@ private:
 
     int clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
     {
-        return m_pApi->clientReply(pInstance, pFilter_session, pStatement);
+        return m_pApi->clientReply(pInstance, pFilter_session, pStatement, nullptr);
     }
 
     void setDownstream(MXS_FILTER* pInstance,

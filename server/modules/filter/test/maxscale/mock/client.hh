@@ -51,7 +51,7 @@ public:
          *
          * @return 1 if processing should continue, 0 otherwise.
          */
-        virtual int32_t backend_reply(GWBUF* pResponse) = 0;
+        virtual int32_t backend_reply(GWBUF* pResponse, DCB* dcb) = 0;
 
         /**
          * Called when a response is sent directly by a filter.
@@ -121,9 +121,12 @@ public:
     void set_as_upstream_on(FilterModule::Session& session);
 
 private:
-    int32_t clientReply(GWBUF* pResponse);
+    int32_t clientReply(GWBUF* pResponse, DCB* dcb);
 
-    static int32_t clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pSession, GWBUF* pResponse);
+    static int32_t clientReply(MXS_FILTER* pInstance,
+                               MXS_FILTER_SESSION* pSession,
+                               GWBUF* pResponse,
+                               DCB* dcb);
 
     // Dcb::Handler
     int32_t write(GWBUF* pBuffer);

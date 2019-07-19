@@ -289,7 +289,7 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
     return rv;
 }
 
-int MaskingFilterSession::clientReply(GWBUF* pPacket)
+int MaskingFilterSession::clientReply(GWBUF* pPacket, DCB* dcb)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(pPacket));
 
@@ -336,7 +336,7 @@ int MaskingFilterSession::clientReply(GWBUF* pPacket)
     int rv;
     if (m_state != SUPPRESSING_RESPONSE)
     {
-        rv = FilterSession::clientReply(pPacket);
+        rv = FilterSession::clientReply(pPacket, dcb);
     }
     else
     {

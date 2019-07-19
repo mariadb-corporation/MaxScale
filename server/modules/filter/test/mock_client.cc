@@ -78,7 +78,7 @@ void Client::set_as_upstream_on(FilterModule::Session& filter_session)
     filter_session.setUpstream(&upstream);
 }
 
-int32_t Client::clientReply(GWBUF* pResponse)
+int32_t Client::clientReply(GWBUF* pResponse, DCB* dcb)
 {
     int32_t rv = 1;
 
@@ -86,7 +86,7 @@ int32_t Client::clientReply(GWBUF* pResponse)
 
     if (m_pHandler)
     {
-        rv = m_pHandler->backend_reply(pResponse);
+        rv = m_pHandler->backend_reply(pResponse, dcb);
     }
     else
     {
@@ -117,12 +117,13 @@ int32_t Client::write(GWBUF* pResponse)
 // static
 int32_t Client::clientReply(MXS_FILTER* pInstance,
                             MXS_FILTER_SESSION* pSession,
-                            GWBUF* pResponse)
+                            GWBUF* pResponse,
+                            DCB* dcb)
 {
     Client* pClient = reinterpret_cast<Client*>(pSession);
     mxb_assert(pInstance == &pClient->m_instance);
 
-    return pClient->clientReply(pResponse);
+    return pClient->clientReply(pResponse, dcb);
 }
 
 //

@@ -91,7 +91,7 @@ static void setUpstream(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* fsession,
                         MXS_UPSTREAM* upstream);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue, DCB* dcb);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -493,7 +493,7 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
                     size_t len = my_session->sql_index + strlen(ptr) + my_instance->query_delimiter_size + 1;
 
                     /* if the total length of query statements exceeds the maximum limit, print an error and
-                    * return */
+                     * return */
                     if (len > sql_size_limit)
                     {
                         MXS_ERROR("The size of query statements exceeds the maximum buffer limit of 64MB.");
@@ -555,7 +555,7 @@ retblock:
                                        queue);
 }
 
-static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply)
+static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
 {
     TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
     TPM_SESSION* my_session = (TPM_SESSION*)session;
@@ -626,7 +626,8 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
     /* Pass the result upstream */
     return my_session->up.clientReply(my_session->up.instance,
                                       my_session->up.session,
-                                      reply);
+                                      reply,
+                                      dcb);
 }
 
 /**

@@ -140,7 +140,7 @@ void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
     {
         HR_DEBUG("Returning packet from %s.", pServer ? pserver->name() : "(null)");
 
-        MXS_SESSION_ROUTE_REPLY(pBackend->session, pPacket);
+        MXS_SESSION_ROUTE_REPLY(pBackend->session, pPacket, pBackend);
     }
     else
     {

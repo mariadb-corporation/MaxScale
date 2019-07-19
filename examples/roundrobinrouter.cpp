@@ -132,7 +132,7 @@ public:
     void             client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb);
     void             handle_error(RRRouterSession* rses,
                                   GWBUF* message,
-                                  DCB*   problem_dcb,
+                                  DCB* problem_dcb,
                                   mxs_error_action_t action,
                                   bool* succp);
 };
@@ -340,7 +340,7 @@ void RRRouter::client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb)
         return;
     }
 
-    MXS_SESSION_ROUTE_REPLY(backend_dcb->session, buf);
+    MXS_SESSION_ROUTE_REPLY(backend_dcb->session, buf, backend_dcb);
 
     m_routing_c++;
     if (m_print_on_routing)
@@ -350,7 +350,7 @@ void RRRouter::client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb)
 }
 void RRRouter::handle_error(RRRouterSession* rses,
                             GWBUF* message,
-                            DCB*   problem_dcb,
+                            DCB* problem_dcb,
                             mxs_error_action_t action,
                             bool* succp)
 {
@@ -580,11 +580,11 @@ static json_t*             diagnostics_json(const MXS_ROUTER* instance);
 static void                clientReply(MXS_ROUTER* instance,
                                        MXS_ROUTER_SESSION* router_session,
                                        GWBUF* resultbuf,
-                                       DCB*   backend_dcb);
+                                       DCB* backend_dcb);
 static void handleError(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* errmsgbuf,
-                        DCB*   backend_dcb,
+                        DCB* backend_dcb,
                         mxs_error_action_t action,
                         bool* succp);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
@@ -818,7 +818,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* instance)
 static void clientReply(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* session,
                         GWBUF* queue,
-                        DCB*   backend_dcb)
+                        DCB* backend_dcb)
 {
     RRRouter* router = static_cast<RRRouter*>(instance);
     RRRouterSession* rses = static_cast<RRRouterSession*>(session);
@@ -842,7 +842,7 @@ static void clientReply(MXS_ROUTER* instance,
 static void handleError(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* session,
                         GWBUF* message,
-                        DCB*   problem_dcb,
+                        DCB* problem_dcb,
                         mxs_error_action_t action,
                         bool* succp)
 {

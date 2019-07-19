@@ -33,7 +33,7 @@ public:
 
     int routeQuery(GWBUF* pPacket);
 
-    int clientReply(GWBUF* pPacket);
+    int clientReply(GWBUF* pPacket, DCB* dcb);
 
 private:
     MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter);

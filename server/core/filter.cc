@@ -463,9 +463,9 @@ int FilterSession::routeQuery(GWBUF* pPacket)
     return m_down.routeQuery(pPacket);
 }
 
-int FilterSession::clientReply(GWBUF* pPacket)
+int FilterSession::clientReply(GWBUF* pPacket, DCB* dcb)
 {
-    return m_up.clientReply(pPacket);
+    return m_up.clientReply(pPacket, dcb);
 }
 
 void FilterSession::diagnostics(DCB* pDcb)

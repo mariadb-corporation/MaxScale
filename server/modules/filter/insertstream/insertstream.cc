@@ -43,7 +43,7 @@ static int32_t  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, G
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
-static int32_t  clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply);
+static int32_t  clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb);
 static bool     extract_insert_target(GWBUF* buffer, char* target, int len);
 static GWBUF*   create_load_data_command(const char* target);
 static GWBUF*   convert_to_stream(GWBUF* buffer, uint8_t packet_num);
@@ -462,7 +462,7 @@ static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
  *
  * @return 1 on success, 0 on error
  */
-static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply)
+static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
 {
     DS_SESSION* my_session = (DS_SESSION*) session;
     int rc = 1;
@@ -493,7 +493,7 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GW
     {
         rc = my_session->up.clientReply(my_session->up.instance,
                                         my_session->up.session,
-                                        reply);
+                                        reply, dcb);
     }
 
     return rc;

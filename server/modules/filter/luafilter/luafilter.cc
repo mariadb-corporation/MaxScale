@@ -70,7 +70,7 @@ static void setUpstream(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* fsession,
                         MXS_UPSTREAM* upstream);
 static int32_t  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-static int32_t  clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static int32_t  clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue, DCB* dcb);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -484,7 +484,7 @@ static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_U
  * @param queue Server response
  * @return 1 on success
  */
-static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
+static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue, DCB* dcb)
 {
     LUA_SESSION* my_session = (LUA_SESSION*) session;
     LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
@@ -517,7 +517,7 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GW
 
     return my_session->up.clientReply(my_session->up.instance,
                                       my_session->up.session,
-                                      queue);
+                                      queue, dcb);
 }
 
 /**

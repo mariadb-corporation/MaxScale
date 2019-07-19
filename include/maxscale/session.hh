@@ -96,7 +96,8 @@ typedef int32_t (* DOWNSTREAMFUNC)(struct mxs_filter* instance,
                                    GWBUF* response);
 typedef int32_t (* UPSTREAMFUNC)(struct mxs_filter* instance,
                                  struct mxs_filter_session* session,
-                                 GWBUF* response);
+                                 GWBUF* response,
+                                 DCB* dcb);
 
 typedef struct mxs_downstream
 {
@@ -219,10 +220,11 @@ bool session_route_query(MXS_SESSION* session, GWBUF* buffer);
  *
  * @param session  The session.
  * @param buffer   A buffer.
+ * @param dcb      The DCB where the response came from
  *
  * @return True, if the routing should continue, false otherwise.
  */
-bool session_route_reply(MXS_SESSION* session, GWBUF* buffer);
+bool session_route_reply(MXS_SESSION* session, GWBUF* buffer, DCB* dcb);
 
 /**
  * A convenience macro that can be used by the protocol modules to route
@@ -236,7 +238,7 @@ bool session_route_reply(MXS_SESSION* session, GWBUF* buffer);
  * the replies to the first element in the pipeline of filters and
  * the protocol.
  */
-#define MXS_SESSION_ROUTE_REPLY(sess, buf) session_route_reply(sess, buf)
+#define MXS_SESSION_ROUTE_REPLY(sess, buf, dcb) session_route_reply(sess, buf, dcb)
 
 /**
  * Start the session

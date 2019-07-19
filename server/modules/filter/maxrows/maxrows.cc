@@ -50,7 +50,8 @@ static int routeQuery(MXS_FILTER* instance,
                       GWBUF* queue);
 static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* sdata,
-                       GWBUF* queue);
+                       GWBUF* queue,
+                       DCB* dcb);
 static void diagnostics(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* sdata,
                         DCB* dcb);
@@ -394,7 +395,8 @@ static int routeQuery(MXS_FILTER* instance,
  */
 static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* sdata,
-                       GWBUF* data)
+                       GWBUF* data,
+                       DCB* dcb)
 {
     MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
@@ -1050,10 +1052,13 @@ static int send_upstream(MAXROWS_SESSION_DATA* csdata)
         csdata->res.column_defs = NULL;
     }
 
+    // TODO: Fix this
+
     /* Send data to client */
     int rv = csdata->up.clientReply(csdata->up.instance,
                                     csdata->up.session,
-                                    csdata->res.data);
+                                    csdata->res.data,
+                                    nullptr);
     csdata->res.data = NULL;
 
     return rv;
@@ -1110,10 +1115,12 @@ static int send_eof_upstream(MAXROWS_SESSION_DATA* csdata)
 
         if (new_pkt)
         {
+            // TODO: Fix this
             /* new_pkt will be freed by write routine */
             rv = csdata->up.clientReply(csdata->up.instance,
                                         csdata->up.session,
-                                        new_pkt);
+                                        new_pkt,
+                                        nullptr);
         }
     }
 
@@ -1165,9 +1172,11 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA* csdata)
 
     mxb_assert(csdata->res.data != NULL);
 
+    // TODO: Fix this
     int rv = csdata->up.clientReply(csdata->up.instance,
                                     csdata->up.session,
-                                    packet);
+                                    packet,
+                                    nullptr);
 
     /* Free server result buffer */
     gwbuf_free(csdata->res.data);
@@ -1245,9 +1254,11 @@ static int send_error_upstream(MAXROWS_SESSION_DATA* csdata)
     /* Copy SQL input */
     memcpy(&ptr[13 + err_prefix_len], sql, sql_len);
 
+    // TODO: Fix this
     int rv = csdata->up.clientReply(csdata->up.instance,
                                     csdata->up.session,
-                                    err_pkt);
+                                    err_pkt,
+                                    nullptr);
 
     /* Free server result buffer */
     gwbuf_free(csdata->res.data);
