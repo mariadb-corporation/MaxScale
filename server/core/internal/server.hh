@@ -233,10 +233,6 @@ public:
      */
     static json_t* server_list_to_json(const char* host);
 
-    static bool create_server_config(const Server* server, const char* filename);
-
-    static json_t* server_json_attributes(const Server* server);
-
     /**
      * Set server custom parameter.
      *
@@ -322,6 +318,10 @@ public:
     DCB** persistent = nullptr;     /**< List of unused persistent connections to the server */
 
 private:
+    json_t* to_json_data(const char* host) const;
+    json_t* json_attributes() const;
+    bool create_server_config(const char* filename) const;
+
     struct Settings
     {
         mutable std::mutex lock;    /**< Protects array-like settings from concurrent access */

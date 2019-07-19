@@ -553,18 +553,18 @@ void Server::dListServers(DCB* dcb)
     message += horizontalLine;
 
     bool have_servers = false;
-    this_unit.foreach_server([&message, &have_servers](Server* server) {
-                                 if (server->server_is_active())
-                                 {
-                                     have_servers = true;
-                                     string stat = server->status_string();
-                                     message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
-                                                                   server->name(), server->address,
-                                                                   server->port,
-                                                                   server->stats.n_current, stat.c_str());
-                                 }
-                                 return true;
-                             });
+    this_unit.foreach_server(
+        [&message, &have_servers](Server* server) {
+            if (server->server_is_active())
+            {
+                have_servers = true;
+                string stat = server->status_string();
+                message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
+                                              server->name(), server->address, server->port,
+                                              server->stats.n_current, stat.c_str());
+            }
+            return true;
+        });
 
     if (have_servers)
     {
@@ -740,16 +740,17 @@ std::unique_ptr<ResultSet> Server::getList()
     std::unique_ptr<ResultSet> set =
         ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
 
-    this_unit.foreach_server([&set](Server* server) {
-                                 if (server->server_is_active())
-                                 {
-                                     string stat = server->status_string();
-                                     set->add_row({server->name(), server->address,
-                                                   std::to_string(server->port),
-                                                   std::to_string(server->stats.n_current), stat});
-                                 }
-                                 return true;
-                             });
+    this_unit.foreach_server(
+        [&set](Server* server) {
+            if (server->server_is_active())
+            {
+                string stat = server->status_string();
+                set->add_row({server->name(), server->address,
+                              std::to_string(server->port),
+                              std::to_string(server->stats.n_current), stat});
+            }
+            return true;
+        });
 
     return set;
 }
@@ -820,37 +821,28 @@ void Server::set_version(uint64_t version_num, const std::string& version_str)
 
 /**
  * Creates a server configuration at the location pointed by @c filename
- * TODO: Move to member
  *
- * @param server Server to serialize into a configuration
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-bool Server::create_server_config(const Server* server, const char* filename)
+bool Server::create_server_config(const char* filename) const
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
     if (file == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
-                  filename,
-                  server->name(),
-                  errno,
-                  mxs_strerror(errno));
+                  filename, name(), errno, mxs_strerror(errno));
         return false;
     }
 
-    // TODO: Check for return values on all of the dprintf calls
-    const MXS_MODULE* mod = get_module(server->m_settings.protocol.c_str(), MODULE_PROTOCOL);
-    string config = generate_config_string(server->name(),
-                                           server->m_settings.all_parameters,
-                                           config_server_params,
+    const MXS_MODULE* mod = get_module(m_settings.protocol.c_str(), MODULE_PROTOCOL);
+    string config = generate_config_string(name(), m_settings.all_parameters, config_server_params,
                                            mod->parameters);
 
     // Print custom parameters. The generate_config_string()-call doesn't print them.
     {
-        Guard guard(server->m_settings.lock);
-        for (const auto& elem : server->m_settings.custom_parameters)
+        Guard guard(m_settings.lock);
+        for (const auto& elem : m_settings.custom_parameters)
         {
             config += elem.first + "=" + elem.second + "\n";
         }
@@ -868,41 +860,26 @@ bool Server::create_server_config(const Server* server, const char* filename)
 
 bool Server::serialize() const
 {
-    const Server* server = this;
     bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename,
-             sizeof(filename),
-             "%s/%s.cnf.tmp",
-             get_config_persistdir(),
-             server->name());
+    string final_filename = mxb::string_printf("%s/%s.cnf", get_config_persistdir(), name());
+    string temp_filename = final_filename + ".tmp";
+    auto zTempFilename = temp_filename.c_str();
 
-    if (unlink(filename) == -1 && errno != ENOENT)
+    if (unlink(zTempFilename) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove temporary server configuration at '%s': %d, %s",
-                  filename,
-                  errno,
-                  mxs_strerror(errno));
+                  zTempFilename, errno, mxs_strerror(errno));
     }
-    else if (create_server_config(server, filename))
+    else if (create_server_config(zTempFilename))
     {
-        char final_filename[PATH_MAX];
-        strcpy(final_filename, filename);
-
-        char* dot = strrchr(final_filename, '.');
-        mxb_assert(dot);
-        *dot = '\0';
-
-        if (rename(filename, final_filename) == 0)
+        if (rename(zTempFilename, final_filename.c_str()) == 0)
         {
             rval = true;
         }
         else
         {
             MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
-                      filename,
-                      errno,
-                      mxs_strerror(errno));
+                      zTempFilename, errno, mxs_strerror(errno));
         }
     }
 
@@ -935,8 +912,7 @@ bool SERVER::is_mxs_service()
     return rval;
 }
 
-// TODO: member function
-json_t* Server::server_json_attributes(const Server* server)
+json_t* Server::json_attributes() const
 {
     /** Resource attributes */
     json_t* attr = json_object();
@@ -944,8 +920,8 @@ json_t* Server::server_json_attributes(const Server* server)
     /** Store server parameters in attributes */
     json_t* params = json_object();
 
-    const MXS_MODULE* mod = get_module(server->m_settings.protocol.c_str(), MODULE_PROTOCOL);
-    config_add_module_params_json(&server->m_settings.all_parameters,
+    const MXS_MODULE* mod = get_module(m_settings.protocol.c_str(), MODULE_PROTOCOL);
+    config_add_module_params_json(&m_settings.all_parameters,
                                   {CN_TYPE},
                                   config_server_params,
                                   mod->parameters,
@@ -953,8 +929,8 @@ json_t* Server::server_json_attributes(const Server* server)
 
     // Add weighting parameters that weren't added by config_add_module_params_json
     {
-        Guard guard(server->m_settings.lock);
-        for (const auto& elem : server->m_settings.custom_parameters)
+        Guard guard(m_settings.lock);
+        for (const auto& elem : m_settings.custom_parameters)
         {
             if (!json_object_get(params, elem.first.c_str()))
             {
@@ -966,29 +942,29 @@ json_t* Server::server_json_attributes(const Server* server)
     json_object_set_new(attr, CN_PARAMETERS, params);
 
     /** Store general information about the server state */
-    string stat = server->status_string();
+    string stat = status_string();
     json_object_set_new(attr, CN_STATE, json_string(stat.c_str()));
 
-    json_object_set_new(attr, CN_VERSION_STRING, json_string(server->version_string().c_str()));
+    json_object_set_new(attr, CN_VERSION_STRING, json_string(version_string().c_str()));
 
-    json_object_set_new(attr, "node_id", json_integer(server->node_id));
-    json_object_set_new(attr, "master_id", json_integer(server->master_id));
+    json_object_set_new(attr, "node_id", json_integer(node_id));
+    json_object_set_new(attr, "master_id", json_integer(master_id));
 
-    const char* event_name = Monitor::get_event_name((mxs_monitor_event_t) server->last_event);
-    time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
+    const char* event_name = Monitor::get_event_name((mxs_monitor_event_t) last_event);
+    time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(triggered_at);
     json_object_set_new(attr, "last_event", json_string(event_name));
     json_object_set_new(attr, "triggered_at", json_string(http_to_date(t).c_str()));
 
-    if (server->rlag >= 0)
+    if (rlag >= 0)
     {
-        json_object_set_new(attr, "replication_lag", json_integer(server->rlag));
+        json_object_set_new(attr, "replication_lag", json_integer(rlag));
     }
 
-    if (server->node_ts > 0)
+    if (node_ts > 0)
     {
         struct tm result;
         char timebuf[30];
-        time_t tim = server->node_ts;
+        time_t tim = node_ts;
         asctime_r(localtime_r(&tim, &result), timebuf);
         mxb::trim(timebuf);
 
@@ -996,34 +972,32 @@ json_t* Server::server_json_attributes(const Server* server)
     }
 
     /** Store statistics */
-    json_t* stats = json_object();
+    json_t* statistics = json_object();
 
-    json_object_set_new(stats, "connections", json_integer(server->stats.n_current));
-    json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
-    json_object_set_new(stats, "persistent_connections", json_integer(server->stats.n_persistent));
-    json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
-    json_object_set_new(stats, "routed_packets", json_integer(server->stats.packets));
+    json_object_set_new(statistics, "connections", json_integer(stats.n_current));
+    json_object_set_new(statistics, "total_connections", json_integer(stats.n_connections));
+    json_object_set_new(statistics, "persistent_connections", json_integer(stats.n_persistent));
+    json_object_set_new(statistics, "active_operations", json_integer(stats.n_current_ops));
+    json_object_set_new(statistics, "routed_packets", json_integer(stats.packets));
+    maxbase::Duration response_ave(response_time_average());
+    json_object_set_new(statistics, "adaptive_avg_select_time", json_string(to_string(response_ave).c_str()));
 
-    maxbase::Duration response_ave(server->response_time_average());
-    json_object_set_new(stats, "adaptive_avg_select_time", json_string(to_string(response_ave).c_str()));
-
-    json_object_set_new(attr, "statistics", stats);
-
+    json_object_set_new(attr, "statistics", statistics);
     return attr;
 }
 
-static json_t* server_to_json_data(const Server* server, const char* host)
+json_t* Server::to_json_data(const char* host) const
 {
     json_t* rval = json_object();
 
     /** Add resource identifiers */
-    json_object_set_new(rval, CN_ID, json_string(server->name()));
+    json_object_set_new(rval, CN_ID, json_string(name()));
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVERS));
 
     /** Relationships */
     json_t* rel = json_object();
-    json_t* service_rel = service_relations_to_server(server, host);
-    json_t* monitor_rel = MonitorManager::monitor_relations_to_server(server, host);
+    json_t* service_rel = service_relations_to_server(this, host);
+    json_t* monitor_rel = MonitorManager::monitor_relations_to_server(this, host);
 
     if (service_rel)
     {
@@ -1037,8 +1011,8 @@ static json_t* server_to_json_data(const Server* server, const char* host)
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     /** Attributes */
-    json_object_set_new(rval, CN_ATTRIBUTES, Server::server_json_attributes(server));
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, server->name()));
+    json_object_set_new(rval, CN_ATTRIBUTES, json_attributes());
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, name()));
 
     return rval;
 }
@@ -1047,19 +1021,20 @@ json_t* Server::to_json(const char* host)
 {
     string self = MXS_JSON_API_SERVERS;
     self += name();
-    return mxs_json_resource(host, self.c_str(), server_to_json_data(this, host));
+    return mxs_json_resource(host, self.c_str(), to_json_data(host));
 }
 
 json_t* Server::server_list_to_json(const char* host)
 {
     json_t* data = json_array();
-    this_unit.foreach_server([data, host](Server* server) {
-                                 if (server->server_is_active())
-                                 {
-                                     json_array_append_new(data, server_to_json_data(server, host));
-                                 }
-                                 return true;
-                             });
+    this_unit.foreach_server(
+        [data, host](Server* server) {
+            if (server->server_is_active())
+            {
+                json_array_append_new(data, server->to_json_data(host));
+            }
+            return true;
+        });
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 
