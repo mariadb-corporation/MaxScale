@@ -31,8 +31,6 @@
 
 class SERVICE;
 
-MXS_BEGIN_DECLS
-
 #define ERRHANDLE
 
 struct MXS_SESSION;
@@ -152,7 +150,7 @@ struct DCB : public MXB_POLL_DATA
         INTERNAL        /*< Internal DCB not connected to the outside */
     };
 
-    DCB(Role role, MXS_SESSION*);
+    DCB(Role role, MXS_SESSION* session, SERVER* server = nullptr);
     ~DCB();
 
     /**
@@ -245,7 +243,7 @@ typedef enum
 void dcb_global_init();
 
 int  dcb_write(DCB*, GWBUF*);
-DCB* dcb_alloc(DCB::Role, MXS_SESSION*);
+DCB* dcb_alloc(DCB::Role role, MXS_SESSION* session, SERVER* server = nullptr);
 DCB* dcb_connect(struct SERVER*, MXS_SESSION*, const char*);
 int  dcb_read(DCB*, GWBUF**, int);
 int  dcb_bytes_readable(DCB* dcb);
@@ -443,5 +441,3 @@ json_t* dcb_to_json(DCB* dcb);
 #define DCBF_REPLIED 0x0004     /*< DCB was written to */
 
 #define DCB_REPLIED(d) ((d)->flags & DCBF_REPLIED)
-
-MXS_END_DECLS

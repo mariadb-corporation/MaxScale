@@ -197,6 +197,8 @@ static int gw_create_backend_connection(DCB* backend_dcb,
         {
             gw_send_proxy_protocol_header(backend_dcb);
         }
+        MXS_DEBUG("Connected to server [%s]:%d, from backend dcb %p, client dcp %p.",
+                  server->address, server->port, backend_dcb, session->client_dcb);
         break;
 
     case 1:
