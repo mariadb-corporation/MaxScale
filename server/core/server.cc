@@ -64,16 +64,6 @@ const char CN_MONITORUSER[] = "monitoruser";
 const char CN_PERSISTMAXTIME[] = "persistmaxtime";
 const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
 const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
-const char CN_RANK[] = "rank";
-
-const MXS_ENUM_VALUE rank_values[] =
-{
-    {"primary",   1},
-    {"secondary", 2},
-    {NULL}
-};
-
-const char* DEFAULT_RANK = "primary";
 
 namespace
 {

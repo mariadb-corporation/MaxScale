@@ -159,6 +159,7 @@ const char CN_QUERY_CLASSIFIER_ARGS[] = "query_classifier_args";
 const char CN_QUERY_CLASSIFIER_CACHE_SIZE[] = "query_classifier_cache_size";
 const char CN_QUERY_RETRIES[] = "query_retries";
 const char CN_QUERY_RETRY_TIMEOUT[] = "query_retry_timeout";
+const char CN_RANK[] = "rank";
 const char CN_RELATIONSHIPS[] = "relationships";
 const char CN_REQUIRED[] = "required";
 const char CN_RETAIN_LAST_STATEMENTS[] = "retain_last_statements";

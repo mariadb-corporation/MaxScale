@@ -45,6 +45,7 @@ add_library(maxscale-common SHARED
   session.cc
   session_command.cc
   ssl.cc
+  target.cc
   users.cc
   utils.cc
   session_stats.cc

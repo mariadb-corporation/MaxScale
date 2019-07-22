@@ -175,6 +175,7 @@ extern const char CN_QUERY_CLASSIFIER_CACHE_SIZE[];
 extern const char CN_QUERY_CLASSIFIER[];
 extern const char CN_QUERY_RETRIES[];
 extern const char CN_QUERY_RETRY_TIMEOUT[];
+extern const char CN_RANK[];
 extern const char CN_RELATIONSHIPS[];
 extern const char CN_REQUIRED[];
 extern const char CN_RETAIN_LAST_STATEMENTS[];
