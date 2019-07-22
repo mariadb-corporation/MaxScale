@@ -44,7 +44,7 @@ static int test1()
 
     /* Server tests */
     fprintf(stderr, "testserver : creating server called MyServer");
-    Server* server = Server::server_alloc("uniquename", *params);
+    Server* server = ServerManager::create_server("uniquename", *params);
     mxb_assert_message(server, "Allocating the server should not fail");
 
     fprintf(stderr, "\t..done\nTest Parameter for Server.");
@@ -54,9 +54,10 @@ static int test1()
     std::string buf = server->get_custom_parameter("name");
     mxb_assert_message(buf == "value", "Parameter should be returned correctly");
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");
-    mxb_assert_message(NULL == Server::find_by_unique_name("non-existent"),
+    mxb_assert_message(NULL == ServerManager::find_by_unique_name("non-existent"),
                        "Should not find non-existent unique name.");
-    mxb_assert_message(server == Server::find_by_unique_name("uniquename"), "Should find by unique name.");
+    mxb_assert_message(server == ServerManager::find_by_unique_name("uniquename"),
+                       "Should find by unique name.");
     fprintf(stderr, "\t..done\nTesting Status Setting for Server.");
     status = server->status_string();
     mxb_assert_message(status == "Running", "Status of Server should be Running by default.");
@@ -69,9 +70,9 @@ static int test1()
                        "Status of Server should be Running after master status cleared.");
     fprintf(stderr, "\t..done\nRun Prints for Server and all Servers.");
     server->printServer();
-    Server::printAllServers();
+    ServerManager::printAllServers();
     fprintf(stderr, "\t..done\nFreeing Server.");
-    Server::server_free(server);
+    ServerManager::server_free(server);
     fprintf(stderr, "\t..done\n");
     return 0;
 }
@@ -98,7 +99,7 @@ bool test_load_config(const char* input, Server* server)
             TEST(param->get_string("authenticator") == server->get_authenticator(),
                  "Server authenticators differ");
             TEST(param->get_integer("port") == server->port, "Server ports differ");
-            TEST(Server::server_alloc(obj->name(), obj->m_parameters),
+            TEST(ServerManager::create_server(obj->name(), obj->m_parameters),
                  "Failed to create server from loaded config");
             duplicate_context_finish(&dcontext);
             config_context_free(obj);
@@ -115,7 +116,7 @@ bool test_serialize()
     char old_config_name[] = "serialized-server.cnf.old";
     char* persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    Server* server = Server::server_alloc(name, *params);
+    Server* server = ServerManager::create_server(name, *params);
     TEST(server, "Server allocation failed");
 
     /** Make sure the files don't exist */
@@ -129,7 +130,7 @@ bool test_serialize()
     TEST(test_load_config(config_name, server), "Failed to load the serialized server");
 
     /** We should have two identical servers */
-    Server* created = Server::find_by_unique_name(name);
+    Server* created = ServerManager::find_by_unique_name(name);
 
     rename(config_name, old_config_name);
 

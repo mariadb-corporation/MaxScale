@@ -41,6 +41,7 @@ add_library(maxscale-common SHARED
   routingworker.cc
   secrets.cc
   server.cc
+  servermanager.cc
   service.cc
   session.cc
   session_command.cc

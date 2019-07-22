@@ -19,7 +19,7 @@
 #include <iostream>
 #include <maxbase/log.hh>
 #include <maxscale/config2.hh>
-#include "../internal/server.hh"
+#include "../internal/servermanager.hh"
 #include "test_utils.hh"
 
 using namespace std;
@@ -284,7 +284,7 @@ int test_server(config::Server& value)
     params1.set(CN_PERSISTMAXTIME, "0");
     params1.set(CN_RANK, "primary");
 
-    std::unique_ptr<Server> sServer1(Server::server_alloc("TheServer1", params1));
+    std::unique_ptr<Server> sServer1(ServerManager::create_server("TheServer1", params1));
     mxb_assert(sServer1.get());
 
     const TestEntry<config::Server::value_type> entries[] =

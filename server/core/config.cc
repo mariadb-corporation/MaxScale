@@ -64,7 +64,7 @@
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
-#include "internal/server.hh"
+#include "internal/servermanager.hh"
 #include "internal/service.hh"
 
 using std::set;
@@ -2001,7 +2001,7 @@ SERVICE* MXS_CONFIG_PARAMETER::get_service(const std::string& key) const
 SERVER* MXS_CONFIG_PARAMETER::get_server(const std::string& key) const
 {
     string param_value = get_string(key);
-    return Server::find_by_unique_name(param_value.c_str());
+    return ServerManager::find_by_unique_name(param_value.c_str());
 }
 
 bool MXS_CONFIG_PARAMETER::contains(const string& key) const
@@ -3859,7 +3859,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
             {
                 fix_object_name(a);
 
-                if (auto s = Server::find_by_unique_name(a))
+                if (auto s = ServerManager::find_by_unique_name(a))
                 {
                     serviceAddBackend(service, s);
                 }
@@ -3981,7 +3981,7 @@ int create_new_server(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    if (Server* server = Server::server_alloc(obj->name(), obj->m_parameters))
+    if (Server* server = ServerManager::create_server(obj->name(), obj->m_parameters))
     {
         auto disk_space_threshold = obj->m_parameters.get_string(CN_DISK_SPACE_THRESHOLD);
         if (!server->set_disk_space_threshold(disk_space_threshold))

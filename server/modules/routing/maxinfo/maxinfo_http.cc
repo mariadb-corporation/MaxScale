@@ -22,7 +22,7 @@
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/monitor.hh"
 #include "../../../core/internal/monitormanager.hh"
-#include "../../../core/internal/server.hh"
+#include "../../../core/internal/servermanager.hh"
 #include "../../../core/internal/service.hh"
 #include "../../../core/internal/modules.hh"
 #include "../../../core/internal/session.hh"
@@ -59,7 +59,7 @@ void maxinfoClientSessions_http(INFO_INSTANCE* instance, INFO_SESSION* session, 
 
 void serverGetList_http(INFO_INSTANCE* instance, INFO_SESSION* session, DCB* dcb)
 {
-    Server::getList()->write_as_json(dcb);
+    ServerManager::getList()->write_as_json(dcb);
 }
 
 void eventTimesGetList_http(INFO_INSTANCE* instance, INFO_SESSION* session, DCB* dcb)

@@ -23,7 +23,7 @@
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
-#include "internal/server.hh"
+#include "internal/servermanager.hh"
 
 /** Size of the error buffer */
 #define MODULECMD_ERRBUF_SIZE 512
@@ -296,7 +296,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_SERVER:
-            if ((arg->value.server = Server::find_by_unique_name((char*)value)))
+            if ((arg->value.server = ServerManager::find_by_unique_name((char*)value)))
             {
                 if (MODULECMD_ALLOW_NAME_MISMATCH(type)
                     || (arg->value.server->protocol() == cmd->domain))

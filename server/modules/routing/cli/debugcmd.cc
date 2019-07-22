@@ -63,7 +63,7 @@
 #include "../../../core/internal/monitormanager.hh"
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/session.hh"
-#include "../../../core/internal/server.hh"
+#include "../../../core/internal/servermanager.hh"
 #include "../../../core/internal/filter.hh"
 
 #define MAXARGS 14
@@ -339,13 +339,13 @@ struct subcommand showoptions[] =
         {ARG_TYPE_SERVER }
     },
     {
-        "servers", 0, 0, (FN)Server::dprintAllServers,
+        "servers", 0, 0, (FN)ServerManager::dprintAllServers,
         "Show all servers",
         "Usage: show servers",
         {0               }
     },
     {
-        "serversjson", 0, 0, (FN)Server::dprintAllServersJson,
+        "serversjson", 0, 0, (FN)ServerManager::dprintAllServersJson,
         "Show all servers in JSON",
         "Usage: show serversjson",
         {0               }
@@ -497,7 +497,7 @@ struct subcommand listoptions[] =
         {0                    }
     },
     {
-        "servers", 0, 0, (FN)Server::dListServers,
+        "servers", 0, 0, (FN)ServerManager::dListServers,
         "List all servers",
         "Usage: list servers",
         {0                    }
@@ -1238,7 +1238,7 @@ static void createServer(DCB* dcb,
 {
     pthread_mutex_lock(&server_mod_lock);
 
-    if (Server::find_by_unique_name(name) == NULL)
+    if (ServerManager::find_by_unique_name(name) == NULL)
     {
         if (runtime_create_server(name, address, port, protocol, authenticator))
         {
@@ -1909,7 +1909,7 @@ static unsigned long convert_arg(char* arg, int arg_type)
 
     case ARG_TYPE_SERVER:
         fix_object_name(arg);
-        rval = (unsigned long)Server::find_by_unique_name(arg);
+        rval = (unsigned long)ServerManager::find_by_unique_name(arg);
         break;
 
     case ARG_TYPE_SESSION:

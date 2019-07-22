@@ -41,7 +41,7 @@
 #include <maxscale/utils.hh>
 #include "../../../../core/internal/modules.hh"
 #include "../../../../core/internal/config.hh"
-#include "../../../../core/internal/server.hh"
+#include "../../../../core/internal/servermanager.hh"
 
 #include <maxscale/protocol/mysql.hh>
 #include <ini.h>
@@ -147,7 +147,7 @@ int main(int argc, char** argv)
         {"authenticator", "mariadbbackendauth"}
     }, config_server_params);
 
-    Server* server = Server::server_alloc("binlog_router_master_host", params);
+    Server* server = ServerManager::create_server("binlog_router_master_host", params);
     if (server == NULL)
     {
         printf("Failed to allocate 'server' object\n");

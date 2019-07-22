@@ -40,7 +40,7 @@
 #include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
 #include "internal/query_classifier.hh"
-#include "internal/server.hh"
+#include "internal/servermanager.hh"
 
 typedef std::set<std::string>    StringSet;
 typedef std::vector<std::string> StringVector;
@@ -274,7 +274,7 @@ bool runtime_create_server(const char* name,
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
-    if (Server::find_by_unique_name(name) == NULL)
+    if (ServerManager::find_by_unique_name(name) == NULL)
     {
         std::string reason;
         if (!external || config_is_valid_name(name, &reason))
@@ -304,7 +304,7 @@ bool runtime_create_server(const char* name,
                     parameters.set(CN_AUTHENTICATOR, authenticator);
                 }
 
-                Server* server = Server::server_alloc(name, parameters);
+                Server* server = ServerManager::create_server(name, parameters);
 
                 if (server && (!external || server->serialize()))
                 {
@@ -1862,7 +1862,7 @@ bool runtime_create_server_from_json(json_t* json)
         const char* protocol = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PROTOCOL));
         mxb_assert(name && protocol);
 
-        if (Server::find_by_unique_name(name))
+        if (ServerManager::find_by_unique_name(name))
         {
             config_runtime_error("Server '%s' already exists", name);
         }
@@ -1876,7 +1876,7 @@ bool runtime_create_server_from_json(json_t* json)
             {
                 params.set_multiple(extract_parameters_from_json(json));
 
-                if (Server* server = Server::server_alloc(name, params))
+                if (Server* server = ServerManager::create_server(name, params))
                 {
                     if (link_server_to_objects(server, relations) && server->serialize())
                     {
@@ -2055,7 +2055,7 @@ bool runtime_alter_server_relationships_from_json(Server* server, const char* ty
 
 static bool object_relation_is_valid(const std::string& type, const std::string& value)
 {
-    return type == CN_SERVERS && Server::find_by_unique_name(value);
+    return type == CN_SERVERS && ServerManager::find_by_unique_name(value);
 }
 
 static bool filter_relation_is_valid(const std::string& type, const std::string& value)
@@ -2175,7 +2175,7 @@ static bool unlink_object_from_servers(const char* target, StringSet& relations)
 
     for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
     {
-        auto server = Server::find_by_unique_name(*it);
+        auto server = ServerManager::find_by_unique_name(*it);
 
         if (!server || !runtime_unlink_server(server, target))
         {
@@ -2193,7 +2193,7 @@ static bool link_object_to_servers(const char* target, StringSet& relations)
 
     for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
     {
-        auto server = Server::find_by_unique_name(*it);
+        auto server = ServerManager::find_by_unique_name(*it);
 
         if (!server || !runtime_link_server(server, target))
         {

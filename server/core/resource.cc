@@ -33,7 +33,7 @@
 #include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
 #include "internal/query_classifier.hh"
-#include "internal/server.hh"
+#include "internal/servermanager.hh"
 #include "internal/service.hh"
 #include "internal/session.hh"
 
@@ -125,7 +125,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
     if (path[0] == ':')
     {
         if ((path == ":service" && service_find(target.c_str()))
-            || (path == ":server" && Server::find_by_unique_name(target))
+            || (path == ":server" && ServerManager::find_by_unique_name(target))
             || (path == ":filter" && filter_find(target.c_str()))
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
             || (path == ":module" && get_module(target.c_str(), NULL))
@@ -313,7 +313,7 @@ HttpResponse cb_create_server(const HttpRequest& request)
 
 HttpResponse cb_alter_server(const HttpRequest& request)
 {
-    auto server = Server::find_by_unique_name(request.uri_part(1));
+    auto server = ServerManager::find_by_unique_name(request.uri_part(1));
     mxb_assert(server && request.get_json());
 
     if (runtime_alter_server_from_json(server, request.get_json()))
@@ -326,7 +326,7 @@ HttpResponse cb_alter_server(const HttpRequest& request)
 
 HttpResponse do_alter_server_relationship(const HttpRequest& request, const char* type)
 {
-    auto server = Server::find_by_unique_name(request.uri_part(1));
+    auto server = ServerManager::find_by_unique_name(request.uri_part(1));
     mxb_assert(server && request.get_json());
 
     if (runtime_alter_server_relationships_from_json(server, type, request.get_json()))
@@ -487,7 +487,7 @@ HttpResponse cb_alter_qc(const HttpRequest& request)
 
 HttpResponse cb_delete_server(const HttpRequest& request)
 {
-    auto server = Server::find_by_unique_name(request.uri_part(1).c_str());
+    auto server = ServerManager::find_by_unique_name(request.uri_part(1).c_str());
     mxb_assert(server);
 
     if (runtime_destroy_server(server))
@@ -557,12 +557,12 @@ HttpResponse cb_delete_filter(const HttpRequest& request)
 }
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, Server::server_list_to_json(request.host()));
+    return HttpResponse(MHD_HTTP_OK, ServerManager::server_list_to_json(request.host()));
 }
 
 HttpResponse cb_get_server(const HttpRequest& request)
 {
-    auto server = Server::find_by_unique_name(request.uri_part(1));
+    auto server = ServerManager::find_by_unique_name(request.uri_part(1));
     mxb_assert(server);
     return HttpResponse(MHD_HTTP_OK, server->to_json(request.host()));
 }
@@ -802,7 +802,7 @@ HttpResponse cb_delete_user(const HttpRequest& request)
 
 HttpResponse cb_set_server(const HttpRequest& request)
 {
-    SERVER* server = Server::find_by_unique_name(request.uri_part(1));
+    SERVER* server = ServerManager::find_by_unique_name(request.uri_part(1));
     int opt = SERVER::status_from_string(request.get_option(CN_STATE).c_str());
 
     if (opt)
@@ -829,7 +829,7 @@ HttpResponse cb_set_server(const HttpRequest& request)
 
 HttpResponse cb_clear_server(const HttpRequest& request)
 {
-    SERVER* server = Server::find_by_unique_name(request.uri_part(1));
+    SERVER* server = ServerManager::find_by_unique_name(request.uri_part(1));
     int opt = SERVER::status_from_string(request.get_option(CN_STATE).c_str());
 
     if (opt)

@@ -68,48 +68,6 @@ const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 namespace
 {
 
-class ThisUnit
-{
-public:
-
-    /**
-     * Call a function on every server in the global server list.
-     *
-     * @param apply The function to apply. If the function returns false, iteration is discontinued.
-     */
-    void foreach_server(std::function<bool(Server*)> apply)
-    {
-        Guard guard(m_all_servers_lock);
-        for (Server* server : m_all_servers)
-        {
-            if (!apply(server))
-            {
-                break;
-            }
-        }
-    }
-
-    void insert_front(Server* server)
-    {
-        Guard guard(m_all_servers_lock);
-        m_all_servers.insert(m_all_servers.begin(), server);
-    }
-
-    void erase(Server* server)
-    {
-        Guard guard(m_all_servers_lock);
-        auto it = std::find(m_all_servers.begin(), m_all_servers.end(), server);
-        mxb_assert(it != m_all_servers.end());
-        m_all_servers.erase(it);
-    }
-
-private:
-    std::mutex           m_all_servers_lock;    /**< Protects access to array */
-    std::vector<Server*> m_all_servers;         /**< Global list of servers, in configuration file order */
-};
-
-ThisUnit this_unit;
-
 const char ERR_TOO_LONG_CONFIG_VALUE[] = "The new value for %s is too long. Maximum length is %i characters.";
 
 /**
@@ -245,8 +203,6 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         }
     }
 
-    // This keeps the order of the servers the same as in 2.2
-    this_unit.insert_front(server);
     return server;
 }
 
@@ -255,26 +211,6 @@ Server* Server::create_test_server()
     static int next_id = 1;
     string name = "TestServer" + std::to_string(next_id++);
     return new Server(name);
-}
-
-void Server::server_free(Server* server)
-{
-    mxb_assert(server);
-    this_unit.erase(server);
-
-    /* Clean up session and free the memory */
-    if (server->persistent)
-    {
-        int nthr = config_threadcount();
-
-        for (int i = 0; i < nthr; i++)
-        {
-            dcb_persistent_clean_count(server->persistent[i], i, true);
-        }
-        MXS_FREE(server->persistent);
-    }
-
-    delete server;
 }
 
 DCB* Server::get_persistent_dcb(const string& user, const string& ip, const string& protocol, int id)
@@ -323,37 +259,6 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
     return NULL;
 }
 
-SERVER* SERVER::find_by_unique_name(const string& name)
-{
-    return Server::find_by_unique_name(name);
-}
-
-Server* Server::find_by_unique_name(const string& name)
-{
-    Server* rval = nullptr;
-    this_unit.foreach_server([&rval, name](Server* server) {
-                                 if (server->is_active && server->m_name == name)
-                                 {
-                                     rval = server;
-                                     return false;
-                                 }
-                                 return true;
-                             }
-                             );
-    return rval;
-}
-
-std::vector<SERVER*> SERVER::server_find_by_unique_names(const std::vector<string>& server_names)
-{
-    std::vector<SERVER*> rval;
-    rval.reserve(server_names.size());
-    for (auto elem : server_names)
-    {
-        rval.push_back(Server::find_by_unique_name(elem));
-    }
-    return rval;
-}
-
 void Server::printServer()
 {
     printf("Server %p\n", this);
@@ -364,37 +269,6 @@ void Server::printServer()
     printf("\tCurrent connections:          %d\n", stats().n_current);
     printf("\tPersistent connections:       %d\n", pool_stats.n_persistent);
     printf("\tPersistent actual max:        %d\n", persistmax);
-}
-
-void Server::printAllServers()
-{
-    this_unit.foreach_server([](Server* server) {
-                                 if (server->server_is_active())
-                                 {
-                                     server->printServer();
-                                 }
-                                 return true;
-                             });
-}
-
-void Server::dprintAllServers(DCB* dcb)
-{
-    this_unit.foreach_server([dcb](Server* server) {
-                                 if (server->is_active)
-                                 {
-                                     Server::dprintServer(dcb, server);
-                                 }
-                                 return true;
-                             });
-}
-
-void Server::dprintAllServersJson(DCB* dcb)
-{
-    json_t* all_servers_json = Server::server_list_to_json("");
-    char* dump = json_dumps(all_servers_json, JSON_INDENT(4));
-    dcb_printf(dcb, "%s", dump);
-    MXS_FREE(dump);
-    json_decref(all_servers_json);
 }
 
 /**
@@ -531,39 +405,6 @@ void Server::dprintPersistentDCBs(DCB* pdcb, const Server* server)
     dcb_printf(pdcb, "Number of persistent DCBs: %d\n", server->pool_stats.n_persistent);
 }
 
-void Server::dListServers(DCB* dcb)
-{
-    const string horizontalLine =
-        "-------------------+-----------------+-------+-------------+--------------------\n";
-    string message;
-    // Estimate the likely size of the string. Should be enough for 5 servers.
-    message.reserve((4 + 5) * horizontalLine.length());
-    message += "Servers.\n" + horizontalLine;
-    message += mxb::string_printf("%-18s | %-15s | Port  | Connections | %-20s\n",
-                                  "Server", "Address", "Status");
-    message += horizontalLine;
-
-    bool have_servers = false;
-    this_unit.foreach_server([&message, &have_servers](Server* server) {
-                                 if (server->server_is_active())
-                                 {
-                                     have_servers = true;
-                                     string stat = server->status_string();
-                                     message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
-                                                                   server->name(), server->address,
-                                                                   server->port,
-                                                                   server->stats().n_current, stat.c_str());
-                                 }
-                                 return true;
-                             });
-
-    if (have_servers)
-    {
-        message += horizontalLine;
-        dcb_printf(dcb, "%s", message.c_str());
-    }
-}
-
 void SERVER::set_status(uint64_t bit)
 {
     m_status |= bit;
@@ -637,30 +478,6 @@ string Server::get_custom_parameter(const string& name) const
 void Server::set_normal_parameter(const std::string& name, const std::string& value)
 {
     m_settings.all_parameters.set(name, value);
-}
-
-/**
- * Return a resultset that has the current set of servers in it
- *
- * @return A Result set
- */
-std::unique_ptr<ResultSet> Server::getList()
-{
-    std::unique_ptr<ResultSet> set =
-        ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
-
-    this_unit.foreach_server([&set](Server* server) {
-                                 if (server->server_is_active())
-                                 {
-                                     string stat = server->status_string();
-                                     set->add_row({server->name(), server->address,
-                                                   std::to_string(server->port),
-                                                   std::to_string(server->stats().n_current), stat});
-                                 }
-                                 return true;
-                             });
-
-    return set;
 }
 
 bool SERVER::server_update_address(const string& new_address)
@@ -930,20 +747,6 @@ json_t* Server::to_json(const char* host)
     string self = MXS_JSON_API_SERVERS;
     self += name();
     return mxs_json_resource(host, self.c_str(), to_json_data(host));
-}
-
-json_t* Server::server_list_to_json(const char* host)
-{
-    json_t* data = json_array();
-    this_unit.foreach_server(
-        [data, host](Server* server) {
-            if (server->server_is_active())
-            {
-                json_array_append_new(data, server->to_json_data(host));
-            }
-            return true;
-        });
-    return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 
 bool Server::set_disk_space_threshold(const string& disk_space_threshold)

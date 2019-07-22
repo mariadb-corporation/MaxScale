@@ -145,16 +145,11 @@ public:
     void print_to_dcb(DCB* dcb) const;
 
     /**
-     * @brief Allocate a new server
+     * Allocates a new server. Should only be called from ServerManager::create_server().
      *
-     * This will create a new server that represents a backend server that services
-     * can use. This function will add the server to the running configuration but
-     * will not persist the changes.
-     *
-     * @param name   Unique server name
-     * @param params Parameters for the server
-     *
-     * @return       The newly created server or NULL if an error occurred
+     * @param name Server name
+     * @param params Configuration
+     * @return The new server or NULL on error
      */
     static Server* server_alloc(const char* name, const MXS_CONFIG_PARAMETER& params);
 
@@ -165,22 +160,6 @@ public:
      * @return A new server
      */
     static Server* create_test_server();
-
-    /**
-     * Deallocate the specified server
-     *
-     * @param server        The server to deallocate
-     * @return Returns true if the server was freed
-     */
-    static void server_free(Server* server);
-
-    /**
-     * @brief Find a server with the specified name
-     *
-     * @param name Name of the server
-     * @return The server or NULL if not found
-     */
-    static Server* find_by_unique_name(const std::string& name);
 
     /**
      * Test if name is not a normal server setting name.
@@ -205,33 +184,6 @@ public:
      * @param       server  SERVER for which DCBs are to be printed
      */
     static void dprintPersistentDCBs(DCB*, const Server*);
-
-    /**
-     * Print all servers to a DCB
-     *
-     * Designed to be called within a debugger session in order
-     * to display all active servers within the gateway
-     */
-    static void dprintAllServers(DCB*);
-
-    /**
-     * Print all servers in Json format to a DCB
-     */
-    static void dprintAllServersJson(DCB*);
-
-    /**
-     * List all servers in a tabular form to a DCB
-     *
-     */
-    static void dListServers(DCB*);
-
-    /**
-     * Convert all servers into JSON format
-     *
-     * @param host    Hostname of this server
-     * @return JSON array of servers or NULL if an error occurred
-     */
-    static json_t* server_list_to_json(const char* host);
 
     /**
      * Set server custom parameter.
@@ -288,19 +240,9 @@ public:
     bool set_disk_space_threshold(const std::string& disk_space_threshold);
 
     /**
-     * Print all servers
-     *
-     * Designed to be called within a debugger session in order
-     * to display all active servers within the gateway
-     */
-    static void printAllServers();
-
-    /**
      * Print details of an individual server
      */
     void printServer();
-
-    static std::unique_ptr<ResultSet> getList();
 
     /**
      * @brief Convert a server to JSON format
@@ -310,6 +252,8 @@ public:
      */
     json_t* to_json(const char* host);
 
+    json_t* to_json_data(const char* host) const;
+
     void* auth_instance()
     {
         return m_auth_instance;
@@ -318,7 +262,6 @@ public:
     DCB** persistent = nullptr;     /**< List of unused persistent connections to the server */
 
 private:
-    json_t* to_json_data(const char* host) const;
     json_t* json_attributes() const;
     bool create_server_config(const char* filename) const;
 

@@ -50,7 +50,7 @@
 #include "../../../core/internal/monitormanager.hh"
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/session.hh"
-#include "../../../core/internal/server.hh"
+#include "../../../core/internal/servermanager.hh"
 #include "../../../core/internal/service.hh"
 
 static void exec_show(DCB* dcb, MAXINFO_TREE* tree);
@@ -165,7 +165,7 @@ static void exec_show_clients(DCB* dcb, MAXINFO_TREE* tree)
  */
 static void exec_show_servers(DCB* dcb, MAXINFO_TREE* tree)
 {
-    Server::getList()->write(dcb);
+    ServerManager::getList()->write(dcb);
 }
 
 /**
@@ -316,7 +316,7 @@ static void exec_flush(DCB* dcb, MAXINFO_TREE* tree)
  */
 void exec_set_server(DCB* dcb, MAXINFO_TREE* tree)
 {
-    auto server = Server::find_by_unique_name(tree->value);
+    auto server = ServerManager::find_by_unique_name(tree->value);
     char errmsg[120];
 
     if (server)
@@ -403,7 +403,7 @@ static void exec_set(DCB* dcb, MAXINFO_TREE* tree)
  */
 void exec_clear_server(DCB* dcb, MAXINFO_TREE* tree)
 {
-    auto server = Server::find_by_unique_name(tree->value);
+    auto server = ServerManager::find_by_unique_name(tree->value);
     char errmsg[120];
 
     if (server)
