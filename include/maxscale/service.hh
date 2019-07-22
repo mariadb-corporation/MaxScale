@@ -28,6 +28,7 @@
 #include <maxscale/listener.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/server.hh>
+#include <maxscale/target.hh>
 
 struct SERVER;
 struct mxs_router;
@@ -46,8 +47,6 @@ typedef struct
 {
     time_t started;         /**< The time when the service was started */
     int    n_failed_starts; /**< Number of times this service has failed to start */
-    int    n_sessions;      /**< Number of sessions created on service since start */
-    int    n_current;       /**< Current number of sessions */
 } SERVICE_STATS;
 
 typedef struct server_ref_t
@@ -90,7 +89,7 @@ inline bool server_ref_is_active(const SERVER_REF* ref)
  * and a set of client side protocol/port pairs used to listen for new connections
  * to the service.
  */
-class SERVICE
+class SERVICE : public mxs::Target
 {
 public:
     int                       state;                /**< The service state */
@@ -107,7 +106,7 @@ public:
                                                      * information */
     char password[MAX_SERVICE_PASSWORD_LEN];        /**< The authentication data requied
                                                      * */
-    SERVICE_STATS stats;                            /**< The service statistics */
+    SERVICE_STATS service_stats;                    /**< The service statistics */
     bool          enable_root;                      /**< Allow root user  access */
     bool          localhost_match_wildcard_host;    /**< Match localhost against wildcard
                                                      * */
@@ -137,14 +136,33 @@ public:
     int  max_retry_interval;                        /**< Maximum retry interval */
     bool session_track_trx_state;                   /**< Get transaction state via session
                                                      * track mechanism */
-    int active;                                     /**< Whether the service is still
-                                                     * active */
     int32_t retain_last_statements;                 /**< How many statements to retain per session,
                                                      * -1 if not explicitly specified. */
 
-    const char* name() const
+    const char* name() const override
     {
         return m_name.c_str();
+    }
+
+    uint64_t status() const override
+    {
+        // TODO: Get this from the backend servers
+        return SERVER_RUNNING | SERVER_MASTER;
+    }
+
+    bool active() const override
+    {
+        return m_active;
+    }
+
+    void deactivate()
+    {
+        m_active = false;
+    }
+
+    int64_t rank() const override
+    {
+        return RANK_PRIMARY;
     }
 
     const char* router_name() const
@@ -163,6 +181,7 @@ protected:
 private:
     const std::string m_name;
     const std::string m_router_name;
+    bool              m_active {true};
 };
 
 typedef enum count_spec_t

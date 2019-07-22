@@ -318,7 +318,7 @@ void RWSplit::diagnostics(DCB* dcb)
                stats().n_sessions);
     dcb_printf(dcb,
                "\tCurrent no. of router sessions:         %d\n",
-               service()->stats.n_current);
+               service()->stats().n_current);
     dcb_printf(dcb,
                "\tNumber of queries forwarded:            %" PRIu64 "\n",
                stats().n_queries);
@@ -395,7 +395,7 @@ json_t* RWSplit::diagnostics_json() const
     json_t* rval = json_object();
 
     json_object_set_new(rval, "connections", json_integer(stats().n_sessions));
-    json_object_set_new(rval, "current_connections", json_integer(service()->stats.n_current));
+    json_object_set_new(rval, "current_connections", json_integer(service()->stats().n_current));
     json_object_set_new(rval, "queries", json_integer(stats().n_queries));
     json_object_set_new(rval, "route_master", json_integer(stats().n_master));
     json_object_set_new(rval, "route_slave", json_integer(stats().n_slave));

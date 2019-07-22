@@ -157,8 +157,8 @@ bool session_start(MXS_SESSION* session)
     }
 
     session->state = SESSION_STATE_STARTED;
-    mxb::atomic::add(&session->service->stats.n_sessions, 1, mxb::atomic::RELAXED);
-    mxb::atomic::add(&session->service->stats.n_current, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&session->service->stats().n_connections, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&session->service->stats().n_current, 1, mxb::atomic::RELAXED);
 
     MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
              session->service->name(), session->ses_id,
@@ -259,7 +259,7 @@ static void session_free(MXS_SESSION* session)
     Service* service = static_cast<Service*>(session->service);
 
     session_final_free(session);
-    bool should_destroy = !mxb::atomic::load(&service->active);
+    bool should_destroy = !service->active();
 
     if (mxb::atomic::add(&service->client_count, -1) == 1 && should_destroy)
     {
@@ -277,7 +277,7 @@ static void session_final_free(MXS_SESSION* ses)
 
     session->state = SESSION_STATE_TO_BE_FREED;
 
-    mxb::atomic::add(&session->service->stats.n_current, -1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&session->service->stats().n_current, -1, mxb::atomic::RELAXED);
 
     if (session->client_dcb)
     {

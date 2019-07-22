@@ -122,7 +122,7 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
     if (service->router_instance == NULL)
     {
         MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name());
-        service->active = false;
+        service->deactivate();
         delete service;
         return NULL;
     }
@@ -201,12 +201,9 @@ Service::Service(const std::string& name,
     client_count = 0;
     n_dbref = 0;
     svc_config_version = 0;
-    stats.started = time(0);
-    stats.n_failed_starts = 0;
-    stats.n_current = 0;
-    stats.n_sessions = 0;
+    service_stats.started = time(0);
+    service_stats.n_failed_starts = 0;
     state = SERVICE_STATE_ALLOC;
-    active = true;
     dbref = NULL;
     n_dbref = 0;
     snprintf(user, sizeof(user), "%s", m_user.c_str());
@@ -271,7 +268,7 @@ Service::~Service()
 void service_free(Service* service)
 {
     mxb_assert(mxb::atomic::load(&service->client_count) == 0 || maxscale_teardown_in_progress());
-    mxb_assert(!service->active || maxscale_teardown_in_progress());
+    mxb_assert(!service->active() || maxscale_teardown_in_progress());
 
     {
         LockGuard guard(this_unit.lock);
@@ -291,8 +288,8 @@ void service_destroy(Service* service)
     mxb_assert_message(current == main, "Destruction of service must be done on the main worker");
 #endif
 
-    mxb_assert(service->active);
-    atomic_store_int(&service->active, false);
+    mxb_assert(service->active());
+    service->deactivate();
 
     char filename[PATH_MAX + 1];
     snprintf(filename,
@@ -369,13 +366,14 @@ int serviceStartAllPorts(Service* service)
         else if (listeners)
         {
             service->state = SERVICE_STATE_STARTED;
-            service->stats.started = time(0);
+            service->service_stats.started = time(0);
         }
         else if (service->retry_start)
         {
             /** Service failed to start any ports. Try again later. */
-            service->stats.n_failed_starts++;
-            int retry_after = MXS_MIN(service->stats.n_failed_starts * 10, service->max_retry_interval);
+            service->service_stats.n_failed_starts++;
+            int retry_after = MXS_MIN(service->service_stats.n_failed_starts * 10,
+                                      service->max_retry_interval);
             MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
                        service->name(),
                        retry_after);
@@ -832,7 +830,7 @@ Service* service_internal_find(const char* name)
 
     for (Service* s : this_unit.services)
     {
-        if (strcmp(s->name(), name) == 0 && atomic_load_int(&s->active))
+        if (strcmp(s->name(), name) == 0 && s->active())
         {
             return s;
         }
@@ -922,7 +920,7 @@ void dprintService(DCB* dcb, SERVICE* svc)
     }
     dcb_printf(dcb,
                "\tStarted:                             %s",
-               asctime_r(localtime_r(&service->stats.started, &result), timebuf));
+               asctime_r(localtime_r(&service->service_stats.started, &result), timebuf));
     dcb_printf(dcb,
                "\tRoot user access:                    %s\n",
                service->enable_root ? "Enabled" : "Disabled");
@@ -962,10 +960,10 @@ void dprintService(DCB* dcb, SERVICE* svc)
 
     dcb_printf(dcb,
                "\tTotal connections:                   %d\n",
-               service->stats.n_sessions);
+               service->stats().n_connections);
     dcb_printf(dcb,
                "\tCurrently connected:                 %d\n",
-               service->stats.n_current);
+               service->stats().n_current);
 }
 
 /**
@@ -991,13 +989,13 @@ void dListServices(DCB* dcb)
 
         for (Service* service : this_unit.services)
         {
-            mxb_assert(service->stats.n_current >= 0);
+            mxb_assert(service->stats().n_current >= 0);
             dcb_printf(dcb,
                        "%-25s | %-17s | %6d | %14d | ",
                        service->name(),
                        service->router_name(),
-                       service->stats.n_current,
-                       service->stats.n_sessions);
+                       service->stats().n_current,
+                       service->stats().n_connections);
 
             SERVER_REF* server_ref = service->dbref;
             bool first = true;
@@ -1212,7 +1210,7 @@ int serviceSessionCountAll()
 
     for (Service* service : this_unit.services)
     {
-        rval += service->stats.n_current;
+        rval += service->stats().n_current;
     }
 
     return rval;
@@ -1254,8 +1252,8 @@ std::unique_ptr<ResultSet> serviceGetList()
 
     for (Service* s : this_unit.services)
     {
-        set->add_row({s->name(), s->router_name(), std::to_string(s->stats.n_current),
-                      std::to_string(s->stats.n_sessions)});
+        set->add_row({s->name(), s->router_name(), std::to_string(s->stats().n_current),
+                      std::to_string(s->stats().n_connections)});
     }
 
     return set;
@@ -1679,12 +1677,12 @@ json_t* service_attributes(const SERVICE* service)
     struct tm result;
     char timebuf[30];
 
-    asctime_r(localtime_r(&service->stats.started, &result), timebuf);
+    asctime_r(localtime_r(&service->service_stats.started, &result), timebuf);
     mxb::trim(timebuf);
 
     json_object_set_new(attr, "started", json_string(timebuf));
-    json_object_set_new(attr, "total_connections", json_integer(service->stats.n_sessions));
-    json_object_set_new(attr, "connections", json_integer(service->stats.n_current));
+    json_object_set_new(attr, "total_connections", json_integer(service->stats().n_connections));
+    json_object_set_new(attr, "connections", json_integer(service->stats().n_current));
 
     /** Add service parameters and listeners */
     json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));

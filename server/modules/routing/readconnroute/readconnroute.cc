@@ -500,7 +500,7 @@ void RCR::diagnostics(DCB* dcb)
                m_stats.n_sessions);
     dcb_printf(dcb,
                "\tCurrent no. of router sessions:	%d\n",
-               m_pService->stats.n_current);
+               m_pService->stats().n_current);
     dcb_printf(dcb,
                "\tNumber of queries forwarded:      %d\n",
                m_stats.n_queries);
@@ -528,7 +528,7 @@ json_t* RCR::diagnostics_json() const
     json_t* rval = json_object();
 
     json_object_set_new(rval, "connections", json_integer(m_stats.n_sessions));
-    json_object_set_new(rval, "current_connections", json_integer(m_pService->stats.n_current));
+    json_object_set_new(rval, "current_connections", json_integer(m_pService->stats().n_current));
     json_object_set_new(rval, "queries", json_integer(m_stats.n_queries));
 
     const char* weightby = serviceGetWeightingParameter(m_pService);
