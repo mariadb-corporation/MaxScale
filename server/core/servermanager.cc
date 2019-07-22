@@ -18,6 +18,8 @@
 #include <vector>
 #include <maxbase/format.hh>
 #include <maxscale/json_api.hh>
+#include "internal/monitormanager.hh"
+#include "internal/service.hh"
 
 using std::string;
 using Guard = std::lock_guard<std::mutex>;
@@ -204,11 +206,48 @@ json_t* ServerManager::server_list_to_json(const char* host)
             [data, host](Server* server) {
                 if (server->server_is_active())
                 {
-                    json_array_append_new(data, server->to_json_data(host));
+                    json_array_append_new(data, server_to_json_data_relations(server, host));
                 }
                 return true;
             });
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
+}
+
+void ServerManager::dprintAllServersJson(DCB* dcb)
+{
+    json_t* all_servers_json = ServerManager::server_list_to_json("");
+    char* dump = json_dumps(all_servers_json, JSON_INDENT(4));
+    dcb_printf(dcb, "%s", dump);
+    MXS_FREE(dump);
+    json_decref(all_servers_json);
+}
+
+json_t* ServerManager::server_to_json_resource(const Server* server, const char* host)
+{
+    string self = MXS_JSON_API_SERVERS;
+    self += server->name();
+    return mxs_json_resource(host, self.c_str(), server_to_json_data_relations(server, host));
+}
+
+json_t* ServerManager::server_to_json_data_relations(const Server* server, const char* host)
+{
+    // Add monitor and service info to server json representation.
+    json_t* rel = json_object();
+    json_t* service_rel = service_relations_to_server(server, host);
+    if (service_rel)
+    {
+        json_object_set_new(rel, CN_SERVICES, service_rel);
+    }
+
+    json_t* monitor_rel = MonitorManager::monitor_relations_to_server(server, host);
+    if (monitor_rel)
+    {
+        json_object_set_new(rel, CN_MONITORS, monitor_rel);
+    }
+
+    auto json_data = server->to_json_data(host);
+    json_object_set_new(json_data, CN_RELATIONSHIPS, rel);
+    return json_data;
 }
 
 SERVER* SERVER::find_by_unique_name(const string& name)
@@ -227,11 +266,28 @@ std::vector<SERVER*> SERVER::server_find_by_unique_names(const std::vector<strin
     return rval;
 }
 
-void ServerManager::dprintAllServersJson(DCB* dcb)
+bool SERVER::is_mxs_service()
 {
-    json_t* all_servers_json = ServerManager::server_list_to_json("");
-    char* dump = json_dumps(all_servers_json, JSON_INDENT(4));
-    dcb_printf(dcb, "%s", dump);
-    MXS_FREE(dump);
-    json_decref(all_servers_json);
+    bool rval = false;
+
+    /** Do a coarse check for local server pointing to a MaxScale service */
+    if (address[0] == '/')
+    {
+        if (service_socket_is_used(address))
+        {
+            rval = true;
+        }
+    }
+    else if (strcmp(address, "127.0.0.1") == 0
+             || strcmp(address, "::1") == 0
+             || strcmp(address, "localhost") == 0
+             || strcmp(address, "localhost.localdomain") == 0)
+    {
+        if (service_port_is_used(port))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }

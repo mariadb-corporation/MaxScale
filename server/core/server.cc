@@ -25,32 +25,28 @@
 #include <string>
 #include <vector>
 
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
 
 #include <maxscale/config.hh>
-#include <maxscale/service.hh>
 #include <maxscale/session.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/ssl.hh>
-#include <maxbase/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/maxscale.h>
+#include <maxscale/monitor.hh>
 #include <maxscale/routingworker.hh>
 
-#include "internal/monitor.hh"
-#include "internal/monitormanager.hh"
 #include "internal/poll.hh"
 #include "internal/config.hh"
-#include "internal/service.hh"
 #include "internal/modules.hh"
-
 
 using maxbase::Worker;
 using maxscale::RoutingWorker;
@@ -611,32 +607,6 @@ bool Server::serialize() const
     return rval;
 }
 
-bool SERVER::is_mxs_service()
-{
-    bool rval = false;
-
-    /** Do a coarse check for local server pointing to a MaxScale service */
-    if (address[0] == '/')
-    {
-        if (service_socket_is_used(address))
-        {
-            rval = true;
-        }
-    }
-    else if (strcmp(address, "127.0.0.1") == 0
-             || strcmp(address, "::1") == 0
-             || strcmp(address, "localhost") == 0
-             || strcmp(address, "localhost.localdomain") == 0)
-    {
-        if (service_port_is_used(port))
-        {
-            rval = true;
-        }
-    }
-
-    return rval;
-}
-
 json_t* Server::json_attributes() const
 {
     /** Resource attributes */
@@ -719,34 +689,11 @@ json_t* Server::to_json_data(const char* host) const
     json_object_set_new(rval, CN_ID, json_string(name()));
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVERS));
 
-    /** Relationships */
-    json_t* rel = json_object();
-    json_t* service_rel = service_relations_to_server(this, host);
-    json_t* monitor_rel = MonitorManager::monitor_relations_to_server(this, host);
-
-    if (service_rel)
-    {
-        json_object_set_new(rel, CN_SERVICES, service_rel);
-    }
-
-    if (monitor_rel)
-    {
-        json_object_set_new(rel, CN_MONITORS, monitor_rel);
-    }
-
-    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     /** Attributes */
     json_object_set_new(rval, CN_ATTRIBUTES, json_attributes());
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, name()));
 
     return rval;
-}
-
-json_t* Server::to_json(const char* host)
-{
-    string self = MXS_JSON_API_SERVERS;
-    self += name();
-    return mxs_json_resource(host, self.c_str(), to_json_data(host));
 }
 
 bool Server::set_disk_space_threshold(const string& disk_space_threshold)

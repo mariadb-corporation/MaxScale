@@ -245,13 +245,12 @@ public:
     void printServer();
 
     /**
-     * @brief Convert a server to JSON format
+     * Convert server to json. This does not add relations to other objects and should only be called from
+     * ServerManager::server_to_json_data_relations().
      *
-     * @param host Hostname of this server as given in request
-     * @return JSON representation of server or NULL if an error occurred
+     * @param host Hostname of this server
+     * @return Server as json
      */
-    json_t* to_json(const char* host);
-
     json_t* to_json_data(const char* host) const;
 
     void* auth_instance()

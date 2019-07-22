@@ -87,4 +87,15 @@ public:
      * @return JSON array of servers or NULL if an error occurred
      */
     static json_t* server_list_to_json(const char* host);
+
+    /**
+     * Convert a server to JSON format
+     *
+     * @param host Hostname of this server as given in request
+     * @return JSON representation of server or NULL if an error occurred
+     */
+    static json_t* server_to_json_resource(const Server* server, const char* host);
+
+private:
+    static json_t* server_to_json_data_relations(const Server* server, const char* host);
 };
