@@ -101,7 +101,7 @@ PRWBackends::iterator backend_cmp_router_conn(PRWBackends& sBackends)
 PRWBackends::iterator backend_cmp_global_conn(PRWBackends& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->server_weight ? (server->server->stats.n_current + 1) / server->server_weight :
+            return server->server_weight ? (server->server->stats().n_current + 1) / server->server_weight :
                    std::numeric_limits<double>::max();
         };
 
@@ -123,7 +123,8 @@ PRWBackends::iterator backend_cmp_behind_master(PRWBackends& sBackends)
 PRWBackends::iterator backend_cmp_current_load(PRWBackends& sBackends)
 {
     static auto server_score = [](SERVER_REF* server) {
-            return server->server_weight ? (server->server->stats.n_current_ops + 1) / server->server_weight :
+            return server->server_weight ?
+                   (server->server->stats().n_current_ops + 1) / server->server_weight :
                    std::numeric_limits<double>::max();
         };
 
@@ -346,7 +347,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
         {
         case LEAST_GLOBAL_CONNECTIONS:
             MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
-                     b->server->stats.n_current,
+                     b->server->stats().n_current,
                      b->server->address,
                      b->server->port,
                      b->server->status_string().c_str());
@@ -362,7 +363,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 
         case LEAST_CURRENT_OPERATIONS:
             MXS_INFO("current operations : %d in \t[%s]:%d %s",
-                     b->server->stats.n_current_ops,
+                     b->server->stats().n_current_ops,
                      b->server->address,
                      b->server->port,
                      b->server->status_string().c_str());

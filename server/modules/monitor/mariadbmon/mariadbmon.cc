@@ -426,7 +426,7 @@ void MariaDBMonitor::tick()
     for (auto srv : m_servers)
     {
         auto mon_srv = srv->m_server_base;
-        auto status = mon_srv->server->status;
+        auto status = mon_srv->server->status();
         mon_srv->pending_status = status;
         mon_srv->mon_prev_status = status;
     }
@@ -503,7 +503,7 @@ void MariaDBMonitor::tick()
     {
         SERVER* srv = server->m_server_base->server;
         srv->rlag = server->m_replication_lag;
-        srv->status = server->m_server_base->pending_status;
+        srv->assign_status(server->m_server_base->pending_status);
     }
 
     log_master_changes();

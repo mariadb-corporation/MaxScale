@@ -16,7 +16,7 @@
 
 #include <string>
 
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 
 constexpr int RANK_PRIMARY = 1;
 constexpr int RANK_SECONDARY = 2;
@@ -178,6 +178,121 @@ public:
     const Stats& stats() const
     {
         return m_stats;
+    }
+
+    /**
+     * Is the target running and can be connected to?
+     *
+     * @return True if the target can be connected to.
+     */
+    bool is_connectable() const
+    {
+        return status_is_connectable(status());
+    }
+
+    /**
+     * Is the target running and not in maintenance?
+     *
+     * @return True if target can be used.
+     */
+    bool is_usable() const
+    {
+        return status_is_usable(status());
+    }
+
+    /**
+     * Is the target running?
+     *
+     * @return True if the target is running
+     */
+    bool is_running() const
+    {
+        return status_is_running(status());
+    }
+
+    /**
+     * Is the target down?
+     *
+     * @return True if monitor cannot connect to the target.
+     */
+    bool is_down() const
+    {
+        return status_is_down(status());
+    }
+
+    /**
+     * Is the target in maintenance mode?
+     *
+     * @return True if target is in maintenance.
+     */
+    bool is_in_maint() const
+    {
+        return status_is_in_maint(status());
+    }
+
+    /**
+     * Is the target being drained?
+     *
+     * @return True if target is being drained.
+     */
+    bool is_draining() const
+    {
+        return status_is_draining(status());
+    }
+
+    /**
+     * Is the target a master?
+     *
+     * @return True if target is running and marked as master.
+     */
+    bool is_master() const
+    {
+        return status_is_master(status());
+    }
+
+    /**
+     * Is the target a slave.
+     *
+     * @return True if target is running and marked as slave.
+     */
+    bool is_slave() const
+    {
+        return status_is_slave(status());
+    }
+
+    /**
+     * Is the target a relay slave?
+     *
+     * @return True, if target is a running relay.
+     */
+    bool is_relay() const
+    {
+        return status_is_relay(status());
+    }
+
+    /**
+     * Is the target joined Galera node?
+     *
+     * @return True, if target is running and joined.
+     */
+    bool is_joined() const
+    {
+        return status_is_joined(status());
+    }
+
+    bool is_in_cluster() const
+    {
+        return (status() & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED)) != 0;
+    }
+
+    bool is_slave_of_ext_master() const
+    {
+        return status_is_slave_of_ext_master(status());
+    }
+
+    bool is_low_on_disk_space() const
+    {
+        return status_is_disk_space_exhausted(status());
     }
 
 protected:

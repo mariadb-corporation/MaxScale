@@ -254,7 +254,7 @@ void store_data(Monitor* monitor, MonitorServer* master, uint8_t* data, uint32_t
         ptr += strlen(db->server->name());
         *ptr++ = '\0';      // Null-terminate the string
 
-        auto status = db->server->status;
+        auto status = db->server->status();
         static_assert(sizeof(status) == MMB_LEN_SERVER_STATUS,
                       "Status size should be MMB_LEN_SERVER_STATUS bytes");
         ptr = maxscale::set_byteN(ptr, status, MMB_LEN_SERVER_STATUS);
@@ -782,8 +782,8 @@ bool Monitor::test_permissions(const string& query)
 
 void MonitorServer::stash_current_status()
 {
-    mon_prev_status = server->status;
-    pending_status = server->status;
+    mon_prev_status = server->status();
+    pending_status = server->status();
 }
 
 void MonitorServer::set_pending_status(uint64_t bits)
@@ -818,7 +818,7 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
     general_event_type event_type = UNSUPPORTED_EVENT;
 
     uint64_t prev = mon_prev_status & all_server_bits;
-    uint64_t present = server->status & all_server_bits;
+    uint64_t present = server->status() & all_server_bits;
 
     if (prev == present)
     {
@@ -939,7 +939,7 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
     for (auto mon_server : m_servers)
     {
         auto server = static_cast<Server*>(mon_server->server);
-        if (status == 0 || server->status & status)
+        if (status == 0 || server->status() & status)
         {
             if (approach == CredentialsApproach::EXCLUDE)
             {
@@ -979,7 +979,7 @@ bool MonitorServer::status_changed()
     {
 
         uint64_t old_status = mon_prev_status & all_server_bits;
-        uint64_t new_status = server->status & all_server_bits;
+        uint64_t new_status = server->status() & all_server_bits;
 
         /**
          * The state has changed if the relevant state bits are not the same,
@@ -1235,7 +1235,7 @@ void MonitorServer::log_connect_error(ConnectResult rval)
 
 void MonitorServer::log_state_change()
 {
-    string prev = SERVER::status_to_string(mon_prev_status);
+    string prev = Target::status_to_string(mon_prev_status, server->stats().n_connections);
     string next = server->status_string();
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
                server->name(), server->address, server->port,
@@ -2046,7 +2046,7 @@ void MonitorWorker::flush_server_status()
     {
         if (!pMs->server->is_in_maint())
         {
-            pMs->server->status = pMs->pending_status;
+            pMs->server->assign_status(pMs->pending_status);
         }
     }
 }
@@ -2081,8 +2081,8 @@ void MonitorWorkerSimple::tick()
     {
         if (!pMs->server->is_in_maint())
         {
-            pMs->mon_prev_status = pMs->server->status;
-            pMs->pending_status = pMs->server->status;
+            pMs->mon_prev_status = pMs->server->status();
+            pMs->pending_status = pMs->server->status();
 
             ConnectResult rval = pMs->ping_or_connect(settings().conn_settings);
 
@@ -2123,16 +2123,6 @@ void MonitorWorkerSimple::tick()
                     pMs->log_connect_error(rval);
                 }
             }
-
-#if defined (SS_DEBUG)
-            if (pMs->status_changed() || pMs->should_print_fail_status())
-            {
-                // The current status is still in pMs->pending_status.
-                MXS_DEBUG("Backend server [%s]:%d state : %s",
-                          pMs->server->address, pMs->server->port,
-                          SERVER::status_to_string(pMs->pending_status).c_str());
-            }
-#endif
 
             if (pMs->server->is_down())
             {

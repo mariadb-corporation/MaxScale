@@ -20,6 +20,7 @@
 #include <maxbase/average.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/modinfo.hh>
+#include <maxscale/target.hh>
 
 /**
  * Server configuration parameters names
@@ -29,95 +30,6 @@ extern const char CN_MONITORUSER[];
 extern const char CN_PERSISTMAXTIME[];
 extern const char CN_PERSISTPOOLMAX[];
 extern const char CN_PROXY_PROTOCOL[];
-extern const char CN_RANK[];
-
-// The enum values for `rank`
-extern const MXS_ENUM_VALUE rank_values[];
-
-// Default value for `rank`
-extern const char* DEFAULT_RANK;
-
-/**
- * Status bits in the SERVER->status member, which describes the general state of a server. Although the
- * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
- */
-// Bits used by most monitors
-#define SERVER_RUNNING              (1 << 0)    /**<< The server is up and running */
-#define SERVER_MAINT                (1 << 1)    /**<< Server is in maintenance mode */
-#define SERVER_AUTH_ERROR           (1 << 2)    /**<< Authentication error from monitor */
-#define SERVER_MASTER               (1 << 3)    /**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE                (1 << 4)    /**<< The server is a slave, i.e. can handle reads */
-#define SERVER_DRAINING             (1 << 5)    /**<< The server is being drained, i.e. no new connection
-                                                 * should be created. */
-#define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)    /**<< The disk space of the server is exhausted */
-// Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER (1 << 16)    /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY               (1 << 17)    /**<< Server is a relay */
-#define SERVER_WAS_MASTER          (1 << 18)    /**<< Server was a master but lost all slaves. */
-// Bits used by other monitors
-#define SERVER_JOINED            (1 << 19)      /**<< The server is joined in a Galera cluster */
-#define SERVER_MASTER_STICKINESS (1 << 20)      /**<< Server Master stickiness */
-
-inline bool status_is_connectable(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_MAINT | SERVER_DRAINING)) == SERVER_RUNNING;
-}
-
-inline bool status_is_usable(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING;
-}
-
-inline bool status_is_running(uint64_t status)
-{
-    return status & SERVER_RUNNING;
-}
-
-inline bool status_is_down(uint64_t status)
-{
-    return (status & SERVER_RUNNING) == 0;
-}
-
-inline bool status_is_in_maint(uint64_t status)
-{
-    return status & SERVER_MAINT;
-}
-
-inline bool status_is_draining(uint64_t status)
-{
-    return status & SERVER_DRAINING;
-}
-
-inline bool status_is_master(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_MASTER | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_MASTER);
-}
-
-inline bool status_is_slave(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_SLAVE);
-}
-
-inline bool status_is_relay(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_RELAY);
-}
-
-inline bool status_is_joined(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_JOINED);
-}
-
-inline bool status_is_slave_of_ext_master(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER))
-           == (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER);
-}
-
-inline bool status_is_disk_space_exhausted(uint64_t status)
-{
-    return status & SERVER_DISK_SPACE_EXHAUSTED;
-}
 
 /**
  * The SERVER structure defines a backend server. Each server has a name
@@ -125,7 +37,7 @@ inline bool status_is_disk_space_exhausted(uint64_t status)
  * the name of a protocol module that is loaded to implement the protocol
  * between the gateway and the server.
  */
-class SERVER
+class SERVER : public mxs::Target
 {
 public:
     static const int MAX_ADDRESS_LEN = 1024;
@@ -159,16 +71,11 @@ public:
         uint32_t patch = 0;     /**< Patch version */
     };
 
-    /* Server connection and usage statistics */
-    struct ConnStats
+    struct PoolStats
     {
-        int      n_connections = 0; /**< Number of connections */
-        int      n_current = 0;     /**< Current connections */
-        int      n_current_ops = 0; /**< Current active operations */
         int      n_persistent = 0;  /**< Current persistent pool */
         uint64_t n_new_conn = 0;    /**< Times the current pool was empty */
         uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
-        uint64_t packets = 0;       /**< Number of packets routed to this server */
     };
 
     // Base settings
@@ -185,14 +92,12 @@ public:
     uint8_t charset = DEFAULT_CHARSET;  /**< Character set. Read from backend and sent to client. */
 
     // Statistics and events
-    ConnStats stats;            /**< The server statistics, e.g. number of connections */
-    int       persistmax = 0;   /**< Maximum pool size actually achieved since startup */
-    int       last_event = 0;   /**< The last event that occurred on this server */
-    int64_t   triggered_at = 0; /**< Time when the last event was triggered */
+    PoolStats pool_stats;
+    int       persistmax = 0;       /**< Maximum pool size actually achieved since startup */
+    int       last_event = 0;       /**< The last event that occurred on this server */
+    int64_t   triggered_at = 0;     /**< Time when the last event was triggered */
 
     // Status descriptors. Updated automatically by a monitor or manually by the admin
-    uint64_t status = 0;                            /**< Current status flag bitmap */
-
     long          node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
     long          master_id = -1;       /**< Master server id of this node */
     int           rlag = RLAG_UNDEFINED;/**< Replication Lag for Master/Slave replication */
@@ -265,25 +170,11 @@ public:
     virtual std::string version_string() const = 0;
 
     /**
-     * Returns the server configuration name. The value is returned as a c-string for printing convenience.
-     *
-     * @return Server name
-     */
-    virtual const char* name() const = 0;
-
-    /**
      * Get backend protocol module name.
      *
      * @return Backend protocol module name of the server
      */
     virtual std::string protocol() const = 0;
-
-    /**
-     * Get server rank
-     *
-     * @return The server rank
-     */
-    virtual int64_t rank() const = 0;
 
     /*
      * Update server address. TODO: Move this to internal class once blr is gone.
@@ -320,122 +211,17 @@ public:
      */
     bool server_is_active() const
     {
+        return active();
+    }
+
+    bool active() const override
+    {
         return is_active;
     }
 
-    /**
-     * Is the server running and can be connected to?
-     *
-     * @return True if the server can be connected to.
-     */
-    bool is_connectable() const
+    uint64_t status() const override
     {
-        return status_is_connectable(status);
-    }
-
-    /**
-     * Is the server running and not in maintenance?
-     *
-     * @return True if server can be used.
-     */
-    bool is_usable() const
-    {
-        return status_is_usable(status);
-    }
-
-    /**
-     * Is the server running?
-     *
-     * @return True if monitor can connect to the server.
-     */
-    bool is_running() const
-    {
-        return status_is_running(status);
-    }
-
-    /**
-     * Is the server down?
-     *
-     * @return True if monitor cannot connect to the server.
-     */
-    bool is_down() const
-    {
-        return status_is_down(status);
-    }
-
-    /**
-     * Is the server in maintenance mode?
-     *
-     * @return True if server is in maintenance.
-     */
-    bool is_in_maint() const
-    {
-        return status_is_in_maint(status);
-    }
-
-    /**
-     * Is the server being drained?
-     *
-     * @return True if server is being drained.
-     */
-    bool is_draining() const
-    {
-        return status_is_draining(status);
-    }
-
-    /**
-     * Is the server a master?
-     *
-     * @return True if server is running and marked as master.
-     */
-    bool is_master() const
-    {
-        return status_is_master(status);
-    }
-
-    /**
-     * Is the server a slave.
-     *
-     * @return True if server is running and marked as slave.
-     */
-    bool is_slave() const
-    {
-        return status_is_slave(status);
-    }
-
-    /**
-     * Is the server a relay slave?
-     *
-     * @return True, if server is a running relay.
-     */
-    bool is_relay() const
-    {
-        return status_is_relay(status);
-    }
-
-    /**
-     * Is the server joined Galera node?
-     *
-     * @return True, if server is running and joined.
-     */
-    bool is_joined() const
-    {
-        return status_is_joined(status);
-    }
-
-    bool is_in_cluster() const
-    {
-        return (status & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED)) != 0;
-    }
-
-    bool is_slave_of_ext_master() const
-    {
-        return status_is_slave_of_ext_master(status);
-    }
-
-    bool is_low_on_disk_space() const
-    {
-        return status_is_disk_space_exhausted(status);
+        return m_status;
     }
 
     /**
@@ -455,27 +241,6 @@ public:
      * @return Array of servers
      */
     static std::vector<SERVER*> server_find_by_unique_names(const std::vector<std::string>& server_names);
-
-    /**
-     * Convert the current server status flags to a string.
-     *
-     * @param server The server to return the status for
-     * @return A string representation of the status
-     */
-    std::string status_string() const;
-
-    /**
-     * Convert a set of server status flags to a string.
-     *
-     * @param flags         Status flags
-     * @param nConnections  Number of current connections. Only affects the output
-     *                      if the @c SERVER_DRAINING bit is on. In that case, if
-     *                      the number of connections is 0 the state will be reported
-     *                      as 'Drained', otherwise as 'Draining'.
-     *
-     * @return A string representation of the status flags
-     */
-    static std::string status_to_string(uint64_t flags, int nConnections = -1);
 
     /**
      * Convert a status string to a status bit. Only converts one status element.
@@ -498,6 +263,12 @@ public:
      * @param bit           The bit to clear for the server
      */
     void clear_status(uint64_t bit);
+
+    // Assigns the status
+    void assign_status(uint64_t status)
+    {
+        m_status = status;
+    }
 
     int response_time_num_samples() const
     {
@@ -535,8 +306,9 @@ protected:
     }
 
 private:
-    static const int   DEFAULT_CHARSET = 0x08;      /**< The latin1 charset */
+    static const int   DEFAULT_CHARSET {0x08};      /**< The latin1 charset */
     maxbase::EMAverage m_response_time;             /**< Response time calculations for this server */
     std::mutex         m_average_write_mutex;       /**< Protects response time from concurrent writing */
     mxs::SSLProvider   m_ssl_provider;
+    uint64_t           m_status {0};
 };

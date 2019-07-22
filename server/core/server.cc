@@ -223,7 +223,7 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
     server->m_auth_instance = auth_instance;
     server->persistent = persistent;
     server->last_event = SERVER_UP_EVENT;
-    server->status = SERVER_RUNNING;
+    server->assign_status(SERVER_RUNNING);
     server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
     mxb_assert(server->m_settings.rank > 0);
 
@@ -284,7 +284,7 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
     if (server->persistent[id]
         && dcb_persistent_clean_count(server->persistent[id], id, false)
         && server->persistent[id]   // Check after cleaning
-        && (server->status & SERVER_RUNNING))
+        && server->is_running())
     {
         dcb = server->persistent[id];
 
@@ -311,8 +311,8 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
                 }
                 MXS_FREE(dcb->user);
                 dcb->user = NULL;
-                mxb::atomic::add(&server->stats.n_persistent, -1);
-                mxb::atomic::add(&server->stats.n_current, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&server->pool_stats.n_persistent, -1);
+                mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
                 return dcb;
             }
 
@@ -360,9 +360,9 @@ void Server::printServer()
     printf("\tServer:                       %s\n", address);
     printf("\tProtocol:                     %s\n", m_settings.protocol.c_str());
     printf("\tPort:                         %d\n", port);
-    printf("\tTotal connections:            %d\n", stats.n_connections);
-    printf("\tCurrent connections:          %d\n", stats.n_current);
-    printf("\tPersistent connections:       %d\n", stats.n_persistent);
+    printf("\tTotal connections:            %d\n", stats().n_connections);
+    printf("\tCurrent connections:          %d\n", stats().n_current);
+    printf("\tPersistent connections:       %d\n", pool_stats.n_persistent);
     printf("\tPersistent actual max:        %d\n", persistmax);
 }
 
@@ -486,10 +486,10 @@ void Server::print_to_dcb(DCB* dcb) const
                        elem.first.c_str(), elem.second.c_str());
         }
     }
-    dcb_printf(dcb, "\tNumber of connections:               %d\n", server->stats.n_connections);
-    dcb_printf(dcb, "\tCurrent no. of conns:                %d\n", server->stats.n_current);
-    dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats.n_current_ops);
-    dcb_printf(dcb, "\tNumber of routed packets:            %lu\n", server->stats.packets);
+    dcb_printf(dcb, "\tNumber of connections:               %d\n", server->stats().n_connections);
+    dcb_printf(dcb, "\tCurrent no. of conns:                %d\n", server->stats().n_current);
+    dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats().n_current_ops);
+    dcb_printf(dcb, "\tNumber of routed packets:            %lu\n", server->stats().packets);
     std::ostringstream ave_os;
     if (response_time_num_samples())
     {
@@ -504,15 +504,16 @@ void Server::print_to_dcb(DCB* dcb) const
 
     if (server->m_settings.persistpoolmax)
     {
-        dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
+        dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->pool_stats.n_persistent);
         cleanup_persistent_connections(server);
-        dcb_printf(dcb, "\tPersistent measured pool size:       %d\n", server->stats.n_persistent);
+        dcb_printf(dcb, "\tPersistent measured pool size:       %d\n", server->pool_stats.n_persistent);
         dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
         dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->m_settings.persistpoolmax);
         dcb_printf(dcb, "\tPersistent max time (secs):          %ld\n", server->m_settings.persistmaxtime);
-        dcb_printf(dcb, "\tConnections taken from pool:         %lu\n", server->stats.n_from_pool);
-        double d = (double)server->stats.n_from_pool / (double)(server->stats.n_connections
-                                                                + server->stats.n_from_pool + 1);
+        dcb_printf(dcb, "\tConnections taken from pool:         %lu\n", server->pool_stats.n_from_pool);
+        double d = (double)server->pool_stats.n_from_pool / (double)(server->stats().n_connections
+                                                                     + server->pool_stats.n_from_pool
+                                                                     + 1);
         dcb_printf(dcb, "\tPool availability:                   %0.2lf%%\n", d * 100.0);
     }
     if (server->ssl().enabled())
@@ -527,7 +528,7 @@ void Server::print_to_dcb(DCB* dcb) const
 
 void Server::dprintPersistentDCBs(DCB* pdcb, const Server* server)
 {
-    dcb_printf(pdcb, "Number of persistent DCBs: %d\n", server->stats.n_persistent);
+    dcb_printf(pdcb, "Number of persistent DCBs: %d\n", server->pool_stats.n_persistent);
 }
 
 void Server::dListServers(DCB* dcb)
@@ -543,18 +544,18 @@ void Server::dListServers(DCB* dcb)
     message += horizontalLine;
 
     bool have_servers = false;
-    this_unit.foreach_server(
-        [&message, &have_servers](Server* server) {
-            if (server->server_is_active())
-            {
-                have_servers = true;
-                string stat = server->status_string();
-                message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
-                                              server->name(), server->address, server->port,
-                                              server->stats.n_current, stat.c_str());
-            }
-            return true;
-        });
+    this_unit.foreach_server([&message, &have_servers](Server* server) {
+                                 if (server->server_is_active())
+                                 {
+                                     have_servers = true;
+                                     string stat = server->status_string();
+                                     message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
+                                                                   server->name(), server->address,
+                                                                   server->port,
+                                                                   server->stats().n_current, stat.c_str());
+                                 }
+                                 return true;
+                             });
 
     if (have_servers)
     {
@@ -563,91 +564,9 @@ void Server::dListServers(DCB* dcb)
     }
 }
 
-string SERVER::status_to_string(uint64_t flags, int nConnections)
-{
-    string result;
-    string separator;
-
-    // Helper function.
-    auto concatenate_if = [&result, &separator](bool condition, const string& desc) {
-            if (condition)
-            {
-                result += separator + desc;
-                separator = ", ";
-            }
-        };
-
-    // TODO: The following values should be revisited at some point, but since they are printed by
-    // the REST API they should not be changed suddenly. Strictly speaking, even the combinations
-    // should not change, but this is more dependant on the monitors and have already changed.
-    // Also, system tests compare to these strings so the output must stay constant for now.
-    const string maintenance = "Maintenance";
-    const string drained = "Drained";
-    const string draining = "Draining";
-    const string master = "Master";
-    const string relay = "Relay Master";
-    const string slave = "Slave";
-    const string synced = "Synced";
-    const string slave_ext = "Slave of External Server";
-    const string sticky = "Master Stickiness";
-    const string auth_err = "Auth Error";
-    const string running = "Running";
-    const string down = "Down";
-
-    // Maintenance/Draining is usually set by user so is printed first.
-    // Draining in the presence of Maintenance has no effect, so we only
-    // print either one of those, with Maintenance taking precedence.
-    if (status_is_in_maint(flags))
-    {
-        concatenate_if(true, maintenance);
-    }
-    else if (status_is_draining(flags))
-    {
-        if (nConnections == 0)
-        {
-            concatenate_if(true, drained);
-        }
-        else
-        {
-            concatenate_if(true, draining);
-        }
-    }
-
-    // Master cannot be a relay or a slave.
-    if (status_is_master(flags))
-    {
-        concatenate_if(true, master);
-    }
-    else
-    {
-        // Relays are typically slaves as well. The binlog server may be an exception.
-        concatenate_if(status_is_relay(flags), relay);
-        concatenate_if(status_is_slave(flags), slave);
-    }
-
-    // The following Galera and Cluster bits may be combined with master/slave.
-    concatenate_if(status_is_joined(flags), synced);
-    // May be combined with other MariaDB monitor flags.
-    concatenate_if(flags & SERVER_SLAVE_OF_EXT_MASTER, slave_ext);
-
-    // Should this be printed only if server is master?
-    concatenate_if(flags & SERVER_MASTER_STICKINESS, sticky);
-
-    concatenate_if(flags & SERVER_AUTH_ERROR, auth_err);
-    concatenate_if(status_is_running(flags), running);
-    concatenate_if(status_is_down(flags), down);
-
-    return result;
-}
-
-string SERVER::status_string() const
-{
-    return status_to_string(status, stats.n_current);
-}
-
 void SERVER::set_status(uint64_t bit)
 {
-    status |= bit;
+    m_status |= bit;
 
     /** clear error logged flag before the next failure */
     if (is_master())
@@ -658,7 +577,7 @@ void SERVER::set_status(uint64_t bit)
 
 void SERVER::clear_status(uint64_t bit)
 {
-    status &= ~bit;
+    m_status &= ~bit;
 }
 
 bool Server::set_monitor_user(const string& username)
@@ -730,17 +649,16 @@ std::unique_ptr<ResultSet> Server::getList()
     std::unique_ptr<ResultSet> set =
         ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
 
-    this_unit.foreach_server(
-        [&set](Server* server) {
-            if (server->server_is_active())
-            {
-                string stat = server->status_string();
-                set->add_row({server->name(), server->address,
-                              std::to_string(server->port),
-                              std::to_string(server->stats.n_current), stat});
-            }
-            return true;
-        });
+    this_unit.foreach_server([&set](Server* server) {
+                                 if (server->server_is_active())
+                                 {
+                                     string stat = server->status_string();
+                                     set->add_row({server->name(), server->address,
+                                                   std::to_string(server->port),
+                                                   std::to_string(server->stats().n_current), stat});
+                                 }
+                                 return true;
+                             });
 
     return set;
 }
@@ -964,11 +882,11 @@ json_t* Server::json_attributes() const
     /** Store statistics */
     json_t* statistics = json_object();
 
-    json_object_set_new(statistics, "connections", json_integer(stats.n_current));
-    json_object_set_new(statistics, "total_connections", json_integer(stats.n_connections));
-    json_object_set_new(statistics, "persistent_connections", json_integer(stats.n_persistent));
-    json_object_set_new(statistics, "active_operations", json_integer(stats.n_current_ops));
-    json_object_set_new(statistics, "routed_packets", json_integer(stats.packets));
+    json_object_set_new(statistics, "connections", json_integer(stats().n_current));
+    json_object_set_new(statistics, "total_connections", json_integer(stats().n_connections));
+    json_object_set_new(statistics, "persistent_connections", json_integer(pool_stats.n_persistent));
+    json_object_set_new(statistics, "active_operations", json_integer(stats().n_current_ops));
+    json_object_set_new(statistics, "routed_packets", json_integer(stats().packets));
     maxbase::Duration response_ave(response_time_average());
     json_object_set_new(statistics, "adaptive_avg_select_time", json_string(to_string(response_ave).c_str()));
 

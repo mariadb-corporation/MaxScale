@@ -113,7 +113,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
 
             MXS_INFO("MaxScale connections : %d (%d) in \t%s:%d %s",
                      b->connections,
-                     b->server->stats.n_current,
+                     b->server->stats().n_current,
                      b->server->address,
                      b->server->port,
                      b->server->status_string().c_str());

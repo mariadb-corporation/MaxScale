@@ -249,7 +249,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
         mxb_assert(ref->server->is_usable());
 
         /* Check server status bits against bitvalue from router_options */
-        if (ref && (ref->server->status & bitmask & bitvalue))
+        if (ref && (ref->server->status() & bitmask & bitvalue))
         {
             if (master_host && connectable_master)
             {
@@ -413,7 +413,7 @@ bool RCRSession::connection_is_valid() const
     // 'router_options=slave' in the configuration file and there was only
     // the sole master available at session creation time.
 
-    if (m_backend->server->is_usable() && (m_backend->server->status & m_bitmask & m_bitvalue))
+    if (m_backend->server->is_usable() && (m_backend->server->status() & m_bitmask & m_bitvalue))
     {
         // Note the use of '==' and not '|'. We must use the former to exclude a
         // 'router_options=slave' that uses the master due to no slave having been
@@ -448,7 +448,7 @@ int RCRSession::routeQuery(GWBUF* queue)
     mxb::atomic::add(&m_instance->stats().n_queries, 1, mxb::atomic::RELAXED);
 
     // Due to the streaming nature of readconnroute, this is not accurate
-    mxb::atomic::add(&m_backend->server->stats.packets, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&m_backend->server->stats().packets, 1, mxb::atomic::RELAXED);
 
     DCB* backend_dcb = m_dcb;
     mxb_assert(backend_dcb);

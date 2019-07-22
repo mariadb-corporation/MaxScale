@@ -360,9 +360,9 @@ void RWSplit::diagnostics(DCB* dcb)
                        "\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
                        ref->server->name(),
                        ref->server_weight * 100,
-                       ref->server->stats.n_current,
+                       ref->server->stats().n_current,
                        ref->connections,
-                       ref->server->stats.n_current_ops);
+                       ref->server->stats().n_current_ops);
         }
     }
 

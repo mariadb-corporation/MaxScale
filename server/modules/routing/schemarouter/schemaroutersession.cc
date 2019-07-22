@@ -462,7 +462,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             {
                 /** Add one query response waiter to backend reference */
                 mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
-                mxb::atomic::add(&bref->server()->stats.packets, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&bref->server()->stats().packets, 1, mxb::atomic::RELAXED);
                 ret = 1;
             }
             else
@@ -764,7 +764,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
                 if ((*it)->execute_session_command())
                 {
                     succp = true;
-                    mxb::atomic::add(&(*it)->server()->stats.packets, 1, mxb::atomic::RELAXED);
+                    mxb::atomic::add(&(*it)->server()->stats().packets, 1, mxb::atomic::RELAXED);
                 }
                 else
                 {
@@ -1587,7 +1587,7 @@ bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SSRBackend& bref, ui
             if (bref->execute_session_command())
             {
                 succp = true;
-                mxb::atomic::add(&bref->server()->stats.packets, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&bref->server()->stats().packets, 1, mxb::atomic::RELAXED);
             }
             else
             {

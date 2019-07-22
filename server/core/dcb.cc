@@ -333,19 +333,18 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
         // TODO: figure out if this can even be NULL
         if (const char* user = session_get_user(session))
         {
-            MXS_DEBUG("Looking for persistent connection DCB user %s protocol %s", user, protocol);
             auto owner = static_cast<RoutingWorker*>(session->client_dcb->owner);
             auto dcb = server->get_persistent_dcb(user, session->client_dcb->remote, protocol, owner->id());
 
             if (dcb)
             {
-                MXS_DEBUG("Reusing a persistent connection, dcb %p", dcb);
+                MXS_DEBUG("Reusing a persistent connection, user %s, dcb %p", user, dcb);
                 session_link_backend_dcb(session, dcb);
                 dcb->persistentstart = 0;
                 dcb->was_persistent = true;
                 dcb->last_read = mxs_clock();
                 dcb->last_write = mxs_clock();
-                mxb::atomic::add(&server->stats.n_from_pool, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&server->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
                 return dcb;
             }
         }
@@ -446,8 +445,8 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
                 dcb_add_callback(dcb, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
             }
 
-            mxb::atomic::add(&server->stats.n_connections, 1, mxb::atomic::RELAXED);
-            mxb::atomic::add(&server->stats.n_current, 1, mxb::atomic::RELAXED);
+            mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
+            mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
         }
         else
         {
@@ -1165,7 +1164,8 @@ void dcb_final_close(DCB* dcb)
             // This is now a DCB::Role::BACKEND_HANDLER.
             // TODO: Make decisions according to the role and assert
             // TODO: that what the role implies is preset.
-            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
+            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server->stats().n_current, -1,
+                                                     mxb::atomic::RELAXED);
             mxb_assert(rc > 0);
         }
 
@@ -1220,11 +1220,11 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         && dcb->session
         && session_valid_for_pool(dcb->session)
         && server->persistpoolmax()
-        && (server->status & SERVER_RUNNING)
+        && server->is_running()
         && !dcb->dcb_errhandle_called
         && dcb_persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax())
     {
-        if (!mxb::atomic::add_limited(&server->stats.n_persistent, 1, (int)server->persistpoolmax()))
+        if (!mxb::atomic::add_limited(&server->pool_stats.n_persistent, 1, (int)server->persistpoolmax()))
         {
             return false;
         }
@@ -1254,7 +1254,7 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
 
         dcb->nextpersistent = server->persistent[owner->id()];
         server->persistent[owner->id()] = dcb;
-        MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&server->stats.n_current, -1, mxb::atomic::RELAXED);
+        MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&server->stats().n_current, -1, mxb::atomic::RELAXED);
         mxb_assert(rc > 0);
         return true;
     }
@@ -1979,7 +1979,7 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
                 || persistentdcb->dcb_errhandle_called
                 || count >= server->persistpoolmax()
                 || persistentdcb->server == NULL
-                || !(persistentdcb->server->status & SERVER_RUNNING)
+                || !(persistentdcb->server->status() & SERVER_RUNNING)
                 || (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime())
             {
                 /* Remove from persistent pool */
@@ -1994,7 +1994,7 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
                 /* Add removed DCBs to disposal list for processing outside spinlock */
                 persistentdcb->nextpersistent = disposals;
                 disposals = persistentdcb;
-                mxb::atomic::add(&server->stats.n_persistent, -1);
+                mxb::atomic::add(&server->pool_stats.n_persistent, -1);
             }
             else
             {

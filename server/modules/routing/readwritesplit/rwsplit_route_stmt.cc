@@ -512,7 +512,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             if (backend->execute_session_command())
             {
                 nsucc += 1;
-                mxb::atomic::add(&backend->server()->stats.packets, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&backend->server()->stats().packets, 1, mxb::atomic::RELAXED);
                 m_server_stats[backend->server()].total++;
                 m_server_stats[backend->server()].read++;
 
@@ -1189,7 +1189,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         }
 
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&target->server()->stats.packets, 1, mxb::atomic::RELAXED);
+        mxb::atomic::add(&target->server()->stats().packets, 1, mxb::atomic::RELAXED);
         m_server_stats[target->server()].total++;
 
         if (!m_qc.large_query() && response == mxs::Backend::EXPECT_RESPONSE)
