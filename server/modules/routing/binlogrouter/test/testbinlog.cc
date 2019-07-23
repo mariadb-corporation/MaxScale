@@ -145,7 +145,7 @@ int main(int argc, char** argv)
         {"port", "3306"},
         {"protocol", "MariaDBBackend"},
         {"authenticator", "mariadbbackendauth"}
-    }, config_server_params);
+    }, common_server_params());
 
     Server* server = ServerManager::create_server("binlog_router_master_host", params);
     if (server == NULL)

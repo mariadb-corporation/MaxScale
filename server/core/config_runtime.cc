@@ -99,7 +99,7 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     }
     else if (strcmp(type, CN_SERVER) == 0)
     {
-        return config_server_params;
+        return common_server_params();
     }
 
     MXS_NOTICE("Module type with no default parameters used: %s", type);
@@ -435,7 +435,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     if (is_normal_parameter)
     {
         const MXS_MODULE* mod = get_module(server->protocol().c_str(), MODULE_PROTOCOL);
-        if (!param_is_valid(config_server_params, mod->parameters, key, value))
+        if (!param_is_valid(common_server_params(), mod->parameters, key, value))
         {
             config_runtime_error("Invalid value for parameter '%s': %s", key, value);
             return false;

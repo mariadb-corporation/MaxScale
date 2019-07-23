@@ -550,7 +550,7 @@ bool Server::create_server_config(const char* filename) const
     }
 
     const MXS_MODULE* mod = get_module(m_settings.protocol.c_str(), MODULE_PROTOCOL);
-    string config = generate_config_string(name(), m_settings.all_parameters, config_server_params,
+    string config = generate_config_string(name(), m_settings.all_parameters, common_server_params(),
                                            mod->parameters);
 
     // Print custom parameters. The generate_config_string()-call doesn't print them.
@@ -611,7 +611,7 @@ json_t* Server::json_attributes() const
     const MXS_MODULE* mod = get_module(m_settings.protocol.c_str(), MODULE_PROTOCOL);
     config_add_module_params_json(&m_settings.all_parameters,
                                   {CN_TYPE},
-                                  config_server_params,
+                                  common_server_params(),
                                   mod->parameters,
                                   params);
 
@@ -734,9 +734,10 @@ void SERVER::response_time_add(double ave, int num_samples)
 
 bool Server::is_custom_parameter(const string& name) const
 {
-    for (int i = 0; config_server_params[i].name; i++)
+    auto server_params = common_server_params();
+    for (int i = 0; server_params[i].name; i++)
     {
-        if (name == config_server_params[i].name)
+        if (name == server_params[i].name)
         {
             return false;
         }
@@ -795,4 +796,44 @@ Server::Type Server::VersionInfo::type() const
 std::string Server::VersionInfo::version_string() const
 {
     return m_version_str;
+}
+
+const MXS_MODULE_PARAM* common_server_params()
+{
+    static const MXS_MODULE_PARAM config_server_params[] =
+    {
+        {CN_TYPE,           MXS_MODULE_PARAM_STRING,   CN_SERVER, MXS_MODULE_OPT_REQUIRED  },
+        {CN_ADDRESS,        MXS_MODULE_PARAM_STRING},
+        {CN_SOCKET,         MXS_MODULE_PARAM_STRING},
+        {CN_PROTOCOL,       MXS_MODULE_PARAM_STRING,   NULL,      MXS_MODULE_OPT_REQUIRED  },
+        {CN_PORT,           MXS_MODULE_PARAM_COUNT,    "3306"},
+        {CN_EXTRA_PORT,     MXS_MODULE_PARAM_COUNT,    "0"},
+        {CN_AUTHENTICATOR,  MXS_MODULE_PARAM_STRING},
+        {CN_MONITORUSER,    MXS_MODULE_PARAM_STRING},
+        {CN_MONITORPW,      MXS_MODULE_PARAM_STRING},
+        {CN_PERSISTPOOLMAX, MXS_MODULE_PARAM_COUNT,    "0"},
+        {CN_PERSISTMAXTIME, MXS_MODULE_PARAM_DURATION, "0",       MXS_MODULE_OPT_DURATION_S},
+        {CN_PROXY_PROTOCOL, MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_SSL,            MXS_MODULE_PARAM_ENUM,     "false",   MXS_MODULE_OPT_ENUM_UNIQUE, ssl_values},
+        {CN_SSL_CERT,       MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
+        {CN_SSL_KEY,        MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
+        {CN_SSL_CA_CERT,    MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
+        {
+            CN_SSL_VERSION, MXS_MODULE_PARAM_ENUM, "MAX", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_version_values
+        },
+        {
+            CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_COUNT, "9"
+        },
+        {
+            CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "true"
+        },
+        {
+            CN_DISK_SPACE_THRESHOLD, MXS_MODULE_PARAM_STRING
+        },
+        {
+            CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
+        },
+        {NULL}
+    };
+    return config_server_params;
 }

@@ -326,3 +326,10 @@ private:
 
     void* m_auth_instance = nullptr;    /**< Authenticator instance data */
 };
+
+/**
+ * Returns parameter definitions shared by all servers.
+ *
+ * @return Common server parameters.
+ */
+const MXS_MODULE_PARAM* common_server_params();

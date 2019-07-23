@@ -810,7 +810,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             {"port", "3306"},
             {"protocol", "mariadbbackend"},
             {"authenticator", "MySQLBackendAuth"}
-        }, config_server_params);
+        }, common_server_params());
 
         Server* server = ServerManager::create_server("binlog_router_master_host", params);
 

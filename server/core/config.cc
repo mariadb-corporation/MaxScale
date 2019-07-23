@@ -274,7 +274,7 @@ static CONFIG_CONTEXT config_context;
 
 // Values for the `ssl` parameter. These are plain boolean types but for legacy
 // reasons the required and disabled keywords need to be allowed.
-static const MXS_ENUM_VALUE ssl_values[] =
+const MXS_ENUM_VALUE ssl_values[] =
 {
     {"required", 1              },
     {"true",     1              },
@@ -500,122 +500,6 @@ const MXS_MODULE_PARAM config_filter_params[] =
         MXS_MODULE_PARAM_STRING,
         NULL,
         MXS_MODULE_OPT_REQUIRED
-    },
-    {NULL}
-};
-
-const MXS_MODULE_PARAM config_server_params[] =
-{
-    {
-        CN_TYPE,
-        MXS_MODULE_PARAM_STRING,
-        CN_SERVER,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_ADDRESS,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_SOCKET,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_PROTOCOL,
-        MXS_MODULE_PARAM_STRING,
-        NULL,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_PORT,
-        MXS_MODULE_PARAM_COUNT,
-        "3306"
-    },
-    {
-        CN_EXTRA_PORT,
-        MXS_MODULE_PARAM_COUNT,
-        "0"
-    },
-    {
-        CN_AUTHENTICATOR,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_MONITORUSER,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_MONITORPW,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_PERSISTPOOLMAX,
-        MXS_MODULE_PARAM_COUNT,
-        "0"
-    },
-    {
-        CN_PERSISTMAXTIME,
-        MXS_MODULE_PARAM_DURATION,
-        "0",
-        MXS_MODULE_OPT_DURATION_S
-    },
-    {
-        CN_PROXY_PROTOCOL,
-        MXS_MODULE_PARAM_BOOL,
-        "false"
-    },
-    {
-        CN_SSL,
-        MXS_MODULE_PARAM_ENUM,
-        "false",
-        MXS_MODULE_OPT_ENUM_UNIQUE,
-        ssl_values
-    },
-    {
-        CN_SSL_CERT,
-        MXS_MODULE_PARAM_PATH,
-        NULL,
-        MXS_MODULE_OPT_PATH_R_OK
-    },
-    {
-        CN_SSL_KEY,
-        MXS_MODULE_PARAM_PATH,
-        NULL,
-        MXS_MODULE_OPT_PATH_R_OK
-    },
-    {
-        CN_SSL_CA_CERT,
-        MXS_MODULE_PARAM_PATH,
-        NULL,
-        MXS_MODULE_OPT_PATH_R_OK
-    },
-    {
-        CN_SSL_VERSION,
-        MXS_MODULE_PARAM_ENUM,
-        "MAX",
-        MXS_MODULE_OPT_ENUM_UNIQUE,
-        ssl_version_values
-    },
-    {
-        CN_SSL_CERT_VERIFY_DEPTH,
-        MXS_MODULE_PARAM_COUNT,
-        "9"
-    },
-    {
-        CN_SSL_VERIFY_PEER_CERTIFICATE,
-        MXS_MODULE_PARAM_BOOL,
-        "true"
-    },
-    {
-        CN_DISK_SPACE_THRESHOLD,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_RANK,
-        MXS_MODULE_PARAM_ENUM,
-        DEFAULT_RANK,
-        MXS_MODULE_OPT_ENUM_UNIQUE,
-        rank_values
     },
     {NULL}
 };
@@ -1462,7 +1346,7 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     else if (type == CN_SERVER)
     {
         auto name = obj->m_parameters.get_string(CN_PROTOCOL);
-        return {config_server_params, get_module(name.c_str(), MODULE_PROTOCOL)};
+        return {common_server_params(), get_module(name.c_str(), MODULE_PROTOCOL)};
     }
     else if (type == CN_MONITOR)
     {
@@ -3825,9 +3709,10 @@ int create_new_service(CONFIG_CONTEXT* obj)
  */
 bool is_normal_server_parameter(const char* param)
 {
-    for (int i = 0; config_server_params[i].name; i++)
+    auto server_params = common_server_params();
+    for (int i = 0; server_params[i].name; i++)
     {
-        if (strcmp(param, config_server_params[i].name) == 0)
+        if (strcmp(param, server_params[i].name) == 0)
         {
             return true;
         }
@@ -3853,7 +3738,7 @@ int create_new_server(CONFIG_CONTEXT* obj)
 {
     bool error = false;
 
-    config_add_defaults(obj, config_server_params);
+    config_add_defaults(obj, common_server_params());
 
     auto module = obj->m_parameters.get_string(CN_PROTOCOL);
     mxb_assert(!module.empty());

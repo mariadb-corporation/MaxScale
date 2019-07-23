@@ -46,8 +46,8 @@ enum
 extern const MXS_MODULE_PARAM config_service_params[];
 extern const MXS_MODULE_PARAM config_listener_params[];
 extern const MXS_MODULE_PARAM config_filter_params[];
-extern const MXS_MODULE_PARAM config_server_params[];
 extern const char* config_pre_parse_global_params[];
+extern const MXS_ENUM_VALUE ssl_values[];
 
 /**
  * Finalize the configuration subsystem
