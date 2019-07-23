@@ -293,7 +293,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
             MXS_FREE(my_session);
             return NULL;
         }
-        sprintf(my_session->filename, "%s.%lu", my_instance->filebase, session->ses_id);
+        sprintf(my_session->filename, "%s.%lu", my_instance->filebase, session->id());
 
         my_session->top = (TOPNQ**) MXS_CALLOC(my_instance->topN + 1, sizeof(TOPNQ*));
         MXS_ABORT_IF_NULL(my_session->top);

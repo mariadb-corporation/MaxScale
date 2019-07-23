@@ -355,7 +355,7 @@ int MySQLSendHandshake(DCB* dcb)
     }
 
     // Get the equivalent of the server thread id.
-    protocol->thread_id = dcb->session->ses_id;
+    protocol->thread_id = dcb->session->id();
     // Send only the low 32bits in the handshake.
     gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(protocol->thread_id));
     memcpy(mysql_scramble_buf, server_scramble, 8);
@@ -1013,7 +1013,7 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
          */
         if (session_start(dcb->session))
         {
-            mxb_assert(dcb->session->state != SESSION_STATE_CREATED);
+            mxb_assert(dcb->session->state() != SESSION_STATE_CREATED);
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
             dcb->session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
@@ -1295,7 +1295,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
     uint64_t capabilities = 0;
 
     session = dcb->session;
-    session_state_value = session->state;
+    session_state_value = session->state();
     if (session_state_value != SESSION_STATE_STARTED)
     {
         if (session_state_value != SESSION_STATE_STOPPING)
@@ -1655,7 +1655,7 @@ static int gw_error_client_event(DCB* dcb)
 
     session = dcb->session;
 
-    if (session != NULL && session->state == SESSION_STATE_STOPPING)
+    if (session != NULL && session->state() == SESSION_STATE_STOPPING)
     {
         goto retblock;
     }
@@ -1673,9 +1673,9 @@ static int gw_client_close(DCB* dcb)
 {
     MXS_SESSION* target = dcb->session;
 
-    if (target->state == SESSION_STATE_STARTED || target->state == SESSION_STATE_STOPPING)
+    if (target->state() == SESSION_STATE_STARTED || target->state() == SESSION_STATE_STOPPING)
     {
-        MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->ses_id);
+        MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->id());
         mxb_assert(removed);
         session_close(target);
     }

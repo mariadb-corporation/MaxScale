@@ -166,6 +166,9 @@ public:
     Session(const SListener& listener);
     ~Session();
 
+    bool start();
+    void close();
+
     // Links a client DCB to a session
     void set_client_dcb(DCB* dcb);
 

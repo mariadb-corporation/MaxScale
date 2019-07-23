@@ -356,7 +356,7 @@ void RRRouter::handle_error(RRRouterSession* rses,
 {
     MXS_SESSION* session = problem_dcb->session;
     DCB* client_dcb = session->client_dcb;
-    mxs_session_state_t sesstate = session->state;
+    mxs_session_state_t sesstate = session->state();
 
     /* If the erroneous dcb is a client handler, close it. Setting succp to
      * false will cause the entire attached session to be closed.

@@ -146,7 +146,7 @@ void dcb_finish()
 
 uint64_t dcb_get_session_id(DCB* dcb)
 {
-    return (dcb && dcb->session) ? dcb->session->ses_id : 0;
+    return (dcb && dcb->session) ? dcb->session->id() : 0;
 }
 
 static MXB_WORKER* get_dcb_owner()
@@ -863,7 +863,7 @@ static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
         return false;
     }
 
-    if (dcb->session == NULL || dcb->session->state != SESSION_STATE_STOPPING)
+    if (dcb->session == NULL || dcb->session->state() != SESSION_STATE_STOPPING)
     {
         /**
          * SESSION_STATE_STOPPING means that one of the backends is closing
@@ -1550,7 +1550,7 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
 
     if (dcb->session)
     {
-        dcb_printf(pdcb, "\tOwning Session:     %" PRIu64 "\n", dcb->session->ses_id);
+        dcb_printf(pdcb, "\tOwning Session:     %" PRIu64 "\n", dcb->session->id());
     }
 
     if (dcb->writeq)

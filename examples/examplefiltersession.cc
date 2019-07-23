@@ -20,7 +20,7 @@
 ExampleFilterSession::ExampleFilterSession(MXS_SESSION* pSession, ExampleFilter& filter)
     : mxs::FilterSession(pSession)
     , m_filter(filter)
-    , m_session_id(pSession->ses_id)
+    , m_session_id(pSession->id())
 {
 }
 

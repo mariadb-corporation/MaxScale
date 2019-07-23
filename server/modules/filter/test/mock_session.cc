@@ -24,13 +24,8 @@ Session::Session(Client* pClient, const SListener& listener)
     , m_client(*pClient)
     , m_client_dcb(this, pClient->user(), pClient->host(), pClient)
 {
-    MXS_SESSION* pSession = this;
-
-    memset((void*)pSession, 0, sizeof(MXS_SESSION));
-
-    pSession->state = SESSION_STATE_CREATED;
-
-    pSession->client_dcb = &m_client_dcb;
+    m_state = SESSION_STATE_CREATED;
+    client_dcb = &m_client_dcb;
 
     memset(&m_mysql_session, 0, sizeof(m_mysql_session));
 

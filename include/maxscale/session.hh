@@ -36,9 +36,9 @@ typedef enum
 {
     SESSION_STATE_CREATED,          /*< Session created but not started */
     SESSION_STATE_STARTED,          /*< Session is fully functional */
-    SESSION_STATE_STOPPING,         /*< session and router are being closed */
-    SESSION_STATE_TO_BE_FREED,      /*< ready to be freed as soon as there are no references */
-    SESSION_STATE_FREE,             /*< for all sessions */
+    SESSION_STATE_STOPPING,         /*< Session and router are being closed */
+    SESSION_STATE_FAILED,           /*< Creation failed */
+    SESSION_STATE_FREE,             /*< The session is freed, only for completeness sake */
 } mxs_session_state_t;
 
 const char* session_state_to_string(mxs_session_state_t);
@@ -166,10 +166,24 @@ struct MXS_SESSION
     MXS_SESSION(const SListener& listener);
     virtual ~MXS_SESSION();
 
-    mxs_session_state_t state;      /*< Current descriptor state */
-    uint64_t            ses_id;     /*< Unique session identifier */
-    DCB*                client_dcb; /*< The client connection */
-    SListener           listener;   /*< The origin of the connection */
+    mxs_session_state_t state() const
+    {
+        return m_state;
+    }
+
+    uint64_t id() const
+    {
+        return m_id;
+    }
+
+protected:
+    mxs_session_state_t m_state;    /*< Current descriptor state */
+    uint64_t            m_id;       /*< Unique session identifier */
+
+public:
+
+    DCB*      client_dcb;   /*< The client connection */
+    SListener listener;     /*< The origin of the connection */
 
     struct mxs_router_session* router_session;          /*< The router instance data */
     MXS_SESSION_STATS          stats;                   /*< Session statistics */
@@ -670,7 +684,7 @@ struct RegistryTraits<MXS_SESSION>
 
     static id_type get_id(entry_type entry)
     {
-        return entry->ses_id;
+        return entry->id();
     }
     static entry_type null_entry()
     {

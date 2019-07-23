@@ -368,7 +368,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 {
                     sprintf(errbuf + strlen(errbuf),
                             " ([%" PRIu64 "]: DB change failed)",
-                            m_client->session->ses_id);
+                            m_client->session->id());
                 }
 
                 write_error_to_client(m_client,
@@ -630,7 +630,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
 
     case ERRACT_REPLY_CLIENT:
         // The session pointer can be NULL if the creation fails when filters are being set up
-        if (m_client->session && m_client->session->state == SESSION_STATE_STARTED)
+        if (m_client->session && m_client->session->state() == SESSION_STATE_STARTED)
         {
             m_client->func.write(m_client, gwbuf_clone(pMessage));
         }
@@ -975,7 +975,7 @@ bool SchemaRouterSession::handle_default_db()
         {
             sprintf(errmsg + strlen(errmsg),
                     " ([%" PRIu64 "]: DB not found on connect)",
-                    m_client->session->ses_id);
+                    m_client->session->id());
         }
         write_error_to_client(m_client,
                               SCHEMA_ERR_DBNOTFOUND,

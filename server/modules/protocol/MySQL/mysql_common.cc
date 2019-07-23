@@ -533,7 +533,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
         mxb_assert(dcb->data);
         memcpy(session, dcb->data, sizeof(MYSQL_session));
     }
-    else if (dcb->session->state != SESSION_STATE_CREATED)
+    else if (dcb->session->state() != SESSION_STATE_CREATED)
     {
         memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }
@@ -541,7 +541,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     {
         mxb_assert(false);
         MXS_ERROR("Couldn't get session authentication info. Session in wrong state: %s.",
-                  session_state_to_string(dcb->session->state));
+                  session_state_to_string(dcb->session->state()));
         rval = false;
     }
 
@@ -908,7 +908,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
     if (dcb->session == NULL
-        || (dcb->session->state != SESSION_STATE_CREATED && dcb->session->state != SESSION_STATE_STARTED)
+        || (dcb->session->state() != SESSION_STATE_CREATED && dcb->session->state() != SESSION_STATE_STARTED)
         || (dcb->server->ssl().context() && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
@@ -1331,7 +1331,7 @@ static bool kill_func(DCB* dcb, void* data)
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
     MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol);
 
-    if (dcb->session->ses_id == info->target_id
+    if (dcb->session->id() == info->target_id
         && dcb->role == DCB::Role::BACKEND
         && (info->keep_thread_id == 0 || proto->thread_id != info->keep_thread_id))
     {

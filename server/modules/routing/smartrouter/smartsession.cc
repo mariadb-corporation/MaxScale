@@ -502,7 +502,7 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
     MySQLProtocol* proto = static_cast<MySQLProtocol*>(cluster.pDcb->protocol);
     int keep_protocol_thread_id = proto->thread_id;
 
-    mxs_mysql_execute_kill_all_others(cluster.pDcb->session, cluster.pDcb->session->ses_id,
+    mxs_mysql_execute_kill_all_others(cluster.pDcb->session, cluster.pDcb->session->id(),
                                       keep_protocol_thread_id, KT_QUERY);
 }
 
@@ -526,7 +526,6 @@ void SmartRouterSession::handleError(GWBUF* pPacket,
                                                     << extract_error(pPacket));
 
     MXS_SESSION* pSession = pProblem->session;
-    mxs_session_state_t sesstate = pSession->state;
 
     /* Send error report to client */
     GWBUF* pCopy = gwbuf_clone(pPacket);

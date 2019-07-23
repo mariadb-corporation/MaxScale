@@ -71,8 +71,6 @@ struct
 }
 
 static void         session_initialize(void* session);
-static int          session_setup_filters(MXS_SESSION* session);
-static void         session_simple_free(MXS_SESSION* session, DCB* dcb);
 static void         session_add_to_all_list(MXS_SESSION* session);
 static MXS_SESSION* session_find_free();
 static void         session_final_free(MXS_SESSION* session);
@@ -88,8 +86,8 @@ static void         session_deliver_response(MXS_SESSION* session);
 static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* data, DCB* dcb);
 
 MXS_SESSION::MXS_SESSION(const SListener& listener)
-    : state(SESSION_STATE_CREATED)
-    , ses_id(session_get_next_id())
+    : m_state(SESSION_STATE_CREATED)
+    , m_id(session_get_next_id())
     , client_dcb(nullptr)
     , listener(listener)
     , router_session(nullptr)
@@ -112,60 +110,10 @@ MXS_SESSION::~MXS_SESSION()
 {
 }
 
-bool session_start(MXS_SESSION* session)
+bool session_start(MXS_SESSION* ses)
 {
-    session->router_session = session->service->router->newSession(session->service->router_instance,
-                                                                   session);
-
-    if (session->router_session == NULL)
-    {
-        session->state = SESSION_STATE_TO_BE_FREED;
-        MXS_ERROR("Failed to create new router session for service '%s'. "
-                  "See previous errors for more details.", session->service->name());
-        return false;
-    }
-
-    /*
-     * Pending filter chain being setup set the head of the chain to
-     * be the router. As filters are inserted the current head will
-     * be pushed to the filter and the head updated.
-     *
-     * NB This dictates that filters are created starting at the end
-     * of the chain nearest the router working back to the client
-     * protocol end of the chain.
-     */
-    // NOTE: Here we cast the router instance into a MXS_FILTER and
-    // NOTE: the router session into a MXS_FILTER_SESSION and
-    // NOTE: the router routeQuery into a filter routeQuery. That
-    // NOTE: is in order to be able to treat the router as the first
-    // NOTE: filter.
-    session->head = router_as_downstream(session);
-
-    // NOTE: Here we cast the session into a MXS_FILTER and MXS_FILTER_SESSION
-    // NOTE: and session_reply into a filter clientReply. That's dubious but ok
-    // NOTE: as session_reply will know what to do. In practice, the session
-    // NOTE: will be called as if it would be the last filter.
-    session->tail.instance = (MXS_FILTER*)session;
-    session->tail.session = (MXS_FILTER_SESSION*)session;
-    session->tail.clientReply = session_reply;
-
-    if (!session_setup_filters(session))
-    {
-        session->state = SESSION_STATE_TO_BE_FREED;
-        MXS_ERROR("Setting up filters failed. Terminating session %s.", session->service->name());
-        return false;
-    }
-
-    session->state = SESSION_STATE_STARTED;
-    mxb::atomic::add(&session->service->stats().n_connections, 1, mxb::atomic::RELAXED);
-    mxb::atomic::add(&session->service->stats().n_current, 1, mxb::atomic::RELAXED);
-
-    MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
-             session->service->name(), session->ses_id,
-             session->client_dcb->user ? session->client_dcb->user : "<no user>",
-             session->client_dcb->remote);
-
-    return true;
+    Session* session = static_cast<Session*>(ses);
+    return session->start();
 }
 
 void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
@@ -187,48 +135,10 @@ void session_unlink_backend_dcb(MXS_SESSION* session, DCB* dcb)
     session_put_ref(session);
 }
 
-/**
- * Deallocate the specified session, minimal actions during session_alloc
- * Since changes to keep new session in existence until all related DCBs
- * have been destroyed, this function is redundant.  Just left until we are
- * sure of the direction taken.
- *
- * @param session       The session to deallocate
- */
-static void session_simple_free(MXS_SESSION* session, DCB* dcb)
+void session_close(MXS_SESSION* ses)
 {
-    /* Does this possibly need a lock? */
-    if (dcb->data)
-    {
-        void* clientdata = dcb->data;
-        dcb->data = NULL;
-        MXS_FREE(clientdata);
-    }
-    if (session)
-    {
-        if (session->router_session)
-        {
-            session->service->router->freeSession(session->service->router_instance,
-                                                  session->router_session);
-        }
-        session->state = SESSION_STATE_STOPPING;
-    }
-
-    session_final_free(session);
-}
-
-void session_close(MXS_SESSION* session)
-{
-    if (session->router_session)
-    {
-        session->state = SESSION_STATE_STOPPING;
-
-        MXS_ROUTER_OBJECT* router = session->service->router;
-        MXS_ROUTER* router_instance = session->service->router_instance;
-
-        /** Close router session and all its connections */
-        router->closeSession(router_instance, session->router_session);
-    }
+    Session* session = static_cast<Session*>(ses);
+    session->close();
 }
 
 class ServiceDestroyTask : public Worker::DisposableTask
@@ -255,7 +165,7 @@ private:
  */
 static void session_free(MXS_SESSION* session)
 {
-    MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name(), session->ses_id);
+    MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name(), session->id());
     Service* service = static_cast<Service*>(session->service);
 
     session_final_free(session);
@@ -273,25 +183,6 @@ static void session_free(MXS_SESSION* session)
 static void session_final_free(MXS_SESSION* ses)
 {
     Session* session = static_cast<Session*>(ses);
-    mxb_assert(session->refcount == 0);
-
-    session->state = SESSION_STATE_TO_BE_FREED;
-
-    mxb::atomic::add(&session->service->stats().n_current, -1, mxb::atomic::RELAXED);
-
-    if (session->client_dcb)
-    {
-        dcb_free_all_memory(session->client_dcb);
-        session->client_dcb = NULL;
-    }
-
-    if (this_unit.dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
-    {
-        session_dump_statements(session);
-    }
-
-    session->state = SESSION_STATE_FREE;
-
     delete session;
 }
 
@@ -317,7 +208,7 @@ void printSession(MXS_SESSION* session)
     char timebuf[40];
 
     printf("Session %p\n", session);
-    printf("\tState:        %s\n", session_state_to_string(session->state));
+    printf("\tState:        %s\n", session_state_to_string(session->state()));
     printf("\tService:      %s (%p)\n", session->service->name(), session->service);
     printf("\tClient DCB:   %p\n", session->client_dcb);
     printf("\tConnected:    %s\n",
@@ -385,8 +276,8 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
     char buf[30];
     int i;
 
-    dcb_printf(dcb, "Session %" PRIu64 "\n", print_session->ses_id);
-    dcb_printf(dcb, "\tState:               %s\n", session_state_to_string(print_session->state));
+    dcb_printf(dcb, "Session %" PRIu64 "\n", print_session->id());
+    dcb_printf(dcb, "\tState:               %s\n", session_state_to_string(print_session->state()));
     dcb_printf(dcb, "\tService:             %s\n", print_session->service->name());
 
     if (print_session->client_dcb && print_session->client_dcb->remote)
@@ -424,12 +315,12 @@ bool dListSessions_cb(DCB* dcb, void* data)
         MXS_SESSION* session = dcb->session;
         dcb_printf(out_dcb,
                    "%-16" PRIu64 " | %-15s | %-14s | %s\n",
-                   session->ses_id,
+                   session->id(),
                    session->client_dcb && session->client_dcb->remote ?
                    session->client_dcb->remote : "",
                    session->service && session->service->name() ?
                    session->service->name() : "",
-                   session_state_to_string(session->state));
+                   session_state_to_string(session->state()));
     }
 
     return true;
@@ -472,8 +363,8 @@ const char* session_state_to_string(mxs_session_state_t state)
     case SESSION_STATE_STOPPING:
         return "Stopping session";
 
-    case SESSION_STATE_TO_BE_FREED:
-        return "Session to be freed";
+    case SESSION_STATE_FAILED:
+        return "Session creation failed";
 
     case SESSION_STATE_FREE:
         return "Freed session";
@@ -481,25 +372,6 @@ const char* session_state_to_string(mxs_session_state_t state)
     default:
         return "Invalid State";
     }
-}
-
-/**
- * Create the filter chain for this session.
- *
- * Filters must be setup in reverse order, starting with the last
- * filter in the chain and working back towards the client connection
- * Each filter is passed the current session head of the filter chain
- * this head becomes the destination for the filter. The newly created
- * filter becomes the new head of the filter chain.
- *
- * @param       session         The session that requires the chain
- * @return      0 if filter creation fails
- */
-static int session_setup_filters(MXS_SESSION* ses)
-{
-    Service* service = static_cast<Service*>(ses->service);
-    Session* session = static_cast<Session*>(ses);
-    return session->setup_filters(service);
 }
 
 /**
@@ -602,7 +474,7 @@ bool dcb_iter_cb(DCB* dcb, void* data)
         snprintf(buf, sizeof(buf), "%p", ses);
 
         set->add_row({buf, ses->client_dcb->remote, ses->service->name(),
-                      session_state_to_string(ses->state)});
+                      session_state_to_string(ses->state())});
     }
 
     return true;
@@ -673,7 +545,7 @@ static bool ses_find_id(DCB* dcb, void* data)
     uint64_t* id = (uint64_t*)params[1];
     bool rval = true;
 
-    if (dcb->session->ses_id == *id)
+    if (dcb->session->id() == *id)
     {
         *ses = session_get_ref(dcb->session);
         rval = false;
@@ -721,7 +593,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     /** ID must be a string */
     stringstream ss;
-    ss << session->ses_id;
+    ss << session->id();
 
     /** ID and type */
     json_object_set_new(data, CN_ID, json_string(ss.str().c_str()));
@@ -753,7 +625,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     /** Session attributes */
     json_t* attr = json_object();
-    json_object_set_new(attr, "state", json_string(session_state_to_string(session->state)));
+    json_object_set_new(attr, "state", json_string(session_state_to_string(session->state())));
 
     if (session->client_dcb->user)
     {
@@ -812,7 +684,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 json_t* session_to_json(const MXS_SESSION* session, const char* host, bool rdns)
 {
     stringstream ss;
-    ss << MXS_JSON_API_SESSIONS << session->ses_id;
+    ss << MXS_JSON_API_SESSIONS << session->id();
     const Session* s = static_cast<const Session*>(session);
     return mxs_json_resource(host, ss.str().c_str(), session_json_data(s, host, rdns));
 }
@@ -871,7 +743,7 @@ uint64_t session_get_current_id()
 {
     MXS_SESSION* session = session_get_current();
 
-    return session ? session->ses_id : 0;
+    return session ? session->id() : 0;
 }
 
 bool session_add_variable(MXS_SESSION* session,
@@ -1034,7 +906,7 @@ public:
 
     void execute()
     {
-        if (m_session->state == SESSION_STATE_STARTED)
+        if (m_session->state() == SESSION_STATE_STARTED)
         {
             GWBUF* buffer = m_buffer;
             m_buffer = NULL;
@@ -1140,6 +1012,23 @@ Session::Session(const SListener& listener)
 
 Session::~Session()
 {
+    mxb_assert(refcount == 0);
+
+    mxb::atomic::add(&service->stats().n_current, -1, mxb::atomic::RELAXED);
+
+    if (client_dcb)
+    {
+        dcb_free_all_memory(client_dcb);
+        client_dcb = NULL;
+    }
+
+    if (this_unit.dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
+    {
+        session_dump_statements(this);
+    }
+
+    m_state = SESSION_STATE_FREE;
+
     if (router_session)
     {
         service->router->freeSession(service->router_instance, router_session);
@@ -1215,14 +1104,13 @@ void Session::dump_statements() const
     {
         int n = m_last_queries.size();
 
-        uint64_t id = session_get_current_id();
+        uint64_t current_id = session_get_current_id();
 
-        if ((id != 0) && (id != ses_id))
+        if ((current_id != 0) && (current_id != id()))
         {
-            MXS_WARNING("Current session is %" PRIu64 ", yet statements are dumped for %" PRIu64 ". "
-                                                                                                 "The session id in the subsequent dumped statements is the wrong one.",
-                        id,
-                        ses_id);
+            MXS_WARNING("Current session is %lu, yet statements are dumped for %lu. "
+                        "The session id in the subsequent dumped statements is the wrong one.",
+                        current_id, id());
         }
 
         for (auto i = m_last_queries.rbegin(); i != m_last_queries.rend(); ++i)
@@ -1241,7 +1129,7 @@ void Session::dump_statements() const
 
             if (pStmt)
             {
-                if (id != 0)
+                if (current_id != 0)
                 {
                     MXS_NOTICE("Stmt %d(%s): %.*s", n, timestamp, len, pStmt);
                 }
@@ -1250,7 +1138,7 @@ void Session::dump_statements() const
                     // We are in a context where we do not have a current session, so we need to
                     // log the session id ourselves.
 
-                    MXS_NOTICE("(%" PRIu64 ") Stmt %d(%s): %.*s", ses_id, n, timestamp, len, pStmt);
+                    MXS_NOTICE("(%" PRIu64 ") Stmt %d(%s): %.*s", current_id, n, timestamp, len, pStmt);
                 }
 
                 if (deallocate)
@@ -1635,4 +1523,69 @@ void Session::QueryInfo::reset_server_bookkeeping()
     m_completed.tv_sec = 0;
     m_completed.tv_nsec = 0;
     m_complete = false;
+}
+
+bool Session::start()
+{
+    router_session = service->router->newSession(service->router_instance, this);
+
+    if (!router_session)
+    {
+        m_state = SESSION_STATE_FAILED;
+        MXS_ERROR("Failed to create new router session for service '%s'. "
+                  "See previous errors for more details.", service->name());
+        return false;
+    }
+
+    /*
+     * Pending filter chain being setup set the head of the chain to
+     * be the router. As filters are inserted the current head will
+     * be pushed to the filter and the head updated.
+     *
+     * NB This dictates that filters are created starting at the end
+     * of the chain nearest the router working back to the client
+     * protocol end of the chain.
+     */
+    // NOTE: Here we cast the router instance into a MXS_FILTER and
+    // NOTE: the router session into a MXS_FILTER_SESSION and
+    // NOTE: the router routeQuery into a filter routeQuery. That
+    // NOTE: is in order to be able to treat the router as the first
+    // NOTE: filter.
+    head = router_as_downstream(this);
+
+    // NOTE: Here we cast the session into a MXS_FILTER and MXS_FILTER_SESSION
+    // NOTE: and session_reply into a filter clientReply. That's dubious but ok
+    // NOTE: as session_reply will know what to do. In practice, the session
+    // NOTE: will be called as if it would be the last filter.
+    tail.instance = (MXS_FILTER*)this;
+    tail.session = (MXS_FILTER_SESSION*)this;
+    tail.clientReply = session_reply;
+
+    if (!setup_filters(static_cast<Service*>(service)))
+    {
+        m_state = SESSION_STATE_FAILED;
+        MXS_ERROR("Setting up filters failed. Terminating session %s.", service->name());
+        return false;
+    }
+
+    m_state = SESSION_STATE_STARTED;
+    mxb::atomic::add(&service->stats().n_connections, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
+
+    MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
+             service->name(), id(),
+             client_dcb->user ? client_dcb->user : "<no user>",
+             client_dcb->remote);
+
+    return true;
+}
+
+
+void Session::close()
+{
+    if (router_session)
+    {
+        m_state = SESSION_STATE_STOPPING;
+        service->router->closeSession(service->router_instance, router_session);
+    }
 }

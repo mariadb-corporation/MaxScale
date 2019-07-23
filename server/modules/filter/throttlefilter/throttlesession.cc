@@ -70,7 +70,7 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
         if (m_state == State::MEASURING)
         {
             MXS_INFO("Query throttling STARTED session %ld user %s",
-                     m_pSession->ses_id,
+                     m_pSession->id(),
                      m_pSession->client_dcb->user);
             m_state = State::THROTTLING;
             m_first_sample.restart();
@@ -88,13 +88,13 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
         {
             m_state = State::MEASURING;
             MXS_INFO("Query throttling stopped session %ld user %s",
-                     m_pSession->ses_id,
+                     m_pSession->id(),
                      m_pSession->client_dcb->user);
         }
         else if (m_first_sample.split() > m_filter.config().throttling_duration)
         {
             MXS_NOTICE("Query throttling Session %ld user %s, throttling limit reached. Disconnect.",
-                       m_pSession->ses_id,
+                       m_pSession->id(),
                        m_pSession->client_dcb->user);
             return false;   // disconnect
         }
