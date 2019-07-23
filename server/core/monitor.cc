@@ -34,6 +34,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/mariadb.hh>
+#include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
@@ -43,6 +44,7 @@
 #include <maxscale/json_api.hh>
 #include <mysqld_error.h>
 #include <maxbase/format.hh>
+#include <maxscale/http.hh>
 
 #include "internal/config.hh"
 #include "internal/externcmd.hh"
@@ -780,6 +782,29 @@ bool Monitor::test_permissions(const string& query)
     return rval;
 }
 
+json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
+{
+    auto comp = [srv](MonitorServer* ms) {
+        return ms->server == srv;
+    };
+
+    auto iter = std::find_if(m_servers.begin(), m_servers.end(), comp);
+    if (iter != m_servers.end())
+    {
+        auto mon_srv = *iter;
+        json_t* rval = json_object();
+        json_object_set_new(rval, "node_id", json_integer(mon_srv->node_id));
+        json_object_set_new(rval, "master_id", json_integer(mon_srv->master_id));
+
+        const char* event_name = get_event_name(mon_srv->last_event);
+        time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(mon_srv->triggered_at);
+        json_object_set_new(rval, "last_event", json_string(event_name));
+        json_object_set_new(rval, "triggered_at", json_string(http_to_date(t).c_str()));
+        return rval; // TODO: Add derived class calling here for monitor-specific data
+    }
+    return nullptr;
+}
+
 void MonitorServer::stash_current_status()
 {
     mon_prev_status = server->status();
@@ -927,7 +952,7 @@ const char* Monitor::get_event_name(mxs_monitor_event_t event)
 
 const char* MonitorServer::get_event_name()
 {
-    return Monitor::get_event_name((mxs_monitor_event_t) server->last_event);
+    return Monitor::get_event_name(last_event);
 }
 
 string Monitor::gen_serverlist(int status, CredentialsApproach approach)
@@ -1011,11 +1036,11 @@ MonitorServer* Monitor::find_parent_node(MonitorServer* target)
 {
     MonitorServer* rval = NULL;
 
-    if (target->server->master_id > 0)
+    if (target->master_id > 0)
     {
         for (MonitorServer* node : m_servers)
         {
-            if (node->server->node_id == target->server->master_id)
+            if (node->node_id == target->master_id)
             {
                 rval = node;
                 break;
@@ -1030,12 +1055,12 @@ std::string Monitor::child_nodes(MonitorServer* parent)
 {
     std::stringstream ss;
 
-    if (parent->server->node_id > 0)
+    if (parent->node_id > 0)
     {
         bool have_content = false;
         for (MonitorServer* node : m_servers)
         {
-            if (node->server->master_id == parent->server->node_id)
+            if (node->master_id == parent->node_id)
             {
                 if (have_content)
                 {
@@ -1325,8 +1350,8 @@ void Monitor::detect_handle_state_changes()
              * or new_master events are triggered within a pre-defined time limit.
              */
             mxs_monitor_event_t event = ptr->get_event_type();
-            ptr->server->last_event = event;
-            ptr->server->triggered_at = mxs_clock();
+            ptr->last_event = event;
+            ptr->triggered_at = mxs_clock();
             ptr->log_state_change();
 
             if (event == MASTER_DOWN_EVENT)

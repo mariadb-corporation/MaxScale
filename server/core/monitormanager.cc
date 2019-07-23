@@ -469,6 +469,17 @@ json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host
     return mxs_json_resource(host, self.c_str(), monitor->to_json(host));
 }
 
+json_t* MonitorManager::monitored_server_attributes_json(const SERVER* srv)
+{
+    mxb_assert(Monitor::is_admin_thread());
+    Monitor* mon = server_is_monitored(srv);
+    if (mon)
+    {
+        return mon->monitored_server_json_attributes(srv);
+    }
+    return nullptr;
+}
+
 json_t* MonitorManager::monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();

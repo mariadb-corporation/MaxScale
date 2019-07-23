@@ -518,7 +518,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
                     m_server_id = server_id_parsed;
                     m_topology_changed = true;
                 }
-                m_server_base->server->node_id = server_id_parsed;
+                m_server_base->node_id = server_id_parsed;
 
                 if (read_only_parsed != m_read_only)
                 {
@@ -883,7 +883,7 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
     if (rval)
     {
         /** Store master_id of current node. */
-        m_server_base->server->master_id = !m_slave_status.empty() ?
+        m_server_base->master_id = !m_slave_status.empty() ?
             m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
     }
     return rval;

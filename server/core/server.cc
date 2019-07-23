@@ -176,7 +176,6 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
     server->is_active = true;
     server->m_auth_instance = auth_instance;
     server->persistent = persistent;
-    server->last_event = SERVER_UP_EVENT;
     server->assign_status(SERVER_RUNNING);
     server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
     mxb_assert(server->m_settings.rank > 0);
@@ -324,13 +323,7 @@ void Server::print_to_dcb(DCB* dcb) const
     dcb_printf(dcb, "\tProtocol:                            %s\n", server->m_settings.protocol.c_str());
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
     dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string().c_str());
-    dcb_printf(dcb, "\tNode Id:                             %ld\n", server->node_id);
-    dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
-    dcb_printf(dcb,
-               "\tLast event:                          %s\n",
-               mxs::Monitor::get_event_name((mxs_monitor_event_t) server->last_event));
-    time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
-    dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
+
     if (server->is_slave() || server->is_relay())
     {
         if (server->rlag >= 0)
@@ -641,14 +634,6 @@ json_t* Server::json_attributes() const
     json_object_set_new(attr, CN_STATE, json_string(stat.c_str()));
 
     json_object_set_new(attr, CN_VERSION_STRING, json_string(version_string().c_str()));
-
-    json_object_set_new(attr, "node_id", json_integer(node_id));
-    json_object_set_new(attr, "master_id", json_integer(master_id));
-
-    const char* event_name = Monitor::get_event_name((mxs_monitor_event_t) last_event);
-    time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(triggered_at);
-    json_object_set_new(attr, "last_event", json_string(event_name));
-    json_object_set_new(attr, "triggered_at", json_string(http_to_date(t).c_str()));
 
     if (rlag >= 0)
     {

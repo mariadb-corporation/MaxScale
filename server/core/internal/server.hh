@@ -253,6 +253,8 @@ public:
      */
     json_t* to_json_data(const char* host) const;
 
+    json_t* json_attributes() const;
+
     void* auth_instance()
     {
         return m_auth_instance;
@@ -261,7 +263,6 @@ public:
     DCB** persistent = nullptr;     /**< List of unused persistent connections to the server */
 
 private:
-    json_t* json_attributes() const;
     bool create_server_config(const char* filename) const;
 
     struct Settings

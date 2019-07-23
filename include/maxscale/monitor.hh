@@ -235,6 +235,12 @@ public:
     uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
     uint64_t pending_status = 0;        /**< Status during current monitor loop */
 
+    int64_t  node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
+    int64_t  master_id = -1;       /**< Master server id of this node */
+
+    mxs_monitor_event_t last_event = SERVER_UP_EVENT;   /**< The last event that occurred on this server */
+    int64_t             triggered_at = 0;               /**< Time when the last event was triggered */
+
     int status_request = NO_CHANGE;     /**< Is admin requesting Maintenance=ON/OFF on the
                                          *  server? */
 private:
@@ -396,6 +402,8 @@ public:
     bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
 
     void show(DCB* dcb);
+
+    json_t* monitored_server_json_attributes(const SERVER* srv) const;
 
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */

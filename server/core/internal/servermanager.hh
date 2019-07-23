@@ -98,4 +98,5 @@ public:
 
 private:
     static json_t* server_to_json_data_relations(const Server* server, const char* host);
+    static json_t* server_to_json_attributes(const Server* server);
 };

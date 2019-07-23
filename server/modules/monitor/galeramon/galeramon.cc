@@ -320,7 +320,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
 
         get_gtid(monitored_server, &info);
         get_slave_status(monitored_server, &info);
-        monitored_server->server->node_id = info.joined ? info.local_index : -1;
+        monitored_server->node_id = info.joined ? info.local_index : -1;
 
         m_info[monitored_server] = info;
     }
@@ -372,7 +372,7 @@ void GaleraMonitor::post_tick()
             else
             {
                 if (candidate_master
-                    && m_master->server->node_id != candidate_master->server->node_id)
+                    && m_master->node_id != candidate_master->node_id)
                 {
                     /* set master role and master stickiness */
                     ptr->clear_pending_status(repl_bits);
@@ -504,7 +504,7 @@ MonitorServer* GaleraMonitor::get_candidate_master()
                     }
                 }
             }
-            else if (moitor_servers->server->node_id >= 0)
+            else if (moitor_servers->node_id >= 0)
             {
                 if (m_use_priority && candidate_master
                     && !candidate_master->server->get_custom_parameter("priority").empty())
@@ -514,9 +514,9 @@ MonitorServer* GaleraMonitor::get_candidate_master()
                 }
 
                 // Server priorities are not in use or no candidate has been found
-                if (min_id < 0 || moitor_servers->server->node_id < min_id)
+                if (min_id < 0 || moitor_servers->node_id < min_id)
                 {
-                    min_id = moitor_servers->server->node_id;
+                    min_id = moitor_servers->node_id;
                     candidate_master = moitor_servers;
                 }
             }
@@ -730,7 +730,7 @@ static int compare_node_index(const void* a, const void* b)
     const MonitorServer* s_b = *(MonitorServer* const*)b;
 
     // Order is DESC: b - a
-    return s_b->server->node_id - s_a->server->node_id;
+    return s_b->node_id - s_a->node_id;
 }
 
 /**
