@@ -30,19 +30,23 @@ const char CONNECTING[] = "Connecting";
 const char NO[] = "No";
 }
 
+SlaveStatus::SlaveStatus(const std::string& owner)
+    : settings(owner)
+{
+}
+
 string SlaveStatus::to_string() const
 {
     // Print all of this on the same line to make things compact. Are the widths reasonable? The format is
     // not quite array-like since usually there is just one row. May be changed later.
     // Form the components of the line.
-    string host_port = string_printf("[%s]:%d", master_host.c_str(), master_port);
     string running_states = string_printf("%s/%s",
                                           slave_io_to_string(slave_io_running).c_str(),
                                           slave_sql_running ? "Yes" : "No");
 
     string rval = string_printf(
         "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %d",
-        host_port.c_str(),
+        settings.master_endpoint.to_string().c_str(),
         running_states.c_str(),
         master_server_id,
         gtid_io_pos.to_string().c_str(),
@@ -50,26 +54,26 @@ string SlaveStatus::to_string() const
     return rval;
 }
 
-string SlaveStatus::to_short_string() const
+std::string SlaveStatus::Settings::to_string() const
 {
     if (name.empty())
     {
-        return string_printf("Slave connection from %s to [%s]:%i",
-                             owning_server.c_str(), master_host.c_str(), master_port);
+        return string_printf("Slave connection from %s to %s",
+                             m_owner.c_str(), master_endpoint.to_string().c_str());
     }
     else
     {
-        return string_printf("Slave connection '%s' from %s to [%s]:%i",
-                             name.c_str(), owning_server.c_str(), master_host.c_str(), master_port);
+        return string_printf("Slave connection '%s' from %s to %s",
+                             name.c_str(), m_owner.c_str(), master_endpoint.to_string().c_str());
     }
 }
 
 json_t* SlaveStatus::to_json() const
 {
     json_t* result = json_object();
-    json_object_set_new(result, "connection_name", json_string(name.c_str()));
-    json_object_set_new(result, "master_host", json_string(master_host.c_str()));
-    json_object_set_new(result, "master_port", json_integer(master_port));
+    json_object_set_new(result, "connection_name", json_string(settings.name.c_str()));
+    json_object_set_new(result, "master_host", json_string(settings.master_endpoint.host().c_str()));
+    json_object_set_new(result, "master_port", json_integer(settings.master_endpoint.port()));
     json_object_set_new(result,
                         "slave_io_running",
                         json_string(slave_io_to_string(slave_io_running).c_str()));
@@ -82,6 +86,7 @@ json_t* SlaveStatus::to_json() const
     json_object_set_new(result, "gtid_io_pos", json_string(gtid_io_pos.to_string().c_str()));
     return result;
 }
+
 SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::string& str)
 {
     slave_io_running_t rval = SLAVE_IO_NO;
@@ -153,6 +158,23 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
         *ignore_reason_out = ignore_reason;
     }
     return accepted;
+}
+
+SlaveStatus::Settings::Settings(const std::string& name, const EndPoint& target, const std::string& owner)
+    : name(name)
+    , master_endpoint(target)
+    , m_owner(owner)
+{
+}
+
+SlaveStatus::Settings::Settings(const std::string& name, const SERVER* target)
+    : Settings(name, EndPoint(target), "")
+{
+}
+
+SlaveStatus::Settings::Settings(const std::string& owner)
+    : m_owner(owner)
+{
 }
 
 ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
@@ -415,4 +437,29 @@ GtidList::DomainList GtidList::domains() const
         rval.push_back(gtid.m_domain);
     }
     return rval;
+}
+
+EndPoint::EndPoint(const std::string& host, int port)
+    : m_host(host, port)
+{
+}
+
+EndPoint::EndPoint(const SERVER* server)
+    : EndPoint(server->address, server->port)
+{
+}
+
+EndPoint::EndPoint()
+    : EndPoint("", PORT_UNKNOWN)
+{
+}
+
+bool EndPoint::operator==(const EndPoint& rhs) const
+{
+    return m_host.address() == rhs.m_host.address() && m_host.port() == rhs.m_host.port();
+}
+
+std::string EndPoint::to_string() const
+{
+    return "[" + m_host.address() + "]:" + std::to_string(m_host.port());
 }

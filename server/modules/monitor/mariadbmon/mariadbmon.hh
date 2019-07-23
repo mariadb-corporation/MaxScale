@@ -169,6 +169,21 @@ private:
         bool result_waiting = false;        /* Guard variable for has_result */
     };
 
+    class DNSResolver
+    {
+    public:
+        std::string resolve_server(const std::string& host);
+
+    private:
+        struct MapElement
+        {
+            std::string    address;
+            mxb::TimePoint timestamp;
+        };
+
+        std::unordered_map<std::string, MapElement> m_mapping; // hostname -> address cache
+    };
+
     ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
 
     // Server containers, mostly constant.
@@ -185,6 +200,8 @@ private:
     bool m_cluster_modified = false;        /* Has a cluster operation been performed this loop? Prevents
                                              * other operations during this tick. */
 
+    DNSResolver m_resolver;                 /* DNS-resolver with cache */
+
     /* Counter for temporary automatic cluster operation disabling. */
     int cluster_operation_disable_timer = 0;
 
@@ -194,8 +211,6 @@ private:
     // Miscellaneous info
     int64_t m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;     /* gtid_domain_id most recently seen on
                                                              * the master */
-    std::string m_external_master_host;                     /* External master host, for fail/switchover */
-    int         m_external_master_port = PORT_UNKNOWN;      /* External master port */
 
     // Fields controlling logging of various events. TODO: Check these
     bool m_log_no_master {true};                /* Should it be logged that there is no master? */
@@ -223,6 +238,8 @@ private:
                                                * TODO: think about removing */
         bool ignore_external_masters {false}; /* Ignore masters outside of the monitor configuration.
                                                * TODO: requires work */
+        bool assume_unique_hostnames {true};  /* Are server hostnames consistent between MaxScale and
+                                               * servers */
 
         int failcount {1};  /* Number of ticks master must be down before it's considered
                              * totally down, allowing failover or master change. */
@@ -266,7 +283,7 @@ private:
     std::string diagnostics_to_string() const;
     json_t*     to_json() const;
 
-    MariaDBServer* get_server(const std::string& host, int port);
+    MariaDBServer* get_server(const EndPoint& search_ep);
     MariaDBServer* get_server(int64_t id);
     MariaDBServer* get_server(mxs::MonitorServer* mon_server);
     MariaDBServer* get_server(SERVER* server);
@@ -291,7 +308,7 @@ private:
     int  running_slaves(MariaDBServer* search_root);
     bool cycle_has_master_server(ServerArray& cycle_servers);
     void update_gtid_domain();
-    void update_external_master();
+
     void update_master_cycle_info();
     bool is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, std::string* why_not = nullptr);
 

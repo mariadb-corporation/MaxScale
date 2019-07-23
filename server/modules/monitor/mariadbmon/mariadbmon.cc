@@ -88,14 +88,14 @@ void MariaDBMonitor::reset_server_info()
     assign_new_master(NULL);
     m_next_master = NULL;
     m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
-    m_external_master_host.clear();
-    m_external_master_port = PORT_UNKNOWN;
 
     // Next, initialize the data.
     for (auto mon_server : servers())
     {
         m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_settings.shared));
     }
+
+    m_resolver = DNSResolver(); // Erases result cache.
 }
 
 void MariaDBMonitor::reset_node_index_info()
@@ -106,17 +106,39 @@ void MariaDBMonitor::reset_node_index_info()
     }
 }
 
-MariaDBServer* MariaDBMonitor::get_server(const std::string& host, int port)
+MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
 {
-    // TODO: Do this with a map lookup
     MariaDBServer* found = NULL;
-    for (MariaDBServer* server : m_servers)
+    // Phase 1: Direct string compare
+    for (auto server : m_servers)
     {
-        SERVER* srv = server->m_server_base->server;
-        if (host == srv->address && srv->port == port)
+        EndPoint srv(server->m_server_base->server);
+        if (srv == search_ep)
         {
             found = server;
             break;
+        }
+    }
+
+    if (!found)
+    {
+        // Phase 2: Was not found with simple string compare. Try DNS resolving for endpoints with
+        // matching ports.
+        string target_addr = m_resolver.resolve_server(search_ep.host());
+        if (!target_addr.empty())
+        {
+            for (auto server : m_servers)
+            {
+                if (server->m_server_base->server->port == search_ep.port())
+                {
+                    string server_addr = m_resolver.resolve_server(server->m_server_base->server->address);
+                    if (server_addr == target_addr)
+                    {
+                        found = server;
+                        break;
+                    }
+                }
+            }
         }
     }
     return found;
@@ -214,7 +236,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.detect_stale_slave = params->get_bool("detect_stale_slave");
     m_settings.detect_standalone_master = params->get_bool(CN_DETECT_STANDALONE_MASTER);
     m_settings.ignore_external_masters = params->get_bool("ignore_external_masters");
-    m_settings.shared.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
+    m_settings.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
     m_settings.failcount = params->get_integer(CN_FAILCOUNT);
     m_settings.failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
     m_settings.switchover_timeout = params->get_duration<std::chrono::seconds>(CN_SWITCHOVER_TIMEOUT).count();
@@ -274,12 +296,12 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
             }
         };
 
-        warn_and_enable(&m_settings.shared.assume_unique_hostnames, CN_ASSUME_UNIQUE_HOSTNAMES);
+        warn_and_enable(&m_settings.assume_unique_hostnames, CN_ASSUME_UNIQUE_HOSTNAMES);
         warn_and_enable(&m_settings.auto_failover, CN_AUTO_FAILOVER);
         warn_and_enable(&m_settings.auto_rejoin, CN_AUTO_REJOIN);
     }
 
-    if (!m_settings.shared.assume_unique_hostnames)
+    if (!m_settings.assume_unique_hostnames)
     {
         const char requires[] = "%s requires that %s is on.";
         if (m_settings.auto_failover)
@@ -464,7 +486,6 @@ void MariaDBMonitor::tick()
     {
         // Update cluster-wide values dependant on the current master.
         update_gtid_domain();
-        update_external_master();
     }
 
     /* Set low disk space slaves to maintenance. This needs to happen after roles have been assigned.
@@ -589,49 +610,6 @@ void MariaDBMonitor::update_gtid_domain()
                    m_master_gtid_domain, domain);
     }
     m_master_gtid_domain = domain;
-}
-
-void MariaDBMonitor::update_external_master()
-{
-    if (m_master->is_slave_of_ext_master())
-    {
-        mxb_assert(!m_master->m_slave_status.empty() && !m_master->m_node.external_masters.empty());
-        // TODO: Add support for multiple external masters.
-        auto& master_sstatus = m_master->m_slave_status[0];
-        if (master_sstatus.master_host != m_external_master_host
-            || master_sstatus.master_port != m_external_master_port)
-        {
-            const string new_ext_host = master_sstatus.master_host;
-            const int new_ext_port = master_sstatus.master_port;
-            if (m_external_master_port == PORT_UNKNOWN)
-            {
-                MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",
-                           new_ext_host.c_str(),
-                           new_ext_port);
-            }
-            else
-            {
-                MXS_NOTICE("The external master of the cluster has changed: %s:%d -> %s:%d.",
-                           m_external_master_host.c_str(),
-                           m_external_master_port,
-                           new_ext_host.c_str(),
-                           new_ext_port);
-            }
-            m_external_master_host = new_ext_host;
-            m_external_master_port = new_ext_port;
-        }
-    }
-    else
-    {
-        if (m_external_master_port != PORT_UNKNOWN)
-        {
-            MXS_NOTICE("Cluster lost the external master. Previous one was at: [%s]:%d",
-                       m_external_master_host.c_str(),
-                       m_external_master_port);
-        }
-        m_external_master_host.clear();
-        m_external_master_port = PORT_UNKNOWN;
-    }
 }
 
 void MariaDBMonitor::log_master_changes()

@@ -766,7 +766,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
         auto remote = session->client_dcb->remote;
         if (rdns)
         {
-            maxbase::reverse_dns(remote, &result_address);
+            maxbase::reverse_name_lookup(remote, &result_address);
         }
         else
         {
