@@ -160,6 +160,9 @@ struct DCB : public MXB_POLL_DATA
 
     int ssl_handshake();
 
+    // Starts the shutdown process, called when a client DCB is closed
+    void shutdown();
+
     bool                    dcb_errhandle_called = false;   /**< this can be called only once */
     Role                    role;
     int                     fd = DCBFD_CLOSED;                  /**< The descriptor */

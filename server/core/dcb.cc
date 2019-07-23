@@ -319,6 +319,7 @@ static void dcb_stop_polling_and_shutdown(DCB* dcb)
      */
     if (dcb->func.close != NULL)
     {
+        dcb->shutdown();
         dcb->func.close(dcb);
         dcb->protocol = nullptr;
     }
@@ -3284,4 +3285,16 @@ const char* DCB::type()
 int DCB::ssl_handshake()
 {
     return role == Role::CLIENT ? dcb_accept_SSL(this) : dcb_connect_SSL(this);
+}
+
+void DCB::shutdown()
+{
+    if (role == DCB::Role::CLIENT
+        && (session->state() == MXS_SESSION::State::STARTED
+            || session->state() == MXS_SESSION::State::STOPPING))
+    {
+        MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(session->id());
+        mxb_assert(removed);
+        session_close(session);
+    }
 }

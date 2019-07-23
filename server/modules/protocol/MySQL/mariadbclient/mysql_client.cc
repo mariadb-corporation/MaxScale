@@ -1671,19 +1671,8 @@ retblock:
 
 static int gw_client_close(DCB* dcb)
 {
-    MXS_SESSION* target = dcb->session;
-
-    if (target->state() == MXS_SESSION::State::STARTED || target->state() == MXS_SESSION::State::STOPPING)
-    {
-        MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->id());
-        mxb_assert(removed);
-        session_close(target);
-    }
-
-    MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol);
-    mxb_assert(protocol);
-    delete protocol;
-
+    mxb_assert(dcb->protocol);
+    delete static_cast<MySQLProtocol*>(dcb->protocol);
     return 1;
 }
 
