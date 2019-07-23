@@ -294,6 +294,7 @@ void RWBackend::process_packets(GWBUF* result)
     auto it = buffer.begin();
     MXB_AT_DEBUG(size_t total_len = buffer.length());
     MXB_AT_DEBUG(size_t used_len = 0);
+    mxb_assert(dcb()->session->service->capabilities & (RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_STMT_OUTPUT));
 
     while (it != buffer.end())
     {

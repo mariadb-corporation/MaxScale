@@ -265,9 +265,12 @@ json_t* SchemaRouter::diagnostics_json() const
     return rval;
 }
 
+static const uint64_t CAPABILITIES = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_PACKET_OUTPUT
+    | RCAP_TYPE_RUNTIME_CONFIG;
+
 uint64_t SchemaRouter::getCapabilities()
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG;
+    return schemarouter::CAPABILITIES;
 }
 }
 
@@ -288,21 +291,21 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "A database sharding router for simple sharding",
         "V1.0.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG,
+        schemarouter::CAPABILITIES,
         &schemarouter::SchemaRouter::s_object,
-        NULL,                                                   /* Process init. */
-        NULL,                                                   /* Process finish. */
-        NULL,                                                   /* Thread init. */
-        NULL,                                                   /* Thread finish. */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
-            {"ignore_databases",                              MXS_MODULE_PARAM_STRING  },
-            {"ignore_databases_regex",                        MXS_MODULE_PARAM_STRING  },
-            {"max_sescmd_history",                            MXS_MODULE_PARAM_COUNT, "0"},
-            {"disable_sescmd_history",                        MXS_MODULE_PARAM_BOOL, "false"},
-            {"refresh_databases",                             MXS_MODULE_PARAM_BOOL, "true"},
-            {"refresh_interval",                              MXS_MODULE_PARAM_COUNT, DEFAULT_REFRESH_INTERVAL},
-            {"debug",                                         MXS_MODULE_PARAM_BOOL, "false"},
-            {"preferred_server",                              MXS_MODULE_PARAM_SERVER  },
+            {"ignore_databases",                         MXS_MODULE_PARAM_STRING  },
+            {"ignore_databases_regex",                   MXS_MODULE_PARAM_STRING  },
+            {"max_sescmd_history",                       MXS_MODULE_PARAM_COUNT, "0"},
+            {"disable_sescmd_history",                   MXS_MODULE_PARAM_BOOL, "false"},
+            {"refresh_databases",                        MXS_MODULE_PARAM_BOOL, "true"},
+            {"refresh_interval",                         MXS_MODULE_PARAM_COUNT, DEFAULT_REFRESH_INTERVAL},
+            {"debug",                                    MXS_MODULE_PARAM_BOOL, "false"},
+            {"preferred_server",                         MXS_MODULE_PARAM_SERVER  },
             {MXS_END_MODULE_PARAMS}
         }
     };
