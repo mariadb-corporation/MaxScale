@@ -293,7 +293,7 @@ static int cdc_accept(DCB* client_dcb)
 
     client_dcb->protocol = (CDC_protocol*) protocol;
 
-    if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
+    if (NULL == client_dcb->session)
     {
         dcb_close(client_dcb);
         return 0;

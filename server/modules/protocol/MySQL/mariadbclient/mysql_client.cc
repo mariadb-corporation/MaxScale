@@ -1631,41 +1631,14 @@ int gw_MySQLAccept(DCB* dcb)
 {
     dcb->protocol = new(std::nothrow) MySQLProtocol(dcb);
     MXS_ABORT_IF_NULL(dcb->protocol);
-
-    if (poll_add_dcb(dcb) == -1)
-    {
-        mysql_send_custom_error(dcb, 1, 0,
-                                "MaxScale encountered system limit while "
-                                "attempting to register on an epoll instance.");
-
-        MXS_ERROR("Failed to add dcb %p for fd %d to epoll set.", dcb, dcb->fd);
-        dcb_close(dcb);
-    }
-    else
-    {
-        MySQLSendHandshake(dcb);
-    }
-
+    MySQLSendHandshake(dcb);
     return 1;
 }
 
 static int gw_error_client_event(DCB* dcb)
 {
-    MXS_SESSION* session;
-
-    session = dcb->session;
-
-    if (session != NULL && session->state() == MXS_SESSION::State::STOPPING)
-    {
-        goto retblock;
-    }
-
-#if defined (SS_DEBUG)
-    MXS_DEBUG("Client error event handling.");
-#endif
+    mxb_assert(dcb->session->state() != MXS_SESSION::State::STOPPING);
     dcb_close(dcb);
-
-retblock:
     return 1;
 }
 
@@ -1688,36 +1661,34 @@ static int gw_client_hangup_event(DCB* dcb)
 {
     MXS_SESSION* session = dcb->session;
 
-    if (session)
+    if (session && !session_valid_for_pool(session))
     {
-        if (!session_valid_for_pool(session))
+        if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
         {
-            if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
-            {
-                session_dump_statements(session);
-            }
-
-            // The client did not send a COM_QUIT packet
-            std::string errmsg {"Connection killed by MaxScale"};
-            std::string extra {session_get_close_reason(dcb->session)};
-
-            if (!extra.empty())
-            {
-                errmsg += ": " + extra;
-            }
-
-            int seqno = 1;
-
-            if (dcb->data && ((MYSQL_session*)dcb->data)->changing_user)
-            {
-                // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
-                seqno = 3;
-            }
-
-            modutil_send_mysql_err_packet(dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
+            session_dump_statements(session);
         }
-        dcb_close(dcb);
+
+        // The client did not send a COM_QUIT packet
+        std::string errmsg {"Connection killed by MaxScale"};
+        std::string extra {session_get_close_reason(dcb->session)};
+
+        if (!extra.empty())
+        {
+            errmsg += ": " + extra;
+        }
+
+        int seqno = 1;
+
+        if (dcb->data && ((MYSQL_session*)dcb->data)->changing_user)
+        {
+            // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
+            seqno = 3;
+        }
+
+        modutil_send_mysql_err_packet(dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
     }
+
+    dcb_close(dcb);
 
     return 1;
 }
