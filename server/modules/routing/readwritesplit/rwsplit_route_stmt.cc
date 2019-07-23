@@ -521,16 +521,14 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                     m_expected_responses++;
                 }
 
-                MXS_INFO("Route query to %s: %s \t%s",
+                MXS_INFO("Route query to %s: %s",
                          backend->is_master() ? "master" : "slave",
-                         backend->name(),
-                         backend->uri());
+                         backend->name());
             }
             else
             {
-                MXS_ERROR("Failed to execute session command in %s (%s)",
-                          backend->name(),
-                          backend->uri());
+                MXS_ERROR("Failed to execute session command in %s",
+                          backend->name());
             }
         }
     }
@@ -1127,8 +1125,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     mxb_assert_message(target->get_reply_state() == REPLY_STATE_DONE || m_qc.large_query(),
                        "Node must be idle when routing queries to it");
 
-    MXS_INFO("Route query to %s: %s \t%s <", target->is_master() ? "master" : "slave",
-             target->name(), target->uri());
+    MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
 
     if (!m_target_node && session_trx_is_read_only(m_client->session))
     {
@@ -1232,7 +1229,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
          * information is used to route all COM_STMT_FETCH commands
          * to the same server where the COM_STMT_EXECUTE was done. */
         m_exec_map[m_qc.current_route_info().stmt_id()] = target;
-        MXS_INFO("%s on %s: %s", STRPACKETTYPE(cmd), target->name(), target->uri());
+        MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
     }
 
     return success;

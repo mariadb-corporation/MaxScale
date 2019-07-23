@@ -314,16 +314,6 @@ public:
         return m_backend->server->name();
     }
 
-    /**
-     * @brief Get the address and port as a string
-     *
-     * @return The address and port combined into one string
-     */
-    inline const char* uri() const
-    {
-        return m_uri.c_str();
-    }
-
     void select_started();
     void select_ended();
 
@@ -385,7 +375,6 @@ private:
     int                m_state;             /**< State of the backend */
     SessionCommandList m_session_commands;  /**< List of session commands that are
                                              * to be executed on this backend server */
-    std::string m_uri;                      /**< The combined address and port */
 
     maxbase::StopWatch     m_session_timer;
     maxbase::IntervalTimer m_select_timer;

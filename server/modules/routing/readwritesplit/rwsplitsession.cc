@@ -1066,10 +1066,9 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                 {
                     if (!backend->is_master() && !backend->server()->master_err_is_logged)
                     {
-                        MXS_ERROR("Server %s (%s) lost the master status while waiting"
+                        MXS_ERROR("Server %s lost the master status while waiting"
                                   " for a result. Client sessions will be closed.",
-                                  backend->name(),
-                                  backend->uri());
+                                  backend->name());
                         backend->server()->master_err_is_logged = true;
                     }
                     else

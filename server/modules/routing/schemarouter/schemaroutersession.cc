@@ -431,7 +431,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             m_load_target = bref->backend()->server;
         }
 
-        MXS_INFO("Route query to \t%s %s <", bref->name(), bref->uri());
+        MXS_INFO("Route query to \t%s <", bref->name());
 
         if (bref->has_session_commands())
         {

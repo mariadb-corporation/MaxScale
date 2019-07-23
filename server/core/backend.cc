@@ -30,9 +30,6 @@ Backend::Backend(SERVER_REF* ref)
     , m_dcb(NULL)
     , m_state(0)
 {
-    std::stringstream ss;
-    ss << "[" << server()->address << "]:" << server()->port;
-    m_uri = ss.str();
 }
 
 Backend::~Backend()
