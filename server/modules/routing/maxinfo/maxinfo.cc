@@ -272,7 +272,7 @@ static void handleError(MXS_ROUTER* instance,
 
     client_dcb = session->client_dcb;
 
-    if (session->state() == SESSION_STATE_STARTED)
+    if (session->state() == MXS_SESSION::State::STARTED)
     {
         client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
     }

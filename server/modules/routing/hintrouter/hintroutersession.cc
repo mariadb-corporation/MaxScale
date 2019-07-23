@@ -161,14 +161,14 @@ void HintRouterSession::handleError(GWBUF* pMessage,
     mxb_assert(pProblem->role == DCB::Role::BACKEND);
 
     MXS_SESSION* pSession = pProblem->session;
-    mxs_session_state_t sesstate = pSession->state();
+    MXS_SESSION::State sesstate = pSession->state();
 
     switch (action)
     {
     case ERRACT_REPLY_CLIENT:
         {
             /* React to failed authentication, send message to client */
-            if (sesstate == SESSION_STATE_STARTED)
+            if (sesstate == MXS_SESSION::State::STARTED)
             {
                 /* Send error report to client */
                 GWBUF* pCopy = gwbuf_clone(pMessage);

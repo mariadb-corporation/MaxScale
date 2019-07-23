@@ -1013,7 +1013,7 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
          */
         if (session_start(dcb->session))
         {
-            mxb_assert(dcb->session->state() != SESSION_STATE_CREATED);
+            mxb_assert(dcb->session->state() != MXS_SESSION::State::CREATED);
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
             dcb->session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
@@ -1291,14 +1291,14 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
 static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
 {
     MXS_SESSION* session;
-    mxs_session_state_t session_state_value;
+    MXS_SESSION::State session_state_value;
     uint64_t capabilities = 0;
 
     session = dcb->session;
     session_state_value = session->state();
-    if (session_state_value != SESSION_STATE_STARTED)
+    if (session_state_value != MXS_SESSION::State::STARTED)
     {
-        if (session_state_value != SESSION_STATE_STOPPING)
+        if (session_state_value != MXS_SESSION::State::STOPPING)
         {
             MXS_ERROR("Session received a query in incorrect state: %s",
                       session_state_to_string(session_state_value));
@@ -1655,7 +1655,7 @@ static int gw_error_client_event(DCB* dcb)
 
     session = dcb->session;
 
-    if (session != NULL && session->state() == SESSION_STATE_STOPPING)
+    if (session != NULL && session->state() == MXS_SESSION::State::STOPPING)
     {
         goto retblock;
     }
@@ -1673,7 +1673,7 @@ static int gw_client_close(DCB* dcb)
 {
     MXS_SESSION* target = dcb->session;
 
-    if (target->state() == SESSION_STATE_STARTED || target->state() == SESSION_STATE_STOPPING)
+    if (target->state() == MXS_SESSION::State::STARTED || target->state() == MXS_SESSION::State::STOPPING)
     {
         MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->id());
         mxb_assert(removed);

@@ -863,13 +863,13 @@ static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
         return false;
     }
 
-    if (dcb->session == NULL || dcb->session->state() != SESSION_STATE_STOPPING)
+    if (dcb->session == NULL || dcb->session->state() != MXS_SESSION::State::STOPPING)
     {
         /**
-         * SESSION_STATE_STOPPING means that one of the backends is closing
+         * MXS_SESSION::State::STOPPING means that one of the backends is closing
          * the router session. Some backends may have not completed
          * authentication yet and thus they have no information about router
-         * being closed. Session state is changed to SESSION_STATE_STOPPING
+         * being closed. Session state is changed to MXS_SESSION::State::STOPPING
          * before router's closeSession is called and that tells that DCB may
          * still be writable.
          */

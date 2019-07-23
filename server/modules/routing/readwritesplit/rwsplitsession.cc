@@ -1234,12 +1234,12 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
  */
 void RWSplitSession::handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg)
 {
-    mxs_session_state_t sesstate = m_client->session->state();
+    MXS_SESSION::State sesstate = m_client->session->state();
     RWBackend* backend = get_backend_from_dcb(backend_dcb);
 
     backend->close();
 
-    if (sesstate == SESSION_STATE_STARTED)
+    if (sesstate == MXS_SESSION::State::STARTED)
     {
         m_client->func.write(m_client, gwbuf_clone(errmsg));
     }

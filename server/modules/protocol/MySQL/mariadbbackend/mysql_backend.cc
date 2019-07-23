@@ -609,7 +609,7 @@ static inline bool session_ok_to_route(DCB* dcb)
 {
     bool rval = false;
 
-    if (dcb->session->state() == SESSION_STATE_STARTED
+    if (dcb->session->state() == MXS_SESSION::State::STARTED
         && dcb->session->client_dcb != NULL
         && dcb->session->client_dcb->state == DCB_STATE_POLLING
         && (dcb->session->router_session
@@ -1232,7 +1232,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
     {
     case MXS_AUTH_STATE_HANDSHAKE_FAILED:
     case MXS_AUTH_STATE_FAILED:
-        if (dcb->session->state() != SESSION_STATE_STOPPING)
+        if (dcb->session->state() != MXS_SESSION::State::STOPPING)
         {
             MXS_ERROR("Unable to write to backend '%s' due to "
                       "%s failure. Server in state %s.",
@@ -1316,7 +1316,7 @@ static int gw_error_backend_event(DCB* dcb)
         }
         dcb_close(dcb);
     }
-    else if (dcb->state != DCB_STATE_POLLING || session->state() != SESSION_STATE_STARTED)
+    else if (dcb->state != DCB_STATE_POLLING || session->state() != MXS_SESSION::State::STARTED)
     {
         int error;
         int len = sizeof(error);
@@ -1361,13 +1361,13 @@ static int gw_backend_hangup(DCB* dcb)
 
     if (!dcb->persistentstart)
     {
-        if (session->state() != SESSION_STATE_STARTED)
+        if (session->state() != MXS_SESSION::State::STARTED)
         {
             int error;
             int len = sizeof(error);
             if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
             {
-                if (error != 0 && session->state() != SESSION_STATE_STOPPING)
+                if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
                 {
                     MXS_ERROR("Hangup in session that is not ready for routing, "
                               "Error reported is '%s'.",

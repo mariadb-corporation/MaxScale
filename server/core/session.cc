@@ -86,7 +86,7 @@ static void         session_deliver_response(MXS_SESSION* session);
 static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* data, DCB* dcb);
 
 MXS_SESSION::MXS_SESSION(const SListener& listener)
-    : m_state(SESSION_STATE_CREATED)
+    : m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
     , client_dcb(nullptr)
     , listener(listener)
@@ -350,23 +350,23 @@ void dListSessions(DCB* dcb)
  * @param state         The session state
  * @return A string representation of the session state
  */
-const char* session_state_to_string(mxs_session_state_t state)
+const char* session_state_to_string(MXS_SESSION::State state)
 {
     switch (state)
     {
-    case SESSION_STATE_CREATED:
+    case MXS_SESSION::State::CREATED:
         return "Session created";
 
-    case SESSION_STATE_STARTED:
+    case MXS_SESSION::State::STARTED:
         return "Session started";
 
-    case SESSION_STATE_STOPPING:
+    case MXS_SESSION::State::STOPPING:
         return "Stopping session";
 
-    case SESSION_STATE_FAILED:
+    case MXS_SESSION::State::FAILED:
         return "Session creation failed";
 
-    case SESSION_STATE_FREE:
+    case MXS_SESSION::State::FREE:
         return "Freed session";
 
     default:
@@ -906,7 +906,7 @@ public:
 
     void execute()
     {
-        if (m_session->state() == SESSION_STATE_STARTED)
+        if (m_session->state() == MXS_SESSION::State::STARTED)
         {
             GWBUF* buffer = m_buffer;
             m_buffer = NULL;
@@ -1027,7 +1027,7 @@ Session::~Session()
         session_dump_statements(this);
     }
 
-    m_state = SESSION_STATE_FREE;
+    m_state = MXS_SESSION::State::FREE;
 
     if (router_session)
     {
@@ -1531,7 +1531,7 @@ bool Session::start()
 
     if (!router_session)
     {
-        m_state = SESSION_STATE_FAILED;
+        m_state = MXS_SESSION::State::FAILED;
         MXS_ERROR("Failed to create new router session for service '%s'. "
                   "See previous errors for more details.", service->name());
         return false;
@@ -1563,12 +1563,12 @@ bool Session::start()
 
     if (!setup_filters(static_cast<Service*>(service)))
     {
-        m_state = SESSION_STATE_FAILED;
+        m_state = MXS_SESSION::State::FAILED;
         MXS_ERROR("Setting up filters failed. Terminating session %s.", service->name());
         return false;
     }
 
-    m_state = SESSION_STATE_STARTED;
+    m_state = MXS_SESSION::State::STARTED;
     mxb::atomic::add(&service->stats().n_connections, 1, mxb::atomic::RELAXED);
     mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
 
@@ -1585,7 +1585,7 @@ void Session::close()
 {
     if (router_session)
     {
-        m_state = SESSION_STATE_STOPPING;
+        m_state = MXS_SESSION::State::STOPPING;
         service->router->closeSession(service->router_instance, router_session);
     }
 }

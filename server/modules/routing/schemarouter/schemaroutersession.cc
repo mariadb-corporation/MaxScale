@@ -630,7 +630,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
 
     case ERRACT_REPLY_CLIENT:
         // The session pointer can be NULL if the creation fails when filters are being set up
-        if (m_client->session && m_client->session->state() == SESSION_STATE_STARTED)
+        if (m_client->session && m_client->session->state() == MXS_SESSION::State::STARTED)
         {
             m_client->func.write(m_client, gwbuf_clone(pMessage));
         }

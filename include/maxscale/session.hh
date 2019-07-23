@@ -34,17 +34,6 @@ using SListener = std::shared_ptr<Listener>;
 
 typedef enum
 {
-    SESSION_STATE_CREATED,          /*< Session created but not started */
-    SESSION_STATE_STARTED,          /*< Session is fully functional */
-    SESSION_STATE_STOPPING,         /*< Session and router are being closed */
-    SESSION_STATE_FAILED,           /*< Creation failed */
-    SESSION_STATE_FREE,             /*< The session is freed, only for completeness sake */
-} mxs_session_state_t;
-
-const char* session_state_to_string(mxs_session_state_t);
-
-typedef enum
-{
     SESSION_TRX_INACTIVE_BIT   = 0x01,  /* 0b00001 */
     SESSION_TRX_ACTIVE_BIT     = 0x02,  /* 0b00010 */
     SESSION_TRX_READ_ONLY_BIT  = 0x04,  /* 0b00100 */
@@ -163,10 +152,19 @@ typedef char* (* session_variable_handler_t)(void* context,
  */
 struct MXS_SESSION
 {
+    enum class State
+    {
+        CREATED,    /*< Session created but not started */
+        STARTED,    /*< Session is fully functional */
+        STOPPING,   /*< Session and router are being closed */
+        FAILED,     /*< Creation failed */
+        FREE,       /*< The session is freed, only for completeness sake */
+    };
+
     MXS_SESSION(const SListener& listener);
     virtual ~MXS_SESSION();
 
-    mxs_session_state_t state() const
+    State state() const
     {
         return m_state;
     }
@@ -177,8 +175,8 @@ struct MXS_SESSION
     }
 
 protected:
-    mxs_session_state_t m_state;    /*< Current descriptor state */
-    uint64_t            m_id;       /*< Unique session identifier */
+    State    m_state;                   /**< Current descriptor state */
+    uint64_t m_id;                      /**< Unique session identifier */
 
 public:
 
@@ -268,6 +266,7 @@ bool session_start(MXS_SESSION* session);
 
 const char* session_get_remote(const MXS_SESSION*);
 const char* session_get_user(const MXS_SESSION*);
+const char* session_state_to_string(MXS_SESSION::State);
 
 /**
  * Convert transaction state to string representation.

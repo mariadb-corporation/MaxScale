@@ -356,7 +356,7 @@ void RRRouter::handle_error(RRRouterSession* rses,
 {
     MXS_SESSION* session = problem_dcb->session;
     DCB* client_dcb = session->client_dcb;
-    mxs_session_state_t sesstate = session->state();
+    MXS_SESSION::State sesstate = session->state();
 
     /* If the erroneous dcb is a client handler, close it. Setting succp to
      * false will cause the entire attached session to be closed.
@@ -373,7 +373,7 @@ void RRRouter::handle_error(RRRouterSession* rses,
         case ERRACT_REPLY_CLIENT:
             {
                 /* React to failed authentication, send message to client */
-                if (sesstate == SESSION_STATE_STARTED)
+                if (sesstate == MXS_SESSION::State::STARTED)
                 {
                     /* Send error report to client */
                     GWBUF* copy = gwbuf_clone(message);

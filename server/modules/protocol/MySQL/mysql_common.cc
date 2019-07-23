@@ -533,7 +533,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
         mxb_assert(dcb->data);
         memcpy(session, dcb->data, sizeof(MYSQL_session));
     }
-    else if (dcb->session->state() != SESSION_STATE_CREATED)
+    else if (dcb->session->state() != MXS_SESSION::State::CREATED)
     {
         memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }
@@ -908,7 +908,8 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
     if (dcb->session == NULL
-        || (dcb->session->state() != SESSION_STATE_CREATED && dcb->session->state() != SESSION_STATE_STARTED)
+        || (dcb->session->state() != MXS_SESSION::State::CREATED
+            && dcb->session->state() != MXS_SESSION::State::STARTED)
         || (dcb->server->ssl().context() && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
