@@ -91,7 +91,7 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     }
     else if (strcmp(type, CN_MONITOR) == 0)
     {
-        return config_monitor_params;
+        return common_monitor_params();
     }
     else if (strcmp(type, CN_FILTER) == 0)
     {
@@ -2262,7 +2262,7 @@ Monitor* runtime_create_monitor_from_json(json_t* json)
 
             params.set_multiple(extract_parameters(json));
 
-            if (validate_param(config_monitor_params, mod->parameters, &params)
+            if (validate_param(common_monitor_params(), mod->parameters, &params)
                 && server_relationship_to_parameter(json, &params))
             {
                 if (runtime_create_monitor(name, module, &params))
@@ -2417,7 +2417,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
     params.set_multiple(extract_parameters(new_json));
 
     if (is_valid_resource_body(new_json)
-        && validate_param(config_monitor_params, mod->parameters, &params)
+        && validate_param(common_monitor_params(), mod->parameters, &params)
         && server_relationship_to_parameter(new_json, &params))
     {
         success = MonitorManager::reconfigure_monitor(monitor, params);

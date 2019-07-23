@@ -46,7 +46,6 @@
 
 #include "../../../core/internal/maxscale.hh"
 #include "../../../core/internal/modules.hh"
-#include "../../../core/internal/monitor.hh"
 #include "../../../core/internal/monitormanager.hh"
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/session.hh"

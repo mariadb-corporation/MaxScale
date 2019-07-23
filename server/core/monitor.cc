@@ -429,6 +429,35 @@ const char ERR_CANNOT_MODIFY[] =
     "set/cleared manually. Status was not modified.";
 const char WRN_REQUEST_OVERWRITTEN[] =
     "Previous maintenance request was not yet read by the monitor and was overwritten.";
+
+/* Is not really an event as the other values, but is a valid config setting and also the default.
+ * Bitmask value matches all events. */
+const MXS_ENUM_VALUE monitor_event_default = {"all", ~0ULL};
+
+// Allowed values for the "events"-setting. Also defines the enum<->string conversion for events.
+const MXS_ENUM_VALUE monitor_event_values[] =
+{
+    monitor_event_default,
+    {"master_down",       MASTER_DOWN_EVENT },
+    {"master_up",         MASTER_UP_EVENT   },
+    {"slave_down",        SLAVE_DOWN_EVENT  },
+    {"slave_up",          SLAVE_UP_EVENT    },
+    {"server_down",       SERVER_DOWN_EVENT },
+    {"server_up",         SERVER_UP_EVENT   },
+    {"synced_down",       SYNCED_DOWN_EVENT },
+    {"synced_up",         SYNCED_UP_EVENT   },
+    {"donor_down",        DONOR_DOWN_EVENT  },
+    {"donor_up",          DONOR_UP_EVENT    },
+    {"lost_master",       LOST_MASTER_EVENT },
+    {"lost_slave",        LOST_SLAVE_EVENT  },
+    {"lost_synced",       LOST_SYNCED_EVENT },
+    {"lost_donor",        LOST_DONOR_EVENT  },
+    {"new_master",        NEW_MASTER_EVENT  },
+    {"new_slave",         NEW_SLAVE_EVENT   },
+    {"new_synced",        NEW_SYNCED_EVENT  },
+    {"new_donor",         NEW_DONOR_EVENT   },
+    {NULL}
+};
 }
 
 namespace maxscale
@@ -465,7 +494,7 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
     m_settings.interval = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
     m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
-    m_settings.events = params->get_enum(CN_EVENTS, mxs_monitor_event_enum_values);
+    m_settings.events = params->get_enum(CN_EVENTS, monitor_event_values);
 
     MonitorServer::ConnectionSettings& conn_settings = m_settings.conn_settings;
     conn_settings.read_timeout = params->get_duration<seconds>(CN_BACKEND_READ_TIMEOUT).count();
@@ -701,7 +730,7 @@ json_t* Monitor::parameters_to_json() const
     auto my_config = parameters();
     config_add_module_params_json(&my_config,
                                   {CN_TYPE, CN_MODULE, CN_SERVERS},
-                                  config_monitor_params,
+                                  common_monitor_params(),
                                   mod->parameters,
                                   rval);
     return rval;
@@ -938,11 +967,11 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
 
 const char* Monitor::get_event_name(mxs_monitor_event_t event)
 {
-    for (int i = 0; mxs_monitor_event_enum_values[i].name; i++)
+    for (int i = 0; monitor_event_values[i].name; i++)
     {
-        if (mxs_monitor_event_enum_values[i].enum_value == event)
+        if (monitor_event_values[i].enum_value == event)
         {
-            return mxs_monitor_event_enum_values[i].name;
+            return monitor_event_values[i].name;
         }
     }
 
@@ -2266,4 +2295,33 @@ MonitorServer::~MonitorServer()
         mysql_close(con);
     }
 }
+}
+
+const MXS_MODULE_PARAM* common_monitor_params()
+{
+    static const MXS_MODULE_PARAM config_monitor_params[] =
+    {
+        {CN_TYPE,                      MXS_MODULE_PARAM_STRING,   CN_MONITOR, MXS_MODULE_OPT_REQUIRED  },
+        {CN_MODULE,                    MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
+        {CN_USER,                      MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
+        {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
+        {CN_SERVERS,                   MXS_MODULE_PARAM_SERVERLIST},
+        {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_DURATION, "2000ms"},
+        {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_DURATION, "3s",       MXS_MODULE_OPT_DURATION_S},
+        {CN_BACKEND_READ_TIMEOUT,      MXS_MODULE_PARAM_DURATION, "1s",       MXS_MODULE_OPT_DURATION_S},
+        {CN_BACKEND_WRITE_TIMEOUT,     MXS_MODULE_PARAM_DURATION, "2s",       MXS_MODULE_OPT_DURATION_S},
+        {CN_BACKEND_CONNECT_ATTEMPTS,  MXS_MODULE_PARAM_COUNT,    "1"},
+        {CN_JOURNAL_MAX_AGE,           MXS_MODULE_PARAM_DURATION, "28800s",   MXS_MODULE_OPT_DURATION_S},
+        {CN_DISK_SPACE_THRESHOLD,      MXS_MODULE_PARAM_STRING},
+        {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_DURATION, "0ms"},
+        // Cannot be a path type as the script may have parameters
+        {CN_SCRIPT,                    MXS_MODULE_PARAM_STRING},
+        {CN_SCRIPT_TIMEOUT,            MXS_MODULE_PARAM_DURATION, "90s",      MXS_MODULE_OPT_DURATION_S},
+        {
+            CN_EVENTS, MXS_MODULE_PARAM_ENUM, monitor_event_default.name, MXS_MODULE_OPT_NONE,
+            monitor_event_values
+        },
+        {NULL}
+    };
+    return config_monitor_params;
 }

@@ -39,7 +39,6 @@
 #include <maxscale/router.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/monitor.hh>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/maxscale.h>
@@ -51,7 +50,6 @@
 #include <maxscale/protocol/mysql.hh>
 
 #include "../../../core/internal/modules.hh"
-#include "../../../core/internal/monitor.hh"
 #include "../../../core/internal/session.hh"
 #include "../../../core/internal/poll.hh"
 

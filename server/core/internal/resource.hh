@@ -24,7 +24,6 @@
 
 #include "httprequest.hh"
 #include "httpresponse.hh"
-#include "monitor.hh"
 #include "service.hh"
 #include "filter.hh"
 #include "session.hh"

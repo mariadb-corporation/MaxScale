@@ -68,7 +68,6 @@
 #include "internal/config.hh"
 #include "internal/maxscale.hh"
 #include "internal/modules.hh"
-#include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
 #include "internal/poll.hh"
 #include "internal/service.hh"

@@ -20,7 +20,6 @@
 #include <maxscale/utils.hh>
 
 #include "../../../core/internal/poll.hh"
-#include "../../../core/internal/monitor.hh"
 #include "../../../core/internal/monitormanager.hh"
 #include "../../../core/internal/servermanager.hh"
 #include "../../../core/internal/service.hh"

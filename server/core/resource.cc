@@ -30,7 +30,6 @@
 #include "internal/httprequest.hh"
 #include "internal/httpresponse.hh"
 #include "internal/modules.hh"
-#include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
 #include "internal/query_classifier.hh"
 #include "internal/servermanager.hh"

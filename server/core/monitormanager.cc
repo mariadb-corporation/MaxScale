@@ -353,7 +353,7 @@ bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* f
     mxb_assert(mod);
 
     string config = generate_config_string(monitor->m_name, monitor->parameters(),
-                                           config_monitor_params, mod->parameters);
+                                           common_monitor_params(), mod->parameters);
 
     if (dprintf(file, "%s", config.c_str()) == -1)
     {
@@ -446,7 +446,7 @@ bool MonitorManager::alter_monitor(mxs::Monitor* monitor, const std::string& key
                                    std::string* error_out)
 {
     const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
-    if (!validate_param(config_monitor_params, mod->parameters, key, value, error_out))
+    if (!validate_param(common_monitor_params(), mod->parameters, key, value, error_out))
     {
         return false;
     }
