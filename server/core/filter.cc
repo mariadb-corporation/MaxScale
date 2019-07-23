@@ -72,6 +72,12 @@ SFilterDef filter_alloc(const char* name, const char* module, MXS_CONFIG_PARAMET
         return NULL;
     }
 
+    if (!object->clientReply)
+    {
+        MXS_ERROR("Filter '%s' does not implement the clientReply entry point.", module);
+        return NULL;
+    }
+
     MXS_FILTER* instance = object->createInstance(name, params);
 
     if (instance == NULL)
