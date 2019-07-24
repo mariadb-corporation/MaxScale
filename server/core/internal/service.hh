@@ -445,3 +445,4 @@ void service_remove_server(mxs::Monitor* pMonitor, SERVER* pServer);
 
 std::unique_ptr<ResultSet> serviceGetList(void);
 std::unique_ptr<ResultSet> serviceGetListenerList(void);
+const MXS_MODULE_PARAM* common_service_params();

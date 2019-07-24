@@ -83,7 +83,7 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
 {
     if (strcmp(type, CN_SERVICE) == 0)
     {
-        return config_service_params;
+        return common_service_params();
     }
     else if (strcmp(type, CN_LISTENER) == 0)
     {
@@ -606,7 +606,7 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
     std::string key(zKey);
     std::string value(zValue);
 
-    if (!validate_param(config_service_params, mod->parameters, zKey, zValue))
+    if (!validate_param(common_service_params(), mod->parameters, zKey, zValue))
     {
         return false;
     }
@@ -2512,11 +2512,12 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
         {
             /** Create a set of accepted service parameters */
             StringSet paramset;
-            for (int i = 0; config_service_params[i].name; i++)
+            auto service_params = common_service_params();
+            for (int i = 0; service_params[i].name; i++)
             {
-                if (is_dynamic_param(config_service_params[i].name))
+                if (is_dynamic_param(service_params[i].name))
                 {
-                    paramset.insert(config_service_params[i].name);
+                    paramset.insert(service_params[i].name);
                 }
             }
 

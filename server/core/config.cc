@@ -153,123 +153,6 @@ const MXS_ENUM_VALUE ssl_values[] =
     {NULL}
 };
 
-const MXS_MODULE_PARAM config_service_params[] =
-{
-    {
-        CN_TYPE,
-        MXS_MODULE_PARAM_STRING,
-        CN_SERVICE,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_ROUTER,
-        MXS_MODULE_PARAM_STRING,
-        NULL,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_ROUTER_OPTIONS,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_SERVERS,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_USER,    // Not mandatory due to RCAP_TYPE_NO_AUTH
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_PASSWORD,    // Not mandatory due to RCAP_TYPE_NO_AUTH
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_ENABLE_ROOT_USER,
-        MXS_MODULE_PARAM_BOOL,
-        "false"
-    },
-    {
-        CN_MAX_RETRY_INTERVAL,
-        MXS_MODULE_PARAM_DURATION,
-        "3600s",
-        MXS_MODULE_OPT_DURATION_S
-    },
-    {
-        CN_MAX_CONNECTIONS,
-        MXS_MODULE_PARAM_COUNT,
-        "0"
-    },
-    {
-        CN_CONNECTION_TIMEOUT,
-        MXS_MODULE_PARAM_DURATION,
-        "0",
-        MXS_MODULE_OPT_DURATION_S
-    },
-    {
-        CN_NET_WRITE_TIMEOUT,
-        MXS_MODULE_PARAM_DURATION,
-        "0",
-        MXS_MODULE_OPT_DURATION_S
-    },
-    {
-        CN_AUTH_ALL_SERVERS,
-        MXS_MODULE_PARAM_BOOL,
-        "false"
-    },
-    {
-        CN_STRIP_DB_ESC,
-        MXS_MODULE_PARAM_BOOL,
-        "true"
-    },
-    {
-        CN_LOCALHOST_MATCH_WILDCARD_HOST,
-        MXS_MODULE_PARAM_BOOL,
-        "true"
-    },
-    {
-        CN_VERSION_STRING,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_FILTERS,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_WEIGHTBY,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_LOG_AUTH_WARNINGS,
-        MXS_MODULE_PARAM_BOOL,
-        "true"
-    },
-    {
-        CN_RETRY_ON_FAILURE,
-        MXS_MODULE_PARAM_BOOL,
-        "true"
-    },
-    {
-        CN_SESSION_TRACK_TRX_STATE,
-        MXS_MODULE_PARAM_BOOL,
-        "false"
-    },
-    {
-        CN_RETAIN_LAST_STATEMENTS,
-        MXS_MODULE_PARAM_INT,
-        "-1"
-    },
-    {
-        CN_SESSION_TRACE,
-        MXS_MODULE_PARAM_BOOL,
-        "false"
-    },
-    {
-        CN_CLUSTER,
-        MXS_MODULE_PARAM_STRING
-    },
-    {NULL}
-};
-
 const MXS_MODULE_PARAM config_listener_params[] =
 {
     {
@@ -1205,7 +1088,7 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     if (type == CN_SERVICE)
     {
         auto name = obj->m_parameters.get_string(CN_ROUTER);
-        return {config_service_params, get_module(name.c_str(), MODULE_ROUTER)};
+        return {common_service_params(), get_module(name.c_str(), MODULE_ROUTER)};
     }
     else if (type == CN_LISTENER)
     {
@@ -3520,7 +3403,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    config_add_defaults(obj, config_service_params);
+    config_add_defaults(obj, common_service_params());
     config_add_defaults(obj, module->parameters);
 
     int error_count = 0;
