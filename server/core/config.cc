@@ -61,6 +61,7 @@
 #include "internal/config.hh"
 #include "internal/event.hh"
 #include "internal/filter.hh"
+#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
@@ -150,93 +151,6 @@ const MXS_ENUM_VALUE ssl_values[] =
     {"no",       0              },
     {"off",      0              },
     {"0",        0              },
-    {NULL}
-};
-
-const MXS_MODULE_PARAM config_listener_params[] =
-{
-    {
-        CN_TYPE,
-        MXS_MODULE_PARAM_STRING,
-        CN_LISTENER,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_SERVICE,
-        MXS_MODULE_PARAM_SERVICE,
-        NULL,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_PROTOCOL,
-        MXS_MODULE_PARAM_STRING,
-        NULL,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_PORT,    // Either port or socket, checked when created
-        MXS_MODULE_PARAM_COUNT
-    },
-    {
-        CN_SOCKET,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_AUTHENTICATOR_OPTIONS,
-        MXS_MODULE_PARAM_STRING,
-        ""
-    },
-    {
-        CN_ADDRESS,
-        MXS_MODULE_PARAM_STRING,
-        "::"
-    },
-    {
-        CN_AUTHENTICATOR,
-        MXS_MODULE_PARAM_STRING
-    },
-    {
-        CN_SSL,
-        MXS_MODULE_PARAM_ENUM,
-        "false",
-        MXS_MODULE_OPT_ENUM_UNIQUE,
-        ssl_values
-    },
-    {
-        CN_SSL_CERT,
-        MXS_MODULE_PARAM_PATH,
-        NULL,
-        MXS_MODULE_OPT_PATH_R_OK
-    },
-    {
-        CN_SSL_KEY,
-        MXS_MODULE_PARAM_PATH,
-        NULL,
-        MXS_MODULE_OPT_PATH_R_OK
-    },
-    {
-        CN_SSL_CA_CERT,
-        MXS_MODULE_PARAM_PATH,
-        NULL,
-        MXS_MODULE_OPT_PATH_R_OK
-    },
-    {
-        CN_SSL_VERSION,
-        MXS_MODULE_PARAM_ENUM,
-        "MAX",
-        MXS_MODULE_OPT_ENUM_UNIQUE,
-        ssl_version_values
-    },
-    {
-        CN_SSL_CERT_VERIFY_DEPTH,
-        MXS_MODULE_PARAM_COUNT,
-        "9"
-    },
-    {
-        CN_SSL_VERIFY_PEER_CERTIFICATE,
-        MXS_MODULE_PARAM_BOOL,
-        "true"
-    },
     {NULL}
 };
 
@@ -1093,7 +1007,7 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     else if (type == CN_LISTENER)
     {
         auto name = obj->m_parameters.get_string(CN_PROTOCOL);
-        return {config_listener_params, get_module(name.c_str(), MODULE_PROTOCOL)};
+        return {common_listener_params(), get_module(name.c_str(), MODULE_PROTOCOL)};
     }
     else if (type == CN_SERVER)
     {
@@ -3644,7 +3558,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 
     if (const MXS_MODULE* mod = get_module(protocol.c_str(), MODULE_PROTOCOL))
     {
-        config_add_defaults(obj, config_listener_params);
+        config_add_defaults(obj, common_listener_params());
         config_add_defaults(obj, mod->parameters);
     }
     else

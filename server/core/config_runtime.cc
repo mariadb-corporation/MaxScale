@@ -36,6 +36,7 @@
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
+#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
@@ -87,7 +88,7 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     }
     else if (strcmp(type, CN_LISTENER) == 0)
     {
-        return config_listener_params;
+        return common_listener_params();
     }
     else if (strcmp(type, CN_MONITOR) == 0)
     {

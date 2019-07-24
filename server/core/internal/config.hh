@@ -44,7 +44,6 @@ enum
 };
 
 /** Object type specific parameter lists */
-extern const MXS_MODULE_PARAM config_listener_params[];
 extern const MXS_MODULE_PARAM config_filter_params[];
 extern const char* config_pre_parse_global_params[];
 extern const MXS_ENUM_VALUE ssl_values[];

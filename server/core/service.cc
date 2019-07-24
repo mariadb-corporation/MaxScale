@@ -40,7 +40,6 @@
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/paths.h>
-#include <maxscale/listener.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/resultset.hh>
@@ -57,6 +56,7 @@
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
+#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/service.hh"
 #include "internal/maxscale.hh"
