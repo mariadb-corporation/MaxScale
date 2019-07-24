@@ -788,14 +788,12 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             mock::OkBackend backend;
             mock::RouterSession router_session(&backend, &session);
 
-            auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session);
+            auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session,
+                                                                                         router_session.as_downstream(),
+                                                                                         client.as_upstream());
 
             if (sFilter_session.get())
             {
-                router_session.set_as_downstream_on(sFilter_session.get());
-
-                client.set_as_upstream_on(*sFilter_session.get());
-
                 rv += test(client, *sFilter_session.get(), router_session, c);
             }
             else

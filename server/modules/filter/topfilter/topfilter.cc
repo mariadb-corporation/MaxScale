@@ -51,15 +51,12 @@
  * The filter entry points
  */
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
-static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                setDownstream(MXS_FILTER* instance,
-                                         MXS_FILTER_SESSION* fsession,
-                                         MXS_DOWNSTREAM* downstream);
-static void setUpstream(MXS_FILTER* instance,
-                        MXS_FILTER_SESSION* fsession,
-                        MXS_UPSTREAM* upstream);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up);
+static void     closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void     freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue, DCB* dcb);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
@@ -149,8 +146,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         newSession,
         closeSession,
         freeSession,
-        setDownstream,
-        setUpstream,
         routeQuery,
         clientReply,
         diagnostic,
@@ -277,7 +272,10 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up)
 {
     TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
     TOPN_SESSION* my_session;
@@ -307,6 +305,9 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
         my_session->total.tv_sec = 0;
         my_session->total.tv_usec = 0;
         my_session->current = NULL;
+        my_session->down = *down;
+        my_session->up = *up;
+
         if ((remote = session_get_remote(session)) != NULL)
         {
             my_session->clientHost = MXS_STRDUP_A(remote);
@@ -436,36 +437,6 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
     MXS_FREE(my_session->filename);
     MXS_FREE(session);
     return;
-}
-
-/**
- * Set the downstream filter or router to which queries will be
- * passed from this filter.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param downstream    The downstream filter or router.
- */
-static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
-{
-    TOPN_SESSION* my_session = (TOPN_SESSION*) session;
-
-    my_session->down = *downstream;
-}
-
-/**
- * Set the upstream filter or session to which results will be
- * passed from this filter.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param upstream  The upstream filter or session.
- */
-static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
-{
-    TOPN_SESSION* my_session = (TOPN_SESSION*) session;
-
-    my_session->up = *upstream;
 }
 
 /**

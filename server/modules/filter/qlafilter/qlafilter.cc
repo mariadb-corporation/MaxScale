@@ -202,11 +202,14 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
     return my_instance;
 }
 
-QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session)
+QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session, MXS_DOWNSTREAM* down, MXS_UPSTREAM* up)
 {
     auto my_session = new(std::nothrow) QlaFilterSession(*this, session);
     if (my_session)
     {
+        my_session->down = *down;
+        my_session->up = *up;
+
         if (!my_session->prepare())
         {
             my_session->close();
@@ -818,10 +821,13 @@ MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
     return QlaInstance::create(name, params);
 }
 
-MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                               MXS_SESSION* session,
+                               MXS_DOWNSTREAM* down,
+                               MXS_UPSTREAM* up)
 {
     auto my_instance = static_cast<QlaInstance*>(instance);
-    return my_instance->newSession(session);
+    return my_instance->newSession(session, down, up);
 }
 
 void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
@@ -834,18 +840,6 @@ void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
     QlaFilterSession* my_session = (QlaFilterSession*) session;
     delete my_session;
-}
-
-void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-    my_session->down = *downstream;
-}
-
-void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-    my_session->up = *upstream;
 }
 
 uint64_t getCapabilities(MXS_FILTER* instance)
@@ -944,8 +938,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         newSession,
         closeSession,
         freeSession,
-        setDownstream,
-        setUpstream,
         routeQuery,
         clientReply,
         diagnostic,

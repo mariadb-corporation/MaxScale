@@ -59,7 +59,7 @@ public:
      * @param session   The generic session
      * @return          Router session on null on error
      */
-    QlaFilterSession* newSession(MXS_SESSION* session);
+    QlaFilterSession* newSession(MXS_SESSION* session, MXS_DOWNSTREAM* down, MXS_UPSTREAM* up);
 
     /**
      * Create an instance of the filter for a particular service within MaxScale.

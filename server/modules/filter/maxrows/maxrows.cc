@@ -34,17 +34,13 @@
 
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session);
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up);
 static void closeSession(MXS_FILTER* instance,
                          MXS_FILTER_SESSION* sdata);
 static void freeSession(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* sdata);
-static void setDownstream(MXS_FILTER* instance,
-                          MXS_FILTER_SESSION* sdata,
-                          MXS_DOWNSTREAM* downstream);
-static void setUpstream(MXS_FILTER* instance,
-                        MXS_FILTER_SESSION* sdata,
-                        MXS_UPSTREAM* upstream);
 static int routeQuery(MXS_FILTER* instance,
                       MXS_FILTER_SESSION* sdata,
                       GWBUF* queue);
@@ -92,8 +88,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         newSession,
         closeSession,
         freeSession,
-        setDownstream,
-        setUpstream,
         routeQuery,
         clientReply,
         diagnostics,
@@ -253,10 +247,15 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  *
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up)
 {
     MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA* csdata = maxrows_session_data_create(cinstance, session);
+    csdata->down = *down;
+    csdata->up = *up;
 
     return (MXS_FILTER_SESSION*)csdata;
 }
@@ -285,36 +284,6 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* sdata)
     MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
 
     maxrows_session_data_free(csdata);
-}
-
-/**
- * Set the downstream component for this filter.
- *
- * @param instance    The maxrowsinstance data
- * @param sdata       The session data of the session
- * @param down        The downstream filter or router
- */
-static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* sdata, MXS_DOWNSTREAM* down)
-{
-    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
-
-    csdata->down = *down;
-}
-
-/**
- * Set the upstream component for this filter.
- *
- * @param instance    The maxrows instance data
- * @param sdata       The session data of the session
- * @param up          The upstream filter or router
- */
-static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* sdata, MXS_UPSTREAM* up)
-{
-    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
-
-    csdata->up = *up;
 }
 
 /**

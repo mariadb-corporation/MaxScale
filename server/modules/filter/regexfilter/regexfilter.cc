@@ -37,13 +37,17 @@
  */
 
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
-static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                setDownstream(MXS_FILTER* instance,
-                                         MXS_FILTER_SESSION* fsession,
-                                         MXS_DOWNSTREAM* downstream);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up);
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void setDownstream(MXS_FILTER* instance,
+                          MXS_FILTER_SESSION* fsession,
+                          MXS_DOWNSTREAM* downstream);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -73,6 +77,7 @@ struct RegexInstance
 struct RegexSession
 {
     MXS_DOWNSTREAM    down; /* The downstream filter */
+    MXS_UPSTREAM      up;   /* The upstream filter */
     pthread_mutex_t   lock;
     int               no_change;    /* No. of unchanged requests */
     int               replacements; /* No. of changed requests */
@@ -108,14 +113,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
         newSession,
         closeSession,
         freeSession,
-        setDownstream,
-        NULL,       // No Upstream requirement
         routeQuery,
-        NULL,       // No clientReply
+        clientReply,
         diagnostic,
         diagnostic_json,
         getCapabilities,
-        NULL,       // No destroyInstance
+        NULL,
     };
 
     static const char description[] = "A query rewrite filter that uses regular "
@@ -262,7 +265,10 @@ bool matching_connection(RegexInstance* my_instance, MXS_SESSION* session)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up)
 {
     RegexInstance* my_instance = (RegexInstance*) instance;
     RegexSession* my_session = static_cast<RegexSession*>(MXS_CALLOC(1, sizeof(RegexSession)));
@@ -272,6 +278,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
         my_session->no_change = 0;
         my_session->replacements = 0;
         my_session->match_data = nullptr;
+        my_session->down = *down;
+        my_session->up = *up;
 
         if (matching_connection(my_instance, session))
         {
@@ -305,19 +313,6 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
     pcre2_match_data_free(my_session->match_data);
     MXS_FREE(my_session);
     return;
-}
-
-/**
- * Set the downstream component for this filter.
- *
- * @param instance  The filter instance data
- * @param session   The session being closed
- * @param downstream    The downstream filter or router
- */
-static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
-{
-    RegexSession* my_session = (RegexSession*) session;
-    my_session->down = *downstream;
 }
 
 /**
@@ -367,6 +362,12 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
     return my_session->down.routeQuery(my_session->down.instance,
                                        my_session->down.session,
                                        queue);
+}
+
+static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
+{
+    RegexSession* my_session = (RegexSession*) session;
+    return my_session->up.clientReply(my_session->up.instance, my_session->up.session, reply, dcb);
 }
 
 /**

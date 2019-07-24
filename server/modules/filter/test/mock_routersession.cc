@@ -31,18 +31,6 @@ RouterSession::~RouterSession()
 {
 }
 
-void RouterSession::set_as_downstream_on(FilterModule::Session* pFilter_session)
-{
-    MXS_DOWNSTREAM downstream;
-    downstream.instance = reinterpret_cast<MXS_FILTER*>(&m_instance);
-    downstream.session = reinterpret_cast<MXS_FILTER_SESSION*>(this);
-    downstream.routeQuery = &RouterSession::routeQuery;
-
-    pFilter_session->setDownstream(&downstream);
-
-    m_pUpstream_filter_session = pFilter_session;
-}
-
 bool RouterSession::respond()
 {
     return m_pBackend->respond(this);

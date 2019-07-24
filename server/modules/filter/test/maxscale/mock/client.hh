@@ -114,11 +114,15 @@ public:
     void reset();
 
     /**
-     * Set this object as client filter of provided filter.
-     *
-     * @param session  The filter session whose upstream filter should be set.
+     * Get the MXS_UPSTREAM for this object
      */
-    void set_as_upstream_on(FilterModule::Session& session);
+    MXS_UPSTREAM* as_upstream()
+    {
+        m_upstream.instance = &m_instance;
+        m_upstream.session = this;
+        m_upstream.clientReply = &Client::clientReply;
+        return &m_upstream;
+    }
 
 private:
     int32_t clientReply(GWBUF* pResponse, DCB* dcb);
@@ -132,11 +136,12 @@ private:
     int32_t write(GWBUF* pBuffer);
 
 private:
-    MXS_FILTER  m_instance;
-    std::string m_user;
-    std::string m_host;
-    Handler*    m_pHandler;
-    size_t      m_n_responses;
+    MXS_FILTER   m_instance;
+    std::string  m_user;
+    std::string  m_host;
+    Handler*     m_pHandler;
+    size_t       m_n_responses;
+    MXS_UPSTREAM m_upstream;
 };
 }
 }

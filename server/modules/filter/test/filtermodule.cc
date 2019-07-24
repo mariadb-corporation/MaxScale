@@ -56,11 +56,16 @@ FilterModule::Instance::~Instance()
     m_module.destroyInstance(m_pInstance);
 }
 
-auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* pSession)
+auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* pSession,
+                                                                   MXS_DOWNSTREAM* down,
+                                                                   MXS_UPSTREAM* up)
 {
     auto_ptr<Session> sFilter_session;
 
-    MXS_FILTER_SESSION* pFilter_session = m_module.newSession(m_pInstance, pSession);
+    MXS_FILTER_SESSION* pFilter_session = m_module.newSession(m_pInstance,
+                                                              pSession,
+                                                              down,
+                                                              up);
 
     if (pFilter_session)
     {

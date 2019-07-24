@@ -68,16 +68,6 @@ void Client::reset()
     }
 }
 
-void Client::set_as_upstream_on(FilterModule::Session& filter_session)
-{
-    MXS_UPSTREAM upstream;
-    upstream.instance = &m_instance;
-    upstream.session = this;
-    upstream.clientReply = &Client::clientReply;
-
-    filter_session.setUpstream(&upstream);
-}
-
 int32_t Client::clientReply(GWBUF* pResponse, DCB* dcb)
 {
     int32_t rv = 1;

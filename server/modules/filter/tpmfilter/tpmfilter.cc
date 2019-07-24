@@ -81,17 +81,17 @@ static const int default_sql_size = 4 * 1024;
 struct TPM_INSTANCE;
 
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
-static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                setDownstream(MXS_FILTER* instance,
-                                         MXS_FILTER_SESSION* fsession,
-                                         MXS_DOWNSTREAM* downstream);
-static void setUpstream(MXS_FILTER* instance,
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up);
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static int  clientReply(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* fsession,
-                        MXS_UPSTREAM* upstream);
-static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue, DCB* dcb);
+                        GWBUF* queue,
+                        DCB* dcb);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -170,8 +170,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         newSession,
         closeSession,
         freeSession,
-        setDownstream,
-        setUpstream,
         routeQuery,
         clientReply,
         diagnostic,
@@ -325,7 +323,10 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up)
 {
     TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
     TPM_SESSION* my_session;
@@ -346,6 +347,9 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
         my_session->total.tv_sec = 0;
         my_session->total.tv_usec = 0;
         my_session->current = NULL;
+        my_session->down = *down;
+        my_session->up = *up;
+
         if ((remote = session_get_remote(session)) != NULL)
         {
             my_session->clientHost = MXS_STRDUP_A(remote);
@@ -412,36 +416,6 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
     MXS_FREE(my_session->latency);
     MXS_FREE(session);
     return;
-}
-
-/**
- * Set the downstream filter or router to which queries will be
- * passed from this filter.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param downstream    The downstream filter or router.
- */
-static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
-{
-    TPM_SESSION* my_session = (TPM_SESSION*)session;
-
-    my_session->down = *downstream;
-}
-
-/**
- * Set the upstream filter or session to which results will be
- * passed from this filter.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param upstream  The upstream filter or session.
- */
-static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
-{
-    TPM_SESSION* my_session = (TPM_SESSION*)session;
-
-    my_session->up = *upstream;
 }
 
 /**

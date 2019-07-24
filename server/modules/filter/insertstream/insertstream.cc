@@ -30,23 +30,23 @@
  */
 
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
-static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                setDownstream(MXS_FILTER* instance,
-                                         MXS_FILTER_SESSION* fsession,
-                                         MXS_DOWNSTREAM* downstream);
-static void setUpstream(MXS_FILTER* instance,
-                        MXS_FILTER_SESSION* session,
-                        MXS_UPSTREAM* upstream);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* downstream,
+                                      MXS_UPSTREAM* upstream);
+static void     closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void     freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int32_t  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
-static int32_t  clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb);
-static bool     extract_insert_target(GWBUF* buffer, char* target, int len);
-static GWBUF*   create_load_data_command(const char* target);
-static GWBUF*   convert_to_stream(GWBUF* buffer, uint8_t packet_num);
+static int32_t  clientReply(MXS_FILTER* instance,
+                            MXS_FILTER_SESSION* session,
+                            GWBUF* reply,
+                            DCB* dcb);
+static bool   extract_insert_target(GWBUF* buffer, char* target, int len);
+static GWBUF* create_load_data_command(const char* target);
+static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num);
 
 /**
  * Instance structure
@@ -106,8 +106,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         newSession,
         closeSession,
         freeSession,
-        setDownstream,
-        setUpstream,
         routeQuery,
         clientReply,
         diagnostic,
@@ -189,13 +187,18 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* downstream,
+                                      MXS_UPSTREAM* upstream)
 {
     DS_INSTANCE* my_instance = (DS_INSTANCE*) instance;
     DS_SESSION* my_session;
 
     if ((my_session = static_cast<DS_SESSION*>(MXS_CALLOC(1, sizeof(DS_SESSION)))) != NULL)
     {
+        my_session->down = *downstream;
+        my_session->up = *upstream;
         my_session->target[0] = '\0';
         my_session->state = DS_STREAM_CLOSED;
         my_session->active = true;
@@ -237,31 +240,6 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
     MXS_FREE(session);
-}
-
-/**
- * Set the downstream component for this filter.
- *
- * @param instance  The filter instance data
- * @param session   The session being closed
- * @param downstream    The downstream filter or router
- */
-static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
-{
-    DS_SESSION* my_session = (DS_SESSION*) session;
-    my_session->down = *downstream;
-}
-
-/**
- * Set the filter upstream
- * @param instance Filter instance
- * @param session Filter session
- * @param upstream Upstream filter
- */
-static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
-{
-    DS_SESSION* my_session = (DS_SESSION*) session;
-    my_session->up = *upstream;
 }
 
 /**

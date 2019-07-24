@@ -85,15 +85,12 @@ static int hktask_id = 0;
  * The filter entry points
  */
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
-static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void                setDownstream(MXS_FILTER* instance,
-                                         MXS_FILTER_SESSION* fsession,
-                                         MXS_DOWNSTREAM* downstream);
-static void setUpstream(MXS_FILTER* instance,
-                        MXS_FILTER_SESSION* fsession,
-                        MXS_UPSTREAM* upstream);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up);
+static void     closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void     freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue, DCB* dcb);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
@@ -271,8 +268,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         newSession,
         closeSession,
         freeSession,
-        setDownstream,
-        setUpstream,
         routeQuery,
         clientReply,
         diagnostic,
@@ -868,7 +863,10 @@ void pushMessage(MQ_INSTANCE* instance, amqp_basic_properties_t* prop, char* msg
  * @param session       The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session,
+                                      MXS_DOWNSTREAM* down,
+                                      MXS_UPSTREAM* up)
 {
     const char* db = mxs_mysql_get_current_db(session);
     char* my_db = NULL;
@@ -886,6 +884,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
 
     if ((my_session = static_cast<MQ_SESSION*>(MXS_CALLOC(1, sizeof(MQ_SESSION)))) != NULL)
     {
+        my_session->down = *down;
+        my_session->up = *up;
         my_session->was_query = false;
         my_session->uid = NULL;
         my_session->session = session;
@@ -924,26 +924,6 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
     MXS_FREE(my_session->db);
     MXS_FREE(my_session);
     return;
-}
-
-/**
- * Set the downstream filter or router to which queries will be
- * passed from this filter.
- *
- * @param instance      The filter instance data
- * @param session       The filter session
- * @param downstream    The downstream filter or router.
- */
-static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
-{
-    MQ_SESSION* my_session = (MQ_SESSION*) session;
-    my_session->down = *downstream;
-}
-
-static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
-{
-    MQ_SESSION* my_session = (MQ_SESSION*) session;
-    my_session->up = *upstream;
 }
 
 /**

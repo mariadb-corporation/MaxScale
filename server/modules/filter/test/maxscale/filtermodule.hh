@@ -46,7 +46,7 @@ public:
          *
          * @return A new filter session or NULL if the creation failed.
          */
-        std::auto_ptr<Session> newSession(MXS_SESSION* pSession);
+        std::auto_ptr<Session> newSession(MXS_SESSION* pSession, MXS_DOWNSTREAM* pDown, MXS_UPSTREAM* pUp);
 
     private:
         friend class FilterModule;
@@ -69,16 +69,6 @@ public:
         int clientReply(MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
         {
             return m_module.clientReply(m_pInstance, pFilter_session, pStatement);
-        }
-
-        void setDownstream(MXS_FILTER_SESSION* pFilter_session, MXS_DOWNSTREAM* pDownstream)
-        {
-            m_module.setDownstream(m_pInstance, pFilter_session, pDownstream);
-        }
-
-        void setUpstream(MXS_FILTER_SESSION* pFilter_session, MXS_UPSTREAM* pUpstream)
-        {
-            m_module.setUpstream(m_pInstance, pFilter_session, pUpstream);
         }
 
     private:
@@ -105,16 +95,6 @@ public:
         int clientReply(GWBUF* pBuffer)
         {
             return m_instance.clientReply(m_pFilter_session, pBuffer);
-        }
-
-        void setDownstream(MXS_DOWNSTREAM* pDownstream)
-        {
-            m_instance.setDownstream(m_pFilter_session, pDownstream);
-        }
-
-        void setUpstream(MXS_UPSTREAM* pUpstream)
-        {
-            m_instance.setUpstream(m_pFilter_session, pUpstream);
         }
 
     private:
@@ -146,9 +126,12 @@ private:
         m_pApi->destroyInstance(pInstance);
     }
 
-    MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession)
+    MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance,
+                                   MXS_SESSION* pSession,
+                                   MXS_DOWNSTREAM* pDown,
+                                   MXS_UPSTREAM* pUp)
     {
-        return m_pApi->newSession(pInstance, pSession);
+        return m_pApi->newSession(pInstance, pSession, pDown, pUp);
     }
 
     void freeSession(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session)
@@ -164,20 +147,6 @@ private:
     int clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
     {
         return m_pApi->clientReply(pInstance, pFilter_session, pStatement, nullptr);
-    }
-
-    void setDownstream(MXS_FILTER* pInstance,
-                       MXS_FILTER_SESSION* pFilter_session,
-                       MXS_DOWNSTREAM* pDownstream)
-    {
-        m_pApi->setDownstream(pInstance, pFilter_session, pDownstream);
-    }
-
-    void setUpstream(MXS_FILTER* pInstance,
-                     MXS_FILTER_SESSION* pFilter_session,
-                     MXS_UPSTREAM* pUpstream)
-    {
-        m_pApi->setUpstream(pInstance, pFilter_session, pUpstream);
     }
 
 private:
