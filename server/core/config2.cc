@@ -12,6 +12,8 @@
  */
 
 #include <maxscale/config2.hh>
+
+#include <maxscale/monitor.hh>
 #include "internal/config.hh"
 
 using namespace std;

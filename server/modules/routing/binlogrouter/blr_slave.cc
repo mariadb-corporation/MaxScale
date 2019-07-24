@@ -37,6 +37,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxscale/clock.h>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale.h>

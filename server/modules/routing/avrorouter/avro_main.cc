@@ -24,6 +24,7 @@
 #include <ini.h>
 #include <sys/stat.h>
 #include <maxbase/atomic.h>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/maxscale.h>
 #include <maxbase/worker.hh>
 #include <maxbase/alloc.h>

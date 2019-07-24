@@ -30,6 +30,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <sys/ioctl.h>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/service.hh>

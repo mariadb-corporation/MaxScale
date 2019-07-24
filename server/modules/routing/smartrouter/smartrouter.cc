@@ -14,6 +14,7 @@
 #include "smartrouter.hh"
 #include "smartsession.hh"
 
+#include <maxscale/cn_strings.hh>
 #include <maxscale/modutil.hh>
 
 namespace

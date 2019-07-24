@@ -14,9 +14,10 @@
 #include <maxscale/json_api.hh>
 
 #include <string>
-
-#include <maxscale/config.hh>
 #include <jansson.h>
+
+#include <maxscale/cn_strings.hh>
+#include <maxscale/config.hh>
 
 using std::string;
 

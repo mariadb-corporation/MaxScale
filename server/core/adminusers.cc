@@ -22,14 +22,16 @@
 #include <sys/stat.h>
 #include <string>
 
-#include <maxbase/alloc.h>
-#include <maxscale/users.h>
 #include <maxscale/adminusers.h>
+#include <maxbase/alloc.h>
+#include <maxscale/cn_strings.hh>
+#include <maxscale/users.h>
 #include <maxbase/pam_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/event.hh>
+
 
 /**
  * @file adminusers.c - Administration user account management

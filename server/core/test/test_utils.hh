@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/maxbase.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>

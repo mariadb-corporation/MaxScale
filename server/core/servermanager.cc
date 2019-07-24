@@ -17,7 +17,9 @@
 #include <string>
 #include <vector>
 #include <maxbase/format.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
+
 #include "internal/monitormanager.hh"
 #include "internal/service.hh"
 

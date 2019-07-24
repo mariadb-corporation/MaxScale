@@ -22,6 +22,7 @@
 #include <maxbase/log.hh>
 #include <maxbase/logger.hh>
 
+#include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/session.hh>

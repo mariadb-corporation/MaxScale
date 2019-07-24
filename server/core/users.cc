@@ -23,6 +23,7 @@
 #include <maxscale/adminusers.h>
 #include <maxbase/pam_utils.hh>
 #include <maxscale/authenticator.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/event.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/users.h>

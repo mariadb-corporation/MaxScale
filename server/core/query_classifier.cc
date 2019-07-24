@@ -20,6 +20,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/format.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>

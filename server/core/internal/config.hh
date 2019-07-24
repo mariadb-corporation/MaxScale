@@ -23,6 +23,7 @@
 #include <unordered_set>
 
 #include <maxbase/jansson.h>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/ssl.hh>
 
 #define DEFAULT_NBPOLLS                     3       /**< Default number of non block polls before we block */

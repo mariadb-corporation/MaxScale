@@ -18,6 +18,7 @@
 
 #include <maxscale/adminusers.h>
 #include <maxbase/alloc.h>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/jansson.hh>

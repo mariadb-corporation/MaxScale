@@ -12,7 +12,9 @@
  */
 
 #include <maxscale/mainworker.hh>
+
 #include <signal.h>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 
 namespace

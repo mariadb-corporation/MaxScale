@@ -30,6 +30,7 @@
 #include <maxbase/host.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/clock.h>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/json_api.hh>
