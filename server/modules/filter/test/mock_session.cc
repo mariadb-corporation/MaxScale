@@ -38,6 +38,8 @@ Session::~Session()
 {
     // This prevents the protocol module from freeing the data
     m_client_dcb.data = nullptr;
+    refcount = 0;
+    client_dcb = nullptr;
 }
 
 Client& Session::client() const

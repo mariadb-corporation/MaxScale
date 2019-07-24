@@ -31,6 +31,11 @@ RouterSession::~RouterSession()
 {
 }
 
+void RouterSession::set_upstream(FilterModule::Session* pFilter_session)
+{
+    m_pUpstream_filter_session = pFilter_session;
+}
+
 bool RouterSession::respond()
 {
     return m_pBackend->respond(this);

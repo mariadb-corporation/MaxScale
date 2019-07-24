@@ -103,6 +103,9 @@ public:
         return static_cast<MXS_SESSION*>(m_pSession);
     }
 
+    // Sets the upstream filter session
+    void set_upstream(FilterModule::Session* pFilter_session);
+
 private:
     int32_t routeQuery(MXS_ROUTER* pInstance, GWBUF* pStatement);
 

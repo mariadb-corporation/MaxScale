@@ -317,6 +317,8 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 
     if (sFilter_session.get())
     {
+        router_session.set_upstream(sFilter_session.get());
+
         rv += test(session, *sFilter_session.get(), router_session, tc);
     }
     else
