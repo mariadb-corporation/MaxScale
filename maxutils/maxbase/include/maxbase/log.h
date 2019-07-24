@@ -85,6 +85,8 @@ typedef struct MXB_LOG_THROTTLING
  */
 typedef size_t (* mxb_log_context_provider_t)(char* buffer, size_t len);
 
+typedef void (* mxb_in_memory_log_t)(const char* buffer, size_t len);
+
 /**
  * @brief Initialize the log
  *
@@ -105,7 +107,8 @@ bool mxb_log_init(const char* ident,
                   const char* logdir,
                   const char* filename,
                   mxb_log_target_t target,
-                  mxb_log_context_provider_t context_provider);
+                  mxb_log_context_provider_t context_provider,
+                  mxb_in_memory_log_t in_memory_log);
 
 /**
  * @brief Finalize the log
@@ -149,6 +152,8 @@ const char* mxb_log_get_filename();
  * @return True if the priority was valid, false otherwise.
  */
 bool mxb_log_set_priority_enabled(int priority, bool enabled);
+
+bool mxb_log_get_session_trace();
 
 /**
  * Query whether a particular syslog priority is enabled.
@@ -234,6 +239,14 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling);
 void mxs_log_redirect_stdout(bool redirect);
 
 /**
+ * Set session specific in-memory log
+ *
+ * @param enabled True or false to enable or disable session in-memory logging
+ */
+void mxb_log_set_session_trace(bool enabled);
+
+
+/**
  * Log a message of a particular priority.
  *
  * @param priority One of the syslog constants: LOG_ERR, LOG_WARNING, ...
@@ -278,7 +291,7 @@ int mxb_log_oom(const char* message);
  *            MXB_ERROR, MXB_WARNING, etc. macros instead.
  */
 #define MXB_LOG_MESSAGE(priority, format, ...) \
-    (mxb_log_is_priority_enabled(priority)   \
+    (mxb_log_is_priority_enabled(priority) || mxb_log_get_session_trace()  \
      ? mxb_log_message(priority, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)  \
      : 0)
 

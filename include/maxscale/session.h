@@ -679,6 +679,17 @@ session_dump_statements_t session_get_dump_statements();
  */
 const char* session_get_dump_statements_str();
 
+
+void session_set_session_trace(uint32_t value);
+
+uint32_t session_get_session_trace();
+
+const char* session_get_session_log(MXS_SESSION* pSession);
+
+void session_append_log(MXS_SESSION* pSession, const char* log);
+
+void session_dump_log(MXS_SESSION* pSession);
+
 /**
  * @brief Route the query again after a delay
  *

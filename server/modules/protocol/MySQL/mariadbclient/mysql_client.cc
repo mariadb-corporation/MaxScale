@@ -1585,6 +1585,11 @@ static int gw_client_hangup_event(DCB* dcb)
                 session_dump_statements(session);
             }
 
+            if (session_get_session_trace())
+            {
+                session_dump_log(session);
+            }
+
             // The client did not send a COM_QUIT packet
             std::string errmsg {"Connection killed by MaxScale"};
             std::string extra {session_get_close_reason(dcb->session)};

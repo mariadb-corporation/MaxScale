@@ -395,6 +395,7 @@ static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer, GWBUF* c
                   backend->current_command(),
                   sql.c_str());
         session_dump_statements(backend->dcb()->session);
+        session_dump_log(backend->dcb()->session);
         mxb_assert(false);
     }
 }
