@@ -101,6 +101,8 @@ typedef struct mxs_filter_object
      * @param down     Downstream component of the filter chain, route queries here
      * @param up       Upstream component of the filter chain, send replies here
      *
+     * @note Don't copy the upstream or downstream components, use the provided pointers instead.
+     *
      * @return New filter session or NULL on error
      */
     MXS_FILTER_SESSION*(*newSession)(MXS_FILTER * instance, MXS_SESSION* session,
@@ -278,12 +280,9 @@ public:
     public:
         Downstream()
         {
-            m_data.instance = NULL;
-            m_data.session = NULL;
-            m_data.routeQuery = NULL;
         }
 
-        Downstream(const MXS_DOWNSTREAM& down)
+        Downstream(const MXS_DOWNSTREAM* down)
             : m_data(down)
         {
         }
@@ -298,10 +297,10 @@ public:
          */
         int routeQuery(GWBUF* pPacket)
         {
-            return m_data.routeQuery(m_data.instance, m_data.session, pPacket);
+            return m_data->routeQuery(m_data->instance, m_data->session, pPacket);
         }
 
-        MXS_DOWNSTREAM m_data;
+        const MXS_DOWNSTREAM* m_data {nullptr};
     };
 
     class Upstream
@@ -314,12 +313,9 @@ public:
          */
         Upstream()
         {
-            m_data.instance = NULL;
-            m_data.session = NULL;
-            m_data.clientReply = NULL;
         }
 
-        Upstream(const MXS_UPSTREAM& up)
+        Upstream(const MXS_UPSTREAM* up)
             : m_data(up)
         {
         }
@@ -334,10 +330,10 @@ public:
          */
         int clientReply(GWBUF* pPacket, DCB* dcb)
         {
-            return m_data.clientReply(m_data.instance, m_data.session, pPacket, dcb);
+            return m_data->clientReply(m_data->instance, m_data->session, pPacket, dcb);
         }
 
-        MXS_UPSTREAM m_data;
+        const MXS_UPSTREAM* m_data {nullptr};
     };
 
     /**
@@ -405,7 +401,7 @@ protected:
      */
     void set_response(GWBUF* pResponse) const
     {
-        session_set_response(m_pSession, &m_up.m_data, pResponse);
+        session_set_response(m_pSession, m_up.m_data, pResponse);
     }
 
 protected:
@@ -488,8 +484,8 @@ public:
 
         if (pFilterSession)
         {
-            typename FilterSessionType::Downstream down(*pDown);
-            typename FilterSessionType::Upstream up(*pUp);
+            typename FilterSessionType::Downstream down(pDown);
+            typename FilterSessionType::Upstream up(pUp);
 
             MXS_EXCEPTION_GUARD(pFilterSession->setDownstream(down));
             MXS_EXCEPTION_GUARD(pFilterSession->setUpstream(up));

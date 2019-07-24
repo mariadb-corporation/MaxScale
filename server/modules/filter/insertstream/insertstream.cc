@@ -71,9 +71,9 @@ enum ds_state
  */
 typedef struct
 {
-    MXS_DOWNSTREAM down;                                            /**< Downstream filter */
-    MXS_UPSTREAM   up;                                              /**< Upstream filter*/
-    GWBUF*         queue;                                           /**< Queue containing a stored
+    MXS_DOWNSTREAM* down;                                           /**< Downstream filter */
+    MXS_UPSTREAM*   up;                                             /**< Upstream filter*/
+    GWBUF*          queue;                                          /**< Queue containing a stored
                                                                      * query */
     bool active;                                                    /**< Whether the session is active
                                                                      * */
@@ -197,8 +197,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
 
     if ((my_session = static_cast<DS_SESSION*>(MXS_CALLOC(1, sizeof(DS_SESSION)))) != NULL)
     {
-        my_session->down = *downstream;
-        my_session->up = *upstream;
+        my_session->down = downstream;
+        my_session->up = upstream;
         my_session->target[0] = '\0';
         my_session->state = DS_STREAM_CLOSED;
         my_session->active = true;
@@ -355,9 +355,9 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
     }
     else
     {
-        rc = my_session->down.routeQuery(my_session->down.instance,
-                                         my_session->down.session,
-                                         queue);
+        rc = my_session->down->routeQuery(my_session->down->instance,
+                                          my_session->down->session,
+                                          queue);
     }
 
     return rc;
@@ -469,9 +469,9 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GW
     }
     else
     {
-        rc = my_session->up.clientReply(my_session->up.instance,
-                                        my_session->up.session,
-                                        reply, dcb);
+        rc = my_session->up->clientReply(my_session->up->instance,
+                                         my_session->up->session,
+                                         reply, dcb);
     }
 
     return rc;

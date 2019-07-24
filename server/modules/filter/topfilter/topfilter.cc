@@ -103,20 +103,20 @@ typedef struct topnq
  */
 typedef struct
 {
-    MXS_DOWNSTREAM down;
-    MXS_UPSTREAM   up;
-    int            active;
-    char*          clientHost;
-    char*          userName;
-    char*          filename;
-    int            fd;
-    struct timeval start;
-    char*          current;
-    TOPNQ**        top;
-    int            n_statements;
-    struct timeval total;
-    struct timeval connect;
-    struct timeval disconnect;
+    MXS_DOWNSTREAM* down;
+    MXS_UPSTREAM*   up;
+    int             active;
+    char*           clientHost;
+    char*           userName;
+    char*           filename;
+    int             fd;
+    struct timeval  start;
+    char*           current;
+    TOPNQ**         top;
+    int             n_statements;
+    struct timeval  total;
+    struct timeval  connect;
+    struct timeval  disconnect;
 } TOPN_SESSION;
 
 static const MXS_ENUM_VALUE option_values[] =
@@ -305,8 +305,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         my_session->total.tv_sec = 0;
         my_session->total.tv_usec = 0;
         my_session->current = NULL;
-        my_session->down = *down;
-        my_session->up = *up;
+        my_session->down = down;
+        my_session->up = up;
 
         if ((remote = session_get_remote(session)) != NULL)
         {
@@ -479,9 +479,9 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
         }
     }
     /* Pass the query downstream */
-    return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session,
-                                       queue);
+    return my_session->down->routeQuery(my_session->down->instance,
+                                        my_session->down->session,
+                                        queue);
 }
 
 static int cmp_topn(const void* va, const void* vb)
@@ -548,10 +548,10 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
     }
 
     /* Pass the result upstream */
-    return my_session->up.clientReply(my_session->up.instance,
-                                      my_session->up.session,
-                                      reply,
-                                      dcb);
+    return my_session->up->clientReply(my_session->up->instance,
+                                       my_session->up->session,
+                                       reply,
+                                       dcb);
 }
 
 /**

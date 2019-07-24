@@ -230,12 +230,12 @@ typedef struct
  */
 typedef struct
 {
-    char*          uid; /**Unique identifier used to tag messages*/
-    char*          db;  /**The currently active database*/
-    MXS_DOWNSTREAM down;
-    MXS_UPSTREAM   up;
-    MXS_SESSION*   session;
-    bool           was_query;   /**True if the previous routeQuery call had valid content*/
+    char*           uid;/**Unique identifier used to tag messages*/
+    char*           db; /**The currently active database*/
+    MXS_DOWNSTREAM* down;
+    MXS_UPSTREAM*   up;
+    MXS_SESSION*    session;
+    bool            was_query;  /**True if the previous routeQuery call had valid content*/
 } MQ_SESSION;
 
 bool sendMessage(mxb::Worker::Call::action_t action, MQ_INSTANCE* instance);
@@ -884,8 +884,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
 
     if ((my_session = static_cast<MQ_SESSION*>(MXS_CALLOC(1, sizeof(MQ_SESSION)))) != NULL)
     {
-        my_session->down = *down;
-        my_session->up = *up;
+        my_session->down = down;
+        my_session->up = up;
         my_session->was_query = false;
         my_session->uid = NULL;
         my_session->session = session;
@@ -1263,9 +1263,9 @@ validate_triggers:
         /** Pass the query downstream */
     }
 
-    return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session,
-                                       queue);
+    return my_session->down->routeQuery(my_session->down->instance,
+                                        my_session->down->session,
+                                        queue);
 }
 
 /**
@@ -1509,10 +1509,10 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
         }
     }
 
-    return my_session->up.clientReply(my_session->up.instance,
-                                      my_session->up.session,
-                                      reply,
-                                      dcb);
+    return my_session->up->clientReply(my_session->up->instance,
+                                       my_session->up->session,
+                                       reply,
+                                       dcb);
 }
 
 /**

@@ -207,8 +207,8 @@ QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session, MXS_DOWNSTREAM* 
     auto my_session = new(std::nothrow) QlaFilterSession(*this, session);
     if (my_session)
     {
-        my_session->down = *down;
-        my_session->up = *up;
+        my_session->down = down;
+        my_session->up = up;
 
         if (!my_session->prepare())
         {
@@ -450,7 +450,7 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
         }
     }
     /* Pass the query downstream */
-    return down.routeQuery(down.instance, down.session, queue);
+    return down->routeQuery(down->instance, down->session, queue);
 }
 
 int QlaFilterSession::clientReply(GWBUF* queue, DCB* dcb)
@@ -478,7 +478,7 @@ int QlaFilterSession::clientReply(GWBUF* queue, DCB* dcb)
         write_log_entries(elems);
         event.clear();
     }
-    return up.clientReply(up.instance, up.session, queue, dcb);
+    return up->clientReply(up->instance, up->session, queue, dcb);
 }
 
 FILE* QlaInstance::open_session_log_file(const string& filename) const

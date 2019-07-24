@@ -214,11 +214,11 @@ typedef struct
  */
 typedef struct
 {
-    MXS_SESSION*   session;
-    lua_State*     lua_state;
-    GWBUF*         current_query;
-    MXS_DOWNSTREAM down;
-    MXS_UPSTREAM   up;
+    MXS_SESSION*    session;
+    lua_State*      lua_state;
+    GWBUF*          current_query;
+    MXS_DOWNSTREAM* down;
+    MXS_UPSTREAM*   up;
 } LUA_SESSION;
 
 void expose_functions(lua_State* state, GWBUF** active_buffer)
@@ -334,8 +334,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         return NULL;
     }
 
-    my_session->down = *downstream;
-    my_session->up = *upstream;
+    my_session->down = downstream;
+    my_session->up = upstream;
     my_session->session = session;
 
     if (my_instance->session_script)
@@ -492,9 +492,9 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GW
         }
     }
 
-    return my_session->up.clientReply(my_session->up.instance,
-                                      my_session->up.session,
-                                      queue, dcb);
+    return my_session->up->clientReply(my_session->up->instance,
+                                       my_session->up->session,
+                                       queue, dcb);
 }
 
 /**
@@ -597,14 +597,14 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
     {
         gwbuf_free(queue);
         GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1045, "28000", "Access denied.");
-        session_set_response(my_session->session, &my_session->up, err);
+        session_set_response(my_session->session, my_session->up, err);
         rc = 1;
     }
     else
     {
-        rc = my_session->down.routeQuery(my_session->down.instance,
-                                         my_session->down.session,
-                                         forward);
+        rc = my_session->down->routeQuery(my_session->down->instance,
+                                          my_session->down->session,
+                                          forward);
     }
 
     return rc;

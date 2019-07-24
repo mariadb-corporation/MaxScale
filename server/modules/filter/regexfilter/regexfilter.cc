@@ -76,8 +76,8 @@ struct RegexInstance
  */
 struct RegexSession
 {
-    MXS_DOWNSTREAM    down; /* The downstream filter */
-    MXS_UPSTREAM      up;   /* The upstream filter */
+    MXS_DOWNSTREAM*   down; /* The downstream filter */
+    MXS_UPSTREAM*     up;   /* The upstream filter */
     pthread_mutex_t   lock;
     int               no_change;    /* No. of unchanged requests */
     int               replacements; /* No. of changed requests */
@@ -278,8 +278,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         my_session->no_change = 0;
         my_session->replacements = 0;
         my_session->match_data = nullptr;
-        my_session->down = *down;
-        my_session->up = *up;
+        my_session->down = down;
+        my_session->up = up;
 
         if (matching_connection(my_instance, session))
         {
@@ -359,15 +359,15 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
             MXS_FREE(sql);
         }
     }
-    return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session,
-                                       queue);
+    return my_session->down->routeQuery(my_session->down->instance,
+                                        my_session->down->session,
+                                        queue);
 }
 
 static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
 {
     RegexSession* my_session = (RegexSession*) session;
-    return my_session->up.clientReply(my_session->up.instance, my_session->up.session, reply, dcb);
+    return my_session->up->clientReply(my_session->up->instance, my_session->up->session, reply, dcb);
 }
 
 /**

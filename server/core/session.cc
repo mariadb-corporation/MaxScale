@@ -1173,40 +1173,10 @@ bool Session::setup_filters(Service* service)
         m_filters.emplace_back(a);
     }
 
-    // The head of the chain currently points at the router
-    MXS_DOWNSTREAM* chain_head = &head;
-
-    for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
-    {
-        it->down = *chain_head;
-        chain_head = &it->down;
-    }
-
-    head = *chain_head;
-
-    // The tail is the upstream component of the service (the client DCB)
-    MXS_UPSTREAM* chain_tail = &tail;
-
-    for (auto it = m_filters.begin(); it != m_filters.end(); it++)
-    {
-        it->up = *chain_tail;
-        chain_tail = &it->up;
-    }
-
-    tail = *chain_tail;
-
     for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
     {
         auto& f = *it;
-        f.down.routeQuery = f.filter->obj->routeQuery;
-        f.up.clientReply = f.filter->obj->clientReply;
-        f.instance = f.filter->filter;
-        f.up.instance = f.instance;
-        f.down.instance = f.instance;
-
         f.session = f.filter->obj->newSession(f.instance, this, &f.down, &f.up);
-        f.up.session = f.session;
-        f.down.session = f.session;
 
         if (!f.session)
         {
@@ -1223,6 +1193,32 @@ bool Session::setup_filters(Service* service)
             return false;
         }
     }
+
+    // The head of the chain currently points at the router
+    MXS_DOWNSTREAM chain_head = head;
+
+    for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
+    {
+        it->down = chain_head;
+        chain_head.instance = it->instance;
+        chain_head.session = it->session;
+        chain_head.routeQuery = it->filter->obj->routeQuery;
+    }
+
+    head = chain_head;
+
+    // The tail is the upstream component of the service (the client DCB)
+    MXS_UPSTREAM chain_tail = tail;
+
+    for (auto it = m_filters.begin(); it != m_filters.end(); it++)
+    {
+        it->up = chain_tail;
+        chain_tail.instance = it->instance;
+        chain_tail.session = it->session;
+        chain_tail.clientReply = it->filter->obj->clientReply;
+    }
+
+    tail = chain_tail;
 
     return true;
 }

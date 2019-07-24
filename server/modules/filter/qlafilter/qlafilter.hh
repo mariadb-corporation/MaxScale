@@ -168,8 +168,8 @@ public:
      */
     void close();
 
-    MXS_UPSTREAM   up;
-    MXS_DOWNSTREAM down;
+    MXS_UPSTREAM*   up;
+    MXS_DOWNSTREAM* down;
 
     std::string m_filename;     /* The session-specific log file name */
 

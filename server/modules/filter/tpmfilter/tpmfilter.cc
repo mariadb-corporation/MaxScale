@@ -130,24 +130,24 @@ struct TPM_INSTANCE
  */
 typedef struct
 {
-    MXS_DOWNSTREAM down;
-    MXS_UPSTREAM   up;
-    int            active;
-    char*          clientHost;
-    char*          userName;
-    char*          sql;
-    char*          latency;
-    struct timeval start;
-    char*          current;
-    int            n_statements;
-    struct timeval total;
-    struct timeval current_start;
-    struct timeval last_statement_start;
-    bool           query_end;
-    char*          buf;
-    int            sql_index;
-    int            latency_index;
-    size_t         max_sql_size;
+    MXS_DOWNSTREAM* down;
+    MXS_UPSTREAM*   up;
+    int             active;
+    char*           clientHost;
+    char*           userName;
+    char*           sql;
+    char*           latency;
+    struct timeval  start;
+    char*           current;
+    int             n_statements;
+    struct timeval  total;
+    struct timeval  current_start;
+    struct timeval  last_statement_start;
+    bool            query_end;
+    char*           buf;
+    int             sql_index;
+    int             latency_index;
+    size_t          max_sql_size;
 } TPM_SESSION;
 
 extern "C"
@@ -347,8 +347,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         my_session->total.tv_sec = 0;
         my_session->total.tv_usec = 0;
         my_session->current = NULL;
-        my_session->down = *down;
-        my_session->up = *up;
+        my_session->down = down;
+        my_session->up = up;
 
         if ((remote = session_get_remote(session)) != NULL)
         {
@@ -524,9 +524,9 @@ retblock:
 
     MXS_FREE(ptr);
     /* Pass the query downstream */
-    return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session,
-                                       queue);
+    return my_session->down->routeQuery(my_session->down->instance,
+                                        my_session->down->session,
+                                        queue);
 }
 
 static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
@@ -598,10 +598,10 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
     }
 
     /* Pass the result upstream */
-    return my_session->up.clientReply(my_session->up.instance,
-                                      my_session->up.session,
-                                      reply,
-                                      dcb);
+    return my_session->up->clientReply(my_session->up->instance,
+                                       my_session->up->session,
+                                       reply,
+                                       dcb);
 }
 
 /**
