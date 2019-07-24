@@ -1173,44 +1173,54 @@ bool Session::setup_filters(Service* service)
         m_filters.emplace_back(a);
     }
 
+    // The head of the chain currently points at the router
+    MXS_DOWNSTREAM* chain_head = &head;
+
     for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
     {
-        MXS_DOWNSTREAM* my_head = filter_apply(it->filter, this, &head);
-
-        if (my_head == NULL)
-        {
-            MXS_ERROR("Failed to create filter '%s' for service '%s'.\n",
-                      filter_def_get_name(it->filter.get()),
-                      service->name());
-            return false;
-        }
-
-        it->session = my_head->session;
-        it->instance = my_head->instance;
-        head = *my_head;
-        MXS_FREE(my_head);
+        it->down = *chain_head;
+        chain_head = &it->down;
     }
+
+    head = *chain_head;
+
+    // The tail is the upstream component of the service (the client DCB)
+    MXS_UPSTREAM* chain_tail = &tail;
 
     for (auto it = m_filters.begin(); it != m_filters.end(); it++)
     {
-        MXS_UPSTREAM* my_tail = filter_upstream(it->filter, it->session, &tail);
+        it->up = *chain_tail;
+        chain_tail = &it->up;
+    }
 
-        if (my_tail == NULL)
+    tail = *chain_tail;
+
+    for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
+    {
+        auto& f = *it;
+        f.down.routeQuery = f.filter->obj->routeQuery;
+        f.up.clientReply = f.filter->obj->clientReply;
+        f.instance = f.filter->filter;
+        f.up.instance = f.instance;
+        f.down.instance = f.instance;
+
+        f.session = f.filter->obj->newSession(f.instance, this, &f.down, &f.up);
+        f.up.session = f.session;
+        f.down.session = f.session;
+
+        if (!f.session)
         {
-            MXS_ERROR("Failed to create filter '%s' for service '%s'.",
-                      filter_def_get_name(it->filter.get()),
-                      service->name());
+            MXS_ERROR("Failed to create filter session for '%s'", f.filter->name.c_str());
+
+            for (auto d = m_filters.begin(); d != it; ++d)
+            {
+                mxb_assert(d->session);
+                d->filter->obj->closeSession(d->instance, d->session);
+                d->filter->obj->freeSession(d->instance, d->session);
+            }
+
+            m_filters.clear();
             return false;
-        }
-
-        /**
-         * filter_upstream may simply return the 3 parameters if the filter has no
-         * upstream entry point. So no need to copy the contents or free tail in this case.
-         */
-        if (my_tail != &tail)
-        {
-            tail = *my_tail;
-            MXS_FREE(my_tail);
         }
     }
 

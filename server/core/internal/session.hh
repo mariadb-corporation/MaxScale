@@ -106,7 +106,7 @@ public:
 
     SessionFilter(const SFilterDef& f)
         : filter(f)
-        , instance(nullptr)
+        , instance(filter->filter)
         , session(nullptr)
     {
     }
@@ -114,6 +114,8 @@ public:
     SFilterDef          filter;
     MXS_FILTER*         instance;
     MXS_FILTER_SESSION* session;
+    MXS_UPSTREAM        up;
+    MXS_DOWNSTREAM      down;
 };
 
 class Session : public MXS_SESSION
