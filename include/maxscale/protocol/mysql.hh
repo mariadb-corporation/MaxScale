@@ -500,12 +500,21 @@ struct MySQLProtocol
             return m_row_count;
         }
 
+        /**
+         * Number of bytes received
+         */
+        uint64_t size() const
+        {
+            return m_size;
+        }
+
     private:
         SERVER*    m_server {nullptr};
         uint8_t    m_command {0};
         ReplyState m_reply_state {ReplyState::DONE};
         Error      m_error;
         uint64_t   m_row_count {0};
+        uint64_t   m_size {0};
 
         friend class MySQLProtocol;
     };

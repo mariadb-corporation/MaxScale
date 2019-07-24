@@ -2028,6 +2028,11 @@ GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
         rval = process_packets(buffer);
     }
 
+    if (rval)
+    {
+        m_reply.m_size += gwbuf_length(rval);
+    }
+
     return rval;
 }
 
@@ -2055,6 +2060,7 @@ void MySQLProtocol::track_query(GWBUF* buffer)
     {
         m_reply.m_command = MYSQL_GET_COMMAND(data);
         m_reply.m_row_count = 0;
+        m_reply.m_size = 0;
         current_command = (mxs_mysql_cmd_t) m_reply.m_command;
 
         MXS_INFO("%02hhx: %s", m_reply.m_command, mxs::extract_sql(buffer).c_str());
