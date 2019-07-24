@@ -1750,7 +1750,8 @@ bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
 
         // The end result should contain the same set of nodes we started with
         mxb_assert(std::set<CONFIG_CONTEXT*>(result.begin(), result.end())
-                   == std::set<CONFIG_CONTEXT*>(objects.begin(), objects.end()));
+                   == std::set<CONFIG_CONTEXT*>(objects.begin(), objects.end())
+                   || errors > 0);
 
         objects = std::move(result);
     }
