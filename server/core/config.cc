@@ -3179,27 +3179,18 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char* ssl_cert, char* ss
     return error_count;
 }
 
-/**
- * @brief Add default parameters for a module to the configuration context
- *
- * Only parameters that aren't defined are added to the configuration context.
- * This allows users to override the default values.
- *
- * @param ctx Configuration context where the default parameters are added
- * @param module Name of the module
- */
-void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params)
+void config_add_defaults(MXS_CONFIG_PARAMETER* dest, const MXS_MODULE_PARAM* params)
 {
     if (params)
     {
         for (int i = 0; params[i].name; i++)
         {
-            if (params[i].default_value && !ctx->m_parameters.contains(params[i].name))
+            if (params[i].default_value && !dest->contains(params[i].name))
             {
                 std::string key = params[i].name;
                 std::string value = params[i].default_value;
                 config_fix_param(params, key, &value);
-                ctx->m_parameters.set(key, value);
+                dest->set(key, value);
             }
         }
     }
@@ -3317,8 +3308,8 @@ int create_new_service(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    config_add_defaults(obj, common_service_params());
-    config_add_defaults(obj, module->parameters);
+    config_add_defaults(&obj->m_parameters, common_service_params());
+    config_add_defaults(&obj->m_parameters, module->parameters);
 
     int error_count = 0;
     Service* service = service_alloc(obj->name(), router.c_str(), &obj->m_parameters);
@@ -3419,14 +3410,14 @@ int create_new_server(CONFIG_CONTEXT* obj)
 {
     bool error = false;
 
-    config_add_defaults(obj, common_server_params());
+    config_add_defaults(&obj->m_parameters, common_server_params());
 
     auto module = obj->m_parameters.get_string(CN_PROTOCOL);
     mxb_assert(!module.empty());
 
     if (const MXS_MODULE* mod = get_module(module.c_str(), MODULE_PROTOCOL))
     {
-        config_add_defaults(obj, mod->parameters);
+        config_add_defaults(&obj->m_parameters, mod->parameters);
     }
     else
     {
@@ -3523,8 +3514,8 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
 
     if (const MXS_MODULE* mod = get_module(module.c_str(), MODULE_MONITOR))
     {
-        config_add_defaults(obj, common_monitor_params());
-        config_add_defaults(obj, mod->parameters);
+        config_add_defaults(&obj->m_parameters, common_monitor_params());
+        config_add_defaults(&obj->m_parameters, mod->parameters);
     }
     else
     {
@@ -3558,8 +3549,8 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 
     if (const MXS_MODULE* mod = get_module(protocol.c_str(), MODULE_PROTOCOL))
     {
-        config_add_defaults(obj, common_listener_params());
-        config_add_defaults(obj, mod->parameters);
+        config_add_defaults(&obj->m_parameters, common_listener_params());
+        config_add_defaults(&obj->m_parameters, mod->parameters);
     }
     else
     {
@@ -3584,7 +3575,7 @@ int create_new_filter(CONFIG_CONTEXT* obj)
 
     if (const MXS_MODULE* mod = get_module(module, MODULE_FILTER))
     {
-        config_add_defaults(obj, mod->parameters);
+        config_add_defaults(&obj->m_parameters, mod->parameters);
 
         if (!filter_alloc(obj->name(), module, &obj->m_parameters))
         {

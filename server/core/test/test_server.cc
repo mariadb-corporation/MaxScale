@@ -91,7 +91,7 @@ bool test_load_config(const char* input, Server* server)
         {
             CONFIG_CONTEXT* obj = ccontext.m_next;
             MXS_CONFIG_PARAMETER* param = &obj->m_parameters;
-            config_add_defaults(obj, common_server_params());
+            config_add_defaults(&obj->m_parameters, common_server_params());
 
             TEST(strcmp(obj->name(), server->name()) == 0, "Server names differ");
             TEST(param->get_string("address") == server->address, "Server addresses differ");

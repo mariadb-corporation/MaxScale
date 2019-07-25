@@ -146,8 +146,8 @@ static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
 
     if (const MXS_MODULE* mod = get_module(name, module_type))
     {
-        config_add_defaults(&ctx, get_type_parameters(object_type));
-        config_add_defaults(&ctx, mod->parameters);
+        config_add_defaults(&ctx.m_parameters, get_type_parameters(object_type));
+        config_add_defaults(&ctx.m_parameters, mod->parameters);
         params = ctx.m_parameters;
         params.set(get_module_param_name(object_type), name);
         rval = true;

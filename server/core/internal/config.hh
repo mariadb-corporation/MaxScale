@@ -59,14 +59,15 @@ void config_finish();
 void config_set_global_defaults();
 
 /**
- * @brief Generate default module parameters
+ * @brief Add default parameters for a module to the configuration context
  *
- * Adds any default parameters to @c ctx that aren't already in it.
+ * Only parameters that aren't yet in the destination container are added.
+ * This allows users to override the default values.
  *
- * @param ctx    Configuration context where the parameters are added
- * @param params Module parameters
+ * @param dest Container where the default parameters are added
+ * @param params Module parameter definitions
  */
-void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params);
+void config_add_defaults(MXS_CONFIG_PARAMETER* dest, const MXS_MODULE_PARAM* params);
 
 char* config_clean_string_list(const char* str);
 bool  config_load(const char*);

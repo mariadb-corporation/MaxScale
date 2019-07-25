@@ -163,7 +163,7 @@ int test_add_parameter()
     config_add_param(&svc1, "type", "service");
     config_add_param(&svc2, "type", "service");
 
-    config_add_defaults(&ctx, params);
+    config_add_defaults(&ctx.m_parameters, params);
 
     /** Test default values */
     TEST(ctx.m_parameters.get_integer("p1") == -123);
@@ -185,7 +185,7 @@ int test_add_parameter()
     config_add_param(&ctx, "p6", "/dev/null");
     config_add_param(&ctx, "p7", "some-service");
 
-    config_add_defaults(&ctx, params);
+    config_add_defaults(&ctx.m_parameters, params);
 
     TEST(ctx.m_parameters.get_integer("p1") == -321);
     TEST(ctx.m_parameters.get_integer("p2") == 321);
@@ -211,7 +211,7 @@ int test_required_parameters()
     CONFIG_CONTEXT ctx;
 
     TEST(missing_required_parameters(params, ctx.m_parameters, "test"));
-    config_add_defaults(&ctx, params);
+    config_add_defaults(&ctx.m_parameters, params);
     TEST(!missing_required_parameters(params, ctx.m_parameters, "test"));
 
     ctx.m_parameters.clear();
