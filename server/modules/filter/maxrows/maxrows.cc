@@ -44,7 +44,7 @@ void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE* state)
  * @param sdata     The filter session data
  * @param buffer    Buffer containing an MySQL protocol packet.
  */
-int MaxRowsSession::routeQuery(GWBUF* packet)
+int MaxRowsSession::old_routeQuery(GWBUF* packet)
 {
     MaxRows* cinstance = instance;
     MaxRowsSession* csdata = this;
@@ -109,7 +109,7 @@ int MaxRowsSession::routeQuery(GWBUF* packet)
  * @param sdata     The filter session data
  * @param queue     The query data
  */
-int MaxRowsSession::clientReply(GWBUF* data, DCB* dcb)
+int MaxRowsSession::old_clientReply(GWBUF* data, DCB* dcb)
 {
     MaxRows* cinstance = instance;
     MaxRowsSession* csdata = this;
@@ -911,14 +911,79 @@ int MaxRowsSession::send_maxrows_reply_limit(MaxRowsSession* csdata)
     }
 }
 
-extern "C"
+int MaxRowsSession::routeQuery(GWBUF* packet)
 {
+    return FilterSession::routeQuery(packet);
+}
+
+int MaxRowsSession::clientReply(GWBUF* data, DCB* dcb)
+{
+    mxs::Buffer buffer(data);
+    MySQLProtocol::Reply reply = static_cast<MySQLProtocol*>(dcb->protocol)->reply();
+    int rv = 1;
+
+    if (m_collect)
+    {
+        // The resultset is stored in an internal buffer until we know whether to send it or to discard it
+        m_buffer.append(buffer.release());
+
+        if (reply.rows_read() > m_instance->config().max_rows || reply.size() > m_instance->config().max_size)
+        {
+            // A limit was exceeded, discard the result and replace it with a fake result
+            switch (m_instance->config().mode)
+            {
+            case Mode::EMPTY:
+                if (reply.rows_read() > 0)
+                {
+                    // We have the start of the resultset with at least one row in it. Truncate the result
+                    // to contain the start of the first resultset with no rows and inject an EOF packet into
+                    // it.
+                    uint64_t num_packets = reply.field_counts()[0] + 2;
+                    auto tmp = mxs::truncate_packets(m_buffer.release(), num_packets);
+                    m_buffer.append(tmp);
+                    m_buffer.append(modutil_create_eof(num_packets + 1));
+                    m_collect = false;
+                }
+                break;
+
+            case Mode::ERR:
+                m_buffer.reset(
+                    modutil_create_mysql_err_msg(1, 0, 1226, "42000",
+                                                 reply.rows_read() > m_instance->config().max_rows ?
+                                                 "Resultset row limit exceeded" :
+                                                 "Resultset size limit exceeded"));
+                m_collect = false;
+                break;
+
+            case Mode::OK:
+                m_buffer.reset(modutil_create_ok());
+                m_collect = false;
+                break;
+
+            default:
+                mxb_assert(!true);
+                rv = 0;
+                break;
+            }
+        }
+    }
+
+    if (reply.is_complete())
+    {
+        rv = FilterSession::clientReply(m_buffer.release(), dcb);
+        m_collect = true;
+    }
+
+    return rv;
+}
 
 /**
  * The module entry point function, called when the module is loaded.
  *
  * @return The module object.
  */
+extern "C"
+{
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
@@ -938,17 +1003,18 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "max_resultset_rows",
                 MXS_MODULE_PARAM_COUNT,
-                MAXROWS_DEFAULT_MAX_RESULTSET_ROWS
+                MXS_MODULE_PARAM_COUNT_MAX
             },
             {
                 "max_resultset_size",
                 MXS_MODULE_PARAM_SIZE,
-                MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
+                "65536"
             },
             {
                 "debug",
                 MXS_MODULE_PARAM_COUNT,
-                MAXROWS_DEFAULT_DEBUG
+                "0",
+                MXS_MODULE_OPT_DEPRECATED
             },
             {
                 "max_resultset_return",

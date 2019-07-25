@@ -105,8 +105,7 @@ private:
     // Used in the create function
     MaxRowsSession(MXS_SESSION* pSession, MaxRows* pFilter)
         : FilterSession(pSession)
-        , instance(pFilter)
-        , session(pSession)
+        , m_instance(pFilter)
     {
     }
 
@@ -121,8 +120,6 @@ private:
     int send_error_upstream(MaxRowsSession* csdata);
     int send_maxrows_reply_limit(MaxRowsSession* csdata);
 
-public:
-
     MaxRows*                instance;   /**< The maxrows instance the session is associated with. */
     MAXROWS_RESPONSE_STATE  res {};     /**< The response state. */
     MXS_SESSION*            session;    /**< The session this data is associated with. */
@@ -130,6 +127,10 @@ public:
     bool                    large_packet {false};       /**< Large packet (> 16MB)) indicator */
     bool                    discard_resultset {false};  /**< Discard resultset indicator */
     GWBUF*                  input_sql {nullptr};        /**< Input query */
+
+    MaxRows*    m_instance;
+    mxs::Buffer m_buffer;   // Contains the partial resultset
+    bool        m_collect {true};
 };
 
 class MaxRows : public maxscale::Filter<MaxRows, MaxRowsSession>
@@ -154,7 +155,7 @@ public:
         Mode     mode;
     };
 
-    static constexpr uint64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
+    static constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING;
 
     // Creates a new filter instance
     static MaxRows* create(const char* name, MXS_CONFIG_PARAMETER* params)
