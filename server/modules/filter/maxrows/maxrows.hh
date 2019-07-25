@@ -15,32 +15,7 @@
 #define MXS_MODULE_NAME "maxrows"
 
 #include <maxscale/ccdefs.hh>
-
 #include <maxscale/filter.hh>
-
-/*
- * The EOF packet 2 bytes flags start after:
- * network header (4 bytes) + eof indicator (1) + 2 bytes warnings count)
- */
-#define MAXROWS_MYSQL_EOF_PACKET_FLAGS_OFFSET (MYSQL_HEADER_LEN + 1 + 2)
-
-#define MAXROWS_DEBUG_NONE       0
-#define MAXROWS_DEBUG_DISCARDING 1
-#define MAXROWS_DEBUG_DECISIONS  2
-
-#define MAXROWS_DEBUG_USAGE (MAXROWS_DEBUG_DECISIONS | MAXROWS_DEBUG_DISCARDING)
-#define MAXROWS_DEBUG_MIN   MAXROWS_DEBUG_NONE
-#define MAXROWS_DEBUG_MAX   MAXROWS_DEBUG_USAGE
-
-// Count
-#define MAXROWS_DEFAULT_MAX_RESULTSET_ROWS MXS_MODULE_PARAM_COUNT_MAX
-// Bytes
-#define MAXROWS_DEFAULT_MAX_RESULTSET_SIZE "65536"
-// Integer value
-#define MAXROWS_DEFAULT_DEBUG "0"
-// Max size of copied input SQL
-#define MAXROWS_INPUT_SQL_MAX_LEN 1024
-
 
 enum Mode
 {
@@ -54,26 +29,6 @@ static const MXS_ENUM_VALUE mode_values[] =
     {"ok",    Mode::OK   },
     {NULL}
 };
-
-typedef enum maxrows_session_state
-{
-    MAXROWS_EXPECTING_RESPONSE = 1, // A select has been sent, and we are waiting for the response.
-    MAXROWS_EXPECTING_FIELDS,       // A select has been sent, and we want more fields.
-    MAXROWS_EXPECTING_ROWS,         // A select has been sent, and we want more rows.
-    MAXROWS_EXPECTING_NOTHING,      // We are not expecting anything from the server.
-    MAXROWS_IGNORING_RESPONSE,      // We are not interested in the data received from the server.
-} maxrows_session_state_t;
-
-typedef struct maxrows_response_state
-{
-    GWBUF* data;            /**< Response data, possibly incomplete. */
-    size_t n_totalfields;   /**< The number of fields a resultset contains. */
-    size_t n_fields;        /**< How many fields we have received, <= n_totalfields. */
-    size_t n_rows;          /**< How many rows we have received. */
-    size_t offset;          /**< Where we are in the response buffer. */
-    size_t length;          /**< Buffer size. */
-    GWBUF* column_defs;     /**< Buffer with result set columns definitions */
-} MAXROWS_RESPONSE_STATE;
 
 class MaxRows;
 
@@ -89,12 +44,6 @@ public:
         return new(std::nothrow) MaxRowsSession(pSession, pFilter);
     }
 
-    // Called when a client session has been closed
-    void close()
-    {
-        gwbuf_free(input_sql);
-    }
-
     // Handle a query from the client
     int routeQuery(GWBUF* pPacket);
 
@@ -108,25 +57,6 @@ private:
         , m_instance(pFilter)
     {
     }
-
-    int handle_expecting_fields(MaxRowsSession* csdata);
-    int handle_expecting_nothing(MaxRowsSession* csdata);
-    int handle_expecting_response(MaxRowsSession* csdata);
-    int handle_rows(MaxRowsSession* csdata, GWBUF* buffer, size_t extra_offset);
-    int handle_ignoring_response(MaxRowsSession* csdata);
-    int send_upstream(MaxRowsSession* csdata);
-    int send_ok_upstream(MaxRowsSession* csdata);
-    int send_eof_upstream(MaxRowsSession* csdata);
-    int send_error_upstream(MaxRowsSession* csdata);
-    int send_maxrows_reply_limit(MaxRowsSession* csdata);
-
-    MaxRows*                instance;   /**< The maxrows instance the session is associated with. */
-    MAXROWS_RESPONSE_STATE  res {};     /**< The response state. */
-    MXS_SESSION*            session;    /**< The session this data is associated with. */
-    maxrows_session_state_t state {MAXROWS_EXPECTING_NOTHING};
-    bool                    large_packet {false};       /**< Large packet (> 16MB)) indicator */
-    bool                    discard_resultset {false};  /**< Discard resultset indicator */
-    GWBUF*                  input_sql {nullptr};        /**< Input query */
 
     MaxRows*    m_instance;
     mxs::Buffer m_buffer;   // Contains the partial resultset
