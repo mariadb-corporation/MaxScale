@@ -493,7 +493,7 @@ struct MySQLProtocol
         }
 
         /**
-         * Number of rows read from the resultset
+         * Number of rows read from the result
          */
         uint64_t rows_read() const
         {
@@ -508,13 +508,19 @@ struct MySQLProtocol
             return m_size;
         }
 
+        std::vector<uint64_t> field_counts() const
+        {
+            return m_field_counts;
+        }
+
     private:
-        SERVER*    m_server {nullptr};
-        uint8_t    m_command {0};
-        ReplyState m_reply_state {ReplyState::DONE};
-        Error      m_error;
-        uint64_t   m_row_count {0};
-        uint64_t   m_size {0};
+        SERVER*               m_server {nullptr};
+        uint8_t               m_command {0};
+        ReplyState            m_reply_state {ReplyState::DONE};
+        Error                 m_error;
+        uint64_t              m_row_count {0};
+        uint64_t              m_size {0};
+        std::vector<uint64_t> m_field_counts;
 
         friend class MySQLProtocol;
     };

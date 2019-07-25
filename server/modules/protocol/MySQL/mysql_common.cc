@@ -1822,6 +1822,7 @@ void MySQLProtocol::process_reply_start(Iter it, Iter end)
         {
             // Start of a result set
             m_num_coldefs = get_encoded_int(it);
+            m_reply.m_field_counts.push_back(m_num_coldefs);
             set_reply_state(ReplyState::RSET_COLDEF);
         }
 
@@ -2061,6 +2062,7 @@ void MySQLProtocol::track_query(GWBUF* buffer)
         m_reply.m_command = MYSQL_GET_COMMAND(data);
         m_reply.m_row_count = 0;
         m_reply.m_size = 0;
+        m_reply.m_field_counts.clear();
         current_command = (mxs_mysql_cmd_t) m_reply.m_command;
 
         MXS_INFO("%02hhx: %s", m_reply.m_command, mxs::extract_sql(buffer).c_str());
