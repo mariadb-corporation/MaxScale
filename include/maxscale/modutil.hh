@@ -49,9 +49,12 @@ void          modutil_reply_parse_error(DCB* backend_dcb, char* errstr, uint32_t
 void          modutil_reply_auth_error(DCB* backend_dcb, char* errstr, uint32_t flags);
 int           modutil_count_statements(GWBUF* buffer);
 int           modutil_count_packets(GWBUF* buffer);
-GWBUF*        modutil_create_query(const char* query);
-GWBUF*        modutil_create_mysql_err_msg(int packet_number, int affected_rows, int merrno,
-                                           const char* statemsg, const char* msg);
+
+GWBUF* modutil_create_query(const char* query);
+GWBUF* modutil_create_mysql_err_msg(int packet_number, int affected_rows, int merrno,
+                                    const char* statemsg, const char* msg);
+GWBUF* modutil_create_ok();
+GWBUF* modutil_create_eof(uint8_t sequence);
 
 /** Struct used for tracking the state inside the modutil functions */
 typedef struct
@@ -128,4 +131,14 @@ namespace maxscale
 std::string extract_sql(GWBUF* buffer, size_t len = -1);
 
 std::string get_canonical(GWBUF* querybuf);
+
+/**
+ * Truncate buffers at packet boundaries
+ *
+ * @param b   Buffer to truncate
+ * @param pkt Upper limit of how many packets to return
+ *
+ * @return A buffer with at most `ptk` packets in it
+ */
+GWBUF* truncate_packets(GWBUF* b, uint64_t pkt);
 }

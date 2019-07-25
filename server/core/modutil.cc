@@ -1066,6 +1066,28 @@ GWBUF* modutil_create_query(const char* query)
     return rval;
 }
 
+// See: https://mariadb.com/kb/en/library/ok_packet/
+GWBUF* modutil_create_ok()
+{
+    uint8_t ok[] =
+    {0x7, 0x0, 0x0, 0x1,// packet header
+     0x0,               // OK header byte
+     0x0,               // affected rows
+     0x0,               // last_insert_id
+     0x0, 0x0,          // server status
+     0x0, 0x0           // warnings
+    };
+
+    return gwbuf_alloc_and_load(sizeof(ok), ok);
+}
+
+// See: https://mariadb.com/kb/en/library/eof_packet/
+GWBUF* modutil_create_eof(uint8_t seq)
+{
+    uint8_t eof[] = {0x5, 0x0, 0x0, seq, 0xfe, 0x0, 0x0, 0x0, 0x0};
+    return gwbuf_alloc_and_load(sizeof(eof), eof);
+}
+
 /**
  * Count the number of statements in a query.
  * @param buffer Buffer to analyze.
@@ -1855,5 +1877,51 @@ std::string extract_sql(GWBUF* buffer, size_t len)
     }
 
     return rval;
+}
+
+GWBUF* truncate_packets(GWBUF* b, uint64_t packets)
+{
+    mxs::Buffer buffer(b);
+
+    auto it = buffer.begin();
+    size_t total_bytes = buffer.length();
+    size_t bytes_used = 0;
+
+    while (it != buffer.end())
+    {
+        size_t bytes_left = total_bytes - bytes_used;
+
+        if (bytes_left < MYSQL_HEADER_LEN)
+        {
+            // Partial header
+            break;
+        }
+
+        // Extract packet length and command byte
+        uint32_t len = *it++;
+        len |= (*it++) << 8;
+        len |= (*it++) << 16;
+        ++it;   // Skip the sequence
+
+        if (bytes_left < len + MYSQL_HEADER_LEN)
+        {
+            // Partial packet payload
+            break;
+        }
+
+        bytes_used += len + MYSQL_HEADER_LEN;
+
+        mxb_assert(it != buffer.end());
+        it.advance(len);
+
+        if (--packets == 0)
+        {
+            // Trim off the extra data at the end
+            buffer.erase(it, buffer.end());
+            break;
+        }
+    }
+
+    return buffer.release();
 }
 }
