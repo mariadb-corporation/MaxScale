@@ -510,19 +510,29 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.disk_space_check_interval = (dsc_interval > 0) ?
         mxb::Duration(static_cast<double>(dsc_interval) / 1000) : mxb::Duration(-1);
 
-    // The monitor serverlist has already been checked to be valid. Empty value is ok too.
     // First, remove all servers.
     remove_all_servers();
 
-    auto servers_temp = params->get_server_list(CN_SERVERS);
     bool error = false;
-    for (auto elem : servers_temp)
+    string name_not_found;
+    auto servers_temp = params->get_server_list(CN_SERVERS, &name_not_found);
+    if (name_not_found.empty())
     {
-        if (!add_server(elem))
+        for (auto elem : servers_temp)
         {
-            error = true;
+            if (!add_server(elem))
+            {
+                error = true;
+            }
         }
     }
+    else
+    {
+        MXB_ERROR("Server '%s' configured for monitor '%s' does not exist.",
+                  name_not_found.c_str(), name());
+        error = true;
+    }
+
 
     /* The previous config values were normal types and were checked by the config manager
      * to be correct. The following is a complicated type and needs to be checked separately. */

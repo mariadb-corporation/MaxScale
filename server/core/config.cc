@@ -3471,68 +3471,24 @@ int create_new_server(CONFIG_CONTEXT* obj)
  * Create a new monitor
  *
  * @param obj               Monitor configuration context
- * @param monitored_servers Set containing the servers that are already monitored
- *
- * @return Number of errors
+ * @return 0 on success
  */
 int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers)
 {
-    bool err = false;
-
-    MXS_CONFIG_PARAMETER* params = &obj->m_parameters;
-    // The config loader has already checked that the server list is mostly ok. However, it cannot
-    // check that the server names in the list actually ended up generated.
-    if (params->contains(CN_SERVERS))
-    {
-        string name_not_found;
-        auto servers = params->get_server_list(CN_SERVERS, &name_not_found);
-        if (servers.empty())
-        {
-            err = true;
-            mxb_assert(!name_not_found.empty());
-            MXS_ERROR("Unable to find server '%s' that is configured in monitor '%s'.",
-                      name_not_found.c_str(), obj->name());
-        }
-        for (auto server : servers)
-        {
-            mxb_assert(server);
-            if (monitored_servers.insert(server->name()).second == false)
-            {
-                MXS_WARNING("Multiple monitors are monitoring server [%s]. "
-                            "This will cause undefined behavior.", server->name());
-            }
-        }
-    }
-
-    if (err)
-    {
-        return 1;
-    }
-
     auto module = obj->m_parameters.get_string(CN_MODULE);
     mxb_assert(!module.empty());
-
-    if (const MXS_MODULE* mod = get_module(module.c_str(), MODULE_MONITOR))
+    int rval = 1;
+    Monitor* monitor = MonitorManager::create_monitor(obj->name(), module, &obj->m_parameters);
+    if (monitor)
     {
-        config_add_defaults(&obj->m_parameters, common_monitor_params());
-        config_add_defaults(&obj->m_parameters, mod->parameters);
+        rval = 0;
     }
     else
-    {
-        MXS_ERROR("Unable to load monitor module '%s'.", module.c_str());
-        return 1;
-    }
-
-    Monitor* monitor = MonitorManager::create_monitor(obj->name(), module, &obj->m_parameters);
-    if (monitor == NULL)
     {
         MXS_ERROR("Failed to create monitor '%s'.", obj->name());
-        return 1;
     }
-    else
-    {
-        return 0;
-    }
+
+    return rval;
 }
 
 /**

@@ -91,35 +91,41 @@ ThisUnit this_unit;
 const char RECONFIG_FAILED[] = "Monitor reconfiguration failed when %s. Check log for more details.";
 }
 
-Monitor* MonitorManager::create_monitor(const string& name, const string& module,
+Monitor* MonitorManager::create_monitor(const string& name, const string& module_name,
                                         MXS_CONFIG_PARAMETER* params)
 {
     mxb_assert(Monitor::is_admin_thread());
-    MXS_MONITOR_API* api = (MXS_MONITOR_API*)load_module(module.c_str(), MODULE_MONITOR);
-    if (!api)
+    Monitor* new_monitor = nullptr;
+    const MXS_MODULE* module = get_module(module_name.c_str(), MODULE_MONITOR);
+    if (module)
     {
-        MXS_ERROR("Unable to load library file for monitor '%s'.", name.c_str());
-        return NULL;
-    }
-
-    Monitor* mon = api->createInstance(name, module);
-    if (!mon)
-    {
-        MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
-                  name.c_str(), module.c_str());
-        return NULL;
-    }
-
-    if (mon->configure(params))
-    {
-        this_unit.insert_front(mon);
+        MXS_MONITOR_API* api = (MXS_MONITOR_API*)module->module_object;
+        new_monitor = api->createInstance(name, module_name);
+        if (new_monitor)
+        {
+            config_add_defaults(params, common_monitor_params());
+            config_add_defaults(params, module->parameters);
+            if (new_monitor->configure(params))
+            {
+                this_unit.insert_front(new_monitor);
+            }
+            else
+            {
+                delete new_monitor;
+                new_monitor = nullptr;
+            }
+        }
+        else
+        {
+            MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
+                      name.c_str(), module_name.c_str());
+        }
     }
     else
     {
-        delete mon;
-        mon = NULL;
+        MXS_ERROR("Unable to load library file for monitor '%s'.", name.c_str());
     }
-    return mon;
+    return new_monitor;
 }
 
 void MonitorManager::debug_wait_one_tick()

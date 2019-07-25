@@ -29,10 +29,10 @@ public:
      * global list.
      *
      * @param name          The configuration name of the monitor
-     * @param module        The module name to load
+     * @param module_name   The module name to load
      * @return              The newly created monitor, or NULL on error
      */
-    static mxs::Monitor* create_monitor(const std::string& name, const std::string& module,
+    static mxs::Monitor* create_monitor(const std::string& name, const std::string& module_name,
                                         MXS_CONFIG_PARAMETER* params);
 
     /**
