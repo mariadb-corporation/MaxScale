@@ -107,10 +107,13 @@ MXS_SESSION::MXS_SESSION(const SListener& listener)
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
 {
+    mxs_rworker_register_session(this);
 }
 
 MXS_SESSION::~MXS_SESSION()
 {
+    MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(m_id);
+    mxb_assert(removed);
 }
 
 bool session_start(MXS_SESSION* ses)

@@ -3293,8 +3293,6 @@ void DCB::shutdown()
         && (session->state() == MXS_SESSION::State::STARTED
             || session->state() == MXS_SESSION::State::STOPPING))
     {
-        MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(session->id());
-        mxb_assert(removed);
         session_close(session);
     }
 }

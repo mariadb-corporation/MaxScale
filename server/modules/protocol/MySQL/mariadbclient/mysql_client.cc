@@ -1017,8 +1017,6 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
             dcb->session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
-            MXB_AT_DEBUG(bool check = ) mxs_rworker_register_session(dcb->session);
-            mxb_assert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
             if (dcb->readq)
