@@ -94,12 +94,7 @@ public:
     // Statistics and events
     PoolStats pool_stats;
     int       persistmax = 0;       /**< Maximum pool size actually achieved since startup */
-    int       last_event = 0;       /**< The last event that occurred on this server */
-    int64_t   triggered_at = 0;     /**< Time when the last event was triggered */
 
-    // Status descriptors. Updated automatically by a monitor or manually by the admin
-    long          node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
-    long          master_id = -1;       /**< Master server id of this node */
     int           rlag = RLAG_UNDEFINED;/**< Replication Lag for Master/Slave replication */
     unsigned long node_ts = 0;          /**< Last timestamp set from M/S monitor module */
 
