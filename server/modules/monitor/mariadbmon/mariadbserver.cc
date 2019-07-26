@@ -2190,12 +2190,11 @@ bool MariaDBServer::update_enabled_events()
  *
  * @param server The server to update
  */
-void MariaDBServer::update_server(bool time_to_update_disk_space,
-                                  const MonitorServer::ConnectionSettings& conn_settings)
+void MariaDBServer::update_server(bool time_to_update_disk_space)
 {
     auto server = this;
     MonitorServer* mon_srv = server->m_server_base;
-    ConnectResult conn_status = mon_srv->ping_or_connect(conn_settings);
+    ConnectResult conn_status = mon_srv->ping_or_connect();
     MYSQL* conn = mon_srv->con;     // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 
     if (mxs::Monitor::connection_is_ok(conn_status))

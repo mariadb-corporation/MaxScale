@@ -159,7 +159,7 @@ void MariaDBMonitor::Test::init_servers(int count)
     {
         // Server contents mostly undefined
         auto base_server = Server::create_test_server();
-        MonitorServer* mon_server = new MonitorServer(base_server, m_monitor->settings().disk_space_limits);
+        MonitorServer* mon_server = new MonitorServer(base_server, m_monitor->settings().shared);
         MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_monitor->m_settings.shared);
 
         if (m_use_hostnames)

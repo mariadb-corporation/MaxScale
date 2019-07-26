@@ -496,7 +496,7 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
     m_settings.events = params->get_enum(CN_EVENTS, monitor_event_values);
 
-    MonitorServer::ConnectionSettings& conn_settings = m_settings.conn_settings;
+    MonitorServer::ConnectionSettings& conn_settings = m_settings.shared.conn_settings;
     conn_settings.read_timeout = params->get_duration<seconds>(CN_BACKEND_READ_TIMEOUT).count();
     conn_settings.write_timeout = params->get_duration<seconds>(CN_BACKEND_WRITE_TIMEOUT).count();
     conn_settings.connect_timeout = params->get_duration<seconds>(CN_BACKEND_CONNECT_TIMEOUT).count();
@@ -571,6 +571,11 @@ const Monitor::Settings& Monitor::settings() const
     return m_settings;
 }
 
+const MonitorServer::ConnectionSettings& Monitor::conn_settings() const
+{
+    return m_settings.shared.conn_settings;
+}
+
 long Monitor::ticks() const
 {
     return m_ticks.load(std::memory_order_acquire);
@@ -605,7 +610,7 @@ bool Monitor::add_server(SERVER* server)
     string existing_owner;
     if (this_unit.claim_server(server->name(), m_name, &existing_owner))
     {
-        auto new_server = new MonitorServer(server, m_settings.disk_space_limits);
+        auto new_server = new MonitorServer(server, m_settings.shared);
         m_servers.push_back(new_server);
         server_added(server);
         success = true;
@@ -651,10 +656,10 @@ void Monitor::show(DCB* dcb)
     dcb_printf(dcb, "State:                  %s\n", state_string());
     dcb_printf(dcb, "Times monitored:        %li\n", ticks());
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
-    dcb_printf(dcb, "Connect Timeout:        %i seconds\n", m_settings.conn_settings.connect_timeout);
-    dcb_printf(dcb, "Read Timeout:           %i seconds\n", m_settings.conn_settings.read_timeout);
-    dcb_printf(dcb, "Write Timeout:          %i seconds\n", m_settings.conn_settings.write_timeout);
-    dcb_printf(dcb, "Connect attempts:       %i \n", m_settings.conn_settings.connect_attempts);
+    dcb_printf(dcb, "Connect Timeout:        %i seconds\n", conn_settings().connect_timeout);
+    dcb_printf(dcb, "Read Timeout:           %i seconds\n", conn_settings().read_timeout);
+    dcb_printf(dcb, "Write Timeout:          %i seconds\n", conn_settings().write_timeout);
+    dcb_printf(dcb, "Connect attempts:       %i \n", conn_settings().connect_attempts);
     dcb_printf(dcb, "Monitored servers:      ");
 
     const char* sep = "";
@@ -743,12 +748,12 @@ bool Monitor::test_permissions(const string& query)
         return true;
     }
 
-    char* dpasswd = decrypt_password(m_settings.conn_settings.password.c_str());
+    char* dpasswd = decrypt_password(conn_settings().password.c_str());
     bool rval = false;
 
     for (MonitorServer* mondb : m_servers)
     {
-        if (!connection_is_ok(mondb->ping_or_connect(m_settings.conn_settings)))
+        if (!connection_is_ok(mondb->ping_or_connect()))
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
@@ -787,7 +792,7 @@ bool Monitor::test_permissions(const string& query)
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      name(), query.c_str(), m_settings.conn_settings.username.c_str(),
+                      name(), query.c_str(), conn_settings().username.c_str(),
                       mysql_error(mondb->con));
         }
         else
@@ -1001,8 +1006,8 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
             }
             else
             {
-                string user = m_settings.conn_settings.username;
-                string password = m_settings.conn_settings.password;
+                string user = conn_settings().username;
+                string password = conn_settings().password;
                 string server_specific_monuser = server->monitor_user();
                 if (!server_specific_monuser.empty())
                 {
@@ -1183,7 +1188,8 @@ int Monitor::launch_command(MonitorServer* ptr)
 }
 
 MonitorServer::ConnectResult
-Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server, MYSQL** ppConn)
+MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server,
+                                     MYSQL** ppConn)
 {
     mxb_assert(ppConn);
     auto pConn = *ppConn;
@@ -1243,9 +1249,9 @@ Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SE
     return conn_result;
 }
 
-ConnectResult MonitorServer::ping_or_connect(const ConnectionSettings& settings)
+ConnectResult MonitorServer::ping_or_connect()
 {
-    return Monitor::ping_or_connect_to_db(settings, *server, &con);
+    return ping_or_connect_to_db(m_shared.conn_settings, *server, &con);
 }
 
 /**
@@ -1705,7 +1711,7 @@ bool Monitor::set_disk_space_threshold(const string& dst_setting)
     bool rv = config_parse_disk_space_threshold(&new_dst, dst_setting.c_str());
     if (rv)
     {
-        m_settings.disk_space_limits = new_dst;
+        m_settings.shared.monitor_disk_limits = new_dst;
     }
     return rv;
 }
@@ -1979,7 +1985,7 @@ int64_t MonitorWorker::get_time_ms()
 
 bool MonitorServer::can_update_disk_space_status() const
 {
-    return ok_to_check_disk_space && (!monitor_limits.empty() || server->have_disk_space_limits());
+    return ok_to_check_disk_space && (!m_shared.monitor_disk_limits.empty() || server->have_disk_space_limits());
 }
 
 void MonitorServer::update_disk_space_status()
@@ -1995,7 +2001,7 @@ void MonitorServer::update_disk_space_status()
         auto dst = pMs->server->get_disk_space_limits();
         if (dst.empty())
         {
-            dst = monitor_limits;
+            dst = m_shared.monitor_disk_limits;
         }
 
         bool disk_space_exhausted = false;
@@ -2138,7 +2144,7 @@ void MonitorWorkerSimple::tick()
             pMs->mon_prev_status = pMs->server->status();
             pMs->pending_status = pMs->server->status();
 
-            ConnectResult rval = pMs->ping_or_connect(settings().conn_settings);
+            ConnectResult rval = pMs->ping_or_connect();
 
             if (connection_is_ok(rval))
             {
@@ -2282,9 +2288,9 @@ bool MonitorWorker::immediate_tick_required() const
     return false;
 }
 
-MonitorServer::MonitorServer(SERVER* server, const SERVER::DiskSpaceLimits& monitor_limits)
+MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)
     : server(server)
-    , monitor_limits(monitor_limits)
+    , m_shared(shared)
 {
 }
 

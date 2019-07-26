@@ -201,8 +201,8 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
         else
         {
             // Ok, neither is set. Use monitor credentials.
-            repl_user = settings().conn_settings.username;
-            repl_pw = settings().conn_settings.password;
+            repl_user = conn_settings().username;
+            repl_pw = conn_settings().password;
         }
     }
 
@@ -438,10 +438,9 @@ void MariaDBMonitor::tick()
 
     // Query all servers for their status.
     bool should_update_disk_space = check_disk_space_this_tick();
-    const auto& conn_settings = settings().conn_settings;
 
-    auto update_task = [should_update_disk_space, conn_settings](MariaDBServer* server) {
-            server->update_server(should_update_disk_space, conn_settings);
+    auto update_task = [should_update_disk_space](MariaDBServer* server) {
+        server->update_server(should_update_disk_space);
         };
 
     // Asynchronously query all servers for their status.

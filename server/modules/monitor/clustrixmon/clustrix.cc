@@ -208,7 +208,7 @@ bool Clustrix::ping_or_connect_to_hub(const char* zName,
                                       MYSQL** ppCon)
 {
     bool connected = false;
-    MonitorServer::ConnectResult rv = Monitor::ping_or_connect_to_db(settings, server, ppCon);
+    MonitorServer::ConnectResult rv = MonitorServer::ping_or_connect_to_db(settings, server, ppCon);
 
     if (Monitor::connection_is_ok(rv))
     {

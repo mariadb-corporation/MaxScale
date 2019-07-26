@@ -167,8 +167,7 @@ public:
      */
     std::string diagnostics() const;
 
-    void update_server(bool time_to_update_disk_space,
-                       const mxs::MonitorServer::ConnectionSettings& conn_settings);
+    void update_server(bool time_to_update_disk_space);
 
     /**
      * Query this server.

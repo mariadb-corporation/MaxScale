@@ -132,6 +132,17 @@ public:
         int connect_attempts {1};       /**< How many times a connection is attempted */
     };
 
+    /**
+     * Container shared between the monitor and all its servers. May be read concurrently, but only
+     * written when monitor is stopped.
+     */
+    class SharedSettings
+    {
+    public:
+        ConnectionSettings      conn_settings;          /**< Monitor-level connection settings */
+        SERVER::DiskSpaceLimits monitor_disk_limits;    /**< Monitor-level disk space limits */
+    };
+
     /* Return type of mon_ping_or_connect_to_db(). */
     enum class ConnectResult
     {
@@ -151,7 +162,21 @@ public:
     static const int BEING_DRAINED_OFF = 3;
     static const int BEING_DRAINED_ON = 4;
 
-    MonitorServer(SERVER* server, const SERVER::DiskSpaceLimits& monitor_limits);
+    /**
+     * Ping or connect to a database. If connection does not exist or ping fails, a new connection
+     * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
+     * to call MySQL C API functions to find out the reason of the failure.
+     *
+     * @param sett        Connection settings
+     * @param pServer     A server
+     * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
+     *                    valid or NULL.
+     * @return Connection status.
+     */
+    static ConnectResult
+    ping_or_connect_to_db(const ConnectionSettings& sett, SERVER& server, MYSQL** ppConn);
+
+    MonitorServer(SERVER* server, const SharedSettings& shared);
 
     ~MonitorServer();
 
@@ -189,10 +214,9 @@ public:
      * This will always leave a valid database handle in the database->con pointer, allowing the user to call
      * MySQL C API functions to find out the reason of the failure.
      *
-     * @param settings Connection settings
-     * @return Connection status.
+     * @return Connection status
      */
-    ConnectResult ping_or_connect(const ConnectionSettings& settings);
+    ConnectResult ping_or_connect();
 
     const char* get_event_name();
 
@@ -241,10 +265,10 @@ public:
     mxs_monitor_event_t last_event = SERVER_UP_EVENT;   /**< The last event that occurred on this server */
     int64_t             triggered_at = 0;               /**< Time when the last event was triggered */
 
-    int status_request = NO_CHANGE;     /**< Is admin requesting Maintenance=ON/OFF on the
-                                         *  server? */
+    int status_request = NO_CHANGE;     /**< Is admin requesting Maintenance=ON/OFF on the server? */
+
 private:
-    const SERVER::DiskSpaceLimits& monitor_limits;      /**< Monitor-level disk-space limits */
+    const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
 
     bool ok_to_check_disk_space {true};     /**< Set to false if check fails */
 };
@@ -259,20 +283,6 @@ public:
 
     Monitor(const std::string& name, const std::string& module);
     virtual ~Monitor();
-
-    /**
-     * Ping or connect to a database. If connection does not exist or ping fails, a new connection
-     * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
-     * to call MySQL C API functions to find out the reason of the failure.
-     *
-     * @param sett        Connection settings
-     * @param pServer     A server
-     * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
-     *                    valid or NULL.
-     * @return Connection status.
-     */
-    static MonitorServer::ConnectResult
-    ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server, MYSQL** ppConn);
 
     static bool connection_is_ok(MonitorServer::ConnectResult connect_result);
 
@@ -529,15 +539,14 @@ protected:
 
         time_t journal_max_age {0};     /**< Maximum age of journal file */
 
-        SERVER::DiskSpaceLimits disk_space_limits;      /**< Disk space thresholds */
-
         // How often should a disk space check be made at most. Negative values imply disabling.
         maxbase::Duration disk_space_check_interval {-1};
-
-        MonitorServer::ConnectionSettings conn_settings;
+        // Settings shared between all servers of the monitor.
+        MonitorServer::SharedSettings shared;
     };
 
     const Settings& settings() const;
+    const MonitorServer::ConnectionSettings& conn_settings() const;
 
     /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
     std::atomic_long m_ticks {0};
