@@ -56,7 +56,7 @@ json_t* get_json_data(TestConnections& test, const char* query)
     char* output = test.maxscales->ssh_node_output(0, query, true, &exit_code);
     if (output == NULL)
     {
-        test.add_result(1, "Query '%s' execution error, no output.\ni", output);
+        test.add_result(1, "Query '%s' execution error, no output.", query);
     }
     else
     {
