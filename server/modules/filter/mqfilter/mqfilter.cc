@@ -87,8 +87,8 @@ static int hktask_id = 0;
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* down,
-                                      MXS_UPSTREAM* up);
+                                      mxs::Downstream* down,
+                                      mxs::Upstream* up);
 static void     closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void     freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
@@ -230,12 +230,12 @@ typedef struct
  */
 typedef struct
 {
-    char*           uid;/**Unique identifier used to tag messages*/
-    char*           db; /**The currently active database*/
-    MXS_DOWNSTREAM* down;
-    MXS_UPSTREAM*   up;
-    MXS_SESSION*    session;
-    bool            was_query;  /**True if the previous routeQuery call had valid content*/
+    char*            uid;   /**Unique identifier used to tag messages*/
+    char*            db;    /**The currently active database*/
+    mxs::Downstream* down;
+    mxs::Upstream*   up;
+    MXS_SESSION*     session;
+    bool             was_query; /**True if the previous routeQuery call had valid content*/
 } MQ_SESSION;
 
 bool sendMessage(mxb::Worker::Call::action_t action, MQ_INSTANCE* instance);
@@ -865,8 +865,8 @@ void pushMessage(MQ_INSTANCE* instance, amqp_basic_properties_t* prop, char* msg
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* down,
-                                      MXS_UPSTREAM* up)
+                                      mxs::Downstream* down,
+                                      mxs::Upstream* up)
 {
     const char* db = mxs_mysql_get_current_db(session);
     char* my_db = NULL;

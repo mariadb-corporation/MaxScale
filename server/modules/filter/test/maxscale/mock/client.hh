@@ -114,9 +114,9 @@ public:
     void reset();
 
     /**
-     * Get the MXS_UPSTREAM for this object
+     * Get the mxs::Upstream for this object
      */
-    MXS_UPSTREAM* as_upstream()
+    mxs::Upstream* as_upstream()
     {
         m_upstream.instance = &m_instance;
         m_upstream.session = this;
@@ -136,12 +136,12 @@ private:
     int32_t write(GWBUF* pBuffer);
 
 private:
-    MXS_FILTER   m_instance;
-    std::string  m_user;
-    std::string  m_host;
-    Handler*     m_pHandler;
-    size_t       m_n_responses;
-    MXS_UPSTREAM m_upstream;
+    MXS_FILTER    m_instance;
+    std::string   m_user;
+    std::string   m_host;
+    Handler*      m_pHandler;
+    size_t        m_n_responses;
+    mxs::Upstream m_upstream;
 };
 }
 }

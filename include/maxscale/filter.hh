@@ -106,7 +106,7 @@ typedef struct mxs_filter_object
      * @return New filter session or NULL on error
      */
     MXS_FILTER_SESSION*(*newSession)(MXS_FILTER * instance, MXS_SESSION* session,
-                                     MXS_DOWNSTREAM* down, MXS_UPSTREAM* up);
+                                     mxs::Downstream* down, mxs::Upstream* up);
 
     /**
      * @brief Called when a session is closed
@@ -282,7 +282,7 @@ public:
         {
         }
 
-        Downstream(const MXS_DOWNSTREAM* down)
+        Downstream(const mxs::Downstream* down)
             : m_data(down)
         {
         }
@@ -300,7 +300,7 @@ public:
             return m_data->routeQuery(m_data->instance, m_data->session, pPacket);
         }
 
-        const MXS_DOWNSTREAM* m_data {nullptr};
+        const mxs::Downstream* m_data {nullptr};
     };
 
     class Upstream
@@ -315,7 +315,7 @@ public:
         {
         }
 
-        Upstream(const MXS_UPSTREAM* up)
+        Upstream(const mxs::Upstream* up)
             : m_data(up)
         {
         }
@@ -333,7 +333,7 @@ public:
             return m_data->clientReply(m_data->instance, m_data->session, pPacket, dcb);
         }
 
-        const MXS_UPSTREAM* m_data {nullptr};
+        const mxs::Upstream* m_data {nullptr};
     };
 
     /**
@@ -474,8 +474,8 @@ public:
 
     static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance,
                                           MXS_SESSION* pSession,
-                                          MXS_DOWNSTREAM* pDown,
-                                          MXS_UPSTREAM* pUp)
+                                          mxs::Downstream* pDown,
+                                          mxs::Upstream* pUp)
     {
         FilterType* pFilter = static_cast<FilterType*>(pInstance);
         FilterSessionType* pFilterSession = NULL;

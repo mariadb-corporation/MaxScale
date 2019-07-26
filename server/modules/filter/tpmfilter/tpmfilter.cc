@@ -83,8 +83,8 @@ struct TPM_INSTANCE;
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* down,
-                                      MXS_UPSTREAM* up);
+                                      mxs::Downstream* down,
+                                      mxs::Upstream* up);
 static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
@@ -130,24 +130,24 @@ struct TPM_INSTANCE
  */
 typedef struct
 {
-    MXS_DOWNSTREAM* down;
-    MXS_UPSTREAM*   up;
-    int             active;
-    char*           clientHost;
-    char*           userName;
-    char*           sql;
-    char*           latency;
-    struct timeval  start;
-    char*           current;
-    int             n_statements;
-    struct timeval  total;
-    struct timeval  current_start;
-    struct timeval  last_statement_start;
-    bool            query_end;
-    char*           buf;
-    int             sql_index;
-    int             latency_index;
-    size_t          max_sql_size;
+    mxs::Downstream* down;
+    mxs::Upstream*   up;
+    int              active;
+    char*            clientHost;
+    char*            userName;
+    char*            sql;
+    char*            latency;
+    struct timeval   start;
+    char*            current;
+    int              n_statements;
+    struct timeval   total;
+    struct timeval   current_start;
+    struct timeval   last_statement_start;
+    bool             query_end;
+    char*            buf;
+    int              sql_index;
+    int              latency_index;
+    size_t           max_sql_size;
 } TPM_SESSION;
 
 extern "C"
@@ -325,8 +325,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* down,
-                                      MXS_UPSTREAM* up)
+                                      mxs::Downstream* down,
+                                      mxs::Upstream* up)
 {
     TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
     TPM_SESSION* my_session;

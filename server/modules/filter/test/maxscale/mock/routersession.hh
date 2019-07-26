@@ -55,7 +55,7 @@ public:
      * @param pFilter_session  The filter to set this router as downstream
      *                         filter of.
      */
-    MXS_DOWNSTREAM* as_downstream()
+    mxs::Downstream* as_downstream()
     {
         m_downstream.instance = reinterpret_cast<MXS_FILTER*>(&m_instance);
         m_downstream.session = reinterpret_cast<MXS_FILTER_SESSION*>(this);
@@ -115,7 +115,7 @@ private:
     MXS_ROUTER             m_instance;
     Backend*               m_pBackend;
     FilterModule::Session* m_pUpstream_filter_session;
-    MXS_DOWNSTREAM         m_downstream;
+    mxs::Downstream        m_downstream;
 
     maxscale::mock::Session* m_pSession;
 };

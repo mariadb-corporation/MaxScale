@@ -59,7 +59,7 @@ public:
      * @param session   The generic session
      * @return          Router session on null on error
      */
-    QlaFilterSession* newSession(MXS_SESSION* session, MXS_DOWNSTREAM* down, MXS_UPSTREAM* up);
+    QlaFilterSession* newSession(MXS_SESSION* session, mxs::Downstream* down, mxs::Upstream* up);
 
     /**
      * Create an instance of the filter for a particular service within MaxScale.
@@ -168,8 +168,8 @@ public:
      */
     void close();
 
-    MXS_UPSTREAM*   up;
-    MXS_DOWNSTREAM* down;
+    mxs::Upstream*   up;
+    mxs::Downstream* down;
 
     std::string m_filename;     /* The session-specific log file name */
 

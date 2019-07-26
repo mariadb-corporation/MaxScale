@@ -39,13 +39,13 @@
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* down,
-                                      MXS_UPSTREAM* up);
+                                      mxs::Downstream* down,
+                                      mxs::Upstream* up);
 static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void setDownstream(MXS_FILTER* instance,
                           MXS_FILTER_SESSION* fsession,
-                          MXS_DOWNSTREAM* downstream);
+                          mxs::Downstream* downstream);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
@@ -76,8 +76,8 @@ struct RegexInstance
  */
 struct RegexSession
 {
-    MXS_DOWNSTREAM*   down; /* The downstream filter */
-    MXS_UPSTREAM*     up;   /* The upstream filter */
+    mxs::Downstream*  down; /* The downstream filter */
+    mxs::Upstream*    up;   /* The upstream filter */
     pthread_mutex_t   lock;
     int               no_change;    /* No. of unchanged requests */
     int               replacements; /* No. of changed requests */
@@ -267,8 +267,8 @@ bool matching_connection(RegexInstance* my_instance, MXS_SESSION* session)
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* down,
-                                      MXS_UPSTREAM* up)
+                                      mxs::Downstream* down,
+                                      mxs::Upstream* up)
 {
     RegexInstance* my_instance = (RegexInstance*) instance;
     RegexSession* my_session = static_cast<RegexSession*>(MXS_CALLOC(1, sizeof(RegexSession)));

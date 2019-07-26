@@ -29,8 +29,6 @@
 #include "service.hh"
 
 #define SESSION_STATS_INIT  {0}
-#define MXS_DOWNSTREAM_INIT {0}
-#define MXS_UPSTREAM_INIT   {0}
 #define SESSION_FILTER_INIT {0}
 
 #define SESSION_PROTOCOL(x, type) DCB_PROTOCOL((x)->client_dcb, type)
@@ -114,8 +112,8 @@ public:
     SFilterDef          filter;
     MXS_FILTER*         instance;
     MXS_FILTER_SESSION* session;
-    MXS_UPSTREAM        up;
-    MXS_DOWNSTREAM      down;
+    mxs::Upstream       up;
+    mxs::Downstream     down;
 };
 
 class Session : public MXS_SESSION

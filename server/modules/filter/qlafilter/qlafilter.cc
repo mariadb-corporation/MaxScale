@@ -202,7 +202,7 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
     return my_instance;
 }
 
-QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session, MXS_DOWNSTREAM* down, MXS_UPSTREAM* up)
+QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session, mxs::Downstream* down, mxs::Upstream* up)
 {
     auto my_session = new(std::nothrow) QlaFilterSession(*this, session);
     if (my_session)
@@ -823,8 +823,8 @@ MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 
 MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                MXS_SESSION* session,
-                               MXS_DOWNSTREAM* down,
-                               MXS_UPSTREAM* up)
+                               mxs::Downstream* down,
+                               mxs::Upstream* up)
 {
     auto my_instance = static_cast<QlaInstance*>(instance);
     return my_instance->newSession(session, down, up);

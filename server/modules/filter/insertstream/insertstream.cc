@@ -32,8 +32,8 @@
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* downstream,
-                                      MXS_UPSTREAM* upstream);
+                                      mxs::Downstream* downstream,
+                                      mxs::Upstream* upstream);
 static void     closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void     freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int32_t  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
@@ -71,9 +71,9 @@ enum ds_state
  */
 typedef struct
 {
-    MXS_DOWNSTREAM* down;                                           /**< Downstream filter */
-    MXS_UPSTREAM*   up;                                             /**< Upstream filter*/
-    GWBUF*          queue;                                          /**< Queue containing a stored
+    mxs::Downstream* down;                                          /**< Downstream filter */
+    mxs::Upstream*   up;                                            /**< Upstream filter*/
+    GWBUF*           queue;                                         /**< Queue containing a stored
                                                                      * query */
     bool active;                                                    /**< Whether the session is active
                                                                      * */
@@ -189,8 +189,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* downstream,
-                                      MXS_UPSTREAM* upstream)
+                                      mxs::Downstream* downstream,
+                                      mxs::Upstream* upstream)
 {
     DS_INSTANCE* my_instance = (DS_INSTANCE*) instance;
     DS_SESSION* my_session;

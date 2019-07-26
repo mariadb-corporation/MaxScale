@@ -782,7 +782,7 @@ bool session_remove_variable(MXS_SESSION* session,
     return pSession->remove_variable(name, context);
 }
 
-void session_set_response(MXS_SESSION* session, const MXS_UPSTREAM* up, GWBUF* buffer)
+void session_set_response(MXS_SESSION* session, const mxs::Upstream* up, GWBUF* buffer)
 {
     // Valid arguments.
     mxb_assert(session && up && buffer);
@@ -922,7 +922,7 @@ class DelayedRoutingTask
     DelayedRoutingTask& operator=(const DelayedRoutingTask&) = delete;
 
 public:
-    DelayedRoutingTask(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buffer)
+    DelayedRoutingTask(MXS_SESSION* session, mxs::Downstream down, GWBUF* buffer)
         : m_session(session_get_ref(session))
         , m_down(down)
         , m_buffer(buffer)
@@ -951,9 +951,9 @@ public:
     }
 
 private:
-    MXS_SESSION*   m_session;
-    MXS_DOWNSTREAM m_down;
-    GWBUF*         m_buffer;
+    MXS_SESSION*    m_session;
+    mxs::Downstream m_down;
+    GWBUF*          m_buffer;
 };
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
@@ -967,7 +967,7 @@ static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask
     return false;
 }
 
-bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buffer, int seconds)
+bool session_delay_routing(MXS_SESSION* session, mxs::Downstream down, GWBUF* buffer, int seconds)
 {
     bool success = false;
 
@@ -991,9 +991,9 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
     return success;
 }
 
-MXS_DOWNSTREAM router_as_downstream(MXS_SESSION* session)
+mxs::Downstream router_as_downstream(MXS_SESSION* session)
 {
-    MXS_DOWNSTREAM head;
+    mxs::Downstream head;
     head.instance = (MXS_FILTER*)session->service->router_instance;
     head.session = (MXS_FILTER_SESSION*)session->router_session;
     head.routeQuery = (DOWNSTREAMFUNC)session->service->router->routeQuery;
@@ -1238,7 +1238,7 @@ bool Session::setup_filters(Service* service)
     }
 
     // The head of the chain currently points at the router
-    MXS_DOWNSTREAM chain_head = head;
+    mxs::Downstream chain_head = head;
 
     for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
     {
@@ -1251,7 +1251,7 @@ bool Session::setup_filters(Service* service)
     head = chain_head;
 
     // The tail is the upstream component of the service (the client DCB)
-    MXS_UPSTREAM chain_tail = tail;
+    mxs::Upstream chain_tail = tail;
 
     for (auto it = m_filters.begin(); it != m_filters.end(); it++)
     {

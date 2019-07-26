@@ -53,8 +53,8 @@
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* down,
-                                      MXS_UPSTREAM* up);
+                                      mxs::Downstream* down,
+                                      mxs::Upstream* up);
 static void     closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void     freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
@@ -103,20 +103,20 @@ typedef struct topnq
  */
 typedef struct
 {
-    MXS_DOWNSTREAM* down;
-    MXS_UPSTREAM*   up;
-    int             active;
-    char*           clientHost;
-    char*           userName;
-    char*           filename;
-    int             fd;
-    struct timeval  start;
-    char*           current;
-    TOPNQ**         top;
-    int             n_statements;
-    struct timeval  total;
-    struct timeval  connect;
-    struct timeval  disconnect;
+    mxs::Downstream* down;
+    mxs::Upstream*   up;
+    int              active;
+    char*            clientHost;
+    char*            userName;
+    char*            filename;
+    int              fd;
+    struct timeval   start;
+    char*            current;
+    TOPNQ**          top;
+    int              n_statements;
+    struct timeval   total;
+    struct timeval   connect;
+    struct timeval   disconnect;
 } TOPN_SESSION;
 
 static const MXS_ENUM_VALUE option_values[] =
@@ -274,8 +274,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* down,
-                                      MXS_UPSTREAM* up)
+                                      mxs::Downstream* down,
+                                      mxs::Upstream* up)
 {
     TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
     TOPN_SESSION* my_session;

@@ -62,8 +62,8 @@ extern "C"
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* downstream,
-                                      MXS_UPSTREAM* upstream);
+                                      mxs::Downstream* downstream,
+                                      mxs::Upstream* upstream);
 static void    closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void    freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
@@ -214,11 +214,11 @@ typedef struct
  */
 typedef struct
 {
-    MXS_SESSION*    session;
-    lua_State*      lua_state;
-    GWBUF*          current_query;
-    MXS_DOWNSTREAM* down;
-    MXS_UPSTREAM*   up;
+    MXS_SESSION*     session;
+    lua_State*       lua_state;
+    GWBUF*           current_query;
+    mxs::Downstream* down;
+    mxs::Upstream*   up;
 } LUA_SESSION;
 
 void expose_functions(lua_State* state, GWBUF** active_buffer)
@@ -323,8 +323,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
-                                      MXS_DOWNSTREAM* downstream,
-                                      MXS_UPSTREAM* upstream)
+                                      mxs::Downstream* downstream,
+                                      mxs::Upstream* upstream)
 {
     LUA_SESSION* my_session;
     LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;

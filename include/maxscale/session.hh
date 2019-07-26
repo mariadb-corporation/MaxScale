@@ -79,6 +79,8 @@ typedef struct
 struct mxs_filter;
 struct mxs_filter_session;
 
+namespace maxscale
+{
 // These are more convenient types
 typedef int32_t (* DOWNSTREAMFUNC)(struct mxs_filter* instance,
                                    struct mxs_filter_session* session,
@@ -88,23 +90,24 @@ typedef int32_t (* UPSTREAMFUNC)(struct mxs_filter* instance,
                                  GWBUF* response,
                                  DCB* dcb);
 
-typedef struct mxs_downstream
+struct Downstream
 {
-    struct mxs_filter*         instance;
-    struct mxs_filter_session* session;
-    DOWNSTREAMFUNC             routeQuery;
-} MXS_DOWNSTREAM;
+    mxs_filter*         instance {nullptr};
+    mxs_filter_session* session {nullptr};
+    DOWNSTREAMFUNC      routeQuery {nullptr};
+};
 
 /**
  * The upstream element in the filter chain. This may refer to
  * another filter or to the protocol implementation.
  */
-typedef struct mxs_upstream
+struct Upstream
 {
-    struct mxs_filter*         instance;
-    struct mxs_filter_session* session;
-    UPSTREAMFUNC               clientReply;
-} MXS_UPSTREAM;
+    mxs_filter*         instance {nullptr};
+    mxs_filter_session* session {nullptr};
+    UPSTREAMFUNC        clientReply {nullptr};
+};
+}
 
 /* Specific reasons why a session was closed */
 typedef enum
@@ -186,8 +189,8 @@ public:
     struct mxs_router_session* router_session;          /*< The router instance data */
     MXS_SESSION_STATS          stats;                   /*< Session statistics */
     SERVICE*                   service;                 /*< The service this session is using */
-    MXS_DOWNSTREAM             head;                    /*< Head of the filter chain */
-    MXS_UPSTREAM               tail;                    /*< The tail of the filter chain */
+    mxs::Downstream            head;                    /*< Head of the filter chain */
+    mxs::Upstream              tail;                    /*< The tail of the filter chain */
     int                        refcount;                /*< Reference count on the session */
     mxs_session_trx_state_t    trx_state;               /*< The current transaction state. */
     bool                       autocommit;              /*< Whether autocommit is on. */
@@ -196,8 +199,8 @@ public:
                                                          * pool */
     struct
     {
-        MXS_UPSTREAM up;            /*< Upward component to receive buffer. */
-        GWBUF*       buffer;        /*< Buffer to deliver to up. */
+        mxs::Upstream up;           /*< Upward component to receive buffer. */
+        GWBUF*        buffer;       /*< Buffer to deliver to up. */
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
     bool            load_active;    /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
@@ -213,7 +216,7 @@ public:
  * @param up       The filter that should receive the response.
  * @param buffer   The response.
  */
-void session_set_response(MXS_SESSION* session, const MXS_UPSTREAM* up, GWBUF* buffer);
+void session_set_response(MXS_SESSION* session, const mxs::Upstream* up, GWBUF* buffer);
 
 /**
  * Function to be used by protocol module for routing incoming data
@@ -649,16 +652,16 @@ const char* session_get_dump_statements_str();
  *
  * @return True if queuing of the query was successful
  */
-bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buffer, int seconds);
+bool session_delay_routing(MXS_SESSION* session, mxs::Downstream down, GWBUF* buffer, int seconds);
 
 /**
- * Cast the session's router as a MXS_DOWNSTREAM object
+ * Cast the session's router as a mxs::Downstream object
  *
  * @param session The session to use
  *
- * @return The router cast as MXS_DOWNSTREAM
+ * @return The router cast as mxs::Downstream
  */
-MXS_DOWNSTREAM router_as_downstream(MXS_SESSION* session);
+mxs::Downstream router_as_downstream(MXS_SESSION* session);
 
 /**
  * Get the reason why a session was closed
