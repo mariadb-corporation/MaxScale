@@ -64,12 +64,10 @@ MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
 {
 }
 
-MariaDBMonitor::~MariaDBMonitor()
+mxs::MonitorServer*
+MariaDBMonitor::create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared)
 {
-    for (auto server : m_servers)
-    {
-        delete server;
-    }
+    return new MariaDBServer(server, servers().size(), shared, m_settings.shared);
 }
 
 /**
@@ -77,24 +75,17 @@ MariaDBMonitor::~MariaDBMonitor()
  */
 void MariaDBMonitor::reset_server_info()
 {
-    // If this monitor is being restarted, the server data needs to be freed.
-    for (auto server : m_servers)
-    {
-        delete server;
-    }
-    // All MariaDBServer*:s are now invalid, as well as any dependant data.
+    // The convenience container may contain invalid pointers if not cleared.
     m_servers.clear();
+    for (auto mon_server : servers())
+    {
+        m_servers.push_back(static_cast<MariaDBServer*>(mon_server));
+    }
+
     m_servers_by_id.clear();
     assign_new_master(NULL);
     m_next_master = NULL;
     m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
-
-    // Next, initialize the data.
-    for (auto mon_server : servers())
-    {
-        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size(), m_settings.shared));
-    }
-
     m_resolver = DNSResolver(); // Erases result cache.
 }
 
@@ -112,7 +103,7 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
     // Phase 1: Direct string compare
     for (auto server : m_servers)
     {
-        EndPoint srv(server->m_server_base->server);
+        EndPoint srv(server->server);
         if (srv == search_ep)
         {
             found = server;
@@ -129,9 +120,9 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
         {
             for (auto server : m_servers)
             {
-                if (server->m_server_base->server->port == search_ep.port())
+                if (server->server->port == search_ep.port())
                 {
-                    string server_addr = m_resolver.resolve_server(server->m_server_base->server->address);
+                    string server_addr = m_resolver.resolve_server(server->server->address);
                     if (server_addr == target_addr)
                     {
                         found = server;
@@ -159,7 +150,7 @@ MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
 {
     for (auto iter : m_servers)
     {
-        if (iter->m_server_base->server == server)
+        if (iter->server == server)
         {
             return iter;
         }
@@ -409,10 +400,10 @@ void MariaDBMonitor::pre_loop()
      * the monitor makes new connections when starting. */
     for (MariaDBServer* server : m_servers)
     {
-        if (server->m_server_base->con)
+        if (server->con)
         {
-            mysql_close(server->m_server_base->con);
-            server->m_server_base->con = NULL;
+            mysql_close(server->con);
+            server->con = NULL;
         }
     }
 }
@@ -425,10 +416,9 @@ void MariaDBMonitor::tick()
      * Also, backup current status so that it can be compared to any deduced state. */
     for (auto srv : m_servers)
     {
-        auto mon_srv = srv->m_server_base;
-        auto status = mon_srv->server->status();
-        mon_srv->pending_status = status;
-        mon_srv->mon_prev_status = status;
+        auto status = srv->server->status();
+        srv->pending_status = status;
+        srv->mon_prev_status = status;
     }
 
     if (cluster_operation_disable_timer > 0)
@@ -500,9 +490,9 @@ void MariaDBMonitor::tick()
     // Update shared status.
     for (auto server : m_servers)
     {
-        SERVER* srv = server->m_server_base->server;
+        SERVER* srv = server->server;
         srv->rlag = server->m_replication_lag;
-        srv->assign_status(server->m_server_base->pending_status);
+        srv->assign_status(server->pending_status);
     }
 
     log_master_changes();
@@ -510,7 +500,7 @@ void MariaDBMonitor::tick()
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
-    store_server_journal(m_master ? m_master->m_server_base : nullptr);
+    store_server_journal(m_master);
 }
 
 void MariaDBMonitor::process_state_changes()
@@ -613,7 +603,7 @@ void MariaDBMonitor::update_gtid_domain()
 
 void MariaDBMonitor::log_master_changes()
 {
-    MonitorServer* root_master = m_master ? m_master->m_server_base : NULL;
+    MonitorServer* root_master = m_master;
     if (root_master && root_master->status_changed()
         && !(root_master->pending_status & SERVER_WAS_MASTER))
     {

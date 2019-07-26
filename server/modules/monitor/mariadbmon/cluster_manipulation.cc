@@ -366,7 +366,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
 
                 if (!slaves.empty())
                 {
-                    SERVER* new_master_srv = new_master->m_server_base->server;
+                    SERVER* new_master_srv = new_master->server;
                     SlaveStatus::Settings new_conn("", new_master_srv);
                     GeneralOpData general(error_out, mxb::Duration(0.0)); // Expect this to complete quickly.
                     size_t slave_conns_started = 0;
@@ -549,7 +549,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
  */
 uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t** output)
 {
-    SERVER* master_server = m_master->m_server_base->server;
+    SERVER* master_server = m_master->server;
     const char* master_name = master_server->name();
     uint32_t servers_joined = 0;
     bool rejoin_error = false;
@@ -721,7 +721,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
             else if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING
                      && slave_status->slave_sql_running)
             {
-                EndPoint cluster_master_endpoint(m_master->m_server_base->server);
+                EndPoint cluster_master_endpoint(m_master->server);
                 if (slave_status->settings.master_endpoint != cluster_master_endpoint)
                 {
                     is_suspect = true;
@@ -1268,8 +1268,8 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const M
             // If both have log_slave_updates on ...
             else if (cand_updates && curr_updates)
             {
-                bool cand_disk_ok = !candidate->m_server_base->server->is_low_on_disk_space();
-                bool curr_disk_ok = !current_best->m_server_base->server->is_low_on_disk_space();
+                bool cand_disk_ok = !candidate->server->is_low_on_disk_space();
+                bool curr_disk_ok = !current_best->server->is_low_on_disk_space();
                 // ... prefer a slave without disk space issues.
                 if (cand_disk_ok && !curr_disk_ok)
                 {
@@ -1414,7 +1414,7 @@ void MariaDBMonitor::handle_auto_failover()
         return;
     }
 
-    int master_down_count = m_master->m_server_base->mon_err_count;
+    int master_down_count = m_master->mon_err_count;
     const MariaDBServer* connected_slave = NULL;
     Duration event_age;
     Duration delay_time;
@@ -1489,8 +1489,7 @@ void MariaDBMonitor::check_cluster_operations_support()
             supported = false;
             auto reason = string_printf("The version of '%s' (%s) is not supported. Failover/switchover "
                                         "requires MariaDB 10.0.2 or later.",
-                                        server->name(),
-                                        server->m_server_base->server->version_string().c_str());
+                                        server->name(), server->server->version_string().c_str());
             printer.cat(all_reasons, reason);
         }
 
@@ -1683,7 +1682,7 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
         if (server->is_slave() && !server->is_read_only()
             && (server->m_srv_type != MariaDBServer::server_type::BINLOG_ROUTER))
         {
-            MYSQL* conn = server->m_server_base->con;
+            MYSQL* conn = server->con;
             if (mxs_mysql_query(conn, QUERY) == 0)
             {
                 MXS_NOTICE("read_only set to ON on '%s'.", server->name());
@@ -1715,7 +1714,7 @@ void MariaDBMonitor::handle_low_disk_space_master()
         // Looks like the master should be swapped out. Before trying it, check if there is even
         // a likely valid slave to swap to.
         Log log_mode = m_warn_switchover_precond ? Log::ON : Log::OFF;
-        auto op = switchover_prepare(NULL, m_master->m_server_base->server, log_mode, NULL);
+        auto op = switchover_prepare(NULL, m_master->server, log_mode, NULL);
         if (op)
         {
             m_warn_switchover_precond = true;

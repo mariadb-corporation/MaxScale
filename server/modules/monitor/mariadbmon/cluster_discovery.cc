@@ -721,7 +721,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
     else if (m_master->is_down())
     {
         // These two conditionals are separate since cases 4&5 should not apply if master is down.
-        if (m_master->m_server_base->mon_err_count > m_settings.failcount && running_slaves(m_master) == 0)
+        if (m_master->mon_err_count > m_settings.failcount && running_slaves(m_master) == 0)
         {
             rval = false;
             reason = string_printf("it has been down over %d (failcount) monitor updates and "

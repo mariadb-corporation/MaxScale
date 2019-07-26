@@ -31,13 +31,13 @@ using Guard = std::lock_guard<std::mutex>;
 using maxscale::MonitorServer;
 using ConnectResult = maxscale::MonitorServer::ConnectResult;
 
-MariaDBServer::MariaDBServer(MonitorServer* monitored_server, int config_index,
-                             const SharedSettings& settings)
-    : m_server_base(monitored_server)
+MariaDBServer::MariaDBServer(SERVER* server, int config_index,
+                             const MonitorServer::SharedSettings& base_settings,
+                             const MariaDBServer::SharedSettings& settings)
+    : MonitorServer(server, base_settings)
     , m_config_index(config_index)
     , m_settings(settings)
 {
-    mxb_assert(monitored_server);
 }
 
 NodeData::NodeData()
@@ -76,7 +76,7 @@ uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn)
 std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, string* errmsg_out,
                                                           unsigned int* errno_out)
 {
-    return maxscale::execute_query(m_server_base->con, query, errmsg_out, errno_out);
+    return maxscale::execute_query(con, query, errmsg_out, errno_out);
 }
 
 /**
@@ -90,7 +90,7 @@ std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, s
 bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
                                    std::string* errmsg_out, unsigned int* errno_out)
 {
-    auto conn = m_server_base->con;
+    auto conn = con;
     bool query_success = false;
     if (mode == QueryRetryMode::ENABLED)
     {
@@ -163,7 +163,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
     int connector_timeout = -1;
     if (m_capabilities.max_statement_time)
     {
-        MXB_AT_DEBUG(int rv = ) mysql_get_optionv(m_server_base->con, MYSQL_OPT_READ_TIMEOUT,
+        MXB_AT_DEBUG(int rv = ) mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT,
                                                   &connector_timeout);
         mxb_assert(rv == 0);
         if (connector_timeout > 0)
@@ -518,7 +518,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
                     m_server_id = server_id_parsed;
                     m_topology_changed = true;
                 }
-                m_server_base->node_id = server_id_parsed;
+                node_id = server_id_parsed;
 
                 if (read_only_parsed != m_read_only)
                 {
@@ -614,57 +614,57 @@ bool MariaDBServer::binlog_on() const
 
 bool MariaDBServer::is_master() const
 {
-    return status_is_master(m_server_base->pending_status);
+    return status_is_master(pending_status);
 }
 
 bool MariaDBServer::is_slave() const
 {
-    return status_is_slave(m_server_base->pending_status);
+    return status_is_slave(pending_status);
 }
 
 bool MariaDBServer::is_slave_of_ext_master() const
 {
-    return status_is_slave_of_ext_master(m_server_base->pending_status);
+    return status_is_slave_of_ext_master(pending_status);
 }
 
 bool MariaDBServer::is_usable() const
 {
-    return status_is_usable(m_server_base->pending_status);
+    return status_is_usable(pending_status);
 }
 
 bool MariaDBServer::is_running() const
 {
-    return status_is_running(m_server_base->pending_status);
+    return status_is_running(pending_status);
 }
 
 bool MariaDBServer::is_down() const
 {
-    return status_is_down(m_server_base->pending_status);
+    return status_is_down(pending_status);
 }
 
 bool MariaDBServer::is_in_maintenance() const
 {
-    return status_is_in_maint(m_server_base->pending_status);
+    return status_is_in_maint(pending_status);
 }
 
 bool MariaDBServer::is_relay_master() const
 {
-    return status_is_relay(m_server_base->pending_status);
+    return status_is_relay(pending_status);
 }
 
 bool MariaDBServer::is_low_on_disk_space() const
 {
-    return status_is_disk_space_exhausted(m_server_base->pending_status);
+    return status_is_disk_space_exhausted(pending_status);
 }
 
 bool MariaDBServer::has_status(uint64_t bits) const
 {
-    return (m_server_base->pending_status & bits) == bits;
+    return (pending_status & bits) == bits;
 }
 
 bool MariaDBServer::had_status(uint64_t bits) const
 {
-    return (m_server_base->mon_prev_status & bits) == bits;
+    return (mon_prev_status & bits) == bits;
 }
 
 bool MariaDBServer::is_read_only() const
@@ -674,7 +674,7 @@ bool MariaDBServer::is_read_only() const
 
 const char* MariaDBServer::name() const
 {
-    return m_server_base->server->name();
+    return server->name();
 }
 
 string MariaDBServer::diagnostics() const
@@ -773,7 +773,7 @@ bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out
 
 bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
 {
-    MYSQL* conn = m_server_base->con;
+    MYSQL* conn = con;
     bool error = false;
     std::ifstream sql_file(path);
     if (sql_file.is_open())
@@ -883,7 +883,7 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
     if (rval)
     {
         /** Store master_id of current node. */
-        m_server_base->master_id = !m_slave_status.empty() ?
+        master_id = !m_slave_status.empty() ?
             m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
     }
     return rval;
@@ -891,8 +891,8 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
 
 void MariaDBServer::update_server_version()
 {
-    auto conn = m_server_base->con;
-    auto srv = m_server_base->server;
+    auto conn = con;
+    auto srv = server;
     mxs_mysql_update_server_version(srv, conn);
 
     m_srv_type = server_type::UNKNOWN;      // TODO: Use type information in SERVER directly
@@ -972,12 +972,12 @@ void MariaDBServer::check_permissions()
 
 void MariaDBServer::clear_status(uint64_t bits)
 {
-    m_server_base->clear_pending_status(bits);
+    clear_pending_status(bits);
 }
 
 void MariaDBServer::set_status(uint64_t bits)
 {
-    m_server_base->set_pending_status(bits);
+    set_pending_status(bits);
 }
 
 /**
@@ -1198,7 +1198,7 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
 
 const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaDBServer* target) const
 {
-    EndPoint target_endpoint(target->m_server_base->server);
+    EndPoint target_endpoint(target->server);
     for (const SlaveStatus& ss : m_slave_status)
     {
         if (ss.settings.master_endpoint == target_endpoint)
@@ -1871,7 +1871,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
     auto conn_can_be_merged = [this](const SlaveStatus& slave_conn, string* ignore_reason_out) -> bool {
             bool accepted = true;
             auto master_id = slave_conn.master_server_id;
-            EndPoint my_host_port(m_server_base->server);
+            EndPoint my_host_port(server);
             // The connection is only merged if it satisfies the copy-conditions. Merging has also
             // additional requirements.
             string ignore_reason;
@@ -2012,7 +2012,7 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
             {
                 if (replacement)
                 {
-                    slave_conn.settings.master_endpoint = EndPoint(replacement->m_server_base->server);
+                    slave_conn.settings.master_endpoint = EndPoint(replacement->server);
                 }
                 else
                 {
@@ -2120,7 +2120,7 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
     if (stopped)
     {
         SlaveStatus::Settings modified_settings = conn_settings;
-        modified_settings.master_endpoint = EndPoint(new_master->m_server_base->server);
+        modified_settings.master_endpoint = EndPoint(new_master->server);
         string change_master = generate_change_master_cmd(modified_settings);
 
         string error_msg;
@@ -2193,7 +2193,7 @@ bool MariaDBServer::update_enabled_events()
 void MariaDBServer::update_server(bool time_to_update_disk_space)
 {
     auto server = this;
-    MonitorServer* mon_srv = server->m_server_base;
+    MonitorServer* mon_srv = server;
     ConnectResult conn_status = mon_srv->ping_or_connect();
     MYSQL* conn = mon_srv->con;     // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 

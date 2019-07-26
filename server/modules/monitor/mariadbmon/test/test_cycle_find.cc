@@ -159,8 +159,8 @@ void MariaDBMonitor::Test::init_servers(int count)
     {
         // Server contents mostly undefined
         auto base_server = Server::create_test_server();
-        MonitorServer* mon_server = new MonitorServer(base_server, m_monitor->settings().shared);
-        MariaDBServer* mariadb_server = new MariaDBServer(mon_server, i - 1, m_monitor->m_settings.shared);
+        MariaDBServer* mariadb_server = new MariaDBServer(base_server, i - 1, m_monitor->settings().shared,
+                                                          m_monitor->m_settings.shared);
 
         if (m_use_hostnames)
         {
@@ -190,8 +190,7 @@ void MariaDBMonitor::Test::clear_servers()
     m_monitor->m_servers_by_id.clear();
     for (MariaDBServer* server : m_monitor->m_servers)
     {
-        delete server->m_server_base->server;
-        delete server->m_server_base;
+        delete server->server;
         delete server;
     }
     m_monitor->m_servers.clear();

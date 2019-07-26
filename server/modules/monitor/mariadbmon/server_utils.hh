@@ -303,23 +303,3 @@ public:
 
     ServerOperation(MariaDBServer* target, bool was_is_master);
 };
-
-// Settings shared between the MariaDB-Monitor and the MariaDB-Servers.
-// These are only written to when configuring the monitor.
-class SharedSettings
-{
-public:
-    // Required by cluster operations
-    std::string replication_user;         /**< Username for CHANGE MASTER TO-commands */
-    std::string replication_password;     /**< Password for CHANGE MASTER TO-commands */
-    bool        replication_ssl {false};  /**< Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
-
-    std::string promotion_sql_file;  /**< File with sql commands which are ran to a server being
-                                       *  promoted. */
-    std::string demotion_sql_file;   /**< File with sql commands which are ran to a server being
-                                       *  demoted. */
-
-    /* Should failover/switchover enable/disable any scheduled events on the servers during
-     * promotion/demotion? */
-    bool handle_event_scheduler {true};
-};

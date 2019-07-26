@@ -178,7 +178,7 @@ public:
 
     MonitorServer(SERVER* server, const SharedSettings& shared);
 
-    ~MonitorServer();
+    virtual ~MonitorServer();
 
     /**
      * Set pending status bits in the monitor server
@@ -552,6 +552,16 @@ protected:
     std::atomic_long m_ticks {0};
 
 private:
+
+    /**
+     * Creates a new monitored server object. Called by monitor configuration code. If a monitor wants to
+     * implements its own server-class, it must override this function.
+     *
+     * @param server The base server object
+     * @param shared Base class settings shared with servers
+     * @return A new monitored server
+     */
+    virtual MonitorServer* create_server(SERVER* server, const MonitorServer::SharedSettings& shared);
 
     bool add_server(SERVER* server);
     void remove_all_servers();

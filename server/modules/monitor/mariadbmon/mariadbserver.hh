@@ -70,11 +70,13 @@ struct NodeData
  * Monitor specific information about a server. Eventually, this will be the primary data structure handled
  * by the monitor. These are initialized in @c init_server_info.
  */
-class MariaDBServer
+class MariaDBServer : public mxs::MonitorServer
 {
 public:
-    MariaDBServer(mxs::MonitorServer* monitored_server, int config_index,
-                  const SharedSettings& settings);
+    class SharedSettings;
+
+    MariaDBServer(SERVER* server, int config_index, const MonitorServer::SharedSettings& base_settings,
+                  const MariaDBServer::SharedSettings& settings);
 
     class EventInfo
     {
@@ -116,9 +118,26 @@ public:
         bool log_slave_updates = false; /* Does the slave write replicated events to binlog? */
     };
 
-    /* Monitored server base class/struct. MariaDBServer does not own the struct, it is not freed
-     * (or connection closed) when a MariaDBServer is destroyed. */
-    mxs::MonitorServer* m_server_base = NULL;
+    // Settings shared between the MariaDB-Monitor and the MariaDB-Servers.
+    // These are only written to when configuring the monitor.
+    class SharedSettings
+    {
+    public:
+        // Required by cluster operations
+        std::string replication_user;         /**< Username for CHANGE MASTER TO-commands */
+        std::string replication_password;     /**< Password for CHANGE MASTER TO-commands */
+        bool        replication_ssl {false};  /**< Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
+
+        std::string promotion_sql_file;  /**< File with sql commands which are ran to a server being
+                                       *  promoted. */
+        std::string demotion_sql_file;   /**< File with sql commands which are ran to a server being
+                                       *  demoted. */
+
+        /* Should failover/switchover enable/disable any scheduled events on the servers during
+         * promotion/demotion? */
+        bool handle_event_scheduler {true};
+    };
+
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
     int m_config_index = 0;
 

@@ -621,7 +621,7 @@ bool Monitor::add_server(SERVER* server)
     string existing_owner;
     if (this_unit.claim_server(server->name(), m_name, &existing_owner))
     {
-        auto new_server = new MonitorServer(server, m_settings.shared);
+        auto new_server = create_server(server, m_settings.shared);
         m_servers.push_back(new_server);
         server_added(server);
         success = true;
@@ -1889,6 +1889,11 @@ bool Monitor::server_status_request_waiting() const
 const Monitor::ServerVector& Monitor::servers() const
 {
     return m_servers;
+}
+
+MonitorServer* Monitor::create_server(SERVER* server, const MonitorServer::SharedSettings& shared)
+{
+    return new MonitorServer(server, shared);
 }
 
 MonitorWorker::MonitorWorker(const string& name, const string& module)

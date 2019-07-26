@@ -54,8 +54,6 @@ public:
      */
     static MariaDBMonitor* create(const std::string& name, const std::string& module);
 
-    ~MariaDBMonitor();
-
     /**
      * Print diagnostics.
      *
@@ -184,10 +182,13 @@ private:
         std::unordered_map<std::string, MapElement> m_mapping; // hostname -> address cache
     };
 
+    mxs::MonitorServer*
+    create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
+
     ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
 
     // Server containers, mostly constant.
-    ServerArray   m_servers;        /* Servers of the monitor */
+    ServerArray   m_servers;        /* Servers of the monitor. Contains the same servers as the base class. */
     IdToServerMap m_servers_by_id;  /* Map from server id:s to MariaDBServer */
 
     // Topology related fields
@@ -265,7 +266,7 @@ private:
         ServerArray excluded_servers;          /* Servers which cannot be autoselected when deciding which
                                                 * slave to promote during failover switchover. */
 
-        SharedSettings shared;                 /* Settings required by MariaDBServer objects */
+        MariaDBServer::SharedSettings shared;  /* Settings required by MariaDBServer objects */
     };
 
     Settings m_settings;
