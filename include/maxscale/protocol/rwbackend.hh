@@ -240,7 +240,7 @@ public:
      */
     bool reply_has_started() const
     {
-        return m_reply_state != REPLY_STATE_START && m_reply_state != REPLY_STATE_DONE;
+        return m_size > 0 && m_reply_state != REPLY_STATE_DONE;
     }
 
     void process_packets(GWBUF* buffer);
@@ -269,6 +269,7 @@ private:
     bool             m_large_query = false;
     bool             m_skip_next = false;
     Error            m_error;
+    uint64_t         m_size = 0;/**< Size of the response */
 
     /**
      * @param it   Iterator pointing to the command byte of an error packet.
