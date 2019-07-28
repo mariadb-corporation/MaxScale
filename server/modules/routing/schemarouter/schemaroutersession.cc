@@ -1192,11 +1192,13 @@ char* get_lenenc_str(void* data)
     return rval;
 }
 
+static const std::set<std::string> always_ignore = {"mysql", "information_schema", "performance_schema"};
+
 bool SchemaRouterSession::ignore_duplicate_database(const char* data)
 {
     bool rval = false;
 
-    if (m_config->ignored_dbs.find(data) != m_config->ignored_dbs.end())
+    if (m_config->ignored_dbs.count(data) || always_ignore.count(data))
     {
         rval = true;
     }
@@ -1379,8 +1381,7 @@ void SchemaRouterSession::query_databases()
                                          "LEFT JOIN information_schema.tables AS t ON s.schema_name = t.table_schema "
                                          "WHERE t.table_name IS NULL "
                                          "UNION "
-                                         "SELECT CONCAT (table_schema, '.', table_name) FROM information_schema.tables "
-                                         "WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql');");
+                                         "SELECT CONCAT (table_schema, '.', table_name) FROM information_schema.tables");
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
     for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)

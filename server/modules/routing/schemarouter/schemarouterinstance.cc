@@ -264,9 +264,12 @@ json_t* SchemaRouter::diagnostics_json() const
     return rval;
 }
 
+static const uint64_t CAPABILITIES = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_PACKET_OUTPUT
+    | RCAP_TYPE_RUNTIME_CONFIG;
+
 uint64_t SchemaRouter::getCapabilities()
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG;
+    return schemarouter::CAPABILITIES;
 }
 }
 
@@ -280,7 +283,6 @@ uint64_t SchemaRouter::getCapabilities()
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static uint64_t caps = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG;
     static auto desc = "A database sharding router for simple sharding";
     static MXS_MODULE info =
     {
@@ -289,7 +291,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         desc,
         "V1.0.0",
-        caps,
+        schemarouter::CAPABILITIES,
         &schemarouter::SchemaRouter::s_object,
         NULL,
         NULL,

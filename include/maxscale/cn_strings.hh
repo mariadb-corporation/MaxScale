@@ -115,6 +115,7 @@ constexpr char CN_SERVER[] = "server";
 constexpr char CN_SERVICES[] = "services";
 constexpr char CN_SERVICE[] = "service";
 constexpr char CN_SESSIONS[] = "sessions";
+constexpr char CN_SESSION_TRACE[] = "session_trace";
 constexpr char CN_SESSION_TRACK_TRX_STATE[] = "session_track_trx_state";
 constexpr char CN_SKIP_PERMISSION_CHECKS[] = "skip_permission_checks";
 constexpr char CN_SOCKET[] = "socket";

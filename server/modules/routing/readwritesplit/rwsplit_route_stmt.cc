@@ -359,7 +359,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             succp = true;
             MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
         }
-        else
+        else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
         {
             MXS_ERROR("Could not find valid server for target type %s, closing "
                       "connection.", route_target_to_string(route_target));

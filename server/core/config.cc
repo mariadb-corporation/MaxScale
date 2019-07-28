@@ -259,6 +259,11 @@ const MXS_MODULE_PARAM config_service_params[] =
         "-1"
     },
     {
+        CN_SESSION_TRACE,
+        MXS_MODULE_PARAM_BOOL,
+        "false"
+    },
+    {
         CN_CLUSTER,
         MXS_MODULE_PARAM_STRING
     },
@@ -2383,6 +2388,21 @@ static int handle_global_item(const char* name, const char* value)
         {
             MXS_ERROR("%s can have the values 'never', 'on_close' or 'on_error'.",
                       CN_DUMP_LAST_STATEMENTS);
+            return 0;
+        }
+    }
+    else if (strcmp(name, CN_SESSION_TRACE) == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval >= 0)
+        {
+            session_set_session_trace(intval);
+            mxb_log_set_session_trace(true);
+        }
+        else
+        {
+            MXS_ERROR("Invalid value for '%s': %s", CN_SESSION_TRACE, value);
             return 0;
         }
     }

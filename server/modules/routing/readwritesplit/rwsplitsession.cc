@@ -366,6 +366,7 @@ static void log_unexpected_response(RWBackend* backend, GWBUF* buffer, GWBUF* cu
                   backend->current_command(),
                   sql.c_str());
         session_dump_statements(backend->dcb()->session);
+        session_dump_log(backend->dcb()->session);
         mxb_assert(false);
     }
 }
@@ -1010,7 +1011,9 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                 MXS_INFO("Master '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
                 /** The connection to the master has failed */
 
-                if (!backend->is_waiting_result())
+                bool expected_response = backend->is_waiting_result();
+
+                if (!expected_response)
                 {
                     /** The failure of a master is not considered a critical
                      * failure as partial functionality still remains. If
@@ -1046,14 +1049,6 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                         can_continue = true;
                         send_readonly_error(m_client);
                     }
-
-                    // Decrement the expected response count only if we know we can continue the sesssion.
-                    // This keeps the internal logic sound even if another query is routed before the session
-                    // is closed.
-                    if (can_continue)
-                    {
-                        m_expected_responses--;
-                    }
                 }
 
                 if (session_trx_is_active(session) && m_otrx_state == OTRX_INACTIVE)
@@ -1078,6 +1073,14 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                                   "Connection has been idle for %.1f seconds. Error caused by: %s",
                                   errmsg.c_str(), (float)idle / 10.f, extract_error(errmsgbuf).c_str());
                     }
+                }
+
+                // Decrement the expected response count only if we know we can continue the sesssion.
+                // This keeps the internal logic sound even if another query is routed before the session
+                // is closed.
+                if (can_continue && expected_response)
+                {
+                    m_expected_responses--;
                 }
 
                 backend->close();
