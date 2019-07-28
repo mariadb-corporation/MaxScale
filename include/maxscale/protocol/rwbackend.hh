@@ -88,6 +88,13 @@ public:
             return rv;
         }
 
+        bool is_wsrep_error() const
+        {
+            return m_code == 1047
+                   && m_sql_state == "08S01"
+                   && m_message == "WSREP has not yet prepared node for application use";
+        }
+
         bool is_unexpected_error() const
         {
             switch (m_code)
