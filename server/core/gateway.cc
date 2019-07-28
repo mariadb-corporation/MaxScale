@@ -433,6 +433,7 @@ static void sigfatal_handler(int i)
         if (dcb->session)
         {
             session_dump_statements(dcb->session);
+            session_dump_log(dcb->session);
         }
     }
 

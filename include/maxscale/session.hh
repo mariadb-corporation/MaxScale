@@ -602,6 +602,16 @@ void session_dump_statements(MXS_SESSION* pSession);
  */
 void session_set_dump_statements(session_dump_statements_t value);
 
+void session_set_session_trace(uint32_t value);
+
+uint32_t session_get_session_trace();
+
+std::string session_get_session_log(MXS_SESSION* pSession);
+
+void session_append_log(MXS_SESSION* pSession, std::string log);
+
+void session_dump_log(MXS_SESSION* pSession);
+
 /**
  * @brief Returns in what contexts statements should be dumped.
  *
