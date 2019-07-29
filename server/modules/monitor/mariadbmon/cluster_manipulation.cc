@@ -236,7 +236,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         // Step 1: Gather the list of affected servers. If any operation on the servers fails,
         // the reset fails as well.
         ServerArray targets;
-        for (MariaDBServer* server : m_servers)
+        for (MariaDBServer* server : servers())
         {
             if (server->is_usable())
             {
@@ -640,7 +640,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
     // Whether a join operation should be attempted or not depends on several criteria. Start with the ones
     // easiest to test. Go though all slaves and construct a preliminary list.
     ServerArray suspects;
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         if (server_is_rejoin_suspect(server, NULL))
         {
@@ -1480,7 +1480,7 @@ void MariaDBMonitor::check_cluster_operations_support()
     string all_reasons;
     // Currently, only simple topologies are supported. No Relay Masters or multiple slave connections.
     // Gtid-replication is required, and a server version which supports it.
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         // Need to accept unknown versions here. Otherwise servers which are down when the monitor starts
         // would deactivate failover.
@@ -1677,7 +1677,7 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
 {
     const char QUERY[] = "SET GLOBAL read_only=1;";
     bool error = false;
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         if (server->is_slave() && !server->is_read_only()
             && (server->m_srv_type != MariaDBServer::server_type::BINLOG_ROUTER))

@@ -170,13 +170,13 @@ void MariaDBMonitor::build_replication_graph()
 {
     const bool use_hostnames = m_settings.assume_unique_hostnames;
     // First, reset all node data.
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         server->m_node.reset_indexes();
         server->m_node.reset_results();
     }
 
-    for (auto slave : m_servers)
+    for (auto slave : servers())
     {
         /* Check all slave connections of all servers. Connections are added even if one or both endpoints
          * are down or in maintenance. */
@@ -271,7 +271,7 @@ void MariaDBMonitor::find_graph_cycles()
                                              * identical
                                              * cycle index. */
 
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         /** Index is 0, this node has not yet been visited. */
         if (server->m_node.index == NodeData::INDEX_NOT_VISITED)
@@ -333,7 +333,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
     // Helper function for finding normal master candidates.
     auto search_outside_cycles = [this, &master_candidates](RequireRunning req_running,
                                                             DelimitedPrinter& topo_messages) {
-        for (MariaDBServer* server : m_servers)
+        for (MariaDBServer* server : servers())
         {
             if (server->m_node.parents.empty())
             {
@@ -507,7 +507,7 @@ void MariaDBMonitor::assign_server_roles()
     // 'mon_prev_status'.
     const uint64_t remove_bits = SERVER_MASTER | SERVER_WAS_MASTER | SERVER_SLAVE | SERVER_RELAY
         | SERVER_SLAVE_OF_EXT_MASTER;
-    for (auto server : m_servers)
+    for (auto server : servers())
     {
         server->clear_status(remove_bits);
         server->m_replication_lag = SERVER::RLAG_UNDEFINED;
@@ -549,7 +549,7 @@ void MariaDBMonitor::assign_server_roles()
     if (!m_settings.ignore_external_masters)
     {
         // Do a sweep through all the nodes in the cluster (even the master) and mark external slaves.
-        for (MariaDBServer* server : m_servers)
+        for (MariaDBServer* server : servers())
         {
             if (!server->m_node.external_masters.empty())
             {
@@ -809,7 +809,7 @@ void MariaDBMonitor::update_topology()
     {
         // Server IDs may have changed.
         m_servers_by_id.clear();
-        for (auto server : m_servers)
+        for (auto server : servers())
         {
             if (server->m_server_id != SERVER_ID_UNKNOWN)
             {
@@ -963,7 +963,7 @@ void MariaDBMonitor::update_master()
 void MariaDBMonitor::set_low_disk_slaves_maintenance()
 {
     // Only set pure slave and standalone servers to maintenance.
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         if (server->is_low_on_disk_space() && server->is_usable()
             && !server->is_master() && !server->is_relay_master())

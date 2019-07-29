@@ -41,7 +41,6 @@ private:
     MariaDBMonitor(const MariaDBMonitor&) = delete;
     MariaDBMonitor& operator=(const MariaDBMonitor&) = delete;
 public:
-    // Helper class used for testing.
     class Test;
     friend class Test;
 
@@ -185,10 +184,9 @@ private:
     mxs::MonitorServer*
     create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 
-    ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
+    const ServerArray& servers() const; /* Hides base class function. */
 
-    // Server containers, mostly constant.
-    ServerArray   m_servers;        /* Servers of the monitor. Contains the same servers as the base class. */
+    ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
     IdToServerMap m_servers_by_id;  /* Map from server id:s to MariaDBServer */
 
     // Topology related fields

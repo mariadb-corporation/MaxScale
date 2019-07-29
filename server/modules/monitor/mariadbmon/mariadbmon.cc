@@ -70,18 +70,16 @@ MariaDBMonitor::create_server(SERVER* server, const mxs::MonitorServer::SharedSe
     return new MariaDBServer(server, servers().size(), shared, m_settings.shared);
 }
 
+const ServerArray& MariaDBMonitor::servers() const
+{
+    return reinterpret_cast<const ServerArray&>(Monitor::servers());
+}
+
 /**
  * Reset and initialize server arrays and related data.
  */
 void MariaDBMonitor::reset_server_info()
 {
-    // The convenience container may contain invalid pointers if not cleared.
-    m_servers.clear();
-    for (auto mon_server : servers())
-    {
-        m_servers.push_back(static_cast<MariaDBServer*>(mon_server));
-    }
-
     m_servers_by_id.clear();
     assign_new_master(NULL);
     m_next_master = NULL;
@@ -91,9 +89,9 @@ void MariaDBMonitor::reset_server_info()
 
 void MariaDBMonitor::reset_node_index_info()
 {
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (auto server : servers())
     {
-        (*iter)->m_node.reset_indexes();
+        server->m_node.reset_indexes();
     }
 }
 
@@ -101,7 +99,7 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
 {
     MariaDBServer* found = NULL;
     // Phase 1: Direct string compare
-    for (auto server : m_servers)
+    for (auto server : servers())
     {
         EndPoint srv(server->server);
         if (srv == search_ep)
@@ -118,7 +116,7 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
         string target_addr = m_resolver.resolve_server(search_ep.host());
         if (!target_addr.empty())
         {
-            for (auto server : m_servers)
+            for (auto server : servers())
             {
                 if (server->server->port == search_ep.port())
                 {
@@ -148,7 +146,7 @@ MariaDBServer* MariaDBMonitor::get_server(MonitorServer* mon_server)
 
 MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
 {
-    for (auto iter : m_servers)
+    for (auto iter : servers())
     {
         if (iter->server == server)
         {
@@ -348,9 +346,9 @@ string MariaDBMonitor::diagnostics_to_string() const
     }
 
     rval += string_printf("\nServer information:\n-------------------\n\n");
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (auto srv : servers())
     {
-        rval += (*iter)->diagnostics() + "\n";
+        rval += srv->diagnostics() + "\n";
     }
     return rval;
 }
@@ -374,7 +372,7 @@ json_t* MariaDBMonitor::to_json() const
                         json_integer(m_master_gtid_domain));
 
     json_t* server_info = json_array();
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         json_array_append_new(server_info, server->to_json());
     }
@@ -398,7 +396,7 @@ void MariaDBMonitor::pre_loop()
 
     /* This loop can be removed if/once the replication check code is inside tick. It's required so that
      * the monitor makes new connections when starting. */
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         if (server->con)
         {
@@ -414,7 +412,7 @@ void MariaDBMonitor::tick()
 
     /* Update MonitorServer->pending_status. This is where the monitor loop writes it's findings.
      * Also, backup current status so that it can be compared to any deduced state. */
-    for (auto srv : m_servers)
+    for (auto srv : servers())
     {
         auto status = srv->server->status();
         srv->pending_status = status;
@@ -435,8 +433,8 @@ void MariaDBMonitor::tick()
 
     // Asynchronously query all servers for their status.
     std::vector<std::future<void>> futures;
-    futures.reserve(m_servers.size());
-    for (auto server : m_servers)
+    futures.reserve(servers().size());
+    for (auto server : servers())
     {
         futures.emplace_back(std::async(std::launch::async, update_task, server));
     }
@@ -446,7 +444,7 @@ void MariaDBMonitor::tick()
         f.get();
     }
 
-    for (MariaDBServer* server : m_servers)
+    for (MariaDBServer* server : servers())
     {
         if (server->m_topology_changed)
         {
@@ -488,7 +486,7 @@ void MariaDBMonitor::tick()
     mxb_assert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
 
     // Update shared status.
-    for (auto server : m_servers)
+    for (auto server : servers())
     {
         SERVER* srv = server->server;
         srv->rlag = server->m_replication_lag;

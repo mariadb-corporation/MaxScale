@@ -2346,3 +2346,33 @@ const MXS_MODULE_PARAM* common_monitor_params()
     };
     return config_monitor_params;
 }
+
+mxs::Monitor::Test::Test(mxs::Monitor* monitor)
+    : m_monitor(monitor)
+{
+}
+
+mxs::Monitor::Test::~Test()
+{
+}
+
+void mxs::Monitor::Test::remove_servers()
+{
+    // Copy SERVERs before removing from monitor
+    std::vector<SERVER*> copy;
+    for (auto ms : m_monitor->m_servers)
+    {
+        copy.push_back(ms->server);
+    }
+
+    m_monitor->remove_all_servers();
+    for (auto srv : copy)
+    {
+        delete srv; // MonitorServer dtor doesn't delete the base server.
+    }
+};
+
+void mxs::Monitor::Test::add_server(SERVER* new_server)
+{
+    m_monitor->add_server(new_server);
+}

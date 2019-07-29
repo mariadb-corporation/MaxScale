@@ -279,6 +279,9 @@ private:
 class Monitor
 {
 public:
+    class Test;
+    friend class Test;
+
     using ServerVector = std::vector<MonitorServer*>;
 
     Monitor(const std::string& name, const std::string& module);
@@ -866,3 +869,17 @@ MXS_MONITOR_API MonitorApi<MonitorInstance>::s_api =
     &MonitorApi<MonitorInstance>::createInstance,
 };
 }
+
+/**
+ * This helper class exposes some monitor private functions. Should be used with test code.
+ */
+class mxs::Monitor::Test
+{
+protected:
+    explicit Test(mxs::Monitor* monitor);
+    virtual ~Test();
+    void remove_servers();
+    void add_server(SERVER* new_server);
+
+    std::unique_ptr<mxs::Monitor> m_monitor;
+};
