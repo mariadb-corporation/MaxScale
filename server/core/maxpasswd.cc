@@ -155,24 +155,9 @@ int main(int argc, char** argv)
     mxs_log_set_priority_enabled(LOG_INFO, false);
     mxs_log_set_priority_enabled(LOG_DEBUG, false);
 
-    size_t len = strlen(password);
-
-    if (len > MXS_PASSWORD_MAXLEN)
-    {
-        fprintf(stderr,
-                "warning: The provided password is %lu characters long. "
-                "Only the first %d will be used.\n",
-                len,
-                MXS_PASSWORD_MAXLEN);
-    }
-
-    char used_password[MXS_PASSWORD_MAXLEN + 1];
-    strncpy(used_password, password, MXS_PASSWORD_MAXLEN);
-    used_password[MXS_PASSWORD_MAXLEN] = 0;
-
     int rval = EXIT_SUCCESS;
 
-    char* enc = encrypt_password(path, used_password);
+    char* enc = encrypt_password(path, password);
     if (enc)
     {
         printf("%s\n", enc);

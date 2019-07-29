@@ -32,11 +32,6 @@ typedef struct maxkeys
     unsigned char initvector[MAXSCALE_IV_LEN];
 } MAXKEYS;
 
-enum
-{
-    MXS_PASSWORD_MAXLEN = 79
-};
-
 int   secrets_write_keys(const char* directory);
 char* encrypt_password(const char*, const char*);
 

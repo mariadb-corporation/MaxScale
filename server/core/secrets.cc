@@ -348,7 +348,8 @@ char* decrypt_password(const char* crypt)
     AES_KEY aeskey;
     unsigned char* plain;
     const char* ptr;
-    unsigned char encrypted[80];
+    size_t len = strlen(crypt);
+    unsigned char encrypted[len];
     int enlen;
 
     keys = secrets_readKeys(NULL);
@@ -369,8 +370,8 @@ char* decrypt_password(const char* crypt)
         }
     }
 
-    enlen = strlen(crypt) / 2;
-    gw_hex2bin(encrypted, crypt, strlen(crypt));
+    enlen = len / 2;
+    gw_hex2bin(encrypted, crypt, len);
 
     if ((plain = (unsigned char*) MXS_MALLOC(enlen + 1)) == NULL)
     {
@@ -401,21 +402,19 @@ char* encrypt_password(const char* path, const char* password)
     AES_KEY aeskey;
     int padded_len;
     char* hex_output;
-    unsigned char padded_passwd[MXS_PASSWORD_MAXLEN + 1];
-    unsigned char encrypted[MXS_PASSWORD_MAXLEN + 1];
+    size_t len = strlen(password);
+    unsigned char encrypted[len + 1];
 
     if ((keys = secrets_readKeys(path)) == NULL)
     {
         return NULL;
     }
 
-    memset(padded_passwd, 0, MXS_PASSWORD_MAXLEN + 1);
-    strncpy((char*) padded_passwd, password, MXS_PASSWORD_MAXLEN);
-    padded_len = ((strlen((char*)padded_passwd) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
+    padded_len = ((len / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
     AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
-    AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, keys->initvector, AES_ENCRYPT);
+    AES_cbc_encrypt((const unsigned char*) password, encrypted, padded_len, &aeskey, keys->initvector, AES_ENCRYPT);
     hex_output = (char*) MXS_MALLOC(padded_len * 2 + 1);
     if (hex_output)
     {
