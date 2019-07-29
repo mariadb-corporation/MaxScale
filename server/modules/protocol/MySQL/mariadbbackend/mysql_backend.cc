@@ -32,16 +32,21 @@
  * and the backend MySQL database.
  */
 
-static int         gw_create_backend_connection(DCB* backend, SERVER* server, MXS_SESSION* in_session);
-static int         gw_read_backend_event(DCB* dcb);
-static int         gw_write_backend_event(DCB* dcb);
-static int         gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue);
-static int         gw_error_backend_event(DCB* dcb);
-static int         gw_backend_close(DCB* dcb);
-static int         gw_backend_hangup(DCB* dcb);
-static int         backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
-static void        backend_set_delayqueue(DCB* dcb, GWBUF* queue);
-static int         gw_change_user(DCB* backend_dcb, SERVER* server, MXS_SESSION* in_session, GWBUF* queue);
+static MXS_PROTOCOL_SESSION* gw_create_backend_connection(DCB* backend,
+                                                          SERVER* server,
+                                                          MXS_SESSION* in_session);
+static int  gw_read_backend_event(DCB* dcb);
+static int  gw_write_backend_event(DCB* dcb);
+static int  gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue);
+static int  gw_error_backend_event(DCB* dcb);
+static int  gw_backend_close(DCB* dcb);
+static int  gw_backend_hangup(DCB* dcb);
+static int  backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
+static void backend_set_delayqueue(DCB* dcb, GWBUF* queue);
+static int  gw_change_user(DCB* backend_dcb,
+                           SERVER* server,
+                           MXS_SESSION* in_session,
+                           GWBUF* queue);
 static char*       gw_backend_default_auth();
 static GWBUF*      process_response_data(DCB* dcb, GWBUF** readbuf, int nbytes_to_process);
 static bool        sescmd_response_complete(DCB* dcb);
@@ -154,18 +159,15 @@ static char* gw_backend_default_auth()
  *  backend server. Positive fd is copied to protocol and to dcb.
  * If fails, fd == -1 and socket is closed.
  */
-static int gw_create_backend_connection(DCB* backend_dcb,
-                                        SERVER* server,
-                                        MXS_SESSION* session)
+static MXS_PROTOCOL_SESSION* gw_create_backend_connection(DCB* backend_dcb,
+                                                          SERVER* server,
+                                                          MXS_SESSION* session)
 {
-    int rv = -1;
-    int fd = -1;
-
     MySQLProtocol* protocol = new(std::nothrow) MySQLProtocol(backend_dcb);
     MXS_ABORT_IF_NULL(protocol);
 
     /** Copy client flags to backend protocol */
-    if (backend_dcb->session->client_dcb->protocol)
+    if (session->client_dcb->protocol)
     {
         MySQLProtocol* client = (MySQLProtocol*)backend_dcb->session->client_dcb->protocol;
         protocol->client_capabilities = client->client_capabilities;
@@ -178,113 +180,16 @@ static int gw_create_backend_connection(DCB* backend_dcb,
         protocol->charset = 0x08;
     }
 
-    /*
-     *< if succeed, fd > 0, -1 otherwise
-     * TODO: Better if function returned a protocol auth state
-     */
-    rv = gw_do_connect_to_backend(server->address, server->port, &fd);
-    /*< Assign protocol with backend_dcb */
-    backend_dcb->protocol = protocol;
+    protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
 
-    /*< Set protocol state */
-    switch (rv)
+    if (server->proxy_protocol)
     {
-    case 0:
-        mxb_assert(fd != DCBFD_CLOSED);
-        protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
-
-        if (server->proxy_protocol)
-        {
-            gw_send_proxy_protocol_header(backend_dcb);
-        }
-        MXS_DEBUG("Connected to server [%s]:%d, from backend dcb %p, client dcp %p.",
-                  server->address, server->port, backend_dcb, session->client_dcb);
-        break;
-
-    case 1:
-        /*
-         * The state MYSQL_PENDING_CONNECT is likely to be transitory,
-         * as it means the calls have been successful but the connection
-         * has not yet completed and the calls are non-blocking.
-         */
-        mxb_assert(fd != DCBFD_CLOSED);
-        protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
-        break;
-
-    default:
-        /* Failure - the state reverts to its initial value */
-        mxb_assert(fd == -1);
-        mxb_assert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
-        break;
+        gw_send_proxy_protocol_header(backend_dcb);
     }
+    MXS_DEBUG("Connected to server [%s]:%d, from backend dcb %p, client dcp %p.",
+              server->address, server->port, backend_dcb, session->client_dcb);
 
-    return fd;
-}
-
-/**
- * gw_do_connect_to_backend
- *
- * This routine creates socket and connects to a backend server.
- * Connect it non-blocking operation. If connect fails, socket is closed.
- *
- * @param host The host to connect to
- * @param port The host TCP/IP port
- * @param *fd where connected fd is copied
- * @return 0/1 on success and -1 on failure
- * If successful, fd has file descriptor to socket which is connected to
- * backend server. In failure, fd == -1 and socket is closed.
- *
- */
-static int gw_do_connect_to_backend(char* host, int port, int* fd)
-{
-    struct sockaddr_storage serv_addr = {};
-    int rv = -1;
-
-    /* prepare for connect */
-    int so;
-    size_t sz;
-
-    if (host[0] == '/')
-    {
-        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&serv_addr, host);
-        sz = sizeof(sockaddr_un);
-    }
-    else
-    {
-        so = open_network_socket(MXS_SOCKET_NETWORK, &serv_addr, host, port);
-        sz = sizeof(sockaddr_storage);
-    }
-
-    if (so == -1)
-    {
-        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
-        return rv;
-    }
-
-    rv = connect(so, (struct sockaddr*)&serv_addr, sz);
-
-    if (rv != 0)
-    {
-        if (errno == EINPROGRESS)
-        {
-            rv = 1;
-        }
-        else
-        {
-            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
-                      host,
-                      port,
-                      errno,
-                      mxs_strerror(errno));
-            close(so);
-            return rv;
-        }
-    }
-
-    *fd = so;
-    MXS_DEBUG("Connected to backend server [%s]:%d, fd %d.", host, port, so);
-
-    return rv;
+    return protocol;
 }
 
 /**
@@ -1082,9 +987,7 @@ static int gw_write_backend_event(DCB* dcb)
 
             if (!com_quit)
             {
-                mysql_send_custom_error(dcb->session->client_dcb,
-                                        1,
-                                        0,
+                mysql_send_custom_error(dcb->session->client_dcb, 1, 0,
                                         "Writing to backend failed due invalid Maxscale state.");
                 MXS_ERROR("Attempt to write buffered data to backend "
                           "failed due internal inconsistent state: %s",
@@ -1101,20 +1004,8 @@ static int gw_write_backend_event(DCB* dcb)
     else
     {
         MySQLProtocol* backend_protocol = (MySQLProtocol*)dcb->protocol;
-
-        if (backend_protocol->protocol_auth_state == MXS_AUTH_STATE_PENDING_CONNECT)
-        {
-            backend_protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
-            if (dcb->server->proxy_protocol)
-            {
-                gw_send_proxy_protocol_header(dcb);
-            }
-        }
-        else
-        {
-            dcb_drain_writeq(dcb);
-        }
-
+        mxb_assert(backend_protocol->protocol_auth_state != MXS_AUTH_STATE_PENDING_CONNECT);
+        dcb_drain_writeq(dcb);
         MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->fd, rc);
     }
 

@@ -56,14 +56,14 @@
 
 #define GETPWUID_BUF_LEN 255
 
-static int   maxscaled_read_event(DCB* dcb);
-static int   maxscaled_write_event(DCB* dcb);
-static int   maxscaled_write(DCB* dcb, GWBUF* queue);
-static int   maxscaled_error(DCB* dcb);
-static int   maxscaled_hangup(DCB* dcb);
-static int   maxscaled_accept(DCB*);
-static int   maxscaled_close(DCB* dcb);
-static char* mxsd_default_auth();
+static int                   maxscaled_read_event(DCB* dcb);
+static int                   maxscaled_write_event(DCB* dcb);
+static int                   maxscaled_write(DCB* dcb, GWBUF* queue);
+static int                   maxscaled_error(DCB* dcb);
+static int                   maxscaled_hangup(DCB* dcb);
+static MXS_PROTOCOL_SESSION* maxscaled_accept(DCB*);
+static int                   maxscaled_close(DCB* dcb);
+static char*                 mxsd_default_auth();
 
 static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* dcb)
 {
@@ -345,7 +345,7 @@ static int maxscaled_hangup(DCB* dcb)
  * @param dcb   The descriptor control block
  * @return The number of new connections created
  */
-static int maxscaled_accept(DCB* client_dcb)
+static MXS_PROTOCOL_SESSION* maxscaled_accept(DCB* client_dcb)
 {
     socklen_t len = sizeof(struct ucred);
     struct ucred ucred;
@@ -371,7 +371,6 @@ static int maxscaled_accept(DCB* client_dcb)
     }
 
     pthread_mutex_init(&maxscaled_protocol->lock, NULL);
-    client_dcb->protocol = (void*)maxscaled_protocol;
 
     if (!session_start(client_dcb->session))
     {
@@ -379,7 +378,7 @@ static int maxscaled_accept(DCB* client_dcb)
         return 0;
     }
 
-    return 1;
+    return (MXS_PROTOCOL_SESSION*)maxscaled_protocol;
 }
 
 /**
@@ -391,7 +390,7 @@ static int maxscaled_accept(DCB* client_dcb)
 
 static int maxscaled_close(DCB* dcb)
 {
-    MAXSCALED* maxscaled = static_cast<MAXSCALED*>(dcb->protocol);
+    MAXSCALED* maxscaled = reinterpret_cast<MAXSCALED*>(dcb->protocol);
 
     if (!maxscaled)
     {

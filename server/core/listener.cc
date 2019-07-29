@@ -1013,7 +1013,12 @@ void Listener::accept_connections()
         {
             if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
             {
-                m_proto_func.accept(dcb);
+                dcb->protocol = m_proto_func.accept(dcb);
+
+                if (!dcb->protocol)
+                {
+                    dcb_close(dcb);
+                }
             }
         }
         else
@@ -1025,7 +1030,12 @@ void Listener::accept_connections()
             worker->execute([this, conn]() {
                                 if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
                                 {
-                                    m_proto_func.accept(dcb);
+                                    dcb->protocol = m_proto_func.accept(dcb);
+
+                                    if (!dcb->protocol)
+                                    {
+                                        dcb_close(dcb);
+                                    }
                                 }
                             }, mxs::RoutingWorker::EXECUTE_AUTO);
         }

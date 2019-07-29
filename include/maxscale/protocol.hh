@@ -28,6 +28,10 @@ struct DCB;
 class SERVER;
 struct MXS_SESSION;
 
+struct MXS_PROTOCOL_SESSION
+{
+};
+
 /**
  * Protocol module API
  */
@@ -86,26 +90,24 @@ struct MXS_PROTOCOL
     int32_t (* hangup)(DCB* dcb);
 
     /**
-     * Accept a connection, only for client side protocol modules
+     * Allocate new client side protocol sessoin
      *
-     * @param dcb The client DCB
+     * @param dcb The client that was accepted DCB
      *
-     * @return 1 on success, 0 on error
-     *
-     * @note Currently the return value is ignored
+     * @return New protocol session or null on error
      */
-    int32_t (* accept)(DCB* client_dcb);
+    MXS_PROTOCOL_SESSION* (* accept)(DCB* client_dcb);
 
     /**
-     * Connect to a server, only for backend side protocol modules
+     * Allocate new backend protocol sessoin
      *
-     * @param dcb     DCB to connect
+     * @param dcb     DCB that was connected
      * @param server  Server where the connection is made
-     * @param session The session where the DCB should be linked to
+     * @param session The session to which the connection belongs to
      *
-     * @return The opened file descriptor or DCBFD_CLOSED on error
+     * @return New protocol session or null on error
      */
-    int32_t (* connect)(DCB* dcb, SERVER* server, MXS_SESSION* session);
+    MXS_PROTOCOL_SESSION* (* connect)(DCB* dcb, SERVER* server, MXS_SESSION* session);
 
     /**
      * Free protocol data allocated in the connect handler

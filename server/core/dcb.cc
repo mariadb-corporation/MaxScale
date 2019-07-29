@@ -410,6 +410,55 @@ DCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* pro
 }
 
 /**
+ * Connect to a server
+ *
+ * @param host The host to connect to
+ * @param port The port to connect to
+ * @param fd   FD is stored in this pointer
+ *
+ * @return True on success, false on error
+ */
+static bool do_connect(const char* host, int port, int* fd)
+{
+    bool ok = false;
+    struct sockaddr_storage addr = {};
+    int so;
+    size_t sz;
+
+    if (host[0] == '/')
+    {
+        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&addr, host);
+        sz = sizeof(sockaddr_un);
+    }
+    else
+    {
+        so = open_network_socket(MXS_SOCKET_NETWORK, &addr, host, port);
+        sz = sizeof(sockaddr_storage);
+    }
+
+    if (so != -1)
+    {
+        if (connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
+        {
+            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
+                      host, port, errno, mxs_strerror(errno));
+            close(so);
+        }
+        else
+        {
+            *fd = so;
+            ok = true;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
+    }
+
+    return ok;
+}
+
+/**
  * Connect to a backend server
  *
  * @param srv      The server to connect to
@@ -432,9 +481,9 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
 
     if (dcb)
     {
-        dcb->fd = dcb->func.connect(dcb, server, session);
-
-        if (dcb->fd != DCBFD_CLOSED && poll_add_dcb(dcb) == 0)
+        if (do_connect(server->address, server->port, &dcb->fd)
+            && (dcb->protocol = dcb->func.connect(dcb, server, session))
+            && poll_add_dcb(dcb) == 0)
         {
             // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
             // event that is triggered once the connection is established.

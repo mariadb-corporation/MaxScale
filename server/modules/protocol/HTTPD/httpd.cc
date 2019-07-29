@@ -44,16 +44,16 @@
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
 
-static int   httpd_read_event(DCB* dcb);
-static int   httpd_write_event(DCB* dcb);
-static int   httpd_write(DCB* dcb, GWBUF* queue);
-static int   httpd_error(DCB* dcb);
-static int   httpd_hangup(DCB* dcb);
-static int   httpd_accept(DCB*);
-static int   httpd_close(DCB* dcb);
-static int   httpd_get_line(int sock, char* buf, int size);
-static void  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
-static char* httpd_default_auth();
+static int                   httpd_read_event(DCB* dcb);
+static int                   httpd_write_event(DCB* dcb);
+static int                   httpd_write(DCB* dcb, GWBUF* queue);
+static int                   httpd_error(DCB* dcb);
+static int                   httpd_hangup(DCB* dcb);
+static MXS_PROTOCOL_SESSION* httpd_accept(DCB*);
+static int                   httpd_close(DCB* dcb);
+static int                   httpd_get_line(int sock, char* buf, int size);
+static void                  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
+static char*                 httpd_default_auth();
 
 extern "C"
 {
@@ -139,7 +139,7 @@ static int httpd_read_event(DCB* dcb)
     HTTPD_session* client_data = NULL;
     GWBUF* uri;
 
-    client_data = static_cast<HTTPD_session*>(dcb->data);
+    client_data = reinterpret_cast<HTTPD_session*>(dcb->protocol);
 
     /**
      * get the request line
@@ -357,25 +357,17 @@ static int httpd_hangup(DCB* dcb)
  *
  * @param listener   The descriptor control block
  */
-static int httpd_accept(DCB* client_dcb)
+static MXS_PROTOCOL_SESSION* httpd_accept(DCB* client_dcb)
 {
-    HTTPD_session* client_data = NULL;
-
-    /* create the session data for HTTPD */
-    if ((client_data = (HTTPD_session*)MXS_CALLOC(1, sizeof(HTTPD_session))) == NULL)
-    {
-        dcb_close(client_dcb);
-        return 0;
-    }
-    client_dcb->data = client_data;
+    HTTPD_session* client_data = (HTTPD_session*)MXS_CALLOC(1, sizeof(HTTPD_session));
 
     if (!session_start(client_dcb->session))
     {
-        dcb_close(client_dcb);
-        return 0;
+        MXS_FREE(client_data);
+        client_data = nullptr;
     }
 
-    return 1;
+    return (MXS_PROTOCOL_SESSION*)client_data;
 }
 
 /**

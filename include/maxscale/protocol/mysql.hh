@@ -319,7 +319,7 @@ static const char* const MXS_LAST_GTID = "last_gtid";
  *
  * Tracks various parts of the network protocol e.g. the response state
  */
-struct MySQLProtocol
+struct MySQLProtocol : public MXS_PROTOCOL_SESSION
 {
     class Error
     {

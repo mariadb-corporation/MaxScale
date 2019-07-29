@@ -53,21 +53,6 @@ typedef enum spec_com_res_t
 
 const char WORD_KILL[] = "KILL";
 
-static int  process_init(void);
-static void process_finish(void);
-static int  thread_init(void);
-static void thread_finish(void);
-
-static int   gw_MySQLAccept(DCB*);
-static int   gw_read_client_event(DCB* dcb);
-static int   gw_write_client_event(DCB* dcb);
-static int   gw_MySQLWrite_client(DCB* dcb, GWBUF* queue);
-static int   gw_error_client_event(DCB* dcb);
-static int   gw_client_close(DCB* dcb);
-static int   gw_client_hangup_event(DCB* dcb);
-static char* gw_default_auth();
-static int   gw_connection_limit(DCB* dcb, int limit);
-static int   MySQLSendHandshake(DCB* dcb);
 static int route_by_statement(MXS_SESSION*, uint64_t, GWBUF**);
 static void           mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_number);
 static int            gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
@@ -83,54 +68,7 @@ static bool   parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t
 static void   parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
 static GWBUF* gw_reject_connection(const char* host);
 
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-extern "C" MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_PROTOCOL MyObject =
-    {
-        gw_read_client_event,                       /* Read - EPOLLIN handler        */
-        gw_MySQLWrite_client,                       /* Write - data from gateway     */
-        gw_write_client_event,                      /* WriteReady - EPOLLOUT handler */
-        gw_error_client_event,                      /* Error - EPOLLERR handler      */
-        gw_client_hangup_event,                     /* HangUp - EPOLLHUP handler     */
-        gw_MySQLAccept,                             /* Accept                        */
-        NULL,                                       /* Connect                       */
-        gw_client_close,                            /* Close                         */
-        NULL,                                       /* Authentication                */
-        gw_default_auth,                            /* Default authenticator         */
-        gw_connection_limit,                        /* Send error connection limit   */
-        NULL,
-        NULL,
-        gw_reject_connection
-    };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_GA,
-        MXS_PROTOCOL_VERSION,
-        "The client to MaxScale MySQL protocol implementation",
-        "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        process_init,
-        process_finish,
-        thread_init,
-        thread_finish,
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
 /*lint +e14 */
 
 /**
@@ -313,7 +251,7 @@ bool ssl_required_but_not_negotiated(DCB* dcb)
  * @param dcb The descriptor control block to use for sending the handshake request
  * @return      The packet length sent
  */
-int MySQLSendHandshake(DCB* dcb)
+int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
 {
     uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
@@ -335,7 +273,6 @@ int MySQLSendHandshake(DCB* dcb)
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
     bool is_maria = supports_extended_caps(dcb->service->dbref);
 
-    MySQLProtocol* protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     GWBUF* buf;
     std::string version = get_version_string(dcb->service);
 
@@ -1625,12 +1562,12 @@ return_1:
  *
  * @return always 1
  */
-int gw_MySQLAccept(DCB* dcb)
+MXS_PROTOCOL_SESSION* gw_MySQLAccept(DCB* dcb)
 {
-    dcb->protocol = new(std::nothrow) MySQLProtocol(dcb);
-    MXS_ABORT_IF_NULL(dcb->protocol);
-    MySQLSendHandshake(dcb);
-    return 1;
+    auto protocol = new(std::nothrow) MySQLProtocol(dcb);
+    MXS_ABORT_IF_NULL(protocol);
+    MySQLSendHandshake(dcb, protocol);
+    return protocol;
 }
 
 static int gw_error_client_event(DCB* dcb)
@@ -2334,4 +2271,53 @@ static GWBUF* gw_reject_connection(const char* host)
     std::stringstream ss;
     ss << "Host '" << host << "' is temporarily blocked due to too many authentication failures.";
     return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", ss.str().c_str());
+}
+
+/**
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
+ */
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_PROTOCOL MyObject =
+    {
+        gw_read_client_event,                       /* Read - EPOLLIN handler        */
+        gw_MySQLWrite_client,                       /* Write - data from gateway     */
+        gw_write_client_event,                      /* WriteReady - EPOLLOUT handler */
+        gw_error_client_event,                      /* Error - EPOLLERR handler      */
+        gw_client_hangup_event,                     /* HangUp - EPOLLHUP handler     */
+        gw_MySQLAccept,                             /* Accept                        */
+        NULL,                                       /* Connect                       */
+        gw_client_close,                            /* Close                         */
+        NULL,                                       /* Authentication                */
+        gw_default_auth,                            /* Default authenticator         */
+        gw_connection_limit,                        /* Send error connection limit   */
+        NULL,
+        NULL,
+        gw_reject_connection
+    };
+
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
+        MXS_PROTOCOL_VERSION,
+        "The client to MaxScale MySQL protocol implementation",
+        "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        process_init,
+        process_finish,
+        thread_init,
+        thread_finish,
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+
+    return &info;
 }

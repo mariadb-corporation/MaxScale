@@ -171,7 +171,7 @@ struct DCB : public MXB_POLL_DATA
     char*                   remote = nullptr;                   /**< Address of remote end */
     char*                   user = nullptr;                     /**< User name for connection */
     struct sockaddr_storage ip;                                 /**< remote IPv4/IPv6 address */
-    void*                   protocol = nullptr;                 /**< The protocol specific state */
+    MXS_PROTOCOL_SESSION*   protocol = nullptr;                 /**< The protocol specific state */
     size_t                  protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  protocol_bytes_processed = 0;       /**< How many bytes have been read */
     MXS_SESSION*            session;                            /**< The owning session */

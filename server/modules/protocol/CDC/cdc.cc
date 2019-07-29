@@ -57,18 +57,18 @@
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"
 
-static int           cdc_read_event(DCB* dcb);
-static int           cdc_write_event(DCB* dcb);
-static int           cdc_write(DCB* dcb, GWBUF* queue);
-static int           cdc_error(DCB* dcb);
-static int           cdc_hangup(DCB* dcb);
-static int           cdc_accept(DCB*);
-static int           cdc_close(DCB* dcb);
-static CDC_protocol* cdc_protocol_init(DCB* dcb);
-static void          cdc_protocol_done(DCB* dcb);
-static int           do_auth(DCB* dcb, GWBUF* buffer, void* data);
-static void          write_auth_ack(DCB* dcb);
-static void          write_auth_err(DCB* dcb);
+static int                   cdc_read_event(DCB* dcb);
+static int                   cdc_write_event(DCB* dcb);
+static int                   cdc_write(DCB* dcb, GWBUF* queue);
+static int                   cdc_error(DCB* dcb);
+static int                   cdc_hangup(DCB* dcb);
+static MXS_PROTOCOL_SESSION* cdc_accept(DCB*);
+static int                   cdc_close(DCB* dcb);
+static CDC_protocol*         cdc_protocol_init(DCB* dcb);
+static void                  cdc_protocol_done(DCB* dcb);
+static int                   do_auth(DCB* dcb, GWBUF* buffer, void* data);
+static void                  write_auth_ack(DCB* dcb);
+static void                  write_auth_err(DCB* dcb);
 
 static char* cdc_default_auth()
 {
@@ -291,7 +291,7 @@ static int cdc_hangup(DCB* dcb)
  *
  * @param dcb    The descriptor control block
  */
-static int cdc_accept(DCB* client_dcb)
+static MXS_PROTOCOL_SESSION* cdc_accept(DCB* client_dcb)
 {
     CDC_session* client_data = NULL;
     CDC_protocol* protocol = NULL;
@@ -304,8 +304,6 @@ static int cdc_accept(DCB* client_dcb)
         dcb_close(client_dcb);
         return 0;
     }
-
-    client_dcb->protocol = (CDC_protocol*) protocol;
 
     if (NULL == client_dcb->session)
     {
@@ -333,7 +331,7 @@ static int cdc_accept(DCB* client_dcb)
                client_dcb->service->name(),
                client_dcb->remote != NULL ? client_dcb->remote : "");
 
-    return 1;
+    return (MXS_PROTOCOL_SESSION*)protocol;
 }
 
 /**
