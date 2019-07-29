@@ -243,7 +243,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     {
         update_trx_statistics();
 
-        auto next_master = get_target_backend(BE_MASTER, NULL, MXS_RLAG_UNDEFINED);
+        auto next_master = get_target_backend(BE_MASTER, NULL, SERVER::RLAG_UNDEFINED);
 
         if (should_replace_master(next_master))
         {
