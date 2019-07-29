@@ -6,5 +6,3 @@ endif()
 add_subdirectory(HTTPD)
 add_subdirectory(maxscaled)
 add_subdirectory(MySQL)
-add_subdirectory(telnetd)
-
