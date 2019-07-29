@@ -39,6 +39,20 @@
 #include <maxscale/protocol.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/poll.hh>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <maxscale/dcb.hh>
+#include <maxscale/buffer.hh>
+#include <maxscale/service.hh>
+#include <maxscale/session.hh>
+#include <maxscale/poll.hh>
+#include <maxbase/atomic.h>
 
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"
@@ -363,7 +377,6 @@ static CDC_protocol* cdc_protocol_init(DCB* dcb)
 
     p->state = CDC_ALLOC;
 
-    pthread_mutex_init(&p->lock, NULL);
 
     /* memory allocation here */
     p->state = CDC_STATE_WAIT_FOR_AUTH;
@@ -388,13 +401,9 @@ static void cdc_protocol_done(DCB* dcb)
 
     p = (CDC_protocol*) dcb->protocol;
 
-    pthread_mutex_lock(&p->lock);
-
     /* deallocate memory here */
 
     p->state = CDC_STATE_CLOSE;
-
-    pthread_mutex_unlock(&p->lock);
 }
 
 /**

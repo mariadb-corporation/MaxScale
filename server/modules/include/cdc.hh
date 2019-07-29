@@ -14,23 +14,8 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <maxscale/dcb.hh>
-#include <maxscale/buffer.hh>
-#include <maxscale/service.hh>
-#include <maxscale/session.hh>
-#include <maxscale/router.hh>
-#include <maxscale/poll.hh>
-#include <maxbase/atomic.h>
 
-MXS_BEGIN_DECLS
+#include <openssl/sha.h>
 
 #define CDC_SMALL_BUFFER       1024
 #define CDC_METHOD_MAXLEN      128
@@ -70,13 +55,7 @@ typedef struct cdc_session
  */
 typedef struct  cdc_protocol
 {
-    int             state;                      /*< CDC protocol state          */
-    char            user[CDC_USER_MAXLEN + 1];  /*< username for authentication */
-    pthread_mutex_t lock;                       /*< Protocol structure lock     */
-    char            type[CDC_TYPE_LEN + 1];     /*< Request Type            */
+    int  state;                     /*< CDC protocol state          */
+    char user[CDC_USER_MAXLEN + 1]; /*< username for authentication */
+    char type[CDC_TYPE_LEN + 1];    /*< Request Type            */
 } CDC_protocol;
-
-/* routines */
-extern int gw_hex2bin(uint8_t* out, const char* in, unsigned int len);
-
-MXS_END_DECLS
