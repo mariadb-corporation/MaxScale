@@ -112,7 +112,7 @@ bool mxs_rworker_register_session(MXS_SESSION* session);
  * @param id Which id to remove.
  * @return The removed session or NULL if not found.
  */
-bool mxs_rworker_deregister_session(uint64_t id);
+bool mxs_rworker_deregister_session(MXS_SESSION* session);
 
 /**
  * Find a session in the current routing worker's session container.

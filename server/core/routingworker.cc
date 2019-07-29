@@ -1178,11 +1178,11 @@ bool mxs_rworker_register_session(MXS_SESSION* session)
     return pWorker->session_registry().add(session);
 }
 
-bool mxs_rworker_deregister_session(uint64_t id)
+bool mxs_rworker_deregister_session(MXS_SESSION* session)
 {
     RoutingWorker* pWorker = RoutingWorker::get_current();
     mxb_assert(pWorker);
-    return pWorker->session_registry().remove(id);
+    return pWorker->session_registry().remove(session->id());
 }
 
 MXS_SESSION* mxs_rworker_find_session(uint64_t id)

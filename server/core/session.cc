@@ -112,7 +112,7 @@ MXS_SESSION::MXS_SESSION(const SListener& listener)
 
 MXS_SESSION::~MXS_SESSION()
 {
-    MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(m_id);
+    MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(this);
     mxb_assert(removed);
 }
 
