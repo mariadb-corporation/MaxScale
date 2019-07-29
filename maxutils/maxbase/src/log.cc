@@ -894,7 +894,7 @@ int mxb_log_message(int priority,
                     this_unit.in_memory_log(msg.c_str(), msg.length());
                 }
 
-                if (mxb_log_is_priority_enabled(priority))
+                if (mxb_log_is_priority_enabled(level))
                 {
                     err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
                 }
