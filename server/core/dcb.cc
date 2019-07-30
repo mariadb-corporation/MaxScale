@@ -3328,3 +3328,36 @@ void DCB::shutdown()
         session_close(session);
     }
 }
+
+namespace maxscale
+{
+
+const char* to_string(dcb_state_t state)
+{
+    switch (state)
+    {
+    case DCB_STATE_UNDEFINED:
+        return "DCB_STATE_UNDEFINED";
+
+    case DCB_STATE_ALLOC:
+        return "DCB_STATE_ALLOC";
+
+    case DCB_STATE_POLLING:
+        return "DCB_STATE_POLLING";
+
+    case DCB_STATE_LISTENING:
+        return "DCB_STATE_LISTENING";
+
+    case DCB_STATE_DISCONNECTED:
+        return "DCB_STATE_DISCONNECTED";
+
+    case DCB_STATE_NOPOLLING:
+        return "DCB_STATE_NOPOLLING";
+
+    default:
+        assert(!true);
+        return "DCB_STATE_UNKNOWN";
+    }
+}
+
+}

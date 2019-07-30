@@ -62,29 +62,14 @@ typedef enum
     DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
 } dcb_state_t;
 
-#define STRDCBSTATE(s) \
-    ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC"      \
-                            : ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING"   \
-                                                        : ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING"   \
-                                                                                      : ((s) \
-                                                                                         == \
-                                                                                         DCB_STATE_DISCONNECTED \
-                                                                                         ? \
-                                                                                         "DCB_STATE_DISCONNECTED"   \
-                                                                                         : (( \
-                                                                                                s) \
-                                                                                            == \
-                                                                                            DCB_STATE_NOPOLLING \
-                                                                                            ? \
-                                                                                            "DCB_STATE_NOPOLLING"   \
-                                                                                            : (( \
-                                                                                                   s) \
-                                                                                               == \
-                                                                                               DCB_STATE_UNDEFINED \
-                                                                                               ? \
-                                                                                               "DCB_STATE_UNDEFINED" \
-                                                                                               : \
-                                                                                               "DCB_STATE_UNKNOWN"))))))
+namespace maxscale
+{
+
+const char* to_string(dcb_state_t state);
+
+}
+
+#define STRDCBSTATE(s) mxs::to_string(s)
 
 /**
  * Callback reasons for the DCB callback mechanism.
