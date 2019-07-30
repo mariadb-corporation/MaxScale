@@ -29,14 +29,10 @@
 
 #include <memory>
 
+class DCB;
 class SERVICE;
-
-#define ERRHANDLE
-
-struct MXS_SESSION;
-struct SERVER;
-
-struct DCB;
+class MXS_SESSION;
+class SERVER;
 
 #define DCBFD_CLOSED -1
 
@@ -455,11 +451,3 @@ DCB* dcb_get_current();
  * @return The JSON representation
  */
 json_t* dcb_to_json(DCB* dcb);
-
-/**
- * DCB flags values
- */
-#define DCBF_HUNG    0x0002     /*< Hangup has been dispatched */
-#define DCBF_REPLIED 0x0004     /*< DCB was written to */
-
-#define DCB_REPLIED(d) ((d)->flags & DCBF_REPLIED)
