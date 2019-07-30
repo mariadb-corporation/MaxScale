@@ -76,13 +76,9 @@ const char* to_string(dcb_state_t state);
  */
 typedef enum
 {
-    DCB_REASON_CLOSE,               /*< The DCB is closing */
     DCB_REASON_DRAINED,             /*< The write delay queue has drained */
     DCB_REASON_HIGH_WATER,          /*< Cross high water mark */
     DCB_REASON_LOW_WATER,           /*< Cross low water mark */
-    DCB_REASON_ERROR,               /*< An error was flagged on the connection */
-    DCB_REASON_HUP,                 /*< A hangup was detected */
-    DCB_REASON_NOT_RESPONDING       /*< Server connection was lost */
 } DCB_REASON;
 
 /**
