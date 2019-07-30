@@ -325,7 +325,7 @@ static int mysql_auth_authenticate(DCB* dcb)
                   client_data->db);
 
         MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session->listener->auth_instance();
-        MySQLProtocol* protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+        MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol);
 
         if (!client_data->correct_authenticator)
         {
@@ -427,7 +427,7 @@ static bool mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
     MySQLProtocol* protocol = NULL;
     MYSQL_session* client_data = NULL;
     int client_auth_packet_size = 0;
-    protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+    protocol = static_cast<MySQLProtocol*>(dcb->protocol);
 
     client_data = (MYSQL_session*)dcb->data;
 
@@ -673,7 +673,7 @@ static bool mysql_auth_is_client_ssl_capable(DCB* dcb)
 {
     MySQLProtocol* protocol;
 
-    protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+    protocol = static_cast<MySQLProtocol*>(dcb->protocol);
     return (protocol->client_capabilities & (int)GW_MYSQL_CAPABILITIES_SSL) ? true : false;
 }
 

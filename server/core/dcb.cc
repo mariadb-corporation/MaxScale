@@ -73,6 +73,10 @@ constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EP
 constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
 #endif
 
+#define DCB_BELOW_LOW_WATER(x)    ((x)->low_water && (x)->m_writeqlen < (x)->low_water)
+#define DCB_ABOVE_HIGH_WATER(x)   ((x)->high_water && (x)->m_writeqlen > (x)->high_water)
+#define DCB_THROTTLING_ENABLED(x) ((x)->high_water && (x)->low_water)
+
 namespace
 {
 

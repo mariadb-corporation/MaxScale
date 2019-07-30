@@ -251,15 +251,6 @@ typedef enum
     DCB_USAGE_ALL
 } DCB_USAGE;
 
-/* A few useful macros */
-#define DCB_SESSION(x)            (x)->session
-#define DCB_PROTOCOL(x, type)     (type*)((x)->protocol)
-#define DCB_WRITEQLEN(x)          (x)->writeqlen
-#define DCB_SET_LOW_WATER(x, lo)  (x)->low_water = (lo);
-#define DCB_SET_HIGH_WATER(x, hi) (x)->low_water = (hi);
-#define DCB_BELOW_LOW_WATER(x)    ((x)->low_water && (x)->m_writeqlen < (x)->low_water)
-#define DCB_ABOVE_HIGH_WATER(x)   ((x)->high_water && (x)->m_writeqlen > (x)->high_water)
-#define DCB_THROTTLING_ENABLED(x) ((x)->high_water && (x)->low_water)
 /**
  * @brief DCB system initialization function
  *
