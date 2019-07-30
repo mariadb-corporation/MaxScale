@@ -38,7 +38,7 @@ public:
 
     struct SERVER* server() const
     {
-        return (this->m_sInner.get()) ? m_sInner.get()->server : NULL;
+        return (this->m_sInner.get()) ? m_sInner.get()->m_server : NULL;
     }
 
     DCB* get() const

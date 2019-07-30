@@ -1769,7 +1769,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             {
                 dcb_printf(dcb,
                            "\t\tSlave connected with SSL:                %s\n",
-                           session->dcb->ssl_state == SSL_ESTABLISHED ?
+                           session->dcb->m_ssl_state == SSL_ESTABLISHED ?
                            "Established" : "Not connected yet");
             }
             dcb_printf(dcb,
@@ -2369,7 +2369,7 @@ static void errorReply(MXS_ROUTER* instance,
 
     len = sizeof(error);
     if (router->master
-        && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0
+        && getsockopt(router->master->m_fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0
         && error != 0)
     {
         sprintf(msg, "%s, ", mxs_strerror(error));
@@ -2879,7 +2879,7 @@ static void destroyInstance(MXS_ROUTER* instance)
     /* Check whether master connection is active */
     if (inst->master)
     {
-        if (inst->master->fd != -1 && inst->master->state == DCB_STATE_POLLING)
+        if (inst->master->m_fd != -1 && inst->master->m_state == DCB_STATE_POLLING)
         {
             blr_master_close(inst);
         }
@@ -2896,7 +2896,7 @@ static void destroyInstance(MXS_ROUTER* instance)
 
     if (inst->client)
     {
-        if (inst->client->state == DCB_STATE_POLLING)
+        if (inst->client->m_state == DCB_STATE_POLLING)
         {
             dcb_close(inst->client);
             inst->client = NULL;

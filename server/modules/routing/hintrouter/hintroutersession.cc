@@ -134,7 +134,7 @@ void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
 {
     HR_ENTRY();
 
-    SERVER* pServer = pBackend->server;
+    SERVER* pServer = pBackend->m_server;
 
     if (m_surplus_replies == 0)
     {
@@ -391,7 +391,7 @@ void HintRouterSession::update_connections()
     for (BackendMap::const_iterator iter = m_backends.begin();
          iter != m_backends.end(); iter++)
     {
-        SERVER* server = iter->second.get()->server;
+        SERVER* server = iter->second.get()->m_server;
         if (server->is_master())
         {
             if (!m_master.get())

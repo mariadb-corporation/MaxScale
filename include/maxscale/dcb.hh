@@ -141,8 +141,9 @@ typedef enum
  * Note that the first few fields (up to and including "entry_is_ready") must
  * precisely match the LIST_ENTRY structure defined in the list manager.
  */
-struct DCB : public MXB_POLL_DATA
+class DCB : public MXB_POLL_DATA
 {
+public:
     enum class Role
     {
         CLIENT,         /*< Serves dedicated client */
@@ -160,14 +161,35 @@ struct DCB : public MXB_POLL_DATA
 
     int ssl_handshake();
 
+    /**
+     * Read data from the DCB.
+     *
+     * @param ppHead    Pointer to pointer to GWBUF to append to. The GWBUF pointed to
+     *                  may be NULL in which case it will be non-NULL after a successful read.
+     * @param maxbytes  Maximum amount of bytes to read, 0 means no limit.
+     *
+     * @return -1 on error, otherwise the total length of the GWBUF. That is, not only
+     *         the amount of data appended to the GWBUF.
+     */
+    int read(GWBUF** ppHead, int maxbytes);
+
+    /**
+     * Write data to the DCB.
+     *
+     * @param pData  The GWBUF to write.
+     *
+     * @return False on failure, true on success.
+     */
+    bool write(GWBUF* pData);
+
     // Starts the shutdown process, called when a client DCB is closed
     void shutdown();
 
     bool                    dcb_errhandle_called = false;   /**< this can be called only once */
     Role                    role;
-    int                     fd = DCBFD_CLOSED;                  /**< The descriptor */
-    dcb_state_t             state = DCB_STATE_ALLOC;            /**< Current descriptor state */
-    SSL_STATE               ssl_state = SSL_HANDSHAKE_UNKNOWN;  /**< Current state of SSL if in use */
+    int                     m_fd = DCBFD_CLOSED;                /**< The descriptor */
+    dcb_state_t             m_state = DCB_STATE_ALLOC;          /**< Current descriptor state */
+    SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
     char*                   remote = nullptr;                   /**< Address of remote end */
     char*                   user = nullptr;                     /**< User name for connection */
     struct sockaddr_storage ip;                                 /**< remote IPv4/IPv6 address */
@@ -177,16 +199,16 @@ struct DCB : public MXB_POLL_DATA
     MXS_SESSION*            session;                            /**< The owning session */
     MXS_PROTOCOL            func = {};                          /**< Protocol functions for the DCB */
     MXS_AUTHENTICATOR       authfunc = {};                      /**< Authenticator functions for the DCB */
-    uint64_t                writeqlen = 0;                      /**< Bytes in writeq */
+    uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
     uint64_t                high_water = 0;                     /**< High water mark of write queue */
     uint64_t                low_water = 0;                      /**< Low water mark of write queue */
-    GWBUF*                  writeq = nullptr;                   /**< Write Data Queue */
+    GWBUF*                  m_writeq = nullptr;                 /**< Write Data Queue */
     GWBUF*                  delayq = nullptr;                   /**< Delay Backend Write Data Queue */
-    GWBUF*                  readq = nullptr;                    /**< Read queue for incomplete reads */
-    GWBUF*                  fakeq = nullptr;                    /**< Fake event queue for generated events */
+    GWBUF*                  m_readq = nullptr;                  /**< Read queue for incomplete reads */
+    GWBUF*                  m_fakeq = nullptr;                  /**< Fake event queue for generated events */
     uint32_t                fake_event = 0;                     /**< Fake event to be delivered to handler */
 
-    DCBSTATS stats = {};                        /**< DCB related statistics */
+    DCBSTATS m_stats = {};                      /**< DCB related statistics */
     DCB*     nextpersistent = nullptr;          /**< Next DCB in the persistent pool for SERVER */
     time_t   persistentstart = 0;               /**<    0: Not in the persistent pool.
                                                  *      -1: Evicted from the persistent pool and being closed.
@@ -196,16 +218,16 @@ struct DCB : public MXB_POLL_DATA
     void*          data = nullptr;              /**< Client protocol data, owned by client DCB */
     void*          authenticator_data = nullptr;/**< The authenticator data for this DCB */
     DCB_CALLBACK*  callbacks = nullptr;         /**< The list of callbacks for the DCB */
-    int64_t        last_read = 0;               /**< Last time the DCB received data */
-    int64_t        last_write = 0;              /**< Last time the DCB sent data */
-    struct SERVER* server = nullptr;            /**< The associated backend server */
+    int64_t        m_last_read = 0;             /**< Last time the DCB received data */
+    int64_t        m_last_write = 0;            /**< Last time the DCB sent data */
+    struct SERVER* m_server = nullptr;          /**< The associated backend server */
     SSL*           ssl = nullptr;               /**< SSL struct for connection */
     bool           ssl_read_want_read = false;
     bool           ssl_read_want_write = false;
     bool           ssl_write_want_read = false;
     bool           ssl_write_want_write = false;
     bool           was_persistent = false;      /**< Whether this DCB was in the persistent pool */
-    bool           high_water_reached = false;  /** High water mark reached, to determine whether we need to
+    bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
                                                  * release
                                                  * throttle */
     struct
@@ -235,8 +257,8 @@ typedef enum
 #define DCB_WRITEQLEN(x)          (x)->writeqlen
 #define DCB_SET_LOW_WATER(x, lo)  (x)->low_water = (lo);
 #define DCB_SET_HIGH_WATER(x, hi) (x)->low_water = (hi);
-#define DCB_BELOW_LOW_WATER(x)    ((x)->low_water && (x)->writeqlen < (x)->low_water)
-#define DCB_ABOVE_HIGH_WATER(x)   ((x)->high_water && (x)->writeqlen > (x)->high_water)
+#define DCB_BELOW_LOW_WATER(x)    ((x)->low_water && (x)->m_writeqlen < (x)->low_water)
+#define DCB_ABOVE_HIGH_WATER(x)   ((x)->high_water && (x)->m_writeqlen > (x)->high_water)
 #define DCB_THROTTLING_ENABLED(x) ((x)->high_water && (x)->low_water)
 /**
  * @brief DCB system initialization function
@@ -245,10 +267,16 @@ typedef enum
  */
 void dcb_global_init();
 
-int  dcb_write(DCB*, GWBUF*);
+inline bool dcb_write(DCB* dcb, GWBUF* queue)
+{
+    return dcb->write(queue);
+}
 DCB* dcb_alloc(DCB::Role role, MXS_SESSION* session, SERVER* server = nullptr);
 DCB* dcb_connect(struct SERVER*, MXS_SESSION*, const char*);
-int  dcb_read(DCB*, GWBUF**, int);
+inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
+{
+    return dcb->read(head, maxbytes);
+}
 int  dcb_bytes_readable(DCB* dcb);
 int  dcb_drain_writeq(DCB*);
 void dcb_close(DCB*);
@@ -302,7 +330,7 @@ void     dcb_process_timeouts(int thr);
  */
 static inline void dcb_readq_append(DCB* dcb, GWBUF* buffer)
 {
-    dcb->readq = gwbuf_append(dcb->readq, buffer);
+    dcb->m_readq = gwbuf_append(dcb->m_readq, buffer);
 }
 
 /**
@@ -314,7 +342,7 @@ static inline void dcb_readq_append(DCB* dcb, GWBUF* buffer)
  */
 static GWBUF* dcb_readq_get(DCB* dcb)
 {
-    return dcb->readq;
+    return dcb->m_readq;
 }
 
 /**
@@ -324,7 +352,7 @@ static GWBUF* dcb_readq_get(DCB* dcb)
  */
 static inline bool dcb_readq_has(DCB* dcb)
 {
-    return dcb->readq != NULL;
+    return dcb->m_readq != NULL;
 }
 
 /**
@@ -334,7 +362,7 @@ static inline bool dcb_readq_has(DCB* dcb)
  */
 static unsigned int dcb_readq_length(DCB* dcb)
 {
-    return dcb->readq ? gwbuf_length(dcb->readq) : 0;
+    return dcb->m_readq ? gwbuf_length(dcb->m_readq) : 0;
 }
 
 /**
@@ -345,7 +373,7 @@ static unsigned int dcb_readq_length(DCB* dcb)
  */
 static inline void dcb_readq_prepend(DCB* dcb, GWBUF* buffer)
 {
-    dcb->readq = gwbuf_append(buffer, dcb->readq);
+    dcb->m_readq = gwbuf_append(buffer, dcb->m_readq);
 }
 
 /**
@@ -357,8 +385,8 @@ static inline void dcb_readq_prepend(DCB* dcb, GWBUF* buffer)
  */
 static GWBUF* dcb_readq_release(DCB* dcb)
 {
-    GWBUF* readq = dcb->readq;
-    dcb->readq = NULL;
+    GWBUF* readq = dcb->m_readq;
+    dcb->m_readq = NULL;
     return readq;
 }
 
@@ -373,17 +401,17 @@ static GWBUF* dcb_readq_release(DCB* dcb)
  */
 static inline void dcb_readq_set(DCB* dcb, GWBUF* buffer)
 {
-    if (dcb->readq)
+    if (dcb->m_readq)
     {
         MXS_ERROR("Read-queue set when there already is a read-queue.");
         // TODO: Conceptually this should be freed here. However, currently
         // TODO: the code just assigns without checking, so we do the same
         // TODO: for now. If this is not set to NULL when it has been consumed,
         // TODO: we would get a double free.
-        // TODO: gwbuf_free(dcb->readq);
-        dcb->readq = NULL;
+        // TODO: gwbuf_free(dcb->m_readq);
+        dcb->m_readq = NULL;
     }
-    dcb->readq = buffer;
+    dcb->m_readq = buffer;
 }
 
 /**

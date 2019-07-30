@@ -42,7 +42,7 @@ void Dcb::deleter(DCB* dcb)
         // TODO: connections number, dcb_close should handle that.
         SERVER_REF* pSref = dcb->service->dbref;
 
-        while (pSref && (pSref->server != dcb->server))
+        while (pSref && (pSref->server != dcb->m_server))
         {
             pSref = pSref->next;
         }

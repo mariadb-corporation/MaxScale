@@ -18,9 +18,9 @@ namespace
 
 void initialize_dcb(DCB* pDcb)
 {
-    pDcb->fd = DCBFD_CLOSED;
-    pDcb->state = DCB_STATE_ALLOC;
-    pDcb->ssl_state = SSL_HANDSHAKE_UNKNOWN;
+    pDcb->m_fd = DCBFD_CLOSED;
+    pDcb->m_state = DCB_STATE_ALLOC;
+    pDcb->m_ssl_state = SSL_HANDSHAKE_UNKNOWN;
 }
 }
 

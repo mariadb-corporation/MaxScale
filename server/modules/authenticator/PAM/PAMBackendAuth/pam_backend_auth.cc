@@ -52,7 +52,7 @@ static bool pam_backend_auth_extract(DCB* dcb, GWBUF* buffer)
  */
 static bool pam_backend_auth_connectssl(DCB* dcb)
 {
-    return dcb->server->ssl().context();
+    return dcb->m_server->ssl().context();
 }
 
 /**

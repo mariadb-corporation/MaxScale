@@ -528,7 +528,7 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     MySQLProtocol(DCB* dcb)
         : owner_dcb(dcb)
     {
-        m_reply.m_server = dcb->server;
+        m_reply.m_server = dcb->m_server;
     }
 
     ~MySQLProtocol()

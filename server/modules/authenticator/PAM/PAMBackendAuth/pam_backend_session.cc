@@ -179,7 +179,7 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
      * Authenticators receive complete packets from protocol.
      */
 
-    const char* srv_name = dcb->server->name();
+    const char* srv_name = dcb->m_server->name();
     if (m_servername.empty())
     {
         m_servername = srv_name;
@@ -280,7 +280,7 @@ int PamBackendSession::authenticate(DCB* dcb)
 
     if (m_state == State::RECEIVED_PROMPT)
     {
-        MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.", dcb->server->name());
+        MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.", dcb->m_server->name());
         if (send_client_password(dcb))
         {
             m_state = State::PW_SENT;

@@ -222,7 +222,7 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
         while (dcb)
         {
             mxb_assert(dcb->role == DCB::Role::BACKEND);
-            mxb_assert(dcb->server);
+            mxb_assert(dcb->m_server);
 
             if (dcb->user
                 && dcb->remote
@@ -230,7 +230,7 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
                 && !dcb->dcb_errhandle_called
                 && user == dcb->user
                 && ip == dcb->remote
-                && protocol == dcb->server->protocol())
+                && protocol == dcb->m_server->protocol())
             {
                 if (NULL == previous)
                 {

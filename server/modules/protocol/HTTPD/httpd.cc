@@ -146,7 +146,7 @@ static int httpd_read_event(DCB* dcb)
      * METHOD URL HTTP_VER\r\n
      */
 
-    numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
+    numchars = httpd_get_line(dcb->m_fd, buf, sizeof(buf));
 
     i = 0;
     j = 0;
@@ -213,7 +213,7 @@ static int httpd_read_event(DCB* dcb)
     {
         char* value = NULL;
         char* end = NULL;
-        numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
+        numchars = httpd_get_line(dcb->m_fd, buf, sizeof(buf));
         if ((value = strchr(buf, ':')))
         {
             *value = '\0';

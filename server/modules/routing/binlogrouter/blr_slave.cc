@@ -3867,8 +3867,8 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     if (router->master)
     {
-        if (router->master->fd != -1
-            && router->master->state == DCB_STATE_POLLING)
+        if (router->master->m_fd != -1
+            && router->master->m_state == DCB_STATE_POLLING)
         {
             blr_close_master_in_main(router);
         }
@@ -3894,8 +3894,8 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     if (router->client)
     {
-        if (router->client->fd != -1
-            && router->client->state == DCB_STATE_POLLING)
+        if (router->client->m_fd != -1
+            && router->client->m_state == DCB_STATE_POLLING)
         {
             // Is this dead code? dcb->fd for internal DCBs is always -1
             dcb_close(router->client);

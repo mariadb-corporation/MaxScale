@@ -221,7 +221,7 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
 
     MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
               "Msg : %s",
-              dcb->server->name(),
+              dcb->m_server->name(),
               errcode,
               bufstr);
 
@@ -230,7 +230,7 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
     if (errcode == ER_HOST_IS_BLOCKED)
     {
         auto main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        auto target_server = dcb->server;
+        auto target_server = dcb->m_server;
         main_worker->execute([target_server]() {
                                  MonitorManager::set_server_status(target_server, SERVER_MAINT);
                              }, mxb::Worker::EXECUTE_AUTO);
@@ -239,9 +239,9 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
                   "this server out of maintenance mode. To avoid this problem in the future, set "
                   "'max_connect_errors' to a larger value in the backend server.",
-                  dcb->server->name(),
-                  dcb->server->address,
-                  dcb->server->port);
+                  dcb->m_server->name(),
+                  dcb->m_server->address,
+                  dcb->m_server->port);
     }
     else if (errcode == ER_ACCESS_DENIED_ERROR
              || errcode == ER_DBACCESS_DENIED_ERROR
@@ -375,7 +375,7 @@ static int gw_read_backend_event(DCB* dcb)
 
     MXS_DEBUG("Read dcb %p fd %d protocol state %d, %s.",
               dcb,
-              dcb->fd,
+              dcb->m_fd,
               proto->protocol_auth_state,
               mxs::to_string(proto->protocol_auth_state));
 
@@ -453,7 +453,7 @@ static int gw_read_backend_event(DCB* dcb)
             gwbuf_free(readbuf);
         }
         else if (proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED
-                 && dcb->ssl_state == SSL_ESTABLISHED)
+                 && dcb->m_ssl_state == SSL_ESTABLISHED)
         {
             proto->protocol_auth_state = gw_send_backend_auth(dcb);
         }
@@ -516,7 +516,7 @@ static inline bool session_ok_to_route(DCB* dcb)
 
     if (dcb->session->state() == MXS_SESSION::State::STARTED
         && dcb->session->client_dcb != NULL
-        && dcb->session->client_dcb->state == DCB_STATE_POLLING
+        && dcb->session->client_dcb->m_state == DCB_STATE_POLLING
         && (dcb->session->router_session
             || service_get_capabilities(dcb->session->service) & RCAP_TYPE_NO_RSESSION))
     {
@@ -969,15 +969,15 @@ static int gw_write_backend_event(DCB* dcb)
 {
     int rc = 1;
 
-    if (dcb->state != DCB_STATE_POLLING)
+    if (dcb->m_state != DCB_STATE_POLLING)
     {
         /** Don't write to backend if backend_dcb is not in poll set anymore */
         uint8_t* data = NULL;
         bool com_quit = false;
 
-        if (dcb->writeq)
+        if (dcb->m_writeq)
         {
-            data = (uint8_t*) GWBUF_DATA(dcb->writeq);
+            data = (uint8_t*) GWBUF_DATA(dcb->m_writeq);
             com_quit = MYSQL_IS_COM_QUIT(data);
         }
 
@@ -991,14 +991,14 @@ static int gw_write_backend_event(DCB* dcb)
                                         "Writing to backend failed due invalid Maxscale state.");
                 MXS_ERROR("Attempt to write buffered data to backend "
                           "failed due internal inconsistent state: %s",
-                          STRDCBSTATE(dcb->state));
+                          STRDCBSTATE(dcb->m_state));
             }
         }
         else
         {
             MXS_DEBUG("Dcb %p in state %s but there's nothing to write either.",
                       dcb,
-                      STRDCBSTATE(dcb->state));
+                      STRDCBSTATE(dcb->m_state));
         }
     }
     else
@@ -1006,7 +1006,7 @@ static int gw_write_backend_event(DCB* dcb)
         MySQLProtocol* backend_protocol = (MySQLProtocol*)dcb->protocol;
         mxb_assert(backend_protocol->protocol_auth_state != MXS_AUTH_STATE_PENDING_CONNECT);
         dcb_drain_writeq(dcb);
-        MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->fd, rc);
+        MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->m_fd, rc);
     }
 
     return rc;
@@ -1019,17 +1019,17 @@ static int handle_persistent_connection(DCB* dcb, GWBUF* queue)
 
     if (dcb->was_persistent)
     {
-        mxb_assert(!dcb->fakeq && !dcb->readq && !dcb->delayq && !dcb->writeq);
+        mxb_assert(!dcb->m_fakeq && !dcb->m_readq && !dcb->delayq && !dcb->m_writeq);
         mxb_assert(dcb->persistentstart == 0);
         mxb_assert(protocol->ignore_replies >= 0);
 
         dcb->was_persistent = false;
         protocol->ignore_replies = 0;
 
-        if (dcb->state != DCB_STATE_POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
+        if (dcb->m_state != DCB_STATE_POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
         {
             MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
-                     STRDCBSTATE(dcb->state), mxs::to_string(protocol->protocol_auth_state));
+                     STRDCBSTATE(dcb->m_state), mxs::to_string(protocol->protocol_auth_state));
             gwbuf_free(queue);
             return 0;
         }
@@ -1127,10 +1127,10 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
         {
             MXS_ERROR("Unable to write to backend '%s' due to "
                       "%s failure. Server in state %s.",
-                      dcb->server->name(),
+                      dcb->m_server->name(),
                       backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
                       "handshake" : "authentication",
-                      dcb->server->status_string().c_str());
+                      dcb->m_server->status_string().c_str());
         }
 
         gwbuf_free(queue);
@@ -1144,12 +1144,12 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
 
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
                       dcb,
-                      dcb->fd,
+                      dcb->m_fd,
                       mxs::to_string(backend_protocol->protocol_auth_state));
 
             prepare_for_write(dcb, queue);
 
-            if (cmd == MXS_COM_QUIT && dcb->server->persistent_conns_enabled())
+            if (cmd == MXS_COM_QUIT && dcb->m_server->persistent_conns_enabled())
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
                 gwbuf_free(queue);
@@ -1174,7 +1174,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
         {
             MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
                       dcb,
-                      dcb->fd,
+                      dcb->m_fd,
                       mxs::to_string(backend_protocol->protocol_auth_state));
 
             /** Store data until authentication is complete */
@@ -1207,17 +1207,17 @@ static int gw_error_backend_event(DCB* dcb)
         }
         dcb_close(dcb);
     }
-    else if (dcb->state != DCB_STATE_POLLING || session->state() != MXS_SESSION::State::STARTED)
+    else if (dcb->m_state != DCB_STATE_POLLING || session->state() != MXS_SESSION::State::STARTED)
     {
         int error;
         int len = sizeof(error);
 
-        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
+        if (getsockopt(dcb->m_fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
         {
-            if (dcb->state != DCB_STATE_POLLING)
+            if (dcb->m_state != DCB_STATE_POLLING)
             {
                 MXS_ERROR("DCB in state %s got error '%s'.",
-                          STRDCBSTATE(dcb->state),
+                          STRDCBSTATE(dcb->m_state),
                           mxs_strerror(errno));
             }
             else
@@ -1256,7 +1256,7 @@ static int gw_backend_hangup(DCB* dcb)
         {
             int error;
             int len = sizeof(error);
-            if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
+            if (getsockopt(dcb->m_fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
             {
                 if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
                 {
@@ -1335,7 +1335,7 @@ static int backend_write_delayqueue(DCB* dcb, GWBUF* buffer)
 
     int rc = 1;
 
-    if (MYSQL_IS_COM_QUIT(((uint8_t*)GWBUF_DATA(buffer))) && dcb->server->persistent_conns_enabled())
+    if (MYSQL_IS_COM_QUIT(((uint8_t*)GWBUF_DATA(buffer))) && dcb->m_server->persistent_conns_enabled())
     {
         /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
         gwbuf_free(buffer);
@@ -1770,7 +1770,7 @@ static void gw_send_proxy_protocol_header(DCB* backend_dcb)
     // TODO: Add support for chained proxies. Requires reading the client header.
 
     const DCB* client_dcb = backend_dcb->session->client_dcb;
-    const int client_fd = client_dcb->fd;
+    const int client_fd = client_dcb->m_fd;
     const sa_family_t family = client_dcb->ip.ss_family;
     const char* family_str = NULL;
 
@@ -1849,7 +1849,7 @@ static void gw_send_proxy_protocol_header(DCB* backend_dcb)
     {
         MXS_INFO("Sending proxy-protocol header '%s' to backend %s.",
                  proxy_header,
-                 backend_dcb->server->name());
+                 backend_dcb->m_server->name());
         if (!dcb_write(backend_dcb, headerbuf))
         {
             gwbuf_free(headerbuf);

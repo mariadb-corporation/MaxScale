@@ -349,11 +349,11 @@ int mysql_send_auth_error(DCB* dcb,
 
     GWBUF* buf;
 
-    if (dcb->state != DCB_STATE_POLLING)
+    if (dcb->m_state != DCB_STATE_POLLING)
     {
         MXS_DEBUG("dcb %p is in a state %s, and it is not in epoll set anymore. Skip error sending.",
                   dcb,
-                  STRDCBSTATE(dcb->state));
+                  STRDCBSTATE(dcb->m_state));
         return 0;
     }
     mysql_error_msg = "Access denied!";
@@ -496,7 +496,7 @@ bool read_complete_packet(DCB* dcb, GWBUF** readbuf)
     if (dcb_read(dcb, &localbuf, 0) >= 0)
     {
         rval = true;
-        dcb->last_read = mxs_clock();
+        dcb->m_last_read = mxs_clock();
         GWBUF* packets = modutil_get_complete_packets(&localbuf);
 
         if (packets)
@@ -910,13 +910,13 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     if (dcb->session == NULL
         || (dcb->session->state() != MXS_SESSION::State::CREATED
             && dcb->session->state() != MXS_SESSION::State::STARTED)
-        || (dcb->server->ssl().context() && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
+        || (dcb->m_server->ssl().context() && dcb->m_ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
     }
 
-    bool with_ssl = dcb->server->ssl().context();
-    bool ssl_established = dcb->ssl_state == SSL_ESTABLISHED;
+    bool with_ssl = dcb->m_server->ssl().context();
+    bool ssl_established = dcb->m_ssl_state == SSL_ESTABLISHED;
 
     MYSQL_session client;
     gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
@@ -1017,9 +1017,9 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
 
     // LocalClient also uses this code and it doesn't populate the server pointer
     // TODO: fix it
-    if (conn->owner_dcb && conn->owner_dcb->server)
+    if (conn->owner_dcb && conn->owner_dcb->m_server)
     {
-        MXS_INFO("Connected to '%s' with thread id %u", conn->owner_dcb->server->name(), tid);
+        MXS_INFO("Connected to '%s' with thread id %u", conn->owner_dcb->m_server->name(), tid);
     }
 
     /* TODO: Correct value of thread id could be queried later from backend if
@@ -1341,7 +1341,7 @@ static bool kill_func(DCB* dcb, void* data)
             // DCB is connected and we know the thread ID so we can kill it
             std::stringstream ss;
             ss << info->query_base << proto->thread_id;
-            info->targets[dcb->server] = ss.str();
+            info->targets[dcb->m_server] = ss.str();
         }
         else
         {
@@ -1361,7 +1361,7 @@ static bool kill_user_func(DCB* dcb, void* data)
     if (dcb->role == DCB::Role::BACKEND
         && strcasecmp(dcb->session->client_dcb->user, info->user.c_str()) == 0)
     {
-        info->targets[dcb->server] = info->query_base;
+        info->targets[dcb->m_server] = info->query_base;
     }
 
     return true;

@@ -163,9 +163,9 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server)
     , high_water(config_writeq_high_water())
     , low_water(config_writeq_low_water())
     , service(session->service)
-    , last_read(mxs_clock())
-    , last_write(mxs_clock())
-    , server(server)
+    , m_last_read(mxs_clock())
+    , m_last_write(mxs_clock())
+    , m_server(server)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
 {
     // TODO: Remove DCB::Role::INTERNAL to always have a valid listener
@@ -221,9 +221,9 @@ DCB::~DCB()
     MXS_FREE(remote);
     MXS_FREE(user);
     gwbuf_free(delayq);
-    gwbuf_free(writeq);
-    gwbuf_free(readq);
-    gwbuf_free(fakeq);
+    gwbuf_free(m_writeq);
+    gwbuf_free(m_readq);
+    gwbuf_free(m_fakeq);
 
     owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
@@ -255,7 +255,7 @@ DCB* dcb_alloc(DCB::Role role, MXS_SESSION* session, SERVER* server)
  */
 static void dcb_final_free(DCB* dcb)
 {
-    mxb_assert_message(dcb->state == DCB_STATE_DISCONNECTED || dcb->state == DCB_STATE_ALLOC,
+    mxb_assert_message(dcb->m_state == DCB_STATE_DISCONNECTED || dcb->m_state == DCB_STATE_ALLOC,
                        "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
     if (dcb->session)
@@ -343,8 +343,8 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
                 session_link_backend_dcb(session, dcb);
                 dcb->persistentstart = 0;
                 dcb->was_persistent = true;
-                dcb->last_read = mxs_clock();
-                dcb->last_write = mxs_clock();
+                dcb->m_last_read = mxs_clock();
+                dcb->m_last_write = mxs_clock();
                 mxb::atomic::add(&server->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
                 return dcb;
             }
@@ -481,7 +481,7 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
 
     if (dcb)
     {
-        if (do_connect(server->address, server->port, &dcb->fd)
+        if (do_connect(server->address, server->port, &dcb->m_fd)
             && (dcb->protocol = dcb->func.connect(dcb, server, session))
             && poll_add_dcb(dcb) == 0)
         {
@@ -500,9 +500,9 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
         }
         else
         {
-            if (dcb->fd != DCBFD_CLOSED)
+            if (dcb->m_fd != DCBFD_CLOSED)
             {
-                close(dcb->fd);
+                close(dcb->m_fd);
             }
             session_unlink_backend_dcb(dcb->session, dcb);
             dcb_free_all_memory(dcb);
@@ -513,45 +513,31 @@ DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
     return dcb;
 }
 
-/**
- * General purpose read routine to read data from a socket in the
- * Descriptor Control Block and append it to a linked list of buffers.
- * The list may be empty, in which case *head == NULL. The third
- * parameter indicates the maximum number of bytes to be read (needed
- * for SSL processing) with 0 meaning no limit.
- *
- * @param dcb       The DCB to read from
- * @param head      Pointer to linked list to append data to
- * @param maxbytes  Maximum bytes to read (0 = no limit)
- * @return          -1 on error, otherwise the total number of bytes read
- */
-int dcb_read(DCB* dcb,
-             GWBUF** head,
-             int maxbytes)
+int DCB::read(GWBUF** head, int maxbytes)
 {
-    mxb_assert(dcb->owner == RoutingWorker::get_current());
+    mxb_assert(this->owner == RoutingWorker::get_current());
     int nsingleread = 0;
     int nreadtotal = 0;
 
-    if (dcb->readq)
+    if (m_readq)
     {
-        *head = gwbuf_append(*head, dcb->readq);
-        dcb->readq = NULL;
+        *head = gwbuf_append(*head, m_readq);
+        m_readq = NULL;
         nreadtotal = gwbuf_length(*head);
     }
-    else if (dcb->fakeq)
+    else if (m_fakeq)
     {
-        *head = gwbuf_append(*head, dcb->fakeq);
-        dcb->fakeq = NULL;
+        *head = gwbuf_append(*head, m_fakeq);
+        m_fakeq = NULL;
         nreadtotal = gwbuf_length(*head);
     }
 
-    if (SSL_HANDSHAKE_DONE == dcb->ssl_state || SSL_ESTABLISHED == dcb->ssl_state)
+    if (SSL_HANDSHAKE_DONE == m_ssl_state || SSL_ESTABLISHED == m_ssl_state)
     {
-        return dcb_read_SSL(dcb, head);
+        return dcb_read_SSL(this, head);
     }
 
-    if (dcb->fd == DCBFD_CLOSED)
+    if (m_fd == DCBFD_CLOSED)
     {
         MXS_ERROR("Read failed, dcb is closed.");
         return 0;
@@ -561,30 +547,30 @@ int dcb_read(DCB* dcb,
     {
         int bytes_available;
 
-        bytes_available = dcb_bytes_readable(dcb);
+        bytes_available = dcb_bytes_readable(this);
         if (bytes_available <= 0)
         {
             return bytes_available < 0 ? -1
                                        :/** Handle closed client socket */
-                   dcb_read_no_bytes_available(dcb, nreadtotal);
+                   dcb_read_no_bytes_available(this, nreadtotal);
         }
         else
         {
             GWBUF* buffer;
-            dcb->last_read = mxs_clock();
+            m_last_read = mxs_clock();
 
-            buffer = dcb_basic_read(dcb, bytes_available, maxbytes, nreadtotal, &nsingleread);
+            buffer = dcb_basic_read(this, bytes_available, maxbytes, nreadtotal, &nsingleread);
             if (buffer)
             {
                 nreadtotal += nsingleread;
                 MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
                           nsingleread,
-                          dcb,
-                          STRDCBSTATE(dcb->state),
-                          dcb->fd);
+                          this,
+                          STRDCBSTATE(m_state),
+                          m_fd);
 
                 /*< Assign the target server for the gwbuf */
-                buffer->server = dcb->server;
+                buffer->server = m_server;
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
             }
@@ -609,12 +595,12 @@ int dcb_bytes_readable(DCB* dcb)
 {
     int bytesavailable;
 
-    if (-1 == ioctl(dcb->fd, FIONREAD, &bytesavailable))
+    if (-1 == ioctl(dcb->m_fd, FIONREAD, &bytesavailable))
     {
         MXS_ERROR("ioctl FIONREAD for dcb %p in state %s fd %d failed: %d, %s",
                   dcb,
-                  STRDCBSTATE(dcb->state),
-                  dcb->fd,
+                  STRDCBSTATE(dcb->m_state),
+                  dcb->m_fd,
                   errno,
                   mxs_strerror(errno));
         return -1;
@@ -642,7 +628,7 @@ static int dcb_read_no_bytes_available(DCB* dcb, int nreadtotal)
         long r = -1;
 
         /* try to read 1 byte, without consuming the socket buffer */
-        r = recv(dcb->fd, &c, sizeof(char), MSG_PEEK);
+        r = recv(dcb->m_fd, &c, sizeof(char), MSG_PEEK);
         l_errno = errno;
 
         if (r <= 0
@@ -677,8 +663,8 @@ static GWBUF* dcb_basic_read(DCB* dcb, int bytesavailable, int maxbytes, int nre
     }
     else
     {
-        *nsingleread = read(dcb->fd, GWBUF_DATA(buffer), bufsize);
-        dcb->stats.n_reads++;
+        *nsingleread = read(dcb->m_fd, GWBUF_DATA(buffer), bufsize);
+        dcb->m_stats.n_reads++;
 
         if (*nsingleread <= 0)
         {
@@ -686,8 +672,8 @@ static GWBUF* dcb_basic_read(DCB* dcb, int bytesavailable, int maxbytes, int nre
             {
                 MXS_ERROR("Read failed, dcb %p in state %s fd %d: %d, %s",
                           dcb,
-                          STRDCBSTATE(dcb->state),
-                          dcb->fd,
+                          STRDCBSTATE(dcb->m_state),
+                          dcb->m_fd,
                           errno,
                           mxs_strerror(errno));
             }
@@ -714,7 +700,7 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
     int nsingleread = 0, nreadtotal = 0;
     int start_length = *head ? gwbuf_length(*head) : 0;
 
-    if (dcb->fd == DCBFD_CLOSED)
+    if (dcb->m_fd == DCBFD_CLOSED)
     {
         MXS_ERROR("Read failed, dcb is closed.");
         return -1;
@@ -725,7 +711,7 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
         dcb_drain_writeq(dcb);
     }
 
-    dcb->last_read = mxs_clock();
+    dcb->m_last_read = mxs_clock();
     buffer = dcb_basic_read_SSL(dcb, &nsingleread);
     if (buffer)
     {
@@ -734,7 +720,7 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
 
         while (buffer)
         {
-            dcb->last_read = mxs_clock();
+            dcb->m_last_read = mxs_clock();
             buffer = dcb_basic_read_SSL(dcb, &nsingleread);
             if (buffer)
             {
@@ -765,7 +751,7 @@ static GWBUF* dcb_basic_read_SSL(DCB* dcb, int* nsingleread)
 
     *nsingleread = SSL_read(dcb->ssl, temp_buffer, MXS_SO_RCVBUF_SIZE);
 
-    dcb->stats.n_reads++;
+    dcb->m_stats.n_reads++;
 
     switch (SSL_get_error(dcb->ssl, *nsingleread))
     {
@@ -838,8 +824,8 @@ static int dcb_log_errors_SSL(DCB* dcb, int ret)
         MXS_ERROR("SSL operation failed, dcb %p in state "
                   "%s fd %d return code %d. More details may follow.",
                   dcb,
-                  STRDCBSTATE(dcb->state),
-                  dcb->fd,
+                  STRDCBSTATE(dcb->m_state),
+                  dcb->m_fd,
                   ret);
     }
     if (ret && !ssl_errno)
@@ -861,32 +847,25 @@ static int dcb_log_errors_SSL(DCB* dcb, int ret)
     return -1;
 }
 
-/**
- * General purpose routine to write to a DCB
- *
- * @param dcb   The DCB of the client
- * @param queue Queue of buffers to write
- * @return      0 on failure, 1 on success
- */
-int dcb_write(DCB* dcb, GWBUF* queue)
+bool DCB::write(GWBUF* queue)
 {
-    mxb_assert(dcb->owner == RoutingWorker::get_current());
-    dcb->writeqlen += gwbuf_length(queue);
+    mxb_assert(this->owner == RoutingWorker::get_current());
+    m_writeqlen += gwbuf_length(queue);
     // The following guarantees that queue is not NULL
-    if (!dcb_write_parameter_check(dcb, queue))
+    if (!dcb_write_parameter_check(this, queue))
     {
         return 0;
     }
 
-    dcb->writeq = gwbuf_append(dcb->writeq, queue);
-    dcb->stats.n_buffered++;
-    dcb_drain_writeq(dcb);
+    m_writeq = gwbuf_append(m_writeq, queue);
+    m_stats.n_buffered++;
+    dcb_drain_writeq(this);
 
-    if (DCB_ABOVE_HIGH_WATER(dcb) && !dcb->high_water_reached)
+    if (DCB_ABOVE_HIGH_WATER(this) && !m_high_water_reached)
     {
-        dcb_call_callback(dcb, DCB_REASON_HIGH_WATER);
-        dcb->high_water_reached = true;
-        dcb->stats.n_high_water++;
+        dcb_call_callback(this, DCB_REASON_HIGH_WATER);
+        m_high_water_reached = true;
+        m_stats.n_high_water++;
     }
 
     return 1;
@@ -906,7 +885,7 @@ static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
         return false;
     }
 
-    if (dcb->fd == DCBFD_CLOSED)
+    if (dcb->m_fd == DCBFD_CLOSED)
     {
         MXS_ERROR("Write failed, dcb is closed.");
         gwbuf_free(queue);
@@ -923,14 +902,14 @@ static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
          * before router's closeSession is called and that tells that DCB may
          * still be writable.
          */
-        if (dcb->state != DCB_STATE_ALLOC
-            && dcb->state != DCB_STATE_POLLING
-            && dcb->state != DCB_STATE_LISTENING
-            && dcb->state != DCB_STATE_NOPOLLING)
+        if (dcb->m_state != DCB_STATE_ALLOC
+            && dcb->m_state != DCB_STATE_POLLING
+            && dcb->m_state != DCB_STATE_LISTENING
+            && dcb->m_state != DCB_STATE_NOPOLLING)
         {
             MXS_DEBUG("Write aborted to dcb %p because it is in state %s",
                       dcb,
-                      STRDCBSTATE(dcb->state));
+                      STRDCBSTATE(dcb->m_state));
             gwbuf_free(queue);
             return false;
         }
@@ -953,8 +932,8 @@ static void dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno)
     {
         MXS_ERROR("Write to dcb %p in state %s fd %d failed: %d, %s",
                   dcb,
-                  STRDCBSTATE(dcb->state),
-                  dcb->fd,
+                  STRDCBSTATE(dcb->m_state),
+                  dcb->m_fd,
                   eno,
                   mxs_strerror(eno));
     }
@@ -980,8 +959,8 @@ int dcb_drain_writeq(DCB* dcb)
     }
 
     int total_written = 0;
-    GWBUF* local_writeq = dcb->writeq;
-    dcb->writeq = NULL;
+    GWBUF* local_writeq = dcb->m_writeq;
+    dcb->m_writeq = NULL;
 
     while (local_writeq)
     {
@@ -1003,11 +982,11 @@ int dcb_drain_writeq(DCB* dcb)
          */
         if (written)
         {
-            dcb->last_write = mxs_clock();
+            dcb->m_last_write = mxs_clock();
         }
         if (stop_writing)
         {
-            dcb->writeq = dcb->writeq ? gwbuf_append(local_writeq, dcb->writeq) : local_writeq;
+            dcb->m_writeq = dcb->m_writeq ? gwbuf_append(local_writeq, dcb->m_writeq) : local_writeq;
             local_writeq = NULL;
         }
         else
@@ -1019,20 +998,20 @@ int dcb_drain_writeq(DCB* dcb)
         }
     }
 
-    if (dcb->writeq == NULL)
+    if (dcb->m_writeq == NULL)
     {
         /* The write queue has drained, potentially need to call a callback function */
         dcb_call_callback(dcb, DCB_REASON_DRAINED);
     }
 
-    mxb_assert(dcb->writeqlen >= (uint32_t)total_written);
-    dcb->writeqlen -= total_written;
+    mxb_assert(dcb->m_writeqlen >= (uint32_t)total_written);
+    dcb->m_writeqlen -= total_written;
 
-    if (dcb->high_water_reached && DCB_BELOW_LOW_WATER(dcb))
+    if (dcb->m_high_water_reached && DCB_BELOW_LOW_WATER(dcb))
     {
         dcb_call_callback(dcb, DCB_REASON_LOW_WATER);
-        dcb->high_water_reached = false;
-        dcb->stats.n_low_water++;
+        dcb->m_high_water_reached = false;
+        dcb->m_stats.n_low_water++;
     }
 
     return total_written;
@@ -1045,7 +1024,7 @@ static void log_illegal_dcb(DCB* dcb)
     switch (dcb->role)
     {
     case DCB::Role::BACKEND:
-        connected_to = dcb->server->name();
+        connected_to = dcb->m_server->name();
         break;
 
     case DCB::Role::CLIENT:
@@ -1064,7 +1043,7 @@ static void log_illegal_dcb(DCB* dcb)
     MXS_ERROR("Removing DCB %p but it is in state %s which is not legal for "
               "a call to dcb_close. The DCB is connected to: %s",
               dcb,
-              STRDCBSTATE(dcb->state),
+              STRDCBSTATE(dcb->m_state),
               connected_to);
 }
 
@@ -1091,7 +1070,7 @@ void dcb_close(DCB* dcb)
     }
 #endif
 
-    if ((DCB_STATE_UNDEFINED == dcb->state) || (DCB_STATE_DISCONNECTED == dcb->state))
+    if ((DCB_STATE_UNDEFINED == dcb->m_state) || (DCB_STATE_DISCONNECTED == dcb->m_state))
     {
         log_illegal_dcb(dcb);
         raise(SIGABRT);
@@ -1101,7 +1080,7 @@ void dcb_close(DCB* dcb)
      * dcb_close may be called for freshly created dcb, in which case
      * it only needs to be freed.
      */
-    if (dcb->state == DCB_STATE_ALLOC && dcb->fd == DCBFD_CLOSED)
+    if (dcb->m_state == DCB_STATE_ALLOC && dcb->m_fd == DCBFD_CLOSED)
     {
         // A freshly created dcb that was closed before it was taken into use.
         dcb_final_free(dcb);
@@ -1183,10 +1162,10 @@ void dcb_final_close(DCB* dcb)
     mxb_assert(dcb->n_close != 0);
 
     if (dcb->role == DCB::Role::BACKEND         // Backend DCB
-        && dcb->state == DCB_STATE_POLLING      // Being polled
+        && dcb->m_state == DCB_STATE_POLLING      // Being polled
         && dcb->persistentstart == 0            /** Not already in (> 0) or being evicted from (-1)
                                                  * the persistent pool. */
-        && dcb->server)                         // And has a server
+        && dcb->m_server)                         // And has a server
     {
         /* May be a candidate for persistence, so save user name */
         const char* user;
@@ -1204,40 +1183,40 @@ void dcb_final_close(DCB* dcb)
 
     if (dcb->n_close != 0)
     {
-        if (dcb->state == DCB_STATE_POLLING)
+        if (dcb->m_state == DCB_STATE_POLLING)
         {
             dcb_stop_polling_and_shutdown(dcb);
         }
 
-        if (dcb->server && dcb->persistentstart == 0)
+        if (dcb->m_server && dcb->persistentstart == 0)
         {
             // This is now a DCB::Role::BACKEND_HANDLER.
             // TODO: Make decisions according to the role and assert
             // TODO: that what the role implies is preset.
-            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server->stats().n_current, -1,
+            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->m_server->stats().n_current, -1,
                                                      mxb::atomic::RELAXED);
             mxb_assert(rc > 0);
         }
 
-        if (dcb->fd != DCBFD_CLOSED)
+        if (dcb->m_fd != DCBFD_CLOSED)
         {
-            // TODO: How could we get this far with a dcb->fd <= 0?
+            // TODO: How could we get this far with a dcb->m_fd <= 0?
 
-            if (close(dcb->fd) < 0)
+            if (close(dcb->m_fd) < 0)
             {
                 int eno = errno;
                 errno = 0;
                 MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
-                          dcb->fd,
+                          dcb->m_fd,
                           dcb,
                           eno,
                           mxs_strerror(eno));
             }
             else
             {
-                dcb->fd = DCBFD_CLOSED;
+                dcb->m_fd = DCBFD_CLOSED;
 
-                MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
+                MXS_DEBUG("Closed socket %d on dcb %p.", dcb->m_fd, dcb);
             }
         }
         else
@@ -1246,7 +1225,7 @@ void dcb_final_close(DCB* dcb)
             mxb_assert(dcb->role == DCB::Role::INTERNAL);
         }
 
-        dcb->state = DCB_STATE_DISCONNECTED;
+        dcb->m_state = DCB_STATE_DISCONNECTED;
         dcb_remove_from_list(dcb);
         dcb_final_free(dcb);
     }
@@ -1262,7 +1241,7 @@ void dcb_final_close(DCB* dcb)
 static bool dcb_maybe_add_persistent(DCB* dcb)
 {
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
-    Server* server = static_cast<Server*>(dcb->server);
+    Server* server = static_cast<Server*>(dcb->m_server);
     if (dcb->user != NULL
         && (dcb->func.established == NULL || dcb->func.established(dcb))
         && strlen(dcb->user)
@@ -1293,14 +1272,14 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         }
 
         /** Free all buffered data */
-        gwbuf_free(dcb->fakeq);
-        gwbuf_free(dcb->readq);
+        gwbuf_free(dcb->m_fakeq);
+        gwbuf_free(dcb->m_readq);
         gwbuf_free(dcb->delayq);
-        gwbuf_free(dcb->writeq);
-        dcb->fakeq = NULL;
-        dcb->readq = NULL;
+        gwbuf_free(dcb->m_writeq);
+        dcb->m_fakeq = NULL;
+        dcb->m_readq = NULL;
         dcb->delayq = NULL;
-        dcb->writeq = NULL;
+        dcb->m_writeq = NULL;
 
         dcb->nextpersistent = server->persistent[owner->id()];
         server->persistent[owner->id()] = dcb;
@@ -1321,7 +1300,7 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
 void printDCB(DCB* dcb)
 {
     printf("DCB: %p\n", (void*)dcb);
-    printf("\tDCB state:            %s\n", gw_dcb_state2string(dcb->state));
+    printf("\tDCB state:            %s\n", gw_dcb_state2string(dcb->m_state));
     if (dcb->remote)
     {
         printf("\tConnected to:         %s\n", dcb->remote);
@@ -1334,13 +1313,13 @@ void printDCB(DCB* dcb)
     {
         printf("\tProtocol:             %s\n", dcb->session->listener->protocol());
     }
-    if (dcb->writeq)
+    if (dcb->m_writeq)
     {
-        printf("\tQueued write data:    %u\n", gwbuf_length(dcb->writeq));
+        printf("\tQueued write data:    %u\n", gwbuf_length(dcb->m_writeq));
     }
-    if (dcb->server)
+    if (dcb->m_server)
     {
-        string statusname = dcb->server->status_string();
+        string statusname = dcb->m_server->status_string();
         if (!statusname.empty())
         {
             printf("\tServer status:            %s\n", statusname.c_str());
@@ -1354,17 +1333,17 @@ void printDCB(DCB* dcb)
     }
     printf("\tStatistics:\n");
     printf("\t\tNo. of Reads:                       %d\n",
-           dcb->stats.n_reads);
+           dcb->m_stats.n_reads);
     printf("\t\tNo. of Writes:                      %d\n",
-           dcb->stats.n_writes);
+           dcb->m_stats.n_writes);
     printf("\t\tNo. of Buffered Writes:             %d\n",
-           dcb->stats.n_buffered);
+           dcb->m_stats.n_buffered);
     printf("\t\tNo. of Accepts:                     %d\n",
-           dcb->stats.n_accepts);
+           dcb->m_stats.n_accepts);
     printf("\t\tNo. of High Water Events:   %d\n",
-           dcb->stats.n_high_water);
+           dcb->m_stats.n_high_water);
     printf("\t\tNo. of Low Water Events:    %d\n",
-           dcb->stats.n_low_water);
+           dcb->m_stats.n_low_water);
 }
 /**
  * Display an entry from the spinlock statistics data
@@ -1404,7 +1383,7 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
     dcb_printf(pdcb, "DCB: %p\n", (void*)dcb);
     dcb_printf(pdcb,
                "\tDCB state:          %s\n",
-               gw_dcb_state2string(dcb->state));
+               gw_dcb_state2string(dcb->m_state));
     if (dcb->session && dcb->session->service)
     {
         dcb_printf(pdcb,
@@ -1417,19 +1396,19 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
                    "\tConnected to:       %s\n",
                    dcb->remote);
     }
-    if (dcb->server)
+    if (dcb->m_server)
     {
-        if (dcb->server->address)
+        if (dcb->m_server->address)
         {
             dcb_printf(pdcb,
                        "\tServer name/IP:     %s\n",
-                       dcb->server->address);
+                       dcb->m_server->address);
         }
-        if (dcb->server->port)
+        if (dcb->m_server->port)
         {
             dcb_printf(pdcb,
                        "\tPort number:        %d\n",
-                       dcb->server->port);
+                       dcb->m_server->port);
         }
     }
     if (dcb->user)
@@ -1442,15 +1421,15 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
     {
         dcb_printf(pdcb, "\tProtocol:           %s\n", dcb->session->listener->protocol());
     }
-    if (dcb->writeq)
+    if (dcb->m_writeq)
     {
         dcb_printf(pdcb,
                    "\tQueued write data:  %d\n",
-                   gwbuf_length(dcb->writeq));
+                   gwbuf_length(dcb->m_writeq));
     }
-    if (dcb->server)
+    if (dcb->m_server)
     {
-        string statusname = dcb->server->status_string();
+        string statusname = dcb->m_server->status_string();
         if (!statusname.empty())
         {
             dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());
@@ -1463,12 +1442,12 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
         MXS_FREE(rolename);
     }
     dcb_printf(pdcb, "\tStatistics:\n");
-    dcb_printf(pdcb, "\t\tNo. of Reads:             %d\n", dcb->stats.n_reads);
-    dcb_printf(pdcb, "\t\tNo. of Writes:            %d\n", dcb->stats.n_writes);
-    dcb_printf(pdcb, "\t\tNo. of Buffered Writes:   %d\n", dcb->stats.n_buffered);
-    dcb_printf(pdcb, "\t\tNo. of Accepts:           %d\n", dcb->stats.n_accepts);
-    dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->stats.n_high_water);
-    dcb_printf(pdcb, "\t\tNo. of Low Water Events:  %d\n", dcb->stats.n_low_water);
+    dcb_printf(pdcb, "\t\tNo. of Reads:             %d\n", dcb->m_stats.n_reads);
+    dcb_printf(pdcb, "\t\tNo. of Writes:            %d\n", dcb->m_stats.n_writes);
+    dcb_printf(pdcb, "\t\tNo. of Buffered Writes:   %d\n", dcb->m_stats.n_buffered);
+    dcb_printf(pdcb, "\t\tNo. of Accepts:           %d\n", dcb->m_stats.n_accepts);
+    dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->m_stats.n_high_water);
+    dcb_printf(pdcb, "\t\tNo. of Low Water Events:  %d\n", dcb->m_stats.n_low_water);
 
     if (dcb->persistentstart)
     {
@@ -1503,7 +1482,7 @@ static bool dlist_dcbs_cb(DCB* dcb, void* data)
     dcb_printf(pdcb,
                " %-16p | %-26s | %-18s | %s\n",
                dcb,
-               gw_dcb_state2string(dcb->state),
+               gw_dcb_state2string(dcb->m_state),
                ((dcb->session && dcb->session->service) ? dcb->session->service->name() : ""),
                (dcb->remote ? dcb->remote : ""));
     return true;
@@ -1576,7 +1555,7 @@ void dListClients(DCB* pdcb)
 void dprintDCB(DCB* pdcb, DCB* dcb)
 {
     dcb_printf(pdcb, "DCB: %p\n", (void*)dcb);
-    dcb_printf(pdcb, "\tDCB state:          %s\n", gw_dcb_state2string(dcb->state));
+    dcb_printf(pdcb, "\tDCB state:          %s\n", gw_dcb_state2string(dcb->m_state));
     if (dcb->session && dcb->session->service)
     {
         dcb_printf(pdcb,
@@ -1603,17 +1582,17 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
         dcb_printf(pdcb, "\tOwning Session:     %" PRIu64 "\n", dcb->session->id());
     }
 
-    if (dcb->writeq)
+    if (dcb->m_writeq)
     {
-        dcb_printf(pdcb, "\tQueued write data:  %d\n", gwbuf_length(dcb->writeq));
+        dcb_printf(pdcb, "\tQueued write data:  %d\n", gwbuf_length(dcb->m_writeq));
     }
     if (dcb->delayq)
     {
         dcb_printf(pdcb, "\tDelayed write data: %d\n", gwbuf_length(dcb->delayq));
     }
-    if (dcb->server)
+    if (dcb->m_server)
     {
-        string statusname = dcb->server->status_string();
+        string statusname = dcb->m_server->status_string();
         if (!statusname.empty())
         {
             dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());
@@ -1628,22 +1607,22 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
     dcb_printf(pdcb, "\tStatistics:\n");
     dcb_printf(pdcb,
                "\t\tNo. of Reads:                     %d\n",
-               dcb->stats.n_reads);
+               dcb->m_stats.n_reads);
     dcb_printf(pdcb,
                "\t\tNo. of Writes:                    %d\n",
-               dcb->stats.n_writes);
+               dcb->m_stats.n_writes);
     dcb_printf(pdcb,
                "\t\tNo. of Buffered Writes:           %d\n",
-               dcb->stats.n_buffered);
+               dcb->m_stats.n_buffered);
     dcb_printf(pdcb,
                "\t\tNo. of Accepts:                   %d\n",
-               dcb->stats.n_accepts);
+               dcb->m_stats.n_accepts);
     dcb_printf(pdcb,
                "\t\tNo. of High Water Events: %d\n",
-               dcb->stats.n_high_water);
+               dcb->m_stats.n_high_water);
     dcb_printf(pdcb,
                "\t\tNo. of Low Water Events:  %d\n",
-               dcb->stats.n_low_water);
+               dcb->m_stats.n_low_water);
 
     if (dcb->persistentstart)
     {
@@ -1795,7 +1774,7 @@ static int gw_write_SSL(DCB* dcb, GWBUF* writeq, bool* stop_writing)
 static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
 {
     int written = 0;
-    int fd = dcb->fd;
+    int fd = dcb->m_fd;
     size_t nbytes = GWBUF_LENGTH(writeq);
     void* buf = GWBUF_DATA(writeq);
     int saved_errno;
@@ -1818,7 +1797,7 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
             MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
                       dcb->type(),
                       dcb->remote,
-                      STRDCBSTATE(dcb->state),
+                      STRDCBSTATE(dcb->m_state),
                       saved_errno,
                       mxs_strerror(saved_errno));
         }
@@ -1975,7 +1954,7 @@ static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct SERVER* server)
 
     for (DCB* dcb = this_unit.all_dcbs[id]; dcb; dcb = dcb->thread.next)
     {
-        if (dcb->state == DCB_STATE_POLLING && dcb->server && dcb->server == server && dcb->n_close == 0)
+        if (dcb->m_state == DCB_STATE_POLLING && dcb->m_server && dcb->m_server == server && dcb->n_close == 0)
         {
             if (!dcb->dcb_errhandle_called)
             {
@@ -2014,9 +1993,9 @@ void dcb_hangup_foreach(struct SERVER* server)
 int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
 {
     int count = 0;
-    if (dcb && dcb->server)
+    if (dcb && dcb->m_server)
     {
-        Server* server = static_cast<Server*>(dcb->server);
+        Server* server = static_cast<Server*>(dcb->m_server);
         DCB* previousdcb = NULL;
         DCB* persistentdcb, * nextdcb;
         DCB* disposals = NULL;
@@ -2028,8 +2007,8 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
             if (cleanall
                 || persistentdcb->dcb_errhandle_called
                 || count >= server->persistpoolmax()
-                || persistentdcb->server == NULL
-                || !(persistentdcb->server->status() & SERVER_RUNNING)
+                || persistentdcb->m_server == NULL
+                || !(persistentdcb->m_server->status() & SERVER_RUNNING)
                 || (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime())
             {
                 /* Remove from persistent pool */
@@ -2060,7 +2039,7 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
         {
             nextdcb = disposals->nextpersistent;
             disposals->persistentstart = -1;
-            if (DCB_STATE_POLLING == disposals->state)
+            if (DCB_STATE_POLLING == disposals->m_state)
             {
                 dcb_stop_polling_and_shutdown(disposals);
             }
@@ -2091,7 +2070,7 @@ bool count_by_usage_cb(DCB* dcb, void* data)
         break;
 
     case DCB_USAGE_LISTENER:
-        if (dcb->state == DCB_STATE_LISTENING)
+        if (dcb->m_state == DCB_STATE_LISTENING)
         {
             d->count++;
         }
@@ -2154,7 +2133,7 @@ static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
         return -1;
     }
 
-    if (SSL_set_fd(dcb->ssl, dcb->fd) == 0)
+    if (SSL_set_fd(dcb->ssl, dcb->m_fd) == 0)
     {
         MXS_ERROR("Failed to set file descriptor for SSL connection.");
         return -1;
@@ -2191,7 +2170,7 @@ int dcb_accept_SSL(DCB* dcb)
     {
     case SSL_ERROR_NONE:
         MXS_DEBUG("SSL_accept done for %s@%s", user, remote);
-        dcb->ssl_state = SSL_ESTABLISHED;
+        dcb->m_ssl_state = SSL_ESTABLISHED;
         dcb->ssl_read_want_write = false;
         return 1;
 
@@ -2214,7 +2193,7 @@ int dcb_accept_SSL(DCB* dcb)
         MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
         if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
         {
-            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
+            dcb->m_ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
             return -1;
         }
@@ -2227,7 +2206,7 @@ int dcb_accept_SSL(DCB* dcb)
         MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
         if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
         {
-            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
+            dcb->m_ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
             return -1;
         }
@@ -2253,19 +2232,19 @@ int dcb_connect_SSL(DCB* dcb)
     int ssl_rval;
     int return_code;
 
-    if ((NULL == dcb->server || NULL == dcb->server->ssl().context())
-        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->server->ssl().context()) != 0))
+    if ((NULL == dcb->m_server || NULL == dcb->m_server->ssl().context())
+        || (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->m_server->ssl().context()) != 0))
     {
-        mxb_assert((NULL != dcb->server) && (NULL != dcb->server->ssl().context()));
+        mxb_assert((NULL != dcb->m_server) && (NULL != dcb->m_server->ssl().context()));
         return -1;
     }
-    dcb->ssl_state = SSL_HANDSHAKE_REQUIRED;
+    dcb->m_ssl_state = SSL_HANDSHAKE_REQUIRED;
     ssl_rval = SSL_connect(dcb->ssl);
     switch (SSL_get_error(dcb->ssl, ssl_rval))
     {
     case SSL_ERROR_NONE:
         MXS_DEBUG("SSL_connect done for %s", dcb->remote);
-        dcb->ssl_state = SSL_ESTABLISHED;
+        dcb->m_ssl_state = SSL_ESTABLISHED;
         dcb->ssl_read_want_write = false;
         return_code = 1;
         break;
@@ -2294,7 +2273,7 @@ int dcb_connect_SSL(DCB* dcb)
         MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", dcb->remote);
         if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
         {
-            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
+            dcb->m_ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
             return_code = -1;
         }
@@ -2308,7 +2287,7 @@ int dcb_connect_SSL(DCB* dcb)
         MXS_DEBUG("SSL connection shut down with error during SSL connect %s", dcb->remote);
         if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
         {
-            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
+            dcb->m_ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
             return -1;
         }
@@ -2490,13 +2469,13 @@ void dcb_process_timeouts(int thr)
 
         for (DCB* dcb = this_unit.all_dcbs[thr]; dcb; dcb = dcb->thread.next)
         {
-            if (dcb->role == DCB::Role::CLIENT && dcb->state == DCB_STATE_POLLING)
+            if (dcb->role == DCB::Role::CLIENT && dcb->m_state == DCB_STATE_POLLING)
             {
                 SERVICE* service = dcb->session->service;
 
                 if (service->conn_idle_timeout)
                 {
-                    int64_t idle = mxs_clock() - dcb->last_read;
+                    int64_t idle = mxs_clock() - dcb->m_last_read;
                     // Multiply by 10 to match conn_idle_timeout resolution
                     // to the 100 millisecond tics.
                     int64_t timeout = service->conn_idle_timeout * 10;
@@ -2512,9 +2491,9 @@ void dcb_process_timeouts(int thr)
                     }
                 }
 
-                if (service->net_write_timeout && dcb->writeqlen > 0)
+                if (service->net_write_timeout && dcb->m_writeqlen > 0)
                 {
-                    int64_t idle = mxs_clock() - dcb->last_write;
+                    int64_t idle = mxs_clock() - dcb->m_last_write;
                     // Multiply by 10 to match net_write_timeout resolution
                     // to the 100 millisecond tics.
                     if (idle > dcb->service->net_write_timeout * 10)
@@ -2639,9 +2618,9 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
 
     /*
      * It isn't obvious that this is impossible
-     * mxb_assert(dcb->state != DCB_STATE_DISCONNECTED);
+     * mxb_assert(dcb->m_state != DCB_STATE_DISCONNECTED);
      */
-    if (DCB_STATE_DISCONNECTED == dcb->state)
+    if (DCB_STATE_DISCONNECTED == dcb->m_state)
     {
         return rc;
     }
@@ -2664,7 +2643,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
     if ((events & EPOLLOUT) && (dcb->n_close == 0))
     {
         int eno = 0;
-        eno = gw_getsockerrno(dcb->fd);
+        eno = gw_getsockerrno(dcb->m_fd);
 
         if (eno == 0)
         {
@@ -2686,7 +2665,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
                       eno,
                       strerror_r(eno, errbuf, sizeof(errbuf)),
                       dcb,
-                      dcb->fd);
+                      dcb->m_fd);
         }
     }
     if ((events & EPOLLIN) && (dcb->n_close == 0))
@@ -2695,7 +2674,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
                   "Read in dcb %p fd %d",
                   pthread_self(),
                   dcb,
-                  dcb->fd);
+                  dcb->m_fd);
         rc |= MXB_POLL_READ;
 
         if (dcb_session_check(dcb, "read"))
@@ -2703,7 +2682,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
             int return_code = 1;
             /** SSL authentication is still going on, we need to call dcb_accept_SSL
              * until it return 1 for success or -1 for error */
-            if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
+            if (dcb->m_ssl_state == SSL_HANDSHAKE_REQUIRED)
             {
                 return_code = dcb->ssl_handshake();
             }
@@ -2716,7 +2695,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
     }
     if ((events & EPOLLERR) && (dcb->n_close == 0))
     {
-        int eno = gw_getsockerrno(dcb->fd);
+        int eno = gw_getsockerrno(dcb->m_fd);
         if (eno != 0)
         {
             char errbuf[MXS_STRERROR_BUFLEN];
@@ -2737,14 +2716,14 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
 
     if ((events & EPOLLHUP) && (dcb->n_close == 0))
     {
-        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->fd));
+        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->m_fd));
         MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
                   pthread_self(),
                   dcb,
-                  dcb->fd,
+                  dcb->m_fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
@@ -2764,14 +2743,14 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
 #ifdef EPOLLRDHUP
     if ((events & EPOLLRDHUP) && (dcb->n_close == 0))
     {
-        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->fd));
+        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->m_fd));
         MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLRDHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
                   pthread_self(),
                   dcb,
-                  dcb->fd,
+                  dcb->m_fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
@@ -2879,7 +2858,7 @@ public:
         if (dcb_is_still_valid(m_dcb, rworker.id()) && m_dcb->m_uid == m_uid)
         {
             mxb_assert(m_dcb->owner == RoutingWorker::get_current());
-            m_dcb->fakeq = m_buffer;
+            m_dcb->m_fakeq = m_buffer;
             dcb_handler(m_dcb, m_ev);
         }
         else
@@ -2907,11 +2886,11 @@ static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
         if (dcb->fake_event != 0)
         {
             MXS_WARNING("Events have already been injected to current DCB, discarding existing.");
-            gwbuf_free(dcb->fakeq);
+            gwbuf_free(dcb->m_fakeq);
             dcb->fake_event = 0;
         }
 
-        dcb->fakeq = buf;
+        dcb->m_fakeq = buf;
         dcb->fake_event = ev;
     }
     else
@@ -2986,20 +2965,20 @@ static bool dcb_session_check(DCB* dcb, const char* function)
 /** DCB Sanity checks */
 static inline void dcb_sanity_check(DCB* dcb)
 {
-    if (dcb->state == DCB_STATE_DISCONNECTED || dcb->state == DCB_STATE_UNDEFINED)
+    if (dcb->m_state == DCB_STATE_DISCONNECTED || dcb->m_state == DCB_STATE_UNDEFINED)
     {
         MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
                   "is %s, but this should be impossible, crashing.",
                   dcb,
-                  STRDCBSTATE(dcb->state));
+                  STRDCBSTATE(dcb->m_state));
         raise(SIGABRT);
     }
-    else if (dcb->state == DCB_STATE_POLLING || dcb->state == DCB_STATE_LISTENING)
+    else if (dcb->m_state == DCB_STATE_POLLING || dcb->m_state == DCB_STATE_LISTENING)
     {
         MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
                   "is %s, but this is probably an error, not crashing.",
                   dcb,
-                  STRDCBSTATE(dcb->state));
+                  STRDCBSTATE(dcb->m_state));
     }
 }
 
@@ -3079,7 +3058,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
     {
         // If the DCB should end up on the current thread, we can both add it
         // to the epoll-instance and to the DCB book-keeping immediately.
-        if (worker->add_fd(dcb->fd, events, (MXB_POLL_DATA*)dcb))
+        if (worker->add_fd(dcb->m_fd, events, (MXB_POLL_DATA*)dcb))
         {
             dcb_add_to_list(dcb);
             rv = true;
@@ -3127,8 +3106,8 @@ int poll_add_dcb(DCB* dcb)
      * Assign the new state before adding the DCB to the worker and store the
      * old state in case we need to revert it.
      */
-    dcb_state_t old_state = dcb->state;
-    dcb->state = DCB_STATE_POLLING;
+    dcb_state_t old_state = dcb->m_state;
+    dcb->m_state = DCB_STATE_POLLING;
 
     if (!dcb_add_to_worker(owner, dcb, poll_events))
     {
@@ -3136,7 +3115,7 @@ int poll_add_dcb(DCB* dcb)
          * We failed to add the DCB to a worker. Revert the state so that it
          * will be treated as a DCB in the correct state.
          */
-        dcb->state = old_state;
+        dcb->m_state = old_state;
         rc = -1;
     }
 
@@ -3149,28 +3128,28 @@ int poll_remove_dcb(DCB* dcb)
     struct  epoll_event ev;
 
     /*< It is possible that dcb has already been removed from the set */
-    if (dcb->state == DCB_STATE_NOPOLLING)
+    if (dcb->m_state == DCB_STATE_NOPOLLING)
     {
         return 0;
     }
-    if (DCB_STATE_POLLING != dcb->state
-        && DCB_STATE_LISTENING != dcb->state)
+    if (DCB_STATE_POLLING != dcb->m_state
+        && DCB_STATE_LISTENING != dcb->m_state)
     {
         MXS_ERROR("%lu [poll_remove_dcb] Error : existing state of dcb %p "
                   "is %s, but this is probably an error, not crashing.",
                   pthread_self(),
                   dcb,
-                  STRDCBSTATE(dcb->state));
+                  STRDCBSTATE(dcb->m_state));
     }
     /*<
      * Set state to NOPOLLING and remove dcb from poll set.
      */
-    dcb->state = DCB_STATE_NOPOLLING;
+    dcb->m_state = DCB_STATE_NOPOLLING;
 
     /**
      * Only positive fds can be removed from epoll set.
      */
-    dcbfd = dcb->fd;
+    dcbfd = dcb->m_fd;
     mxb_assert(dcbfd != DCBFD_CLOSED || dcb->role == DCB::Role::INTERNAL);
 
     if (dcbfd != DCBFD_CLOSED)
@@ -3217,15 +3196,15 @@ static int upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdat
     {
         MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
                  client_dcb->user, client_dcb->remote);
-        worker->remove_fd(client_dcb->fd);
-        client_dcb->state = DCB_STATE_NOPOLLING;
+        worker->remove_fd(client_dcb->m_fd);
+        client_dcb->m_state = DCB_STATE_NOPOLLING;
     }
     else if (reason == DCB_REASON_LOW_WATER)
     {
         MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data", client_dcb->user,
                  client_dcb->remote);
-        worker->add_fd(client_dcb->fd, poll_events, (MXB_POLL_DATA*)client_dcb);
-        client_dcb->state = DCB_STATE_POLLING;
+        worker->add_fd(client_dcb->m_fd, poll_events, (MXB_POLL_DATA*)client_dcb);
+        client_dcb->m_state = DCB_STATE_POLLING;
     }
 
     return 0;
@@ -3239,11 +3218,11 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
     {
         DCB* client_dcb = dcb->session->client_dcb;
         MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
-                 "mark is hit", dcb->server->name(), client_dcb->user, client_dcb->remote);
+                 "mark is hit", dcb->m_server->name(), client_dcb->user, client_dcb->remote);
 
         mxb::Worker* worker = static_cast<mxb::Worker*>(dcb->owner);
-        worker->remove_fd(dcb->fd);
-        dcb->state = DCB_STATE_NOPOLLING;
+        worker->remove_fd(dcb->m_fd);
+        dcb->m_state = DCB_STATE_NOPOLLING;
     }
 
     return true;
@@ -3257,11 +3236,11 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
     {
         DCB* client_dcb = dcb->session->client_dcb;
         MXS_INFO("Low water mark hit for  connection to '%s' from '%s'@'%s', accepting new data",
-                 dcb->server->name(), client_dcb->user, client_dcb->remote);
+                 dcb->m_server->name(), client_dcb->user, client_dcb->remote);
 
         mxb::Worker* worker = static_cast<mxb::Worker*>(dcb->owner);
-        worker->add_fd(dcb->fd, poll_events, (MXB_POLL_DATA*)dcb);
-        dcb->state = DCB_STATE_POLLING;
+        worker->add_fd(dcb->m_fd, poll_events, (MXB_POLL_DATA*)dcb);
+        dcb->m_state = DCB_STATE_POLLING;
     }
 
     return true;
@@ -3300,7 +3279,7 @@ json_t* dcb_to_json(DCB* dcb)
     char buf[25];
     snprintf(buf, sizeof(buf), "%p", dcb);
     json_object_set_new(obj, "id", json_string(buf));
-    json_object_set_new(obj, "server", json_string(dcb->server->name()));
+    json_object_set_new(obj, "server", json_string(dcb->m_server->name()));
 
     if (dcb->func.diagnostics_json)
     {

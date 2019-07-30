@@ -204,7 +204,7 @@ Dcb HintRouter::connect_to_backend(MXS_SESSION* session,
         mxb::atomic::add(&sref->connections, 1, mxb::atomic::RELAXED);
 
         result = Dcb(new_connection);
-        string name(new_connection->server->name());
+        string name(new_connection->m_server->name());
         all_backends->insert(HintRouterSession::MapElement(name, result));
     }
     else

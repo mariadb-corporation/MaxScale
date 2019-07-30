@@ -212,7 +212,7 @@ static void blr_start_master(void* data)
     router->client->remote = MXS_STRDUP("127.0.0.1");
 
     /* Fake the client is reading */
-    router->client->state = DCB_STATE_POLLING;      /* Fake the client is reading */
+    router->client->m_state = DCB_STATE_POLLING;      /* Fake the client is reading */
 
     /**
      * This prevents the actual protocol level closing code from being called that expects
@@ -266,7 +266,7 @@ static void blr_start_master(void* data)
 
     router->connect_time = time(0);
 
-    if (setsockopt(router->master->fd,
+    if (setsockopt(router->master->m_fd,
                    SOL_SOCKET,
                    SO_KEEPALIVE,
                    &keepalive,
@@ -1387,8 +1387,8 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
 {
     if (router->master)
     {
-        if (router->master->fd != -1
-            && router->master->state == DCB_STATE_POLLING)
+        if (router->master->m_fd != -1
+            && router->master->m_state == DCB_STATE_POLLING)
         {
             blr_close_master_in_main(router);
         }
@@ -1413,8 +1413,8 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
 
     if (router->client)
     {
-        if (router->client->fd != -1
-            && router->client->state == DCB_STATE_POLLING)
+        if (router->client->m_fd != -1
+            && router->client->m_state == DCB_STATE_POLLING)
         {
             // Is this dead code? dcb->fd for internal DCBs is always -1
             dcb_close(router->client);
@@ -1739,7 +1739,7 @@ bool blr_send_event(blr_thread_role_t role,
                   ROLETOSTR(role),
                   t2.str().c_str(),
                   ROLETOSTR(slave->lsi_sender_role),
-                  gwbuf_length(slave->dcb->writeq),
+                  gwbuf_length(slave->dcb->m_writeq),
                   slave->dcb,
                   slave->router->stats.n_binlogs);
         return false;

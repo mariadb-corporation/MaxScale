@@ -242,7 +242,7 @@ bool ssl_required_by_dcb(DCB* dcb)
  */
 bool ssl_required_but_not_negotiated(DCB* dcb)
 {
-    return ssl_required_by_dcb(dcb) && SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state;
+    return ssl_required_by_dcb(dcb) && SSL_HANDSHAKE_UNKNOWN == dcb->m_ssl_state;
 }
 
 /**
@@ -542,7 +542,7 @@ int gw_read_client_event(DCB* dcb)
             {
                 // We read more data than was needed
                 dcb_readq_append(dcb, read_buffer);
-                read_buffer = modutil_get_next_MySQL_packet(&dcb->readq);
+                read_buffer = modutil_get_next_MySQL_packet(&dcb->m_readq);
             }
 
             return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
@@ -715,7 +715,7 @@ bool ssl_is_connection_healthy(DCB* dcb)
      * then everything is as we wish. Otherwise, either there is a problem or
      * more to be done.
      */
-    return !dcb->session->listener->ssl().context() || dcb->ssl_state == SSL_ESTABLISHED;
+    return !dcb->session->listener->ssl().context() || dcb->m_ssl_state == SSL_ESTABLISHED;
 }
 
 /* Looks to be redundant - can remove include for ioctl too */
@@ -723,10 +723,10 @@ bool ssl_check_data_to_process(DCB* dcb)
 {
     /** SSL authentication is still going on, we need to call dcb_accept_SSL
      * until it return 1 for success or -1 for error */
-    if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED && 1 == dcb_accept_SSL(dcb))
+    if (dcb->m_ssl_state == SSL_HANDSHAKE_REQUIRED && 1 == dcb_accept_SSL(dcb))
     {
         int b = 0;
-        ioctl(dcb->fd, FIONREAD, &b);
+        ioctl(dcb->m_fd, FIONREAD, &b);
         if (b != 0)
         {
             return true;
@@ -774,13 +774,13 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
     /* Now we know SSL is required and client is capable */
-    if (dcb->ssl_state != SSL_HANDSHAKE_DONE && dcb->ssl_state != SSL_ESTABLISHED)
+    if (dcb->m_ssl_state != SSL_HANDSHAKE_DONE && dcb->m_ssl_state != SSL_ESTABLISHED)
     {
         int return_code;
         /** Do the SSL Handshake */
-        if (SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state)
+        if (SSL_HANDSHAKE_UNKNOWN == dcb->m_ssl_state)
         {
-            dcb->ssl_state = SSL_HANDSHAKE_REQUIRED;
+            dcb->m_ssl_state = SSL_HANDSHAKE_REQUIRED;
         }
         /**
          * Note that this will often fail to achieve its result, because further
@@ -956,7 +956,7 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
-            if (dcb->readq)
+            if (dcb->m_readq)
             {
                 // The user has already send more data, process it
                 poll_fake_read_event(dcb);
@@ -1434,14 +1434,14 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
     switch (auth_val)
     {
     case MXS_AUTH_NO_SESSION:
-        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd);
+        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->m_fd);
 
         /** Send ERR 1045 to client */
         mysql_send_auth_error(dcb, packet_number, 0, "failed to create new session");
         break;
 
     case MXS_AUTH_FAILED_DB:
-        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->fd);
+        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->m_fd);
         /** Send error 1049 to client */
         message_len = 25 + MYSQL_DATABASE_MAXLEN;
 
@@ -1456,7 +1456,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
         MXS_DEBUG("client is "
                   "not SSL capable for SSL listener. fd %d, "
                   "state = MYSQL_FAILED_AUTH_SSL.",
-                  dcb->fd);
+                  dcb->m_fd);
 
         /** Send ERR 1045 to client */
         mysql_send_auth_error(dcb, packet_number, 0, "Access without SSL denied");
@@ -1465,7 +1465,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
     case MXS_AUTH_SSL_INCOMPLETE:
         MXS_DEBUG("unable to complete SSL authentication. fd %d, "
                   "state = MYSQL_AUTH_SSL_INCOMPLETE.",
-                  dcb->fd);
+                  dcb->m_fd);
 
         /** Send ERR 1045 to client */
         mysql_send_auth_error(dcb,
@@ -1475,7 +1475,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
         break;
 
     case MXS_AUTH_FAILED:
-        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd);
+        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->m_fd);
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user,
                                         dcb->remote,
@@ -1490,7 +1490,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
         break;
 
     default:
-        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd);
+        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->m_fd);
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user,
                                         dcb->remote,
@@ -1527,14 +1527,14 @@ int gw_write_client_event(DCB* dcb)
 {
     MySQLProtocol* protocol = NULL;
 
-    mxb_assert(dcb->state != DCB_STATE_DISCONNECTED);
+    mxb_assert(dcb->m_state != DCB_STATE_DISCONNECTED);
 
     if (dcb == NULL)
     {
         goto return_1;
     }
 
-    if (dcb->state == DCB_STATE_DISCONNECTED)
+    if (dcb->m_state == DCB_STATE_DISCONNECTED)
     {
         goto return_1;
     }

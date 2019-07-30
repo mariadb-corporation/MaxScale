@@ -827,7 +827,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
     {
         session->set_client_dcb(client_dcb);
         memcpy(&client_dcb->ip, addr, sizeof(*addr));
-        client_dcb->fd = fd;
+        client_dcb->m_fd = fd;
         client_dcb->remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */
@@ -856,7 +856,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         }
         else if (poll_add_dcb(client_dcb) == -1)
         {
-            MXS_ERROR("Failed to add dcb %p for fd %d to epoll set.", client_dcb, client_dcb->fd);
+            MXS_ERROR("Failed to add dcb %p for fd %d to epoll set.", client_dcb, client_dcb->m_fd);
             dcb_close(client_dcb);
             client_dcb = NULL;
         }

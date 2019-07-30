@@ -68,9 +68,9 @@ static int test1()
         return 1;
     }
 
-    dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    dcb->m_fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
-    if (dcb->fd < 0)
+    if (dcb->m_fd < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr,

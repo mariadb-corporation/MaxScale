@@ -51,7 +51,7 @@ void RWSplitSession::handle_connection_keepalive(RWBackend* target)
             if (backend->in_use() && backend != target && !backend->is_waiting_result())
             {
                 MXB_AT_DEBUG(nserv++);
-                int64_t diff = now - backend->dcb()->last_read;
+                int64_t diff = now - backend->dcb()->m_last_read;
 
                 if (diff > keepalive)
                 {

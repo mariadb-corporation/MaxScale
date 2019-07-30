@@ -483,7 +483,7 @@ int RCRSession::routeQuery(GWBUF* queue)
 
     MXS_INFO("Routed [%s] to '%s'%s%s",
              STRPACKETTYPE(mysql_command),
-             backend_dcb->server->name(),
+             backend_dcb->m_server->name(),
              trc ? ": " : ".",
              trc ? trc : "");
     MXS_FREE(trc);
