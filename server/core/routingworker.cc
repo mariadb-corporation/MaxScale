@@ -268,6 +268,17 @@ RoutingWorker::RoutingWorker()
 
 RoutingWorker::~RoutingWorker()
 {
+    for (uint64_t key = 0; key < m_local_data.size(); ++key)
+    {
+        auto* pData = m_local_data[key];
+        auto deleter = m_data_deleters[key];
+
+        if (pData && deleter)
+        {
+            deleter(pData);
+        }
+    }
+
     delete m_pWatchdog_notifier;
 }
 
