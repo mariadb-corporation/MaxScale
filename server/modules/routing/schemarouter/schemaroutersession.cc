@@ -599,7 +599,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 
     if (pPacket)
     {
-        MXS_SESSION_ROUTE_REPLY(pDcb->session, pPacket, pDcb);
+        RouterSession::clientReply(pPacket, pDcb);
     }
 }
 

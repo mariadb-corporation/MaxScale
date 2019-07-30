@@ -50,7 +50,7 @@ public:
 
     /**
      * Called when a packet is routed to the client. The router should
-     * forward the packet to the client using `MXS_SESSION_ROUTE_REPLY`.
+     * forward the packet to the client using `RouterSession::clientReply`.
      *
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.

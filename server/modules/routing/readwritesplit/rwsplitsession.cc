@@ -655,7 +655,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
          * logic cannot handle this situation. Routing the reply straight to
          * the client should be the safest thing to do at this point. */
         log_unexpected_response(backend, writebuf, m_current_query.get());
-        MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf, backend_dcb);
+        RouterSession::clientReply(writebuf, backend_dcb);
         return;
     }
 
@@ -835,7 +835,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         mxb_assert(client_dcb);
         mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
-        MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf, backend_dcb);
+        RouterSession::clientReply(writebuf, backend_dcb);
     }
 
     if (m_expected_responses == 0)

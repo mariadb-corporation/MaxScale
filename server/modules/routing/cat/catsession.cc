@@ -106,7 +106,7 @@ void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb)
         // Increment the packet sequence number and send it to the client
         mxb_assert(modutil_count_packets(pPacket) > 0);
         GWBUF_DATA(pPacket)[3] = m_packet_num++;
-        MXS_SESSION_ROUTE_REPLY(pDcb->session, pPacket, pDcb);
+        RouterSession::clientReply(pPacket, pDcb);
     }
     else
     {

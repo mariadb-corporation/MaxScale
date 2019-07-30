@@ -552,7 +552,7 @@ json_t* RCR::diagnostics_json() const
 void RCRSession::clientReply(GWBUF* queue, DCB* backend_dcb)
 {
     mxb_assert(backend_dcb->session->client_dcb);
-    MXS_SESSION_ROUTE_REPLY(backend_dcb->session, queue, backend_dcb);
+    RouterSession::clientReply(queue, backend_dcb);
 }
 
 /**

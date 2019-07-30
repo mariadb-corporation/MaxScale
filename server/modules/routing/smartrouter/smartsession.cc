@@ -380,7 +380,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     if (will_reply)
     {
         MXS_SDEBUG("Forward response to client");
-        MXS_SESSION_ROUTE_REPLY(pDcb->session, pPacket, pDcb);
+        RouterSession::clientReply(pPacket, pDcb);
     }
 }
 
