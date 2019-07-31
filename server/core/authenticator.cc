@@ -11,11 +11,13 @@
  * Public License.
  */
 
-#include <maxscale/authenticator.hh>
+#include <maxscale/authenticator2.hh>
+
 #include <maxscale/modutil.hh>
 #include <maxbase/alloc.h>
 
 #include "internal/modules.hh"
+
 /**
  * @file authenticator.c - Authenticator module functions
  */
@@ -149,4 +151,12 @@ const char* to_string(mxs_auth_state_t state)
 
     return rval;
 }
+
+int AuthenticatorSession::reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
+                                         uint8_t* scramble, size_t scramble_len,
+                                         uint8_t* output, size_t output_len)
+{
+    return MXS_AUTH_STATE_FAILED;
+}
+
 }
