@@ -117,8 +117,6 @@ static void   dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno);
 static int    gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    gw_write_SSL(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    dcb_log_errors_SSL(DCB* dcb, int ret);
-static int    dcb_listen_create_socket_inet(const char* host, uint16_t port);
-static int    dcb_listen_create_socket_unix(const char* path);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 static void   dcb_add_to_all_list(DCB* dcb);
 static void   dcb_add_to_list(DCB* dcb);
