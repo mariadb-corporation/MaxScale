@@ -39,7 +39,7 @@ static void pam_backend_auth_free(void* data)
  */
 static bool pam_backend_auth_extract(DCB* dcb, GWBUF* buffer)
 {
-    PamBackendSession* pses = static_cast<PamBackendSession*>(dcb->authenticator_data);
+    PamBackendSession* pses = static_cast<PamBackendSession*>(dcb->m_authenticator_data);
     return pses->extract(dcb, buffer);
 }
 
@@ -65,7 +65,7 @@ static bool pam_backend_auth_connectssl(DCB* dcb)
  */
 static int pam_backend_auth_authenticate(DCB* dcb)
 {
-    PamBackendSession* pses = static_cast<PamBackendSession*>(dcb->authenticator_data);
+    PamBackendSession* pses = static_cast<PamBackendSession*>(dcb->m_authenticator_data);
     return pses->authenticate(dcb);
 }
 

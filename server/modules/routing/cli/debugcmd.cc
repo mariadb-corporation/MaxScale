@@ -1961,16 +1961,16 @@ static bool user_is_authorized(DCB* dcb)
 {
     bool rval = true;
 
-    if (strcmp(dcb->remote, "localhost") == 0)
+    if (strcmp(dcb->m_remote, "localhost") == 0)
     {
-        if (!admin_user_is_unix_admin(dcb->user))
+        if (!admin_user_is_unix_admin(dcb->m_user))
         {
             rval = false;
         }
     }
     else
     {
-        if (!admin_user_is_inet_admin(dcb->user, nullptr))
+        if (!admin_user_is_inet_admin(dcb->m_user, nullptr))
         {
             rval = false;
         }

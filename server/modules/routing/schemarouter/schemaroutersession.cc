@@ -41,18 +41,18 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     : mxs::RouterSession(session)
     , m_closed(false)
     , m_client(session->client_dcb)
-    , m_mysql_session((MYSQL_session*)session->client_dcb->data)
+    , m_mysql_session((MYSQL_session*)session->client_dcb->m_data)
     , m_backends(backends)
     , m_config(router->m_config)
     , m_router(router)
-    , m_shard(m_router->m_shard_manager.get_shard(m_client->user, m_config->refresh_min_interval))
+    , m_shard(m_router->m_shard_manager.get_shard(m_client->m_user, m_config->refresh_min_interval))
     , m_state(0)
     , m_sent_sescmd(0)
     , m_replied_sescmd(0)
     , m_load_target(NULL)
 {
     char db[MYSQL_DATABASE_MAXLEN + 1] = "";
-    MySQLProtocol* protocol = (MySQLProtocol*)session->client_dcb->protocol;
+    MySQLProtocol* protocol = (MySQLProtocol*)session->client_dcb->m_protocol;
     bool using_db = false;
     bool have_db = false;
     const char* current_db = mxs_mysql_get_current_db(session);
@@ -117,7 +117,7 @@ void SchemaRouterSession::close()
         {
             m_router->m_stats.longest_sescmd = m_stats.longest_sescmd;
         }
-        double ses_time = difftime(time(NULL), m_client->session->stats.connect);
+        double ses_time = difftime(time(NULL), m_client->m_session->stats.connect);
         if (m_router->m_stats.ses_longest < ses_time)
         {
             m_router->m_stats.ses_longest = ses_time;
@@ -368,7 +368,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 {
                     sprintf(errbuf + strlen(errbuf),
                             " ([%" PRIu64 "]: DB change failed)",
-                            m_client->session->id());
+                            m_client->m_session->id());
                 }
 
                 write_error_to_client(m_client,
@@ -559,7 +559,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     {
         MXS_DEBUG("Reply to USE '%s' received for session %p",
                   m_connect_db.c_str(),
-                  m_client->session);
+                  m_client->m_session);
         m_state &= ~INIT_USE_DB;
         m_current_db = m_connect_db;
         mxb_assert(m_state == INIT_READY);
@@ -608,7 +608,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
                                       mxs_error_action_t action,
                                       bool* pSuccess)
 {
-    mxb_assert(pProblem->role == DCB::Role::BACKEND);
+    mxb_assert(pProblem->m_role == DCB::Role::BACKEND);
     SSRBackend bref = get_bref_from_dcb(pProblem);
 
     if (bref.get() == NULL)     // Should never happen
@@ -622,7 +622,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
         if (bref->is_waiting_result())
         {
             /** If the client is waiting for a reply, send an error. */
-            m_client->func.write(m_client, gwbuf_clone(pMessage));
+            m_client->m_func.write(m_client, gwbuf_clone(pMessage));
         }
 
         *pSuccess = have_servers();
@@ -630,9 +630,9 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
 
     case ERRACT_REPLY_CLIENT:
         // The session pointer can be NULL if the creation fails when filters are being set up
-        if (m_client->session && m_client->session->state() == MXS_SESSION::State::STARTED)
+        if (m_client->m_session && m_client->m_session->state() == MXS_SESSION::State::STARTED)
         {
-            m_client->func.write(m_client, gwbuf_clone(pMessage));
+            m_client->m_func.write(m_client, gwbuf_clone(pMessage));
         }
 
         *pSuccess = false;      /*< no new backend servers were made available */
@@ -665,7 +665,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
 void SchemaRouterSession::synchronize_shards()
 {
     m_router->m_stats.shmap_cache_miss++;
-    m_router->m_shard_manager.update_shard(m_shard, m_client->user);
+    m_router->m_shard_manager.update_shard(m_shard, m_client->m_user);
 }
 
 /**
@@ -906,7 +906,7 @@ void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const c
     GWBUF* errbuff = modutil_create_mysql_err_msg(1, 0, errnum, mysqlstate, errmsg);
     if (errbuff)
     {
-        if (dcb->func.write(dcb, errbuff) != 1)
+        if (dcb->m_func.write(dcb, errbuff) != 1)
         {
             MXS_ERROR("Failed to write error packet to client.");
         }
@@ -952,7 +952,7 @@ bool SchemaRouterSession::handle_default_db()
                 MXS_DEBUG("USE '%s' sent to %s for session %p",
                           m_connect_db.c_str(),
                           target->name(),
-                          m_client->session);
+                          m_client->m_session);
                 rval = true;
             }
             else
@@ -975,7 +975,7 @@ bool SchemaRouterSession::handle_default_db()
         {
             sprintf(errmsg + strlen(errmsg),
                     " ([%" PRIu64 "]: DB not found on connect)",
-                    m_client->session->id());
+                    m_client->m_session->id());
         }
         write_error_to_client(m_client,
                               SCHEMA_ERR_DBNOTFOUND,
@@ -994,7 +994,7 @@ void SchemaRouterSession::route_queued_query()
 #ifdef SS_DEBUG
     char* querystr = modutil_get_SQL(tmp);
     MXS_DEBUG("Sending queued buffer for session %p: %s",
-              m_client->session,
+              m_client->m_session,
               querystr);
     MXS_FREE(querystr);
 #endif
@@ -1024,7 +1024,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
                 (*it)->set_mapped(true);
                 MXS_DEBUG("Received SHOW DATABASES reply from %s for session %p",
                           (*it)->backend()->server->name(),
-                          m_client->session);
+                          m_client->m_session);
             }
             else
             {
@@ -1061,7 +1061,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
 
                         if (error)
                         {
-                            client_dcb->func.write(client_dcb, error);
+                            client_dcb->m_func.write(client_dcb, error);
                         }
                         else
                         {
@@ -1079,7 +1079,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
             mapped = false;
             MXS_DEBUG("Still waiting for reply to SHOW DATABASES from %s for session %p",
                       (*it)->backend()->server->name(),
-                      m_client->session);
+                      m_client->m_session);
         }
     }
     *wbuf = writebuf;
@@ -1313,8 +1313,8 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
                               data,
                               target->name(),
                               duplicate->name(),
-                              m_client->user,
-                              m_client->remote);
+                              m_client->m_user,
+                              m_client->m_remote);
                 }
                 else if (m_config->preferred_server == target)
                 {

@@ -107,5 +107,5 @@ void maxinfo_send_error(DCB* dcb, int errcode, const char* msg)
     data[6] = (errcode >> 8) & 0xff;// Error Code
     memcpy(&data[7], "#42000", 6);
     memcpy(&data[13], msg, strlen(msg));    // Error Message
-    dcb->func.write(dcb, pkt);
+    dcb->m_func.write(dcb, pkt);
 }

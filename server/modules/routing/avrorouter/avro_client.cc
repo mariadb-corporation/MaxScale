@@ -73,8 +73,8 @@ int AvroSession::routeQuery(GWBUF* queue)
 
             state = AVRO_CLIENT_REGISTERED;
             MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
-                     dcb->service->name(),
-                     dcb->remote != NULL ? dcb->remote : "");
+                     dcb->m_service->name(),
+                     dcb->m_remote != NULL ? dcb->m_remote : "");
         }
         break;
 
@@ -354,7 +354,7 @@ void AvroSession::process_command(GWBUF* queue)
     {
         const char err[] = "ERR: Unknown command\n";
         GWBUF* reply = gwbuf_alloc_and_load(sizeof(err), err);
-        dcb->func.write(dcb, reply);
+        dcb->m_func.write(dcb, reply);
     }
 }
 
@@ -370,7 +370,7 @@ static int send_row(DCB* dcb, json_t* row)
         uint8_t* data = GWBUF_DATA(buf);
         memcpy(data, json, len);
         data[len] = '\n';
-        rc = dcb->func.write(dcb, buf);
+        rc = dcb->m_func.write(dcb, buf);
     }
     else
     {
@@ -442,7 +442,7 @@ bool AvroSession::stream_binary()
         bytes += file_handle->buffer_size;
         if ((buffer = maxavro_record_read_binary(file_handle)))
         {
-            rc = dcb->func.write(dcb, buffer);
+            rc = dcb->m_func.write(dcb, buffer);
         }
         else
         {
@@ -498,8 +498,8 @@ bool AvroSession::seek_to_gtid()
                                  gtid.domain,
                                  gtid.server_id,
                                  gtid.seq,
-                                 dcb->user,
-                                 dcb->remote);
+                                 dcb->m_user,
+                                 dcb->m_remote);
                         seeking = false;
                     }
                 }
@@ -649,8 +649,8 @@ void AvroSession::rotate_avro_file(std::string fullname)
     else
     {
         MXS_INFO("Rotated '%s'@'%s' to file: %s",
-                 dcb->user,
-                 dcb->remote,
+                 dcb->m_user,
+                 dcb->m_remote,
                  fullname.c_str());
     }
 }
@@ -715,7 +715,7 @@ void AvroSession::client_callback()
 
         if (schema)
         {
-            dcb->func.write(dcb, schema);
+            dcb->m_func.write(dcb, schema);
         }
     }
 

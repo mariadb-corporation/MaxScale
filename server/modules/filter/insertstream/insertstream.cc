@@ -205,13 +205,13 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         my_session->client_dcb = session->client_dcb;
 
         if (my_instance->source
-            && strcmp(session->client_dcb->remote, my_instance->source) != 0)
+            && strcmp(session->client_dcb->m_remote, my_instance->source) != 0)
         {
             my_session->active = false;
         }
 
         if (my_instance->user
-            && strcmp(session->client_dcb->user, my_instance->user) != 0)
+            && strcmp(session->client_dcb->m_user, my_instance->user) != 0)
         {
             my_session->active = false;
         }
@@ -263,7 +263,7 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
     int rc = 0;
     mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
 
-    if (session_trx_is_active(my_session->client_dcb->session)
+    if (session_trx_is_active(my_session->client_dcb->m_session)
         && extract_insert_target(queue, target, sizeof(target)))
     {
         switch (my_session->state)

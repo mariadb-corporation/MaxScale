@@ -164,7 +164,7 @@ static void pam_auth_free(void* data)
  */
 static bool pam_auth_extract(DCB* dcb, GWBUF* read_buffer)
 {
-    PamClientSession* pses = static_cast<PamClientSession*>(dcb->authenticator_data);
+    PamClientSession* pses = static_cast<PamClientSession*>(dcb->m_authenticator_data);
     return pses->extract(dcb, read_buffer);
 }
 
@@ -177,7 +177,7 @@ static bool pam_auth_extract(DCB* dcb, GWBUF* read_buffer)
  */
 static bool pam_auth_connectssl(DCB* dcb)
 {
-    MySQLProtocol* protocol = (MySQLProtocol*)dcb->protocol;
+    MySQLProtocol* protocol = (MySQLProtocol*)dcb->m_protocol;
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 
@@ -192,7 +192,7 @@ static bool pam_auth_connectssl(DCB* dcb)
  */
 static int pam_auth_authenticate(DCB* dcb)
 {
-    PamClientSession* pses = static_cast<PamClientSession*>(dcb->authenticator_data);
+    PamClientSession* pses = static_cast<PamClientSession*>(dcb->m_authenticator_data);
     return pses->authenticate(dcb);
 }
 
@@ -205,12 +205,12 @@ static int pam_auth_authenticate(DCB* dcb)
  */
 static void pam_auth_free_data(DCB* dcb)
 {
-    if (dcb->data)
+    if (dcb->m_data)
     {
-        MYSQL_session* ses = (MYSQL_session*)dcb->data;
+        MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
         MXS_FREE(ses->auth_token);
         MXS_FREE(ses);
-        dcb->data = NULL;
+        dcb->m_data = NULL;
     }
 }
 

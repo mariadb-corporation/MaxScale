@@ -146,7 +146,7 @@ PamBackendSession::PamBackendSession()
  */
 bool PamBackendSession::send_client_password(DCB* dcb)
 {
-    MYSQL_session* ses = (MYSQL_session*)dcb->session->client_dcb->data;
+    MYSQL_session* ses = (MYSQL_session*)dcb->m_session->client_dcb->m_data;
     size_t buflen = MYSQL_HEADER_LEN + ses->auth_token_len;
     uint8_t bufferdata[buflen];
     gw_mysql_set_byte3(bufferdata, ses->auth_token_len);
@@ -183,8 +183,8 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
     if (m_servername.empty())
     {
         m_servername = srv_name;
-        auto client_dcb = dcb->session->client_dcb;
-        m_clienthost = client_dcb->user + (std::string)"@" + client_dcb->remote;
+        auto client_dcb = dcb->m_session->client_dcb;
+        m_clienthost = client_dcb->m_user + (std::string)"@" + client_dcb->m_remote;
     }
 
     // Smallest buffer that is parsed, header + (cmd-byte/msg-type + message).
@@ -269,7 +269,7 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
 
     if (unexpected_data)
     {
-        MXS_ERROR("Failed to read data from '%s' when authenticating user '%s'.", srv_name, dcb->user);
+        MXS_ERROR("Failed to read data from '%s' when authenticating user '%s'.", srv_name, dcb->m_user);
     }
     return success;
 }

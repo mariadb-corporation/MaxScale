@@ -46,7 +46,7 @@ uint32_t mysql_extract_ps_id(GWBUF* buffer)
 // TODO: The current database should somehow be available in a generic fashion.
 const char* qc_mysql_get_current_db(MXS_SESSION* session)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
     return data->db;
 }
 
@@ -113,7 +113,7 @@ bool check_for_sp_call(GWBUF* buf, uint8_t packet_type)
 
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
-    MySQLProtocol* pPcol = static_cast<MySQLProtocol*>(pSession->client_dcb->protocol);
+    MySQLProtocol* pPcol = static_cast<MySQLProtocol*>(pSession->client_dcb->m_protocol);
 
     if (pPcol->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS)
     {

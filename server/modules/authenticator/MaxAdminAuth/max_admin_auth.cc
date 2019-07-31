@@ -101,7 +101,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  */
 static int max_admin_auth_authenticate(DCB* dcb)
 {
-    return (dcb->data != NULL && ((ADMIN_session*)dcb->data)->validated) ? 0 : 1;
+    return (dcb->m_data != NULL && ((ADMIN_session*)dcb->m_data)->validated) ? 0 : 1;
 }
 
 /**
@@ -125,7 +125,7 @@ static bool max_admin_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
         int user_len = (GWBUF_LENGTH(buf) > ADMIN_USER_MAXLEN) ? ADMIN_USER_MAXLEN : GWBUF_LENGTH(buf);
         memcpy(session_data->user, GWBUF_DATA(buf), user_len);
         session_data->validated = false;
-        dcb->data = (void*)session_data;
+        dcb->m_data = (void*)session_data;
 
         /* Check for existance of the user */
         if (admin_linux_account_enabled(session_data->user))
@@ -161,5 +161,5 @@ static bool max_admin_auth_is_client_ssl_capable(DCB* dcb)
  */
 static void max_admin_auth_free_client_data(DCB* dcb)
 {
-    MXS_FREE(dcb->data);
+    MXS_FREE(dcb->m_data);
 }

@@ -127,7 +127,7 @@ static char* httpd_default_auth()
  */
 static int httpd_read_event(DCB* dcb)
 {
-    MXS_SESSION* session = dcb->session;
+    MXS_SESSION* session = dcb->m_session;
 
     int numchars = 1;
     char buf[HTTPD_REQUESTLINE_MAXLEN - 1] = "";
@@ -139,7 +139,7 @@ static int httpd_read_event(DCB* dcb)
     HTTPD_session* client_data = NULL;
     GWBUF* uri;
 
-    client_data = reinterpret_cast<HTTPD_session*>(dcb->protocol);
+    client_data = reinterpret_cast<HTTPD_session*>(dcb->m_protocol);
 
     /**
      * get the request line
@@ -163,7 +163,7 @@ static int httpd_read_event(DCB* dcb)
     /* check allowed http methods */
     if (strcasecmp(method, "GET") && strcasecmp(method, "POST"))
     {
-        // httpd_unimplemented(dcb->fd);
+        // httpd_unimplemented(dcb->m_fd);
         return 0;
     }
 
@@ -203,7 +203,7 @@ static int httpd_read_event(DCB* dcb)
     /** If listener->authenticator is the default authenticator, it means that
      * we don't need to check the user credentials. All other authenticators
      * cause a 401 Unauthorized to be returned on the first try. */
-    bool auth_ok = httpd_default_auth() == std::string(dcb->session->listener->authenticator());
+    bool auth_ok = httpd_default_auth() == std::string(dcb->m_session->listener->authenticator());
 
     /**
      * Get the request headers
@@ -239,8 +239,8 @@ static int httpd_read_event(DCB* dcb)
                 {
                     /** The freeing entry point is called automatically when
                      * the client DCB is closed */
-                    dcb->authfunc.extract(dcb, auth_data);
-                    auth_ok = dcb->authfunc.authenticate(dcb) == MXS_AUTH_SUCCEEDED;
+                    dcb->m_authfunc.extract(dcb, auth_data);
+                    auth_ok = dcb->m_authfunc.authenticate(dcb) == MXS_AUTH_SUCCEEDED;
                     gwbuf_free(auth_data);
                 }
             }
@@ -361,7 +361,7 @@ static MXS_PROTOCOL_SESSION* httpd_accept(DCB* client_dcb)
 {
     HTTPD_session* client_data = (HTTPD_session*)MXS_CALLOC(1, sizeof(HTTPD_session));
 
-    if (!session_start(client_dcb->session))
+    if (!session_start(client_dcb->m_session))
     {
         MXS_FREE(client_data);
         client_data = nullptr;

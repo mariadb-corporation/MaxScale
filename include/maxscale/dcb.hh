@@ -161,48 +161,48 @@ public:
     // Starts the shutdown process, called when a client DCB is closed
     void shutdown();
 
-    bool                    dcb_errhandle_called = false;   /**< this can be called only once */
-    Role                    role;
+    bool                    m_dcb_errhandle_called = false;   /**< this can be called only once */
+    Role                    m_role;
     int                     m_fd = DCBFD_CLOSED;                /**< The descriptor */
     dcb_state_t             m_state = DCB_STATE_ALLOC;          /**< Current descriptor state */
     SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
-    char*                   remote = nullptr;                   /**< Address of remote end */
-    char*                   user = nullptr;                     /**< User name for connection */
-    struct sockaddr_storage ip;                                 /**< remote IPv4/IPv6 address */
-    MXS_PROTOCOL_SESSION*   protocol = nullptr;                 /**< The protocol specific state */
-    size_t                  protocol_packet_length = 0;         /**< protocol packet length */
-    size_t                  protocol_bytes_processed = 0;       /**< How many bytes have been read */
-    MXS_SESSION*            session;                            /**< The owning session */
-    MXS_PROTOCOL            func = {};                          /**< Protocol functions for the DCB */
-    MXS_AUTHENTICATOR       authfunc = {};                      /**< Authenticator functions for the DCB */
+    char*                   m_remote = nullptr;                   /**< Address of remote end */
+    char*                   m_user = nullptr;                     /**< User name for connection */
+    struct sockaddr_storage m_ip;                                 /**< remote IPv4/IPv6 address */
+    void*                   m_protocol = nullptr;                 /**< The protocol specific state */
+    size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
+    size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
+    MXS_SESSION*            m_session;                            /**< The owning session */
+    MXS_PROTOCOL            m_func = {};                          /**< Protocol functions for the DCB */
+    MXS_AUTHENTICATOR       m_authfunc = {};                      /**< Authenticator functions for the DCB */
     uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
-    uint64_t                high_water = 0;                     /**< High water mark of write queue */
-    uint64_t                low_water = 0;                      /**< Low water mark of write queue */
+    uint64_t                m_high_water = 0;                     /**< High water mark of write queue */
+    uint64_t                m_low_water = 0;                      /**< Low water mark of write queue */
     GWBUF*                  m_writeq = nullptr;                 /**< Write Data Queue */
-    GWBUF*                  delayq = nullptr;                   /**< Delay Backend Write Data Queue */
+    GWBUF*                  m_delayq = nullptr;                   /**< Delay Backend Write Data Queue */
     GWBUF*                  m_readq = nullptr;                  /**< Read queue for incomplete reads */
     GWBUF*                  m_fakeq = nullptr;                  /**< Fake event queue for generated events */
-    uint32_t                fake_event = 0;                     /**< Fake event to be delivered to handler */
+    uint32_t                m_fake_event = 0;                     /**< Fake event to be delivered to handler */
 
     DCBSTATS m_stats = {};                      /**< DCB related statistics */
-    DCB*     nextpersistent = nullptr;          /**< Next DCB in the persistent pool for SERVER */
-    time_t   persistentstart = 0;               /**<    0: Not in the persistent pool.
+    DCB*     m_nextpersistent = nullptr;          /**< Next DCB in the persistent pool for SERVER */
+    time_t   m_persistentstart = 0;               /**<    0: Not in the persistent pool.
                                                  *      -1: Evicted from the persistent pool and being closed.
                                                  *   non-0: Time when placed in the persistent pool.
                                                  */
-    SERVICE*       service = nullptr;           /**< The related service */
-    void*          data = nullptr;              /**< Client protocol data, owned by client DCB */
-    void*          authenticator_data = nullptr;/**< The authenticator data for this DCB */
-    DCB_CALLBACK*  callbacks = nullptr;         /**< The list of callbacks for the DCB */
+    SERVICE*       m_service = nullptr;           /**< The related service */
+    void*          m_data = nullptr;              /**< Client protocol data, owned by client DCB */
+    void*          m_authenticator_data = nullptr;/**< The authenticator data for this DCB */
+    DCB_CALLBACK*  m_callbacks = nullptr;         /**< The list of callbacks for the DCB */
     int64_t        m_last_read = 0;             /**< Last time the DCB received data */
     int64_t        m_last_write = 0;            /**< Last time the DCB sent data */
     struct SERVER* m_server = nullptr;          /**< The associated backend server */
-    SSL*           ssl = nullptr;               /**< SSL struct for connection */
-    bool           ssl_read_want_read = false;
-    bool           ssl_read_want_write = false;
-    bool           ssl_write_want_read = false;
-    bool           ssl_write_want_write = false;
-    bool           was_persistent = false;      /**< Whether this DCB was in the persistent pool */
+    SSL*           m_ssl = nullptr;               /**< SSL struct for connection */
+    bool           m_ssl_read_want_read = false;
+    bool           m_ssl_read_want_write = false;
+    bool           m_ssl_write_want_read = false;
+    bool           m_ssl_write_want_write = false;
+    bool           m_was_persistent = false;      /**< Whether this DCB was in the persistent pool */
     bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
                                                  * release
                                                  * throttle */
@@ -210,8 +210,8 @@ public:
     {
         DCB* next = nullptr;        /**< Next DCB in owning thread's list */
         DCB* tail = nullptr;        /**< Last DCB in owning thread's list */
-    }        thread;
-    uint32_t n_close = 0;   /** How many times dcb_close has been called. */
+    } m_thread;
+    uint32_t m_nClose = 0;   /** How many times dcb_close has been called. */
     uint64_t m_uid;         /**< Unique identifier for this DCB */
 };
 

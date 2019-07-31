@@ -1297,7 +1297,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
                        "%d SQL commands, %d events sent (%lu bytes), binlog '%s', "
                        "last position %lu",
                        router->service->name(),
-                       slave->dcb->remote,
+                       slave->dcb->m_remote,
                        dcb_get_port(slave->dcb),
                        slave->serverid,
                        time(0) - slave->connect_time,
@@ -1312,7 +1312,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
             MXS_NOTICE("%s: Slave %s, server id %d, disconnected after %ld seconds. "
                        "%d SQL commands",
                        router->service->name(),
-                       slave->dcb->remote,
+                       slave->dcb->m_remote,
                        slave->serverid,
                        time(0) - slave->connect_time,
                        slave->stats.n_queries);
@@ -1757,15 +1757,15 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             }
             dcb_printf(dcb,
                        "\t\tSlave_host_port:                         [%s]:%d\n",
-                       session->dcb->remote,
+                       session->dcb->m_remote,
                        dcb_get_port(session->dcb));
             dcb_printf(dcb,
                        "\t\tUsername:                                %s\n",
-                       session->dcb->user);
+                       session->dcb->m_user);
             dcb_printf(dcb,
                        "\t\tSlave DCB:                               %p\n",
                        session->dcb);
-            if (session->dcb->ssl)
+            if (session->dcb->m_ssl)
             {
                 dcb_printf(dcb,
                            "\t\tSlave connected with SSL:                %s\n",
@@ -2165,10 +2165,10 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
                 json_object_set_new(rval, "uuid", json_string(session->uuid));
             }
 
-            json_object_set_new(rval, "address", json_string(session->dcb->remote));
+            json_object_set_new(rval, "address", json_string(session->dcb->m_remote));
             json_object_set_new(rval, "port", json_integer(dcb_get_port(session->dcb)));
-            json_object_set_new(rval, "user", json_string(session->dcb->user));
-            json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->ssl));
+            json_object_set_new(rval, "user", json_string(session->dcb->m_user));
+            json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->m_ssl));
             json_object_set_new(rval, "state", json_string(blrs_states[session->state]));
             json_object_set_new(rval, "next_sequence", json_integer(session->seqno));
             json_object_set_new(rval, "binlog_file", json_string(session->binlog_name));
@@ -2304,7 +2304,7 @@ static void errorReply(MXS_ROUTER* instance,
                        mxs_error_action_t action,
                        bool* succp)
 {
-    mxb_assert(backend_dcb->role == DCB::Role::BACKEND);
+    mxb_assert(backend_dcb->m_role == DCB::Role::BACKEND);
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
     int error;
     socklen_t len;

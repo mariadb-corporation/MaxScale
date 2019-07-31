@@ -227,7 +227,7 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
                 {
                     /* Success */
                     atomic_add(&sref->connections, 1);
-                    conn->service = session->service;
+                    conn->m_service = session->service;
                     backends.push_back(conn);
                 }   /* Any error by dcb_connect is reported by the function itself */
             }
@@ -239,7 +239,7 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
             if (write_dcb)
             {
                 /* Success */
-                write_dcb->service = session->service;
+                write_dcb->m_service = session->service;
             }
         }
         if (backends.size() < 1)
@@ -362,7 +362,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
         }
         /* Do not use dcb_write() to output to a dcb. dcb_write() is used only
          * for raw write in the procol modules. */
-        rval = target->func.write(target, querybuf);
+        rval = target->m_func.write(target, querybuf);
         /* After write, the buffer points to non-existing data. */
         querybuf = NULL;
     }
@@ -383,7 +383,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
             GWBUF* copy = gwbuf_clone(querybuf);
             if (copy)
             {
-                route_success += dcb->func.write(dcb, copy);
+                route_success += dcb->m_func.write(dcb, copy);
             }
         }
         if (m_write_dcb)
@@ -391,7 +391,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
             GWBUF* copy = gwbuf_clone(querybuf);
             if (copy)
             {
-                route_success += m_write_dcb->func.write(m_write_dcb, copy);
+                route_success += m_write_dcb->m_func.write(m_write_dcb, copy);
             }
         }
         m_replies_to_ignore += route_success - 1;
@@ -466,14 +466,14 @@ void RRRouterSession::handleError(GWBUF* message,
                                   mxs_error_action_t action,
                                   bool* succp)
 {
-    MXS_SESSION* session = problem_dcb->session;
+    MXS_SESSION* session = problem_dcb->m_session;
     DCB* client_dcb = session->client_dcb;
     MXS_SESSION::State sesstate = session->state();
 
     /* If the erroneous dcb is a client handler, close it. Setting succp to
      * false will cause the entire attached session to be closed.
      */
-    if (problem_dcb->role == DCB::Role::CLIENT)
+    if (problem_dcb->m_role == DCB::Role::CLIENT)
     {
         dcb_close(problem_dcb);
         *succp = false;
@@ -491,7 +491,7 @@ void RRRouterSession::handleError(GWBUF* message,
                     GWBUF* copy = gwbuf_clone(message);
                     if (copy)
                     {
-                        client_dcb->func.write(client_dcb, copy);
+                        client_dcb->m_func.write(client_dcb, copy);
                     }
                 }
                 *succp = false;
@@ -501,7 +501,7 @@ void RRRouterSession::handleError(GWBUF* message,
         case ERRACT_NEW_CONNECTION:
             {
                 /* React to a failed backend */
-                if (problem_dcb->role == DCB::Role::BACKEND)
+                if (problem_dcb->m_role == DCB::Role::BACKEND)
                 {
                     if (problem_dcb == m_write_dcb)
                     {
@@ -578,7 +578,7 @@ void RRRouterSession::close()
         for (unsigned int i = 0; i < m_backend_dcbs.size(); i++)
         {
             DCB* dcb = m_backend_dcbs[i];
-            SERVER_REF* sref = dcb->service->dbref;
+            SERVER_REF* sref = dcb->m_service->dbref;
             while (sref && (sref->server != dcb->m_server))
             {
                 sref = sref->next;

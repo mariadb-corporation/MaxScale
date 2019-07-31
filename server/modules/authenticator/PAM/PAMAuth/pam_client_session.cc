@@ -41,7 +41,7 @@ bool store_client_password(DCB* dcb, GWBUF* buffer)
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(header);
-        MYSQL_session* ses = (MYSQL_session*)dcb->data;
+        MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
         ses->auth_token = (uint8_t*)MXS_CALLOC(plen, sizeof(uint8_t));
         if (ses->auth_token)
         {
@@ -160,7 +160,7 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
                                              StringVector* services_out)
 {
     const char* user = session->user;
-    const char* host = dcb->remote;
+    const char* host = dcb->m_remote;
     const string db = session->db;
     // First search for a normal matching user.
     const string columns = FIELD_HOST + ", " + FIELD_AUTHSTR + ", " + FIELD_DEF_ROLE + ", " + FIELD_ANYDB;
@@ -267,7 +267,7 @@ Buffer PamClientSession::create_auth_change_packet() const
 int PamClientSession::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_SSL_COMPLETE;
-    MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->data);
+    MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->m_data);
     if (*ses->user)
     {
         rval = MXS_AUTH_FAILED;
@@ -277,7 +277,7 @@ int PamClientSession::authenticate(DCB* dcb)
              * authentication to something other than the 'mysql_native_password'
              * method */
             Buffer authbuf = create_auth_change_packet();
-            if (authbuf.length() && dcb->func.write(dcb, authbuf.release()))
+            if (authbuf.length() && dcb->m_func.write(dcb, authbuf.release()))
             {
                 m_state = State::ASKED_FOR_PW;
                 rval = MXS_AUTH_INCOMPLETE;
@@ -298,7 +298,7 @@ int PamClientSession::authenticate(DCB* dcb)
             StringVector services_old;
             for (int loop = 0; loop < 2 && !authenticated; loop++)
             {
-                if (loop == 0 || service_refresh_users(dcb->service) == 0)
+                if (loop == 0 || service_refresh_users(dcb->m_service) == 0)
                 {
                     bool try_validate = true;
                     StringVector services;
@@ -323,7 +323,7 @@ int PamClientSession::authenticate(DCB* dcb)
                                 service = "mysql";
                             }
 
-                            mxb::PamResult res = mxb::pam_authenticate(ses->user, password, dcb->remote,
+                            mxb::PamResult res = mxb::pam_authenticate(ses->user, password, dcb->m_remote,
                                                                        service, PASSWORD);
                             if (res.type == mxb::PamResult::Result::SUCCESS)
                             {

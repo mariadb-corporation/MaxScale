@@ -82,7 +82,7 @@ void auth_backend_destroy(void* data)
 static bool auth_backend_extract(DCB* dcb, GWBUF* buf)
 {
     bool rval = false;
-    mysql_backend_auth_t* mba = (mysql_backend_auth_t*)dcb->authenticator_data;
+    mysql_backend_auth_t* mba = (mysql_backend_auth_t*)dcb->m_authenticator_data;
 
     switch (mba->state)
     {
@@ -117,7 +117,7 @@ static bool auth_backend_extract(DCB* dcb, GWBUF* buf)
 static int auth_backend_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    mysql_backend_auth_t* mba = (mysql_backend_auth_t*)dcb->authenticator_data;
+    mysql_backend_auth_t* mba = (mysql_backend_auth_t*)dcb->m_authenticator_data;
 
     if (mba->state == MBA_AUTH_OK)
     {

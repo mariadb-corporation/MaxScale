@@ -442,7 +442,7 @@ bool RCRSession::connection_is_valid() const
 int RCRSession::routeQuery(GWBUF* queue)
 {
     int rc = 0;
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(m_client_dcb->protocol);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(m_client_dcb->m_protocol);
     mxs_mysql_cmd_t mysql_command = proto->current_command;
 
     mxb::atomic::add(&m_instance->stats().n_queries, 1, mxb::atomic::RELAXED);
@@ -464,10 +464,10 @@ int RCRSession::routeQuery(GWBUF* queue)
     switch (mysql_command)
     {
     case MXS_COM_CHANGE_USER:
-        rc = backend_dcb->func.auth(backend_dcb,
-                                    nullptr,
-                                    backend_dcb->session,
-                                    queue);
+        rc = backend_dcb->m_func.auth(backend_dcb,
+                                      nullptr,
+                                      backend_dcb->m_session,
+                                      queue);
         break;
 
     case MXS_COM_QUERY:
@@ -477,7 +477,7 @@ int RCRSession::routeQuery(GWBUF* queue)
         }
 
     default:
-        rc = backend_dcb->func.write(backend_dcb, queue);
+        rc = backend_dcb->m_func.write(backend_dcb, queue);
         break;
     }
 
@@ -551,7 +551,7 @@ json_t* RCR::diagnostics_json() const
  */
 void RCRSession::clientReply(GWBUF* queue, DCB* backend_dcb)
 {
-    mxb_assert(backend_dcb->session->client_dcb);
+    mxb_assert(backend_dcb->m_session->client_dcb);
     RouterSession::clientReply(queue, backend_dcb);
 }
 
@@ -568,10 +568,10 @@ void RCRSession::clientReply(GWBUF* queue, DCB* backend_dcb)
 void RCRSession::handleError(GWBUF* errbuf, DCB* problem_dcb, mxs_error_action_t action, bool* succp)
 
 {
-    mxb_assert(problem_dcb->role == DCB::Role::BACKEND);
-    mxb_assert(problem_dcb->session->state() == MXS_SESSION::State::STARTED);
-    DCB* client_dcb = problem_dcb->session->client_dcb;
-    client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
+    mxb_assert(problem_dcb->m_role == DCB::Role::BACKEND);
+    mxb_assert(problem_dcb->m_session->state() == MXS_SESSION::State::STARTED);
+    DCB* client_dcb = problem_dcb->m_session->client_dcb;
+    client_dcb->m_func.write(client_dcb, gwbuf_clone(errbuf));
 
     // The DCB will be closed once the session closes, no need to close it here
     *succp = false;

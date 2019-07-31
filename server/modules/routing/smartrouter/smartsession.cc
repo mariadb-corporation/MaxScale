@@ -229,7 +229,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
             MXS_SDEBUG("Write all");
             ret = write_to_all(pBuf, Mode::Query);
         }
-        else if (m_qc.target_is_master(route_info.target()) || session_trx_is_active(m_pClient_dcb->session))
+        else if (m_qc.target_is_master(route_info.target()) || session_trx_is_active(m_pClient_dcb->m_session))
         {
             MXS_SDEBUG("Write to master");
             ret = write_to_master(pBuf);
@@ -421,7 +421,7 @@ bool SmartRouterSession::write_to_master(GWBUF* pBuf)
         m_mode = Mode::Query;
     }
 
-    return cluster.pDcb->func.write(cluster.pDcb, pBuf);
+    return cluster.pDcb->m_func.write(cluster.pDcb, pBuf);
 }
 
 bool SmartRouterSession::write_to_host(const maxbase::Host& host, GWBUF* pBuf)
@@ -439,7 +439,7 @@ bool SmartRouterSession::write_to_host(const maxbase::Host& host, GWBUF* pBuf)
 
     cluster.is_replying_to_client = false;
 
-    return cluster.pDcb->func.write(cluster.pDcb, pBuf);
+    return cluster.pDcb->m_func.write(cluster.pDcb, pBuf);
 }
 
 bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
@@ -452,7 +452,7 @@ bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
         cluster.tracker = maxsql::PacketTracker(pBuf);
         cluster.is_replying_to_client = false;
         auto pBuf_send = (next(it) == end(m_clusters)) ? pBuf : gwbuf_clone(pBuf);
-        if (!cluster.pDcb->func.write(cluster.pDcb, pBuf_send))
+        if (!cluster.pDcb->m_func.write(cluster.pDcb, pBuf_send))
         {
             success = false;
         }
@@ -487,7 +487,7 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
         cluster.tracker.update_request(pBuf);
 
         auto pBuf_send = (next(it) == end(active)) ? pBuf : gwbuf_clone(pBuf);
-        if (!cluster.pDcb->func.write(cluster.pDcb, pBuf_send))
+        if (!cluster.pDcb->m_func.write(cluster.pDcb, pBuf_send))
         {
             success = false;
             break;
@@ -499,10 +499,10 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
 
 void SmartRouterSession::kill_all_others(const Cluster& cluster)
 {
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(cluster.pDcb->protocol);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(cluster.pDcb->m_protocol);
     int keep_protocol_thread_id = proto->thread_id;
 
-    mxs_mysql_execute_kill_all_others(cluster.pDcb->session, cluster.pDcb->session->id(),
+    mxs_mysql_execute_kill_all_others(cluster.pDcb->m_session, cluster.pDcb->m_session->id(),
                                       keep_protocol_thread_id, KT_QUERY);
 }
 
@@ -525,14 +525,14 @@ void SmartRouterSession::handleError(GWBUF* pPacket,
     MXS_SERROR("handleError(): Lost connection to " << cluster.host << " Error code=" << err_code << " "
                                                     << extract_error(pPacket));
 
-    MXS_SESSION* pSession = pProblem->session;
+    MXS_SESSION* pSession = pProblem->m_session;
 
     /* Send error report to client */
     GWBUF* pCopy = gwbuf_clone(pPacket);
     if (pCopy)
     {
         DCB* pClient = pSession->client_dcb;
-        pClient->func.write(pClient, pCopy);
+        pClient->m_func.write(pClient, pCopy);
     }
 
     // This will lead to the rest of the connections to be closed.

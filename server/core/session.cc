@@ -125,10 +125,10 @@ bool session_start(MXS_SESSION* ses)
 void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
 {
     mxb_assert(dcb->owner == session->client_dcb->owner);
-    mxb_assert(dcb->role == DCB::Role::BACKEND);
+    mxb_assert(dcb->m_role == DCB::Role::BACKEND);
 
     mxb::atomic::add(&session->refcount, 1);
-    dcb->session = session;
+    dcb->m_session = session;
 
     Session* ses = static_cast<Session*>(session);
     ses->link_backend_dcb(dcb);
@@ -224,9 +224,9 @@ void printSession(MXS_SESSION* session)
 
 bool printAllSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->role == DCB::Role::CLIENT)
+    if (dcb->m_role == DCB::Role::CLIENT)
     {
-        printSession(dcb->session);
+        printSession(dcb->m_session);
     }
 
     return true;
@@ -246,10 +246,10 @@ void printAllSessions()
 /** Callback for dprintAllSessions */
 bool dprintAllSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->role == DCB::Role::CLIENT)
+    if (dcb->m_role == DCB::Role::CLIENT)
     {
         DCB* out_dcb = (DCB*)data;
-        dprintSession(out_dcb, dcb->session);
+        dprintSession(out_dcb, dcb->m_session);
     }
     return true;
 }
@@ -286,15 +286,15 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
     dcb_printf(dcb, "\tState:               %s\n", session_state_to_string(print_session->state()));
     dcb_printf(dcb, "\tService:             %s\n", print_session->service->name());
 
-    if (print_session->client_dcb && print_session->client_dcb->remote)
+    if (print_session->client_dcb && print_session->client_dcb->m_remote)
     {
         double idle = (mxs_clock() - print_session->client_dcb->m_last_read);
         idle = idle > 0 ? idle / 10.f : 0;
         dcb_printf(dcb,
                    "\tClient Address:          %s%s%s\n",
-                   print_session->client_dcb->user ? print_session->client_dcb->user : "",
-                   print_session->client_dcb->user ? "@" : "",
-                   print_session->client_dcb->remote);
+                   print_session->client_dcb->m_user ? print_session->client_dcb->m_user : "",
+                   print_session->client_dcb->m_user ? "@" : "",
+                   print_session->client_dcb->m_remote);
         dcb_printf(dcb,
                    "\tConnected:               %s\n",
                    asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
@@ -315,15 +315,15 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
 
 bool dListSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->role == DCB::Role::CLIENT)
+    if (dcb->m_role == DCB::Role::CLIENT)
     {
         DCB* out_dcb = (DCB*)data;
-        MXS_SESSION* session = dcb->session;
+        MXS_SESSION* session = dcb->m_session;
         dcb_printf(out_dcb,
                    "%-16" PRIu64 " | %-15s | %-14s | %s\n",
                    session->id(),
-                   session->client_dcb && session->client_dcb->remote ?
-                   session->client_dcb->remote : "",
+                   session->client_dcb && session->client_dcb->m_remote ?
+                   session->client_dcb->m_remote : "",
                    session->service && session->service->name() ?
                    session->service->name() : "",
                    session_state_to_string(session->state()));
@@ -395,7 +395,7 @@ int session_reply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* data
 {
     MXS_SESSION* the_session = (MXS_SESSION*)session;
 
-    return the_session->client_dcb->func.write(the_session->client_dcb, data);
+    return the_session->client_dcb->m_func.write(the_session->client_dcb, data);
 }
 
 /**
@@ -407,7 +407,7 @@ const char* session_get_remote(const MXS_SESSION* session)
 {
     if (session && session->client_dcb)
     {
-        return session->client_dcb->remote;
+        return session->client_dcb->m_remote;
     }
     return NULL;
 }
@@ -451,19 +451,19 @@ bool session_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
  */
 const char* session_get_user(const MXS_SESSION* session)
 {
-    return (session && session->client_dcb) ? session->client_dcb->user : NULL;
+    return (session && session->client_dcb) ? session->client_dcb->m_user : NULL;
 }
 
 bool dcb_iter_cb(DCB* dcb, void* data)
 {
-    if (dcb->role == DCB::Role::CLIENT)
+    if (dcb->m_role == DCB::Role::CLIENT)
     {
         ResultSet* set = static_cast<ResultSet*>(data);
-        MXS_SESSION* ses = dcb->session;
+        MXS_SESSION* ses = dcb->m_session;
         char buf[20];
         snprintf(buf, sizeof(buf), "%p", ses);
 
-        set->add_row({buf, ses->client_dcb->remote, ses->service->name(),
+        set->add_row({buf, ses->client_dcb->m_remote, ses->service->name(),
                       session_state_to_string(ses->state())});
     }
 
@@ -535,9 +535,9 @@ static bool ses_find_id(DCB* dcb, void* data)
     uint64_t* id = (uint64_t*)params[1];
     bool rval = true;
 
-    if (dcb->session->id() == *id)
+    if (dcb->m_session->id() == *id)
     {
-        *ses = session_get_ref(dcb->session);
+        *ses = session_get_ref(dcb->m_session);
         rval = false;
     }
 
@@ -617,15 +617,15 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     json_t* attr = json_object();
     json_object_set_new(attr, "state", json_string(session_state_to_string(session->state())));
 
-    if (session->client_dcb->user)
+    if (session->client_dcb->m_user)
     {
-        json_object_set_new(attr, CN_USER, json_string(session->client_dcb->user));
+        json_object_set_new(attr, CN_USER, json_string(session->client_dcb->m_user));
     }
 
-    if (session->client_dcb->remote)
+    if (session->client_dcb->m_remote)
     {
         string result_address;
-        auto remote = session->client_dcb->remote;
+        auto remote = session->client_dcb->m_remote;
         if (rdns)
         {
             maxbase::reverse_name_lookup(remote, &result_address);
@@ -698,10 +698,10 @@ struct SessionListData
 
 bool seslist_cb(DCB* dcb, void* data)
 {
-    if (dcb->role == DCB::Role::CLIENT)
+    if (dcb->m_role == DCB::Role::CLIENT)
     {
         SessionListData* d = (SessionListData*)data;
-        Session* session = static_cast<Session*>(dcb->session);
+        Session* session = static_cast<Session*>(dcb->m_session);
         json_array_append_new(d->json, session_json_data(session, d->host, d->rdns));
     }
 
@@ -729,7 +729,7 @@ MXS_SESSION* session_get_current()
 {
     DCB* dcb = dcb_get_current();
 
-    return dcb ? dcb->session : NULL;
+    return dcb ? dcb->m_session : NULL;
 }
 
 uint64_t session_get_current_id()
@@ -1059,7 +1059,7 @@ Session::~Session()
 void Session::set_client_dcb(DCB* dcb)
 {
     mxb_assert(client_dcb == nullptr);
-    mxb_assert(dcb->role == DCB::Role::CLIENT);
+    mxb_assert(dcb->m_role == DCB::Role::CLIENT);
     client_dcb = dcb;
 }
 
@@ -1607,8 +1607,8 @@ bool Session::start()
 
     MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
              service->name(), id(),
-             client_dcb->user ? client_dcb->user : "<no user>",
-             client_dcb->remote);
+             client_dcb->m_user ? client_dcb->m_user : "<no user>",
+             client_dcb->m_remote);
 
     return true;
 }

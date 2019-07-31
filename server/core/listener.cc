@@ -826,13 +826,13 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
     else
     {
         session->set_client_dcb(client_dcb);
-        memcpy(&client_dcb->ip, addr, sizeof(*addr));
+        memcpy(&client_dcb->m_ip, addr, sizeof(*addr));
         client_dcb->m_fd = fd;
-        client_dcb->remote = MXS_STRDUP_A(host);
+        client_dcb->m_remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */
         if (m_auth_func.create
-            && (client_dcb->authenticator_data = m_auth_func.create(m_auth_instance)) == NULL)
+            && (client_dcb->m_authenticator_data = m_auth_func.create(m_auth_instance)) == NULL)
         {
             MXS_ERROR("Failed to create authenticator for client DCB");
             dcb_close(client_dcb);
@@ -849,7 +849,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
             }
 
             // TODO: This is never used as the client connection is not up yet
-            client_dcb->session->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
+            client_dcb->m_session->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
 
             dcb_close(client_dcb);
             client_dcb = NULL;

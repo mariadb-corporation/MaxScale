@@ -429,10 +429,10 @@ static void sigfatal_handler(int i)
 
     if (DCB* dcb = dcb_get_current())
     {
-        if (dcb->session)
+        if (dcb->m_session)
         {
-            session_dump_statements(dcb->session);
-            session_dump_log(dcb->session);
+            session_dump_statements(dcb->m_session);
+            session_dump_log(dcb->m_session);
         }
     }
 

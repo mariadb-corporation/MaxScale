@@ -92,12 +92,12 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* dcb)
             strcpy((char*)GWBUF_DATA(username), protocol->username);
 
             /* Authenticate the user */
-            if (dcb->authfunc.extract(dcb, username)
-                && dcb->authfunc.authenticate(dcb) == 0)
+            if (dcb->m_authfunc.extract(dcb, username)
+                && dcb->m_authfunc.authenticate(dcb) == 0)
             {
                 dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
                 protocol->state = MAXSCALED_STATE_DATA;
-                dcb->user = strdup(protocol->username);
+                dcb->m_user = strdup(protocol->username);
             }
             else
             {
@@ -230,7 +230,7 @@ static int maxscaled_read_event(DCB* dcb)
 {
     int n;
     GWBUF* head = NULL;
-    MAXSCALED* maxscaled = (MAXSCALED*)dcb->protocol;
+    MAXSCALED* maxscaled = (MAXSCALED*)dcb->m_protocol;
 
     if ((n = dcb_read(dcb, &head, 0)) != -1)
     {
@@ -247,7 +247,7 @@ static int maxscaled_read_event(DCB* dcb)
                         memcpy(user, GWBUF_DATA(head), len);
                         user[len] = '\0';
                         maxscaled->username = MXS_STRDUP_A(user);
-                        dcb->user = MXS_STRDUP_A(user);
+                        dcb->m_user = MXS_STRDUP_A(user);
                         maxscaled->state = MAXSCALED_STATE_PASSWD;
                         dcb_printf(dcb, MAXADMIN_AUTH_PASSWORD_PROMPT);
                         gwbuf_free(head);
@@ -274,7 +274,7 @@ static int maxscaled_read_event(DCB* dcb)
 
                 case MAXSCALED_STATE_DATA:
                     {
-                        MXS_SESSION_ROUTE_QUERY(dcb->session, head);
+                        MXS_SESSION_ROUTE_QUERY(dcb->m_session, head);
                         dcb_printf(dcb, "OK");
                     }
                     break;
@@ -372,7 +372,7 @@ static MXS_PROTOCOL_SESSION* maxscaled_accept(DCB* client_dcb)
 
     pthread_mutex_init(&maxscaled_protocol->lock, NULL);
 
-    if (!session_start(client_dcb->session))
+    if (!session_start(client_dcb->m_session))
     {
         dcb_close(client_dcb);
         return 0;
@@ -390,7 +390,11 @@ static MXS_PROTOCOL_SESSION* maxscaled_accept(DCB* client_dcb)
 
 static int maxscaled_close(DCB* dcb)
 {
+<<<<<<< e9a59d554b9b38ab3a03974f399606ad2e1b5204
     MAXSCALED* maxscaled = reinterpret_cast<MAXSCALED*>(dcb->protocol);
+=======
+    MAXSCALED* maxscaled = static_cast<MAXSCALED*>(dcb->m_protocol);
+>>>>>>> MXS-1386 Add m_ to all DCB member variables
 
     if (!maxscaled)
     {

@@ -158,9 +158,9 @@ void HintRouterSession::handleError(GWBUF* pMessage,
 {
     HR_ENTRY();
 
-    mxb_assert(pProblem->role == DCB::Role::BACKEND);
+    mxb_assert(pProblem->m_role == DCB::Role::BACKEND);
 
-    MXS_SESSION* pSession = pProblem->session;
+    MXS_SESSION* pSession = pProblem->m_session;
     MXS_SESSION::State sesstate = pSession->state();
 
     switch (action)
@@ -175,7 +175,7 @@ void HintRouterSession::handleError(GWBUF* pMessage,
                 if (pCopy)
                 {
                     DCB* pClient = pSession->client_dcb;
-                    pClient->func.write(pClient, pCopy);
+                    pClient->m_func.write(pClient, pCopy);
                 }
             }
             *pSuccess = false;

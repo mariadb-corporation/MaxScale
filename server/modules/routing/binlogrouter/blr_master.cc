@@ -133,8 +133,8 @@ static void blr_start_master(void* data)
 
     if (router->client)
     {
-        MXS_FREE(router->client->data);
-        router->client->data = NULL;
+        MXS_FREE(router->client->m_data);
+        router->client->m_data = NULL;
         dcb_close(router->client);
         router->client = NULL;
     }
@@ -209,20 +209,20 @@ static void blr_start_master(void* data)
 
     router->client = dcb_alloc(DCB::Role::INTERNAL, router->session);
     mxb_assert(router->client);
-    router->client->remote = MXS_STRDUP("127.0.0.1");
+    router->client->m_remote = MXS_STRDUP("127.0.0.1");
 
     /* Fake the client is reading */
     router->client->m_state = DCB_STATE_POLLING;      /* Fake the client is reading */
 
     /**
      * This prevents the actual protocol level closing code from being called that expects
-     * the dcb->protocol pointer to not be NULL.
+     * the dcb->m_protocol pointer to not be NULL.
      */
-    router->client->func.close = nullptr;
+    router->client->m_func.close = nullptr;
 
     /* Create MySQL Athentication from configured user/passwd */
-    router->client->data = CreateMySQLAuthData(router->user, router->password, "");
-    router->client->user = MXS_STRDUP(router->user);
+    router->client->m_data = CreateMySQLAuthData(router->user, router->password, "");
+    router->client->m_user = MXS_STRDUP(router->user);
     router->session->client_dcb = router->client;
 
     /* Create a session for dummy client DCB */
@@ -252,7 +252,7 @@ static void blr_start_master(void* data)
                   connect_retry);
         return;
     }
-    router->master->remote = MXS_STRDUP_A(router->service->dbref->server->address);
+    router->master->m_remote = MXS_STRDUP_A(router->service->dbref->server->address);
 
     MXS_NOTICE("%s: attempting to connect to master"
                " server [%s]:%d, binlog='%s', pos=%lu%s%s",
@@ -646,7 +646,7 @@ static GWBUF* blr_make_query(DCB* dcb, char* query)
     memcpy(&data[5], query, strlen(query));
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
     proto->current_command = MXS_COM_QUERY;
 
     return buf;
@@ -710,7 +710,7 @@ static GWBUF* blr_make_registration(ROUTER_INSTANCE* router)
     encode_value(&data[6], router->masterid, 32);   // Master server-id, 4 bytes
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol* proto = (MySQLProtocol*)router->master->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)router->master->m_protocol;
     proto->current_command = MXS_COM_REGISTER_SLAVE;
 
     return buf;
@@ -764,7 +764,7 @@ static GWBUF* blr_make_binlog_dump(ROUTER_INSTANCE* router)
            binlog_file_len);                // binlog filename
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol* proto = (MySQLProtocol*)router->master->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)router->master->m_protocol;
     proto->current_command = MXS_COM_BINLOG_DUMP;
 
     return buf;
@@ -1416,7 +1416,7 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
         if (router->client->m_fd != -1
             && router->client->m_state == DCB_STATE_POLLING)
         {
-            // Is this dead code? dcb->fd for internal DCBs is always -1
+            // Is this dead code? dcb->m_fd for internal DCBs is always -1
             dcb_close(router->client);
             router->client = NULL;
         }
@@ -1730,7 +1730,7 @@ bool blr_send_event(blr_thread_role_t role,
                   "thread %s in the role of %s could not send the event, "
                   "the event has already been sent by thread %s in the role of %s. "
                   "%u bytes buffered for writing in DCB %p. %lu events received from master.",
-                  slave->dcb->remote,
+                  slave->dcb->m_remote,
                   dcb_get_port(slave->dcb),
                   slave->serverid,
                   binlog_name,
@@ -1795,7 +1795,7 @@ bool blr_send_event(blr_thread_role_t role,
     {
         MXS_ERROR("Failed to send an event of %u bytes to slave at [%s]:%d.",
                   hdr->event_size,
-                  slave->dcb->remote,
+                  slave->dcb->m_remote,
                   dcb_get_port(slave->dcb));
     }
     return rval;
@@ -1908,7 +1908,7 @@ int blr_send_semisync_ack(ROUTER_INSTANCE* router, uint64_t pos)
     /* Binlog filename */
     memcpy((char*)&data[13], router->binlog_name, binlog_file_len);
 
-    router->master->func.write(router->master, buf);
+    router->master->m_func.write(router->master, buf);
 
     return 1;
 }
@@ -2468,7 +2468,7 @@ static void blr_register_send_command(ROUTER_INSTANCE* router,
     // Set the next registration phase state
     router->master_state = state;
     // Send the packet
-    router->master->func.write(router->master, buf);
+    router->master->m_func.write(router->master, buf);
 }
 
 /**
@@ -2759,7 +2759,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
         // Set new state
         router->master_state = BLRM_REGISTER;
         // Send the packet
-        router->master->func.write(router->master, buf);
+        router->master->m_func.write(router->master, buf);
         break;
 
     case BLRM_REGISTER:
@@ -2820,7 +2820,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
          */
         buf = blr_make_binlog_dump(router);
         router->master_state = BLRM_BINLOGDUMP;
-        router->master->func.write(router->master, buf);
+        router->master->m_func.write(router->master, buf);
 
         if (router->binlog_name[0])
         {

@@ -108,11 +108,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static int http_auth_authenticate(DCB* dcb)
 {
     int rval = 1;
-    HTTP_AUTH* ses = (HTTP_AUTH*)dcb->data;
+    HTTP_AUTH* ses = (HTTP_AUTH*)dcb->m_data;
     const char* user;
     const char* password;
 
-    serviceGetUser(dcb->service, &user, &password);
+    serviceGetUser(dcb->m_service, &user, &password);
     char* pw = decrypt_password(password);
 
     if (ses && strcmp(ses->user, user) == 0 && strcmp(ses->pw, pw) == 0)
@@ -166,7 +166,7 @@ static bool http_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
             {
                 ses->user = user;
                 ses->pw = pw;
-                dcb->data = ses;
+                dcb->m_data = ses;
                 rval = true;
             }
             else
@@ -205,7 +205,7 @@ static bool http_auth_is_client_ssl_capable(DCB* dcb)
  */
 static void http_auth_free_client_data(DCB* dcb)
 {
-    HTTP_AUTH* ses = (HTTP_AUTH*)dcb->data;
+    HTTP_AUTH* ses = (HTTP_AUTH*)dcb->m_data;
     MXS_FREE(ses->user);
     MXS_FREE(ses->pw);
     MXS_FREE(ses);

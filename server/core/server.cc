@@ -221,34 +221,34 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
 
         while (dcb)
         {
-            mxb_assert(dcb->role == DCB::Role::BACKEND);
+            mxb_assert(dcb->m_role == DCB::Role::BACKEND);
             mxb_assert(dcb->m_server);
 
-            if (dcb->user
-                && dcb->remote
+            if (dcb->m_user
+                && dcb->m_remote
                 && !ip.empty()
-                && !dcb->dcb_errhandle_called
-                && user == dcb->user
-                && ip == dcb->remote
+                && !dcb->m_dcb_errhandle_called
+                && user == dcb->m_user
+                && ip == dcb->m_remote
                 && protocol == dcb->m_server->protocol())
             {
                 if (NULL == previous)
                 {
-                    server->persistent[id] = dcb->nextpersistent;
+                    server->persistent[id] = dcb->m_nextpersistent;
                 }
                 else
                 {
-                    previous->nextpersistent = dcb->nextpersistent;
+                    previous->m_nextpersistent = dcb->m_nextpersistent;
                 }
-                MXS_FREE(dcb->user);
-                dcb->user = NULL;
+                MXS_FREE(dcb->m_user);
+                dcb->m_user = NULL;
                 mxb::atomic::add(&server->pool_stats.n_persistent, -1);
                 mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
                 return dcb;
             }
 
             previous = dcb;
-            dcb = dcb->nextpersistent;
+            dcb = dcb->m_nextpersistent;
         }
     }
     return NULL;

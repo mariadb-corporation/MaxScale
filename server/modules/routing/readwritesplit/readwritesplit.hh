@@ -398,7 +398,7 @@ inline bool can_continue_using_master(const mxs::RWBackend* current_master)
 
     return server->is_master() || (current_master->in_use()
                                    && (server->status() & bits) == bits
-                                   && session_trx_is_active(current_master->dcb()->session));
+                                   && session_trx_is_active(current_master->dcb()->m_session));
 }
 
 mxs::RWBackend* get_root_master(const mxs::PRWBackends& backends, mxs::RWBackend* current_master);

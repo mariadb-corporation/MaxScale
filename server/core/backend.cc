@@ -44,7 +44,7 @@ Backend::~Backend()
 
 void Backend::close(close_type type)
 {
-    mxb_assert(m_dcb && m_dcb->n_close == 0);
+    mxb_assert(m_dcb && m_dcb->m_nClose == 0);
 
     if (!m_closed)
     {
@@ -211,7 +211,7 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
 bool Backend::write(GWBUF* buffer, response_type type)
 {
     mxb_assert(in_use());
-    bool rval = m_dcb->func.write(m_dcb, buffer) != 0;
+    bool rval = m_dcb->m_func.write(m_dcb, buffer) != 0;
 
     if (rval && type == EXPECT_RESPONSE)
     {
@@ -226,7 +226,7 @@ bool Backend::auth(GWBUF* buffer)
     mxb_assert(in_use());
     bool rval = false;
 
-    if (m_dcb->func.auth(m_dcb, NULL, m_dcb->session, buffer) == 1)
+    if (m_dcb->m_func.auth(m_dcb, NULL, m_dcb->m_session, buffer) == 1)
     {
         set_state(WAITING_RESULT);
         rval = true;

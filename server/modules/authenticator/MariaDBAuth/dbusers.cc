@@ -385,8 +385,8 @@ int validate_mysql_user(MYSQL_AUTH* instance,
         mysqlauth_validate_user_query;
     size_t len = snprintf(NULL, 0, validate_query,
                 session->user,
-                dcb->remote,
-                dcb->remote,
+                dcb->m_remote,
+                dcb->m_remote,
                 session->db,
                 session->db);
     char sql[len + 1];
@@ -402,8 +402,8 @@ int validate_mysql_user(MYSQL_AUTH* instance,
         sprintf(sql,
                 validate_query,
                 session->user,
-                dcb->remote,
-                dcb->remote,
+                dcb->m_remote,
+                dcb->m_remote,
                 session->db,
                 session->db);
     }
@@ -417,9 +417,9 @@ int validate_mysql_user(MYSQL_AUTH* instance,
     }
 
     /** Check for IPv6 mapped IPv4 address */
-    if (!res.ok && strchr(dcb->remote, ':') && strchr(dcb->remote, '.'))
+    if (!res.ok && strchr(dcb->m_remote, ':') && strchr(dcb->m_remote, '.'))
     {
-        const char* ipv4 = strrchr(dcb->remote, ':') + 1;
+        const char* ipv4 = strrchr(dcb->m_remote, ':') + 1;
         sprintf(sql,
                 validate_query,
                 session->user,
@@ -1004,10 +1004,10 @@ static bool get_hostname(DCB* dcb, char* client_hostname, size_t size)
     hint.ai_flags = AI_ALL;
     int rc;
 
-    if ((rc = getaddrinfo(dcb->remote, NULL, &hint, &ai)) != 0)
+    if ((rc = getaddrinfo(dcb->m_remote, NULL, &hint, &ai)) != 0)
     {
         MXS_ERROR("Failed to obtain address for host %s, %s",
-                  dcb->remote,
+                  dcb->m_remote,
                   gai_strerror(rc));
         return false;
     }
@@ -1027,7 +1027,7 @@ static bool get_hostname(DCB* dcb, char* client_hostname, size_t size)
     if (lookup_result != 0 && lookup_result != EAI_NONAME)
     {
         MXS_WARNING("Client hostname lookup failed for '%s', getnameinfo() returned: '%s'.",
-                    dcb->remote,
+                    dcb->m_remote,
                     gai_strerror(lookup_result));
     }
 

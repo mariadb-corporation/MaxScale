@@ -317,15 +317,15 @@ static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session
 static int mysql_auth_authenticate(DCB* dcb)
 {
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
-    MYSQL_session* client_data = (MYSQL_session*)dcb->data;
+    MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
     if (*client_data->user)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
                   client_data->user,
                   client_data->db);
 
-        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session->listener->auth_instance();
-        MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol);
+        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->m_session->listener->auth_instance();
+        MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->m_protocol);
 
         if (!client_data->correct_authenticator)
         {
@@ -349,7 +349,7 @@ static int mysql_auth_authenticate(DCB* dcb)
                                        sizeof(protocol->scramble));
 
         if (auth_ret != MXS_AUTH_SUCCEEDED
-            && service_refresh_users(dcb->service) == 0)
+            && service_refresh_users(dcb->m_service) == 0)
         {
             auth_ret = validate_mysql_user(instance,
                                            dcb,
@@ -362,10 +362,10 @@ static int mysql_auth_authenticate(DCB* dcb)
         if (auth_ret == MXS_AUTH_SUCCEEDED)
         {
             auth_ret = MXS_AUTH_SUCCEEDED;
-            dcb->user = MXS_STRDUP_A(client_data->user);
+            dcb->m_user = MXS_STRDUP_A(client_data->user);
             /** Send an OK packet to the client */
         }
-        else if (dcb->service->log_auth_warnings)
+        else if (dcb->m_service->log_auth_warnings)
         {
             // The default failure is a `User not found` one
             char extra[256] = "User not found.";
@@ -381,19 +381,19 @@ static int mysql_auth_authenticate(DCB* dcb)
 
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
-                          dcb->service->name(),
+                          dcb->m_service->name(),
                           client_data->user,
-                          dcb->remote,
+                          dcb->m_remote,
                           dcb_get_port(dcb),
                           extra);
 
-            if (is_localhost_address(&dcb->ip)
-                && !dcb->service->localhost_match_wildcard_host)
+            if (is_localhost_address(&dcb->m_ip)
+                && !dcb->m_service->localhost_match_wildcard_host)
             {
                 MXS_NOTICE("If you have a wildcard grant that covers this address, "
                            "try adding 'localhost_match_wildcard_host=true' for "
                            "service '%s'. ",
-                           dcb->service->name());
+                           dcb->m_service->name());
             }
         }
 
@@ -427,9 +427,9 @@ static bool mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
     MySQLProtocol* protocol = NULL;
     MYSQL_session* client_data = NULL;
     int client_auth_packet_size = 0;
-    protocol = static_cast<MySQLProtocol*>(dcb->protocol);
+    protocol = static_cast<MySQLProtocol*>(dcb->m_protocol);
 
-    client_data = (MYSQL_session*)dcb->data;
+    client_data = (MYSQL_session*)dcb->m_data;
 
     client_auth_packet_size = gwbuf_length(buf);
 
@@ -617,7 +617,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                     // logged at once.
                                     MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
                                              "plugin '%s'. Trying to switch to '%s'.",
-                                             client_data->user, protocol->owner_dcb->remote, plugin_name,
+                                             client_data->user, protocol->owner_dcb->m_remote, plugin_name,
                                              DEFAULT_MYSQL_AUTH_PLUGIN);
                                 }
                             }
@@ -673,7 +673,7 @@ static bool mysql_auth_is_client_ssl_capable(DCB* dcb)
 {
     MySQLProtocol* protocol;
 
-    protocol = static_cast<MySQLProtocol*>(dcb->protocol);
+    protocol = static_cast<MySQLProtocol*>(dcb->m_protocol);
     return (protocol->client_capabilities & (int)GW_MYSQL_CAPABILITIES_SSL) ? true : false;
 }
 
@@ -681,7 +681,7 @@ static bool mysql_auth_is_client_ssl_capable(DCB* dcb)
  * @brief Free the client data pointed to by the passed DCB.
  *
  * Currently all that is required is to free the storage pointed to by
- * dcb->data.  But this is intended to be implemented as part of the
+ * dcb->m_data.  But this is intended to be implemented as part of the
  * authentication API at which time this code will be moved into the
  * MySQL authenticator.  If the data structure were to become more complex
  * the mechanism would still work and be the responsibility of the authenticator.
@@ -691,7 +691,7 @@ static bool mysql_auth_is_client_ssl_capable(DCB* dcb)
  */
 static void mysql_auth_free_client_data(DCB* dcb)
 {
-    MXS_FREE(dcb->data);
+    MXS_FREE(dcb->m_data);
 }
 
 /**
@@ -839,7 +839,7 @@ int mysql_auth_reauthenticate(DCB* dcb,
                               uint8_t* output_token,
                               size_t output_token_len)
 {
-    MYSQL_session* client_data = (MYSQL_session*)dcb->data;
+    MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
     MYSQL_session temp;
     int rval = 1;
 
@@ -848,10 +848,10 @@ int mysql_auth_reauthenticate(DCB* dcb,
     temp.auth_token = token;
     temp.auth_token_len = token_len;
 
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session->listener->auth_instance();
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->m_session->listener->auth_instance();
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
-    if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service) == 0)
+    if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->m_service) == 0)
     {
         rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
     }

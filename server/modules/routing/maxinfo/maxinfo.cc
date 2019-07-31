@@ -264,15 +264,15 @@ static void handleError(MXS_ROUTER* instance,
                         bool* succp)
 
 {
-    mxb_assert(backend_dcb->role == DCB::Role::BACKEND);
+    mxb_assert(backend_dcb->m_role == DCB::Role::BACKEND);
     DCB* client_dcb;
-    MXS_SESSION* session = backend_dcb->session;
+    MXS_SESSION* session = backend_dcb->m_session;
 
     client_dcb = session->client_dcb;
 
     if (session->state() == MXS_SESSION::State::STARTED)
     {
-        client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
+        client_dcb->m_func.write(client_dcb, gwbuf_clone(errbuf));
     }
 
     /** false because connection is not available anymore */
@@ -421,7 +421,7 @@ static int maxinfo_statistics(INFO_INSTANCE* router, INFO_SESSION* session, GWBU
     *ptr++ = 1;
     memcpy(ptr, result, len);
 
-    return session->dcb->func.write(session->dcb, ret);
+    return session->dcb->m_func.write(session->dcb, ret);
 }
 
 /**
@@ -448,7 +448,7 @@ static int maxinfo_ping(INFO_INSTANCE* router, INFO_SESSION* session, GWBUF* que
     *ptr++ = 1;
     *ptr = 0;       // OK
 
-    return session->dcb->func.write(session->dcb, ret);
+    return session->dcb->m_func.write(session->dcb, ret);
 }
 
 /**
@@ -502,7 +502,7 @@ static int maxinfo_send_ok(DCB* dcb)
     *ptr++ = 0;
     *ptr++ = 0;
     *ptr++ = 0;
-    return dcb->func.write(dcb, buf);
+    return dcb->m_func.write(dcb, buf);
 }
 
 /**

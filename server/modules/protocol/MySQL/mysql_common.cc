@@ -74,7 +74,7 @@ const char* gw_mysql_protocol_state2string(int state)
 
 void mysql_protocol_set_current_command(DCB* dcb, mxs_mysql_cmd_t cmd)
 {
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
     proto->current_command = cmd;
 }
 
@@ -136,7 +136,7 @@ int mysql_send_com_quit(DCB* dcb,
     {
         return 0;
     }
-    nbytes = dcb->func.write(dcb, buf);
+    nbytes = dcb->m_func.write(dcb, buf);
 
     return nbytes;
 }
@@ -292,7 +292,7 @@ int mysql_send_standard_error(DCB* dcb,
 {
     GWBUF* buf;
     buf = mysql_create_standard_error(packet_number, error_number, error_message);
-    return buf ? dcb->func.write(dcb, buf) : 0;
+    return buf ? dcb->m_func.write(dcb, buf) : 0;
 }
 
 /**
@@ -317,7 +317,7 @@ int mysql_send_custom_error(DCB* dcb,
 
     buf = mysql_create_custom_error(packet_number, in_affected_rows, mysql_message);
 
-    return dcb->func.write(dcb, buf);
+    return dcb->m_func.write(dcb, buf);
 }
 
 /**
@@ -404,7 +404,7 @@ int mysql_send_auth_error(DCB* dcb,
     memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
     // writing data in the Client buffer queue
-    dcb->func.write(dcb, buf);
+    dcb->m_func.write(dcb, buf);
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
@@ -527,21 +527,21 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
 {
     bool rval = true;
 
-    if (dcb->role == DCB::Role::CLIENT)
+    if (dcb->m_role == DCB::Role::CLIENT)
     {
         // The shared session data can be extracted at any time if the client DCB is used.
-        mxb_assert(dcb->data);
-        memcpy(session, dcb->data, sizeof(MYSQL_session));
+        mxb_assert(dcb->m_data);
+        memcpy(session, dcb->m_data, sizeof(MYSQL_session));
     }
-    else if (dcb->session->state() != MXS_SESSION::State::CREATED)
+    else if (dcb->m_session->state() != MXS_SESSION::State::CREATED)
     {
-        memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
+        memcpy(session, dcb->m_session->client_dcb->m_data, sizeof(MYSQL_session));
     }
     else
     {
         mxb_assert(false);
         MXS_ERROR("Couldn't get session authentication info. Session in wrong state: %s.",
-                  session_state_to_string(dcb->session->state()));
+                  session_state_to_string(dcb->m_session->state()));
         rval = false;
     }
 
@@ -627,7 +627,7 @@ int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char*
     }
 
     // writing data in the Client buffer queue
-    return dcb->func.write(dcb, buf);
+    return dcb->m_func.write(dcb, buf);
 }
 
 /**
@@ -907,9 +907,9 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
 {
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
-    if (dcb->session == NULL
-        || (dcb->session->state() != MXS_SESSION::State::CREATED
-            && dcb->session->state() != MXS_SESSION::State::STARTED)
+    if (dcb->m_session == NULL
+        || (dcb->m_session->state() != MXS_SESSION::State::CREATED
+            && dcb->m_session->state() != MXS_SESSION::State::STARTED)
         || (dcb->m_server->ssl().context() && dcb->m_ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
@@ -919,13 +919,13 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     bool ssl_established = dcb->m_ssl_state == SSL_ESTABLISHED;
 
     MYSQL_session client;
-    gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
+    gw_get_shared_session_auth_info(dcb->m_session->client_dcb, &client);
 
     GWBUF* buffer = gw_generate_auth_response(&client,
-                                              (MySQLProtocol*)dcb->protocol,
+                                              (MySQLProtocol*)dcb->m_protocol,
                                               with_ssl,
                                               ssl_established,
-                                              dcb->service->capabilities);
+                                              dcb->m_service->capabilities);
     mxb_assert(buffer);
 
     if (with_ssl && !ssl_established)
@@ -945,7 +945,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
 
 int send_mysql_native_password_response(DCB* dcb)
 {
-    MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*) dcb->m_protocol;
     MYSQL_session local_session;
     gw_get_shared_session_auth_info(dcb, &local_session);
 
@@ -963,7 +963,7 @@ int send_mysql_native_password_response(DCB* dcb)
 
 bool send_auth_switch_request_packet(DCB* dcb)
 {
-    MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*) dcb->m_protocol;
     const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
     uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + len);
@@ -1088,7 +1088,7 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
  */
 bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
 {
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
     bool rval = false;
     uint8_t* payload = GWBUF_DATA(buffer) + 4;
 
@@ -1213,19 +1213,19 @@ bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
 
 mxs_mysql_cmd_t mxs_mysql_current_command(MXS_SESSION* session)
 {
-    MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->m_protocol;
     return proto->current_command;
 }
 
 const char* mxs_mysql_get_current_db(MXS_SESSION* session)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
     return data->db;
 }
 
 void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
     snprintf(data->db, sizeof(data->db), "%s", db);
 }
 
@@ -1285,7 +1285,7 @@ struct KillInfo
     KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
         : origin(mxs_rworker_get_current_id())
         , query_base(query)
-        , protocol(*(MySQLProtocol*)ses->client_dcb->protocol)
+        , protocol(*(MySQLProtocol*)ses->client_dcb->m_protocol)
         , cb(callback)
     {
         gw_get_shared_session_auth_info(ses->client_dcb, &session);
@@ -1330,10 +1330,10 @@ struct UserKillInfo : public KillInfo
 static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->m_protocol);
 
-    if (dcb->session->id() == info->target_id
-        && dcb->role == DCB::Role::BACKEND
+    if (dcb->m_session->id() == info->target_id
+        && dcb->m_role == DCB::Role::BACKEND
         && (info->keep_thread_id == 0 || proto->thread_id != info->keep_thread_id))
     {
         if (proto->thread_id)
@@ -1346,7 +1346,7 @@ static bool kill_func(DCB* dcb, void* data)
         else
         {
             // DCB is not yet connected, send a hangup to forcibly close it
-            dcb->session->close_reason = SESSION_CLOSE_KILLED;
+            dcb->m_session->close_reason = SESSION_CLOSE_KILLED;
             poll_fake_hangup_event(dcb);
         }
     }
@@ -1358,8 +1358,8 @@ static bool kill_user_func(DCB* dcb, void* data)
 {
     UserKillInfo* info = (UserKillInfo*)data;
 
-    if (dcb->role == DCB::Role::BACKEND
-        && strcasecmp(dcb->session->client_dcb->user, info->user.c_str()) == 0)
+    if (dcb->m_role == DCB::Role::BACKEND
+        && strcasecmp(dcb->m_session->client_dcb->m_user, info->user.c_str()) == 0)
     {
         info->targets[dcb->m_server] = info->query_base;
     }
@@ -1796,7 +1796,7 @@ void MySQLProtocol::process_reply_start(Iter it, Iter end)
     case MYSQL_REPLY_LOCAL_INFILE:
         // The client will send a request after this with the contents of the file which the server will
         // respond to with either an OK or an ERR packet
-        session_set_load_active(owner_dcb->session, true);
+        session_set_load_active(owner_dcb->m_session, true);
         set_reply_state(ReplyState::DONE);
         break;
 
@@ -2048,12 +2048,12 @@ void MySQLProtocol::track_query(GWBUF* buffer)
         return;
     }
 
-    if (session_is_load_active(owner_dcb->session))
+    if (session_is_load_active(owner_dcb->m_session))
     {
         if (MYSQL_GET_PAYLOAD_LEN(data) == 0)
         {
             MXS_INFO("Load data ended");
-            session_set_load_active(owner_dcb->session, false);
+            session_set_load_active(owner_dcb->m_session, false);
             set_reply_state(ReplyState::START);
         }
     }

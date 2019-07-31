@@ -59,8 +59,8 @@ void gssapi_backend_auth_free(void* data)
 static bool send_new_auth_token(DCB* dcb)
 {
     bool rval = false;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
-    MYSQL_session* ses = (MYSQL_session*)dcb->session->client_dcb->data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
+    MYSQL_session* ses = (MYSQL_session*)dcb->m_session->client_dcb->m_data;
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + ses->auth_token_len);
 
     // This function actually just forwards the client's token to the backend server
@@ -95,7 +95,7 @@ bool extract_principal_name(DCB* dcb, GWBUF* buffer)
     size_t buflen = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
     uint8_t databuf[buflen];
     uint8_t* data = databuf;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
 
     /** Copy the payload and the current packet sequence number */
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, buflen, databuf);
@@ -165,7 +165,7 @@ bool extract_principal_name(DCB* dcb, GWBUF* buffer)
 static bool gssapi_backend_auth_extract(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
 
     if (auth->state == GSSAPI_AUTH_INIT && extract_principal_name(dcb, buffer))
     {
@@ -203,7 +203,7 @@ static bool gssapi_backend_auth_connectssl(DCB* dcb)
 static int gssapi_backend_auth_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
 
     if (auth->state == GSSAPI_AUTH_INIT)
     {

@@ -31,13 +31,13 @@ Session::Session(Client* pClient, const SListener& listener)
 
     strcpy(m_mysql_session.db, "dummy");
 
-    m_client_dcb.data = &m_mysql_session;
+    m_client_dcb.m_data = &m_mysql_session;
 }
 
 Session::~Session()
 {
     // This prevents the protocol module from freeing the data
-    m_client_dcb.data = nullptr;
+    m_client_dcb.m_data = nullptr;
     refcount = 0;
     client_dcb = nullptr;
 }

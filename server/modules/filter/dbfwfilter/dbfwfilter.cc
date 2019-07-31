@@ -1477,12 +1477,12 @@ void DbfwSession::clear_error()
 
 std::string DbfwSession::user() const
 {
-    return m_session->client_dcb->user;
+    return m_session->client_dcb->m_user;
 }
 
 std::string DbfwSession::remote() const
 {
-    return m_session->client_dcb->remote;
+    return m_session->client_dcb->m_remote;
 }
 
 QuerySpeed* DbfwSession::query_speed()

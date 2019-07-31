@@ -219,7 +219,7 @@ static int cdc_auth_check(DCB* dcb,
 {
     int rval = CDC_STATE_AUTH_FAILED;
 
-    if (dcb->session->listener->users())
+    if (dcb->m_session->listener->users())
     {
         /* compute SHA1 of auth_data */
         uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
@@ -228,7 +228,7 @@ static int cdc_auth_check(DCB* dcb,
         gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
         gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
 
-        if (users_auth(dcb->session->listener->users(), username, hex_step1))
+        if (users_auth(dcb->m_session->listener->users(), username, hex_step1))
         {
             rval = CDC_STATE_AUTH_OK;
         }
@@ -246,8 +246,8 @@ static int cdc_auth_check(DCB* dcb,
  */
 static int cdc_auth_authenticate(DCB* dcb)
 {
-    CDC_protocol* protocol = static_cast<CDC_protocol*>(dcb->protocol);
-    CDC_session* client_data = (CDC_session*)dcb->data;
+    CDC_protocol* protocol = static_cast<CDC_protocol*>(dcb->m_protocol);
+    CDC_session* client_data = (CDC_session*)dcb->m_data;
     int auth_ret;
 
     if (0 == strlen(client_data->user))
@@ -264,7 +264,7 @@ static int cdc_auth_authenticate(DCB* dcb)
 
         /* On failed authentication try to reload users and authenticate again */
         if (CDC_STATE_AUTH_OK != auth_ret
-            && cdc_replace_users(dcb->session->listener.get()) == MXS_AUTH_LOADUSERS_OK)
+            && cdc_replace_users(dcb->m_session->listener.get()) == MXS_AUTH_LOADUSERS_OK)
         {
             auth_ret = cdc_auth_check(dcb,
                                       protocol,
@@ -276,13 +276,13 @@ static int cdc_auth_authenticate(DCB* dcb)
         /* on successful authentication, set user into dcb field */
         if (CDC_STATE_AUTH_OK == auth_ret)
         {
-            dcb->user = MXS_STRDUP_A(client_data->user);
+            dcb->m_user = MXS_STRDUP_A(client_data->user);
         }
-        else if (dcb->service->log_auth_warnings)
+        else if (dcb->m_service->log_auth_warnings)
         {
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s', authentication failed.",
-                          dcb->service->name(),
+                          dcb->m_service->name(),
                           client_data->user);
         }
     }
@@ -311,18 +311,18 @@ static bool cdc_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
     CDC_session* client_data = NULL;
     int client_auth_packet_size = 0;
 
-    protocol = static_cast<CDC_protocol*>(dcb->protocol);
-    if (dcb->data == NULL)
+    protocol = static_cast<CDC_protocol*>(dcb->m_protocol);
+    if (dcb->m_data == NULL)
     {
         if (NULL == (client_data = (CDC_session*)MXS_CALLOC(1, sizeof(CDC_session))))
         {
             return false;
         }
-        dcb->data = client_data;
+        dcb->m_data = client_data;
     }
     else
     {
-        client_data = (CDC_session*)dcb->data;
+        client_data = (CDC_session*)dcb->m_data;
     }
 
     client_auth_packet_size = gwbuf_length(buf);
@@ -418,7 +418,7 @@ static bool cdc_auth_is_client_ssl_capable(DCB* dcb)
  * @brief Free the client data pointed to by the passed DCB.
  *
  * Currently all that is required is to free the storage pointed to by
- * dcb->data.  But this is intended to be implemented as part of the
+ * dcb->m_data.  But this is intended to be implemented as part of the
  * authentication API at which time this code will be moved into the
  * CDC authenticator.  If the data structure were to become more complex
  * the mechanism would still work and be the responsibility of the authenticator.
@@ -428,7 +428,7 @@ static bool cdc_auth_is_client_ssl_capable(DCB* dcb)
  */
 static void cdc_auth_free_client_data(DCB* dcb)
 {
-    MXS_FREE(dcb->data);
+    MXS_FREE(dcb->m_data);
 }
 
 /*

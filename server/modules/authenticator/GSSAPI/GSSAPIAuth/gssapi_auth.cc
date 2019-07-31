@@ -248,7 +248,7 @@ bool store_client_token(DCB* dcb, GWBUF* buffer)
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(hdr);
-        MYSQL_session* ses = (MYSQL_session*)dcb->data;
+        MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
 
         if ((ses->auth_token = static_cast<uint8_t*>(MXS_MALLOC(plen))))
         {
@@ -268,7 +268,7 @@ bool store_client_token(DCB* dcb, GWBUF* buffer)
  */
 static void copy_client_information(DCB* dcb, GWBUF* buffer)
 {
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &auth->sequence);
 }
 
@@ -282,7 +282,7 @@ static void copy_client_information(DCB* dcb, GWBUF* buffer)
 static bool gssapi_auth_extract(DCB* dcb, GWBUF* read_buffer)
 {
     int rval = false;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
 
     switch (auth->state)
     {
@@ -313,7 +313,7 @@ static bool gssapi_auth_extract(DCB* dcb, GWBUF* read_buffer)
  */
 bool gssapi_auth_connectssl(DCB* dcb)
 {
-    MySQLProtocol* protocol = (MySQLProtocol*)dcb->protocol;
+    MySQLProtocol* protocol = (MySQLProtocol*)dcb->m_protocol;
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 
@@ -433,7 +433,7 @@ static bool validate_user(gssapi_auth_t* auth, DCB* dcb, MYSQL_session* session,
 {
     mxb_assert(princ);
     size_t len = sizeof(gssapi_auth_query) + strlen(session->user) * 2
-        + strlen(session->db) * 2 + strlen(dcb->remote) + strlen(princ) * 2;
+        + strlen(session->db) * 2 + strlen(dcb->m_remote) + strlen(princ) * 2;
     char sql[len + 1];
     bool rval = false;
     char* err;
@@ -449,7 +449,7 @@ static bool validate_user(gssapi_auth_t* auth, DCB* dcb, MYSQL_session* session,
     sprintf(sql,
             gssapi_auth_query,
             session->user,
-            dcb->remote,
+            dcb->m_remote,
             session->db,
             session->db,
             princ_user,
@@ -471,7 +471,7 @@ static bool validate_user(gssapi_auth_t* auth, DCB* dcb, MYSQL_session* session,
 
         if (!rval)
         {
-            service_refresh_users(dcb->service);
+            service_refresh_users(dcb->m_service);
         }
     }
 
@@ -489,8 +489,8 @@ static bool validate_user(gssapi_auth_t* auth, DCB* dcb, MYSQL_session* session,
 int gssapi_auth_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
-    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->session->listener->auth_instance();
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
+    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->m_session->listener->auth_instance();
 
     if (auth->state == GSSAPI_AUTH_INIT)
     {
@@ -499,7 +499,7 @@ int gssapi_auth_authenticate(DCB* dcb)
          * method */
         GWBUF* buffer = create_auth_change_packet(instance, auth);
 
-        if (buffer && dcb->func.write(dcb, buffer))
+        if (buffer && dcb->m_func.write(dcb, buffer))
         {
             auth->state = GSSAPI_AUTH_DATA_SENT;
             rval = MXS_AUTH_INCOMPLETE;
@@ -510,7 +510,7 @@ int gssapi_auth_authenticate(DCB* dcb)
         /** We sent the principal name and the client responded with the GSSAPI
          * token that we must validate */
 
-        MYSQL_session* ses = (MYSQL_session*)dcb->data;
+        MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
         char* princ = NULL;
 
         if (validate_gssapi_token(instance->principal_name, ses->auth_token, ses->auth_token_len, &princ)
@@ -532,12 +532,12 @@ int gssapi_auth_authenticate(DCB* dcb)
  */
 void gssapi_auth_free_data(DCB* dcb)
 {
-    if (dcb->data)
+    if (dcb->m_data)
     {
-        MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->data);
+        MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->m_data);
         MXS_FREE(ses->auth_token);
         MXS_FREE(ses);
-        dcb->data = NULL;
+        dcb->m_data = NULL;
     }
 }
 

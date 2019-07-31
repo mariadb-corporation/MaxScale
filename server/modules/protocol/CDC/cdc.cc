@@ -134,12 +134,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
  */
 static int cdc_read_event(DCB* dcb)
 {
-    MXS_SESSION* session = dcb->session;
-    CDC_protocol* protocol = (CDC_protocol*) dcb->protocol;
+    MXS_SESSION* session = dcb->m_session;
+    CDC_protocol* protocol = (CDC_protocol*) dcb->m_protocol;
     int n, rc = 0;
     GWBUF* head = NULL;
     int auth_val = CDC_STATE_AUTH_FAILED;
-    CDC_session* client_data = (CDC_session*) dcb->data;
+    CDC_session* client_data = (CDC_session*) dcb->m_data;
 
     if ((n = dcb_read(dcb, &head, 0)) > 0)
     {
@@ -147,10 +147,10 @@ static int cdc_read_event(DCB* dcb)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (dcb->authfunc.extract(dcb, head))
+            if (dcb->m_authfunc.extract(dcb, head))
             {
                 /* Call protocol authentication */
-                auth_val = dcb->authfunc.authenticate(dcb);
+                auth_val = dcb->m_authfunc.authenticate(dcb);
             }
 
             /* Discard input buffer */
@@ -158,15 +158,15 @@ static int cdc_read_event(DCB* dcb)
 
             if (auth_val == CDC_STATE_AUTH_OK)
             {
-                if (session_start(dcb->session))
+                if (session_start(dcb->m_session))
                 {
                     protocol->state = CDC_STATE_HANDLE_REQUEST;
 
                     write_auth_ack(dcb);
 
                     MXS_INFO("%s: Client [%s] authenticated with user [%s]",
-                             dcb->service->name(),
-                             dcb->remote != NULL ? dcb->remote : "",
+                             dcb->m_service->name(),
+                             dcb->m_remote != NULL ? dcb->m_remote : "",
                              client_data->user);
                 }
                 else
@@ -181,8 +181,8 @@ static int cdc_read_event(DCB* dcb)
 
                 write_auth_err(dcb);
                 MXS_ERROR("%s: authentication failure from [%s], user [%s]",
-                          dcb->service->name(),
-                          dcb->remote != NULL ? dcb->remote : "",
+                          dcb->m_service->name(),
+                          dcb->m_remote != NULL ? dcb->m_remote : "",
                           client_data->user);
 
                 /* force the client connection close */
@@ -196,8 +196,8 @@ static int cdc_read_event(DCB* dcb)
             if (strncmp((char*)GWBUF_DATA(head), "CLOSE", GWBUF_LENGTH(head)) == 0)
             {
                 MXS_INFO("%s: Client [%s] has requested CLOSE action",
-                         dcb->service->name(),
-                         dcb->remote != NULL ? dcb->remote : "");
+                         dcb->m_service->name(),
+                         dcb->m_remote != NULL ? dcb->m_remote : "");
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
                 // the router will close the client connection
@@ -212,8 +212,8 @@ static int cdc_read_event(DCB* dcb)
             else
             {
                 MXS_INFO("%s: Client [%s] requested [%.*s] action",
-                         dcb->service->name(),
-                         dcb->remote != NULL ? dcb->remote : "",
+                         dcb->m_service->name(),
+                         dcb->m_remote != NULL ? dcb->m_remote : "",
                          (int)GWBUF_LENGTH(head),
                          (char*)GWBUF_DATA(head));
 
@@ -224,8 +224,8 @@ static int cdc_read_event(DCB* dcb)
 
         default:
             MXS_INFO("%s: Client [%s] in unknown state %d",
-                     dcb->service->name(),
-                     dcb->remote != NULL ? dcb->remote : "",
+                     dcb->m_service->name(),
+                     dcb->m_remote != NULL ? dcb->m_remote : "",
                      protocol->state);
             gwbuf_free(head);
 
@@ -300,12 +300,12 @@ static MXS_PROTOCOL_SESSION* cdc_accept(DCB* client_dcb)
     protocol = cdc_protocol_init(client_dcb);
     if (protocol == NULL)
     {
-        client_dcb->protocol = NULL;
+        client_dcb->m_protocol = NULL;
         dcb_close(client_dcb);
         return 0;
     }
 
-    if (NULL == client_dcb->session)
+    if (NULL == client_dcb->m_session)
     {
         dcb_close(client_dcb);
         return 0;
@@ -322,14 +322,14 @@ static MXS_PROTOCOL_SESSION* cdc_accept(DCB* client_dcb)
         return 0;
     }
 
-    client_dcb->data = client_data;
+    client_dcb->m_data = client_data;
 
     /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
     protocol->state = CDC_STATE_WAIT_FOR_AUTH;
 
     MXS_NOTICE("%s: new connection from [%s]",
-               client_dcb->service->name(),
-               client_dcb->remote != NULL ? client_dcb->remote : "");
+               client_dcb->m_service->name(),
+               client_dcb->m_remote != NULL ? client_dcb->m_remote : "");
 
     return (MXS_PROTOCOL_SESSION*)protocol;
 }
@@ -342,7 +342,7 @@ static MXS_PROTOCOL_SESSION* cdc_accept(DCB* client_dcb)
  */
 static int cdc_close(DCB* dcb)
 {
-    CDC_protocol* p = (CDC_protocol*) dcb->protocol;
+    CDC_protocol* p = (CDC_protocol*) dcb->m_protocol;
 
     if (!p)
     {
@@ -390,14 +390,14 @@ static CDC_protocol* cdc_protocol_init(DCB* dcb)
  */
 static void cdc_protocol_done(DCB* dcb)
 {
-    CDC_protocol* p = (CDC_protocol*) dcb->protocol;
+    CDC_protocol* p = (CDC_protocol*) dcb->m_protocol;
 
     if (!p)
     {
         return;
     }
 
-    p = (CDC_protocol*) dcb->protocol;
+    p = (CDC_protocol*) dcb->m_protocol;
 
     /* deallocate memory here */
 

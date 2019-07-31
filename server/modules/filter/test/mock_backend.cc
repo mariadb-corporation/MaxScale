@@ -178,7 +178,7 @@ public:
     {
         DCB* pDcb = this;
 
-        pDcb->func.write = &ResultSetDCB::write;
+        pDcb->m_func.write = &ResultSetDCB::write;
     }
 
     GWBUF* create_response() const
