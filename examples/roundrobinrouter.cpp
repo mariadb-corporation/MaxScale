@@ -90,57 +90,27 @@ static const MXS_ENUM_VALUE enum_example[] =
     {NULL}      /* Last must be NULL */
 };
 
-static modulecmd_arg_type_t custom_cmd_args[] =
-{
-    {MODULECMD_ARG_STRING,                             "Example string"                    },
-    {(MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL), "This is an optional bool parameter"}
-};
-
-bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output);
-
 using std::string;
 using std::cout;
 
 typedef std::vector<DCB*> DCB_VEC;
 
 class RRRouter;
-class RRRouterSession;
-
-/* Each service using this router will have a router object instance. */
-class RRRouter : public MXS_ROUTER
-{
-private:
-    SERVICE* m_service;             /* Service this router is part of */
-    /* Router settings */
-    unsigned int m_max_backends;    /* How many backend servers to use */
-    SERVER*      m_write_server;    /* Where to send write etc. "unsafe" queries */
-    bool         m_print_on_routing;/* Print a message on every packet routed? */
-    uint64_t     m_example_enum;    /* Not used */
-
-    void decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& target, bool& route_to_all);
-public:
-    /* Statistics, written to by multiple threads */
-    volatile unsigned long int m_routing_s;     /* Routing success */
-    volatile unsigned long int m_routing_f;     /* Routing fail */
-    volatile unsigned long int m_routing_c;     /* Client packets routed */
-
-    /* Methods */
-    RRRouter(SERVICE* service);
-    ~RRRouter();
-    RRRouterSession* create_session(MXS_SESSION* session);
-    int              route_query(RRRouterSession* rses, GWBUF* querybuf);
-    void             client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb);
-    void             handle_error(RRRouterSession* rses,
-                                  GWBUF* message,
-                                  DCB* problem_dcb,
-                                  mxs_error_action_t action,
-                                  bool* succp);
-};
 
 /* Every client connection has a corresponding session. */
-class RRRouterSession : public MXS_ROUTER_SESSION
+class RRRouterSession : public mxs::RouterSession
 {
 public:
+
+    // The API functions must be public
+    RRRouterSession(RRRouter*, DCB_VEC&, DCB*, DCB*);
+    ~RRRouterSession();
+    void    close();
+    int32_t routeQuery(GWBUF* buffer);
+    void    clientReply(GWBUF* buffer, DCB* dcb);
+    void    handleError(GWBUF* message, DCB* problem_dcb, mxs_error_action_t action, bool* succp);
+
+private:
     bool         m_closed;              /* true when closeSession is called */
     DCB_VEC      m_backend_dcbs;        /* backends */
     DCB*         m_write_dcb;           /* write backend */
@@ -148,14 +118,56 @@ public:
     unsigned int m_route_count;         /* how many packets have been routed */
     bool         m_on_transaction;      /* Is the session in transaction mode? */
     unsigned int m_replies_to_ignore;   /* Counts how many replies should be ignored. */
+    RRRouter*    m_router;
 
-    RRRouterSession(DCB_VEC&, DCB*, DCB*);
-    ~RRRouterSession();
-    void close();
+    void decide_target(GWBUF* querybuf, DCB*& target, bool& route_to_all);
 };
 
+/* Each service using this router will have a router object instance. */
+class RRRouter : public mxs::Router<RRRouter, RRRouterSession>
+{
+public:
+
+    // The routing capabilities that this module requires. The getCapabilities entry point and the
+    // capabilities given in the module declaration should be the same.
+    static constexpr const uint64_t CAPABILITIES {RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RESULTSET_OUTPUT};
+
+    ~RRRouter();
+    static RRRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
+    RRRouterSession* newSession(MXS_SESSION* session);
+    void             diagnostics(DCB* dcb) const;
+    json_t*          diagnostics_json() const;
+
+    uint64_t getCapabilities()
+    {
+        return CAPABILITIES;
+    }
+
+private:
+    friend class RRRouterSession;
+
+    SERVICE* m_service;             /* Service this router is part of */
+    /* Router settings */
+    unsigned int m_max_backends;    /* How many backend servers to use */
+    SERVER*      m_write_server;    /* Where to send write etc. "unsafe" queries */
+    bool         m_print_on_routing;/* Print a message on every packet routed? */
+    uint64_t     m_example_enum;    /* Not used */
+
+    /* Methods */
+    RRRouter(SERVICE* service);
+
+    /* Statistics, written to by multiple threads */
+    std::atomic<uint64_t> m_routing_s;      /* Routing success */
+    std::atomic<uint64_t> m_routing_f;      /* Routing fail */
+    std::atomic<uint64_t> m_routing_c;      /* Client packets routed */
+};
+
+/**
+ * Constructs a new router instance, called by the static `create` method.
+ */
 RRRouter::RRRouter(SERVICE* service)
-    : m_service(service)
+    : mxs::Router<RRRouter, RRRouterSession>(service)
+    , m_service(service)
     , m_routing_s(0)
     , m_routing_f(0)
     , m_routing_c(0)
@@ -174,15 +186,29 @@ RRRouter::RRRouter(SERVICE* service)
     RR_DEBUG("'%s': %d", PRINT_ON_ROUTING, m_print_on_routing);
     RR_DEBUG("'%s': %lu", DUMMY, m_example_enum);
 }
+
+/**
+ * Resources can be freed in the router destructor
+ */
 RRRouter::~RRRouter()
 {
     RR_DEBUG("Deleting router instance.");
-    RR_DEBUG("Queries routed successfully: %lu", m_routing_s);
-    RR_DEBUG("Failed routing attempts: %lu", m_routing_f);
-    RR_DEBUG("Client replies: %lu", m_routing_c);
+    RR_DEBUG("Queries routed successfully: %lu", m_routing_s.load());
+    RR_DEBUG("Failed routing attempts: %lu", m_routing_f.load());
+    RR_DEBUG("Client replies: %lu", m_routing_c.load());
 }
 
-RRRouterSession* RRRouter::create_session(MXS_SESSION* session)
+/**
+ * @brief Create a new router session for this router instance (API).
+ *
+ * Connect a client session to the router instance and return a router session.
+ * The router session stores all client specific data required by the router.
+ *
+ * @param session   The MaxScale session (generic client connection data)
+ *
+ * @return          Client specific data for this router
+ */
+RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
 {
     DCB_VEC backends;
     DCB* write_dcb = NULL;
@@ -223,7 +249,7 @@ RRRouterSession* RRRouter::create_session(MXS_SESSION* session)
         }
         else
         {
-            rses = new RRRouterSession(backends, write_dcb, session->client_dcb);
+            rses = new RRRouterSession(this, backends, write_dcb, session->client_dcb);
             RR_DEBUG("Session with %lu connections created.",
                      backends.size() + (write_dcb ? 1 : 0));
         }
@@ -247,16 +273,81 @@ RRRouterSession* RRRouter::create_session(MXS_SESSION* session)
     return rses;
 }
 
-int RRRouter::route_query(RRRouterSession* rses, GWBUF* querybuf)
+/**
+ * @brief Create an instance of the router (API).
+ *
+ * Create an instance of the round robin router. One instance of the router is
+ * created for each service that is defined in the configuration as using this
+ * router. One instance of the router will handle multiple connections
+ * (router sessions).
+ *
+ * @param service   The service this router is being created for
+ * @param options   The options for this query router
+ * @return          NULL in failure, pointer to router in success.
+ */
+RRRouter* RRRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
+{
+    return new(std::nothrow) RRRouter(pService);
+}
+
+/**
+ * @brief Diagnostics routine (API)
+ *
+ * Print router statistics to the DCB passed in. This is usually called by the
+ * MaxInfo or MaxAdmin modules.
+ *
+ * @param   instance    The router instance
+ * @param   dcb         The DCB for diagnostic output
+ */
+void RRRouter::diagnostics(DCB* dcb) const
+{
+    dcb_printf(dcb, "\t\tQueries routed successfully: %lu\n", m_routing_s.load());
+    dcb_printf(dcb, "\t\tFailed routing attempts:     %lu\n", m_routing_f.load());
+    dcb_printf(dcb, "\t\tClient replies routed:       %lu\n", m_routing_c.load());
+}
+
+/**
+ * @brief Diagnostics routine (API)
+ *
+ * Print router statistics to the DCB passed in. This is usually called by the
+ * MaxInfo or MaxAdmin modules.
+ *
+ * @param   instance    The router instance
+ * @param   dcb         The DCB for diagnostic output
+ */
+json_t* RRRouter::diagnostics_json() const
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "queries_ok", json_integer(m_routing_s.load()));
+    json_object_set_new(rval, "queries_failed", json_integer(m_routing_f.load()));
+    json_object_set_new(rval, "replies", json_integer(m_routing_c.load()));
+
+    return rval;
+}
+
+/**
+ * @brief Route a packet (API)
+ *
+ * The routeQuery function receives a packet and makes the routing decision
+ * based on the contents of the router instance, router session and the query
+ * itself. It then sends the query to the target backend(s).
+ *
+ * @param instance       Router instance
+ * @param session        Router session associated with the client
+ * @param buffer       Buffer containing the query (or command)
+ * @return 1 on success, 0 on error
+ */
+int RRRouterSession::routeQuery(GWBUF* querybuf)
 {
     int rval = 0;
-    const bool print = m_print_on_routing;
+    const bool print = m_router->m_print_on_routing;
     DCB* target = NULL;
     bool route_to_all = false;
 
-    if (!rses->m_closed)
+    if (!m_closed)
     {
-        decide_target(rses, querybuf, target, route_to_all);
+        decide_target(querybuf, target, route_to_all);
     }
 
     /* Target selection done, write to dcb. */
@@ -277,7 +368,7 @@ int RRRouter::route_query(RRRouterSession* rses, GWBUF* querybuf)
     }
     else if (route_to_all)
     {
-        int n_targets = rses->m_backend_dcbs.size() + (rses->m_write_dcb ? 1 : 0);
+        int n_targets = m_backend_dcbs.size() + (m_write_dcb ? 1 : 0);
         if (print)
         {
             MXS_NOTICE("Routing statement of length %du to %d backends.",
@@ -285,9 +376,9 @@ int RRRouter::route_query(RRRouterSession* rses, GWBUF* querybuf)
                        n_targets);
         }
         int route_success = 0;
-        for (unsigned int i = 0; i < rses->m_backend_dcbs.size(); i++)
+        for (unsigned int i = 0; i < m_backend_dcbs.size(); i++)
         {
-            DCB* dcb = rses->m_backend_dcbs[i];
+            DCB* dcb = m_backend_dcbs[i];
             /* Need to clone the buffer since write consumes it */
             GWBUF* copy = gwbuf_clone(querybuf);
             if (copy)
@@ -295,16 +386,15 @@ int RRRouter::route_query(RRRouterSession* rses, GWBUF* querybuf)
                 route_success += dcb->func.write(dcb, copy);
             }
         }
-        if (rses->m_write_dcb)
+        if (m_write_dcb)
         {
             GWBUF* copy = gwbuf_clone(querybuf);
             if (copy)
             {
-                route_success += rses->m_write_dcb->func.write(rses->m_write_dcb,
-                                                               copy);
+                route_success += m_write_dcb->func.write(m_write_dcb, copy);
             }
         }
-        rses->m_replies_to_ignore += route_success - 1;
+        m_replies_to_ignore += route_success - 1;
         rval = (route_success == n_targets) ? 1 : 0;
         gwbuf_free(querybuf);
     }
@@ -318,41 +408,63 @@ int RRRouter::route_query(RRRouterSession* rses, GWBUF* querybuf)
     if (rval == 1)
     {
         /* Non-atomic update of shared data, but contents are non-essential */
-        m_routing_s++;
+        m_router->m_routing_s++;
     }
     else
     {
-        m_routing_f++;
+        m_router->m_routing_f++;
     }
     return rval;
 }
 
-void RRRouter::client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb)
+/**
+ * @brief Client Reply routine (API)
+ *
+ * This routine receives a packet from a backend server meant for the client.
+ * Often, there is little logic needed and the packet can just be forwarded to
+ * the next element in the processing chain.
+ *
+ * @param   queue       The GWBUF with reply data
+ * @param   backend_dcb The backend DCB (data source)
+ */
+void RRRouterSession::clientReply(GWBUF* buf, DCB* backend_dcb)
 {
-    if (rses->m_replies_to_ignore > 0)
+    if (m_replies_to_ignore > 0)
     {
         /* In this case MaxScale cloned the message to many backends but the client
          * expects just one reply. Assume that client does not send next query until
          * previous has been answered.
          */
-        rses->m_replies_to_ignore--;
+        m_replies_to_ignore--;
         gwbuf_free(buf);
         return;
     }
 
-    MXS_SESSION_ROUTE_REPLY(backend_dcb->session, buf, backend_dcb);
+    RouterSession::clientReply(buf, backend_dcb);
 
-    m_routing_c++;
-    if (m_print_on_routing)
+    m_router->m_routing_c++;
+    if (m_router->m_print_on_routing)
     {
         MXS_NOTICE("Replied to client.\n");
     }
 }
-void RRRouter::handle_error(RRRouterSession* rses,
-                            GWBUF* message,
-                            DCB* problem_dcb,
-                            mxs_error_action_t action,
-                            bool* succp)
+
+/**
+ * Error Handler routine (API)
+ *
+ * This routine will handle errors that occurred with the session. This function
+ * is called if routeQuery() returns 0 instead of 1. The client or a backend
+ * unexpectedly closing a connection also triggers this routine.
+ *
+ * @param       message         The error message to reply
+ * @param       problem_dcb     The DCB related to the error
+ * @param       action          The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param       succp           Output result of action, true if router can continue
+ */
+void RRRouterSession::handleError(GWBUF* message,
+                                  DCB* problem_dcb,
+                                  mxs_error_action_t action,
+                                  bool* succp)
 {
     MXS_SESSION* session = problem_dcb->session;
     DCB* client_dcb = session->client_dcb;
@@ -391,21 +503,21 @@ void RRRouter::handle_error(RRRouterSession* rses,
                 /* React to a failed backend */
                 if (problem_dcb->role == DCB::Role::BACKEND)
                 {
-                    if (problem_dcb == rses->m_write_dcb)
+                    if (problem_dcb == m_write_dcb)
                     {
-                        dcb_close(rses->m_write_dcb);
-                        rses->m_write_dcb = NULL;
+                        dcb_close(m_write_dcb);
+                        m_write_dcb = NULL;
                     }
                     else
                     {
                         /* Find dcb in the list of backends */
-                        DCB_VEC::iterator iter = rses->m_backend_dcbs.begin();
-                        while (iter != rses->m_backend_dcbs.end())
+                        DCB_VEC::iterator iter = m_backend_dcbs.begin();
+                        while (iter != m_backend_dcbs.end())
                         {
                             if (*iter == problem_dcb)
                             {
                                 dcb_close(*iter);
-                                rses->m_backend_dcbs.erase(iter);
+                                m_backend_dcbs.erase(iter);
                                 break;
                             }
                         }
@@ -414,7 +526,7 @@ void RRRouter::handle_error(RRRouterSession* rses,
                     /* If there is still backends remaining, return true since
                      * router can still function.
                      */
-                    *succp = (rses->m_backend_dcbs.size() > 0) ? true : false;
+                    *succp = (m_backend_dcbs.size() > 0) ? true : false;
                 }
             }
             break;
@@ -427,11 +539,13 @@ void RRRouter::handle_error(RRRouterSession* rses,
     }
 }
 
-RRRouterSession::RRRouterSession(DCB_VEC& backends, DCB* write, DCB* client)
-    : m_closed(false)
+RRRouterSession::RRRouterSession(RRRouter* router, DCB_VEC& backends, DCB* write, DCB* client)
+    : RouterSession(client->session)
+    , m_closed(false)
     , m_route_count(0)
     , m_on_transaction(false)
     , m_replies_to_ignore(0)
+    , m_router(router)
 {
     m_backend_dcbs = backends;
     m_write_dcb = write;
@@ -444,6 +558,14 @@ RRRouterSession::~RRRouterSession()
     mxb_assert(m_closed);
 }
 
+/**
+ * @brief Close an existing router session for this router instance (API).
+ *
+ * Close a client session attached to the router instance. This function should
+ * close connections and release other resources allocated in "newSession" or
+ * otherwise held by the router session. This function should NOT free the
+ * session object itself.
+ */
 void RRRouterSession::close()
 {
     if (!m_closed)
@@ -479,7 +601,7 @@ void RRRouterSession::close()
     }
 }
 
-void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& target, bool& route_to_all)
+void RRRouterSession::decide_target(GWBUF* querybuf, DCB*& target, bool& route_to_all)
 {
     /* Extract the command type from the SQL-buffer */
     mxs_mysql_cmd_t cmd_type = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
@@ -533,30 +655,30 @@ void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& targe
 
     if ((query_types & q_route_to_write) != 0)
     {
-        target = rses->m_write_dcb;
+        target = m_write_dcb;
     }
     else
     {
         /* This is not yet sufficient for handling transactions. */
         if ((query_types & q_trx_begin) != 0)
         {
-            rses->m_on_transaction = true;
+            m_on_transaction = true;
         }
-        if (rses->m_on_transaction)
+        if (m_on_transaction)
         {
             /* If a transaction is going on, route all to write backend */
-            target = rses->m_write_dcb;
+            target = m_write_dcb;
         }
         if ((query_types & q_trx_end) != 0)
         {
-            rses->m_on_transaction = false;
+            m_on_transaction = false;
         }
 
         if (!target && ((query_types & q_route_to_rr) != 0))
         {
             /* Round robin backend. */
-            unsigned int index = (rses->m_route_count++) % rses->m_backend_dcbs.size();
-            target = rses->m_backend_dcbs[index];
+            unsigned int index = (m_route_count++) % m_backend_dcbs.size();
+            target = m_backend_dcbs[index];
         }
         /* Some commands and queries are routed to all backends. */
         else if (!target && ((query_types & q_route_to_all) != 0))
@@ -566,323 +688,7 @@ void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& targe
     }
 }
 
-/*
- * The functions implementing the router module API. These do not need to be
- * "extern C", but they do need to be callable from  C code.
- */
-static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
-static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
-static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
-static int                 routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* querybuf);
-static void                diagnostics(MXS_ROUTER* instance, DCB* dcb);
-static json_t*             diagnostics_json(const MXS_ROUTER* instance);
-static void                clientReply(MXS_ROUTER* instance,
-                                       MXS_ROUTER_SESSION* router_session,
-                                       GWBUF* resultbuf,
-                                       DCB* backend_dcb);
-static void handleError(MXS_ROUTER* instance,
-                        MXS_ROUTER_SESSION* router_session,
-                        GWBUF* errmsgbuf,
-                        DCB* backend_dcb,
-                        mxs_error_action_t action,
-                        bool* succp);
-static uint64_t getCapabilities(MXS_ROUTER* instance);
-static void     destroyInstance(MXS_ROUTER* instance);
-/* The next two entry points are usually optional. */
-static int  process_init();
-static void process_finish();
-
-/*
- * This is called by the module loader during MaxScale startup. A module
- * description, including entrypoints and allowed configuration parameters,
- * is returned. This function must be exported.
- */
-extern "C" MXS_MODULE* MXS_CREATE_MODULE();
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_ROUTER_OBJECT entryPoints =
-    {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        routeQuery,
-        diagnostics,
-        diagnostics_json,
-        clientReply,
-        handleError,
-        getCapabilities,
-        destroyInstance
-    };
-
-    static MXS_MODULE moduleObject =
-    {
-        MXS_MODULE_API_ROUTER,                                  /* Module type */
-        MXS_MODULE_BETA_RELEASE,                                /* Release status */
-        MXS_ROUTER_VERSION,                                     /* Implemented module API version */
-        "A simple round robin router",                          /* Description */
-        "V1.1.0",                                               /* Module version */
-        RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RESULTSET_OUTPUT,
-        &entryPoints,                                           /* Defined above */
-        process_init,                                           /* Process init, can be null */
-        process_finish,                                         /* Process finish, can be null */
-        NULL,                                                   /* Thread init */
-        NULL,                                                   /* Thread finish */
-        {
-            /* Next is an array of MODULE_PARAM structs, max 64 items. These define all
-             * the possible parameters that this module accepts. This is required
-             * since the module loader also parses the configuration file for the module.
-             * Any unrecognised parameters in the config file are discarded.
-             *
-             * Note that many common parameters, such as backend servers, are
-             * already set to the upper level "service"-object.
-             */
-            {                           /* For simple types, only 3 of the 5 struct fields need to be
-                                         * defined. */
-                MAX_BACKENDS,           /* Setting identifier in maxscale.cnf */
-                MXS_MODULE_PARAM_INT,   /* Setting type */
-                "0"                     /* Default value */
-            },
-            {PRINT_ON_ROUTING,                                  MXS_MODULE_PARAM_BOOL,    "false"},
-            {WRITE_BACKEND,                                     MXS_MODULE_PARAM_SERVER,  NULL   },
-            {   /* Enum types require an array with allowed values. */
-                DUMMY,
-                MXS_MODULE_PARAM_ENUM,
-                "the_answer",
-                MXS_MODULE_OPT_NONE,
-                enum_example
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-    return &moduleObject;
-}
-
-/**
- * @brief Create an instance of the router (API).
- *
- * Create an instance of the round robin router. One instance of the router is
- * created for each service that is defined in the configuration as using this
- * router. One instance of the router will handle multiple connections
- * (router sessions).
- *
- * @param service   The service this router is being created for
- * @param options   The options for this query router
- * @return          NULL in failure, pointer to router in success.
- */
-static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
-{
-    RRRouter* instance = NULL;
-    /* The core of MaxScale is written in C and does not understand exceptions.
-     * The macro catches all exceptions. Add custom handling here if required. */
-    MXS_EXCEPTION_GUARD(instance = new RRRouter(service));
-    /* The MXS_ROUTER is just a void*. Only the router module will dereference
-     * the pointer. */
-
-    /* Register a custom command */
-    if (!modulecmd_register_command("rrrouter",
-                                    "test_command",
-                                    MODULECMD_TYPE_ACTIVE,
-                                    custom_cmd_example,
-                                    2,
-                                    custom_cmd_args,
-                                    "This is the command description"))
-    {
-        MXS_ERROR("Module command registration failed.");
-    }
-    return instance;
-}
-
-/**
- * @brief Create a new router session for this router instance (API).
- *
- * Connect a client session to the router instance and return a router session.
- * The router session stores all client specific data required by the router.
- *
- * @param instance  The router object instance
- * @param session   The MaxScale session (generic client connection data)
- * @return          Client specific data for this router
- */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
-{
-    RRRouter* router = static_cast<RRRouter*>(instance);
-    RRRouterSession* rses = NULL;
-    MXS_EXCEPTION_GUARD(rses = router->create_session(session));
-    return rses;
-}
-/**
- * @brief Close an existing router session for this router instance (API).
- *
- * Close a client session attached to the router instance. This function should
- * close connections and release other resources allocated in "newSession" or
- * otherwise held by the router session. This function should NOT free the
- * session object itself.
- *
- * @param instance  The router object instance
- * @param session   The router session
- */
-static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session)
-{
-    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
-    MXS_EXCEPTION_GUARD(rses->close());
-}
-
-/**
- * @brief Free a router session (API).
- *
- * When a router session has been closed, freeSession may be called to free
- * allocated resources.
- *
- * @param instance   The router instance the session belongs to
- * @param session    Router client session
- *
- */
-static void freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session)
-{
-    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
-    delete rses;
-}
-
-/**
- * @brief Route a packet (API)
- *
- * The routeQuery function receives a packet and makes the routing decision
- * based on the contents of the router instance, router session and the query
- * itself. It then sends the query to the target backend(s).
- *
- * @param instance       Router instance
- * @param session        Router session associated with the client
- * @param buffer       Buffer containing the query (or command)
- * @return 1 on success, 0 on error
- */
-static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* buffer)
-{
-    RRRouter* router = static_cast<RRRouter*>(instance);
-    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
-    int rval = 0;
-    MXS_EXCEPTION_GUARD(rval = router->route_query(rses, buffer));
-    return rval;
-}
-
-/**
- * @brief Diagnostics routine (API)
- *
- * Print router statistics to the DCB passed in. This is usually called by the
- * MaxInfo or MaxAdmin modules.
- *
- * @param   instance    The router instance
- * @param   dcb         The DCB for diagnostic output
- */
-static void diagnostics(MXS_ROUTER* instance, DCB* dcb)
-{
-    RRRouter* router = static_cast<RRRouter*>(instance);
-    dcb_printf(dcb, "\t\tQueries routed successfully: %lu\n", router->m_routing_s);
-    dcb_printf(dcb, "\t\tFailed routing attempts:     %lu\n", router->m_routing_f);
-    dcb_printf(dcb, "\t\tClient replies routed:       %lu\n", router->m_routing_c);
-}
-
-/**
- * @brief Diagnostics routine (API)
- *
- * Print router statistics to the DCB passed in. This is usually called by the
- * MaxInfo or MaxAdmin modules.
- *
- * @param   instance    The router instance
- * @param   dcb         The DCB for diagnostic output
- */
-static json_t* diagnostics_json(const MXS_ROUTER* instance)
-{
-    const RRRouter* router = static_cast<const RRRouter*>(instance);
-    json_t* rval = json_object();
-
-    json_object_set_new(rval, "queries_ok", json_integer(router->m_routing_s));
-    json_object_set_new(rval, "queries_failed", json_integer(router->m_routing_f));
-    json_object_set_new(rval, "replies", json_integer(router->m_routing_c));
-
-    return rval;
-}
-
-/**
- * @brief Client Reply routine (API)
- *
- * This routine receives a packet from a backend server meant for the client.
- * Often, there is little logic needed and the packet can just be forwarded to
- * the next element in the processing chain.
- *
- * @param   instance    The router instance
- * @param   session     The router session
- * @param   backend_dcb The backend DCB (data source)
- * @param   queue       The GWBUF with reply data
- */
-static void clientReply(MXS_ROUTER* instance,
-                        MXS_ROUTER_SESSION* session,
-                        GWBUF* queue,
-                        DCB* backend_dcb)
-{
-    RRRouter* router = static_cast<RRRouter*>(instance);
-    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
-    MXS_EXCEPTION_GUARD(router->client_reply(rses, queue, backend_dcb));
-}
-
-/**
- * Error Handler routine (API)
- *
- * This routine will handle errors that occurred with the session. This function
- * is called if routeQuery() returns 0 instead of 1. The client or a backend
- * unexpectedly closing a connection also triggers this routine.
- *
- * @param       instance        The router instance
- * @param       session         The router session
- * @param       message         The error message to reply
- * @param       problem_dcb     The DCB related to the error
- * @param       action          The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
- * @param       succp           Output result of action, true if router can continue
- */
-static void handleError(MXS_ROUTER* instance,
-                        MXS_ROUTER_SESSION* session,
-                        GWBUF* message,
-                        DCB* problem_dcb,
-                        mxs_error_action_t action,
-                        bool* succp)
-{
-    RRRouter* router = static_cast<RRRouter*>(instance);
-    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
-    MXS_EXCEPTION_GUARD(router->handle_error(rses, message, problem_dcb, action, succp));
-}
-
-/**
- * @brief Get router capabilities (API)
- *
- * Return a bit map indicating the characteristics of this router type.
- * In this case, the only bit set indicates that the router wants to receive
- * data for routing as whole SQL statements.
- *
- * @param instance The router instance
- * @return RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_STMT_OUTPUT
- */
-static uint64_t getCapabilities(MXS_ROUTER* instance)
-{
-    /* This router needs to parse client queries, so it should set RCAP_TYPE_CONTIGUOUS_INPUT.
-     * For output, parsing is not required but counting SQL replies is. RCAP_TYPE_RESULTSET_OUTPUT
-     * should be sufficient.
-     */
-    return RCAP_TYPE_NONE;
-}
-
-/**
- * @brief Destroy router instance (API)
- *
- * A destroy-function is rarely required, since this is usually called only at
- * program exit.
- *
- * @param instance Router instance
- */
-static void destroyInstance(MXS_ROUTER* instance)
-{
-    RRRouter* router = static_cast<RRRouter*>(instance);
-    delete router;
-}
+/* The next two entry points are optional. */
 
 /**
  * Make any initializations required by the router module as a whole and not
@@ -895,6 +701,7 @@ static int process_init()
     RR_DEBUG("Module loaded.");
     return 0;
 }
+
 /**
  * Undo module initializations.
  */
@@ -902,6 +709,12 @@ static void process_finish()
 {
     RR_DEBUG("Module unloaded.");
 }
+
+static modulecmd_arg_type_t custom_cmd_args[] =
+{
+    {MODULECMD_ARG_STRING,                             "Example string"                    },
+    {(MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL), "This is an optional bool parameter"}
+};
 
 /**
  * A function executed as a custom module command through MaxAdmin
@@ -944,4 +757,67 @@ bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output)
              << "'\n";
     }
     return true;
+}
+
+/*
+ * This is called by the module loader during MaxScale startup. A module
+ * description, including entrypoints and allowed configuration parameters,
+ * is returned. This function must be exported.
+ */
+extern "C" MXS_MODULE* MXS_CREATE_MODULE();
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    /* Register a custom command */
+    if (!modulecmd_register_command("rrrouter",
+                                    "test_command",
+                                    MODULECMD_TYPE_ACTIVE,
+                                    custom_cmd_example,
+                                    2,
+                                    custom_cmd_args,
+                                    "This is the command description"))
+    {
+        MXS_ERROR("Module command registration failed.");
+    }
+
+    static MXS_MODULE moduleObject =
+    {
+        MXS_MODULE_API_ROUTER,          /* Module type */
+        MXS_MODULE_BETA_RELEASE,        /* Release status */
+        MXS_ROUTER_VERSION,             /* Implemented module API version */
+        "A simple round robin router",  /* Description */
+        "V1.1.0",                       /* Module version */
+        RRRouter::CAPABILITIES,
+        &RRRouter::s_object,
+        process_init,                   /* Process init, can be null */
+        process_finish,                 /* Process finish, can be null */
+        NULL,                           /* Thread init */
+        NULL,                           /* Thread finish */
+        {
+            /* Next is an array of MODULE_PARAM structs, max 64 items. These define all
+             * the possible parameters that this module accepts. This is required
+             * since the module loader also parses the configuration file for the module.
+             * Any unrecognised parameters in the config file are discarded.
+             *
+             * Note that many common parameters, such as backend servers, are
+             * already set to the upper level "service"-object.
+             */
+            {                           /* For simple types, only 3 of the 5 struct fields need to be
+                                         * defined. */
+                MAX_BACKENDS,           /* Setting identifier in maxscale.cnf */
+                MXS_MODULE_PARAM_INT,   /* Setting type */
+                "0"                     /* Default value */
+            },
+            {PRINT_ON_ROUTING,        MXS_MODULE_PARAM_BOOL,    "false"},
+            {WRITE_BACKEND,           MXS_MODULE_PARAM_SERVER,  NULL   },
+            {   /* Enum types require an array with allowed values. */
+                DUMMY,
+                MXS_MODULE_PARAM_ENUM,
+                "the_answer",
+                MXS_MODULE_OPT_NONE,
+                enum_example
+            },
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+    return &moduleObject;
 }
