@@ -2050,61 +2050,31 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
     return count;
 }
 
-struct dcb_usage_count
+struct dcb_role_count
 {
     int       count;
-    DCB_USAGE type;
+    DCB::Role role;
 };
 
-bool count_by_usage_cb(DCB* dcb, void* data)
+bool count_by_role_cb(DCB* dcb, void* data)
 {
-    struct dcb_usage_count* d = (struct dcb_usage_count*)data;
+    struct dcb_role_count* d = (struct dcb_role_count*)data;
 
-    switch (d->type)
+    if (dcb->role == d->role)
     {
-    case DCB_USAGE_CLIENT:
-        if (DCB::Role::CLIENT == dcb->role)
-        {
-            d->count++;
-        }
-        break;
-
-    case DCB_USAGE_BACKEND:
-        if (dcb->role == DCB::Role::BACKEND)
-        {
-            d->count++;
-        }
-        break;
-
-    case DCB_USAGE_INTERNAL:
-        if (dcb->role == DCB::Role::CLIENT
-            || dcb->role == DCB::Role::BACKEND)
-        {
-            d->count++;
-        }
-        break;
-
-    case DCB_USAGE_ALL:
         d->count++;
-        break;
     }
 
     return true;
 }
 
-/**
- * Return DCB counts optionally filtered by usage
- *
- * @param       usage   The usage of the DCB
- * @return      A count of DCBs in the desired state
- */
-int dcb_count_by_usage(DCB_USAGE usage)
+int dcb_count_by_role(DCB::Role role)
 {
-    struct dcb_usage_count val = {};
+    struct dcb_role_count val = {};
     val.count = 0;
-    val.type = usage;
+    val.role = role;
 
-    dcb_foreach(count_by_usage_cb, &val);
+    dcb_foreach(count_by_role_cb, &val);
 
     return val.count;
 }

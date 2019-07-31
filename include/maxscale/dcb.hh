@@ -216,17 +216,6 @@ public:
 };
 
 /**
- * The DCB usage filer used for returning DCB's in use for a certain reason
- */
-typedef enum
-{
-    DCB_USAGE_CLIENT,
-    DCB_USAGE_BACKEND,
-    DCB_USAGE_INTERNAL,
-    DCB_USAGE_ALL
-} DCB_USAGE;
-
-/**
  * @brief DCB system initialization function
  *
  * This function needs to be the first function call into this system.
@@ -274,7 +263,15 @@ const char* gw_dcb_state2string(dcb_state_t);                                   
 void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); /* DCB version of printf */
 int dcb_add_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
 int dcb_remove_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
-int dcb_count_by_usage(DCB_USAGE);                      /* Return counts of DCBs */
+/**
+ * Return DCB counts filtered by role
+ *
+ * @param role   What kind of DCBs should be counted.
+ *
+ * @return  Count of DCBs in the specified role.
+ */
+int dcb_count_by_role(DCB::Role role);
+
 int      dcb_persistent_clean_count(DCB*, int, bool);   /* Clean persistent and return count */
 void     dcb_hangup_foreach(struct SERVER* server);
 uint64_t dcb_get_session_id(DCB* dcb);

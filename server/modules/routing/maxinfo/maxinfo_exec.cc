@@ -835,7 +835,10 @@ std::unique_ptr<ResultSet> maxinfo_variables()
  */
 static int maxinfo_all_dcbs()
 {
-    return dcb_count_by_usage(DCB_USAGE_ALL);
+    return
+        dcb_count_by_role(DCB::Role::CLIENT)
+        + dcb_count_by_role(DCB::Role::BACKEND)
+        + dcb_count_by_role(DCB::Role::INTERNAL);
 }
 
 /**
@@ -843,7 +846,7 @@ static int maxinfo_all_dcbs()
  */
 static int maxinfo_client_dcbs()
 {
-    return dcb_count_by_usage(DCB_USAGE_CLIENT);
+    return dcb_count_by_role(DCB::Role::CLIENT);
 }
 
 /**
@@ -860,7 +863,7 @@ static int maxinfo_listener_dcbs()
  */
 static int maxinfo_backend_dcbs()
 {
-    return dcb_count_by_usage(DCB_USAGE_BACKEND);
+    return dcb_count_by_role(DCB::Role::BACKEND);
 }
 
 /**
@@ -868,7 +871,7 @@ static int maxinfo_backend_dcbs()
  */
 static int maxinfo_internal_dcbs()
 {
-    return dcb_count_by_usage(DCB_USAGE_INTERNAL);
+    return dcb_count_by_role(DCB::Role::INTERNAL);
 }
 
 /**
