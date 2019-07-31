@@ -7,7 +7,7 @@
 #include <maxscale/protocol/mysql.hh>
 
 uint8_t hack[128] = {};     // Avoids having to allocate services, sessions and DCBs just to test the protocol
-MySQLProtocol proto((MXS_SESSION*)hack, (SERVER*)hack);
+MySQLProtocol proto((MXS_SESSION*)hack, (SERVER*)hack, (mxs::Component*)hack);
 
 static const uint8_t resultset1[] =
 {

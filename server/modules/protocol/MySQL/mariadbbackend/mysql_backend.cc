@@ -40,7 +40,8 @@ static int  gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue);
 static int  gw_error_backend_event(DCB* dcb);
 static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
                                                     SERVER* server,
-                                                    MXS_PROTOCOL_SESSION* client_protocol_session);
+                                                    MXS_PROTOCOL_SESSION* client_protocol_session,
+                                                    mxs::Component* component);
 static bool gw_init_connection(DCB* backend_dcb);
 static void gw_finish_connection(DCB* backend_dcb);
 static void gw_backend_free_session(MXS_PROTOCOL_SESSION*);
@@ -151,9 +152,10 @@ static char* gw_backend_default_auth()
 
 static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
                                                     SERVER* server,
-                                                    MXS_PROTOCOL_SESSION* client_protocol_session)
+                                                    MXS_PROTOCOL_SESSION* client_protocol_session,
+                                                    mxs::Component* component)
 {
-    MySQLProtocol* protocol_session = new(std::nothrow) MySQLProtocol(session, server);
+    MySQLProtocol* protocol_session = new(std::nothrow) MySQLProtocol(session, server, component);
     MXS_ABORT_IF_NULL(protocol_session);
 
     /** Copy client flags to backend protocol */

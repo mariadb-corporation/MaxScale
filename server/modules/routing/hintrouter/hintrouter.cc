@@ -199,7 +199,7 @@ Dcb HintRouter::connect_to_backend(MXS_SESSION* session,
     mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(session->client_dcb->owner);
     mxb_assert(worker == mxs::RoutingWorker::get_current());
 
-    BackendDCB* new_connection = BackendDCB::connect(sref->server, session, worker);
+    BackendDCB* new_connection = BackendDCB::connect(sref->server, session, worker, nullptr);
 
     if (new_connection)
     {

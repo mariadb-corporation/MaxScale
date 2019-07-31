@@ -1562,9 +1562,9 @@ return_1:
     return 1;
 }
 
-MXS_PROTOCOL_SESSION* gw_new_client_session(MXS_SESSION* session)
+MXS_PROTOCOL_SESSION* gw_new_client_session(MXS_SESSION* session, mxs::Component* component)
 {
-    return new(std::nothrow) MySQLProtocol(session, nullptr);
+    return new(std::nothrow) MySQLProtocol(session, nullptr, component);
 }
 
 bool gw_init_connection(DCB* client_dcb)

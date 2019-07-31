@@ -38,6 +38,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/session.hh>
 #include <maxscale/version.h>
+#include <maxscale/target.hh>
 
 // Default version string sent to clients
 #define DEFAULT_VERSION_STRING "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"
@@ -526,8 +527,9 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
         friend class MySQLProtocol;
     };
 
-    MySQLProtocol(MXS_SESSION* session, SERVER* server)
+    MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
         : m_session(session)
+        , m_component(component)
     {
         m_reply.m_server = server;
     }
@@ -620,6 +622,9 @@ private:
     bool         m_large_query = false;
     bool         m_skip_next = false;
     Reply        m_reply;
+
+    // Called by the protocol module when routing needs to be done
+    mxs::Component* m_component;
 
     bool   consume_fetched_rows(GWBUF* buffer);
     void   process_reply_start(Iter it, Iter end);

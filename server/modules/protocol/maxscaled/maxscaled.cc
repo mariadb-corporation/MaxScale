@@ -62,7 +62,7 @@ static int                   maxscaled_write_event(DCB* dcb);
 static int                   maxscaled_write(DCB* dcb, GWBUF* queue);
 static int                   maxscaled_error(DCB* dcb);
 static int                   maxscaled_hangup(DCB* dcb);
-static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION*);
+static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION*, mxs::Component*);
 static void                  maxscaled_free_session(MXS_PROTOCOL_SESSION*);
 static bool                  maxscaled_init_connection(DCB*);
 static void                  maxscaled_finish_connection(DCB* dcb);
@@ -343,7 +343,7 @@ static int maxscaled_hangup(DCB* dcb)
     return 0;
 }
 
-static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION* session)
+static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION* session, mxs::Component*)
 {
     MAXSCALED* maxscaled_protocol = (MAXSCALED*)calloc(1, sizeof(MAXSCALED));
 

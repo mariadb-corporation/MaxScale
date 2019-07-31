@@ -26,6 +26,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/protocol.hh>
+#include <maxscale/target.hh>
 
 #include <memory>
 
@@ -48,7 +49,6 @@ namespace maxscale
 {
 
 class SSLContext;
-
 }
 
 /**
@@ -145,7 +145,7 @@ public:
     uint64_t uid() const
     {
         return m_uid;
-    };
+    }
 
     /**
      * File descriptor of DCB.
@@ -294,29 +294,29 @@ public:
 
     struct CALLBACK
     {
-        Reason           reason;   /*< The reason for the callback */
-        int           (* cb)(DCB* dcb, Reason reason, void* userdata);
-        void*            userdata; /*< User data to be sent in the callback */
-        struct CALLBACK* next;     /*< Next callback for this DCB */
+        Reason           reason;    /*< The reason for the callback */
+        int              (* cb)(DCB* dcb, Reason reason, void* userdata);
+        void*            userdata;  /*< User data to be sent in the callback */
+        struct CALLBACK* next;      /*< Next callback for this DCB */
     };
 
-    bool                    m_dcb_errhandle_called = false;      /**< this can be called only once */
-    SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN; /**< Current state of SSL if in use */
-    char*                   m_remote = nullptr;                  /**< Address of remote end */
-    char*                   m_user = nullptr;                    /**< User name for connection */
-    struct sockaddr_storage m_ip;                                /**< remote IPv4/IPv6 address */
-    uint64_t                m_writeqlen = 0;                     /**< Bytes in writeq */
-    GWBUF*                  m_writeq = nullptr;                  /**< Write Data Queue */
-    GWBUF*                  m_delayq = nullptr;                  /**< Delay Backend Write Data Queue */
-    GWBUF*                  m_readq = nullptr;                   /**< Read queue for incomplete reads */
-    GWBUF*                  m_fakeq = nullptr;                   /**< Fake event queue for generated events */
-    uint32_t                m_fake_event = 0;                    /**< Fake event to be delivered to handler */
+    bool                    m_dcb_errhandle_called = false;     /**< this can be called only once */
+    SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
+    char*                   m_remote = nullptr;                 /**< Address of remote end */
+    char*                   m_user = nullptr;                   /**< User name for connection */
+    struct sockaddr_storage m_ip;                               /**< remote IPv4/IPv6 address */
+    uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
+    GWBUF*                  m_writeq = nullptr;                 /**< Write Data Queue */
+    GWBUF*                  m_delayq = nullptr;                 /**< Delay Backend Write Data Queue */
+    GWBUF*                  m_readq = nullptr;                  /**< Read queue for incomplete reads */
+    GWBUF*                  m_fakeq = nullptr;                  /**< Fake event queue for generated events */
+    uint32_t                m_fake_event = 0;                   /**< Fake event to be delivered to handler */
 
-    void*                   m_data = nullptr;                    /**< Client pcol data, owned by client DCB */
+    void* m_data = nullptr;                     /**< Client pcol data, owned by client DCB */
 
-    int64_t                 m_last_read = 0;                     /**< Last time the DCB received data */
-    int64_t                 m_last_write = 0;                    /**< Last time the DCB sent data */
-    uint32_t                m_nClose = 0;                        /** How many times dcb_close has been called. */
+    int64_t  m_last_read = 0;                       /**< Last time the DCB received data */
+    int64_t  m_last_write = 0;                      /**< Last time the DCB sent data */
+    uint32_t m_nClose = 0;                          /** How many times dcb_close has been called. */
 
 protected:
     DCB(int fd,
@@ -353,36 +353,36 @@ protected:
 
     int log_errors_SSL(int ret);
 
-    const uint64_t        m_uid;                         /**< Unique identifier for this DCB */
-    const uint64_t        m_high_water;                  /**< High water mark of write queue */
-    const uint64_t        m_low_water;                   /**< Low water mark of write queue */
-    State                 m_state = State::ALLOC;        /**< Current state */
-    int                   m_fd;                          /**< The descriptor */
-    MXS_SESSION*          m_session;                     /**< The owning session */
-    MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
-    MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
-    SSL*                  m_ssl = nullptr;               /**< SSL struct for connection */
+    const uint64_t        m_uid;                        /**< Unique identifier for this DCB */
+    const uint64_t        m_high_water;                 /**< High water mark of write queue */
+    const uint64_t        m_low_water;                  /**< Low water mark of write queue */
+    State                 m_state = State::ALLOC;       /**< Current state */
+    int                   m_fd;                         /**< The descriptor */
+    MXS_SESSION*          m_session;                    /**< The owning session */
+    MXS_PROTOCOL_SESSION* m_protocol;                   /**< The protocol session */
+    MXS_PROTOCOL_API      m_protocol_api;               /**< Protocol functions for the DCB */
+    SSL*                  m_ssl = nullptr;              /**< SSL struct for connection */
     bool                  m_ssl_read_want_read = false;
     bool                  m_ssl_read_want_write = false;
     bool                  m_ssl_write_want_read = false;
     bool                  m_ssl_write_want_write = false;
-    Stats                 m_stats;                       /**< DCB related statistics */
-    CALLBACK*             m_callbacks = nullptr;         /**< The list of callbacks for the DCB */
-    bool                  m_high_water_reached = false;  /** High water mark reached, to determine
-                                                          * whether we need to release throttle */
+    Stats                 m_stats;                      /**< DCB related statistics */
+    CALLBACK*             m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
+    bool                  m_high_water_reached = false; /** High water mark reached, to determine
+                                                         * whether we need to release throttle */
 
 private:
     friend class Manager;
 
     GWBUF* basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread);
 
-    int read_SSL(GWBUF** head);
+    int    read_SSL(GWBUF** head);
     GWBUF* basic_read_SSL(int* nsingleread);
 
     int socket_write_SSL(GWBUF* writeq, bool* stop_writing);
     int socket_write(GWBUF* writeq, bool* stop_writing);
 
-    void destroy();
+    void        destroy();
     static void free(DCB* dcb);
 
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
@@ -395,15 +395,14 @@ private:
     void call_callback(Reason reason);
 
 private:
-    Role         m_role;    /**< The role of the DCB */
-    Manager*     m_manager; /**< The DCB manager to use */
+    Role     m_role;        /**< The role of the DCB */
+    Manager* m_manager;     /**< The DCB manager to use */
 };
 
 namespace maxscale
 {
 
 const char* to_string(DCB::State state);
-
 }
 
 class ClientDCB : public DCB
@@ -415,7 +414,7 @@ public:
 
     int ssl_handshake() override;
 
-    std::unique_ptr<mxs::AuthenticatorSession> m_auth_session; /**< Client authentication data */
+    std::unique_ptr<mxs::AuthenticatorSession> m_auth_session;      /**< Client authentication data */
 
     bool ready() const;
 
@@ -442,7 +441,8 @@ private:
 class BackendDCB : public DCB
 {
 public:
-    static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager);
+    static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager,
+                               mxs::Component* upstream);
 
     /**
      * Hangup all BackendDCBs connected to a particular server.
@@ -462,7 +462,7 @@ public:
 
     int ssl_handshake() override;
 
-    std::unique_ptr<mxs::AuthenticatorBackendSession> m_auth_session; /**< Backend authentication data */
+    std::unique_ptr<mxs::AuthenticatorBackendSession> m_auth_session;   /**< Backend authentication data */
 
     bool ready() const;
 
@@ -484,7 +484,7 @@ public:
     static int persistent_clean_count(BackendDCB* dcb, int id, bool cleanall);
 
     // TODO: Temporarily public.
-    BackendDCB* m_nextpersistent = nullptr; /**< Next DCB in the persistent pool for SERVER */
+    BackendDCB* m_nextpersistent = nullptr;     /**< Next DCB in the persistent pool for SERVER */
 
 private:
     BackendDCB(SERVER* server,
@@ -498,7 +498,8 @@ private:
     static BackendDCB* create(SERVER* server,
                               int fd,
                               MXS_SESSION* session,
-                              DCB::Manager* manager);
+                              DCB::Manager* manager,
+                              mxs::Component* upstream);
 
     static BackendDCB* take_from_connection_pool(SERVER* server, MXS_SESSION* session);
 
@@ -510,12 +511,12 @@ private:
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 
 
-    SERVER* m_server;                  /**< The associated backend server */
-    time_t  m_persistentstart = 0;     /**<    0: Not in the persistent pool.
-                                        *      -1: Evicted from the persistent pool and being closed.
-                                        *   non-0: Time when placed in the persistent pool.
-                                        */
-    bool    m_was_persistent = false;  /**< Whether this DCB was in the persistent pool */
+    SERVER* m_server;                   /**< The associated backend server */
+    time_t  m_persistentstart = 0;      /**<    0: Not in the persistent pool.
+                                         *      -1: Evicted from the persistent pool and being closed.
+                                         *   non-0: Time when placed in the persistent pool.
+                                         */
+    bool m_was_persistent = false;      /**< Whether this DCB was in the persistent pool */
 };
 
 class InternalDCB : public ClientDCB
@@ -538,7 +539,6 @@ namespace maxscale
 {
 
 const char* to_string(DCB::Role role);
-
 }
 
 inline bool dcb_write(DCB* dcb, GWBUF* queue)

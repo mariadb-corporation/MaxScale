@@ -63,7 +63,7 @@ static int                   cdc_write_event(DCB* dcb);
 static int                   cdc_write(DCB* dcb, GWBUF* queue);
 static int                   cdc_error(DCB* dcb);
 static int                   cdc_hangup(DCB* dcb);
-static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION*);
+static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION*, mxs::Component*);
 static void                  cdc_free_session(MXS_PROTOCOL_SESSION*);
 static bool                  cdc_init_connection(DCB*);
 static void                  cdc_finish_connection(DCB* dcb);
@@ -290,7 +290,7 @@ static int cdc_hangup(DCB* dcb)
     return 0;
 }
 
-static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION* session)
+static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION* session, mxs::Component*)
 {
     return cdc_protocol_init();
 }

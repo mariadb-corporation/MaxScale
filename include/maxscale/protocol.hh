@@ -22,6 +22,7 @@
 
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.hh>
+#include <maxscale/target.hh>
 
 
 struct DCB;
@@ -92,11 +93,12 @@ struct MXS_PROTOCOL_API
     /**
      * Allocate new client protocol session
      *
-     * @param session  The session to which the connection belongs to
+     * @param session   The session to which the connection belongs to
+     * @param component The component to use for routeQuery
      *
      * @return New protocol session or null on error
      */
-    MXS_PROTOCOL_SESSION* (* new_client_session)(MXS_SESSION* session);
+    MXS_PROTOCOL_SESSION* (* new_client_session)(MXS_SESSION* session, mxs::Component* component);
 
     /**
      * Allocate new backend protocol session
@@ -109,7 +111,8 @@ struct MXS_PROTOCOL_API
      */
     MXS_PROTOCOL_SESSION* (* new_backend_session)(MXS_SESSION* session,
                                                   SERVER* server,
-                                                  MXS_PROTOCOL_SESSION* client_protocol_session);
+                                                  MXS_PROTOCOL_SESSION* client_protocol_session,
+                                                  mxs::Component* component);
 
     /**
      * Free protocol session

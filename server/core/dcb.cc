@@ -190,11 +190,12 @@ ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session, DCB::Manager* manager
     ClientDCB* dcb = nullptr;
 
     MXS_PROTOCOL_API protocol_api = session->listener->protocol_func();
-    MXS_PROTOCOL_SESSION* protocol_session = protocol_api.new_client_session(session);
+    MXS_PROTOCOL_SESSION* protocol_session =
+        protocol_api.new_client_session(session, static_cast<mxs::Session*>(session));
 
     if (protocol_session)
     {
-        dcb = new (std::nothrow) ClientDCB(fd, session, protocol_session, protocol_api, manager);
+        dcb = new(std::nothrow) ClientDCB(fd, session, protocol_session, protocol_api, manager);
 
         if (!dcb)
         {
@@ -210,7 +211,7 @@ InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
 {
     MXS_PROTOCOL_API protocol_api = session->listener->protocol_func();
 
-    return new (std::nothrow) InternalDCB(session, protocol_api, manager);
+    return new(std::nothrow) InternalDCB(session, protocol_api, manager);
 }
 
 /**
@@ -218,7 +219,7 @@ InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
  *
  * @param dcb The DCB to free
  */
-//static
+// static
 void DCB::free(DCB* dcb)
 {
     mxb_assert(dcb->m_state == State::DISCONNECTED || dcb->m_state == State::ALLOC);
@@ -251,7 +252,7 @@ void DCB::stop_polling_and_shutdown()
     /**
      * close protocol and router session
      */
-    if (m_protocol_api.finish_connection && m_protocol_api.free_session) // TODO: Hacks for InternalDCB
+    if (m_protocol_api.finish_connection && m_protocol_api.free_session)    // TODO: Hacks for InternalDCB
     {
         shutdown();
         m_protocol_api.finish_connection(this);
@@ -296,7 +297,8 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
 BackendDCB* BackendDCB::create(SERVER* srv,
                                int fd,
                                MXS_SESSION* session,
-                               DCB::Manager* manager)
+                               DCB::Manager* manager,
+                               mxs::Component* component)
 {
     BackendDCB* dcb = nullptr;
 
@@ -304,8 +306,8 @@ BackendDCB* BackendDCB::create(SERVER* srv,
     if (protocol_api)
     {
         DCB* client_dcb = session->client_dcb;
-        MXS_PROTOCOL_SESSION* protocol_session
-            = protocol_api->new_backend_session(session, srv, client_dcb->protocol_session());
+        MXS_PROTOCOL_SESSION* protocol_session =
+            protocol_api->new_backend_session(session, srv, client_dcb->protocol_session(), component);
 
         if (protocol_session)
         {
@@ -328,8 +330,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
 
             if (new_auth_session)
             {
-                dcb = new (std::nothrow) BackendDCB(srv,
-                                                    fd, session, protocol_session, *protocol_api,
+                dcb = new (std::nothrow) BackendDCB(srv, fd, session, protocol_session, *protocol_api,
                                                     std::move(new_auth_session), manager);
 
                 if (dcb)
@@ -418,7 +419,8 @@ static bool connect_backend(const char* host, int port, int* fd)
  *
  * @return The new allocated dcb or NULL on error
  */
-BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager* manager)
+BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager* manager,
+                                mxs::Component* component)
 {
     Server* server = static_cast<Server*>(srv);
 
@@ -430,7 +432,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
     if (auto dcb = take_from_connection_pool(server, session))
     {
         // TODO: For now, we ignore the problem.
-        return static_cast<BackendDCB*>(dcb);     // Reusing a DCB from the connection pool
+        return static_cast<BackendDCB*>(dcb);       // Reusing a DCB from the connection pool
     }
 
     // Could not find a reusable DCB, allocate a new one
@@ -439,7 +441,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
 
     if (connect_backend(server->address, server->port, &fd))
     {
-        dcb = create(server, fd, session, manager);
+        dcb = create(server, fd, session, manager, component);
 
         if (dcb)
         {
@@ -945,7 +947,7 @@ int DCB::drain_writeq()
  *
  * @param dcb The DCB to close
  */
-//static
+// static
 void DCB::close(DCB* dcb)
 {
     mxb_assert(dcb->m_state != State::DISCONNECTED);
@@ -1656,7 +1658,7 @@ void DCB::call_callback(Reason reason)
     }
 }
 
-//static
+// static
 void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 {
     RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
@@ -1687,7 +1689,7 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 /**
  * Call all the callbacks on all DCB's that match the server and the reason given
  */
-//static
+// static
 void BackendDCB::hangup(const SERVER* server)
 {
     intptr_t arg1 = (intptr_t)&BackendDCB::hangup_cb;
@@ -2178,7 +2180,7 @@ int dcb_get_port(const DCB* dcb)
     return rval;
 }
 
-//static
+// static
 uint32_t DCB::process_events(DCB* dcb, uint32_t events)
 {
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
@@ -2341,7 +2343,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
     return rc;
 }
 
-//static
+// static
 uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
 {
     this_thread.current_dcb = dcb;
@@ -2365,7 +2367,7 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
     return rv;
 }
 
-//static
+// static
 uint32_t DCB::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
 {
     uint32_t rval = 0;
@@ -2443,7 +2445,7 @@ private:
     uint64_t m_uid;     /**< DCB UID guarantees we deliver the event to the correct DCB */
 };
 
-//static
+// static
 void DCB::add_event(DCB* dcb, GWBUF* buf, uint32_t ev)
 {
     if (dcb == this_thread.current_dcb)
@@ -2745,7 +2747,6 @@ const char* to_string(DCB::Role role)
         return "Unknown DCB";
     }
 }
-
 }
 
 SERVICE* DCB::service() const
@@ -2972,5 +2973,4 @@ const char* to_string(DCB::State state)
         return "DCB::State::UNKNOWN";
     }
 }
-
 }
