@@ -908,7 +908,6 @@ static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
          */
         if (dcb->m_state != DCB_STATE_ALLOC
             && dcb->m_state != DCB_STATE_POLLING
-            && dcb->m_state != DCB_STATE_LISTENING
             && dcb->m_state != DCB_STATE_NOPOLLING)
         {
             MXS_DEBUG("Write aborted to dcb %p because it is in state %s",
@@ -1658,9 +1657,6 @@ const char* gw_dcb_state2string(dcb_state_t state)
     case DCB_STATE_NOPOLLING:
         return "DCB not in polling loop";
 
-    case DCB_STATE_LISTENING:
-        return "DCB for listening socket";
-
     case DCB_STATE_DISCONNECTED:
         return "DCB socket closed";
 
@@ -2074,10 +2070,6 @@ bool count_by_usage_cb(DCB* dcb, void* data)
         break;
 
     case DCB_USAGE_LISTENER:
-        if (dcb->m_state == DCB_STATE_LISTENING)
-        {
-            d->count++;
-        }
         break;
 
     case DCB_USAGE_BACKEND:
@@ -2977,7 +2969,7 @@ static inline void dcb_sanity_check(DCB* dcb)
                   STRDCBSTATE(dcb->m_state));
         raise(SIGABRT);
     }
-    else if (dcb->m_state == DCB_STATE_POLLING || dcb->m_state == DCB_STATE_LISTENING)
+    else if (dcb->m_state == DCB_STATE_POLLING)
     {
         MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
                   "is %s, but this is probably an error, not crashing.",
@@ -3136,8 +3128,7 @@ int poll_remove_dcb(DCB* dcb)
     {
         return 0;
     }
-    if (DCB_STATE_POLLING != dcb->m_state
-        && DCB_STATE_LISTENING != dcb->m_state)
+    if (DCB_STATE_POLLING != dcb->m_state)
     {
         MXS_ERROR("%lu [poll_remove_dcb] Error : existing state of dcb %p "
                   "is %s, but this is probably an error, not crashing.",
@@ -3344,9 +3335,6 @@ const char* to_string(dcb_state_t state)
 
     case DCB_STATE_POLLING:
         return "DCB_STATE_POLLING";
-
-    case DCB_STATE_LISTENING:
-        return "DCB_STATE_LISTENING";
 
     case DCB_STATE_DISCONNECTED:
         return "DCB_STATE_DISCONNECTED";
