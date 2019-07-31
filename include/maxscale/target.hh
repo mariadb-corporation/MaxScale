@@ -17,6 +17,9 @@
 #include <string>
 
 #include <maxscale/modinfo.hh>
+#include <maxscale/buffer.hh>
+
+struct MXS_SESSION;
 
 constexpr int RANK_PRIMARY = 1;
 constexpr int RANK_SECONDARY = 2;
@@ -113,6 +116,36 @@ inline bool status_is_disk_space_exhausted(uint64_t status)
 namespace maxscale
 {
 
+class Target;
+
+// A routing component
+class Component
+{
+public:
+    virtual ~Component() = default;
+
+    virtual mxs::Target* target() const = 0;
+
+    virtual int32_t routeQuery(GWBUF* buffer) = 0;
+
+    virtual int32_t clientReply(GWBUF* buffer, Component* down) = 0;
+
+    virtual bool handleError(GWBUF* error, Component* down) = 0;
+};
+
+// A connectable routing endpoint (a service or a server)
+class Endpoint : public Component
+{
+public:
+    virtual ~Endpoint() = default;
+
+    virtual bool connect() = 0;
+
+    virtual void close() = 0;
+
+    virtual bool is_open() const = 0;
+};
+
 // A routing target
 class Target
 {
@@ -147,6 +180,11 @@ public:
      * Get target rank
      */
     virtual int64_t rank() const = 0;
+
+    /**
+     * Get a connection handle to this target
+     */
+    virtual std::unique_ptr<Endpoint> get_connection(Component* up, MXS_SESSION* session) = 0;
 
     /* Target connection and usage statistics */
     struct Stats
