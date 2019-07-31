@@ -164,4 +164,85 @@ MXS_AUTHENTICATOR AuthenticatorApi<AuthImplementation>::s_api =
         &AuthenticatorApi<AuthImplementation>::reauthenticate
 };
 
+/**
+ * The base class for all authenticator backend sessions. Ideally, these should be created by the
+ * authenticator client sessions. For now they must be a separate class and API struct.
+ */
+class AuthenticatorBackendSession
+{
+public:
+
+    virtual ~AuthenticatorBackendSession() = default;
+    virtual bool extract(DCB* backend, GWBUF* buffer) = 0;
+    virtual bool ssl_capable(DCB* backend) = 0;
+    virtual int authenticate(DCB* backend) = 0;
+};
+
+/**
+ * Another helper template for backend authenticators.
+ */
+template<class AuthImplementation>
+class BackendAuthenticatorApi
+{
+public:
+    BackendAuthenticatorApi() = delete;
+    BackendAuthenticatorApi(const BackendAuthenticatorApi&) = delete;
+    BackendAuthenticatorApi& operator=(const BackendAuthenticatorApi&) = delete;
+
+    static void* newSession(void* instance)
+    {
+        AuthenticatorBackendSession* ses = nullptr;
+        MXS_EXCEPTION_GUARD(ses = AuthImplementation::newSession());
+        return ses;
+    }
+
+    static bool extractData(DCB* backend, GWBUF* buffer)
+    {
+        auto session = static_cast<AuthenticatorBackendSession*>(backend->m_authenticator_data);
+        bool success = false;
+        MXS_EXCEPTION_GUARD(success = session->extract(backend, buffer));
+        return success;
+    }
+
+    static bool sslCapable(DCB* backend)
+    {
+        auto session = static_cast<AuthenticatorBackendSession*>(backend->m_authenticator_data);
+        bool ssl = false;
+        MXS_EXCEPTION_GUARD(ssl = session->ssl_capable(backend));
+        return ssl;
+    }
+
+    static int authenticate(DCB* backend)
+    {
+        auto session = static_cast<AuthenticatorBackendSession*>(backend->m_authenticator_data);
+        int rval = MXS_AUTH_SSL_COMPLETE;
+        MXS_EXCEPTION_GUARD(rval = session->authenticate(backend));
+        return rval;
+    }
+
+    static void freeSession(void* session)
+    {
+        auto ses = static_cast<AuthenticatorBackendSession*>(session);
+        MXS_EXCEPTION_GUARD(delete ses);
+    }
+
+    static MXS_AUTHENTICATOR s_api;
+};
+
+template<class AuthImplementation>
+MXS_AUTHENTICATOR BackendAuthenticatorApi<AuthImplementation>::s_api =
+{
+        nullptr,
+        &BackendAuthenticatorApi<AuthImplementation>::newSession,
+        &BackendAuthenticatorApi<AuthImplementation>::extractData,
+        &BackendAuthenticatorApi<AuthImplementation>::sslCapable,
+        &BackendAuthenticatorApi<AuthImplementation>::authenticate,
+        nullptr,
+        &BackendAuthenticatorApi<AuthImplementation>::freeSession,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr
+};
+
 }

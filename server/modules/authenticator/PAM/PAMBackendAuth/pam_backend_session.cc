@@ -14,6 +14,11 @@
 #include "pam_backend_session.hh"
 #include <maxscale/server.hh>
 
+PamBackendSession* PamBackendSession::newSession()
+{
+    return new(std::nothrow) PamBackendSession();
+}
+
 /**
  * Parse packet type and plugin name from packet data. Advances pointer.
  *
@@ -297,4 +302,9 @@ int PamBackendSession::authenticate(DCB* dcb)
     }
 
     return rval;
+}
+
+bool PamBackendSession::ssl_capable(DCB* dcb)
+{
+    return dcb->m_server->ssl().context();
 }

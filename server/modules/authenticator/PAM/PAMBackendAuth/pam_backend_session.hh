@@ -11,18 +11,23 @@
  * Public License.
  */
 #pragma once
+
 #include "pam_backend_auth.hh"
 #include "../pam_auth_common.hh"
+#include <maxscale/authenticator2.hh>
 
-class PamBackendSession
+class PamBackendSession : public mxs::AuthenticatorBackendSession
 {
 public:
     PamBackendSession(const PamBackendSession& orig) = delete;
     PamBackendSession& operator=(const PamBackendSession&) = delete;
 
+    static PamBackendSession* newSession();
+
     PamBackendSession();
-    bool extract(DCB* dcb, GWBUF* buffer);
-    int  authenticate(DCB* dcb);
+    bool extract(DCB* dcb, GWBUF* buffer) override;
+    int  authenticate(DCB* dcb) override;
+    bool ssl_capable(DCB* dcb) override;
 
 private:
     bool send_client_password(DCB* dcb);
