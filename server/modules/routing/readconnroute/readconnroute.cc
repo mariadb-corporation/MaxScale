@@ -466,7 +466,7 @@ int RCRSession::routeQuery(GWBUF* queue)
     case MXS_COM_CHANGE_USER:
         rc = backend_dcb->m_func.auth(backend_dcb,
                                       nullptr,
-                                      backend_dcb->m_session,
+                                      backend_dcb->session(),
                                       queue);
         break;
 
@@ -551,7 +551,7 @@ json_t* RCR::diagnostics_json() const
  */
 void RCRSession::clientReply(GWBUF* queue, DCB* backend_dcb)
 {
-    mxb_assert(backend_dcb->m_session->client_dcb);
+    mxb_assert(backend_dcb->session()->client_dcb);
     RouterSession::clientReply(queue, backend_dcb);
 }
 
@@ -568,9 +568,9 @@ void RCRSession::clientReply(GWBUF* queue, DCB* backend_dcb)
 void RCRSession::handleError(GWBUF* errbuf, DCB* problem_dcb, mxs_error_action_t action, bool* succp)
 
 {
-    mxb_assert(problem_dcb->m_role == DCB::Role::BACKEND);
-    mxb_assert(problem_dcb->m_session->state() == MXS_SESSION::State::STARTED);
-    DCB* client_dcb = problem_dcb->m_session->client_dcb;
+    mxb_assert(problem_dcb->role() == DCB::Role::BACKEND);
+    mxb_assert(problem_dcb->session()->state() == MXS_SESSION::State::STARTED);
+    DCB* client_dcb = problem_dcb->session()->client_dcb;
     client_dcb->m_func.write(client_dcb, gwbuf_clone(errbuf));
 
     // The DCB will be closed once the session closes, no need to close it here

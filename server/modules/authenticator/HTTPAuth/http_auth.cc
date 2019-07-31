@@ -112,7 +112,7 @@ static int http_auth_authenticate(DCB* dcb)
     const char* user;
     const char* password;
 
-    serviceGetUser(dcb->m_service, &user, &password);
+    serviceGetUser(dcb->service(), &user, &password);
     char* pw = decrypt_password(password);
 
     if (ses && strcmp(ses->user, user) == 0 && strcmp(ses->pw, pw) == 0)

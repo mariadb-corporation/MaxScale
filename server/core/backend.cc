@@ -226,7 +226,7 @@ bool Backend::auth(GWBUF* buffer)
     mxb_assert(in_use());
     bool rval = false;
 
-    if (m_dcb->m_func.auth(m_dcb, NULL, m_dcb->m_session, buffer) == 1)
+    if (m_dcb->m_func.auth(m_dcb, NULL, m_dcb->session(), buffer) == 1)
     {
         set_state(WAITING_RESULT);
         rval = true;

@@ -226,8 +226,8 @@ bool supports_extended_caps(SERVER_REF* servers)
  */
 bool ssl_required_by_dcb(DCB* dcb)
 {
-    mxb_assert(dcb->m_session->listener);
-    return dcb->m_session->listener->ssl().context();
+    mxb_assert(dcb->session()->listener);
+    return dcb->session()->listener->ssl().context();
 }
 
 /**
@@ -265,16 +265,16 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
     uint8_t mysql_plugin_data[13] = "";
     uint8_t mysql_server_capabilities_one[2];
     uint8_t mysql_server_capabilities_two[2];
-    uint8_t mysql_server_language = get_charset(dcb->m_service->dbref);
+    uint8_t mysql_server_language = get_charset(dcb->service()->dbref);
     uint8_t mysql_server_status[2];
     uint8_t mysql_scramble_len = 21;
     uint8_t mysql_filler_ten[10] = {};
     /* uint8_t mysql_last_byte = 0x00; not needed */
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
-    bool is_maria = supports_extended_caps(dcb->m_service->dbref);
+    bool is_maria = supports_extended_caps(dcb->service()->dbref);
 
     GWBUF* buf;
-    std::string version = get_version_string(dcb->m_service);
+    std::string version = get_version_string(dcb->service());
 
     gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
@@ -292,7 +292,7 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
     }
 
     // Get the equivalent of the server thread id.
-    protocol->thread_id = dcb->m_session->id();
+    protocol->thread_id = dcb->session()->id();
     // Send only the low 32bits in the handshake.
     gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(protocol->thread_id));
     memcpy(mysql_scramble_buf, server_scramble, 8);
@@ -434,9 +434,9 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
  */
 int gw_MySQLWrite_client(DCB* dcb, GWBUF* queue)
 {
-    if (GWBUF_IS_REPLY_OK(queue) && dcb->m_service->session_track_trx_state)
+    if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->session_track_trx_state)
     {
-        parse_and_set_trx_state(dcb->m_session, queue);
+        parse_and_set_trx_state(dcb->session(), queue);
     }
     return dcb_write(dcb, queue);
 }
@@ -455,7 +455,7 @@ int gw_read_client_event(DCB* dcb)
     uint32_t nbytes_read = 0;
     uint32_t max_bytes = 0;
 
-    if (dcb->m_role != DCB::Role::CLIENT)
+    if (dcb->role() != DCB::Role::CLIENT)
     {
         MXS_ERROR("DCB must be a client handler for MySQL client protocol.");
         return 1;
@@ -688,7 +688,7 @@ static void check_packet(DCB* dcb, GWBUF* buf, int bytes)
     if (bytes == MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         /** This is an SSL request packet */
-        mxb_assert(dcb->m_session->listener->ssl().context());
+        mxb_assert(dcb->session()->listener->ssl().context());
         mxb_assert(buflen == bytes && pktlen >= buflen);
     }
     else
@@ -715,7 +715,7 @@ bool ssl_is_connection_healthy(DCB* dcb)
      * then everything is as we wish. Otherwise, either there is a problem or
      * more to be done.
      */
-    return !dcb->m_session->listener->ssl().context() || dcb->m_ssl_state == SSL_ESTABLISHED;
+    return !dcb->session()->listener->ssl().context() || dcb->m_ssl_state == SSL_ESTABLISHED;
 }
 
 /* Looks to be redundant - can remove include for ioctl too */
@@ -756,9 +756,9 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
 {
     const char* user = dcb->m_user ? dcb->m_user : "";
     const char* remote = dcb->m_remote ? dcb->m_remote : "";
-    const char* service = (dcb->m_service && dcb->m_service->name()) ? dcb->m_service->name() : "";
+    const char* service = (dcb->service() && dcb->service()->name()) ? dcb->service()->name() : "";
 
-    if (!dcb->m_session->listener->ssl().context())
+    if (!dcb->session()->listener->ssl().context())
     {
         /* Not an SSL connection on account of listener configuration */
         return SSL_AUTH_CHECKS_OK;
@@ -948,11 +948,11 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
          * is changed so that future data will go through the
          * normal data handling function instead of this one.
          */
-        if (session_start(dcb->m_session))
+        if (session_start(dcb->session()))
         {
-            mxb_assert(dcb->m_session->state() != MXS_SESSION::State::CREATED);
+            mxb_assert(dcb->session()->state() != MXS_SESSION::State::CREATED);
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
-            dcb->m_session->client_protocol_data = QC_SQL_MODE_DEFAULT;
+            dcb->session()->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
@@ -978,12 +978,12 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
     {
         protocol->protocol_auth_state = MXS_AUTH_STATE_FAILED;
         mysql_client_auth_error_handling(dcb, auth_val, next_sequence);
-        mxb_assert(dcb->m_session->listener);
+        mxb_assert(dcb->session()->listener);
 
         // MXS_AUTH_NO_SESSION is for failure to start session, not authentication failure
         if (auth_val != MXS_AUTH_NO_SESSION)
         {
-            dcb->m_session->listener->mark_auth_as_failed(dcb->m_remote);
+            dcb->session()->listener->mark_auth_as_failed(dcb->m_remote);
         }
 
         /**
@@ -1229,7 +1229,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
     MXS_SESSION::State session_state_value;
     uint64_t capabilities = 0;
 
-    session = dcb->m_session;
+    session = dcb->session();
     session_state_value = session->state();
     if (session_state_value != MXS_SESSION::State::STARTED)
     {
@@ -1338,7 +1338,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
  */
 void check_pool_candidate(DCB* dcb)
 {
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
     MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
 
     if (proto->current_command == MXS_COM_QUIT)
@@ -1365,7 +1365,7 @@ void check_pool_candidate(DCB* dcb)
  */
 static int gw_read_finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities)
 {
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
     uint8_t* payload = GWBUF_DATA(read_buffer);
     MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
     int return_code = 0;
@@ -1404,14 +1404,14 @@ static int gw_read_finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capa
     if (return_code != 0)
     {
         /** Routing failed, close the client connection */
-        dcb->m_session->close_reason = SESSION_CLOSE_ROUTING_FAILED;
+        dcb->session()->close_reason = SESSION_CLOSE_ROUTING_FAILED;
         dcb_close(dcb);
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
     else if (proto->current_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
-        mxb_assert_message(session_valid_for_pool(dcb->m_session), "Session should qualify for pooling");
+        mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
         dcb_close(dcb);
     }
 
@@ -1527,14 +1527,14 @@ int gw_write_client_event(DCB* dcb)
 {
     MySQLProtocol* protocol = NULL;
 
-    mxb_assert(dcb->m_state != DCB_STATE_DISCONNECTED);
+    mxb_assert(dcb->state() != DCB_STATE_DISCONNECTED);
 
     if (dcb == NULL)
     {
         goto return_1;
     }
 
-    if (dcb->m_state == DCB_STATE_DISCONNECTED)
+    if (dcb->state() == DCB_STATE_DISCONNECTED)
     {
         goto return_1;
     }
@@ -1572,7 +1572,7 @@ MXS_PROTOCOL_SESSION* gw_MySQLAccept(DCB* dcb)
 
 static int gw_error_client_event(DCB* dcb)
 {
-    mxb_assert(dcb->m_session->state() != MXS_SESSION::State::STOPPING);
+    mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
     dcb_close(dcb);
     return 1;
 }
@@ -1594,7 +1594,7 @@ static int gw_client_close(DCB* dcb)
  */
 static int gw_client_hangup_event(DCB* dcb)
 {
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
 
     if (session && !session_valid_for_pool(session))
     {
@@ -1610,7 +1610,7 @@ static int gw_client_hangup_event(DCB* dcb)
 
         // The client did not send a COM_QUIT packet
         std::string errmsg {"Connection killed by MaxScale"};
-        std::string extra {session_get_close_reason(dcb->m_session)};
+        std::string extra {session_get_close_reason(dcb->session())};
 
         if (!extra.empty())
         {
@@ -1942,7 +1942,7 @@ static spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int
                 == sizeof(bytes))
             {
                 uint64_t process_id = gw_mysql_get_byte4(bytes);
-                mxs_mysql_execute_kill(dcb->m_session, process_id, KT_CONNECTION);
+                mxs_mysql_execute_kill(dcb->session(), process_id, KT_CONNECTION);
                 mxs_mysql_send_ok(dcb, 1, 0, NULL);
                 rval = RES_END;
             }
@@ -2014,11 +2014,11 @@ spec_com_res_t handle_query_kill(DCB* dcb,
 
                 if (thread_id > 0)
                 {
-                    mxs_mysql_execute_kill(dcb->m_session, thread_id, kt);
+                    mxs_mysql_execute_kill(dcb->session(), thread_id, kt);
                 }
                 else if (!user.empty())
                 {
-                    mxs_mysql_execute_kill_user(dcb->m_session, user.c_str(), kt);
+                    mxs_mysql_execute_kill_user(dcb->session(), user.c_str(), kt);
                 }
 
                 mxs_mysql_send_ok(dcb, 1, 0, NULL);

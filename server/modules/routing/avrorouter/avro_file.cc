@@ -374,9 +374,9 @@ bool notify_cb(DCB* dcb, void* data)
 {
     SERVICE* service = static_cast<SERVICE*>(data);
 
-    if (dcb->m_service == service && dcb->m_role == DCB::Role::CLIENT)
+    if (dcb->service() == service && dcb->role() == DCB::Role::CLIENT)
     {
-        auto session = (AvroSession*)dcb->m_session->router_session;
+        auto session = (AvroSession*)dcb->session()->router_session;
         session->queue_client_callback();
     }
 

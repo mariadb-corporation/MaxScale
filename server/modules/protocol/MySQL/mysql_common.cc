@@ -349,11 +349,11 @@ int mysql_send_auth_error(DCB* dcb,
 
     GWBUF* buf;
 
-    if (dcb->m_state != DCB_STATE_POLLING)
+    if (dcb->state() != DCB_STATE_POLLING)
     {
         MXS_DEBUG("dcb %p is in a state %s, and it is not in epoll set anymore. Skip error sending.",
                   dcb,
-                  STRDCBSTATE(dcb->m_state));
+                  STRDCBSTATE(dcb->state()));
         return 0;
     }
     mysql_error_msg = "Access denied!";
@@ -527,21 +527,21 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
 {
     bool rval = true;
 
-    if (dcb->m_role == DCB::Role::CLIENT)
+    if (dcb->role() == DCB::Role::CLIENT)
     {
         // The shared session data can be extracted at any time if the client DCB is used.
         mxb_assert(dcb->m_data);
         memcpy(session, dcb->m_data, sizeof(MYSQL_session));
     }
-    else if (dcb->m_session->state() != MXS_SESSION::State::CREATED)
+    else if (dcb->session()->state() != MXS_SESSION::State::CREATED)
     {
-        memcpy(session, dcb->m_session->client_dcb->m_data, sizeof(MYSQL_session));
+        memcpy(session, dcb->session()->client_dcb->m_data, sizeof(MYSQL_session));
     }
     else
     {
         mxb_assert(false);
         MXS_ERROR("Couldn't get session authentication info. Session in wrong state: %s.",
-                  session_state_to_string(dcb->m_session->state()));
+                  session_state_to_string(dcb->session()->state()));
         rval = false;
     }
 
@@ -907,9 +907,9 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
 {
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
-    if (dcb->m_session == NULL
-        || (dcb->m_session->state() != MXS_SESSION::State::CREATED
-            && dcb->m_session->state() != MXS_SESSION::State::STARTED)
+    if (dcb->session() == NULL
+        || (dcb->session()->state() != MXS_SESSION::State::CREATED
+            && dcb->session()->state() != MXS_SESSION::State::STARTED)
         || (dcb->m_server->ssl().context() && dcb->m_ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
@@ -919,13 +919,13 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     bool ssl_established = dcb->m_ssl_state == SSL_ESTABLISHED;
 
     MYSQL_session client;
-    gw_get_shared_session_auth_info(dcb->m_session->client_dcb, &client);
+    gw_get_shared_session_auth_info(dcb->session()->client_dcb, &client);
 
     GWBUF* buffer = gw_generate_auth_response(&client,
                                               (MySQLProtocol*)dcb->m_protocol,
                                               with_ssl,
                                               ssl_established,
-                                              dcb->m_service->capabilities);
+                                              dcb->service()->capabilities);
     mxb_assert(buffer);
 
     if (with_ssl && !ssl_established)
@@ -1332,8 +1332,8 @@ static bool kill_func(DCB* dcb, void* data)
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
     MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->m_protocol);
 
-    if (dcb->m_session->id() == info->target_id
-        && dcb->m_role == DCB::Role::BACKEND
+    if (dcb->session()->id() == info->target_id
+        && dcb->role() == DCB::Role::BACKEND
         && (info->keep_thread_id == 0 || proto->thread_id != info->keep_thread_id))
     {
         if (proto->thread_id)
@@ -1346,7 +1346,7 @@ static bool kill_func(DCB* dcb, void* data)
         else
         {
             // DCB is not yet connected, send a hangup to forcibly close it
-            dcb->m_session->close_reason = SESSION_CLOSE_KILLED;
+            dcb->session()->close_reason = SESSION_CLOSE_KILLED;
             poll_fake_hangup_event(dcb);
         }
     }
@@ -1358,8 +1358,8 @@ static bool kill_user_func(DCB* dcb, void* data)
 {
     UserKillInfo* info = (UserKillInfo*)data;
 
-    if (dcb->m_role == DCB::Role::BACKEND
-        && strcasecmp(dcb->m_session->client_dcb->m_user, info->user.c_str()) == 0)
+    if (dcb->role() == DCB::Role::BACKEND
+        && strcasecmp(dcb->session()->client_dcb->m_user, info->user.c_str()) == 0)
     {
         info->targets[dcb->m_server] = info->query_base;
     }
@@ -1796,7 +1796,7 @@ void MySQLProtocol::process_reply_start(Iter it, Iter end)
     case MYSQL_REPLY_LOCAL_INFILE:
         // The client will send a request after this with the contents of the file which the server will
         // respond to with either an OK or an ERR packet
-        session_set_load_active(owner_dcb->m_session, true);
+        session_set_load_active(owner_dcb->session(), true);
         set_reply_state(ReplyState::DONE);
         break;
 
@@ -2048,12 +2048,12 @@ void MySQLProtocol::track_query(GWBUF* buffer)
         return;
     }
 
-    if (session_is_load_active(owner_dcb->m_session))
+    if (session_is_load_active(owner_dcb->session()))
     {
         if (MYSQL_GET_PAYLOAD_LEN(data) == 0)
         {
             MXS_INFO("Load data ended");
-            session_set_load_active(owner_dcb->m_session, false);
+            session_set_load_active(owner_dcb->session(), false);
             set_reply_state(ReplyState::START);
         }
     }

@@ -221,7 +221,7 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
 
         while (dcb)
         {
-            mxb_assert(dcb->m_role == DCB::Role::BACKEND);
+            mxb_assert(dcb->role() == DCB::Role::BACKEND);
             mxb_assert(dcb->m_server);
 
             if (dcb->m_user

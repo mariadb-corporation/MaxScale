@@ -263,7 +263,7 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
     int rc = 0;
     mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
 
-    if (session_trx_is_active(my_session->client_dcb->m_session)
+    if (session_trx_is_active(my_session->client_dcb->session())
         && extract_insert_target(queue, target, sizeof(target)))
     {
         switch (my_session->state)

@@ -130,10 +130,22 @@ public:
     DCB(Role role, MXS_SESSION* session, SERVER* server = nullptr);
     ~DCB();
 
-    /**
-     * DCB type in string form
-     */
-    const char* type();
+    Role role() const
+    {
+        return m_role;
+    }
+
+    dcb_state_t state() const
+    {
+        return m_state;
+    }
+
+    MXS_SESSION* session() const
+    {
+        return m_session;
+    }
+
+    SERVICE* service() const;
 
     int ssl_handshake();
 
@@ -161,10 +173,36 @@ public:
     // Starts the shutdown process, called when a client DCB is closed
     void shutdown();
 
+    /**
+     * Add the DCB to the epoll set of the current worker.
+     *
+     * @return -1 on error or 0 on success.
+     */
+    int add_to_worker();
+
+    /**
+     * Remove the DCB from the epoll set of the current worker.
+     *
+     * @return -1 on error or 0 on success; actually always 0
+     */
+    int remove_from_worker();
+
+    // BEGIN: Temporarily here, do not use.
+    static void close(DCB* dcb);
+    static void final_close(DCB* dcb);
+    static bool maybe_add_persistent(DCB* dcb);
+    void set_state(dcb_state_t s)
+    {
+        m_state = s;
+    }
+    void set_session(MXS_SESSION* s)
+    {
+        m_session = s;
+    }
+    // END
+
     bool                    m_dcb_errhandle_called = false;   /**< this can be called only once */
-    Role                    m_role;
     int                     m_fd = DCBFD_CLOSED;                /**< The descriptor */
-    dcb_state_t             m_state = DCB_STATE_ALLOC;          /**< Current descriptor state */
     SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
     char*                   m_remote = nullptr;                   /**< Address of remote end */
     char*                   m_user = nullptr;                     /**< User name for connection */
@@ -172,7 +210,6 @@ public:
     void*                   m_protocol = nullptr;                 /**< The protocol specific state */
     size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
-    MXS_SESSION*            m_session;                            /**< The owning session */
     MXS_PROTOCOL            m_func = {};                          /**< Protocol functions for the DCB */
     MXS_AUTHENTICATOR       m_authfunc = {};                      /**< Authenticator functions for the DCB */
     uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
@@ -190,7 +227,6 @@ public:
                                                  *      -1: Evicted from the persistent pool and being closed.
                                                  *   non-0: Time when placed in the persistent pool.
                                                  */
-    SERVICE*       m_service = nullptr;           /**< The related service */
     void*          m_data = nullptr;              /**< Client protocol data, owned by client DCB */
     void*          m_authenticator_data = nullptr;/**< The authenticator data for this DCB */
     DCB_CALLBACK*  m_callbacks = nullptr;         /**< The list of callbacks for the DCB */
@@ -213,7 +249,22 @@ public:
     } m_thread;
     uint32_t m_nClose = 0;   /** How many times dcb_close has been called. */
     uint64_t m_uid;         /**< Unique identifier for this DCB */
+
+private:
+    static void final_free(DCB* dcb);
+
+private:
+    Role         m_role;                    /**< The role of the DCB */
+    dcb_state_t  m_state = DCB_STATE_ALLOC; /**< Current state */
+    MXS_SESSION* m_session;                 /**< The owning session */
 };
+
+namespace maxscale
+{
+
+const char* to_string(DCB::Role role);
+
+}
 
 /**
  * @brief DCB system initialization function
@@ -234,7 +285,10 @@ inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 }
 int  dcb_bytes_readable(DCB* dcb);
 int  dcb_drain_writeq(DCB*);
-void dcb_close(DCB*);
+inline void dcb_close(DCB* dcb)
+{
+    DCB::close(dcb);
+}
 
 /**
  * @brief Close DCB in the thread that owns it.

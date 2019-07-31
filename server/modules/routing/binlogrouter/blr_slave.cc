@@ -3134,7 +3134,7 @@ int blr_slave_callback(DCB* dcb, DCB_REASON reason, void* data)
     ROUTER_SLAVE* slave = (ROUTER_SLAVE*)data;
     ROUTER_INSTANCE* router = slave->router;
 
-    if (NULL == dcb->m_session->router_session)
+    if (NULL == dcb->session()->router_session)
     {
         /*
          * The following processing will fail if there is no router session,
@@ -3868,7 +3868,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     if (router->master)
     {
         if (router->master->m_fd != -1
-            && router->master->m_state == DCB_STATE_POLLING)
+            && router->master->state() == DCB_STATE_POLLING)
         {
             blr_close_master_in_main(router);
         }
@@ -3895,7 +3895,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     if (router->client)
     {
         if (router->client->m_fd != -1
-            && router->client->m_state == DCB_STATE_POLLING)
+            && router->client->state() == DCB_STATE_POLLING)
         {
             // Is this dead code? dcb->m_fd for internal DCBs is always -1
             dcb_close(router->client);

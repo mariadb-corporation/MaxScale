@@ -849,7 +849,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
             }
 
             // TODO: This is never used as the client connection is not up yet
-            client_dcb->m_session->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
+            client_dcb->session()->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
 
             dcb_close(client_dcb);
             client_dcb = NULL;
@@ -1013,9 +1013,9 @@ void Listener::accept_connections()
         {
             if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
             {
-                dcb->protocol = m_proto_func.accept(dcb);
+                dcb->m_protocol = m_proto_func.accept(dcb);
 
-                if (!dcb->protocol)
+                if (!dcb->m_protocol)
                 {
                     dcb_close(dcb);
                 }
@@ -1030,9 +1030,9 @@ void Listener::accept_connections()
             worker->execute([this, conn]() {
                                 if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
                                 {
-                                    dcb->protocol = m_proto_func.accept(dcb);
+                                    dcb->m_protocol = m_proto_func.accept(dcb);
 
-                                    if (!dcb->protocol)
+                                    if (!dcb->m_protocol)
                                     {
                                         dcb_close(dcb);
                                     }

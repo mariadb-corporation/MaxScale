@@ -169,7 +169,7 @@ static MXS_PROTOCOL_SESSION* gw_create_backend_connection(DCB* backend_dcb,
     /** Copy client flags to backend protocol */
     if (session->client_dcb->m_protocol)
     {
-        MySQLProtocol* client = (MySQLProtocol*)backend_dcb->m_session->client_dcb->m_protocol;
+        MySQLProtocol* client = (MySQLProtocol*)backend_dcb->session()->client_dcb->m_protocol;
         protocol->client_capabilities = client->client_capabilities;
         protocol->charset = client->charset;
         protocol->extra_capabilities = client->extra_capabilities;
@@ -248,7 +248,7 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
              || errcode == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
     {
         // Authentication failed, reload users
-        service_refresh_users(dcb->m_service);
+        service_refresh_users(dcb->service());
     }
 }
 
@@ -302,9 +302,9 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
     MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
 
     // The DCB's session is set to null when it is put into the persistent connection pool.
-    if (dcb->m_session)
+    if (dcb->session())
     {
-        uint64_t capabilities = service_get_capabilities(dcb->m_session->service);
+        uint64_t capabilities = service_get_capabilities(dcb->session()->service);
 
         /**
          * Copy the current command being executed to this backend. For statement
@@ -317,9 +317,9 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
         {
             proto->track_query(buffer);
         }
-        else if (dcb->m_session->client_dcb && dcb->m_session->client_dcb->m_protocol)
+        else if (dcb->session()->client_dcb && dcb->session()->client_dcb->m_protocol)
         {
-            MySQLProtocol* client_proto = (MySQLProtocol*)dcb->m_session->client_dcb->m_protocol;
+            MySQLProtocol* client_proto = (MySQLProtocol*)dcb->session()->client_dcb->m_protocol;
             proto->current_command = client_proto->current_command;
         }
     }
@@ -369,7 +369,7 @@ static int gw_read_backend_event(DCB* dcb)
         return 0;
     }
 
-    mxb_assert(dcb->m_session);
+    mxb_assert(dcb->session());
 
     MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
 
@@ -465,7 +465,7 @@ static int gw_read_backend_event(DCB* dcb)
 static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* errmsg)
 {
     bool succp = true;
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
 
     mxb_assert(!dcb->m_dcb_errhandle_called);
 
@@ -497,7 +497,7 @@ static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* err
  */
 static void gw_reply_on_error(DCB* dcb, mxs_auth_state_t state)
 {
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
 
     do_handle_error(dcb,
                     ERRACT_REPLY_CLIENT,
@@ -514,13 +514,13 @@ static inline bool session_ok_to_route(DCB* dcb)
 {
     bool rval = false;
 
-    if (dcb->m_session->state() == MXS_SESSION::State::STARTED
-        && dcb->m_session->client_dcb != NULL
-        && dcb->m_session->client_dcb->m_state == DCB_STATE_POLLING
-        && (dcb->m_session->router_session
-            || service_get_capabilities(dcb->m_session->service) & RCAP_TYPE_NO_RSESSION))
+    if (dcb->session()->state() == MXS_SESSION::State::STARTED
+        && dcb->session()->client_dcb != NULL
+        && dcb->session()->client_dcb->state() == DCB_STATE_POLLING
+        && (dcb->session()->router_session
+            || service_get_capabilities(dcb->session()->service) & RCAP_TYPE_NO_RSESSION))
     {
-        MySQLProtocol* client_protocol = (MySQLProtocol*)dcb->m_session->client_dcb->m_protocol;
+        MySQLProtocol* client_protocol = (MySQLProtocol*)dcb->session()->client_dcb->m_protocol;
 
         if (client_protocol)
         {
@@ -529,7 +529,7 @@ static inline bool session_ok_to_route(DCB* dcb)
                 rval = true;
             }
         }
-        else if (dcb->m_session->client_dcb->m_role == DCB::Role::INTERNAL)
+        else if (dcb->session()->client_dcb->role() == DCB::Role::INTERNAL)
         {
             rval = true;
         }
@@ -658,7 +658,7 @@ static bool handle_auth_change_response(GWBUF* reply, MySQLProtocol* proto, DCB*
 static int gw_read_and_write(DCB* dcb)
 {
     GWBUF* read_buffer = NULL;
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
     int nbytes_read = 0;
     int return_code = 0;
 
@@ -969,7 +969,7 @@ static int gw_write_backend_event(DCB* dcb)
 {
     int rc = 1;
 
-    if (dcb->m_state != DCB_STATE_POLLING)
+    if (dcb->state() != DCB_STATE_POLLING)
     {
         /** Don't write to backend if backend_dcb is not in poll set anymore */
         uint8_t* data = NULL;
@@ -987,18 +987,18 @@ static int gw_write_backend_event(DCB* dcb)
 
             if (!com_quit)
             {
-                mysql_send_custom_error(dcb->m_session->client_dcb, 1, 0,
+                mysql_send_custom_error(dcb->session()->client_dcb, 1, 0,
                                         "Writing to backend failed due invalid Maxscale state.");
                 MXS_ERROR("Attempt to write buffered data to backend "
                           "failed due internal inconsistent state: %s",
-                          STRDCBSTATE(dcb->m_state));
+                          STRDCBSTATE(dcb->state()));
             }
         }
         else
         {
             MXS_DEBUG("Dcb %p in state %s but there's nothing to write either.",
                       dcb,
-                      STRDCBSTATE(dcb->m_state));
+                      STRDCBSTATE(dcb->state()));
         }
     }
     else
@@ -1026,10 +1026,10 @@ static int handle_persistent_connection(DCB* dcb, GWBUF* queue)
         dcb->m_was_persistent = false;
         protocol->ignore_replies = 0;
 
-        if (dcb->m_state != DCB_STATE_POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
+        if (dcb->state() != DCB_STATE_POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
         {
             MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
-                     STRDCBSTATE(dcb->m_state), mxs::to_string(protocol->protocol_auth_state));
+                     STRDCBSTATE(dcb->state()), mxs::to_string(protocol->protocol_auth_state));
             gwbuf_free(queue);
             return 0;
         }
@@ -1057,7 +1057,7 @@ static int handle_persistent_connection(DCB* dcb, GWBUF* queue)
             return 1;
         }
 
-        auto mysqlses = static_cast<MYSQL_session*>(dcb->m_session->client_dcb->m_data);
+        auto mysqlses = static_cast<MYSQL_session*>(dcb->session()->client_dcb->m_data);
         GWBUF* buf = gw_create_change_user_packet(mysqlses, protocol);
 
         if (dcb_write(dcb, buf))
@@ -1123,7 +1123,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
     {
     case MXS_AUTH_STATE_HANDSHAKE_FAILED:
     case MXS_AUTH_STATE_FAILED:
-        if (dcb->m_session->state() != MXS_SESSION::State::STOPPING)
+        if (dcb->session()->state() != MXS_SESSION::State::STOPPING)
         {
             MXS_ERROR("Unable to write to backend '%s' due to "
                       "%s failure. Server in state %s.",
@@ -1195,7 +1195,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
  */
 static int gw_error_backend_event(DCB* dcb)
 {
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
 
     if (!session)
     {
@@ -1207,17 +1207,17 @@ static int gw_error_backend_event(DCB* dcb)
         }
         dcb_close(dcb);
     }
-    else if (dcb->m_state != DCB_STATE_POLLING || session->state() != MXS_SESSION::State::STARTED)
+    else if (dcb->state() != DCB_STATE_POLLING || session->state() != MXS_SESSION::State::STARTED)
     {
         int error;
         int len = sizeof(error);
 
         if (getsockopt(dcb->m_fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
         {
-            if (dcb->m_state != DCB_STATE_POLLING)
+            if (dcb->state() != DCB_STATE_POLLING)
             {
                 MXS_ERROR("DCB in state %s got error '%s'.",
-                          STRDCBSTATE(dcb->m_state),
+                          STRDCBSTATE(dcb->state()),
                           mxs_strerror(errno));
             }
             else
@@ -1248,7 +1248,7 @@ static int gw_error_backend_event(DCB* dcb)
 static int gw_backend_hangup(DCB* dcb)
 {
     mxb_assert(dcb->m_nClose == 0);
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
 
     if (!dcb->m_persistentstart)
     {
@@ -1282,7 +1282,7 @@ static int gw_backend_hangup(DCB* dcb)
  */
 static int gw_backend_close(DCB* dcb)
 {
-    mxb_assert(dcb->m_session || dcb->m_persistentstart);
+    mxb_assert(dcb->session() || dcb->m_persistentstart);
 
     /** Send COM_QUIT to the backend being closed */
     GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
@@ -1458,7 +1458,7 @@ static int gw_change_user(DCB* backend,
      * Decode the token and check the password.
      * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
      */
-    DCB* dcb = backend->m_session->client_dcb;
+    DCB* dcb = backend->session()->client_dcb;
 
     if (dcb->m_authfunc.reauthenticate == NULL)
     {
@@ -1480,7 +1480,7 @@ static int gw_change_user(DCB* backend,
 
     if (auth_ret != 0)
     {
-        if (service_refresh_users(backend->m_session->client_dcb->m_service) == 0)
+        if (service_refresh_users(backend->session()->client_dcb->service()) == 0)
         {
             /*
              * Try authentication again with new repository data
@@ -1523,7 +1523,7 @@ static int gw_change_user(DCB* backend,
          * reply to the client.
          */
         message = create_auth_fail_str(username,
-                                       backend->m_session->client_dcb->m_remote,
+                                       backend->session()->client_dcb->m_remote,
                                        password_set,
                                        NULL,
                                        auth_ret);
@@ -1744,7 +1744,7 @@ static int gw_send_change_user_to_backend(char* dbname,
     int rc;
     MYSQL_session* mses;
 
-    mses = (MYSQL_session*)conn->owner_dcb->m_session->client_dcb->m_data;
+    mses = (MYSQL_session*)conn->owner_dcb->session()->client_dcb->m_data;
     buffer = gw_create_change_user_packet(mses, conn);
     rc = conn->owner_dcb->m_func.write(conn->owner_dcb, buffer);
 
@@ -1769,7 +1769,7 @@ static void gw_send_proxy_protocol_header(DCB* backend_dcb)
 {
     // TODO: Add support for chained proxies. Requires reading the client header.
 
-    const DCB* client_dcb = backend_dcb->m_session->client_dcb;
+    const DCB* client_dcb = backend_dcb->session()->client_dcb;
     const int client_fd = client_dcb->m_fd;
     const sa_family_t family = client_dcb->m_ip.ss_family;
     const char* family_str = NULL;

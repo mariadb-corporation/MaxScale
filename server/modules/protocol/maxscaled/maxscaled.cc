@@ -274,7 +274,7 @@ static int maxscaled_read_event(DCB* dcb)
 
                 case MAXSCALED_STATE_DATA:
                     {
-                        MXS_SESSION_ROUTE_QUERY(dcb->m_session, head);
+                        MXS_SESSION_ROUTE_QUERY(dcb->session(), head);
                         dcb_printf(dcb, "OK");
                     }
                     break;
@@ -372,7 +372,7 @@ static MXS_PROTOCOL_SESSION* maxscaled_accept(DCB* client_dcb)
 
     pthread_mutex_init(&maxscaled_protocol->lock, NULL);
 
-    if (!session_start(client_dcb->m_session))
+    if (!session_start(client_dcb->session()))
     {
         dcb_close(client_dcb);
         return 0;
@@ -390,11 +390,7 @@ static MXS_PROTOCOL_SESSION* maxscaled_accept(DCB* client_dcb)
 
 static int maxscaled_close(DCB* dcb)
 {
-<<<<<<< e9a59d554b9b38ab3a03974f399606ad2e1b5204
-    MAXSCALED* maxscaled = reinterpret_cast<MAXSCALED*>(dcb->protocol);
-=======
-    MAXSCALED* maxscaled = static_cast<MAXSCALED*>(dcb->m_protocol);
->>>>>>> MXS-1386 Add m_ to all DCB member variables
+    MAXSCALED* maxscaled = reinterpret_cast<MAXSCALED*>(dcb->m_protocol);
 
     if (!maxscaled)
     {

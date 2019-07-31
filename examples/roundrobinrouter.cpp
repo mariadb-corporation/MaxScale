@@ -227,7 +227,6 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
                 {
                     /* Success */
                     atomic_add(&sref->connections, 1);
-                    conn->m_service = session->service;
                     backends.push_back(conn);
                 }   /* Any error by dcb_connect is reported by the function itself */
             }
@@ -236,11 +235,6 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
         {
             /* Connect to write backend server. This is not essential.  */
             write_dcb = dcb_connect(m_write_server, session, m_write_server->protocol().c_str());
-            if (write_dcb)
-            {
-                /* Success */
-                write_dcb->m_service = session->service;
-            }
         }
         if (backends.size() < 1)
         {
@@ -466,14 +460,14 @@ void RRRouterSession::handleError(GWBUF* message,
                                   mxs_error_action_t action,
                                   bool* succp)
 {
-    MXS_SESSION* session = problem_dcb->m_session;
+    MXS_SESSION* session = problem_dcb->session();
     DCB* client_dcb = session->client_dcb;
     MXS_SESSION::State sesstate = session->state();
 
     /* If the erroneous dcb is a client handler, close it. Setting succp to
      * false will cause the entire attached session to be closed.
      */
-    if (problem_dcb->m_role == DCB::Role::CLIENT)
+    if (problem_dcb->role() == DCB::Role::CLIENT)
     {
         dcb_close(problem_dcb);
         *succp = false;
@@ -501,7 +495,7 @@ void RRRouterSession::handleError(GWBUF* message,
         case ERRACT_NEW_CONNECTION:
             {
                 /* React to a failed backend */
-                if (problem_dcb->m_role == DCB::Role::BACKEND)
+                if (problem_dcb->role() == DCB::Role::BACKEND)
                 {
                     if (problem_dcb == m_write_dcb)
                     {
@@ -540,7 +534,7 @@ void RRRouterSession::handleError(GWBUF* message,
 }
 
 RRRouterSession::RRRouterSession(RRRouter* router, DCB_VEC& backends, DCB* write, DCB* client)
-    : RouterSession(client->session)
+    : RouterSession(client->session())
     , m_closed(false)
     , m_route_count(0)
     , m_on_transaction(false)
@@ -578,7 +572,7 @@ void RRRouterSession::close()
         for (unsigned int i = 0; i < m_backend_dcbs.size(); i++)
         {
             DCB* dcb = m_backend_dcbs[i];
-            SERVER_REF* sref = dcb->m_service->dbref;
+            SERVER_REF* sref = dcb->service()->dbref;
             while (sref && (sref->server != dcb->m_server))
             {
                 sref = sref->next;

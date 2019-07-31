@@ -40,7 +40,7 @@ void Dcb::deleter(DCB* dcb)
         HR_DEBUG("CLOSING dcb");
         // TODO: You should not need to manually adjust any
         // TODO: connections number, dcb_close should handle that.
-        SERVER_REF* pSref = dcb->m_service->dbref;
+        SERVER_REF* pSref = dcb->service()->dbref;
 
         while (pSref && (pSref->server != dcb->m_server))
         {

@@ -117,7 +117,7 @@ void SchemaRouterSession::close()
         {
             m_router->m_stats.longest_sescmd = m_stats.longest_sescmd;
         }
-        double ses_time = difftime(time(NULL), m_client->m_session->stats.connect);
+        double ses_time = difftime(time(NULL), m_client->session()->stats.connect);
         if (m_router->m_stats.ses_longest < ses_time)
         {
             m_router->m_stats.ses_longest = ses_time;
@@ -368,7 +368,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 {
                     sprintf(errbuf + strlen(errbuf),
                             " ([%" PRIu64 "]: DB change failed)",
-                            m_client->m_session->id());
+                            m_client->session()->id());
                 }
 
                 write_error_to_client(m_client,
@@ -559,7 +559,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     {
         MXS_DEBUG("Reply to USE '%s' received for session %p",
                   m_connect_db.c_str(),
-                  m_client->m_session);
+                  m_client->session());
         m_state &= ~INIT_USE_DB;
         m_current_db = m_connect_db;
         mxb_assert(m_state == INIT_READY);
@@ -608,7 +608,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
                                       mxs_error_action_t action,
                                       bool* pSuccess)
 {
-    mxb_assert(pProblem->m_role == DCB::Role::BACKEND);
+    mxb_assert(pProblem->role() == DCB::Role::BACKEND);
     SSRBackend bref = get_bref_from_dcb(pProblem);
 
     if (bref.get() == NULL)     // Should never happen
@@ -630,7 +630,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
 
     case ERRACT_REPLY_CLIENT:
         // The session pointer can be NULL if the creation fails when filters are being set up
-        if (m_client->m_session && m_client->m_session->state() == MXS_SESSION::State::STARTED)
+        if (m_client->session() && m_client->session()->state() == MXS_SESSION::State::STARTED)
         {
             m_client->m_func.write(m_client, gwbuf_clone(pMessage));
         }
@@ -952,7 +952,7 @@ bool SchemaRouterSession::handle_default_db()
                 MXS_DEBUG("USE '%s' sent to %s for session %p",
                           m_connect_db.c_str(),
                           target->name(),
-                          m_client->m_session);
+                          m_client->session());
                 rval = true;
             }
             else
@@ -975,7 +975,7 @@ bool SchemaRouterSession::handle_default_db()
         {
             sprintf(errmsg + strlen(errmsg),
                     " ([%" PRIu64 "]: DB not found on connect)",
-                    m_client->m_session->id());
+                    m_client->session()->id());
         }
         write_error_to_client(m_client,
                               SCHEMA_ERR_DBNOTFOUND,
@@ -994,7 +994,7 @@ void SchemaRouterSession::route_queued_query()
 #ifdef SS_DEBUG
     char* querystr = modutil_get_SQL(tmp);
     MXS_DEBUG("Sending queued buffer for session %p: %s",
-              m_client->m_session,
+              m_client->session(),
               querystr);
     MXS_FREE(querystr);
 #endif
@@ -1024,7 +1024,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
                 (*it)->set_mapped(true);
                 MXS_DEBUG("Received SHOW DATABASES reply from %s for session %p",
                           (*it)->backend()->server->name(),
-                          m_client->m_session);
+                          m_client->session());
             }
             else
             {
@@ -1079,7 +1079,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
             mapped = false;
             MXS_DEBUG("Still waiting for reply to SHOW DATABASES from %s for session %p",
                       (*it)->backend()->server->name(),
-                      m_client->m_session);
+                      m_client->session());
         }
     }
     *wbuf = writebuf;

@@ -240,8 +240,8 @@ private:
          * @see handle_trx_replay
          */
         return m_config.delayed_retry
-               && m_retry_duration < m_config.delayed_retry_timeout
-               && !session_trx_is_active(m_client->m_session);
+            && m_retry_duration < m_config.delayed_retry_timeout
+            && !session_trx_is_active(m_client->session());
     }
 
     // Whether a transaction replay can remain active
@@ -303,7 +303,7 @@ private:
 
     void update_trx_statistics()
     {
-        if (session_trx_is_ending(m_client->m_session))
+        if (session_trx_is_ending(m_client->session()))
         {
             mxb::atomic::add(m_qc.is_trx_still_read_only() ?
                              &m_router->stats().n_ro_trx :

@@ -60,7 +60,7 @@ static bool send_new_auth_token(DCB* dcb)
 {
     bool rval = false;
     gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
-    MYSQL_session* ses = (MYSQL_session*)dcb->m_session->client_dcb->m_data;
+    MYSQL_session* ses = (MYSQL_session*)dcb->session()->client_dcb->m_data;
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + ses->auth_token_len);
 
     // This function actually just forwards the client's token to the backend server

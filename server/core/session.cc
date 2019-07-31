@@ -125,10 +125,10 @@ bool session_start(MXS_SESSION* ses)
 void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
 {
     mxb_assert(dcb->owner == session->client_dcb->owner);
-    mxb_assert(dcb->m_role == DCB::Role::BACKEND);
+    mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
     mxb::atomic::add(&session->refcount, 1);
-    dcb->m_session = session;
+    dcb->set_session(session);
 
     Session* ses = static_cast<Session*>(session);
     ses->link_backend_dcb(dcb);
@@ -224,9 +224,9 @@ void printSession(MXS_SESSION* session)
 
 bool printAllSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->m_role == DCB::Role::CLIENT)
+    if (dcb->role() == DCB::Role::CLIENT)
     {
-        printSession(dcb->m_session);
+        printSession(dcb->session());
     }
 
     return true;
@@ -246,10 +246,10 @@ void printAllSessions()
 /** Callback for dprintAllSessions */
 bool dprintAllSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->m_role == DCB::Role::CLIENT)
+    if (dcb->role() == DCB::Role::CLIENT)
     {
         DCB* out_dcb = (DCB*)data;
-        dprintSession(out_dcb, dcb->m_session);
+        dprintSession(out_dcb, dcb->session());
     }
     return true;
 }
@@ -298,7 +298,7 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
         dcb_printf(dcb,
                    "\tConnected:               %s\n",
                    asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
-        if (print_session->client_dcb->m_state == DCB_STATE_POLLING)
+        if (print_session->client_dcb->state() == DCB_STATE_POLLING)
         {
             dcb_printf(dcb, "\tIdle:                %.0f seconds\n", idle);
         }
@@ -315,10 +315,10 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
 
 bool dListSessions_cb(DCB* dcb, void* data)
 {
-    if (dcb->m_role == DCB::Role::CLIENT)
+    if (dcb->role() == DCB::Role::CLIENT)
     {
         DCB* out_dcb = (DCB*)data;
-        MXS_SESSION* session = dcb->m_session;
+        MXS_SESSION* session = dcb->session();
         dcb_printf(out_dcb,
                    "%-16" PRIu64 " | %-15s | %-14s | %s\n",
                    session->id(),
@@ -456,10 +456,10 @@ const char* session_get_user(const MXS_SESSION* session)
 
 bool dcb_iter_cb(DCB* dcb, void* data)
 {
-    if (dcb->m_role == DCB::Role::CLIENT)
+    if (dcb->role() == DCB::Role::CLIENT)
     {
         ResultSet* set = static_cast<ResultSet*>(data);
-        MXS_SESSION* ses = dcb->m_session;
+        MXS_SESSION* ses = dcb->session();
         char buf[20];
         snprintf(buf, sizeof(buf), "%p", ses);
 
@@ -535,9 +535,9 @@ static bool ses_find_id(DCB* dcb, void* data)
     uint64_t* id = (uint64_t*)params[1];
     bool rval = true;
 
-    if (dcb->m_session->id() == *id)
+    if (dcb->session()->id() == *id)
     {
-        *ses = session_get_ref(dcb->m_session);
+        *ses = session_get_ref(dcb->session());
         rval = false;
     }
 
@@ -645,7 +645,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     json_object_set_new(attr, "connected", json_string(buf));
 
-    if (session->client_dcb->m_state == DCB_STATE_POLLING)
+    if (session->client_dcb->state() == DCB_STATE_POLLING)
     {
         double idle = (mxs_clock() - session->client_dcb->m_last_read);
         idle = idle > 0 ? idle / 10.f : 0;
@@ -698,10 +698,10 @@ struct SessionListData
 
 bool seslist_cb(DCB* dcb, void* data)
 {
-    if (dcb->m_role == DCB::Role::CLIENT)
+    if (dcb->role() == DCB::Role::CLIENT)
     {
         SessionListData* d = (SessionListData*)data;
-        Session* session = static_cast<Session*>(dcb->m_session);
+        Session* session = static_cast<Session*>(dcb->session());
         json_array_append_new(d->json, session_json_data(session, d->host, d->rdns));
     }
 
@@ -729,7 +729,7 @@ MXS_SESSION* session_get_current()
 {
     DCB* dcb = dcb_get_current();
 
-    return dcb ? dcb->m_session : NULL;
+    return dcb ? dcb->session() : NULL;
 }
 
 uint64_t session_get_current_id()
@@ -1059,7 +1059,7 @@ Session::~Session()
 void Session::set_client_dcb(DCB* dcb)
 {
     mxb_assert(client_dcb == nullptr);
-    mxb_assert(dcb->m_role == DCB::Role::CLIENT);
+    mxb_assert(dcb->role() == DCB::Role::CLIENT);
     client_dcb = dcb;
 }
 

@@ -2304,7 +2304,7 @@ static void errorReply(MXS_ROUTER* instance,
                        mxs_error_action_t action,
                        bool* succp)
 {
-    mxb_assert(backend_dcb->m_role == DCB::Role::BACKEND);
+    mxb_assert(backend_dcb->role() == DCB::Role::BACKEND);
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
     int error;
     socklen_t len;
@@ -2879,7 +2879,7 @@ static void destroyInstance(MXS_ROUTER* instance)
     /* Check whether master connection is active */
     if (inst->master)
     {
-        if (inst->master->m_fd != -1 && inst->master->m_state == DCB_STATE_POLLING)
+        if (inst->master->m_fd != -1 && inst->master->state() == DCB_STATE_POLLING)
         {
             blr_master_close(inst);
         }
@@ -2896,7 +2896,7 @@ static void destroyInstance(MXS_ROUTER* instance)
 
     if (inst->client)
     {
-        if (inst->client->m_state == DCB_STATE_POLLING)
+        if (inst->client->state() == DCB_STATE_POLLING)
         {
             dcb_close(inst->client);
             inst->client = NULL;

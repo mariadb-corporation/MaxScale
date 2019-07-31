@@ -229,7 +229,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
             MXS_SDEBUG("Write all");
             ret = write_to_all(pBuf, Mode::Query);
         }
-        else if (m_qc.target_is_master(route_info.target()) || session_trx_is_active(m_pClient_dcb->m_session))
+        else if (m_qc.target_is_master(route_info.target()) || session_trx_is_active(m_pClient_dcb->session()))
         {
             MXS_SDEBUG("Write to master");
             ret = write_to_master(pBuf);
@@ -502,7 +502,7 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
     MySQLProtocol* proto = static_cast<MySQLProtocol*>(cluster.pDcb->m_protocol);
     int keep_protocol_thread_id = proto->thread_id;
 
-    mxs_mysql_execute_kill_all_others(cluster.pDcb->m_session, cluster.pDcb->m_session->id(),
+    mxs_mysql_execute_kill_all_others(cluster.pDcb->session(), cluster.pDcb->session()->id(),
                                       keep_protocol_thread_id, KT_QUERY);
 }
 
@@ -525,7 +525,7 @@ void SmartRouterSession::handleError(GWBUF* pPacket,
     MXS_SERROR("handleError(): Lost connection to " << cluster.host << " Error code=" << err_code << " "
                                                     << extract_error(pPacket));
 
-    MXS_SESSION* pSession = pProblem->m_session;
+    MXS_SESSION* pSession = pProblem->session();
 
     /* Send error report to client */
     GWBUF* pCopy = gwbuf_clone(pPacket);

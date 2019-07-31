@@ -324,7 +324,7 @@ static int mysql_auth_authenticate(DCB* dcb)
                   client_data->user,
                   client_data->db);
 
-        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->m_session->listener->auth_instance();
+        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session()->listener->auth_instance();
         MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->m_protocol);
 
         if (!client_data->correct_authenticator)
@@ -349,7 +349,7 @@ static int mysql_auth_authenticate(DCB* dcb)
                                        sizeof(protocol->scramble));
 
         if (auth_ret != MXS_AUTH_SUCCEEDED
-            && service_refresh_users(dcb->m_service) == 0)
+            && service_refresh_users(dcb->service()) == 0)
         {
             auth_ret = validate_mysql_user(instance,
                                            dcb,
@@ -365,7 +365,7 @@ static int mysql_auth_authenticate(DCB* dcb)
             dcb->m_user = MXS_STRDUP_A(client_data->user);
             /** Send an OK packet to the client */
         }
-        else if (dcb->m_service->log_auth_warnings)
+        else if (dcb->service()->log_auth_warnings)
         {
             // The default failure is a `User not found` one
             char extra[256] = "User not found.";
@@ -381,19 +381,19 @@ static int mysql_auth_authenticate(DCB* dcb)
 
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
-                          dcb->m_service->name(),
+                          dcb->service()->name(),
                           client_data->user,
                           dcb->m_remote,
                           dcb_get_port(dcb),
                           extra);
 
             if (is_localhost_address(&dcb->m_ip)
-                && !dcb->m_service->localhost_match_wildcard_host)
+                && !dcb->service()->localhost_match_wildcard_host)
             {
                 MXS_NOTICE("If you have a wildcard grant that covers this address, "
                            "try adding 'localhost_match_wildcard_host=true' for "
                            "service '%s'. ",
-                           dcb->m_service->name());
+                           dcb->service()->name());
             }
         }
 
@@ -848,10 +848,10 @@ int mysql_auth_reauthenticate(DCB* dcb,
     temp.auth_token = token;
     temp.auth_token_len = token_len;
 
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->m_session->listener->auth_instance();
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session()->listener->auth_instance();
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
-    if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->m_service) == 0)
+    if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service()) == 0)
     {
         rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
     }

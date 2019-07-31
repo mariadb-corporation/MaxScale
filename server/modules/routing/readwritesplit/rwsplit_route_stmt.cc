@@ -70,7 +70,7 @@ void RWSplitSession::handle_connection_keepalive(RWBackend* target)
 bool RWSplitSession::prepare_connection(RWBackend* target)
 {
     mxb_assert(!target->in_use());
-    bool rval = target->connect(m_client->m_session, &m_sescmd_list);
+    bool rval = target->connect(m_client->session(), &m_sescmd_list);
 
     if (rval)
     {
@@ -131,7 +131,7 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 {
     mxb_assert(querybuf);
     // Try to route the query again later
-    MXS_SESSION* session = m_client->m_session;
+    MXS_SESSION* session = m_client->session();
 
     /**
      * Used to distinct retried queries from new ones while we're doing transaction replay.
@@ -189,7 +189,7 @@ bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
 {
     bool store_stmt = true;
 
-    if (session_trx_is_ending(m_client->m_session))
+    if (session_trx_is_ending(m_client->session()))
     {
         m_otrx_state = OTRX_INACTIVE;
     }
@@ -255,7 +255,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         }
 
         if (m_qc.is_trx_starting()                          // A transaction is starting
-            && !session_trx_is_read_only(m_client->m_session) // Not explicitly read-only
+            && !session_trx_is_read_only(m_client->session()) // Not explicitly read-only
             && should_try_trx_on_slave(route_target))       // Qualifies for speculative routing
         {
             // Speculatively start routing the transaction to a slave
@@ -694,7 +694,7 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
                                               int max_rlag)
 {
     /** Check whether using target_node as target SLAVE */
-    if (m_target_node && session_trx_is_read_only(m_client->m_session))
+    if (m_target_node && session_trx_is_read_only(m_client->session()))
     {
         return m_target_node;
     }
@@ -882,9 +882,9 @@ void RWSplitSession::log_master_routing_failure(bool found,
     /** Both backends should either be empty, not connected or the DCB should
      * be a backend (the last check is slightly redundant). */
     mxb_assert(!old_master || !old_master->in_use()
-               || old_master->dcb()->m_role == DCB::Role::BACKEND);
+               || old_master->dcb()->role() == DCB::Role::BACKEND);
     mxb_assert(!curr_master || !curr_master->in_use()
-               || curr_master->dcb()->m_role == DCB::Role::BACKEND);
+               || curr_master->dcb()->role() == DCB::Role::BACKEND);
     char errmsg[SERVER::MAX_ADDRESS_LEN* 2 + 100];      // Extra space for error message
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout)
@@ -941,7 +941,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
 bool RWSplitSession::trx_is_starting()
 {
-    return session_trx_is_active(m_client->m_session)
+    return session_trx_is_active(m_client->session())
            && qc_query_is_type(m_qc.current_route_info().type_mask(), QUERY_TYPE_BEGIN_TRX);
 }
 
@@ -951,7 +951,7 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // We are not inside a transaction (also checks for autocommit=1)
-           (!session_trx_is_active(m_client->m_session) || trx_is_starting() || m_is_replay_active)
+           (!session_trx_is_active(m_client->session()) || trx_is_starting() || m_is_replay_active)
            &&   // We are not locked to the old master
            !is_locked_to_master();
 }
@@ -971,7 +971,7 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
            &&   // Transaction replay is not active (replay is only attempted once)
            !m_is_replay_active
            &&   // We have an open transaction
-           session_trx_is_active(m_client->m_session)
+           session_trx_is_active(m_client->session())
            &&   // The transaction can be replayed
            m_can_replay_trx;
 }
@@ -1129,7 +1129,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
 
     MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
 
-    if (!m_target_node && session_trx_is_read_only(m_client->m_session))
+    if (!m_target_node && session_trx_is_read_only(m_client->session()))
     {
         // Lock the session to this node until the read-only transaction ends
         m_target_node = target;
@@ -1212,8 +1212,8 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         m_prev_target = target;
 
         if (m_target_node
-            && session_trx_is_read_only(m_client->m_session)
-            && session_trx_is_ending(m_client->m_session))
+            && session_trx_is_read_only(m_client->session())
+            && session_trx_is_ending(m_client->session()))
         {
             // Read-only transaction is over, stop routing queries to a specific node
             m_target_node = nullptr;

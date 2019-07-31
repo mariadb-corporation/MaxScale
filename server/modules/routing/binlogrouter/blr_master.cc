@@ -212,7 +212,7 @@ static void blr_start_master(void* data)
     router->client->m_remote = MXS_STRDUP("127.0.0.1");
 
     /* Fake the client is reading */
-    router->client->m_state = DCB_STATE_POLLING;      /* Fake the client is reading */
+    router->client->set_state(DCB_STATE_POLLING);      /* Fake the client is reading */
 
     /**
      * This prevents the actual protocol level closing code from being called that expects
@@ -1388,7 +1388,7 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
     if (router->master)
     {
         if (router->master->m_fd != -1
-            && router->master->m_state == DCB_STATE_POLLING)
+            && router->master->state() == DCB_STATE_POLLING)
         {
             blr_close_master_in_main(router);
         }
@@ -1414,7 +1414,7 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
     if (router->client)
     {
         if (router->client->m_fd != -1
-            && router->client->m_state == DCB_STATE_POLLING)
+            && router->client->state() == DCB_STATE_POLLING)
         {
             // Is this dead code? dcb->m_fd for internal DCBs is always -1
             dcb_close(router->client);

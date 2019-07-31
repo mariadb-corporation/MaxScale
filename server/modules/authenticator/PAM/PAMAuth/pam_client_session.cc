@@ -298,7 +298,7 @@ int PamClientSession::authenticate(DCB* dcb)
             StringVector services_old;
             for (int loop = 0; loop < 2 && !authenticated; loop++)
             {
-                if (loop == 0 || service_refresh_users(dcb->m_service) == 0)
+                if (loop == 0 || service_refresh_users(dcb->service()) == 0)
                 {
                     bool try_validate = true;
                     StringVector services;

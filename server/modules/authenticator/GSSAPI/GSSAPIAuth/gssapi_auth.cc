@@ -471,7 +471,7 @@ static bool validate_user(gssapi_auth_t* auth, DCB* dcb, MYSQL_session* session,
 
         if (!rval)
         {
-            service_refresh_users(dcb->m_service);
+            service_refresh_users(dcb->service());
         }
     }
 
@@ -490,7 +490,7 @@ int gssapi_auth_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
     gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
-    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->m_session->listener->auth_instance();
+    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->session()->listener->auth_instance();
 
     if (auth->state == GSSAPI_AUTH_INIT)
     {

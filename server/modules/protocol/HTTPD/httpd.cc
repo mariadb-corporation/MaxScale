@@ -127,7 +127,7 @@ static char* httpd_default_auth()
  */
 static int httpd_read_event(DCB* dcb)
 {
-    MXS_SESSION* session = dcb->m_session;
+    MXS_SESSION* session = dcb->session();
 
     int numchars = 1;
     char buf[HTTPD_REQUESTLINE_MAXLEN - 1] = "";
@@ -203,7 +203,7 @@ static int httpd_read_event(DCB* dcb)
     /** If listener->authenticator is the default authenticator, it means that
      * we don't need to check the user credentials. All other authenticators
      * cause a 401 Unauthorized to be returned on the first try. */
-    bool auth_ok = httpd_default_auth() == std::string(dcb->m_session->listener->authenticator());
+    bool auth_ok = httpd_default_auth() == std::string(dcb->session()->listener->authenticator());
 
     /**
      * Get the request headers
@@ -361,7 +361,7 @@ static MXS_PROTOCOL_SESSION* httpd_accept(DCB* client_dcb)
 {
     HTTPD_session* client_data = (HTTPD_session*)MXS_CALLOC(1, sizeof(HTTPD_session));
 
-    if (!session_start(client_dcb->m_session))
+    if (!session_start(client_dcb->session()))
     {
         MXS_FREE(client_data);
         client_data = nullptr;

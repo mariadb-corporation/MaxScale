@@ -158,9 +158,9 @@ void HintRouterSession::handleError(GWBUF* pMessage,
 {
     HR_ENTRY();
 
-    mxb_assert(pProblem->m_role == DCB::Role::BACKEND);
+    mxb_assert(pProblem->role() == DCB::Role::BACKEND);
 
-    MXS_SESSION* pSession = pProblem->m_session;
+    MXS_SESSION* pSession = pProblem->session();
     MXS_SESSION::State sesstate = pSession->state();
 
     switch (action)

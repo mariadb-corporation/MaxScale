@@ -219,7 +219,7 @@ static int cdc_auth_check(DCB* dcb,
 {
     int rval = CDC_STATE_AUTH_FAILED;
 
-    if (dcb->m_session->listener->users())
+    if (dcb->session()->listener->users())
     {
         /* compute SHA1 of auth_data */
         uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
@@ -228,7 +228,7 @@ static int cdc_auth_check(DCB* dcb,
         gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
         gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
 
-        if (users_auth(dcb->m_session->listener->users(), username, hex_step1))
+        if (users_auth(dcb->session()->listener->users(), username, hex_step1))
         {
             rval = CDC_STATE_AUTH_OK;
         }
@@ -264,7 +264,7 @@ static int cdc_auth_authenticate(DCB* dcb)
 
         /* On failed authentication try to reload users and authenticate again */
         if (CDC_STATE_AUTH_OK != auth_ret
-            && cdc_replace_users(dcb->m_session->listener.get()) == MXS_AUTH_LOADUSERS_OK)
+            && cdc_replace_users(dcb->session()->listener.get()) == MXS_AUTH_LOADUSERS_OK)
         {
             auth_ret = cdc_auth_check(dcb,
                                       protocol,
@@ -278,11 +278,11 @@ static int cdc_auth_authenticate(DCB* dcb)
         {
             dcb->m_user = MXS_STRDUP_A(client_data->user);
         }
-        else if (dcb->m_service->log_auth_warnings)
+        else if (dcb->service()->log_auth_warnings)
         {
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s', authentication failed.",
-                          dcb->m_service->name(),
+                          dcb->service()->name(),
                           client_data->user);
         }
     }
