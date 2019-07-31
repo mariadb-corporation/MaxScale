@@ -317,7 +317,7 @@ int MariaDBAuthenticatorSession::authenticate(DCB* dcb)
                                        sizeof(protocol->scramble));
 
         if (auth_ret != MXS_AUTH_SUCCEEDED
-            && service_refresh_users(dcb->service()) == 0)
+            && service_refresh_users(dcb->service))
         {
             auth_ret = validate_mysql_user(instance,
                                            dcb,
@@ -815,7 +815,7 @@ int MariaDBAuthenticatorSession::reauthenticate(DCB* dcb, const char* user, uint
     MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session()->listener->auth_instance();
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
-    if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service()) == 0)
+    if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service))
     {
         rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
     }

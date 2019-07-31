@@ -367,13 +367,6 @@ bool RoutingWorker::init()
 
     if (this_unit.initialized)
     {
-        // When the initialization has successfully been performed, we set the
-        // current_worker_id of this thread to 0. That way any connections that
-        // are made during service startup (after this function returns, but
-        // bofore the workes have been started) will be handled by the worker
-        // that will be running in the main thread.
-        this_thread.current_worker_id = 0;
-
         if (s_watchdog_interval.count() != 0)
         {
             MXS_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",

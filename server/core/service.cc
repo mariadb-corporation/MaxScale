@@ -53,6 +53,7 @@
 #include <maxscale/version.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/housekeeper.h>
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
@@ -79,6 +80,7 @@ static struct
 } this_unit;
 
 static bool service_internal_restart(mxb::Worker::Call::action_t action, Service* service);
+static bool service_refresh_users_cb(void* svc);
 
 Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
 {
@@ -245,6 +247,10 @@ Service::Service(const std::string& name,
         a.last = last;
         a.warned = warned;
     }
+
+    std::string task_name = name;
+    task_name += " refresh users";
+    hktask_add(task_name.c_str(), service_refresh_users_cb, this, USERS_REFRESH_RATE);
 }
 
 Service::~Service()
@@ -1152,13 +1158,25 @@ bool Service::refresh_users()
  * version found on the backend servers. There is a limit on how often the users
  * can be reloaded and if this limit is exceeded, the reload will fail.
  * @param service Service to reload
- * @return 0 on success and 1 on error
+ * @return true on success and false on error
  */
-int service_refresh_users(SERVICE* svc)
+bool service_refresh_users(SERVICE* svc)
 {
     Service* service = static_cast<Service*>(svc);
     mxb_assert(service);
-    return service->refresh_users() ? 0 : 1;
+    return service->refresh_users();
+}
+
+static bool service_refresh_users_cb(void* svc)
+{
+    Service* service = static_cast<Service*>(svc);
+    mxs::RoutingWorker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    bool rval;
+
+    worker->execute([&rval, service]() {
+                                rval = service_refresh_users(service);
+                             }, mxb::Worker::EXECUTE_AUTO);
+    return rval;
 }
 
 void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param)
