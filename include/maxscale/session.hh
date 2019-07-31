@@ -239,7 +239,7 @@ bool session_route_query(MXS_SESSION* session, GWBUF* buffer);
  *
  * @return True, if the routing should continue, false otherwise.
  */
-bool session_route_reply(MXS_SESSION* session, GWBUF* buffer, DCB* dcb);
+bool session_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb);
 
 /**
  * A convenience macro that can be used by the protocol modules to route

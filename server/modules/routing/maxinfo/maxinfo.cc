@@ -62,7 +62,7 @@ static int maxinfo_send_ok(DCB* dcb);
 
 /* The router entry points */
 static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up);
 static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
 static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
 static int                 execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
@@ -172,7 +172,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up)
 {
     INFO_INSTANCE* inst = (INFO_INSTANCE*)instance;
     INFO_SESSION* client;

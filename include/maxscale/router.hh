@@ -100,10 +100,11 @@ typedef struct mxs_router_object
      *
      * @param instance Router instance
      * @param session  Client MXS_SESSION object
+     * @param up       The upstream component where responses are routed to
      *
      * @return New router session or NULL on error
      */
-    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION* session);
+    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, mxs::Upstream* up);
 
     /**
      * @brief Called when a session is closed
@@ -342,11 +343,18 @@ public:
                      mxs_error_action_t action,
                      bool* pSuccess);
 
+    // Sets the upstream component (don't override this in the inherited class)
+    void setUpstream(mxs::Upstream* up)
+    {
+        m_pUp = up;
+    }
+
 protected:
     RouterSession(MXS_SESSION* pSession);
 
 protected:
-    MXS_SESSION* m_pSession;    /*< The MXS_SESSION this router session is associated with. */
+    MXS_SESSION*   m_pSession;  /*< The MXS_SESSION this router session is associated with. */
+    mxs::Upstream* m_pUp;
 };
 
 
@@ -417,12 +425,13 @@ public:
         return pRouter;
     }
 
-    static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession)
+    static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession, mxs::Upstream* up)
     {
         RouterType* pRouter = static_cast<RouterType*>(pInstance);
         RouterSessionType* pRouter_session = nullptr;
 
         MXS_EXCEPTION_GUARD(pRouter_session = pRouter->newSession(pSession));
+        pRouter_session->setUpstream(up);
 
         return pRouter_session;
     }

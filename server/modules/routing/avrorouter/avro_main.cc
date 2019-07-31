@@ -88,7 +88,7 @@ MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up)
 {
     Avro* inst = reinterpret_cast<Avro*>(instance);
     return AvroSession::create(inst, session);

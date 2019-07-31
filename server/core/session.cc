@@ -63,7 +63,7 @@ struct
     uint64_t                  next_session_id;
     uint32_t                  retain_last_statements;
     session_dump_statements_t dump_statements;
-    uint32_t session_trace;
+    uint32_t                  session_trace;
 } this_unit =
 {
     1,
@@ -437,25 +437,9 @@ bool session_route_query(MXS_SESSION* session, GWBUF* buffer)
     return rv;
 }
 
-bool session_route_reply(MXS_SESSION* session, GWBUF* buffer, DCB* dcb)
+bool session_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
 {
-    mxb_assert(session);
-    mxb_assert(session->tail.clientReply);
-    mxb_assert(session->tail.instance);
-    mxb_assert(session->tail.session);
-
-    bool rv;
-
-    if (session->tail.clientReply(session->tail.instance, session->tail.session, buffer, dcb) == 1)
-    {
-        rv = true;
-    }
-    else
-    {
-        rv = false;
-    }
-
-    return rv;
+    return up->clientReply(up->instance, up->session, buffer, dcb);
 }
 
 /**
@@ -1576,7 +1560,7 @@ void Session::QueryInfo::reset_server_bookkeeping()
 
 bool Session::start()
 {
-    router_session = service->router->newSession(service->router_instance, this);
+    router_session = service->router->newSession(service->router_instance, this, &tail);
 
     if (!router_session)
     {

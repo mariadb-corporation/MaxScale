@@ -40,7 +40,7 @@ int32_t RouterSession::routeQuery(GWBUF* pPacket)
 
 void RouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
 {
-    MXS_SESSION_ROUTE_REPLY(m_pSession, pPacket, pBackend);
+    m_pUp->clientReply(m_pUp->instance, m_pUp->session, pPacket, pBackend);
 }
 
 void RouterSession::handleError(GWBUF* pMessage,
