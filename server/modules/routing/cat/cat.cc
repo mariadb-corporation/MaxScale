@@ -30,7 +30,7 @@ Cat* Cat::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
     return new Cat(pService);
 }
 
-CatSession* Cat::newSession(MXS_SESSION* pSession)
+CatSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     auto backends = RWBackend::from_servers(pSession->service->dbref);
     bool connected = false;

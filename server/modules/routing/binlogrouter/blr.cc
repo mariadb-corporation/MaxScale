@@ -55,9 +55,8 @@
 /* The router entry points */
 static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
 static void                free_instance(ROUTER_INSTANCE* instance);
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
-                                      MXS_SESSION* session,
-                                      mxs::Upstream* up);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session,
+                                      mxs::Upstream* up, const Endpoints& endpoints);
 static void closeSession(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session);
 static void freeSession(MXS_ROUTER* instance,
@@ -1122,7 +1121,10 @@ static void free_instance(ROUTER_INSTANCE* instance)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
+                                      MXS_SESSION* session,
+                                      mxs::Upstream* up,
+                                      const Endpoints& endpoints)
 {
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*)instance;
     ROUTER_SLAVE* slave;

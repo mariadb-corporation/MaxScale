@@ -42,13 +42,16 @@
 
 /* The router entry points */
 static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up);
-static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
-static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
-static int                 execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
-static void                diagnostics(MXS_ROUTER* instance, DCB* dcb);
-static json_t*             diagnostics_json(const MXS_ROUTER* instance);
-static uint64_t            getCapabilities(MXS_ROUTER* instance);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
+                                      MXS_SESSION* session,
+                                      mxs::Upstream* up,
+                                      const Endpoints& endpoints);
+static void     closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static void     freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static int      execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
+static void     diagnostics(MXS_ROUTER* instance, DCB* dcb);
+static json_t*  diagnostics_json(const MXS_ROUTER* instance);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
 
 extern int execute_cmd(CLI_SESSION* cli);
 
@@ -132,7 +135,8 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session,
+                                      mxs::Upstream* up, const Endpoints& endpoints)
 {
     CLI_INSTANCE* inst = (CLI_INSTANCE*)instance;
     CLI_SESSION* client;

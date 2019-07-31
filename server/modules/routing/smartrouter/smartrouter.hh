@@ -63,7 +63,7 @@ public:
 
     static SmartRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* pParams);
 
-    SmartRouterSession* newSession(MXS_SESSION* pSession);
+    SmartRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     void     diagnostics(DCB* pDcb);
     json_t*  diagnostics_json() const;

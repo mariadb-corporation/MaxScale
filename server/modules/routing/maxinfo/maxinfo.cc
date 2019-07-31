@@ -62,19 +62,22 @@ static int maxinfo_send_ok(DCB* dcb);
 
 /* The router entry points */
 static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up);
-static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
-static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
-static int                 execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
-static void                diagnostics(MXS_ROUTER* instance, DCB* dcb);
-static json_t*             diagnostics_json(const MXS_ROUTER* instance);
-static uint64_t            getCapabilities(MXS_ROUTER* instance);
-static void                handleError(MXS_ROUTER* instance,
-                                       MXS_ROUTER_SESSION* router_session,
-                                       GWBUF* errbuf,
-                                       DCB* backend_dcb,
-                                       mxs_error_action_t action,
-                                       bool* succp);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
+                                      MXS_SESSION* session,
+                                      mxs::Upstream* up,
+                                      const Endpoints& endpoints);
+static void     closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static void     freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static int      execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
+static void     diagnostics(MXS_ROUTER* instance, DCB* dcb);
+static json_t*  diagnostics_json(const MXS_ROUTER* instance);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
+static void     handleError(MXS_ROUTER* instance,
+                            MXS_ROUTER_SESSION* router_session,
+                            GWBUF* errbuf,
+                            DCB* backend_dcb,
+                            mxs_error_action_t action,
+                            bool* succp);
 
 static pthread_mutex_t instlock;
 static INFO_INSTANCE* instances;
@@ -172,7 +175,10 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
+                                      MXS_SESSION* session,
+                                      mxs::Upstream* up,
+                                      const Endpoints& endpoints)
 {
     INFO_INSTANCE* inst = (INFO_INSTANCE*)instance;
     INFO_SESSION* client;

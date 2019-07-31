@@ -304,7 +304,7 @@ public:
      *
      * @return New router session or NULL on error
      */
-    RWSplitSession* newSession(MXS_SESSION* pSession);
+    RWSplitSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     /**
      * @brief Diagnostics routine

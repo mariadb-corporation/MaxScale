@@ -111,7 +111,7 @@ public:
      *
      * @return Router session or nullptr on error
      */
-    RCRSession* newSession(MXS_SESSION* pSession);
+    RCRSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     /**
      * Display router diagnostics

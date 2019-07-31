@@ -206,7 +206,7 @@ void RCRSession::close()
     dcb_close(m_dcb);
 }
 
-RCRSession* RCR::newSession(MXS_SESSION* session)
+RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
     uint64_t mask = atomic_load_uint64(&m_bitmask_and_bitvalue);
     uint32_t bitmask = mask;

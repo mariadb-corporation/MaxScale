@@ -181,7 +181,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
     return succp;
 }
 
-SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
+SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     SSRBackendList backends;
 

@@ -239,7 +239,7 @@ RWSplit* RWSplit::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
     return new(std::nothrow) RWSplit(service, config);
 }
 
-RWSplitSession* RWSplit::newSession(MXS_SESSION* session)
+RWSplitSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
     RWSplitSession* rses = NULL;
     MXS_EXCEPTION_GUARD(rses = RWSplitSession::create(this, session));

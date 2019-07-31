@@ -161,7 +161,7 @@ SmartRouter::SmartRouter(SERVICE* service)
 {
 }
 
-SmartRouterSession* SmartRouter::newSession(MXS_SESSION* pSession)
+SmartRouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     SmartRouterSession* pRouter = nullptr;
     MXS_EXCEPTION_GUARD(pRouter = SmartRouterSession::create(this, pSession));

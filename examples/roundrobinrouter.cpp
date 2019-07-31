@@ -134,7 +134,7 @@ public:
 
     ~RRRouter();
     static RRRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
-    RRRouterSession* newSession(MXS_SESSION* session);
+    RRRouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
     void             diagnostics(DCB* dcb) const;
     json_t*          diagnostics_json() const;
 
@@ -204,11 +204,12 @@ RRRouter::~RRRouter()
  * Connect a client session to the router instance and return a router session.
  * The router session stores all client specific data required by the router.
  *
- * @param session   The MaxScale session (generic client connection data)
+ * @param session    The MaxScale session (generic client connection data)
+ * @param endspoints The routing endpoints that this session should use
  *
  * @return          Client specific data for this router
  */
-RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
+RRRouterSession* RRRouter::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
     DCB_VEC backends;
     BackendDCB* write_dcb = NULL;

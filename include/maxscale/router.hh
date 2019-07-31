@@ -19,8 +19,9 @@
 #include <maxscale/routing.h>
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
+#include <maxscale/target.hh>
 
-MXS_BEGIN_DECLS
+using Endpoints = std::vector<mxs::Endpoint*>;
 
 /**
  * MXS_ROUTER is an opaque type representing a particular router instance.
@@ -104,7 +105,8 @@ typedef struct mxs_router_object
      *
      * @return New router session or NULL on error
      */
-    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, mxs::Upstream* up);
+    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, mxs::Upstream* up,
+                                     const Endpoints& endpoints);
 
     /**
      * @brief Called when a session is closed
@@ -285,8 +287,6 @@ static inline const char* mxs_target_to_str(mxs_target_t target)
     }
 }
 
-MXS_END_DECLS
-
 namespace maxscale
 {
 
@@ -425,12 +425,13 @@ public:
         return pRouter;
     }
 
-    static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession, mxs::Upstream* up)
+    static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession,
+                                          mxs::Upstream* up, const Endpoints& endpoints)
     {
         RouterType* pRouter = static_cast<RouterType*>(pInstance);
         RouterSessionType* pRouter_session = nullptr;
 
-        MXS_EXCEPTION_GUARD(pRouter_session = pRouter->newSession(pSession));
+        MXS_EXCEPTION_GUARD(pRouter_session = pRouter->newSession(pSession, endpoints));
 
         if (pRouter_session)
         {

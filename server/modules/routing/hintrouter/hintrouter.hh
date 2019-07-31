@@ -21,7 +21,7 @@ class HintRouter : public maxscale::Router<HintRouter, HintRouterSession>
 {
 public:
     static HintRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
-    HintRouterSession* newSession(MXS_SESSION* pSession);
+    HintRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
     void               diagnostics(DCB* pOut);
     json_t*            diagnostics_json() const;
     uint64_t getCapabilities() const
