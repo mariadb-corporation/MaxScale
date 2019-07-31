@@ -229,6 +229,7 @@ private:
     bool lock_to_master();
     bool is_locked_to_master() const;
     bool supports_hint(HINT_TYPE hint_type) const;
+    bool handle_ignorable_error(mxs::RWBackend* backend);
 
     inline bool can_retry_query() const
     {

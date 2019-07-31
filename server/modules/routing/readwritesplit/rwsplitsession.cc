@@ -600,6 +600,48 @@ void RWSplitSession::close_stale_connections()
     }
 }
 
+bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
+{
+    mxb_assert(session_trx_is_active(m_pSession) || can_retry_query());
+    mxb_assert(m_expected_responses > 0);
+
+    bool ok = false;
+    m_expected_responses--;
+
+    MXS_INFO("%s: %s", backend->error().is_rollback() ?
+             "Server triggered transaction rollback, replaying transaction" :
+             "WSREP not ready, retrying query", backend->error().message().c_str());
+
+    if (session_trx_is_active(m_pSession))
+    {
+        ok = start_trx_replay();
+    }
+    else
+    {
+        mxb_assert(backend->error().is_wsrep_error());
+
+        if (backend == m_current_master)
+        {
+            if (can_retry_query())
+            {
+                ok = retry_master_query(backend);
+            }
+        }
+        else if (m_config.retry_failed_reads)
+        {
+            ok = true;
+            retry_query(m_current_query.release());
+        }
+    }
+
+    if (ok)
+    {
+        session_reset_server_bookkeeping(m_pSession);
+    }
+
+    return ok;
+}
+
 void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
 {
     DCB* client_dcb = backend_dcb->session->client_dcb;
@@ -643,16 +685,10 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         }
     }
 
-    if (error && m_config.transaction_replay && error.is_rollback())
+    if ((error.is_rollback() || error.is_wsrep_error()) && handle_ignorable_error(backend))
     {
-        MXS_INFO("A retryable error: %s", error.message().c_str());
-
-        // writebuf was an error that can be handled by replaying the transaction.
-        m_expected_responses--;
-
-        start_trx_replay();
+        // We can ignore this error and treat it as if the connection to the server was broken.
         gwbuf_free(writebuf);
-        session_reset_server_bookkeeping(m_pSession);
         return;
     }
 

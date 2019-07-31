@@ -45,6 +45,7 @@ bool RWBackend::execute_session_command()
     if (rval && expect_response)
     {
         set_reply_state(REPLY_STATE_START);
+        m_size = 0;
     }
 
     return rval;
@@ -88,6 +89,7 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
     {
         /** The server will reply to this command */
         set_reply_state(REPLY_STATE_START);
+        m_size = 0;
     }
 
     uint8_t cmd = mxs_mysql_get_command(buffer);
@@ -319,6 +321,8 @@ void RWBackend::process_packets(GWBUF* result)
         auto end = it;
         end.advance(len);
         uint8_t cmd = *it;
+
+        m_size += len;
 
         // Ignore the tail end of a large packet large packet. Only resultsets can generate packets this large
         // and we don't care what the contents are and thus it is safe to ignore it.

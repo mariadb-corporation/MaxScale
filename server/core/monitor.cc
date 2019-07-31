@@ -48,6 +48,7 @@
 
 #include "internal/config.hh"
 #include "internal/externcmd.hh"
+#include "internal/maxscale.hh"
 #include "internal/monitor.hh"
 #include "internal/modules.hh"
 #include "internal/server.hh"
@@ -1282,8 +1283,7 @@ string Monitor::get_server_monitor(const SERVER* server)
 
 bool Monitor::is_admin_thread()
 {
-    mxb::Worker* current = mxb::Worker::get_current();
-    return current == nullptr || current == mxs_rworker_get(MXS_RWORKER_MAIN);
+    return running_in_admin_thread();
 }
 
 /**
