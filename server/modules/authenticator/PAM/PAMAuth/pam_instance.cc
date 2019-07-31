@@ -12,6 +12,7 @@
  */
 
 #include "pam_instance.hh"
+#include "pam_client_session.hh"
 
 #include <string>
 #include <string.h>
@@ -261,8 +262,9 @@ void PamInstance::delete_old_users()
  *
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-int PamInstance::load_users(SERVICE* service)
+int PamInstance::load_users(Listener* listener)
 {
+    SERVICE* service = listener->service();
     /** Query that gets all users that authenticate via the pam plugin */
 
     string users_query, db_query, role_query;
@@ -461,9 +463,9 @@ void PamInstance::fill_user_arrays(QResult user_res, QResult db_res, QResult rol
     m_sqlite->exec("COMMIT");
 }
 
-void PamInstance::diagnostic(DCB* dcb)
+void PamInstance::diagnostics(DCB* dcb)
 {
-    json_t* array = diagnostic_json();
+    json_t* array = diagnostics_json();
     mxb_assert(json_is_array(array));
 
     string result, separator;
@@ -501,7 +503,7 @@ static int diag_cb_json(json_t* data, int columns, char** row, char** field_name
     return 0;
 }
 
-json_t* PamInstance::diagnostic_json()
+json_t* PamInstance::diagnostics_json()
 {
     json_t* rval = json_array();
     string select = "SELECT * FROM " + TABLE_USER + ";";
@@ -510,6 +512,11 @@ json_t* PamInstance::diagnostic_json()
         MXS_ERROR("Failed to print users: %s", m_sqlite->error());
     }
     return rval;
+}
+
+PamClientSession* PamInstance::createSession()
+{
+    return PamClientSession::create(*this);
 }
 
 bool PamInstance::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)

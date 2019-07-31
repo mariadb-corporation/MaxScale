@@ -17,11 +17,12 @@
 #include <string>
 #include <vector>
 #include <maxscale/sqlite3.h>
-#include "pam_instance.hh"
 #include "../pam_auth_common.hh"
 
+class PamInstance;
+
 /** Client authenticator PAM-specific session data */
-class PamClientSession
+class PamClientSession : public mxs::AuthenticatorSession
 {
 public:
     PamClientSession(const PamClientSession& orig) = delete;
@@ -30,8 +31,11 @@ public:
     using StringVector = std::vector<std::string>;
     static PamClientSession* create(const PamInstance& inst);
 
-    int  authenticate(DCB* client);
-    bool extract(DCB* dcb, GWBUF* read_buffer);
+    int  authenticate(DCB* client) override;
+    bool extract(DCB* dcb, GWBUF* read_buffer) override;
+
+    bool ssl_capable(DCB* client) override;
+    void free_data(DCB* client) override;
 
 private:
     PamClientSession(const PamInstance& instance, SQLite::SSQLite sqlite);

@@ -17,6 +17,7 @@
 #include <maxbase/pam_utils.hh>
 #include <maxbase/format.hh>
 #include <maxscale/event.hh>
+#include "pam_instance.hh"
 
 using maxscale::Buffer;
 using std::string;
@@ -376,6 +377,23 @@ bool PamClientSession::extract(DCB* dcb, GWBUF* buffer)
         break;
     }
     return rval;
+}
+
+bool PamClientSession::ssl_capable(DCB* client)
+{
+    MySQLProtocol* protocol = (MySQLProtocol*)client->m_protocol;
+    return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
+}
+
+void PamClientSession::free_data(DCB* client)
+{
+    if (client->m_data)
+    {
+        MYSQL_session* ses = (MYSQL_session*)client->m_data;
+        MXS_FREE(ses->auth_token);
+        MXS_FREE(ses);
+        client->m_data = NULL;
+    }
 }
 
 bool PamClientSession::role_can_access_db(const std::string& role, const std::string& target_db)

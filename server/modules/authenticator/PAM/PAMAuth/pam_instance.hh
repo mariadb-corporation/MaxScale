@@ -17,9 +17,10 @@
 #include <maxsql/queryresult.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
+#include "pam_client_session.hh"
 
 /** The instance class for the client side PAM authenticator, created in pam_auth_init() */
-class PamInstance
+class PamInstance : public mxs::Authenticator
 {
 public:
     PamInstance(const PamInstance& orig) = delete;
@@ -27,9 +28,11 @@ public:
 
     static PamInstance* create(char** options);
 
-    int     load_users(SERVICE* service);
-    void    diagnostic(DCB* dcb);
-    json_t* diagnostic_json();
+    int load_users(Listener* listener) override;
+    void    diagnostics(DCB* dcb) override;
+    json_t* diagnostics_json() override;
+
+    PamClientSession* createSession() override;
 
     const std::string m_dbname;     /**< Name of the in-memory database */
 
