@@ -679,10 +679,11 @@ public:
     {
     }
 
-    // Copy-constructed
-    rworker_local(const T& t)
+    // Forwarding constructor
+    template<typename ... Args>
+    rworker_local(Args&& ... args)
         : m_handle(mxs_rworker_create_key())
-        , m_value(t)
+        , m_value(std::forward<Args>(args)...)
     {
     }
 
