@@ -431,7 +431,11 @@ public:
         RouterSessionType* pRouter_session = nullptr;
 
         MXS_EXCEPTION_GUARD(pRouter_session = pRouter->newSession(pSession));
-        pRouter_session->setUpstream(up);
+
+        if (pRouter_session)
+        {
+            pRouter_session->setUpstream(up);
+        }
 
         return pRouter_session;
     }
