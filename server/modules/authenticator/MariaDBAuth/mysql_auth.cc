@@ -27,9 +27,9 @@
 
 #include "mysql_auth.hh"
 
+#include <maxbase/alloc.h>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/authenticator.hh>
-#include <maxbase/alloc.h>
 #include <maxscale/event.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/paths.h>
@@ -37,12 +37,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 
-static void* mysql_auth_init(char** options);
-static bool  mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
-static bool  mysql_auth_is_client_ssl_capable(DCB* dcb);
-static int   mysql_auth_authenticate(DCB* dcb);
-static void  mysql_auth_free_client_data(DCB* dcb);
-static int   mysql_auth_load_users(Listener* port);
 static void* mysql_auth_create(void* instance);
 static void  mysql_auth_destroy(void* data);
 
@@ -58,17 +52,6 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                        MySQLProtocol* protocol,
                                        GWBUF* buffer);
 
-void    mysql_auth_diagnostic(DCB* dcb, Listener* port);
-json_t* mysql_auth_diagnostic_json(const Listener* port);
-
-int mysql_auth_reauthenticate(DCB* dcb,
-                              const char* user,
-                              uint8_t* token,
-                              size_t token_len,
-                              uint8_t* scramble,
-                              size_t scramble_len,
-                              uint8_t* output_token,
-                              size_t output_token_len);
 
 extern "C"
 {
@@ -82,21 +65,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_AUTHENTICATOR MyObject =
-    {
-        mysql_auth_init,                        /* Initialize the authenticator */
-        NULL,                                   /* Create entry point */
-        mysql_auth_set_protocol_data,           /* Extract data into structure   */
-        mysql_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
-        mysql_auth_authenticate,                /* Authenticate user credentials */
-        mysql_auth_free_client_data,            /* Free the client data held in DCB */
-        NULL,                                   /* Destroy entry point */
-        mysql_auth_load_users,                  /* Load users from backend databases */
-        mysql_auth_diagnostic,
-        mysql_auth_diagnostic_json,
-        mysql_auth_reauthenticate           /* Handle COM_CHANGE_USER */
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
@@ -105,7 +73,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The MySQL client to MaxScale authenticator implementation",
         "V1.1.0",
         ACAP_TYPE_ASYNC,
-        &MyObject,
+        &mxs::AuthenticatorApi<MYSQL_AUTH>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
@@ -179,10 +147,9 @@ static bool should_check_permissions(MYSQL_AUTH* instance)
  * @param options Authenticator options
  * @return New MYSQL_AUTH instance or NULL on error
  */
-static void* mysql_auth_init(char** options)
+MYSQL_AUTH* MYSQL_AUTH::create(char** options)
 {
-    MYSQL_AUTH* instance = static_cast<MYSQL_AUTH*>(MXS_MALLOC(sizeof(*instance)));
-
+    auto instance = new(std::nothrow) MYSQL_AUTH();
     if (instance
         && (instance->handles = static_cast<sqlite3**>(MXS_CALLOC(config_threadcount(), sizeof(sqlite3*)))))
     {
@@ -238,13 +205,13 @@ static void* mysql_auth_init(char** options)
         {
             MXS_FREE(instance->cache_dir);
             MXS_FREE(instance->handles);
-            MXS_FREE(instance);
+            delete instance;
             instance = NULL;
         }
     }
     else if (instance)
     {
-        MXS_FREE(instance);
+        delete instance;
         instance = NULL;
     }
 
@@ -314,7 +281,7 @@ static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session
  * @return Authentication status
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-static int mysql_auth_authenticate(DCB* dcb)
+int MariaDBAuthenticatorSession::authenticate(DCB* dcb)
 {
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
     MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
@@ -422,7 +389,7 @@ static int mysql_auth_authenticate(DCB* dcb)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return True on success, false on error
  */
-static bool mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
+bool MariaDBAuthenticatorSession::extract(DCB* dcb, GWBUF* buf)
 {
     MySQLProtocol* protocol = NULL;
     MYSQL_session* client_data = NULL;
@@ -669,7 +636,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable
  */
-static bool mysql_auth_is_client_ssl_capable(DCB* dcb)
+bool MariaDBAuthenticatorSession::ssl_capable(DCB* dcb)
 {
     MySQLProtocol* protocol;
 
@@ -689,7 +656,7 @@ static bool mysql_auth_is_client_ssl_capable(DCB* dcb)
  *
  * @param dcb Request handler DCB connected to the client
  */
-static void mysql_auth_free_client_data(DCB* dcb)
+void MariaDBAuthenticatorSession::free_data(DCB* dcb)
 {
     MXS_FREE(dcb->m_data);
 }
@@ -755,7 +722,7 @@ static bool service_has_servers(SERVICE* service)
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR and
  * MXS_AUTH_LOADUSERS_FATAL on fatal error
  */
-static int mysql_auth_load_users(Listener* port)
+int MYSQL_AUTH::load_users(Listener* port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE* service = port->service();
@@ -830,14 +797,9 @@ static int mysql_auth_load_users(Listener* port)
     return rc;
 }
 
-int mysql_auth_reauthenticate(DCB* dcb,
-                              const char* user,
-                              uint8_t* token,
-                              size_t token_len,
-                              uint8_t* scramble,
-                              size_t scramble_len,
-                              uint8_t* output_token,
-                              size_t output_token_len)
+int MariaDBAuthenticatorSession::reauthenticate(DCB* dcb, const char* user, uint8_t* token, size_t token_len,
+                                                uint8_t* scramble, size_t scramble_len,
+                                                uint8_t* output_token, size_t output_token_len)
 {
     MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
     MYSQL_session temp;
@@ -872,9 +834,9 @@ int diag_cb(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-void mysql_auth_diagnostic(DCB* dcb, Listener* port)
+void MYSQL_AUTH::diagnostics(DCB* dcb)
 {
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance();
+    MYSQL_AUTH* instance = this;
     sqlite3* handle = get_handle(instance);
     char* err;
 
@@ -901,11 +863,11 @@ int diag_cb_json(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-json_t* mysql_auth_diagnostic_json(const Listener* port)
+json_t* MYSQL_AUTH::diagnostics_json()
 {
     json_t* rval = json_array();
 
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance();
+    MYSQL_AUTH* instance = this;
     char* err;
     sqlite3* handle = get_handle(instance);
 
@@ -920,4 +882,9 @@ json_t* mysql_auth_diagnostic_json(const Listener* port)
     }
 
     return rval;
+}
+
+MariaDBAuthenticatorSession* MYSQL_AUTH::createSession()
+{
+    return new(std::nothrow) MariaDBAuthenticatorSession();
 }
