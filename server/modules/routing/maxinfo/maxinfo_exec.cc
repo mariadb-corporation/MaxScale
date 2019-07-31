@@ -851,7 +851,8 @@ static int maxinfo_client_dcbs()
  */
 static int maxinfo_listener_dcbs()
 {
-    return dcb_count_by_usage(DCB_USAGE_LISTENER);
+    // TODO: Perhaps should be removed entirelly.
+    return 0;
 }
 
 /**

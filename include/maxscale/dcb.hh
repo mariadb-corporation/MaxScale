@@ -221,7 +221,6 @@ public:
 typedef enum
 {
     DCB_USAGE_CLIENT,
-    DCB_USAGE_LISTENER,
     DCB_USAGE_BACKEND,
     DCB_USAGE_INTERNAL,
     DCB_USAGE_ALL

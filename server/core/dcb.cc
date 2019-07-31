@@ -2069,9 +2069,6 @@ bool count_by_usage_cb(DCB* dcb, void* data)
         }
         break;
 
-    case DCB_USAGE_LISTENER:
-        break;
-
     case DCB_USAGE_BACKEND:
         if (dcb->role == DCB::Role::BACKEND)
         {
