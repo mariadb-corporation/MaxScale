@@ -630,6 +630,7 @@ typedef struct router_slave
     sqlite3*          gtid_maps;        /*< GTID storage client handle, read only*/
     MARIADB_GTID_INFO f_info;           /*< GTID info for file name prefix */
     bool              annotate_rows;    /*< MariaDB 10 Slave requests ANNOTATE_ROWS */
+    mxs::Upstream*    up;
 } ROUTER_SLAVE;
 
 
@@ -1086,7 +1087,7 @@ extern void          blr_close_binlog(ROUTER_INSTANCE*, BLFILE*);
 extern unsigned long blr_file_size(BLFILE*);
 extern int           blr_statistics(ROUTER_INSTANCE*, ROUTER_SLAVE*, GWBUF*);
 extern int           blr_ping(ROUTER_INSTANCE*, ROUTER_SLAVE*, GWBUF*);
-extern int           blr_send_custom_error(DCB*,
+extern int           blr_send_custom_error(ROUTER_SLAVE*,
                                            int,
                                            int,
                                            const char*,

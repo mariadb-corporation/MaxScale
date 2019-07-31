@@ -56,7 +56,8 @@
 static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
 static void                free_instance(ROUTER_INSTANCE* instance);
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
-                                      MXS_SESSION* session);
+                                      MXS_SESSION* session,
+                                      mxs::Upstream* up);
 static void closeSession(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session);
 static void freeSession(MXS_ROUTER* instance,
@@ -1121,7 +1122,7 @@ static void free_instance(ROUTER_INSTANCE* instance)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up)
 {
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*)instance;
     ROUTER_SLAVE* slave;
@@ -1140,6 +1141,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     memset(&slave->stats, 0, sizeof(SLAVE_STATS));
     atomic_add(&inst->stats.n_slaves, 1);
     slave->state = BLRS_CREATED;        /* Set initial state of the slave */
+    slave->up = up;
     slave->cstate = 0;
     slave->pthread = 0;
     slave->overrun = 0;
@@ -2567,7 +2569,7 @@ int blr_statistics(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue)
     memcpy(ptr, result, len);
 
     // The concept of a backend DCB doesn't really make sense for blr
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, ret, nullptr);
+    return MXS_SESSION_ROUTE_REPLY(slave->up, ret, nullptr);
 }
 
 /**
@@ -2593,7 +2595,7 @@ int blr_ping(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue)
     *ptr++ = 1;
     *ptr = 0;       // OK
 
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, ret, nullptr);
+    return MXS_SESSION_ROUTE_REPLY(slave->up, ret, nullptr);
 }
 
 
@@ -2612,7 +2614,7 @@ int blr_ping(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue)
  * @return 1 Non-zero if data was sent
  *
  */
-int blr_send_custom_error(DCB* dcb,
+int blr_send_custom_error(ROUTER_SLAVE* slave,
                           int packet_number,
                           int affected_rows,
                           const char* msg,
@@ -2699,7 +2701,7 @@ int blr_send_custom_error(DCB* dcb,
     /** write error message */
     memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
-    return MXS_SESSION_ROUTE_REPLY(dcb->session, errbuf, nullptr);
+    return MXS_SESSION_ROUTE_REPLY(slave->up, errbuf, nullptr);
 }
 
 /**
