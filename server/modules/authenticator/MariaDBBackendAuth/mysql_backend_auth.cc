@@ -29,119 +29,73 @@
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
-
-/** Authentication states */
-enum mba_state
-{
-    MBA_NEED_OK,                /**< Waiting for server's OK packet */
-    MBA_AUTH_OK,                /**< Authentication completed successfully */
-    MBA_AUTH_FAILED             /**< Authentication failed */
-};
+#include <maxscale/authenticator2.hh>
 
 /** Structure representing the authentication state */
-typedef struct mysql_backend_auth
+class MariaDBBackendSession : public mxs::AuthenticatorBackendSession
 {
-    enum mba_state state;   /**< Authentication state */
-} mysql_backend_auth_t;
-
-/**
- * @brief Allocate a new mysql_backend_auth object
- * @return Allocated object or NULL if memory allocation failed
- */
-void* auth_backend_create(void* instance)
-{
-    mysql_backend_auth_t* mba = static_cast<mysql_backend_auth_t*>(MXS_MALLOC(sizeof(*mba)));
-
-    if (mba)
+public:
+    static MariaDBBackendSession* newSession()
     {
-        mba->state = MBA_NEED_OK;
+        return new MariaDBBackendSession();
     }
 
-    return mba;
-}
+    ~MariaDBBackendSession() = default;
 
-/**
- * @brief Free allocated mysql_backend_auth object
- * @param data Allocated mysql_backend_auth object
- */
-void auth_backend_destroy(void* data)
-{
-    if (data)
+    bool extract(DCB* backend, GWBUF* buffer) override
     {
-        MXS_FREE(data);
-    }
-}
-/**
- * @brief Extract backend response
- *
- * @param dcb Request handler DCB connected to the client
- * @param buffer Buffer containing data from client
- * @return True on success, false on error
- * @see authenticator.h
- */
-static bool auth_backend_extract(DCB* dcb, GWBUF* buf)
-{
-    bool rval = false;
-    mysql_backend_auth_t* mba = (mysql_backend_auth_t*)dcb->m_authenticator_data;
+        bool rval = false;
 
-    switch (mba->state)
-    {
-    case MBA_NEED_OK:
-        if (mxs_mysql_is_ok_packet(buf))
+        switch (state)
         {
-            rval = true;
-            mba->state = MBA_AUTH_OK;
-        }
-        else
-        {
-            mba->state = MBA_AUTH_FAILED;
-        }
-        break;
+        case State::NEED_OK:
+            if (mxs_mysql_is_ok_packet(buffer))
+            {
+                rval = true;
+                state = State::AUTH_OK;
+            }
+            else
+            {
+                state = State::AUTH_FAILED;
+            }
+            break;
 
-    default:
-        MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
-        mxb_assert(false);
-        break;
+        default:
+            MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
+            mxb_assert(false);
+            break;
+        }
+
+        return rval;
     }
 
-    return rval;
-}
-
-/**
- * @brief Authenticates as a MySQL user
- *
- * @param dcb Backend DCB
- * @return Authentication status
- * @see authenticator.h
- */
-static int auth_backend_authenticate(DCB* dcb)
-{
-    int rval = MXS_AUTH_FAILED;
-    mysql_backend_auth_t* mba = (mysql_backend_auth_t*)dcb->m_authenticator_data;
-
-    if (mba->state == MBA_AUTH_OK)
+    bool ssl_capable(DCB* backend) override
     {
-        /** Authentication completed successfully */
-        rval = MXS_AUTH_SUCCEEDED;
+        return backend->m_server->ssl().context() != nullptr;
     }
 
-    return rval;
-}
+    int authenticate(DCB* backend) override
+    {
+        int rval = MXS_AUTH_FAILED;
+        if (state == State::AUTH_OK)
+        {
+            /** Authentication completed successfully */
+            rval = MXS_AUTH_SUCCEEDED;
+        }
+        return rval;
+    }
 
-/**
- * @brief Determine whether the client is SSL capable
- *
- * The authentication request from the client will indicate whether the client
- * is expecting to make an SSL connection. The information has been extracted
- * in the previous functions.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Boolean indicating whether client is SSL capable
- */
-static bool auth_backend_ssl(DCB* dcb)
-{
-    return dcb->m_server->ssl().context() != NULL;
-}
+private:
+    /** Authentication states */
+    enum class State
+    {
+        NEED_OK,                /**< Waiting for server's OK packet */
+        AUTH_OK,                /**< Authentication completed successfully */
+        AUTH_FAILED             /**< Authentication failed */
+    };
+
+    State state {State::NEED_OK};   /**< Authentication state */
+};
 
 extern "C"
 {
@@ -155,21 +109,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_AUTHENTICATOR MyObject =
-    {
-        NULL,                           /* No initialize entry point */
-        auth_backend_create,            /* Create authenticator */
-        auth_backend_extract,           /* Extract data into structure   */
-        auth_backend_ssl,               /* Check if client supports SSL  */
-        auth_backend_authenticate,      /* Authenticate user credentials */
-        NULL,                           /* The shared data is freed by the client DCB */
-        auth_backend_destroy,           /* Destroy authenticator */
-        NULL,                           /* We don't need to load users */
-        NULL,                           /* No diagnostic */
-        NULL,
-        NULL                        /* No user reauthentication */
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
@@ -178,7 +117,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The MySQL MaxScale to backend server authenticator",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::BackendAuthenticatorApi<MariaDBBackendSession>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
