@@ -126,7 +126,9 @@ public:
      *
      * @return A DCB or NULL if no connection is found
      */
-    BackendDCB* get_persistent_dcb(const std::string& user, const std::string& ip, const std::string& protocol,
+    BackendDCB* get_persistent_dcb(const std::string& user,
+                                   const std::string& ip,
+                                   const std::string& protocol,
                                    int id);
 
     /**
@@ -247,7 +249,9 @@ public:
 
     json_t* json_attributes() const;
 
-    BackendDCB** persistent = nullptr;     /**< List of unused persistent connections to the server */
+    std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* upstream, MXS_SESSION* session) override;
+
+    BackendDCB** persistent = nullptr;      /**< List of unused persistent connections to the server */
 
 private:
     bool create_server_config(const char* filename) const;
@@ -309,6 +313,34 @@ private:
     const std::string m_name;               /**< Server config name */
     Settings          m_settings;           /**< Server settings */
     VersionInfo       m_info;               /**< Server version and type information */
+};
+
+// A connection to a server
+class ServerEndpoint final : public mxs::Endpoint
+{
+public:
+    ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server* server);
+    ~ServerEndpoint() override;
+
+    mxs::Target* target() const override;
+
+    bool connect() override;
+
+    void close() override;
+
+    bool is_open() const override;
+
+    int32_t routeQuery(GWBUF* buffer) override;
+
+    int32_t clientReply(GWBUF* buffer, mxs::Component* down) override;
+
+    bool handleError(GWBUF* error, mxs::Component* down) override;
+
+private:
+    DCB*            m_dcb {nullptr};
+    mxs::Component* m_up;
+    MXS_SESSION*    m_session;
+    Server*         m_server;
 };
 
 /**

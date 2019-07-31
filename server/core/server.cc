@@ -807,3 +807,60 @@ const MXS_MODULE_PARAM* common_server_params()
     };
     return config_server_params;
 }
+
+ServerEndpoint::ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server* server)
+    : m_up(up)
+    , m_session(session)
+    , m_server(server)
+{
+}
+
+ServerEndpoint::~ServerEndpoint()
+{
+    if (is_open())
+    {
+        close();
+    }
+}
+
+mxs::Target* ServerEndpoint::target() const
+{
+    return m_server;
+}
+
+bool ServerEndpoint::connect()
+{
+    m_dcb = BackendDCB::connect(m_server, m_session, mxs::RoutingWorker::get_current(), this);
+    return m_dcb != nullptr;
+}
+
+void ServerEndpoint::close()
+{
+    dcb_close(m_dcb);
+    m_dcb = nullptr;
+}
+
+bool ServerEndpoint::is_open() const
+{
+    return m_dcb;
+}
+
+int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
+{
+    return m_dcb->protocol_write(buffer);
+}
+
+int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::Component* down)
+{
+    return m_up->clientReply(buffer, this);
+}
+
+bool ServerEndpoint::handleError(GWBUF* error, mxs::Component* down)
+{
+    return m_up->handleError(error, this);
+}
+
+std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)
+{
+    return std::unique_ptr<mxs::Endpoint>(new ServerEndpoint(up, session, this));
+}

@@ -184,8 +184,7 @@ public:
     /**
      * Get a connection handle to this target
      */
-    // TODO: Implement this
-    // virtual std::unique_ptr<Endpoint> get_connection(Component* up, MXS_SESSION* session) = 0;
+    virtual std::unique_ptr<Endpoint> get_connection(Component* up, MXS_SESSION* session) = 0;
 
     /* Target connection and usage statistics */
     struct Stats
