@@ -119,6 +119,13 @@ typedef enum
 class DCB : public MXB_POLL_DATA
 {
 public:
+    class Registry
+    {
+    public:
+        virtual void add(DCB* dcb) = 0;
+        virtual void remove(DCB* dcb) = 0;
+    };
+
     enum class Role
     {
         CLIENT,         /*< Serves dedicated client */
@@ -126,7 +133,16 @@ public:
         INTERNAL        /*< Internal DCB not connected to the outside */
     };
 
-    DCB(Role role, MXS_SESSION* session, SERVER* server = nullptr);
+    DCB(Role role,
+        MXS_SESSION* session,
+        Registry* registry = nullptr);
+    DCB(Role role,
+        MXS_SESSION* session,
+        SERVER* server);
+    DCB(Role role,
+        MXS_SESSION* session,
+        SERVER* server,
+        Registry* registry);
     ~DCB();
 
     Role role() const
@@ -260,6 +276,7 @@ private:
     Role         m_role;                    /**< The role of the DCB */
     dcb_state_t  m_state = DCB_STATE_ALLOC; /**< Current state */
     MXS_SESSION* m_session;                 /**< The owning session */
+    Registry*    m_registry;                /**< The DCB registry to use */
 };
 
 namespace maxscale

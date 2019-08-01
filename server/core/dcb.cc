@@ -158,7 +158,17 @@ static MXB_WORKER* get_dcb_owner()
     return RoutingWorker::get_current();
 }
 
+DCB::DCB(Role role, MXS_SESSION* session, Registry* registry)
+    : DCB(role, session, nullptr, registry)
+{
+}
+
 DCB::DCB(Role role, MXS_SESSION* session, SERVER* server)
+    : DCB(role, session, server, nullptr)
+{
+}
+
+DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Registry* registry)
     : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner()}
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
@@ -168,6 +178,7 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_role(role)
     , m_session(session)
+    , m_registry(registry)
 {
     // TODO: Remove DCB::Role::INTERNAL to always have a valid listener
     if (session->listener)
@@ -193,10 +204,20 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server)
         dcb_add_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
         dcb_add_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
     }
+
+    if (m_registry)
+    {
+        m_registry->add(this);
+    }
 }
 
 DCB::~DCB()
 {
+    if (m_registry)
+    {
+        m_registry->remove(this);
+    }
+
     if (m_data && m_authfunc.free)
     {
         m_authfunc.free(this);
