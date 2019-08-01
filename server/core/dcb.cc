@@ -2037,12 +2037,12 @@ void dcb_process_timeouts(int thr)
             {
                 SERVICE* service = dcb->session()->service;
 
-                if (service->conn_idle_timeout)
+                if (service->config().conn_idle_timeout)
                 {
                     int64_t idle = mxs_clock() - dcb->m_last_read;
                     // Multiply by 10 to match conn_idle_timeout resolution
                     // to the 100 millisecond tics.
-                    int64_t timeout = service->conn_idle_timeout * 10;
+                    int64_t timeout = service->config().conn_idle_timeout * 10;
 
                     if (idle > timeout)
                     {
@@ -2055,12 +2055,12 @@ void dcb_process_timeouts(int thr)
                     }
                 }
 
-                if (service->net_write_timeout && dcb->m_writeqlen > 0)
+                if (service->config().net_write_timeout && dcb->m_writeqlen > 0)
                 {
                     int64_t idle = mxs_clock() - dcb->m_last_write;
                     // Multiply by 10 to match net_write_timeout resolution
                     // to the 100 millisecond tics.
-                    if (idle > dcb->service()->net_write_timeout * 10)
+                    if (idle > dcb->service()->config().net_write_timeout * 10)
                     {
                         MXS_WARNING("network write timed out for '%s'@%s, ",
                                     dcb->m_user ? dcb->m_user : "<unknown>",

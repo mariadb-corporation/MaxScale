@@ -131,14 +131,17 @@ public:
         return std::find(m_targets.begin(), m_targets.end(), target) != m_targets.end();
     }
 
+    const Config& config() const override
+    {
+        return *m_config;
+    }
+
 private:
-    FilterList  m_filters;          /**< Ordered list of filters */
-    std::string m_user;             /**< Username */
-    std::string m_password;         /**< Password */
-    std::string m_weightby;         /**< Weighting parameter name */
-    std::string m_version_string;   /**< Version string sent to clients */
-    RateLimits  m_rate_limits;      /**< The refresh rate limits for users of each thread */
-    uint64_t    m_wkey;             /**< Key for worker local data */
+    FilterList m_filters;           /**< Ordered list of filters */
+    RateLimits m_rate_limits;       /**< The refresh rate limits for users of each thread */
+    uint64_t   m_wkey;              /**< Key for worker local data */
+
+    mxs::rworker_local<Config> m_config;
 
     std::vector<mxs::Target*> m_targets;
 
@@ -440,9 +443,6 @@ bool service_has_named_listener(Service* service, const char* name);
  * @return The first service that uses the monitor or nullptr if no service uses it
  */
 Service* service_uses_monitor(mxs::Monitor* monitor);
-
-// Required by MaxAdmin
-int service_enable_root(Service* service, int action);
 
 /**
  * @brief Convert a service to JSON

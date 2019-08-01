@@ -92,52 +92,44 @@ inline bool server_ref_is_active(const SERVER_REF* ref)
 class SERVICE : public mxs::Target
 {
 public:
-    int                       state;                /**< The service state */
-    int                       client_count;         /**< Number of connected clients */
-    int                       max_connections;      /**< Maximum client connections */
-    struct mxs_router_object* router;               /**< The router we are using */
-    struct mxs_router*        router_instance;      /**< The router instance for this
-                                                     * service */
-    char version_string[MAX_SERVICE_VERSION_LEN];   /**< version string for this service
-                                                     * listeners */
-    SERVER_REF* dbref;                              /**< server references */
-    int         n_dbref;                            /**< Number of server references */
-    char        user[MAX_SERVICE_USER_LEN];         /**< The user name to use to extract
-                                                     * information */
-    char password[MAX_SERVICE_PASSWORD_LEN];        /**< The authentication data requied
-                                                     * */
-    SERVICE_STATS service_stats;                    /**< The service statistics */
-    bool          enable_root;                      /**< Allow root user  access */
-    bool          localhost_match_wildcard_host;    /**< Match localhost against wildcard
-                                                     * */
-    MXS_CONFIG_PARAMETER svc_config_param;          /**<  list of config params and values */
-    int                  svc_config_version;        /**<  Version number of configuration
-                                                     * */
-    bool svc_do_shutdown;                           /**< tells the service to exit loops
-                                                     * etc. */
-    bool users_from_all;                            /**< Load users from one server or all
-                                                     * of them */
-    bool strip_db_esc;                              /**< Remove the '\' characters from
-                                                     * database names
-                                                     * when querying them from the server.
-                                                     * MySQL Workbench seems
-                                                     * to escape at least the underscore
-                                                     * character. */
-    int64_t conn_idle_timeout;                      /**< Session timeout in seconds */
-    int64_t net_write_timeout;                      /**< Write timeout in seconds */
-    char    weightby[MAX_SERVICE_WEIGHTBY_LEN];     /**< Service weighting parameter name
-                                                     * */
-    bool retry_start;                               /**< If starting of the service should
-                                                     * be retried later */
-    bool log_auth_warnings;                         /**< Log authentication failures and
-                                                     * warnings */
-    uint64_t capabilities;                          /**< The capabilities of the service,
-                                                     * @see enum routing_capability */
-    int  max_retry_interval;                        /**< Maximum retry interval */
-    bool session_track_trx_state;                   /**< Get transaction state via session
-                                                     * track mechanism */
-    int32_t retain_last_statements;                 /**< How many statements to retain per session,
+
+    struct Config
+    {
+        Config(MXS_CONFIG_PARAMETER* params);
+
+        std::string user;                           /**< Username */
+        std::string password;                       /**< Password */
+        std::string weightby;                       /**< Weighting parameter name */
+        std::string version_string;                 /**< Version string sent to clients */
+        int         max_connections;                /**< Maximum client connections */
+        int         max_retry_interval;             /**< Maximum retry interval */
+        bool        enable_root;                    /**< Allow root user  access */
+        bool        localhost_match_wildcard_host;  /**< Match localhost against wildcard */
+        bool        users_from_all;                 /**< Load users from all servers */
+        bool        retry_start;                    /**< If starting of the service should be retried later */
+        bool        log_auth_warnings;              /**< Log authentication failures and warnings */
+        bool        session_track_trx_state;        /**< Get transaction state via session track mechanism */
+        int64_t     conn_idle_timeout;              /**< Session timeout in seconds */
+        int64_t     net_write_timeout;              /**< Write timeout in seconds */
+        int32_t     retain_last_statements;         /**< How many statements to retain per session,
                                                      * -1 if not explicitly specified. */
+
+        bool strip_db_esc;      /**< Remove the '\' characters from database names when querying them from
+                                 * the server. MySQL Workbench seems to escape at least the underscore
+                                 * character. */
+    };
+
+    int                  state;             /**< The service state */
+    int                  client_count;      /**< Number of connected clients */
+    mxs_router_object*   router;            /**< The router we are using */
+    mxs_router*          router_instance;   /**< The router instance for this service */
+    SERVER_REF*          dbref;             /**< server references */
+    int                  n_dbref;           /**< Number of server references */
+    SERVICE_STATS        service_stats;     /**< The service statistics */
+    MXS_CONFIG_PARAMETER svc_config_param;  /**<  list of config params and values */
+    bool                 svc_do_shutdown;   /**< tells the service to exit loops etc. */
+    uint64_t             capabilities;      /**< The capabilities of the service,
+                                             * @see enum routing_capability */
 
     const char* name() const override
     {
@@ -169,6 +161,8 @@ public:
     {
         return m_router_name.c_str();
     }
+
+    virtual const Config& config() const = 0;
 
 protected:
     SERVICE(const std::string& name,

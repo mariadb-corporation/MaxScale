@@ -138,10 +138,10 @@ std::string get_version_string(SERVICE* service)
 {
     std::string rval = DEFAULT_VERSION_STRING;
 
-    if (service->version_string[0])
+    if (!service->config().version_string.empty())
     {
         // User-defined version string, use it
-        rval = service->version_string;
+        rval = service->config().version_string;
     }
     else
     {
@@ -434,7 +434,7 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
  */
 int gw_MySQLWrite_client(DCB* dcb, GWBUF* queue)
 {
-    if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->session_track_trx_state)
+    if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->config().session_track_trx_state)
     {
         parse_and_set_trx_state(dcb->session(), queue);
     }
@@ -1700,8 +1700,8 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
         strcpy(data->user, user);
 
         int rc = client_dcb->m_auth_session->reauthenticate(
-                client_dcb, data->user, &payload[0], payload.size(),
-                proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
+            client_dcb, data->user, &payload[0], payload.size(),
+            proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
 
         if (rc == MXS_AUTH_SUCCEEDED)
         {
@@ -1773,7 +1773,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                 SERVICE* service = session->service;
 
                 if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-                    && !service->session_track_trx_state
+                    && !service->config().session_track_trx_state
                     && !session_is_load_active(session))
                 {
                     if (session_trx_is_ending(session))

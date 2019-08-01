@@ -6788,9 +6788,9 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE* router,
 
         sprintf(max_conns,
                 "%d",
-                !router->service->max_connections ?
+                !router->service->config().max_connections ?
                 BLR_DEFAULT_MAX_CONNS :
-                router->service->max_connections);
+                router->service->config().max_connections);
         strcpy(heading, word);
 
         blr_slave_send_var_value(router,

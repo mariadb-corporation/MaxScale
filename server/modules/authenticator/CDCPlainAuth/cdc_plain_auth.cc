@@ -322,7 +322,7 @@ static int cdc_auth_authenticate(DCB* dcb)
         {
             dcb->m_user = MXS_STRDUP_A(client_data->user);
         }
-        else if (dcb->service()->log_auth_warnings)
+        else if (dcb->service()->config().log_auth_warnings)
         {
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s', authentication failed.",

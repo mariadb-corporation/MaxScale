@@ -53,7 +53,8 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
         if (s->active && s->server->is_master())
         {
             // TODO: per-server credentials aren't exposed in the public class
-            servers.push_back({s->server->address, s->server->port, service->user, service->password});
+            servers.push_back({s->server->address, s->server->port, service->config().user,
+                               service->config().password});
         }
     }
 

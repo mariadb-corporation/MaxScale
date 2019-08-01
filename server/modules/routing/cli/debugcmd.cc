@@ -2662,7 +2662,7 @@ static void restart_monitor(DCB* dcb, Monitor* monitor)
  */
 static void enable_service_root(DCB* dcb, SERVICE* service)
 {
-    service_enable_root((Service*)service, 1);
+    static_cast<Service*>(service)->update_basic_parameter("enable_root_user", "true");
 }
 
 /**
@@ -2673,7 +2673,7 @@ static void enable_service_root(DCB* dcb, SERVICE* service)
  */
 static void disable_service_root(DCB* dcb, SERVICE* service)
 {
-    service_enable_root((Service*)service, 0);
+    static_cast<Service*>(service)->update_basic_parameter("enable_root_user", "false");
 }
 
 struct log_action_entry

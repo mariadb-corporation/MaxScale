@@ -107,7 +107,7 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
-    if (service->conn_idle_timeout || service->net_write_timeout)
+    if (service->config().conn_idle_timeout || service->config().net_write_timeout)
     {
         dcb_enable_session_timeouts();
     }
@@ -182,16 +182,33 @@ void service_remove_server(Monitor* pMonitor, SERVER* pServer)
     }
 }
 
+Service::Config::Config(MXS_CONFIG_PARAMETER* params)
+    : user(params->get_string(CN_USER))
+    , password(params->get_string(CN_PASSWORD))
+    , weightby(params->get_string(CN_WEIGHTBY))
+    , version_string(get_version_string(params))
+    , max_connections(params->get_integer(CN_MAX_CONNECTIONS))
+    , max_retry_interval(params->get_duration<std::chrono::seconds>(CN_MAX_RETRY_INTERVAL).count())
+    , enable_root(params->get_bool(CN_ENABLE_ROOT_USER))
+    , localhost_match_wildcard_host(params->get_bool(CN_LOCALHOST_MATCH_WILDCARD_HOST))
+    , users_from_all(params->get_bool(CN_AUTH_ALL_SERVERS))
+    , retry_start(params->get_bool(CN_RETRY_ON_FAILURE))
+    , log_auth_warnings(params->get_bool(CN_LOG_AUTH_WARNINGS))
+    , session_track_trx_state(params->get_bool(CN_SESSION_TRACK_TRX_STATE))
+    , conn_idle_timeout(params->get_duration<std::chrono::seconds>(CN_CONNECTION_TIMEOUT).count())
+    , net_write_timeout(params->get_duration<std::chrono::seconds>(CN_NET_WRITE_TIMEOUT).count())
+    , retain_last_statements(params->get_integer(CN_RETAIN_LAST_STATEMENTS))
+    , strip_db_esc(params->get_bool(CN_STRIP_DB_ESC))
+{
+}
+
 Service::Service(const std::string& name,
                  const std::string& router_name,
                  MXS_CONFIG_PARAMETER* params)
     : SERVICE(name, router_name)
-    , m_user(params->get_string(CN_USER))
-    , m_password(params->get_string(CN_PASSWORD))
-    , m_weightby(params->get_string(CN_WEIGHTBY))
-    , m_version_string(get_version_string(params))
     , m_rate_limits(config_threadcount())
     , m_wkey(mxs_rworker_create_key())
+    , m_config(params)
 {
     const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
     mxb_assert(module);
@@ -201,29 +218,11 @@ Service::Service(const std::string& name,
     capabilities = module->module_capabilities;
     client_count = 0;
     n_dbref = 0;
-    svc_config_version = 0;
     service_stats.started = time(0);
     service_stats.n_failed_starts = 0;
     state = SERVICE_STATE_ALLOC;
     dbref = NULL;
     n_dbref = 0;
-    snprintf(user, sizeof(user), "%s", m_user.c_str());
-    snprintf(password, sizeof(password), "%s", m_password.c_str());
-    snprintf(weightby, sizeof(weightby), "%s", m_weightby.c_str());
-    snprintf(version_string, sizeof(version_string), "%s", m_version_string.c_str());
-
-    max_retry_interval = params->get_duration<std::chrono::seconds>(CN_MAX_RETRY_INTERVAL).count();
-    users_from_all = params->get_bool(CN_AUTH_ALL_SERVERS);
-    localhost_match_wildcard_host = params->get_bool(CN_LOCALHOST_MATCH_WILDCARD_HOST);
-    retry_start = params->get_bool(CN_RETRY_ON_FAILURE);
-    enable_root = params->get_bool(CN_ENABLE_ROOT_USER);
-    conn_idle_timeout = params->get_duration<std::chrono::seconds>(CN_CONNECTION_TIMEOUT).count();
-    net_write_timeout = params->get_duration<std::chrono::seconds>(CN_NET_WRITE_TIMEOUT).count();
-    max_connections = params->get_integer(CN_MAX_CONNECTIONS);
-    log_auth_warnings = params->get_bool(CN_LOG_AUTH_WARNINGS);
-    strip_db_esc = params->get_bool(CN_STRIP_DB_ESC);
-    session_track_trx_state = params->get_bool(CN_SESSION_TRACK_TRX_STATE);
-    retain_last_statements = params->get_integer(CN_RETAIN_LAST_STATEMENTS);
 
     /**
      * At service start last update is set to config->users_refresh_time seconds earlier.
@@ -376,12 +375,12 @@ int serviceStartAllPorts(Service* service)
             service->state = SERVICE_STATE_STARTED;
             service->service_stats.started = time(0);
         }
-        else if (service->retry_start)
+        else if (service->config().retry_start)
         {
             /** Service failed to start any ports. Try again later. */
             service->service_stats.n_failed_starts++;
             int retry_after = MXS_MIN(service->service_stats.n_failed_starts * 10,
-                                      service->max_retry_interval);
+                                      service->config().max_retry_interval);
             MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
                        service->name(),
                        retry_after);
@@ -725,31 +724,8 @@ bool serviceHasBackend(Service* service, SERVER* server)
 void serviceGetUser(SERVICE* svc, const char** user, const char** auth)
 {
     Service* service = static_cast<Service*>(svc);
-    *user = service->user;
-    *auth = service->password;
-}
-
-/**
- * Enable/Disable root user for this service
- * associated with this service.
- *
- * @param service       The service we are setting the data for
- * @param action        1 for root enable, 0 for disable access
- * @return              0 on failure
- */
-
-int service_enable_root(Service* svc, int action)
-{
-    Service* service = static_cast<Service*>(svc);
-
-    if (action != 0 && action != 1)
-    {
-        return 0;
-    }
-
-    service->enable_root = action;
-
-    return 1;
+    *user = service->config().user.c_str();
+    *auth = service->config().password.c_str();
 }
 
 bool Service::set_filters(const std::vector<std::string>& filters)
@@ -928,7 +904,7 @@ void dprintService(DCB* dcb, SERVICE* svc)
                asctime_r(localtime_r(&service->service_stats.started, &result), timebuf));
     dcb_printf(dcb,
                "\tRoot user access:                    %s\n",
-               service->enable_root ? "Enabled" : "Disabled");
+               service->config().enable_root ? "Enabled" : "Disabled");
     auto filters = service->get_filters();
 
     if (!filters.empty())
@@ -956,11 +932,11 @@ void dprintService(DCB* dcb, SERVICE* svc)
         }
         server = server->next;
     }
-    if (*service->weightby)
+    if (!service->config().weightby.empty())
     {
         dcb_printf(dcb,
                    "\tRouting weight parameter:            %s\n",
-                   service->weightby);
+                   service->config().weightby.c_str());
     }
 
     dcb_printf(dcb,
@@ -1212,7 +1188,7 @@ void service_replace_parameter(Service* service, const char* key, const char* va
 const char* serviceGetWeightingParameter(SERVICE* svc)
 {
     Service* service = static_cast<Service*>(svc);
-    return service->weightby;
+    return service->config().weightby.c_str();
 }
 
 void service_destroy_instances(void)
@@ -1900,82 +1876,8 @@ bool Service::is_basic_parameter(const std::string& name)
 
 void Service::update_basic_parameter(const std::string& key, const std::string& value)
 {
-    if (key == CN_USER)
-    {
-        m_user = value;
-        snprintf(user, sizeof(user), "%s", value.c_str());
-    }
-    else if (key == CN_PASSWORD)
-    {
-        m_password = value;
-        snprintf(password, sizeof(password), "%s", value.c_str());
-    }
-    else if (key == CN_ENABLE_ROOT_USER)
-    {
-        enable_root = config_truth_value(value.c_str());
-    }
-    else if (key == CN_MAX_RETRY_INTERVAL)
-    {
-        max_retry_interval = std::stoi(value);
-        mxb_assert(max_retry_interval > 0);
-    }
-    else if (key == CN_MAX_CONNECTIONS)
-    {
-        max_connections = std::stoi(value);
-        mxb_assert(max_connections > 0);
-    }
-    else if (key == CN_CONNECTION_TIMEOUT)
-    {
-        if ((conn_idle_timeout = std::stoi(value)))
-        {
-            dcb_enable_session_timeouts();
-        }
-
-        mxb_assert(conn_idle_timeout >= 0);
-    }
-    else if (key == CN_NET_WRITE_TIMEOUT)
-    {
-        if ((net_write_timeout = std::stoi(value)))
-        {
-            dcb_enable_session_timeouts();
-        }
-
-        mxb_assert(net_write_timeout >= 0);
-    }
-    else if (key == CN_AUTH_ALL_SERVERS)
-    {
-        users_from_all = config_truth_value(value.c_str());
-    }
-    else if (key == CN_STRIP_DB_ESC)
-    {
-        strip_db_esc = config_truth_value(value.c_str());
-    }
-    else if (key == CN_LOCALHOST_MATCH_WILDCARD_HOST)
-    {
-        localhost_match_wildcard_host = config_truth_value(value.c_str());
-    }
-    else if (key == CN_VERSION_STRING)
-    {
-        m_version_string = value;
-        snprintf(version_string, sizeof(version_string), "%s", value.c_str());
-    }
-    else if (key == CN_WEIGHTBY)
-    {
-        m_weightby = value;
-        snprintf(weightby, sizeof(weightby), "%s", value.c_str());
-    }
-    else if (key == CN_LOG_AUTH_WARNINGS)
-    {
-        log_auth_warnings = config_truth_value(value.c_str());
-    }
-    else if (key == CN_RETRY_ON_FAILURE)
-    {
-        retry_start = config_truth_value(value.c_str());
-    }
-    else if (key == CN_RETAIN_LAST_STATEMENTS)
-    {
-        retain_last_statements = std::stoi(value);
-    }
+    svc_config_param.set(key, value);
+    m_config.assign(Config(&svc_config_param));
 }
 
 const MXS_MODULE_PARAM* common_service_params()

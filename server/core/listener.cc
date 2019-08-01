@@ -818,13 +818,14 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
             return NULL;
         }
 
-        if (m_service->max_connections && m_service->client_count >= m_service->max_connections)
+        if (m_service->config().max_connections
+            && m_service->client_count >= m_service->config().max_connections)
         {
             // TODO: If connections can be queued, this is the place to put the
             // TODO: connection on that queue.
             if (m_proto_func.connlimit)
             {
-                m_proto_func.connlimit(client_dcb, m_service->max_connections);
+                m_proto_func.connlimit(client_dcb, m_service->config().max_connections);
             }
 
             // TODO: This is never used as the client connection is not up yet

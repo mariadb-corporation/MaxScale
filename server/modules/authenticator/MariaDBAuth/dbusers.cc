@@ -384,11 +384,11 @@ int validate_mysql_user(MariaDBAuthenticator* instance,
         mysqlauth_validate_user_query_lower :
         mysqlauth_validate_user_query;
     size_t len = snprintf(NULL, 0, validate_query,
-                session->user,
-                dcb->m_remote,
-                dcb->m_remote,
-                session->db,
-                session->db);
+                          session->user,
+                          dcb->m_remote,
+                          dcb->m_remote,
+                          session->db,
+                          session->db);
     char sql[len + 1];
     int rval = MXS_AUTH_FAILED;
     char* err;
@@ -1122,7 +1122,7 @@ bool query_and_process_users(const char* query, MYSQL* con, SERVICE* service, in
 
             while ((row = mysql_fetch_row(result)))
             {
-                if (service->strip_db_esc)
+                if (service->config().strip_db_esc)
                 {
                     strip_escape_chars(row[2]);
                 }
@@ -1169,7 +1169,7 @@ int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service, Listener
         category = SERVER_NO_ROLES;
     }
 
-    char* query = get_users_query(server_version, service->enable_root, category);
+    char* query = get_users_query(server_version, service->config().enable_root, category);
 
     MariaDBAuthenticator* instance = (MariaDBAuthenticator*)listener->auth_instance();
     int users = 0;
@@ -1185,7 +1185,7 @@ int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service, Listener
          * a 10.1.10 server makes sure CTEs aren't used.
          */
         MXS_FREE(query);
-        query = get_users_query(server_version, service->enable_root, SERVER_ROLES);
+        query = get_users_query(server_version, service->config().enable_root, SERVER_ROLES);
         rv = query_and_process_users(query, con, service, &users, &userlist, SERVER_ROLES);
     }
 
@@ -1317,7 +1317,7 @@ static int get_users(Listener* listener, bool skip_local, SERVER** srv)
 
                 mysql_close(con);
 
-                if (!service->users_from_all)
+                if (!service->config().users_from_all)
                 {
                     break;
                 }

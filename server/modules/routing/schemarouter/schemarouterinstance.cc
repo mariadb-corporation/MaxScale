@@ -53,12 +53,16 @@ SchemaRouter::~SchemaRouter()
 
 SchemaRouter* SchemaRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {
-    if (!params->contains("auth_all_servers"))
-    {
-        MXS_NOTICE("Authentication data is fetched from all servers. To disable this "
-                   "add 'auth_all_servers=0' to the service.");
-        pService->users_from_all = true;
-    }
+    // TODO: This is wrong: a router shouldn't modify core parameters. This should be expressed in some other
+    // form that the service would know to behave differently if a router requires authentication from all
+    // servers.
+
+    // if (!params->contains("auth_all_servers"))
+    // {
+    //     MXS_NOTICE("Authentication data is fetched from all servers. To disable this "
+    //                "add 'auth_all_servers=0' to the service.");
+    //     pService->users_from_all = true;
+    // }
 
     SConfig config(new Config(params));
     return new SchemaRouter(pService, config);

@@ -327,7 +327,7 @@ int MariaDBAuthenticatorSession::authenticate(DCB* dcb)
             dcb->m_user = MXS_STRDUP_A(client_data->user);
             /** Send an OK packet to the client */
         }
-        else if (dcb->service()->log_auth_warnings)
+        else if (dcb->service()->config().log_auth_warnings)
         {
             // The default failure is a `User not found` one
             char extra[256] = "User not found.";
@@ -349,8 +349,7 @@ int MariaDBAuthenticatorSession::authenticate(DCB* dcb)
                           dcb_get_port(dcb),
                           extra);
 
-            if (is_localhost_address(&dcb->m_ip)
-                && !dcb->service()->localhost_match_wildcard_host)
+            if (is_localhost_address(&dcb->m_ip) && !dcb->service()->config().localhost_match_wildcard_host)
             {
                 MXS_NOTICE("If you have a wildcard grant that covers this address, "
                            "try adding 'localhost_match_wildcard_host=true' for "

@@ -969,9 +969,9 @@ Session::Session(const SListener& listener)
     : MXS_SESSION(listener)
     , m_down(static_cast<Service*>(listener->service())->get_connection(this, this))
 {
-    if (service->retain_last_statements != -1)          // Explicitly set for the service
+    if (service->config().retain_last_statements != -1)          // Explicitly set for the service
     {
-        m_retain_last_statements = service->retain_last_statements;
+        m_retain_last_statements = service->config().retain_last_statements;
     }
     else
     {
