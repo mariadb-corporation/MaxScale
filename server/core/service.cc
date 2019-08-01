@@ -207,7 +207,6 @@ Service::Service(const std::string& name,
                  MXS_CONFIG_PARAMETER* params)
     : SERVICE(name, router_name)
     , m_rate_limits(config_threadcount())
-    , m_wkey(mxs_rworker_create_key())
     , m_config(params)
 {
     const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
@@ -257,8 +256,6 @@ Service::Service(const std::string& name,
 
 Service::~Service()
 {
-    mxs_rworker_delete_data(m_wkey);
-
     if (router && router_instance && router->destroyInstance)
     {
         router->destroyInstance(router_instance);
@@ -760,49 +757,16 @@ bool Service::set_filters(const std::vector<std::string>& filters)
 
     if (rval)
     {
-        UniqueLock guard(lock);
-        m_filters = flist;
+        m_filters.assign(flist);
         capabilities |= my_capabilities;
-        guard.unlock();
-
-        // Broadcast a message to other workers to update their filter lists
-        mxs_rworker_broadcast(update_filters_cb, this);
     }
 
     return rval;
 }
 
-static void destroy_filter_list(void* data)
-{
-    Service::FilterList* filters = static_cast<Service::FilterList*>(data);
-    delete filters;
-}
-
-Service::FilterList* Service::get_local_filters() const
-{
-    FilterList* filters = static_cast<FilterList*>(mxs_rworker_get_data(m_wkey));
-
-    if (filters == nullptr)
-    {
-        UniqueLock guard(lock);
-        filters = new FilterList(m_filters);
-        guard.unlock();
-        mxs_rworker_set_data(m_wkey, filters, destroy_filter_list);
-    }
-
-    return filters;
-}
-
-void Service::update_local_filters()
-{
-    FilterList* filters = get_local_filters();
-    LockGuard guard(lock);
-    *filters = m_filters;
-}
-
 const Service::FilterList& Service::get_filters() const
 {
-    return *get_local_filters();
+    return *m_filters;
 }
 
 Service* service_internal_find(const char* name)
@@ -1375,12 +1339,12 @@ bool Service::dump_config(const char* filename) const
     /**
      * TODO: Check for return values on all of the dprintf calls
      */
-    if (!m_filters.empty())
+    if (!m_filters->empty())
     {
         dprintf(file, "%s=", CN_FILTERS);
         const char* sep = "";
 
-        for (const auto& f : m_filters)
+        for (const auto& f : *m_filters)
         {
             dprintf(file, "%s%s", sep, f->name.c_str());
             sep = "|";
@@ -1621,11 +1585,11 @@ json_t* Service::json_relationships(const char* host) const
     /** Store relationships to other objects */
     json_t* rel = json_object();
 
-    if (!m_filters.empty())
+    if (!m_filters->empty())
     {
         json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
 
-        for (const auto& f : m_filters)
+        for (const auto& f : *m_filters)
         {
             mxs_json_add_relation(filters, f->name.c_str(), CN_FILTERS);
         }
@@ -2091,9 +2055,9 @@ std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_S
     if (my_connection)
     {
         std::vector<std::unique_ptr<mxs::Endpoint>> connections;
-        connections.reserve(m_targets.size());
+        connections.reserve(config().targets.size());
 
-        for (auto a : m_targets)
+        for (auto a : config().targets)
         {
             connections.push_back(a->get_connection(my_connection.get(), session));
             mxb_assert(connections.back().get());

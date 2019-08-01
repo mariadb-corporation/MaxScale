@@ -122,13 +122,13 @@ public:
     // Adds a routing target to this service
     void add_target(mxs::Target* target)
     {
-        // TODO: Not thread-safe
-        m_targets.push_back(target);
+        m_config->targets.push_back(target);
+        m_config.assign(*m_config);
     }
 
     bool has_target(mxs::Target* target)
     {
-        return std::find(m_targets.begin(), m_targets.end(), target) != m_targets.end();
+        return std::find(config().targets.begin(), config().targets.end(), target) != config().targets.end();
     }
 
     const Config& config() const override
@@ -137,26 +137,12 @@ public:
     }
 
 private:
-    FilterList m_filters;           /**< Ordered list of filters */
+
+    mxs::rworker_local<FilterList> m_filters;   /**< Ordered list of filters */
+
     RateLimits m_rate_limits;       /**< The refresh rate limits for users of each thread */
-    uint64_t   m_wkey;              /**< Key for worker local data */
 
     mxs::rworker_local<Config> m_config;
-
-    std::vector<mxs::Target*> m_targets;
-
-    // Get the worker local filter list
-    FilterList* get_local_filters() const;
-
-    // Update the local filter list on the current worker
-    void update_local_filters();
-
-    // Callback for updating the local filter list
-    static void update_filters_cb(void* data)
-    {
-        Service* service = static_cast<Service*>(data);
-        service->update_local_filters();
-    }
 };
 
 // A connection to a service

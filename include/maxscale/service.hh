@@ -114,6 +114,9 @@ public:
         int32_t     retain_last_statements;         /**< How many statements to retain per session,
                                                      * -1 if not explicitly specified. */
 
+        // The targets this service points to
+        std::vector<mxs::Target*> targets;
+
         bool strip_db_esc;      /**< Remove the '\' characters from database names when querying them from
                                  * the server. MySQL Workbench seems to escape at least the underscore
                                  * character. */
