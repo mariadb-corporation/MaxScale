@@ -175,12 +175,16 @@ public:
     /**
      * Add the DCB to the epoll set of the current worker.
      *
+     * NOTE: The current worker *must* be the owner of the DCB.
+     *
      * @return -1 on error or 0 on success.
      */
     int add_to_worker();
 
     /**
      * Remove the DCB from the epoll set of the current worker.
+     *
+     * NOTE: The current worker *must* be the owner of the DCB.
      *
      * @return -1 on error or 0 on success; actually always 0
      */

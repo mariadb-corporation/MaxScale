@@ -121,7 +121,6 @@ static int    dcb_log_errors_SSL(DCB* dcb, int ret);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 static void   dcb_add_to_all_list(DCB* dcb);
 static void   dcb_add_to_list(DCB* dcb);
-static bool   dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events);
 static DCB*   dcb_find_free();
 static void   dcb_remove_from_list(DCB* dcb);
 
@@ -2944,42 +2943,6 @@ static inline void dcb_sanity_check(DCB* dcb)
     }
 }
 
-namespace
-{
-
-class AddDcbToWorker : public Worker::DisposableTask
-{
-public:
-    AddDcbToWorker(const AddDcbToWorker&) = delete;
-    AddDcbToWorker& operator=(const AddDcbToWorker&) = delete;
-
-    AddDcbToWorker(DCB* dcb, uint32_t events)
-        : m_dcb(dcb)
-        , m_events(events)
-    {
-    }
-
-    void execute(Worker& worker)
-    {
-        RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
-
-        mxb_assert(rworker.id() == static_cast<RoutingWorker*>(m_dcb->owner)->id());
-
-        bool added = dcb_add_to_worker(&rworker, m_dcb, m_events);
-        mxb_assert(added);
-
-        if (!added)
-        {
-            dcb_close(m_dcb);
-        }
-    }
-
-private:
-    DCB*     m_dcb;
-    uint32_t m_events;
-};
-}
-
 static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* data)
 {
     bool rv = true;
@@ -3011,58 +2974,12 @@ static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* da
     return rv;
 }
 
-static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
-{
-    mxb_assert(worker == dcb->owner);
-    bool rv = false;
-
-    if (worker == RoutingWorker::get_current())
-    {
-        // If the DCB should end up on the current thread, we can both add it
-        // to the epoll-instance and to the DCB book-keeping immediately.
-        if (worker->add_fd(dcb->m_fd, events, (MXB_POLL_DATA*)dcb))
-        {
-            dcb_add_to_list(dcb);
-            rv = true;
-        }
-    }
-    else
-    {
-        // Otherwise we'll move the whole operation to the correct worker.
-        // This will only happen for "cli" and "maxinfo" services that must
-        // be served by one thread as there otherwise deadlocks can occur.
-        AddDcbToWorker* task = new(std::nothrow) AddDcbToWorker(dcb, events);
-        mxb_assert(task);
-
-        if (task)
-        {
-            Worker* worker = static_cast<RoutingWorker*>(dcb->owner);
-            mxb_assert(worker);
-
-            if (worker->execute(std::unique_ptr<AddDcbToWorker>(task), Worker::EXECUTE_QUEUED))
-            {
-                rv = true;
-            }
-            else
-            {
-                MXS_ERROR("Could not post task to add DCB to worker.");
-            }
-        }
-        else
-        {
-            MXS_OOM();
-        }
-    }
-
-    return rv;
-}
-
 int DCB::add_to_worker()
 {
     dcb_sanity_check(this);
     int rc = 0;
-    RoutingWorker* owner = static_cast<RoutingWorker*>(this->owner);
-    mxb_assert(owner == RoutingWorker::get_current());
+    RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
+    mxb_assert(worker == RoutingWorker::get_current());
 
     /**
      * Assign the new state before adding the DCB to the worker and store the
@@ -3071,7 +2988,11 @@ int DCB::add_to_worker()
     dcb_state_t old_state = m_state;
     m_state = DCB_STATE_POLLING;
 
-    if (!dcb_add_to_worker(owner, this, THIS_UNIT::poll_events))
+    if (worker->add_fd(m_fd, THIS_UNIT::poll_events, this))
+    {
+        dcb_add_to_list(this);
+    }
+    else
     {
         /**
          * We failed to add the DCB to a worker. Revert the state so that it
@@ -3091,8 +3012,9 @@ int poll_add_dcb(DCB* dcb)
 
 int DCB::remove_from_worker()
 {
-    int dcbfd, rc = 0;
-    struct  epoll_event ev;
+    int rc = 0;
+    RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
+    mxb_assert(worker == RoutingWorker::get_current());
 
     /*< It is possible that dcb has already been removed from the set */
     if (m_state == DCB_STATE_NOPOLLING)
@@ -3115,17 +3037,13 @@ int DCB::remove_from_worker()
     /**
      * Only positive fds can be removed from epoll set.
      */
-    dcbfd = m_fd;
-    mxb_assert(dcbfd != DCBFD_CLOSED || m_role == DCB::Role::INTERNAL);
+    mxb_assert(m_fd != DCBFD_CLOSED || m_role == DCB::Role::INTERNAL);
 
-    if (dcbfd != DCBFD_CLOSED)
+    if (m_fd != DCBFD_CLOSED)
     {
         rc = -1;
 
-        Worker* worker = static_cast<Worker*>(this->owner);
-        mxb_assert(worker);
-
-        if (worker->remove_fd(dcbfd))
+        if (worker->remove_fd(m_fd))
         {
             rc = 0;
         }
