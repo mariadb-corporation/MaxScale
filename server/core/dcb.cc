@@ -1074,7 +1074,7 @@ void DCB::close(DCB* dcb)
     }
 #endif
 
-    if ((DCB_STATE_UNDEFINED == dcb->state()) || (DCB_STATE_DISCONNECTED == dcb->state()))
+    if (DCB_STATE_DISCONNECTED == dcb->state())
     {
         log_illegal_dcb(dcb);
         raise(SIGABRT);
@@ -1662,9 +1662,6 @@ const char* gw_dcb_state2string(dcb_state_t state)
 
     case DCB_STATE_DISCONNECTED:
         return "DCB socket closed";
-
-    case DCB_STATE_UNDEFINED:
-        return "DCB undefined state";
 
     default:
         return "DCB (unknown - erroneous)";
@@ -2931,7 +2928,7 @@ static bool dcb_session_check(DCB* dcb, const char* function)
 /** DCB Sanity checks */
 static inline void dcb_sanity_check(DCB* dcb)
 {
-    if (dcb->state() == DCB_STATE_DISCONNECTED || dcb->state() == DCB_STATE_UNDEFINED)
+    if (dcb->state() == DCB_STATE_DISCONNECTED)
     {
         MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
                   "is %s, but this should be impossible, crashing.",
@@ -3317,9 +3314,6 @@ const char* to_string(dcb_state_t state)
 {
     switch (state)
     {
-    case DCB_STATE_UNDEFINED:
-        return "DCB_STATE_UNDEFINED";
-
     case DCB_STATE_ALLOC:
         return "DCB_STATE_ALLOC";
 
