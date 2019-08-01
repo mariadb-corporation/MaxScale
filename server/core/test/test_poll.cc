@@ -60,11 +60,11 @@ static int test1()
     auto listener = Listener::create("listener", "mariadbclient", listener_params);
 
     auto session = new mxs::Session(listener);
-    dcb = dcb_create_client(session);
+    dcb = dcb_create_client(session, nullptr);
 
     if (dcb == NULL)
     {
-        fprintf(stderr, "\nError on function call: dcb_alloc() returned NULL.\n");
+        fprintf(stderr, "\nError on function call: dcb_create_client() returned NULL.\n");
         return 1;
     }
 

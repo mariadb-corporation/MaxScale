@@ -215,6 +215,9 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
     RRRouterSession* rses = NULL;
     try
     {
+        mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(session->client_dcb->owner);
+        mxb_assert(worker == mxs::RoutingWorker::get_current());
+
         /* Try to connect to as many backends as required. */
         SERVER_REF* sref;
         for (sref = m_service->dbref; sref != NULL; sref = sref->next)
@@ -222,7 +225,7 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
             if (server_ref_is_active(sref) && (backends.size() < m_max_backends))
             {
                 /* Connect to server */
-                DCB* conn = dcb_connect(sref->server, sref->server->protocol().c_str(), session);
+                DCB* conn = dcb_connect(sref->server, sref->server->protocol().c_str(), session, worker);
                 if (conn)
                 {
                     /* Success */
@@ -234,7 +237,7 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
         if (m_write_server)
         {
             /* Connect to write backend server. This is not essential.  */
-            write_dcb = dcb_connect(m_write_server, m_write_server->protocol().c_str(), session);
+            write_dcb = dcb_connect(m_write_server, m_write_server->protocol().c_str(), session, worker);
         }
         if (backends.size() < 1)
         {

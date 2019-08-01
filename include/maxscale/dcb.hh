@@ -298,9 +298,9 @@ inline bool dcb_write(DCB* dcb, GWBUF* queue)
     return dcb->write(queue);
 }
 
-DCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry = nullptr);
-DCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry = nullptr);
-DCB* dcb_connect(SERVER* server, const char* protocol, MXS_SESSION* session, DCB::Registry* registry = nullptr);
+DCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry);
+DCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry);
+DCB* dcb_connect(SERVER* server, const char* protocol, MXS_SESSION* session, DCB::Registry* registry);
 
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 {

@@ -815,7 +815,10 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         return NULL;
     }
 
-    DCB* client_dcb = dcb_create_client(session);
+    mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
+    mxb_assert(worker);
+
+    DCB* client_dcb = dcb_create_client(session, worker);
 
     if (!client_dcb)
     {
