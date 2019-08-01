@@ -337,7 +337,7 @@ client to route to. Depending on the router, some packets may not be routed to
 the client. For example, if a client query was routed to multiple backends,
 MaxScale will receive multiple replies while the client only expects one.
 Routers should pass the reply packet to the last filter in the chain (reversed
-order) using the macro `MXS_SESSION_ROUTE_REPLY`. Filters should call the
+order) using the function `mxs_route_reply`. Filters should call the
 `clientReply` of the previous filter in the chain. There is no need for filters
 to worry about being the first filter in the chain, as this is handled
 transparently by the session creation routine.

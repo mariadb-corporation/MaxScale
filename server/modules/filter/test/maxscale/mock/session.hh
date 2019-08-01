@@ -71,7 +71,7 @@ public:
 
     bool route_query(GWBUF* pBuffer)
     {
-        return session_route_query(this, pBuffer);
+        return mxs_route_query(this, pBuffer);
     }
 
 private:

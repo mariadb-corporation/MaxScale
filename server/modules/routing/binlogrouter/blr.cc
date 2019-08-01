@@ -2571,7 +2571,7 @@ int blr_statistics(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue)
     memcpy(ptr, result, len);
 
     // The concept of a backend DCB doesn't really make sense for blr
-    return MXS_SESSION_ROUTE_REPLY(slave->up, ret, nullptr);
+    return mxs_route_reply(slave->up, ret, nullptr);
 }
 
 /**
@@ -2597,7 +2597,7 @@ int blr_ping(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue)
     *ptr++ = 1;
     *ptr = 0;       // OK
 
-    return MXS_SESSION_ROUTE_REPLY(slave->up, ret, nullptr);
+    return mxs_route_reply(slave->up, ret, nullptr);
 }
 
 
@@ -2703,7 +2703,7 @@ int blr_send_custom_error(ROUTER_SLAVE* slave,
     /** write error message */
     memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
-    return MXS_SESSION_ROUTE_REPLY(slave->up, errbuf, nullptr);
+    return mxs_route_reply(slave->up, errbuf, nullptr);
 }
 
 /**

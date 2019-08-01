@@ -298,7 +298,7 @@ static int httpd_read_event(DCB* generic_dcb)
     {
         strcpy((char*)GWBUF_DATA(uri), url);
         gwbuf_set_type(uri, GWBUF_TYPE_HTTP);
-        MXS_SESSION_ROUTE_QUERY(session, uri);
+        mxs_route_query(session, uri);
     }
 
     /* force the client connecton close */

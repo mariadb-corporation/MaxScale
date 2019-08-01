@@ -411,7 +411,7 @@ const char* session_get_remote(const MXS_SESSION* session)
     return NULL;
 }
 
-bool session_route_query(MXS_SESSION* session, GWBUF* buffer)
+bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
 {
     mxb_assert(session);
     mxb_assert(session->head.routeQuery);
@@ -436,7 +436,7 @@ bool session_route_query(MXS_SESSION* session, GWBUF* buffer)
     return rv;
 }
 
-bool session_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
+bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
 {
     return up->clientReply(up->instance, up->session, buffer, dcb);
 }

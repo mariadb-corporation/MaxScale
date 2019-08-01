@@ -1677,7 +1677,7 @@ bool blr_send_packet(ROUTER_SLAVE* slave, uint8_t* buf, uint32_t len, bool first
         }
 
         slave->stats.n_bytes += GWBUF_LENGTH(buffer);
-        MXS_SESSION_ROUTE_REPLY(slave->up, buffer, nullptr);
+        mxs_route_reply(slave->up, buffer, nullptr);
     }
     else
     {

@@ -279,7 +279,7 @@ static int maxscaled_read_event(DCB* dcb)
 
                 case MAXSCALED_STATE_DATA:
                     {
-                        MXS_SESSION_ROUTE_QUERY(dcb->session(), head);
+                        mxs_route_query(dcb->session(), head);
                         dcb_printf(dcb, "OK");
                     }
                     break;

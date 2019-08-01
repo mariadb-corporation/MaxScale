@@ -206,7 +206,7 @@ static int cdc_read_event(DCB* generic_dcb)
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
                 // the router will close the client connection
-                // rc = MXS_SESSION_ROUTE_QUERY(session, head);
+                // rc = mxs_route_query(session, head);
 
                 // buffer not handled by router right now, consume it
                 gwbuf_free(head);
@@ -223,7 +223,7 @@ static int cdc_read_event(DCB* generic_dcb)
                          (char*)GWBUF_DATA(head));
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
-                rc = MXS_SESSION_ROUTE_QUERY(session, head);
+                rc = mxs_route_query(session, head);
             }
             break;
 

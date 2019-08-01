@@ -227,33 +227,19 @@ void session_set_response(MXS_SESSION* session, const mxs::Upstream* up, GWBUF* 
  *
  * @return True, if the routing should continue, false otherwise.
  */
-bool session_route_query(MXS_SESSION* session, GWBUF* buffer);
+bool mxs_route_query(MXS_SESSION* session, GWBUF* buffer);
 
 /**
  * Function to be used by the router module to route the replies to
  * the first element in the pipeline of filters and a protocol.
  *
- * @param session  The session.
+ * @param session  The upstream component
  * @param buffer   A buffer.
  * @param dcb      The DCB where the response came from
  *
  * @return True, if the routing should continue, false otherwise.
  */
-bool session_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb);
-
-/**
- * A convenience macro that can be used by the protocol modules to route
- * the incoming data to the first element in the pipeline of filters and
- * routers.
- */
-#define MXS_SESSION_ROUTE_QUERY(sess, buf) session_route_query(sess, buf)
-
-/**
- * A convenience macro that can be used by the router modules to route
- * the replies to the first element in the pipeline of filters and
- * the protocol.
- */
-#define MXS_SESSION_ROUTE_REPLY(sess, buf, dcb) session_route_reply(sess, buf, dcb)
+bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb);
 
 /**
  * Start the session
