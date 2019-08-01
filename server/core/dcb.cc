@@ -67,12 +67,6 @@ using std::string;
 #define DCB_EH_NOTICE(s, p)
 #endif
 
-#ifdef EPOLLRDHUP
-constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
-#else
-constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
-#endif
-
 #define DCB_BELOW_LOW_WATER(x)    ((x)->m_low_water && (x)->m_writeqlen < (x)->m_low_water)
 #define DCB_ABOVE_HIGH_WATER(x)   ((x)->m_high_water && (x)->m_writeqlen > (x)->m_high_water)
 #define DCB_THROTTLING_ENABLED(x) ((x)->m_high_water && (x)->m_low_water)
@@ -80,12 +74,17 @@ constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
 namespace
 {
 
-static struct
+static struct THIS_UNIT
 {
     DCB** all_dcbs;     /**< #workers sized array of pointers to DCBs where dcbs are listed. */
 
     bool                  check_timeouts;   /**< Should session timeouts be checked. */
     std::atomic<uint64_t> uid_generator {0};
+#ifdef EPOLLRDHUP
+    static constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
+#else
+    static constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
+#endif
 } this_unit;
 
 static thread_local struct
@@ -3072,7 +3071,7 @@ int DCB::add_to_worker()
     dcb_state_t old_state = m_state;
     m_state = DCB_STATE_POLLING;
 
-    if (!dcb_add_to_worker(owner, this, poll_events))
+    if (!dcb_add_to_worker(owner, this, THIS_UNIT::poll_events))
     {
         /**
          * We failed to add the DCB to a worker. Revert the state so that it
@@ -3175,7 +3174,7 @@ static int upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdat
     {
         MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data", client_dcb->m_user,
                  client_dcb->m_remote);
-        worker->add_fd(client_dcb->m_fd, poll_events, (MXB_POLL_DATA*)client_dcb);
+        worker->add_fd(client_dcb->m_fd, THIS_UNIT::poll_events, (MXB_POLL_DATA*)client_dcb);
         client_dcb->set_state(DCB_STATE_POLLING);
     }
 
@@ -3211,7 +3210,7 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
                  dcb->m_server->name(), client_dcb->m_user, client_dcb->m_remote);
 
         mxb::Worker* worker = static_cast<mxb::Worker*>(dcb->owner);
-        worker->add_fd(dcb->m_fd, poll_events, (MXB_POLL_DATA*)dcb);
+        worker->add_fd(dcb->m_fd, THIS_UNIT::poll_events, (MXB_POLL_DATA*)dcb);
         dcb->set_state(DCB_STATE_POLLING);
     }
 
