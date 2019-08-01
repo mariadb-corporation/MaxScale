@@ -496,11 +496,7 @@ void SERVER::update_extra_port(int new_port)
 
 uint64_t SERVER::status_from_string(const char* str)
 {
-    static struct
-    {
-        const char* str;
-        uint64_t    bit;
-    } ServerBits[] =
+    static std::vector<std::pair<const char*, uint64_t>> status_bits =
     {
         {"running",     SERVER_RUNNING   },
         {"master",      SERVER_MASTER    },
@@ -509,17 +505,17 @@ uint64_t SERVER::status_from_string(const char* str)
         {"maintenance", SERVER_MAINT     },
         {"maint",       SERVER_MAINT     },
         {"stale",       SERVER_WAS_MASTER},
-        {"drain",       SERVER_DRAINING  },
-        {NULL,          0                }
+        {"drain",       SERVER_DRAINING  }
     };
 
-    for (int i = 0; ServerBits[i].str; i++)
+    for (const auto& a : status_bits)
     {
-        if (!strcasecmp(str, ServerBits[i].str))
+        if (strcasecmp(str, a.first) == 0)
         {
-            return ServerBits[i].bit;
+            return a.second;
         }
     }
+
     return 0;
 }
 
