@@ -24,6 +24,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/users.h>
+#include <maxscale/authenticator2.hh>
 
 #include "../gssapi_auth.hh"
 
@@ -86,13 +87,48 @@ static int db_flags = SQLITE_OPEN_READWRITE
     | SQLITE_OPEN_URI
     | SQLITE_OPEN_SHAREDCACHE;
 
-/** The instance structure for the client side GSSAPI authenticator, created in
- *  gssapi_auth_init() */
-typedef struct gssapi_instance
+
+class GSSAPIAuthenticatorSession : public mxs::AuthenticatorSession
 {
+public:
+    ~GSSAPIAuthenticatorSession() override;
+    bool extract(DCB* client, GWBUF* buffer) override;
+    bool ssl_capable(DCB* client) override;
+    int authenticate(DCB* client) override;
+    void free_data(DCB* client) override;
+
+
+    gssapi_auth_state state;               /**< Authentication state*/
+    uint8_t*               principal_name;      /**< Principal name */
+    size_t                 principal_name_len;  /**< Length of the principal name */
+    uint8_t                sequence;            /**< The next packet seqence number */
+    sqlite3*               handle;              /**< SQLite3 database handle */
+
+private:
+    void copy_client_information(DCB* dcb, GWBUF* buffer);
+    bool store_client_token(DCB* dcb, GWBUF* buffer);
+};
+
+class GSSAPI_INSTANCE : public mxs::Authenticator
+{
+public:
+    static GSSAPI_INSTANCE* create(char** options);
+    ~GSSAPI_INSTANCE() override = default;
+    GSSAPIAuthenticatorSession* createSession() override;
+    int load_users(Listener* listener) override;
+    void diagnostics(DCB* output, Listener* listener) override
+    {
+        users_default_diagnostic(output, listener);
+    }
+
+    json_t* diagnostics_json(const Listener* listener) override
+    {
+        return users_default_diagnostic_json(listener);
+    }
+
     char*    principal_name;/**< Service principal name given to the client */
     sqlite3* handle;        /**< SQLite3 database handle */
-} GSSAPI_INSTANCE;
+};
 
 /**
  * @brief Initialize the GSSAPI authenticator
@@ -103,9 +139,9 @@ typedef struct gssapi_instance
  * @param options Listener options
  * @return Authenticator instance
  */
-void* gssapi_auth_init(char** options)
+GSSAPI_INSTANCE* GSSAPI_INSTANCE::create(char** options)
 {
-    GSSAPI_INSTANCE* instance = static_cast<GSSAPI_INSTANCE*>(MXS_MALLOC(sizeof(GSSAPI_INSTANCE)));
+    auto instance = new(std::nothrow) GSSAPI_INSTANCE();
 
     if (instance)
     {
@@ -114,7 +150,7 @@ void* gssapi_auth_init(char** options)
         if (sqlite3_open_v2(GSSAPI_DATABASE_NAME, &instance->handle, db_flags, NULL) != SQLITE_OK)
         {
             MXS_ERROR("Failed to open SQLite3 handle.");
-            MXS_FREE(instance);
+            delete instance;
             return NULL;
         }
 
@@ -125,7 +161,7 @@ void* gssapi_auth_init(char** options)
             MXS_ERROR("Failed to create database: %s", err);
             sqlite3_free(err);
             sqlite3_close_v2(instance->handle);
-            MXS_FREE(instance);
+            delete instance;
             return NULL;
         }
 
@@ -144,7 +180,7 @@ void* gssapi_auth_init(char** options)
             {
                 MXS_ERROR("Unknown option: %s", options[i]);
                 MXS_FREE(instance->principal_name);
-                MXS_FREE(instance);
+                delete instance;
                 return NULL;
             }
         }
@@ -159,9 +195,9 @@ void* gssapi_auth_init(char** options)
     return instance;
 }
 
-void* gssapi_auth_alloc(void* instance)
+GSSAPIAuthenticatorSession* GSSAPI_INSTANCE::createSession()
 {
-    gssapi_auth_t* rval = static_cast<gssapi_auth_t*>(MXS_MALLOC(sizeof(gssapi_auth_t)));
+    auto rval = new (std::nothrow) GSSAPIAuthenticatorSession();
 
     if (rval)
     {
@@ -177,7 +213,7 @@ void* gssapi_auth_alloc(void* instance)
         else
         {
             MXS_ERROR("Failed to open SQLite3 handle.");
-            MXS_FREE(rval);
+            delete rval;
             rval = NULL;
         }
     }
@@ -185,15 +221,10 @@ void* gssapi_auth_alloc(void* instance)
     return rval;
 }
 
-void gssapi_auth_free(void* data)
+GSSAPIAuthenticatorSession::~GSSAPIAuthenticatorSession()
 {
-    if (data)
-    {
-        gssapi_auth_t* auth = (gssapi_auth_t*)data;
-        sqlite3_close_v2(auth->handle);
-        MXS_FREE(auth->principal_name);
-        MXS_FREE(auth);
-    }
+        sqlite3_close_v2(handle);
+        MXS_FREE(principal_name);
 }
 
 /**
@@ -209,7 +240,7 @@ void gssapi_auth_free(void* data)
  * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  * @see https://web.mit.edu/kerberos/krb5-1.5/krb5-1.5.4/doc/krb5-user/What-is-a-Kerberos-Principal_003f.html
  */
-static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE* instance, gssapi_auth_t* auth)
+static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE* instance, GSSAPIAuthenticatorSession* auth)
 {
     size_t principal_name_len = strlen(instance->principal_name);
     size_t plen = sizeof(auth_plugin_name) + 1 + principal_name_len;
@@ -240,7 +271,7 @@ static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE* instance, gssapi_auth_t
  * @param buffer Buffer containing the key
  * @return True on success, false if memory allocation failed
  */
-bool store_client_token(DCB* dcb, GWBUF* buffer)
+bool GSSAPIAuthenticatorSession::store_client_token(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     uint8_t hdr[MYSQL_HEADER_LEN];
@@ -266,10 +297,9 @@ bool store_client_token(DCB* dcb, GWBUF* buffer)
  * @param dcb Client DCB
  * @param buffer Buffer containing the first authentication response
  */
-static void copy_client_information(DCB* dcb, GWBUF* buffer)
+void GSSAPIAuthenticatorSession::copy_client_information(DCB* dcb, GWBUF* buffer)
 {
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
-    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &auth->sequence);
+    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
 }
 
 /**
@@ -279,12 +309,11 @@ static void copy_client_information(DCB* dcb, GWBUF* buffer)
  * @param read_buffer Buffer containing the client's response
  * @return True if authentication can continue, false if not
  */
-static bool gssapi_auth_extract(DCB* dcb, GWBUF* read_buffer)
+bool GSSAPIAuthenticatorSession::extract(DCB* dcb, GWBUF* read_buffer)
 {
     int rval = false;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
 
-    switch (auth->state)
+    switch (state)
     {
     case GSSAPI_AUTH_INIT:
         copy_client_information(dcb, read_buffer);
@@ -297,7 +326,7 @@ static bool gssapi_auth_extract(DCB* dcb, GWBUF* read_buffer)
         break;
 
     default:
-        MXS_ERROR("Unexpected authentication state: %d", auth->state);
+        MXS_ERROR("Unexpected authentication state: %d", state);
         mxb_assert(false);
         break;
     }
@@ -311,7 +340,7 @@ static bool gssapi_auth_extract(DCB* dcb, GWBUF* read_buffer)
  * @param dcb Client DCB
  * @return True if client supports SSL
  */
-bool gssapi_auth_connectssl(DCB* dcb)
+bool GSSAPIAuthenticatorSession::ssl_capable(DCB* dcb)
 {
     MySQLProtocol* protocol = (MySQLProtocol*)dcb->m_protocol;
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
@@ -429,7 +458,8 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
  * @param princ Client principal name
  * @return True if the user has access to the database
  */
-static bool validate_user(gssapi_auth_t* auth, DCB* dcb, MYSQL_session* session, const char* princ)
+static bool validate_user(GSSAPIAuthenticatorSession* auth, DCB* dcb, MYSQL_session* session,
+                          const char* princ)
 {
     mxb_assert(princ);
     size_t len = sizeof(gssapi_auth_query) + strlen(session->user) * 2
@@ -486,13 +516,13 @@ static bool validate_user(gssapi_auth_t* auth, DCB* dcb, MYSQL_session* session,
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-int gssapi_auth_authenticate(DCB* dcb)
+int GSSAPIAuthenticatorSession::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
+    auto auth = this;
     GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->session()->listener->auth_instance();
 
-    if (auth->state == GSSAPI_AUTH_INIT)
+    if (state == GSSAPI_AUTH_INIT)
     {
         /** We need to send the authentication switch packet to change the
          * authentication to something other than the 'mysql_native_password'
@@ -530,7 +560,7 @@ int gssapi_auth_authenticate(DCB* dcb)
  *
  * @param dcb DCB to free
  */
-void gssapi_auth_free_data(DCB* dcb)
+void GSSAPIAuthenticatorSession::free_data(DCB* dcb)
 {
     if (dcb->m_data)
     {
@@ -621,12 +651,12 @@ static void add_gssapi_user(sqlite3* handle,
  * @param listener Listener definition
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-int gssapi_auth_load_users(Listener* listener)
+int GSSAPI_INSTANCE::load_users(Listener* listener)
 {
     const char* user;
     const char* password;
     int rval = MXS_AUTH_LOADUSERS_ERROR;
-    GSSAPI_INSTANCE* inst = (GSSAPI_INSTANCE*)listener->auth_instance();
+    auto inst = this;
     serviceGetUser(listener->service(), &user, &password);
     char* pw;
 
@@ -705,21 +735,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_AUTHENTICATOR MyObject =
-    {
-        gssapi_auth_init,                   /* Initialize authenticator */
-        gssapi_auth_alloc,                  /* Allocate authenticator data */
-        gssapi_auth_extract,                /* Extract data into structure   */
-        gssapi_auth_connectssl,             /* Check if client supports SSL  */
-        gssapi_auth_authenticate,           /* Authenticate user credentials */
-        gssapi_auth_free_data,              /* Free the client data held in DCB */
-        gssapi_auth_free,                   /* Free authenticator data */
-        gssapi_auth_load_users,             /* Load database users */
-        users_default_diagnostic,           /* Default user diagnostic */
-        users_default_diagnostic_json,      /* Default user diagnostic */
-        NULL                                /* No user reauthentication */
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
@@ -728,7 +743,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "GSSAPI authenticator",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::AuthenticatorApi<GSSAPI_INSTANCE>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
