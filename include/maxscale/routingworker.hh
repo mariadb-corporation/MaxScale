@@ -14,16 +14,18 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <unordered_map>
-#include <vector>
+#include <atomic>
 #include <mutex>
 #include <type_traits>
-#include <atomic>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/semaphore.hh>
-#include <maxbase/worker.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/worker.hh>
+#include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
@@ -171,6 +173,7 @@ namespace maxscale
 {
 
 class RoutingWorker : public mxb::Worker
+                    , public DCB::Registry
                     , private MXB_POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;
@@ -182,8 +185,8 @@ public:
         MAIN = -1
     };
 
-    typedef Registry<MXS_SESSION> SessionsById;
-    typedef std::vector<DCB*>     Zombies;
+    typedef mxs::Registry<MXS_SESSION> SessionsById;
+    typedef std::vector<DCB*>          Zombies;
 
     typedef std::vector<void*>           LocalData;
     typedef std::vector<void (*)(void*)> DataDeleters;
@@ -625,6 +628,11 @@ public:
     };
 
 private:
+    // DCB::Registry
+    void add(DCB* pDcb) override;
+    void remove(DCB* pDcb) override;
+
+private:
     class WatchdogNotifier;
     friend WatchdogNotifier;
 
@@ -638,14 +646,17 @@ private:
     LocalData    m_local_data;      /*< Data local to this worker */
     DataDeleters m_data_deleters;   /*< Delete functions for the local data */
 
+    using DCBs = std::unordered_set<DCB*>;
+    DCBs         m_dcbs;
+
     RoutingWorker();
     virtual ~RoutingWorker();
 
     static RoutingWorker* create(int epoll_listener_fd);
 
-    bool pre_run();     // override
-    void post_run();    // override
-    void epoll_tick();  // override
+    bool pre_run() override;
+    void post_run() override;
+    void epoll_tick() override;
 
     void delete_zombies();
     void check_systemd_watchdog();

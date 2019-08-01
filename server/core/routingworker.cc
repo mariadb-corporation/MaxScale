@@ -562,6 +562,19 @@ void RoutingWorker::delete_zombies()
     }
 }
 
+void RoutingWorker::add(DCB* pDcb)
+{
+    auto rv = m_dcbs.insert(pDcb);
+    mxb_assert(rv.second);
+}
+
+void RoutingWorker::remove(DCB* pDcb)
+{
+    auto it = m_dcbs.find(pDcb);
+    mxb_assert(it != m_dcbs.end());
+    m_dcbs.erase(it);
+}
+
 bool RoutingWorker::pre_run()
 {
     this_thread.current_worker_id = m_id;
