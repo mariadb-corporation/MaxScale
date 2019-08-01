@@ -24,6 +24,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/resultset.hh>
 #include <maxscale/utils.hh>
+#include <maxscale/target.hh>
 
 #include "filter.hh"
 #include "service.hh"
@@ -114,7 +115,7 @@ public:
     mxs::Downstream     down;
 };
 
-class Session : public MXS_SESSION
+class Session : public MXS_SESSION, public mxs::Component
 {
 public:
     class QueryInfo
@@ -211,6 +212,11 @@ public:
         return m_dcb_set;
     }
 
+    // Implementation of mxs::Component
+    int32_t routeQuery(GWBUF* buffer) override;
+    int32_t clientReply(GWBUF* buffer, Component* down) override;
+    bool    handleError(GWBUF* error, Component* down) override;
+
 private:
     FilterList        m_filters;
     SessionVarsByName m_variables;
@@ -219,6 +225,8 @@ private:
     DCBSet            m_dcb_set;                /*< Set of associated backend DCBs */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
+
+    std::unique_ptr<mxs::Endpoint> m_down;
 };
 }
 

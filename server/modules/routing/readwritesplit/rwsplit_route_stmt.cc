@@ -142,7 +142,12 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
      */
     gwbuf_set_type(querybuf, GWBUF_TYPE_REPLAYED);
 
-    session_delay_routing(session, router_as_downstream(session), querybuf, delay);
+    mxs::Downstream down;
+    down.instance = (mxs_filter*)m_router;
+    down.session = (mxs_filter_session*)this;
+    down.routeQuery = (DOWNSTREAMFUNC)RWSplit::routeQuery;
+
+    session_delay_routing(session, down, querybuf, delay);
     ++m_retry_duration;
 }
 

@@ -86,11 +86,8 @@ MXS_SESSION::MXS_SESSION(const SListener& listener)
     , m_id(session_get_next_id())
     , client_dcb(nullptr)
     , listener(listener)
-    , router_session(nullptr)
     , stats{time(0)}
     , service(listener ? listener->service() : nullptr)
-    , head{}
-    , tail{}
     , refcount(1)
     , trx_state(SESSION_TRX_INACTIVE)
     , autocommit(config_get_global_options()->qc_sql_mode == QC_SQL_MODE_ORACLE ? false : true)
@@ -196,7 +193,6 @@ void printSession(MXS_SESSION* session)
     printf("\tClient DCB:   %p\n", session->client_dcb);
     printf("\tConnected:    %s\n",
            asctime_r(localtime_r(&session->stats.connect, &result), timebuf));
-    printf("\tRouter Session: %p\n", session->router_session);
 }
 
 bool printAllSessions_cb(DCB* dcb, void* data)
@@ -941,15 +937,6 @@ bool session_delay_routing(MXS_SESSION* session, mxs::Downstream down, GWBUF* bu
     return success;
 }
 
-mxs::Downstream router_as_downstream(MXS_SESSION* session)
-{
-    mxs::Downstream head;
-    head.instance = (MXS_FILTER*)session->service->router_instance;
-    head.session = (MXS_FILTER_SESSION*)session->router_session;
-    head.routeQuery = (DOWNSTREAMFUNC)session->service->router->routeQuery;
-    return head;
-}
-
 const char* session_get_close_reason(const MXS_SESSION* session)
 {
     switch (session->close_reason)
@@ -980,8 +967,9 @@ const char* session_get_close_reason(const MXS_SESSION* session)
 
 Session::Session(const SListener& listener)
     : MXS_SESSION(listener)
+    , m_down(static_cast<Service*>(listener->service())->get_connection(this, this))
 {
-    if (service->retain_last_statements != -1)      // Explicitly set for the service
+    if (service->retain_last_statements != -1)          // Explicitly set for the service
     {
         m_retain_last_statements = service->retain_last_statements;
     }
@@ -994,6 +982,7 @@ Session::Session(const SListener& listener)
 Session::~Session()
 {
     mxb_assert(refcount == 0);
+    mxb_assert(!m_down->is_open());
 
     mxb::atomic::add(&service->stats().n_current, -1, mxb::atomic::RELAXED);
 
@@ -1009,17 +998,6 @@ Session::~Session()
     }
 
     m_state = MXS_SESSION::State::FREE;
-
-    if (router_session)
-    {
-        service->router->freeSession(service->router_instance, router_session);
-    }
-
-    for (auto& f : m_filters)
-    {
-        f.filter->obj->closeSession(f.instance, f.session);
-        f.filter->obj->freeSession(f.instance, f.session);
-    }
 }
 
 void Session::set_client_dcb(ClientDCB* dcb)
@@ -1156,63 +1134,6 @@ json_t* Session::log_as_json() const
     }
 
     return pLog;
-}
-
-bool Session::setup_filters(Service* service)
-{
-    for (const auto& a : service->get_filters())
-    {
-        m_filters.emplace_back(a);
-    }
-
-    for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
-    {
-        auto& f = *it;
-        f.session = f.filter->obj->newSession(f.instance, this, &f.down, &f.up);
-
-        if (!f.session)
-        {
-            MXS_ERROR("Failed to create filter session for '%s'", f.filter->name.c_str());
-
-            for (auto d = m_filters.begin(); d != it; ++d)
-            {
-                mxb_assert(d->session);
-                d->filter->obj->closeSession(d->instance, d->session);
-                d->filter->obj->freeSession(d->instance, d->session);
-            }
-
-            m_filters.clear();
-            return false;
-        }
-    }
-
-    // The head of the chain currently points at the router
-    mxs::Downstream chain_head = head;
-
-    for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
-    {
-        it->down = chain_head;
-        chain_head.instance = it->instance;
-        chain_head.session = it->session;
-        chain_head.routeQuery = it->filter->obj->routeQuery;
-    }
-
-    head = chain_head;
-
-    // The tail is the upstream component of the service (the client DCB)
-    mxs::Upstream chain_tail = tail;
-
-    for (auto it = m_filters.begin(); it != m_filters.end(); it++)
-    {
-        it->up = chain_tail;
-        chain_tail.instance = it->instance;
-        chain_tail.session = it->session;
-        chain_tail.clientReply = it->filter->obj->clientReply;
-    }
-
-    tail = chain_tail;
-
-    return true;
 }
 
 bool Session::add_variable(const char* name, session_variable_handler_t handler, void* context)
@@ -1525,67 +1446,27 @@ void Session::QueryInfo::reset_server_bookkeeping()
 
 bool Session::start()
 {
-    router_session = service->router->newSession(service->router_instance, this, &tail);
+    bool rval = false;
 
-    if (!router_session)
+    if (m_down->connect())
     {
-        m_state = MXS_SESSION::State::FAILED;
-        MXS_ERROR("Failed to create new router session for service '%s'. "
-                  "See previous errors for more details.", service->name());
-        return false;
+        rval = true;
+        m_state = MXS_SESSION::State::STARTED;
+        mxb::atomic::add(&service->stats().n_connections, 1, mxb::atomic::RELAXED);
+        mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
+
+        MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
+                 service->name(), id(),
+                 client_dcb->m_user ? client_dcb->m_user : "<no user>",
+                 client_dcb->m_remote);
     }
 
-    /*
-     * Pending filter chain being setup set the head of the chain to
-     * be the router. As filters are inserted the current head will
-     * be pushed to the filter and the head updated.
-     *
-     * NB This dictates that filters are created starting at the end
-     * of the chain nearest the router working back to the client
-     * protocol end of the chain.
-     */
-    // NOTE: Here we cast the router instance into a MXS_FILTER and
-    // NOTE: the router session into a MXS_FILTER_SESSION and
-    // NOTE: the router routeQuery into a filter routeQuery. That
-    // NOTE: is in order to be able to treat the router as the first
-    // NOTE: filter.
-    head = router_as_downstream(this);
-
-    // NOTE: Here we cast the session into a MXS_FILTER and MXS_FILTER_SESSION
-    // NOTE: and session_reply into a filter clientReply. That's dubious but ok
-    // NOTE: as session_reply will know what to do. In practice, the session
-    // NOTE: will be called as if it would be the last filter.
-    tail.instance = (MXS_FILTER*)this;
-    tail.session = (MXS_FILTER_SESSION*)this;
-    tail.clientReply = session_reply;
-
-    if (!setup_filters(static_cast<Service*>(service)))
-    {
-        m_state = MXS_SESSION::State::FAILED;
-        MXS_ERROR("Setting up filters failed. Terminating session %s.", service->name());
-        return false;
-    }
-
-    m_state = MXS_SESSION::State::STARTED;
-    mxb::atomic::add(&service->stats().n_connections, 1, mxb::atomic::RELAXED);
-    mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
-
-    MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
-             service->name(), id(),
-             client_dcb->m_user ? client_dcb->m_user : "<no user>",
-             client_dcb->m_remote);
-
-    return true;
+    return rval;
 }
-
 
 void Session::close()
 {
-    if (router_session)
-    {
-        m_state = MXS_SESSION::State::STOPPING;
-        service->router->closeSession(service->router_instance, router_session);
-    }
+    m_down->close();
 }
 
 void Session::append_session_log(std::string log)
@@ -1611,4 +1492,20 @@ void Session::dump_session_log()
 
         MXS_NOTICE("Session log for session (%" PRIu64"): \n%s ", id(), log.c_str());
     }
+}
+
+int32_t Session::routeQuery(GWBUF* buffer)
+{
+    return m_down->routeQuery(buffer);
+}
+
+int32_t Session::clientReply(GWBUF* buffer, Component* down)
+{
+    return client_dcb->protocol_write(buffer);
+}
+
+bool Session::handleError(GWBUF* error, Component* down)
+{
+    dcb_close(client_dcb);
+    return false;
 }

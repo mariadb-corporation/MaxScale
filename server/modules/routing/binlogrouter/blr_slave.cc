@@ -3134,15 +3134,6 @@ int blr_slave_callback(DCB* dcb, DCB::Reason reason, void* data)
     ROUTER_SLAVE* slave = (ROUTER_SLAVE*)data;
     ROUTER_INSTANCE* router = slave->router;
 
-    if (NULL == dcb->session()->router_session)
-    {
-        /*
-         * The following processing will fail if there is no router session,
-         * because the "data" parameter will not contain meaningful data,
-         * so we have no choice but to stop here.
-         */
-        return 0;
-    }
     if (reason == DCB::Reason::DRAINED)
     {
         if (slave->state == BLRS_DUMPING)

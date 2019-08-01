@@ -124,8 +124,6 @@ class Component
 public:
     virtual ~Component() = default;
 
-    virtual mxs::Target* target() const = 0;
-
     virtual int32_t routeQuery(GWBUF* buffer) = 0;
 
     virtual int32_t clientReply(GWBUF* buffer, Component* down) = 0;
@@ -144,6 +142,8 @@ public:
     virtual void close() = 0;
 
     virtual bool is_open() const = 0;
+
+    virtual mxs::Target* target() const = 0;
 };
 
 // A routing target

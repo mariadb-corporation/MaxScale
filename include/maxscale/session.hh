@@ -186,17 +186,14 @@ public:
     ClientDCB* client_dcb;   /*< The client connection */
     SListener listener;     /*< The origin of the connection */
 
-    struct mxs_router_session* router_session;          /*< The router instance data */
-    MXS_SESSION_STATS          stats;                   /*< Session statistics */
-    SERVICE*                   service;                 /*< The service this session is using */
-    mxs::Downstream            head;                    /*< Head of the filter chain */
-    mxs::Upstream              tail;                    /*< The tail of the filter chain */
-    int                        refcount;                /*< Reference count on the session */
-    mxs_session_trx_state_t    trx_state;               /*< The current transaction state. */
-    bool                       autocommit;              /*< Whether autocommit is on. */
-    intptr_t                   client_protocol_data;    /*< Owned and managed by the client protocol. */
-    bool                       qualifies_for_pooling;   /**< Whether this session qualifies for the connection
-                                                         * pool */
+    MXS_SESSION_STATS       stats;                  /*< Session statistics */
+    SERVICE*                service;                /*< The service this session is using */
+    int                     refcount;               /*< Reference count on the session */
+    mxs_session_trx_state_t trx_state;              /*< The current transaction state. */
+    bool                    autocommit;             /*< Whether autocommit is on. */
+    intptr_t                client_protocol_data;   /*< Owned and managed by the client protocol. */
+    bool                    qualifies_for_pooling;  /**< Whether this session qualifies for the connection
+                                                     * pool */
     struct
     {
         mxs::Upstream up;           /*< Upward component to receive buffer. */
@@ -639,15 +636,6 @@ const char* session_get_dump_statements_str();
  * @return True if queuing of the query was successful
  */
 bool session_delay_routing(MXS_SESSION* session, mxs::Downstream down, GWBUF* buffer, int seconds);
-
-/**
- * Cast the session's router as a mxs::Downstream object
- *
- * @param session The session to use
- *
- * @return The router cast as mxs::Downstream
- */
-mxs::Downstream router_as_downstream(MXS_SESSION* session);
 
 /**
  * Get the reason why a session was closed
