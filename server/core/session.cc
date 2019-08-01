@@ -72,12 +72,6 @@ struct
 };
 }
 
-static void         session_initialize(void* session);
-static void         session_add_to_all_list(MXS_SESSION* session);
-static MXS_SESSION* session_find_free();
-static void         session_final_free(MXS_SESSION* session);
-static void         session_deliver_response(MXS_SESSION* session);
-
 /**
  * The clientReply of the session.
  *
@@ -173,7 +167,8 @@ static void session_free(MXS_SESSION* session)
     MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name(), session->id());
     Service* service = static_cast<Service*>(session->service);
 
-    session_final_free(session);
+    delete static_cast<Session*>(session);
+
     bool should_destroy = !service->active();
 
     if (mxb::atomic::add(&service->client_count, -1) == 1 && should_destroy)
@@ -183,23 +178,6 @@ static void session_free(MXS_SESSION* session)
         main_worker->execute(std::unique_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)),
                              Worker::EXECUTE_AUTO);
     }
-}
-
-static void session_final_free(MXS_SESSION* ses)
-{
-    Session* session = static_cast<Session*>(ses);
-    delete session;
-}
-
-/**
- * Check to see if a session is valid, i.e. in the list of all sessions
- *
- * @param session       Session to check
- * @return              1 if the session is valid otherwise 0
- */
-int session_isvalid(MXS_SESSION* session)
-{
-    return session != NULL;
 }
 
 /**
@@ -411,23 +389,50 @@ const char* session_get_remote(const MXS_SESSION* session)
     return NULL;
 }
 
+/**
+ * Delivers a provided response to the upstream filter that should
+ * receive it.
+ *
+ * @param session  The session.
+ */
+static void session_deliver_response(MXS_SESSION* session)
+{
+    MXS_FILTER* filter_instance = session->response.up.instance;
+
+    if (filter_instance)
+    {
+        MXS_FILTER_SESSION* filter_session = session->response.up.session;
+        GWBUF* buffer = session->response.buffer;
+
+        mxb_assert(filter_session);
+        mxb_assert(buffer);
+
+        // TODO: Figure out what to do with the DCB argument
+        session->response.up.clientReply(filter_instance, filter_session, buffer, nullptr);
+
+        session->response.up.instance = NULL;
+        session->response.up.session = NULL;
+        session->response.up.clientReply = NULL;
+        session->response.buffer = NULL;
+
+        // If some filter short-circuits the routing, then there will
+        // be no response from a server and we need to ensure that
+        // subsequent book-keeping targets the right statement.
+        static_cast<Session*>(session)->book_last_as_complete();
+    }
+
+    mxb_assert(!session->response.up.instance);
+    mxb_assert(!session->response.up.session);
+    mxb_assert(!session->response.up.clientReply);
+    mxb_assert(!session->response.buffer);
+}
+
 bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
 {
+    Session* session = static_cast<Session*>(ses);
     mxb_assert(session);
-    mxb_assert(session->head.routeQuery);
-    mxb_assert(session->head.instance);
-    mxb_assert(session->head.session);
 
-    bool rv;
-
-    if (session->head.routeQuery(session->head.instance, session->head.session, buffer) == 1)
-    {
-        rv = true;
-    }
-    else
-    {
-        rv = false;
-    }
+    bool rv = session->routeQuery(buffer);
 
     // In case some filter has short-circuited the request processing we need
     // to deliver that now to the client.
@@ -777,44 +782,6 @@ void session_set_response(MXS_SESSION* session, const mxs::Upstream* up, GWBUF* 
 
     session->response.up = *up;
     session->response.buffer = buffer;
-}
-
-/**
- * Delivers a provided response to the upstream filter that should
- * receive it.
- *
- * @param session  The session.
- */
-static void session_deliver_response(MXS_SESSION* session)
-{
-    MXS_FILTER* filter_instance = session->response.up.instance;
-
-    if (filter_instance)
-    {
-        MXS_FILTER_SESSION* filter_session = session->response.up.session;
-        GWBUF* buffer = session->response.buffer;
-
-        mxb_assert(filter_session);
-        mxb_assert(buffer);
-
-        // TODO: Figure out what to do with the DCB argument
-        session->response.up.clientReply(filter_instance, filter_session, buffer, nullptr);
-
-        session->response.up.instance = NULL;
-        session->response.up.session = NULL;
-        session->response.up.clientReply = NULL;
-        session->response.buffer = NULL;
-
-        // If some filter short-circuits the routing, then there will
-        // be no response from a server and we need to ensure that
-        // subsequent book-keeping targets the right statement.
-        static_cast<Session*>(session)->book_last_as_complete();
-    }
-
-    mxb_assert(!session->response.up.instance);
-    mxb_assert(!session->response.up.session);
-    mxb_assert(!session->response.up.clientReply);
-    mxb_assert(!session->response.buffer);
 }
 
 void session_set_retain_last_statements(uint32_t n)

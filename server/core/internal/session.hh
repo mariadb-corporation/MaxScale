@@ -44,8 +44,6 @@ typedef enum
     SESSION_LIST_CONNECTION
 } SESSIONLISTFILTER;
 
-int session_isvalid(MXS_SESSION*);
-
 /**
  * Link a session to a backend DCB.
  *
