@@ -18,7 +18,6 @@
 #include <gssapi.h>
 #include <maxscale/sqlite3.h>
 
-MXS_BEGIN_DECLS
 
 /** Client auth plugin name */
 static const char auth_plugin_name[] = "auth_gssapi_client";
@@ -35,17 +34,6 @@ enum gssapi_auth_state
     GSSAPI_AUTH_FAILED
 };
 
-/** Common structure for both backend and client authenticators */
-typedef struct gssapi_auth
-{
-    enum gssapi_auth_state state;               /**< Authentication state*/
-    uint8_t*               principal_name;      /**< Principal name */
-    size_t                 principal_name_len;  /**< Length of the principal name */
-    uint8_t                sequence;            /**< The next packet seqence number */
-    sqlite3*               handle;              /**< SQLite3 database handle */
-} gssapi_auth_t;
-
 /** Report GSSAPI errors */
 void report_error(OM_uint32 major, OM_uint32 minor);
 
-MXS_END_DECLS

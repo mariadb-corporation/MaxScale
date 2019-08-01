@@ -15,7 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/authenticator.hh>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
@@ -26,9 +26,30 @@
  * @file gssapi_backend_auth.c - GSSAPI backend authenticator
  */
 
-void* gssapi_backend_auth_alloc(void* instance)
+class GSSAPIBackendAuthenticatorSession : public mxs::AuthenticatorBackendSession
 {
-    gssapi_auth_t* rval = static_cast<gssapi_auth_t*>(MXS_MALLOC(sizeof(gssapi_auth_t)));
+public:
+    static GSSAPIBackendAuthenticatorSession* newSession();
+
+    ~GSSAPIBackendAuthenticatorSession() override;
+    bool extract(DCB* backend, GWBUF* buffer) override;
+    bool ssl_capable(DCB* backend) override;
+    int authenticate(DCB* backend) override;
+
+    gssapi_auth_state state;               /**< Authentication state*/
+    uint8_t*               principal_name;      /**< Principal name */
+    size_t                 principal_name_len;  /**< Length of the principal name */
+    uint8_t                sequence;            /**< The next packet seqence number */
+    sqlite3*               handle;              /**< SQLite3 database handle */
+
+private:
+    bool extract_principal_name(DCB* dcb, GWBUF* buffer);
+    bool send_new_auth_token(DCB* dcb);
+};
+
+GSSAPIBackendAuthenticatorSession* GSSAPIBackendAuthenticatorSession::newSession()
+{
+    auto rval = new (std::nothrow) GSSAPIBackendAuthenticatorSession();
 
     if (rval)
     {
@@ -41,14 +62,9 @@ void* gssapi_backend_auth_alloc(void* instance)
     return rval;
 }
 
-void gssapi_backend_auth_free(void* data)
+GSSAPIBackendAuthenticatorSession::~GSSAPIBackendAuthenticatorSession()
 {
-    if (data)
-    {
-        gssapi_auth_t* auth = (gssapi_auth_t*)data;
-        MXS_FREE(auth->principal_name);
-        MXS_FREE(auth);
-    }
+    MXS_FREE(principal_name);
 }
 
 /**
@@ -56,10 +72,10 @@ void gssapi_backend_auth_free(void* data)
  * @param dcb Backend DCB
  * @return True on success, false on error
  */
-static bool send_new_auth_token(DCB* dcb)
+bool GSSAPIBackendAuthenticatorSession::send_new_auth_token(DCB* dcb)
 {
     bool rval = false;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
+    auto auth = this;
     MYSQL_session* ses = (MYSQL_session*)dcb->session()->client_dcb->m_data;
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + ses->auth_token_len);
 
@@ -89,13 +105,13 @@ static bool send_new_auth_token(DCB* dcb)
  * @param buffer Buffer containing an AuthSwitchRequest packet
  * @return True on success, false on error
  */
-bool extract_principal_name(DCB* dcb, GWBUF* buffer)
+bool GSSAPIBackendAuthenticatorSession::extract_principal_name(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     size_t buflen = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
     uint8_t databuf[buflen];
     uint8_t* data = databuf;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
+    auto auth = this;
 
     /** Copy the payload and the current packet sequence number */
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, buflen, databuf);
@@ -162,10 +178,10 @@ bool extract_principal_name(DCB* dcb, GWBUF* buffer)
  * @return True if authentication is ongoing or complete,
  * false if authentication failed.
  */
-static bool gssapi_backend_auth_extract(DCB* dcb, GWBUF* buffer)
+bool GSSAPIBackendAuthenticatorSession::extract(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
+    auto auth = this;
 
     if (auth->state == GSSAPI_AUTH_INIT && extract_principal_name(dcb, buffer))
     {
@@ -189,7 +205,7 @@ static bool gssapi_backend_auth_extract(DCB* dcb, GWBUF* buffer)
  * @param dcb Backend DCB
  * @return True if DCB supports SSL
  */
-static bool gssapi_backend_auth_connectssl(DCB* dcb)
+bool GSSAPIBackendAuthenticatorSession::ssl_capable(DCB* dcb)
 {
     return dcb->m_server->ssl().context() != NULL;
 }
@@ -200,10 +216,10 @@ static bool gssapi_backend_auth_connectssl(DCB* dcb)
  * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
  * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
  */
-static int gssapi_backend_auth_authenticate(DCB* dcb)
+int GSSAPIBackendAuthenticatorSession::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->m_authenticator_data;
+    auto auth = this;
 
     if (auth->state == GSSAPI_AUTH_INIT)
     {
@@ -228,21 +244,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_AUTHENTICATOR MyObject =
-    {
-        NULL,                                   /* No initialize entry point */
-        gssapi_backend_auth_alloc,              /* Allocate authenticator data */
-        gssapi_backend_auth_extract,            /* Extract data into structure   */
-        gssapi_backend_auth_connectssl,         /* Check if client supports SSL  */
-        gssapi_backend_auth_authenticate,       /* Authenticate user credentials */
-        NULL,                                   /* Client plugin will free shared data */
-        gssapi_backend_auth_free,               /* Free authenticator data */
-        NULL,                                   /* Load users from backend databases */
-        NULL,                                   /* No diagnostic */
-        NULL,
-        NULL                                /* No user reauthentication */
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
@@ -251,7 +252,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "GSSAPI backend authenticator",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::BackendAuthenticatorApi<GSSAPIBackendAuthenticatorSession>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
