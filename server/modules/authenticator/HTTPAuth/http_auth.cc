@@ -13,46 +13,74 @@
 
 #define MXS_MODULE_NAME "HTTPAuth"
 
-#include <maxscale/authenticator.hh>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/users.h>
 
-static int http_auth_authenticate(DCB* dcb)
+class HTTPAuthenticatorSession : public mxs::AuthenticatorSession
 {
-    return 0;
-}
+public:
+    ~HTTPAuthenticatorSession() override = default;
+    bool extract(DCB* client, GWBUF* buffer) override
+    {
+        return true;
+    }
 
-static bool http_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
+    bool ssl_capable(DCB* client) override
+    {
+        return false;
+    }
+
+    int authenticate(DCB* client) override
+    {
+        return 0;
+    }
+
+    void free_data(DCB* client) override
+    {
+    }
+
+    // No fields, authenticator does nothing.
+};
+
+class HTTPAuthenticator : public mxs::Authenticator
 {
-    return true;
-}
+public:
+    static HTTPAuthenticator* create(char** options)
+    {
+        return new(std::nothrow) HTTPAuthenticator();
+    }
 
-static bool http_auth_is_client_ssl_capable(DCB* dcb)
-{
-    return false;
-}
+    ~HTTPAuthenticator() override = default;
 
-static void http_auth_free_client_data(DCB* dcb)
+    HTTPAuthenticatorSession* createSession() override
+    {
+        return new(std::nothrow) HTTPAuthenticatorSession();
+    }
+
+    int load_users(Listener* listener) override
+    {
+        return users_default_loadusers(listener);
+    }
+
+    void diagnostics(DCB* output, Listener* listener) override
+    {
+        users_default_diagnostic(output, listener);
+
+    }
+
+    json_t* diagnostics_json(const Listener* listener) override
+    {
+        return users_default_diagnostic_json(listener);
+    }
+};
+
+extern "C"
 {
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_AUTHENTICATOR MyObject =
-    {
-        NULL,                               /* No initialize entry point */
-        NULL,                               /* No create entry point */
-        http_auth_set_protocol_data,        /* Extract data into structure   */
-        http_auth_is_client_ssl_capable,    /* Check if client supports SSL  */
-        http_auth_authenticate,             /* Authenticate user credentials */
-        http_auth_free_client_data,         /* Free the client data held in DCB */
-        NULL,                               /* No destroy entry point */
-        users_default_loadusers,            /* Load generic users */
-        users_default_diagnostic,           /* Default user diagnostic */
-        users_default_diagnostic_json,      /* Default user diagnostic */
-        NULL                                /* No user reauthentication */
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
@@ -61,7 +89,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "The MaxScale HTTP authenticator (does nothing)",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::AuthenticatorApi<HTTPAuthenticator>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
