@@ -2017,3 +2017,188 @@ const MXS_MODULE_PARAM* common_service_params()
     };
     return config_service_params;
 }
+
+ServiceEndpoint::ServiceEndpoint(MXS_SESSION* session, Service* service, mxs::Component* up)
+    : m_up(up)
+    , m_session(session)
+    , m_service(service)
+{
+}
+
+ServiceEndpoint::~ServiceEndpoint()
+{
+    if (is_open())
+    {
+        close();
+    }
+}
+
+// static
+int32_t ServiceEndpoint::upstream_function(MXS_FILTER* instance,
+                                           MXS_FILTER_SESSION* session,
+                                           GWBUF* buffer,
+                                           DCB* dcb)
+{
+    ServiceEndpoint* self = reinterpret_cast<ServiceEndpoint*>(session);
+    return self->send_upstream(buffer, dcb);
+}
+
+int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, DCB* dcb)
+{
+    return m_up->clientReply(buffer, this);
+}
+
+void ServiceEndpoint::set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down)
+{
+    m_down = std::move(down);
+}
+
+mxs::Target* ServiceEndpoint::target() const
+{
+    return m_service;
+}
+
+bool ServiceEndpoint::connect()
+{
+    std::vector<mxs::Endpoint*> endpoints;
+    endpoints.reserve(m_down.size());
+    std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
+                   std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
+
+    m_router_session = m_service->router->newSession(m_service->router_instance, m_session,
+                                                     &m_tail, endpoints);
+
+    if (!m_router_session)
+    {
+        MXS_ERROR("Failed to create new router session for service '%s'. "
+                  "See previous errors for more details.", m_service->name());
+        return false;
+    }
+
+    m_head.instance = (MXS_FILTER*)m_service->router_instance;
+    m_head.session = (MXS_FILTER_SESSION*)m_router_session;
+    m_head.routeQuery = (DOWNSTREAMFUNC)m_service->router->routeQuery;
+
+    m_tail.instance = (MXS_FILTER*)this;
+    m_tail.session = (MXS_FILTER_SESSION*)this;
+    m_tail.clientReply = ServiceEndpoint::upstream_function;
+
+    for (const auto& a : m_service->get_filters())
+    {
+        m_filters.emplace_back(a);
+    }
+
+    for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
+    {
+        auto& f = *it;
+        f.session = f.filter->obj->newSession(f.instance, m_session, &f.down, &f.up);
+
+        if (!f.session)
+        {
+            MXS_ERROR("Failed to create filter session for '%s'", f.filter->name.c_str());
+
+            for (auto d = m_filters.begin(); d != it; ++d)
+            {
+                mxb_assert(d->session);
+                d->filter->obj->closeSession(d->instance, d->session);
+                d->filter->obj->freeSession(d->instance, d->session);
+            }
+
+            m_filters.clear();
+            return false;
+        }
+    }
+
+    // The head of the chain currently points at the router
+    mxs::Downstream chain_head = m_head;
+
+    for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
+    {
+        it->down = chain_head;
+        chain_head.instance = it->instance;
+        chain_head.session = it->session;
+        chain_head.routeQuery = it->filter->obj->routeQuery;
+    }
+
+    m_head = chain_head;
+
+    // The tail is the upstream component of the service (the client DCB)
+    mxs::Upstream chain_tail = m_tail;
+
+    for (auto it = m_filters.begin(); it != m_filters.end(); it++)
+    {
+        it->up = chain_tail;
+        chain_tail.instance = it->instance;
+        chain_tail.session = it->session;
+        chain_tail.clientReply = it->filter->obj->clientReply;
+    }
+
+    m_tail = chain_tail;
+
+    // The endpoint is now "connected"
+    m_open = true;
+
+    return true;
+}
+
+void ServiceEndpoint::close()
+{
+    m_service->router->closeSession(m_service->router_instance, m_router_session);
+
+    for (auto& a : m_filters)
+    {
+        a.filter->obj->closeSession(a.instance, a.session);
+    }
+
+    m_service->router->freeSession(m_service->router_instance, m_router_session);
+
+    for (auto& a : m_filters)
+    {
+        a.filter->obj->freeSession(a.instance, a.session);
+    }
+}
+
+bool ServiceEndpoint::is_open() const
+{
+    return m_open;
+}
+
+int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
+{
+    mxb_assert(m_open);
+    return m_head.routeQuery(m_head.instance, m_head.session, buffer);
+}
+
+int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Component* down)
+{
+    return m_tail.clientReply(m_tail.instance, m_tail.session, buffer, nullptr);
+}
+
+bool ServiceEndpoint::handleError(GWBUF* error, mxs::Component* down)
+{
+    bool ok = false;
+    m_service->router->handleError(m_service->router_instance, m_router_session, error, nullptr,
+                                   ERRACT_NEW_CONNECTION, &ok);
+    return ok;
+}
+
+std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_SESSION* session)
+{
+    std::unique_ptr<ServiceEndpoint> my_connection(new(std::nothrow) ServiceEndpoint(session, this, up));
+
+    if (my_connection)
+    {
+        std::vector<std::unique_ptr<mxs::Endpoint>> connections;
+        connections.reserve(m_targets.size());
+
+        for (auto a : m_targets)
+        {
+            connections.push_back(a->get_connection(my_connection.get(), session));
+            mxb_assert(connections.back().get());
+        }
+
+        my_connection->set_endpoints(std::move(connections));
+    }
+
+    return my_connection;
+}

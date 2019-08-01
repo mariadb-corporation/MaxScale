@@ -14,6 +14,7 @@
 
 #include <maxscale/service.hh>
 #include <maxscale/resultset.hh>
+#include <maxscale/router.hh>
 
 #include <mutex>
 #include <string>
@@ -116,6 +117,20 @@ public:
         return m_monitor != nullptr;
     }
 
+    std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* up, MXS_SESSION* session) override;
+
+    // Adds a routing target to this service
+    void add_target(mxs::Target* target)
+    {
+        // TODO: Not thread-safe
+        m_targets.push_back(target);
+    }
+
+    bool has_target(mxs::Target* target)
+    {
+        return std::find(m_targets.begin(), m_targets.end(), target) != m_targets.end();
+    }
+
 private:
     FilterList  m_filters;          /**< Ordered list of filters */
     std::string m_user;             /**< Username */
@@ -124,6 +139,8 @@ private:
     std::string m_version_string;   /**< Version string sent to clients */
     RateLimits  m_rate_limits;      /**< The refresh rate limits for users of each thread */
     uint64_t    m_wkey;             /**< Key for worker local data */
+
+    std::vector<mxs::Target*> m_targets;
 
     // Get the worker local filter list
     FilterList* get_local_filters() const;
@@ -137,6 +154,69 @@ private:
         Service* service = static_cast<Service*>(data);
         service->update_local_filters();
     }
+};
+
+// A connection to a service
+class ServiceEndpoint final : public mxs::Endpoint
+{
+public:
+    ServiceEndpoint(MXS_SESSION* session, Service* service, mxs::Component* up);
+    ~ServiceEndpoint();
+
+    mxs::Target* target() const override;
+
+    bool connect() override;
+
+    void close() override;
+
+    bool is_open() const override;
+
+    int32_t routeQuery(GWBUF* buffer) override;
+
+    int32_t clientReply(GWBUF* buffer, mxs::Component* down) override;
+
+    bool handleError(GWBUF* error, mxs::Component* down) override;
+
+private:
+
+    // Class that holds the session specific filter data (TODO: Remove duplicate from session.cc)
+    class SessionFilter
+    {
+    public:
+
+        SessionFilter(const SFilterDef& f)
+            : filter(f)
+            , instance(filter->filter)
+            , session(nullptr)
+        {
+        }
+
+        SFilterDef          filter;
+        MXS_FILTER*         instance;
+        MXS_FILTER_SESSION* session;
+        mxs::Upstream       up;
+        mxs::Downstream     down;
+    };
+
+    friend class Service;
+
+    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*, DCB*);
+    int32_t        send_upstream(GWBUF* buffer, DCB* dcb);
+    void           set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
+
+    bool                m_open {false};
+    mxs::Component*     m_up;       // The upstream where replies are routed to
+    MXS_SESSION*        m_session;  // The owning session
+    Service*            m_service;  // The service where the connection points to
+    MXS_ROUTER_SESSION* m_router_session {nullptr};
+
+    mxs::Downstream m_head;
+    mxs::Upstream   m_tail;
+
+    std::vector<SessionFilter> m_filters;
+
+    // Downstream components where this component routes to
+    std::vector<std::unique_ptr<mxs::Endpoint>> m_down;
 };
 
 /**
@@ -442,4 +522,4 @@ void service_remove_server(mxs::Monitor* pMonitor, SERVER* pServer);
 
 std::unique_ptr<ResultSet> serviceGetList(void);
 std::unique_ptr<ResultSet> serviceGetListenerList(void);
-const MXS_MODULE_PARAM* common_service_params();
+const MXS_MODULE_PARAM*    common_service_params();
