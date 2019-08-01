@@ -297,8 +297,11 @@ inline bool dcb_write(DCB* dcb, GWBUF* queue)
 {
     return dcb->write(queue);
 }
-DCB* dcb_alloc(DCB::Role role, MXS_SESSION* session, SERVER* server = nullptr);
-DCB* dcb_connect(struct SERVER*, MXS_SESSION*, const char*);
+
+DCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry = nullptr);
+DCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry = nullptr);
+DCB* dcb_connect(SERVER* server, const char* protocol, MXS_SESSION* session, DCB::Registry* registry = nullptr);
+
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 {
     return dcb->read(head, maxbytes);

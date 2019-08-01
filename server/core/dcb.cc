@@ -265,9 +265,19 @@ DCB::~DCB()
  *
  * @return An available DCB or NULL if none could be allocated.
  */
-DCB* dcb_alloc(DCB::Role role, MXS_SESSION* session, SERVER* server)
+static DCB* dcb_alloc(DCB::Role role, MXS_SESSION* session, SERVER* server, DCB::Registry* registry)
 {
-    return new(std::nothrow) DCB(role, session, server);
+    return new(std::nothrow) DCB(role, session, server, registry);
+}
+
+DCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry)
+{
+    return dcb_alloc(DCB::Role::CLIENT, session, nullptr, registry);
+}
+
+DCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry)
+{
+    return dcb_alloc(DCB::Role::INTERNAL, session, nullptr, registry);
 }
 
 /**
@@ -377,7 +387,7 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
     return nullptr;
 }
 
-DCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* protocol)
+DCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* protocol, DCB::Registry* registry)
 {
     MXS_PROTOCOL* funcs = (MXS_PROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
 
@@ -414,7 +424,7 @@ DCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* pro
         }
     }
 
-    DCB* dcb = dcb_alloc(DCB::Role::BACKEND, session, server);
+    DCB* dcb = dcb_alloc(DCB::Role::BACKEND, session, server, registry);
 
     if (dcb)
     {
@@ -485,22 +495,29 @@ static bool do_connect(const char* host, int port, int* fd)
  * Connect to a backend server
  *
  * @param srv      The server to connect to
- * @param session  The session this connection is being made for
  * @param protocol The protocol module to use
+ * @param session  The session this connection is being made for
+ * @param registry The DCB registry to use
  *
  * @return The new allocated dcb or NULL on error
  */
-DCB* dcb_connect(SERVER* srv, MXS_SESSION* session, const char* protocol)
+DCB* dcb_connect(SERVER* srv, const char* protocol, MXS_SESSION* session, DCB::Registry* registry)
 {
     Server* server = static_cast<Server*>(srv);
 
+    // TODO: Either
+    // - ignore that the provided registry may be different that the one used,
+    // - remove the DCB from its registry when moved to the pool and assign a new one when it is
+    //   taken out from the pool, or
+    // - also consider the registry when deciding whether a DCB in the pool can be used or not.
     if (auto dcb = take_from_connection_pool(server, session, protocol))
     {
+        // TODO: For now, we ignore the problem.
         return dcb;     // Reusing a DCB from the connection pool
     }
 
     // Could not find a reusable DCB, allocate a new one
-    DCB* dcb = dcb_alloc_backend_dcb(server, session, protocol);
+    DCB* dcb = dcb_alloc_backend_dcb(server, session, protocol, registry);
 
     if (dcb)
     {

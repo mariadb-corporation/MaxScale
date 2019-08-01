@@ -222,7 +222,7 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
             if (server_ref_is_active(sref) && (backends.size() < m_max_backends))
             {
                 /* Connect to server */
-                DCB* conn = dcb_connect(sref->server, session, sref->server->protocol().c_str());
+                DCB* conn = dcb_connect(sref->server, sref->server->protocol().c_str(), session);
                 if (conn)
                 {
                     /* Success */
@@ -234,7 +234,7 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
         if (m_write_server)
         {
             /* Connect to write backend server. This is not essential.  */
-            write_dcb = dcb_connect(m_write_server, session, m_write_server->protocol().c_str());
+            write_dcb = dcb_connect(m_write_server, m_write_server->protocol().c_str(), session);
         }
         if (backends.size() < 1)
         {

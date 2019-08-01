@@ -177,7 +177,7 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
     mxb_assert(!in_use() && m_dcb == nullptr);
     bool rval = false;
 
-    if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol().c_str())))
+    if ((m_dcb = dcb_connect(m_backend->server, m_backend->server->protocol().c_str(), session)))
     {
         m_closed = false;
         m_closed_at = 0;

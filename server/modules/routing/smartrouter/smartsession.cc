@@ -161,7 +161,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
 
         mxb_assert(ref->server->is_usable());
 
-        DCB* dcb = dcb_connect(ref->server, pSession, ref->server->protocol().c_str());
+        DCB* dcb = dcb_connect(ref->server, ref->server->protocol().c_str(), pSession);
         if (dcb)
         {
             bool is_master = (ref->server == pMaster);

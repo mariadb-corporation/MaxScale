@@ -349,7 +349,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
     }
 
     /** Open the backend connection */
-    DCB* backend_dcb = dcb_connect(candidate->server, session, candidate->server->protocol().c_str());
+    DCB* backend_dcb = dcb_connect(candidate->server, candidate->server->protocol().c_str(), session);
 
     if (!backend_dcb)
     {

@@ -207,7 +207,7 @@ static void blr_start_master(void* data)
     // Destroy the listener so it's not visible to the user
     Listener::destroy(listener);
 
-    router->client = dcb_alloc(DCB::Role::INTERNAL, router->session);
+    router->client = dcb_create_internal(router->session);
     mxb_assert(router->client);
     router->client->m_remote = MXS_STRDUP("127.0.0.1");
 
@@ -236,8 +236,8 @@ static void blr_start_master(void* data)
 
     /* Connect to configured master server */
     if ((router->master = dcb_connect(router->service->dbref->server,
-                                      router->session,
-                                      BLR_PROTOCOL)) == NULL)
+                                      BLR_PROTOCOL,
+                                      router->session)) == NULL)
     {
         pthread_mutex_lock(&router->lock);
         router->retry_count++;

@@ -196,7 +196,7 @@ Dcb HintRouter::connect_to_backend(MXS_SESSION* session,
 {
     Dcb result(NULL);
     HR_DEBUG("Connecting to %s.", sref->server->name());
-    DCB* new_connection = dcb_connect(sref->server, session, sref->server->protocol().c_str());
+    DCB* new_connection = dcb_connect(sref->server, sref->server->protocol().c_str(), session);
 
     if (new_connection)
     {

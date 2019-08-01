@@ -60,7 +60,7 @@ static int test1()
     auto listener = Listener::create("listener", "mariadbclient", listener_params);
 
     auto session = new mxs::Session(listener);
-    dcb = dcb_alloc(DCB::Role::CLIENT, session);
+    dcb = dcb_create_client(session);
 
     if (dcb == NULL)
     {

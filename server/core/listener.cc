@@ -815,7 +815,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         return NULL;
     }
 
-    DCB* client_dcb = dcb_alloc(DCB::Role::CLIENT, session);
+    DCB* client_dcb = dcb_create_client(session);
 
     if (!client_dcb)
     {
