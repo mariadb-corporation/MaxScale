@@ -1395,13 +1395,13 @@ static int gw_read_finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capa
             dcb_readq_append(dcb, read_buffer);
         }
     }
-    else if (NULL != session->router_session || (rcap_type_required(capabilities, RCAP_TYPE_NO_RSESSION)))
+    else
     {
         /** Check if this connection qualifies for the connection pool */
         check_pool_candidate(dcb);
 
         /** Feed the whole buffer to the router */
-        return_code = MXS_SESSION_ROUTE_QUERY(session, read_buffer) ? 0 : 1;
+        return_code = proto->do_routeQuery(read_buffer) ? 0 : 1;
     }
     /*
      * else return_code is still 0 from when it was originally set
@@ -1871,7 +1871,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             if (packetbuf)
             {
                 /** Route query */
-                rc = MXS_SESSION_ROUTE_QUERY(session, packetbuf);
+                rc = proto->do_routeQuery(packetbuf);
             }
 
             proto->changing_user = changed_user;

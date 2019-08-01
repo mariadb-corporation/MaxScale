@@ -34,10 +34,10 @@
  * and the backend MySQL database.
  */
 
-static int  gw_read_backend_event(DCB* dcb);
-static int  gw_write_backend_event(DCB* dcb);
-static int  gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue);
-static int  gw_error_backend_event(DCB* dcb);
+static int                   gw_read_backend_event(DCB* dcb);
+static int                   gw_write_backend_event(DCB* dcb);
+static int                   gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue);
+static int                   gw_error_backend_event(DCB* dcb);
 static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
                                                     SERVER* server,
                                                     MXS_PROTOCOL_SESSION* client_protocol_session,
@@ -93,7 +93,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_backend_hangup,                  /* HangUp - EPOLLHUP handler     */
         NULL,                               /* new_client_session            */
         gw_new_backend_session,             /* New backend connection        */
-        gw_backend_free_session,           /* Close                         */
+        gw_backend_free_session,            /* Close                         */
         gw_init_connection,                 /* Init backend connection       */
         gw_finish_connection,
         gw_backend_default_auth,            /* Default authenticator         */
@@ -478,28 +478,19 @@ static int gw_read_backend_event(DCB* plain_dcb)
 
 static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* errmsg)
 {
-    bool succp = true;
-    MXS_SESSION* session = dcb->session();
-
     mxb_assert(!dcb->m_dcb_errhandle_called);
-
+    MySQLProtocol* p = static_cast<MySQLProtocol*>(dcb->protocol_session());
     GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
-    MXS_ROUTER_SESSION* rsession = static_cast<MXS_ROUTER_SESSION*>(session->router_session);
-    MXS_ROUTER_OBJECT* router = session->service->router;
-    MXS_ROUTER* router_instance = session->service->router_instance;
 
-    router->handleError(router_instance, rsession, errbuf, dcb, action, &succp);
-
-    gwbuf_free(errbuf);
-    /**
-     * If error handler fails it means that routing session can't continue
-     * and it must be closed. In success, only this DCB is closed.
-     */
-    if (!succp)
+    if (!p->do_handleError(errbuf))
     {
+        // A failure to handle an error means that the session must be closed
+        MXS_SESSION* session = dcb->session();
         session->close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
         poll_fake_hangup_event(session->client_dcb);
     }
+
+    gwbuf_free(errbuf);
 }
 
 /**
@@ -511,11 +502,7 @@ static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* err
  */
 static void gw_reply_on_error(DCB* dcb, mxs_auth_state_t state)
 {
-    MXS_SESSION* session = dcb->session();
-
-    do_handle_error(dcb,
-                    ERRACT_REPLY_CLIENT,
-                    "Authentication with backend failed. Session will be closed.");
+    do_handle_error(dcb, ERRACT_REPLY_CLIENT, "Authentication with backend failed. Session will be closed.");
 }
 
 /**
@@ -529,10 +516,8 @@ static inline bool session_ok_to_route(DCB* dcb)
     bool rval = false;
 
     if (dcb->session()->state() == MXS_SESSION::State::STARTED
-        && dcb->session()->client_dcb != NULL
-        && dcb->session()->client_dcb->state() == DCB::State::POLLING
-        && (dcb->session()->router_session
-            || service_get_capabilities(dcb->session()->service) & RCAP_TYPE_NO_RSESSION))
+        && dcb->session()->client_dcb
+        && dcb->session()->client_dcb->state() == DCB::State::POLLING)
     {
         MySQLProtocol* client_protocol = (MySQLProtocol*)dcb->session()->client_dcb->protocol_session();
 
@@ -957,11 +942,7 @@ static int gw_read_and_write(DCB* dcb)
                 gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
             }
 
-            session->service->router->clientReply(session->service->router_instance,
-                                                  session->router_session,
-                                                  stmt,
-                                                  dcb);
-            return_code = 1;
+            return_code = proto->do_clientReply(stmt);
         }
         else    /*< session is closing; replying to client isn't possible */
         {
@@ -1478,9 +1459,9 @@ static int gw_change_user(DCB* backend,
     }
 
     auth_ret = dcb->m_auth_session->reauthenticate(
-            dcb, username, auth_token, auth_token_len,
-            client_protocol->scramble, sizeof(client_protocol->scramble),
-            client_sha1, sizeof(client_sha1));
+        dcb, username, auth_token, auth_token_len,
+        client_protocol->scramble, sizeof(client_protocol->scramble),
+        client_sha1, sizeof(client_sha1));
 
     strcpy(current_session->db, current_database);
 
@@ -1495,9 +1476,9 @@ static int gw_change_user(DCB* backend,
             *current_session->db = 0;
 
             auth_ret = dcb->m_auth_session->reauthenticate(
-                    dcb, username, auth_token, auth_token_len,
-                    client_protocol->scramble, sizeof(client_protocol->scramble),
-                    client_sha1, sizeof(client_sha1));
+                dcb, username, auth_token, auth_token_len,
+                client_protocol->scramble, sizeof(client_protocol->scramble),
+                client_sha1, sizeof(client_sha1));
 
             strcpy(current_session->db, current_database);
         }

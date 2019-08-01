@@ -577,6 +577,21 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
         return m_session;
     }
 
+    int32_t do_routeQuery(GWBUF* buffer)
+    {
+        return m_component->routeQuery(buffer);
+    }
+
+    int32_t do_clientReply(GWBUF* buffer)
+    {
+        return m_component->clientReply(buffer, nullptr);
+    }
+
+    bool do_handleError(GWBUF* buffer)
+    {
+        return m_component->handleError(buffer, nullptr);
+    }
+
     //
     // Legacy public members
     //
