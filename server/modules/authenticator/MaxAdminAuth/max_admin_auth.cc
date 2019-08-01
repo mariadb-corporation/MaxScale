@@ -28,7 +28,7 @@
 
 #define MXS_MODULE_NAME "MaxAdminAuth"
 
-#include <maxscale/authenticator.hh>
+#include <maxscale/authenticator2.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/modinfo.hh>
 #include <maxscale/dcb.hh>
@@ -40,6 +40,65 @@ static bool max_admin_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
 static bool max_admin_auth_is_client_ssl_capable(DCB* dcb);
 static int  max_admin_auth_authenticate(DCB* dcb);
 static void max_admin_auth_free_client_data(DCB* dcb);
+
+class MaxAdminAuthenticatorSession : public mxs::AuthenticatorSession
+{
+public:
+    ~MaxAdminAuthenticatorSession() override = default;
+    bool extract(DCB* client, GWBUF* buffer) override
+    {
+        return max_admin_auth_set_protocol_data(client, buffer);
+    }
+
+    bool ssl_capable(DCB* client) override
+    {
+        return max_admin_auth_is_client_ssl_capable(client);
+    }
+
+    int authenticate(DCB* client) override
+    {
+        return max_admin_auth_authenticate(client);
+    }
+
+    void free_data(DCB* client) override
+    {
+        max_admin_auth_free_client_data(client);
+    }
+
+    // No fields, data is contained in protocol.
+};
+
+class MaxAdminAuthenticator : public mxs::Authenticator
+{
+public:
+    static MaxAdminAuthenticator* create(char** options)
+    {
+        return new(std::nothrow) MaxAdminAuthenticator();
+    }
+
+    ~MaxAdminAuthenticator() override = default;
+
+    MaxAdminAuthenticatorSession* createSession() override
+    {
+        return new(std::nothrow) MaxAdminAuthenticatorSession();
+    }
+
+    int load_users(Listener* listener) override
+    {
+        return users_default_loadusers(listener);
+    }
+
+    void diagnostics(DCB* output, Listener* listener) override
+    {
+        users_default_diagnostic(output, listener);
+
+    }
+
+    json_t* diagnostics_json(const Listener* listener) override
+    {
+        return users_default_diagnostic_json(listener);
+    }
+};
 
 extern "C"
 {
@@ -53,21 +112,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_AUTHENTICATOR MyObject =
-    {
-        NULL,                                       /* No initialize entry point */
-        NULL,                                       /* No create entry point */
-        max_admin_auth_set_protocol_data,           /* Extract data into structure   */
-        max_admin_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
-        max_admin_auth_authenticate,                /* Authenticate user credentials */
-        max_admin_auth_free_client_data,            /* Free the client data held in DCB */
-        NULL,                                       /* No destroy entry point */
-        users_default_loadusers,                    /* Load generic users */
-        users_default_diagnostic,                   /* Default user diagnostic */
-        users_default_diagnostic_json,              /* Default user diagnostic */
-        NULL                                        /* No user reauthentication */
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
@@ -76,7 +120,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The MaxScale Admin client authenticator implementation",
         "V2.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::AuthenticatorApi<MaxAdminAuthenticator>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

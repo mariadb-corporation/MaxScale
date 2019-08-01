@@ -463,9 +463,9 @@ void PamInstance::fill_user_arrays(QResult user_res, QResult db_res, QResult rol
     m_sqlite->exec("COMMIT");
 }
 
-void PamInstance::diagnostics(DCB* dcb)
+void PamInstance::diagnostics(DCB* dcb, Listener* listener)
 {
-    json_t* array = diagnostics_json();
+    json_t* array = diagnostics_json(nullptr);
     mxb_assert(json_is_array(array));
 
     string result, separator;
@@ -503,7 +503,7 @@ static int diag_cb_json(json_t* data, int columns, char** row, char** field_name
     return 0;
 }
 
-json_t* PamInstance::diagnostics_json()
+json_t* PamInstance::diagnostics_json(const Listener* listener)
 {
     json_t* rval = json_array();
     string select = "SELECT * FROM " + TABLE_USER + ";";

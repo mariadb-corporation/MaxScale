@@ -834,7 +834,7 @@ int diag_cb(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-void MYSQL_AUTH::diagnostics(DCB* dcb)
+void MYSQL_AUTH::diagnostics(DCB* dcb, Listener* listener)
 {
     MYSQL_AUTH* instance = this;
     sqlite3* handle = get_handle(instance);
@@ -863,7 +863,7 @@ int diag_cb_json(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-json_t* MYSQL_AUTH::diagnostics_json()
+json_t* MYSQL_AUTH::diagnostics_json(const Listener* listener)
 {
     json_t* rval = json_array();
 

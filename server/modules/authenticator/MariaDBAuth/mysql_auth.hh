@@ -127,8 +127,8 @@ public:
     ~MYSQL_AUTH() override = default;
     MariaDBAuthenticatorSession* createSession() override;
     int load_users(Listener* listener) override;
-    void diagnostics(DCB* output) override;
-    json_t* diagnostics_json() override;
+    void diagnostics(DCB* output, Listener* listener) override;
+    json_t* diagnostics_json(const Listener* listener) override;
 
     sqlite3** handles;              /**< SQLite3 database handle */
     char*     cache_dir;            /**< Custom cache directory location */

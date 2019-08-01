@@ -29,8 +29,8 @@ public:
     static PamInstance* create(char** options);
 
     int load_users(Listener* listener) override;
-    void    diagnostics(DCB* dcb) override;
-    json_t* diagnostics_json() override;
+    void diagnostics(DCB* dcb, Listener* listener) override;
+    json_t* diagnostics_json(const Listener* listener) override;
 
     PamClientSession* createSession() override;
 

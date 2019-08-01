@@ -30,8 +30,8 @@ public:
     virtual ~Authenticator() = default;
     virtual AuthenticatorSession* createSession() = 0;
     virtual int load_users(Listener* listener) = 0;
-    virtual void diagnostics(DCB* output) = 0;
-    virtual json_t* diagnostics_json() = 0;
+    virtual void diagnostics(DCB* output, Listener* listener) = 0;
+    virtual json_t* diagnostics_json(const Listener* listener) = 0;
 };
 
 /**
@@ -124,14 +124,14 @@ public:
     static void diagnostics(DCB* output, Listener* listener)
     {
         auto auth = static_cast<Authenticator*>(listener->auth_instance());
-        MXS_EXCEPTION_GUARD(auth->diagnostics(output));
+        MXS_EXCEPTION_GUARD(auth->diagnostics(output, listener));
     }
 
     static json_t* diagnostics_json(const Listener* listener)
     {
         auto auth = static_cast<Authenticator*>(listener->auth_instance());
         json_t* rval = nullptr;
-        MXS_EXCEPTION_GUARD(rval = auth->diagnostics_json());
+        MXS_EXCEPTION_GUARD(rval = auth->diagnostics_json(nullptr));
         return rval;
     }
 
