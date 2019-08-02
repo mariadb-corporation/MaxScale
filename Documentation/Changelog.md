@@ -1,5 +1,9 @@
 # Changelog
 
+## MariaDB MaxScale 2.5
+
+* Server weights have been removed
+
 ## MariaDB MaxScale 2.4
 
 * A Clustrix specific monitor has been added.

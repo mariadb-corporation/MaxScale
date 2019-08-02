@@ -1358,79 +1358,12 @@ _5.5.5-MaxScale-Service_ being sent to the client.
 
 ### `weightby`
 
-**Note:** This parameter has been deprecated in MaxScale 2.3.2.
-[A rank mechanism](https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/Getting-Started/Configuration-Guide.md#rank)
-will be added in MaxScale 2.4 to allow better control over server usage.
+This parameter has been removed. Server weights were deprecated in
+MaxScale 2.3.2 and removed in MaxScale 2.5.0. The feature has been
+replaced with the [`rank`](#rank) mechanism.
 
-The weightby parameter is used in conjunction with server parameters in order to
-control the load balancing applied in the router in use by the service. This
-allows varying weights to be applied to each server to create a non-uniform
-distribution of the load amongst the servers.
-
-An example of this might be to define a parameter for each server that
-represents the amount of resource available on the server, we could call this
-serversize. Every server should then have a serversize parameter set for the
-server.
-
-```
-serversize=10
-```
-
-The service would then have the parameter `weightby=serv_weight`. If there are 4
-servers defined in the service (serverA, serverB, serverC and serverD) with the
-serversize set as shown in the table below, the connections would balanced using
-the percentages in this table.
-
- Server  |serversize|% connections
----------|----------|-------------
-serverA  |   10     |     18%
-serverB  |   15     |     27%
-serverC  |   10     |     18%
-serverD  |   20     |     36%
-
-_**Note**: If the value of the weighting parameter of an individual server is
-zero or the relative weight rounds down to zero, no queries will be routed to
-that server as long as a server with a positive weight is available._
-
-Here is an excerpt from an example configuration with the `serv_weight`
-parameter used as the weighting parameter.
-
-```
-[server1]
-type=server
-address=127.0.0.1
-port=3000
-protocol=MariaDBBackend
-serv_weight=3
-
-[server2]
-type=server
-address=127.0.0.1
-port=3001
-protocol=MariaDBBackend
-serv_weight=1
-
-[Read-Service]
-type=service
-router=readconnroute
-servers=server1,server2
-weightby=serv_weight
-```
-
-With this configuration and a heavy query load, the server _server1_ will get
-most of the connections and about a third of the remaining queries are routed to
-the second server. With server weights, you can assign secondary servers that
-are only used when the primary server is under heavy load.
-
-Without the weightby parameter, each connection counts as a single connection.
-With a weighting parameter, a single connection received its weight from the
-server's own weighting parameter divided by the sum of all weighting parameters
-in all the configured servers.
-
-If we use the previous configuration as an example, the sum of the `serv_weight`
-parameter is 4. _Server1_ would receive a weight of `3/4=75%` and _server2_
-would get `1/4=25%`. This means that _server1_ would get 75% of the connections
-and _server2_ would get 25% of the connections.
+If this value is found in the MaxScale configuration, a warning is logged
+and the value is ignored.
 
 ### `auth_all_servers`
 
