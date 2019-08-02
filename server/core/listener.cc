@@ -541,14 +541,10 @@ json_t* Listener::to_json() const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
-    if (m_auth_func.diagnostic_json)
+    json_t* diag = m_auth_instance->diagnostics_json(this);
+    if (diag)
     {
-        json_t* diag = m_auth_func.diagnostic_json(this);
-
-        if (diag)
-        {
-            json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
-        }
+        json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
     }
 
     json_t* rval = json_object();
@@ -631,26 +627,14 @@ const char* Listener::state() const
 
 void Listener::print_users(DCB* dcb)
 {
-    if (m_auth_func.diagnostic)
-    {
-        dcb_printf(dcb, "User names (%s): ", name());
-
-        m_auth_func.diagnostic(dcb, this);
-
-        dcb_printf(dcb, "\n");
-    }
+    dcb_printf(dcb, "User names (%s): ", name());
+    m_auth_instance->diagnostics(dcb, this);
+    dcb_printf(dcb, "\n");
 }
 
 int Listener::load_users()
 {
-    int rval = MXS_AUTH_LOADUSERS_OK;
-
-    if (m_auth_func.loadusers)
-    {
-        rval = m_auth_func.loadusers(this);
-    }
-
-    return rval;
+    return m_auth_instance->load_users(this);
 }
 
 struct users* Listener::users() const
@@ -939,23 +923,20 @@ bool Listener::listen()
     m_state = FAILED;
 
     /** Load the authentication users before before starting the listener */
-    if (m_auth_func.loadusers)
+    switch (m_auth_instance->load_users(this))
     {
-        switch (m_auth_func.loadusers(this))
-        {
-        case MXS_AUTH_LOADUSERS_FATAL:
-            MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
-                      "service is not started.", m_service->name(), name());
-            return false;
+    case MXS_AUTH_LOADUSERS_FATAL:
+        MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
+                  "service is not started.", m_service->name(), name());
+        return false;
 
-        case MXS_AUTH_LOADUSERS_ERROR:
-            MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                        " might not work.", m_service->name(), name());
-            break;
+    case MXS_AUTH_LOADUSERS_ERROR:
+        MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
+                    " might not work.", m_service->name(), name());
+        break;
 
-        default:
-            break;
-        }
+    default:
+        break;
     }
 
     bool rval = false;

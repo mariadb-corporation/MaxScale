@@ -85,28 +85,6 @@ enum authenticator_capability_t
  *                      `dcb->authenticator_data`. If a module does not implement
  *                      this entry point, `dcb->authenticator_data` will be set to NULL.
  *
- *      extract         Extract client or backend data from a buffer and place it
- *                      in a structure shared at the session level, stored in
- *                      `dcb->data`. Typically, this is called just before the
- *                      authenticate-entrypoint.
- *
- *      connectSSL      Determine whether the connection can support SSL
- *
- *      authenticate    Carry out the authentication
- *
- *      free            Free extracted data. This is only called for the client
- *                      side authenticators so backend authenticators should not
- *                      implement it.
- *
- *      destroy         Destroy the unique DCB data returned by the `create`
- *                      entry point.
- *
- *      loadusers       Load or update authenticator user data
- *
- *      diagnostic      Print diagnostic output to a DCB
- *
- *      reauthenticate  Reauthenticate a user
- *
  * @endverbatim
  *
  * This forms the "module object" for authenticator modules within the gateway.
@@ -117,23 +95,6 @@ struct MXS_AUTHENTICATOR
 {
     void* (* initialize)(char** options);
     void* (* create)(void* instance);
-    void  (* destroy)(void*);
-    int   (* loadusers)(Listener*);
-    void  (* diagnostic)(DCB*, Listener*);
-
-    /**
-     * @brief Return diagnostic information about the authenticator
-     *
-     * The authenticator module should return information about its internal
-     * state when this function is called.
-     *
-     * @params Listener object
-     *
-     * @return JSON representation of the listener
-     *
-     * @see jansson.h
-     */
-    json_t* (* diagnostic_json)(const Listener* listener);
 
     /**
      * This entry point was added to avoid calling authenticator functions

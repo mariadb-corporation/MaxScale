@@ -28,9 +28,27 @@ class Authenticator
 {
 public:
     virtual ~Authenticator() = default;
+
+    // Create a data structure unique to this DCB, stored in `dcb->authenticator_data`. If a module
+    // does not implement this entry point, `dcb->authenticator_data` will be set to NULL.
     virtual AuthenticatorSession* createSession() = 0;
+
+    // Load or update authenticator user data
     virtual int load_users(Listener* listener) = 0;
+
+    // Print diagnostic output to a DCB.
     virtual void diagnostics(DCB* output, Listener* listener) = 0;
+
+    /**
+     * @brief Return diagnostic information about the authenticator
+     *
+     * The authenticator module should return information about its internal
+     * state when this function is called.
+     *
+     * @params Listener object
+     * @return JSON representation of the listener
+     * @see jansson.h
+     */
     virtual json_t* diagnostics_json(const Listener* listener) = 0;
 };
 
@@ -41,10 +59,22 @@ class AuthenticatorSession
 {
 public:
     virtual ~AuthenticatorSession() = default;
+
+    // Extract client or backend data from a buffer and place it in a structure shared at the session
+    // level, stored in `dcb->data`. Typically, this is called just before the authenticate-entrypoint.
     virtual bool extract(DCB* client, GWBUF* buffer) = 0;
+
+    // Determine whether the connection can support SSL.
     virtual bool ssl_capable(DCB* client) = 0;
+
+    // Carry out the authentication.
     virtual int authenticate(DCB* client) = 0;
+
+    // Free extracted data. This is only called for the client side authenticators so backend
+    // authenticators should not implement it.
     virtual void free_data(DCB* client) = 0;
+
+    // Reauthenticate a user. Not implemented by most authenticators.
     virtual int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
                                uint8_t* scramble, size_t scramble_len,
                                uint8_t* output, size_t output_len);
@@ -77,34 +107,6 @@ public:
         return session;
     }
 
-    static void destroySession(void* session)
-    {
-        auto ses = static_cast<AuthenticatorSession*>(session);
-        MXS_EXCEPTION_GUARD(delete ses);
-    }
-
-    static int loadUsers(Listener* listener)
-    {
-        auto auth = listener->auth_instance();
-        int rval = MXS_AUTH_LOADUSERS_ERROR;
-        MXS_EXCEPTION_GUARD(rval = auth->load_users(listener));
-        return rval;
-    }
-
-    static void diagnostics(DCB* output, Listener* listener)
-    {
-        auto auth = listener->auth_instance();
-        MXS_EXCEPTION_GUARD(auth->diagnostics(output, listener));
-    }
-
-    static json_t* diagnostics_json(const Listener* listener)
-    {
-        auto auth = listener->auth_instance();
-        json_t* rval = nullptr;
-        MXS_EXCEPTION_GUARD(rval = auth->diagnostics_json(nullptr));
-        return rval;
-    }
-
     static int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
                               uint8_t* scramble, size_t scramble_len, uint8_t* output, size_t output_len)
     {
@@ -123,10 +125,6 @@ MXS_AUTHENTICATOR AuthenticatorApi<AuthImplementation>::s_api =
 {
         &AuthenticatorApi<AuthImplementation>::createInstance,
         &AuthenticatorApi<AuthImplementation>::createSession,
-        &AuthenticatorApi<AuthImplementation>::destroySession,
-        &AuthenticatorApi<AuthImplementation>::loadUsers,
-        &AuthenticatorApi<AuthImplementation>::diagnostics,
-        &AuthenticatorApi<AuthImplementation>::diagnostics_json,
         &AuthenticatorApi<AuthImplementation>::reauthenticate
 };
 
@@ -158,12 +156,6 @@ public:
         return ses;
     }
 
-    static void freeSession(void* session)
-    {
-        auto ses = static_cast<AuthenticatorBackendSession*>(session);
-        MXS_EXCEPTION_GUARD(delete ses);
-    }
-
     static MXS_AUTHENTICATOR s_api;
 };
 
@@ -172,10 +164,6 @@ MXS_AUTHENTICATOR BackendAuthenticatorApi<AuthImplementation>::s_api =
 {
         nullptr,
         &BackendAuthenticatorApi<AuthImplementation>::newSession,
-        &BackendAuthenticatorApi<AuthImplementation>::freeSession,
-        nullptr,
-        nullptr,
-        nullptr,
         nullptr
 };
 
