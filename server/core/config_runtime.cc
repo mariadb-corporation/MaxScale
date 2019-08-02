@@ -525,7 +525,6 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     {
         // This is a custom parameter and may be used for weighting. Update the weights of services.
         server->set_custom_parameter(key, value);
-        service_update_weights();
         setting_changed = true;
     }
 

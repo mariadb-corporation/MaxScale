@@ -259,9 +259,6 @@ bool service_server_in_use(const SERVER* server);
  */
 bool service_filter_in_use(const SFilterDef& filter);
 
-/** Update the server weights used by services */
-void service_update_weights();
-
 /**
  * @brief Add parameters to a service
  *

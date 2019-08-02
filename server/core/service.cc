@@ -79,7 +79,6 @@ static struct
 } this_unit;
 
 static bool service_internal_restart(mxb::Worker::Call::action_t action, Service* service);
-static void service_calculate_weights(SERVICE* service);
 
 Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
 {
@@ -407,9 +406,6 @@ int serviceStartAllPorts(Service* service)
  */
 int serviceInitialize(Service* service)
 {
-    /** Calculate the server weights */
-    service_calculate_weights(service);
-
     int listeners = 0;
 
     if (!config_get_global_options()->config_check)
@@ -1292,85 +1288,6 @@ bool service_all_services_have_listeners()
     }
 
     return rval;
-}
-static void service_calculate_weights(SERVICE* service)
-{
-    const char* weightby = serviceGetWeightingParameter(service);
-
-    if (*weightby && service->dbref)
-    {
-        // DEPRECATED in 2.3, remove in 2.4.
-        MXS_WARNING("Setting of server weights (%s) has been deprecated"
-                    " and will be removed in a later version of MaxScale.",
-                    weightby);
-
-        /** Service has a weighting parameter and at least one server */
-        double total {0};
-
-        /** Calculate total weight */
-        for (SERVER_REF* server = service->dbref; server; server = server->next)
-        {
-            string buf = server->server->get_custom_parameter(weightby);
-            if (!buf.empty())
-            {
-                long w = atol(buf.c_str());
-                if (w > 0)
-                {
-                    total += w;
-                }
-            }
-        }
-
-        if (total == 0)
-        {
-            MXS_WARNING("Weighting parameters for service '%s' will be ignored as "
-                        "no servers have (positive) values for the parameter '%s'.",
-                        service->name(),
-                        weightby);
-        }
-        else
-        {
-            /** Calculate the relative weight of the servers */
-            for (SERVER_REF* server = service->dbref; server; server = server->next)
-            {
-                string buf = server->server->get_custom_parameter(weightby);
-                if (!buf.empty())
-                {
-                    long config_weight = atol(buf.c_str());
-                    if (config_weight <= 0)
-                    {
-                        MXS_WARNING("Weighting parameter '%s' is set to %ld for server '%s'."
-                                    " The runtime weight will be set to 0, and the server"
-                                    " will only be used if no other servers are available.",
-                                    weightby,
-                                    config_weight,
-                                    server->server->name());
-                        config_weight = 0;
-                    }
-                    server->server_weight = config_weight / total;
-                }
-                else
-                {
-                    MXS_WARNING("Weighting parameter '%s' is not set for server '%s'."
-                                " The runtime weight will be set to 0, and the server"
-                                " will only be used if no other servers are available.",
-                                weightby,
-                                server->server->name());
-                    server->server_weight = 0;
-                }
-            }
-        }
-    }
-}
-
-void service_update_weights()
-{
-    LockGuard guard(this_unit.lock);
-
-    for (Service* service : this_unit.services)
-    {
-        service_calculate_weights(service);
-    }
 }
 
 bool service_server_in_use(const SERVER* server)
