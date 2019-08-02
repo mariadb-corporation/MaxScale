@@ -47,6 +47,7 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
@@ -146,10 +147,10 @@ static int cdc_read_event(DCB* dcb)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (dcb->m_authfunc.extract(dcb, head))
+            if (dcb->m_authenticator_data->extract(dcb, head))
             {
                 /* Call protocol authentication */
-                auth_val = dcb->m_authfunc.authenticate(dcb);
+                auth_val = dcb->m_authenticator_data->authenticate(dcb);
             }
 
             /* Discard input buffer */

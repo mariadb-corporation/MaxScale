@@ -195,15 +195,12 @@ DCB::~DCB()
         m_registry->remove(this);
     }
 
-    if (m_data && m_authfunc.free)
+    if (m_data)
     {
-        m_authfunc.free(this);
+        m_authenticator_data->free_data(this);
     }
 
-    if (m_authfunc.destroy)
-    {
-        m_authfunc.destroy(m_authenticator_data);
-    }
+    delete m_authenticator_data;
 
     while (m_callbacks)
     {

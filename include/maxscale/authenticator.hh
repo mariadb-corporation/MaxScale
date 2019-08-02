@@ -117,10 +117,6 @@ struct MXS_AUTHENTICATOR
 {
     void* (* initialize)(char** options);
     void* (* create)(void* instance);
-    bool  (* extract)(DCB*, GWBUF*);
-    bool  (* connectssl)(DCB*);
-    int   (* authenticate)(DCB*);
-    void  (* free)(DCB*);
     void  (* destroy)(void*);
     int   (* loadusers)(Listener*);
     void  (* diagnostic)(DCB*, Listener*);

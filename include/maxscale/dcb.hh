@@ -34,6 +34,11 @@ class SERVICE;
 class MXS_SESSION;
 class SERVER;
 
+namespace maxscale
+{
+class AuthenticatorSession;
+}
+
 #define DCBFD_CLOSED -1
 
 /**
@@ -264,11 +269,14 @@ public:
                                                  *   non-0: Time when placed in the persistent pool.
                                                  */
     void*          m_data = nullptr;              /**< Client protocol data, owned by client DCB */
-    void*          m_authenticator_data = nullptr;/**< The authenticator data for this DCB */
+
+    /**< The authenticator data for this DCB */
+    mxs::AuthenticatorSession* m_authenticator_data = nullptr;
+
     DCB_CALLBACK*  m_callbacks = nullptr;         /**< The list of callbacks for the DCB */
     int64_t        m_last_read = 0;             /**< Last time the DCB received data */
     int64_t        m_last_write = 0;            /**< Last time the DCB sent data */
-    struct SERVER* m_server = nullptr;          /**< The associated backend server */
+    SERVER*        m_server = nullptr;          /**< The associated backend server */
     bool           m_was_persistent = false;      /**< Whether this DCB was in the persistent pool */
     bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
                                                  * release

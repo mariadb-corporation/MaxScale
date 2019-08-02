@@ -148,4 +148,9 @@ int AuthenticatorSession::reauthenticate(DCB* client, const char* user, uint8_t*
     return MXS_AUTH_STATE_FAILED;
 }
 
+void AuthenticatorBackendSession::free_data(DCB* client)
+{
+    // Nothing to do, not used by backend authenticators.
+    mxb_assert(!true);
+}
 }

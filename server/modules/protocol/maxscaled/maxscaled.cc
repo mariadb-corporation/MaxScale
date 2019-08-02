@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol.hh>
@@ -92,8 +93,8 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* dcb)
             strcpy((char*)GWBUF_DATA(username), protocol->username);
 
             /* Authenticate the user */
-            if (dcb->m_authfunc.extract(dcb, username)
-                && dcb->m_authfunc.authenticate(dcb) == 0)
+            if (dcb->m_authenticator_data->extract(dcb, username)
+                && dcb->m_authenticator_data->authenticate(dcb) == 0)
             {
                 dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
                 protocol->state = MAXSCALED_STATE_DATA;

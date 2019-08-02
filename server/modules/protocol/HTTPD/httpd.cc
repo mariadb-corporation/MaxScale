@@ -37,6 +37,7 @@
 #include "httpd.hh"
 #include <ctype.h>
 #include <maxbase/alloc.h>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/resultset.hh>
@@ -238,8 +239,8 @@ static int httpd_read_event(DCB* dcb)
                 {
                     /** The freeing entry point is called automatically when
                      * the client DCB is closed */
-                    dcb->m_authfunc.extract(dcb, auth_data);
-                    auth_ok = dcb->m_authfunc.authenticate(dcb) == MXS_AUTH_SUCCEEDED;
+                    dcb->m_authenticator_data->extract(dcb, auth_data);
+                    auth_ok = dcb->m_authenticator_data->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
                     gwbuf_free(auth_data);
                 }
             }

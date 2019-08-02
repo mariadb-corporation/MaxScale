@@ -14,7 +14,9 @@
 #define MXS_MODULE_NAME "mariadbbackend"
 
 #include <maxscale/ccdefs.hh>
+
 #include <maxbase/alloc.h>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/limits.h>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
@@ -265,9 +267,9 @@ mxs_auth_state_t handle_server_response(DCB* dcb, GWBUF* buffer)
     mxs_auth_state_t rval = proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED ?
         MXS_AUTH_STATE_HANDSHAKE_FAILED : MXS_AUTH_STATE_FAILED;
 
-    if (dcb->m_authfunc.extract(dcb, buffer))
+    if (dcb->m_authenticator_data->extract(dcb, buffer))
     {
-        switch (dcb->m_authfunc.authenticate(dcb))
+        switch (dcb->m_authenticator_data->authenticate(dcb))
         {
         case MXS_AUTH_INCOMPLETE:
         case MXS_AUTH_SSL_INCOMPLETE:

@@ -26,7 +26,7 @@
 #include <sstream>
 
 #include <maxbase/alloc.h>
-#include <maxscale/authenticator.hh>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
@@ -829,7 +829,7 @@ int ssl_authenticate_check_status(DCB* dcb)
      * data needs to be read from the socket.
      */
     bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, dcb->m_authfunc.connectssl(dcb));
+    int ssl_ret = ssl_authenticate_client(dcb, dcb->m_authenticator_data->ssl_capable(dcb));
     bool health_after = ssl_is_connection_healthy(dcb);
 
     if (ssl_ret != 0)
@@ -901,14 +901,14 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
      * authenticate function to carry out the user checks.
      */
     int auth_val = MXS_AUTH_FAILED;
-    if (dcb->m_authfunc.extract(dcb, read_buffer))
+    if (dcb->m_authenticator_data->extract(dcb, read_buffer))
     {
         auth_val = ssl_authenticate_check_status(dcb);
 
         if (auth_val == MXS_AUTH_SSL_COMPLETE)
         {
             // TLS connection phase complete
-            auth_val = dcb->m_authfunc.authenticate(dcb);
+            auth_val = dcb->m_authenticator_data->authenticate(dcb);
         }
     }
     else
