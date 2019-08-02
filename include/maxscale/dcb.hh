@@ -193,18 +193,18 @@ public:
      *
      * NOTE: The current worker *must* be the owner of the DCB.
      *
-     * @return -1 on error or 0 on success.
+     * @return True on success, false on error.
      */
-    int add_to_worker();
+    bool add_to_worker();
 
     /**
      * Remove the DCB from the epoll set of the current worker.
      *
      * NOTE: The current worker *must* be the owner of the DCB.
      *
-     * @return -1 on error or 0 on success; actually always 0
+     * @return True on success, false on error.
      */
-    int remove_from_worker();
+    bool remove_from_worker();
 
     // BEGIN: Temporarily here, do not use.
     static void close(DCB* dcb);

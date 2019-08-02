@@ -857,7 +857,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
             dcb_close(client_dcb);
             client_dcb = NULL;
         }
-        else if (poll_add_dcb(client_dcb) == -1)
+        else if (!poll_add_dcb(client_dcb))
         {
             MXS_ERROR("Failed to add dcb %p for fd %d to epoll set.", client_dcb, client_dcb->m_fd);
             dcb_close(client_dcb);

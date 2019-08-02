@@ -512,7 +512,7 @@ DCB* dcb_connect(SERVER* srv, const char* protocol, MXS_SESSION* session, DCB::R
     {
         if (do_connect(server->address, server->port, &dcb->m_fd)
             && (dcb->m_protocol = dcb->m_func.connect(dcb, server, session))
-            && poll_add_dcb(dcb) == 0)
+            && poll_add_dcb(dcb))
         {
             // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
             // event that is triggered once the connection is established.
@@ -2915,10 +2915,10 @@ static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* da
     return rv;
 }
 
-int DCB::add_to_worker()
+bool DCB::add_to_worker()
 {
     dcb_sanity_check(this);
-    int rc = 0;
+    bool rv = true;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
     mxb_assert(worker == RoutingWorker::get_current());
 
@@ -2936,27 +2936,27 @@ int DCB::add_to_worker()
          * will be treated as a DCB in the correct state.
          */
         m_state = old_state;
-        rc = -1;
+        rv = false;
     }
 
-    return rc;
+    return rv;
 }
 
-int poll_add_dcb(DCB* dcb)
+bool poll_add_dcb(DCB* dcb)
 {
     return dcb->add_to_worker();
 }
 
-int DCB::remove_from_worker()
+bool DCB::remove_from_worker()
 {
-    int rc = 0;
+    bool rv = true;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
     mxb_assert(worker == RoutingWorker::get_current());
 
     /*< It is possible that dcb has already been removed from the set */
     if (m_state == DCB_STATE_NOPOLLING)
     {
-        return 0;
+        return true;
     }
     if (DCB_STATE_POLLING != m_state)
     {
@@ -2978,17 +2978,17 @@ int DCB::remove_from_worker()
 
     if (m_fd != DCBFD_CLOSED)
     {
-        rc = -1;
+        rv = false;
 
         if (worker->remove_fd(m_fd))
         {
-            rc = 0;
+            rv = true;
         }
     }
-    return rc;
+    return rv;
 }
 
-int poll_remove_dcb(DCB* dcb)
+bool poll_remove_dcb(DCB* dcb)
 {
     return dcb->remove_from_worker();
 }

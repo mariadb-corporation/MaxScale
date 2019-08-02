@@ -81,21 +81,21 @@ static int test1()
     }
 
 
-    if ((eno = poll_add_dcb(dcb)) != 0)
+    if (!poll_add_dcb(dcb))
     {
-        fprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n", eno);
+        fprintf(stderr, "\nError on function call: poll_add_dcb() failed\n");
         return 1;
     }
 
-    if ((eno = poll_remove_dcb(dcb)) != 0)
+    if (!poll_remove_dcb(dcb))
     {
-        fprintf(stderr, "\nError on function call: poll_remove_dcb() returned %d.\n", eno);
+        fprintf(stderr, "\nError on function call: poll_remove_dcb() failed.\n");
         return 1;
     }
 
-    if ((eno = poll_add_dcb(dcb)) != 0)
+    if (!poll_add_dcb(dcb))
     {
-        fprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n", eno);
+        fprintf(stderr, "\nError on function call: poll_add_dcb() failed.\n");
         return 1;
     }
 

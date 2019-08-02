@@ -92,18 +92,18 @@ void poll_fake_read_event(DCB* dcb);
  * environment.
  *
  * @param dcb   The descriptor to add to the poll
- * @return      -1 on error or 0 on success
+ * @return      True on success, false on error.
  */
-int poll_add_dcb(DCB*);
+bool poll_add_dcb(DCB*);
 
 /**
  * Remove a descriptor from the set of descriptors within the
  * polling environment.
  *
  * @param dcb   The descriptor to remove
- * @return      -1 on error or 0 on success; actually always 0
+ * @return      True on success, false on error.
  */
-int poll_remove_dcb(DCB*);
+bool poll_remove_dcb(DCB*);
 
 /**
  * Add given GWBUF to DCB's readqueue and add a pending EPOLLIN event for DCB.
