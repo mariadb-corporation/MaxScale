@@ -627,6 +627,20 @@ public:
         RoutingWorker* m_pWorker;
     };
 
+    using DCBs = std::unordered_set<DCB*>;
+    /**
+     * Access all DCBs of the routing worker.
+     *
+     * @attn Must only be called from worker thread.
+     *
+     * @return Unordered set of DCBs.
+     */
+    const DCBs& dcbs() const
+    {
+        mxb_assert(this == RoutingWorker::get_current());
+        return m_dcbs;
+    }
+
 private:
     // DCB::Registry
     void add(DCB* pDcb) override;
@@ -646,7 +660,6 @@ private:
     LocalData    m_local_data;      /*< Data local to this worker */
     DataDeleters m_data_deleters;   /*< Delete functions for the local data */
 
-    using DCBs = std::unordered_set<DCB*>;
     DCBs         m_dcbs;
 
     RoutingWorker();

@@ -1985,10 +1985,9 @@ static void dcb_call_callback(DCB* dcb, DCB_REASON reason)
 static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct SERVER* server)
 {
     RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
-    int id = rworker->id();
     DCB* old_current = this_thread.current_dcb;
 
-    for (DCB* dcb = this_unit.all_dcbs[id]; dcb; dcb = dcb->m_thread.next)
+    for (DCB* dcb : rworker->dcbs())
     {
         if (dcb->state() == DCB_STATE_POLLING && dcb->m_server && dcb->m_server == server && dcb->m_nClose == 0)
         {
@@ -2466,7 +2465,9 @@ void dcb_process_timeouts(int thr)
          * check them once per second. One heartbeat is 100 milliseconds. */
         this_thread.next_timeout_check = mxs_clock() + 10;
 
-        for (DCB* dcb = this_unit.all_dcbs[thr]; dcb; dcb = dcb->m_thread.next)
+        RoutingWorker* rworker = RoutingWorker::get_current();
+
+        for (DCB* dcb : rworker->dcbs())
         {
             if (dcb->role() == DCB::Role::CLIENT && dcb->state() == DCB_STATE_POLLING)
             {
@@ -2524,12 +2525,14 @@ public:
     void execute(Worker& worker)
     {
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
-        int thread_id = rworker.id();
+        const auto& dcbs = rworker.dcbs();
 
-        for (DCB* dcb = this_unit.all_dcbs[thread_id];
-             dcb && atomic_load_int32(&m_more);
-             dcb = dcb->m_thread.next)
+        for (auto it = dcbs.begin();
+             it != dcbs.end() && atomic_load_int32(&m_more);
+             ++it)
         {
+            DCB* dcb = *it;
+
             if (dcb->session())
             {
                 if (!m_func(dcb, m_data))
@@ -2566,9 +2569,10 @@ bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data)
 
 void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
 {
-    int thread_id = RoutingWorker::get_current_id();
+    RoutingWorker* worker = RoutingWorker::get_current();
+    const auto& dcbs = worker->dcbs();
 
-    for (DCB* dcb = this_unit.all_dcbs[thread_id]; dcb; dcb = dcb->m_thread.next)
+    for (DCB* dcb : dcbs)
     {
         if (dcb->session())
         {
@@ -2815,20 +2819,17 @@ static uint32_t dcb_poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32
     return rval;
 }
 
-static bool dcb_is_still_valid(DCB* target, int id)
+static bool dcb_is_still_valid(DCB* target, const RoutingWorker& worker)
 {
     bool rval = false;
 
-    for (DCB* dcb = this_unit.all_dcbs[id];
-         dcb; dcb = dcb->m_thread.next)
+    const auto& dcbs = worker.dcbs();
+
+    if (dcbs.count(target) != 0)
     {
-        if (target == dcb)
+        if (target->m_nClose == 0)
         {
-            if (dcb->m_nClose == 0)
-            {
-                rval = true;
-            }
-            break;
+            rval = true;
         }
     }
 
@@ -2854,7 +2855,7 @@ public:
         mxb_assert(&worker == RoutingWorker::get_current());
 
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
-        if (dcb_is_still_valid(m_dcb, rworker.id()) && m_dcb->m_uid == m_uid)
+        if (dcb_is_still_valid(m_dcb, rworker) && m_dcb->m_uid == m_uid)
         {
             mxb_assert(m_dcb->owner == RoutingWorker::get_current());
             m_dcb->m_fakeq = m_buffer;
