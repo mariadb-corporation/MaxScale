@@ -61,7 +61,7 @@ static const char mysqlauth_validate_user_query[] =
 static const char mysqlauth_validate_user_query_lower[] =
     "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
     " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host)"
-    " AND (anydb = '1' OR LOWER('%s') IN ('', 'information_schema') OR LOWER('%s') LIKE LOWER(db)"
+    " AND (anydb = '1' OR LOWER('%s') IN ('', 'information_schema') OR LOWER('%s') LIKE LOWER(db))"
     " LIMIT 1";
 
 /** Query that only checks if there's a matching user */
