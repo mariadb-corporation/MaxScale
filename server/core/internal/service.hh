@@ -87,6 +87,11 @@ public:
      */
     const FilterList& get_filters() const;
 
+    const std::vector<mxs::Target*>& get_children() const override
+    {
+        return config().targets;
+    }
+
     /**
      * Reload users for all listeners
      *

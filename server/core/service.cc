@@ -835,7 +835,6 @@ void dprintAllServices(DCB* dcb)
 void dprintService(DCB* dcb, SERVICE* svc)
 {
     Service* service = static_cast<Service*>(svc);
-    SERVER_REF* server = service->dbref;
     struct tm result;
     char timebuf[30];
 
@@ -882,25 +881,12 @@ void dprintService(DCB* dcb, SERVICE* svc)
         }
         dcb_printf(dcb, "\n");
     }
-    dcb_printf(dcb, "\tBackend databases:\n");
-    while (server)
+
+    dcb_printf(dcb, "\tRouting targets:\n");
+
+    for (auto target : service->get_children())
     {
-        if (server_ref_is_active(server))
-        {
-            dcb_printf(dcb,
-                       "\t\t[%s]:%d    Protocol: %s    Name: %s\n",
-                       server->server->address,
-                       server->server->port,
-                       server->server->protocol().c_str(),
-                       server->server->name());
-        }
-        server = server->next;
-    }
-    if (!service->config().weightby.empty())
-    {
-        dcb_printf(dcb,
-                   "\tRouting weight parameter:            %s\n",
-                   service->config().weightby.c_str());
+        dcb_printf(dcb, "\t\tName: %s\n", target->name());
     }
 
     dcb_printf(dcb,
@@ -942,25 +928,14 @@ void dListServices(DCB* dcb)
                        service->stats().n_current,
                        service->stats().n_connections);
 
-            SERVER_REF* server_ref = service->dbref;
-            bool first = true;
-            while (server_ref)
+            std::vector<std::string> names;
+
+            for (auto t : service->get_children())
             {
-                if (server_ref_is_active(server_ref))
-                {
-                    if (first)
-                    {
-                        dcb_printf(dcb, "%s", server_ref->server->name());
-                    }
-                    else
-                    {
-                        dcb_printf(dcb, ", %s", server_ref->server->name());
-                    }
-                    first = false;
-                }
-                server_ref = server_ref->next;
+                names.push_back(t->name());
             }
-            dcb_printf(dcb, "\n");
+
+            dcb_printf(dcb, "%s\n", mxb::join(names).c_str());
         }
         dcb_printf(dcb, "%s\n", HORIZ_SEPARATOR);
     }
@@ -1269,13 +1244,11 @@ bool service_server_in_use(const SERVER* server)
     for (Service* service : this_unit.services)
     {
         LockGuard guard(service->lock);
+        auto targets = service->get_children();
 
-        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+        if (std::find(targets.begin(), targets.end(), server) != targets.end())
         {
-            if (ref->active && ref->server == server)
-            {
-                return true;
-            }
+            return true;
         }
     }
 
@@ -1509,19 +1482,6 @@ json_t* service_parameters_to_json(const SERVICE* service)
     return rval;
 }
 
-static inline bool have_active_servers(const SERVICE* service)
-{
-    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
-    {
-        if (server_ref_is_active(ref))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 static json_t* service_all_listeners_json_data(const SERVICE* service)
 {
     json_t* arr = json_array();
@@ -1706,13 +1666,11 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     for (Service* service : this_unit.services)
     {
         LockGuard guard(service->lock);
+        auto targets = service->get_children();
 
-        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+        if (std::find(targets.begin(), targets.end(), server) != targets.end())
         {
-            if (ref->server == server && server_ref_is_active(ref))
-            {
-                names.push_back(service->name());
-            }
+            names.push_back(service->name());
         }
     }
 
@@ -1724,10 +1682,9 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     {
         rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
 
-        for (std::vector<std::string>::iterator it = names.begin();
-             it != names.end(); it++)
+        for (const auto& a : names)
         {
-            mxs_json_add_relation(rel, it->c_str(), CN_SERVICES);
+            mxs_json_add_relation(rel, a.c_str(), CN_SERVICES);
         }
     }
 

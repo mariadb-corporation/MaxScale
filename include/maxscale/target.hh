@@ -186,6 +186,13 @@ public:
      */
     virtual std::unique_ptr<Endpoint> get_connection(Component* up, MXS_SESSION* session) = 0;
 
+    /**
+     * Get children of this target
+     *
+     * @return A vector of targets that this target uses
+     */
+    virtual const std::vector<Target*>& get_children() const = 0;
+
     /* Target connection and usage statistics */
     struct Stats
     {

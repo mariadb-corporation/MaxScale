@@ -50,7 +50,7 @@ HintRouter::HintRouter(SERVICE* pService,
     if (m_max_slaves < 0)
     {
         // set a reasonable default value
-        m_max_slaves = pService->n_dbref - 1;
+        m_max_slaves = pService->get_children().size() - 1;
     }
     MXS_NOTICE("Hint router [%s] created.", pService->name());
 }

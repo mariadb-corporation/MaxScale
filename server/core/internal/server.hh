@@ -251,6 +251,12 @@ public:
 
     std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* upstream, MXS_SESSION* session) override;
 
+    const std::vector<mxs::Target*>& get_children() const override
+    {
+        static std::vector<mxs::Target*> no_children;
+        return no_children;
+    }
+
     BackendDCB** persistent = nullptr;      /**< List of unused persistent connections to the server */
 
 private:
