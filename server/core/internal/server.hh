@@ -255,11 +255,6 @@ public:
 
     json_t* json_attributes() const;
 
-    void* auth_instance()
-    {
-        return m_auth_instance;
-    }
-
     DCB** persistent = nullptr;     /**< List of unused persistent connections to the server */
 
 private:
@@ -323,8 +318,6 @@ private:
     const std::string m_name;               /**< Server config name */
     Settings          m_settings;           /**< Server settings */
     VersionInfo       m_info;               /**< Server version and type information */
-
-    void* m_auth_instance = nullptr;    /**< Authenticator instance data */
 };
 
 /**

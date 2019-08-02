@@ -131,17 +131,7 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         authenticator = zAuthenticator;
     }
 
-    void* auth_instance = NULL;
-    // Backend authenticators do not have options.
-    if (!authenticator_init(&auth_instance, authenticator.c_str(), NULL))
-    {
-        MXS_ERROR("Failed to initialize authenticator module '%s' for server '%s' ",
-                  authenticator.c_str(), name);
-        return NULL;
-    }
-
     std::unique_ptr<mxs::SSLContext> ssl;
-
     if (!config_create_ssl(name, params, false, &ssl))
     {
         MXS_ERROR("Unable to initialize SSL for server '%s'", name);
@@ -174,7 +164,6 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
     server->m_settings.persistmaxtime = params.get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
     server->proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
     server->is_active = true;
-    server->m_auth_instance = auth_instance;
     server->persistent = persistent;
     server->assign_status(SERVER_RUNNING);
     server->m_settings.rank = params.get_enum(CN_RANK, rank_values);

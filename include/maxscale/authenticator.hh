@@ -27,6 +27,11 @@ struct GWBUF;
 struct json_t;
 struct MXS_SESSION;
 
+namespace maxscale
+{
+class Authenticator;
+}
+
 /**
  * The MXS_AUTHENTICATOR version data. The following should be updated whenever
  * the MXS_AUTHENTICATOR structure is changed. See the rules defined in modinfo.h
@@ -175,7 +180,7 @@ enum mxs_auth_state_t
     MXS_AUTH_STATE_COMPLETE         /**< Authentication is complete */
 };
 
-bool        authenticator_init(void** instance, const char* authenticator, const char* options);
+mxs::Authenticator* authenticator_init(const char* authenticator, const char* options);
 const char* get_default_authenticator(const char* protocol);
 
 namespace maxscale

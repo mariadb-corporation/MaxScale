@@ -29,6 +29,7 @@
 #include <string>
 #include <unordered_set>
 
+#include <maxscale/authenticator2.hh>
 #include <maxscale/maxadmin.h>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.hh>
@@ -112,7 +113,7 @@ Listener::Listener(SERVICE* service,
                    const std::string& protocol,
                    const std::string& authenticator,
                    const std::string& auth_opts,
-                   void* auth_instance,
+                   mxs::Authenticator* auth_instance,
                    std::unique_ptr<mxs::SSLContext> ssl,
                    const MXS_CONFIG_PARAMETER& params)
     : MXB_POLL_DATA{Listener::poll_handler}
@@ -239,9 +240,8 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    void* auth_instance = NULL;
-
-    if (!authenticator_init(&auth_instance, auth, authenticator_options.c_str()))
+    mxs::Authenticator* auth_instance = authenticator_init(auth, authenticator_options.c_str());
+    if (!auth_instance)
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for listener '%s'.",
                   auth, name.c_str());
@@ -599,7 +599,7 @@ const MXS_AUTHENTICATOR& Listener::auth_func() const
     return m_auth_func;
 }
 
-void* Listener::auth_instance() const
+mxs::Authenticator* Listener::auth_instance() const
 {
     return m_auth_instance;
 }
@@ -834,10 +834,9 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         client_dcb->m_remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */
-        if (m_auth_func.create
-            && (client_dcb->m_authenticator_data = m_auth_func.create(m_auth_instance)) == NULL)
+        if ((client_dcb->m_authenticator_data = m_auth_instance->createSession()) == nullptr)
         {
-            MXS_ERROR("Failed to create authenticator for client DCB");
+            MXS_ERROR("Failed to create authenticator session for client DCB");
             dcb_close(client_dcb);
             return NULL;
         }

@@ -43,6 +43,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/atomic.hh>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/listener.hh>
@@ -59,6 +60,7 @@
 using maxscale::RoutingWorker;
 using maxbase::Worker;
 using std::string;
+using mxs::AuthenticatorBackendSession;
 
 // #define DCB_LOG_EVENT_HANDLING
 #if defined (DCB_LOG_EVENT_HANDLING)
@@ -359,24 +361,18 @@ BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const ch
         authenticator = funcs->auth_default();
     }
 
-    MXS_AUTHENTICATOR* authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator.c_str(),
-                                                                   MODULE_AUTHENTICATOR);
-
-    if (!authfuncs)
+    // Allocate DCB specific authentication data. Backend authenticators do not have an instance.
+    AuthenticatorBackendSession* auth_session = nullptr;
+    auto authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
+    if (authfuncs && authfuncs->create)
     {
-        return nullptr;
+        auth_session = static_cast<AuthenticatorBackendSession*>(authfuncs->create(nullptr));
     }
 
-    void* authenticator_data = nullptr;
-
-    // Allocate DCB specific authentication data
-    if (auto auth_create = authfuncs->create)
+    if (!auth_session)
     {
-        if (!(authenticator_data = auth_create(server->auth_instance())))
-        {
-            MXS_ERROR("Failed to create authenticator session for backend DCB.");
-            return nullptr;
-        }
+        MXS_ERROR("Failed to create authenticator session for backend DCB.");
+        return nullptr;
     }
 
     BackendDCB* dcb = new (std::nothrow) BackendDCB(session, server, registry);
@@ -385,13 +381,13 @@ BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const ch
     {
         memcpy(&dcb->m_func, funcs, sizeof(dcb->m_func));
         memcpy(&dcb->m_authfunc, authfuncs, sizeof(dcb->m_authfunc));
-        dcb->m_authenticator_data = authenticator_data;
+        dcb->m_authenticator_data = auth_session;
 
         session_link_backend_dcb(session, dcb);
     }
-    else if (authfuncs->destroy)
+    else
     {
-        authfuncs->destroy(authenticator_data);
+        delete auth_session;
     }
 
     return dcb;

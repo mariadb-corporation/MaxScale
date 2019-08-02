@@ -136,7 +136,7 @@ public:
     /**
      * The authenticator instance
      */
-    void* auth_instance() const;
+    mxs::Authenticator* auth_instance() const;
 
     /**
      * The state of the listener
@@ -213,8 +213,8 @@ private:
     std::string m_address;          /**< Address to listen with */
     std::string m_authenticator;    /**< Name of authenticator */
     std::string m_auth_options;     /**< Authenticator options */
-    void*       m_auth_instance;    /**< Authenticator instance */
 
+    mxs::Authenticator*  m_auth_instance;   /**< Authenticator instance */
     struct users*        m_users;           /**< The user data for this listener */
     SERVICE*             m_service;         /**< The service which used by this listener */
     std::atomic<bool>    m_active;          /**< True if the port has not been deleted */
@@ -255,8 +255,8 @@ private:
      */
     Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
              const std::string& protocol, const std::string& authenticator,
-             const std::string& auth_opts, void* auth_instance, std::unique_ptr<mxs::SSLContext> ssl,
-             const MXS_CONFIG_PARAMETER& params);
+             const std::string& auth_opts, mxs::Authenticator* auth_instance,
+             std::unique_ptr<mxs::SSLContext> ssl, const MXS_CONFIG_PARAMETER& params);
 
     /**
      * Listen on a file descriptor shared between all workers

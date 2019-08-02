@@ -22,31 +22,25 @@
  * @file authenticator.c - Authenticator module functions
  */
 
+using mxs::Authenticator;
+
 /**
  * @brief Initialize an authenticator module
  *
  * Process the options into an array and pass them to the authenticator
  * initialization function
  *
- * The authenticator must implement the @c initialize entry point if this
- * function is called. If the authenticator does not implement this, behavior is
- * undefined.
- *
- * @param func Authenticator entry point
+ * @param authenticator Authenticator name
  * @param options Authenticator options
  * @return Authenticator instance or NULL on error
  */
-bool authenticator_init(void** dest, const char* authenticator, const char* options)
+Authenticator* authenticator_init(const char* authenticator, const char* options)
 {
-    bool rval = true;
-    void* instance = NULL;
-    MXS_AUTHENTICATOR* func = (MXS_AUTHENTICATOR*)load_module(authenticator, MODULE_AUTHENTICATOR);
+    Authenticator* rval = nullptr;
+    auto func = (MXS_AUTHENTICATOR*)load_module(authenticator, MODULE_AUTHENTICATOR);
 
-    if (func == NULL)
-    {
-        rval = false;
-    }
-    else if (func->initialize)
+    // Client authenticator modules must have an init-entrypoint.
+    if (func && func->initialize)
     {
         char* optarray[AUTHENTICATOR_MAX_OPTIONS + 1];
         size_t optlen = options && *options ? strlen(options) : 0;
@@ -74,13 +68,8 @@ bool authenticator_init(void** dest, const char* authenticator, const char* opti
 
         optarray[optcount] = NULL;
 
-        if ((instance = func->initialize(optarray)) == NULL)
-        {
-            rval = false;
-        }
+        rval = static_cast<Authenticator*>(func->initialize(optarray));
     }
-
-    *dest = instance;
     return rval;
 }
 

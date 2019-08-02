@@ -115,7 +115,7 @@ public:
 
     static int loadUsers(Listener* listener)
     {
-        auto auth = static_cast<Authenticator*>(listener->auth_instance());
+        auto auth = listener->auth_instance();
         int rval = MXS_AUTH_LOADUSERS_ERROR;
         MXS_EXCEPTION_GUARD(rval = auth->load_users(listener));
         return rval;
@@ -123,13 +123,13 @@ public:
 
     static void diagnostics(DCB* output, Listener* listener)
     {
-        auto auth = static_cast<Authenticator*>(listener->auth_instance());
+        auto auth = listener->auth_instance();
         MXS_EXCEPTION_GUARD(auth->diagnostics(output, listener));
     }
 
     static json_t* diagnostics_json(const Listener* listener)
     {
-        auto auth = static_cast<Authenticator*>(listener->auth_instance());
+        auto auth = listener->auth_instance();
         json_t* rval = nullptr;
         MXS_EXCEPTION_GUARD(rval = auth->diagnostics_json(nullptr));
         return rval;
