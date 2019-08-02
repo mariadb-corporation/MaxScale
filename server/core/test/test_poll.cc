@@ -81,21 +81,21 @@ static int test1()
     }
 
 
-    if (!poll_add_dcb(dcb))
+    if (!dcb->enable_events())
     {
-        fprintf(stderr, "\nError on function call: poll_add_dcb() failed\n");
+        fprintf(stderr, "\nError on function call: DCB::enable_events() failed\n");
         return 1;
     }
 
-    if (!poll_remove_dcb(dcb))
+    if (!dcb->disable_events())
     {
-        fprintf(stderr, "\nError on function call: poll_remove_dcb() failed.\n");
+        fprintf(stderr, "\nError on function call: DCB::disable_events() failed.\n");
         return 1;
     }
 
-    if (!poll_add_dcb(dcb))
+    if (!dcb->enable_events())
     {
-        fprintf(stderr, "\nError on function call: poll_add_dcb() failed.\n");
+        fprintf(stderr, "\nError on function call: DCB::enable_events() failed.\n");
         return 1;
     }
 

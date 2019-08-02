@@ -88,24 +88,6 @@ void poll_fake_write_event(DCB* dcb);
 void poll_fake_read_event(DCB* dcb);
 
 /**
- * Add a DCB to the set of descriptors within the polling
- * environment.
- *
- * @param dcb   The descriptor to add to the poll
- * @return      True on success, false on error.
- */
-bool poll_add_dcb(DCB*);
-
-/**
- * Remove a descriptor from the set of descriptors within the
- * polling environment.
- *
- * @param dcb   The descriptor to remove
- * @return      True on success, false on error.
- */
-bool poll_remove_dcb(DCB*);
-
-/**
  * Add given GWBUF to DCB's readqueue and add a pending EPOLLIN event for DCB.
  * The event pretends that there is something to read for the DCB. Actually
  * the incoming data is stored in the DCB's readqueue where it is read.

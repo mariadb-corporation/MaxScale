@@ -335,7 +335,7 @@ void dcb_free_all_memory(DCB* dcb)
  */
 static void dcb_stop_polling_and_shutdown(DCB* dcb)
 {
-    poll_remove_dcb(dcb);
+    dcb->disable_events();
     /**
      * close protocol and router session
      */
@@ -512,7 +512,7 @@ DCB* dcb_connect(SERVER* srv, const char* protocol, MXS_SESSION* session, DCB::R
     {
         if (do_connect(server->address, server->port, &dcb->m_fd)
             && (dcb->m_protocol = dcb->m_func.connect(dcb, server, session))
-            && poll_add_dcb(dcb))
+            && dcb->enable_events())
         {
             // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
             // event that is triggered once the connection is established.
@@ -2915,7 +2915,7 @@ static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* da
     return rv;
 }
 
-bool DCB::add_to_worker()
+bool DCB::enable_events()
 {
     dcb_sanity_check(this);
     bool rv = true;
@@ -2942,12 +2942,7 @@ bool DCB::add_to_worker()
     return rv;
 }
 
-bool poll_add_dcb(DCB* dcb)
-{
-    return dcb->add_to_worker();
-}
-
-bool DCB::remove_from_worker()
+bool DCB::disable_events()
 {
     bool rv = true;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
@@ -2986,11 +2981,6 @@ bool DCB::remove_from_worker()
         }
     }
     return rv;
-}
-
-bool poll_remove_dcb(DCB* dcb)
-{
-    return dcb->remove_from_worker();
 }
 
 DCB* dcb_get_current()

@@ -189,22 +189,26 @@ public:
     void shutdown();
 
     /**
-     * Add the DCB to the epoll set of the current worker.
+     * Adds the DCB to the epoll set of the current worker, which in practice
+     * means that the DCB will receive I/O events related to its file descriptor,
+     * and that corresponding handlers will be called.
      *
      * NOTE: The current worker *must* be the owner of the DCB.
      *
      * @return True on success, false on error.
      */
-    bool add_to_worker();
+    bool enable_events();
 
     /**
-     * Remove the DCB from the epoll set of the current worker.
+     * Remove the DCB from the epoll set of the current worker, which in practice
+     * means that the DCB will no longer receive I/O events related to its file
+     * descriptor and that corresponding handlers will no longer be called.
      *
      * NOTE: The current worker *must* be the owner of the DCB.
      *
      * @return True on success, false on error.
      */
-    bool remove_from_worker();
+    bool disable_events();
 
     // BEGIN: Temporarily here, do not use.
     static void close(DCB* dcb);
