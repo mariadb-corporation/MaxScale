@@ -2293,7 +2293,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         gw_MySQLAccept,                             /* Accept                        */
         NULL,                                       /* Connect                       */
         gw_client_close,                            /* Close                         */
-        NULL,                                       /* Authentication                */
         gw_default_auth,                            /* Default authenticator         */
         gw_connection_limit,                        /* Send error connection limit   */
         NULL,

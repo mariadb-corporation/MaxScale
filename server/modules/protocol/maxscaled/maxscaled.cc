@@ -180,7 +180,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         maxscaled_accept,               /**< Accept                        */
         NULL,                           /**< Connect                       */
         maxscaled_close,                /**< Close                         */
-        NULL,                           /**< Authentication                */
         mxsd_default_auth,              /**< Default authenticator         */
         NULL,                           /**< Connection limit reached      */
         NULL,

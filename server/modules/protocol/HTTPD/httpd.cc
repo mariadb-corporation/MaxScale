@@ -77,7 +77,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         httpd_accept,           /**< Accept                        */
         NULL,                   /**< Connect                       */
         httpd_close,            /**< Close                         */
-        NULL,                   /**< Authentication                */
         httpd_default_auth,     /**< Default authenticator         */
         NULL,                   /**< Connection limit reached      */
         NULL,

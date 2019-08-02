@@ -43,10 +43,8 @@ static int  gw_backend_close(DCB* dcb);
 static int  gw_backend_hangup(DCB* dcb);
 static int  backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
 static void backend_set_delayqueue(DCB* dcb, GWBUF* queue);
-static int  gw_change_user(DCB* backend_dcb,
-                           SERVER* server,
-                           MXS_SESSION* in_session,
-                           GWBUF* queue);
+
+static int         gw_change_user(DCB* dcb, MXS_SESSION* session, GWBUF* queue);
 static char*       gw_backend_default_auth();
 static GWBUF*      process_response_data(DCB* dcb, GWBUF** readbuf, int nbytes_to_process);
 static bool        sescmd_response_complete(DCB* dcb);
@@ -90,7 +88,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                               /* Accept                        */
         gw_create_backend_connection,       /* Connect                     */
         gw_backend_close,                   /* Close                         */
-        gw_change_user,                     /* Authentication                */
         gw_backend_default_auth,            /* Default authenticator         */
         NULL,                               /* Connection limit reached      */
         gw_connection_established,
@@ -1149,7 +1146,11 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
 
             prepare_for_write(dcb, queue);
 
-            if (cmd == MXS_COM_QUIT && dcb->m_server->persistent_conns_enabled())
+            if (backend_protocol->reply().command() == MXS_COM_CHANGE_USER)
+            {
+                return gw_change_user(dcb, dcb->session(), queue);
+            }
+            else if (cmd == MXS_COM_QUIT && dcb->m_server->persistent_conns_enabled())
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
                 gwbuf_free(queue);
@@ -1367,7 +1368,6 @@ static int backend_write_delayqueue(DCB* dcb, GWBUF* buffer)
  * @return 1 on success and 0 on failure
  */
 static int gw_change_user(DCB* backend,
-                          SERVER* server,
                           MXS_SESSION* in_session,
                           GWBUF* queue)
 {

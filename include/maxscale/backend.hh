@@ -189,15 +189,6 @@ public:
     virtual bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
 
     /**
-     * @brief Write an authentication switch request to the backend server
-     *
-     * @param buffer Buffer containing the authentication switch request
-     *
-     * @return True if request was successfully written
-     */
-    bool auth(GWBUF* buffer);
-
-    /**
      * @brief Mark that a reply to a query was received and processed
      */
     void ack_write();

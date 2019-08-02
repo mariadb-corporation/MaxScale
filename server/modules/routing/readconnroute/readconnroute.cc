@@ -463,13 +463,6 @@ int RCRSession::routeQuery(GWBUF* queue)
 
     switch (mysql_command)
     {
-    case MXS_COM_CHANGE_USER:
-        rc = backend_dcb->m_func.auth(backend_dcb,
-                                      nullptr,
-                                      backend_dcb->session(),
-                                      queue);
-        break;
-
     case MXS_COM_QUERY:
         if (mxs_log_is_priority_enabled(LOG_INFO))
         {

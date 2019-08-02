@@ -101,10 +101,6 @@ bool Backend::execute_session_command()
         mxb_assert(!is_waiting_result());
         break;
 
-    case MXS_COM_CHANGE_USER:
-        rval = auth(buffer);
-        break;
-
     case MXS_COM_QUERY:
     default:
         // We want the complete response in one packet
@@ -216,20 +212,6 @@ bool Backend::write(GWBUF* buffer, response_type type)
     if (rval && type == EXPECT_RESPONSE)
     {
         set_state(WAITING_RESULT);
-    }
-
-    return rval;
-}
-
-bool Backend::auth(GWBUF* buffer)
-{
-    mxb_assert(in_use());
-    bool rval = false;
-
-    if (m_dcb->m_func.auth(m_dcb, NULL, m_dcb->session(), buffer) == 1)
-    {
-        set_state(WAITING_RESULT);
-        rval = true;
     }
 
     return rval;

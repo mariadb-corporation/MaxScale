@@ -121,20 +121,6 @@ struct MXS_PROTOCOL
     int32_t (* close)(DCB* dcb);
 
     /**
-     * Perform user re-authentication
-     *
-     * @param dcb     DCB to re-authenticate
-     * @param server  Server where the DCB is connected
-     * @param session The session for the DCB
-     * @param buffer  The buffer containing the original re-authentication request
-     *
-     * @return 1 on success, 0 on error
-     *
-     * @note Currently the return value is ignored
-     */
-    int32_t (* auth)(DCB* dcb, SERVER* server, MXS_SESSION* session, GWBUF* buffer);
-
-    /**
      * Returns the name of the default authenticator module for this protocol
      *
      * @return The name of the default authenticator

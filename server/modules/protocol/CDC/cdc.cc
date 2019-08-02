@@ -97,7 +97,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         cdc_accept,             /* Accept                        */
         NULL,                   /* Connect                       */
         cdc_close,              /* Close                         */
-        NULL,                   /* Authentication                */
         cdc_default_auth,       /* default authentication */
         NULL,
         NULL,
