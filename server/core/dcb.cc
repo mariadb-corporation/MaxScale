@@ -2967,15 +2967,21 @@ static int upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdat
     {
         MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
                  client_dcb->m_user, client_dcb->m_remote);
-        worker->remove_fd(client_dcb->m_fd);
-        client_dcb->set_state(DCB_STATE_NOPOLLING);
+
+        client_dcb->disable_events();
     }
     else if (reason == DCB_REASON_LOW_WATER)
     {
         MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data", client_dcb->m_user,
                  client_dcb->m_remote);
-        worker->add_fd(client_dcb->m_fd, THIS_UNIT::poll_events, (MXB_POLL_DATA*)client_dcb);
-        client_dcb->set_state(DCB_STATE_POLLING);
+
+        if (!client_dcb->enable_events())
+        {
+            MXS_ERROR("Could not re-enable I/O events for client connection whose I/O events "
+                      "earlier were disabled due to the high water mark having been hit. "
+                      "Closing session.");
+            poll_fake_hangup_event(client_dcb);
+        }
     }
 
     return 0;
@@ -2991,9 +2997,7 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
         MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
                  "mark is hit", dcb->m_server->name(), client_dcb->m_user, client_dcb->m_remote);
 
-        mxb::Worker* worker = static_cast<mxb::Worker*>(dcb->owner);
-        worker->remove_fd(dcb->m_fd);
-        dcb->set_state(DCB_STATE_NOPOLLING);
+        dcb->disable_events();
     }
 
     return true;
@@ -3006,12 +3010,16 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
     if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
     {
         DCB* client_dcb = dcb->session()->client_dcb;
-        MXS_INFO("Low water mark hit for  connection to '%s' from '%s'@'%s', accepting new data",
+        MXS_INFO("Low water mark hit for connection to '%s' from '%s'@'%s', accepting new data",
                  dcb->m_server->name(), client_dcb->m_user, client_dcb->m_remote);
 
-        mxb::Worker* worker = static_cast<mxb::Worker*>(dcb->owner);
-        worker->add_fd(dcb->m_fd, THIS_UNIT::poll_events, (MXB_POLL_DATA*)dcb);
-        dcb->set_state(DCB_STATE_POLLING);
+        if (!dcb->enable_events())
+        {
+            MXS_ERROR("Could not re-enable I/O events for backend connection whose I/O events "
+                      "earlier were disabled due to the high water mark having been hit. "
+                      "Closing session.");
+            poll_fake_hangup_event(client_dcb);
+        }
     }
 
     return true;
