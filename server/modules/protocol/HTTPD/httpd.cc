@@ -107,7 +107,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 /*lint +e14 */
 
-static const char* default_auth = "NullAuthAllow";
+static const char* default_auth = "httpauth";
 
 /**
  * The default authenticator name for this protocol
