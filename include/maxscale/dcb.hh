@@ -261,11 +261,6 @@ public:
     bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
                                                  * release
                                                  * throttle */
-    struct
-    {
-        DCB* next = nullptr;        /**< Next DCB in owning thread's list */
-        DCB* tail = nullptr;        /**< Last DCB in owning thread's list */
-    } m_thread;
     uint32_t m_nClose = 0;   /** How many times dcb_close has been called. */
     uint64_t m_uid;         /**< Unique identifier for this DCB */
 

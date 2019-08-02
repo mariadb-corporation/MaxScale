@@ -76,8 +76,6 @@ namespace
 
 static struct THIS_UNIT
 {
-    DCB** all_dcbs;     /**< #workers sized array of pointers to DCBs where dcbs are listed. */
-
     bool                  check_timeouts;   /**< Should session timeouts be checked. */
     std::atomic<uint64_t> uid_generator {0};
 #ifdef EPOLLRDHUP
@@ -120,9 +118,7 @@ static int    gw_write_SSL(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    dcb_log_errors_SSL(DCB* dcb, int ret);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 static void   dcb_add_to_all_list(DCB* dcb);
-static void   dcb_add_to_list(DCB* dcb);
 static DCB*   dcb_find_free();
-static void   dcb_remove_from_list(DCB* dcb);
 
 static uint32_t dcb_poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
 static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t ev);
@@ -132,13 +128,6 @@ static int      downstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* 
 
 void dcb_global_init()
 {
-    int nthreads = config_threadcount();
-
-    if ((this_unit.all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL)
-    {
-        MXS_OOM();
-        raise(SIGABRT);
-    }
 }
 
 void dcb_finish()
@@ -1267,7 +1256,6 @@ void DCB::final_close(DCB* dcb)
         }
 
         dcb->m_state = DCB_STATE_DISCONNECTED;
-        dcb_remove_from_list(dcb);
         DCB::final_free(dcb);
     }
 }
@@ -2357,90 +2345,6 @@ char* dcb_role_name(DCB* dcb)
     return name;
 }
 
-static void dcb_add_to_list_cb(int thread_id, void* data)
-{
-    DCB* dcb = (DCB*)data;
-
-    mxb_assert(thread_id == static_cast<RoutingWorker*>(dcb->owner)->id());
-
-    dcb_add_to_list(dcb);
-}
-
-static void dcb_add_to_list(DCB* dcb)
-{
-    if (dcb->m_thread.next == NULL && dcb->m_thread.tail == NULL)
-    {
-        /**
-         * This is a DCB which is either not a listener or it is a listener which
-         * is not in the list. Stopped listeners are not removed from the list.
-         */
-
-        int id = static_cast<RoutingWorker*>(dcb->owner)->id();
-        mxb_assert(id == RoutingWorker::get_current_id());
-
-        if (this_unit.all_dcbs[id] == NULL)
-        {
-            this_unit.all_dcbs[id] = dcb;
-            this_unit.all_dcbs[id]->m_thread.tail = dcb;
-        }
-        else
-        {
-            mxb_assert(this_unit.all_dcbs[id]->m_thread.tail->m_thread.next != dcb);
-            this_unit.all_dcbs[id]->m_thread.tail->m_thread.next = dcb;
-            this_unit.all_dcbs[id]->m_thread.tail = dcb;
-        }
-    }
-}
-
-/**
- * Remove a DCB from the owner's list
- *
- * @param dcb DCB to remove
- */
-static void dcb_remove_from_list(DCB* dcb)
-{
-    int id = static_cast<RoutingWorker*>(dcb->owner)->id();
-
-    if (dcb == this_unit.all_dcbs[id])
-    {
-        DCB* tail = this_unit.all_dcbs[id]->m_thread.tail;
-        this_unit.all_dcbs[id] = this_unit.all_dcbs[id]->m_thread.next;
-
-        if (this_unit.all_dcbs[id])
-        {
-            this_unit.all_dcbs[id]->m_thread.tail = tail;
-        }
-    }
-    else
-    {
-        // If the creation of the DCB failed, it will not have been added
-        // to the list at all. And if it happened to be the first DCB to be
-        // created, then `prev` is NULL at this point.
-        DCB* prev = this_unit.all_dcbs[id];
-        DCB* current = prev ? prev->m_thread.next : NULL;
-
-        while (current)
-        {
-            if (current == dcb)
-            {
-                if (current == this_unit.all_dcbs[id]->m_thread.tail)
-                {
-                    this_unit.all_dcbs[id]->m_thread.tail = prev;
-                }
-                prev->m_thread.next = current->m_thread.next;
-                break;
-            }
-            prev = current;
-            current = current->m_thread.next;
-        }
-    }
-
-    /** Reset the next and tail pointers so that if this DCB is added to the list
-     * again, it will be in a clean state. */
-    dcb->m_thread.next = NULL;
-    dcb->m_thread.tail = NULL;
-}
-
 /**
  * Enable the timing out of idle connections.
  */
@@ -2576,8 +2480,6 @@ void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
     {
         if (dcb->session())
         {
-            mxb_assert(dcb->m_thread.next != dcb);
-
             if (!func(dcb, data))
             {
                 break;
@@ -3027,11 +2929,7 @@ int DCB::add_to_worker()
     dcb_state_t old_state = m_state;
     m_state = DCB_STATE_POLLING;
 
-    if (worker->add_fd(m_fd, THIS_UNIT::poll_events, this))
-    {
-        dcb_add_to_list(this);
-    }
-    else
+    if (!worker->add_fd(m_fd, THIS_UNIT::poll_events, this))
     {
         /**
          * We failed to add the DCB to a worker. Revert the state so that it
