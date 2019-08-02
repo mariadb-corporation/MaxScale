@@ -393,6 +393,10 @@ add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND
 # END: ColumnStore tests                   #
 ############################################
 
+############################################
+# BEGIN: Normal tests                      #
+############################################
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
@@ -996,6 +1000,13 @@ add_test_executable(sr_basics.cpp sr_basics sr_basics LABELS REPL_BACKEND)
 
 # MXS-2490: Direct execution doesn't work with MaxScale
 add_test_executable(mxs2490_ps_execute_direct.cpp mxs2490_ps_execute_direct replication LABELS REPL_BACKEND readwritesplit)
+
+# MXS-2621: Incorrect SQL if lower_case_table_names is used.
+add_test_executable(mxs2621_lower_case_tables.cpp mxs2621_lower_case_tables mxs2621_lower_case_tables LABELS REPL_BACKEND)
+
+############################################
+# END: Normal tests                        #
+############################################
 
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
