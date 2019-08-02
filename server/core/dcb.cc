@@ -2864,26 +2864,6 @@ static bool dcb_session_check(DCB* dcb, const char* function)
     }
 }
 
-/** DCB Sanity checks */
-static inline void dcb_sanity_check(DCB* dcb)
-{
-    if (dcb->state() == DCB_STATE_DISCONNECTED)
-    {
-        MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
-                  "is %s, but this should be impossible, crashing.",
-                  dcb,
-                  STRDCBSTATE(dcb->state()));
-        raise(SIGABRT);
-    }
-    else if (dcb->state() == DCB_STATE_POLLING)
-    {
-        MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
-                  "is %s, but this is probably an error, not crashing.",
-                  dcb,
-                  STRDCBSTATE(dcb->state()));
-    }
-}
-
 static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* data)
 {
     bool rv = true;
@@ -2917,26 +2897,16 @@ static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* da
 
 bool DCB::enable_events()
 {
-    dcb_sanity_check(this);
-    bool rv = true;
+    mxb_assert(m_state == DCB_STATE_ALLOC || m_state == DCB_STATE_NOPOLLING);
+
+    bool rv = false;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
     mxb_assert(worker == RoutingWorker::get_current());
 
-    /**
-     * Assign the new state before adding the DCB to the worker and store the
-     * old state in case we need to revert it.
-     */
-    dcb_state_t old_state = m_state;
-    m_state = DCB_STATE_POLLING;
-
-    if (!worker->add_fd(m_fd, THIS_UNIT::poll_events, this))
+    if (worker->add_fd(m_fd, THIS_UNIT::poll_events, this))
     {
-        /**
-         * We failed to add the DCB to a worker. Revert the state so that it
-         * will be treated as a DCB in the correct state.
-         */
-        m_state = old_state;
-        rv = false;
+        m_state = DCB_STATE_POLLING;
+        rv = true;
     }
 
     return rv;
@@ -2944,42 +2914,27 @@ bool DCB::enable_events()
 
 bool DCB::disable_events()
 {
+    mxb_assert(m_state == DCB_STATE_POLLING);
+    mxb_assert(m_fd != DCBFD_CLOSED || m_role == DCB::Role::INTERNAL);
+
     bool rv = true;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
     mxb_assert(worker == RoutingWorker::get_current());
 
-    /*< It is possible that dcb has already been removed from the set */
-    if (m_state == DCB_STATE_NOPOLLING)
-    {
-        return true;
-    }
-    if (DCB_STATE_POLLING != m_state)
-    {
-        MXS_ERROR("%lu [poll_remove_dcb] Error : existing state of dcb %p "
-                  "is %s, but this is probably an error, not crashing.",
-                  pthread_self(),
-                  this,
-                  STRDCBSTATE(m_state));
-    }
-    /*<
-     * Set state to NOPOLLING and remove dcb from poll set.
-     */
+    // We unconditionally set the state, even if the actual removal might fail.
     m_state = DCB_STATE_NOPOLLING;
 
-    /**
-     * Only positive fds can be removed from epoll set.
-     */
-    mxb_assert(m_fd != DCBFD_CLOSED || m_role == DCB::Role::INTERNAL);
-
+    // When BLR creates an internal DCB, it will set its state to
+    // DCB_STATE_NOPOLLING and the fd will be DCBFD_CLOSED.
     if (m_fd != DCBFD_CLOSED)
     {
-        rv = false;
 
-        if (worker->remove_fd(m_fd))
+        if (!worker->remove_fd(m_fd))
         {
-            rv = true;
+            rv = false;
         }
     }
+
     return rv;
 }
 
