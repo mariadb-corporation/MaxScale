@@ -89,7 +89,7 @@ public:
 
     const std::vector<mxs::Target*>& get_children() const override
     {
-        return config().targets;
+        return m_data->targets;
     }
 
     /**
@@ -122,18 +122,22 @@ public:
         return m_monitor != nullptr;
     }
 
+    constexpr uint64_t get_version(service_version_which_t which) const
+    {
+        return which == SERVICE_VERSION_MAX ? m_data->version_max : m_data->version_min;
+    }
+
     std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* up, MXS_SESSION* session) override;
 
     // Adds a routing target to this service
-    void add_target(mxs::Target* target)
-    {
-        m_config->targets.push_back(target);
-        m_config.assign(*m_config);
-    }
+    void add_target(mxs::Target* target);
 
-    bool has_target(mxs::Target* target)
+    // Removes a target
+    void remove_target(mxs::Target* target);
+
+    bool has_target(mxs::Target* target) const
     {
-        return std::find(config().targets.begin(), config().targets.end(), target) != config().targets.end();
+        return std::find(m_data->targets.begin(), m_data->targets.end(), target) != m_data->targets.end();
     }
 
     const Config& config() const override
@@ -141,13 +145,48 @@ public:
         return *m_config;
     }
 
+    std::vector<SERVER*> reachable_servers() const final
+    {
+        return m_data->servers;
+    }
+
+    /**
+     * Check whether a service can be destroyed
+     *
+     * @return True if service can be destroyed
+     */
+    bool can_be_destroyed() const;
+
 private:
 
-    mxs::rworker_local<FilterList> m_filters;   /**< Ordered list of filters */
+    struct Data
+    {
+        // Server version numbers, precalculated
+        uint64_t   version_max {std::numeric_limits<uint64_t>::max()};
+        uint64_t   version_min {0};
+        FilterList filters;     // Ordered list of filters
 
-    RateLimits m_rate_limits;       /**< The refresh rate limits for users of each thread */
+        // List of servers this service reaches via its direct descendants. All servers are leaf nodes but not
+        // all leaf nodes are servers. As the list of servers is relatively often required and the
+        // construction is somewhat costly, the values are precalculated whenever the list of direct
+        // descendants is updated (i.e. the targets of the service).
+        std::vector<SERVER*> servers;
 
+        // The targets that this service points to i.e. the children of this node in the routing tree.
+        std::vector<mxs::Target*> targets;
+    };
+
+    mxs::rworker_local<Data>   m_data;
+    RateLimits                 m_rate_limits;   // User reload rate limits
     mxs::rworker_local<Config> m_config;
+
+    /**
+     * Recalculate internal data
+     *
+     * Recalculates the server reach this service has as well as the minimum and maximum server versions
+     * available through this service.
+     */
+    void targets_updated();
 };
 
 // A connection to a service
@@ -248,15 +287,6 @@ void service_free(Service* service);
  * @param service Service to destroy
  */
 void service_destroy(Service* service);
-
-/**
- * Check whether a service can be destroyed
- *
- * @param service Service to check
- *
- * @return True if service can be destroyed
- */
-bool service_can_be_destroyed(Service* service);
 
 /**
  * @brief Shut all services down

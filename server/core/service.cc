@@ -61,6 +61,7 @@
 #include "internal/modules.hh"
 #include "internal/service.hh"
 #include "internal/maxscale.hh"
+#include "internal/servermanager.hh"
 
 /** This define is needed in CentOS 6 systems */
 #if !defined (UINT64_MAX)
@@ -552,28 +553,10 @@ bool service_has_named_listener(Service* service, const char* name)
     return listener && listener->service() == service;
 }
 
-bool service_can_be_destroyed(Service* service)
+bool Service::can_be_destroyed() const
 {
-    bool rval = listener_find_by_service(service).empty();
-
-    if (rval)
-    {
-        for (auto s = service->dbref; s; s = s->next)
-        {
-            if (s->active)
-            {
-                rval = false;
-                break;
-            }
-        }
-    }
-
-    if (!service->get_filters().empty())
-    {
-        rval = false;
-    }
-
-    return rval;
+    const auto& data = *m_data;
+    return listener_find_by_service(this).empty() && data.targets.empty() && data.filters.empty();
 }
 
 /**
@@ -755,7 +738,8 @@ bool Service::set_filters(const std::vector<std::string>& filters)
 
     if (rval)
     {
-        m_filters.assign(flist);
+        m_data->filters = flist;
+        m_data.assign(*m_data);
         capabilities |= my_capabilities;
     }
 
@@ -764,7 +748,7 @@ bool Service::set_filters(const std::vector<std::string>& filters)
 
 const Service::FilterList& Service::get_filters() const
 {
-    return *m_filters;
+    return m_data->filters;
 }
 
 Service* service_internal_find(const char* name)
@@ -1310,12 +1294,15 @@ bool Service::dump_config(const char* filename) const
     /**
      * TODO: Check for return values on all of the dprintf calls
      */
-    if (!m_filters->empty())
+
+    const auto& data = *m_data;
+
+    if (!data.filters.empty())
     {
         dprintf(file, "%s=", CN_FILTERS);
         const char* sep = "";
 
-        for (const auto& f : *m_filters)
+        for (const auto& f : data.filters)
         {
             dprintf(file, "%s%s", sep, f->name.c_str());
             sep = "|";
@@ -1324,18 +1311,15 @@ bool Service::dump_config(const char* filename) const
         dprintf(file, "\n");
     }
 
-    if (dbref)
+    if (!data.targets.empty())
     {
         dprintf(file, "%s=", CN_SERVERS);
         const char* sep = "";
 
-        for (SERVER_REF* db = dbref; db; db = db->next)
+        for (const auto& s : data.targets)
         {
-            if (server_ref_is_active(db))
-            {
-                dprintf(file, "%s%s", sep, db->server->name());
-                sep = ",";
-            }
+            dprintf(file, "%s%s", sep, s->name());
+            sep = ",";
         }
         dprintf(file, "\n");
     }
@@ -1542,12 +1526,13 @@ json_t* Service::json_relationships(const char* host) const
 {
     /** Store relationships to other objects */
     json_t* rel = json_object();
+    const auto& data = *m_data;
 
-    if (!m_filters->empty())
+    if (!data.filters.empty())
     {
         json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
 
-        for (const auto& f : *m_filters)
+        for (const auto& f : data.filters)
         {
             mxs_json_add_relation(filters, f->name.c_str(), CN_FILTERS);
         }
@@ -1555,19 +1540,25 @@ json_t* Service::json_relationships(const char* host) const
         json_object_set_new(rel, CN_FILTERS, filters);
     }
 
-    if (have_active_servers(this))
+    if (!data.targets.empty())
     {
         json_t* servers = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
+        json_t* services = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
 
-        for (SERVER_REF* ref = dbref; ref; ref = ref->next)
+        for (const auto& s : data.targets)
         {
-            if (server_ref_is_active(ref))
+            if (ServerManager::find_by_unique_name(s->name()))
             {
-                mxs_json_add_relation(servers, ref->server->name(), CN_SERVERS);
+                mxs_json_add_relation(servers, s->name(), CN_SERVERS);
+            }
+            else
+            {
+                mxs_json_add_relation(services, s->name(), CN_SERVICES);
             }
         }
 
         json_object_set_new(rel, CN_SERVERS, servers);
+        json_object_set_new(rel, CN_SERVICES, services);
     }
 
     return rel;
@@ -1691,81 +1682,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
 
 uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
 {
-    const Service* service = static_cast<const Service*>(svc);
-    uint64_t version = 0;
-
-    if (which == SERVICE_VERSION_ANY)
-    {
-        SERVER_REF* sref = service->dbref;
-
-        while (sref && !sref->active)
-        {
-            sref = sref->next;
-        }
-
-        if (sref)
-        {
-            version = sref->server->version().total;
-        }
-    }
-    else
-    {
-        size_t n = 0;
-
-        uint64_t v;
-
-        if (which == SERVICE_VERSION_MIN)
-        {
-            v = UINT64_MAX;
-        }
-        else
-        {
-            mxb_assert(which == SERVICE_VERSION_MAX);
-
-            v = 0;
-        }
-
-        SERVER_REF* sref = service->dbref;
-
-        while (sref)
-        {
-            if (sref->active)
-            {
-                ++n;
-
-                SERVER* s = sref->server;
-                uint64_t server_version = s->version().total;
-
-                if (which == SERVICE_VERSION_MIN)
-                {
-                    if (server_version < v)
-                    {
-                        v = server_version;
-                    }
-                }
-                else
-                {
-                    mxb_assert(which == SERVICE_VERSION_MAX);
-
-                    if (server_version > v)
-                    {
-                        v = server_version;
-                    }
-                }
-            }
-
-            sref = sref->next;
-        }
-
-        if (n == 0)
-        {
-            v = 0;
-        }
-
-        version = v;
-    }
-
-    return version;
+    return static_cast<const Service*>(svc)->get_version(which);
 }
 
 bool Service::is_basic_parameter(const std::string& name)
@@ -2010,9 +1927,9 @@ std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_S
     if (my_connection)
     {
         std::vector<std::unique_ptr<mxs::Endpoint>> connections;
-        connections.reserve(config().targets.size());
+        connections.reserve(m_data->targets.size());
 
-        for (auto a : config().targets)
+        for (auto a : m_data->targets)
         {
             connections.push_back(a->get_connection(my_connection.get(), session));
             mxb_assert(connections.back().get());
@@ -2022,4 +1939,80 @@ std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_S
     }
 
     return my_connection;
+}
+
+namespace
+{
+
+// Returns minimum and maximum server versions from the list of servers
+std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers)
+{
+    uint64_t v_max = 0;
+    uint64_t v_min = 0;
+
+    if (!servers.empty())
+    {
+        v_min = UINT64_MAX;
+
+        for (auto s : servers)
+        {
+            v_min = std::min(s->version().total, v_min);
+            v_max = std::max(s->version().total, v_max);
+        }
+    }
+
+    return {v_min, v_max};
+}
+
+// Returns all servers that are in the given list of targets
+std::vector<SERVER*> get_servers(std::vector<mxs::Target*> targets)
+{
+    std::vector<SERVER*> rval;
+
+    for (auto a : targets)
+    {
+        if (auto srv = ServerManager::find_by_unique_name(a->name()))
+        {
+            rval.push_back(srv);
+        }
+        else
+        {
+            auto servers = get_servers(a->get_children());
+            rval.insert(rval.end(), servers.begin(), servers.end());
+        }
+    }
+
+    std::sort(rval.begin(), rval.end());
+    rval.erase(std::unique(rval.begin(), rval.end()), rval.end());
+
+    return rval;
+}
+}
+
+void Service::targets_updated()
+{
+    auto& data = *m_data;
+
+    // Now that we have the new set of targets, recalculate the servers that this service reaches
+    data.servers = get_servers(data.targets);
+
+    std::tie(data.version_min, data.version_max) = get_versions(data.servers);
+
+    // Update the global value based on the local cached value. Since modifications to services are always
+    // done on the same thread, there's no possibility of lost updates.
+    mxb_assert(mxs::RoutingWorker::get_current() == mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN));
+    m_data.assign(data);
+}
+
+void Service::remove_target(mxs::Target* target)
+{
+    auto& targets = m_data->targets;
+    targets.erase(std::remove(targets.begin(), targets.end(), target), targets.end());
+    targets_updated();
+}
+
+void Service::add_target(mxs::Target* target)
+{
+    m_data->targets.push_back(target);
+    targets_updated();
 }

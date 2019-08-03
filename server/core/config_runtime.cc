@@ -1332,7 +1332,7 @@ bool runtime_destroy_service(Service* service)
     std::lock_guard<std::mutex> guard(crt_lock);
     mxb_assert(service && service->active());
 
-    if (service_can_be_destroyed(service))
+    if (service->can_be_destroyed())
     {
         service_destroy(service);
         rval = true;
