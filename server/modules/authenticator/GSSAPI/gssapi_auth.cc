@@ -629,23 +629,17 @@ int GSSAPIAuthenticator::load_users(Listener* listener)
     {
         bool no_active_servers = true;
 
-        for (SERVER_REF* servers = listener->service()->dbref; servers; servers = servers->next)
+        for (SERVER* server : listener->service()->reachable_servers())
         {
-            if (!server_ref_is_active(servers) || !servers->server->server_is_active())
-            {
-                continue;
-            }
-
             no_active_servers = false;
             MYSQL* mysql = mysql_init(NULL);
 
-            if (mxs_mysql_real_connect(mysql, servers->server, user, pw))
+            if (mxs_mysql_real_connect(mysql, server, user, pw))
             {
                 if (mxs_mysql_query(mysql, gssapi_users_query))
                 {
                     MXS_ERROR("Failed to query server '%s' for GSSAPI users: %s",
-                              servers->server->name(),
-                              mysql_error(mysql));
+                              server->name(), mysql_error(mysql));
                 }
                 else
                 {

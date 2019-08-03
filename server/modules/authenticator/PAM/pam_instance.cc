@@ -319,16 +319,16 @@ int PamInstance::load_users(Listener* listener)
     {
         bool found_valid_server = false;
         bool got_data = false;
-        for (auto sref = service->dbref; sref && !got_data; sref = sref->next)
+        for (auto srv : service->reachable_servers())
         {
-            SERVER* srv = sref->server;
             if (srv->is_active && srv->is_usable())
             {
                 bool using_roles = false;
                 auto version = srv->version();
                 // Default roles are in server version 10.1.1.
                 if (version.major > 10 || (version.major == 10 && (version.minor > 1
-                    || (version.minor == 1 && version.patch == 1))))
+                                                                   || (version.minor == 1
+                                                                       && version.patch == 1))))
                 {
                     using_roles = true;
                 }

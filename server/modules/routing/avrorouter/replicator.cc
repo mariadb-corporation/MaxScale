@@ -48,13 +48,12 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
 {
     std::vector<cdc::Server> servers;
 
-    for (auto s = service->dbref; s; s = s->next)
+    for (auto s : service->reachable_servers())
     {
-        if (s->active && s->server->is_master())
+        if (s->is_master())
         {
             // TODO: per-server credentials aren't exposed in the public class
-            servers.push_back({s->server->address, s->server->port, service->config().user,
-                               service->config().password});
+            servers.push_back({s->address, s->port, service->config().user, service->config().password});
         }
     }
 

@@ -697,15 +697,7 @@ static bool add_service_user(Listener* port)
 
 static bool service_has_servers(SERVICE* service)
 {
-    for (SERVER_REF* s = service->dbref; s; s = s->next)
-    {
-        if (s->active)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return !service->reachable_servers().empty();
 }
 
 /**

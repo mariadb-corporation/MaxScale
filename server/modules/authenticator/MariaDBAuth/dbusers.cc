@@ -959,9 +959,11 @@ static bool check_server_permissions(SERVICE* service,
 
 bool check_service_permissions(SERVICE* service)
 {
+    auto servers = service->reachable_servers();
+
     if (rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH)
         || config_get_global_options()->skip_permission_checks
-        || service->dbref == NULL)      // No servers to check
+        || servers.empty())     // No servers to check
     {
         return true;
     }
@@ -974,10 +976,9 @@ bool check_service_permissions(SERVICE* service)
     char* dpasswd = decrypt_password(password);
     bool rval = false;
 
-    for (SERVER_REF* server = service->dbref; server; server = server->next)
+    for (auto server : servers)
     {
-        if (server->server->is_mxs_service()
-            || check_server_permissions(service, server->server, user, dpasswd))
+        if (server->is_mxs_service() || check_server_permissions(service, server, user, dpasswd))
         {
             rval = true;
         }
@@ -1245,12 +1246,11 @@ static std::vector<SERVER*> get_candidates(SERVICE* service, bool skip_local)
 {
     std::vector<SERVER*> candidates;
 
-    for (auto server = service->dbref; server; server = server->next)
+    for (auto server : service->reachable_servers())
     {
-        if (server_ref_is_active(server) && server->server->is_running()
-            && (!skip_local || !server->server->is_mxs_service()))
+        if (server->is_running() && (!skip_local || !server->is_mxs_service()))
         {
-            candidates.push_back(server->server);
+            candidates.push_back(server);
         }
     }
 

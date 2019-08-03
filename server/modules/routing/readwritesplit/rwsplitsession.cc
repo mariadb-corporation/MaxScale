@@ -30,7 +30,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_prev_target(nullptr)
     , m_config(instance->config())
     , m_last_keepalive_check(mxs_clock())
-    , m_nbackends(instance->service()->n_dbref)
+    , m_nbackends(instance->service()->get_children().size())
     , m_client(session->client_dcb)
     , m_sescmd_count(1)
     , m_expected_responses(0)

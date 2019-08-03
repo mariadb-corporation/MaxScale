@@ -127,7 +127,6 @@ public:
     mxs_router_object*   router;            /**< The router we are using */
     mxs_router*          router_instance;   /**< The router instance for this service */
     SERVER_REF*          dbref;             /**< server references */
-    int                  n_dbref;           /**< Number of server references */
     SERVICE_STATS        service_stats;     /**< The service statistics */
     MXS_CONFIG_PARAMETER svc_config_param;  /**<  list of config params and values */
     bool                 svc_do_shutdown;   /**< tells the service to exit loops etc. */
@@ -166,6 +165,13 @@ public:
     }
 
     virtual const Config& config() const = 0;
+
+    /**
+     * Get all servers that are reachable from this service
+     *
+     * @return All servers that can be reached via this service
+     */
+    virtual std::vector<SERVER*> reachable_servers() const = 0;
 
 protected:
     SERVICE(const std::string& name,

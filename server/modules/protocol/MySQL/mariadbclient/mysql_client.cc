@@ -146,12 +146,12 @@ std::string get_version_string(SERVICE* service)
     else
     {
         uint64_t smallest_found = UINT64_MAX;
-        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+        for (auto server : service->reachable_servers())
         {
-            auto version = ref->server->version();
+            auto version = server->version();
             if (version.total > 0 && version.total < smallest_found)
             {
-                rval = ref->server->version_string();
+                rval = server->version_string();
                 smallest_found = version.total;
             }
         }
@@ -167,25 +167,22 @@ std::string get_version_string(SERVICE* service)
     return rval;
 }
 
-uint8_t get_charset(SERVER_REF* servers)
+uint8_t get_charset(SERVICE* service)
 {
     uint8_t rval = 0;
 
-    for (SERVER_REF* s = servers; s; s = s->next)
+    for (SERVER* s : service->reachable_servers())
     {
-        if (server_ref_is_active(s))
+        if (s->is_master())
         {
-            if (s->server->is_master())
-            {
-                // Master found, stop searching
-                rval = s->server->charset;
-                break;
-            }
-            else if (s->server->is_slave() || (s->server->is_running() && rval == 0))
-            {
-                // Slaves precede Running servers
-                rval = s->server->charset;
-            }
+            // Master found, stop searching
+            rval = s->charset;
+            break;
+        }
+        else if (s->is_slave() || (s->is_running() && rval == 0))
+        {
+            // Slaves precede Running servers
+            rval = s->charset;
         }
     }
 
@@ -198,13 +195,13 @@ uint8_t get_charset(SERVER_REF* servers)
     return rval;
 }
 
-bool supports_extended_caps(SERVER_REF* servers)
+bool supports_extended_caps(SERVICE* service)
 {
     bool rval = false;
 
-    for (SERVER_REF* s = servers; s; s = s->next)
+    for (SERVER* s : service->reachable_servers())
     {
-        if (s->active && s->server->is_active && s->server->version().total >= 100200)
+        if (s->version().total >= 100200)
         {
             rval = true;
             break;
@@ -265,13 +262,13 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
     uint8_t mysql_plugin_data[13] = "";
     uint8_t mysql_server_capabilities_one[2];
     uint8_t mysql_server_capabilities_two[2];
-    uint8_t mysql_server_language = get_charset(dcb->service()->dbref);
+    uint8_t mysql_server_language = get_charset(dcb->service());
     uint8_t mysql_server_status[2];
     uint8_t mysql_scramble_len = 21;
     uint8_t mysql_filler_ten[10] = {};
     /* uint8_t mysql_last_byte = 0x00; not needed */
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
-    bool is_maria = supports_extended_caps(dcb->service()->dbref);
+    bool is_maria = supports_extended_caps(dcb->service());
 
     GWBUF* buf;
     std::string version = get_version_string(dcb->service());

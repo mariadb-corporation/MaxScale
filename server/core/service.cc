@@ -216,12 +216,10 @@ Service::Service(const std::string& name,
     router = (MXS_ROUTER_OBJECT*)module->module_object;
     capabilities = module->module_capabilities;
     client_count = 0;
-    n_dbref = 0;
     service_stats.started = time(0);
     service_stats.n_failed_starts = 0;
     state = SERVICE_STATE_ALLOC;
     dbref = NULL;
-    n_dbref = 0;
 
     /**
      * At service start last update is set to config->users_refresh_time seconds earlier.
