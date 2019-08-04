@@ -114,12 +114,12 @@ void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     }
 }
 
-void CatSession::handleError(GWBUF* pMessage, DCB* pProblem, mxs_error_action_t action, bool* pSuccess)
+bool CatSession::handleError(GWBUF* pMessage, DCB* pProblem)
 {
     /**
      * The simples thing to do here is to close the connection. Anything else
      * would still require extra processing on the client side and reconnecting
      * will cause things to fix themselves.
      */
-    *pSuccess = false;
+    return false;
 }

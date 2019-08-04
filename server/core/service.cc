@@ -1914,9 +1914,14 @@ int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Component* down)
 
 bool ServiceEndpoint::handleError(GWBUF* error, mxs::Component* down)
 {
-    bool ok = false;
-    m_service->router->handleError(m_service->router_instance, m_router_session, error, nullptr,
-                                   ERRACT_NEW_CONNECTION, &ok);
+    // TODO: Pass the Component to the handleError function
+    bool ok = m_service->router->handleError(m_service->router_instance, m_router_session, error, nullptr);
+
+    if (!ok)
+    {
+        ok = m_up->handleError(error, this);
+    }
+
     return ok;
 }
 

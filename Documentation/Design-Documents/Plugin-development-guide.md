@@ -363,20 +363,15 @@ have to wait for the entire data packet to arrive before sending it down the
 processing chain.
 
 ```java
-void handleError(INSTANCE* instance,SESSION* session, GWBUF* errmsgbuf,
-                 DCB* problem_dcb, mxs_error_action_t action, bool* succp);
+bool handleError(INSTANCE* instance, SESSION* session, GWBUF* errmsgbuf, DCB* problem_dcb);
 ```
 
-This router-only entrypoint is called if `routeQuery` returns an error value or
-if an error occurs in one of the connections listened to by the session. The
-steps an error handler typically takes depend on the nature of the `problem_dcb`
-and the error encountered. If `problem_dcb` is a client socket, then the session
-is lost and should be closed. The error handler should not do this by itself and
-just report the failure by setting `succp` to false. If `problem_dcb` is a
-backend socket, then the error handler should try to connect to another backend
-if the routing logic allows this. If the error is simply a failed authentication
-on the backend, then it is usually best to send the message directly to the
-client and close the session.
+This router-only entrypoint is called if a network error occurs in one of the
+backend server connections in use by the session. When the entrypoint is called,
+the router should try to continue the session if possible. If the session can
+continue operating normally, the function should return `true`. If the router
+cannot continue routing queries, for example due to a complete cluster outage,
+the function should return `false` which will cause the whole session to close.
 
 ### Monitor
 

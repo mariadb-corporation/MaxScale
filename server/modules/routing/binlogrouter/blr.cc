@@ -70,12 +70,10 @@ static void    clientReply(MXS_ROUTER* instance,
                            MXS_ROUTER_SESSION* router_session,
                            GWBUF* queue,
                            DCB* backend_dcb);
-static void errorReply(MXS_ROUTER* instance,
+static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       DCB* backend_dcb,
-                       mxs_error_action_t action,
-                       bool* succp);
+                       DCB* backend_dcb);
 
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 static int      blr_load_dbusers(const ROUTER_INSTANCE* router);
@@ -2295,16 +2293,12 @@ static char* extract_message(GWBUF* errpkt)
  * @param       router_session  The router session
  * @param       message         The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action      The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
- * @param   succp       Result of action: true iff router can continue
  *
  */
-static void errorReply(MXS_ROUTER* instance,
+static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       DCB* backend_dcb,
-                       mxs_error_action_t action,
-                       bool* succp)
+                       DCB* backend_dcb)
 {
     mxb_assert(backend_dcb->role() == DCB::Role::BACKEND);
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
@@ -2316,58 +2310,6 @@ static void errorReply(MXS_ROUTER* instance,
 
     mysql_errno = (unsigned long) extract_field(((uint8_t*)GWBUF_DATA(message) + 5), 16);
     errmsg = extract_message(message);
-
-    if (action == ERRACT_REPLY_CLIENT)
-    {
-        /** Check router state and set errno and message */
-        if (router->master_state != BLRM_SLAVE_STOPPED)
-        {
-            /* Authentication failed: stop replication */
-            if (router->master_state == BLRM_TIMESTAMP)
-            {
-                pthread_mutex_lock(&router->lock);
-                /* set io error message */
-                if (router->m_errmsg)
-                {
-                    free(router->m_errmsg);
-                }
-                router->m_errmsg = mxb_strdup("#28000 Authentication with master server failed");
-                /* set mysql_errno */
-                router->m_errno = 1045;
-
-                /* Stop replication */
-                router->master_state = BLRM_SLAVE_STOPPED;
-                pthread_mutex_unlock(&router->lock);
-
-                /* Force backend DCB close */
-                dcb_close(backend_dcb);
-
-                /* Force Fake Client DCB close */
-                if (router->client)
-                {
-                    dcb_close(router->client);
-                    router->client = NULL;
-                }
-
-                MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                          "%s while connecting to master [%s]:%d. Replication is stopped.",
-                          router->service->name(),
-                          router->m_errno,
-                          router->m_errmsg,
-                          blrm_states[BLRM_TIMESTAMP],
-                          msg,
-                          router->service->dbref->server->address,
-                          router->service->dbref->server->port);
-            }
-        }
-        if (errmsg)
-        {
-            MXS_FREE(errmsg);
-        }
-
-        *succp = true;
-        return;
-    }
 
     len = sizeof(error);
     if (router->master
@@ -2422,8 +2364,6 @@ static void errorReply(MXS_ROUTER* instance,
     {
         MXS_FREE(errmsg);
     }
-    *succp = true;
-
     /* Force Backend DCB close */
     if (backend_dcb == router->master)
     {
@@ -2445,6 +2385,8 @@ static void errorReply(MXS_ROUTER* instance,
                time(0) - router->connect_time,
                router->stats.n_binlogs_ses);
     blr_master_reconnect(router);
+
+    return true;
 }
 
 /** to be inline'd */

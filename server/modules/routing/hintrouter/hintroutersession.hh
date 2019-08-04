@@ -48,10 +48,7 @@ public:
 
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
-    void handleError(GWBUF* pMessage,
-                     DCB* pProblem,
-                     mxs_error_action_t action,
-                     bool* pSuccess);
+    bool handleError(GWBUF* pMessage, DCB* pProblem);
 
 private:
     HintRouterSession(const HintRouterSession&);            // denied

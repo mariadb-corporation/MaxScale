@@ -72,12 +72,10 @@ static int      execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session
 static void     diagnostics(MXS_ROUTER* instance, DCB* dcb);
 static json_t*  diagnostics_json(const MXS_ROUTER* instance);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
-static void     handleError(MXS_ROUTER* instance,
+static bool     handleError(MXS_ROUTER* instance,
                             MXS_ROUTER_SESSION* router_session,
                             GWBUF* errbuf,
-                            DCB* backend_dcb,
-                            mxs_error_action_t action,
-                            bool* succp);
+                            DCB* backend_dcb);
 
 static pthread_mutex_t instlock;
 static INFO_INSTANCE* instances;
@@ -253,37 +251,15 @@ static void freeSession(MXS_ROUTER* router_instance,
  * Error Handler routine
  *
  * The routine will handle errors that occurred in backend writes.
- *
- * @param instance        The router instance
- * @param router_session  The router session
- * @param message         The error message to reply
- * @param backend_dcb     The backend DCB
- * @param action          The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
- * @param succp           Result of action: true iff router can continue
- *
  */
-static void handleError(MXS_ROUTER* instance,
+static bool handleError(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* errbuf,
-                        DCB* backend_dcb,
-                        mxs_error_action_t action,
-                        bool* succp)
+                        DCB* backend_dcb)
 
 {
-    mxb_assert(backend_dcb->role() == DCB::Role::BACKEND);
-    DCB* client_dcb;
-    MXS_SESSION* session = backend_dcb->session();
-
-    client_dcb = session->client_dcb;
-
-    if (session->state() == MXS_SESSION::State::STARTED)
-    {
-        client_dcb->protocol_write(gwbuf_clone(errbuf));
-    }
-
-    /** false because connection is not available anymore */
-    dcb_close(backend_dcb);
-    *succp = false;
+    mxb_assert_message(!true, "This should never be called as maxinfo never creates backend connections");
+    return false;
 }
 
 /**

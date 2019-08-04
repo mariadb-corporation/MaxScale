@@ -46,12 +46,6 @@ typedef struct mxs_router_session
 {
 } MXS_ROUTER_SESSION;
 
-typedef enum error_action
-{
-    ERRACT_NEW_CONNECTION = 0x001,
-    ERRACT_REPLY_CLIENT   = 0x002
-} mxs_error_action_t;
-
 /**
  * @verbatim
  * The "module object" structure for a query router module. All entry points
@@ -66,8 +60,7 @@ typedef enum error_action
  *  routeQuery      Called on each query that requires routing
  *  diagnostics     Called to force the router to print diagnostic output
  *  clientReply     Called to reply to client the data from one or all backends (optional)
- *  handleError     Called to reply to client errors with optional closeSession
- *                  or make a request for a new backend connection
+ *  handleError     Called when a backend connection fails
  *  getCapabilities Called to obtain the capabilities of the router (optional)
  *  destroyInstance Called for destroying a router instance (optional)
  *
@@ -180,20 +173,21 @@ typedef struct mxs_router_object
     /**
      * @brief Called when a backend DCB has failed
      *
+     * If the router session can continue with reduced capabilities, for example execute only read-only
+     * queries when a master is lost, then the function should close the DCB and return true. If the router
+     * cannot continue, the function should return false.
+     *
      * @param instance       Router instance
      * @param router_session Router session
      * @param errmsgbuf      Error message buffer
      * @param backend_dcb    The backend DCB that has failed
-     * @param action         The type of the action (TODO: Remove this parameter)
      *
-     * @param succp Pointer to a `bool` which should be set to true for success or false for error
+     * @return True for success or false for error
      */
-    void (* handleError)(MXS_ROUTER* instance,
+    bool (* handleError)(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* errmsgbuf,
-                         DCB* backend_dcb,
-                         mxs_error_action_t action,
-                         bool* succp);
+                         DCB* backend_dcb);
 
     /**
      * @brief Called to obtain the capabilities of the router
@@ -332,16 +326,14 @@ public:
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
     /**
+     * Handle backend connection network errors
      *
-     * @param pMessage  The rror message.
+     * @param pMessage  The error message.
      * @param pProblem  The DCB on which the error occurred.
-     * @param action    The context.
-     * @param pSuccess  On output, if false, the session will be terminated.
+     *
+     * @return True if the session can continue, false if the session should be closed
      */
-    void handleError(GWBUF* pMessage,
-                     DCB* pProblem,
-                     mxs_error_action_t action,
-                     bool* pSuccess);
+    bool handleError(GWBUF* pMessage, DCB* pProblem);
 
     // Sets the upstream component (don't override this in the inherited class)
     void setUpstream(mxs::Upstream* up)
@@ -490,16 +482,16 @@ public:
         MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pBackend));
     }
 
-    static void handleError(MXS_ROUTER* pInstance,
+    static bool handleError(MXS_ROUTER* pInstance,
                             MXS_ROUTER_SESSION* pData,
                             GWBUF* pMessage,
-                            DCB* pProblem,
-                            mxs_error_action_t action,
-                            bool* pSuccess)
+                            DCB* pProblem)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
-        MXS_EXCEPTION_GUARD(pRouter_session->handleError(pMessage, pProblem, action, pSuccess));
+        bool rv = false;
+        MXS_EXCEPTION_GUARD(rv = pRouter_session->handleError(pMessage, pProblem));
+        return rv;
     }
 
     static uint64_t getCapabilities(MXS_ROUTER* pInstance)

@@ -236,19 +236,16 @@ static void clientReply(MXS_ROUTER* instance,
  * @param       router_session  The router session
  * @param       message         The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action      The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
- * @param   succp       Result of action: true iff router can continue
  *
  */
-static void errorReply(MXS_ROUTER* instance,
+static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       DCB* backend_dcb,
-                       mxs_error_action_t action,
-                       bool* succp)
+                       DCB* backend_dcb)
 {
     /** We should never end up here */
     mxb_assert(false);
+    return false;
 }
 
 static uint64_t getCapabilities(MXS_ROUTER* instance)

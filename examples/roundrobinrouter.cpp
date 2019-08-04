@@ -108,7 +108,7 @@ public:
     void    close();
     int32_t routeQuery(GWBUF* buffer);
     void    clientReply(GWBUF* buffer, DCB* dcb);
-    void    handleError(GWBUF* message, DCB* problem_dcb, mxs_error_action_t action, bool* succp);
+    bool    handleError(GWBUF* message, DCB* problem_dcb);
 
 private:
     bool         m_closed;              /* true when closeSession is called */
@@ -447,94 +447,33 @@ void RRRouterSession::clientReply(GWBUF* buf, DCB* backend_dcb)
     }
 }
 
-/**
- * Error Handler routine (API)
- *
- * This routine will handle errors that occurred with the session. This function
- * is called if routeQuery() returns 0 instead of 1. The client or a backend
- * unexpectedly closing a connection also triggers this routine.
- *
- * @param       message         The error message to reply
- * @param       problem_dcb     The DCB related to the error
- * @param       action          The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
- * @param       succp           Output result of action, true if router can continue
- */
-void RRRouterSession::handleError(GWBUF* message,
-                                  DCB* problem_dcb,
-                                  mxs_error_action_t action,
-                                  bool* succp)
+bool RRRouterSession::handleError(GWBUF* message, DCB* problem_dcb)
 {
     MXS_SESSION* session = problem_dcb->session();
     DCB* client_dcb = session->client_dcb;
     MXS_SESSION::State sesstate = session->state();
 
-    /* If the erroneous dcb is a client handler, close it. Setting succp to
-     * false will cause the entire attached session to be closed.
-     */
-    if (problem_dcb->role() == DCB::Role::CLIENT)
+    if (problem_dcb == m_write_dcb)
     {
-        dcb_close(problem_dcb);
-        *succp = false;
+        dcb_close(m_write_dcb);
+        m_write_dcb = NULL;
     }
     else
     {
-        switch (action)
+        /* Find dcb in the list of backends */
+        DCB_VEC::iterator iter = m_backend_dcbs.begin();
+        while (iter != m_backend_dcbs.end())
         {
-        case ERRACT_REPLY_CLIENT:
+            if (*iter == problem_dcb)
             {
-                /* React to failed authentication, send message to client */
-                if (sesstate == MXS_SESSION::State::STARTED)
-                {
-                    /* Send error report to client */
-                    GWBUF* copy = gwbuf_clone(message);
-                    if (copy)
-                    {
-                        client_dcb->protocol_write(copy);
-                    }
-                }
-                *succp = false;
+                dcb_close(*iter);
+                m_backend_dcbs.erase(iter);
+                break;
             }
-            break;
-
-        case ERRACT_NEW_CONNECTION:
-            {
-                /* React to a failed backend */
-                if (problem_dcb->role() == DCB::Role::BACKEND)
-                {
-                    if (problem_dcb == m_write_dcb)
-                    {
-                        dcb_close(m_write_dcb);
-                        m_write_dcb = NULL;
-                    }
-                    else
-                    {
-                        /* Find dcb in the list of backends */
-                        DCB_VEC::iterator iter = m_backend_dcbs.begin();
-                        while (iter != m_backend_dcbs.end())
-                        {
-                            if (*iter == problem_dcb)
-                            {
-                                dcb_close(*iter);
-                                m_backend_dcbs.erase(iter);
-                                break;
-                            }
-                        }
-                    }
-
-                    /* If there is still backends remaining, return true since
-                     * router can still function.
-                     */
-                    *succp = (m_backend_dcbs.size() > 0) ? true : false;
-                }
-            }
-            break;
-
-        default:
-            mxb_assert(!true);
-            *succp = false;
-            break;
         }
     }
+
+    return !m_backend_dcbs.empty();
 }
 
 RRRouterSession::RRRouterSession(RRRouter* router, DCB_VEC& backends, BackendDCB* write, ClientDCB* client)

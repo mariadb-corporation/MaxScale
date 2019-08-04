@@ -151,48 +151,12 @@ void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
     }
 }
 
-void HintRouterSession::handleError(GWBUF* pMessage,
-                                    DCB* pProblem,
-                                    mxs_error_action_t action,
-                                    bool* pSuccess)
+bool HintRouterSession::handleError(GWBUF* pMessage, DCB* pProblem)
 {
     HR_ENTRY();
 
-    mxb_assert(pProblem->role() == DCB::Role::BACKEND);
-
-    MXS_SESSION* pSession = pProblem->session();
-    MXS_SESSION::State sesstate = pSession->state();
-
-    switch (action)
-    {
-    case ERRACT_REPLY_CLIENT:
-        {
-            /* React to failed authentication, send message to client */
-            if (sesstate == MXS_SESSION::State::STARTED)
-            {
-                /* Send error report to client */
-                GWBUF* pCopy = gwbuf_clone(pMessage);
-                if (pCopy)
-                {
-                    DCB* pClient = pSession->client_dcb;
-                    pClient->protocol_write(pCopy);
-                }
-            }
-            *pSuccess = false;
-        }
-        break;
-
-    case ERRACT_NEW_CONNECTION:
-        {
-            HR_DEBUG("ERRACT_NEW_CONNECTION");
-            *pSuccess = true;
-        }
-        break;
-
-    default:
-        mxb_assert(!true);
-        *pSuccess = false;
-    }
+    // This potentially breaks if a query was in progress while the connection failed
+    return true;
 }
 
 bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_errors)

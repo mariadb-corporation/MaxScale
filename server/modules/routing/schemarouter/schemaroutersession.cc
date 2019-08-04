@@ -603,47 +603,23 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     }
 }
 
-void SchemaRouterSession::handleError(GWBUF* pMessage,
-                                      DCB* pProblem,
-                                      mxs_error_action_t action,
-                                      bool* pSuccess)
+bool SchemaRouterSession::handleError(GWBUF* pMessage, DCB* pProblem)
 {
     mxb_assert(pProblem->role() == DCB::Role::BACKEND);
     SSRBackend bref = get_bref_from_dcb(pProblem);
+    mxb_assert(bref.get());
 
-    if (bref.get() == NULL)     // Should never happen
+    if (bref->is_waiting_result())
     {
-        return;
+        /** If the client is waiting for a reply, send an error. */
+        m_client->m_func.write(m_client, gwbuf_clone(pMessage));
     }
 
-    switch (action)
-    {
-    case ERRACT_NEW_CONNECTION:
-        if (bref->is_waiting_result())
-        {
-            /** If the client is waiting for a reply, send an error. */
-            m_client->protocol_write(gwbuf_clone(pMessage));
-        }
-
-        *pSuccess = have_servers();
-        break;
-
-    case ERRACT_REPLY_CLIENT:
-        // The session pointer can be NULL if the creation fails when filters are being set up
-        if (m_client->session() && m_client->session()->state() == MXS_SESSION::State::STARTED)
-        {
-            m_client->protocol_write(gwbuf_clone(pMessage));
-        }
-
-        *pSuccess = false;      /*< no new backend servers were made available */
-        break;
-
-    default:
-        *pSuccess = false;
-        break;
-    }
+    bool rv = have_servers();
 
     bref->close();
+
+    return rv;
 }
 
 /**

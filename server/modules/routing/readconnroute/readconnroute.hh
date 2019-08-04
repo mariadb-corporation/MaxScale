@@ -55,18 +55,10 @@ public:
      */
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
-    /**
-     * Handle connection errors
-     *
-     * @param pMessage Buffer containing the error message
-     * @param pProblem The DCB that is the source of the problem
-     * @param action   The action to take
-     * @param pSuccess Pointer where the result of the error handling is stored
-     */
-    void handleError(GWBUF* pMessage,
-                     DCB* pProblem,
-                     mxs_error_action_t action,
-                     bool* pSuccess);
+    bool handleError(GWBUF* pMessage, DCB* pProblem)
+    {
+        return false;
+    }
 
 private:
     RCR*        m_instance;     /**< Router instance */

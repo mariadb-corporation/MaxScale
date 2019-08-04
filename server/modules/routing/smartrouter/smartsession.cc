@@ -509,10 +509,7 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
                                       keep_protocol_thread_id, KT_QUERY);
 }
 
-void SmartRouterSession::handleError(GWBUF* pPacket,
-                                     DCB* pProblem,
-                                     mxs_error_action_t action,
-                                     bool* pSuccess)
+bool SmartRouterSession::handleError(GWBUF* pPacket, DCB* pProblem)
 {
     // One of the clusters closed the connection. In terms of SmartRouter this is a hopeless situation.
     // Close the shop, and let the client retry. Also see marker1.
@@ -539,7 +536,7 @@ void SmartRouterSession::handleError(GWBUF* pPacket,
     }
 
     // This will lead to the rest of the connections to be closed.
-    *pSuccess = false;
+    return false;
 }
 
 bool SmartRouterSession::lock_to_master()

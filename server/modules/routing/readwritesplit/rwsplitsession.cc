@@ -1023,25 +1023,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     return can_continue;
 }
 
-/**
- * @brief Router error handling routine
- *
- * Error Handler routine to resolve backend failures. If it succeeds then
- * there are enough operative backends available and connected. Otherwise it
- * fails, and session is terminated.
- *
- * @param instance       The router instance
- * @param router_session The router session
- * @param errmsgbuf      The error message to reply
- * @param backend_dcb    The backend DCB
- * @param action         The action: ERRACT_NEW_CONNECTION or
- *                       ERRACT_REPLY_CLIENT
- * @param succp          Result of action: true if router can continue
- */
-void RWSplitSession::handleError(GWBUF* errmsgbuf,
-                                 DCB* problem_dcb,
-                                 mxs_error_action_t action,
-                                 bool* succp)
+bool RWSplitSession::handleError(GWBUF* errmsgbuf, DCB* problem_dcb)
 {
     mxb_assert(problem_dcb->role() == DCB::Role::BACKEND);
     MXS_SESSION* session = problem_dcb->session();
@@ -1058,147 +1040,127 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
         // This effectively causes an instant termination of the client connection and prevents any errors
         // from being sent to the client (MXS-2562).
         dcb_close(m_client);
-        *succp = true;
-        return;
+        return false;
     }
 
-    switch (action)
+    std::string errmsg;
+    bool can_continue = false;
+
+    if (m_current_master && m_current_master->in_use() && m_current_master == backend)
     {
-    case ERRACT_NEW_CONNECTION:
+        MXS_INFO("Master '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
+        /** The connection to the master has failed */
+
+        bool expected_response = backend->is_waiting_result();
+
+        if (!expected_response)
         {
-            std::string errmsg;
-            bool can_continue = false;
-
-            if (m_current_master && m_current_master->in_use() && m_current_master == backend)
+            /** The failure of a master is not considered a critical
+             * failure as partial functionality still remains. If
+             * master_failure_mode is not set to fail_instantly, reads
+             * are allowed as long as slave servers are available
+             * and writes will cause an error to be returned.
+             *
+             * If we were waiting for a response from the master, we
+             * can't be sure whether it was executed or not. In this
+             * case the safest thing to do is to close the client
+             * connection. */
+            errmsg += " Lost connection to master server while connection was idle.";
+            if (m_config.master_failure_mode != RW_FAIL_INSTANTLY)
             {
-                MXS_INFO("Master '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
-                /** The connection to the master has failed */
-
-                bool expected_response = backend->is_waiting_result();
-
-                if (!expected_response)
-                {
-                    /** The failure of a master is not considered a critical
-                     * failure as partial functionality still remains. If
-                     * master_failure_mode is not set to fail_instantly, reads
-                     * are allowed as long as slave servers are available
-                     * and writes will cause an error to be returned.
-                     *
-                     * If we were waiting for a response from the master, we
-                     * can't be sure whether it was executed or not. In this
-                     * case the safest thing to do is to close the client
-                     * connection. */
-                    errmsg += " Lost connection to master server while connection was idle.";
-                    if (m_config.master_failure_mode != RW_FAIL_INSTANTLY)
-                    {
-                        can_continue = true;
-                    }
-                }
-                else
-                {
-                    // We were expecting a response but we aren't going to get one
-                    mxb_assert(m_expected_responses > 0);
-                    errmsg += " Lost connection to master server while waiting for a result.";
-
-                    if (can_retry_query())
-                    {
-                        can_continue = retry_master_query(backend);
-                    }
-                    else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
-                    {
-                        /** In error_on_write mode, the session can continue even
-                         * if the master is lost. Send a read-only error to
-                         * the client to let it know that the query failed. */
-                        can_continue = true;
-                        send_readonly_error(m_client);
-                    }
-                }
-
-                if (session_trx_is_active(session) && m_otrx_state == OTRX_INACTIVE)
-                {
-                    can_continue = start_trx_replay();
-                    errmsg += " A transaction is active and cannot be replayed.";
-                }
-
-                if (!can_continue)
-                {
-                    int64_t idle = mxs_clock() - backend->dcb()->m_last_read;
-                    MXS_ERROR("Lost connection to the master server '%s', closing session.%s "
-                              "Connection has been idle for %.1f seconds. Error caused by: %s",
-                              backend->name(), errmsg.c_str(), (float)idle / 10.f,
-                              extract_error(errmsgbuf).c_str());
-                }
-
-                // Decrement the expected response count only if we know we can continue the sesssion.
-                // This keeps the internal logic sound even if another query is routed before the session
-                // is closed.
-                if (can_continue && expected_response)
-                {
-                    m_expected_responses--;
-                }
-
-                backend->close();
-                backend->set_close_reason("Master connection failed: " + extract_error(errmsgbuf));
+                can_continue = true;
             }
-            else
+        }
+        else
+        {
+            // We were expecting a response but we aren't going to get one
+            mxb_assert(m_expected_responses > 0);
+            errmsg += " Lost connection to master server while waiting for a result.";
+
+            if (can_retry_query())
             {
-                MXS_INFO("Slave '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
-                if (m_target_node && m_target_node == backend
-                    && session_trx_is_read_only(problem_dcb->session()))
-                {
-                    // We're no longer locked to this server as it failed
-                    m_target_node = nullptr;
-
-                    // Try to replay the transaction on another node
-                    can_continue = start_trx_replay();
-                    backend->close();
-                    backend->set_close_reason("Read-only trx failed: " + extract_error(errmsgbuf));
-
-                    if (!can_continue)
-                    {
-                        MXS_ERROR("Connection to server %s failed while executing a read-only transaction",
-                                  backend->name());
-                    }
-                }
-                else if (m_otrx_state != OTRX_INACTIVE)
-                {
-                    /**
-                     * The connection was closed mid-transaction or while we were
-                     * executing the ROLLBACK. In both cases the transaction will
-                     * be closed. We can safely start retrying the transaction
-                     * on the master.
-                     */
-
-                    mxb_assert(session_trx_is_active(session));
-                    m_otrx_state = OTRX_INACTIVE;
-                    can_continue = start_trx_replay();
-                    backend->close();
-                    backend->set_close_reason("Optimistic trx failed: " + extract_error(errmsgbuf));
-                }
-                else
-                {
-                    /** Try to replace the failed connection with a new one */
-                    can_continue = handle_error_new_connection(problem_dcb, errmsgbuf);
-                }
+                can_continue = retry_master_query(backend);
             }
-
-            *succp = can_continue;
-            check_and_log_backend_state(backend, problem_dcb);
-            break;
+            else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
+            {
+                /** In error_on_write mode, the session can continue even
+                 * if the master is lost. Send a read-only error to
+                 * the client to let it know that the query failed. */
+                can_continue = true;
+                send_readonly_error(m_client);
+            }
         }
 
-    case ERRACT_REPLY_CLIENT:
+        if (session_trx_is_active(session) && m_otrx_state == OTRX_INACTIVE)
         {
-            handle_error_reply_client(problem_dcb, errmsgbuf);
-            *succp = false;     /*< no new backend servers were made available */
-            break;
+            can_continue = start_trx_replay();
+            errmsg += " A transaction is active and cannot be replayed.";
         }
 
-    default:
-        mxb_assert(!true);
-        *succp = false;
-        break;
+        if (!can_continue)
+        {
+            int64_t idle = mxs_clock() - backend->dcb()->m_last_read;
+            MXS_ERROR("Lost connection to the master server, closing session.%s "
+                      "Connection has been idle for %.1f seconds. Error caused by: %s",
+                      errmsg.c_str(), (float)idle / 10.f, extract_error(errmsgbuf).c_str());
+        }
+
+        // Decrement the expected response count only if we know we can continue the sesssion.
+        // This keeps the internal logic sound even if another query is routed before the session
+        // is closed.
+        if (can_continue && expected_response)
+        {
+            m_expected_responses--;
+        }
+
+        backend->close();
+        backend->set_close_reason("Master connection failed: " + extract_error(errmsgbuf));
     }
+    else
+    {
+        MXS_INFO("Slave '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
+        if (m_target_node && m_target_node == backend
+            && session_trx_is_read_only(problem_dcb->session()))
+        {
+            // We're no longer locked to this server as it failed
+            m_target_node = nullptr;
+
+            // Try to replay the transaction on another node
+            can_continue = start_trx_replay();
+            backend->close();
+            backend->set_close_reason("Read-only trx failed: " + extract_error(errmsgbuf));
+
+            if (!can_continue)
+            {
+                MXS_ERROR("Connection to server %s failed while executing a read-only transaction",
+                          backend->name());
+            }
+        }
+        else if (m_otrx_state != OTRX_INACTIVE)
+        {
+            /**
+             * The connection was closed mid-transaction or while we were
+             * executing the ROLLBACK. In both cases the transaction will
+             * be closed. We can safely start retrying the transaction
+             * on the master.
+             */
+
+            mxb_assert(session_trx_is_active(session));
+            m_otrx_state = OTRX_INACTIVE;
+            can_continue = start_trx_replay();
+            backend->close();
+            backend->set_close_reason("Optimistic trx failed: " + extract_error(errmsgbuf));
+        }
+        else
+        {
+            /** Try to replace the failed connection with a new one */
+            can_continue = handle_error_new_connection(problem_dcb, errmsgbuf);
+        }
+    }
+
+    check_and_log_backend_state(backend, problem_dcb);
+
+    return can_continue;
 }
 
 /**

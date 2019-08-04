@@ -551,28 +551,6 @@ void RCRSession::clientReply(GWBUF* queue, DCB* backend_dcb)
     RouterSession::clientReply(queue, backend_dcb);
 }
 
-/**
- * Error Handler routine
- *
- * The routine will handle errors that occurred in writes.
- *
- * @param       message         The error message to reply
- * @param       problem_dcb     The DCB related to the error
- * @param       action      The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
- * @param   succp       Result of action: true if router can continue
- */
-void RCRSession::handleError(GWBUF* errbuf, DCB* problem_dcb, mxs_error_action_t action, bool* succp)
-
-{
-    mxb_assert(problem_dcb->role() == DCB::Role::BACKEND);
-    mxb_assert(problem_dcb->session()->state() == MXS_SESSION::State::STARTED);
-    DCB* client_dcb = problem_dcb->session()->client_dcb;
-    client_dcb->protocol_write(gwbuf_clone(errbuf));
-
-    // The DCB will be closed once the session closes, no need to close it here
-    *succp = false;
-}
-
 uint64_t RCR::getCapabilities()
 {
     return RCAP_TYPE_RUNTIME_CONFIG;

@@ -44,10 +44,7 @@ public:
     int  routeQuery(GWBUF* pBuf);
     void close();
     void clientReply(GWBUF* pPacket, DCB* pDcb);
-    void handleError(GWBUF* pPacket,
-                     DCB* pProblem,
-                     mxs_error_action_t action,
-                     bool* pSuccess);
+    bool handleError(GWBUF* pPacket, DCB* pProblem);
 
 private:
     enum class Mode {Idle, Query, MeasureQuery, CollectResults};

@@ -114,17 +114,8 @@ public:
      */
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
-    /**
-     *
-     * @param pMessage  The error message.
-     * @param pProblem  The DCB on which the error occurred.
-     * @param action    The context.
-     * @param pSuccess  On output, if false, the session will be terminated.
-     */
-    void handleError(GWBUF* pMessage,
-                     DCB* pProblem,
-                     mxs_error_action_t action,
-                     bool* pSuccess);
+
+    bool handleError(GWBUF* pMessage, DCB* pProblem);
 
     mxs::QueryClassifier& qc()
     {

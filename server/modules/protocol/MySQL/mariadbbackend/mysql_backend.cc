@@ -476,7 +476,7 @@ static int gw_read_backend_event(DCB* plain_dcb)
     return rc;
 }
 
-static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* errmsg)
+static void do_handle_error(DCB* dcb, const char* errmsg)
 {
     mxb_assert(!dcb->m_dcb_errhandle_called);
     MySQLProtocol* p = static_cast<MySQLProtocol*>(dcb->protocol_session());
@@ -502,7 +502,10 @@ static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* err
  */
 static void gw_reply_on_error(DCB* dcb, mxs_auth_state_t state)
 {
-    do_handle_error(dcb, ERRACT_REPLY_CLIENT, "Authentication with backend failed. Session will be closed.");
+    MySQLProtocol* p = static_cast<MySQLProtocol*>(dcb->protocol_session());
+    auto err = mysql_create_custom_error(1, 0, "Authentication with backend failed. Session will be closed.");
+    p->do_clientReply(err);
+    poll_fake_hangup_event(dcb->session()->client_dcb);
 }
 
 /**
@@ -666,7 +669,7 @@ static int gw_read_and_write(DCB* dcb)
 
     if (return_code < 0)
     {
-        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Read from backend failed");
+        do_handle_error(dcb, "Read from backend failed");
         return 0;
     }
 
@@ -1232,7 +1235,7 @@ static int gw_error_backend_event(DCB* dcb)
     }
     else
     {
-        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
+        do_handle_error(dcb, "Lost connection to backend server.");
     }
 
     return 1;
@@ -1273,7 +1276,7 @@ static int gw_backend_hangup(DCB* dcb)
         }
         else
         {
-            do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
+            do_handle_error(dcb, "Lost connection to backend server.");
         }
     }
 
@@ -1340,8 +1343,7 @@ static int backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer)
 
     if (rc == 0)
     {
-        do_handle_error(dcb, ERRACT_NEW_CONNECTION,
-                        "Lost connection to backend server while writing delay queue.");
+        do_handle_error(dcb, "Lost connection to backend server while writing delay queue.");
     }
 
     return rc;

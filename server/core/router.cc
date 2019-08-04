@@ -43,10 +43,8 @@ void RouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
     m_pUp->clientReply(m_pUp->instance, m_pUp->session, pPacket, pBackend);
 }
 
-void RouterSession::handleError(GWBUF* pMessage,
-                                DCB* pProblem,
-                                mxs_error_action_t action,
-                                bool* pSuccess)
+bool RouterSession::handleError(GWBUF* pMessage, DCB* pProblem)
 {
+    return false;
 }
 }
