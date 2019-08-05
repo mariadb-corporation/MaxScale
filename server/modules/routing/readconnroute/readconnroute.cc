@@ -352,7 +352,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
     mxb_assert(worker == mxs::RoutingWorker::get_current());
 
     /** Open the backend connection */
-    DCB* backend_dcb = dcb_connect(candidate->server, candidate->server->protocol().c_str(), session, worker);
+    DCB* backend_dcb = BackendDCB::connect(candidate->server, session, worker);
 
     if (!backend_dcb)
     {

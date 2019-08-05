@@ -180,7 +180,7 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
     mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(session->client_dcb->owner);
     mxb_assert(worker == mxs::RoutingWorker::get_current());
 
-    if ((m_dcb = dcb_connect(m_backend->server, m_backend->server->protocol().c_str(), session, worker)))
+    if ((m_dcb = BackendDCB::connect(m_backend->server, session, worker)))
     {
         m_closed = false;
         m_closed_at = 0;

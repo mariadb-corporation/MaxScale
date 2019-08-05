@@ -454,14 +454,14 @@ static bool do_connect(const char* host, int port, int* fd)
  * Connect to a backend server
  *
  * @param srv      The server to connect to
- * @param protocol The protocol module to use
  * @param session  The session this connection is being made for
  * @param registry The DCB registry to use
  *
  * @return The new allocated dcb or NULL on error
  */
-BackendDCB* dcb_connect(SERVER* srv, const char* protocol, MXS_SESSION* session, DCB::Registry* registry)
+BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Registry* registry)
 {
+    const char* protocol = srv->protocol().c_str();
     Server* server = static_cast<Server*>(srv);
 
     // TODO: Either
@@ -501,7 +501,7 @@ BackendDCB* dcb_connect(SERVER* srv, const char* protocol, MXS_SESSION* session,
         {
             if (dcb->m_fd != DCBFD_CLOSED)
             {
-                close(dcb->m_fd);
+                ::close(dcb->m_fd);
             }
             session_unlink_backend_dcb(dcb->session(), dcb);
             dcb_free_all_memory(dcb);

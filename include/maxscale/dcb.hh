@@ -284,6 +284,8 @@ class BackendDCB : public DCB
 {
 public:
     BackendDCB(MXS_SESSION* session, SERVER* server, Registry* registry);
+
+    static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Registry* registry);
 };
 
 class InternalDCB : public DCB
@@ -313,7 +315,6 @@ inline bool dcb_write(DCB* dcb, GWBUF* queue)
 
 ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry);
 InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry);
-BackendDCB* dcb_connect(SERVER* server, const char* protocol, MXS_SESSION* session, DCB::Registry* registry);
 
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 {

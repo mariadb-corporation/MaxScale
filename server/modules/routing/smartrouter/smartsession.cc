@@ -164,7 +164,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
         mxs::RoutingWorker* pWorker = static_cast<mxs::RoutingWorker*>(pSession->client_dcb->owner);
         mxb_assert(pWorker == mxs::RoutingWorker::get_current());
 
-        DCB* dcb = dcb_connect(ref->server, ref->server->protocol().c_str(), pSession, pWorker);
+        DCB* dcb = BackendDCB::connect(ref->server, pSession, pWorker);
         if (dcb)
         {
             bool is_master = (ref->server == pMaster);
