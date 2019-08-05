@@ -22,7 +22,6 @@
 
 #include <maxscale/protocol.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/routingworker.hh>
 
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>

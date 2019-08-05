@@ -104,17 +104,13 @@ inline bool        dcb_maybe_add_persistent(DCB* dcb)
 }
 static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int nreadtotal);
-static int         dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl);
-static int         dcb_read_SSL(DCB* dcb, GWBUF** head);
 static GWBUF*      dcb_basic_read(DCB* dcb,
                                   int bytesavailable,
                                   int maxbytes,
                                   int nreadtotal,
                                   int* nsingleread);
-static GWBUF* dcb_basic_read_SSL(DCB* dcb, int* nsingleread);
 static void   dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno);
 static int    gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing);
-static int    gw_write_SSL(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    dcb_log_errors_SSL(DCB* dcb, int ret);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 static void   dcb_add_to_all_list(DCB* dcb);
@@ -533,7 +529,7 @@ int DCB::read(GWBUF** head, int maxbytes)
 
     if (SSL_HANDSHAKE_DONE == m_ssl_state || SSL_ESTABLISHED == m_ssl_state)
     {
-        return dcb_read_SSL(this, head);
+        return read_SSL(head);
     }
 
     if (m_fd == DCBFD_CLOSED)
@@ -693,25 +689,25 @@ static GWBUF* dcb_basic_read(DCB* dcb, int bytesavailable, int maxbytes, int nre
  * @param head  Pointer to linked list to append data to
  * @return      -1 on error, otherwise the total number of bytes read
  */
-static int dcb_read_SSL(DCB* dcb, GWBUF** head)
+int DCB::read_SSL(GWBUF** head)
 {
     GWBUF* buffer;
     int nsingleread = 0, nreadtotal = 0;
     int start_length = *head ? gwbuf_length(*head) : 0;
 
-    if (dcb->m_fd == DCBFD_CLOSED)
+    if (m_fd == DCBFD_CLOSED)
     {
         MXS_ERROR("Read failed, dcb is closed.");
         return -1;
     }
 
-    if (dcb->m_ssl_write_want_read)
+    if (m_ssl_write_want_read)
     {
-        dcb_drain_writeq(dcb);
+        drain_writeq();
     }
 
-    dcb->m_last_read = mxs_clock();
-    buffer = dcb_basic_read_SSL(dcb, &nsingleread);
+    m_last_read = mxs_clock();
+    buffer = basic_read_SSL(&nsingleread);
     if (buffer)
     {
         nreadtotal += nsingleread;
@@ -719,8 +715,8 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
 
         while (buffer)
         {
-            dcb->m_last_read = mxs_clock();
-            buffer = dcb_basic_read_SSL(dcb, &nsingleread);
+            m_last_read = mxs_clock();
+            buffer = basic_read_SSL(&nsingleread);
             if (buffer)
             {
                 nreadtotal += nsingleread;
@@ -742,17 +738,17 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
  * @param nsingleread   To be set as the number of bytes read this time
  * @return              GWBUF* buffer containing the data, or null.
  */
-static GWBUF* dcb_basic_read_SSL(DCB* dcb, int* nsingleread)
+GWBUF* DCB::basic_read_SSL(int* nsingleread)
 {
     const size_t MXS_SO_RCVBUF_SIZE = (128 * 1024);
     unsigned char temp_buffer[MXS_SO_RCVBUF_SIZE];
     GWBUF* buffer = NULL;
 
-    *nsingleread = SSL_read(dcb->m_ssl, temp_buffer, MXS_SO_RCVBUF_SIZE);
+    *nsingleread = SSL_read(m_ssl, temp_buffer, MXS_SO_RCVBUF_SIZE);
 
-    dcb->m_stats.n_reads++;
+    m_stats.n_reads++;
 
-    switch (SSL_get_error(dcb->m_ssl, *nsingleread))
+    switch (SSL_get_error(m_ssl, *nsingleread))
     {
     case SSL_ERROR_NONE:
         /* Successful read */
@@ -762,40 +758,40 @@ static GWBUF* dcb_basic_read_SSL(DCB* dcb, int* nsingleread)
             return NULL;
         }
         /* If we were in a retry situation, need to clear flag and attempt write */
-        if (dcb->m_ssl_read_want_write || dcb->m_ssl_read_want_read)
+        if (m_ssl_read_want_write || m_ssl_read_want_read)
         {
-            dcb->m_ssl_read_want_write = false;
-            dcb->m_ssl_read_want_read = false;
-            dcb_drain_writeq(dcb);
+            m_ssl_read_want_write = false;
+            m_ssl_read_want_read = false;
+            drain_writeq();
         }
         break;
 
     case SSL_ERROR_ZERO_RETURN:
         /* react to the SSL connection being closed */
-        poll_fake_hangup_event(dcb);
+        poll_fake_hangup_event(this);
         *nsingleread = 0;
         break;
 
     case SSL_ERROR_WANT_READ:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
-        dcb->m_ssl_read_want_write = false;
-        dcb->m_ssl_read_want_read = true;
+        m_ssl_read_want_write = false;
+        m_ssl_read_want_read = true;
         *nsingleread = 0;
         break;
 
     case SSL_ERROR_WANT_WRITE:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
-        dcb->m_ssl_read_want_write = true;
-        dcb->m_ssl_read_want_read = false;
+        m_ssl_read_want_write = true;
+        m_ssl_read_want_read = false;
         *nsingleread = 0;
         break;
 
     case SSL_ERROR_SYSCALL:
-        *nsingleread = dcb_log_errors_SSL(dcb, *nsingleread);
+        *nsingleread = dcb_log_errors_SSL(this, *nsingleread);
         break;
 
     default:
-        *nsingleread = dcb_log_errors_SSL(dcb, *nsingleread);
+        *nsingleread = dcb_log_errors_SSL(this, *nsingleread);
         break;
     }
     return buffer;
@@ -858,7 +854,7 @@ bool DCB::write(GWBUF* queue)
 
     m_writeq = gwbuf_append(m_writeq, queue);
     m_stats.n_buffered++;
-    dcb_drain_writeq(this);
+    drain_writeq();
 
     if (DCB_ABOVE_HIGH_WATER(this) && !m_high_water_reached)
     {
@@ -937,41 +933,32 @@ static void dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno)
     }
 }
 
-/**
- * @brief Drain the write queue of a DCB
- *
- * This is called as part of the EPOLLOUT handling of a socket and will try to
- * send any buffered data from the write queue up until the point the write would block.
- *
- * @param dcb DCB to drain
- * @return The number of bytes written
- */
-int dcb_drain_writeq(DCB* dcb)
+int DCB::drain_writeq()
 {
-    mxb_assert(dcb->owner == RoutingWorker::get_current());
+    mxb_assert(this->owner == RoutingWorker::get_current());
 
-    if (dcb->m_ssl_read_want_write)
+    if (m_ssl_read_want_write)
     {
         /** The SSL library needs to write more data */
-        poll_fake_read_event(dcb);
+        poll_fake_read_event(this);
     }
 
     int total_written = 0;
-    GWBUF* local_writeq = dcb->m_writeq;
-    dcb->m_writeq = NULL;
+    GWBUF* local_writeq = m_writeq;
+    m_writeq = NULL;
 
     while (local_writeq)
     {
         int written;
         bool stop_writing = false;
         /* The value put into written will be >= 0 */
-        if (dcb->m_ssl)
+        if (m_ssl)
         {
-            written = gw_write_SSL(dcb, local_writeq, &stop_writing);
+            written = write_SSL(local_writeq, &stop_writing);
         }
         else
         {
-            written = gw_write(dcb, local_writeq, &stop_writing);
+            written = gw_write(this, local_writeq, &stop_writing);
         }
         /*
          * If the stop_writing boolean is set, writing has become blocked,
@@ -980,11 +967,11 @@ int dcb_drain_writeq(DCB* dcb)
          */
         if (written)
         {
-            dcb->m_last_write = mxs_clock();
+            m_last_write = mxs_clock();
         }
         if (stop_writing)
         {
-            dcb->m_writeq = dcb->m_writeq ? gwbuf_append(local_writeq, dcb->m_writeq) : local_writeq;
+            m_writeq = m_writeq ? gwbuf_append(local_writeq, m_writeq) : local_writeq;
             local_writeq = NULL;
         }
         else
@@ -996,20 +983,20 @@ int dcb_drain_writeq(DCB* dcb)
         }
     }
 
-    if (dcb->m_writeq == NULL)
+    if (m_writeq == NULL)
     {
         /* The write queue has drained, potentially need to call a callback function */
-        dcb_call_callback(dcb, DCB_REASON_DRAINED);
+        dcb_call_callback(this, DCB_REASON_DRAINED);
     }
 
-    mxb_assert(dcb->m_writeqlen >= (uint32_t)total_written);
-    dcb->m_writeqlen -= total_written;
+    mxb_assert(m_writeqlen >= (uint32_t)total_written);
+    m_writeqlen -= total_written;
 
-    if (dcb->m_high_water_reached && DCB_BELOW_LOW_WATER(dcb))
+    if (m_high_water_reached && DCB_BELOW_LOW_WATER(this))
     {
-        dcb_call_callback(dcb, DCB_REASON_LOW_WATER);
-        dcb->m_high_water_reached = false;
-        dcb->m_stats.n_low_water++;
+        dcb_call_callback(this, DCB_REASON_LOW_WATER);
+        m_high_water_reached = false;
+        m_stats.n_low_water++;
     }
 
     return total_written;
@@ -1701,55 +1688,55 @@ void dcb_printf(DCB* dcb, const char* fmt, ...)
  * @param stop_writing  Set to true if the caller should stop writing, false otherwise
  * @return              Number of written bytes
  */
-static int gw_write_SSL(DCB* dcb, GWBUF* writeq, bool* stop_writing)
+int DCB::write_SSL(GWBUF* writeq, bool* stop_writing)
 {
     int written;
 
-    written = SSL_write(dcb->m_ssl, GWBUF_DATA(writeq), GWBUF_LENGTH(writeq));
+    written = SSL_write(m_ssl, GWBUF_DATA(writeq), GWBUF_LENGTH(writeq));
 
     *stop_writing = false;
-    switch ((SSL_get_error(dcb->m_ssl, written)))
+    switch ((SSL_get_error(m_ssl, written)))
     {
     case SSL_ERROR_NONE:
         /* Successful write */
-        dcb->m_ssl_write_want_read = false;
-        dcb->m_ssl_write_want_write = false;
+        m_ssl_write_want_read = false;
+        m_ssl_write_want_write = false;
         break;
 
     case SSL_ERROR_ZERO_RETURN:
         /* react to the SSL connection being closed */
         *stop_writing = true;
-        poll_fake_hangup_event(dcb);
+        poll_fake_hangup_event(this);
         break;
 
     case SSL_ERROR_WANT_READ:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
         *stop_writing = true;
-        dcb->m_ssl_write_want_read = true;
-        dcb->m_ssl_write_want_write = false;
+        m_ssl_write_want_read = true;
+        m_ssl_write_want_write = false;
         break;
 
     case SSL_ERROR_WANT_WRITE:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
         *stop_writing = true;
-        dcb->m_ssl_write_want_read = false;
-        dcb->m_ssl_write_want_write = true;
+        m_ssl_write_want_read = false;
+        m_ssl_write_want_write = true;
         break;
 
     case SSL_ERROR_SYSCALL:
         *stop_writing = true;
-        if (dcb_log_errors_SSL(dcb, written) < 0)
+        if (dcb_log_errors_SSL(this, written) < 0)
         {
-            poll_fake_hangup_event(dcb);
+            poll_fake_hangup_event(this);
         }
         break;
 
     default:
         /* Report error(s) and shutdown the connection */
         *stop_writing = true;
-        if (dcb_log_errors_SSL(dcb, written) < 0)
+        if (dcb_log_errors_SSL(this, written) < 0)
         {
-            poll_fake_hangup_event(dcb);
+            poll_fake_hangup_event(this);
         }
         break;
     }
@@ -2079,17 +2066,17 @@ int dcb_count_by_role(DCB::Role role)
  * @param       dcb
  * @return      -1 on error, 0 otherwise.
  */
-static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
+int DCB::create_SSL(mxs::SSLContext* ssl)
 {
-    dcb->m_ssl = ssl->open();
+    m_ssl = ssl->open();
 
-    if (!dcb->m_ssl)
+    if (!m_ssl)
     {
         MXS_ERROR("Failed to initialize SSL for connection.");
         return -1;
     }
 
-    if (SSL_set_fd(dcb->m_ssl, dcb->m_fd) == 0)
+    if (SSL_set_fd(m_ssl, m_fd) == 0)
     {
         MXS_ERROR("Failed to set file descriptor for SSL connection.");
         return -1;
@@ -2112,7 +2099,7 @@ static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
 int ClientDCB::ssl_handshake()
 {
     if (!m_session->listener->ssl().context()
-        || (!m_ssl && dcb_create_SSL(this, m_session->listener->ssl().context()) != 0))
+        || (!m_ssl && create_SSL(m_session->listener->ssl().context()) != 0))
     {
         return -1;
     }
@@ -2189,7 +2176,7 @@ int BackendDCB::ssl_handshake()
     int return_code;
 
     if ((NULL == m_server || NULL == m_server->ssl().context())
-        || (NULL == m_ssl && dcb_create_SSL(this, m_server->ssl().context()) != 0))
+        || (NULL == m_ssl && create_SSL(m_server->ssl().context()) != 0))
     {
         mxb_assert((NULL != m_server) && (NULL != m_server->ssl().context()));
         return -1;

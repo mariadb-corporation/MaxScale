@@ -1765,11 +1765,11 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             dcb_printf(dcb,
                        "\t\tSlave DCB:                               %p\n",
                        session->dcb);
-            if (session->dcb->m_ssl)
+            if (session->dcb->ssl_enabled())
             {
                 dcb_printf(dcb,
                            "\t\tSlave connected with SSL:                %s\n",
-                           session->dcb->m_ssl_state == SSL_ESTABLISHED ?
+                           session->dcb->ssl_state() == SSL_ESTABLISHED ?
                            "Established" : "Not connected yet");
             }
             dcb_printf(dcb,
@@ -2168,7 +2168,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
             json_object_set_new(rval, "address", json_string(session->dcb->m_remote));
             json_object_set_new(rval, "port", json_integer(dcb_get_port(session->dcb)));
             json_object_set_new(rval, "user", json_string(session->dcb->m_user));
-            json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->m_ssl));
+            json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->ssl_enabled()));
             json_object_set_new(rval, "state", json_string(blrs_states[session->state]));
             json_object_set_new(rval, "next_sequence", json_integer(session->seqno));
             json_object_set_new(rval, "binlog_file", json_string(session->binlog_name));

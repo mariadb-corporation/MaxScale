@@ -65,6 +65,8 @@ namespace maxscale
 
 const char* to_string(dcb_state_t state);
 
+class SSLContext;
+
 }
 
 #define STRDCBSTATE(s) mxs::to_string(s)
@@ -152,6 +154,16 @@ public:
 
     SERVICE* service() const;
 
+    bool ssl_enabled() const
+    {
+        return m_ssl != nullptr;
+    }
+
+    SSL_STATE ssl_state() const
+    {
+        return m_ssl_state;
+    }
+
     virtual int ssl_handshake() = 0;
 
     /**
@@ -174,6 +186,17 @@ public:
      * @return False on failure, true on success.
      */
     bool write(GWBUF* pData);
+
+    /**
+     * Drain the write queue of the DCB.
+     *
+     * This is called as part of the EPOLLOUT handling of a socket and will try
+     * to send any buffered data from the write queue up until the point the
+     * write would block.
+     *
+     * @return The number of bytes written.
+     */
+    int drain_writeq();
 
     // Starts the shutdown process, called when a client DCB is closed
     void shutdown();
@@ -246,11 +269,6 @@ public:
     int64_t        m_last_read = 0;             /**< Last time the DCB received data */
     int64_t        m_last_write = 0;            /**< Last time the DCB sent data */
     struct SERVER* m_server = nullptr;          /**< The associated backend server */
-    SSL*           m_ssl = nullptr;               /**< SSL struct for connection */
-    bool           m_ssl_read_want_read = false;
-    bool           m_ssl_read_want_write = false;
-    bool           m_ssl_write_want_read = false;
-    bool           m_ssl_write_want_write = false;
     bool           m_was_persistent = false;      /**< Whether this DCB was in the persistent pool */
     bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
                                                  * release
@@ -264,9 +282,21 @@ protected:
         SERVER* server,
         Registry* registry);
 
-    MXS_SESSION* m_session;                 /**< The owning session */
+    int create_SSL(mxs::SSLContext* ssl);
+
+    MXS_SESSION* m_session;                     /**< The owning session */
+    SSL*         m_ssl = nullptr;               /**< SSL struct for connection */
+    bool         m_ssl_read_want_read = false;
+    bool         m_ssl_read_want_write = false;
+    bool         m_ssl_write_want_read = false;
+    bool         m_ssl_write_want_write = false;
 
 private:
+    int read_SSL(GWBUF** head);
+    GWBUF* basic_read_SSL(int* nsingleread);
+
+    int write_SSL(GWBUF* writeq, bool* stop_writing);
+
     static void final_free(DCB* dcb);
 
 private:
@@ -328,7 +358,10 @@ inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
     return dcb->read(head, maxbytes);
 }
 int  dcb_bytes_readable(DCB* dcb);
-int  dcb_drain_writeq(DCB*);
+inline int dcb_drain_writeq(DCB* dcb)
+{
+    return dcb->drain_writeq();
+}
 inline void dcb_close(DCB* dcb)
 {
     DCB::close(dcb);
