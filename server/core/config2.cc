@@ -21,74 +21,24 @@ namespace
 
 using namespace config;
 
-// TODO: Do not duplicate information from config.cc.
-
-const char* pzCore_filter_params[] = {
-    CN_TYPE,
-    CN_MODULE,
-    nullptr,
-};
-
-const char* pzCore_monitor_params[] = {
-    CN_TYPE,
-    CN_MODULE,
-    CN_USER,
-    CN_PASSWORD,
-    CN_SERVERS,
-    CN_MONITOR_INTERVAL,
-    CN_BACKEND_CONNECT_TIMEOUT,
-    CN_BACKEND_READ_TIMEOUT,
-    CN_BACKEND_WRITE_TIMEOUT,
-    CN_BACKEND_CONNECT_ATTEMPTS,
-    CN_JOURNAL_MAX_AGE,
-    CN_DISK_SPACE_THRESHOLD,
-    CN_DISK_SPACE_CHECK_INTERVAL,
-    CN_SCRIPT,
-    CN_SCRIPT_TIMEOUT,
-    CN_EVENTS,
-    nullptr,
-};
-
-const char* pzCore_router_params[] =
-{
-    CN_AUTH_ALL_SERVERS,
-    CN_CONNECTION_TIMEOUT,
-    CN_ENABLE_ROOT_USER,
-    CN_LOCALHOST_MATCH_WILDCARD_HOST,
-    CN_LOG_AUTH_WARNINGS,
-    CN_MAX_CONNECTIONS,
-    CN_MAX_RETRY_INTERVAL,
-    CN_NET_WRITE_TIMEOUT,
-    CN_PASSWORD,
-    CN_RETAIN_LAST_STATEMENTS,
-    CN_RETRY_ON_FAILURE,
-    CN_ROUTER,
-    CN_SERVERS,
-    CN_SESSION_TRACK_TRX_STATE,
-    CN_STRIP_DB_ESC,
-    CN_TYPE,
-    CN_USER,
-    nullptr
-};
-
 bool is_core_param(Specification::Kind kind, const std::string& param)
 {
     bool rv = false;
 
-    const char** pzCore_params = nullptr;
+    const MXS_MODULE_PARAM* pzCore_params = nullptr;
 
     switch (kind)
     {
     case Specification::FILTER:
-        pzCore_params = pzCore_filter_params;
+        pzCore_params = config_filter_params;
         break;
 
     case Specification::MONITOR:
-        pzCore_params = pzCore_monitor_params;
+        pzCore_params = config_monitor_params;
         break;
 
     case Specification::ROUTER:
-        pzCore_params = pzCore_router_params;
+        pzCore_params = config_service_params;
         break;
 
     default:
@@ -97,9 +47,9 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 
     if (pzCore_params)
     {
-        while (!rv && *pzCore_params)
+        while (!rv && pzCore_params->name)
         {
-            const char* zCore_param = *pzCore_params;
+            const char* zCore_param = pzCore_params->name;
 
             rv = (param == zCore_param);
             ++pzCore_params;
