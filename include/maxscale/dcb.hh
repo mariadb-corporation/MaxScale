@@ -133,7 +133,7 @@ public:
         INTERNAL        /*< Internal DCB not connected to the outside */
     };
 
-    ~DCB();
+    virtual ~DCB();
 
     Role role() const
     {
@@ -152,7 +152,7 @@ public:
 
     SERVICE* service() const;
 
-    int ssl_handshake();
+    virtual int ssl_handshake() = 0;
 
     /**
      * Read data from the DCB.
@@ -278,6 +278,8 @@ class ClientDCB : public DCB
 {
 public:
     ClientDCB(MXS_SESSION* session, Registry* registry);
+
+    int ssl_handshake() override;
 };
 
 class BackendDCB : public DCB
@@ -286,12 +288,16 @@ public:
     BackendDCB(MXS_SESSION* session, SERVER* server, Registry* registry);
 
     static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Registry* registry);
+
+    int ssl_handshake() override;
 };
 
 class InternalDCB : public DCB
 {
 public:
     InternalDCB(MXS_SESSION* session, Registry* registry);
+
+    int ssl_handshake() override;
 };
 
 namespace maxscale

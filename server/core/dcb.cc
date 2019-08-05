@@ -3069,11 +3069,6 @@ SERVICE* DCB::service() const
     return m_session->service;
 }
 
-int DCB::ssl_handshake()
-{
-    return m_role == Role::CLIENT ? dcb_accept_SSL(this) : dcb_connect_SSL(this);
-}
-
 void DCB::shutdown()
 {
     if (m_role == DCB::Role::CLIENT
@@ -3089,14 +3084,30 @@ ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Registry* registry)
 {
 }
 
+int ClientDCB::ssl_handshake()
+{
+    return dcb_accept_SSL(this);
+}
+
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Registry* registry)
     : DCB(DCB::Role::INTERNAL, session, nullptr, registry)
 {
 }
 
+int InternalDCB::ssl_handshake()
+{
+    mxb_assert(!true);
+    return -1;
+}
+
 BackendDCB::BackendDCB(MXS_SESSION* session, SERVER* server, DCB::Registry* registry)
     : DCB(DCB::Role::BACKEND, session, server, registry)
 {
+}
+
+int BackendDCB::ssl_handshake()
+{
+    return dcb_connect_SSL(this);
 }
 
 namespace maxscale
