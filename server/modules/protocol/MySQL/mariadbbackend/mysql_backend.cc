@@ -487,7 +487,7 @@ static void do_handle_error(DCB* dcb, const char* errmsg)
         // A failure to handle an error means that the session must be closed
         MXS_SESSION* session = dcb->session();
         session->close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
-        poll_fake_hangup_event(session->client_dcb);
+        session->terminate();
     }
 
     gwbuf_free(errbuf);
@@ -505,7 +505,7 @@ static void gw_reply_on_error(DCB* dcb, mxs_auth_state_t state)
     MySQLProtocol* p = static_cast<MySQLProtocol*>(dcb->protocol_session());
     auto err = mysql_create_custom_error(1, 0, "Authentication with backend failed. Session will be closed.");
     p->do_clientReply(err);
-    poll_fake_hangup_event(dcb->session()->client_dcb);
+    dcb->session()->terminate();
 }
 
 /**

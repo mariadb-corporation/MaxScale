@@ -106,6 +106,17 @@ MXS_SESSION::~MXS_SESSION()
     mxb_assert(removed);
 }
 
+void MXS_SESSION::terminate(GWBUF* error)
+{
+    if (error)
+    {
+        // Write the error to the client before closing the DCB
+        client_dcb->protocol_write(error);
+    }
+
+    dcb_close(client_dcb);
+}
+
 bool session_start(MXS_SESSION* ses)
 {
     Session* session = static_cast<Session*>(ses);
@@ -1506,6 +1517,7 @@ int32_t Session::clientReply(GWBUF* buffer, Endpoint* down)
 
 bool Session::handleError(GWBUF* error, Endpoint* down)
 {
-    dcb_close(client_dcb);
+    clientReply(error, down);
+    terminate();
     return false;
 }

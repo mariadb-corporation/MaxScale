@@ -177,6 +177,15 @@ struct MXS_SESSION
         return m_id;
     }
 
+    /**
+     * Abruptly stop the session
+     *
+     * This method should be used to stop the session when an abnormal failure has occurred.
+     *
+     * @param error An optionl error message that is sent to the client before the session is terminated
+     */
+    void terminate(GWBUF* error = nullptr);
+
 protected:
     State    m_state;                   /**< Current descriptor state */
     uint64_t m_id;                      /**< Unique session identifier */
