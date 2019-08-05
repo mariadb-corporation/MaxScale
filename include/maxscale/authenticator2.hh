@@ -27,6 +27,13 @@ class AuthenticatorSession;
 class Authenticator
 {
 public:
+    enum Capabilities
+    {
+         CAP_REAUTHENTICATE = (1 << 1),  /**< Does the module support reauthentication? */
+         CAP_BACKEND_AUTH = (1 << 2),    /**< Does the module support backend authentication? */
+         CAP_CONC_LOAD_USERS = (1 << 3)  /**< Does the module support concurrent user loading? */
+    };
+
     virtual ~Authenticator() = default;
 
     // Create a data structure unique to this DCB, stored in `dcb->authenticator_data`. If a module
@@ -50,6 +57,13 @@ public:
      * @see jansson.h
      */
     virtual json_t* diagnostics_json(const Listener* listener) = 0;
+
+    /**
+     * Get module runtime capabilities. Returns 0 by default.
+     *
+     * @return Capabilities as a bitfield
+     */
+    virtual uint64_t capabilities() const;
 };
 
 /**
@@ -74,10 +88,24 @@ public:
     // authenticators should not implement it.
     virtual void free_data(DCB* client) = 0;
 
-    // Reauthenticate a user. Not implemented by most authenticators.
+    /**
+     * This entry point was added to avoid calling authenticator functions
+     * directly when a COM_CHANGE_USER command is executed. Not implemented by most authenticators.
+     *
+     * @param dcb The connection
+     * @param user Username
+     * @param token Client auth token
+     * @param token_len Auth token length
+     * @param scramble Scramble sent by MaxScale to client
+     * @param scramble_len Scramble length
+     * @param output Hashed client password used by backend protocols
+     * @param output_len Hash length
+     * @return 0 on success
+     */
     virtual int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
                                uint8_t* scramble, size_t scramble_len,
                                uint8_t* output, size_t output_len);
+
 };
 
 /**
@@ -107,16 +135,6 @@ public:
         return session;
     }
 
-    static int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
-                              uint8_t* scramble, size_t scramble_len, uint8_t* output, size_t output_len)
-    {
-        auto session = client->m_authenticator_data;
-        int rval = MXS_AUTH_SSL_COMPLETE;
-        MXS_EXCEPTION_GUARD(rval = session->reauthenticate(client, user, token, token_len,
-                                                           scramble, scramble_len, output, output_len));
-        return rval;
-    }
-
     static MXS_AUTHENTICATOR s_api;
 };
 
@@ -125,7 +143,6 @@ MXS_AUTHENTICATOR AuthenticatorApi<AuthImplementation>::s_api =
 {
         &AuthenticatorApi<AuthImplementation>::createInstance,
         &AuthenticatorApi<AuthImplementation>::createSession,
-        &AuthenticatorApi<AuthImplementation>::reauthenticate
 };
 
 /**
@@ -163,8 +180,7 @@ template<class AuthImplementation>
 MXS_AUTHENTICATOR BackendAuthenticatorApi<AuthImplementation>::s_api =
 {
         nullptr,
-        &BackendAuthenticatorApi<AuthImplementation>::newSession,
-        nullptr
+        &BackendAuthenticatorApi<AuthImplementation>::newSession
 };
 
 }

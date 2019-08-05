@@ -141,6 +141,11 @@ const char* to_string(mxs_auth_state_t state)
     return rval;
 }
 
+uint64_t Authenticator::capabilities() const
+{
+    return 0;
+}
+
 int AuthenticatorSession::reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
                                          uint8_t* scramble, size_t scramble_len,
                                          uint8_t* output, size_t output_len)

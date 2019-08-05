@@ -1462,21 +1462,17 @@ static int gw_change_user(DCB* backend,
      */
     DCB* dcb = backend->session()->client_dcb;
 
-    if (dcb->m_authfunc.reauthenticate == NULL)
+    if ((in_session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_REAUTHENTICATE) == 0)
     {
         /** Authenticator does not support reauthentication */
         rv = 0;
         goto retblock;
     }
 
-    auth_ret = dcb->m_authfunc.reauthenticate(dcb,
-                                            username,
-                                            auth_token,
-                                            auth_token_len,
-                                            client_protocol->scramble,
-                                            sizeof(client_protocol->scramble),
-                                            client_sha1,
-                                            sizeof(client_sha1));
+    auth_ret = dcb->m_authenticator_data->reauthenticate(
+            dcb, username, auth_token, auth_token_len,
+            client_protocol->scramble, sizeof(client_protocol->scramble),
+            client_sha1, sizeof(client_sha1));
 
     strcpy(current_session->db, current_database);
 
@@ -1490,14 +1486,10 @@ static int gw_change_user(DCB* backend,
              */
             *current_session->db = 0;
 
-            auth_ret = dcb->m_authfunc.reauthenticate(dcb,
-                                                    username,
-                                                    auth_token,
-                                                    auth_token_len,
-                                                    client_protocol->scramble,
-                                                    sizeof(client_protocol->scramble),
-                                                    client_sha1,
-                                                    sizeof(client_sha1));
+            auth_ret = dcb->m_authenticator_data->reauthenticate(
+                    dcb, username, auth_token, auth_token_len,
+                    client_protocol->scramble, sizeof(client_protocol->scramble),
+                    client_sha1, sizeof(client_sha1));
 
             strcpy(current_session->db, current_database);
         }

@@ -72,7 +72,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_AUTHENTICATOR_VERSION,
         "The MySQL client to MaxScale authenticator implementation",
         "V1.1.0",
-        ACAP_TYPE_ASYNC,
+        MXS_NO_MODULE_CAPABILITIES, // Authenticator capabilities are in the instance object
         &mxs::AuthenticatorApi<MYSQL_AUTH>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
@@ -884,7 +884,13 @@ json_t* MYSQL_AUTH::diagnostics_json(const Listener* listener)
     return rval;
 }
 
+uint64_t MYSQL_AUTH::capabilities() const
+{
+    return CAP_REAUTHENTICATE | CAP_CONC_LOAD_USERS;
+}
+
 MariaDBAuthenticatorSession* MYSQL_AUTH::createSession()
 {
     return new(std::nothrow) MariaDBAuthenticatorSession();
 }
+

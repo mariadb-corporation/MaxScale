@@ -36,6 +36,7 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/jansson.h>
 
+#include <maxscale/authenticator2.hh>
 #include <maxscale/service.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
@@ -51,7 +52,6 @@
 #include <maxscale/utils.hh>
 #include <maxscale/version.h>
 #include <maxscale/json_api.hh>
-#include <maxscale/routingworker.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/config.hh"
@@ -1072,10 +1072,21 @@ bool Service::refresh_users()
     mxb_assert(self >= 0);
     time_t now = time(NULL);
 
+    auto listeners = listener_find_by_service(this);
+    bool concurrent_update = true;
+    // All listeners must support concurrent updating for it to be used.
+    for (const auto& listener : listeners)
+    {
+        if ((listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_CONC_LOAD_USERS) == 0)
+        {
+            concurrent_update = false;
+            break;
+        }
+    }
+
     // Use unique_lock instead of lock_guard to make the locking conditional
     UniqueLock guard(lock, std::defer_lock);
-
-    if ((capabilities & ACAP_TYPE_ASYNC) == 0)
+    if (!concurrent_update)
     {
         // Use only one rate limitation for synchronous authenticators to keep
         // rate limitations synchronous as well
@@ -1104,7 +1115,7 @@ bool Service::refresh_users()
         m_rate_limits[self].last = now;
         m_rate_limits[self].warned = false;
 
-        for (const auto& listener : listener_find_by_service(this))
+        for (const auto& listener : listeners)
         {
             /** Load the authentication users before before starting the listener */
 

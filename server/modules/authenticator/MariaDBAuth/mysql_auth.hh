@@ -129,6 +129,7 @@ public:
     int load_users(Listener* listener) override;
     void diagnostics(DCB* output, Listener* listener) override;
     json_t* diagnostics_json(const Listener* listener) override;
+    uint64_t capabilities() const override;
 
     sqlite3** handles;              /**< SQLite3 database handle */
     char*     cache_dir;            /**< Custom cache directory location */

@@ -1669,8 +1669,7 @@ void update_current_command(DCB* dcb, GWBUF* buffer)
 static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
-
-    if (session->client_dcb->m_authfunc.reauthenticate)
+    if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_REAUTHENTICATE)
     {
         uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
         MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->m_protocol;
@@ -1694,14 +1693,9 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
         MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
         strcpy(data->user, user);
 
-        int rc = session->client_dcb->m_authfunc.reauthenticate(session->client_dcb,
-                                                              data->user,
-                                                              &payload[0],
-                                                              payload.size(),
-                                                              proto->scramble,
-                                                              sizeof(proto->scramble),
-                                                              data->client_sha1,
-                                                              sizeof(data->client_sha1));
+        int rc = session->client_dcb->m_authenticator_data->reauthenticate(
+                session->client_dcb, data->user, &payload[0], payload.size(),
+                proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
 
         if (rc == MXS_AUTH_SUCCEEDED)
         {

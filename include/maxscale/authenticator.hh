@@ -60,19 +60,6 @@ class Authenticator;
 #define MXS_AUTH_LOADUSERS_FATAL 2  /**< Fatal error, service is not started */
 
 /**
- * Specifies capabilities specific for authenticators.
- *
- * @see enum routing_capability
- *
- * @note The values of the capabilities here *must* be between 0x000100000000
- *       and 0x008000000000, that is, bits 32 to 39.
- */
-enum authenticator_capability_t
-{
-    ACAP_TYPE_ASYNC = 0x000100000000    /**< Supports asynchronous access */
-};
-
-/**
  * @verbatim
  * The operations that can be performed on the descriptor
  *
@@ -95,23 +82,6 @@ struct MXS_AUTHENTICATOR
 {
     void* (* initialize)(char** options);
     void* (* create)(void* instance);
-
-    /**
-     * This entry point was added to avoid calling authenticator functions
-     * directly when a COM_CHANGE_USER command is executed.
-     *
-     * @param dcb The connection
-     * @param user Username
-     * @param token Client auth token
-     * @param token_len Auth token length
-     * @param scramble Scramble sent by MaxScale to client
-     * @param scramble_len Scramble length
-     * @param output Hashed client password used by backend protocols
-     * @param output_len Hash length
-     * @return 0 on success
-     */
-    int (* reauthenticate)(DCB* dcb, const char* user, uint8_t* token, size_t token_len,
-                           uint8_t* scramble, size_t scramble_len, uint8_t* output, size_t output_len);
 };
 
 /**
