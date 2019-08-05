@@ -206,9 +206,9 @@ public:
 
     int32_t routeQuery(GWBUF* buffer) override;
 
-    int32_t clientReply(GWBUF* buffer, mxs::Component* down) override;
+    int32_t clientReply(GWBUF* buffer, mxs::Endpoint* down) override;
 
-    bool handleError(GWBUF* error, mxs::Component* down) override;
+    bool handleError(GWBUF* error, mxs::Endpoint* down) override;
 
 private:
 

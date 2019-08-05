@@ -1499,12 +1499,12 @@ int32_t Session::routeQuery(GWBUF* buffer)
     return m_down->routeQuery(buffer);
 }
 
-int32_t Session::clientReply(GWBUF* buffer, Component* down)
+int32_t Session::clientReply(GWBUF* buffer, Endpoint* down)
 {
     return client_dcb->protocol_write(buffer);
 }
 
-bool Session::handleError(GWBUF* error, Component* down)
+bool Session::handleError(GWBUF* error, Endpoint* down)
 {
     dcb_close(client_dcb);
     return false;

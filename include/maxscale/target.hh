@@ -117,6 +117,7 @@ namespace maxscale
 {
 
 class Target;
+class Endpoint;
 
 // A routing component
 class Component
@@ -126,9 +127,9 @@ public:
 
     virtual int32_t routeQuery(GWBUF* buffer) = 0;
 
-    virtual int32_t clientReply(GWBUF* buffer, Component* down) = 0;
+    virtual int32_t clientReply(GWBUF* buffer, Endpoint* down) = 0;
 
-    virtual bool handleError(GWBUF* error, Component* down) = 0;
+    virtual bool handleError(GWBUF* error, Endpoint* down) = 0;
 };
 
 // A connectable routing endpoint (a service or a server)

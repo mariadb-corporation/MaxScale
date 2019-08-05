@@ -1907,12 +1907,12 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
     return m_head.routeQuery(m_head.instance, m_head.session, buffer);
 }
 
-int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Component* down)
+int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* down)
 {
     return m_tail.clientReply(m_tail.instance, m_tail.session, buffer, nullptr);
 }
 
-bool ServiceEndpoint::handleError(GWBUF* error, mxs::Component* down)
+bool ServiceEndpoint::handleError(GWBUF* error, mxs::Endpoint* down)
 {
     // TODO: Pass the Component to the handleError function
     bool ok = m_service->router->handleError(m_service->router_instance, m_router_session, error, nullptr);
