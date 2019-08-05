@@ -155,8 +155,8 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Registry* registry)
     , m_last_write(mxs_clock())
     , m_server(server)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
-    , m_role(role)
     , m_session(session)
+    , m_role(role)
     , m_registry(registry)
 {
     // TODO: Remove DCB::Role::INTERNAL to always have a valid listener
@@ -2109,25 +2109,25 @@ static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
  * still ongoing and another call to dcb_SSL_accept should be made or -1 if an
  * error occurred during the handshake and the connection should be terminated.
  */
-static int dcb_accept_SSL(DCB* dcb)
+int ClientDCB::ssl_handshake()
 {
-    if (!dcb->session()->listener->ssl().context()
-        || (!dcb->m_ssl && dcb_create_SSL(dcb, dcb->session()->listener->ssl().context()) != 0))
+    if (!m_session->listener->ssl().context()
+        || (!m_ssl && dcb_create_SSL(this, m_session->listener->ssl().context()) != 0))
     {
         return -1;
     }
 
-    MXB_AT_DEBUG(const char* remote = dcb->m_remote ? dcb->m_remote : "");
-    MXB_AT_DEBUG(const char* user = dcb->m_user ? dcb->m_user : "");
+    MXB_AT_DEBUG(const char* remote = m_remote ? m_remote : "");
+    MXB_AT_DEBUG(const char* user = m_user ? m_user : "");
 
-    int ssl_rval = SSL_accept(dcb->m_ssl);
+    int ssl_rval = SSL_accept(m_ssl);
 
-    switch (SSL_get_error(dcb->m_ssl, ssl_rval))
+    switch (SSL_get_error(m_ssl, ssl_rval))
     {
     case SSL_ERROR_NONE:
         MXS_DEBUG("SSL_accept done for %s@%s", user, remote);
-        dcb->m_ssl_state = SSL_ESTABLISHED;
-        dcb->m_ssl_read_want_write = false;
+        m_ssl_state = SSL_ESTABLISHED;
+        m_ssl_read_want_write = false;
         return 1;
 
     case SSL_ERROR_WANT_READ:
@@ -2136,21 +2136,21 @@ static int dcb_accept_SSL(DCB* dcb)
 
     case SSL_ERROR_WANT_WRITE:
         MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user, remote);
-        dcb->m_ssl_read_want_write = true;
+        m_ssl_read_want_write = true;
         return 0;
 
     case SSL_ERROR_ZERO_RETURN:
         MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user, remote);
-        dcb_log_errors_SSL(dcb, 0);
-        poll_fake_hangup_event(dcb);
+        dcb_log_errors_SSL(this, 0);
+        poll_fake_hangup_event(this);
         return 0;
 
     case SSL_ERROR_SYSCALL:
         MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
-        if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
+        if (dcb_log_errors_SSL(this, ssl_rval) < 0)
         {
-            dcb->m_ssl_state = SSL_HANDSHAKE_FAILED;
-            poll_fake_hangup_event(dcb);
+            m_ssl_state = SSL_HANDSHAKE_FAILED;
+            poll_fake_hangup_event(this);
             return -1;
         }
         else
@@ -2160,10 +2160,10 @@ static int dcb_accept_SSL(DCB* dcb)
 
     default:
         MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
-        if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
+        if (dcb_log_errors_SSL(this, ssl_rval) < 0)
         {
-            dcb->m_ssl_state = SSL_HANDSHAKE_FAILED;
-            poll_fake_hangup_event(dcb);
+            m_ssl_state = SSL_HANDSHAKE_FAILED;
+            poll_fake_hangup_event(this);
             return -1;
         }
         else
@@ -2183,54 +2183,54 @@ static int dcb_accept_SSL(DCB* dcb)
  * @param dcb DCB to connect
  * @return 1 on success, -1 on error and 0 if the SSL handshake is still ongoing
  */
-static int dcb_connect_SSL(DCB* dcb)
+int BackendDCB::ssl_handshake()
 {
     int ssl_rval;
     int return_code;
 
-    if ((NULL == dcb->m_server || NULL == dcb->m_server->ssl().context())
-        || (NULL == dcb->m_ssl && dcb_create_SSL(dcb, dcb->m_server->ssl().context()) != 0))
+    if ((NULL == m_server || NULL == m_server->ssl().context())
+        || (NULL == m_ssl && dcb_create_SSL(this, m_server->ssl().context()) != 0))
     {
-        mxb_assert((NULL != dcb->m_server) && (NULL != dcb->m_server->ssl().context()));
+        mxb_assert((NULL != m_server) && (NULL != m_server->ssl().context()));
         return -1;
     }
-    dcb->m_ssl_state = SSL_HANDSHAKE_REQUIRED;
-    ssl_rval = SSL_connect(dcb->m_ssl);
-    switch (SSL_get_error(dcb->m_ssl, ssl_rval))
+    m_ssl_state = SSL_HANDSHAKE_REQUIRED;
+    ssl_rval = SSL_connect(m_ssl);
+    switch (SSL_get_error(m_ssl, ssl_rval))
     {
     case SSL_ERROR_NONE:
-        MXS_DEBUG("SSL_connect done for %s", dcb->m_remote);
-        dcb->m_ssl_state = SSL_ESTABLISHED;
-        dcb->m_ssl_read_want_write = false;
+        MXS_DEBUG("SSL_connect done for %s", m_remote);
+        m_ssl_state = SSL_ESTABLISHED;
+        m_ssl_read_want_write = false;
         return_code = 1;
         break;
 
     case SSL_ERROR_WANT_READ:
-        MXS_DEBUG("SSL_connect ongoing want read for %s", dcb->m_remote);
+        MXS_DEBUG("SSL_connect ongoing want read for %s", m_remote);
         return_code = 0;
         break;
 
     case SSL_ERROR_WANT_WRITE:
-        MXS_DEBUG("SSL_connect ongoing want write for %s", dcb->m_remote);
-        dcb->m_ssl_read_want_write = true;
+        MXS_DEBUG("SSL_connect ongoing want write for %s", m_remote);
+        m_ssl_read_want_write = true;
         return_code = 0;
         break;
 
     case SSL_ERROR_ZERO_RETURN:
-        MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", dcb->m_remote);
-        if (dcb_log_errors_SSL(dcb, 0) < 0)
+        MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote);
+        if (dcb_log_errors_SSL(this, 0) < 0)
         {
-            poll_fake_hangup_event(dcb);
+            poll_fake_hangup_event(this);
         }
         return_code = 0;
         break;
 
     case SSL_ERROR_SYSCALL:
-        MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", dcb->m_remote);
-        if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
+        MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote);
+        if (dcb_log_errors_SSL(this, ssl_rval) < 0)
         {
-            dcb->m_ssl_state = SSL_HANDSHAKE_FAILED;
-            poll_fake_hangup_event(dcb);
+            m_ssl_state = SSL_HANDSHAKE_FAILED;
+            poll_fake_hangup_event(this);
             return_code = -1;
         }
         else
@@ -2240,11 +2240,11 @@ static int dcb_connect_SSL(DCB* dcb)
         break;
 
     default:
-        MXS_DEBUG("SSL connection shut down with error during SSL connect %s", dcb->m_remote);
-        if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
+        MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote);
+        if (dcb_log_errors_SSL(this, ssl_rval) < 0)
         {
-            dcb->m_ssl_state = SSL_HANDSHAKE_FAILED;
-            poll_fake_hangup_event(dcb);
+            m_ssl_state = SSL_HANDSHAKE_FAILED;
+            poll_fake_hangup_event(this);
             return -1;
         }
         else
@@ -3084,11 +3084,6 @@ ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Registry* registry)
 {
 }
 
-int ClientDCB::ssl_handshake()
-{
-    return dcb_accept_SSL(this);
-}
-
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Registry* registry)
     : DCB(DCB::Role::INTERNAL, session, nullptr, registry)
 {
@@ -3103,11 +3098,6 @@ int InternalDCB::ssl_handshake()
 BackendDCB::BackendDCB(MXS_SESSION* session, SERVER* server, DCB::Registry* registry)
     : DCB(DCB::Role::BACKEND, session, server, registry)
 {
-}
-
-int BackendDCB::ssl_handshake()
-{
-    return dcb_connect_SSL(this);
 }
 
 namespace maxscale

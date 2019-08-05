@@ -264,13 +264,14 @@ protected:
         SERVER* server,
         Registry* registry);
 
+    MXS_SESSION* m_session;                 /**< The owning session */
+
 private:
     static void final_free(DCB* dcb);
 
 private:
     Role         m_role;                    /**< The role of the DCB */
     dcb_state_t  m_state = DCB_STATE_ALLOC; /**< Current state */
-    MXS_SESSION* m_session;                 /**< The owning session */
     Registry*    m_registry;                /**< The DCB registry to use */
 };
 
