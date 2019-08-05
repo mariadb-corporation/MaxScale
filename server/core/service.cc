@@ -166,6 +166,7 @@ void service_add_server(Monitor* pMonitor, SERVER* pServer)
         if (pService->m_monitor == pMonitor)
         {
             serviceAddBackend(pService, pServer);
+            pService->add_target(pServer);
         }
     }
 }
@@ -179,6 +180,7 @@ void service_remove_server(Monitor* pMonitor, SERVER* pServer)
         if (pService->m_monitor == pMonitor)
         {
             serviceRemoveBackend(pService, pServer);
+            pService->remove_target(pServer);
         }
     }
 }
@@ -602,8 +604,6 @@ bool serviceAddBackend(SERVICE* svc, SERVER* server)
             rval = true;
             LockGuard guard(service->lock);
 
-            service->n_dbref++;
-
             if (service->dbref)
             {
                 SERVER_REF* ref = service->dbref;
@@ -660,7 +660,6 @@ void serviceRemoveBackend(Service* service, const SERVER* server)
         if (ref->server == server && ref->active)
         {
             ref->active = false;
-            service->n_dbref--;
             break;
         }
     }

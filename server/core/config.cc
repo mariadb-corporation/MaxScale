@@ -135,7 +135,6 @@ const char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
 const char CN_LOCAL_ADDRESS[] = "local_address";
 const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
-
 }
 
 // Values for the `ssl` parameter. These are plain boolean types but for legacy
@@ -3336,6 +3335,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
                 if (auto s = ServerManager::find_by_unique_name(a))
                 {
                     serviceAddBackend(service, s);
+                    service->add_target(s);
                 }
                 else
                 {
