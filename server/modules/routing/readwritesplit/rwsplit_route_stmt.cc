@@ -721,7 +721,8 @@ SRWBackend RWSplitSession::get_master_backend()
 
     if (master)
     {
-        if (master->in_use() || (m_config.master_reconnection && master->can_connect()))
+        if (master->in_use()
+            || (m_config.master_reconnection && master->can_connect() && can_recover_servers()))
         {
             if (master->is_master())
             {
@@ -736,7 +737,8 @@ SRWBackend RWSplitSession::get_master_backend()
         }
         else
         {
-            MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
+            MXS_ERROR("Cannot choose server '%s' as the master because it is not "
+                      "in use and a new connection to it cannot be created.",
                       master->name());
         }
     }
