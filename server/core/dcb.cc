@@ -147,16 +147,6 @@ static MXB_WORKER* get_dcb_owner()
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(Role role, MXS_SESSION* session, Registry* registry)
-    : DCB(role, session, nullptr, registry)
-{
-}
-
-DCB::DCB(Role role, MXS_SESSION* session, SERVER* server)
-    : DCB(role, session, server, nullptr)
-{
-}
-
 DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Registry* registry)
     : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner()}
     , m_high_water(config_writeq_high_water())
@@ -239,34 +229,14 @@ DCB::~DCB()
     MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
 
-/**
- * @brief Allocate a new DCB.
- *
- * This routine performs the generic initialisation on the DCB before returning
- * the newly allocated DCB.
- *
- * Remaining fields are set from the given parameters, and then the DCB is
- * flagged as ready for use.
- *
- * @param role     The role for the new DCB
- * @param listener The listener if applicable.
- * @param service  The service which is used
- *
- * @return An available DCB or NULL if none could be allocated.
- */
-static DCB* dcb_alloc(DCB::Role role, MXS_SESSION* session, SERVER* server, DCB::Registry* registry)
+ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry)
 {
-    return new(std::nothrow) DCB(role, session, server, registry);
+    return new (std::nothrow) ClientDCB(session, registry);
 }
 
-DCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry)
+InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry)
 {
-    return dcb_alloc(DCB::Role::CLIENT, session, nullptr, registry);
-}
-
-DCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry)
-{
-    return dcb_alloc(DCB::Role::INTERNAL, session, nullptr, registry);
+    return new (std::nothrow) InternalDCB(session, registry);
 }
 
 /**
@@ -376,7 +346,7 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
     return nullptr;
 }
 
-DCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* protocol, DCB::Registry* registry)
+BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* protocol, DCB::Registry* registry)
 {
     MXS_PROTOCOL* funcs = (MXS_PROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
 
@@ -413,7 +383,7 @@ DCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* pro
         }
     }
 
-    DCB* dcb = dcb_alloc(DCB::Role::BACKEND, session, server, registry);
+    BackendDCB* dcb = new (std::nothrow) BackendDCB(session, server, registry);
 
     if (dcb)
     {
@@ -490,7 +460,7 @@ static bool do_connect(const char* host, int port, int* fd)
  *
  * @return The new allocated dcb or NULL on error
  */
-DCB* dcb_connect(SERVER* srv, const char* protocol, MXS_SESSION* session, DCB::Registry* registry)
+BackendDCB* dcb_connect(SERVER* srv, const char* protocol, MXS_SESSION* session, DCB::Registry* registry)
 {
     Server* server = static_cast<Server*>(srv);
 
@@ -502,11 +472,11 @@ DCB* dcb_connect(SERVER* srv, const char* protocol, MXS_SESSION* session, DCB::R
     if (auto dcb = take_from_connection_pool(server, session, protocol))
     {
         // TODO: For now, we ignore the problem.
-        return dcb;     // Reusing a DCB from the connection pool
+        return static_cast<BackendDCB*>(dcb);     // Reusing a DCB from the connection pool
     }
 
     // Could not find a reusable DCB, allocate a new one
-    DCB* dcb = dcb_alloc_backend_dcb(server, session, protocol, registry);
+    BackendDCB* dcb = dcb_alloc_backend_dcb(server, session, protocol, registry);
 
     if (dcb)
     {
@@ -3112,6 +3082,21 @@ void DCB::shutdown()
     {
         session_close(m_session);
     }
+}
+
+ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Registry* registry)
+    : DCB(DCB::Role::CLIENT, session, nullptr, registry)
+{
+}
+
+InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Registry* registry)
+    : DCB(DCB::Role::INTERNAL, session, nullptr, registry)
+{
+}
+
+BackendDCB::BackendDCB(MXS_SESSION* session, SERVER* server, DCB::Registry* registry)
+    : DCB(DCB::Role::BACKEND, session, server, registry)
+{
 }
 
 namespace maxscale

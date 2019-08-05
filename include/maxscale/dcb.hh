@@ -133,16 +133,6 @@ public:
         INTERNAL        /*< Internal DCB not connected to the outside */
     };
 
-    DCB(Role role,
-        MXS_SESSION* session,
-        Registry* registry = nullptr);
-    DCB(Role role,
-        MXS_SESSION* session,
-        SERVER* server);
-    DCB(Role role,
-        MXS_SESSION* session,
-        SERVER* server,
-        Registry* registry);
     ~DCB();
 
     Role role() const
@@ -268,6 +258,12 @@ public:
     uint32_t m_nClose = 0;   /** How many times dcb_close has been called. */
     uint64_t m_uid;         /**< Unique identifier for this DCB */
 
+protected:
+    DCB(Role role,
+        MXS_SESSION* session,
+        SERVER* server,
+        Registry* registry);
+
 private:
     static void final_free(DCB* dcb);
 
@@ -276,6 +272,24 @@ private:
     dcb_state_t  m_state = DCB_STATE_ALLOC; /**< Current state */
     MXS_SESSION* m_session;                 /**< The owning session */
     Registry*    m_registry;                /**< The DCB registry to use */
+};
+
+class ClientDCB : public DCB
+{
+public:
+    ClientDCB(MXS_SESSION* session, Registry* registry);
+};
+
+class BackendDCB : public DCB
+{
+public:
+    BackendDCB(MXS_SESSION* session, SERVER* server, Registry* registry);
+};
+
+class InternalDCB : public DCB
+{
+public:
+    InternalDCB(MXS_SESSION* session, Registry* registry);
 };
 
 namespace maxscale
@@ -297,9 +311,9 @@ inline bool dcb_write(DCB* dcb, GWBUF* queue)
     return dcb->write(queue);
 }
 
-DCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry);
-DCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry);
-DCB* dcb_connect(SERVER* server, const char* protocol, MXS_SESSION* session, DCB::Registry* registry);
+ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry);
+InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry);
+BackendDCB* dcb_connect(SERVER* server, const char* protocol, MXS_SESSION* session, DCB::Registry* registry);
 
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 {

@@ -25,7 +25,7 @@ namespace mock
 /**
  * The class Dcb provides a mock DCB that can be used when testing.
  */
-class Dcb : public DCB
+class Dcb : public ClientDCB
 {
     Dcb(const Dcb&);
     Dcb& operator=(const Dcb&);

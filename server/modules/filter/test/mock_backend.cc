@@ -170,11 +170,11 @@ ResultSetBackend::ResultSetBackend()
 namespace
 {
 
-class ResultSetDCB : public DCB
+class ResultSetDCB : public ClientDCB
 {
 public:
     ResultSetDCB(MXS_SESSION* session)
-        : DCB(DCB::Role::CLIENT, session)
+        : ClientDCB(session, nullptr)
     {
         DCB* pDcb = this;
 
