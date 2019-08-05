@@ -450,7 +450,7 @@ bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
 
 bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
 {
-    return up->clientReply(up->instance, up->session, buffer, dcb, nullptr);
+    return up->clientReply(up->instance, up->session, buffer, nullptr, nullptr);
 }
 
 /**
@@ -980,7 +980,7 @@ Session::Session(const SListener& listener)
     : MXS_SESSION(listener)
     , m_down(static_cast<Service*>(listener->service())->get_connection(this, this))
 {
-    if (service->config().retain_last_statements != -1)          // Explicitly set for the service
+    if (service->config().retain_last_statements != -1)         // Explicitly set for the service
     {
         m_retain_last_statements = service->config().retain_last_statements;
     }
@@ -1501,7 +1501,7 @@ void Session::dump_session_log()
             log += s;
         }
 
-        MXS_NOTICE("Session log for session (%" PRIu64"): \n%s ", id(), log.c_str());
+        MXS_NOTICE("Session log for session (%" PRIu64 "): \n%s ", id(), log.c_str());
     }
 }
 

@@ -233,8 +233,8 @@ private:
 
     friend class Service;
 
-    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*, DCB*, mxs::Reply*);
-    int32_t        send_upstream(GWBUF* buffer, DCB* dcb, mxs::Reply*);
+    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*, mxs::Endpoint*, mxs::Reply*);
+    int32_t        send_upstream(GWBUF* buffer, mxs::Endpoint* down, mxs::Reply*);
     void           set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
 
     bool                m_open {false};

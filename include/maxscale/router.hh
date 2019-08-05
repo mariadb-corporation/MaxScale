@@ -163,12 +163,12 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      * @param queue          Response from the server
-     * @param backend_dcb    The backend DCB which responded to the query
+     * @param backend_dcb    The downstream endpoint which responded to the query
      */
     void (* clientReply)(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* queue,
-                         DCB* backend_dcb,
+                         mxs::Endpoint* down,
                          mxs::Reply* reply);
 
     /**
@@ -181,14 +181,14 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      * @param errmsgbuf      Error message buffer
-     * @param backend_dcb    The backend DCB that has failed
+     * @param down           The downstream endpoint that failed
      *
      * @return True for success or false for error
      */
     bool (* handleError)(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* errmsgbuf,
-                         DCB* backend_dcb);
+                         mxs::Endpoint* down);
 
     /**
      * @brief Called to obtain the capabilities of the router
@@ -324,7 +324,7 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, mxs::Reply* reply);
 
     /**
      * Handle backend connection network errors
@@ -334,7 +334,7 @@ public:
      *
      * @return True if the session can continue, false if the session should be closed
      */
-    bool handleError(GWBUF* pMessage, DCB* pProblem);
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
 
     // Sets the upstream component (don't override this in the inherited class)
     void setUpstream(mxs::Upstream* up)
@@ -476,21 +476,18 @@ public:
         return rval;
     }
 
-    static void clientReply(MXS_ROUTER*,
-                            MXS_ROUTER_SESSION* pData,
-                            GWBUF* pPacket,
-                            DCB* pBackend,
-                            mxs::Reply* reply)
+    static void clientReply(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket,
+                            mxs::Endpoint* pDown, mxs::Reply* reply)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
-        MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pBackend, reply));
+        MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pDown, reply));
     }
 
     static bool handleError(MXS_ROUTER* pInstance,
                             MXS_ROUTER_SESSION* pData,
                             GWBUF* pMessage,
-                            DCB* pProblem)
+                            mxs::Endpoint* pProblem)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 

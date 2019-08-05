@@ -88,7 +88,7 @@ typedef int32_t (* DOWNSTREAMFUNC)(struct mxs_filter* instance,
 typedef int32_t (* UPSTREAMFUNC)(struct mxs_filter* instance,
                                  struct mxs_filter_session* session,
                                  GWBUF* response,
-                                 DCB* dcb,
+                                 mxs::Endpoint* down,
                                  mxs::Reply* reply);
 
 struct Downstream

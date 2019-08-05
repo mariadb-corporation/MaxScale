@@ -38,12 +38,12 @@ int32_t RouterSession::routeQuery(GWBUF* pPacket)
     return 0;
 }
 
-void RouterSession::clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* reply)
+void RouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, mxs::Reply* reply)
 {
     m_pUp->clientReply(m_pUp->instance, m_pUp->session, pPacket, pBackend, reply);
 }
 
-bool RouterSession::handleError(GWBUF* pMessage, DCB* pProblem)
+bool RouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)
 {
     return false;
 }
