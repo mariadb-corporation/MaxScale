@@ -564,7 +564,7 @@ void RoutingWorker::delete_zombies()
 
 void RoutingWorker::add(DCB* pDcb)
 {
-    auto rv = m_dcbs.insert(pDcb);
+    MXB_AT_DEBUG(auto rv =) m_dcbs.insert(pDcb);
     mxb_assert(rv.second);
 }
 
