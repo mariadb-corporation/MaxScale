@@ -134,6 +134,7 @@ const char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
 const char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
 const char CN_LOCAL_ADDRESS[] = "local_address";
 const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
+const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 }
 
@@ -2117,6 +2118,13 @@ static int handle_global_item(const char* name, const char* value)
 
         gateway.users_refresh_time = users_refresh_time;
     }
+    else if (strcmp(name, CN_USERS_REFRESH_INTERVAL) == 0)
+    {
+        if (!get_seconds(name, value, &gateway.users_refresh_interval))
+        {
+            return 0;
+        }
+    }
     else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
     {
         if (!get_suffixed_size(value, &gateway.writeq_high_water))
@@ -2305,6 +2313,7 @@ bool config_can_modify_at_runtime(const char* name)
     }
     std::unordered_set<std::string> static_params
     {
+        CN_USERS_REFRESH_INTERVAL,
         CN_USERS_REFRESH_TIME,
         CN_LOCAL_ADDRESS,
         CN_ADMIN_ENABLED,
@@ -2410,6 +2419,7 @@ void config_set_global_defaults()
     gateway.load_persisted_configs = true;
     gateway.max_auth_errors_until_block = DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK;
     gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
+    gateway.users_refresh_interval = 0;
 
     gateway.peer_hosts[0] = '\0';
     gateway.peer_user[0] = '\0';

@@ -65,8 +65,6 @@ inline bool server_ref_is_active(const SERVER_REF* ref)
 
 #define SERVICE_MAX_RETRY_INTERVAL 3600     /*< The maximum interval between service start retries */
 
-#define USERS_REFRESH_RATE 1728000          /*< The refresh rate for reloading the database users (8 hours)*/
-
 /** Value of service timeout if timeout checks are disabled */
 #define SERVICE_NO_SESSION_TIMEOUT 0
 

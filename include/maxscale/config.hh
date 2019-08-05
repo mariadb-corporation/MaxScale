@@ -393,6 +393,7 @@ struct MXS_CONFIG
                                                          * */
     char*    local_address;                             /**< Local address to use when connecting */
     time_t   users_refresh_time;                        /**< How often the users can be refreshed */
+    time_t   users_refresh_interval;                    /**< How often the users will be refreshed */
     uint64_t writeq_high_water;                         /**< High water mark of dcb write queue */
     uint64_t writeq_low_water;                          /**< Low water mark of dcb write queue */
     char     peer_hosts[MAX_ADMIN_HOST_LEN];            /**< The protocol, address and port for peers

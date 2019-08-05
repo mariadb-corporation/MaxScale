@@ -248,9 +248,12 @@ Service::Service(const std::string& name,
         a.warned = warned;
     }
 
-    std::string task_name = name;
-    task_name += " refresh users";
-    hktask_add(task_name.c_str(), service_refresh_users_cb, this, USERS_REFRESH_RATE);
+    if (cnf->users_refresh_interval > 0)
+    {
+        std::string task_name = name;
+        task_name += " refresh users";
+        hktask_add(task_name.c_str(), service_refresh_users_cb, this, cnf->users_refresh_interval);
+    }
 }
 
 Service::~Service()
