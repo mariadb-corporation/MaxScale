@@ -721,9 +721,9 @@ bool ssl_is_connection_healthy(DCB* dcb)
 /* Looks to be redundant - can remove include for ioctl too */
 bool ssl_check_data_to_process(DCB* dcb)
 {
-    /** SSL authentication is still going on, we need to call dcb_accept_SSL
+    /** SSL authentication is still going on, we need to call DCB::ssl_handshake
      * until it return 1 for success or -1 for error */
-    if (dcb->m_ssl_state == SSL_HANDSHAKE_REQUIRED && 1 == dcb_accept_SSL(dcb))
+    if (dcb->m_ssl_state == SSL_HANDSHAKE_REQUIRED && 1 == dcb->ssl_handshake())
     {
         int b = 0;
         ioctl(dcb->m_fd, FIONREAD, &b);
@@ -746,7 +746,7 @@ bool ssl_check_data_to_process(DCB* dcb)
  * the result as the second parameter. If the listener requires SSL but the
  * client is not SSL capable, an error message is recorded and failure return
  * given. If both sides want SSL, and SSL is not already established, the
- * process is triggered by calling dcb_accept_SSL.
+ * process is triggered by calling DCB::ssl_handshake.
  *
  * @param dcb Request handler DCB connected to the client
  * @param is_capable Indicates if the client can handle SSL
@@ -787,10 +787,10 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
          * reading (or possibly writing) of SSL related information is needed.
          * When that happens, there is a call in poll.c so that an EPOLLIN
          * event that arrives while the SSL state is SSL_HANDSHAKE_REQUIRED
-         * will trigger dcb_accept_SSL. This situation does not result in a
+         * will trigger DCB::ssl_handshake. This situation does not result in a
          * negative return code - that indicates a real failure.
          */
-        return_code = dcb_accept_SSL(dcb);
+        return_code = dcb->ssl_handshake();
         if (return_code < 0)
         {
             MXS_INFO("User %s@%s failed to connect to service '%s' with SSL.",

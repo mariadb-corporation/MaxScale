@@ -2109,7 +2109,7 @@ static int dcb_create_SSL(DCB* dcb, mxs::SSLContext* ssl)
  * still ongoing and another call to dcb_SSL_accept should be made or -1 if an
  * error occurred during the handshake and the connection should be terminated.
  */
-int dcb_accept_SSL(DCB* dcb)
+static int dcb_accept_SSL(DCB* dcb)
 {
     if (!dcb->session()->listener->ssl().context()
         || (!dcb->m_ssl && dcb_create_SSL(dcb, dcb->session()->listener->ssl().context()) != 0))
@@ -2183,7 +2183,7 @@ int dcb_accept_SSL(DCB* dcb)
  * @param dcb DCB to connect
  * @return 1 on success, -1 on error and 0 if the SSL handshake is still ongoing
  */
-int dcb_connect_SSL(DCB* dcb)
+static int dcb_connect_SSL(DCB* dcb)
 {
     int ssl_rval;
     int return_code;
@@ -2555,7 +2555,7 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
         if (dcb_session_check(dcb, "read"))
         {
             int return_code = 1;
-            /** SSL authentication is still going on, we need to call dcb_accept_SSL
+            /** SSL authentication is still going on, we need to call DCB::ssl_handehake
              * until it return 1 for success or -1 for error */
             if (dcb->m_ssl_state == SSL_HANDSHAKE_REQUIRED)
             {

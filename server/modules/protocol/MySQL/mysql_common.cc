@@ -930,7 +930,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
 
     if (with_ssl && !ssl_established)
     {
-        if (dcb_write(dcb, buffer) && dcb_connect_SSL(dcb) >= 0)
+        if (dcb_write(dcb, buffer) && dcb->ssl_handshake() >= 0)
         {
             rval = MXS_AUTH_STATE_CONNECTED;
         }

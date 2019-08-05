@@ -373,8 +373,6 @@ int      dcb_persistent_clean_count(DCB*, int, bool);   /* Clean persistent and 
 void     dcb_hangup_foreach(struct SERVER* server);
 uint64_t dcb_get_session_id(DCB* dcb);
 char*    dcb_role_name(DCB*);               /* Return the name of a role */
-int      dcb_accept_SSL(DCB* dcb);
-int      dcb_connect_SSL(DCB* dcb);
 void     dcb_enable_session_timeouts();
 void     dcb_process_timeouts(int thr);
 
