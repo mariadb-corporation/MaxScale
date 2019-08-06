@@ -11,41 +11,16 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "GSSAPIBackendAuth"
+#include "gssapi_auth.hh"
 
-#include <maxscale/ccdefs.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 
-#include "../gssapi_auth.hh"
-
 /**
  * @file gssapi_backend_auth.c - GSSAPI backend authenticator
  */
-
-class GSSAPIBackendAuthenticatorSession : public mxs::AuthenticatorBackendSession
-{
-public:
-    static GSSAPIBackendAuthenticatorSession* newSession();
-
-    ~GSSAPIBackendAuthenticatorSession() override;
-    bool extract(DCB* backend, GWBUF* buffer) override;
-    bool ssl_capable(DCB* backend) override;
-    int authenticate(DCB* backend) override;
-
-    gssapi_auth_state state;               /**< Authentication state*/
-    uint8_t*               principal_name;      /**< Principal name */
-    size_t                 principal_name_len;  /**< Length of the principal name */
-    uint8_t                sequence;            /**< The next packet seqence number */
-    sqlite3*               handle;              /**< SQLite3 database handle */
-
-private:
-    bool extract_principal_name(DCB* dcb, GWBUF* buffer);
-    bool send_new_auth_token(DCB* dcb);
-};
 
 GSSAPIBackendAuthenticatorSession* GSSAPIBackendAuthenticatorSession::newSession()
 {
@@ -235,33 +210,4 @@ int GSSAPIBackendAuthenticatorSession::authenticate(DCB* dcb)
     }
 
     return rval;
-}
-
-extern "C"
-{
-/**
- * Module handle entry point
- */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "GSSAPI backend authenticator",
-        "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &mxs::BackendAuthenticatorApi<GSSAPIBackendAuthenticatorSession>::s_api,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
 }

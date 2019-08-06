@@ -10,10 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-#define MXS_MODULE_NAME "GSSAPIAuth"
-
-#include <maxscale/ccdefs.hh>
+#include "gssapi_auth.hh"
 
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator.hh>
@@ -26,7 +23,6 @@
 #include <maxscale/users.h>
 #include <maxscale/authenticator2.hh>
 
-#include "../gssapi_auth.hh"
 
 /**
  * MySQL queries for retrieving the list of users
@@ -87,28 +83,6 @@ static int db_flags = SQLITE_OPEN_READWRITE
     | SQLITE_OPEN_URI
     | SQLITE_OPEN_SHAREDCACHE;
 
-
-class GSSAPIAuthenticatorSession : public mxs::AuthenticatorSession
-{
-public:
-    ~GSSAPIAuthenticatorSession() override;
-    bool extract(DCB* client, GWBUF* buffer) override;
-    bool ssl_capable(DCB* client) override;
-    int authenticate(DCB* client) override;
-    void free_data(DCB* client) override;
-
-
-    gssapi_auth_state state;               /**< Authentication state*/
-    uint8_t*               principal_name;      /**< Principal name */
-    size_t                 principal_name_len;  /**< Length of the principal name */
-    uint8_t                sequence;            /**< The next packet seqence number */
-    sqlite3*               handle;              /**< SQLite3 database handle */
-
-private:
-    void copy_client_information(DCB* dcb, GWBUF* buffer);
-    bool store_client_token(DCB* dcb, GWBUF* buffer);
-};
-
 class GSSAPI_INSTANCE : public mxs::Authenticator
 {
 public:
@@ -124,6 +98,10 @@ public:
     json_t* diagnostics_json(const Listener* listener) override
     {
         return users_default_diagnostic_json(listener);
+    }
+    uint64_t capabilities() const override
+    {
+        return CAP_BACKEND_AUTH;
     }
 
     char*    principal_name;/**< Service principal name given to the client */
@@ -569,6 +547,11 @@ void GSSAPIAuthenticatorSession::free_data(DCB* dcb)
         MXS_FREE(ses);
         dcb->m_data = NULL;
     }
+}
+
+GSSAPIBackendAuthenticatorSession* GSSAPIAuthenticatorSession::newBackendSession()
+{
+    return GSSAPIBackendAuthenticatorSession::newSession();
 }
 
 /**
