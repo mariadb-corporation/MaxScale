@@ -229,38 +229,24 @@ InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager)
  * @param dcb The DCB to free
  */
 //static
-void DCB::final_free(DCB* dcb)
+void DCB::free(DCB* dcb)
 {
-    mxb_assert_message(dcb->state() == DCB_STATE_DISCONNECTED || dcb->state() == DCB_STATE_ALLOC,
-                       "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
+    mxb_assert(dcb->m_state == DCB_STATE_DISCONNECTED || dcb->m_state == DCB_STATE_ALLOC);
 
     if (dcb->m_session)
     {
-        /*<
-         * Terminate client session.
-         */
-        MXS_SESSION* local_session = dcb->m_session;
+        MXS_SESSION* session = dcb->m_session;
         dcb->m_session = NULL;
-        if (dcb->m_role == DCB::Role::BACKEND)
-        {
-            session_unlink_backend_dcb(local_session, dcb);
-        }
-        else
-        {
-            /**
-             * The client DCB is only freed once all other DCBs that the session
-             * uses have been freed. This will guarantee that the authentication
-             * data will be usable for all DCBs even if the client DCB has already
-             * been closed.
-             */
 
-            mxb_assert(dcb->m_role == DCB::Role::CLIENT || dcb->m_role == DCB::Role::INTERNAL);
-            session_put_ref(local_session);
-            return;
+        if (dcb->was_freed(session))
+        {
+            delete dcb;
         }
     }
-
-    delete dcb;
+    else
+    {
+        delete dcb;
+    }
 }
 
 /**
@@ -1005,7 +991,7 @@ void DCB::close(DCB* dcb)
     if (dcb->state() == DCB_STATE_ALLOC && dcb->m_fd == DCBFD_CLOSED)
     {
         // A freshly created dcb that was closed before it was taken into use.
-        DCB::final_free(dcb);
+        DCB::free(dcb);
     }
     /*
      * If DCB is in persistent pool, mark it as an error and exit
@@ -1152,7 +1138,7 @@ void DCB::destroy()
         }
 
         m_state = DCB_STATE_DISCONNECTED;
-        DCB::final_free(this);
+        DCB::free(this);
     }
 }
 
@@ -3010,6 +2996,18 @@ ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Manager* manager)
 {
 }
 
+bool ClientDCB::was_freed(MXS_SESSION* session)
+{
+    /**
+     * The client DCB is only freed once all other DCBs that the session
+     * uses have been freed. This will guarantee that the authentication
+     * data will be usable for all DCBs even if the client DCB has already
+     * been closed.
+     */
+    session_put_ref(session);
+    return false;
+}
+
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
     : DCB(DCB::Role::INTERNAL, session, nullptr, manager)
 {
@@ -3037,9 +3035,27 @@ bool InternalDCB::disable_events()
     return true;
 }
 
+bool InternalDCB::was_freed(MXS_SESSION* session)
+{
+    /**
+     * The client DCB is only freed once all other DCBs that the session
+     * uses have been freed. This will guarantee that the authentication
+     * data will be usable for all DCBs even if the client DCB has already
+     * been closed.
+     */
+    session_put_ref(session);
+    return false;
+}
+
 BackendDCB::BackendDCB(MXS_SESSION* session, SERVER* server, DCB::Manager* manager)
     : DCB(DCB::Role::BACKEND, session, server, manager)
 {
+}
+
+bool BackendDCB::was_freed(MXS_SESSION* session)
+{
+    session_unlink_backend_dcb(session, this);
+    return true;
 }
 
 namespace maxscale

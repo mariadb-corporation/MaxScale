@@ -304,6 +304,16 @@ protected:
 
     int create_SSL(mxs::SSLContext* ssl);
 
+    /**
+     * Free the instance from the associated session.
+     *
+     * @param session The session to free the DCB from.
+     *
+     * @return True, if the DCB was freed and can be deleted, false otherwise.
+     */
+    virtual bool was_freed(MXS_SESSION* session) = 0;
+
+
     dcb_state_t  m_state = DCB_STATE_ALLOC;     /**< Current state */
     MXS_SESSION* m_session;                     /**< The owning session */
     SSL*         m_ssl = nullptr;               /**< SSL struct for connection */
@@ -321,7 +331,7 @@ private:
     int write_SSL(GWBUF* writeq, bool* stop_writing);
 
     void destroy();
-    static void final_free(DCB* dcb);
+    static void free(DCB* dcb);
 
 private:
     Role     m_role;    /**< The role of the DCB */
@@ -334,6 +344,9 @@ public:
     ClientDCB(MXS_SESSION* session, Manager* manager);
 
     int ssl_handshake() override;
+
+private:
+    bool was_freed(MXS_SESSION* session) override;
 };
 
 class BackendDCB : public DCB
@@ -344,6 +357,9 @@ public:
     static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager);
 
     int ssl_handshake() override;
+
+private:
+    bool was_freed(MXS_SESSION* session) override;
 };
 
 class InternalDCB : public DCB
@@ -355,6 +371,9 @@ public:
 
     bool enable_events() override;
     bool disable_events() override;
+
+private:
+    bool was_freed(MXS_SESSION* session) override;
 };
 
 namespace maxscale
