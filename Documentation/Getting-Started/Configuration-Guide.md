@@ -912,6 +912,22 @@ Note that you need to specify with `retain_last_statements` how many statements
 MaxScale should retain for each session. Unless it has been set to another value
 than `0`, this configuration setting will not have an effect.
 
+### `session_trace`
+
+How many log entries are stored in the session specific trace log. This log is
+written to disk when a session ends abnormally and can be used for debugging
+purposes. It would be good to enable this if a session is disconnected and the
+log is not detailed enough. In this case the info log might reveal the true
+cause of why the connection was closed.
+
+```
+session_trace=20
+```
+Default is `0`.
+
+The session trace log is also exposed by REST API and is shown with
+`maxctrl show sessions`.
+
 ### `writeq_high_water`
 
 High water mark for network write buffer. Controls when network traffic
