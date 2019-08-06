@@ -147,7 +147,7 @@ public:
     protected:
         static void call_destroy(DCB* dcb)
         {
-            DCB::final_close(dcb);
+            dcb->destroy();
         }
     };
 
@@ -320,7 +320,7 @@ private:
 
     int write_SSL(GWBUF* writeq, bool* stop_writing);
 
-    static void final_close(DCB* dcb);
+    void destroy();
     static void final_free(DCB* dcb);
 
 private:

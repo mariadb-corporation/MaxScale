@@ -1031,7 +1031,7 @@ void DCB::close(DCB* dcb)
         }
         else
         {
-            DCB::final_close(dcb);
+            dcb->destroy();
         }
     }
     else
@@ -1071,89 +1071,88 @@ void dcb_close_in_owning_thread(DCB* dcb)
     }
 }
 
-//static
-void DCB::final_close(DCB* dcb)
+void DCB::destroy()
 {
 #if defined (SS_DEBUG)
     RoutingWorker* current = RoutingWorker::get_current();
-    RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
+    RoutingWorker* owner = static_cast<RoutingWorker*>(this->owner);
     if (current && (current != owner))
     {
         MXS_ALERT("dcb_final_close(%p) called by %d, owned by %d.",
-                  dcb,
+                  this,
                   current->id(),
                   owner->id());
         mxb_assert(owner == current);
     }
 #endif
-    mxb_assert(dcb->m_nClose != 0);
+    mxb_assert(m_nClose != 0);
 
-    if (dcb->role() == DCB::Role::BACKEND         // Backend DCB
-        && dcb->state() == DCB_STATE_POLLING      // Being polled
-        && dcb->m_persistentstart == 0            /** Not already in (> 0) or being evicted from (-1)
-                                                 * the persistent pool. */
-        && dcb->m_server)                         // And has a server
+    if (m_role == DCB::Role::BACKEND         // Backend DCB
+        && m_state == DCB_STATE_POLLING      // Being polled
+        && m_persistentstart == 0            /** Not already in (> 0) or being evicted from (-1)
+                                              * the persistent pool. */
+        && m_server)                         // And has a server
     {
         /* May be a candidate for persistence, so save user name */
         const char* user;
-        user = session_get_user(dcb->m_session);
-        if (user && strlen(user) && !dcb->m_user)
+        user = session_get_user(m_session);
+        if (user && strlen(user) && !m_user)
         {
-            dcb->m_user = MXS_STRDUP_A(user);
+            m_user = MXS_STRDUP_A(user);
         }
 
-        if (dcb_maybe_add_persistent(dcb))
+        if (dcb_maybe_add_persistent(this))
         {
-            dcb->m_nClose = 0;
+            m_nClose = 0;
         }
     }
 
-    if (dcb->m_nClose != 0)
+    if (m_nClose != 0)
     {
-        if (dcb->state() == DCB_STATE_POLLING)
+        if (m_state == DCB_STATE_POLLING)
         {
-            dcb_stop_polling_and_shutdown(dcb);
+            dcb_stop_polling_and_shutdown(this);
         }
 
-        if (dcb->m_server && dcb->m_persistentstart == 0)
+        if (m_server && m_persistentstart == 0)
         {
             // This is now a DCB::Role::BACKEND_HANDLER.
             // TODO: Make decisions according to the role and assert
             // TODO: that what the role implies is preset.
-            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->m_server->stats().n_current, -1,
+            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&m_server->stats().n_current, -1,
                                                      mxb::atomic::RELAXED);
             mxb_assert(rc > 0);
         }
 
-        if (dcb->m_fd != DCBFD_CLOSED)
+        if (m_fd != DCBFD_CLOSED)
         {
             // TODO: How could we get this far with a dcb->m_fd <= 0?
 
-            if (::close(dcb->m_fd) < 0)
+            if (::close(m_fd) < 0)
             {
                 int eno = errno;
                 errno = 0;
                 MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
-                          dcb->m_fd,
-                          dcb,
+                          m_fd,
+                          this,
                           eno,
                           mxs_strerror(eno));
             }
             else
             {
-                dcb->m_fd = DCBFD_CLOSED;
+                m_fd = DCBFD_CLOSED;
 
-                MXS_DEBUG("Closed socket %d on dcb %p.", dcb->m_fd, dcb);
+                MXS_DEBUG("Closed socket %d on dcb %p.", m_fd, this);
             }
         }
         else
         {
             // Only internal DCBs are closed with a fd of -1
-            mxb_assert(dcb->role() == DCB::Role::INTERNAL);
+            mxb_assert(m_role == DCB::Role::INTERNAL);
         }
 
-        dcb->m_state = DCB_STATE_DISCONNECTED;
-        DCB::final_free(dcb);
+        m_state = DCB_STATE_DISCONNECTED;
+        DCB::final_free(this);
     }
 }
 
