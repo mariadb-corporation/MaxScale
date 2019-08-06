@@ -252,7 +252,6 @@ public:
     size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
     MXS_PROTOCOL            m_func = {};                          /**< Protocol functions for the DCB */
-    MXS_AUTHENTICATOR       m_authfunc = {};                      /**< Authenticator functions for the DCB */
     uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
     uint64_t                m_high_water = 0;                     /**< High water mark of write queue */
     uint64_t                m_low_water = 0;                      /**< Low water mark of write queue */

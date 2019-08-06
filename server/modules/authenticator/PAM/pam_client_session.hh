@@ -17,9 +17,11 @@
 #include <string>
 #include <vector>
 #include <maxscale/sqlite3.h>
-#include "../pam_auth_common.hh"
+#include "pam_backend_session.hh"
+#include "pam_auth_common.hh"
 
 class PamInstance;
+class PamBackendSession;
 
 /** Client authenticator PAM-specific session data */
 class PamClientSession : public mxs::AuthenticatorSession
@@ -36,6 +38,8 @@ public:
 
     bool ssl_capable(DCB* client) override;
     void free_data(DCB* client) override;
+
+    PamBackendSession* newBackendSession() override;
 
 private:
     PamClientSession(const PamInstance& instance, SQLite::SSQLite sqlite);

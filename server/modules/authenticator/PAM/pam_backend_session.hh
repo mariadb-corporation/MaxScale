@@ -12,8 +12,7 @@
  */
 #pragma once
 
-#include "pam_backend_auth.hh"
-#include "../pam_auth_common.hh"
+#include "pam_auth_common.hh"
 #include <maxscale/authenticator2.hh>
 
 class PamBackendSession : public mxs::AuthenticatorBackendSession
@@ -21,8 +20,6 @@ class PamBackendSession : public mxs::AuthenticatorBackendSession
 public:
     PamBackendSession(const PamBackendSession& orig) = delete;
     PamBackendSession& operator=(const PamBackendSession&) = delete;
-
-    static PamBackendSession* newSession();
 
     PamBackendSession();
     bool extract(DCB* dcb, GWBUF* buffer) override;

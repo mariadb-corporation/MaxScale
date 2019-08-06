@@ -32,6 +32,7 @@ public:
     void diagnostics(DCB* dcb, Listener* listener) override;
     json_t* diagnostics_json(const Listener* listener) override;
 
+    uint64_t capabilities() const override;
     PamClientSession* createSession() override;
 
     const std::string m_dbname;     /**< Name of the in-memory database */

@@ -161,7 +161,6 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Registry* registry)
     if (session->listener)
     {
         m_func = session->listener->protocol_func();
-        m_authfunc = session->listener->auth_func();
     }
 
     if (DCB* client = session->client_dcb)
@@ -360,10 +359,19 @@ BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const ch
 
     // Allocate DCB specific authentication data. Backend authenticators do not have an instance.
     AuthenticatorBackendSession* auth_session = nullptr;
-    auto authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
-    if (authfuncs && authfuncs->create)
+    // If possible, use the client session to generate the backend authenticator.
+    MXS_AUTHENTICATOR* authfuncs = nullptr;
+    if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_BACKEND_AUTH)
     {
-        auth_session = static_cast<AuthenticatorBackendSession*>(authfuncs->create(nullptr));
+        auth_session = session->client_dcb->m_authenticator_data->newBackendSession();
+    }
+    else
+    {
+        authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
+        if (authfuncs && authfuncs->create)
+        {
+            auth_session = static_cast<AuthenticatorBackendSession*>(authfuncs->create(nullptr));
+        }
     }
 
     if (!auth_session)
@@ -377,7 +385,6 @@ BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const ch
     if (dcb)
     {
         memcpy(&dcb->m_func, funcs, sizeof(dcb->m_func));
-        memcpy(&dcb->m_authfunc, authfuncs, sizeof(dcb->m_authfunc));
         dcb->m_authenticator_data = auth_session;
 
         session_link_backend_dcb(session, dcb);

@@ -19,7 +19,7 @@
 
 #include "pam_instance.hh"
 #include "pam_client_session.hh"
-#include "../pam_auth_common.hh"
+#include "pam_auth_common.hh"
 
 using std::string;
 using SSQLite = SQLite::SSQLite;

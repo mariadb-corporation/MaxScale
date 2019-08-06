@@ -20,6 +20,7 @@ namespace maxscale
 {
 
 class AuthenticatorSession;
+class AuthenticatorBackendSession;
 
 /**
  * The base class of all authenticators. Contains the global data for an authenticator module instance.
@@ -105,6 +106,14 @@ public:
     virtual int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
                                uint8_t* scramble, size_t scramble_len,
                                uint8_t* output, size_t output_len);
+
+    /**
+     * Create a new backend session linked to the client session. Should only be implemented by
+     * authenticators which also support backend authentication.
+     *
+     * @return Backend session
+     */
+    virtual AuthenticatorBackendSession* newBackendSession();
 
 };
 

@@ -514,6 +514,11 @@ json_t* PamInstance::diagnostics_json(const Listener* listener)
     return rval;
 }
 
+uint64_t PamInstance::capabilities() const
+{
+    return Authenticator::CAP_BACKEND_AUTH;
+}
+
 PamClientSession* PamInstance::createSession()
 {
     return PamClientSession::create(*this);
