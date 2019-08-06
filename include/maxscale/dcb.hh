@@ -126,11 +126,23 @@ typedef enum
 class DCB : public MXB_POLL_DATA
 {
 public:
-    class Registry
+    class Manager
     {
     public:
+        /**
+         * Called by DCB when created.
+         */
         virtual void add(DCB* dcb) = 0;
+
+        /**
+         * Called by DCB when destroyed.
+         */
         virtual void remove(DCB* dcb) = 0;
+
+        /**
+         * Called by DCB when it needs to be destroyed.
+         */
+        virtual void destroy(DCB* dcb) = 0;
     };
 
     enum class Role
@@ -283,7 +295,7 @@ protected:
     DCB(Role role,
         MXS_SESSION* session,
         SERVER* server,
-        Registry* registry);
+        Manager* manager);
 
     int create_SSL(mxs::SSLContext* ssl);
 
@@ -304,14 +316,14 @@ private:
     static void final_free(DCB* dcb);
 
 private:
-    Role         m_role;                    /**< The role of the DCB */
-    Registry*    m_registry;                /**< The DCB registry to use */
+    Role     m_role;    /**< The role of the DCB */
+    Manager* m_manager; /**< The DCB manager to use */
 };
 
 class ClientDCB : public DCB
 {
 public:
-    ClientDCB(MXS_SESSION* session, Registry* registry);
+    ClientDCB(MXS_SESSION* session, Manager* manager);
 
     int ssl_handshake() override;
 };
@@ -319,9 +331,9 @@ public:
 class BackendDCB : public DCB
 {
 public:
-    BackendDCB(MXS_SESSION* session, SERVER* server, Registry* registry);
+    BackendDCB(MXS_SESSION* session, SERVER* server, Manager* manager);
 
-    static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Registry* registry);
+    static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager);
 
     int ssl_handshake() override;
 };
@@ -329,7 +341,7 @@ public:
 class InternalDCB : public DCB
 {
 public:
-    InternalDCB(MXS_SESSION* session, Registry* registry);
+    InternalDCB(MXS_SESSION* session, Manager* manager);
 
     int ssl_handshake() override;
 
@@ -356,8 +368,8 @@ inline bool dcb_write(DCB* dcb, GWBUF* queue)
     return dcb->write(queue);
 }
 
-ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry);
-InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry);
+ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Manager* manager);
+InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager);
 
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 {

@@ -145,7 +145,7 @@ static MXB_WORKER* get_dcb_owner()
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Registry* registry)
+DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Manager* manager)
     : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner()}
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
@@ -155,7 +155,7 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Registry* registry)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_session(session)
     , m_role(role)
-    , m_registry(registry)
+    , m_manager(manager)
 {
     // TODO: Remove DCB::Role::INTERNAL to always have a valid listener
     if (session->listener)
@@ -181,9 +181,9 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Registry* registry)
         dcb_add_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
     }
 
-    if (m_registry)
+    if (m_manager)
     {
-        m_registry->add(this);
+        m_manager->add(this);
     }
 }
 
@@ -194,9 +194,9 @@ DCB::~DCB()
         this_thread.current_dcb = nullptr;
     }
 
-    if (m_registry)
+    if (m_manager)
     {
-        m_registry->remove(this);
+        m_manager->remove(this);
     }
 
     if (m_data)
@@ -228,14 +228,14 @@ DCB::~DCB()
     MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
 
-ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Registry* registry)
+ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Manager* manager)
 {
-    return new (std::nothrow) ClientDCB(session, registry);
+    return new (std::nothrow) ClientDCB(session, manager);
 }
 
-InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Registry* registry)
+InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager)
 {
-    return new (std::nothrow) InternalDCB(session, registry);
+    return new (std::nothrow) InternalDCB(session, manager);
 }
 
 /**
@@ -326,7 +326,7 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
     return nullptr;
 }
 
-BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* protocol, DCB::Registry* registry)
+BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* protocol, DCB::Manager* manager)
 {
     MXS_PROTOCOL* funcs = (MXS_PROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
 
@@ -366,7 +366,7 @@ BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const ch
         return nullptr;
     }
 
-    BackendDCB* dcb = new (std::nothrow) BackendDCB(session, server, registry);
+    BackendDCB* dcb = new (std::nothrow) BackendDCB(session, server, manager);
 
     if (dcb)
     {
@@ -437,20 +437,20 @@ static bool do_connect(const char* host, int port, int* fd)
  *
  * @param srv      The server to connect to
  * @param session  The session this connection is being made for
- * @param registry The DCB registry to use
+ * @param manager The DCB manager to use
  *
  * @return The new allocated dcb or NULL on error
  */
-BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Registry* registry)
+BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager* manager)
 {
     const char* protocol = srv->protocol().c_str();
     Server* server = static_cast<Server*>(srv);
 
     // TODO: Either
-    // - ignore that the provided registry may be different that the one used,
-    // - remove the DCB from its registry when moved to the pool and assign a new one when it is
+    // - ignore that the provided manager may be different that the one used,
+    // - remove the DCB from its manager when moved to the pool and assign a new one when it is
     //   taken out from the pool, or
-    // - also consider the registry when deciding whether a DCB in the pool can be used or not.
+    // - also consider the manager when deciding whether a DCB in the pool can be used or not.
     if (auto dcb = take_from_connection_pool(server, session, protocol))
     {
         // TODO: For now, we ignore the problem.
@@ -458,7 +458,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Registry
     }
 
     // Could not find a reusable DCB, allocate a new one
-    BackendDCB* dcb = dcb_alloc_backend_dcb(server, session, protocol, registry);
+    BackendDCB* dcb = dcb_alloc_backend_dcb(server, session, protocol, manager);
 
     if (dcb)
     {
@@ -1040,10 +1040,14 @@ void DCB::close(DCB* dcb)
     {
         dcb->m_nClose = 1;
 
-        RoutingWorker* worker = static_cast<RoutingWorker*>(dcb->owner);
-        mxb_assert(worker);
-
-        worker->register_zombie(dcb);
+        if (dcb->m_manager)
+        {
+            dcb->m_manager->destroy(dcb);
+        }
+        else
+        {
+            dcb_final_close(dcb);
+        }
     }
     else
     {
@@ -3017,13 +3021,13 @@ void DCB::shutdown()
     }
 }
 
-ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Registry* registry)
-    : DCB(DCB::Role::CLIENT, session, nullptr, registry)
+ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Manager* manager)
+    : DCB(DCB::Role::CLIENT, session, nullptr, manager)
 {
 }
 
-InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Registry* registry)
-    : DCB(DCB::Role::INTERNAL, session, nullptr, registry)
+InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
+    : DCB(DCB::Role::INTERNAL, session, nullptr, manager)
 {
 }
 
@@ -3049,8 +3053,8 @@ bool InternalDCB::disable_events()
     return true;
 }
 
-BackendDCB::BackendDCB(MXS_SESSION* session, SERVER* server, DCB::Registry* registry)
-    : DCB(DCB::Role::BACKEND, session, server, registry)
+BackendDCB::BackendDCB(MXS_SESSION* session, SERVER* server, DCB::Manager* manager)
+    : DCB(DCB::Role::BACKEND, session, server, manager)
 {
 }
 

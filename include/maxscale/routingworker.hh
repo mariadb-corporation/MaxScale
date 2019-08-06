@@ -173,7 +173,7 @@ namespace maxscale
 {
 
 class RoutingWorker : public mxb::Worker
-                    , public DCB::Registry
+                    , public DCB::Manager
                     , private MXB_POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;
@@ -247,15 +247,6 @@ public:
     {
         return m_id;
     }
-
-    /**
-     * Register zombie for later deletion.
-     *
-     * @param pZombie  DCB that will be deleted at end of event loop.
-     *
-     * @note The DCB must be owned by this worker.
-     */
-    void register_zombie(DCB* pZombie);
 
     /**
      * Return a reference to the session registry of this worker.
@@ -642,9 +633,10 @@ public:
     }
 
 private:
-    // DCB::Registry
+    // DCB::Manager
     void add(DCB* pDcb) override;
     void remove(DCB* pDcb) override;
+    void destroy(DCB* pDcb) override;
 
 private:
     class WatchdogNotifier;

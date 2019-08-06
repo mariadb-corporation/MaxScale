@@ -542,7 +542,7 @@ RoutingWorker::SessionsById& RoutingWorker::session_registry()
     return m_sessions;
 }
 
-void RoutingWorker::register_zombie(DCB* pDcb)
+void RoutingWorker::destroy(DCB* pDcb)
 {
     mxb_assert(pDcb->owner == this);
 
