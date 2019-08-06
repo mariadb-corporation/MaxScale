@@ -558,7 +558,8 @@ void RoutingWorker::delete_zombies()
     {
         DCB* pDcb = m_zombies.back();
         m_zombies.pop_back();
-        dcb_final_close(pDcb);
+
+        DCB::Manager::call_destroy(pDcb);
     }
 }
 

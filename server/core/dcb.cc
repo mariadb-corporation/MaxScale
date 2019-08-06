@@ -1046,7 +1046,7 @@ void DCB::close(DCB* dcb)
         }
         else
         {
-            dcb_final_close(dcb);
+            DCB::final_close(dcb);
         }
     }
     else

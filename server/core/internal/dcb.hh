@@ -16,9 +16,4 @@
 
 MXS_BEGIN_DECLS
 
-inline void dcb_final_close(DCB* dcb)
-{
-    DCB::final_close(dcb);
-}
-
 MXS_END_DECLS

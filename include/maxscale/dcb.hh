@@ -143,6 +143,12 @@ public:
          * Called by DCB when it needs to be destroyed.
          */
         virtual void destroy(DCB* dcb) = 0;
+
+    protected:
+        static void call_destroy(DCB* dcb)
+        {
+            DCB::final_close(dcb);
+        }
     };
 
     enum class Role
@@ -242,7 +248,6 @@ public:
 
     // BEGIN: Temporarily here, do not use.
     static void close(DCB* dcb);
-    static void final_close(DCB* dcb);
     static bool maybe_add_persistent(DCB* dcb);
     void set_session(MXS_SESSION* s)
     {
@@ -308,11 +313,14 @@ protected:
     bool         m_ssl_write_want_write = false;
 
 private:
+    friend class Manager;
+
     int read_SSL(GWBUF** head);
     GWBUF* basic_read_SSL(int* nsingleread);
 
     int write_SSL(GWBUF* writeq, bool* stop_writing);
 
+    static void final_close(DCB* dcb);
     static void final_free(DCB* dcb);
 
 private:
