@@ -171,6 +171,7 @@ runtime and can only be defined in a configuration file:
 * `sql_mode`
 * `local_address`
 * `users_refresh_time`
+* `users_refresh_interval`
 * `load_persisted_configs`
 * `admin_auth`
 * `admin_ssl_key`
@@ -924,7 +925,7 @@ the authentication of a user fails, MaxScale assumes it is because a new
 user has been created and will thus refresh the users. By default, MaxScale
 will do that at most once per 30 seconds and with this configuration option
 that can be changed. A value of 0 allows infinite refreshes and a negative
-value disables the refreshing entirelly. Note that using `maxadmin` it is
+value disables the refreshing entirely. Note that using `maxadmin` it is
 possible to explicitly cause the users of a service to be reloaded.
 
 ```
@@ -939,6 +940,22 @@ even if the duration is longer than a second.
 
 In MaxScale 2.3.9 and older versions, the minimum allowed value was 10 seconds
 but, due to a bug, the default value was 0 which allowed infinite refreshes.
+
+### `users_refresh_interval`
+
+How often, in seconds, MaxScale will automatically refresh the users from the
+backend server.
+
+This configuration is used to periodically refresh the backend users, making sure
+they are up to date. The default value for this setting is 0, meaning the users
+are not periodically refreshed. However, they can still be refreshed in case of
+failed authentication depending on `users_refresh_time`.
+```
+users_refresh_interval=2h
+```
+
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4.
 
 ### `retain_last_statements`
 
