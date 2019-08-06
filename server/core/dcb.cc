@@ -3082,6 +3082,22 @@ int InternalDCB::ssl_handshake()
     return -1;
 }
 
+bool InternalDCB::enable_events()
+{
+    mxb_assert(m_state == DCB_STATE_ALLOC || m_state == DCB_STATE_NOPOLLING);
+    m_state = DCB_STATE_POLLING;
+
+    return true;
+}
+
+bool InternalDCB::disable_events()
+{
+    mxb_assert(m_state == DCB_STATE_NOPOLLING);
+    m_state = DCB_STATE_NOPOLLING;
+
+    return true;
+}
+
 BackendDCB::BackendDCB(MXS_SESSION* session, SERVER* server, DCB::Registry* registry)
     : DCB(DCB::Role::BACKEND, session, server, registry)
 {

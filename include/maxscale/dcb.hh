@@ -215,7 +215,7 @@ public:
      *
      * @return True on success, false on error.
      */
-    bool enable_events();
+    virtual bool enable_events();
 
     /**
      * Remove the DCB from the epoll set of the current worker, which in practice
@@ -226,16 +226,12 @@ public:
      *
      * @return True on success, false on error.
      */
-    bool disable_events();
+    virtual bool disable_events();
 
     // BEGIN: Temporarily here, do not use.
     static void close(DCB* dcb);
     static void final_close(DCB* dcb);
     static bool maybe_add_persistent(DCB* dcb);
-    void set_state(dcb_state_t s)
-    {
-        m_state = s;
-    }
     void set_session(MXS_SESSION* s)
     {
         m_session = s;
@@ -291,6 +287,7 @@ protected:
 
     int create_SSL(mxs::SSLContext* ssl);
 
+    dcb_state_t  m_state = DCB_STATE_ALLOC;     /**< Current state */
     MXS_SESSION* m_session;                     /**< The owning session */
     SSL*         m_ssl = nullptr;               /**< SSL struct for connection */
     bool         m_ssl_read_want_read = false;
@@ -308,7 +305,6 @@ private:
 
 private:
     Role         m_role;                    /**< The role of the DCB */
-    dcb_state_t  m_state = DCB_STATE_ALLOC; /**< Current state */
     Registry*    m_registry;                /**< The DCB registry to use */
 };
 
@@ -336,6 +332,9 @@ public:
     InternalDCB(MXS_SESSION* session, Registry* registry);
 
     int ssl_handshake() override;
+
+    bool enable_events() override;
+    bool disable_events() override;
 };
 
 namespace maxscale

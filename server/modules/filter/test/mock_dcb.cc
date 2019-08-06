@@ -13,17 +13,6 @@
 
 #include "maxscale/mock/dcb.hh"
 
-namespace
-{
-
-void initialize_dcb(DCB* pDcb)
-{
-    pDcb->m_fd = DCBFD_CLOSED;
-    pDcb->set_state(DCB_STATE_ALLOC);
-    pDcb->m_ssl_state = SSL_HANDSHAKE_UNKNOWN;
-}
-}
-
 namespace maxscale
 {
 
@@ -40,7 +29,6 @@ Dcb::Dcb(MXS_SESSION* pSession,
     , m_pHandler(pHandler)
 {
     DCB* pDcb = this;
-    initialize_dcb(this);
 
     pDcb->m_remote = MXS_STRDUP(zHost);
     pDcb->m_user = MXS_STRDUP(zUser);

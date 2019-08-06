@@ -215,7 +215,7 @@ static void blr_start_master(void* data)
     router->client->m_remote = MXS_STRDUP("127.0.0.1");
 
     /* Fake the client is reading */
-    router->client->set_state(DCB_STATE_POLLING);      /* Fake the client is reading */
+    router->client->enable_events();      /* Fake the client is reading */
 
     /**
      * This prevents the actual protocol level closing code from being called that expects

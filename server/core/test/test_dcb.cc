@@ -63,7 +63,7 @@ static int test1()
     // TODO: Some kind of test environment with workers would be needed.
     // printAllDCBs();
     fprintf(stderr, "\t..done\n");
-    dcb->set_state(DCB_STATE_POLLING);
+    dcb->enable_events(); // Makes state DCB_STATE_POLLING;
     this_thread.current_dcb = dcb;
     dcb_close(dcb);
     fprintf(stderr, "Freed original dcb");
