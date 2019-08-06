@@ -16,7 +16,6 @@
 
 MXS_BEGIN_DECLS
 
-void dcb_free_all_memory(DCB* dcb);
 inline void dcb_final_close(DCB* dcb)
 {
     DCB::final_close(dcb);

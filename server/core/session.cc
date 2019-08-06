@@ -1033,7 +1033,7 @@ Session::~Session()
 
     if (client_dcb)
     {
-        dcb_free_all_memory(client_dcb);
+        delete client_dcb;
         client_dcb = NULL;
     }
 

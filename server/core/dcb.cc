@@ -189,6 +189,11 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Registry* registry)
 
 DCB::~DCB()
 {
+    if (this_thread.current_dcb == this)
+    {
+        this_thread.current_dcb = nullptr;
+    }
+
     if (m_registry)
     {
         m_registry->remove(this);
@@ -268,25 +273,6 @@ void DCB::final_free(DCB* dcb)
             session_put_ref(local_session);
             return;
         }
-    }
-
-    dcb_free_all_memory(dcb);
-}
-
-/**
- * Free the memory belonging to a DCB
- *
- * NB The DCB is fully detached from all links except perhaps the session
- * dcb_client link.
- *
- * @param dcb The DCB to free
- */
-void dcb_free_all_memory(DCB* dcb)
-{
-    // This needs to be done here because session_free() calls this directly.
-    if (this_thread.current_dcb == dcb)
-    {
-        this_thread.current_dcb = NULL;
     }
 
     delete dcb;
@@ -500,7 +486,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Registry
                 ::close(dcb->m_fd);
             }
             session_unlink_backend_dcb(dcb->session(), dcb);
-            dcb_free_all_memory(dcb);
+            delete dcb;
             dcb = nullptr;
         }
     }
