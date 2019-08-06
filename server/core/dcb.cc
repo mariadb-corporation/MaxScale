@@ -988,36 +988,6 @@ int DCB::drain_writeq()
     return total_written;
 }
 
-static void log_illegal_dcb(DCB* dcb)
-{
-    const char* connected_to;
-
-    switch (dcb->role())
-    {
-    case DCB::Role::BACKEND:
-        connected_to = dcb->m_server->name();
-        break;
-
-    case DCB::Role::CLIENT:
-        connected_to = dcb->m_remote;
-        break;
-
-    case DCB::Role::INTERNAL:
-        connected_to = "Internal DCB";
-        break;
-
-    default:
-        connected_to = "Illegal DCB role";
-        break;
-    }
-
-    MXS_ERROR("Removing DCB %p but it is in state %s which is not legal for "
-              "a call to dcb_close. The DCB is connected to: %s",
-              dcb,
-              STRDCBSTATE(dcb->state()),
-              connected_to);
-}
-
 /**
  * Closes a client/backend dcb, which in the former case always means that
  * the corrsponding socket fd is closed and the dcb itself is freed, and in
@@ -1029,6 +999,7 @@ static void log_illegal_dcb(DCB* dcb)
 //static
 void DCB::close(DCB* dcb)
 {
+    mxb_assert(dcb->m_state != DCB_STATE_DISCONNECTED);
 #if defined (SS_DEBUG)
     RoutingWorker* current = RoutingWorker::get_current();
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
@@ -1041,12 +1012,6 @@ void DCB::close(DCB* dcb)
         mxb_assert(owner == RoutingWorker::get_current());
     }
 #endif
-
-    if (DCB_STATE_DISCONNECTED == dcb->state())
-    {
-        log_illegal_dcb(dcb);
-        raise(SIGABRT);
-    }
 
     /**
      * dcb_close may be called for freshly created dcb, in which case
