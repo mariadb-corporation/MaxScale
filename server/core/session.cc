@@ -42,7 +42,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mysql.hh>
 
-#include "internal/dcb.hh"
 #include "internal/filter.hh"
 #include "internal/session.hh"
 #include "internal/service.hh"

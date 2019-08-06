@@ -364,13 +364,6 @@ const char* to_string(DCB::Role role);
 
 }
 
-/**
- * @brief DCB system initialization function
- *
- * This function needs to be the first function call into this system.
- */
-void dcb_global_init();
-
 inline bool dcb_write(DCB* dcb, GWBUF* queue)
 {
     return dcb->write(queue);

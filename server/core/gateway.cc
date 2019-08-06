@@ -2132,8 +2132,6 @@ int main(int argc, char** argv)
     /* Init MaxScale poll system */
     poll_init();
 
-    dcb_global_init();
-
     /** Load the admin users */
     admin_users_init();
 

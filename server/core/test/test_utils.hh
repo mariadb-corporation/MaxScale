@@ -99,7 +99,6 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
         exit(1);
     }
     atexit(mxs_log_finish);
-    dcb_global_init();
     std::string old_libdir = get_libdir();
     set_libdir(MXS_STRDUP(TEST_DIR "/query_classifier/qc_sqlite/"));
     qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);

@@ -20,7 +20,7 @@
  * the state data and pointers to other components that relate to the
  * use of a file descriptor.
  */
-#include "internal/dcb.hh"
+#include <maxscale/dcb.hh>
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -94,11 +94,7 @@ static thread_local struct
 } this_thread;
 }
 
-static void        dcb_initialize(DCB* dcb);
 static void        dcb_call_callback(DCB* dcb, DCB_REASON reason);
-static int         dcb_null_write(DCB* dcb, GWBUF* buf);
-static int         dcb_null_auth(DCB* dcb, SERVER* server, MXS_SESSION* session, GWBUF* buf);
-static inline DCB* dcb_find_in_list(DCB* dcb);
 static void        dcb_stop_polling_and_shutdown(DCB* dcb);
 inline bool        dcb_maybe_add_persistent(DCB* dcb)
 {
@@ -115,23 +111,12 @@ static void   dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno);
 static int    gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    dcb_log_errors_SSL(DCB* dcb, int ret);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
-static void   dcb_add_to_all_list(DCB* dcb);
-static DCB*   dcb_find_free();
 
 static uint32_t dcb_poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
 static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t ev);
 static bool     dcb_session_check(DCB* dcb, const char*);
 static int      upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdata);
 static int      downstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdata);
-
-void dcb_global_init()
-{
-}
-
-void dcb_finish()
-{
-    // TODO: Free all resources.
-}
 
 uint64_t dcb_get_session_id(DCB* dcb)
 {
