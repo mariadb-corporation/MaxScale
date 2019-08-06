@@ -19,13 +19,12 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 
-#include <maxscale/authenticator.hh>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mysql.hh>
-#include <maxscale/authenticator2.hh>
 
 /** Cache directory and file names */
 static const char DBUSERS_DIR[] = "cache";
@@ -103,6 +102,28 @@ static int db_flags = SQLITE_OPEN_READWRITE
     | SQLITE_OPEN_CREATE
     | SQLITE_OPEN_NOMUTEX;
 
+/** Structure representing the authentication state */
+class MariaDBBackendSession : public mxs::AuthenticatorBackendSession
+{
+public:
+    ~MariaDBBackendSession() = default;
+
+    bool extract(DCB* backend, GWBUF* buffer) override;
+    bool ssl_capable(DCB* backend) override;
+    int authenticate(DCB* backend) override;
+
+private:
+    /** Authentication states */
+    enum class State
+    {
+        NEED_OK,                /**< Waiting for server's OK packet */
+        AUTH_OK,                /**< Authentication completed successfully */
+        AUTH_FAILED             /**< Authentication failed */
+    };
+
+    State state {State::NEED_OK};   /**< Authentication state */
+};
+
 class MariaDBAuthenticatorSession : public mxs::AuthenticatorSession
 {
 public:
@@ -115,6 +136,7 @@ public:
                                uint8_t* scramble, size_t scramble_len,
                                uint8_t* output, size_t output_len) override;
 
+    MariaDBBackendSession* newBackendSession() override;
     // No fields, as authentication data is managed by the protocol.
 };
 

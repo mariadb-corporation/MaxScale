@@ -6,6 +6,5 @@ add_subdirectory(GSSAPI)
 add_subdirectory(HTTPAuth)
 add_subdirectory(MaxAdminAuth)
 add_subdirectory(MariaDBAuth)
-add_subdirectory(MariaDBBackendAuth)
 add_subdirectory(PAM)
 

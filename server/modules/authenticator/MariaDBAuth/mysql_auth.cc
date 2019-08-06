@@ -827,6 +827,11 @@ int MariaDBAuthenticatorSession::reauthenticate(DCB* dcb, const char* user, uint
     return rval;
 }
 
+MariaDBBackendSession* MariaDBAuthenticatorSession::newBackendSession()
+{
+    return new(std::nothrow) MariaDBBackendSession();
+}
+
 int diag_cb(void* data, int columns, char** row, char** field_names)
 {
     DCB* dcb = (DCB*)data;
@@ -886,7 +891,7 @@ json_t* MYSQL_AUTH::diagnostics_json(const Listener* listener)
 
 uint64_t MYSQL_AUTH::capabilities() const
 {
-    return CAP_REAUTHENTICATE | CAP_CONC_LOAD_USERS;
+    return CAP_REAUTHENTICATE | CAP_CONC_LOAD_USERS | CAP_BACKEND_AUTH;
 }
 
 MariaDBAuthenticatorSession* MYSQL_AUTH::createSession()
@@ -894,3 +899,45 @@ MariaDBAuthenticatorSession* MYSQL_AUTH::createSession()
     return new(std::nothrow) MariaDBAuthenticatorSession();
 }
 
+bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)
+{
+    bool rval = false;
+
+    switch (state)
+    {
+        case State::NEED_OK:
+            if (mxs_mysql_is_ok_packet(buffer))
+            {
+                rval = true;
+                state = State::AUTH_OK;
+            }
+            else
+            {
+                state = State::AUTH_FAILED;
+            }
+            break;
+
+        default:
+            MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
+            mxb_assert(false);
+            break;
+    }
+
+    return rval;
+}
+
+bool MariaDBBackendSession::ssl_capable(DCB* backend)
+{
+    return backend->m_server->ssl().context() != nullptr;
+}
+
+int MariaDBBackendSession::authenticate(DCB* backend)
+{
+    int rval = MXS_AUTH_FAILED;
+    if (state == State::AUTH_OK)
+    {
+        /** Authentication completed successfully */
+        rval = MXS_AUTH_SUCCEEDED;
+    }
+    return rval;
+}
