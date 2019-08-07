@@ -133,11 +133,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
 /**
  * Read event for EPOLLIN on the CDC protocol module.
  *
- * @param dcb    The descriptor control block
+ * @param generic_dcb    The descriptor control block
  * @return
  */
-static int cdc_read_event(DCB* dcb)
+static int cdc_read_event(DCB* generic_dcb)
 {
+    ClientDCB* dcb = static_cast<ClientDCB*>(generic_dcb);
     MXS_SESSION* session = dcb->session();
     CDC_protocol* protocol = (CDC_protocol*) dcb->protocol_session();
     int n, rc = 0;
@@ -151,10 +152,10 @@ static int cdc_read_event(DCB* dcb)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (dcb->m_authenticator_data->extract(dcb, head))
+            if (dcb->m_auth_session->extract(dcb, head))
             {
                 /* Call protocol authentication */
-                auth_val = dcb->m_authenticator_data->authenticate(dcb);
+                auth_val = dcb->m_auth_session->authenticate(dcb);
             }
 
             /* Discard input buffer */

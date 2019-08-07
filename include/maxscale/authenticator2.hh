@@ -68,7 +68,7 @@ public:
 };
 
 /**
- * The base class of all authenticator sessions. Contains session-specific data for an authenticator.
+ * The base class of authenticator client sessions. Contains session-specific data for an authenticator.
  */
 class AuthenticatorSession
 {
@@ -118,9 +118,23 @@ public:
 };
 
 /**
- * Helper template which builds the authenticator c-api from the basic authenticator-classes. Should not
- * be needed once refactoring is complete.
+ * The base class for all authenticator backend sessions. Created by the client session.
  */
+class AuthenticatorBackendSession
+{
+public:
+    virtual ~AuthenticatorBackendSession() = default;
+
+    // Extract backend data from a buffer. Typically, this is called just before the authenticate-entrypoint.
+    virtual bool extract(DCB* client, GWBUF* buffer) = 0;
+
+    // Determine whether the connection can support SSL.
+    virtual bool ssl_capable(DCB* client) = 0;
+
+    // Carry out the authentication.
+    virtual int authenticate(DCB* client) = 0;
+};
+
 template<class AuthImplementation>
 class AuthenticatorApi
 {
@@ -143,16 +157,6 @@ template<class AuthImplementation>
 MXS_AUTHENTICATOR AuthenticatorApi<AuthImplementation>::s_api =
 {
     &AuthenticatorApi<AuthImplementation>::createInstance
-};
-
-/**
- * The base class for all authenticator backend sessions. Ideally, these should be created by the
- * authenticator client sessions. For now they must be a separate class and API struct.
- */
-class AuthenticatorBackendSession : public mxs::AuthenticatorSession
-{
-public:
-    void free_data(DCB* client) final;
 };
 
 }

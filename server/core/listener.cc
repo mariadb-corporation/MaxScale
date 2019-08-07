@@ -810,7 +810,8 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         client_dcb->m_remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */
-        if ((client_dcb->m_authenticator_data = m_auth_instance->createSession()) == nullptr)
+        client_dcb->m_auth_session.reset(m_auth_instance->createSession());
+        if (!client_dcb->m_auth_session)
         {
             MXS_ERROR("Failed to create authenticator session for client DCB");
             dcb_close(client_dcb);

@@ -262,19 +262,20 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
  * This function reads the server's response packet and does the final step of
  * the authentication.
  *
- * @param dcb Backend DCB
+ * @param generic_dcb Backend DCB
  * @param buffer Buffer containing the server's complete handshake
  * @return MXS_AUTH_STATE_HANDSHAKE_FAILED on failure.
  */
-mxs_auth_state_t handle_server_response(DCB* dcb, GWBUF* buffer)
+mxs_auth_state_t handle_server_response(DCB* generic_dcb, GWBUF* buffer)
 {
+    auto dcb = static_cast<BackendDCB*>(generic_dcb);
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
     mxs_auth_state_t rval = proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED ?
         MXS_AUTH_STATE_HANDSHAKE_FAILED : MXS_AUTH_STATE_FAILED;
 
-    if (dcb->m_authenticator_data->extract(dcb, buffer))
+    if (dcb->m_auth_session->extract(dcb, buffer))
     {
-        switch (dcb->m_authenticator_data->authenticate(dcb))
+        switch (dcb->m_auth_session->authenticate(dcb))
         {
         case MXS_AUTH_INCOMPLETE:
         case MXS_AUTH_SSL_INCOMPLETE:
@@ -1450,7 +1451,7 @@ static int gw_change_user(DCB* backend,
      * Decode the token and check the password.
      * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
      */
-    DCB* dcb = backend->session()->client_dcb;
+    auto dcb = backend->session()->client_dcb;
 
     if ((in_session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_REAUTHENTICATE) == 0)
     {
@@ -1459,7 +1460,7 @@ static int gw_change_user(DCB* backend,
         goto retblock;
     }
 
-    auth_ret = dcb->m_authenticator_data->reauthenticate(
+    auth_ret = dcb->m_auth_session->reauthenticate(
             dcb, username, auth_token, auth_token_len,
             client_protocol->scramble, sizeof(client_protocol->scramble),
             client_sha1, sizeof(client_sha1));
@@ -1476,7 +1477,7 @@ static int gw_change_user(DCB* backend,
              */
             *current_session->db = 0;
 
-            auth_ret = dcb->m_authenticator_data->reauthenticate(
+            auth_ret = dcb->m_auth_session->reauthenticate(
                     dcb, username, auth_token, auth_token_len,
                     client_protocol->scramble, sizeof(client_protocol->scramble),
                     client_sha1, sizeof(client_sha1));

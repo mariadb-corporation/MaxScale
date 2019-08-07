@@ -126,11 +126,12 @@ static char* httpd_default_auth()
 /**
  * Read event for EPOLLIN on the httpd protocol module.
  *
- * @param dcb   The descriptor control block
+ * @param generic_dcb   The descriptor control block
  * @return
  */
-static int httpd_read_event(DCB* dcb)
+static int httpd_read_event(DCB* generic_dcb)
 {
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
     MXS_SESSION* session = dcb->session();
 
     int numchars = 1;
@@ -243,8 +244,8 @@ static int httpd_read_event(DCB* dcb)
                 {
                     /** The freeing entry point is called automatically when
                      * the client DCB is closed */
-                    dcb->m_authenticator_data->extract(dcb, auth_data);
-                    auth_ok = dcb->m_authenticator_data->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
+                    dcb->m_auth_session->extract(dcb, auth_data);
+                    auth_ok = dcb->m_auth_session->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
                     gwbuf_free(auth_data);
                 }
             }

@@ -37,6 +37,7 @@ class SERVER;
 namespace maxscale
 {
 class AuthenticatorSession;
+class AuthenticatorBackendSession;
 }
 
 #define DCBFD_CLOSED -1
@@ -294,12 +295,8 @@ public:
                                                  *      -1: Evicted from the persistent pool and being closed.
                                                  *   non-0: Time when placed in the persistent pool.
                                                  */
-    void*          m_data = nullptr;              /**< Client protocol data, owned by client DCB */
-
-    /**< The authenticator data for this DCB */
-    mxs::AuthenticatorSession* m_authenticator_data = nullptr;
-
-    DCB_CALLBACK*  m_callbacks = nullptr;         /**< The list of callbacks for the DCB */
+    void*          m_data = nullptr;            /**< Client protocol data, owned by client DCB */
+    DCB_CALLBACK*  m_callbacks = nullptr;       /**< The list of callbacks for the DCB */
     int64_t        m_last_read = 0;             /**< Last time the DCB received data */
     int64_t        m_last_write = 0;            /**< Last time the DCB sent data */
     SERVER*        m_server = nullptr;          /**< The associated backend server */
@@ -376,8 +373,11 @@ public:
               MXS_PROTOCOL_SESSION* protocol,
               MXS_PROTOCOL_API protocol_api,
               Manager* manager);
+    ~ClientDCB() override;
 
     int ssl_handshake() override;
+
+    std::unique_ptr<mxs::AuthenticatorSession> m_auth_session; /**< Client authentication data */
 
 protected:
     // Only for InternalDCB.
@@ -405,6 +405,8 @@ public:
     static void hangup(const SERVER* server);
 
     int ssl_handshake() override;
+
+    mxs::AuthenticatorBackendSession* m_auth_session {nullptr}; /**< Backend authentication data */
 
 private:
     BackendDCB(int fd,

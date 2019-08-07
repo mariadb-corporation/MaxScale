@@ -174,13 +174,6 @@ DCB::~DCB()
         m_manager->remove(this);
     }
 
-    if (m_data)
-    {
-        m_authenticator_data->free_data(this);
-    }
-
-    delete m_authenticator_data;
-
     while (m_callbacks)
     {
         DCB_CALLBACK* tmp = m_callbacks;
@@ -328,7 +321,7 @@ BackendDCB* BackendDCB::create(int fd,
             std::unique_ptr<AuthenticatorBackendSession> auth_session;
             if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_BACKEND_AUTH)
             {
-                auth_session.reset(session->client_dcb->m_authenticator_data->newBackendSession());
+                auth_session.reset(session->client_dcb->m_auth_session->newBackendSession());
                 if (!auth_session)
                 {
                     MXS_ERROR("Failed to create authenticator session for backend DCB.");
@@ -347,7 +340,7 @@ BackendDCB* BackendDCB::create(int fd,
                                                     srv, manager);
                 if (dcb)
                 {
-                    dcb->m_authenticator_data = auth_session.release();
+                    dcb->m_auth_session = auth_session.release();
                     session_link_backend_dcb(session, dcb);
                 }
                 else
@@ -3039,6 +3032,14 @@ ClientDCB::ClientDCB(int fd,
     {
         dcb_add_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
         dcb_add_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
+    }
+}
+
+ClientDCB::~ClientDCB()
+{
+    if (m_data)
+    {
+        m_auth_session->free_data(this);
     }
 }
 

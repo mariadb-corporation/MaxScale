@@ -820,7 +820,7 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
     return SSL_AUTH_CHECKS_OK;
 }
 
-int ssl_authenticate_check_status(DCB* dcb)
+int ssl_authenticate_check_status(DCB* generic_dcb)
 {
     int rval = MXS_AUTH_FAILED;
     /**
@@ -828,8 +828,9 @@ int ssl_authenticate_check_status(DCB* dcb)
      * us to detect if the SSL handshake is immediately completed, which means more
      * data needs to be read from the socket.
      */
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
     bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, dcb->m_authenticator_data->ssl_capable(dcb));
+    int ssl_ret = ssl_authenticate_client(dcb, dcb->m_auth_session->ssl_capable(dcb));
     bool health_after = ssl_is_connection_healthy(dcb);
 
     if (ssl_ret != 0)
@@ -855,13 +856,14 @@ int ssl_authenticate_check_status(DCB* dcb)
 /**
  * @brief Client read event, process when client not yet authenticated
  *
- * @param dcb           Descriptor control block
+ * @param generic_dcb   Descriptor control block
  * @param read_buffer   A buffer containing the data read from client
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
+static int gw_read_do_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read)
 {
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
     MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
 
     /** Allocate the shared session structure */
@@ -901,14 +903,14 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
      * authenticate function to carry out the user checks.
      */
     int auth_val = MXS_AUTH_FAILED;
-    if (dcb->m_authenticator_data->extract(dcb, read_buffer))
+    if (dcb->m_auth_session->extract(dcb, read_buffer))
     {
         auth_val = ssl_authenticate_check_status(dcb);
 
         if (auth_val == MXS_AUTH_SSL_COMPLETE)
         {
             // TLS connection phase complete
-            auth_val = dcb->m_authenticator_data->authenticate(dcb);
+            auth_val = dcb->m_auth_session->authenticate(dcb);
         }
     }
     else
@@ -1669,8 +1671,9 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     bool rval = false;
     if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_REAUTHENTICATE)
     {
+        auto client_dcb = session->client_dcb;
         uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
-        MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
+        MySQLProtocol* proto = (MySQLProtocol*)client_dcb->protocol_session();
         std::vector<uint8_t> payload;
         payload.resize(payloadlen);
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
@@ -1683,16 +1686,16 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 
         if (std::find(user, end, '\0') == end)
         {
-            mysql_send_auth_error(session->client_dcb, 3, 0, "Malformed AuthSwitchRequest packet");
+            mysql_send_auth_error(client_dcb, 3, 0, "Malformed AuthSwitchRequest packet");
             return false;
         }
 
         // Copy the new username to the session data
-        MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
+        MYSQL_session* data = (MYSQL_session*)client_dcb->m_data;
         strcpy(data->user, user);
 
-        int rc = session->client_dcb->m_authenticator_data->reauthenticate(
-                session->client_dcb, data->user, &payload[0], payload.size(),
+        int rc = client_dcb->m_auth_session->reauthenticate(
+                client_dcb, data->user, &payload[0], payload.size(),
                 proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
 
         if (rc == MXS_AUTH_SUCCEEDED)
@@ -1710,7 +1713,7 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
              * First packet is COM_CHANGE_USER, the second is AuthSwitchRequest,
              * third is the response and the fourth is the following error.
              */
-            mysql_client_auth_error_handling(session->client_dcb, rc, 3);
+            mysql_client_auth_error_handling(client_dcb, rc, 3);
         }
     }
 

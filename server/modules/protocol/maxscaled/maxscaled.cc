@@ -68,8 +68,9 @@ static bool                  maxscaled_init_connection(DCB*);
 static void                  maxscaled_finish_connection(DCB* dcb);
 static char*                 maxscaled_default_auth();
 
-static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* dcb)
+static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
 {
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
     bool authenticated = false;
 
     struct ucred ucred;
@@ -95,8 +96,8 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* dcb)
             strcpy((char*)GWBUF_DATA(username), protocol->username);
 
             /* Authenticate the user */
-            if (dcb->m_authenticator_data->extract(dcb, username)
-                && dcb->m_authenticator_data->authenticate(dcb) == 0)
+            if (dcb->m_auth_session->extract(dcb, username)
+                && dcb->m_auth_session->authenticate(dcb) == 0)
             {
                 dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
                 protocol->state = MAXSCALED_STATE_DATA;
