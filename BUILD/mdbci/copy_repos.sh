@@ -34,7 +34,9 @@ if [ "$box_type" == "RPM" ] ; then
                 fi
                 if [ "$platform" == "opensuse" ] ; then
                         mkdir -p sles
-                        ln -s opensuse/$platform_version sles/$platform_version
+			cd sles
+                        ln -s ../opensuse/$platform_version $platform_version
+                        cd ..
                 fi
 
 
