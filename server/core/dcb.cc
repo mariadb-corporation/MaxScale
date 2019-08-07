@@ -428,8 +428,11 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
 
     if (dcb)
     {
+        DCB* client_dcb = session->client_dcb;
+
         if (do_connect(server->address, server->port, &dcb->m_fd)
-            && (dcb->m_protocol = dcb->m_func.connect(dcb, server, session))
+            && (dcb->m_protocol = dcb->m_func.new_backend_session(session, server, client_dcb->m_protocol))
+            && (dcb->m_func.prepare_backend_connection(dcb))
             && dcb->enable_events())
         {
             // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT

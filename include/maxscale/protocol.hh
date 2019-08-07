@@ -101,13 +101,22 @@ struct MXS_PROTOCOL
     /**
      * Allocate new backend protocol sessoin
      *
-     * @param dcb     DCB that was connected
-     * @param server  Server where the connection is made
-     * @param session The session to which the connection belongs to
+     * @param session  The session to which the connection belongs to
+     * @param server   Server where the connection is made
+     * @param protocol The client protocol session.
      *
      * @return New protocol session or null on error
      */
-    MXS_PROTOCOL_SESSION* (* connect)(DCB* dcb, SERVER* server, MXS_SESSION* session);
+    MXS_PROTOCOL_SESSION* (* new_backend_session)(MXS_SESSION* session,
+                                                  SERVER* server,
+                                                  void* client_protocol_session);
+
+    /**
+     * Prepare a new backend connection.
+     *
+     * @return True, if the backend connection could be prepared, false otherwise.
+     */
+    bool (* prepare_backend_connection)(DCB* backend_dcb);
 
     /**
      * Free protocol data allocated in the connect handler
@@ -174,7 +183,7 @@ struct MXS_PROTOCOL
  * the MXS_PROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_PROTOCOL_VERSION {2, 1, 0}
+#define MXS_PROTOCOL_VERSION {3, 1, 0}
 
 /**
  * Specifies capabilities specific for protocol.

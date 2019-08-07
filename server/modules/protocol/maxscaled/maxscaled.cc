@@ -179,7 +179,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         maxscaled_error,                /**< Error - EPOLLERR handler      */
         maxscaled_hangup,               /**< HangUp - EPOLLHUP handler     */
         maxscaled_accept,               /**< Accept                        */
-        NULL,                           /**< Connect                       */
+        NULL,                           /**< new_backend_session           */
+        NULL,                           /**< prepare_backend_connection    */
         maxscaled_close,                /**< Close                         */
         mxsd_default_auth,              /**< Default authenticator         */
         NULL,                           /**< Connection limit reached      */

@@ -96,7 +96,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         cdc_error,              /* Error - EPOLLERR handler      */
         cdc_hangup,             /* HangUp - EPOLLHUP handler     */
         cdc_accept,             /* Accept                        */
-        NULL,                   /* Connect                       */
+        NULL,                   /* new_backend_session           */
+        NULL,                   /* prepare_backend_connection    */
         cdc_close,              /* Close                         */
         cdc_default_auth,       /* default authentication */
         NULL,

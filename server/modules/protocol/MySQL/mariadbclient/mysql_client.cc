@@ -2285,7 +2285,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         gw_error_client_event,                      /* Error - EPOLLERR handler      */
         gw_client_hangup_event,                     /* HangUp - EPOLLHUP handler     */
         gw_MySQLAccept,                             /* Accept                        */
-        NULL,                                       /* Connect                       */
+        NULL,                                       /* new_backend_session           */
+        NULL,                                       /* prepare_backend_connection    */
         gw_client_close,                            /* Close                         */
         gw_default_auth,                            /* Default authenticator         */
         gw_connection_limit,                        /* Send error connection limit   */

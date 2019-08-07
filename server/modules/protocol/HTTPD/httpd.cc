@@ -76,7 +76,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         httpd_error,            /**< Error - EPOLLERR handler      */
         httpd_hangup,           /**< HangUp - EPOLLHUP handler     */
         httpd_accept,           /**< Accept                        */
-        NULL,                   /**< Connect                       */
+        NULL,                   /**< new_backend_session           */
+        NULL,                   /**< prepare_backend_connection    */
         httpd_close,            /**< Close                         */
         httpd_default_auth,     /**< Default authenticator         */
         NULL,                   /**< Connection limit reached      */

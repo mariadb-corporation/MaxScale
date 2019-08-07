@@ -34,13 +34,14 @@
  * and the backend MySQL database.
  */
 
-static MXS_PROTOCOL_SESSION* gw_create_backend_connection(DCB* backend,
-                                                          SERVER* server,
-                                                          MXS_SESSION* in_session);
 static int  gw_read_backend_event(DCB* dcb);
 static int  gw_write_backend_event(DCB* dcb);
 static int  gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue);
 static int  gw_error_backend_event(DCB* dcb);
+static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
+                                                    SERVER* server,
+                                                    void* client_protocol_session);
+static bool gw_prepare_backend_connection(DCB* backend_dcb);
 static int  gw_backend_close(DCB* dcb);
 static int  gw_backend_hangup(DCB* dcb);
 static int  backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
@@ -89,7 +90,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_error_backend_event,             /* Error - EPOLLERR handler      */
         gw_backend_hangup,                  /* HangUp - EPOLLHUP handler     */
         NULL,                               /* Accept                        */
-        gw_create_backend_connection,       /* Connect                     */
+        gw_new_backend_session,             /* New backend connection        */
+        gw_prepare_backend_connection,      /* Prepare backend connection    */
         gw_backend_close,                   /* Close                         */
         gw_backend_default_auth,            /* Default authenticator         */
         NULL,                               /* Connection limit reached      */
@@ -145,51 +147,43 @@ static char* gw_backend_default_auth()
  *******************************************************************************
  ******************************************************************************/
 
-/*
- * Create a new backend connection.
- *
- * This routine will connect to a backend server and it is called by dbc_connect
- * in router->newSession
- *
- * @param backend_dcb, in, out, use - backend DCB allocated from dcb_connect
- * @param server, in, use - server to connect to
- * @param session, in use - current session from client DCB
- * @return 0/1 on Success and -1 on Failure.
- * If succesful, returns positive fd to socket which is connected to
- *  backend server. Positive fd is copied to protocol and to dcb.
- * If fails, fd == -1 and socket is closed.
- */
-static MXS_PROTOCOL_SESSION* gw_create_backend_connection(DCB* backend_dcb,
-                                                          SERVER* server,
-                                                          MXS_SESSION* session)
+static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
+                                                    SERVER* server,
+                                                    void* client_protocol_session)
 {
-    MySQLProtocol* protocol = new(std::nothrow) MySQLProtocol(session, server);
-    MXS_ABORT_IF_NULL(protocol);
+    MySQLProtocol* protocol_session = new(std::nothrow) MySQLProtocol(session, server);
+    MXS_ABORT_IF_NULL(protocol_session);
 
     /** Copy client flags to backend protocol */
-    if (session->client_dcb->m_protocol)
+    if (client_protocol_session)
     {
-        MySQLProtocol* client = (MySQLProtocol*)backend_dcb->session()->client_dcb->m_protocol;
-        protocol->client_capabilities = client->client_capabilities;
-        protocol->charset = client->charset;
-        protocol->extra_capabilities = client->extra_capabilities;
+        MySQLProtocol* cps = (MySQLProtocol*)client_protocol_session;
+        protocol_session->client_capabilities = cps->client_capabilities;
+        protocol_session->charset = cps->charset;
+        protocol_session->extra_capabilities = cps->extra_capabilities;
     }
     else
     {
-        protocol->client_capabilities = (int)GW_MYSQL_CAPABILITIES_CLIENT;
-        protocol->charset = 0x08;
+        protocol_session->client_capabilities = (int)GW_MYSQL_CAPABILITIES_CLIENT;
+        protocol_session->charset = 0x08;
     }
 
-    protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
+    protocol_session->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
 
-    if (server->proxy_protocol)
+    return protocol_session;
+}
+
+static bool gw_prepare_backend_connection(DCB* backend_dcb)
+{
+    bool rv = true;
+
+    if (backend_dcb->m_server->proxy_protocol)
     {
+        // TODO: The following function needs a return value.
         gw_send_proxy_protocol_header(backend_dcb);
     }
-    MXS_DEBUG("Connected to server [%s]:%d, from backend dcb %p, client dcp %p.",
-              server->address, server->port, backend_dcb, session->client_dcb);
 
-    return protocol;
+    return true;
 }
 
 /**
