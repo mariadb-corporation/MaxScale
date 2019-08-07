@@ -154,12 +154,6 @@ DCB::DCB(int fd,
         }
     }
 
-    if (m_high_water && m_low_water && m_role == DCB::Role::CLIENT)
-    {
-        dcb_add_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
-        dcb_add_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
-    }
-
     if (m_manager)
     {
         m_manager->add(this);
@@ -451,13 +445,6 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
             {
                 // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
                 // event that is triggered once the connection is established.
-
-                if (DCB_THROTTLING_ENABLED(dcb))
-                {
-                    // Register upstream throttling callbacks
-                    dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
-                    dcb_add_callback(dcb, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
-                }
 
                 mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
                 mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
@@ -3021,6 +3008,11 @@ ClientDCB::ClientDCB(int fd, DCB::Role role, MXS_SESSION* session, Manager* mana
           nullptr,
           manager)
 {
+    if (DCB_THROTTLING_ENABLED(this))
+    {
+        dcb_add_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
+        dcb_add_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
+    }
 }
 
 bool ClientDCB::was_freed(MXS_SESSION* session)
@@ -3043,6 +3035,13 @@ InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
      * the dcb->m_protocol pointer to not be NULL.
      */
     m_func.close = nullptr;
+
+    if (DCB_THROTTLING_ENABLED(this))
+    {
+        // Remove the callbacks that ClientDCB added.
+        dcb_remove_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
+        dcb_remove_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
+    }
 }
 
 int InternalDCB::ssl_handshake()
@@ -3070,6 +3069,12 @@ bool InternalDCB::disable_events()
 BackendDCB::BackendDCB(int fd, MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, DCB::Manager* manager)
     : DCB(fd, DCB::Role::BACKEND, session, func, server, manager)
 {
+    if (DCB_THROTTLING_ENABLED(this))
+    {
+        // Register upstream throttling callbacks
+        dcb_add_callback(this, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
+        dcb_add_callback(this, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
+    }
 }
 
 bool BackendDCB::was_freed(MXS_SESSION* session)
