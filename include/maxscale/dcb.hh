@@ -248,11 +248,11 @@ public:
 
     // BEGIN: Temporarily here, do not use.
     static void close(DCB* dcb);
-    static bool maybe_add_persistent(DCB* dcb);
     void set_session(MXS_SESSION* s)
     {
         m_session = s;
     }
+    static void add_event(DCB* dcb, GWBUF* buf, uint32_t ev);
     // END
 
     bool                    m_dcb_errhandle_called = false;   /**< this can be called only once */
@@ -332,6 +332,15 @@ private:
 
     void destroy();
     static void free(DCB* dcb);
+
+    static bool maybe_add_persistent(DCB* dcb);
+
+    static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+    static uint32_t event_handler(DCB* dcb, uint32_t events);
+    static uint32_t process_events(DCB* dcb, uint32_t events);
+
+    class FakeEventTask;
+    friend class FakeEventTask;
 
 private:
     Role     m_role;    /**< The role of the DCB */

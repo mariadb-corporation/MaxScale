@@ -108,8 +108,6 @@ static int    gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    dcb_log_errors_SSL(DCB* dcb, int ret);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 
-static uint32_t dcb_poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
-static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t ev);
 static bool     dcb_session_check(DCB* dcb, const char*);
 static int      upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdata);
 static int      downstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdata);
@@ -127,7 +125,7 @@ static MXB_WORKER* get_dcb_owner()
 }
 
 DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Manager* manager)
-    : MXB_POLL_DATA{dcb_poll_handler, get_dcb_owner()}
+    : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
     , m_last_read(mxs_clock())
@@ -2394,7 +2392,8 @@ int dcb_get_port(const DCB* dcb)
     return rval;
 }
 
-static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
+//static
+uint32_t DCB::process_events(DCB* dcb, uint32_t events)
 {
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
     mxb_assert(owner == RoutingWorker::get_current());
@@ -2556,10 +2555,11 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
     return rc;
 }
 
-static uint32_t dcb_handler(DCB* dcb, uint32_t events)
+//static
+uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
 {
     this_thread.current_dcb = dcb;
-    uint32_t rv = dcb_process_poll_events(dcb, events);
+    uint32_t rv = DCB::process_events(dcb, events);
 
     // When all I/O events have been handled, we will immediately
     // process an added fake event. As the handling of a fake event
@@ -2571,7 +2571,7 @@ static uint32_t dcb_handler(DCB* dcb, uint32_t events)
         events = dcb->m_fake_event;
         dcb->m_fake_event = 0;
 
-        rv |= dcb_process_poll_events(dcb, events);
+        rv |= DCB::process_events(dcb, events);
     }
 
     this_thread.current_dcb = NULL;
@@ -2579,7 +2579,8 @@ static uint32_t dcb_handler(DCB* dcb, uint32_t events)
     return rv;
 }
 
-static uint32_t dcb_poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
+//static
+uint32_t DCB::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
 {
     uint32_t rval = 0;
     DCB* dcb = (DCB*)data;
@@ -2595,7 +2596,7 @@ static uint32_t dcb_poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32
      */
     if (dcb->m_nClose == 0)
     {
-        rval = dcb_handler(dcb, events);
+        rval = DCB::event_handler(dcb, events);
     }
 
     return rval;
@@ -2618,12 +2619,12 @@ static bool dcb_is_still_valid(DCB* target, const RoutingWorker& worker)
     return rval;
 }
 
-class FakeEventTask : public Worker::DisposableTask
+class DCB::FakeEventTask : public Worker::DisposableTask
 {
-    FakeEventTask(const FakeEventTask&);
-    FakeEventTask& operator=(const FakeEventTask&);
-
 public:
+    FakeEventTask(const FakeEventTask&) = delete;
+    FakeEventTask& operator=(const FakeEventTask&) = delete;
+
     FakeEventTask(DCB* dcb, GWBUF* buf, uint32_t ev)
         : m_dcb(dcb)
         , m_buffer(buf)
@@ -2641,7 +2642,7 @@ public:
         {
             mxb_assert(m_dcb->owner == RoutingWorker::get_current());
             m_dcb->m_fakeq = m_buffer;
-            dcb_handler(m_dcb, m_ev);
+            DCB::event_handler(m_dcb, m_ev);
         }
         else
         {
@@ -2656,13 +2657,14 @@ private:
     uint64_t m_uid;     /**< DCB UID guarantees we deliver the event to the correct DCB */
 };
 
-static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
+//static
+void DCB::add_event(DCB* dcb, GWBUF* buf, uint32_t ev)
 {
     if (dcb == this_thread.current_dcb)
     {
         mxb_assert(dcb->owner == RoutingWorker::get_current());
         // If the fake event is added to the current DCB, we arrange for
-        // it to be handled immediately in dcb_handler() when the handling
+        // it to be handled immediately in DCB::event_handler() when the handling
         // of the current events are done...
 
         if (dcb->m_fake_event != 0)
@@ -2695,17 +2697,17 @@ static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
 
 void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf)
 {
-    poll_add_event_to_dcb(dcb, buf, EPOLLIN);
+    DCB::add_event(dcb, buf, EPOLLIN);
 }
 
 void poll_fake_write_event(DCB* dcb)
 {
-    poll_add_event_to_dcb(dcb, NULL, EPOLLOUT);
+    DCB::add_event(dcb, NULL, EPOLLOUT);
 }
 
 void poll_fake_read_event(DCB* dcb)
 {
-    poll_add_event_to_dcb(dcb, NULL, EPOLLIN);
+    DCB::add_event(dcb, NULL, EPOLLIN);
 }
 
 void poll_fake_hangup_event(DCB* dcb)
@@ -2715,7 +2717,7 @@ void poll_fake_hangup_event(DCB* dcb)
 #else
     uint32_t ev = EPOLLHUP;
 #endif
-    poll_add_event_to_dcb(dcb, NULL, ev);
+    DCB::add_event(dcb, NULL, ev);
 }
 
 /**
