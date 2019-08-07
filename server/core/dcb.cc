@@ -96,10 +96,6 @@ static thread_local struct
 
 static void        dcb_call_callback(DCB* dcb, DCB_REASON reason);
 static void        dcb_stop_polling_and_shutdown(DCB* dcb);
-inline bool        dcb_maybe_add_persistent(DCB* dcb)
-{
-    return DCB::maybe_add_persistent(dcb);
-}
 static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int nreadtotal);
 static GWBUF*      dcb_basic_read(DCB* dcb,
@@ -297,8 +293,10 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
     return nullptr;
 }
 
-BackendDCB* dcb_alloc_backend_dcb(Server* server, MXS_SESSION* session, const char* protocol, DCB::Manager* manager)
+BackendDCB* BackendDCB::create(SERVER* srv, MXS_SESSION* session, const char* protocol, DCB::Manager* manager)
 {
+    Server* server = static_cast<Server*>(srv);
+
     MXS_PROTOCOL* funcs = (MXS_PROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
 
     if (!funcs)
@@ -429,7 +427,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
     }
 
     // Could not find a reusable DCB, allocate a new one
-    BackendDCB* dcb = dcb_alloc_backend_dcb(server, session, protocol, manager);
+    BackendDCB* dcb = create(server, session, protocol, manager);
 
     if (dcb)
     {
@@ -1001,7 +999,7 @@ void DCB::close(DCB* dcb)
         // A DCB in the persistent pool.
 
         // TODO: This dcb will now actually be closed when dcb_persistent_clean_count() is
-        // TODO: called by either dcb_maybe_add_persistent() - another dcb is added to the
+        // TODO: called by either maybe_add_persistent() - another dcb is added to the
         // TODO: persistent pool - or server_get_persistent() - get a dcb from the persistent
         // TODO: pool - is called. There is no reason not to just remove this dcb from the
         // TODO: persistent pool here and now, and then close it immediately.
@@ -1087,7 +1085,7 @@ void DCB::destroy()
             m_user = MXS_STRDUP_A(user);
         }
 
-        if (dcb_maybe_add_persistent(this))
+        if (maybe_add_persistent(this))
         {
             m_nClose = 0;
         }

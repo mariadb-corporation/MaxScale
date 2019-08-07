@@ -359,6 +359,9 @@ public:
     int ssl_handshake() override;
 
 private:
+    static BackendDCB* create(SERVER* server, MXS_SESSION* session, const char* protocol, DCB::Manager* manager);
+
+private:
     bool was_freed(MXS_SESSION* session) override;
 };
 
