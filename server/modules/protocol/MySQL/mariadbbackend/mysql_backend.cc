@@ -59,7 +59,8 @@ static GWBUF*      gw_create_change_user_packet(MYSQL_session* mses,
 static int gw_send_change_user_to_backend(char* dbname,
                                           char* user,
                                           uint8_t* passwd,
-                                          MySQLProtocol* conn);
+                                          DCB* backend,
+                                          MySQLProtocol* backend_protocol);
 static void gw_send_proxy_protocol_header(DCB* backend_dcb);
 static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    char* ip,
@@ -162,7 +163,7 @@ static MXS_PROTOCOL_SESSION* gw_create_backend_connection(DCB* backend_dcb,
                                                           SERVER* server,
                                                           MXS_SESSION* session)
 {
-    MySQLProtocol* protocol = new(std::nothrow) MySQLProtocol(backend_dcb);
+    MySQLProtocol* protocol = new(std::nothrow) MySQLProtocol(session, server);
     MXS_ABORT_IF_NULL(protocol);
 
     /** Copy client flags to backend protocol */
@@ -1545,7 +1546,7 @@ static int gw_change_user(DCB* backend,
         strcpy(current_session->user, username);
         strcpy(current_session->db, database);
         memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
-        rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
+        rv = gw_send_change_user_to_backend(database, username, client_sha1, backend, backend_protocol);
     }
 
 retblock:
@@ -1732,19 +1733,20 @@ static GWBUF* gw_create_change_user_packet(MYSQL_session* mses,
 static int gw_send_change_user_to_backend(char* dbname,
                                           char* user,
                                           uint8_t* passwd,
-                                          MySQLProtocol* conn)
+                                          DCB* backend,
+                                          MySQLProtocol* backend_protocol)
 {
     GWBUF* buffer;
     int rc;
     MYSQL_session* mses;
 
-    mses = (MYSQL_session*)conn->owner_dcb->session()->client_dcb->m_data;
-    buffer = gw_create_change_user_packet(mses, conn);
-    rc = conn->owner_dcb->protocol_write(buffer);
+    mses = (MYSQL_session*)backend_protocol->session()->client_dcb->m_data;
+    buffer = gw_create_change_user_packet(mses, backend_protocol);
+    rc = backend->protocol_write(buffer);
 
     if (rc != 0)
     {
-        conn->changing_user = true;
+        backend_protocol->changing_user = true;
         rc = 1;
     }
 

@@ -1017,9 +1017,9 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
 
     // LocalClient also uses this code and it doesn't populate the server pointer
     // TODO: fix it
-    if (conn->owner_dcb && conn->owner_dcb->m_server)
+    if (conn->server())
     {
-        MXS_INFO("Connected to '%s' with thread id %u", conn->owner_dcb->m_server->name(), tid);
+        MXS_INFO("Connected to '%s' with thread id %u", conn->server()->name(), tid);
     }
 
     /* TODO: Correct value of thread id could be queried later from backend if
@@ -1796,7 +1796,7 @@ void MySQLProtocol::process_reply_start(Iter it, Iter end)
     case MYSQL_REPLY_LOCAL_INFILE:
         // The client will send a request after this with the contents of the file which the server will
         // respond to with either an OK or an ERR packet
-        session_set_load_active(owner_dcb->session(), true);
+        session_set_load_active(m_session, true);
         set_reply_state(ReplyState::DONE);
         break;
 
@@ -2048,12 +2048,12 @@ void MySQLProtocol::track_query(GWBUF* buffer)
         return;
     }
 
-    if (session_is_load_active(owner_dcb->session()))
+    if (session_is_load_active(m_session))
     {
         if (MYSQL_GET_PAYLOAD_LEN(data) == 0)
         {
             MXS_INFO("Load data ended");
-            session_set_load_active(owner_dcb->session(), false);
+            session_set_load_active(m_session, false);
             set_reply_state(ReplyState::START);
         }
     }

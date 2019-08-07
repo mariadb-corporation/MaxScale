@@ -525,10 +525,10 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
         friend class MySQLProtocol;
     };
 
-    MySQLProtocol(DCB* dcb)
-        : owner_dcb(dcb)
+    MySQLProtocol(MXS_SESSION* session, SERVER* server)
+        : m_session(session)
     {
-        m_reply.m_server = dcb->m_server;
+        m_reply.m_server = server;
     }
 
     ~MySQLProtocol()
@@ -564,11 +564,19 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
         return m_reply;
     }
 
+    /**
+     * Get the session the protocol data is associated with.
+     *
+     * @return A session.
+     */
+    MXS_SESSION* session() const
+    {
+        return m_session;
+    }
+
     //
     // Legacy public members
     //
-    DCB* owner_dcb;     /*< The DCB associated with this protocol */
-
     mxs_mysql_cmd_t        current_command = MXS_COM_UNDEFINED;         /*< Current command being executed */
     mxs_auth_state_t       protocol_auth_state = MXS_AUTH_STATE_INIT;   /*< Authentication state */
     mysql_protocol_state_t protocol_state = MYSQL_PROTOCOL_ACTIVE;      /*< Protocol state */
@@ -588,6 +596,11 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     uint32_t     num_eof_packets = 0;   /*< Encountered eof packet number, used for check packet type */
     bool         large_query = false;   /*< Whether to ignore the command byte of the next packet*/
 
+    SERVER* server() const
+    {
+        return m_reply.m_server;
+    }
+
     //
     // END Legacy public members
     //
@@ -595,14 +608,14 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     using Iter = mxs::Buffer::iterator;
 
 private:
-
-    uint16_t m_modutil_state;           /**< TODO: This is an ugly hack, replace it */
-    bool     m_opening_cursor = false;  /**< Whether we are opening a cursor */
-    uint32_t m_expected_rows = 0;       /**< Number of rows a COM_STMT_FETCH is retrieving */
-    uint64_t m_num_coldefs = 0;
-    bool     m_large_query = false;
-    bool     m_skip_next = false;
-    Reply    m_reply;
+    MXS_SESSION* m_session;                 /**< The session this protocol session is associated with */
+    uint16_t     m_modutil_state;           /**< TODO: This is an ugly hack, replace it */
+    bool         m_opening_cursor = false;  /**< Whether we are opening a cursor */
+    uint32_t     m_expected_rows = 0;       /**< Number of rows a COM_STMT_FETCH is retrieving */
+    uint64_t     m_num_coldefs = 0;
+    bool         m_large_query = false;
+    bool         m_skip_next = false;
+    Reply        m_reply;
 
     bool   consume_fetched_rows(GWBUF* buffer);
     void   process_reply_start(Iter it, Iter end);

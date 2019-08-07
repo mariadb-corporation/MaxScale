@@ -1564,7 +1564,7 @@ return_1:
  */
 MXS_PROTOCOL_SESSION* gw_MySQLAccept(DCB* dcb)
 {
-    auto protocol = new(std::nothrow) MySQLProtocol(dcb);
+    auto protocol = new(std::nothrow) MySQLProtocol(dcb->session(), dcb->m_server);
     MXS_ABORT_IF_NULL(protocol);
     MySQLSendHandshake(dcb, protocol);
     return protocol;

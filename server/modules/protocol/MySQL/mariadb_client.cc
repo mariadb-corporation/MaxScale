@@ -33,7 +33,6 @@ LocalClient::LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd)
     , m_self_destruct(false)
 {
     MXB_POLL_DATA::handler = LocalClient::poll_handler;
-    m_protocol.owner_dcb = nullptr;
     m_protocol.stored_query = nullptr;
 }
 

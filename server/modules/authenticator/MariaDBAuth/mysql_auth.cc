@@ -582,10 +582,9 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                 {
                                     // The switch attempt is done later but the message is clearest if
                                     // logged at once.
-                                    MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
+                                    MXS_INFO("Client '%s'@[?] is using an unsupported authenticator "
                                              "plugin '%s'. Trying to switch to '%s'.",
-                                             client_data->user, protocol->owner_dcb->m_remote, plugin_name,
-                                             DEFAULT_MYSQL_AUTH_PLUGIN);
+                                             client_data->user, plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN);
                                 }
                             }
                         }
