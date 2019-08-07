@@ -33,6 +33,7 @@ if [ "$box_type" == "RPM" ] ; then
                         ln -s centos rhel
                 fi
                 if [ "$platform" == "opensuse" ] ; then
+                        mkdir -p sles
                         ln -s opensuse/$paltform_version sles/$paltform_version
                 fi
 
