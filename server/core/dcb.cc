@@ -95,7 +95,6 @@ static thread_local struct
 }
 
 static void        dcb_call_callback(DCB* dcb, DCB_REASON reason);
-static void        dcb_stop_polling_and_shutdown(DCB* dcb);
 static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int nreadtotal);
 static GWBUF*      dcb_basic_read(DCB* dcb,
@@ -248,17 +247,17 @@ void DCB::free(DCB* dcb)
  *
  * @param       dcb     The DCB to be processed
  */
-static void dcb_stop_polling_and_shutdown(DCB* dcb)
+void DCB::stop_polling_and_shutdown()
 {
-    dcb->disable_events();
+    disable_events();
     /**
      * close protocol and router session
      */
-    if (dcb->m_func.close != NULL)
+    if (m_func.close != NULL)
     {
-        dcb->shutdown();
-        dcb->m_func.close(dcb);
-        dcb->m_protocol = nullptr;
+        shutdown();
+        m_func.close(this);
+        m_protocol = nullptr;
     }
 }
 
@@ -996,7 +995,7 @@ void DCB::close(DCB* dcb)
     {
         // A DCB in the persistent pool.
 
-        // TODO: This dcb will now actually be closed when dcb_persistent_clean_count() is
+        // TODO: This dcb will now actually be closed when DCB::persistent_clean_count() is
         // TODO: called by either maybe_add_persistent() - another dcb is added to the
         // TODO: persistent pool - or server_get_persistent() - get a dcb from the persistent
         // TODO: pool - is called. There is no reason not to just remove this dcb from the
@@ -1093,7 +1092,7 @@ void DCB::destroy()
     {
         if (m_state == DCB_STATE_POLLING)
         {
-            dcb_stop_polling_and_shutdown(this);
+            stop_polling_and_shutdown();
         }
 
         if (m_server && m_persistentstart == 0)
@@ -1159,7 +1158,7 @@ bool DCB::maybe_add_persistent(DCB* dcb)
         && server->persistpoolmax()
         && server->is_running()
         && !dcb->m_dcb_errhandle_called
-        && dcb_persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax())
+        && DCB::persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax())
     {
         if (!mxb::atomic::add_limited(&server->pool_stats.n_persistent, 1, (int)server->persistpoolmax()))
         {
@@ -1891,7 +1890,7 @@ void BackendDCB::hangup(const SERVER* server)
  *                      server related to the given DCB
  * @return              A count of the DCBs remaining in the pool
  */
-int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
+int DCB::persistent_clean_count(DCB* dcb, int id, bool cleanall)
 {
     int count = 0;
     if (dcb && dcb->m_server)
@@ -1942,7 +1941,7 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
             disposals->m_persistentstart = -1;
             if (DCB_STATE_POLLING == disposals->state())
             {
-                dcb_stop_polling_and_shutdown(disposals);
+                disposals->stop_polling_and_shutdown();
             }
             dcb_close(disposals);
             disposals = nextdcb;

@@ -253,6 +253,7 @@ public:
         m_session = s;
     }
     static void add_event(DCB* dcb, GWBUF* buf, uint32_t ev);
+    static int persistent_clean_count(DCB*, int, bool);   /* Clean persistent and return count */
     // END
 
     bool                    m_dcb_errhandle_called = false;   /**< this can be called only once */
@@ -329,6 +330,8 @@ private:
     GWBUF* basic_read_SSL(int* nsingleread);
 
     int write_SSL(GWBUF* writeq, bool* stop_writing);
+
+    void stop_polling_and_shutdown();
 
     void destroy();
     static void free(DCB* dcb);
@@ -464,7 +467,6 @@ int dcb_remove_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void
  */
 int dcb_count_by_role(DCB::Role role);
 
-int      dcb_persistent_clean_count(DCB*, int, bool);   /* Clean persistent and return count */
 uint64_t dcb_get_session_id(DCB* dcb);
 char*    dcb_role_name(DCB*);               /* Return the name of a role */
 void     dcb_enable_session_timeouts();

@@ -202,7 +202,7 @@ DCB* Server::get_persistent_dcb(const string& user, const string& ip, const stri
     DCB* dcb, * previous = NULL;
     Server* server = this;
     if (server->persistent[id]
-        && dcb_persistent_clean_count(server->persistent[id], id, false)
+        && DCB::persistent_clean_count(server->persistent[id], id, false)
         && server->persistent[id]   // Check after cleaning
         && server->is_running())
     {
@@ -272,7 +272,7 @@ public:
         mxb_assert(&rworker == RoutingWorker::get_current());
 
         int thread_id = rworker.id();
-        dcb_persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
+        DCB::persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
     }
 
 private:
