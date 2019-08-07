@@ -358,6 +358,13 @@ public:
 
     static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager);
 
+    /**
+     * Hangup all BackendDCBs connected to a particular server.
+     *
+     * @param server  BackendDCBs connected to this server should be closed.
+     */
+    static void hangup(const SERVER* server);
+
     int ssl_handshake() override;
 
 private:
@@ -365,6 +372,8 @@ private:
 
 private:
     bool was_freed(MXS_SESSION* session) override;
+
+    static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 };
 
 class InternalDCB : public DCB
@@ -447,7 +456,6 @@ int dcb_remove_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void
 int dcb_count_by_role(DCB::Role role);
 
 int      dcb_persistent_clean_count(DCB*, int, bool);   /* Clean persistent and return count */
-void     dcb_hangup_foreach(struct SERVER* server);
 uint64_t dcb_get_session_id(DCB* dcb);
 char*    dcb_role_name(DCB*);               /* Return the name of a role */
 void     dcb_enable_session_timeouts();

@@ -1850,7 +1850,8 @@ static void dcb_call_callback(DCB* dcb, DCB_REASON reason)
     }
 }
 
-static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct SERVER* server)
+//static
+void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 {
     RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
     DCB* old_current = this_thread.current_dcb;
@@ -1873,12 +1874,11 @@ static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct SERVER* server)
 
 /**
  * Call all the callbacks on all DCB's that match the server and the reason given
- *
- * @param reason        The DCB_REASON that triggers the callback
  */
-void dcb_hangup_foreach(struct SERVER* server)
+//static
+void BackendDCB::hangup(const SERVER* server)
 {
-    intptr_t arg1 = (intptr_t)dcb_hangup_foreach_worker;
+    intptr_t arg1 = (intptr_t)&BackendDCB::hangup_cb;
     intptr_t arg2 = (intptr_t)server;
 
     RoutingWorker::broadcast_message(MXB_WORKER_MSG_CALL, arg1, arg2);

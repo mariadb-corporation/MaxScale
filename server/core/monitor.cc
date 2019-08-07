@@ -1319,7 +1319,7 @@ void Monitor::hangup_failed_servers()
     {
         if (ptr->status_changed() && (!(ptr->server->is_usable()) || !(ptr->server->is_in_cluster())))
         {
-            dcb_hangup_foreach(ptr->server);
+            BackendDCB::hangup(ptr->server);
         }
     }
 }
