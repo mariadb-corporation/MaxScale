@@ -1055,10 +1055,9 @@ Session::~Session()
     }
 }
 
-void Session::set_client_dcb(DCB* dcb)
+void Session::set_client_dcb(ClientDCB* dcb)
 {
     mxb_assert(client_dcb == nullptr);
-    mxb_assert(dcb->role() == DCB::Role::CLIENT);
     client_dcb = dcb;
 }
 

@@ -183,7 +183,7 @@ protected:
 
 public:
 
-    DCB*      client_dcb;   /*< The client connection */
+    ClientDCB* client_dcb;   /*< The client connection */
     SListener listener;     /*< The origin of the connection */
 
     struct mxs_router_session* router_session;          /*< The router instance data */

@@ -761,7 +761,7 @@ struct ROUTER_INSTANCE : public MXS_ROUTER
     bool         maxwell_compat;/*< Zendesk's Maxwell compatibility */
     char*        master_uuid;   /*< Set UUID of the master, sent to slaves */
     DCB*         master;        /*< DCB for master connection */
-    DCB*         client;        /*< DCB for dummy client */
+    ClientDCB*   client;        /*< DCB for dummy client */
     MXS_SESSION* session;       /*< Fake session for master connection */
     unsigned int master_state;  /*< State of the master FSM */
     uint8_t      lastEventReceived;

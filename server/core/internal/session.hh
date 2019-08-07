@@ -170,7 +170,7 @@ public:
     void close();
 
     // Links a client DCB to a session
-    void set_client_dcb(DCB* dcb);
+    void set_client_dcb(ClientDCB* dcb);
 
     bool setup_filters(Service* service);
 
