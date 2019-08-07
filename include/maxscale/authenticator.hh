@@ -37,7 +37,7 @@ class Authenticator;
  * the MXS_AUTHENTICATOR structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_AUTHENTICATOR_VERSION {2, 1, 0}
+#define MXS_AUTHENTICATOR_VERSION {3, 0, 0}
 
 /** Maximum number of authenticator options */
 #define AUTHENTICATOR_MAX_OPTIONS 256
@@ -60,28 +60,17 @@ class Authenticator;
 #define MXS_AUTH_LOADUSERS_FATAL 2  /**< Fatal error, service is not started */
 
 /**
- * @verbatim
- * The operations that can be performed on the descriptor
- *
- *      initialize      Initialize the authenticator instance. The return value
- *                      of this function will be given to the `create` entry point.
- *                      If a module does not implement this entry point, the value
- *                      given to the `create` is NULL.
- *
- *      create          Create a data structure unique to this DCB, stored in
- *                      `dcb->authenticator_data`. If a module does not implement
- *                      this entry point, `dcb->authenticator_data` will be set to NULL.
- *
- * @endverbatim
- *
- * This forms the "module object" for authenticator modules within the gateway.
- *
- * @see load_module
+ * This struct contains the authenticator entrypoint in a shared library.
  */
 struct MXS_AUTHENTICATOR
 {
-    void* (* initialize)(char** options);
-    void* (* create)(void* instance);
+    /**
+     * Create an authenticator module instance.
+     *
+     * @param options Authenticator options
+     * @return Authenticator object, or null on error
+     */
+    mxs::Authenticator* (* initialize)(char** options);
 };
 
 /**

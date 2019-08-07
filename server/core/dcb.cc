@@ -316,7 +316,6 @@ BackendDCB* BackendDCB::create(int fd,
     BackendDCB* dcb = nullptr;
 
     MXS_PROTOCOL_API* protocol_api = (MXS_PROTOCOL_API*)load_module(protocol_name, MODULE_PROTOCOL);
-
     if (protocol_api)
     {
         DCB* client_dcb = session->client_dcb;
@@ -325,53 +324,40 @@ BackendDCB* BackendDCB::create(int fd,
 
         if (protocol_session)
         {
-            Server* server = static_cast<Server*>(srv);
-            string authenticator = server->get_authenticator();
-
-            if (authenticator.empty())
-            {
-                mxb_assert(protocol_api->auth_default);
-                authenticator = protocol_api->auth_default();
-            }
-
-            // Allocate DCB specific authentication data. Backend authenticators do not have an instance.
-            AuthenticatorBackendSession* auth_session = nullptr;
-            // If possible, use the client session to generate the backend authenticator.
-            MXS_AUTHENTICATOR* authfuncs = nullptr;
+            // Allocate DCB specific backend-authentication data from the client session.
+            std::unique_ptr<AuthenticatorBackendSession> auth_session;
             if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_BACKEND_AUTH)
             {
-                auth_session = session->client_dcb->m_authenticator_data->newBackendSession();
+                auth_session.reset(session->client_dcb->m_authenticator_data->newBackendSession());
+                if (!auth_session)
+                {
+                    MXS_ERROR("Failed to create authenticator session for backend DCB.");
+                }
             }
             else
             {
-                authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
-                if (authfuncs && authfuncs->create)
-                {
-                    auth_session = static_cast<AuthenticatorBackendSession*>(authfuncs->create(nullptr));
-                }
+                MXS_ERROR("The authenticator of listener '%s' (%s) does not support backend authentication. "
+                          "Cannot create backend connection.",
+                          session->listener->name(), session->listener->authenticator());
             }
 
             if (auth_session)
             {
                 dcb = new (std::nothrow) BackendDCB(fd, session, protocol_session, *protocol_api,
-                                                    server, manager);
-
+                                                    srv, manager);
                 if (dcb)
                 {
-                    dcb->m_authenticator_data = auth_session;
-
+                    dcb->m_authenticator_data = auth_session.release();
                     session_link_backend_dcb(session, dcb);
                 }
                 else
                 {
-                    delete auth_session;
                     protocol_api->free_session(protocol_session);
                 }
             }
             else
             {
                 protocol_api->free_session(protocol_session);
-                MXS_ERROR("Failed to create authenticator session for backend DCB.");
             }
         }
         else

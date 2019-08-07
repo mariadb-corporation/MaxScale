@@ -129,19 +129,11 @@ public:
     AuthenticatorApi(const AuthenticatorApi&) = delete;
     AuthenticatorApi& operator=(const AuthenticatorApi&) = delete;
 
-    static void* createInstance(char** options)
+    static Authenticator* createInstance(char** options)
     {
         Authenticator* instance = nullptr;
         MXS_EXCEPTION_GUARD(instance = AuthImplementation::create(options));
         return instance;
-    }
-
-    static void* createSession(void* instance)
-    {
-        auto inst = static_cast<Authenticator*>(instance);
-        AuthenticatorSession* session = nullptr;
-        MXS_EXCEPTION_GUARD(session = inst->createSession());
-        return session;
     }
 
     static MXS_AUTHENTICATOR s_api;
@@ -150,8 +142,7 @@ public:
 template<class AuthImplementation>
 MXS_AUTHENTICATOR AuthenticatorApi<AuthImplementation>::s_api =
 {
-        &AuthenticatorApi<AuthImplementation>::createInstance,
-        &AuthenticatorApi<AuthImplementation>::createSession,
+    &AuthenticatorApi<AuthImplementation>::createInstance
 };
 
 /**
@@ -162,34 +153,6 @@ class AuthenticatorBackendSession : public mxs::AuthenticatorSession
 {
 public:
     void free_data(DCB* client) final;
-};
-
-/**
- * Another helper template for backend authenticators.
- */
-template<class AuthImplementation>
-class BackendAuthenticatorApi
-{
-public:
-    BackendAuthenticatorApi() = delete;
-    BackendAuthenticatorApi(const BackendAuthenticatorApi&) = delete;
-    BackendAuthenticatorApi& operator=(const BackendAuthenticatorApi&) = delete;
-
-    static void* newSession(void* instance)
-    {
-        AuthenticatorBackendSession* ses = nullptr;
-        MXS_EXCEPTION_GUARD(ses = AuthImplementation::newSession());
-        return ses;
-    }
-
-    static MXS_AUTHENTICATOR s_api;
-};
-
-template<class AuthImplementation>
-MXS_AUTHENTICATOR BackendAuthenticatorApi<AuthImplementation>::s_api =
-{
-        nullptr,
-        &BackendAuthenticatorApi<AuthImplementation>::newSession
 };
 
 }
