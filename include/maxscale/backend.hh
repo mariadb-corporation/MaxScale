@@ -303,6 +303,16 @@ public:
         return m_state & FATAL_FAILURE;
     }
 
+    /**
+     * Is the backend replaying session command history
+     *
+     * @return If a list of session commands was provided at connect time, the function returns true as long
+     *         as the backend has not completed those session commands.
+     */
+    inline bool is_replaying_history() const
+    {
+        return m_history_size > 0;
+    }
 
     /**
      * @brief Get the object name of this server
@@ -389,7 +399,8 @@ private:
 
     maxbase::StopWatch     m_session_timer;
     maxbase::IntervalTimer m_select_timer;
-    int64_t                m_num_selects = 0;
+    int64_t                m_num_selects {0};
+    int64_t                m_history_size {0};
 };
 
 typedef std::shared_ptr<Backend> SBackend;
