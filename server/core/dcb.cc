@@ -2994,7 +2994,12 @@ void DCB::shutdown()
 }
 
 ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : DCB(DCB::Role::CLIENT,
+    : ClientDCB(DCB::Role::CLIENT, session, manager)
+{
+}
+
+ClientDCB::ClientDCB(DCB::Role role, MXS_SESSION* session, Manager* manager)
+    : DCB(role,
           session,
           session->listener ? session->listener->protocol_func() : MXS_PROTOCOL {},
           nullptr,
@@ -3015,11 +3020,7 @@ bool ClientDCB::was_freed(MXS_SESSION* session)
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : DCB(DCB::Role::INTERNAL,
-          session,
-          session->listener ? session->listener->protocol_func() : MXS_PROTOCOL {},
-          nullptr,
-          manager)
+    : ClientDCB(DCB::Role::INTERNAL, session, manager)
 {
     /**
      * This prevents the actual protocol level closing code from being called that expects
@@ -3048,18 +3049,6 @@ bool InternalDCB::disable_events()
     m_state = DCB_STATE_NOPOLLING;
 
     return true;
-}
-
-bool InternalDCB::was_freed(MXS_SESSION* session)
-{
-    /**
-     * The client DCB is only freed once all other DCBs that the session
-     * uses have been freed. This will guarantee that the authentication
-     * data will be usable for all DCBs even if the client DCB has already
-     * been closed.
-     */
-    session_put_ref(session);
-    return false;
 }
 
 BackendDCB::BackendDCB(MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, DCB::Manager* manager)

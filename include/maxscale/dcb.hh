@@ -369,6 +369,10 @@ public:
 
     int ssl_handshake() override;
 
+protected:
+    // Only for InternalDCB.
+    ClientDCB(DCB::Role role, MXS_SESSION* session, Manager* manager);
+
 private:
     bool was_freed(MXS_SESSION* session) override;
 };
@@ -397,7 +401,7 @@ private:
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 };
 
-class InternalDCB : public DCB
+class InternalDCB : public ClientDCB
 {
 public:
     InternalDCB(MXS_SESSION* session, Manager* manager);
@@ -406,9 +410,6 @@ public:
 
     bool enable_events() override;
     bool disable_events() override;
-
-private:
-    bool was_freed(MXS_SESSION* session) override;
 };
 
 namespace maxscale
