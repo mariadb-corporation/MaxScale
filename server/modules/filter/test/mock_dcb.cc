@@ -33,7 +33,7 @@ Dcb::Dcb(MXS_SESSION* pSession,
     pDcb->m_remote = MXS_STRDUP(zHost);
     pDcb->m_user = MXS_STRDUP(zUser);
 
-    pDcb->m_func.write = &Dcb::write;
+    m_func.write = &Dcb::write;
 }
 
 Dcb::~Dcb()

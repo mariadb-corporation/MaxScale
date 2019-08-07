@@ -424,7 +424,7 @@ bool SmartRouterSession::write_to_master(GWBUF* pBuf)
         m_mode = Mode::Query;
     }
 
-    return cluster.pDcb->m_func.write(cluster.pDcb, pBuf);
+    return cluster.pDcb->protocol_write(pBuf);
 }
 
 bool SmartRouterSession::write_to_host(const maxbase::Host& host, GWBUF* pBuf)
@@ -442,7 +442,7 @@ bool SmartRouterSession::write_to_host(const maxbase::Host& host, GWBUF* pBuf)
 
     cluster.is_replying_to_client = false;
 
-    return cluster.pDcb->m_func.write(cluster.pDcb, pBuf);
+    return cluster.pDcb->protocol_write(pBuf);
 }
 
 bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
@@ -455,7 +455,7 @@ bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
         cluster.tracker = maxsql::PacketTracker(pBuf);
         cluster.is_replying_to_client = false;
         auto pBuf_send = (next(it) == end(m_clusters)) ? pBuf : gwbuf_clone(pBuf);
-        if (!cluster.pDcb->m_func.write(cluster.pDcb, pBuf_send))
+        if (!cluster.pDcb->protocol_write(pBuf_send))
         {
             success = false;
         }
@@ -490,7 +490,7 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
         cluster.tracker.update_request(pBuf);
 
         auto pBuf_send = (next(it) == end(active)) ? pBuf : gwbuf_clone(pBuf);
-        if (!cluster.pDcb->m_func.write(cluster.pDcb, pBuf_send))
+        if (!cluster.pDcb->protocol_write(pBuf_send))
         {
             success = false;
             break;
@@ -535,7 +535,7 @@ void SmartRouterSession::handleError(GWBUF* pPacket,
     if (pCopy)
     {
         DCB* pClient = pSession->client_dcb;
-        pClient->m_func.write(pClient, pCopy);
+        pClient->protocol_write(pCopy);
     }
 
     // This will lead to the rest of the connections to be closed.

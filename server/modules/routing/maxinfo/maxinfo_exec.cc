@@ -1104,6 +1104,6 @@ void maxinfo_send_ok(DCB* dcb)
     if (buffer)
     {
         memcpy(buffer->start, ok_packet, sizeof(ok_packet));
-        dcb->m_func.write(dcb, buffer);
+        dcb->protocol_write(buffer);
     }
 }

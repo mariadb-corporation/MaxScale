@@ -110,7 +110,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
 
         if (errbuf)
         {
-            m_client->m_func.write(m_client, errbuf);
+            m_client->protocol_write(errbuf);
             result = true;
         }
 
@@ -157,7 +157,7 @@ bool send_readonly_error(DCB* dcb)
 
     if (err)
     {
-        succp = dcb->m_func.write(dcb, err);
+        succp = dcb->protocol_write(err);
     }
     else
     {

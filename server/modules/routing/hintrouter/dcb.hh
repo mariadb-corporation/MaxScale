@@ -49,7 +49,7 @@ public:
     bool write(GWBUF* pPacket) const
     {
         mxb_assert(m_sInner.get());
-        return m_sInner.get()->m_func.write(m_sInner.get(), pPacket) == 1;
+        return m_sInner.get()->protocol_write(pPacket) == 1;
     }
 
 private:

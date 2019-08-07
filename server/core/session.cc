@@ -394,7 +394,7 @@ int session_reply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* data
 {
     MXS_SESSION* the_session = (MXS_SESSION*)session;
 
-    return the_session->client_dcb->m_func.write(the_session->client_dcb, data);
+    return the_session->client_dcb->protocol_write(data);
 }
 
 /**

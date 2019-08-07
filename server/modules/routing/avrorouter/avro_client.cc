@@ -354,7 +354,7 @@ void AvroSession::process_command(GWBUF* queue)
     {
         const char err[] = "ERR: Unknown command\n";
         GWBUF* reply = gwbuf_alloc_and_load(sizeof(err), err);
-        dcb->m_func.write(dcb, reply);
+        dcb->protocol_write(reply);
     }
 }
 
@@ -370,7 +370,7 @@ static int send_row(DCB* dcb, json_t* row)
         uint8_t* data = GWBUF_DATA(buf);
         memcpy(data, json, len);
         data[len] = '\n';
-        rc = dcb->m_func.write(dcb, buf);
+        rc = dcb->protocol_write(buf);
     }
     else
     {
@@ -442,7 +442,7 @@ bool AvroSession::stream_binary()
         bytes += file_handle->buffer_size;
         if ((buffer = maxavro_record_read_binary(file_handle)))
         {
-            rc = dcb->m_func.write(dcb, buffer);
+            rc = dcb->protocol_write(buffer);
         }
         else
         {
@@ -715,7 +715,7 @@ void AvroSession::client_callback()
 
         if (schema)
         {
-            dcb->m_func.write(dcb, schema);
+            dcb->protocol_write(schema);
         }
     }
 

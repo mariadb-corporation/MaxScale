@@ -136,7 +136,7 @@ int mysql_send_com_quit(DCB* dcb,
     {
         return 0;
     }
-    nbytes = dcb->m_func.write(dcb, buf);
+    nbytes = dcb->protocol_write(buf);
 
     return nbytes;
 }
@@ -292,7 +292,7 @@ int mysql_send_standard_error(DCB* dcb,
 {
     GWBUF* buf;
     buf = mysql_create_standard_error(packet_number, error_number, error_message);
-    return buf ? dcb->m_func.write(dcb, buf) : 0;
+    return buf ? dcb->protocol_write(buf) : 0;
 }
 
 /**
@@ -317,7 +317,7 @@ int mysql_send_custom_error(DCB* dcb,
 
     buf = mysql_create_custom_error(packet_number, in_affected_rows, mysql_message);
 
-    return dcb->m_func.write(dcb, buf);
+    return dcb->protocol_write(buf);
 }
 
 /**
@@ -404,7 +404,7 @@ int mysql_send_auth_error(DCB* dcb,
     memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
     // writing data in the Client buffer queue
-    dcb->m_func.write(dcb, buf);
+    dcb->protocol_write(buf);
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
@@ -627,7 +627,7 @@ int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char*
     }
 
     // writing data in the Client buffer queue
-    return dcb->m_func.write(dcb, buf);
+    return dcb->protocol_write(buf);
 }
 
 /**

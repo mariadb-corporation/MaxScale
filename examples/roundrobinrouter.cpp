@@ -358,8 +358,8 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
                        target->m_server->name());
         }
         /* Do not use dcb_write() to output to a dcb. dcb_write() is used only
-         * for raw write in the procol modules. */
-        rval = target->m_func.write(target, querybuf);
+         * for raw write in the protocol modules. */
+        rval = target->protocol_write(querybuf);
         /* After write, the buffer points to non-existing data. */
         querybuf = NULL;
     }
@@ -380,7 +380,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
             GWBUF* copy = gwbuf_clone(querybuf);
             if (copy)
             {
-                route_success += dcb->m_func.write(dcb, copy);
+                route_success += dcb->protocol_write(copy);
             }
         }
         if (m_write_dcb)
@@ -388,7 +388,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
             GWBUF* copy = gwbuf_clone(querybuf);
             if (copy)
             {
-                route_success += m_write_dcb->m_func.write(m_write_dcb, copy);
+                route_success += m_write_dcb->protocol_write(copy);
             }
         }
         m_replies_to_ignore += route_success - 1;
@@ -488,7 +488,7 @@ void RRRouterSession::handleError(GWBUF* message,
                     GWBUF* copy = gwbuf_clone(message);
                     if (copy)
                     {
-                        client_dcb->m_func.write(client_dcb, copy);
+                        client_dcb->protocol_write(copy);
                     }
                 }
                 *succp = false;

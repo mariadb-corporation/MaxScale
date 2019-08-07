@@ -221,6 +221,16 @@ public:
      */
     int drain_writeq();
 
+    int32_t protocol_write(GWBUF* pData)
+    {
+        return m_func.write(this, pData);
+    }
+
+    json_t* protocol_diagnostics_json()
+    {
+        return m_func.diagnostics_json ? m_func.diagnostics_json(this) : nullptr;
+    }
+
     // Starts the shutdown process, called when a client DCB is closed
     void shutdown();
 
@@ -265,7 +275,7 @@ public:
     void*                   m_protocol = nullptr;                 /**< The protocol specific state */
     size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
-    MXS_PROTOCOL            m_func = {};                          /**< Protocol functions for the DCB */
+    MXS_AUTHENTICATOR       m_authfunc = {};                      /**< Authenticator functions for the DCB */
     uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
     uint64_t                m_high_water = 0;                     /**< High water mark of write queue */
     uint64_t                m_low_water = 0;                      /**< Low water mark of write queue */
@@ -300,6 +310,7 @@ public:
 protected:
     DCB(Role role,
         MXS_SESSION* session,
+        MXS_PROTOCOL func,
         SERVER* server,
         Manager* manager);
 
@@ -322,6 +333,7 @@ protected:
     bool         m_ssl_read_want_write = false;
     bool         m_ssl_write_want_read = false;
     bool         m_ssl_write_want_write = false;
+    MXS_PROTOCOL m_func;    /**< Protocol functions for the DCB */
 
 private:
     friend class Manager;
@@ -346,8 +358,8 @@ private:
     friend class FakeEventTask;
 
 private:
-    Role     m_role;    /**< The role of the DCB */
-    Manager* m_manager; /**< The DCB manager to use */
+    Role         m_role;    /**< The role of the DCB */
+    Manager*     m_manager; /**< The DCB manager to use */
 };
 
 class ClientDCB : public DCB
@@ -358,16 +370,12 @@ public:
     int ssl_handshake() override;
 
 private:
-    static BackendDCB* create(SERVER* server, MXS_SESSION* session, const char* protocol, DCB::Manager* manager);
-
     bool was_freed(MXS_SESSION* session) override;
 };
 
 class BackendDCB : public DCB
 {
 public:
-    BackendDCB(MXS_SESSION* session, SERVER* server, Manager* manager);
-
     static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager);
 
     /**
@@ -380,9 +388,10 @@ public:
     int ssl_handshake() override;
 
 private:
+    BackendDCB(MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, Manager* manager);
+
     static BackendDCB* create(SERVER* server, MXS_SESSION* session, const char* protocol, DCB::Manager* manager);
 
-private:
     bool was_freed(MXS_SESSION* session) override;
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);

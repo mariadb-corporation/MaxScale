@@ -175,7 +175,7 @@ void HintRouterSession::handleError(GWBUF* pMessage,
                 if (pCopy)
                 {
                     DCB* pClient = pSession->client_dcb;
-                    pClient->m_func.write(pClient, pCopy);
+                    pClient->protocol_write(pCopy);
                 }
             }
             *pSuccess = false;

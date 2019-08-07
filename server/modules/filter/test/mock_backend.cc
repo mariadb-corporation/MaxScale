@@ -176,9 +176,7 @@ public:
     ResultSetDCB(MXS_SESSION* session)
         : ClientDCB(session, nullptr)
     {
-        DCB* pDcb = this;
-
-        pDcb->m_func.write = &ResultSetDCB::write;
+        m_func.write = &ResultSetDCB::write;
     }
 
     GWBUF* create_response() const

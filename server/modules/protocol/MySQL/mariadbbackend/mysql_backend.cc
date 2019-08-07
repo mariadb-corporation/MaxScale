@@ -831,7 +831,7 @@ static int gw_read_and_write(DCB* dcb)
         if (result == MYSQL_REPLY_OK)
         {
             MXS_INFO("Response to COM_CHANGE_USER is OK, writing stored query");
-            rval = query ? dcb->m_func.write(dcb, query) : 1;
+            rval = query ? dcb->protocol_write(query) : 1;
         }
         else if (auth_change_requested(reply))
         {
@@ -1740,7 +1740,7 @@ static int gw_send_change_user_to_backend(char* dbname,
 
     mses = (MYSQL_session*)conn->owner_dcb->session()->client_dcb->m_data;
     buffer = gw_create_change_user_packet(mses, conn);
-    rc = conn->owner_dcb->m_func.write(conn->owner_dcb, buffer);
+    rc = conn->owner_dcb->protocol_write(buffer);
 
     if (rc != 0)
     {

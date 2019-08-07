@@ -420,7 +420,7 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
     *mysql_handshake_payload = 0x00;
 
     // writing data in the Client buffer queue
-    dcb->m_func.write(dcb, buf);
+    dcb->protocol_write(buf);
     protocol->protocol_auth_state = MXS_AUTH_STATE_MESSAGE_READ;
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
@@ -1279,7 +1279,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
 
         if (message)
         {
-            int rv = dcb->m_func.write(dcb, modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
+            int rv = dcb->protocol_write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
             MXS_FREE(message);
             return rv;
         }

@@ -123,7 +123,7 @@ static MXB_WORKER* get_dcb_owner()
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Manager* manager)
+DCB::DCB(Role role, MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
@@ -132,13 +132,13 @@ DCB::DCB(Role role, MXS_SESSION* session, SERVER* server, Manager* manager)
     , m_server(server)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_session(session)
+    , m_func(func)
     , m_role(role)
     , m_manager(manager)
 {
-    // TODO: Remove DCB::Role::INTERNAL to always have a valid listener
     if (session->listener)
     {
-        m_func = session->listener->protocol_func();
+        m_authfunc = session->listener->auth_func();
     }
 
     if (DCB* client = session->client_dcb)
@@ -332,11 +332,11 @@ BackendDCB* BackendDCB::create(SERVER* srv, MXS_SESSION* session, const char* pr
         return nullptr;
     }
 
-    BackendDCB* dcb = new (std::nothrow) BackendDCB(session, server, manager);
+    BackendDCB* dcb = new (std::nothrow) BackendDCB(session, *funcs, server, manager);
 
     if (dcb)
     {
-        memcpy(&dcb->m_func, funcs, sizeof(dcb->m_func));
+        memcpy(&dcb->m_authfunc, authfuncs, sizeof(dcb->m_authfunc));
         dcb->m_authenticator_data = auth_session;
 
         session_link_backend_dcb(session, dcb);
@@ -1594,7 +1594,7 @@ void dcb_printf(DCB* dcb, const char* fmt, ...)
 
         // Remove the trailing null character
         GWBUF_RTRIM(buf, 1);
-        dcb->m_func.write(dcb, buf);
+        dcb->protocol_write(buf);
     }
 }
 
@@ -1860,7 +1860,7 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
             if (!dcb->m_dcb_errhandle_called)
             {
                 this_thread.current_dcb = dcb;
-                dcb->m_func.hangup(dcb);
+                static_cast<BackendDCB*>(dcb)->m_func.hangup(dcb);
                 dcb->m_dcb_errhandle_called = true;
             }
         }
@@ -2941,10 +2941,10 @@ json_t* dcb_to_json(DCB* dcb)
     json_object_set_new(obj, "id", json_string(buf));
     json_object_set_new(obj, "server", json_string(dcb->m_server->name()));
 
-    if (dcb->m_func.diagnostics_json)
+    json_t* json = dcb->protocol_diagnostics_json();
+
+    if (json)
     {
-        json_t* json = dcb->m_func.diagnostics_json(dcb);
-        mxb_assert(json);
         json_object_set_new(obj, "protocol_diagnostics", json);
     }
 
@@ -2991,7 +2991,11 @@ void DCB::shutdown()
 }
 
 ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : DCB(DCB::Role::CLIENT, session, nullptr, manager)
+    : DCB(DCB::Role::CLIENT,
+          session,
+          session->listener ? session->listener->protocol_func() : MXS_PROTOCOL {},
+          nullptr,
+          manager)
 {
 }
 
@@ -3008,8 +3012,17 @@ bool ClientDCB::was_freed(MXS_SESSION* session)
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : DCB(DCB::Role::INTERNAL, session, nullptr, manager)
+    : DCB(DCB::Role::INTERNAL,
+          session,
+          session->listener ? session->listener->protocol_func() : MXS_PROTOCOL {},
+          nullptr,
+          manager)
 {
+    /**
+     * This prevents the actual protocol level closing code from being called that expects
+     * the dcb->m_protocol pointer to not be NULL.
+     */
+    m_func.close = nullptr;
 }
 
 int InternalDCB::ssl_handshake()
@@ -3046,8 +3059,8 @@ bool InternalDCB::was_freed(MXS_SESSION* session)
     return false;
 }
 
-BackendDCB::BackendDCB(MXS_SESSION* session, SERVER* server, DCB::Manager* manager)
-    : DCB(DCB::Role::BACKEND, session, server, manager)
+BackendDCB::BackendDCB(MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, DCB::Manager* manager)
+    : DCB(DCB::Role::BACKEND, session, func, server, manager)
 {
 }
 

@@ -217,12 +217,6 @@ static void blr_start_master(void* data)
     /* Fake the client is reading */
     router->client->enable_events();      /* Fake the client is reading */
 
-    /**
-     * This prevents the actual protocol level closing code from being called that expects
-     * the dcb->m_protocol pointer to not be NULL.
-     */
-    router->client->m_func.close = nullptr;
-
     /* Create MySQL Athentication from configured user/passwd */
     router->client->m_data = CreateMySQLAuthData(router->user, router->password, "");
     router->client->m_user = MXS_STRDUP(router->user);
@@ -1908,7 +1902,7 @@ int blr_send_semisync_ack(ROUTER_INSTANCE* router, uint64_t pos)
     /* Binlog filename */
     memcpy((char*)&data[13], router->binlog_name, binlog_file_len);
 
-    router->master->m_func.write(router->master, buf);
+    router->master->protocol_write(buf);
 
     return 1;
 }
@@ -2468,7 +2462,7 @@ static void blr_register_send_command(ROUTER_INSTANCE* router,
     // Set the next registration phase state
     router->master_state = state;
     // Send the packet
-    router->master->m_func.write(router->master, buf);
+    router->master->protocol_write(buf);
 }
 
 /**
@@ -2759,7 +2753,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
         // Set new state
         router->master_state = BLRM_REGISTER;
         // Send the packet
-        router->master->m_func.write(router->master, buf);
+        router->master->protocol_write(buf);
         break;
 
     case BLRM_REGISTER:
@@ -2820,7 +2814,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
          */
         buf = blr_make_binlog_dump(router);
         router->master_state = BLRM_BINLOGDUMP;
-        router->master->m_func.write(router->master, buf);
+        router->master->protocol_write(buf);
 
         if (router->binlog_name[0])
         {

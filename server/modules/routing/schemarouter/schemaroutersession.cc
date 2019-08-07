@@ -622,7 +622,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
         if (bref->is_waiting_result())
         {
             /** If the client is waiting for a reply, send an error. */
-            m_client->m_func.write(m_client, gwbuf_clone(pMessage));
+            m_client->protocol_write(gwbuf_clone(pMessage));
         }
 
         *pSuccess = have_servers();
@@ -632,7 +632,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
         // The session pointer can be NULL if the creation fails when filters are being set up
         if (m_client->session() && m_client->session()->state() == MXS_SESSION::State::STARTED)
         {
-            m_client->m_func.write(m_client, gwbuf_clone(pMessage));
+            m_client->protocol_write(gwbuf_clone(pMessage));
         }
 
         *pSuccess = false;      /*< no new backend servers were made available */
@@ -906,7 +906,7 @@ void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const c
     GWBUF* errbuff = modutil_create_mysql_err_msg(1, 0, errnum, mysqlstate, errmsg);
     if (errbuff)
     {
-        if (dcb->m_func.write(dcb, errbuff) != 1)
+        if (dcb->protocol_write(errbuff) != 1)
         {
             MXS_ERROR("Failed to write error packet to client.");
         }
@@ -1061,7 +1061,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
 
                         if (error)
                         {
-                            client_dcb->m_func.write(client_dcb, error);
+                            client_dcb->protocol_write(error);
                         }
                         else
                         {

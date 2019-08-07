@@ -1240,7 +1240,7 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
             else
             {
                 // Send an error so that the client knows to proceed.
-                m_client->m_func.write(m_client, gwbuf_clone(errmsg));
+                m_client->protocol_write(gwbuf_clone(errmsg));
                 m_current_query.reset();
             }
         }
@@ -1296,7 +1296,7 @@ void RWSplitSession::handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg)
 
     if (sesstate == MXS_SESSION::State::STARTED)
     {
-        m_client->m_func.write(m_client, gwbuf_clone(errmsg));
+        m_client->protocol_write(gwbuf_clone(errmsg));
     }
     else
     {
@@ -1354,5 +1354,5 @@ bool RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
     std::stringstream ss;
     ss << "Unknown prepared statement handler (" << stmt_id << ") given to MaxScale";
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
-    return m_client->m_func.write(m_client, err);
+    return m_client->protocol_write(err);
 }

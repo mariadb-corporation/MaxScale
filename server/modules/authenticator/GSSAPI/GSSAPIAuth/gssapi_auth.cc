@@ -529,7 +529,7 @@ int GSSAPIAuthenticatorSession::authenticate(DCB* dcb)
          * method */
         GWBUF* buffer = create_auth_change_packet(instance, auth);
 
-        if (buffer && dcb->m_func.write(dcb, buffer))
+        if (buffer && dcb->protocol_write(buffer))
         {
             auth->state = GSSAPI_AUTH_DATA_SENT;
             rval = MXS_AUTH_INCOMPLETE;

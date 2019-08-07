@@ -45,7 +45,7 @@ static int mysql_send_fieldcount(DCB* dcb, int count)
     *ptr++ = 0x00;
     *ptr++ = 0x01;                  // Sequence number in response
     *ptr++ = count;                 // Length of result string
-    return dcb->m_func.write(dcb, pkt);
+    return dcb->protocol_write(pkt);
 }
 
 /**
@@ -99,7 +99,7 @@ static int mysql_send_columndef(DCB* dcb, const std::string& name, uint8_t seqno
     *ptr++ = 0;
     *ptr++ = 0;
     *ptr++ = 0;
-    return dcb->m_func.write(dcb, pkt);
+    return dcb->protocol_write(pkt);
 }
 
 /**
@@ -128,7 +128,7 @@ static int mysql_send_eof(DCB* dcb, int seqno)
     *ptr++ = 0x00;
     *ptr++ = 0x02;                          // Autocommit enabled
     *ptr++ = 0x00;
-    return dcb->m_func.write(dcb, pkt);
+    return dcb->protocol_write(pkt);
 }
 
 /**
@@ -168,7 +168,7 @@ static int mysql_send_row(DCB* dcb, const std::vector<std::string>& row, int seq
         ptr += a.length();
     }
 
-    return dcb->m_func.write(dcb, pkt);
+    return dcb->protocol_write(pkt);
 }
 
 ResultSet::ResultSet(std::initializer_list<std::string> names)

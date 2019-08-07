@@ -278,7 +278,7 @@ int PamClientSession::authenticate(DCB* dcb)
              * authentication to something other than the 'mysql_native_password'
              * method */
             Buffer authbuf = create_auth_change_packet();
-            if (authbuf.length() && dcb->m_func.write(dcb, authbuf.release()))
+            if (authbuf.length() && dcb->protocol_write(authbuf.release()))
             {
                 m_state = State::ASKED_FOR_PW;
                 rval = MXS_AUTH_INCOMPLETE;

@@ -473,7 +473,7 @@ int RCRSession::routeQuery(GWBUF* queue)
         }
 
     default:
-        rc = backend_dcb->m_func.write(backend_dcb, queue);
+        rc = backend_dcb->protocol_write(queue);
         break;
     }
 
@@ -567,7 +567,7 @@ void RCRSession::handleError(GWBUF* errbuf, DCB* problem_dcb, mxs_error_action_t
     mxb_assert(problem_dcb->role() == DCB::Role::BACKEND);
     mxb_assert(problem_dcb->session()->state() == MXS_SESSION::State::STARTED);
     DCB* client_dcb = problem_dcb->session()->client_dcb;
-    client_dcb->m_func.write(client_dcb, gwbuf_clone(errbuf));
+    client_dcb->protocol_write(gwbuf_clone(errbuf));
 
     // The DCB will be closed once the session closes, no need to close it here
     *succp = false;

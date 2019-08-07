@@ -482,7 +482,7 @@ int modutil_send_mysql_err_packet(DCB* dcb,
                                        sqlstate_msg,
                                        mysql_message);
 
-    return dcb->m_func.write(dcb, buf);
+    return dcb->protocol_write(buf);
 }
 
 // Helper function for debug assertions
@@ -1744,7 +1744,7 @@ bool modutil_ignorable_ping(DCB* dcb)
     {
         gwbuf_set_type(buf, GWBUF_TYPE_IGNORABLE);
 
-        if (dcb->m_func.write(dcb, buf))
+        if (dcb->protocol_write(buf))
         {
             rval = true;
         }
