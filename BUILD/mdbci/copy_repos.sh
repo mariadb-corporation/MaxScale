@@ -28,10 +28,15 @@ if [ "$box_type" == "RPM" ] ; then
                 cd $path_prefix/$platform
                 ln -s $platform_version "$platform_version"server
                 ln -s $platform_version "$platform_version"Server
+                cd ..
                 if [ "$platform" == "centos" ] ; then
-                        cd ..
                         ln -s centos rhel
                 fi
+                if [ "$platform" == "opensuse" ] ; then
+                        mkdir -p sles
+                        ln -s opensuse/$platform_version sles/$platform_version
+                fi
+
 
   eval "cat <<EOF
 $(<${script_dir}/templates/repository-config/rpm.json.template)
