@@ -28,15 +28,12 @@
 class Server : public SERVER
 {
 public:
-    Server(const std::string& name,
-           const std::string& protocol = "",
-           const std::string& authenticator = "",
+    Server(const std::string& name, const std::string& protocol = "",
            std::unique_ptr<mxs::SSLContext> ssl = {})
         : SERVER(std::move(ssl))
         , m_name(name)
     {
         m_settings.protocol = protocol;
-        m_settings.authenticator = authenticator;
     }
 
     long persistpoolmax() const
@@ -112,11 +109,6 @@ public:
     std::string protocol() const override
     {
         return m_settings.protocol;
-    }
-
-    std::string get_authenticator() const
-    {
-        return m_settings.authenticator;
     }
 
     int64_t rank() const override
@@ -269,7 +261,6 @@ private:
         MXS_CONFIG_PARAMETER all_parameters;
 
         std::string protocol;       /**< Backend protocol module name. Does not change so needs no locking. */
-        std::string authenticator;  /**< Authenticator module name. Does not change so needs no locking. */
 
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
         char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */

@@ -115,22 +115,6 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         return NULL;
     }
 
-    auto protocol = params.get_string(CN_PROTOCOL);
-    auto authenticator = params.get_string(CN_AUTHENTICATOR);
-
-    if (authenticator.empty())
-    {
-        const char* zAuthenticator = get_default_authenticator(protocol.c_str());
-        if (!zAuthenticator)
-        {
-            MXS_ERROR("No authenticator defined for server '%s' and no default "
-                      "authenticator for protocol '%s'.",
-                      name, protocol.c_str());
-            return NULL;
-        }
-        authenticator = zAuthenticator;
-    }
-
     std::unique_ptr<mxs::SSLContext> ssl;
     if (!config_create_ssl(name, params, false, &ssl))
     {
@@ -138,7 +122,8 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         return NULL;
     }
 
-    Server* server = new(std::nothrow) Server(name, protocol, authenticator, std::move(ssl));
+    auto protocol_name = params.get_string(CN_PROTOCOL);
+    Server* server = new(std::nothrow) Server(name, protocol_name, std::move(ssl));
     DCB** persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
     if (!server || !persistent)
@@ -793,7 +778,7 @@ const MXS_MODULE_PARAM* common_server_params()
         {CN_PROTOCOL,       MXS_MODULE_PARAM_STRING,   NULL,      MXS_MODULE_OPT_REQUIRED  },
         {CN_PORT,           MXS_MODULE_PARAM_COUNT,    "3306"},
         {CN_EXTRA_PORT,     MXS_MODULE_PARAM_COUNT,    "0"},
-        {CN_AUTHENTICATOR,  MXS_MODULE_PARAM_STRING},
+        {CN_AUTHENTICATOR,  MXS_MODULE_PARAM_STRING,   NULL,      MXS_MODULE_OPT_DEPRECATED},
         {CN_MONITORUSER,    MXS_MODULE_PARAM_STRING},
         {CN_MONITORPW,      MXS_MODULE_PARAM_STRING},
         {CN_PERSISTPOOLMAX, MXS_MODULE_PARAM_COUNT,    "0"},
