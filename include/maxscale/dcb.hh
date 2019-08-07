@@ -275,7 +275,6 @@ public:
     void*                   m_protocol = nullptr;                 /**< The protocol specific state */
     size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
-    MXS_AUTHENTICATOR       m_authfunc = {};                      /**< Authenticator functions for the DCB */
     uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
     uint64_t                m_high_water = 0;                     /**< High water mark of write queue */
     uint64_t                m_low_water = 0;                      /**< Low water mark of write queue */
@@ -308,7 +307,8 @@ public:
     uint64_t m_uid;         /**< Unique identifier for this DCB */
 
 protected:
-    DCB(Role role,
+    DCB(int fd,
+        Role role,
         MXS_SESSION* session,
         MXS_PROTOCOL func,
         SERVER* server,
@@ -365,13 +365,13 @@ private:
 class ClientDCB : public DCB
 {
 public:
-    ClientDCB(MXS_SESSION* session, Manager* manager);
+    ClientDCB(int fd, MXS_SESSION* session, Manager* manager);
 
     int ssl_handshake() override;
 
 protected:
     // Only for InternalDCB.
-    ClientDCB(DCB::Role role, MXS_SESSION* session, Manager* manager);
+    ClientDCB(int fd, DCB::Role role, MXS_SESSION* session, Manager* manager);
 
 private:
     bool was_freed(MXS_SESSION* session) override;
@@ -392,9 +392,13 @@ public:
     int ssl_handshake() override;
 
 private:
-    BackendDCB(MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, Manager* manager);
+    BackendDCB(int fd, MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, Manager* manager);
 
-    static BackendDCB* create(SERVER* server, MXS_SESSION* session, const char* protocol, DCB::Manager* manager);
+    static BackendDCB* create(int fd,
+                              SERVER* server,
+                              MXS_SESSION* session,
+                              const char* protocol,
+                              DCB::Manager* manager);
 
     bool was_freed(MXS_SESSION* session) override;
 
@@ -424,7 +428,7 @@ inline bool dcb_write(DCB* dcb, GWBUF* queue)
     return dcb->write(queue);
 }
 
-ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Manager* manager);
+ClientDCB* dcb_create_client(int fd, MXS_SESSION* session, DCB::Manager* manager);
 InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager);
 
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)

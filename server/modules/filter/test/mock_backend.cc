@@ -174,7 +174,7 @@ class ResultSetDCB : public ClientDCB
 {
 public:
     ResultSetDCB(MXS_SESSION* session)
-        : ClientDCB(session, nullptr)
+        : ClientDCB(DCBFD_CLOSED, session, nullptr)
     {
         m_func.write = &ResultSetDCB::write;
     }

@@ -23,7 +23,7 @@ Dcb::Dcb(MXS_SESSION* pSession,
          const char* zUser,
          const char* zHost,
          Handler* pHandler)
-    : ClientDCB(pSession, nullptr)
+    : ClientDCB(DCBFD_CLOSED, pSession, nullptr)
     , m_user(zUser)
     , m_host(zHost)
     , m_pHandler(pHandler)

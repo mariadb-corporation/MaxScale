@@ -123,8 +123,14 @@ static MXB_WORKER* get_dcb_owner()
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(Role role, MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, Manager* manager)
+DCB::DCB(int fd,
+         Role role,
+         MXS_SESSION* session,
+         MXS_PROTOCOL func,
+         SERVER* server,
+         Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
+    , m_fd(fd)
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
     , m_last_read(mxs_clock())
@@ -136,11 +142,6 @@ DCB::DCB(Role role, MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, Man
     , m_role(role)
     , m_manager(manager)
 {
-    if (session->listener)
-    {
-        m_authfunc = session->listener->auth_func();
-    }
-
     if (DCB* client = session->client_dcb)
     {
         if (client->m_remote)
@@ -206,9 +207,16 @@ DCB::~DCB()
     MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
 
-ClientDCB* dcb_create_client(MXS_SESSION* session, DCB::Manager* manager)
+ClientDCB* dcb_create_client(int fd, MXS_SESSION* session, DCB::Manager* manager)
 {
-    return new (std::nothrow) ClientDCB(session, manager);
+    ClientDCB* dcb = new (std::nothrow) ClientDCB(fd, session, manager);
+
+    if (!dcb)
+    {
+        ::close(fd);
+    }
+
+    return dcb;
 }
 
 InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager)
@@ -290,60 +298,62 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
     return nullptr;
 }
 
-BackendDCB* BackendDCB::create(SERVER* srv, MXS_SESSION* session, const char* protocol, DCB::Manager* manager)
+BackendDCB* BackendDCB::create(int fd,
+                               SERVER* srv,
+                               MXS_SESSION* session,
+                               const char* protocol,
+                               DCB::Manager* manager)
 {
-    Server* server = static_cast<Server*>(srv);
+    BackendDCB* dcb = nullptr;
 
     MXS_PROTOCOL* funcs = (MXS_PROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
 
-    if (!funcs)
+    if (funcs)
     {
-        return nullptr;
-    }
+        Server* server = static_cast<Server*>(srv);
+        string authenticator = server->get_authenticator();
 
-    mxb_assert_message(funcs->auth_default, "Module '%s' does not define auth_default method", protocol);
-    string authenticator = server->get_authenticator();
-
-    if (authenticator.empty())
-    {
-        authenticator = funcs->auth_default();
-    }
-
-    // Allocate DCB specific authentication data. Backend authenticators do not have an instance.
-    AuthenticatorBackendSession* auth_session = nullptr;
-    // If possible, use the client session to generate the backend authenticator.
-    MXS_AUTHENTICATOR* authfuncs = nullptr;
-    if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_BACKEND_AUTH)
-    {
-        auth_session = session->client_dcb->m_authenticator_data->newBackendSession();
-    }
-    else
-    {
-        authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
-        if (authfuncs && authfuncs->create)
+        // Allocate DCB specific authentication data. Backend authenticators do not have an instance.
+        AuthenticatorBackendSession* auth_session = nullptr;
+        // If possible, use the client session to generate the backend authenticator.
+        MXS_AUTHENTICATOR* authfuncs = nullptr;
+        if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_BACKEND_AUTH)
         {
-            auth_session = static_cast<AuthenticatorBackendSession*>(authfuncs->create(nullptr));
+            auth_session = session->client_dcb->m_authenticator_data->newBackendSession();
+        }
+        else
+        {
+            authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
+            if (authfuncs && authfuncs->create)
+            {
+                auth_session = static_cast<AuthenticatorBackendSession*>(authfuncs->create(nullptr));
+            }
+        }
+
+        if (auth_session)
+        {
+            dcb = new (std::nothrow) BackendDCB(fd, session, *funcs, server, manager);
+
+            if (dcb)
+            {
+                dcb->m_authenticator_data = auth_session;
+
+                session_link_backend_dcb(session, dcb);
+            }
+            else
+            {
+                delete auth_session;
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed to create authenticator session for backend DCB.");
         }
     }
 
-    if (!auth_session)
+    if (!dcb)
     {
-        MXS_ERROR("Failed to create authenticator session for backend DCB.");
-        return nullptr;
-    }
-
-    BackendDCB* dcb = new (std::nothrow) BackendDCB(session, *funcs, server, manager);
-
-    if (dcb)
-    {
-        memcpy(&dcb->m_authfunc, authfuncs, sizeof(dcb->m_authfunc));
-        dcb->m_authenticator_data = auth_session;
-
-        session_link_backend_dcb(session, dcb);
-    }
-    else
-    {
-        delete auth_session;
+        ::close(fd);
     }
 
     return dcb;
@@ -358,7 +368,7 @@ BackendDCB* BackendDCB::create(SERVER* srv, MXS_SESSION* session, const char* pr
  *
  * @return True on success, false on error
  */
-static bool do_connect(const char* host, int port, int* fd)
+static bool connect_backend(const char* host, int port, int* fd)
 {
     bool ok = false;
     struct sockaddr_storage addr = {};
@@ -424,39 +434,44 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
     }
 
     // Could not find a reusable DCB, allocate a new one
-    BackendDCB* dcb = create(server, session, protocol, manager);
+    BackendDCB* dcb = nullptr;
+    int fd = 0;
 
-    if (dcb)
+    if (connect_backend(server->address, server->port, &fd))
     {
-        DCB* client_dcb = session->client_dcb;
+        dcb = create(fd, server, session, protocol, manager);
 
-        if (do_connect(server->address, server->port, &dcb->m_fd)
-            && (dcb->m_protocol = dcb->m_func.new_backend_session(session, server, client_dcb->m_protocol))
-            && (dcb->m_func.prepare_backend_connection(dcb))
-            && dcb->enable_events())
+        if (dcb)
         {
-            // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
-            // event that is triggered once the connection is established.
+            DCB* client_dcb = session->client_dcb;
 
-            if (DCB_THROTTLING_ENABLED(dcb))
+            if ((dcb->m_protocol = dcb->m_func.new_backend_session(session, server, client_dcb->m_protocol))
+                && (dcb->m_func.prepare_backend_connection(dcb))
+                && dcb->enable_events())
             {
-                // Register upstream throttling callbacks
-                dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
-                dcb_add_callback(dcb, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
-            }
+                // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
+                // event that is triggered once the connection is established.
 
-            mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
-            mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
-        }
-        else
-        {
-            if (dcb->m_fd != DCBFD_CLOSED)
-            {
-                ::close(dcb->m_fd);
+                if (DCB_THROTTLING_ENABLED(dcb))
+                {
+                    // Register upstream throttling callbacks
+                    dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
+                    dcb_add_callback(dcb, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
+                }
+
+                mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
             }
-            session_unlink_backend_dcb(dcb->session(), dcb);
-            delete dcb;
-            dcb = nullptr;
+            else
+            {
+                if (dcb->m_fd != DCBFD_CLOSED)
+                {
+                    ::close(dcb->m_fd);
+                }
+                session_unlink_backend_dcb(dcb->session(), dcb);
+                delete dcb;
+                dcb = nullptr;
+            }
         }
     }
 
@@ -2993,13 +3008,14 @@ void DCB::shutdown()
     }
 }
 
-ClientDCB::ClientDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : ClientDCB(DCB::Role::CLIENT, session, manager)
+ClientDCB::ClientDCB(int fd, MXS_SESSION* session, DCB::Manager* manager)
+    : ClientDCB(fd, DCB::Role::CLIENT, session, manager)
 {
 }
 
-ClientDCB::ClientDCB(DCB::Role role, MXS_SESSION* session, Manager* manager)
-    : DCB(role,
+ClientDCB::ClientDCB(int fd, DCB::Role role, MXS_SESSION* session, Manager* manager)
+    : DCB(fd,
+          role,
           session,
           session->listener ? session->listener->protocol_func() : MXS_PROTOCOL {},
           nullptr,
@@ -3020,7 +3036,7 @@ bool ClientDCB::was_freed(MXS_SESSION* session)
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : ClientDCB(DCB::Role::INTERNAL, session, manager)
+    : ClientDCB(DCBFD_CLOSED, DCB::Role::INTERNAL, session, manager)
 {
     /**
      * This prevents the actual protocol level closing code from being called that expects
@@ -3051,8 +3067,8 @@ bool InternalDCB::disable_events()
     return true;
 }
 
-BackendDCB::BackendDCB(MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, DCB::Manager* manager)
-    : DCB(DCB::Role::BACKEND, session, func, server, manager)
+BackendDCB::BackendDCB(int fd, MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, DCB::Manager* manager)
+    : DCB(fd, DCB::Role::BACKEND, session, func, server, manager)
 {
 }
 

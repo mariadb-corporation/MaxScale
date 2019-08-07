@@ -802,19 +802,17 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
     mxb_assert(worker);
 
-    ClientDCB* client_dcb = dcb_create_client(session, worker);
+    ClientDCB* client_dcb = dcb_create_client(fd, session, worker);
 
     if (!client_dcb)
     {
         MXS_OOM();
-        close(fd);
         delete session;
     }
     else
     {
         session->set_client_dcb(client_dcb);
         memcpy(&client_dcb->m_ip, addr, sizeof(*addr));
-        client_dcb->m_fd = fd;
         client_dcb->m_remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */

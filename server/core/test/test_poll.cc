@@ -60,17 +60,9 @@ static int test1()
     auto listener = Listener::create("listener", "mariadbclient", listener_params);
 
     auto session = new mxs::Session(listener);
-    dcb = dcb_create_client(session, nullptr);
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
-    if (dcb == NULL)
-    {
-        fprintf(stderr, "\nError on function call: dcb_create_client() returned NULL.\n");
-        return 1;
-    }
-
-    dcb->m_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-
-    if (dcb->m_fd < 0)
+    if (fd < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr,
@@ -80,6 +72,13 @@ static int test1()
         return 1;
     }
 
+    dcb = dcb_create_client(fd, session, nullptr);
+
+    if (dcb == NULL)
+    {
+        fprintf(stderr, "\nError on function call: dcb_create_client() returned NULL.\n");
+        return 1;
+    }
 
     if (!dcb->enable_events())
     {
