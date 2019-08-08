@@ -160,6 +160,7 @@ const char CN_SERVER[] = "server";
 const char CN_SERVICES[] = "services";
 const char CN_SERVICE[] = "service";
 const char CN_SESSIONS[] = "sessions";
+const char CN_SESSION_TRACE[] = "session_trace";
 const char CN_SESSION_TRACK_TRX_STATE[] = "session_track_trx_state";
 const char CN_SKIP_PERMISSION_CHECKS[] = "skip_permission_checks";
 const char CN_SOCKET[] = "socket";
@@ -317,6 +318,7 @@ const MXS_MODULE_PARAM config_service_params[] =
     {CN_RETRY_ON_FAILURE,              MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_SESSION_TRACK_TRX_STATE,       MXS_MODULE_PARAM_BOOL,   "false"},
     {CN_RETAIN_LAST_STATEMENTS,        MXS_MODULE_PARAM_INT,    "-1"},
+    {CN_SESSION_TRACE,                 MXS_MODULE_PARAM_INT,    "0"},
     {NULL}
 };
 
@@ -2337,7 +2339,7 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
 
-        decltype(gateway.qc_cache_properties.max_size)max_size = int_value;
+        decltype(gateway.qc_cache_properties.max_size) max_size = int_value;
 
         if (max_size >= 0)
         {
@@ -2515,15 +2517,6 @@ static int handle_global_item(const char* name, const char* value)
                 // but I just don't beleave the uptime will be that long.
                 users_refresh_time = INT32_MAX;
             }
-            else if (users_refresh_time < USERS_REFRESH_TIME_MIN)
-            {
-                MXS_WARNING("%s is less than the allowed minimum value of %d for the "
-                            "configuration option '%s', using the minimum value.",
-                            value,
-                            USERS_REFRESH_TIME_MIN,
-                            CN_USERS_REFRESH_TIME);
-                users_refresh_time = USERS_REFRESH_TIME_MIN;
-            }
 
             if (users_refresh_time > INT32_MAX)
             {
@@ -2608,6 +2601,21 @@ static int handle_global_item(const char* name, const char* value)
         {
             MXS_ERROR("%s can have the values 'never', 'on_close' or 'on_error'.",
                       CN_DUMP_LAST_STATEMENTS);
+            return 0;
+        }
+    }
+    else if (strcmp(name, CN_SESSION_TRACE) == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval >= 0)
+        {
+            session_set_session_trace(intval);
+            mxb_log_set_session_trace(true);
+        }
+        else
+        {
+            MXS_ERROR("Invalid value for '%s': %s", CN_SESSION_TRACE, value);
             return 0;
         }
     }
@@ -3743,12 +3751,11 @@ int create_new_service(CONFIG_CONTEXT* obj)
     config_add_defaults(obj, config_service_params);
     config_add_defaults(obj, module->parameters);
 
+    int error_count = 0;
     Service* service = service_alloc(obj->object, router, obj->parameters);
 
     if (service)
     {
-        int error_count = 0;
-
         for (auto& a : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
         {
             fix_object_name(a);
@@ -3780,9 +3787,10 @@ int create_new_service(CONFIG_CONTEXT* obj)
     else
     {
         MXS_ERROR("Service '%s' creation failed.", obj->object);
+        error_count++;
     }
 
-    return service ? 0 : 1;
+    return error_count;
 }
 
 /**

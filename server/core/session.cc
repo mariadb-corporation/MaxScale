@@ -62,11 +62,13 @@ struct
     uint64_t next_session_id;
     uint32_t retain_last_statements;
     session_dump_statements_t dump_statements;
+    uint32_t session_trace;
 } this_unit =
 {
     1,
     0,
-    SESSION_DUMP_STATEMENTS_NEVER
+    SESSION_DUMP_STATEMENTS_NEVER,
+    0
 };
 
 static struct session dummy_session()
@@ -909,6 +911,9 @@ json_t* session_json_data(const Session* session, const char* host)
     json_t* queries = session->queries_as_json();
     json_object_set_new(attr, "queries", queries);
 
+    json_t* log = session->log_as_json();
+    json_object_set_new(attr, "log", log);
+
     json_object_set_new(data, CN_ATTRIBUTES, attr);
     json_object_set_new(data, CN_LINKS, mxs_json_self_link(host, CN_SESSIONS, ss.str().c_str()));
 
@@ -1109,6 +1114,32 @@ void session_dump_statements(MXS_SESSION* session)
 {
     Session* pSession = static_cast<Session*>(session);
     pSession->dump_statements();
+}
+
+void session_set_session_trace(uint32_t value)
+{
+    this_unit.session_trace = value;
+}
+
+uint32_t session_get_session_trace()
+{
+    return this_unit.session_trace;
+}
+
+void session_append_log(MXS_SESSION* pSession, const char* log)
+{
+    // Ignore dummy and listener sessions
+    if (pSession->state != SESSION_STATE_DUMMY
+        && pSession->state != SESSION_STATE_LISTENER
+        && pSession->state != SESSION_STATE_LISTENER_STOPPED)
+    {
+        static_cast<Session*>(pSession)->append_session_log(std::string(log));
+    }
+}
+
+void session_dump_log(MXS_SESSION* pSession)
+{
+    static_cast<Session*>(pSession)->dump_session_log();
 }
 
 class DelayedRoutingTask
@@ -1363,6 +1394,18 @@ json_t* Session::queries_as_json() const
     }
 
     return pQueries;
+}
+
+json_t* Session::log_as_json() const
+{
+    json_t* pLog = json_array();
+
+    for (const auto& i : m_log)
+    {
+        json_array_append_new(pLog, json_string(i.c_str()));
+    }
+
+    return pLog;
 }
 
 bool Session::setup_filters(Service* service)
@@ -1723,4 +1766,29 @@ void Session::QueryInfo::reset_server_bookkeeping()
     m_completed.tv_sec = 0;
     m_completed.tv_nsec = 0;
     m_complete = false;
+}
+
+void Session::append_session_log(std::string log)
+{
+    m_log.push_front(log);
+
+    if (m_log.size() >= this_unit.session_trace)
+    {
+        m_log.pop_back();
+    }
+}
+
+void Session::dump_session_log()
+{
+    if (!(m_log.empty()))
+    {
+        std::string log;
+
+        for (const auto& s : m_log)
+        {
+            log += s;
+        }
+
+        MXS_NOTICE("Session log for session (%" PRIu64"): \n%s ", ses_id, log.c_str());
+    }
 }

@@ -94,9 +94,9 @@ void cache_config_reset(CACHE_CONFIG& config)
 bool cache_command_show(const MODULECMD_ARG* pArgs, json_t** output)
 {
     mxb_assert(pArgs->argc == 1);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_FILTER);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_FILTER);
 
-    const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
+    const MXS_FILTER_DEF* pFilterDef = pArgs->argv[0].value.filter;
     mxb_assert(pFilterDef);
     CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(filter_def_get_instance(pFilterDef));
 

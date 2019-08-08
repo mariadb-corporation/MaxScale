@@ -47,13 +47,22 @@ size_t mxs_get_context(char* buffer, size_t len)
 
     return len;
 }
+
+void mxs_log_in_memory(const char* msg, size_t len)
+{
+    MXS_SESSION* session = session_get_current();
+    if (session)
+    {
+        session_append_log(session, msg);
+    }
+}
 }
 
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target)
 {
     mxb::Logger::set_ident("MariaDB MaxScale");
 
-    return mxb_log_init(ident, logdir, LOGFILE_NAME, target, mxs_get_context);
+    return mxb_log_init(ident, logdir, LOGFILE_NAME, target, mxs_get_context, mxs_log_in_memory);
 }
 
 namespace

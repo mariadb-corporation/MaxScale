@@ -395,6 +395,7 @@ static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer, GWBUF* c
                   backend->current_command(),
                   sql.c_str());
         session_dump_statements(backend->dcb()->session);
+        session_dump_log(backend->dcb()->session);
         mxb_assert(false);
     }
 }
@@ -963,7 +964,9 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                 MXS_INFO("Master '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
                 /** The connection to the master has failed */
 
-                if (!backend->is_waiting_result())
+                bool expected_response = backend->is_waiting_result();
+
+                if (!expected_response)
                 {
                     /** The failure of a master is not considered a critical
                      * failure as partial functionality still remains. If
@@ -985,7 +988,6 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                 {
                     // We were expecting a response but we aren't going to get one
                     mxb_assert(m_expected_responses > 0);
-                    m_expected_responses--;
                     errmsg += " Lost connection to master server while waiting for a result.";
 
                     if (can_retry_query())
@@ -1010,21 +1012,19 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
 
                 if (!can_continue)
                 {
-                    if (!backend->is_master() && !backend->server()->master_err_is_logged)
-                    {
-                        MXS_ERROR("Server %s (%s) lost the master status while waiting"
-                                  " for a result. Client sessions will be closed.",
-                                  backend->name(),
-                                  backend->uri());
-                        backend->server()->master_err_is_logged = true;
-                    }
-                    else
-                    {
-                        int64_t idle = mxs_clock() - backend->dcb()->last_read;
-                        MXS_ERROR("Lost connection to the master server, closing session.%s "
-                                  "Connection has been idle for %.1f seconds. Error caused by: %s",
-                                  errmsg.c_str(), (float)idle / 10.f, extract_error(errmsgbuf).c_str());
-                    }
+                    int64_t idle = mxs_clock() - backend->dcb()->last_read;
+                    MXS_ERROR("Lost connection to the master server '%s', closing session.%s "
+                              "Connection has been idle for %.1f seconds. Error caused by: %s",
+                              backend->name(), errmsg.c_str(), (float)idle / 10.f,
+                              extract_error(errmsgbuf).c_str());
+                }
+
+                // Decrement the expected response count only if we know we can continue the sesssion.
+                // This keeps the internal logic sound even if another query is routed before the session
+                // is closed.
+                if (can_continue && expected_response)
+                {
+                    m_expected_responses--;
                 }
 
                 backend->close();

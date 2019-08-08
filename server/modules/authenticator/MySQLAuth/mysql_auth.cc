@@ -787,7 +787,8 @@ static int mysql_auth_load_users(SERV_LISTENER* port)
         first_load = true;
     }
 
-    int loaded = replace_mysql_users(port, first_load);
+    SERVER* srv = nullptr;
+    int loaded = replace_mysql_users(port, first_load, &srv);
     bool injected = false;
 
     if (loaded <= 0)
@@ -834,7 +835,9 @@ static int mysql_auth_load_users(SERV_LISTENER* port)
     }
     else if (loaded > 0 && first_load)
     {
-        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name);
+        mxb_assert(srv);
+        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s from server %s.",
+                   service->name, loaded, port->name, srv->name);
     }
 
     return rc;

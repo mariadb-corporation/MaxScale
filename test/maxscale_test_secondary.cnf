@@ -1,5 +1,5 @@
 [maxscale]
-threads=4
+threads=auto
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
 logdir=@CMAKE_INSTALL_PREFIX@/secondary/log/maxscale/
 datadir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale
@@ -10,13 +10,37 @@ persistdir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/maxscale.cnf.d/
 admin_auth=false
 admin_port=8990
 
+[server1]
+type=server
+address=127.0.0.1
+port=3000
+protocol=MariaDBBackend
+
+[server2]
+type=server
+address=127.0.0.1
+port=3001
+protocol=MariaDBBackend
+
+[server3]
+type=server
+address=127.0.0.1
+port=3002
+protocol=MariaDBBackend
+
+[server4]
+type=server
+address=127.0.0.1
+port=3003
+protocol=MariaDBBackend
+
 [MariaDB-Monitor]
 type=monitor
 module=mariadbmon
 servers=server1,server2,server3,server4
 user=maxuser
 password=maxpwd
-monitor_interval=10000
+monitor_interval=5000
 
 [RW-Split-Router]
 type=service
@@ -24,7 +48,6 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
 password=maxpwd
-max_slave_connections=100%
 
 [SchemaRouter-Router]
 type=service
@@ -32,7 +55,6 @@ router=schemarouter
 servers=server1,server2,server3,server4
 user=maxuser
 password=maxpwd
-auth_all_servers=1
 
 [RW-Split-Hint-Router]
 type=service
@@ -40,7 +62,6 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
 password=maxpwd
-max_slave_connections=100%
 filters=Hint
 
 [Read-Connection-Router]
@@ -56,21 +77,6 @@ filters=QLA
 type=filter
 module=hintfilter
 
-[recurse3]
-type=filter
-module=tee
-service=RW-Split-Router
-
-[recurse2]
-type=filter
-module=tee
-service=Read-Connection-Router
-
-[recurse1]
-type=filter
-module=tee
-service=RW-Split-Hint-Router
-
 [QLA]
 type=filter
 module=qlafilter
@@ -78,10 +84,6 @@ log_type=unified
 append=false
 flush=true
 filebase=/tmp/qla2.log
-
-[CLI]
-type=service
-router=cli
 
 [Read-Connection-Listener]
 type=listener
@@ -107,32 +109,12 @@ service=RW-Split-Hint-Router
 protocol=MariaDBClient
 port=5009
 
+[CLI]
+type=service
+router=cli
+
 [CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled
 socket=/tmp/maxadmin2.sock
-
-[server1]
-type=server
-address=127.0.0.1
-port=3000
-protocol=MariaDBBackend
-
-[server2]
-type=server
-address=127.0.0.1
-port=3001
-protocol=MariaDBBackend
-
-[server3]
-type=server
-address=127.0.0.1
-port=3002
-protocol=MariaDBBackend
-
-[server4]
-type=server
-address=127.0.0.1
-port=3003
-protocol=MariaDBBackend

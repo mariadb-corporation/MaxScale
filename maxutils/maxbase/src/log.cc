@@ -386,10 +386,12 @@ struct this_unit
     bool                             do_syslog;         // Can change during the lifetime of log_manager.
     bool                             do_maxlog;         // Can change during the lifetime of log_manager.
     bool                             redirect_stdout;
+    bool                             session_trace;
     MXB_LOG_THROTTLING               throttling;        // Can change during the lifetime of log_manager.
     std::unique_ptr<mxb::Logger>     sLogger;
     std::unique_ptr<MessageRegistry> sMessage_registry;
     size_t                           (* context_provider)(char* buffer, size_t len);
+    void                             (* in_memory_log)(const char* buffer, size_t len);
 } this_unit =
 {
     DEFAULT_LOG_AUGMENTATION,   // augmentation
@@ -397,6 +399,7 @@ struct this_unit
     true,                       // do_syslog
     true,                       // do_maxlog
     false,                      // redirect_stdout
+    false,                      // session_trace
     DEFAULT_LOG_THROTTLING,     // throttling
 };
 
@@ -449,7 +452,8 @@ bool mxb_log_init(const char* ident,
                   const char* logdir,
                   const char* filename,
                   mxb_log_target_t target,
-                  mxb_log_context_provider_t context_provider)
+                  mxb_log_context_provider_t context_provider,
+                  mxb_in_memory_log_t in_memory_log)
 {
     assert(!this_unit.sLogger && !this_unit.sMessage_registry);
 
@@ -511,6 +515,7 @@ bool mxb_log_init(const char* ident,
     if (this_unit.sLogger && this_unit.sMessage_registry)
     {
         this_unit.context_provider = context_provider;
+        this_unit.in_memory_log = in_memory_log;
 
         openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
     }
@@ -612,6 +617,16 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)
 void mxs_log_redirect_stdout(bool redirect)
 {
     this_unit.redirect_stdout = redirect;
+}
+
+void mxb_log_set_session_trace(bool enabled)
+{
+    this_unit.session_trace = enabled;
+}
+
+bool mxb_log_get_session_trace()
+{
+    return this_unit.session_trace;
 }
 
 bool mxb_log_rotate()
@@ -874,7 +889,19 @@ int mxb_log_message(int priority,
                 // Add a final newline into the message
                 msg.push_back('\n');
 
-                err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
+                if (this_unit.session_trace)
+                {
+                    this_unit.in_memory_log(msg.c_str(), msg.length());
+                }
+
+                if (mxb_log_is_priority_enabled(level))
+                {
+                    err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
+                }
+                else
+                {
+                    err = 0;
+                }
             }
         }
     }

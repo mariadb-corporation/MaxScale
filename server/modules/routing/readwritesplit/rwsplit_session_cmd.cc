@@ -149,8 +149,8 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
         {
             if (cmd == MYSQL_REPLY_ERR && m_sescmd_responses[id] != MYSQL_REPLY_ERR)
             {
-                MXS_INFO("Session command failed on slave '%s': %s",
-                         backend->name(), extract_error(*ppPacket).c_str());
+                MXS_WARNING("Session command failed on slave '%s': %s",
+                            backend->name(), extract_error(*ppPacket).c_str());
             }
 
             discard_if_response_differs(backend, m_sescmd_responses[id], cmd, sescmd);

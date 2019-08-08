@@ -415,8 +415,6 @@ json_t* RWSplit::diagnostics_json() const
 
     for (const auto& a : all_server_stats())
     {
-        mxb_assert(a.second.total == a.second.read + a.second.write);
-
         ServerStats::CurrentStats stats = a.second.current_stats();
 
         json_t* obj = json_object();

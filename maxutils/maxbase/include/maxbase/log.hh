@@ -30,7 +30,7 @@
  */
 inline bool mxb_log_init(mxb_log_target_t target = MXB_LOG_TARGET_FS)
 {
-    return mxb_log_init(nullptr, ".", nullptr, target, nullptr);
+    return mxb_log_init(nullptr, ".", nullptr, target, nullptr, nullptr);
 }
 
 namespace maxbase
@@ -52,16 +52,17 @@ public:
         const char* logdir,
         const char* filename,
         mxb_log_target_t target,
-        mxb_log_context_provider_t context_provider)
+        mxb_log_context_provider_t context_provider,
+        mxb_in_memory_log_t in_memory_log)
     {
-        if (!mxb_log_init(ident, logdir, filename, target, context_provider))
+        if (!mxb_log_init(ident, logdir, filename, target, context_provider, in_memory_log))
         {
             throw std::runtime_error("Failed to initialize the log.");
         }
     }
 
     Log(mxb_log_target_t target = MXB_LOG_TARGET_FS)
-        : Log(nullptr, ".", nullptr, target, nullptr)
+        : Log(nullptr, ".", nullptr, target, nullptr, nullptr)
     {
     }
 

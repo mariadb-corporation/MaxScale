@@ -142,6 +142,9 @@ module.exports = function() {
         if (this.argv.tsv) {
             // Based on the regex found in: https://github.com/jonschlinkert/strip-color
             str = str.replace( /\x1B\[[(?);]{0,2}(;?\d)*./g, '')
+
+            // Trim trailing whitespace that cli-table generates
+            str = str.split(os.EOL).map(s => s.split('\t').map(s => s.trim()).join('\t')).join(os.EOL)
         }
         return str
     }

@@ -31,6 +31,8 @@
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 2.3.11 Release Notes](Release-Notes/MaxScale-2.3.11-Release-Notes.md)
+* [MariaDB MaxScale 2.3.10 Release Notes](Release-Notes/MaxScale-2.3.10-Release-Notes.md)
 * [MariaDB MaxScale 2.3.9 Release Notes](Release-Notes/MaxScale-2.3.9-Release-Notes.md)
 * [MariaDB MaxScale 2.3.8 Release Notes](Release-Notes/MaxScale-2.3.8-Release-Notes.md)
 * [MariaDB MaxScale 2.3.7 Release Notes](Release-Notes/MaxScale-2.3.7-Release-Notes.md)

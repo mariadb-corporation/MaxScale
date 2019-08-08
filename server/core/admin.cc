@@ -375,6 +375,19 @@ static bool load_ssl_certificates()
     return rval;
 }
 
+static bool log_daemon_errors = true;
+
+void admin_log_error(void* arg, const char* fmt, va_list ap)
+{
+    if (log_daemon_errors)
+    {
+        char buf[1024];
+        vsnprintf(buf, sizeof(buf), fmt, ap);
+        trim(buf);
+        MXS_ERROR("HTTP daemon error: %s\n", buf);
+    }
+}
+
 bool mxs_admin_init()
 {
     struct sockaddr_storage addr;
@@ -383,7 +396,7 @@ bool mxs_admin_init()
                          config_get_global_options()->admin_port,
                          &addr))
     {
-        int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY;
+        int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DEBUG;
 
         if (addr.ss_family == AF_INET6)
         {
@@ -397,26 +410,19 @@ bool mxs_admin_init()
         }
 
         // The port argument is ignored and the port in the struct sockaddr is used instead
-        http_daemon = MHD_start_daemon(options,
-                                       0,
-                                       NULL,
-                                       NULL,
-                                       handle_client,
-                                       NULL,
-                                       MHD_OPTION_NOTIFY_COMPLETED,
-                                       close_client,
-                                       NULL,
-                                       MHD_OPTION_SOCK_ADDR,
-                                       &addr,
+        http_daemon = MHD_start_daemon(options, 0, NULL, NULL, handle_client, NULL,
+                                       MHD_OPTION_EXTERNAL_LOGGER, admin_log_error, NULL,
+                                       MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
+                                       MHD_OPTION_SOCK_ADDR, &addr,
                                        !using_ssl ? MHD_OPTION_END :
-                                       MHD_OPTION_HTTPS_MEM_KEY,
-                                       admin_ssl_key,
-                                       MHD_OPTION_HTTPS_MEM_CERT,
-                                       admin_ssl_cert,
-                                       MHD_OPTION_HTTPS_MEM_TRUST,
-                                       admin_ssl_cert,
+                                       MHD_OPTION_HTTPS_MEM_KEY, admin_ssl_key,
+                                       MHD_OPTION_HTTPS_MEM_CERT, admin_ssl_cert,
+                                       MHD_OPTION_HTTPS_MEM_TRUST, admin_ssl_cert,
                                        MHD_OPTION_END);
     }
+
+    // Silence all other errors to prevent malformed requests from flooding the log
+    log_daemon_errors = false;
 
     return http_daemon != NULL;
 }

@@ -6,113 +6,79 @@
 
 #include "testconnections.h"
 
-typedef struct
-{
-    int              exit_flag;
-    int              thread_id;
-    long             i;
-    int              rwsplit_only;
-    TestConnections* Test;
-} openclose_thread_data;
+#include <atomic>
+#include <vector>
 
-void* query_thread1(void* ptr);
-int threads_num = 20;
+std::atomic<bool> run {true};
+
+void query_thread(TestConnections& test, int thread_id)
+{
+    uint64_t i = 0;
+
+    auto validate = [&](MYSQL* conn){
+                        unsigned int port = 0;
+                        const char* host = "<none>";
+                        mariadb_get_infov(conn, MARIADB_CONNECTION_PORT, &port);
+                        mariadb_get_infov(conn, MARIADB_CONNECTION_HOST, &host);
+
+                        test.expect(mysql_errno(conn) == 0 || errno == EADDRNOTAVAIL,
+                                    "Error opening conn to %s:%u, thread num is %d, iteration %ld, error is: %s\n",
+                                    host, port, thread_id, i, mysql_error(conn));
+
+                        if (conn && mysql_errno(conn) == 0)
+                        {
+                            test.try_query(conn, "USE test");
+                            mysql_close(conn);
+                        }
+                    };
+
+    // Keep running the test until we exhaust all available ports
+    while (run && test.global_result == 0 && errno != EADDRNOTAVAIL)
+    {
+        validate(test.maxscales->open_rwsplit_connection(0));
+        validate(test.maxscales->open_readconn_master_connection(0));
+        validate(test.maxscales->open_readconn_slave_connection(0));
+        i++;
+    }
+}
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    int run_time = Test->smoke ? 10 : 300;
-
-    openclose_thread_data data[threads_num];
-    for (int i = 0; i < threads_num; i++)
-    {
-        data[i].i = 0;
-        data[i].exit_flag = 0;
-        data[i].Test = Test;
-        data[i].thread_id = i;
-    }
+    TestConnections test(argc, argv);
 
     // Tuning these kernel parameters removes any system limitations on how many
     // connections can be created within a short period
-    Test->maxscales->ssh_node_f(0,
+    test.maxscales->ssh_node_f(0,
                                 true,
                                 "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
                                 "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
-    Test->repl->execute_query_all_nodes((char*) "set global max_connections = 50000;");
-    Test->repl->sync_slaves();
+    test.repl->execute_query_all_nodes((char*) "set global max_connections = 50000;");
+    test.repl->sync_slaves();
 
-    pthread_t thread1[threads_num];
+    std::vector<std::thread> threads;
+    constexpr int threads_num = 20;
 
-    /* Create independent threads each of them will execute function */
     for (int i = 0; i < threads_num; i++)
     {
-        pthread_create(&thread1[i], NULL, query_thread1, &data[i]);
+        threads.emplace_back(query_thread, std::ref(test), i);
     }
 
-    Test->tprintf("Threads are running %d seconds \n", run_time);
+    constexpr int run_time = 10;
+    test.tprintf("Threads are running for %d seconds", run_time);
 
-    for (int i = 0; i < run_time && Test->global_result == 0; i++)
+    for (int i = 0; i < run_time && test.global_result == 0; i++)
     {
         sleep(1);
     }
 
-    for (int i = 0; i < threads_num; i++)
+    run = false;
+
+    for (auto& a : threads)
     {
-        data[i].exit_flag = 1;
-        pthread_join(thread1[i], NULL);
+        a.join();
     }
 
-    Test->check_maxscale_alive(0);
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
-}
-
-void* query_thread1(void* ptr)
-{
-    openclose_thread_data* data = (openclose_thread_data*) ptr;
-
-    while (data->exit_flag == 0 && data->Test->global_result == 0)
-    {
-        MYSQL* conn1 = data->Test->maxscales->open_rwsplit_connection(0);
-        data->Test->add_result(mysql_errno(conn1),
-                               "Error opening RWsplit conn, thread num is %d, iteration %li, error is: %s\n",
-                               data->thread_id, data->i, mysql_error(conn1));
-        MYSQL* conn2 = data->Test->maxscales->open_readconn_master_connection(0);
-        data->Test->add_result(mysql_errno(
-                                   conn2),
-                               "Error opening ReadConn master conn, thread num is %d, iteration %li, error is: %s\n",
-                               data->thread_id,
-                               data->i,
-                               mysql_error(conn2));
-        MYSQL* conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
-        data->Test->add_result(mysql_errno(
-                                   conn3),
-                               "Error opening ReadConn master conn, thread num is %d, iteration %li, error is: %s\n",
-                               data->thread_id,
-                               data->i,
-                               mysql_error(conn3));
-        // USE test here is a hack to prevent Maxscale from failure; should be removed when fixed
-        if (conn1 != NULL)
-        {
-            data->Test->try_query(conn1, (char*) "USE test");
-            mysql_close(conn1);
-        }
-
-        if (conn2 != NULL)
-        {
-            data->Test->try_query(conn2, (char*) "USE test");
-            mysql_close(conn2);
-        }
-        if (conn3 != NULL)
-        {
-            data->Test->try_query(conn3, (char*) "USE test");
-            mysql_close(conn3);
-        }
-
-        data->i++;
-    }
-
-    return NULL;
+    test.check_maxscale_alive(0);
+    return test.global_result;
 }

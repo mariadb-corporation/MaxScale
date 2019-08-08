@@ -97,7 +97,7 @@ public:
     };
 
     typedef std::deque<QueryInfo> QueryInfos;
-
+    using Log = std::deque<std::string>;
     using FilterList = std::vector<SessionFilter>;
 
     Session(SERVICE* service);
@@ -121,8 +121,11 @@ public:
     void book_server_response(SERVER* pServer, bool final_response);
     void book_last_as_complete();
     void reset_server_bookkeeping();
+    void append_session_log(std::string);
+    void dump_session_log();
 
     json_t* queries_as_json() const;
+    json_t* log_as_json() const;
 
     void link_backend_dcb(DCB* dcb)
     {
@@ -148,6 +151,7 @@ private:
     int               m_current_query = -1;     /*< The index of the current query */
     DCBSet            m_dcb_set;                /*< Set of associated backend DCBs */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
+    Log               m_log;                    /*< Session specific in-memory log */
 };
 }
 

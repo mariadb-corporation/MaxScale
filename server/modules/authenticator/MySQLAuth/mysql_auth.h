@@ -71,7 +71,7 @@ static const char mysqlauth_validate_user_query[] =
 static const char mysqlauth_validate_user_query_lower[] =
     "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
     " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host)"
-    " AND (anydb = '1' OR LOWER('%s') IN ('', 'information_schema') OR LOWER('%s') LIKE LOWER(db)"
+    " AND (anydb = '1' OR LOWER('%s') IN ('', 'information_schema') OR LOWER('%s') LIKE LOWER(db))"
     " LIMIT 1";
 
 /** Query that only checks if there's a matching user */
@@ -198,10 +198,11 @@ bool dbusers_save(sqlite3* src, const char* filename);
  *
  * @param service    The current service
  * @param skip_local Skip loading of users on local MaxScale services
+ * @param srv        Server where the users were loaded from (output)
  *
  * @return -1 on any error or the number of users inserted (0 means no users at all)
  */
-int replace_mysql_users(SERV_LISTENER* listener, bool skip_local);
+int replace_mysql_users(SERV_LISTENER* listener, bool skip_local, SERVER** srv);
 
 /**
  * @brief Verify the user has access to the database

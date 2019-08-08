@@ -210,6 +210,17 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     {
         update_trx_statistics();
 
+        auto next_master = get_target_backend(BE_MASTER, NULL, MXS_RLAG_UNDEFINED);
+
+        if (should_replace_master(next_master))
+        {
+            MXS_INFO("Replacing old master '%s' with new master '%s'",
+                     m_current_master ?
+                     m_current_master->name() : "<no previous master>",
+                     next_master->name());
+            replace_master(next_master);
+        }
+
         if (m_qc.is_trx_starting()                          // A transaction is starting
             && !session_trx_is_read_only(m_client->session) // Not explicitly read-only
             && should_try_trx_on_slave(route_target))       // Qualifies for speculative routing
@@ -350,7 +361,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             succp = true;
             MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
         }
-        else
+        else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
         {
             MXS_ERROR("Could not find valid server for target type %s, closing "
                       "connection.", route_target_to_string(route_target));
@@ -1051,15 +1062,6 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
 {
     SRWBackend target = get_target_backend(BE_MASTER, NULL, MXS_RLAG_UNDEFINED);
     bool succp = true;
-
-    if (should_replace_master(target))
-    {
-        MXS_INFO("Replacing old master '%s' with new master '%s'",
-                 m_current_master ?
-                 m_current_master->name() : "<no previous master>",
-                 target->name());
-        replace_master(target);
-    }
 
     if (target && target == m_current_master)
     {
