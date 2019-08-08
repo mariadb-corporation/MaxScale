@@ -1566,6 +1566,10 @@ bool gw_init_connection(DCB* client_dcb)
     return true;
 }
 
+void gw_finish_connection(DCB* client_dcb)
+{
+}
+
 static int gw_error_client_event(DCB* dcb)
 {
     mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
@@ -1573,11 +1577,9 @@ static int gw_error_client_event(DCB* dcb)
     return 1;
 }
 
-static int gw_client_close(DCB* dcb)
+static void gw_client_free_session(MXS_PROTOCOL_SESSION* protocol_session)
 {
-    mxb_assert(dcb->m_protocol);
-    delete static_cast<MySQLProtocol*>(dcb->m_protocol);
-    return 1;
+    delete static_cast<MySQLProtocol*>(protocol_session);
 }
 
 /**
@@ -2280,10 +2282,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         gw_write_client_event,                      /* WriteReady - EPOLLOUT handler */
         gw_error_client_event,                      /* Error - EPOLLERR handler      */
         gw_client_hangup_event,                     /* HangUp - EPOLLHUP handler     */
-        gw_new_client_session,                      /* new_client_session            */
+        gw_new_client_session,
         NULL,                                       /* new_backend_session           */
-        gw_init_connection,                         /* init_connection               */
-        gw_client_close,                            /* Close                         */
+        gw_client_free_session,
+        gw_init_connection,
+        gw_finish_connection,
         gw_default_auth,                            /* Default authenticator         */
         gw_connection_limit,                        /* Send error connection limit   */
         NULL,

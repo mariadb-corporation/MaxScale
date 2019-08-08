@@ -252,13 +252,15 @@ void DCB::free(DCB* dcb)
 void DCB::stop_polling_and_shutdown()
 {
     disable_events();
+
     /**
      * close protocol and router session
      */
-    if (m_func.close != NULL)
+    if (m_func.finish_connection && m_func.free_session) // TODO: Hacks for InternalDCB
     {
         shutdown();
-        m_func.close(this);
+        m_func.finish_connection(this);
+        m_func.free_session(m_protocol);
         m_protocol = nullptr;
     }
 }
@@ -3034,7 +3036,8 @@ InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
      * This prevents the actual protocol level closing code from being called that expects
      * the dcb->m_protocol pointer to not be NULL.
      */
-    m_func.close = nullptr;
+    m_func.finish_connection = nullptr;
+    m_func.free_session = nullptr;
 
     if (DCB_THROTTLING_ENABLED(this))
     {

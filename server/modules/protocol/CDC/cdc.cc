@@ -64,10 +64,11 @@ static int                   cdc_write(DCB* dcb, GWBUF* queue);
 static int                   cdc_error(DCB* dcb);
 static int                   cdc_hangup(DCB* dcb);
 static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION*);
+static void                  cdc_free_session(MXS_PROTOCOL_SESSION*);
 static bool                  cdc_init_connection(DCB*);
-static int                   cdc_close(DCB* dcb);
+static void                  cdc_finish_connection(DCB* dcb);
 static CDC_protocol*         cdc_protocol_init();
-static void                  cdc_protocol_done(DCB* dcb);
+static void                  cdc_protocol_done(CDC_protocol*);
 static int                   do_auth(DCB* dcb, GWBUF* buffer, void* data);
 static void                  write_auth_ack(DCB* dcb);
 static void                  write_auth_err(DCB* dcb);
@@ -96,10 +97,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
         cdc_write_event,               /* WriteReady - EPOLLOUT handler */
         cdc_error,                     /* Error - EPOLLERR handler      */
         cdc_hangup,                    /* HangUp - EPOLLHUP handler     */
-        cdc_new_client_session,        /* new_client_session            */
-        NULL,                          /* new_backend_session           */
-        cdc_init_connection,           /* init_connection               */
-        cdc_close,                     /* Close                         */
+        cdc_new_client_session,
+        NULL,
+        cdc_free_session,
+        cdc_init_connection,
+        cdc_finish_connection,
         cdc_default_auth,              /* default authentication        */
         NULL,
         NULL,
@@ -322,25 +324,16 @@ static bool cdc_init_connection(DCB* client_dcb)
     return inited;
 }
 
-/**
- * The close handler for the descriptor. Called by the gateway to
- * explicitly close a connection.
- *
- * @param dcb   The descriptor control block
- */
-static int cdc_close(DCB* dcb)
+static void cdc_finish_connection(DCB* client_dcb)
 {
-    CDC_protocol* p = (CDC_protocol*) dcb->m_protocol;
+}
 
-    if (!p)
+static void cdc_free_session(MXS_PROTOCOL_SESSION* protocol_session)
+{
+    if (protocol_session)
     {
-        return 0;
+        cdc_protocol_done(static_cast<CDC_protocol*>(protocol_session));
     }
-
-    /* Add deallocate protocol items*/
-    cdc_protocol_done(dcb);
-
-    return 1;
 }
 
 /**
@@ -375,20 +368,13 @@ static CDC_protocol* cdc_protocol_init()
  * @param dcb    DCB with allocateid protocol
  *
  */
-static void cdc_protocol_done(DCB* dcb)
+static void cdc_protocol_done(CDC_protocol* p)
 {
-    CDC_protocol* p = (CDC_protocol*) dcb->m_protocol;
-
-    if (!p)
-    {
-        return;
-    }
-
-    p = (CDC_protocol*) dcb->m_protocol;
-
     /* deallocate memory here */
 
     p->state = CDC_STATE_CLOSE;
+
+    MXS_FREE(p);
 }
 
 /**

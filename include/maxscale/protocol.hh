@@ -112,22 +112,29 @@ struct MXS_PROTOCOL
                                                   void* client_protocol_session);
 
     /**
+     * Free protocol session
+     *
+     * @param protocol_session  The protocol session to free
+     */
+    void (* free_session)(MXS_PROTOCOL_SESSION* protocol_session);
+
+    /**
      * Initialize a connection (client or server).
+     *
+     * @param dcb  The connection to be initialized.
      *
      * @return True, if the connection could be initialized, false otherwise.
      */
     bool (* init_connection)(DCB* dcb);
 
     /**
-     * Free protocol data allocated in the connect handler
+     * Finalize a connection (client or server).
      *
-     * @param dcb DCB to close
+     * Called right before the DCB itself is closed.
      *
-     * @return 1 on success, 0 on error
-     *
-     * @note Currently the return value is ignored
+     * @param dcb  The connection to be finalized.
      */
-    int32_t (* close)(DCB* dcb);
+    void (* finish_connection)(DCB* dcb);
 
     /**
      * Returns the name of the default authenticator module for this protocol

@@ -51,8 +51,9 @@ static int                   httpd_write(DCB* dcb, GWBUF* queue);
 static int                   httpd_error(DCB* dcb);
 static int                   httpd_hangup(DCB* dcb);
 static MXS_PROTOCOL_SESSION* httpd_new_client_session(MXS_SESSION* session);
+static void                  httpd_free_session(MXS_PROTOCOL_SESSION* protocol_session);
 static bool                  httpd_init_connection(DCB* dcb);
-static int                   httpd_close(DCB* dcb);
+static void                  httpd_finish_connection(DCB* dcb);
 static int                   httpd_get_line(int sock, char* buf, int size);
 static void                  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
 static char*                 httpd_default_auth();
@@ -76,10 +77,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
         httpd_write_event,               /**< WriteReady - EPOLLOUT handler */
         httpd_error,                     /**< Error - EPOLLERR handler      */
         httpd_hangup,                    /**< HangUp - EPOLLHUP handler     */
-        httpd_new_client_session,        /**< new_client_session            */
+        httpd_new_client_session,
         NULL,                            /**< new_backend_session           */
-        httpd_init_connection,           /**< init_connection               */
-        httpd_close,                     /**< Close                         */
+        httpd_free_session,
+        httpd_init_connection,
+        httpd_finish_connection,
         httpd_default_auth,              /**< Default authenticator         */
         NULL,                            /**< Connection limit reached      */
         NULL,
@@ -363,16 +365,13 @@ static bool httpd_init_connection(DCB* client_dcb)
     return session_start(client_dcb->session());
 }
 
-/**
- * The close handler for the descriptor. Called by the gateway to
- * explicitly close a connection.
- *
- * @param dcb   The descriptor control block
- */
-
-static int httpd_close(DCB* dcb)
+static void httpd_finish_connection(DCB* client_dcb)
 {
-    return 0;
+}
+
+static void httpd_free_session(MXS_PROTOCOL_SESSION* protocol_session)
+{
+    MXS_FREE(protocol_session);
 }
 
 /**

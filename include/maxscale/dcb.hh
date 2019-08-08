@@ -272,7 +272,7 @@ public:
     char*                   m_remote = nullptr;                   /**< Address of remote end */
     char*                   m_user = nullptr;                     /**< User name for connection */
     struct sockaddr_storage m_ip;                                 /**< remote IPv4/IPv6 address */
-    void*                   m_protocol = nullptr;                 /**< The protocol specific state */
+    MXS_PROTOCOL_SESSION*   m_protocol = nullptr;                 /**< The protocol specific state */
     size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
     uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */

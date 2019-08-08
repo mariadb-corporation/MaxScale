@@ -63,9 +63,10 @@ static int                   maxscaled_write(DCB* dcb, GWBUF* queue);
 static int                   maxscaled_error(DCB* dcb);
 static int                   maxscaled_hangup(DCB* dcb);
 static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION*);
+static void                  maxscaled_free_session(MXS_PROTOCOL_SESSION*);
 static bool                  maxscaled_init_connection(DCB*);
-static int                   maxscaled_close(DCB* dcb);
-static char*                 mxsd_default_auth();
+static void                  maxscaled_finish_connection(DCB* dcb);
+static char*                 maxscaled_default_auth();
 
 static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* dcb)
 {
@@ -179,11 +180,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
         maxscaled_write_event,               /**< WriteReady - EPOLLOUT handler */
         maxscaled_error,                     /**< Error - EPOLLERR handler      */
         maxscaled_hangup,                    /**< HangUp - EPOLLHUP handler     */
-        maxscaled_new_client_session,        /**< new_client_session            */
+        maxscaled_new_client_session,
         NULL,                                /**< new_backend_session           */
-        maxscaled_init_connection,           /**< init_connection               */
-        maxscaled_close,                     /**< Close                         */
-        mxsd_default_auth,                   /**< Default authenticator         */
+        maxscaled_free_session,
+        maxscaled_init_connection,
+        maxscaled_finish_connection,
+        maxscaled_default_auth,              /**< Default authenticator         */
         NULL,                                /**< Connection limit reached      */
         NULL,
         NULL,
@@ -217,7 +219,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return name of authenticator
  */
-static char* mxsd_default_auth()
+static char* maxscaled_default_auth()
 {
     return const_cast<char*>("MaxAdminAuth");
 }
@@ -352,6 +354,22 @@ static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION* session)
     return maxscaled_protocol;
 }
 
+static void maxscaled_free_session(MXS_PROTOCOL_SESSION* protocol_session)
+{
+    MAXSCALED* maxscaled = static_cast<MAXSCALED*>(protocol_session);
+
+    if (maxscaled)
+    {
+        if (maxscaled->username)
+        {
+            MXS_FREE(maxscaled->username);
+            maxscaled->username = NULL;
+        }
+
+        MXS_FREE(maxscaled);
+    }
+}
+
 static bool maxscaled_init_connection(DCB* client_dcb)
 {
     bool rv = true;
@@ -376,29 +394,6 @@ static bool maxscaled_init_connection(DCB* client_dcb)
     return rv;
 }
 
-/**
- * The close handler for the descriptor. Called by the gateway to
- * explicitly close a connection.
- *
- * @param dcb   The descriptor control block
- */
-
-static int maxscaled_close(DCB* dcb)
+static void maxscaled_finish_connection(DCB*)
 {
-    MAXSCALED* maxscaled = reinterpret_cast<MAXSCALED*>(dcb->m_protocol);
-
-    if (!maxscaled)
-    {
-        return 0;
-    }
-
-    pthread_mutex_lock(&maxscaled->lock);
-    if (maxscaled->username)
-    {
-        MXS_FREE(maxscaled->username);
-        maxscaled->username = NULL;
-    }
-    pthread_mutex_unlock(&maxscaled->lock);
-
-    return 0;
 }

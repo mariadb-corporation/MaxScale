@@ -42,7 +42,8 @@ static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
                                                     SERVER* server,
                                                     void* client_protocol_session);
 static bool gw_init_connection(DCB* backend_dcb);
-static int  gw_backend_close(DCB* dcb);
+static void gw_finish_connection(DCB* backend_dcb);
+static void gw_backend_free_session(MXS_PROTOCOL_SESSION*);
 static int  gw_backend_hangup(DCB* dcb);
 static int  backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
 static void backend_set_delayqueue(DCB* dcb, GWBUF* queue);
@@ -91,8 +92,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_backend_hangup,                  /* HangUp - EPOLLHUP handler     */
         NULL,                               /* new_client_session            */
         gw_new_backend_session,             /* New backend connection        */
+        gw_backend_free_session,           /* Close                         */
         gw_init_connection,                 /* Init backend connection       */
-        gw_backend_close,                   /* Close                         */
+        gw_finish_connection,
         gw_backend_default_auth,            /* Default authenticator         */
         NULL,                               /* Connection limit reached      */
         gw_connection_established,
@@ -184,6 +186,14 @@ static bool gw_init_connection(DCB* backend_dcb)
     }
 
     return true;
+}
+
+static void gw_finish_connection(DCB* dcb)
+{
+    mxb_assert(dcb->session() || dcb->m_persistentstart);
+    /** Send COM_QUIT to the backend being closed */
+    GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
+    mysql_send_com_quit(dcb, 0, quitbuf);
 }
 
 /**
@@ -1273,24 +1283,9 @@ static int gw_backend_hangup(DCB* dcb)
     return 1;
 }
 
-/**
- * Send COM_QUIT to backend so that it can be closed.
- * @param dcb The current Backend DCB
- * @return 1 always
- */
-static int gw_backend_close(DCB* dcb)
+static void gw_backend_free_session(MXS_PROTOCOL_SESSION* protocol_session)
 {
-    mxb_assert(dcb->session() || dcb->m_persistentstart);
-
-    /** Send COM_QUIT to the backend being closed */
-    GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
-    mysql_send_com_quit(dcb, 0, quitbuf);
-
-    /** Free protocol data */
-    MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->m_protocol);
-    delete protocol;
-
-    return 1;
+    delete static_cast<MySQLProtocol*>(protocol_session);
 }
 
 /**
