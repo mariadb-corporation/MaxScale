@@ -148,6 +148,22 @@ public:
     virtual bool is_open() const = 0;
 
     virtual mxs::Target* target() const = 0;
+
+//
+// Helper functions for storing a pointer to associated data
+//
+    void set_userdata(void* data)
+    {
+        m_data = data;
+    }
+
+    void* get_userdata()
+    {
+        return m_data;
+    }
+
+private:
+    void* m_data {nullptr};
 };
 
 // A routing target
