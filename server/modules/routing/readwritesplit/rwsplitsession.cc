@@ -31,7 +31,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_config(instance->config())
     , m_last_keepalive_check(mxs_clock())
     , m_nbackends(instance->service()->get_children().size())
-    , m_client(session->client_dcb)
+    , m_session(session)
     , m_sescmd_count(1)
     , m_expected_responses(0)
     , m_router(instance)
@@ -56,17 +56,17 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
 
     for (auto& b : m_raw_backends)
     {
-        m_server_stats[b->server()].start_session();
+        m_server_stats[b->target()].start_session();
     }
 }
 
-RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
+RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints)
 {
     RWSplitSession* rses = NULL;
 
     if (router->have_enough_servers())
     {
-        SRWBackends backends = RWBackend::from_servers(router->service()->dbref);
+        SRWBackends backends = RWBackend::from_endpoints(endpoints);
 
         if ((rses = new(std::nothrow) RWSplitSession(router, session, std::move(backends))))
         {
@@ -107,11 +107,11 @@ void RWSplitSession::close()
 
         if (stat.make_valid())
         {
-            backend->server()->response_time_add(stat.average().secs(), stat.num_samples());
+            backend->target()->response_time_add(stat.average().secs(), stat.num_samples());
         }
         backend->response_stat().reset();
 
-        m_server_stats[backend->server()].end_session(backend->session_timer().split(),
+        m_server_stats[backend->target()].end_session(backend->session_timer().split(),
                                                       backend->select_timer().total(),
                                                       backend->num_selects());
     }
@@ -205,7 +205,7 @@ bool RWSplitSession::route_stored_query()
         // TODO: Move the handling of queued queries to the client protocol
         // TODO: module where the command tracking is done automatically.
         uint8_t cmd = mxs_mysql_get_command(query.get());
-        mysql_protocol_set_current_command(m_client, (mxs_mysql_cmd_t)cmd);
+        mysql_protocol_set_current_command(m_session->client_dcb, (mxs_mysql_cmd_t)cmd);
 
         if (!routeQuery(query.release()))
         {
@@ -271,36 +271,6 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
 }
 
 /**
- * @brief Find the backend reference that matches the given DCB
- *
- * @param dcb DCB to match
- *
- * @return The correct reference
- */
-RWBackend* RWSplitSession::get_backend_from_dcb(DCB* dcb)
-{
-    mxb_assert(dcb->role() == DCB::Role::BACKEND);
-
-    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
-    {
-        RWBackend* backend = *it;
-
-        if (backend->in_use() && backend->dcb() == dcb)
-        {
-            return backend;
-        }
-    }
-
-    /** We should always have a valid backend reference and in case we don't,
-     * something is terribly wrong. */
-    MXS_ALERT("No reference to DCB %p found, aborting.", dcb);
-    raise(SIGABRT);
-
-    // Make the compiler happy
-    abort();
-}
-
-/**
  * @bref After discarded the wait result, we need correct the seqence number of every packet
  *
  * @param buffer origin reply buffer
@@ -337,7 +307,10 @@ static bool connection_was_killed(GWBUF* buffer)
     return rval;
 }
 
-static void log_unexpected_response(RWBackend* backend, GWBUF* buffer, GWBUF* current_query)
+static void log_unexpected_response(MXS_SESSION* session,
+                                    RWBackend* backend,
+                                    GWBUF* buffer,
+                                    GWBUF* current_query)
 {
     if (mxs_mysql_is_err_packet(buffer))
     {
@@ -365,8 +338,8 @@ static void log_unexpected_response(RWBackend* backend, GWBUF* buffer, GWBUF* cu
                   backend->name(),
                   backend->current_command(),
                   sql.c_str());
-        session_dump_statements(backend->dcb()->session());
-        session_dump_log(backend->dcb()->session());
+        session_dump_statements(session);
+        session_dump_log(session);
         mxb_assert(false);
     }
 }
@@ -436,10 +409,11 @@ void RWSplitSession::trx_replay_next_stmt()
             else
             {
                 MXS_INFO("Checksum mismatch, transaction replay failed. Closing connection.");
-                modutil_send_mysql_err_packet(m_client, 1, 0, 1927, "08S01",
-                                              "Transaction checksum mismatch encountered "
-                                              "when replaying transaction.");
-                poll_fake_hangup_event(m_client);
+                GWBUF* buf = modutil_create_mysql_err_msg(1, 0, 1927, "08S01",
+                                                          "Transaction checksum mismatch encountered "
+                                                          "when replaying transaction.");
+
+                m_session->terminate(buf);
 
                 // Turn the replay flag back on to prevent queries from getting routed before the hangup we
                 // just added is processed. For example, this can happen if the error is sent and the client
@@ -473,11 +447,11 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf)
 
         if (!mxs_mysql_is_ok_packet(writebuf))
         {
-            poll_fake_hangup_event(backend->dcb());
+            m_session->terminate();
         }
     }
     else if (m_config.transaction_replay && m_can_replay_trx
-             && session_trx_is_active(m_client->session()))
+             && session_trx_is_active(m_session))
     {
         if (!backend->has_session_commands())
         {
@@ -574,13 +548,13 @@ void RWSplitSession::close_stale_connections()
     {
         if (backend->in_use())
         {
-            auto server = backend->server();
+            auto server = backend->target();
 
             if (!server->is_usable())
             {
                 if (backend == m_current_master
-                    && can_continue_using_master(m_current_master)
-                    && !session_trx_is_ending(m_client->session()))
+                    && can_continue_using_master(m_current_master, m_session)
+                    && !session_trx_is_ending(m_session))
                 {
                     MXS_INFO("Keeping connection to '%s' open until transaction ends", backend->name());
                 }
@@ -593,7 +567,7 @@ void RWSplitSession::close_stale_connections()
             else if (server->rank() != current_rank)
             {
                 MXS_INFO("Discarding connection to '%s': Server has rank %ld and current rank is %ld",
-                         backend->name(), backend->server()->rank(), current_rank);
+                         backend->name(), backend->target()->rank(), current_rank);
                 backend->close();
             }
         }
@@ -642,10 +616,9 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
     return ok;
 }
 
-void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb, mxs::Reply* reply)
+void RWSplitSession::clientReply(GWBUF* writebuf, mxs::Endpoint* endpoint, mxs::Reply* reply)
 {
-    DCB* client_dcb = backend_dcb->session()->client_dcb;
-    RWBackend* backend = get_backend_from_dcb(backend_dcb);
+    RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
 
     if (backend->get_reply_state() == REPLY_STATE_DONE
         && !connection_was_killed(writebuf)
@@ -654,8 +627,8 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb, mxs::Reply* 
         /** If we receive an unexpected response from the server, the internal
          * logic cannot handle this situation. Routing the reply straight to
          * the client should be the safest thing to do at this point. */
-        log_unexpected_response(backend, writebuf, m_current_query.get());
-        RouterSession::clientReply(writebuf, backend_dcb, reply);
+        log_unexpected_response(m_session, backend, writebuf, m_current_query.get());
+        RouterSession::clientReply(writebuf, endpoint, reply);
         return;
     }
 
@@ -699,7 +672,8 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb, mxs::Reply* 
         /** Got a complete reply, decrement expected response count */
         m_expected_responses--;
 
-        session_book_server_response(m_pSession, backend->backend()->server, m_expected_responses == 0);
+        // TODO: This would make more sense if it was done at the client protocol level
+        session_book_server_response(m_pSession, (SERVER*)backend->target(), m_expected_responses == 0);
 
         mxb_assert(m_expected_responses >= 0);
         mxb_assert(backend->get_reply_state() == REPLY_STATE_DONE);
@@ -725,9 +699,9 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb, mxs::Reply* 
         ResponseStat& stat = backend->response_stat();
         stat.query_ended();
         if (stat.is_valid() && (stat.sync_time_reached()
-                                || backend->server()->response_time_num_samples() == 0))
+                                || backend->target()->response_time_num_samples() == 0))
         {
-            backend->server()->response_time_add(stat.average().secs(), stat.num_samples());
+            backend->target()->response_time_add(stat.average().secs(), stat.num_samples());
             stat.reset();
         }
 
@@ -802,7 +776,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb, mxs::Reply* 
             return;
         }
     }
-    else if (m_config.transaction_replay && session_trx_is_ending(m_client->session()))
+    else if (m_config.transaction_replay && session_trx_is_ending(m_session))
     {
         MXS_INFO("Transaction complete");
         m_trx.close();
@@ -831,10 +805,9 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb, mxs::Reply* 
 
     if (writebuf)
     {
-        mxb_assert(client_dcb);
         mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
-        RouterSession::clientReply(writebuf, backend_dcb, reply);
+        RouterSession::clientReply(writebuf, endpoint, reply);
     }
 
     if (m_expected_responses == 0)
@@ -847,29 +820,14 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb, mxs::Reply* 
     }
 }
 
-void check_and_log_backend_state(const RWBackend* backend, DCB* problem_dcb)
+void check_and_log_backend_state(const RWBackend* backend)
 {
-    if (backend)
-    {
-        /** This is a valid DCB for a backend ref */
-        if (backend->in_use() && backend->dcb() == problem_dcb)
-        {
-            MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.",
-                      backend->name());
-            mxb_assert(false);
-        }
-    }
-    else
-    {
-        BackendDCB* backend_problem_dcb = static_cast<BackendDCB*>(problem_dcb);
+    mxb_assert(backend);
 
-        const char* remote = problem_dcb->state() == DCB::State::POLLING
-            ? backend_problem_dcb->server()->name() : "CLOSED";
-
-        MXS_ERROR("DCB connected to '%s' is not in use by the router "
-                  "session, not closing it. DCB is in state '%s'",
-                  remote,
-                  mxs::to_string(problem_dcb->state()));
+    if (backend->in_use())
+    {
+        MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.", backend->name());
+        mxb_assert(false);
     }
 }
 
@@ -941,8 +899,7 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(!session_is_autocommit(m_client->session())
-                               || session_trx_is_ending(m_client->session()),
+            mxb_assert_message(!session_is_autocommit(m_session) || session_trx_is_ending(m_session),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
         }
@@ -1022,14 +979,11 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     return can_continue;
 }
 
-bool RWSplitSession::handleError(GWBUF* errmsgbuf, DCB* problem_dcb)
+bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint)
 {
-    mxb_assert(problem_dcb->role() == DCB::Role::BACKEND);
-    MXS_SESSION* session = problem_dcb->session();
-    mxb_assert(session);
-
-    RWBackend* backend = get_backend_from_dcb(problem_dcb);
-    mxb_assert(backend->in_use());
+    MXS_SESSION* session = m_session;
+    RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
+    mxb_assert(backend && backend->in_use());
 
     if (backend->reply_has_started())
     {
@@ -1038,7 +992,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, DCB* problem_dcb)
 
         // This effectively causes an instant termination of the client connection and prevents any errors
         // from being sent to the client (MXS-2562).
-        dcb_close(m_client);
+        m_session->terminate();
         return false;
     }
 
@@ -1086,7 +1040,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, DCB* problem_dcb)
                  * if the master is lost. Send a read-only error to
                  * the client to let it know that the query failed. */
                 can_continue = true;
-                send_readonly_error(m_client);
+                send_readonly_error();
             }
         }
 
@@ -1098,10 +1052,11 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, DCB* problem_dcb)
 
         if (!can_continue)
         {
-            int64_t idle = mxs_clock() - backend->dcb()->m_last_read;
+            // TODO: Fix this
+            // int64_t idle = mxs_clock() - backend->dcb()->m_last_read;
             MXS_ERROR("Lost connection to the master server, closing session.%s "
                       "Connection has been idle for %.1f seconds. Error caused by: %s",
-                      errmsg.c_str(), (float)idle / 10.f, extract_error(errmsgbuf).c_str());
+                      errmsg.c_str(),    /* (float)idle / 10.f */ 0.0, extract_error(errmsgbuf).c_str());
         }
 
         // Decrement the expected response count only if we know we can continue the sesssion.
@@ -1119,7 +1074,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, DCB* problem_dcb)
     {
         MXS_INFO("Slave '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
         if (m_target_node && m_target_node == backend
-            && session_trx_is_read_only(problem_dcb->session()))
+            && session_trx_is_read_only(session))
         {
             // We're no longer locked to this server as it failed
             m_target_node = nullptr;
@@ -1153,11 +1108,11 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, DCB* problem_dcb)
         else
         {
             /** Try to replace the failed connection with a new one */
-            can_continue = handle_error_new_connection(problem_dcb, errmsgbuf);
+            can_continue = handle_error_new_connection(session, backend, errmsgbuf);
         }
     }
 
-    check_and_log_backend_state(backend, problem_dcb);
+    check_and_log_backend_state(backend);
 
     return can_continue;
 }
@@ -1177,10 +1132,8 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, DCB* problem_dcb)
  * @return true if there are enough backend connections to continue, false if
  * not
  */
-bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg)
+bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* backend, GWBUF* errmsg)
 {
-    RWBackend* backend = get_backend_from_dcb(backend_dcb);
-    MXS_SESSION* ses = backend_dcb->session();
     bool route_stored = false;
 
     if (backend->is_waiting_result())
@@ -1203,7 +1156,7 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
             else
             {
                 // Send an error so that the client knows to proceed.
-                m_client->protocol_write(gwbuf_clone(errmsg));
+                RouterSession::clientReply(gwbuf_clone(errmsg), nullptr, nullptr);
                 m_current_query.reset();
             }
         }
@@ -1240,31 +1193,6 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
     }
 
     return succp;
-}
-
-/**
- * @brief Handle an error reply for a client
- *
- * @param ses           Session
- * @param rses          Router session
- * @param backend_dcb   DCB for the backend server that has failed
- * @param errmsg        GWBUF containing the error message
- */
-void RWSplitSession::handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg)
-{
-    MXS_SESSION::State sesstate = m_client->session()->state();
-    RWBackend* backend = get_backend_from_dcb(backend_dcb);
-
-    backend->close();
-
-    if (sesstate == MXS_SESSION::State::STARTED)
-    {
-        m_client->protocol_write(gwbuf_clone(errmsg));
-    }
-    else
-    {
-        MXS_INFO("Closing router session that is not ready");
-    }
 }
 
 bool RWSplitSession::lock_to_master()
@@ -1312,10 +1240,10 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
     return rv;
 }
 
-bool RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
+void RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
 {
     std::stringstream ss;
     ss << "Unknown prepared statement handler (" << stmt_id << ") given to MaxScale";
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
-    return m_client->protocol_write(err);
+    RouterSession::clientReply(err, nullptr, nullptr);
 }

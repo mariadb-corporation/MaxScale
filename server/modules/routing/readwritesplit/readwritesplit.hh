@@ -127,7 +127,7 @@ static const char gtid_wait_stmt[] =
 /** Function that returns a "score" for a server to enable comparison.
  *  Smaller numbers are better.
  */
-using BackendSelectFunction = mxs::PRWBackends::iterator (*)(mxs::PRWBackends& sBackends);
+using BackendSelectFunction = mxs::RWBackend * (*)(mxs::PRWBackends& sBackends);
 BackendSelectFunction get_backend_select_function(select_criteria_t);
 
 using std::chrono::seconds;
@@ -391,17 +391,15 @@ bool send_readonly_error(DCB* dcb);
  *
  * @see RWSplitSession::close_stale_connections()
  */
-inline bool can_continue_using_master(const mxs::RWBackend* current_master)
+inline bool can_continue_using_master(const mxs::RWBackend* current_master, MXS_SESSION* session)
 {
     constexpr uint64_t bits = SERVER_MASTER | SERVER_RUNNING | SERVER_MAINT;
-    auto server = current_master->server();
+    auto server = current_master->target();
 
     return server->is_master() || (current_master->in_use()
                                    && (server->status() & bits) == bits
-                                   && session_trx_is_active(current_master->dcb()->session()));
+                                   && session_trx_is_active(session));
 }
-
-mxs::RWBackend* get_root_master(const mxs::PRWBackends& backends, mxs::RWBackend* current_master);
 
 /**
  * Get total slave count and connected slave count
@@ -470,5 +468,5 @@ std::string extract_error(GWBUF* buffer);
  */
 static inline bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
 {
-    return max_rlag == SERVER::RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
+    return max_rlag == SERVER::RLAG_UNDEFINED || backend->target()->replication_lag() <= max_rlag;
 }

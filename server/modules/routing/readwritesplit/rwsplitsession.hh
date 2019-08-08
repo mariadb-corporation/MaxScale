@@ -90,7 +90,7 @@ public:
      *
      * @return New router session
      */
-    static RWSplitSession* create(RWSplit* router, MXS_SESSION* session);
+    static RWSplitSession* create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints);
 
     /**
      * Called when a client session has been closed.
@@ -112,10 +112,9 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, mxs::Reply* reply);
 
-
-    bool handleError(GWBUF* pMessage, DCB* pProblem);
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
 
     mxs::QueryClassifier& qc()
     {
@@ -142,6 +141,7 @@ private:
     mxs::RWBackend* get_master_backend();
     mxs::RWBackend* get_last_used_backend();
     mxs::RWBackend* get_target_backend(backend_type_t btype, const char* name, int max_rlag);
+    mxs::RWBackend* get_root_master();
 
     bool handle_target_is_all(route_target_t route_target,
                               GWBUF* querybuf,
@@ -167,19 +167,18 @@ private:
                                     mxs::RWBackend* curr_master);
 
     // Send unknown prepared statement ID error to client
-    bool send_unknown_ps_error(uint32_t stmt_id);
+    void send_unknown_ps_error(uint32_t stmt_id);
+    void send_readonly_error();
 
     GWBUF* handle_causal_read_reply(GWBUF* writebuf, mxs::RWBackend* backend);
     GWBUF* add_prefix_wait_gtid(SERVER* server, GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);
     GWBUF* discard_master_wait_gtid_result(GWBUF* buffer);
 
-    int             get_max_replication_lag();
-    mxs::RWBackend* get_backend_from_dcb(DCB* dcb);
+    int get_max_replication_lag();
 
     bool retry_master_query(mxs::RWBackend* backend);
-    void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
-    bool handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg);
+    bool handle_error_new_connection(MXS_SESSION* ses, mxs::RWBackend* backend, GWBUF* errmsg);
     void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf);
 
     void trx_replay_next_stmt();
@@ -231,8 +230,8 @@ private:
          * @see handle_trx_replay
          */
         return m_config.delayed_retry
-            && m_retry_duration < m_config.delayed_retry_timeout
-            && !session_trx_is_active(m_client->session());
+               && m_retry_duration < m_config.delayed_retry_timeout
+               && !session_trx_is_active(m_session);
     }
 
     // Whether a transaction replay can remain active
@@ -294,7 +293,7 @@ private:
 
     void update_trx_statistics()
     {
-        if (session_trx_is_ending(m_client->session()))
+        if (session_trx_is_ending(m_session))
         {
             mxb::atomic::add(m_qc.is_trx_still_read_only() ?
                              &m_router->stats().n_ro_trx :
@@ -312,7 +311,7 @@ private:
     Config           m_config;                  /**< Configuration for this session */
     int              m_last_keepalive_check;    /**< When the last ping was done */
     int              m_nbackends;               /**< Number of backend servers (obsolete) */
-    DCB*             m_client;                  /**< The client DCB */
+    MXS_SESSION*     m_session;                 /**< The client session */
     uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
     int              m_expected_responses;      /**< Number of expected responses to the current
                                                  * query */

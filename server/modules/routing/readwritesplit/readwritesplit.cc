@@ -120,7 +120,7 @@ maxscale::SrvStatMap RWSplit::all_server_stats() const
     {
         for (const auto& b : a)
         {
-            if (b.first->is_active)
+            if (b.first->active())
             {
                 stats[b.first] += b.second;
             }
@@ -242,7 +242,7 @@ RWSplit* RWSplit::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 RWSplitSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
     RWSplitSession* rses = NULL;
-    MXS_EXCEPTION_GUARD(rses = RWSplitSession::create(this, session));
+    MXS_EXCEPTION_GUARD(rses = RWSplitSession::create(this, session, endpoints));
     return rses;
 }
 

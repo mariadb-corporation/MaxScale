@@ -28,39 +28,6 @@
 #include <maxbase/alloc.h>
 
 /**
- * Functions within the read-write split router that are specific to
- * MySQL. The aim is to either remove these into a separate module or to
- * move them into the MySQL protocol modules.
- */
-
-/*
- * The following functions are called from elsewhere in the router and
- * are defined in rwsplit_internal.hh.  They are not intended to be called
- * from outside this router.
- */
-
-/* This could be placed in the protocol, with a new API entry point
- * It is certainly MySQL specific. Packet types are DB specific, but can be
- * assumed to be enums, which can be handled as integers without knowing
- * which DB is involved until the packet type needs to be interpreted.
- *
- */
-
-/*
- * This appears to be MySQL specific
- */
-/*
- * This one is problematic because it is MySQL specific, but also router
- * specific.
- */
-/*
- * This is mostly router code, but it contains MySQL specific operations that
- * maybe could be moved to the protocol module. The modutil functions are mostly
- * MySQL specific and could migrate to the MySQL protocol; likewise the
- * utility to convert packet type to a string. The aim is for most of this
- * code to remain as part of the router.
- */
-/**
  * @brief Operations to be carried out if request is for all backend servers
  *
  * If the choice of sending to all backends is in conflict with other bit
@@ -101,19 +68,13 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
                   qtype_str,
                   (query_str == NULL ? "(empty)" : query_str));
 
-        GWBUF* errbuf = modutil_create_mysql_err_msg(1,
-                                                     0,
-                                                     1064,
-                                                     "42000",
-                                                     "Routing query to backend failed. "
-                                                     "See the error log for further details.");
+        auto err = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
+                                                "Routing query to backend failed. "
+                                                "See the error log for further details.");
 
-        if (errbuf)
-        {
-            m_client->protocol_write(errbuf);
-            result = true;
-        }
+        RouterSession::clientReply(err, nullptr, nullptr);
 
+        result = true;
         MXS_FREE(query_str);
         MXS_FREE(qtype_str);
     }
@@ -144,25 +105,10 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
  *
  * @return True if sending the message was successful, false if an error occurred
  */
-bool send_readonly_error(DCB* dcb)
+void RWSplitSession::send_readonly_error()
 {
-    bool succp = false;
     const char* errmsg = "The MariaDB server is running with the --read-only"
                          " option so it cannot execute this statement";
-    GWBUF* err = modutil_create_mysql_err_msg(1,
-                                              0,
-                                              ER_OPTION_PREVENTS_STATEMENT,
-                                              "HY000",
-                                              errmsg);
-
-    if (err)
-    {
-        succp = dcb->protocol_write(err);
-    }
-    else
-    {
-        MXS_ERROR("Memory allocation failed when creating client error message.");
-    }
-
-    return succp;
+    GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000", errmsg);
+    RouterSession::clientReply(err, nullptr, nullptr);
 }

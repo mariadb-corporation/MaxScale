@@ -38,39 +38,43 @@ using namespace maxscale;
 
 void RWSplitSession::handle_connection_keepalive(RWBackend* target)
 {
-    mxb_assert(target);
-    MXB_AT_DEBUG(int nserv = 0);
-    /** Each heartbeat is 1/10th of a second */
-    int64_t keepalive = m_config.connection_keepalive * 10;
-    int64_t now = mxs_clock();
+    //
+    // TODO: Fix this
+    //
 
-    if (now - m_last_keepalive_check > keepalive)
-    {
-        for (const auto& backend : m_raw_backends)
-        {
-            if (backend->in_use() && backend != target && !backend->is_waiting_result())
-            {
-                MXB_AT_DEBUG(nserv++);
-                int64_t diff = now - backend->dcb()->m_last_read;
+    // mxb_assert(target);
+    // MXB_AT_DEBUG(int nserv = 0);
+    // /** Each heartbeat is 1/10th of a second */
+    // int64_t keepalive = m_config.connection_keepalive * 10;
+    // int64_t now = mxs_clock();
 
-                if (diff > keepalive)
-                {
-                    MXS_INFO("Pinging %s, idle for %ld seconds",
-                             backend->name(),
-                             MXS_CLOCK_TO_SEC(diff));
-                    modutil_ignorable_ping(backend->dcb());
-                }
-            }
-        }
-    }
+    // if (now - m_last_keepalive_check > keepalive)
+    // {
+    //     for (const auto& backend : m_raw_backends)
+    //     {
+    //         if (backend->in_use() && backend != target && !backend->is_waiting_result())
+    //         {
+    //             MXB_AT_DEBUG(nserv++);
+    //             int64_t diff = now - backend->dcb()->m_last_read;
 
-    mxb_assert(nserv < m_nbackends);
+    //             if (diff > keepalive)
+    //             {
+    //                 MXS_INFO("Pinging %s, idle for %ld seconds",
+    //                          backend->name(),
+    //                          MXS_CLOCK_TO_SEC(diff));
+    //                 modutil_ignorable_ping(backend->dcb());
+    //             }
+    //         }
+    //     }
+    // }
+
+    // mxb_assert(nserv < m_nbackends);
 }
 
 bool RWSplitSession::prepare_connection(RWBackend* target)
 {
     mxb_assert(!target->in_use());
-    bool rval = target->connect(m_client->session(), &m_sescmd_list);
+    bool rval = target->connect(&m_sescmd_list);
 
     if (rval)
     {
@@ -131,7 +135,7 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 {
     mxb_assert(querybuf);
     // Try to route the query again later
-    MXS_SESSION* session = m_client->session();
+    MXS_SESSION* session = m_session;
 
     /**
      * Used to distinct retried queries from new ones while we're doing transaction replay.
@@ -194,7 +198,7 @@ bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
 {
     bool store_stmt = true;
 
-    if (session_trx_is_ending(m_client->session()))
+    if (session_trx_is_ending(m_session))
     {
         m_otrx_state = OTRX_INACTIVE;
     }
@@ -259,9 +263,9 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             replace_master(next_master);
         }
 
-        if (m_qc.is_trx_starting()                          // A transaction is starting
-            && !session_trx_is_read_only(m_client->session()) // Not explicitly read-only
-            && should_try_trx_on_slave(route_target))       // Qualifies for speculative routing
+        if (m_qc.is_trx_starting()                      // A transaction is starting
+            && !session_trx_is_read_only(m_session)     // Not explicitly read-only
+            && should_try_trx_on_slave(route_target))   // Qualifies for speculative routing
         {
             // Speculatively start routing the transaction to a slave
             m_otrx_state = OTRX_STARTING;
@@ -296,7 +300,8 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         else if (mxs_mysql_is_ps_command(command) && stmt_id == 0)
         {
             // Unknown prepared statement ID
-            succp = send_unknown_ps_error(extract_binary_ps_id(querybuf));
+            succp = true;
+            send_unknown_ps_error(extract_binary_ps_id(querybuf));
         }
         else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
         {
@@ -528,9 +533,9 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             if (backend->execute_session_command())
             {
                 nsucc += 1;
-                mxb::atomic::add(&backend->server()->stats().packets, 1, mxb::atomic::RELAXED);
-                m_server_stats[backend->server()].total++;
-                m_server_stats[backend->server()].read++;
+                mxb::atomic::add(&backend->target()->stats().packets, 1, mxb::atomic::RELAXED);
+                m_server_stats[backend->target()].total++;
+                m_server_stats[backend->target()].read++;
 
                 if (expecting_response)
                 {
@@ -651,14 +656,14 @@ RWBackend* RWSplitSession::get_master_backend()
 {
     RWBackend* rval = nullptr;
     /** get root master from available servers */
-    RWBackend* master = get_root_master(m_raw_backends, m_current_master);
+    RWBackend* master = get_root_master();
 
     if (master)
     {
         if (master->in_use()
             || (m_config.master_reconnection && master->can_connect() && can_recover_servers()))
         {
-            if (can_continue_using_master(master))
+            if (can_continue_using_master(master, m_session))
             {
                 rval = master;
             }
@@ -701,7 +706,7 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
                                               int max_rlag)
 {
     /** Check whether using target_node as target SLAVE */
-    if (m_target_node && session_trx_is_read_only(m_client->session()))
+    if (m_target_node && session_trx_is_read_only(m_session))
     {
         return m_target_node;
     }
@@ -778,9 +783,9 @@ RWBackend* RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t 
                     std::string status;
                     for (const auto& a : m_backends)
                     {
-                        if (strcmp(a->server()->name(), named_server) == 0)
+                        if (strcmp(a->target()->name(), named_server) == 0)
                         {
-                            status = a->server()->status_string();
+                            status = a->target()->status_string();
                             break;
                         }
                     }
@@ -868,7 +873,7 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     if (target)
     {
         mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
-        m_server_stats[target->server()].read++;
+        m_server_stats[target->target()].read++;
         mxb_assert(target->in_use() || target->can_connect());
     }
     else
@@ -886,12 +891,6 @@ void RWSplitSession::log_master_routing_failure(bool found,
                                                 RWBackend* old_master,
                                                 RWBackend* curr_master)
 {
-    /** Both backends should either be empty, not connected or the DCB should
-     * be a backend (the last check is slightly redundant). */
-    mxb_assert(!old_master || !old_master->in_use()
-               || old_master->dcb()->role() == DCB::Role::BACKEND);
-    mxb_assert(!curr_master || !curr_master->in_use()
-               || curr_master->dcb()->role() == DCB::Role::BACKEND);
     char errmsg[SERVER::MAX_ADDRESS_LEN* 2 + 100];      // Extra space for error message
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout)
@@ -941,14 +940,14 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
     MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
                 m_router->service()->name(),
-                m_client->m_user,
-                m_client->m_remote,
+                m_session->client_dcb->m_user,
+                m_session->client_dcb->m_remote,
                 errmsg);
 }
 
 bool RWSplitSession::trx_is_starting()
 {
-    return session_trx_is_active(m_client->session())
+    return session_trx_is_active(m_session)
            && qc_query_is_type(m_qc.current_route_info().type_mask(), QUERY_TYPE_BEGIN_TRX);
 }
 
@@ -958,7 +957,7 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // We are not inside a transaction (also checks for autocommit=1)
-           (!session_trx_is_active(m_client->session()) || trx_is_starting() || m_is_replay_active)
+           (!session_trx_is_active(m_session) || trx_is_starting() || m_is_replay_active)
            &&   // We are not locked to the old master
            !is_locked_to_master();
 }
@@ -978,7 +977,7 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
            &&   // Transaction replay is not active (replay is only attempted once)
            !m_is_replay_active
            &&   // We have an open transaction
-           session_trx_is_active(m_client->session())
+           session_trx_is_active(m_session)
            &&   // The transaction can be replayed
            m_can_replay_trx;
 }
@@ -1021,7 +1020,7 @@ bool RWSplitSession::handle_master_is_target(RWBackend** dest)
     if (target && target == m_current_master)
     {
         mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
-        m_server_stats[target->server()].write++;
+        m_server_stats[target->target()].write++;
     }
     else
     {
@@ -1029,7 +1028,8 @@ bool RWSplitSession::handle_master_is_target(RWBackend** dest)
         /** The original master is not available, we can't route the write */
         if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
         {
-            succp = send_readonly_error(m_client);
+            succp = true;
+            send_readonly_error();
 
             if (m_current_master && m_current_master->in_use())
             {
@@ -1136,7 +1136,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
 
     MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
 
-    if (!m_target_node && session_trx_is_read_only(m_client->session()))
+    if (!m_target_node && session_trx_is_read_only(m_session))
     {
         // Lock the session to this node until the read-only transaction ends
         m_target_node = target;
@@ -1149,7 +1149,8 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     if (m_config.causal_reads && cmd == COM_QUERY && !m_gtid_pos.empty() && target->is_slave())
     {
         // Perform the causal read only when the query is routed to a slave
-        send_buf = add_prefix_wait_gtid(target->server(), send_buf);
+        // TODO: Fix this
+        // send_buf = add_prefix_wait_gtid((SERVER*)target->target(), send_buf);
         m_wait_gtid = WAITING_FOR_HEADER;
 
         // The storage for causal reads is done inside add_prefix_wait_gtid
@@ -1195,8 +1196,8 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         }
 
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&target->server()->stats().packets, 1, mxb::atomic::RELAXED);
-        m_server_stats[target->server()].total++;
+        mxb::atomic::add(&target->target()->stats().packets, 1, mxb::atomic::RELAXED);
+        m_server_stats[target->target()].total++;
 
         if (!m_qc.large_query() && response == mxs::Backend::EXPECT_RESPONSE)
         {
@@ -1219,8 +1220,8 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         m_prev_target = target;
 
         if (m_target_node
-            && session_trx_is_read_only(m_client->session())
-            && session_trx_is_ending(m_client->session()))
+            && session_trx_is_read_only(m_session)
+            && session_trx_is_ending(m_session))
         {
             // Read-only transaction is over, stop routing queries to a specific node
             m_target_node = nullptr;
