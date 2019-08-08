@@ -104,6 +104,46 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
     return result;
 }
 
+void Target::response_time_add(double ave, int num_samples)
+{
+    /**
+     * Apply backend average and adjust sample_max, which determines the weight of a new average
+     * applied to EMAverage.
+     *
+     * Sample max is raised if the server is fast, aggressively lowered if the incoming average is clearly
+     * lower than the EMA, else just lowered a bit. The normal increase and decrease, drifting, of the max
+     * is done to follow the speed of a server. The important part is the lowering of max, to allow for a
+     * server that is speeding up to be adjusted and used.
+     *
+     * Three new magic numbers to replace the sample max magic number... */
+    constexpr double drift {1.1};
+    std::lock_guard<std::mutex> guard(m_average_write_mutex);
+    int current_max = m_response_time.sample_max();
+    int new_max {0};
+
+    // This server handles more samples than EMA max.
+    // Increasing max allows all servers to be fairly compared.
+    if (num_samples >= current_max)
+    {
+        new_max = num_samples * drift;
+    }
+    // This server is experiencing high load of some kind,
+    // lower max to give more weight to the samples.
+    else if (m_response_time.average() / ave > 2)
+    {
+        new_max = current_max * 0.5;
+    }
+    // Let the max slowly trickle down to keep
+    // the sample max close to reality.
+    else
+    {
+        new_max = current_max / drift;
+    }
+
+    m_response_time.set_sample_max(new_max);
+    m_response_time.add(ave, num_samples);
+}
+
 Error::operator bool() const
 {
     return m_code != 0;

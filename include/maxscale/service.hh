@@ -156,6 +156,8 @@ public:
         return RANK_PRIMARY;
     }
 
+    virtual int64_t replication_lag() const = 0;
+
     const char* router_name() const
     {
         return m_router_name.c_str();

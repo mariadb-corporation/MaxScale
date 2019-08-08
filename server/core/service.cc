@@ -2020,3 +2020,20 @@ void Service::add_target(mxs::Target* target)
     m_data->targets.push_back(target);
     targets_updated();
 }
+
+int64_t Service::replication_lag() const
+{
+    int64_t lag = std::numeric_limits<int64_t>::max();
+
+    for (auto a : m_data->targets)
+    {
+        int64_t l = a->replication_lag();
+
+        if (l < lag)
+        {
+            lag = l;
+        }
+    }
+
+    return lag;
+}

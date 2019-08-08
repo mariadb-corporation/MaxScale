@@ -59,5 +59,5 @@ private:
     maxbase::CumulativeAverage m_num_ave_session_selects;
 };
 
-using SrvStatMap = std::unordered_map<SERVER*, ServerStats>;
+using SrvStatMap = std::unordered_map<mxs::Target*, ServerStats>;
 }

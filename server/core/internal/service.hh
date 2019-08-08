@@ -129,6 +129,8 @@ public:
 
     std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* up, MXS_SESSION* session) override;
 
+    int64_t replication_lag() const override;
+
     // Adds a routing target to this service
     void add_target(mxs::Target* target);
 

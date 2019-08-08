@@ -15,9 +15,11 @@
 #include <maxscale/ccdefs.hh>
 
 #include <string>
+#include <mutex>
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/buffer.hh>
+#include <maxbase/average.hh>
 
 struct MXS_SESSION;
 
@@ -184,6 +186,14 @@ public:
     virtual int64_t rank() const = 0;
 
     /**
+     * How many seconds behind the master this target is
+     *
+     * @return Returns the lag in seconds that this target is behind. If this target is a master or
+     *         replication lag is not applicable, this function returns 0.
+     */
+    virtual int64_t replication_lag() const = 0;
+
+    /**
      * Get a connection handle to this target
      */
     virtual std::unique_ptr<Endpoint> get_connection(Component* up, MXS_SESSION* session) = 0;
@@ -342,8 +352,28 @@ public:
         return status_is_disk_space_exhausted(status());
     }
 
+    int response_time_num_samples() const
+    {
+        return m_response_time.num_samples();
+    }
+
+    double response_time_average() const
+    {
+        return m_response_time.average();
+    }
+
+    /**
+     * Add a response time measurement to the global server value.
+     *
+     * @param ave The value to add
+     * @param num_samples The weight of the new value, that is, the number of measurement points it represents
+     */
+    void response_time_add(double ave, int num_samples);
+
 protected:
-    Stats m_stats;
+    Stats              m_stats;
+    maxbase::EMAverage m_response_time {0.04, 0.35, 500};   /**< Response time calculations for this server */
+    std::mutex         m_average_write_mutex;               /**< Protects response time modifications */
 };
 
 class Error

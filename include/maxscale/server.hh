@@ -219,6 +219,11 @@ public:
         return m_status;
     }
 
+    int64_t replication_lag() const override
+    {
+        return rlag;
+    }
+
     /**
      * Find a server with the specified name.
      *
@@ -265,24 +270,6 @@ public:
         m_status = status;
     }
 
-    int response_time_num_samples() const
-    {
-        return m_response_time.num_samples();
-    }
-
-    double response_time_average() const
-    {
-        return m_response_time.average();
-    }
-
-    /**
-     * Add a response time measurement to the global server value.
-     *
-     * @param ave The value to add
-     * @param num_samples The weight of the new value, that is, the number of measurement points it represents
-     */
-    void response_time_add(double ave, int num_samples);
-
     const mxs::SSLProvider& ssl() const
     {
         return m_ssl_provider;
@@ -295,15 +282,12 @@ public:
 
 protected:
     SERVER(std::unique_ptr<mxs::SSLContext> ssl_context)
-        : m_response_time{0.04, 0.35, 500}
-        , m_ssl_provider{std::move(ssl_context)}
+        : m_ssl_provider{std::move(ssl_context)}
     {
     }
 
 private:
-    static const int   DEFAULT_CHARSET {0x08};      /**< The latin1 charset */
-    maxbase::EMAverage m_response_time;             /**< Response time calculations for this server */
-    std::mutex         m_average_write_mutex;       /**< Protects response time from concurrent writing */
-    mxs::SSLProvider   m_ssl_provider;
-    uint64_t           m_status {0};
+    static const int DEFAULT_CHARSET {0x08};        /**< The latin1 charset */
+    mxs::SSLProvider m_ssl_provider;
+    uint64_t         m_status {0};
 };
