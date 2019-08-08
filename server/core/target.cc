@@ -12,6 +12,7 @@
  */
 
 #include <maxscale/target.hh>
+#include <maxscale/protocol/mysql.hh>
 
 const MXS_ENUM_VALUE rank_values[] =
 {
@@ -22,8 +23,11 @@ const MXS_ENUM_VALUE rank_values[] =
 
 const char* DEFAULT_RANK = "primary";
 
+namespace maxscale
+{
+
 // static
-std::string mxs::Target::status_to_string(uint64_t flags, int n_connections)
+std::string Target::status_to_string(uint64_t flags, int n_connections)
 {
     std::string result;
     std::string separator;
@@ -98,4 +102,203 @@ std::string mxs::Target::status_to_string(uint64_t flags, int n_connections)
     concatenate_if(status_is_down(flags), down);
 
     return result;
+}
+
+Error::operator bool() const
+{
+    return m_code != 0;
+}
+
+bool Error::is_rollback() const
+{
+    bool rv = false;
+
+    if (m_code != 0)
+    {
+        mxb_assert(m_sql_state.length() == 5);
+        // The 'sql_state' of all transaction rollbacks is "40XXX".
+        if (m_sql_state[0] == '4' && m_sql_state[1] == '0')
+        {
+            rv = true;
+        }
+    }
+
+    return rv;
+}
+
+bool Error::is_unexpected_error() const
+{
+    switch (m_code)
+    {
+    case ER_CONNECTION_KILLED:
+    case ER_SERVER_SHUTDOWN:
+    case ER_NORMAL_SHUTDOWN:
+    case ER_SHUTDOWN_COMPLETE:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+uint32_t Error::code() const
+{
+    return m_code;
+}
+
+const std::string& Error::sql_state() const
+{
+    return m_sql_state;
+}
+
+const std::string& Error::message() const
+{
+    return m_message;
+}
+
+void Error::clear()
+{
+    m_code = 0;
+    m_sql_state.clear();
+    m_message.clear();
+}
+
+Reply::Reply(mxs::Target* target)
+    : m_target(target)
+{
+}
+
+ReplyState Reply::state() const
+{
+    return m_reply_state;
+}
+
+std::string Reply::to_string() const
+{
+    switch (m_reply_state)
+    {
+    case ReplyState::START:
+        return "START";
+
+    case ReplyState::DONE:
+        return "DONE";
+
+    case ReplyState::RSET_COLDEF:
+        return "COLDEF";
+
+    case ReplyState::RSET_COLDEF_EOF:
+        return "COLDEF_EOF";
+
+    case ReplyState::RSET_ROWS:
+        return "ROWS";
+
+    default:
+        mxb_assert(!true);
+        return "UNKNOWN";
+    }
+}
+
+/**
+ * The latest command that was executed
+ */
+uint8_t Reply::command() const
+{
+    return m_command;
+}
+
+/**
+ * The original target where the response came from
+ */
+Target* Reply::target() const
+{
+    return m_target;
+}
+
+/**
+ * Get latest error
+ *
+ * Evaluates to false if the response has no errors.
+ *
+ * @return The current error state.
+ */
+const Error& Reply::error() const
+{
+    return m_error;
+}
+
+/**
+ * Check whether the response from the server is complete
+ *
+ * @return True if no more results are expected from this server
+ */
+bool Reply::is_complete() const
+{
+    return m_reply_state == ReplyState::DONE;
+}
+
+/**
+ * Check if a partial response has been received from the backend
+ *
+ * @return True if some parts of the reply have been received
+ */
+bool Reply::has_started() const
+{
+    return m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
+}
+
+/**
+ * Number of rows read from the result
+ */
+uint64_t Reply::rows_read() const
+{
+    return m_row_count;
+}
+
+/**
+ * Number of bytes received
+ */
+uint64_t Reply::size() const
+{
+    return m_size;
+}
+
+const std::vector<uint64_t>& Reply::field_counts() const
+{
+    return m_field_counts;
+}
+
+void Reply::set_command(uint8_t command)
+{
+    m_command = command;
+}
+
+void Reply::set_reply_state(mxs::ReplyState state)
+{
+    m_reply_state = state;
+}
+
+void Reply::add_rows(uint64_t row_count)
+{
+    m_row_count += row_count;
+}
+
+void Reply::add_bytes(uint64_t size)
+{
+    m_size = size;
+}
+
+void Reply::add_field_count(uint64_t field_count)
+{
+    m_field_counts.push_back(field_count);
+}
+
+void Reply::clear()
+{
+    m_command = 0;
+    m_reply_state = ReplyState::DONE;
+    m_error.clear();
+    m_row_count = 0;
+    m_size = 0;
+    m_field_counts.clear();
+}
 }

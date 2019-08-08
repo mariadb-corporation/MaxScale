@@ -24,7 +24,7 @@ int MaxRowsSession::routeQuery(GWBUF* packet)
 int MaxRowsSession::clientReply(GWBUF* data, DCB* dcb)
 {
     mxs::Buffer buffer(data);
-    MySQLProtocol::Reply reply = static_cast<MySQLProtocol*>(dcb->protocol_session())->reply();
+    mxs::Reply reply = static_cast<MySQLProtocol*>(dcb->protocol_session())->reply();
     int rv = 1;
 
     if (m_collect)

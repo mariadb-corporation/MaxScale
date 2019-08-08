@@ -117,6 +117,7 @@ namespace maxscale
 {
 
 class Target;
+class Reply;
 class Endpoint;
 
 // A routing component
@@ -343,5 +344,147 @@ public:
 
 protected:
     Stats m_stats;
+};
+
+class Error
+{
+public:
+    Error() = default;
+
+    explicit operator bool() const;
+
+    bool is_rollback() const;
+
+    bool is_unexpected_error() const;
+
+
+    uint32_t code() const;
+
+    const std::string& sql_state() const;
+
+    const std::string& message() const;
+
+    template<class InputIterator>
+    void set(uint32_t code,
+             InputIterator sql_state_begin, InputIterator sql_state_end,
+             InputIterator message_begin, InputIterator message_end)
+    {
+        mxb_assert(std::distance(sql_state_begin, sql_state_end) == 5);
+        m_code = code;
+        m_sql_state.assign(sql_state_begin, sql_state_end);
+        m_message.assign(message_begin, message_end);
+    }
+
+    void clear();
+
+private:
+    uint16_t    m_code {0};
+    std::string m_sql_state;
+    std::string m_message;
+};
+
+enum class ReplyState
+{
+    START,              /**< Query sent to backend */
+    DONE,               /**< Complete reply received */
+    RSET_COLDEF,        /**< Resultset response, waiting for column definitions */
+    RSET_COLDEF_EOF,    /**< Resultset response, waiting for EOF for column definitions */
+    RSET_ROWS           /**< Resultset response, waiting for rows */
+};
+
+class Reply
+{
+public:
+
+    Reply(mxs::Target* target);
+
+    /**
+     * Get the current state
+     */
+    ReplyState state() const;
+
+    /**
+     * Get state in string form
+     */
+    std::string to_string() const;
+
+    /**
+     * The command that the reply is for
+     */
+    uint8_t command() const;
+
+    /**
+     * The original target where the response came from
+     */
+    mxs::Target* target() const;
+
+    /**
+     * Get latest error
+     *
+     * Evaluates to false if the response has no errors.
+     *
+     * @return The current error state.
+     */
+    const Error& error() const;
+
+    /**
+     * Check whether the response from the server is complete
+     *
+     * @return True if no more results are expected from this server
+     */
+    bool is_complete() const;
+
+    /**
+     * Check if a partial response has been received from the backend
+     *
+     * @return True if some parts of the reply have been received
+     */
+    bool has_started() const;
+
+    /**
+     * Number of rows read from the result
+     */
+    uint64_t rows_read() const;
+
+    /**
+     * Number of bytes received
+     */
+    uint64_t size() const;
+
+    /**
+     * The field counts for all received result sets
+     */
+    const std::vector<uint64_t>& field_counts() const;
+
+    //
+    // Setters
+    //
+
+    void set_command(uint8_t command);
+
+    void set_reply_state(mxs::ReplyState state);
+
+    void add_rows(uint64_t row_count);
+
+    void add_bytes(uint64_t size);
+
+    void add_field_count(uint64_t field_count);
+
+    void clear();
+
+    template<typename ... Args>
+    void set_error(Args... args)
+    {
+        m_error.set(std::forward<Args>(args)...);
+    }
+
+private:
+    mxs::Target*          m_target {nullptr};
+    uint8_t               m_command {0};
+    ReplyState            m_reply_state {ReplyState::DONE};
+    Error                 m_error;
+    uint64_t              m_row_count {0};
+    uint64_t              m_size {0};
+    std::vector<uint64_t> m_field_counts;
 };
 }

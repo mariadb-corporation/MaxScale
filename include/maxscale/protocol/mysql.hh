@@ -323,255 +323,6 @@ static const char* const MXS_LAST_GTID = "last_gtid";
  */
 struct MySQLProtocol : public MXS_PROTOCOL_SESSION
 {
-    class Error
-    {
-    public:
-        Error() = default;
-
-        explicit operator bool() const
-        {
-            return m_code != 0;
-        }
-
-        bool is_rollback() const
-        {
-            bool rv = false;
-
-            if (m_code != 0)
-            {
-                mxb_assert(m_sql_state.length() == 5);
-                // The 'sql_state' of all transaction rollbacks is "40XXX".
-                if (m_sql_state[0] == '4' && m_sql_state[1] == '0')
-                {
-                    rv = true;
-                }
-            }
-
-            return rv;
-        }
-
-        bool is_unexpected_error() const
-        {
-            switch (m_code)
-            {
-            case ER_CONNECTION_KILLED:
-            case ER_SERVER_SHUTDOWN:
-            case ER_NORMAL_SHUTDOWN:
-            case ER_SHUTDOWN_COMPLETE:
-                return true;
-
-            default:
-                return false;
-            }
-        }
-
-        uint32_t code() const
-        {
-            return m_code;
-        }
-
-        const std::string& sql_state() const
-        {
-            return m_sql_state;
-        }
-
-        const std::string& message() const
-        {
-            return m_message;
-        }
-
-        template<class InputIterator>
-        void set(uint32_t code,
-                 InputIterator sql_state_begin, InputIterator sql_state_end,
-                 InputIterator message_begin, InputIterator message_end)
-        {
-            mxb_assert(std::distance(sql_state_begin, sql_state_end) == 5);
-            m_code = code;
-            m_sql_state.assign(sql_state_begin, sql_state_end);
-            m_message.assign(message_begin, message_end);
-        }
-
-        void clear()
-        {
-            m_code = 0;
-            m_sql_state.clear();
-            m_message.clear();
-        }
-
-    private:
-        uint16_t    m_code {0};
-        std::string m_sql_state;
-        std::string m_message;
-    };
-
-    enum class ReplyState
-    {
-        START,          /**< Query sent to backend */
-        DONE,           /**< Complete reply received */
-        RSET_COLDEF,    /**< Resultset response, waiting for column definitions */
-        RSET_COLDEF_EOF,/**< Resultset response, waiting for EOF for column definitions */
-        RSET_ROWS       /**< Resultset response, waiting for rows */
-    };
-
-    class Reply
-    {
-    public:
-
-        Reply(mxs::Target* target)
-            : m_target(target)
-        {
-        }
-
-        ReplyState state() const
-        {
-            return m_reply_state;
-        }
-
-        std::string to_string() const
-        {
-            switch (m_reply_state)
-            {
-            case ReplyState::START:
-                return "START";
-
-            case ReplyState::DONE:
-                return "DONE";
-
-            case ReplyState::RSET_COLDEF:
-                return "COLDEF";
-
-            case ReplyState::RSET_COLDEF_EOF:
-                return "COLDEF_EOF";
-
-            case ReplyState::RSET_ROWS:
-                return "ROWS";
-
-            default:
-                mxb_assert(!true);
-                return "UNKNOWN";
-            }
-        }
-
-        /**
-         * The latest command that was executed
-         */
-        uint8_t command() const
-        {
-            return m_command;
-        }
-
-        /**
-         * The original target where the response came from
-         */
-        mxs::Target* target() const
-        {
-            return m_target;
-        }
-
-        /**
-         * Get latest error
-         *
-         * Evaluates to false if the response has no errors.
-         *
-         * @return The current error state.
-         */
-        const Error& error() const
-        {
-            return m_error;
-        }
-
-        /**
-         * Check whether the response from the server is complete
-         *
-         * @return True if no more results are expected from this server
-         */
-        bool is_complete() const
-        {
-            return m_reply_state == ReplyState::DONE;
-        }
-
-        /**
-         * Check if a partial response has been received from the backend
-         *
-         * @return True if some parts of the reply have been received
-         */
-        bool has_started() const
-        {
-            return m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
-        }
-
-        /**
-         * Number of rows read from the result
-         */
-        uint64_t rows_read() const
-        {
-            return m_row_count;
-        }
-
-        /**
-         * Number of bytes received
-         */
-        uint64_t size() const
-        {
-            return m_size;
-        }
-
-        std::vector<uint64_t> field_counts() const
-        {
-            return m_field_counts;
-        }
-
-        void set_command(uint8_t command)
-        {
-            m_command = command;
-        }
-
-        void set_reply_state(ReplyState state)
-        {
-            m_reply_state = state;
-        }
-
-        template<typename ... Args>
-        void set_error(Args... args)
-        {
-            m_error.set(std::forward<Args>(args)...);
-        }
-
-        void add_rows(uint64_t row_count)
-        {
-            m_row_count += row_count;
-        }
-
-        void add_bytes(uint64_t size)
-        {
-            m_size = size;
-        }
-
-        void add_field_count(uint64_t field_count)
-        {
-            m_field_counts.push_back(field_count);
-        }
-
-        void clear()
-        {
-            m_command = 0;
-            m_reply_state = ReplyState::DONE;
-            m_error.clear();
-            m_row_count = 0;
-            m_size = 0;
-            m_field_counts.clear();
-        }
-
-    private:
-        mxs::Target*          m_target {nullptr};
-        uint8_t               m_command {0};
-        ReplyState            m_reply_state {ReplyState::DONE};
-        Error                 m_error;
-        uint64_t              m_row_count {0};
-        uint64_t              m_size {0};
-        std::vector<uint64_t> m_field_counts;
-    };
-
     MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
 
     ~MySQLProtocol();
@@ -599,7 +350,7 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     /**
      * Get the reply state object
      */
-    const Reply& reply() const
+    const mxs::Reply& reply() const
     {
         return m_reply;
     }
@@ -651,13 +402,8 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     uint32_t     num_eof_packets = 0;   /*< Encountered eof packet number, used for check packet type */
     bool         large_query = false;   /*< Whether to ignore the command byte of the next packet*/
 
-    size_t       client_protocol_packet_length = 0;   /**< protocol packet length */
-    size_t       client_protocol_bytes_processed = 0; /**< How many bytes have been read */
-
-    SERVER* server() const
-    {
-        return m_reply.m_server;
-    }
+    size_t client_protocol_packet_length = 0;   /**< protocol packet length */
+    size_t client_protocol_bytes_processed = 0; /**< How many bytes have been read */
 
     //
     // END Legacy public members
@@ -673,7 +419,7 @@ private:
     uint64_t     m_num_coldefs = 0;
     bool         m_large_query = false;
     bool         m_skip_next = false;
-    Reply        m_reply;
+    mxs::Reply   m_reply;
 
     // Called by the protocol module when routing needs to be done
     mxs::Component* m_component;
@@ -701,7 +447,7 @@ private:
         m_opening_cursor = false;
     }
 
-    inline void set_reply_state(ReplyState state)
+    inline void set_reply_state(mxs::ReplyState state)
     {
         m_reply.set_reply_state(state);
     }

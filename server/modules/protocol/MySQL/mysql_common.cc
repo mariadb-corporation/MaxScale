@@ -31,7 +31,9 @@
 #include <maxscale/protocol/mariadb_client.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/target.hh>
 
+using mxs::ReplyState;
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 
@@ -1017,9 +1019,9 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
 
     // LocalClient also uses this code and it doesn't populate the server pointer
     // TODO: fix it
-    if (conn->server())
+    if (conn->reply().target())
     {
-        MXS_INFO("Connected to '%s' with thread id %u", conn->server()->name(), tid);
+        MXS_INFO("Connected to '%s' with thread id %u", conn->reply().target()->name(), tid);
     }
 
     /* TODO: Correct value of thread id could be queried later from backend if
