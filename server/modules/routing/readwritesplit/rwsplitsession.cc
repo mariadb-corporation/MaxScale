@@ -1095,20 +1095,11 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
 
                 if (!can_continue)
                 {
-                    if (!backend->is_master() && !backend->server()->master_err_is_logged)
-                    {
-                        MXS_ERROR("Server %s lost the master status while waiting"
-                                  " for a result. Client sessions will be closed.",
-                                  backend->name());
-                        backend->server()->master_err_is_logged = true;
-                    }
-                    else
-                    {
-                        int64_t idle = mxs_clock() - backend->dcb()->m_last_read;
-                        MXS_ERROR("Lost connection to the master server, closing session.%s "
-                                  "Connection has been idle for %.1f seconds. Error caused by: %s",
-                                  errmsg.c_str(), (float)idle / 10.f, extract_error(errmsgbuf).c_str());
-                    }
+                    int64_t idle = mxs_clock() - backend->dcb()->m_last_read;
+                    MXS_ERROR("Lost connection to the master server '%s', closing session.%s "
+                              "Connection has been idle for %.1f seconds. Error caused by: %s",
+                              backend->name(), errmsg.c_str(), (float)idle / 10.f,
+                              extract_error(errmsgbuf).c_str());
                 }
 
                 // Decrement the expected response count only if we know we can continue the sesssion.
