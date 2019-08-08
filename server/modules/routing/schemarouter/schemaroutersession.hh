@@ -77,13 +77,7 @@ class SchemaRouterSession : public mxs::RouterSession
 {
 public:
 
-    SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router, SSRBackendList& backends);
-
-    /**
-     * The RouterSession instance will be deleted when a client session
-     * has terminated. Will be called only after @c close() has been called.
-     */
-    ~SchemaRouterSession();
+    SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router, SRBackendList backends);
 
     /**
      * Called when a client session has been closed.
@@ -105,9 +99,9 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, mxs::Reply* reply);
 
-    bool handleError(GWBUF* pMessage, DCB* pProblem);
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
 
 private:
     /**
@@ -115,39 +109,38 @@ private:
      */
 
     /** Helper functions */
-    SERVER*    get_shard_target(GWBUF* buffer, uint32_t qtype);
-    SSRBackend get_bref_from_dcb(DCB* dcb);
-    bool       get_shard_dcb(DCB** dcb, const char* name);
-    bool       have_servers();
-    bool       handle_default_db();
-    bool       ignore_duplicate_database(const char* data);
-    SERVER*    get_query_target(GWBUF* buffer);
-    SERVER*    get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
+    mxs::Target* get_shard_target(GWBUF* buffer, uint32_t qtype);
+    SRBackend*   get_shard_backend(const char* name);
+    bool         have_servers();
+    bool         handle_default_db();
+    bool         ignore_duplicate_database(const char* data);
+    mxs::Target* get_query_target(GWBUF* buffer);
+    mxs::Target* get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
 
     /** Routing functions */
-    bool    route_session_write(GWBUF* querybuf, uint8_t command);
-    void    process_sescmd_response(SSRBackend& bref, GWBUF** ppPacket);
-    SERVER* resolve_query_target(GWBUF* pPacket,
-                                 uint32_t type,
-                                 uint8_t command,
-                                 enum route_target& route_target);
+    bool         route_session_write(GWBUF* querybuf, uint8_t command);
+    void         process_sescmd_response(SRBackend* bref, GWBUF** ppPacket);
+    mxs::Target* resolve_query_target(GWBUF* pPacket,
+                                      uint32_t type,
+                                      uint8_t command,
+                                      enum route_target& route_target);
 
     /** Shard mapping functions */
     void                 send_databases();
     bool                 send_shards();
     void                 query_databases();
-    int                  inspect_mapping_states(SSRBackend& bref, GWBUF** wbuf);
-    enum showdb_response parse_mapping_response(SSRBackend& bref, GWBUF** buffer);
+    int                  inspect_mapping_states(SRBackend* bref, GWBUF** wbuf);
+    enum showdb_response parse_mapping_response(SRBackend* bref, GWBUF** buffer);
     void                 route_queued_query();
     void                 synchronize_shards();
-    void                 handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket);
-    bool                 handle_statement(GWBUF* querybuf, SSRBackend& bref, uint8_t command, uint32_t type);
+    void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket);
+    bool                 handle_statement(GWBUF* querybuf, SRBackend* bref, uint8_t command, uint32_t type);
 
     /** Member variables */
     bool                   m_closed;        /**< True if session closed */
     DCB*                   m_client;        /**< The client DCB */
     MYSQL_session*         m_mysql_session; /**< Session client data (username, password, SHA1). */
-    SSRBackendList         m_backends;      /**< Backend references */
+    SRBackendList          m_backends;      /**< Backend references */
     SConfig                m_config;        /**< Session specific configuration */
     SchemaRouter*          m_router;        /**< The router instance */
     Shard                  m_shard;         /**< Database to server mapping */
@@ -158,6 +151,6 @@ private:
     Stats                  m_stats;         /**< Statistics for this router */
     uint64_t               m_sent_sescmd;   /**< The latest session command being executed */
     uint64_t               m_replied_sescmd;/**< The last session command reply that was sent to the client */
-    SERVER*                m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
+    mxs::Target*           m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
 };
 }

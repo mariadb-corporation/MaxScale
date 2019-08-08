@@ -100,50 +100,32 @@ bool SchemaRouter::configure(MXS_CONFIG_PARAMETER* params)
  *      connections because all servers are supposed to be operational. It is,
  *      however, possible that there are less available servers than expected.
  */
-bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
+bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
 {
     bool succp = false;
     int servers_found = 0;
     int servers_connected = 0;
     int slaves_connected = 0;
 
-    if (mxs_log_is_priority_enabled(LOG_INFO))
-    {
-        MXS_INFO("Servers and connection counts:");
-
-        for (SSRBackendList::iterator it = backends.begin(); it != backends.end(); it++)
-        {
-            SERVER_REF* b = (*it)->backend();
-
-            MXS_INFO("MaxScale connections : %d (%d) in \t%s:%d %s",
-                     b->connections,
-                     b->server->stats().n_current,
-                     b->server->address,
-                     b->server->port,
-                     b->server->status_string().c_str());
-        }
-    }
     /**
      * Scan server list and connect each of them. None should fail or session
      * can't be established.
      */
-    for (SSRBackendList::iterator it = backends.begin(); it != backends.end(); it++)
+    for (const auto& b : backends)
     {
-        SERVER_REF* b = (*it)->backend();
-
-        if (b->server->is_connectable())
+        if (b->target()->is_connectable())
         {
             servers_found += 1;
 
             /** Server is already connected */
-            if ((*it)->in_use())
+            if (b->in_use())
             {
                 slaves_connected += 1;
             }
             /** New server connection */
             else
             {
-                if ((*it)->connect(session))
+                if (b->connect())
                 {
                     servers_connected += 1;
                 }
@@ -151,9 +133,8 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
                 {
                     succp = false;
                     MXS_ERROR("Unable to establish "
-                              "connection with slave %s:%d",
-                              b->server->address,
-                              b->server->port);
+                              "connection with slave '%s'",
+                              b->name());
                     /* handle connect error */
                     break;
                 }
@@ -167,16 +148,13 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
 
         if (mxs_log_is_priority_enabled(LOG_INFO))
         {
-            for (SSRBackendList::iterator it = backends.begin(); it != backends.end(); it++)
+            for (const auto& b : backends)
             {
-                SERVER_REF* b = (*it)->backend();
-
-                if ((*it)->in_use())
+                if (b->in_use())
                 {
-                    MXS_INFO("Connected %s in \t%s:%d",
-                             b->server->status_string().c_str(),
-                             b->server->address,
-                             b->server->port);
+                    MXS_INFO("Connected %s in \t'%s'",
+                             b->target()->status_string().c_str(),
+                             b->name());
                 }
             }
         }
@@ -187,21 +165,18 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
 
 SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
-    SSRBackendList backends;
+    SRBackendList backends;
 
-    for (SERVER_REF* ref = m_service->dbref; ref; ref = ref->next)
+    for (auto e : endpoints)
     {
-        if (server_ref_is_active(ref))
-        {
-            backends.push_back(SSRBackend(new SRBackend(ref)));
-        }
+        backends.emplace_back(new SRBackend(e));
     }
 
     SchemaRouterSession* rval = NULL;
 
     if (connect_backend_servers(backends, pSession))
     {
-        rval = new SchemaRouterSession(pSession, this, backends);
+        rval = new SchemaRouterSession(pSession, this, std::move(backends));
     }
 
     return rval;
@@ -302,13 +277,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         {
-            {CN_IGNORE_TABLES,                 MXS_MODULE_PARAM_STRING },
-            {CN_IGNORE_TABLES_REGEX,           MXS_MODULE_PARAM_STRING },
-            {CN_IGNORE_DATABASES,              MXS_MODULE_PARAM_STRING },
-            {CN_IGNORE_DATABASES_REGEX,        MXS_MODULE_PARAM_STRING },
-            {"max_sescmd_history",             MXS_MODULE_PARAM_COUNT, "0"},
-            {"disable_sescmd_history",         MXS_MODULE_PARAM_BOOL, "false"},
-            {"refresh_databases",              MXS_MODULE_PARAM_BOOL, "true"},
+            {CN_IGNORE_TABLES,                MXS_MODULE_PARAM_STRING },
+            {CN_IGNORE_TABLES_REGEX,          MXS_MODULE_PARAM_STRING },
+            {CN_IGNORE_DATABASES,             MXS_MODULE_PARAM_STRING },
+            {CN_IGNORE_DATABASES_REGEX,       MXS_MODULE_PARAM_STRING },
+            {"max_sescmd_history",            MXS_MODULE_PARAM_COUNT, "0"},
+            {"disable_sescmd_history",        MXS_MODULE_PARAM_BOOL, "false"},
+            {"refresh_databases",             MXS_MODULE_PARAM_BOOL, "true"},
             {
                 "refresh_interval",
                 MXS_MODULE_PARAM_DURATION,

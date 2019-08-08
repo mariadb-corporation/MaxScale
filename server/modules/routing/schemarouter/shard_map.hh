@@ -24,9 +24,9 @@
 using namespace maxscale;
 
 /** This contains the database to server mapping */
-typedef std::unordered_map<std::string, SERVER*> ServerMap;
-typedef std::unordered_map<uint64_t, SERVER*>    BinaryPSMap;
-typedef std::unordered_map<uint32_t, uint32_t>   PSHandleMap;
+typedef std::unordered_map<std::string, mxs::Target*> ServerMap;
+typedef std::unordered_map<uint64_t, mxs::Target*>    BinaryPSMap;
+typedef std::unordered_map<uint32_t, uint32_t>        PSHandleMap;
 
 class Shard
 {
@@ -42,7 +42,7 @@ public:
      *
      * @return True if location was added
      */
-    bool add_location(std::string db, SERVER* target);
+    bool add_location(std::string db, mxs::Target* target);
 
     /**
      * @brief Retrieve the location of a database
@@ -51,17 +51,17 @@ public:
      *
      * @return The database or NULL if no server contains the database
      */
-    SERVER* get_location(std::string db);
+    mxs::Target* get_location(std::string db);
 
-    void     add_statement(std::string stmt, SERVER* target);
-    void     add_statement(uint32_t id, SERVER* target);
-    void     add_ps_handle(uint32_t id, uint32_t handle);
-    uint32_t get_ps_handle(uint32_t id);
-    bool     remove_ps_handle(uint32_t id);
-    SERVER*  get_statement(std::string stmt);
-    SERVER*  get_statement(uint32_t id);
-    bool     remove_statement(std::string stmt);
-    bool     remove_statement(uint32_t id);
+    void         add_statement(std::string stmt, mxs::Target* target);
+    void         add_statement(uint32_t id, mxs::Target* target);
+    void         add_ps_handle(uint32_t id, uint32_t handle);
+    uint32_t     get_ps_handle(uint32_t id);
+    bool         remove_ps_handle(uint32_t id);
+    mxs::Target* get_statement(std::string stmt);
+    mxs::Target* get_statement(uint32_t id);
+    bool         remove_statement(std::string stmt);
+    bool         remove_statement(uint32_t id);
 
     /**
      * @brief Change the location of a database
@@ -69,7 +69,7 @@ public:
      * @param db     Database to relocate
      * @param target Target where database is relocated to
      */
-    void replace_location(std::string db, SERVER* target);
+    void replace_location(std::string db, mxs::Target* target);
 
     /**
      * @brief Check if shard contains stale information

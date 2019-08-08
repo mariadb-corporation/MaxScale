@@ -26,17 +26,17 @@ Shard::~Shard()
 {
 }
 
-bool Shard::add_location(std::string db, SERVER* target)
+bool Shard::add_location(std::string db, mxs::Target* target)
 {
     return m_map.insert(std::make_pair(db, target)).second;
 }
 
-void Shard::add_statement(std::string stmt, SERVER* target)
+void Shard::add_statement(std::string stmt, mxs::Target* target)
 {
     stmt_map[stmt] = target;
 }
 
-void Shard::add_statement(uint32_t id, SERVER* target)
+void Shard::add_statement(uint32_t id, mxs::Target* target)
 {
     MXS_DEBUG("ADDING ID: [%u] server: [%s]", id, target->name());
     m_binary_map[id] = target;
@@ -63,14 +63,14 @@ uint32_t Shard::get_ps_handle(uint32_t id)
     return 0;
 }
 
-void Shard::replace_location(std::string db, SERVER* target)
+void Shard::replace_location(std::string db, mxs::Target* target)
 {
     m_map[db] = target;
 }
 
-SERVER* Shard::get_location(std::string table)
+mxs::Target* Shard::get_location(std::string table)
 {
-    SERVER* rval = NULL;
+    mxs::Target* rval = NULL;
     if (table.find(".") == std::string::npos)
     {
         for (ServerMap::iterator it = m_map.begin(); it != m_map.end(); it++)
@@ -113,9 +113,9 @@ SERVER* Shard::get_location(std::string table)
     return rval;
 }
 
-SERVER* Shard::get_statement(std::string stmt)
+mxs::Target* Shard::get_statement(std::string stmt)
 {
-    SERVER* rval = NULL;
+    mxs::Target* rval = NULL;
     ServerMap::iterator iter = stmt_map.find(stmt);
     if (iter != stmt_map.end())
     {
@@ -124,9 +124,9 @@ SERVER* Shard::get_statement(std::string stmt)
     return rval;
 }
 
-SERVER* Shard::get_statement(uint32_t id)
+mxs::Target* Shard::get_statement(uint32_t id)
 {
-    SERVER* rval = NULL;
+    mxs::Target* rval = NULL;
     BinaryPSMap::iterator iter = m_binary_map.find(id);
     if (iter != m_binary_map.end())
     {

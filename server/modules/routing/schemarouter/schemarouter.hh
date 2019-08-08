@@ -106,13 +106,9 @@ class SRBackend : public mxs::RWBackend
 {
 public:
 
-    SRBackend(SERVER_REF* ref)
+    SRBackend(mxs::Endpoint* ref)
         : mxs::RWBackend(ref)
         , m_mapped(false)
-    {
-    }
-
-    ~SRBackend()
     {
     }
 
@@ -134,6 +130,5 @@ private:
     bool m_mapped;      /**< Whether the backend has been mapped */
 };
 
-typedef std::shared_ptr<SRBackend> SSRBackend;
-typedef std::list<SSRBackend>      SSRBackendList;
+using SRBackendList = std::vector<std::unique_ptr<SRBackend>>;
 }
