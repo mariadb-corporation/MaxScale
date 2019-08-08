@@ -177,6 +177,11 @@ public:
 
     SERVICE* service() const;
 
+    MXS_PROTOCOL_SESSION* protocol_session() const
+    {
+        return m_protocol;
+    }
+
     bool ssl_enabled() const
     {
         return m_ssl != nullptr;
@@ -272,7 +277,7 @@ public:
     char*                   m_remote = nullptr;                   /**< Address of remote end */
     char*                   m_user = nullptr;                     /**< User name for connection */
     struct sockaddr_storage m_ip;                                 /**< remote IPv4/IPv6 address */
-    MXS_PROTOCOL_SESSION*   m_protocol = nullptr;                 /**< The protocol specific state */
+    MXS_PROTOCOL_SESSION*   m_protocol;                           /**< The protocol session */
     size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
     uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
@@ -310,6 +315,7 @@ protected:
     DCB(int fd,
         Role role,
         MXS_SESSION* session,
+        MXS_PROTOCOL_SESSION* protocol,
         MXS_PROTOCOL func,
         SERVER* server,
         Manager* manager);
@@ -326,14 +332,14 @@ protected:
     virtual bool was_freed(MXS_SESSION* session) = 0;
 
 
-    dcb_state_t  m_state = DCB_STATE_ALLOC;     /**< Current state */
-    MXS_SESSION* m_session;                     /**< The owning session */
-    SSL*         m_ssl = nullptr;               /**< SSL struct for connection */
-    bool         m_ssl_read_want_read = false;
-    bool         m_ssl_read_want_write = false;
-    bool         m_ssl_write_want_read = false;
-    bool         m_ssl_write_want_write = false;
-    MXS_PROTOCOL m_func;    /**< Protocol functions for the DCB */
+    dcb_state_t           m_state = DCB_STATE_ALLOC;     /**< Current state */
+    MXS_SESSION*          m_session;                     /**< The owning session */
+    MXS_PROTOCOL          m_func;                        /**< Protocol functions for the DCB */
+    SSL*                  m_ssl = nullptr;               /**< SSL struct for connection */
+    bool                  m_ssl_read_want_read = false;
+    bool                  m_ssl_read_want_write = false;
+    bool                  m_ssl_write_want_read = false;
+    bool                  m_ssl_write_want_write = false;
 
 private:
     friend class Manager;
@@ -365,13 +371,18 @@ private:
 class ClientDCB : public DCB
 {
 public:
-    ClientDCB(int fd, MXS_SESSION* session, Manager* manager);
+    ClientDCB(int fd, MXS_SESSION* session, MXS_PROTOCOL_SESSION* protocol, MXS_PROTOCOL func, Manager* manager);
 
     int ssl_handshake() override;
 
 protected:
     // Only for InternalDCB.
-    ClientDCB(int fd, DCB::Role role, MXS_SESSION* session, Manager* manager);
+    ClientDCB(int fd,
+              DCB::Role role,
+              MXS_SESSION* session,
+              MXS_PROTOCOL_SESSION* protocol,
+              MXS_PROTOCOL func,
+              Manager* manager);
 
 private:
     bool was_freed(MXS_SESSION* session) override;
@@ -392,7 +403,12 @@ public:
     int ssl_handshake() override;
 
 private:
-    BackendDCB(int fd, MXS_SESSION* session, MXS_PROTOCOL func, SERVER* server, Manager* manager);
+    BackendDCB(int fd,
+               MXS_SESSION* session,
+               MXS_PROTOCOL_SESSION* protocol,
+               MXS_PROTOCOL func,
+               SERVER* server,
+               Manager* manager);
 
     static BackendDCB* create(int fd,
                               SERVER* server,
@@ -408,7 +424,7 @@ private:
 class InternalDCB : public ClientDCB
 {
 public:
-    InternalDCB(MXS_SESSION* session, Manager* manager);
+    InternalDCB(MXS_SESSION* session, MXS_PROTOCOL func, Manager* manager);
 
     int ssl_handshake() override;
 
@@ -428,7 +444,9 @@ inline bool dcb_write(DCB* dcb, GWBUF* queue)
     return dcb->write(queue);
 }
 
-ClientDCB* dcb_create_client(int fd, MXS_SESSION* session, DCB::Manager* manager);
+ClientDCB* dcb_create_client(int fd,
+                             MXS_SESSION* session,
+                             DCB::Manager* manager);
 InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager);
 
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
