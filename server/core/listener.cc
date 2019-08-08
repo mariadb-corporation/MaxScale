@@ -996,7 +996,7 @@ void Listener::accept_connections()
             {
                 dcb->m_protocol = m_proto_func.new_client_session(dcb->session());
 
-                if (!dcb->m_protocol || !m_proto_func.prepare_client_connection(dcb))
+                if (!dcb->m_protocol || !m_proto_func.init_connection(dcb))
                 {
                     dcb_close(dcb);
                 }
@@ -1013,7 +1013,7 @@ void Listener::accept_connections()
                                 {
                                     dcb->m_protocol = m_proto_func.new_client_session(dcb->session());
 
-                                    if (!dcb->m_protocol || !m_proto_func.prepare_client_connection(dcb))
+                                    if (!dcb->m_protocol || !m_proto_func.init_connection(dcb))
                                     {
                                         dcb_close(dcb);
                                     }

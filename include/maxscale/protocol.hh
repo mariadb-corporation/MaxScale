@@ -99,13 +99,6 @@ struct MXS_PROTOCOL
     MXS_PROTOCOL_SESSION* (* new_client_session)(MXS_SESSION* session);
 
     /**
-     * Prepare a new client connection.
-     *
-     * @return True, if the client connection could be prepared, false otherwise.
-     */
-    bool (* prepare_client_connection)(DCB* client_dcb);
-
-    /**
      * Allocate new backend protocol session
      *
      * @param session  The session to which the connection belongs to
@@ -119,11 +112,11 @@ struct MXS_PROTOCOL
                                                   void* client_protocol_session);
 
     /**
-     * Prepare a new backend connection.
+     * Initialize a connection (client or server).
      *
-     * @return True, if the backend connection could be prepared, false otherwise.
+     * @return True, if the connection could be initialized, false otherwise.
      */
-    bool (* prepare_backend_connection)(DCB* backend_dcb);
+    bool (* init_connection)(DCB* dcb);
 
     /**
      * Free protocol data allocated in the connect handler

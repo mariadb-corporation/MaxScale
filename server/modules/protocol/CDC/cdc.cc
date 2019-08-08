@@ -64,7 +64,7 @@ static int                   cdc_write(DCB* dcb, GWBUF* queue);
 static int                   cdc_error(DCB* dcb);
 static int                   cdc_hangup(DCB* dcb);
 static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION*);
-static bool                  cdc_prepare_client_connection(DCB*);
+static bool                  cdc_init_connection(DCB*);
 static int                   cdc_close(DCB* dcb);
 static CDC_protocol*         cdc_protocol_init();
 static void                  cdc_protocol_done(DCB* dcb);
@@ -97,11 +97,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         cdc_error,                     /* Error - EPOLLERR handler      */
         cdc_hangup,                    /* HangUp - EPOLLHUP handler     */
         cdc_new_client_session,        /* new_client_session            */
-        cdc_prepare_client_connection, /* prepare_client_connection */
         NULL,                          /* new_backend_session           */
-        NULL,                          /* prepare_backend_connection    */
+        cdc_init_connection,           /* init_connection               */
         cdc_close,                     /* Close                         */
-        cdc_default_auth,              /* default authentication */
+        cdc_default_auth,              /* default authentication        */
         NULL,
         NULL,
         NULL,
@@ -293,9 +292,9 @@ static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION* session)
     return cdc_protocol_init();
 }
 
-static bool cdc_prepare_client_connection(DCB* client_dcb)
+static bool cdc_init_connection(DCB* client_dcb)
 {
-    bool prepared = false;
+    bool inited = false;
 
     CDC_protocol* protocol = static_cast<CDC_protocol*>(client_dcb->m_protocol);
 
@@ -317,10 +316,10 @@ static bool cdc_prepare_client_connection(DCB* client_dcb)
                    client_dcb->service()->name(),
                    client_dcb->m_remote != NULL ? client_dcb->m_remote : "");
 
-        prepared = true;
+        inited = true;
     }
 
-    return prepared;
+    return inited;
 }
 
 /**

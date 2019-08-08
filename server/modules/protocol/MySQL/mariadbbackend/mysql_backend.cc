@@ -41,7 +41,7 @@ static int  gw_error_backend_event(DCB* dcb);
 static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
                                                     SERVER* server,
                                                     void* client_protocol_session);
-static bool gw_prepare_backend_connection(DCB* backend_dcb);
+static bool gw_init_connection(DCB* backend_dcb);
 static int  gw_backend_close(DCB* dcb);
 static int  gw_backend_hangup(DCB* dcb);
 static int  backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
@@ -90,9 +90,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_error_backend_event,             /* Error - EPOLLERR handler      */
         gw_backend_hangup,                  /* HangUp - EPOLLHUP handler     */
         NULL,                               /* new_client_session            */
-        NULL,                               /* prepare_client_connection     */
         gw_new_backend_session,             /* New backend connection        */
-        gw_prepare_backend_connection,      /* Prepare backend connection    */
+        gw_init_connection,                 /* Init backend connection       */
         gw_backend_close,                   /* Close                         */
         gw_backend_default_auth,            /* Default authenticator         */
         NULL,                               /* Connection limit reached      */
@@ -174,7 +173,7 @@ static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
     return protocol_session;
 }
 
-static bool gw_prepare_backend_connection(DCB* backend_dcb)
+static bool gw_init_connection(DCB* backend_dcb)
 {
     bool rv = true;
 

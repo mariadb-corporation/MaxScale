@@ -63,7 +63,7 @@ static int                   maxscaled_write(DCB* dcb, GWBUF* queue);
 static int                   maxscaled_error(DCB* dcb);
 static int                   maxscaled_hangup(DCB* dcb);
 static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION*);
-static bool                  maxscaled_prepare_client_connection(DCB*);
+static bool                  maxscaled_init_connection(DCB*);
 static int                   maxscaled_close(DCB* dcb);
 static char*                 mxsd_default_auth();
 
@@ -180,9 +180,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         maxscaled_error,                     /**< Error - EPOLLERR handler      */
         maxscaled_hangup,                    /**< HangUp - EPOLLHUP handler     */
         maxscaled_new_client_session,        /**< new_client_session            */
-        maxscaled_prepare_client_connection, /**< prepare_client_connection     */
         NULL,                                /**< new_backend_session           */
-        NULL,                                /**< prepare_backend_connection    */
+        maxscaled_init_connection,           /**< init_connection               */
         maxscaled_close,                     /**< Close                         */
         mxsd_default_auth,                   /**< Default authenticator         */
         NULL,                                /**< Connection limit reached      */
@@ -353,7 +352,7 @@ static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION* session)
     return maxscaled_protocol;
 }
 
-static bool maxscaled_prepare_client_connection(DCB* client_dcb)
+static bool maxscaled_init_connection(DCB* client_dcb)
 {
     bool rv = true;
     socklen_t len = sizeof(struct ucred);

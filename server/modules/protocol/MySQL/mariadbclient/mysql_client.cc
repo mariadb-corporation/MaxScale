@@ -1560,7 +1560,7 @@ MXS_PROTOCOL_SESSION* gw_new_client_session(MXS_SESSION* session)
     return new(std::nothrow) MySQLProtocol(session, nullptr);
 }
 
-bool gw_prepare_client_connection(DCB* client_dcb)
+bool gw_init_connection(DCB* client_dcb)
 {
     MySQLSendHandshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->m_protocol));
     return true;
@@ -2281,9 +2281,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         gw_error_client_event,                      /* Error - EPOLLERR handler      */
         gw_client_hangup_event,                     /* HangUp - EPOLLHUP handler     */
         gw_new_client_session,                      /* new_client_session            */
-        gw_prepare_client_connection,               /* prepare_client_connection     */
         NULL,                                       /* new_backend_session           */
-        NULL,                                       /* prepare_backend_connection    */
+        gw_init_connection,                         /* init_connection               */
         gw_client_close,                            /* Close                         */
         gw_default_auth,                            /* Default authenticator         */
         gw_connection_limit,                        /* Send error connection limit   */
