@@ -128,54 +128,34 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
 {
 }
 
-std::vector<maxbase::Host> SmartRouterSession::hosts() const
-{
-    std::vector<maxbase::Host> ret;
-    for (const auto& c : m_clusters)
-    {
-        ret.push_back(c.host);
-    }
-    return ret;
-}
-
 SmartRouterSession::~SmartRouterSession()
 {
 }
 
 // static
-SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION* pSession)
+SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION* pSession,
+                                               const std::vector<mxs::Endpoint*>& pEndpoints)
 {
     Clusters clusters;
 
-    SERVER* pMaster = pRouter->config().master();
+    mxs::Target* pMaster = pRouter->config().master();
 
     int master_pos = -1;
     int i = 0;
 
-    for (SERVER_REF* ref = pRouter->service()->dbref; ref; ref = ref->next)
+    for (auto e : pEndpoints)
     {
-        if (!server_ref_is_active(ref) || !ref->server->is_connectable())
+        if (e->connect())
         {
-            continue;
-        }
+            bool is_master = false;
 
-        mxb_assert(ref->server->is_usable());
-
-        mxs::RoutingWorker* pWorker = static_cast<mxs::RoutingWorker*>(pSession->client_dcb->owner);
-        mxb_assert(pWorker == mxs::RoutingWorker::get_current());
-
-        DCB* dcb = BackendDCB::connect(ref->server, pSession, pWorker);
-        if (dcb)
-        {
-            bool is_master = (ref->server == pMaster);
-
-            clusters.push_back({ref, dcb, is_master});
-
-            if (is_master)
+            if (e->target() == pMaster)
             {
                 master_pos = i;
+                is_master = true;
             }
 
+            clusters.push_back({e, is_master});
             ++i;
         }
     }
@@ -232,7 +212,8 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
             MXS_SDEBUG("Write all");
             ret = write_to_all(pBuf, Mode::Query);
         }
-        else if (m_qc.target_is_master(route_info.target()) || session_trx_is_active(m_pClient_dcb->session()))
+        else if (m_qc.target_is_master(route_info.target())
+                 || session_trx_is_active(m_pClient_dcb->session()))
         {
             MXS_SDEBUG("Write to master");
             ret = write_to_master(pBuf);
@@ -243,9 +224,9 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
 
             if (perf.is_valid())
             {
-                MXS_SDEBUG("Smart route to " << perf.host()
+                MXS_SDEBUG("Smart route to " << perf.target()->name()
                                              << ", canonical = " << show_some(canonical));
-                ret = write_to_host(perf.host(), pBuf);
+                ret = write_to_target(perf.target(), pBuf);
             }
             else if (modutil_is_SQL(pBuf))
             {
@@ -263,18 +244,10 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     return ret;
 }
 
-void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* reply)
+void SmartRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, mxs::Reply* reply)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(pPacket));
-
-    auto it = std::find_if(begin(m_clusters), end(m_clusters),
-                           [pDcb](const Cluster& cluster) {
-                               return cluster.pDcb == pDcb;
-                           });
-
-    mxb_assert(it != end(m_clusters));
-
-    Cluster& cluster = *it;
+    Cluster& cluster = *static_cast<Cluster*>(pBackend->get_userdata());
 
     auto tracker_state_before = cluster.tracker.state();
 
@@ -286,7 +259,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* repl
     bool very_last_response_packet = !expecting_response_packets();     // last from all clusters
 
     MXS_SDEBUG("Reply from " << std::boolalpha
-                             << cluster.host
+                             << cluster.pBackend->target()->name()
                              << " is_master=" << cluster.is_master
                              << " first_packet=" << first_response_packet
                              << " last_packet=" << last_packet_for_this_cluster
@@ -306,10 +279,10 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* repl
         switch (err_code)
         {
         case ER_CONNECTION_KILLED:      // there might be more error codes needing to be caught here
-            MXS_SERROR("clientReply(): Lost connection to " << cluster.host
+            MXS_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
                                                             << " Error code=" << err_code
                                                             << ' ' << extract_error(pPacket));
-            poll_fake_hangup_event(m_pClient_dcb);
+            m_pClient_dcb->session()->terminate();
             return;
         }
     }
@@ -319,7 +292,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* repl
         MXS_SERROR("ProtocolTracker from state " << tracker_state_before
                                                  << " to state " << cluster.tracker.state()
                                                  << ". Disconnect.");
-        poll_fake_hangup_event(m_pClient_dcb);
+        m_pClient_dcb->session()->terminate();
         return;
     }
 
@@ -328,15 +301,15 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* repl
     if (first_response_packet)
     {
         maxbase::Duration query_dur = maxbase::Clock::now() - m_measurement.start;
-        MXS_SDEBUG("Host " << cluster.host
-                           << " will be responding to the client."
-                           << " First packet received in time " << query_dur);
+        MXS_SDEBUG("Target " << cluster.pBackend->target()->name()
+                             << " will be responding to the client."
+                             << " First packet received in time " << query_dur);
         cluster.is_replying_to_client = true;
         will_reply = true;      // tentatively, the packet might have to be delayed
 
         if (m_mode == Mode::MeasureQuery)
         {
-            m_router.perf_update(m_measurement.canonical, {cluster.host, query_dur});
+            m_router.perf_update(m_measurement.canonical, {cluster.pBackend->target(), query_dur});
             // If the query is still going on, an error packet is received, else the
             // whole query might play out (and be discarded).
             kill_all_others(cluster);
@@ -352,7 +325,8 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* repl
         mxb_assert(cluster.is_replying_to_client || m_pDelayed_packet);
         if (m_pDelayed_packet)
         {
-            MXS_SDEBUG("Picking up delayed packet, discarding response from " << cluster.host);
+            MXS_SDEBUG("Picking up delayed packet, discarding response from "
+                       << cluster.pBackend->target()->name());
             gwbuf_free(pPacket);
             pPacket = m_pDelayed_packet;
             m_pDelayed_packet = nullptr;
@@ -376,14 +350,14 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* repl
     }
     else
     {
-        MXS_SDEBUG("Discarding response from " << cluster.host);
+        MXS_SDEBUG("Discarding response from " << cluster.pBackend->target()->name());
         gwbuf_free(pPacket);
     }
 
     if (will_reply)
     {
         MXS_SDEBUG("Forward response to client");
-        RouterSession::clientReply(pPacket, pDcb, reply);
+        RouterSession::clientReply(pPacket, pBackend, reply);
     }
 }
 
@@ -424,13 +398,13 @@ bool SmartRouterSession::write_to_master(GWBUF* pBuf)
         m_mode = Mode::Query;
     }
 
-    return cluster.pDcb->protocol_write(pBuf);
+    return cluster.pBackend->routeQuery(pBuf);
 }
 
-bool SmartRouterSession::write_to_host(const maxbase::Host& host, GWBUF* pBuf)
+bool SmartRouterSession::write_to_target(mxs::Target* target, GWBUF* pBuf)
 {
-    auto it = std::find_if(begin(m_clusters), end(m_clusters), [host](const Cluster& cluster) {
-                               return cluster.host == host;
+    auto it = std::find_if(begin(m_clusters), end(m_clusters), [target](const Cluster& cluster) {
+                               return cluster.pBackend->target() == target;
                            });
     mxb_assert(it != end(m_clusters));
     auto& cluster = *it;
@@ -442,24 +416,25 @@ bool SmartRouterSession::write_to_host(const maxbase::Host& host, GWBUF* pBuf)
 
     cluster.is_replying_to_client = false;
 
-    return cluster.pDcb->protocol_write(pBuf);
+    return cluster.pBackend->routeQuery(pBuf);
 }
 
 bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
 {
     bool success = true;
 
-    for (auto it = begin(m_clusters); it != end(m_clusters); ++it)
+    for (auto& a : m_clusters)
     {
-        auto& cluster = *it;
-        cluster.tracker = maxsql::PacketTracker(pBuf);
-        cluster.is_replying_to_client = false;
-        auto pBuf_send = (next(it) == end(m_clusters)) ? pBuf : gwbuf_clone(pBuf);
-        if (!cluster.pDcb->protocol_write(pBuf_send))
+        a.tracker = maxsql::PacketTracker(pBuf);
+        a.is_replying_to_client = false;
+
+        if (!a.pBackend->routeQuery(gwbuf_clone(pBuf)))
         {
             success = false;
         }
     }
+
+    gwbuf_free(pBuf);
 
     if (expecting_response_packets())
     {
@@ -471,71 +446,45 @@ bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
 
 bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
 {
-    std::vector<Cluster*> active;
-
-    for (auto it = begin(m_clusters); it != end(m_clusters); ++it)
-    {
-        if (it->tracker.expecting_request_packets())
-        {
-            active.push_back(&*it);
-        }
-    }
-
     bool success = true;
 
-    for (auto it = begin(active); it != end(active); ++it)
+    for (auto& a : m_clusters)
     {
-        auto& cluster = **it;
-
-        cluster.tracker.update_request(pBuf);
-
-        auto pBuf_send = (next(it) == end(active)) ? pBuf : gwbuf_clone(pBuf);
-        if (!cluster.pDcb->protocol_write(pBuf_send))
+        if (a.tracker.expecting_request_packets())
         {
-            success = false;
-            break;
+            a.tracker.update_request(pBuf);
+
+            if (!a.pBackend->routeQuery(gwbuf_clone(pBuf)))
+            {
+                success = false;
+                break;
+            }
         }
     }
+
+    gwbuf_free(pBuf);
 
     return success;
 }
 
 void SmartRouterSession::kill_all_others(const Cluster& cluster)
 {
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(cluster.pDcb->protocol_session());
-    int keep_protocol_thread_id = proto->thread_id;
+    // TODO: Find a fix for this
+    // MySQLProtocol* proto = static_cast<MySQLProtocol*>(cluster.pDcb->m_protocol);
+    // int keep_protocol_thread_id = proto->thread_id;
 
-    mxs_mysql_execute_kill_all_others(cluster.pDcb->session(), cluster.pDcb->session()->id(),
-                                      keep_protocol_thread_id, KT_QUERY);
+    // mxs_mysql_execute_kill_all_others(cluster.pDcb->session(), cluster.pDcb->session()->id(),
+    //                                   keep_protocol_thread_id, KT_QUERY);
 }
 
-bool SmartRouterSession::handleError(GWBUF* pPacket, DCB* pProblem)
+bool SmartRouterSession::handleError(GWBUF* pPacket, mxs::Endpoint* pProblem)
 {
-    // One of the clusters closed the connection. In terms of SmartRouter this is a hopeless situation.
-    // Close the shop, and let the client retry. Also see marker1.
-    auto it = std::find_if(begin(m_clusters), end(m_clusters),
-                           [pProblem](const Cluster& cluster) {
-                               return cluster.pDcb == pProblem;
-                           });
-
-    mxb_assert(it != end(m_clusters));
-    Cluster& cluster = *it;
-
     auto err_code = mxs_mysql_get_mysql_errno(pPacket);
-    MXS_SERROR("handleError(): Lost connection to " << cluster.host << " Error code=" << err_code << " "
-                                                    << extract_error(pPacket));
+    MXS_SERROR("handleError(): Lost connection to "
+               << pProblem->target()->name() << " Error code=" << err_code << " "
+               << extract_error(pPacket));
 
-    MXS_SESSION* pSession = pProblem->session();
-
-    /* Send error report to client */
-    GWBUF* pCopy = gwbuf_clone(pPacket);
-    if (pCopy)
-    {
-        DCB* pClient = pSession->client_dcb;
-        pClient->protocol_write(pCopy);
-    }
-
-    // This will lead to the rest of the connections to be closed.
+    m_pClient_dcb->session()->terminate(gwbuf_clone(pPacket));
     return false;
 }
 
@@ -552,15 +501,4 @@ bool SmartRouterSession::is_locked_to_master() const
 bool SmartRouterSession::supports_hint(HINT_TYPE hint_type) const
 {
     return false;
-}
-
-void SmartRouterSession::close()
-{
-    for (auto& cluster : m_clusters)
-    {
-        if (cluster.pDcb)
-        {
-            dcb_close(const_cast<DCB*>(cluster.pDcb));
-        }
-    }
 }

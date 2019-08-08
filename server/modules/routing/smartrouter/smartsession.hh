@@ -16,7 +16,6 @@
 
 #include <maxsql/packet_tracker.hh>
 #include <maxscale/queryclassifier.hh>
-#include <maxbase/host.hh>
 
 #include <iostream>
 
@@ -35,16 +34,16 @@ class SmartRouter;
 class SmartRouterSession : public mxs::RouterSession, private mxs::QueryClassifier::Handler
 {
 public:
-    static SmartRouterSession* create(SmartRouter* pRouter, MXS_SESSION* pSession);
+    static SmartRouterSession* create(SmartRouter* pRouter, MXS_SESSION* pSession,
+                                      const std::vector<mxs::Endpoint*>& pEndpoints);
 
     virtual ~SmartRouterSession();
     SmartRouterSession(const SmartRouterSession&) = delete;
     SmartRouterSession& operator=(const SmartRouterSession&) = delete;
 
     int  routeQuery(GWBUF* pBuf);
-    void close();
-    void clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* reply);
-    bool handleError(GWBUF* pPacket, DCB* pProblem);
+    void clientReply(GWBUF* pPacket, mxs::Endpoint* pDcb, mxs::Reply* reply);
+    bool handleError(GWBUF* pPacket, mxs::Endpoint* pProblem);
 
 private:
     enum class Mode {Idle, Query, MeasureQuery, CollectResults};
@@ -55,25 +54,16 @@ private:
      */
     struct Cluster
     {
-        Cluster(SERVER_REF* b, DCB* pDcb, bool is_master)
-            : host {b->server->address, b->server->port}
-            , pBackend(b)
-            , pDcb(pDcb)
+        Cluster(mxs::Endpoint* b, bool is_master)
+            : pBackend(b)
             , is_master(is_master)
         {
+            b->set_userdata(this);
         }
 
-        Cluster(const Cluster&) = delete;
-        Cluster& operator=(const Cluster&) = delete;
-
-        Cluster(Cluster&&) = default;
-        Cluster& operator=(Cluster&&) = default;
-
-        maxbase::Host host;
-        SERVER_REF*   pBackend;
-        DCB*          pDcb;
-        bool          is_master;
-        bool          is_replying_to_client;
+        mxs::Endpoint* pBackend;
+        bool           is_master;
+        bool           is_replying_to_client {false};
 
         maxsql::PacketTracker tracker;
     };
@@ -82,10 +72,8 @@ private:
 
     SmartRouterSession(SmartRouter*, MXS_SESSION* pSession, Clusters clusters);
 
-    std::vector<maxbase::Host> hosts() const;
-
     // The write functions initialize Cluster flags and Cluster::ProtocolTracker.
-    bool write_to_host(const maxbase::Host& host, GWBUF* pBuf);
+    bool write_to_target(mxs::Target* target, GWBUF* pBuf);
     bool write_to_master(GWBUF* pBuf);
     bool write_to_all(GWBUF* pBuf, Mode mode);
     bool write_split_packets(GWBUF* pBuf);

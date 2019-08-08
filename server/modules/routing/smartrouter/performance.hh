@@ -15,8 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxbase/stopwatch.hh>
-#include <maxbase/host.hh>
-
+#include <maxscale/target.hh>
 #include <unordered_map>
 
 /** PerformanceInfo is a class that on the one hand provides routeQuery() with performance/routing
@@ -26,11 +25,11 @@ class PerformanceInfo
 {
 public:
     PerformanceInfo() = default;    // creates an instance where is_valid()==false;
-    PerformanceInfo(const maxbase::Host& h, maxbase::Duration d);
+    PerformanceInfo(mxs::Target* t, maxbase::Duration d);
 
     bool is_valid() const;
 
-    maxbase::Host     host() const;
+    mxs::Target*      target() const;
     maxbase::Duration duration() const;
 
     /** When was this PerformanceInfo created.
@@ -49,7 +48,7 @@ public:
     void set_updating(bool val);
     bool is_updating() const;
 private:
-    maxbase::Host     m_host;
+    mxs::Target*      m_target {nullptr};
     maxbase::Duration m_duration;
 
     int  m_eviction_schedule = 0;
@@ -62,20 +61,20 @@ private:
 std::string show_some(const std::string& str, int nchars = 70);
 
 // implementation details below
-inline PerformanceInfo::PerformanceInfo(const maxbase::Host& h, maxbase::Duration d)
-    : m_host(h)
+inline PerformanceInfo::PerformanceInfo(mxs::Target* t, maxbase::Duration d)
+    : m_target(t)
     , m_duration(d)
 {
 }
 
 inline bool PerformanceInfo::is_valid() const
 {
-    return m_host.is_valid();
+    return m_target != nullptr;
 }
 
-inline maxbase::Host PerformanceInfo::host() const
+inline mxs::Target* PerformanceInfo::target() const
 {
-    return m_host;
+    return m_target;
 }
 
 inline maxbase::Duration PerformanceInfo::duration() const

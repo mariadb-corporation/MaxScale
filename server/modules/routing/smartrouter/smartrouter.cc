@@ -163,9 +163,7 @@ SmartRouter::SmartRouter(SERVICE* service)
 
 SmartRouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
-    SmartRouterSession* pRouter = nullptr;
-    MXS_EXCEPTION_GUARD(pRouter = SmartRouterSession::create(this, pSession));
-    return pRouter;
+    return SmartRouterSession::create(this, pSession, endpoints);
 }
 
 // static
@@ -227,7 +225,7 @@ PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
         {
             MXS_SINFO("Trigger re-measure, schedule "
                       << eviction_schedules[perf_it->second.eviction_schedule()]
-                      << ", perf: " << perf_it->second.host()
+                      << ", perf: " << perf_it->second.target()->name()
                       << ", " << perf_it->second.duration() << ", "
                       << show_some(canonical));
 
@@ -248,8 +246,8 @@ void SmartRouter::perf_update(const std::string& canonical, const PerformanceInf
     if (perf_it != end(m_perfs))
     {
         MXS_SINFO("Update perf: from "
-                  << perf_it->second.host() << ", " << perf_it->second.duration()
-                  << " to " << perf.host() << ", " << perf.duration()
+                  << perf_it->second.target()->name() << ", " << perf_it->second.duration()
+                  << " to " << perf.target()->name() << ", " << perf.duration()
                   << ", " << show_some(canonical));
 
         size_t schedule = perf_it->second.eviction_schedule();
@@ -260,7 +258,7 @@ void SmartRouter::perf_update(const std::string& canonical, const PerformanceInf
     else
     {
         m_perfs.insert({canonical, perf});
-        MXS_SDEBUG("Stored new perf: " << perf.host() << ", " << perf.duration()
+        MXS_SDEBUG("Stored new perf: " << perf.target()->name() << ", " << perf.duration()
                                        << ", " << show_some(canonical));
     }
 }
