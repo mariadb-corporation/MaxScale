@@ -994,9 +994,9 @@ void Listener::accept_connections()
         {
             if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
             {
-                dcb->m_protocol = m_proto_func.accept(dcb);
+                dcb->m_protocol = m_proto_func.new_client_session(dcb->session());
 
-                if (!dcb->m_protocol)
+                if (!dcb->m_protocol || !m_proto_func.prepare_client_connection(dcb))
                 {
                     dcb_close(dcb);
                 }
@@ -1011,9 +1011,9 @@ void Listener::accept_connections()
             worker->execute([this, conn]() {
                                 if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
                                 {
-                                    dcb->m_protocol = m_proto_func.accept(dcb);
+                                    dcb->m_protocol = m_proto_func.new_client_session(dcb->session());
 
-                                    if (!dcb->m_protocol)
+                                    if (!dcb->m_protocol || !m_proto_func.prepare_client_connection(dcb))
                                     {
                                         dcb_close(dcb);
                                     }

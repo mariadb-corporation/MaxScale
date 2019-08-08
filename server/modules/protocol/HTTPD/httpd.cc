@@ -50,7 +50,8 @@ static int                   httpd_write_event(DCB* dcb);
 static int                   httpd_write(DCB* dcb, GWBUF* queue);
 static int                   httpd_error(DCB* dcb);
 static int                   httpd_hangup(DCB* dcb);
-static MXS_PROTOCOL_SESSION* httpd_accept(DCB*);
+static MXS_PROTOCOL_SESSION* httpd_new_client_session(MXS_SESSION* session);
+static bool                  httpd_prepare_client_connection(DCB* dcb);
 static int                   httpd_close(DCB* dcb);
 static int                   httpd_get_line(int sock, char* buf, int size);
 static void                  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
@@ -70,17 +71,18 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_PROTOCOL MyObject =
     {
-        httpd_read_event,       /**< Read - EPOLLIN handler        */
-        httpd_write,            /**< Write - data from gateway     */
-        httpd_write_event,      /**< WriteReady - EPOLLOUT handler */
-        httpd_error,            /**< Error - EPOLLERR handler      */
-        httpd_hangup,           /**< HangUp - EPOLLHUP handler     */
-        httpd_accept,           /**< Accept                        */
-        NULL,                   /**< new_backend_session           */
-        NULL,                   /**< prepare_backend_connection    */
-        httpd_close,            /**< Close                         */
-        httpd_default_auth,     /**< Default authenticator         */
-        NULL,                   /**< Connection limit reached      */
+        httpd_read_event,                /**< Read - EPOLLIN handler        */
+        httpd_write,                     /**< Write - data from gateway     */
+        httpd_write_event,               /**< WriteReady - EPOLLOUT handler */
+        httpd_error,                     /**< Error - EPOLLERR handler      */
+        httpd_hangup,                    /**< HangUp - EPOLLHUP handler     */
+        httpd_new_client_session,        /**< new_client_session            */
+        httpd_prepare_client_connection, /**< prepare_client_connection     */
+        NULL,                            /**< new_backend_session           */
+        NULL,                            /**< prepare_backend_connection    */
+        httpd_close,                     /**< Close                         */
+        httpd_default_auth,              /**< Default authenticator         */
+        NULL,                            /**< Connection limit reached      */
         NULL,
         NULL,
     };
@@ -352,23 +354,14 @@ static int httpd_hangup(DCB* dcb)
     return 0;
 }
 
-/**
- * Handler for the EPOLLIN event when the DCB refers to the listening
- * socket for the protocol.
- *
- * @param listener   The descriptor control block
- */
-static MXS_PROTOCOL_SESSION* httpd_accept(DCB* client_dcb)
+static MXS_PROTOCOL_SESSION* httpd_new_client_session(MXS_SESSION*)
 {
-    HTTPD_session* client_data = (HTTPD_session*)MXS_CALLOC(1, sizeof(HTTPD_session));
+    return static_cast<HTTPD_session*>(MXS_CALLOC(1, sizeof(HTTPD_session)));
+}
 
-    if (!session_start(client_dcb->session()))
-    {
-        MXS_FREE(client_data);
-        client_data = nullptr;
-    }
-
-    return (MXS_PROTOCOL_SESSION*)client_data;
+static bool httpd_prepare_client_connection(DCB* client_dcb)
+{
+    return session_start(client_dcb->session());
 }
 
 /**

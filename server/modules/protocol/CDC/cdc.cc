@@ -63,9 +63,10 @@ static int                   cdc_write_event(DCB* dcb);
 static int                   cdc_write(DCB* dcb, GWBUF* queue);
 static int                   cdc_error(DCB* dcb);
 static int                   cdc_hangup(DCB* dcb);
-static MXS_PROTOCOL_SESSION* cdc_accept(DCB*);
+static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION*);
+static bool                  cdc_prepare_client_connection(DCB*);
 static int                   cdc_close(DCB* dcb);
-static CDC_protocol*         cdc_protocol_init(DCB* dcb);
+static CDC_protocol*         cdc_protocol_init();
 static void                  cdc_protocol_done(DCB* dcb);
 static int                   do_auth(DCB* dcb, GWBUF* buffer, void* data);
 static void                  write_auth_ack(DCB* dcb);
@@ -90,16 +91,17 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_PROTOCOL MyObject =
     {
-        cdc_read_event,         /* Read - EPOLLIN handler        */
-        cdc_write,              /* Write - data from gateway     */
-        cdc_write_event,        /* WriteReady - EPOLLOUT handler */
-        cdc_error,              /* Error - EPOLLERR handler      */
-        cdc_hangup,             /* HangUp - EPOLLHUP handler     */
-        cdc_accept,             /* Accept                        */
-        NULL,                   /* new_backend_session           */
-        NULL,                   /* prepare_backend_connection    */
-        cdc_close,              /* Close                         */
-        cdc_default_auth,       /* default authentication */
+        cdc_read_event,                /* Read - EPOLLIN handler        */
+        cdc_write,                     /* Write - data from gateway     */
+        cdc_write_event,               /* WriteReady - EPOLLOUT handler */
+        cdc_error,                     /* Error - EPOLLERR handler      */
+        cdc_hangup,                    /* HangUp - EPOLLHUP handler     */
+        cdc_new_client_session,        /* new_client_session            */
+        cdc_prepare_client_connection, /* prepare_client_connection */
+        NULL,                          /* new_backend_session           */
+        NULL,                          /* prepare_backend_connection    */
+        cdc_close,                     /* Close                         */
+        cdc_default_auth,              /* default authentication */
         NULL,
         NULL,
         NULL,
@@ -286,53 +288,39 @@ static int cdc_hangup(DCB* dcb)
     return 0;
 }
 
-/**
- * Handler for the EPOLLIN event when the DCB refers to the listening
- * socket for the protocol.
- *
- * @param dcb    The descriptor control block
- */
-static MXS_PROTOCOL_SESSION* cdc_accept(DCB* client_dcb)
+static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION* session)
 {
-    CDC_session* client_data = NULL;
-    CDC_protocol* protocol = NULL;
+    return cdc_protocol_init();
+}
 
-    /* allocating CDC protocol */
-    protocol = cdc_protocol_init(client_dcb);
-    if (protocol == NULL)
-    {
-        client_dcb->m_protocol = NULL;
-        dcb_close(client_dcb);
-        return 0;
-    }
+static bool cdc_prepare_client_connection(DCB* client_dcb)
+{
+    bool prepared = false;
 
-    if (NULL == client_dcb->session())
-    {
-        dcb_close(client_dcb);
-        return 0;
-    }
+    CDC_protocol* protocol = static_cast<CDC_protocol*>(client_dcb->m_protocol);
+
+    mxb_assert(client_dcb->session());
 
     /*
      * create the session data for CDC
      * this coud be done in anothe routine, let's keep it here for now
      */
-    client_data = (CDC_session*) MXS_CALLOC(1, sizeof(CDC_session));
-    if (client_data == NULL)
+    CDC_session* client_data = (CDC_session*) MXS_CALLOC(1, sizeof(CDC_session));
+    if (client_data)
     {
-        dcb_close(client_dcb);
-        return 0;
+        client_dcb->m_data = client_data;
+
+        /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
+        protocol->state = CDC_STATE_WAIT_FOR_AUTH;
+
+        MXS_NOTICE("%s: new connection from [%s]",
+                   client_dcb->service()->name(),
+                   client_dcb->m_remote != NULL ? client_dcb->m_remote : "");
+
+        prepared = true;
     }
 
-    client_dcb->m_data = client_data;
-
-    /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
-    protocol->state = CDC_STATE_WAIT_FOR_AUTH;
-
-    MXS_NOTICE("%s: new connection from [%s]",
-               client_dcb->service()->name(),
-               client_dcb->m_remote != NULL ? client_dcb->m_remote : "");
-
-    return (MXS_PROTOCOL_SESSION*)protocol;
+    return prepared;
 }
 
 /**
@@ -359,11 +347,10 @@ static int cdc_close(DCB* dcb)
 /**
  * Allocate a new CDC protocol structure
  *
- * @param  dcb    The DCB where protocol is added
  * @return        New allocated protocol or NULL on errors
  *
  */
-static CDC_protocol* cdc_protocol_init(DCB* dcb)
+static CDC_protocol* cdc_protocol_init()
 {
     CDC_protocol* p;
 

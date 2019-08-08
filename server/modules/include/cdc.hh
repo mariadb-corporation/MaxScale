@@ -17,6 +17,8 @@
 
 #include <openssl/sha.h>
 
+#include <maxscale/protocol.hh>
+
 #define CDC_SMALL_BUFFER       1024
 #define CDC_METHOD_MAXLEN      128
 #define CDC_USER_MAXLEN        128
@@ -41,21 +43,21 @@
 /**
  * CDC session specific data
  */
-typedef struct cdc_session
+struct CDC_session
 {
     char         user[CDC_USER_MAXLEN + 1];     /*< username for authentication */
     char         uuid[CDC_UUID_LEN + 1];        /*< client uuid in registration */
     unsigned int flags[2];                      /*< Received flags              */
     uint8_t      auth_data[SHA_DIGEST_LENGTH];  /*< Password Hash               */
     int          state;                         /*< CDC protocol state          */
-} CDC_session;
+};
 
 /**
  * CDC protocol
  */
-typedef struct  cdc_protocol
+struct CDC_protocol : MXS_PROTOCOL_SESSION
 {
     int  state;                     /*< CDC protocol state          */
     char user[CDC_USER_MAXLEN + 1]; /*< username for authentication */
     char type[CDC_TYPE_LEN + 1];    /*< Request Type            */
-} CDC_protocol;
+};

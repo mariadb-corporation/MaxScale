@@ -90,16 +90,23 @@ struct MXS_PROTOCOL
     int32_t (* hangup)(DCB* dcb);
 
     /**
-     * Allocate new client side protocol sessoin
+     * Allocate new client protocol session
      *
-     * @param dcb The client that was accepted DCB
+     * @param session  The session to which the connection belongs to
      *
      * @return New protocol session or null on error
      */
-    MXS_PROTOCOL_SESSION* (* accept)(DCB* client_dcb);
+    MXS_PROTOCOL_SESSION* (* new_client_session)(MXS_SESSION* session);
 
     /**
-     * Allocate new backend protocol sessoin
+     * Prepare a new client connection.
+     *
+     * @return True, if the client connection could be prepared, false otherwise.
+     */
+    bool (* prepare_client_connection)(DCB* client_dcb);
+
+    /**
+     * Allocate new backend protocol session
      *
      * @param session  The session to which the connection belongs to
      * @param server   Server where the connection is made

@@ -26,6 +26,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
+#include <maxscale/protocol.hh>
 #include <maxscale/router.hh>
 #include <maxscale/poll.hh>
 #include <maxbase/atomic.h>
@@ -44,7 +45,7 @@ MXS_BEGIN_DECLS
  * HTTPD session specific data
  *
  */
-typedef struct httpd_session
+struct HTTPD_session : MXS_PROTOCOL_SESSION
 {
     char  user[HTTPD_USER_MAXLEN];          /*< username for authentication*/
     char* cookies;                          /*< all input cookies */
@@ -57,6 +58,6 @@ typedef struct httpd_session
     char* query_string;                     /*< the Query string, starts with ?, after path_info and document
                                              * name */
     int headers_received;                   /*< All the headers has been received, if 1 */
-} HTTPD_session;
+};
 
 MXS_END_DECLS

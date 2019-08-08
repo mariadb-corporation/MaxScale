@@ -62,7 +62,8 @@ static int                   maxscaled_write_event(DCB* dcb);
 static int                   maxscaled_write(DCB* dcb, GWBUF* queue);
 static int                   maxscaled_error(DCB* dcb);
 static int                   maxscaled_hangup(DCB* dcb);
-static MXS_PROTOCOL_SESSION* maxscaled_accept(DCB*);
+static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION*);
+static bool                  maxscaled_prepare_client_connection(DCB*);
 static int                   maxscaled_close(DCB* dcb);
 static char*                 mxsd_default_auth();
 
@@ -173,17 +174,18 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_PROTOCOL MyObject =
     {
-        maxscaled_read_event,           /**< Read - EPOLLIN handler        */
-        maxscaled_write,                /**< Write - data from gateway     */
-        maxscaled_write_event,          /**< WriteReady - EPOLLOUT handler */
-        maxscaled_error,                /**< Error - EPOLLERR handler      */
-        maxscaled_hangup,               /**< HangUp - EPOLLHUP handler     */
-        maxscaled_accept,               /**< Accept                        */
-        NULL,                           /**< new_backend_session           */
-        NULL,                           /**< prepare_backend_connection    */
-        maxscaled_close,                /**< Close                         */
-        mxsd_default_auth,              /**< Default authenticator         */
-        NULL,                           /**< Connection limit reached      */
+        maxscaled_read_event,                /**< Read - EPOLLIN handler        */
+        maxscaled_write,                     /**< Write - data from gateway     */
+        maxscaled_write_event,               /**< WriteReady - EPOLLOUT handler */
+        maxscaled_error,                     /**< Error - EPOLLERR handler      */
+        maxscaled_hangup,                    /**< HangUp - EPOLLHUP handler     */
+        maxscaled_new_client_session,        /**< new_client_session            */
+        maxscaled_prepare_client_connection, /**< prepare_client_connection     */
+        NULL,                                /**< new_backend_session           */
+        NULL,                                /**< prepare_backend_connection    */
+        maxscaled_close,                     /**< Close                         */
+        mxsd_default_auth,                   /**< Default authenticator         */
+        NULL,                                /**< Connection limit reached      */
         NULL,
         NULL,
     };
@@ -339,47 +341,40 @@ static int maxscaled_hangup(DCB* dcb)
     return 0;
 }
 
-/**
- * Handler for the EPOLLIN event when the DCB refers to the listening
- * socket for the protocol.
- *
- * @param dcb   The descriptor control block
- * @return The number of new connections created
- */
-static MXS_PROTOCOL_SESSION* maxscaled_accept(DCB* client_dcb)
+static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION* session)
 {
+    MAXSCALED* maxscaled_protocol = (MAXSCALED*)calloc(1, sizeof(MAXSCALED));
+
+    if (maxscaled_protocol)
+    {
+        pthread_mutex_init(&maxscaled_protocol->lock, NULL);
+    }
+
+    return maxscaled_protocol;
+}
+
+static bool maxscaled_prepare_client_connection(DCB* client_dcb)
+{
+    bool rv = true;
     socklen_t len = sizeof(struct ucred);
     struct ucred ucred;
 
-    MAXSCALED* maxscaled_protocol = (MAXSCALED*)calloc(1, sizeof(MAXSCALED));
-
-    if (!maxscaled_protocol)
-    {
-        dcb_close(client_dcb);
-        return 0;
-    }
+    MAXSCALED* maxscaled_protocol = static_cast<MAXSCALED*>(client_dcb->m_protocol);
 
     maxscaled_protocol->username = NULL;
     maxscaled_protocol->state = MAXSCALED_STATE_LOGIN;
 
     bool authenticated = false;
 
-    if (!authenticate_socket(maxscaled_protocol, client_dcb))
+    if (authenticate_socket(maxscaled_protocol, client_dcb))
     {
-        dcb_close(client_dcb);
-        free(maxscaled_protocol);
-        return 0;
+        if (session_start(client_dcb->session()))
+        {
+            rv = true;
+        }
     }
 
-    pthread_mutex_init(&maxscaled_protocol->lock, NULL);
-
-    if (!session_start(client_dcb->session()))
-    {
-        dcb_close(client_dcb);
-        return 0;
-    }
-
-    return (MXS_PROTOCOL_SESSION*)maxscaled_protocol;
+    return rv;
 }
 
 /**

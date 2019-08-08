@@ -89,7 +89,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_write_backend_event,             /* WriteReady - EPOLLOUT handler */
         gw_error_backend_event,             /* Error - EPOLLERR handler      */
         gw_backend_hangup,                  /* HangUp - EPOLLHUP handler     */
-        NULL,                               /* Accept                        */
+        NULL,                               /* new_client_session            */
+        NULL,                               /* prepare_client_connection     */
         gw_new_backend_session,             /* New backend connection        */
         gw_prepare_backend_connection,      /* Prepare backend connection    */
         gw_backend_close,                   /* Close                         */

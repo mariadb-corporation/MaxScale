@@ -1555,19 +1555,15 @@ return_1:
     return 1;
 }
 
-/**
- * @node Accept and prepare a new client connection
- *
- * @param dcb The client DCB that was created
- *
- * @return always 1
- */
-MXS_PROTOCOL_SESSION* gw_MySQLAccept(DCB* dcb)
+MXS_PROTOCOL_SESSION* gw_new_client_session(MXS_SESSION* session)
 {
-    auto protocol = new(std::nothrow) MySQLProtocol(dcb->session(), dcb->m_server);
-    MXS_ABORT_IF_NULL(protocol);
-    MySQLSendHandshake(dcb, protocol);
-    return protocol;
+    return new(std::nothrow) MySQLProtocol(session, nullptr);
+}
+
+bool gw_prepare_client_connection(DCB* client_dcb)
+{
+    MySQLSendHandshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->m_protocol));
+    return true;
 }
 
 static int gw_error_client_event(DCB* dcb)
@@ -2284,7 +2280,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         gw_write_client_event,                      /* WriteReady - EPOLLOUT handler */
         gw_error_client_event,                      /* Error - EPOLLERR handler      */
         gw_client_hangup_event,                     /* HangUp - EPOLLHUP handler     */
-        gw_MySQLAccept,                             /* Accept                        */
+        gw_new_client_session,                      /* new_client_session            */
+        gw_prepare_client_connection,               /* prepare_client_connection     */
         NULL,                                       /* new_backend_session           */
         NULL,                                       /* prepare_backend_connection    */
         gw_client_close,                            /* Close                         */

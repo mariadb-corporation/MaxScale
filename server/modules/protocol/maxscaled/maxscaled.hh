@@ -16,23 +16,18 @@
  * @file maxscaled.h The maxscaled protocol module header file
  */
 #include <maxscale/ccdefs.hh>
-#include <maxscale/dcb.hh>
-#include <maxscale/housekeeper.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/protocol.hh>
 
 /**
  * The maxscaled specific protocol structure to put in the DCB.
  */
-typedef struct maxscaled
+struct MAXSCALED : MXS_PROTOCOL_SESSION
 {
     pthread_mutex_t lock;       /**< Protocol structure lock */
     int             state;      /**< The connection state */
     char*           username;   /**< The login name of the user */
-} MAXSCALED;
+};
 
 #define MAXSCALED_STATE_LOGIN  1    /**< Waiting for user */
 #define MAXSCALED_STATE_PASSWD 2    /**< Waiting for password */
 #define MAXSCALED_STATE_DATA   3    /**< User logged in */
-
-MXS_END_DECLS
