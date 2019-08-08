@@ -22,14 +22,10 @@
 
 using namespace maxscale;
 
-Backend::Backend(SERVER_REF* ref)
-    : m_closed(false)
-    , m_closed_at(0)
-    , m_opened_at(0)
-    , m_backend(ref)
-    , m_dcb(NULL)
-    , m_state(0)
+Backend::Backend(mxs::Endpoint* b)
+    : m_backend(b)
 {
+    m_backend->set_userdata(this);
 }
 
 Backend::~Backend()
@@ -44,8 +40,6 @@ Backend::~Backend()
 
 void Backend::close(close_type type)
 {
-    mxb_assert(m_dcb && m_dcb->m_nClose == 0);
-
     if (!m_closed)
     {
         m_closed = true;
@@ -67,11 +61,7 @@ void Backend::close(close_type type)
                 set_state(FATAL_FAILURE);
             }
 
-            dcb_close(m_dcb);
-            m_dcb = NULL;
-
-            /** decrease server current connection counters */
-            mxb::atomic::add(&m_backend->connections, -1, mxb::atomic::RELAXED);
+            m_backend->close();
         }
     }
     else
@@ -157,9 +147,8 @@ void Backend::clear_state(backend_state state)
 {
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT))
     {
-        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->server->stats().n_current_ops,
-                                                    -1,
-                                                    mxb::atomic::RELAXED);
+        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
+                                                    -1, mxb::atomic::RELAXED);
         mxb_assert(prev2 > 0);
     }
 
@@ -170,30 +159,25 @@ void Backend::set_state(backend_state state)
 {
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT) == 0)
     {
-        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->server->stats().n_current_ops,
-                                                    1,
-                                                    mxb::atomic::RELAXED);
+        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
+                                                    1, mxb::atomic::RELAXED);
         mxb_assert(prev2 >= 0);
     }
 
     m_state |= state;
 }
 
-bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
+bool Backend::connect(SessionCommandList* sescmd)
 {
-    mxb_assert(!in_use() && m_dcb == nullptr);
+    mxb_assert(!in_use());
     bool rval = false;
 
-    mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(session->client_dcb->owner);
-    mxb_assert(worker == mxs::RoutingWorker::get_current());
-
-    if ((m_dcb = BackendDCB::connect(m_backend->server, session, worker)))
+    if (m_backend->connect())
     {
         m_closed = false;
         m_closed_at = 0;
         m_opened_at = time(NULL);
         m_state = IN_USE;
-        mxb::atomic::add(&m_backend->connections, 1, mxb::atomic::RELAXED);
         rval = true;
         m_history_size = 0;
 
@@ -219,7 +203,7 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
 bool Backend::write(GWBUF* buffer, response_type type)
 {
     mxb_assert(in_use());
-    bool rval = m_dcb->protocol_write(buffer) != 0;
+    bool rval = m_backend->routeQuery(buffer);
 
     if (rval && type == EXPECT_RESPONSE)
     {
@@ -313,7 +297,7 @@ std::string Backend::get_verbose_status() const
     }
 
     ss << "name: [" << name() << "] "
-       << "status: [" << m_backend->server->status_string() << "] "
+       << "status: [" << m_backend->target()->status_string() << "] "
        << "state: [" << to_string((backend_state)m_state) << "] "
        << "last opened at: [" << opened_at << "] "
        << "last closed at: [" << closed_at << "] "

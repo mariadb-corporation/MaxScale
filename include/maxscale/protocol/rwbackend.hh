@@ -21,6 +21,8 @@
 #include <maxscale/response_stat.hh>
 #include <maxscale/protocol/mysql.hh>
 
+using Endpoints = std::vector<mxs::Endpoint*>;
+
 namespace maxscale
 {
 
@@ -149,9 +151,9 @@ public:
         std::string m_message;
     };
 
-    static SRWBackends from_servers(SERVER_REF* servers);
+    static SRWBackends from_endpoints(const Endpoints& endpoints);
 
-    RWBackend(SERVER_REF* ref);
+    RWBackend(mxs::Endpoint* endpoint);
     virtual ~RWBackend();
 
     inline reply_state_t get_reply_state() const
@@ -254,14 +256,6 @@ public:
 
     // Controlled by the session
     ResponseStat& response_stat();
-
-    /**
-     * Change server replication lag state and log warning when state changes.
-     *
-     * @param new_state New replication lag state
-     * @param max_rlag Maximum allowed lag. Used for the log message.
-     */
-    void change_rlag_state(SERVER::RLagState new_state, int max_rlag);
 
 private:
     reply_state_t    m_reply_state;

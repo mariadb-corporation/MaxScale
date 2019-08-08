@@ -54,9 +54,9 @@ public:
     /**
      * @brief Create new Backend
      *
-     * @param ref Server reference used by this backend
+     * @param endpoint The downstream endpoint to connect to
      */
-    Backend(SERVER_REF* ref);
+    Backend(mxs::Endpoint* endpoint);
 
     virtual ~Backend();
 
@@ -124,21 +124,21 @@ public:
      *
      * @return Pointer to server reference
      */
-    inline SERVER_REF* backend() const
+    inline mxs::Endpoint* backend() const
     {
         mxb_assert(m_backend);
         return m_backend;
     }
 
     /**
-     * @brief Get pointer to server
+     * @brief Get pointer to server reference
      *
-     * @return Pointer to server
+     * @return Pointer to server reference
      */
-    inline SERVER* server() const
+    inline mxs::Target* target() const
     {
         mxb_assert(m_backend);
-        return m_backend->server;
+        return m_backend->target();
     }
 
     /**
@@ -148,18 +148,17 @@ public:
      */
     inline bool can_connect() const
     {
-        return !has_failed() && m_backend->server->is_connectable();
+        return !has_failed() && m_backend->target()->is_connectable();
     }
 
     /**
      * @brief Create a new connection
      *
-     * @param session The session to which the connection is linked
      * @param sescmd  Pointer to a list of session commands to execute
      *
      * @return True if connection was successfully created
      */
-    bool connect(MXS_SESSION* session, SessionCommandList* sescmd = NULL);
+    bool connect(SessionCommandList* sescmd = NULL);
 
     /**
      * @brief Close the backend
@@ -167,16 +166,6 @@ public:
      * This will close all active connections created by the backend.
      */
     virtual void close(close_type type = CLOSE_NORMAL);
-
-    /**
-     * @brief Get a pointer to the internal DCB
-     *
-     * @return Pointer to DCB or NULL if not connected
-     */
-    inline DCB* dcb() const
-    {
-        return m_dcb;
-    }
 
     /**
      * @brief Write data to the backend server
@@ -227,7 +216,7 @@ public:
      */
     inline bool is_active() const
     {
-        return server_ref_is_active(m_backend);
+        return m_backend->target()->active();
     }
 
     /**
@@ -257,7 +246,7 @@ public:
      */
     inline bool is_master() const
     {
-        return m_backend->server->is_master();
+        return m_backend->target()->is_master();
     }
 
     /**
@@ -267,7 +256,7 @@ public:
      */
     inline bool is_slave() const
     {
-        return m_backend->server->is_slave();
+        return m_backend->target()->is_slave();
     }
 
     /**
@@ -277,7 +266,7 @@ public:
      */
     inline bool is_relay() const
     {
-        return m_backend->server->is_relay();
+        return m_backend->target()->is_relay();
     }
 
     /**
@@ -312,7 +301,7 @@ public:
      */
     inline const char* name() const
     {
-        return m_backend->server->name();
+        return m_backend->target()->name();
     }
 
     void select_started();
@@ -366,14 +355,13 @@ private:
     // Stringification function
     static std::string to_string(backend_state state);
 
-    bool               m_closed;            /**< True if a connection has been opened and closed */
-    time_t             m_closed_at;         /**< Timestamp when the backend was last closed */
+    bool               m_closed {false};    /**< True if a connection has been opened and closed */
+    time_t             m_closed_at {0};     /**< Timestamp when the backend was last closed */
     std::string        m_close_reason;      /**< Why the backend was closed */
-    time_t             m_opened_at;         /**< Timestamp when the backend was last opened */
-    SERVER_REF*        m_backend;           /**< Backend server */
-    DCB*               m_dcb;               /**< Backend DCB */
+    time_t             m_opened_at {0};     /**< Timestamp when the backend was last opened */
+    mxs::Endpoint*     m_backend {nullptr}; /**< Backend server */
     mxs::Buffer        m_pending_cmd;       /**< Pending commands */
-    int                m_state;             /**< State of the backend */
+    int                m_state {0};         /**< State of the backend */
     SessionCommandList m_session_commands;  /**< List of session commands that are
                                              * to be executed on this backend server */
 

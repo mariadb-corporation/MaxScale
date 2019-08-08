@@ -15,13 +15,14 @@
 
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mysql.hh>
+#include <maxscale/router.hh>
 
 using Iter = mxs::Buffer::iterator;
 
 namespace maxscale
 {
 
-RWBackend::RWBackend(SERVER_REF* ref)
+RWBackend::RWBackend(mxs::Endpoint* ref)
     : mxs::Backend(ref)
     , m_reply_state(REPLY_STATE_DONE)
     , m_modutil_state{0}
@@ -306,7 +307,6 @@ void RWBackend::process_packets(GWBUF* result)
     auto it = buffer.begin();
     MXB_AT_DEBUG(size_t total_len = buffer.length());
     MXB_AT_DEBUG(size_t used_len = 0);
-    mxb_assert(dcb()->session()->service->capabilities & (RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_STMT_OUTPUT));
 
     while (it != buffer.end())
     {
@@ -438,41 +438,14 @@ ResponseStat& RWBackend::response_stat()
     return m_response_stat;
 }
 
-void RWBackend::change_rlag_state(SERVER::RLagState new_state, int max_rlag)
-{
-    mxb_assert(new_state == SERVER::RLagState::BELOW_LIMIT || new_state == SERVER::RLagState::ABOVE_LIMIT);
-    namespace atom = maxbase::atomic;
-    auto srv = server();
-    auto old_state = atom::load(&srv->rlag_state, atom::RELAXED);
-    if (new_state != old_state)
-    {
-        atom::store(&srv->rlag_state, new_state, atom::RELAXED);
-        // State has just changed, log warning. Don't log catchup if old state was RLAG_NONE.
-        if (new_state == SERVER::RLagState::ABOVE_LIMIT)
-        {
-            MXS_WARNING("Replication lag of '%s' is %is, which is above the configured limit %is. "
-                        "'%s' is excluded from query routing.",
-                        srv->name(), srv->rlag, max_rlag, srv->name());
-        }
-        else if (old_state == SERVER::RLagState::ABOVE_LIMIT)
-        {
-            MXS_WARNING("Replication lag of '%s' is %is, which is below the configured limit %is. "
-                        "'%s' is returned to query routing.",
-                        srv->name(), srv->rlag, max_rlag, srv->name());
-        }
-    }
-}
-
-mxs::SRWBackends RWBackend::from_servers(SERVER_REF* servers)
+mxs::SRWBackends RWBackend::from_endpoints(const Endpoints& endpoints)
 {
     SRWBackends backends;
+    backends.reserve(endpoints.size());
 
-    for (SERVER_REF* ref = servers; ref; ref = ref->next)
+    for (auto e : endpoints)
     {
-        if (ref->active)
-        {
-            backends.emplace_back(new mxs::RWBackend(ref));
-        }
+        backends.emplace_back(new mxs::RWBackend(e));
     }
 
     return backends;
