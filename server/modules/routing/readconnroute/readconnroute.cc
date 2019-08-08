@@ -81,27 +81,26 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The Master server
  */
-SERVER_REF* RCR::get_root_master()
+static mxs::Endpoint* get_root_master(const Endpoints& endpoints)
 {
     auto best_rank = std::numeric_limits<int64_t>::max();
-    SERVER_REF* master_host = nullptr;
+    mxs::Endpoint* master_host = nullptr;
 
-    for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
+    for (auto e : endpoints)
     {
-        if (server_ref_is_active(ref) && ref->server->is_master())
+        if (e->target()->is_master())
         {
-            auto rank = ref->server->rank();
+            auto rank = e->target()->rank();
 
             if (!master_host)
             {
                 // No master found yet
-                master_host = ref;
+                master_host = e;
             }
-            else if (rank < best_rank
-                     || (rank == best_rank && ref->server_weight > master_host->server_weight))
+            else if (rank < best_rank)
             {
                 best_rank = rank;
-                master_host = ref;
+                master_host = e;
             }
         }
     }
@@ -183,27 +182,15 @@ RCR* RCR::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
     return inst;
 }
 
-RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, SERVER_REF* backend, BackendDCB* dcb,
-                       uint32_t bitmask, uint32_t bitvalue)
+RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
+                       const Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue)
     : mxs::RouterSession(session)
     , m_instance(inst)
-    , m_backend(backend)
-    , m_dcb(dcb)
-    , m_client_dcb(session->client_dcb)
     , m_bitmask(bitmask)
     , m_bitvalue(bitvalue)
+    , m_backend(backend)
+    , m_endpoints(endpoints)
 {
-}
-
-RCRSession::~RCRSession()
-{
-    mxb::atomic::add(&m_backend->connections, -1, mxb::atomic::RELAXED);
-}
-
-void RCRSession::close()
-{
-    mxb_assert(m_dcb);
-    dcb_close(m_dcb);
 }
 
 RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
@@ -215,16 +202,16 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
     /**
      * Find the Master host from available servers
      */
-    SERVER_REF* master_host = get_root_master();
+    mxs::Endpoint* master_host = get_root_master(endpoints);
 
-    bool connectable_master = master_host ? master_host->server->is_connectable() : false;
+    bool connectable_master = master_host ? master_host->target()->is_connectable() : false;
 
     /**
      * Find a backend server to connect to. This is the extent of the
      * load balancing algorithm we need to implement for this simple
      * connection router.
      */
-    SERVER_REF* candidate = nullptr;
+    mxs::Endpoint* candidate = nullptr;
     auto best_rank = std::numeric_limits<int64_t>::max();
 
     /*
@@ -239,22 +226,21 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
      * become the new candidate. This has the effect of spreading the
      * connections over different servers during periods of very low load.
      */
-    for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
+    for (auto e : endpoints)
     {
-        if (!server_ref_is_active(ref) || !ref->server->is_connectable())
+        if (!e->target()->is_connectable())
         {
             continue;
         }
 
-        mxb_assert(ref->server->is_usable());
+        mxb_assert(e->target()->is_usable());
 
         /* Check server status bits against bitvalue from router_options */
-        if (ref && (ref->server->status() & bitmask & bitvalue))
+        if (e->target()->status() & bitmask & bitvalue)
         {
             if (master_host && connectable_master)
             {
-                if (ref == master_host
-                    && (bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
+                if (e == master_host && (bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
                 {
                     /* Skip root master here, as it could also be slave of an external server that
                      * is not in the configuration.  Intermediate masters (Relay Servers) are also
@@ -263,7 +249,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 
                     continue;
                 }
-                if (ref == master_host && bitvalue == SERVER_MASTER)
+                if (e == master_host && bitvalue == SERVER_MASTER)
                 {
                     /* If option is "master" return only the root Master as there could be
                      * intermediate masters (Relay Servers) and they must not be selected.
@@ -283,26 +269,16 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
             }
 
             /* If no candidate set, set first running server as our initial candidate server */
-            if (!candidate || ref->server->rank() < best_rank)
+            if (!candidate || e->target()->rank() < best_rank)
             {
-                best_rank = ref->server->rank();
-                candidate = ref;
+                best_rank = e->target()->rank();
+                candidate = e;
             }
-            else if (ref->server->rank() == best_rank)
+            else if (e->target()->rank() == best_rank
+                     && e->target()->stats().n_current < candidate->target()->stats().n_current)
             {
-                if (ref->server_weight == 0 || candidate->server_weight == 0)
-                {
-                    if (ref->server_weight)     // anything with a weight is better
-                    {
-                        candidate = ref;
-                    }
-                }
-                else if ((ref->connections + 1) / ref->server_weight
-                         < (candidate->connections + 1) / candidate->server_weight)
-                {
-                    /* ref has a better score. */
-                    candidate = ref;
-                }
+                // This one is better
+                candidate = e;
             }
         }
     }
@@ -338,63 +314,47 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
             {
                 mxb_assert(!connectable_master);
                 MXS_ERROR("The only possible candidate server (%s) is being drained "
-                          "and thus cannot be used.", master_host->server->address);
+                          "and thus cannot be used.", master_host->target()->name());
             }
             return nullptr;
         }
     }
     else
     {
-        mxb_assert(candidate->server->is_connectable());
+        mxb_assert(candidate->target()->is_connectable());
     }
 
-    mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(session->client_dcb->owner);
-    mxb_assert(worker == mxs::RoutingWorker::get_current());
-
-    /** Open the backend connection */
-    BackendDCB* backend_dcb = BackendDCB::connect(candidate->server, session, worker);
-
-    if (!backend_dcb)
+    if (!candidate->connect())
     {
         /** The failure is reported in dcb_connect() */
         return nullptr;
     }
 
-    RCRSession* client_rses = new(std::nothrow) RCRSession(this, session, candidate, backend_dcb,
-                                                           bitmask, bitvalue);
-
-    if (!client_rses)
-    {
-        return nullptr;
-    }
-
-    mxb::atomic::add(&candidate->connections, 1, mxb::atomic::RELAXED);
-
-    m_stats.n_sessions++;
+    RCRSession* client_rses = new RCRSession(this, session, candidate, endpoints, bitmask, bitvalue);
 
     MXS_INFO("New session for server %s. Connections : %d",
-             candidate->server->name(),
-             candidate->connections);
+             candidate->target()->name(),
+             candidate->target()->stats().n_current);
 
     return client_rses;
 }
 
 /** Log routing failure due to closed session */
-static void log_closed_session(mxs_mysql_cmd_t mysql_command, SERVER_REF* ref)
+static void log_closed_session(uint8_t mysql_command, mxs::Target* t)
 {
     char msg[SERVER::MAX_ADDRESS_LEN + 200] = "";   // Extra space for message
 
-    if (ref->server->is_down())
+    if (t->is_down())
     {
-        sprintf(msg, "Server '%s' is down.", ref->server->name());
+        sprintf(msg, "Server '%s' is down.", t->name());
     }
-    else if (ref->server->is_in_maint())
+    else if (t->is_in_maint())
     {
-        sprintf(msg, "Server '%s' is in maintenance.", ref->server->name());
+        sprintf(msg, "Server '%s' is in maintenance.", t->name());
     }
     else
     {
-        sprintf(msg, "Server '%s' no longer qualifies as a target server.", ref->server->name());
+        sprintf(msg, "Server '%s' no longer qualifies as a target server.", t->name());
     }
 
     MXS_ERROR("Failed to route MySQL command %d to backend server. %s", mysql_command, msg);
@@ -416,15 +376,15 @@ bool RCRSession::connection_is_valid() const
     // 'router_options=slave' in the configuration file and there was only
     // the sole master available at session creation time.
 
-    if (m_backend->server->is_usable() && (m_backend->server->status() & m_bitmask & m_bitvalue))
+    if (m_backend->target()->is_usable() && (m_backend->target()->status() & m_bitmask & m_bitvalue))
     {
         // Note the use of '==' and not '|'. We must use the former to exclude a
         // 'router_options=slave' that uses the master due to no slave having been
         // available at session creation time. Its bitvalue is (SERVER_MASTER | SERVER_SLAVE).
-        if (m_bitvalue == SERVER_MASTER && m_backend->active)
+        if (m_bitvalue == SERVER_MASTER && m_backend->target()->active())
         {
             // If we're using an active master server, verify that it is still a master
-            rval = m_backend == m_instance->get_root_master();
+            rval = m_backend == get_root_master(m_endpoints);
         }
         else
         {
@@ -444,95 +404,37 @@ bool RCRSession::connection_is_valid() const
 
 int RCRSession::routeQuery(GWBUF* queue)
 {
-    int rc = 0;
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(m_client_dcb->protocol_session());
-    mxs_mysql_cmd_t mysql_command = proto->current_command;
-
-    mxb::atomic::add(&m_instance->stats().n_queries, 1, mxb::atomic::RELAXED);
+    uint8_t mysql_command = mxs_mysql_get_command(queue);
 
     // Due to the streaming nature of readconnroute, this is not accurate
-    mxb::atomic::add(&m_backend->server->stats().packets, 1, mxb::atomic::RELAXED);
-
-    BackendDCB* backend_dcb = m_dcb;
-    mxb_assert(backend_dcb);
-    char* trc = nullptr;
+    mxb::atomic::add(&m_backend->target()->stats().packets, 1, mxb::atomic::RELAXED);
 
     if (!connection_is_valid())
     {
-        log_closed_session(mysql_command, m_backend);
+        log_closed_session(mysql_command, m_backend->target());
         gwbuf_free(queue);
-        return rc;
+        return 0;
     }
 
-    switch (mysql_command)
-    {
-    case MXS_COM_QUERY:
-        if (mxs_log_is_priority_enabled(LOG_INFO))
-        {
-            trc = modutil_get_SQL(queue);
-        }
-
-    default:
-        rc = backend_dcb->protocol_write(queue);
-        break;
-    }
-
-    MXS_INFO("Routed [%s] to '%s'%s%s",
+    MXS_INFO("Routed [%s] to '%s' %s",
              STRPACKETTYPE(mysql_command),
-             backend_dcb->server()->name(),
-             trc ? ": " : ".",
-             trc ? trc : "");
-    MXS_FREE(trc);
+             m_backend->target()->name(),
+             mxs::extract_sql(queue).c_str());
 
-    return rc;
+    return m_backend->routeQuery(queue);
 }
 
 void RCR::diagnostics(DCB* dcb)
 {
-    const char* weightby = serviceGetWeightingParameter(m_pService);
-
-    dcb_printf(dcb,
-               "\tNumber of router sessions:    %d\n",
-               m_stats.n_sessions);
-    dcb_printf(dcb,
-               "\tCurrent no. of router sessions:	%d\n",
-               m_pService->stats().n_current);
-    dcb_printf(dcb,
-               "\tNumber of queries forwarded:      %d\n",
-               m_stats.n_queries);
-    if (*weightby)
-    {
-        dcb_printf(dcb,
-                   "\tConnection distribution based on %s "
-                   "server parameter.\n",
-                   weightby);
-        dcb_printf(dcb,
-                   "\t\tServer               Target %% Connections\n");
-        for (SERVER_REF* ref = m_pService->dbref; ref; ref = ref->next)
-        {
-            dcb_printf(dcb,
-                       "\t\t%-20s %3.1f%%     %d\n",
-                       ref->server->name(),
-                       ref->server_weight * 100,
-                       ref->connections);
-        }
-    }
 }
 
 json_t* RCR::diagnostics_json() const
 {
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "connections", json_integer(m_stats.n_sessions));
+    json_object_set_new(rval, "connections", json_integer(m_pService->stats().n_connections));
     json_object_set_new(rval, "current_connections", json_integer(m_pService->stats().n_current));
-    json_object_set_new(rval, "queries", json_integer(m_stats.n_queries));
-
-    const char* weightby = serviceGetWeightingParameter(m_pService);
-
-    if (*weightby)
-    {
-        json_object_set_new(rval, "weightby", json_string(weightby));
-    }
+    json_object_set_new(rval, "queries", json_integer(m_pService->stats().packets));
 
     return rval;
 }

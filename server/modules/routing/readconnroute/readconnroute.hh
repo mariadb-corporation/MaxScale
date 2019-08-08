@@ -29,9 +29,9 @@ class RCR;
 class RCRSession : public mxs::RouterSession
 {
 public:
-    RCRSession(RCR* inst, MXS_SESSION* session, SERVER_REF* backend, BackendDCB* dcb,
-               uint32_t bitmask, uint32_t bitvalue);
-    ~RCRSession();
+    RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
+               const Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue);
+    ~RCRSession() = default;
 
     /**
      * Route data from client to the backend.
@@ -41,11 +41,6 @@ public:
      * @return Returns 1 on success and 0 on error
      */
     int routeQuery(GWBUF* queue);
-
-    /**
-     * Closes the router session
-     */
-    void close();
 
     void clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* pReply)
     {
@@ -58,23 +53,13 @@ public:
     }
 
 private:
-    RCR*        m_instance;     /**< Router instance */
-    SERVER_REF* m_backend;      /**< Backend used by the client session */
-    BackendDCB* m_dcb;          /**< DCB Connection to the backend      */
-    DCB*        m_client_dcb;   /**< Client DCB */
-    uint32_t    m_bitmask;      /**< Bitmask to apply to server->status */
-    uint32_t    m_bitvalue;     /**< Session specific required value of server->status */
+    RCR*           m_instance;  /**< Router instance */
+    uint32_t       m_bitmask;   /**< Bitmask to apply to server->status */
+    uint32_t       m_bitvalue;  /**< Session specific required value of server->status */
+    mxs::Endpoint* m_backend;
+    Endpoints      m_endpoints;
 
     bool connection_is_valid() const;
-};
-
-/**
- * The statistics for this router instance
- */
-struct Stats
-{
-    int n_sessions = 0;     /**< Number sessions created     */
-    int n_queries = 0;      /**< Number of queries forwarded */
 };
 
 /**
@@ -132,26 +117,8 @@ public:
      */
     bool configure(MXS_CONFIG_PARAMETER* params);
 
-    /**
-     * Get the root master server for the service
-     *
-     * @return The root master or nullptr if no master is found
-     */
-    SERVER_REF* get_root_master();
-
-    /**
-     * Get statistics
-     *
-     * @return Reference to statistics object
-     */
-    Stats& stats()
-    {
-        return m_stats;
-    }
-
 private:
     RCR(SERVICE* service);
 
     uint64_t m_bitmask_and_bitvalue = 0;    /**< Lower 32-bits for bitmask and upper for bitvalue */
-    Stats    m_stats;                       /**< Statistics for this router               */
 };
