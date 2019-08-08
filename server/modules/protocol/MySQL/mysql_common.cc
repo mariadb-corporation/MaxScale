@@ -1666,6 +1666,18 @@ mysql_tx_state_t parse_trx_state(const char* str)
     return (mysql_tx_state_t)s;
 }
 
+MySQLProtocol::MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+    : m_session(session)
+    , m_reply(server)
+    , m_component(component)
+{
+}
+
+MySQLProtocol::~MySQLProtocol()
+{
+    gwbuf_free(stored_query);
+}
+
 using Iter = MySQLProtocol::Iter;
 
 uint64_t get_encoded_int(Iter it)
@@ -1757,7 +1769,7 @@ void MySQLProtocol::update_error(Iter it, Iter end)
     auto message_begin = sql_state_end;
     auto message_end = end;
 
-    m_reply.m_error.set(code, sql_state_begin, sql_state_end, message_begin, message_end);
+    m_reply.set_error(code, sql_state_begin, sql_state_end, message_begin, message_end);
 }
 
 bool MySQLProtocol::consume_fetched_rows(GWBUF* buffer)
@@ -1773,12 +1785,12 @@ bool MySQLProtocol::consume_fetched_rows(GWBUF* buffer)
     // If the server responded with an error, n_eof > 0
     if (n_eof > 0)
     {
-        m_reply.m_row_count += num_packets - 1;
+        m_reply.add_rows(num_packets - 1);
         rval = true;
     }
     else
     {
-        m_reply.m_row_count += num_packets;
+        m_reply.add_rows(num_packets);
         m_expected_rows -= num_packets;
         mxb_assert(m_expected_rows >= 0);
         rval = m_expected_rows == 0;
@@ -1821,7 +1833,7 @@ void MySQLProtocol::process_reply_start(Iter it, Iter end)
         break;
 
     default:
-        if (m_reply.m_command == MXS_COM_FIELD_LIST)
+        if (m_reply.command() == MXS_COM_FIELD_LIST)
         {
             // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
             set_reply_state(ReplyState::RSET_ROWS);
@@ -1830,7 +1842,7 @@ void MySQLProtocol::process_reply_start(Iter it, Iter end)
         {
             // Start of a result set
             m_num_coldefs = get_encoded_int(it);
-            m_reply.m_field_counts.push_back(m_num_coldefs);
+            m_reply.add_field_count(m_num_coldefs);
             set_reply_state(ReplyState::RSET_COLDEF);
         }
 
@@ -1842,7 +1854,7 @@ void MySQLProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
 {
     uint8_t cmd = *it;
 
-    switch (m_reply.m_reply_state)
+    switch (m_reply.state())
     {
     case ReplyState::START:
         process_reply_start(it, end);
@@ -1897,7 +1909,7 @@ void MySQLProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
         }
         else
         {
-            ++m_reply.m_row_count;
+            m_reply.add_rows(1);
         }
         break;
     }
@@ -1997,9 +2009,7 @@ GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
 {
     GWBUF* rval = nullptr;
 
-    m_reply.m_error.clear();
-
-    if (m_reply.m_command == MXS_COM_STMT_FETCH)
+    if (m_reply.command() == MXS_COM_STMT_FETCH)
     {
         // TODO: m_reply.m_error is not updated here.
         // If the server responded with an error, n_eof > 0
@@ -2012,14 +2022,14 @@ GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
         }
         rval = modutil_get_complete_packets(buffer);
     }
-    else if (m_reply.m_command == MXS_COM_STATISTICS)
+    else if (m_reply.command() == MXS_COM_STATISTICS)
     {
         // COM_STATISTICS returns a single string and thus requires special handling:
         // https://mariadb.com/kb/en/library/com_statistics/#response
         set_reply_state(ReplyState::DONE);
         rval = modutil_get_complete_packets(buffer);
     }
-    else if (m_reply.m_command == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
+    else if (m_reply.command() == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
     {
         // Successful COM_STMT_PREPARE responses return a special OK packet:
         // https://mariadb.com/kb/en/library/com_stmt_prepare/#com_stmt_prepare_ok
@@ -2039,7 +2049,7 @@ GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
 
     if (rval)
     {
-        m_reply.m_size += gwbuf_length(rval);
+        m_reply.add_bytes(gwbuf_length(rval));
     }
 
     return rval;
@@ -2067,20 +2077,18 @@ void MySQLProtocol::track_query(GWBUF* buffer)
     }
     else if (!large_query)
     {
-        m_reply.m_command = MYSQL_GET_COMMAND(data);
-        m_reply.m_row_count = 0;
-        m_reply.m_size = 0;
-        m_reply.m_field_counts.clear();
-        current_command = (mxs_mysql_cmd_t) m_reply.m_command;
+        m_reply.clear();
+        m_reply.set_command(MYSQL_GET_COMMAND(data));
+        current_command = (mxs_mysql_cmd_t) m_reply.command();
 
-        MXS_INFO("%02hhx: %s", m_reply.m_command, mxs::extract_sql(buffer).c_str());
+        MXS_INFO("%02hhx: %s", m_reply.command(), mxs::extract_sql(buffer).c_str());
 
-        if (mxs_mysql_command_will_respond(m_reply.m_command))
+        if (mxs_mysql_command_will_respond(m_reply.command()))
         {
             set_reply_state(ReplyState::START);
         }
 
-        if (m_reply.m_command == MXS_COM_STMT_EXECUTE)
+        if (m_reply.command() == MXS_COM_STMT_EXECUTE)
         {
             // Extract the flag byte after the statement ID
             uint8_t flags = data[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
@@ -2088,7 +2096,7 @@ void MySQLProtocol::track_query(GWBUF* buffer)
             // Any non-zero flag value means that we have an open cursor
             m_opening_cursor = flags != 0;
         }
-        else if (m_reply.m_command == MXS_COM_STMT_FETCH)
+        else if (m_reply.command() == MXS_COM_STMT_FETCH)
         {
             // Number of rows to fetch is a 4 byte integer after the ID
             m_expected_rows = gw_mysql_get_byte4(data + MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE);

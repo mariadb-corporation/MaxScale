@@ -416,6 +416,12 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     class Reply
     {
     public:
+
+        Reply(mxs::Target* target)
+            : m_target(target)
+        {
+        }
+
         ReplyState state() const
         {
             return m_reply_state;
@@ -455,11 +461,11 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
         }
 
         /**
-         * The actual server where the response came from
+         * The original target where the response came from
          */
-        SERVER* server() const
+        mxs::Target* target() const
         {
-            return m_server;
+            return m_target;
         }
 
         /**
@@ -515,29 +521,60 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
             return m_field_counts;
         }
 
+        void set_command(uint8_t command)
+        {
+            m_command = command;
+        }
+
+        void set_reply_state(ReplyState state)
+        {
+            m_reply_state = state;
+        }
+
+        template<typename ... Args>
+        void set_error(Args... args)
+        {
+            m_error.set(std::forward<Args>(args)...);
+        }
+
+        void add_rows(uint64_t row_count)
+        {
+            m_row_count += row_count;
+        }
+
+        void add_bytes(uint64_t size)
+        {
+            m_size = size;
+        }
+
+        void add_field_count(uint64_t field_count)
+        {
+            m_field_counts.push_back(field_count);
+        }
+
+        void clear()
+        {
+            m_command = 0;
+            m_reply_state = ReplyState::DONE;
+            m_error.clear();
+            m_row_count = 0;
+            m_size = 0;
+            m_field_counts.clear();
+        }
+
     private:
-        SERVER*               m_server {nullptr};
+        mxs::Target*          m_target {nullptr};
         uint8_t               m_command {0};
         ReplyState            m_reply_state {ReplyState::DONE};
         Error                 m_error;
         uint64_t              m_row_count {0};
         uint64_t              m_size {0};
         std::vector<uint64_t> m_field_counts;
-
-        friend class MySQLProtocol;
     };
 
-    MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
-        : m_session(session)
-        , m_component(component)
-    {
-        m_reply.m_server = server;
-    }
+    MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
 
-    ~MySQLProtocol()
-    {
-        gwbuf_free(stored_query);
-    }
+    ~MySQLProtocol();
 
     /**
      * Track a client query
@@ -666,7 +703,7 @@ private:
 
     inline void set_reply_state(ReplyState state)
     {
-        m_reply.m_reply_state = state;
+        m_reply.set_reply_state(state);
     }
 };
 
