@@ -539,7 +539,7 @@ void SchemaRouterSession::process_sescmd_response(SSRBackend& bref, GWBUF** ppPa
     }
 }
 
-void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
+void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* reply)
 {
     SSRBackend bref = get_bref_from_dcb(pDcb);
 
@@ -599,7 +599,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 
     if (pPacket)
     {
-        RouterSession::clientReply(pPacket, pDcb);
+        RouterSession::clientReply(pPacket, pDcb, reply);
     }
 }
 

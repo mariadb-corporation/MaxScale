@@ -220,7 +220,8 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 static void clientReply(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* queue,
-                        DCB* backend_dcb)
+                        DCB* backend_dcb,
+                        mxs::Reply* reply)
 {
     /** We should never end up here */
     mxb_assert(false);

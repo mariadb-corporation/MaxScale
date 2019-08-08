@@ -537,20 +537,6 @@ json_t* RCR::diagnostics_json() const
     return rval;
 }
 
-/**
- * Client Reply routine
- *
- * The routine will reply to client data from backend server
- *
- * @param       backend_dcb     The backend DCB
- * @param       queue           The GWBUF with reply data
- */
-void RCRSession::clientReply(GWBUF* queue, DCB* backend_dcb)
-{
-    mxb_assert(backend_dcb->session()->client_dcb);
-    RouterSession::clientReply(queue, backend_dcb);
-}
-
 uint64_t RCR::getCapabilities()
 {
     return RCAP_TYPE_RUNTIME_CONFIG;

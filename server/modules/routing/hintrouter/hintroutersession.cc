@@ -130,7 +130,7 @@ int32_t HintRouterSession::routeQuery(GWBUF* pPacket)
 }
 
 
-void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
+void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* reply)
 {
     HR_ENTRY();
 
@@ -140,7 +140,7 @@ void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
     {
         HR_DEBUG("Returning packet from %s.", pServer ? pserver->name() : "(null)");
 
-        RouterSession::clientReply(pPacket, pBackend);
+        RouterSession::clientReply(pPacket, pBackend, reply);
     }
     else
     {

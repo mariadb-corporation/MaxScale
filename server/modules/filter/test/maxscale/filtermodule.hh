@@ -66,9 +66,9 @@ public:
             return m_module.routeQuery(m_pInstance, pFilter_session, pStatement);
         }
 
-        int clientReply(MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
+        int clientReply(MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement, mxs::Reply* pReply)
         {
-            return m_module.clientReply(m_pInstance, pFilter_session, pStatement);
+            return m_module.clientReply(m_pInstance, pFilter_session, pStatement, pReply);
         }
 
     private:
@@ -92,9 +92,9 @@ public:
             return m_instance.routeQuery(m_pFilter_session, pStatement);
         }
 
-        int clientReply(GWBUF* pBuffer)
+        int clientReply(GWBUF* pBuffer, mxs::Reply* pReply)
         {
-            return m_instance.clientReply(m_pFilter_session, pBuffer);
+            return m_instance.clientReply(m_pFilter_session, pBuffer, pReply);
         }
 
     private:
@@ -144,9 +144,12 @@ private:
         return m_pApi->routeQuery(pInstance, pFilter_session, pStatement);
     }
 
-    int clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
+    int clientReply(MXS_FILTER* pInstance,
+                    MXS_FILTER_SESSION* pFilter_session,
+                    GWBUF* pStatement,
+                    mxs::Reply* pReply)
     {
-        return m_pApi->clientReply(pInstance, pFilter_session, pStatement, nullptr);
+        return m_pApi->clientReply(pInstance, pFilter_session, pStatement, nullptr, pReply);
     }
 
 private:

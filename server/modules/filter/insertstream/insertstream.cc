@@ -42,8 +42,9 @@ static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SES
 static uint64_t getCapabilities(MXS_FILTER* instance);
 static int32_t  clientReply(MXS_FILTER* instance,
                             MXS_FILTER_SESSION* session,
-                            GWBUF* reply,
-                            DCB* dcb);
+                            GWBUF* buffer,
+                            DCB* dcb,
+                            mxs::Reply* reply);
 static bool   extract_insert_target(GWBUF* buffer, char* target, int len);
 static GWBUF* create_load_data_command(const char* target);
 static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num);
@@ -440,16 +441,20 @@ static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
  *
  * @return 1 on success, 0 on error
  */
-static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
+static int32_t clientReply(MXS_FILTER* instance,
+                           MXS_FILTER_SESSION* session,
+                           GWBUF* buffer,
+                           DCB* dcb,
+                           mxs::Reply* reply)
 {
     DS_SESSION* my_session = (DS_SESSION*) session;
     int rc = 1;
 
     if (my_session->state == DS_CLOSING_STREAM
         || (my_session->state == DS_REQUEST_SENT
-            && !MYSQL_IS_ERROR_PACKET((uint8_t*)GWBUF_DATA(reply))))
+            && !MYSQL_IS_ERROR_PACKET((uint8_t*)GWBUF_DATA(buffer))))
     {
-        gwbuf_free(reply);
+        gwbuf_free(buffer);
         mxb_assert(my_session->queue);
 
         my_session->state = my_session->state == DS_CLOSING_STREAM ?
@@ -471,7 +476,7 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GW
     {
         rc = my_session->up->clientReply(my_session->up->instance,
                                          my_session->up->session,
-                                         reply, dcb);
+                                         buffer, dcb, reply);
     }
 
     return rc;

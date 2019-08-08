@@ -68,7 +68,7 @@ public:
      *
      * @return Whatever the upstream filter returns.
      */
-    int32_t clientReply(GWBUF* pResponse);
+    int32_t clientReply(GWBUF* pResponse, mxs::Reply* reply);
 
     /**
      * Causes the router to make its associated backend deliver a response

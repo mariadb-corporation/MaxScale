@@ -83,7 +83,7 @@ public:
      *
      * @param pData Response data.
      */
-    int clientReply(GWBUF* pPacket, DCB* dcb);
+    int clientReply(GWBUF* pPacket, DCB* dcb, mxs::Reply* reply);
 
     /**
      * Print diagnostics of the session cache.

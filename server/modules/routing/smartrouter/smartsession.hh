@@ -43,7 +43,7 @@ public:
 
     int  routeQuery(GWBUF* pBuf);
     void close();
-    void clientReply(GWBUF* pPacket, DCB* pDcb);
+    void clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* reply);
     bool handleError(GWBUF* pPacket, DCB* pProblem);
 
 private:

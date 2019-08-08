@@ -168,7 +168,8 @@ typedef struct mxs_router_object
     void (* clientReply)(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* queue,
-                         DCB* backend_dcb);
+                         DCB* backend_dcb,
+                         mxs::Reply* reply);
 
     /**
      * @brief Called when a backend DCB has failed
@@ -323,7 +324,7 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, DCB* pBackend);
+    void clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* reply);
 
     /**
      * Handle backend connection network errors
@@ -475,11 +476,15 @@ public:
         return rval;
     }
 
-    static void clientReply(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket, DCB* pBackend)
+    static void clientReply(MXS_ROUTER*,
+                            MXS_ROUTER_SESSION* pData,
+                            GWBUF* pPacket,
+                            DCB* pBackend,
+                            mxs::Reply* reply)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
-        MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pBackend));
+        MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pBackend, reply));
     }
 
     static bool handleError(MXS_ROUTER* pInstance,

@@ -1774,15 +1774,16 @@ ServiceEndpoint::~ServiceEndpoint()
 int32_t ServiceEndpoint::upstream_function(MXS_FILTER* instance,
                                            MXS_FILTER_SESSION* session,
                                            GWBUF* buffer,
-                                           DCB* dcb)
+                                           DCB* dcb,
+                                           mxs::Reply* reply)
 {
     ServiceEndpoint* self = reinterpret_cast<ServiceEndpoint*>(session);
-    return self->send_upstream(buffer, dcb);
+    return self->send_upstream(buffer, dcb, reply);
 }
 
-int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, DCB* dcb)
+int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, DCB* dcb, mxs::Reply* reply)
 {
-    return m_up->clientReply(buffer, this);
+    return m_up->clientReply(buffer, this, reply);
 }
 
 void ServiceEndpoint::set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down)
@@ -1906,9 +1907,9 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
     return m_head.routeQuery(m_head.instance, m_head.session, buffer);
 }
 
-int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* down)
+int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* down, mxs::Reply* reply)
 {
-    return m_tail.clientReply(m_tail.instance, m_tail.session, buffer, nullptr);
+    return m_tail.clientReply(m_tail.instance, m_tail.session, buffer, nullptr, reply);
 }
 
 bool ServiceEndpoint::handleError(GWBUF* error, mxs::Endpoint* down)

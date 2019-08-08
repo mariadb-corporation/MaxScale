@@ -21,10 +21,10 @@ int MaxRowsSession::routeQuery(GWBUF* packet)
     return FilterSession::routeQuery(packet);
 }
 
-int MaxRowsSession::clientReply(GWBUF* data, DCB* dcb)
+int MaxRowsSession::clientReply(GWBUF* data, DCB* dcb, mxs::Reply* r)
 {
+    auto& reply = *r;
     mxs::Buffer buffer(data);
-    mxs::Reply reply = static_cast<MySQLProtocol*>(dcb->protocol_session())->reply();
     int rv = 1;
 
     if (m_collect)
@@ -75,7 +75,7 @@ int MaxRowsSession::clientReply(GWBUF* data, DCB* dcb)
 
     if (reply.is_complete())
     {
-        rv = FilterSession::clientReply(m_buffer.release(), dcb);
+        rv = FilterSession::clientReply(m_buffer.release(), dcb, r);
         m_collect = true;
     }
 

@@ -850,9 +850,9 @@ int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
     return m_dcb->protocol_write(buffer);
 }
 
-int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* down)
+int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* dow, mxs::Reply* reply)
 {
-    return m_up->clientReply(buffer, this);
+    return m_up->clientReply(buffer, this, reply);
 }
 
 bool ServerEndpoint::handleError(GWBUF* error, mxs::Endpoint* down)

@@ -642,7 +642,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
     return ok;
 }
 
-void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
+void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb, mxs::Reply* reply)
 {
     DCB* client_dcb = backend_dcb->session()->client_dcb;
     RWBackend* backend = get_backend_from_dcb(backend_dcb);
@@ -655,7 +655,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
          * logic cannot handle this situation. Routing the reply straight to
          * the client should be the safest thing to do at this point. */
         log_unexpected_response(backend, writebuf, m_current_query.get());
-        RouterSession::clientReply(writebuf, backend_dcb);
+        RouterSession::clientReply(writebuf, backend_dcb, reply);
         return;
     }
 
@@ -666,10 +666,9 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
 
     backend->process_reply(writebuf);
 
-    MySQLProtocol* p = (MySQLProtocol*)backend_dcb->protocol_session();
-    mxb_assert_message(backend->reply_state_str() == p->reply().to_string(),
+    mxb_assert_message(backend->reply_state_str() == reply->to_string(),
                        "RWBackend: %s != MySQLProtocol: %s",
-                       backend->reply_state_str(), p->reply().to_string().c_str());
+                       backend->reply_state_str(), reply->to_string().c_str());
 
     const RWBackend::Error& error = backend->error();
 
@@ -835,7 +834,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         mxb_assert(client_dcb);
         mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
-        RouterSession::clientReply(writebuf, backend_dcb);
+        RouterSession::clientReply(writebuf, backend_dcb, reply);
     }
 
     if (m_expected_responses == 0)

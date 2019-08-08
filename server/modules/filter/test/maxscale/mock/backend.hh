@@ -56,7 +56,7 @@ public:
      *
      * @return True, if the backend has additional responses to the router session.
      */
-    virtual bool respond(RouterSession* pSession) = 0;
+    virtual bool respond(RouterSession* pSession, mxs::Reply* pReply) = 0;
 
     /**
      * Whether the backend has a response for some router.
@@ -99,7 +99,7 @@ class BufferBackend : public Backend
 public:
     ~BufferBackend();
 
-    bool respond(RouterSession* pSession);
+    bool respond(RouterSession* pSession, mxs::Reply* pReply);
 
     bool idle(const RouterSession* pSession) const;
 

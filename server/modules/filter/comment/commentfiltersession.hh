@@ -37,7 +37,7 @@ public:
     int routeQuery(GWBUF* pPacket);
 
     // Handle a reply from server
-    int clientReply(GWBUF* pPacket, DCB* dcb);
+    int clientReply(GWBUF* pPacket, DCB* dcb, mxs::Reply* reply);
 
 private:
 

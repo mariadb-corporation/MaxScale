@@ -128,7 +128,7 @@ public:
 
     virtual int32_t routeQuery(GWBUF* buffer) = 0;
 
-    virtual int32_t clientReply(GWBUF* buffer, Endpoint* down) = 0;
+    virtual int32_t clientReply(GWBUF* buffer, Endpoint* down, mxs::Reply* reply) = 0;
 
     virtual bool handleError(GWBUF* error, Endpoint* down) = 0;
 };

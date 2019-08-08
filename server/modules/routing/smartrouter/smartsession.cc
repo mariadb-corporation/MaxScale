@@ -263,7 +263,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     return ret;
 }
 
-void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
+void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* reply)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(pPacket));
 
@@ -383,7 +383,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     if (will_reply)
     {
         MXS_SDEBUG("Forward response to client");
-        RouterSession::clientReply(pPacket, pDcb);
+        RouterSession::clientReply(pPacket, pDcb, reply);
     }
 }
 

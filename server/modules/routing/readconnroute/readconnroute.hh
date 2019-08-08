@@ -47,13 +47,10 @@ public:
      */
     void close();
 
-    /**
-     * Route reply from backend to the client
-     *
-     * @param pPacket  Buffer containing the backend's response
-     * @param pBackend The backend that responded to the query
-     */
-    void clientReply(GWBUF* pPacket, DCB* pBackend);
+    void clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* pReply)
+    {
+        RouterSession::clientReply(pPacket, pBackend, pReply);
+    }
 
     bool handleError(GWBUF* pMessage, DCB* pProblem)
     {

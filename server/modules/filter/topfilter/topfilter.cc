@@ -55,10 +55,14 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       mxs::Downstream* down,
                                       mxs::Upstream* up);
-static void     closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void     freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue, DCB* dcb);
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static int  clientReply(MXS_FILTER* instance,
+                        MXS_FILTER_SESSION* fsession,
+                        GWBUF* buffer,
+                        DCB* dcb,
+                        mxs::Reply* reply);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -496,7 +500,11 @@ static int cmp_topn(const void* va, const void* vb)
     return (*b)->duration.tv_sec - (*a)->duration.tv_sec;
 }
 
-static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
+static int clientReply(MXS_FILTER* instance,
+                       MXS_FILTER_SESSION* session,
+                       GWBUF* buffer,
+                       DCB* dcb,
+                       mxs::Reply* reply)
 {
     TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
     TOPN_SESSION* my_session = (TOPN_SESSION*) session;
@@ -550,8 +558,9 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
     /* Pass the result upstream */
     return my_session->up->clientReply(my_session->up->instance,
                                        my_session->up->session,
-                                       reply,
-                                       dcb);
+                                       buffer,
+                                       dcb,
+                                       reply);
 }
 
 /**

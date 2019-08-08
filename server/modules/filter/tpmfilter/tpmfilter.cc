@@ -91,7 +91,8 @@ static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF
 static int  clientReply(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* fsession,
                         GWBUF* queue,
-                        DCB* dcb);
+                        DCB* dcb,
+                        mxs::Reply* reply);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -529,7 +530,11 @@ retblock:
                                         queue);
 }
 
-static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply, DCB* dcb)
+static int clientReply(MXS_FILTER* instance,
+                       MXS_FILTER_SESSION* session,
+                       GWBUF* buffer,
+                       DCB* dcb,
+                       mxs::Reply* reply)
 {
     TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
     TPM_SESSION* my_session = (TPM_SESSION*)session;
@@ -582,7 +587,7 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
                     "%ld%s%s%s%s%s%ld%s%s%s%s\n",
                     timestamp,
                     my_instance->delimiter,
-                    reply->server->name(),
+                    reply->target()->name(),
                     my_instance->delimiter,
                     my_session->userName,
                     my_instance->delimiter,
@@ -600,8 +605,9 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
     /* Pass the result upstream */
     return my_session->up->clientReply(my_session->up->instance,
                                        my_session->up->session,
-                                       reply,
-                                       dcb);
+                                       buffer,
+                                       dcb,
+                                       reply);
 }
 
 /**

@@ -38,7 +38,7 @@ void RouterSession::set_upstream(FilterModule::Session* pFilter_session)
 
 bool RouterSession::respond()
 {
-    return m_pBackend->respond(this);
+    return m_pBackend->respond(this, nullptr);
 }
 
 bool RouterSession::idle() const
@@ -64,9 +64,9 @@ int32_t RouterSession::routeQuery(MXS_ROUTER* pInstance, GWBUF* pStatement)
     return 1;
 }
 
-int32_t RouterSession::clientReply(GWBUF* pResponse)
+int32_t RouterSession::clientReply(GWBUF* pResponse, mxs::Reply* pReply)
 {
-    return m_pUpstream_filter_session->clientReply(pResponse);
+    return m_pUpstream_filter_session->clientReply(pResponse, pReply);
 }
 
 // static

@@ -161,7 +161,7 @@ public:
      * @param reply Reply from server
      * @return 0 on success
      */
-    int clientReply(GWBUF* reply, DCB* dcb);
+    int clientReply(GWBUF* buffer, DCB* dcb, mxs::Reply* reply);
 
     /**
      * Close a session with the filter. Close the file descriptor and reset event info.

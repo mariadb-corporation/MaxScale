@@ -107,7 +107,7 @@ public:
     ~RRRouterSession();
     void    close();
     int32_t routeQuery(GWBUF* buffer);
-    void    clientReply(GWBUF* buffer, DCB* dcb);
+    void    clientReply(GWBUF* buffer, DCB* dcb, mxs::Reply* reply);
     bool    handleError(GWBUF* message, DCB* problem_dcb);
 
 private:
@@ -425,7 +425,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
  * @param   queue       The GWBUF with reply data
  * @param   backend_dcb The backend DCB (data source)
  */
-void RRRouterSession::clientReply(GWBUF* buf, DCB* backend_dcb)
+void RRRouterSession::clientReply(GWBUF* buf, DCB* backend_dcb, mxs::Reply* reply)
 {
     if (m_replies_to_ignore > 0)
     {
@@ -438,7 +438,7 @@ void RRRouterSession::clientReply(GWBUF* buf, DCB* backend_dcb)
         return;
     }
 
-    RouterSession::clientReply(buf, backend_dcb);
+    RouterSession::clientReply(buf, backend_dcb, reply);
 
     m_router->m_routing_c++;
     if (m_router->m_print_on_routing)

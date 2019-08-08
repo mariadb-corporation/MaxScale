@@ -206,7 +206,7 @@ public:
 
     int32_t routeQuery(GWBUF* buffer) override;
 
-    int32_t clientReply(GWBUF* buffer, mxs::Endpoint* down) override;
+    int32_t clientReply(GWBUF* buffer, mxs::Endpoint* down, mxs::Reply* reply) override;
 
     bool handleError(GWBUF* error, mxs::Endpoint* down) override;
 
@@ -233,8 +233,8 @@ private:
 
     friend class Service;
 
-    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*, DCB*);
-    int32_t        send_upstream(GWBUF* buffer, DCB* dcb);
+    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*, DCB*, mxs::Reply*);
+    int32_t        send_upstream(GWBUF* buffer, DCB* dcb, mxs::Reply*);
     void           set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
 
     bool                m_open {false};
