@@ -64,7 +64,7 @@ int32_t RouterSession::routeQuery(MXS_ROUTER* pInstance, GWBUF* pStatement)
     return 1;
 }
 
-int32_t RouterSession::clientReply(GWBUF* pResponse, mxs::Reply* pReply)
+int32_t RouterSession::clientReply(GWBUF* pResponse, const mxs::Reply* pReply)
 {
     return m_pUpstream_filter_session->clientReply(pResponse, pReply);
 }

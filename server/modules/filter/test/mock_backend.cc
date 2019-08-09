@@ -62,7 +62,7 @@ BufferBackend::~BufferBackend()
 {
 }
 
-bool BufferBackend::respond(RouterSession* pSession, mxs::Reply* pReply)
+bool BufferBackend::respond(RouterSession* pSession, const mxs::Reply* pReply)
 {
     bool empty = false;
     GWBUF* pResponse = dequeue_response(pSession, &empty);

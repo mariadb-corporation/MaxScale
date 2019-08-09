@@ -96,7 +96,7 @@ static int  clientReply(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* fsession,
                         GWBUF* queue,
                         mxs::Endpoint* down,
-                        mxs::Reply* r);
+                        const mxs::Reply* r);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -1388,7 +1388,7 @@ static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* session,
                        GWBUF* reply,
                        mxs::Endpoint* down,
-                       mxs::Reply* r)
+                       const mxs::Reply* r)
 {
     MQ_SESSION* my_session = (MQ_SESSION*) session;
     MQ_INSTANCE* my_instance = (MQ_INSTANCE*) instance;

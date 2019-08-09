@@ -169,7 +169,7 @@ typedef struct mxs_router_object
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* queue,
                          mxs::Endpoint* down,
-                         mxs::Reply* reply);
+                         const mxs::Reply* reply);
 
     /**
      * @brief Called when a backend DCB has failed
@@ -324,7 +324,7 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply);
 
     /**
      * Handle backend connection network errors
@@ -477,7 +477,7 @@ public:
     }
 
     static void clientReply(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket,
-                            mxs::Endpoint* pDown, mxs::Reply* reply)
+                            mxs::Endpoint* pDown, const mxs::Reply* reply)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 

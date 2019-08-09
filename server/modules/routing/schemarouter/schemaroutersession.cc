@@ -526,7 +526,7 @@ void SchemaRouterSession::process_sescmd_response(SRBackend* bref, GWBUF** ppPac
     }
 }
 
-void SchemaRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, mxs::Reply* reply)
+void SchemaRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply)
 {
     SRBackend* bref = static_cast<SRBackend*>(pBackend->get_userdata());
 

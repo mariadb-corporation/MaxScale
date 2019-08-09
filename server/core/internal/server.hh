@@ -338,7 +338,7 @@ public:
 
     int32_t routeQuery(GWBUF* buffer) override;
 
-    int32_t clientReply(GWBUF* buffer, mxs::Endpoint* down, mxs::Reply* reply) override;
+    int32_t clientReply(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply* reply) override;
 
     bool handleError(GWBUF* error, mxs::Endpoint* down) override;
 

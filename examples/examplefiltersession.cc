@@ -49,7 +49,7 @@ int ExampleFilterSession::routeQuery(GWBUF* pPacket)
     return mxs::FilterSession::routeQuery(pPacket);
 }
 
-int ExampleFilterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* down, mxs::Reply* reply)
+int ExampleFilterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* down, const mxs::Reply* reply)
 {
     m_replies++;
     m_filter.reply_seen();

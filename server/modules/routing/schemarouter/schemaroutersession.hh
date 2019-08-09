@@ -99,7 +99,7 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply);
 
     bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
 

@@ -107,7 +107,7 @@ public:
     ~RRRouterSession();
     void    close();
     int32_t routeQuery(GWBUF* buffer);
-    void    clientReply(GWBUF* buffer, mxs::Endpoint* down, mxs::Reply* reply);
+    void    clientReply(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply* reply);
     bool    handleError(GWBUF* message, mxs::Endpoint* down);
 
 private:
@@ -388,7 +388,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
  * @param   queue       The GWBUF with reply data
  * @param   backend_dcb The backend DCB (data source)
  */
-void RRRouterSession::clientReply(GWBUF* buf, mxs::Endpoint* down, mxs::Reply* reply)
+void RRRouterSession::clientReply(GWBUF* buf, mxs::Endpoint* down, const mxs::Reply* reply)
 {
     if (m_replies_to_ignore > 0)
     {

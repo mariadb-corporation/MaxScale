@@ -616,7 +616,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
     return ok;
 }
 
-void RWSplitSession::clientReply(GWBUF* writebuf, mxs::Endpoint* endpoint, mxs::Reply* reply)
+void RWSplitSession::clientReply(GWBUF* writebuf, mxs::Endpoint* endpoint, const mxs::Reply* reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
 

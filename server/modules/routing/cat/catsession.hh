@@ -55,7 +55,7 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, DCB* pBackend, const mxs::Reply* reply);
 
     /**
      *

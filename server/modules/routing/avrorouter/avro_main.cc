@@ -221,7 +221,7 @@ static void clientReply(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* queue,
                         DCB* backend_dcb,
-                        mxs::Reply* reply)
+                        const mxs::Reply* reply)
 {
     /** We should never end up here */
     mxb_assert(false);

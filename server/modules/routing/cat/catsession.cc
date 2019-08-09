@@ -66,7 +66,7 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb, mxs::Reply* reply)
+void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb, const mxs::Reply* reply)
 {
     auto& backend = *m_current;
     mxb_assert(backend->dcb() == pDcb);

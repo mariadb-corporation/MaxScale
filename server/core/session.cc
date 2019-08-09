@@ -1510,7 +1510,7 @@ int32_t Session::routeQuery(GWBUF* buffer)
     return m_down->routeQuery(buffer);
 }
 
-int32_t Session::clientReply(GWBUF* buffer, Endpoint* down, mxs::Reply* reply)
+int32_t Session::clientReply(GWBUF* buffer, Endpoint* down, const mxs::Reply* reply)
 {
     return client_dcb->protocol_write(buffer);
 }

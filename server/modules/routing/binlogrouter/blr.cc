@@ -70,7 +70,7 @@ static void    clientReply(MXS_ROUTER* instance,
                            MXS_ROUTER_SESSION* router_session,
                            GWBUF* queue,
                            DCB* backend_dcb,
-                           mxs::Reply* reply);
+                           const mxs::Reply* reply);
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
@@ -2256,7 +2256,7 @@ static void clientReply(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* queue,
                         DCB* backend_dcb,
-                        mxs::Reply* reply)
+                        const mxs::Reply* reply)
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
 

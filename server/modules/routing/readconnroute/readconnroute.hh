@@ -42,7 +42,7 @@ public:
      */
     int routeQuery(GWBUF* queue);
 
-    void clientReply(GWBUF* pPacket, DCB* pBackend, mxs::Reply* pReply)
+    void clientReply(GWBUF* pPacket, DCB* pBackend, const mxs::Reply* pReply)
     {
         RouterSession::clientReply(pPacket, pBackend, pReply);
     }

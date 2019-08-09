@@ -181,7 +181,7 @@ static void extract_header(register const uint8_t* event,
  * @param pPacket    GWBUF with binlog event
  * @return           0 on error, >0 otherwise.
  */
-int BinlogFilterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* down, mxs::Reply* reply)
+int BinlogFilterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* down, const mxs::Reply* reply)
 {
     uint8_t* event = GWBUF_DATA(pPacket);
     uint32_t len = MYSQL_GET_PAYLOAD_LEN(event);

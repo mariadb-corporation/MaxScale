@@ -1775,13 +1775,13 @@ int32_t ServiceEndpoint::upstream_function(MXS_FILTER* instance,
                                            MXS_FILTER_SESSION* session,
                                            GWBUF* buffer,
                                            mxs::Endpoint* down,
-                                           mxs::Reply* reply)
+                                           const mxs::Reply* reply)
 {
     ServiceEndpoint* self = reinterpret_cast<ServiceEndpoint*>(session);
     return self->send_upstream(buffer, down, reply);
 }
 
-int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, mxs::Endpoint* down, mxs::Reply* reply)
+int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply* reply)
 {
     return m_up->clientReply(buffer, this, reply);
 }
@@ -1907,7 +1907,7 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
     return m_head.routeQuery(m_head.instance, m_head.session, buffer);
 }
 
-int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* down, mxs::Reply* reply)
+int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply* reply)
 {
     return m_tail.clientReply(m_tail.instance, m_tail.session, buffer, down, reply);
 }

@@ -51,7 +51,7 @@ static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* session,
                        GWBUF* reply,
                        mxs::Endpoint* down,
-                       mxs::Reply* r);
+                       const mxs::Reply* r);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
@@ -369,7 +369,7 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
 }
 
 static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* buffer,
-                       mxs::Endpoint* down, mxs::Reply* reply)
+                       mxs::Endpoint* down, const mxs::Reply* reply)
 {
     RegexSession* my_session = (RegexSession*) session;
     return my_session->up->clientReply(my_session->up->instance, my_session->up->session,

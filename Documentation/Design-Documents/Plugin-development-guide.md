@@ -314,7 +314,7 @@ by the core.
 
 ```java
 int routeQuery(INSTANCE *instance, SESSION session, GWBUF* queue) void
-clientReply(INSTANCE* instance, SESSION session, GWBUF* queue, DCB *backend_dcb, mxs::Reply* reply)
+clientReply(INSTANCE* instance, SESSION session, GWBUF* queue, DCB *backend_dcb, const mxs::Reply* reply)
 uint64_t getCapabilities(INSTANCE* instance)
 ```
 

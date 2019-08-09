@@ -68,7 +68,7 @@ void Client::reset()
     }
 }
 
-int32_t Client::clientReply(GWBUF* pResponse, mxs::Endpoint* down, mxs::Reply* reply)
+int32_t Client::clientReply(GWBUF* pResponse, mxs::Endpoint* down, const mxs::Reply* reply)
 {
     int32_t rv = 1;
 
@@ -109,7 +109,7 @@ int32_t Client::clientReply(MXS_FILTER* pInstance,
                             MXS_FILTER_SESSION* pSession,
                             GWBUF* pResponse,
                             mxs::Endpoint* down,
-                            mxs::Reply* reply)
+                            const mxs::Reply* reply)
 {
     Client* pClient = reinterpret_cast<Client*>(pSession);
     mxb_assert(pInstance == &pClient->m_instance);
