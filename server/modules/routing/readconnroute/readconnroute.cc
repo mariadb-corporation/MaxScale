@@ -367,11 +367,20 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
                     candidate = ref;
                 }
             }
-            else if ((ref->connections + 1) / ref->server_weight
-                     < (candidate->connections + 1) / candidate->server_weight)
+            else
             {
-                /* ref has a better score. */
-                candidate = ref;
+                uint64_t score1 = (ref->connections + 1) / ref->server_weight;
+                uint64_t score2 = (candidate->connections + 1) / candidate->server_weight;
+                if (score1 < score2)
+                {
+                    /* ref has a better score. */
+                    candidate = ref;
+                }
+                else if (score1 == score2 && ref->lru_clock < candidate->lru_clock)
+                {
+                    /* score is same, use lru clock */
+                    candidate = ref;
+                }
             }
         }
     }
@@ -423,6 +432,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
         return NULL;
     }
 
+    candidate->lru_clock = mxs_lru_clock();
     mxb::atomic::add(&candidate->connections, 1, mxb::atomic::RELAXED);
 
     inst->stats.n_sessions++;

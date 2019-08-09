@@ -71,6 +71,13 @@ SRWBackendVector::iterator best_score(SRWBackendVector& sBackends,
             min = score;
             best = ite;
         }
+        else if (min == score)
+        {
+            if ((***best).backend()->lru_clock > (***ite).backend()->lru_clock)
+            {
+                best = ite;
+            }
+        }
     }
 
     return best;
