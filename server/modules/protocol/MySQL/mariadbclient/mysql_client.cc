@@ -66,7 +66,6 @@ static spec_com_res_t handle_query_kill(DCB* dcb,
                                         unsigned int packet_len);
 static bool   parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user);
 static void   parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
-static GWBUF* mariadbclient_reject(const char* host);
 
 
 /*lint +e14 */
@@ -2006,11 +2005,12 @@ static void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
 }
 
 /**
- * @brief Client read event triggered by EPOLLIN
- *
- * @param dcb   Descriptor control block
- * @return 0 if succeed, 1 otherwise
+ * MXS_PROTOCOL_API implementation.
  */
+
+namespace
+{
+
 int mariadbclient_read(DCB* dcb)
 {
     MySQLProtocol* protocol;
@@ -2138,12 +2138,6 @@ int mariadbclient_read(DCB* dcb)
     return return_code;
 }
 
-/**
- * Write function for client DCB: writes data from MaxScale to Client
- *
- * @param dcb   The DCB of the client
- * @param queue Queue of buffers to write
- */
 int mariadbclient_write(DCB* dcb, GWBUF* queue)
 {
     if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->config().session_track_trx_state)
@@ -2153,23 +2147,6 @@ int mariadbclient_write(DCB* dcb, GWBUF* queue)
     return dcb_write(dcb, queue);
 }
 
-///////////////////////////////////////////////
-// client write event to Client triggered by EPOLLOUT
-//////////////////////////////////////////////
-/**
- * @node Client's fd became writable, and EPOLLOUT event
- * arrived. As a consequence, client input buffer (writeq) is flushed.
- *
- * Parameters:
- * @param dcb - in, use
- *          client dcb
- *
- * @return constantly 1
- *
- *
- * @details (write detailed description here)
- *
- */
 int mariadbclient_write_ready(DCB* dcb)
 {
     MySQLProtocol* protocol = NULL;
@@ -2202,23 +2179,18 @@ return_1:
     return 1;
 }
 
-static int mariadbclient_error(DCB* dcb)
+int mariadbclient_error(DCB* dcb)
 {
     mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
     dcb_close(dcb);
     return 1;
 }
 
-/**
- * Handle a hangup event on the client side descriptor.
- *
- * We simply close the DCB, this will propagate the closure to any
- * backend descriptors and perform the session cleanup.
- *
- * @param dcb           The DCB of the connection
- */
-static int mariadbclient_hangup(DCB* dcb)
+int mariadbclient_hangup(DCB* dcb)
 {
+    // We simply close the DCB, this will propagate the closure to any
+    // backend descriptors and perform the session cleanup.
+
     MXS_SESSION* session = dcb->session();
 
     if (session && !session_valid_for_pool(session))
@@ -2263,7 +2235,7 @@ MXS_PROTOCOL_SESSION* mariadbclient_new_client_session(MXS_SESSION* session, mxs
     return new(std::nothrow) MySQLProtocol(session, nullptr, component);
 }
 
-static void mariadbclient_free_session(MXS_PROTOCOL_SESSION* protocol_session)
+void mariadbclient_free_session(MXS_PROTOCOL_SESSION* protocol_session)
 {
     delete static_cast<MySQLProtocol*>(protocol_session);
 }
@@ -2278,26 +2250,23 @@ void mariadbclient_finish_connection(DCB* client_dcb)
 {
 }
 
-/**
- * The default authenticator name for this protocol
- *
- * @return name of authenticator
- */
-static char* mariadbclient_auth_default()
+char* mariadbclient_auth_default()
 {
     return (char*)"mariadbauth";
 }
 
-static int mariadbclient_connlimit(DCB* dcb, int limit)
+int mariadbclient_connlimit(DCB* dcb, int limit)
 {
     return mysql_send_standard_error(dcb, 0, 1040, "Too many connections");
 }
 
-static GWBUF* mariadbclient_reject(const char* host)
+GWBUF* mariadbclient_reject(const char* host)
 {
     std::stringstream ss;
     ss << "Host '" << host << "' is temporarily blocked due to too many authentication failures.";
     return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", ss.str().c_str());
+}
+
 }
 
 /**
