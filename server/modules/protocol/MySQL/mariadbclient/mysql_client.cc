@@ -42,6 +42,9 @@
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
 
+namespace
+{
+
 /** Return type of process_special_commands() */
 typedef enum spec_com_res_t
 {
@@ -53,22 +56,20 @@ typedef enum spec_com_res_t
 
 const char WORD_KILL[] = "KILL";
 
-static int route_by_statement(MXS_SESSION*, uint64_t, GWBUF**);
-static void           mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_number);
-static int            gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
-static int            gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
-static int            gw_read_finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities);
-static spec_com_res_t process_special_commands(DCB* client_dcb, GWBUF* read_buffer, int nbytes_read);
-static spec_com_res_t handle_query_kill(DCB* dcb,
-                                        GWBUF* read_buffer,
-                                        spec_com_res_t current,
-                                        bool is_complete,
-                                        unsigned int packet_len);
-static bool   parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user);
-static void   parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
+int route_by_statement(MXS_SESSION*, uint64_t, GWBUF**);
+void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
+int perform_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
+int perform_normal_read(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
+int finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities);
+spec_com_res_t process_special_commands(DCB* client_dcb, GWBUF* read_buffer, int nbytes_read);
+spec_com_res_t handle_query_kill(DCB* dcb,
+                                 GWBUF* read_buffer,
+                                 spec_com_res_t current,
+                                 bool is_complete,
+                                 unsigned int packet_len);
+bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user);
+void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
 
-
-/*lint +e14 */
 
 std::string get_version_string(SERVICE* service)
 {
@@ -179,12 +180,12 @@ bool ssl_required_but_not_negotiated(DCB* dcb)
 }
 
 /**
- * MySQLSendHandshake
+ * send_mysql_client_handshake
  *
  * @param dcb The descriptor control block to use for sending the handshake request
  * @return      The packet length sent
  */
-int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
+int send_mysql_client_handshake(DCB* dcb, MySQLProtocol* protocol)
 {
     uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
@@ -367,7 +368,7 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
  *
  * @return Length of @c str or -1 if the string is not null-terminated
  */
-static int get_zstr_len(const char* str, int len)
+int get_zstr_len(const char* str, int len)
 {
     const char* end = str + len;
     int slen = 0;
@@ -392,7 +393,7 @@ static int get_zstr_len(const char* str, int len)
  * @param dcb Client DCB
  * @param buffer Buffer containing the handshake response packet
  */
-static void store_client_information(DCB* dcb, GWBUF* buffer)
+void store_client_information(DCB* dcb, GWBUF* buffer)
 {
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
@@ -462,7 +463,7 @@ static void store_client_information(DCB* dcb, GWBUF* buffer)
  * @param buf Buffer containing packet
  * @param bytes Number of bytes available
  */
-static void check_packet(DCB* dcb, GWBUF* buf, int bytes)
+void check_packet(DCB* dcb, GWBUF* buf, int bytes)
 {
     uint8_t hdr[MYSQL_HEADER_LEN];
     mxb_assert(gwbuf_copy_data(buf, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN);
@@ -646,7 +647,7 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-static int gw_read_do_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read)
+int perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read)
 {
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
@@ -764,7 +765,7 @@ static int gw_read_do_authentication(DCB* generic_dcb, GWBUF* read_buffer, int n
         && MXS_AUTH_SSL_INCOMPLETE != auth_val)
     {
         protocol->protocol_auth_state = MXS_AUTH_STATE_FAILED;
-        mysql_client_auth_error_handling(dcb, auth_val, next_sequence);
+        handle_authentication_errors(dcb, auth_val, next_sequence);
         mxb_assert(dcb->session()->listener);
 
         // MXS_AUTH_NO_SESSION is for failure to start session, not authentication failure
@@ -790,7 +791,7 @@ static int gw_read_do_authentication(DCB* generic_dcb, GWBUF* read_buffer, int n
  * @param offset Offset where the split is made
  * @return The first part of the buffer
  */
-static GWBUF* split_and_store(DCB* client_dcb, GWBUF* queue, int offset)
+GWBUF* split_and_store(DCB* client_dcb, GWBUF* queue, int offset)
 {
     GWBUF* newbuf = gwbuf_split(&queue, offset);
     dcb_readq_append(client_dcb, queue);
@@ -837,7 +838,7 @@ inline bool protocol_is_idle(DCB* dcb)
  * @return True if routing can proceed, false if processing should be attempted
  * later when more data is available
  */
-static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffer)
+bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffer)
 {
     GWBUF* queue = *buffer;
 
@@ -1015,7 +1016,7 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
+int perform_normal_read(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
 {
     MXS_SESSION* session;
     MXS_SESSION::State session_state_value;
@@ -1114,7 +1115,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
         break;
 
     case RES_CONTINUE:
-        rval = gw_read_finish_processing(dcb, read_buffer, capabilities);
+        rval = finish_processing(dcb, read_buffer, capabilities);
         break;
 
     default:
@@ -1155,7 +1156,7 @@ void check_pool_candidate(DCB* dcb)
  * @param capabilities  The router capabilities flags
  * @return 0 if succeed, 1 otherwise
  */
-static int gw_read_finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities)
+int finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities)
 {
     MXS_SESSION* session = dcb->session();
     uint8_t* payload = GWBUF_DATA(read_buffer);
@@ -1217,7 +1218,7 @@ static int gw_read_finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capa
  * @param auth_val The type of authentication failure
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_number)
+void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
 {
     int message_len;
     char* fail_str = NULL;
@@ -1327,7 +1328,7 @@ void update_current_command(DCB* dcb, GWBUF* buffer)
  *
  * @return True if the user is allowed access
  */
-static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
+bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
     if (session->listener->auth_instance()->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
@@ -1403,7 +1404,7 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
              * First packet is COM_CHANGE_USER, the second is AuthSwitchRequest,
              * third is the response and the fourth is the following error.
              */
-            mysql_client_auth_error_handling(client_dcb, rc, 3);
+            handle_authentication_errors(client_dcb, rc, 3);
         }
     }
 
@@ -1425,7 +1426,7 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
  *
  * @return 1 if succeed,
  */
-static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF** p_readbuf)
+int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF** p_readbuf)
 {
     int rc = 1;
     GWBUF* packetbuf;
@@ -1582,7 +1583,7 @@ return_rc:
  * @param nbytes_read How many bytes were read
  * @return see @c spec_com_res_t
  */
-static spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
+spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
 {
     spec_com_res_t rval = RES_CONTINUE;
     unsigned int packet_len = MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
@@ -1721,7 +1722,7 @@ spec_com_res_t handle_query_kill(DCB* dcb,
     return rval;
 }
 
-static void extract_user(char* token, std::string* user)
+void extract_user(char* token, std::string* user)
 {
     char* end = strchr(token, ';');
 
@@ -1744,7 +1745,7 @@ static void extract_user(char* token, std::string* user)
  * @param kt_out Kill command type output
  * @return true on success, false on error
  */
-static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user)
+bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user)
 {
     const char WORD_CONNECTION[] = "CONNECTION";
     const char WORD_QUERY[] = "QUERY";
@@ -1904,7 +1905,7 @@ static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* 
  *   Get trx characteristics such as read only, read write, snapshot ...
  *
  */
-static void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
+void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
 {
     char* autocommit = gwbuf_get_property(data, (char*)"autocommit");
 
@@ -1949,6 +1950,8 @@ static void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
     }
     MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->trx_state));
     MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
+}
+
 }
 
 /**
@@ -2056,7 +2059,7 @@ int mariadbclient_read(DCB* dcb)
                 read_buffer = modutil_get_next_MySQL_packet(&dcb->m_readq);
             }
 
-            return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
+            return_code = perform_authentication(dcb, read_buffer, nbytes_read);
         }
         break;
 
@@ -2069,7 +2072,7 @@ int mariadbclient_read(DCB* dcb)
      */
     case MXS_AUTH_STATE_COMPLETE:
         /* After this call read_buffer will point to freed data */
-        return_code = gw_read_normal_data(dcb, read_buffer, nbytes_read);
+        return_code = perform_normal_read(dcb, read_buffer, nbytes_read);
         break;
 
     case MXS_AUTH_STATE_FAILED:
@@ -2189,7 +2192,7 @@ void mariadbclient_free_session(MXS_PROTOCOL_SESSION* protocol_session)
 
 bool mariadbclient_init_connection(DCB* client_dcb)
 {
-    MySQLSendHandshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->protocol_session()));
+    send_mysql_client_handshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->protocol_session()));
     return true;
 }
 
