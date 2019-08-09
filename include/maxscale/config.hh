@@ -191,6 +191,7 @@ extern const char CN_SERVICE[];
 extern const char CN_SERVICES[];
 extern const char CN_SESSION_TRACK_TRX_STATE[];
 extern const char CN_SESSIONS[];
+extern const char CN_SESSION_TRACE[];
 extern const char CN_SKIP_PERMISSION_CHECKS[];
 extern const char CN_SOCKET[];
 extern const char CN_SSL_CA_CERT[];
