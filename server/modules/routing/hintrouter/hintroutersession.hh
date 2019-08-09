@@ -46,9 +46,9 @@ public:
 
     int32_t routeQuery(GWBUF* pPacket);
 
-    void clientReply(GWBUF* pPacket, DCB* pBackend, const mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, mxs::Endpoint* pEndpoint, const mxs::Reply* reply);
 
-    bool handleError(GWBUF* pMessage, DCB* pProblem);
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
 
 private:
     HintRouterSession(const HintRouterSession&);            // denied

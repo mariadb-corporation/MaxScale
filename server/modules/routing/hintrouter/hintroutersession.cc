@@ -130,33 +130,31 @@ int32_t HintRouterSession::routeQuery(GWBUF* pPacket)
 }
 
 
-void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend, const mxs::Reply* reply)
+void HintRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply)
 {
     HR_ENTRY();
 
-    SERVER* pServer = static_cast<BackendDCB*>(pBackend)->server();
+    mxs::Target* pTarget = pBackend->target();
 
     if (m_surplus_replies == 0)
     {
-        HR_DEBUG("Returning packet from %s.", pServer ? pserver->name() : "(null)");
+        HR_DEBUG("Returning packet from %s.", pTarget->name());
 
         RouterSession::clientReply(pPacket, pBackend, reply);
     }
     else
     {
-        HR_DEBUG("Ignoring reply packet from %s.", pServer ? pserver->name() : "(null)");
+        HR_DEBUG("Ignoring reply packet from %s.", pTarget->name());
 
         --m_surplus_replies;
         gwbuf_free(pPacket);
     }
 }
 
-bool HintRouterSession::handleError(GWBUF* pMessage, DCB* pProblem)
+bool HintRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)
 {
     HR_ENTRY();
-
-    // This potentially breaks if a query was in progress while the connection failed
-    return true;
+    return false;
 }
 
 bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_errors)
