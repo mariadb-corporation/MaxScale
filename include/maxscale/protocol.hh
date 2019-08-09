@@ -109,7 +109,7 @@ struct MXS_PROTOCOL
      */
     MXS_PROTOCOL_SESSION* (* new_backend_session)(MXS_SESSION* session,
                                                   SERVER* server,
-                                                  void* client_protocol_session);
+                                                  MXS_PROTOCOL_SESSION* client_protocol_session);
 
     /**
      * Free protocol session
