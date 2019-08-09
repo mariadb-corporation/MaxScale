@@ -75,7 +75,7 @@ static uint64_t getCapabilities(MXS_ROUTER* instance);
 static bool     handleError(MXS_ROUTER* instance,
                             MXS_ROUTER_SESSION* router_session,
                             GWBUF* errbuf,
-                            DCB* backend_dcb);
+                            mxs::Endpoint* backend_dcb);
 
 static pthread_mutex_t instlock;
 static INFO_INSTANCE* instances;
@@ -255,7 +255,7 @@ static void freeSession(MXS_ROUTER* router_instance,
 static bool handleError(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* errbuf,
-                        DCB* backend_dcb)
+                        mxs::Endpoint* backend_dcb)
 
 {
     mxb_assert_message(!true, "This should never be called as maxinfo never creates backend connections");
