@@ -68,7 +68,7 @@ void Client::reset()
     }
 }
 
-int32_t Client::clientReply(GWBUF* pResponse, DCB* dcb, mxs::Reply* reply)
+int32_t Client::clientReply(GWBUF* pResponse, mxs::Endpoint* down, mxs::Reply* reply)
 {
     int32_t rv = 1;
 
@@ -76,7 +76,7 @@ int32_t Client::clientReply(GWBUF* pResponse, DCB* dcb, mxs::Reply* reply)
 
     if (m_pHandler)
     {
-        rv = m_pHandler->backend_reply(pResponse, dcb, reply);
+        rv = m_pHandler->backend_reply(pResponse, down, reply);
     }
     else
     {
@@ -108,13 +108,13 @@ int32_t Client::write(GWBUF* pResponse)
 int32_t Client::clientReply(MXS_FILTER* pInstance,
                             MXS_FILTER_SESSION* pSession,
                             GWBUF* pResponse,
-                            DCB* dcb,
+                            mxs::Endpoint* down,
                             mxs::Reply* reply)
 {
     Client* pClient = reinterpret_cast<Client*>(pSession);
     mxb_assert(pInstance == &pClient->m_instance);
 
-    return pClient->clientReply(pResponse, dcb, reply);
+    return pClient->clientReply(pResponse, down, reply);
 }
 
 //

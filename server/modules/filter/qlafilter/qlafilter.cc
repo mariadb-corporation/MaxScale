@@ -453,7 +453,7 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
     return down->routeQuery(down->instance, down->session, queue);
 }
 
-int QlaFilterSession::clientReply(GWBUF* queue, DCB* dcb, mxs::Reply* reply)
+int QlaFilterSession::clientReply(GWBUF* queue, mxs::Endpoint* down, mxs::Reply* reply)
 {
     LogEventData& event = m_event_data;
     if (event.has_message)
@@ -478,7 +478,7 @@ int QlaFilterSession::clientReply(GWBUF* queue, DCB* dcb, mxs::Reply* reply)
         write_log_entries(elems);
         event.clear();
     }
-    return up->clientReply(up->instance, up->session, queue, dcb, reply);
+    return up->clientReply(up->instance, up->session, queue, down, reply);
 }
 
 FILE* QlaInstance::open_session_log_file(const string& filename) const
@@ -853,10 +853,11 @@ int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
     return my_session->routeQuery(queue);
 }
 
-int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue, DCB* dcb, mxs::Reply* reply)
+int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue,
+                mxs::Endpoint* down, mxs::Reply* reply)
 {
     QlaFilterSession* my_session = (QlaFilterSession*) session;
-    return my_session->clientReply(queue, dcb, reply);
+    return my_session->clientReply(queue, down, reply);
 }
 
 void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)

@@ -352,7 +352,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     return rv;
 }
 
-int CacheFilterSession::clientReply(GWBUF* pData, DCB* dcb, mxs::Reply* reply)
+int CacheFilterSession::clientReply(GWBUF* pData, mxs::Endpoint* down, mxs::Reply* reply)
 {
     int rv;
 

@@ -50,7 +50,7 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF*
 static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* session,
                        GWBUF* reply,
-                       DCB* dcb,
+                       mxs::Endpoint* down,
                        mxs::Reply* r);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
@@ -368,14 +368,12 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
                                         queue);
 }
 
-static int clientReply(MXS_FILTER* instance,
-                       MXS_FILTER_SESSION* session,
-                       GWBUF* reply,
-                       DCB* dcb,
-                       mxs::Reply* r)
+static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* buffer,
+                       mxs::Endpoint* down, mxs::Reply* reply)
 {
     RegexSession* my_session = (RegexSession*) session;
-    return my_session->up->clientReply(my_session->up->instance, my_session->up->session, reply, dcb, r);
+    return my_session->up->clientReply(my_session->up->instance, my_session->up->session,
+                                       buffer, down, reply);
 }
 
 /**

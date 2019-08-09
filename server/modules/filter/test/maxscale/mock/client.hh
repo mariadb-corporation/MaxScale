@@ -51,7 +51,7 @@ public:
          *
          * @return 1 if processing should continue, 0 otherwise.
          */
-        virtual int32_t backend_reply(GWBUF* pResponse, DCB* dcb, mxs::Reply* reply) = 0;
+        virtual int32_t backend_reply(GWBUF* pResponse, mxs::Endpoint* down, mxs::Reply* reply) = 0;
 
         /**
          * Called when a response is sent directly by a filter.
@@ -125,12 +125,12 @@ public:
     }
 
 private:
-    int32_t clientReply(GWBUF* pResponse, DCB* dcb, mxs::Reply* reply);
+    int32_t clientReply(GWBUF* pResponse, mxs::Endpoint* down, mxs::Reply* reply);
 
     static int32_t clientReply(MXS_FILTER* pInstance,
                                MXS_FILTER_SESSION* pSession,
                                GWBUF* pResponse,
-                               DCB* dcb,
+                               mxs::Endpoint* down,
                                mxs::Reply* reply);
 
     // Dcb::Handler

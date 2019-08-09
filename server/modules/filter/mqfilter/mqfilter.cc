@@ -95,7 +95,7 @@ static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF
 static int  clientReply(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* fsession,
                         GWBUF* queue,
-                        DCB* dcb,
+                        mxs::Endpoint* down,
                         mxs::Reply* r);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
@@ -1387,7 +1387,7 @@ unsigned int is_eof(void* p)
 static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* session,
                        GWBUF* reply,
-                       DCB* dcb,
+                       mxs::Endpoint* down,
                        mxs::Reply* r)
 {
     MQ_SESSION* my_session = (MQ_SESSION*) session;
@@ -1519,8 +1519,7 @@ static int clientReply(MXS_FILTER* instance,
 
     return my_session->up->clientReply(my_session->up->instance,
                                        my_session->up->session,
-                                       reply,
-                                       dcb, r);
+                                       reply, down, r);
 }
 
 /**
