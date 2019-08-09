@@ -70,59 +70,6 @@ static void   parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
 
 /*lint +e14 */
 
-/**
- * Performs process wide initialization.
- *
- * @return 0 if successful, non-zero otherwise.
- */
-static int process_init(void)
-{
-    int rv = mysql_library_init(0, NULL, NULL);
-
-    if (rv != 0)
-    {
-        MXS_ERROR("MySQL initialization failed, MariaDB MaxScale will exit. "
-                  "MySQL Error: %d, %s.",
-                  mysql_errno(NULL),
-                  mysql_error(NULL));
-    }
-
-    return rv;
-}
-
-/**
- * Performs process wide finalization.
- */
-static void process_finish(void)
-{
-    mysql_library_end();
-}
-
-/**
- * Performs thread-specific initialization.
- *
- * @return 0 if successful, non-zero otherwise.
- */
-static int thread_init(void)
-{
-    int rv = mysql_thread_init();
-
-    if (rv != 0)
-    {
-        MXS_ERROR("MySQL thread initialization failed, the thread will exit.");
-    }
-
-    return rv;
-}
-
-/**
- * Performs thread specific finalization.
- */
-static void thread_finish(void)
-{
-    mysql_thread_end();
-}
-
 std::string get_version_string(SERVICE* service)
 {
     std::string rval = DEFAULT_VERSION_STRING;
@@ -2265,6 +2212,52 @@ GWBUF* mariadbclient_reject(const char* host)
     std::stringstream ss;
     ss << "Host '" << host << "' is temporarily blocked due to too many authentication failures.";
     return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", ss.str().c_str());
+}
+
+}
+
+/**
+ * Module API implementation.
+ */
+
+namespace
+{
+
+int process_init(void)
+{
+    int rv = mysql_library_init(0, NULL, NULL);
+
+    if (rv != 0)
+    {
+        MXS_ERROR("MySQL initialization failed, MariaDB MaxScale will exit. "
+                  "MySQL Error: %d, %s.",
+                  mysql_errno(NULL),
+                  mysql_error(NULL));
+    }
+
+    return rv;
+}
+
+void process_finish(void)
+{
+    mysql_library_end();
+}
+
+int thread_init(void)
+{
+    int rv = mysql_thread_init();
+
+    if (rv != 0)
+    {
+        MXS_ERROR("MySQL thread initialization failed, the thread will exit.");
+    }
+
+    return rv;
+}
+
+void thread_finish(void)
+{
+    mysql_thread_end();
 }
 
 }
