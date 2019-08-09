@@ -103,24 +103,25 @@ class RRRouterSession : public mxs::RouterSession
 public:
 
     // The API functions must be public
-    RRRouterSession(RRRouter*, DCB_VEC&, BackendDCB*, ClientDCB*);
+    RRRouterSession(RRRouter*, const Endpoints&, mxs::Endpoint*, MXS_SESSION*);
     ~RRRouterSession();
     void    close();
     int32_t routeQuery(GWBUF* buffer);
-    void    clientReply(GWBUF* buffer, DCB* dcb, mxs::Reply* reply);
-    bool    handleError(GWBUF* message, DCB* problem_dcb);
+    void    clientReply(GWBUF* buffer, mxs::Endpoint* down, mxs::Reply* reply);
+    bool    handleError(GWBUF* message, mxs::Endpoint* down);
 
 private:
     bool         m_closed;              /* true when closeSession is called */
-    DCB_VEC      m_backend_dcbs;        /* backends */
-    BackendDCB*  m_write_dcb;           /* write backend */
-    ClientDCB*   m_client_dcb;          /* client */
     unsigned int m_route_count;         /* how many packets have been routed */
     bool         m_on_transaction;      /* Is the session in transaction mode? */
     unsigned int m_replies_to_ignore;   /* Counts how many replies should be ignored. */
     RRRouter*    m_router;
 
-    void decide_target(GWBUF* querybuf, BackendDCB*& target, bool& route_to_all);
+    Endpoints      m_backends;
+    mxs::Endpoint* m_write_backend;
+    MXS_SESSION*   m_session;
+
+    void decide_target(GWBUF* querybuf, mxs::Endpoint*& target, bool& route_to_all);
 };
 
 /* Each service using this router will have a router object instance. */
@@ -149,7 +150,7 @@ private:
     SERVICE* m_service;             /* Service this router is part of */
     /* Router settings */
     unsigned int m_max_backends;    /* How many backend servers to use */
-    SERVER*      m_write_server;    /* Where to send write etc. "unsafe" queries */
+    mxs::Target* m_write_server;    /* Where to send write etc. "unsafe" queries */
     bool         m_print_on_routing;/* Print a message on every packet routed? */
     uint64_t     m_example_enum;    /* Not used */
 
@@ -211,63 +212,33 @@ RRRouter::~RRRouter()
  */
 RRRouterSession* RRRouter::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    DCB_VEC backends;
-    BackendDCB* write_dcb = NULL;
+    mxs::Endpoint* write_backend = nullptr;
     RRRouterSession* rses = NULL;
-    try
-    {
-        mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(session->client_dcb->owner);
-        mxb_assert(worker == mxs::RoutingWorker::get_current());
+    int num_connections = 0;
 
-        /* Try to connect to as many backends as required. */
-        SERVER_REF* sref;
-        for (sref = m_service->dbref; sref != NULL; sref = sref->next)
-        {
-            if (server_ref_is_active(sref) && (backends.size() < m_max_backends))
-            {
-                /* Connect to server */
-                BackendDCB* conn = BackendDCB::connect(sref->server, session, worker);
-                if (conn)
-                {
-                    /* Success */
-                    atomic_add(&sref->connections, 1);
-                    backends.push_back(conn);
-                }   /* Any error by dcb_connect is reported by the function itself */
-            }
-        }
-        if (m_write_server)
-        {
-            /* Connect to write backend server. This is not essential.  */
-            write_dcb = BackendDCB::connect(m_write_server, session, worker);
-        }
-        if (backends.size() < 1)
-        {
-            MXS_ERROR("Session creation failed, could not connect to any "
-                      "read backends.");
-        }
-        else
-        {
-            rses = new RRRouterSession(this, backends, write_dcb, session->client_dcb);
-            RR_DEBUG("Session with %lu connections created.",
-                     backends.size() + (write_dcb ? 1 : 0));
-        }
-    }
-    catch (const std::exception& x)
+    for (auto e : endpoints)
     {
-        MXS_ERROR("Caught exception: %s", x.what());
-        /* Close any connections already made */
-        for (unsigned int i = 0; i < backends.size(); i++)
+        if (e->target() == m_write_server)
         {
-            DCB* dcb = backends[i];
-            dcb_close(dcb);
-            atomic_add(&(m_service->dbref->connections), -1);
+            write_backend = e;
         }
-        backends.clear();
-        if (write_dcb)
+
+        if (e->connect())
         {
-            dcb_close(write_dcb);
+            ++num_connections;
         }
     }
+
+    if (num_connections > 0)
+    {
+        rses = new RRRouterSession(this, endpoints, write_backend, session);
+        RR_DEBUG("Session with %lu connections created.", num_connections);
+    }
+    else
+    {
+        MXS_ERROR("Session creation failed, could not connect to any read backends.");
+    }
+
     return rses;
 }
 
@@ -340,7 +311,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
 {
     int rval = 0;
     const bool print = m_router->m_print_on_routing;
-    BackendDCB* target = NULL;
+    mxs::Endpoint* target = nullptr;
     bool route_to_all = false;
 
     if (!m_closed)
@@ -355,43 +326,35 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
         if (print)
         {
             MXS_NOTICE("Routing statement of length %du  to backend '%s'.",
-                       gwbuf_length(querybuf),
-                       target->server()->name());
+                       gwbuf_length(querybuf), target->target()->name());
         }
-        /* Do not use dcb_write() to output to a dcb. dcb_write() is used only
-         * for raw write in the protocol modules. */
-        rval = target->protocol_write(querybuf);
-        /* After write, the buffer points to non-existing data. */
-        querybuf = NULL;
+
+        rval = target->routeQuery(querybuf);
     }
     else if (route_to_all)
     {
-        int n_targets = m_backend_dcbs.size() + (m_write_dcb ? 1 : 0);
         if (print)
         {
-            MXS_NOTICE("Routing statement of length %du to %d backends.",
-                       gwbuf_length(querybuf),
-                       n_targets);
+            MXS_NOTICE("Routing statement of length %du to %lu backends.",
+                       gwbuf_length(querybuf), m_backends.size());
         }
+
+        int n_targets = 0;
         int route_success = 0;
-        for (unsigned int i = 0; i < m_backend_dcbs.size(); i++)
+
+        for (auto b : m_backends)
         {
-            DCB* dcb = m_backend_dcbs[i];
-            /* Need to clone the buffer since write consumes it */
-            GWBUF* copy = gwbuf_clone(querybuf);
-            if (copy)
+            if (b->is_open())
             {
-                route_success += dcb->protocol_write(copy);
+                ++n_targets;
+
+                if (b->routeQuery(gwbuf_clone(querybuf)))
+                {
+                    ++route_success;
+                }
             }
         }
-        if (m_write_dcb)
-        {
-            GWBUF* copy = gwbuf_clone(querybuf);
-            if (copy)
-            {
-                route_success += m_write_dcb->protocol_write(copy);
-            }
-        }
+
         m_replies_to_ignore += route_success - 1;
         rval = (route_success == n_targets) ? 1 : 0;
         gwbuf_free(querybuf);
@@ -425,7 +388,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
  * @param   queue       The GWBUF with reply data
  * @param   backend_dcb The backend DCB (data source)
  */
-void RRRouterSession::clientReply(GWBUF* buf, DCB* backend_dcb, mxs::Reply* reply)
+void RRRouterSession::clientReply(GWBUF* buf, mxs::Endpoint* down, mxs::Reply* reply)
 {
     if (m_replies_to_ignore > 0)
     {
@@ -438,7 +401,7 @@ void RRRouterSession::clientReply(GWBUF* buf, DCB* backend_dcb, mxs::Reply* repl
         return;
     }
 
-    RouterSession::clientReply(buf, backend_dcb, reply);
+    RouterSession::clientReply(buf, down, reply);
 
     m_router->m_routing_c++;
     if (m_router->m_print_on_routing)
@@ -447,46 +410,24 @@ void RRRouterSession::clientReply(GWBUF* buf, DCB* backend_dcb, mxs::Reply* repl
     }
 }
 
-bool RRRouterSession::handleError(GWBUF* message, DCB* problem_dcb)
+bool RRRouterSession::handleError(GWBUF* message, mxs::Endpoint* down)
 {
-    MXS_SESSION* session = problem_dcb->session();
-    DCB* client_dcb = session->client_dcb;
-    MXS_SESSION::State sesstate = session->state();
-
-    if (problem_dcb == m_write_dcb)
-    {
-        dcb_close(m_write_dcb);
-        m_write_dcb = NULL;
-    }
-    else
-    {
-        /* Find dcb in the list of backends */
-        DCB_VEC::iterator iter = m_backend_dcbs.begin();
-        while (iter != m_backend_dcbs.end())
-        {
-            if (*iter == problem_dcb)
-            {
-                dcb_close(*iter);
-                m_backend_dcbs.erase(iter);
-                break;
-            }
-        }
-    }
-
-    return !m_backend_dcbs.empty();
+    down->close();
+    return std::any_of(m_backends.begin(), m_backends.end(), std::mem_fn(&mxs::Endpoint::is_open));
 }
 
-RRRouterSession::RRRouterSession(RRRouter* router, DCB_VEC& backends, BackendDCB* write, ClientDCB* client)
-    : RouterSession(client->session())
+RRRouterSession::RRRouterSession(RRRouter* router, const Endpoints& backends,
+                                 mxs::Endpoint* write_backend, MXS_SESSION* session)
+    : RouterSession(session)
     , m_closed(false)
     , m_route_count(0)
     , m_on_transaction(false)
     , m_replies_to_ignore(0)
     , m_router(router)
+    , m_backends(backends)
+    , m_write_backend(write_backend)
+    , m_session(session)
 {
-    m_backend_dcbs = backends;
-    m_write_dcb = write;
-    m_client_dcb = client;
 }
 
 RRRouterSession::~RRRouterSession()
@@ -512,33 +453,20 @@ void RRRouterSession::close()
          * of most API functions to quickly stop the processing of closed sessions.
          */
         m_closed = true;
-        for (unsigned int i = 0; i < m_backend_dcbs.size(); i++)
+
+        for (auto b : m_backends)
         {
-            BackendDCB* dcb = m_backend_dcbs[i];
-            SERVER_REF* sref = dcb->service()->dbref;
-            while (sref && (sref->server != dcb->server()))
+            if (b->is_open())
             {
-                sref = sref->next;
+                b->close();
             }
-            if (sref)
-            {
-                atomic_add(&(sref->connections), -1);
-            }
-            dcb_close(dcb);
         }
-        int closed_conns = m_backend_dcbs.size();
-        m_backend_dcbs.clear();
-        if (m_write_dcb)
-        {
-            dcb_close(m_write_dcb);
-            m_write_dcb = NULL;
-            closed_conns++;
-        }
+
         RR_DEBUG("Session with %d connections closed.", closed_conns);
     }
 }
 
-void RRRouterSession::decide_target(GWBUF* querybuf, BackendDCB*& target, bool& route_to_all)
+void RRRouterSession::decide_target(GWBUF* querybuf, mxs::Endpoint*& target, bool& route_to_all)
 {
     /* Extract the command type from the SQL-buffer */
     mxs_mysql_cmd_t cmd_type = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
@@ -592,7 +520,7 @@ void RRRouterSession::decide_target(GWBUF* querybuf, BackendDCB*& target, bool& 
 
     if ((query_types & q_route_to_write) != 0)
     {
-        target = m_write_dcb;
+        target = m_write_backend;
     }
     else
     {
@@ -604,7 +532,7 @@ void RRRouterSession::decide_target(GWBUF* querybuf, BackendDCB*& target, bool& 
         if (m_on_transaction)
         {
             /* If a transaction is going on, route all to write backend */
-            target = m_write_dcb;
+            target = m_write_backend;
         }
         if ((query_types & q_trx_end) != 0)
         {
@@ -613,9 +541,20 @@ void RRRouterSession::decide_target(GWBUF* querybuf, BackendDCB*& target, bool& 
 
         if (!target && ((query_types & q_route_to_rr) != 0))
         {
-            /* Round robin backend. */
-            unsigned int index = (m_route_count++) % m_backend_dcbs.size();
-            target = m_backend_dcbs[index];
+            std::vector<mxs::Endpoint*> candidates;
+
+            for (auto e : m_backends)
+            {
+                if (e->is_open() && e != m_write_backend)
+                {
+                    candidates.push_back(e);
+                }
+            }
+
+            if (!candidates.empty())
+            {
+                target = candidates[m_route_count++ % candidates.size()];
+            }
         }
         /* Some commands and queries are routed to all backends. */
         else if (!target && ((query_types & q_route_to_all) != 0))
