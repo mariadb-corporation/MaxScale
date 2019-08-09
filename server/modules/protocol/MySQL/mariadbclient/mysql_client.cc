@@ -124,16 +124,6 @@ static void thread_finish(void)
     mysql_thread_end();
 }
 
-/**
- * The default authenticator name for this protocol
- *
- * @return name of authenticator
- */
-static char* mariadbclient_auth_default()
-{
-    return (char*)"mariadbauth";
-}
-
 std::string get_version_string(SERVICE* service)
 {
     std::string rval = DEFAULT_VERSION_STRING;
@@ -421,154 +411,6 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
     protocol->protocol_auth_state = MXS_AUTH_STATE_MESSAGE_READ;
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
-}
-
-/**
- * Write function for client DCB: writes data from MaxScale to Client
- *
- * @param dcb   The DCB of the client
- * @param queue Queue of buffers to write
- */
-int mariadbclient_write(DCB* dcb, GWBUF* queue)
-{
-    if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->config().session_track_trx_state)
-    {
-        parse_and_set_trx_state(dcb->session(), queue);
-    }
-    return dcb_write(dcb, queue);
-}
-
-/**
- * @brief Client read event triggered by EPOLLIN
- *
- * @param dcb   Descriptor control block
- * @return 0 if succeed, 1 otherwise
- */
-int mariadbclient_read(DCB* dcb)
-{
-    MySQLProtocol* protocol;
-    GWBUF* read_buffer = NULL;
-    int return_code = 0;
-    uint32_t nbytes_read = 0;
-    uint32_t max_bytes = 0;
-
-    if (dcb->role() != DCB::Role::CLIENT)
-    {
-        MXS_ERROR("DCB must be a client handler for MySQL client protocol.");
-        return 1;
-    }
-
-    protocol = (MySQLProtocol*)dcb->protocol_session();
-
-    MXS_DEBUG("Protocol state: %s", gw_mysql_protocol_state2string(protocol->protocol_auth_state));
-
-    /**
-     * The use of max_bytes seems like a hack, but no better option is available
-     * at the time of writing. When a MySQL server receives a new connection
-     * request, it sends an Initial Handshake Packet. Where the client wants to
-     * use SSL, it responds with an SSL Request Packet (in place of a Handshake
-     * Response Packet). The SSL Request Packet contains only the basic header,
-     * and not the user credentials. It is 36 bytes long.  The server then
-     * initiates the SSL handshake (via calls to OpenSSL).
-     *
-     * In many cases, this is what happens. But occasionally, the client seems
-     * to send a packet much larger than 36 bytes (in tests it was 333 bytes).
-     * If the whole of the packet is read, it is then lost to the SSL handshake
-     * process. Why this happens is presently unknown. Reading just 36 bytes
-     * when the server requires SSL and SSL has not yet been negotiated seems
-     * to solve the problem.
-     *
-     * If a neater solution can be found, so much the better.
-     */
-    if (ssl_required_but_not_negotiated(dcb))
-    {
-        max_bytes = 36;
-    }
-
-    const uint32_t max_single_read = GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN;
-    return_code = dcb_read(dcb, &read_buffer, max_bytes > 0 ? max_bytes : max_single_read);
-
-    if (return_code < 0)
-    {
-        dcb_close(dcb);
-    }
-
-    if (read_buffer)
-    {
-        nbytes_read = gwbuf_length(read_buffer);
-    }
-
-    if (nbytes_read == 0)
-    {
-        return return_code;
-    }
-
-    if (nbytes_read == max_single_read && dcb_bytes_readable(dcb) > 0)
-    {
-        // We read a maximally long packet, route it first. This is done in case there's a lot more data
-        // waiting and we have to start throttling the reads.
-        poll_fake_read_event(dcb);
-    }
-
-    return_code = 0;
-
-    switch (protocol->protocol_auth_state)
-    {
-    /**
-     *
-     * When a listener receives a new connection request, it creates a
-     * request handler DCB to for the client connection. The listener also
-     * sends the initial authentication request to the client. The first
-     * time this function is called from the poll loop, the client reply
-     * to the authentication request should be available.
-     *
-     * If the authentication is successful the protocol authentication state
-     * will be changed to MYSQL_IDLE (see below).
-     *
-     */
-    case MXS_AUTH_STATE_MESSAGE_READ:
-        if (nbytes_read < 3
-            || (0 == max_bytes && nbytes_read < MYSQL_GET_PACKET_LEN(read_buffer))
-            || (0 != max_bytes && nbytes_read < max_bytes))
-        {
-            dcb_readq_append(dcb, read_buffer);
-        }
-        else
-        {
-            if (nbytes_read > MYSQL_GET_PACKET_LEN(read_buffer))
-            {
-                // We read more data than was needed
-                dcb_readq_append(dcb, read_buffer);
-                read_buffer = modutil_get_next_MySQL_packet(&dcb->m_readq);
-            }
-
-            return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
-        }
-        break;
-
-    /**
-     *
-     * Once a client connection is authenticated, the protocol authentication
-     * state will be MYSQL_IDLE and so every event of data received will
-     * result in a call that comes to this section of code.
-     *
-     */
-    case MXS_AUTH_STATE_COMPLETE:
-        /* After this call read_buffer will point to freed data */
-        return_code = gw_read_normal_data(dcb, read_buffer, nbytes_read);
-        break;
-
-    case MXS_AUTH_STATE_FAILED:
-        gwbuf_free(read_buffer);
-        return_code = 1;
-        break;
-
-    default:
-        MXS_ERROR("In mysql_client.c unexpected protocol authentication state");
-        break;
-    }
-
-    return return_code;
 }
 
 /**
@@ -1506,135 +1348,6 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
     MXS_FREE(fail_str);
 }
 
-static int mariadbclient_connlimit(DCB* dcb, int limit)
-{
-    return mysql_send_standard_error(dcb, 0, 1040, "Too many connections");
-}
-///////////////////////////////////////////////
-// client write event to Client triggered by EPOLLOUT
-//////////////////////////////////////////////
-/**
- * @node Client's fd became writable, and EPOLLOUT event
- * arrived. As a consequence, client input buffer (writeq) is flushed.
- *
- * Parameters:
- * @param dcb - in, use
- *          client dcb
- *
- * @return constantly 1
- *
- *
- * @details (write detailed description here)
- *
- */
-int mariadbclient_write_ready(DCB* dcb)
-{
-    MySQLProtocol* protocol = NULL;
-
-    mxb_assert(dcb->state() != DCB::State::DISCONNECTED);
-
-    if (dcb == NULL)
-    {
-        goto return_1;
-    }
-
-    if (dcb->state() == DCB::State::DISCONNECTED)
-    {
-        goto return_1;
-    }
-
-    if (dcb->protocol_session() == NULL)
-    {
-        goto return_1;
-    }
-    protocol = (MySQLProtocol*)dcb->protocol_session();
-
-    if (protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
-    {
-        dcb_drain_writeq(dcb);
-        goto return_1;
-    }
-
-return_1:
-    return 1;
-}
-
-MXS_PROTOCOL_SESSION* mariadbclient_new_client_session(MXS_SESSION* session, mxs::Component* component)
-{
-    return new(std::nothrow) MySQLProtocol(session, nullptr, component);
-}
-
-bool mariadbclient_init_connection(DCB* client_dcb)
-{
-    MySQLSendHandshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->protocol_session()));
-    return true;
-}
-
-void mariadbclient_finish_connection(DCB* client_dcb)
-{
-}
-
-static int mariadbclient_error(DCB* dcb)
-{
-    mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
-    dcb_close(dcb);
-    return 1;
-}
-
-static void mariadbclient_free_session(MXS_PROTOCOL_SESSION* protocol_session)
-{
-    delete static_cast<MySQLProtocol*>(protocol_session);
-}
-
-/**
- * Handle a hangup event on the client side descriptor.
- *
- * We simply close the DCB, this will propagate the closure to any
- * backend descriptors and perform the session cleanup.
- *
- * @param dcb           The DCB of the connection
- */
-static int mariadbclient_hangup(DCB* dcb)
-{
-    MXS_SESSION* session = dcb->session();
-
-    if (session && !session_valid_for_pool(session))
-    {
-        if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
-        {
-            session_dump_statements(session);
-        }
-
-        if (session_get_session_trace())
-        {
-            session_dump_log(session);
-        }
-
-        // The client did not send a COM_QUIT packet
-        std::string errmsg {"Connection killed by MaxScale"};
-        std::string extra {session_get_close_reason(dcb->session())};
-
-        if (!extra.empty())
-        {
-            errmsg += ": " + extra;
-        }
-
-        int seqno = 1;
-
-        if (dcb->m_data && ((MYSQL_session*)dcb->m_data)->changing_user)
-        {
-            // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
-            seqno = 3;
-        }
-
-        modutil_send_mysql_err_packet(dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
-    }
-
-    dcb_close(dcb);
-
-    return 1;
-}
-
 /**
  * Update protocol tracking information for an individual statement
  *
@@ -2292,6 +2005,294 @@ static void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
     MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
 }
 
+/**
+ * @brief Client read event triggered by EPOLLIN
+ *
+ * @param dcb   Descriptor control block
+ * @return 0 if succeed, 1 otherwise
+ */
+int mariadbclient_read(DCB* dcb)
+{
+    MySQLProtocol* protocol;
+    GWBUF* read_buffer = NULL;
+    int return_code = 0;
+    uint32_t nbytes_read = 0;
+    uint32_t max_bytes = 0;
+
+    if (dcb->role() != DCB::Role::CLIENT)
+    {
+        MXS_ERROR("DCB must be a client handler for MySQL client protocol.");
+        return 1;
+    }
+
+    protocol = (MySQLProtocol*)dcb->protocol_session();
+
+    MXS_DEBUG("Protocol state: %s", gw_mysql_protocol_state2string(protocol->protocol_auth_state));
+
+    /**
+     * The use of max_bytes seems like a hack, but no better option is available
+     * at the time of writing. When a MySQL server receives a new connection
+     * request, it sends an Initial Handshake Packet. Where the client wants to
+     * use SSL, it responds with an SSL Request Packet (in place of a Handshake
+     * Response Packet). The SSL Request Packet contains only the basic header,
+     * and not the user credentials. It is 36 bytes long.  The server then
+     * initiates the SSL handshake (via calls to OpenSSL).
+     *
+     * In many cases, this is what happens. But occasionally, the client seems
+     * to send a packet much larger than 36 bytes (in tests it was 333 bytes).
+     * If the whole of the packet is read, it is then lost to the SSL handshake
+     * process. Why this happens is presently unknown. Reading just 36 bytes
+     * when the server requires SSL and SSL has not yet been negotiated seems
+     * to solve the problem.
+     *
+     * If a neater solution can be found, so much the better.
+     */
+    if (ssl_required_but_not_negotiated(dcb))
+    {
+        max_bytes = 36;
+    }
+
+    const uint32_t max_single_read = GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN;
+    return_code = dcb_read(dcb, &read_buffer, max_bytes > 0 ? max_bytes : max_single_read);
+
+    if (return_code < 0)
+    {
+        dcb_close(dcb);
+    }
+
+    if (read_buffer)
+    {
+        nbytes_read = gwbuf_length(read_buffer);
+    }
+
+    if (nbytes_read == 0)
+    {
+        return return_code;
+    }
+
+    if (nbytes_read == max_single_read && dcb_bytes_readable(dcb) > 0)
+    {
+        // We read a maximally long packet, route it first. This is done in case there's a lot more data
+        // waiting and we have to start throttling the reads.
+        poll_fake_read_event(dcb);
+    }
+
+    return_code = 0;
+
+    switch (protocol->protocol_auth_state)
+    {
+    /**
+     *
+     * When a listener receives a new connection request, it creates a
+     * request handler DCB to for the client connection. The listener also
+     * sends the initial authentication request to the client. The first
+     * time this function is called from the poll loop, the client reply
+     * to the authentication request should be available.
+     *
+     * If the authentication is successful the protocol authentication state
+     * will be changed to MYSQL_IDLE (see below).
+     *
+     */
+    case MXS_AUTH_STATE_MESSAGE_READ:
+        if (nbytes_read < 3
+            || (0 == max_bytes && nbytes_read < MYSQL_GET_PACKET_LEN(read_buffer))
+            || (0 != max_bytes && nbytes_read < max_bytes))
+        {
+            dcb_readq_append(dcb, read_buffer);
+        }
+        else
+        {
+            if (nbytes_read > MYSQL_GET_PACKET_LEN(read_buffer))
+            {
+                // We read more data than was needed
+                dcb_readq_append(dcb, read_buffer);
+                read_buffer = modutil_get_next_MySQL_packet(&dcb->m_readq);
+            }
+
+            return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
+        }
+        break;
+
+    /**
+     *
+     * Once a client connection is authenticated, the protocol authentication
+     * state will be MYSQL_IDLE and so every event of data received will
+     * result in a call that comes to this section of code.
+     *
+     */
+    case MXS_AUTH_STATE_COMPLETE:
+        /* After this call read_buffer will point to freed data */
+        return_code = gw_read_normal_data(dcb, read_buffer, nbytes_read);
+        break;
+
+    case MXS_AUTH_STATE_FAILED:
+        gwbuf_free(read_buffer);
+        return_code = 1;
+        break;
+
+    default:
+        MXS_ERROR("In mysql_client.c unexpected protocol authentication state");
+        break;
+    }
+
+    return return_code;
+}
+
+/**
+ * Write function for client DCB: writes data from MaxScale to Client
+ *
+ * @param dcb   The DCB of the client
+ * @param queue Queue of buffers to write
+ */
+int mariadbclient_write(DCB* dcb, GWBUF* queue)
+{
+    if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->config().session_track_trx_state)
+    {
+        parse_and_set_trx_state(dcb->session(), queue);
+    }
+    return dcb_write(dcb, queue);
+}
+
+///////////////////////////////////////////////
+// client write event to Client triggered by EPOLLOUT
+//////////////////////////////////////////////
+/**
+ * @node Client's fd became writable, and EPOLLOUT event
+ * arrived. As a consequence, client input buffer (writeq) is flushed.
+ *
+ * Parameters:
+ * @param dcb - in, use
+ *          client dcb
+ *
+ * @return constantly 1
+ *
+ *
+ * @details (write detailed description here)
+ *
+ */
+int mariadbclient_write_ready(DCB* dcb)
+{
+    MySQLProtocol* protocol = NULL;
+
+    mxb_assert(dcb->state() != DCB::State::DISCONNECTED);
+
+    if (dcb == NULL)
+    {
+        goto return_1;
+    }
+
+    if (dcb->state() == DCB::State::DISCONNECTED)
+    {
+        goto return_1;
+    }
+
+    if (dcb->protocol_session() == NULL)
+    {
+        goto return_1;
+    }
+    protocol = (MySQLProtocol*)dcb->protocol_session();
+
+    if (protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
+    {
+        dcb_drain_writeq(dcb);
+        goto return_1;
+    }
+
+return_1:
+    return 1;
+}
+
+static int mariadbclient_error(DCB* dcb)
+{
+    mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
+    dcb_close(dcb);
+    return 1;
+}
+
+/**
+ * Handle a hangup event on the client side descriptor.
+ *
+ * We simply close the DCB, this will propagate the closure to any
+ * backend descriptors and perform the session cleanup.
+ *
+ * @param dcb           The DCB of the connection
+ */
+static int mariadbclient_hangup(DCB* dcb)
+{
+    MXS_SESSION* session = dcb->session();
+
+    if (session && !session_valid_for_pool(session))
+    {
+        if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
+        {
+            session_dump_statements(session);
+        }
+
+        if (session_get_session_trace())
+        {
+            session_dump_log(session);
+        }
+
+        // The client did not send a COM_QUIT packet
+        std::string errmsg {"Connection killed by MaxScale"};
+        std::string extra {session_get_close_reason(dcb->session())};
+
+        if (!extra.empty())
+        {
+            errmsg += ": " + extra;
+        }
+
+        int seqno = 1;
+
+        if (dcb->m_data && ((MYSQL_session*)dcb->m_data)->changing_user)
+        {
+            // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
+            seqno = 3;
+        }
+
+        modutil_send_mysql_err_packet(dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
+    }
+
+    dcb_close(dcb);
+
+    return 1;
+}
+
+MXS_PROTOCOL_SESSION* mariadbclient_new_client_session(MXS_SESSION* session, mxs::Component* component)
+{
+    return new(std::nothrow) MySQLProtocol(session, nullptr, component);
+}
+
+static void mariadbclient_free_session(MXS_PROTOCOL_SESSION* protocol_session)
+{
+    delete static_cast<MySQLProtocol*>(protocol_session);
+}
+
+bool mariadbclient_init_connection(DCB* client_dcb)
+{
+    MySQLSendHandshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->protocol_session()));
+    return true;
+}
+
+void mariadbclient_finish_connection(DCB* client_dcb)
+{
+}
+
+/**
+ * The default authenticator name for this protocol
+ *
+ * @return name of authenticator
+ */
+static char* mariadbclient_auth_default()
+{
+    return (char*)"mariadbauth";
+}
+
+static int mariadbclient_connlimit(DCB* dcb, int limit)
+{
+    return mysql_send_standard_error(dcb, 0, 1040, "Too many connections");
+}
+
 static GWBUF* mariadbclient_reject(const char* host)
 {
     std::stringstream ss;
@@ -2300,10 +2301,7 @@ static GWBUF* mariadbclient_reject(const char* host)
 }
 
 /**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
+ * mariadbclient module entry point.
  *
  * @return The module object
  */
