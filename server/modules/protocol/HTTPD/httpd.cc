@@ -143,7 +143,7 @@ static int httpd_read_event(DCB* dcb)
     HTTPD_session* client_data = NULL;
     GWBUF* uri;
 
-    client_data = reinterpret_cast<HTTPD_session*>(dcb->m_protocol);
+    client_data = reinterpret_cast<HTTPD_session*>(dcb->protocol_session());
 
     /**
      * get the request line

@@ -132,7 +132,6 @@ DCB::DCB(int fd,
          Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
     , m_fd(fd)
-    , m_protocol(protocol)
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
     , m_last_read(mxs_clock())
@@ -140,6 +139,7 @@ DCB::DCB(int fd,
     , m_server(server)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_session(session)
+    , m_protocol(protocol)
     , m_func(func)
     , m_role(role)
     , m_manager(manager)
@@ -321,7 +321,7 @@ BackendDCB* BackendDCB::create(int fd,
     {
         DCB* client_dcb = session->client_dcb;
         MXS_PROTOCOL_SESSION* protocol_session
-            = funcs->new_backend_session(session, srv, client_dcb->m_protocol);
+            = funcs->new_backend_session(session, srv, client_dcb->protocol_session());
 
         if (protocol_session)
         {

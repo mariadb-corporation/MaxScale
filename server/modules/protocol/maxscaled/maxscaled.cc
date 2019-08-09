@@ -234,7 +234,7 @@ static int maxscaled_read_event(DCB* dcb)
 {
     int n;
     GWBUF* head = NULL;
-    MAXSCALED* maxscaled = (MAXSCALED*)dcb->m_protocol;
+    MAXSCALED* maxscaled = (MAXSCALED*)dcb->protocol_session();
 
     if ((n = dcb_read(dcb, &head, 0)) != -1)
     {
@@ -376,7 +376,7 @@ static bool maxscaled_init_connection(DCB* client_dcb)
     socklen_t len = sizeof(struct ucred);
     struct ucred ucred;
 
-    MAXSCALED* maxscaled_protocol = static_cast<MAXSCALED*>(client_dcb->m_protocol);
+    MAXSCALED* maxscaled_protocol = static_cast<MAXSCALED*>(client_dcb->protocol_session());
 
     maxscaled_protocol->username = NULL;
     maxscaled_protocol->state = MAXSCALED_STATE_LOGIN;

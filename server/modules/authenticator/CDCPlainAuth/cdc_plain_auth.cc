@@ -290,7 +290,7 @@ static int cdc_auth_check(DCB* dcb,
  */
 static int cdc_auth_authenticate(DCB* dcb)
 {
-    CDC_protocol* protocol = static_cast<CDC_protocol*>(dcb->m_protocol);
+    CDC_protocol* protocol = static_cast<CDC_protocol*>(dcb->protocol_session());
     CDC_session* client_data = (CDC_session*)dcb->m_data;
     int auth_ret;
 
@@ -355,7 +355,7 @@ static bool cdc_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
     CDC_session* client_data = NULL;
     int client_auth_packet_size = 0;
 
-    protocol = static_cast<CDC_protocol*>(dcb->m_protocol);
+    protocol = static_cast<CDC_protocol*>(dcb->protocol_session());
     if (dcb->m_data == NULL)
     {
         if (NULL == (client_data = (CDC_session*)MXS_CALLOC(1, sizeof(CDC_session))))

@@ -139,7 +139,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static int cdc_read_event(DCB* dcb)
 {
     MXS_SESSION* session = dcb->session();
-    CDC_protocol* protocol = (CDC_protocol*) dcb->m_protocol;
+    CDC_protocol* protocol = (CDC_protocol*) dcb->protocol_session();
     int n, rc = 0;
     GWBUF* head = NULL;
     int auth_val = CDC_STATE_AUTH_FAILED;
@@ -298,7 +298,7 @@ static bool cdc_init_connection(DCB* client_dcb)
 {
     bool inited = false;
 
-    CDC_protocol* protocol = static_cast<CDC_protocol*>(client_dcb->m_protocol);
+    CDC_protocol* protocol = static_cast<CDC_protocol*>(client_dcb->protocol_session());
 
     mxb_assert(client_dcb->session());
 

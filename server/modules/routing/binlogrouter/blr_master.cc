@@ -640,7 +640,7 @@ static GWBUF* blr_make_query(DCB* dcb, char* query)
     memcpy(&data[5], query, strlen(query));
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
     proto->current_command = MXS_COM_QUERY;
 
     return buf;
@@ -704,7 +704,7 @@ static GWBUF* blr_make_registration(ROUTER_INSTANCE* router)
     encode_value(&data[6], router->masterid, 32);   // Master server-id, 4 bytes
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol* proto = (MySQLProtocol*)router->master->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)router->master->protocol_session();
     proto->current_command = MXS_COM_REGISTER_SLAVE;
 
     return buf;
@@ -758,7 +758,7 @@ static GWBUF* blr_make_binlog_dump(ROUTER_INSTANCE* router)
            binlog_file_len);                // binlog filename
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol* proto = (MySQLProtocol*)router->master->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)router->master->protocol_session();
     proto->current_command = MXS_COM_BINLOG_DUMP;
 
     return buf;

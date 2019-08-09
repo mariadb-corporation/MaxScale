@@ -381,7 +381,7 @@ bool PamClientSession::extract(DCB* dcb, GWBUF* buffer)
 
 bool PamClientSession::ssl_capable(DCB* client)
 {
-    MySQLProtocol* protocol = (MySQLProtocol*)client->m_protocol;
+    MySQLProtocol* protocol = (MySQLProtocol*)client->protocol_session();
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 

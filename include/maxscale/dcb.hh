@@ -277,7 +277,6 @@ public:
     char*                   m_remote = nullptr;                   /**< Address of remote end */
     char*                   m_user = nullptr;                     /**< User name for connection */
     struct sockaddr_storage m_ip;                                 /**< remote IPv4/IPv6 address */
-    MXS_PROTOCOL_SESSION*   m_protocol;                           /**< The protocol session */
     size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
     size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
     uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
@@ -334,6 +333,7 @@ protected:
 
     dcb_state_t           m_state = DCB_STATE_ALLOC;     /**< Current state */
     MXS_SESSION*          m_session;                     /**< The owning session */
+    MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
     MXS_PROTOCOL          m_func;                        /**< Protocol functions for the DCB */
     SSL*                  m_ssl = nullptr;               /**< SSL struct for connection */
     bool                  m_ssl_read_want_read = false;

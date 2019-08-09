@@ -74,7 +74,7 @@ const char* gw_mysql_protocol_state2string(int state)
 
 void mysql_protocol_set_current_command(DCB* dcb, mxs_mysql_cmd_t cmd)
 {
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
     proto->current_command = cmd;
 }
 
@@ -922,7 +922,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     gw_get_shared_session_auth_info(dcb->session()->client_dcb, &client);
 
     GWBUF* buffer = gw_generate_auth_response(&client,
-                                              (MySQLProtocol*)dcb->m_protocol,
+                                              (MySQLProtocol*)dcb->protocol_session(),
                                               with_ssl,
                                               ssl_established,
                                               dcb->service()->capabilities);
@@ -945,7 +945,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
 
 int send_mysql_native_password_response(DCB* dcb)
 {
-    MySQLProtocol* proto = (MySQLProtocol*) dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol_session();
     MYSQL_session local_session;
     gw_get_shared_session_auth_info(dcb, &local_session);
 
@@ -963,7 +963,7 @@ int send_mysql_native_password_response(DCB* dcb)
 
 bool send_auth_switch_request_packet(DCB* dcb)
 {
-    MySQLProtocol* proto = (MySQLProtocol*) dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol_session();
     const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
     uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + len);
@@ -1088,7 +1088,7 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
  */
 bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
 {
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
     bool rval = false;
     uint8_t* payload = GWBUF_DATA(buffer) + 4;
 
@@ -1213,7 +1213,7 @@ bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
 
 mxs_mysql_cmd_t mxs_mysql_current_command(MXS_SESSION* session)
 {
-    MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
     return proto->current_command;
 }
 
@@ -1285,7 +1285,7 @@ struct KillInfo
     KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
         : origin(mxs_rworker_get_current_id())
         , query_base(query)
-        , protocol(*(MySQLProtocol*)ses->client_dcb->m_protocol)
+        , protocol(*(MySQLProtocol*)ses->client_dcb->protocol_session())
         , cb(callback)
     {
         gw_get_shared_session_auth_info(ses->client_dcb, &session);
@@ -1330,7 +1330,7 @@ struct UserKillInfo : public KillInfo
 static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->m_protocol);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
 
     if (dcb->session()->id() == info->target_id
         && dcb->role() == DCB::Role::BACKEND

@@ -445,7 +445,7 @@ bool RCRSession::connection_is_valid() const
 int RCRSession::routeQuery(GWBUF* queue)
 {
     int rc = 0;
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(m_client_dcb->m_protocol);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(m_client_dcb->protocol_session());
     mxs_mysql_cmd_t mysql_command = proto->current_command;
 
     mxb::atomic::add(&m_instance->stats().n_queries, 1, mxb::atomic::RELAXED);

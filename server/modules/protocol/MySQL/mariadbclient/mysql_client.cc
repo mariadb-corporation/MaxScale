@@ -461,7 +461,7 @@ int gw_read_client_event(DCB* dcb)
         return 1;
     }
 
-    protocol = (MySQLProtocol*)dcb->m_protocol;
+    protocol = (MySQLProtocol*)dcb->protocol_session();
 
     MXS_DEBUG("Protocol state: %s", gw_mysql_protocol_state2string(protocol->protocol_auth_state));
 
@@ -611,7 +611,7 @@ static void store_client_information(DCB* dcb, GWBUF* buffer)
 {
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
     MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
 
     gwbuf_copy_data(buffer, 0, len, data);
@@ -916,7 +916,7 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
         auth_val = MXS_AUTH_BAD_HANDSHAKE;
     }
 
-    MySQLProtocol* protocol = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* protocol = (MySQLProtocol*)dcb->protocol_session();
 
     /**
      * At this point, if the auth_val return code indicates success
@@ -1093,7 +1093,7 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
                 break;
             }
 
-            MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+            MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
             if (dcb->m_protocol_packet_length - MYSQL_HEADER_LEN != GW_MYSQL_MAX_PACKET_LEN)
             {
                 /** We're processing the first packet of a command */
@@ -1245,7 +1245,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
 
     /** Ask what type of input the router/filter chain expects */
     capabilities = service_get_capabilities(session->service);
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->m_protocol);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
 
     /** If the router requires statement input we need to make sure that
      * a complete SQL packet is read before continuing. The current command
@@ -1268,7 +1268,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
          * If a COM_CHANGE_USER is in progress, this must not be done as the client
          * is sending authentication data that does not have the command byte.
          */
-        MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
 
         if (!proto->changing_user && !session_is_load_active(session))
         {
@@ -1339,7 +1339,7 @@ static int gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
 void check_pool_candidate(DCB* dcb)
 {
     MXS_SESSION* session = dcb->session();
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
 
     if (proto->current_command == MXS_COM_QUIT)
     {
@@ -1367,7 +1367,7 @@ static int gw_read_finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capa
 {
     MXS_SESSION* session = dcb->session();
     uint8_t* payload = GWBUF_DATA(read_buffer);
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
     int return_code = 0;
 
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
@@ -1539,11 +1539,11 @@ int gw_write_client_event(DCB* dcb)
         goto return_1;
     }
 
-    if (dcb->m_protocol == NULL)
+    if (dcb->protocol_session() == NULL)
     {
         goto return_1;
     }
-    protocol = (MySQLProtocol*)dcb->m_protocol;
+    protocol = (MySQLProtocol*)dcb->protocol_session();
 
     if (protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
@@ -1562,7 +1562,7 @@ MXS_PROTOCOL_SESSION* gw_new_client_session(MXS_SESSION* session)
 
 bool gw_init_connection(DCB* client_dcb)
 {
-    MySQLSendHandshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->m_protocol));
+    MySQLSendHandshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->protocol_session()));
     return true;
 }
 
@@ -1639,7 +1639,7 @@ static int gw_client_hangup_event(DCB* dcb)
  */
 void update_current_command(DCB* dcb, GWBUF* buffer)
 {
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
     uint8_t cmd = (uint8_t)MXS_COM_QUERY;
 
     /**
@@ -1670,7 +1670,7 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_REAUTHENTICATE)
     {
         uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
-        MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->m_protocol;
+        MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
         std::vector<uint8_t> payload;
         payload.resize(payloadlen);
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
@@ -1747,7 +1747,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             packetbuf = gwbuf_make_contiguous(packetbuf);
             session_retain_statement(session, packetbuf);
 
-            MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->m_protocol;
+            MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
 
             // Track the command being executed
             proto->track_query(packetbuf);
@@ -1901,7 +1901,7 @@ static spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int
      * The option is stored as a two byte integer with the values 0 for enabling
      * multi-statements and 1 for disabling it.
      */
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
     uint8_t opt;
 
     if (proto->current_command == MXS_COM_SET_OPTION

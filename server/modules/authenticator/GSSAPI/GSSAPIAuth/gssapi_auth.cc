@@ -342,7 +342,7 @@ bool GSSAPIAuthenticatorSession::extract(DCB* dcb, GWBUF* read_buffer)
  */
 bool GSSAPIAuthenticatorSession::ssl_capable(DCB* dcb)
 {
-    MySQLProtocol* protocol = (MySQLProtocol*)dcb->m_protocol;
+    MySQLProtocol* protocol = (MySQLProtocol*)dcb->protocol_session();
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 
