@@ -1001,6 +1001,9 @@ add_test_executable(sr_basics.cpp sr_basics sr_basics LABELS REPL_BACKEND)
 # MXS-2490: Direct execution doesn't work with MaxScale
 add_test_executable(mxs2490_ps_execute_direct.cpp mxs2490_ps_execute_direct replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-2609: Maxscale crash in RWSplitSession::retry_master_query()
+add_test_executable(mxs2609_history_replay.cpp mxs2609_history_replay mxs2609_history_replay LABELS readwritesplit REPL_BACKEND)
+
 # MXS-2621: Incorrect SQL if lower_case_table_names is used.
 add_test_executable(mxs2621_lower_case_tables.cpp mxs2621_lower_case_tables mxs2621_lower_case_tables LABELS REPL_BACKEND)
 

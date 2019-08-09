@@ -1,0 +1,69 @@
+/**
+ * MXS-2609: Maxscale crash in RWSplitSession::retry_master_query()
+ *
+ * https://jira.mariadb.org/browse/MXS-2609
+ *
+ * This test attempts to reproduce the crash described in MXS-2609 which
+ * occurred during a retrying attempt of a session command that failed on
+ * the master.
+ */
+
+
+#include "testconnections.h"
+
+int main(int argc, char** argv)
+{
+    TestConnections test(argc, argv);
+
+    auto block = [&test](int n){
+                     test.repl->block_node(n);
+                     test.maxscales->wait_for_monitor();
+                     test.repl->unblock_node(n);
+                     test.maxscales->wait_for_monitor();
+                 };
+    auto conn = test.maxscales->rwsplit();
+
+    //
+    // Test 1: Master failure mid-reconnect should trigger query replay
+    //
+
+    test.expect(conn.connect(), "First connect should work: %s", conn.error());
+
+    // Queue up session commands so that the history replay takes some time
+    for (int i = 0; i < 10; i++)
+    {
+        conn.query("SET @a = (SLEEP 1)");
+    }
+
+    block(0);
+
+    test.set_timeout(90);
+
+    std::thread([&](){
+                    sleep(5);
+                    block(0);
+                }).detach();
+
+    test.expect(conn.query("SELECT @@last_insert_id"), "Query should work: %s", conn.error());
+
+    test.stop_timeout();
+    conn.disconnect();
+
+    //
+    // Test 2: Exceed history limit and trigger a master reconnection
+    //
+
+    test.maxctrl("alter service RW-Split-Router max_sescmd_history 2");
+    test.expect(conn.connect(), "Second should work: %s", conn.error());
+
+    for (int i = 0; i < 5; i++)
+    {
+        conn.query("SET @a = (SLEEP 1)");
+    }
+
+    block(0);
+
+    test.expect(!conn.query("SELECT @@last_insert_id"), "Query should fail");
+
+    return test.global_result;
+}

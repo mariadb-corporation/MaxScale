@@ -16,7 +16,12 @@ echo " creating dirs on VM"
 ssh $sshopt "mkdir -p dest ; mkdir -p src; mkdir gpg_keys"
 
 echo "copying stuff to VM"
-scp $scpopt $pre_repo_dir/$target/$box/* $sshuser@$IP:src/
+if [ $1 == "full_repo" ] ; then
+         find  ${repo_path}/maxscale-${major_ver}.*-release/mariadb-maxscale/${platform}/${platform_version}/* -name "*.rpm" -exec scp $scpopt {} $sshuser@$IP:src/ \;
+         find  ${repo_path}/maxscale-${major_ver}.*-release/mariadb-maxscale/${platform}/dists/${platform_version}/* -name "*.deb" -exec scp $scpopt {} $sshuser@$IP:src/ \;
+else
+         scp $scpopt $pre_repo_dir/$target/$box/* $sshuser@$IP:src/
+fi
 
 scp $scpopt -r ${gpg_keys_path}/* $sshuser@$IP:./gpg_keys/
 ssh $sshopt "key=\`ls ~/gpg_keys/*.public -1\` ; gpg --import \$key"

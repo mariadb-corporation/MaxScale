@@ -58,7 +58,7 @@ static std::string do_query(MonitorServer* srv, const char* query)
 // Returns a numeric version similar to mysql_get_server_version
 int get_cs_version(MonitorServer* srv)
 {
-    int rval = 0;
+    int rval = -1;
     std::string prefix = "Columnstore ";
     std::string result = do_query(srv, "SELECT @@version_comment");
     auto pos = result.find(prefix);
@@ -107,16 +107,21 @@ void CsMonitor::update_server_status(MonitorServer* srv)
 
     if (do_query(srv, alive_query) == "1")
     {
-        status |= SERVER_RUNNING;
+        auto version = get_cs_version(srv);
 
-        if (get_cs_version(srv) >= 10200)
+        if (version >= 0)
         {
-            // 1.2 supports the mcsSystemPrimary function
-            status |= do_query(srv, role_query) == "1" ? SERVER_MASTER : SERVER_SLAVE;
-        }
-        else
-        {
-            status |= srv->server == m_primary ? SERVER_MASTER : SERVER_SLAVE;
+            status |= SERVER_RUNNING;
+
+            if (version >= 10200)
+            {
+                // 1.2 supports the mcsSystemPrimary function
+                status |= do_query(srv, role_query) == "1" ? SERVER_MASTER : SERVER_SLAVE;
+            }
+            else
+            {
+                status |= srv->server == m_primary ? SERVER_MASTER : SERVER_SLAVE;
+            }
         }
     }
 

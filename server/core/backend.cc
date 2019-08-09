@@ -54,6 +54,7 @@ void Backend::close(close_type type)
         m_closed = true;
         m_closed_at = time(NULL);
         m_session_commands.clear();
+        m_history_size = 0;
 
         if (in_use())
         {
@@ -139,6 +140,12 @@ uint64_t Backend::complete_session_command()
 {
     uint64_t rval = m_session_commands.front()->get_position();
     m_session_commands.pop_front();
+
+    if (m_history_size > 0)
+    {
+        --m_history_size;
+    }
+
     return rval;
 }
 
@@ -192,10 +199,12 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
         m_state = IN_USE;
         mxb::atomic::add(&m_backend->connections, 1, mxb::atomic::RELAXED);
         rval = true;
+        m_history_size = 0;
 
-        if (sescmd && sescmd->size())
+        if (sescmd && !sescmd->empty())
         {
             append_session_command(*sescmd);
+            m_history_size = sescmd->size();
 
             if (!execute_session_command())
             {
