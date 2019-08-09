@@ -231,7 +231,7 @@ static void blr_start_master(void* data)
 
     /* Connect to configured master server */
     if ((router->master = BackendDCB::connect(router->service->dbref->server,
-                                              router->session, worker)) == NULL)
+                                              router->session, worker, nullptr)) == NULL)
     {
         pthread_mutex_lock(&router->lock);
         router->retry_count++;

@@ -69,12 +69,12 @@ static json_t* diagnostics_json(const MXS_ROUTER* instance);
 static void    clientReply(MXS_ROUTER* instance,
                            MXS_ROUTER_SESSION* router_session,
                            GWBUF* queue,
-                           DCB* backend_dcb,
+                           mxs::Endpoint*,
                            const mxs::Reply* reply);
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       DCB* backend_dcb);
+                       mxs::Endpoint*);
 
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 static int      blr_load_dbusers(const ROUTER_INSTANCE* router);
@@ -2255,7 +2255,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 static void clientReply(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* queue,
-                        DCB* backend_dcb,
+                        mxs::Endpoint*,
                         const mxs::Reply* reply)
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
@@ -2300,8 +2300,10 @@ static char* extract_message(GWBUF* errpkt)
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       DCB* backend_dcb)
+                       mxs::Endpoint* endpoint)
 {
+    // TODO: Replace with Connector-C
+    DCB* backend_dcb = nullptr;
     mxb_assert(backend_dcb->role() == DCB::Role::BACKEND);
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
     int error;
