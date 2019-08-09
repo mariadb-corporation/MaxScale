@@ -66,7 +66,7 @@ static spec_com_res_t handle_query_kill(DCB* dcb,
                                         unsigned int packet_len);
 static bool   parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user);
 static void   parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
-static GWBUF* gw_reject_connection(const char* host);
+static GWBUF* mariadbclient_reject(const char* host);
 
 
 /*lint +e14 */
@@ -129,7 +129,7 @@ static void thread_finish(void)
  *
  * @return name of authenticator
  */
-static char* gw_default_auth()
+static char* mariadbclient_auth_default()
 {
     return (char*)"mariadbauth";
 }
@@ -429,7 +429,7 @@ int MySQLSendHandshake(DCB* dcb, MySQLProtocol* protocol)
  * @param dcb   The DCB of the client
  * @param queue Queue of buffers to write
  */
-int gw_MySQLWrite_client(DCB* dcb, GWBUF* queue)
+int mariadbclient_write(DCB* dcb, GWBUF* queue)
 {
     if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->config().session_track_trx_state)
     {
@@ -444,7 +444,7 @@ int gw_MySQLWrite_client(DCB* dcb, GWBUF* queue)
  * @param dcb   Descriptor control block
  * @return 0 if succeed, 1 otherwise
  */
-int gw_read_client_event(DCB* dcb)
+int mariadbclient_read(DCB* dcb)
 {
     MySQLProtocol* protocol;
     GWBUF* read_buffer = NULL;
@@ -730,7 +730,7 @@ bool ssl_check_data_to_process(DCB* dcb)
         }
         else
         {
-            MXS_DEBUG("[gw_read_client_event] No data in socket after SSL auth");
+            MXS_DEBUG("[mariadbclient_read] No data in socket after SSL auth");
         }
     }
     return false;
@@ -1506,7 +1506,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
     MXS_FREE(fail_str);
 }
 
-static int gw_connection_limit(DCB* dcb, int limit)
+static int mariadbclient_connlimit(DCB* dcb, int limit)
 {
     return mysql_send_standard_error(dcb, 0, 1040, "Too many connections");
 }
@@ -1527,7 +1527,7 @@ static int gw_connection_limit(DCB* dcb, int limit)
  * @details (write detailed description here)
  *
  */
-int gw_write_client_event(DCB* dcb)
+int mariadbclient_write_ready(DCB* dcb)
 {
     MySQLProtocol* protocol = NULL;
 
@@ -1559,29 +1559,29 @@ return_1:
     return 1;
 }
 
-MXS_PROTOCOL_SESSION* gw_new_client_session(MXS_SESSION* session, mxs::Component* component)
+MXS_PROTOCOL_SESSION* mariadbclient_new_client_session(MXS_SESSION* session, mxs::Component* component)
 {
     return new(std::nothrow) MySQLProtocol(session, nullptr, component);
 }
 
-bool gw_init_connection(DCB* client_dcb)
+bool mariadbclient_init_connection(DCB* client_dcb)
 {
     MySQLSendHandshake(client_dcb, static_cast<MySQLProtocol*>(client_dcb->protocol_session()));
     return true;
 }
 
-void gw_finish_connection(DCB* client_dcb)
+void mariadbclient_finish_connection(DCB* client_dcb)
 {
 }
 
-static int gw_error_client_event(DCB* dcb)
+static int mariadbclient_error(DCB* dcb)
 {
     mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
     dcb_close(dcb);
     return 1;
 }
 
-static void gw_client_free_session(MXS_PROTOCOL_SESSION* protocol_session)
+static void mariadbclient_free_session(MXS_PROTOCOL_SESSION* protocol_session)
 {
     delete static_cast<MySQLProtocol*>(protocol_session);
 }
@@ -1594,7 +1594,7 @@ static void gw_client_free_session(MXS_PROTOCOL_SESSION* protocol_session)
  *
  * @param dcb           The DCB of the connection
  */
-static int gw_client_hangup_event(DCB* dcb)
+static int mariadbclient_hangup(DCB* dcb)
 {
     MXS_SESSION* session = dcb->session();
 
@@ -2292,7 +2292,7 @@ static void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
     MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
 }
 
-static GWBUF* gw_reject_connection(const char* host)
+static GWBUF* mariadbclient_reject(const char* host)
 {
     std::stringstream ss;
     ss << "Host '" << host << "' is temporarily blocked due to too many authentication failures.";
@@ -2311,21 +2311,21 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_PROTOCOL_API MyObject =
     {
-        gw_read_client_event,                       /* Read - EPOLLIN handler        */
-        gw_MySQLWrite_client,                       /* Write - data from gateway     */
-        gw_write_client_event,                      /* WriteReady - EPOLLOUT handler */
-        gw_error_client_event,                      /* Error - EPOLLERR handler      */
-        gw_client_hangup_event,                     /* HangUp - EPOLLHUP handler     */
-        gw_new_client_session,
-        NULL,                                       /* new_backend_session           */
-        gw_client_free_session,
-        gw_init_connection,
-        gw_finish_connection,
-        gw_default_auth,                            /* Default authenticator         */
-        gw_connection_limit,                        /* Send error connection limit   */
+        mariadbclient_read,                /* EPOLLIN handler                    */
+        mariadbclient_write,               /* Write data from MaxScale to client */
+        mariadbclient_write_ready,         /* EPOLLOUT handler                   */
+        mariadbclient_error,               /* EPOLLERR handler                   */
+        mariadbclient_hangup,              /* EPOLLHUP handler                   */
+        mariadbclient_new_client_session,
+        NULL,                              /* new_backend_session                */
+        mariadbclient_free_session,
+        mariadbclient_init_connection,
+        mariadbclient_finish_connection,
+        mariadbclient_auth_default,
+        mariadbclient_connlimit,
         NULL,
         NULL,
-        gw_reject_connection
+        mariadbclient_reject
     };
 
     static MXS_MODULE info =
