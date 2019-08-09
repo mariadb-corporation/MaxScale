@@ -943,6 +943,23 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             config_runtime_error("Invalid value for '%s': %s", CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, value);
         }
     }
+    else if (key == CN_SESSION_TRACE)
+    {
+        char* endptr;
+        long intval = strtol(value, &endptr, 10);
+
+        if (*endptr == '\0' && intval >= 0)
+        {
+            session_set_session_trace(intval);
+            mxb_log_set_session_trace(true);
+            rval = true;
+        }
+        else
+        {
+            rval = false;
+            config_runtime_error("Invalid value for '%s': %s", CN_SESSION_TRACE, value);
+        }
+    }
     else if (config_can_modify_at_runtime(key.c_str()))
     {
         config_runtime_error("Global parameter '%s' cannot be modified at runtime", name);

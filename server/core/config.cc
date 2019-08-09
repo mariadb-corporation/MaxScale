@@ -4043,6 +4043,7 @@ json_t* config_maxscale_to_json(const char* host)
 
     json_object_set_new(param, CN_RETAIN_LAST_STATEMENTS, json_integer(session_get_retain_last_statements()));
     json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
+    json_object_set_new(param, CN_SESSION_TRACE, json_integer(session_get_session_trace()));
     json_object_set_new(param, CN_LOAD_PERSISTED_CONFIGS, json_boolean(cnf->load_persisted_configs));
     json_object_set_new(param, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
                         json_integer(cnf->max_auth_errors_until_block));
