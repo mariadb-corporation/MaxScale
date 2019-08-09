@@ -355,7 +355,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             else if (target->has_session_commands())
             {
                 // We need to wait until the session commands are executed
-                m_query_queue.emplace_back(gwbuf_clone(querybuf));
+                m_query_queue.emplace_front(gwbuf_clone(querybuf));
                 MXS_INFO("Queuing query until '%s' completes session command", target->name());
             }
             else
@@ -650,7 +650,8 @@ RWBackend* RWSplitSession::get_master_backend()
 
     if (master)
     {
-        if (master->in_use() || (m_config.master_reconnection && master->can_connect()))
+        if (master->in_use()
+            || (m_config.master_reconnection && master->can_connect() && can_recover_servers()))
         {
             if (can_continue_using_master(master))
             {
@@ -665,7 +666,8 @@ RWBackend* RWSplitSession::get_master_backend()
         }
         else
         {
-            MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
+            MXS_ERROR("Cannot choose server '%s' as the master because it is not "
+                      "in use and a new connection to it cannot be created.",
                       master->name());
         }
     }
