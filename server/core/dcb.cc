@@ -127,7 +127,7 @@ DCB::DCB(int fd,
          Role role,
          MXS_SESSION* session,
          MXS_PROTOCOL_SESSION* protocol,
-         MXS_PROTOCOL func,
+         MXS_PROTOCOL_API protocol_api,
          SERVER* server,
          Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
@@ -140,7 +140,7 @@ DCB::DCB(int fd,
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_session(session)
     , m_protocol(protocol)
-    , m_func(func)
+    , m_protocol_api(protocol_api)
     , m_role(role)
     , m_manager(manager)
 {
@@ -207,16 +207,16 @@ ClientDCB* dcb_create_client(int fd, MXS_SESSION* session, DCB::Manager* manager
 {
     ClientDCB* dcb = nullptr;
 
-    MXS_PROTOCOL func = session->listener->protocol_func();
-    MXS_PROTOCOL_SESSION* protocol_session = func.new_client_session(session);
+    MXS_PROTOCOL_API protocol_api = session->listener->protocol_func();
+    MXS_PROTOCOL_SESSION* protocol_session = protocol_api.new_client_session(session);
 
     if (protocol_session)
     {
-        dcb = new (std::nothrow) ClientDCB(fd, session, protocol_session, func, manager);
+        dcb = new (std::nothrow) ClientDCB(fd, session, protocol_session, protocol_api, manager);
 
         if (!dcb)
         {
-            func.free_session(protocol_session);
+            protocol_api.free_session(protocol_session);
             ::close(fd);
         }
     }
@@ -226,9 +226,9 @@ ClientDCB* dcb_create_client(int fd, MXS_SESSION* session, DCB::Manager* manager
 
 InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager)
 {
-    MXS_PROTOCOL func = session->listener->protocol_func();
+    MXS_PROTOCOL_API protocol_api = session->listener->protocol_func();
 
-    return new (std::nothrow) InternalDCB(session, func, manager);
+    return new (std::nothrow) InternalDCB(session, protocol_api, manager);
 }
 
 /**
@@ -269,11 +269,11 @@ void DCB::stop_polling_and_shutdown()
     /**
      * close protocol and router session
      */
-    if (m_func.finish_connection && m_func.free_session) // TODO: Hacks for InternalDCB
+    if (m_protocol_api.finish_connection && m_protocol_api.free_session) // TODO: Hacks for InternalDCB
     {
         shutdown();
-        m_func.finish_connection(this);
-        m_func.free_session(m_protocol);
+        m_protocol_api.finish_connection(this);
+        m_protocol_api.free_session(m_protocol);
         m_protocol = nullptr;
     }
 }
@@ -315,13 +315,13 @@ BackendDCB* BackendDCB::create(int fd,
 {
     BackendDCB* dcb = nullptr;
 
-    MXS_PROTOCOL* funcs = (MXS_PROTOCOL*)load_module(protocol_name, MODULE_PROTOCOL);
+    MXS_PROTOCOL_API* protocol_api = (MXS_PROTOCOL_API*)load_module(protocol_name, MODULE_PROTOCOL);
 
-    if (funcs)
+    if (protocol_api)
     {
         DCB* client_dcb = session->client_dcb;
         MXS_PROTOCOL_SESSION* protocol_session
-            = funcs->new_backend_session(session, srv, client_dcb->protocol_session());
+            = protocol_api->new_backend_session(session, srv, client_dcb->protocol_session());
 
         if (protocol_session)
         {
@@ -330,8 +330,8 @@ BackendDCB* BackendDCB::create(int fd,
 
             if (authenticator.empty())
             {
-                mxb_assert(funcs->auth_default);
-                authenticator = funcs->auth_default();
+                mxb_assert(protocol_api->auth_default);
+                authenticator = protocol_api->auth_default();
             }
 
             // Allocate DCB specific authentication data. Backend authenticators do not have an instance.
@@ -353,7 +353,8 @@ BackendDCB* BackendDCB::create(int fd,
 
             if (auth_session)
             {
-                dcb = new (std::nothrow) BackendDCB(fd, session, protocol_session, *funcs, server, manager);
+                dcb = new (std::nothrow) BackendDCB(fd, session, protocol_session, *protocol_api,
+                                                    server, manager);
 
                 if (dcb)
                 {
@@ -364,11 +365,12 @@ BackendDCB* BackendDCB::create(int fd,
                 else
                 {
                     delete auth_session;
+                    protocol_api->free_session(protocol_session);
                 }
             }
             else
             {
-                funcs->free_session(protocol_session);
+                protocol_api->free_session(protocol_session);
                 MXS_ERROR("Failed to create authenticator session for backend DCB.");
             }
         }
@@ -470,7 +472,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
 
         if (dcb)
         {
-            if (dcb->m_func.init_connection(dcb) && dcb->enable_events())
+            if (dcb->m_protocol_api.init_connection(dcb) && dcb->enable_events())
             {
                 // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
                 // event that is triggered once the connection is established.
@@ -1184,7 +1186,7 @@ bool DCB::maybe_add_persistent(DCB* dcb)
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
     Server* server = static_cast<Server*>(dcb->m_server);
     if (dcb->m_user != NULL
-        && (dcb->m_func.established == NULL || dcb->m_func.established(dcb))
+        && (dcb->m_protocol_api.established == NULL || dcb->m_protocol_api.established(dcb))
         && strlen(dcb->m_user)
         && server
         && dcb->session()
@@ -1894,7 +1896,7 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
             if (!dcb->m_dcb_errhandle_called)
             {
                 this_thread.current_dcb = dcb;
-                static_cast<BackendDCB*>(dcb)->m_func.hangup(dcb);
+                static_cast<BackendDCB*>(dcb)->m_protocol_api.hangup(dcb);
                 dcb->m_dcb_errhandle_called = true;
             }
         }
@@ -2468,8 +2470,8 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
 
             if (dcb_session_check(dcb, "write_ready"))
             {
-                DCB_EH_NOTICE("Calling dcb->m_func.write_ready(%p)", dcb);
-                dcb->m_func.write_ready(dcb);
+                DCB_EH_NOTICE("Calling dcb->m_protocol_api.write_ready(%p)", dcb);
+                dcb->m_protocol_api.write_ready(dcb);
             }
         }
         else
@@ -2505,8 +2507,8 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             }
             if (1 == return_code)
             {
-                DCB_EH_NOTICE("Calling dcb->m_func.read(%p)", dcb);
-                dcb->m_func.read(dcb);
+                DCB_EH_NOTICE("Calling dcb->m_protocol_api.read(%p)", dcb);
+                dcb->m_protocol_api.read(dcb);
             }
         }
     }
@@ -2526,8 +2528,8 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
 
         if (dcb_session_check(dcb, "error"))
         {
-            DCB_EH_NOTICE("Calling dcb->m_func.error(%p)", dcb);
-            dcb->m_func.error(dcb);
+            DCB_EH_NOTICE("Calling dcb->m_protocol_api.error(%p)", dcb);
+            dcb->m_protocol_api.error(dcb);
         }
     }
 
@@ -2549,8 +2551,8 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
         {
             if (dcb_session_check(dcb, "hangup EPOLLHUP"))
             {
-                DCB_EH_NOTICE("Calling dcb->m_func.hangup(%p)", dcb);
-                dcb->m_func.hangup(dcb);
+                DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", dcb);
+                dcb->m_protocol_api.hangup(dcb);
             }
 
             dcb->m_dcb_errhandle_called = true;
@@ -2576,8 +2578,8 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
         {
             if (dcb_session_check(dcb, "hangup EPOLLRDHUP"))
             {
-                DCB_EH_NOTICE("Calling dcb->m_func.hangup(%p)", dcb);
-                dcb->m_func.hangup(dcb);
+                DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", dcb);
+                dcb->m_protocol_api.hangup(dcb);
             }
 
             dcb->m_dcb_errhandle_called = true;
@@ -3027,9 +3029,9 @@ void DCB::shutdown()
 ClientDCB::ClientDCB(int fd,
                      MXS_SESSION* session,
                      MXS_PROTOCOL_SESSION* protocol,
-                     MXS_PROTOCOL func,
+                     MXS_PROTOCOL_API protocol_api,
                      DCB::Manager* manager)
-    : ClientDCB(fd, DCB::Role::CLIENT, session, protocol, func, manager)
+    : ClientDCB(fd, DCB::Role::CLIENT, session, protocol, protocol_api, manager)
 {
 }
 
@@ -3037,13 +3039,13 @@ ClientDCB::ClientDCB(int fd,
                      DCB::Role role,
                      MXS_SESSION* session,
                      MXS_PROTOCOL_SESSION* protocol_session,
-                     MXS_PROTOCOL func,
+                     MXS_PROTOCOL_API protocol_api,
                      Manager* manager)
     : DCB(fd,
           role,
           session,
           protocol_session,
-          func,
+          protocol_api,
           nullptr,
           manager)
 {
@@ -3066,15 +3068,15 @@ bool ClientDCB::was_freed(MXS_SESSION* session)
     return false;
 }
 
-InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL func, DCB::Manager* manager)
-    : ClientDCB(DCBFD_CLOSED, DCB::Role::INTERNAL, session, nullptr, func, manager)
+InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, DCB::Manager* manager)
+    : ClientDCB(DCBFD_CLOSED, DCB::Role::INTERNAL, session, nullptr, protocol_api, manager)
 {
     /**
      * This prevents the actual protocol level closing code from being called that expects
      * the dcb->m_protocol pointer to not be NULL.
      */
-    m_func.finish_connection = nullptr;
-    m_func.free_session = nullptr;
+    m_protocol_api.finish_connection = nullptr;
+    m_protocol_api.free_session = nullptr;
 
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -3109,10 +3111,10 @@ bool InternalDCB::disable_events()
 BackendDCB::BackendDCB(int fd,
                        MXS_SESSION* session,
                        MXS_PROTOCOL_SESSION* protocol,
-                       MXS_PROTOCOL func,
+                       MXS_PROTOCOL_API protocol_api,
                        SERVER* server,
                        DCB::Manager* manager)
-    : DCB(fd, DCB::Role::BACKEND, session, protocol, func, server, manager)
+    : DCB(fd, DCB::Role::BACKEND, session, protocol, protocol_api, server, manager)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {

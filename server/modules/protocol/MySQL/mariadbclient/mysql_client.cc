@@ -2275,7 +2275,7 @@ static GWBUF* gw_reject_connection(const char* host)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_PROTOCOL MyObject =
+    static MXS_PROTOCOL_API MyObject =
     {
         gw_read_client_event,                       /* Read - EPOLLIN handler        */
         gw_MySQLWrite_client,                       /* Write - data from gateway     */

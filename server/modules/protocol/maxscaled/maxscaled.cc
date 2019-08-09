@@ -173,7 +173,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_INFO("Initialise MaxScaled Protocol module.");
 
-    static MXS_PROTOCOL MyObject =
+    static MXS_PROTOCOL_API MyObject =
     {
         maxscaled_read_event,                /**< Read - EPOLLIN handler        */
         maxscaled_write,                     /**< Write - data from gateway     */

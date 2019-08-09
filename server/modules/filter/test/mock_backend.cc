@@ -174,9 +174,9 @@ class ResultSetDCB : public ClientDCB
 {
 public:
     ResultSetDCB(MXS_SESSION* session)
-        : ClientDCB(DCBFD_CLOSED, session, nullptr, MXS_PROTOCOL {}, nullptr)
+        : ClientDCB(DCBFD_CLOSED, session, nullptr, MXS_PROTOCOL_API {}, nullptr)
     {
-        m_func.write = &ResultSetDCB::write;
+        m_protocol_api.write = &ResultSetDCB::write;
     }
 
     GWBUF* create_response() const

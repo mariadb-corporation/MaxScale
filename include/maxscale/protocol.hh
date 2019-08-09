@@ -35,7 +35,7 @@ struct MXS_PROTOCOL_SESSION
 /**
  * Protocol module API
  */
-struct MXS_PROTOCOL
+struct MXS_PROTOCOL_API
 {
     /**
      * EPOLLIN handler, used to read available data from network socket

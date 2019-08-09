@@ -127,7 +127,7 @@ Listener::Listener(SERVICE* service,
     , m_auth_instance(auth_instance)
     , m_users(nullptr)
     , m_service(service)
-    , m_proto_func(*(MXS_PROTOCOL*)load_module(protocol.c_str(), MODULE_PROTOCOL))
+    , m_proto_func(*(MXS_PROTOCOL_API*)load_module(protocol.c_str(), MODULE_PROTOCOL))
     , m_auth_func(*(MXS_AUTHENTICATOR*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR))
     , m_params(params)
     , m_ssl_provider(std::move(ssl))
@@ -585,7 +585,7 @@ const char* Listener::protocol() const
     return m_protocol.c_str();
 }
 
-const MXS_PROTOCOL& Listener::protocol_func() const
+const MXS_PROTOCOL_API& Listener::protocol_func() const
 {
     return m_proto_func;
 }

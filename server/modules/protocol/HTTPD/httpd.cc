@@ -70,7 +70,7 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_PROTOCOL MyObject =
+    static MXS_PROTOCOL_API MyObject =
     {
         httpd_read_event,                /**< Read - EPOLLIN handler        */
         httpd_write,                     /**< Write - data from gateway     */

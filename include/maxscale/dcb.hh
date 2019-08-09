@@ -228,12 +228,12 @@ public:
 
     int32_t protocol_write(GWBUF* pData)
     {
-        return m_func.write(this, pData);
+        return m_protocol_api.write(this, pData);
     }
 
     json_t* protocol_diagnostics_json()
     {
-        return m_func.diagnostics_json ? m_func.diagnostics_json(this) : nullptr;
+        return m_protocol_api.diagnostics_json ? m_protocol_api.diagnostics_json(this) : nullptr;
     }
 
     // Starts the shutdown process, called when a client DCB is closed
@@ -315,7 +315,7 @@ protected:
         Role role,
         MXS_SESSION* session,
         MXS_PROTOCOL_SESSION* protocol,
-        MXS_PROTOCOL func,
+        MXS_PROTOCOL_API protocol_api,
         SERVER* server,
         Manager* manager);
 
@@ -334,7 +334,7 @@ protected:
     dcb_state_t           m_state = DCB_STATE_ALLOC;     /**< Current state */
     MXS_SESSION*          m_session;                     /**< The owning session */
     MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
-    MXS_PROTOCOL          m_func;                        /**< Protocol functions for the DCB */
+    MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
     SSL*                  m_ssl = nullptr;               /**< SSL struct for connection */
     bool                  m_ssl_read_want_read = false;
     bool                  m_ssl_read_want_write = false;
@@ -371,7 +371,11 @@ private:
 class ClientDCB : public DCB
 {
 public:
-    ClientDCB(int fd, MXS_SESSION* session, MXS_PROTOCOL_SESSION* protocol, MXS_PROTOCOL func, Manager* manager);
+    ClientDCB(int fd,
+              MXS_SESSION* session,
+              MXS_PROTOCOL_SESSION* protocol,
+              MXS_PROTOCOL_API protocol_api,
+              Manager* manager);
 
     int ssl_handshake() override;
 
@@ -381,7 +385,7 @@ protected:
               DCB::Role role,
               MXS_SESSION* session,
               MXS_PROTOCOL_SESSION* protocol,
-              MXS_PROTOCOL func,
+              MXS_PROTOCOL_API protocol_api,
               Manager* manager);
 
 private:
@@ -406,7 +410,7 @@ private:
     BackendDCB(int fd,
                MXS_SESSION* session,
                MXS_PROTOCOL_SESSION* protocol,
-               MXS_PROTOCOL func,
+               MXS_PROTOCOL_API protocol_api,
                SERVER* server,
                Manager* manager);
 
@@ -424,7 +428,7 @@ private:
 class InternalDCB : public ClientDCB
 {
 public:
-    InternalDCB(MXS_SESSION* session, MXS_PROTOCOL func, Manager* manager);
+    InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, Manager* manager);
 
     int ssl_handshake() override;
 

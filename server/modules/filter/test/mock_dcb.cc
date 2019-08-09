@@ -23,7 +23,7 @@ Dcb::Dcb(MXS_SESSION* pSession,
          const char* zUser,
          const char* zHost,
          Handler* pHandler)
-    : ClientDCB(DCBFD_CLOSED, pSession, nullptr, MXS_PROTOCOL {}, nullptr)
+    : ClientDCB(DCBFD_CLOSED, pSession, nullptr, MXS_PROTOCOL_API {}, nullptr)
     , m_user(zUser)
     , m_host(zHost)
     , m_pHandler(pHandler)
@@ -33,7 +33,7 @@ Dcb::Dcb(MXS_SESSION* pSession,
     pDcb->m_remote = MXS_STRDUP(zHost);
     pDcb->m_user = MXS_STRDUP(zUser);
 
-    m_func.write = &Dcb::write;
+    m_protocol_api.write = &Dcb::write;
 }
 
 Dcb::~Dcb()

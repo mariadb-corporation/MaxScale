@@ -83,7 +83,7 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_PROTOCOL MyObject =
+    static MXS_PROTOCOL_API MyObject =
     {
         gw_read_backend_event,              /* Read - EPOLLIN handler        */
         gw_MySQLWrite_backend,              /* Write - data from gateway     */
