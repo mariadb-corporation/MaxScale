@@ -235,9 +235,10 @@ private:
 
     friend class Service;
 
-    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*, mxs::Endpoint*, const mxs::Reply*);
-    int32_t        send_upstream(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply*);
-    void           set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
+    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*,
+                                     mxs::Endpoint*, const mxs::Reply*);
+    int32_t send_upstream(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply*);
+    void    set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
 
     bool                m_open {false};
     mxs::Component*     m_up;       // The upstream where replies are routed to

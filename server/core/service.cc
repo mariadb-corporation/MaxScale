@@ -1881,6 +1881,7 @@ bool ServiceEndpoint::connect()
 
 void ServiceEndpoint::close()
 {
+    mxb_assert(m_open);
     m_service->router->closeSession(m_service->router_instance, m_router_session);
 
     for (auto& a : m_filters)
@@ -1894,6 +1895,8 @@ void ServiceEndpoint::close()
     {
         a.filter->obj->freeSession(a.instance, a.session);
     }
+
+    m_open = false;
 }
 
 bool ServiceEndpoint::is_open() const
@@ -1909,11 +1912,16 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
 
 int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply* reply)
 {
-    return m_tail.clientReply(m_tail.instance, m_tail.session, buffer, down, reply);
+    mxb_assert(m_open);
+    m_service->router->clientReply(m_service->router_instance, m_router_session, buffer, down, reply);
+
+    // TODO: Add a proper return value to router's clientReply
+    return 1;
 }
 
 bool ServiceEndpoint::handleError(GWBUF* error, mxs::Endpoint* down)
 {
+    mxb_assert(m_open);
     bool ok = m_service->router->handleError(m_service->router_instance, m_router_session, error, down);
 
     if (!ok)
