@@ -50,6 +50,7 @@ static int combined_auth_check(DCB* dcb,
                                );
 static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                        MySQLProtocol* protocol,
+                                       DCB* client_dcb,
                                        GWBUF* buffer);
 
 
@@ -423,7 +424,7 @@ bool MariaDBAuthenticatorSession::extract(DCB* dcb, GWBUF* buf)
         || (client_data->auth_switch_sent
             && (client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)))
     {
-        return mysql_auth_set_client_data(client_data, protocol, buf);
+        return mysql_auth_set_client_data(client_data, protocol, dcb, buf);
     }
     else
     {
@@ -475,12 +476,13 @@ static bool read_zstr(const uint8_t* client_auth_packet, size_t client_auth_pack
  *
  * @param client_data The data structure for the DCB
  * @param protocol The protocol structure for this connection
- * @param client_auth_packet The data from the buffer received from client
- * @param client_auth_packet size An integer giving the size of the data
+ * @param client_dcb The client DCB.
+ * @param buffer The authentication data.
  * @return True on success, false on error
  */
 static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                        MySQLProtocol* protocol,
+                                       DCB* client_dcb,
                                        GWBUF* buffer)
 {
     int client_auth_packet_size = gwbuf_length(buffer);
@@ -582,9 +584,10 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                 {
                                     // The switch attempt is done later but the message is clearest if
                                     // logged at once.
-                                    MXS_INFO("Client '%s'@[?] is using an unsupported authenticator "
+                                    MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
                                              "plugin '%s'. Trying to switch to '%s'.",
-                                             client_data->user, plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN);
+                                             client_data->user, client_dcb->m_remote, plugin_name,
+                                             DEFAULT_MYSQL_AUTH_PLUGIN);
                                 }
                             }
                         }
