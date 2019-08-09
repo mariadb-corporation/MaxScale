@@ -13,12 +13,10 @@
 #pragma once
 
 /**
- * @file routing.h - Common definitions and declarations for routers and filters.
+ * @file routing.hh - Common definitions and declarations for routers and filters.
  */
 
-#include <maxscale/cdefs.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/ccdefs.hh>
 
 /**
  * Routing capability type. Indicates what kind of input a router or
@@ -73,5 +71,3 @@ static inline bool rcap_type_required(uint64_t capabilities, uint64_t type)
 {
     return (capabilities & type) == type;
 }
-
-MXS_END_DECLS

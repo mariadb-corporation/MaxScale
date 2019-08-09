@@ -346,7 +346,7 @@ Application data is not always received in complete packets from the network
 stack. How partial packets are handled by the receiving protocol module depends
 on the attached filters and the router, communicated by their
 `getCapabilities`-functions. `getCapabilities` should return a bitfield
-resulting from ORring the individual capabilities. `routing.h` lists the allowed
+resulting from ORring the individual capabilities. `routing.hh` lists the allowed
 capability flags.
 
 If a router or filter sets no capabilities, `routeQuery` or `clientReply` may be

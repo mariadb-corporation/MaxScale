@@ -22,7 +22,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/routing.h>
+#include <maxscale/routing.hh>
 #include <maxscale/session.hh>
 
 /**
@@ -184,7 +184,7 @@ typedef struct mxs_filter_object
      *
      * @return Zero or more bitwise-or'd values from the mxs_routing_capability_t enum
      *
-     * @see routing.h
+     * @see routing.hh
      */
     uint64_t (* getCapabilities)(MXS_FILTER* instance);
 
