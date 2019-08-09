@@ -55,14 +55,14 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, DCB* pBackend, const mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply);
 
     /**
      *
      * @param pMessage  The error message.
      * @param pProblem  The DCB on which the error occurred.
      */
-    bool handleError(GWBUF* pMessage, DCB* pProblem);
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
 private:
 
     MXS_SESSION*               m_session;

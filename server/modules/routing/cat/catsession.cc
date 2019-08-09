@@ -66,16 +66,17 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb, const mxs::Reply* reply)
+void CatSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply)
 {
     auto& backend = *m_current;
-    mxb_assert(backend->dcb() == pDcb);
+    mxb_assert(backend->backend() == pBackend);
     bool send = false;
 
     backend->process_reply(pPacket);
 
     if (backend->reply_is_complete())
     {
+        mxb_assert(reply->is_complete());
         m_completed++;
         m_current++;
 
@@ -106,7 +107,7 @@ void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb, const mxs::Reply* reply)
         // Increment the packet sequence number and send it to the client
         mxb_assert(modutil_count_packets(pPacket) > 0);
         GWBUF_DATA(pPacket)[3] = m_packet_num++;
-        RouterSession::clientReply(pPacket, pDcb, reply);
+        RouterSession::clientReply(pPacket, pBackend, reply);
     }
     else
     {
@@ -114,7 +115,7 @@ void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb, const mxs::Reply* reply)
     }
 }
 
-bool CatSession::handleError(GWBUF* pMessage, DCB* pProblem)
+bool CatSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)
 {
     /**
      * The simples thing to do here is to close the connection. Anything else

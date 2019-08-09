@@ -32,12 +32,12 @@ Cat* Cat::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 
 CatSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
-    auto backends = RWBackend::from_servers(pSession->service->dbref);
+    auto backends = RWBackend::from_endpoints(endpoints);
     bool connected = false;
 
-    for (auto a = backends.begin(); a != backends.end(); a++)
+    for (const auto& a : backends)
     {
-        if ((*a)->can_connect() && (*a)->connect(pSession))
+        if (a->can_connect() && a->connect())
         {
             connected = true;
         }
