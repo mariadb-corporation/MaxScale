@@ -19,6 +19,8 @@
 
 using Iter = mxs::Buffer::iterator;
 
+static uint64_t mxs_logical_clock_generator = 0;
+
 namespace maxscale
 {
 
@@ -30,6 +32,7 @@ RWBackend::RWBackend(SERVER_REF* ref)
     , m_opening_cursor(false)
     , m_expected_rows(0)
     , m_local_infile_requested(false)
+    , m_lru_tick(mxs_logical_clock_generator)
 {
 }
 
@@ -127,6 +130,8 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
             }
         }
     }
+
+    m_lru_tick = mxs_logical_clock_generator++;
 
     return mxs::Backend::write(buffer, type);
 }

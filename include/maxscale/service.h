@@ -65,7 +65,6 @@ typedef struct server_ref_t
     double               server_weight; /**< Weight in the range [0..1]. 0 is worst, and a special case. */
     int                  connections;   /**< Number of connections created through this reference */
     bool                 active;        /**< Whether this reference is valid and in use*/
-    uint64_t              lru_clock;
 } SERVER_REF;
 
 /** Macro to check whether a SERVER_REF is active */
@@ -280,8 +279,5 @@ typedef enum service_version_which_t
  * @return The version of the service.
  */
 uint64_t service_get_version(const SERVICE* service, service_version_which_t which);
-
-// return lru clock
-uint64_t mxs_lru_clock();
 
 MXS_END_DECLS

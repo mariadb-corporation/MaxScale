@@ -156,6 +156,12 @@ public:
 
     // Controlled by the session
     ResponseStat& response_stat();
+
+    uint64_t get_lru_tick() const
+    {
+        return m_lru_tick;
+    }
+
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles;      /**< Internal ID to backend PS handle mapping */
@@ -167,6 +173,7 @@ private:
     ResponseStat     m_response_stat;
     uint64_t         m_num_coldefs = 0;
     bool             m_skip_next = false;
+    uint64_t         m_lru_tick = 0;
 
     inline bool is_opening_cursor() const
     {

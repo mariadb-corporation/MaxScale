@@ -78,7 +78,6 @@ static struct
 {
     std::mutex            lock;
     std::vector<Service*> services;
-    uint64_t lru_clock_generator = 0;
 } this_unit;
 
 static bool service_internal_restart(void* data);
@@ -949,7 +948,6 @@ static SERVER_REF* server_ref_create(SERVER* server)
         sref->server_weight = 1.0;
         sref->connections = 0;
         sref->active = true;
-        sref->lru_clock = 0;
     }
 
     return sref;
@@ -2426,9 +2424,4 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
     {
         retain_last_statements = std::stoi(value);
     }
-}
-
-uint64_t mxs_lru_clock()
-{
-    return this_unit.lru_clock_generator++;
 }
