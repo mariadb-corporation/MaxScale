@@ -415,7 +415,8 @@ static void session_deliver_response(MXS_SESSION* session)
         mxb_assert(buffer);
 
         // TODO: Figure out what to do with the DCB and Reply arguments
-        session->response.up.clientReply(filter_instance, filter_session, buffer, nullptr, nullptr);
+        mxs::ReplyRoute route;
+        session->response.up.clientReply(filter_instance, filter_session, buffer, route, nullptr);
 
         session->response.up.instance = NULL;
         session->response.up.session = NULL;
@@ -450,7 +451,8 @@ bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
 
 bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
 {
-    return up->clientReply(up->instance, up->session, buffer, nullptr, nullptr);
+    mxs::ReplyRoute route;
+    return up->clientReply(up->instance, up->session, buffer, route, nullptr);
 }
 
 /**
@@ -1510,14 +1512,15 @@ int32_t Session::routeQuery(GWBUF* buffer)
     return m_down->routeQuery(buffer);
 }
 
-int32_t Session::clientReply(GWBUF* buffer, Endpoint* down, const mxs::Reply* reply)
+int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     return client_dcb->protocol_write(buffer);
 }
 
 bool Session::handleError(GWBUF* error, Endpoint* down)
 {
-    clientReply(error, down, nullptr);
+    mxs::ReplyRoute route;
+    clientReply(error, route, nullptr);
     terminate();
     return false;
 }

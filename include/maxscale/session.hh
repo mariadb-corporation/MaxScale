@@ -88,7 +88,7 @@ typedef int32_t (* DOWNSTREAMFUNC)(struct mxs_filter* instance,
 typedef int32_t (* UPSTREAMFUNC)(struct mxs_filter* instance,
                                  struct mxs_filter_session* session,
                                  GWBUF* response,
-                                 mxs::Endpoint* down,
+                                 const mxs::ReplyRoute& down,
                                  const mxs::Reply* reply);
 
 struct Downstream
@@ -193,8 +193,8 @@ protected:
 
 public:
 
-    ClientDCB* client_dcb;   /*< The client connection */
-    SListener listener;     /*< The origin of the connection */
+    ClientDCB* client_dcb;  /*< The client connection */
+    SListener  listener;    /*< The origin of the connection */
 
     MXS_SESSION_STATS       stats;                  /*< Session statistics */
     SERVICE*                service;                /*< The service this session is using */

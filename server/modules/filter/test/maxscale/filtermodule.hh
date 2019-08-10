@@ -149,7 +149,8 @@ private:
                     GWBUF* pStatement,
                     const mxs::Reply* pReply)
     {
-        return m_pApi->clientReply(pInstance, pFilter_session, pStatement, nullptr, pReply);
+        mxs::ReplyRoute route;
+        return m_pApi->clientReply(pInstance, pFilter_session, pStatement, route, pReply);
     }
 
 private:

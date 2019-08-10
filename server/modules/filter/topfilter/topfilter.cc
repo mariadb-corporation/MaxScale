@@ -61,7 +61,7 @@ static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF
 static int  clientReply(MXS_FILTER* instance,
                         MXS_FILTER_SESSION* fsession,
                         GWBUF* buffer,
-                        mxs::Endpoint* down,
+                        const mxs::ReplyRoute& down,
                         const mxs::Reply* reply);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
@@ -503,7 +503,7 @@ static int cmp_topn(const void* va, const void* vb)
 static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* session,
                        GWBUF* buffer,
-                       mxs::Endpoint* down,
+                       const mxs::ReplyRoute& down,
                        const mxs::Reply* reply)
 {
     TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;

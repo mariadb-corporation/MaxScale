@@ -130,17 +130,17 @@ int32_t HintRouterSession::routeQuery(GWBUF* pPacket)
 }
 
 
-void HintRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply)
+void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     HR_ENTRY();
 
-    mxs::Target* pTarget = pBackend->target();
+    mxs::Target* pTarget = down.back()->target();
 
     if (m_surplus_replies == 0)
     {
         HR_DEBUG("Returning packet from %s.", pTarget->name());
 
-        RouterSession::clientReply(pPacket, pBackend, reply);
+        RouterSession::clientReply(pPacket, down, reply);
     }
     else
     {

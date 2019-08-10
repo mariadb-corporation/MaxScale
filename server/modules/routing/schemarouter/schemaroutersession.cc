@@ -526,9 +526,9 @@ void SchemaRouterSession::process_sescmd_response(SRBackend* bref, GWBUF** ppPac
     }
 }
 
-void SchemaRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply)
+void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
-    SRBackend* bref = static_cast<SRBackend*>(pBackend->get_userdata());
+    SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
 
     if (m_closed)       // The bref should always be valid
     {
@@ -585,7 +585,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, c
 
     if (pPacket)
     {
-        RouterSession::clientReply(pPacket, pBackend, reply);
+        RouterSession::clientReply(pPacket, down, reply);
     }
 }
 
@@ -597,7 +597,8 @@ bool SchemaRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)
     if (bref->is_waiting_result())
     {
         /** If the client is waiting for a reply, send an error. */
-        RouterSession::clientReply(gwbuf_clone(pMessage), nullptr, nullptr);
+        mxs::ReplyRoute route;
+        RouterSession::clientReply(gwbuf_clone(pMessage), route, nullptr);
     }
 
     bref->close();
@@ -975,7 +976,8 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
                             1, 0, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
                             "Error: duplicate tables found on two different shards.");
 
-                        RouterSession::clientReply(err, nullptr, nullptr);
+                        mxs::ReplyRoute route;
+                        RouterSession::clientReply(err, route, nullptr);
                     }
                 }
 

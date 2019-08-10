@@ -38,9 +38,9 @@ int32_t RouterSession::routeQuery(GWBUF* pPacket)
     return 0;
 }
 
-void RouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply)
+void RouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
-    m_pUp->clientReply(m_pUp->instance, m_pUp->session, pPacket, pBackend, reply);
+    m_pUp->clientReply(m_pUp->instance, m_pUp->session, pPacket, down, reply);
 }
 
 bool RouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)

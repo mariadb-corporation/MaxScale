@@ -83,7 +83,7 @@ public:
      *
      * @param pData Response data.
      */
-    int clientReply(GWBUF* pPacket, mxs::Endpoint* down, const mxs::Reply* reply);
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
 
     /**
      * Print diagnostics of the session cache.

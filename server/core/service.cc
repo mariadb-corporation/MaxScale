@@ -1072,9 +1072,9 @@ static bool service_refresh_users_cb(void* svc)
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
 
     worker->execute([service]() {
-                                service_refresh_users(service);
-                             }, mxb::Worker::EXECUTE_AUTO);
-                             
+                        service_refresh_users(service);
+                    }, mxb::Worker::EXECUTE_AUTO);
+
     return true;
 }
 
@@ -1774,16 +1774,18 @@ ServiceEndpoint::~ServiceEndpoint()
 int32_t ServiceEndpoint::upstream_function(MXS_FILTER* instance,
                                            MXS_FILTER_SESSION* session,
                                            GWBUF* buffer,
-                                           mxs::Endpoint* down,
+                                           const mxs::ReplyRoute& down,
                                            const mxs::Reply* reply)
 {
     ServiceEndpoint* self = reinterpret_cast<ServiceEndpoint*>(session);
     return self->send_upstream(buffer, down, reply);
 }
 
-int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply* reply)
+int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
-    return m_up->clientReply(buffer, this, reply);
+    mxs::ReplyRoute& d = const_cast<mxs::ReplyRoute&>(down);
+    d.push_back(this);
+    return m_up->clientReply(buffer, d, reply);
 }
 
 void ServiceEndpoint::set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down)
@@ -1910,7 +1912,7 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
     return m_head.routeQuery(m_head.instance, m_head.session, buffer);
 }
 
-int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::Endpoint* down, const mxs::Reply* reply)
+int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     mxb_assert(m_open);
     m_service->router->clientReply(m_service->router_instance, m_router_session, buffer, down, reply);

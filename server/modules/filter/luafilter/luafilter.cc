@@ -70,7 +70,7 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GW
 static int32_t clientReply(MXS_FILTER* instance,
                            MXS_FILTER_SESSION* fsession,
                            GWBUF* queue,
-                           mxs::Endpoint* down,
+                           const mxs::ReplyRoute& down,
                            const mxs::Reply* reply);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
@@ -465,7 +465,7 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 static int32_t clientReply(MXS_FILTER* instance,
                            MXS_FILTER_SESSION* session,
                            GWBUF* queue,
-                           mxs::Endpoint* down,
+                           const mxs::ReplyRoute& down,
                            const mxs::Reply* reply)
 {
     LUA_SESSION* my_session = (LUA_SESSION*) session;

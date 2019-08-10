@@ -72,7 +72,8 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
                                                 "Routing query to backend failed. "
                                                 "See the error log for further details.");
 
-        RouterSession::clientReply(err, nullptr, nullptr);
+        mxs::ReplyRoute route;
+        RouterSession::clientReply(err, route, nullptr);
 
         result = true;
         MXS_FREE(query_str);
@@ -110,5 +111,6 @@ void RWSplitSession::send_readonly_error()
     const char* errmsg = "The MariaDB server is running with the --read-only"
                          " option so it cannot execute this statement";
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000", errmsg);
-    RouterSession::clientReply(err, nullptr, nullptr);
+    mxs::ReplyRoute route;
+    RouterSession::clientReply(err, route, nullptr);
 }

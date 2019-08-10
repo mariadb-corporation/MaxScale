@@ -69,7 +69,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* instance);
 static void    clientReply(MXS_ROUTER* instance,
                            MXS_ROUTER_SESSION* router_session,
                            GWBUF* queue,
-                           mxs::Endpoint*,
+                           const mxs::ReplyRoute&,
                            const mxs::Reply* reply);
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
@@ -2255,7 +2255,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 static void clientReply(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
                         GWBUF* queue,
-                        mxs::Endpoint*,
+                        const mxs::ReplyRoute&,
                         const mxs::Reply* reply)
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;

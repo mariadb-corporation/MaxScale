@@ -43,7 +43,7 @@ static uint64_t getCapabilities(MXS_FILTER* instance);
 static int32_t  clientReply(MXS_FILTER* instance,
                             MXS_FILTER_SESSION* session,
                             GWBUF* buffer,
-                            mxs::Endpoint* down,
+                            const mxs::ReplyRoute& down,
                             const mxs::Reply* reply);
 static bool   extract_insert_target(GWBUF* buffer, char* target, int len);
 static GWBUF* create_load_data_command(const char* target);
@@ -444,7 +444,7 @@ static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
 static int32_t clientReply(MXS_FILTER* instance,
                            MXS_FILTER_SESSION* session,
                            GWBUF* buffer,
-                           mxs::Endpoint* down,
+                           const mxs::ReplyRoute& down,
                            const mxs::Reply* reply)
 {
     DS_SESSION* my_session = (DS_SESSION*) session;

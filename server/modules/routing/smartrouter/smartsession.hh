@@ -42,7 +42,7 @@ public:
     SmartRouterSession& operator=(const SmartRouterSession&) = delete;
 
     int  routeQuery(GWBUF* pBuf);
-    void clientReply(GWBUF* pPacket, mxs::Endpoint* pDcb, const mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
     bool handleError(GWBUF* pPacket, mxs::Endpoint* pProblem);
 
 private:

@@ -392,7 +392,7 @@ int FilterSession::routeQuery(GWBUF* pPacket)
     return m_down.routeQuery(pPacket);
 }
 
-int FilterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* down, const mxs::Reply* reply)
+int FilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     return m_up.clientReply(pPacket, down, reply);
 }

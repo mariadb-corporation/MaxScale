@@ -150,13 +150,14 @@ typedef struct mxs_filter_object
      * @param instance    Filter instance
      * @param fsession    Filter session
      * @param queue       Response from the server
-     * @param down        The downstream component where the response came from
+     * @param down        The downstream components where the response came from
+     * @param reply       The reply information (@see target.hh)
      *
      * @return If successful, the function returns 1. If an error occurs and the session should be closed, the
      *         function returns 0.
      */
     int32_t (* clientReply)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue,
-                            mxs::Endpoint* down, const mxs::Reply* reply);
+                            const mxs::ReplyRoute& down, const mxs::Reply* reply);
 
     /**
      * @brief Called for diagnostic output
@@ -328,7 +329,7 @@ public:
          *
          * @return Whatever the following component returns.
          */
-        int clientReply(GWBUF* pPacket, mxs::Endpoint* down, const mxs::Reply* reply)
+        int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
         {
             return m_data->clientReply(m_data->instance, m_data->session, pPacket, down, reply);
         }
@@ -366,6 +367,8 @@ public:
      * forward the packet to the downstream component.
      *
      * @param pPacket A client packet.
+     *
+     * @return 1 for success, 0 for error
      */
     int routeQuery(GWBUF* pPacket);
 
@@ -374,8 +377,12 @@ public:
      * forward the packet to the upstream component.
      *
      * @param pPacket A client packet.
+     * @param down    The downstream components where the response came from
+     * @param reply   The reply information (@see target.hh)
+     *
+     * @return 1 for success, 0 for error
      */
-    int clientReply(GWBUF* pPacket, mxs::Endpoint* down, const mxs::Reply* reply);
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
 
     /**
      * Called for obtaining diagnostics about the filter session.
@@ -521,7 +528,7 @@ public:
     static int clientReply(MXS_FILTER* pInstance,
                            MXS_FILTER_SESSION* pData,
                            GWBUF* pPacket,
-                           mxs::Endpoint* down,
+                           const mxs::ReplyRoute& down,
                            const mxs::Reply* reply)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);

@@ -168,7 +168,7 @@ typedef struct mxs_router_object
     void (* clientReply)(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* queue,
-                         mxs::Endpoint* down,
+                         const mxs::ReplyRoute& down,
                          const mxs::Reply* reply);
 
     /**
@@ -321,10 +321,11 @@ public:
      * Called when a packet is routed to the client. The router should
      * forward the packet to the client using `RouterSession::clientReply`.
      *
-     * @param pPacket  A client packet.
-     * @param pBackend The backend the packet is coming from.
+     * @param pPacket A buffer containing the reply from the backend
+     * @param down    The route the reply took
+     * @param reply   The reply object
      */
-    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
 
     /**
      * Handle backend connection network errors
@@ -477,7 +478,7 @@ public:
     }
 
     static void clientReply(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket,
-                            mxs::Endpoint* pDown, const mxs::Reply* reply)
+                            const mxs::ReplyRoute& pDown, const mxs::Reply* reply)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 

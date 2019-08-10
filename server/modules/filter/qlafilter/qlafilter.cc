@@ -453,7 +453,7 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
     return down->routeQuery(down->instance, down->session, queue);
 }
 
-int QlaFilterSession::clientReply(GWBUF* queue, mxs::Endpoint* down, const mxs::Reply* reply)
+int QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     LogEventData& event = m_event_data;
     if (event.has_message)
@@ -854,7 +854,7 @@ int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 }
 
 int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue,
-                mxs::Endpoint* down, const mxs::Reply* reply)
+                const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     QlaFilterSession* my_session = (QlaFilterSession*) session;
     return my_session->clientReply(queue, down, reply);

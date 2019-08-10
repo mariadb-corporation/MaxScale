@@ -110,10 +110,11 @@ public:
      * Called when a packet is routed to the client. The router should
      * forward the packet to the client using `RouterSession::clientReply`.
      *
-     * @param pPacket  A client packet.
-     * @param pBackend The backend the packet is coming from.
+     * @param pPacket A client packet.
+     * @param down    The route the reply took
+     * @param reply   The reply information
      */
-    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
 
     bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
 

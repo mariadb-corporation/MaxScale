@@ -122,6 +122,9 @@ class Target;
 class Reply;
 class Endpoint;
 
+// The route along which the reply arrived
+using ReplyRoute = std::vector<Endpoint*>;
+
 // A routing component
 class Component
 {
@@ -130,7 +133,7 @@ public:
 
     virtual int32_t routeQuery(GWBUF* buffer) = 0;
 
-    virtual int32_t clientReply(GWBUF* buffer, Endpoint* down, const mxs::Reply* reply) = 0;
+    virtual int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply* reply) = 0;
 
     virtual bool handleError(GWBUF* error, Endpoint* down) = 0;
 };

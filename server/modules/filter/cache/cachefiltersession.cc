@@ -352,7 +352,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     return rv;
 }
 
-int CacheFilterSession::clientReply(GWBUF* pData, mxs::Endpoint* down, const mxs::Reply* reply)
+int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     int rv;
 
@@ -734,7 +734,8 @@ int CacheFilterSession::send_upstream()
     mxb_assert(m_res.pData != NULL);
 
     // TODO: Fix this
-    int rv = m_up.clientReply(m_res.pData, nullptr, nullptr);
+    mxs::ReplyRoute route;
+    int rv = m_up.clientReply(m_res.pData, route, nullptr);
     m_res.pData = NULL;
 
     return rv;

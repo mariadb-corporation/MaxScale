@@ -615,9 +615,9 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
     return ok;
 }
 
-void RWSplitSession::clientReply(GWBUF* writebuf, mxs::Endpoint* endpoint, const mxs::Reply* reply)
+void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
-    RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
+    RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
     if (backend->get_reply_state() == REPLY_STATE_DONE
         && !connection_was_killed(writebuf)
@@ -627,7 +627,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, mxs::Endpoint* endpoint, const
          * logic cannot handle this situation. Routing the reply straight to
          * the client should be the safest thing to do at this point. */
         log_unexpected_response(m_session, backend, writebuf, m_current_query.get());
-        RouterSession::clientReply(writebuf, endpoint, reply);
+        RouterSession::clientReply(writebuf, down, reply);
         return;
     }
 
@@ -806,7 +806,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, mxs::Endpoint* endpoint, const
     {
         mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
-        RouterSession::clientReply(writebuf, endpoint, reply);
+        RouterSession::clientReply(writebuf, down, reply);
     }
 
     if (m_expected_responses == 0)
@@ -1155,7 +1155,8 @@ bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* ba
             else
             {
                 // Send an error so that the client knows to proceed.
-                RouterSession::clientReply(gwbuf_clone(errmsg), nullptr, nullptr);
+                mxs::ReplyRoute route;
+                RouterSession::clientReply(gwbuf_clone(errmsg), route, nullptr);
                 m_current_query.reset();
             }
         }
@@ -1244,5 +1245,6 @@ void RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
     std::stringstream ss;
     ss << "Unknown prepared statement handler (" << stmt_id << ") given to MaxScale";
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
-    RouterSession::clientReply(err, nullptr, nullptr);
+    mxs::ReplyRoute route;
+    RouterSession::clientReply(err, route, nullptr);
 }

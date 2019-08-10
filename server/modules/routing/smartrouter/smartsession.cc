@@ -244,10 +244,10 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     return ret;
 }
 
-void SmartRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply)
+void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(pPacket));
-    Cluster& cluster = *static_cast<Cluster*>(pBackend->get_userdata());
+    Cluster& cluster = *static_cast<Cluster*>(down.back()->get_userdata());
 
     auto tracker_state_before = cluster.tracker.state();
 
@@ -357,7 +357,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, co
     if (will_reply)
     {
         MXS_SDEBUG("Forward response to client");
-        RouterSession::clientReply(pPacket, pBackend, reply);
+        RouterSession::clientReply(pPacket, down, reply);
     }
 }
 

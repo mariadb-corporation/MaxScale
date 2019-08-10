@@ -46,7 +46,7 @@ public:
 
     int32_t routeQuery(GWBUF* pPacket);
 
-    void clientReply(GWBUF* pPacket, mxs::Endpoint* pEndpoint, const mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
 
     bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
 

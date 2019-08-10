@@ -314,7 +314,7 @@ by the core.
 
 ```java
 int routeQuery(INSTANCE *instance, SESSION session, GWBUF* queue) void
-clientReply(INSTANCE* instance, SESSION session, GWBUF* queue, DCB *backend_dcb, const mxs::Reply* reply)
+clientReply(INSTANCE* instance, SESSION session, GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 uint64_t getCapabilities(INSTANCE* instance)
 ```
 
@@ -363,7 +363,7 @@ have to wait for the entire data packet to arrive before sending it down the
 processing chain.
 
 ```java
-bool handleError(INSTANCE* instance, SESSION* session, GWBUF* errmsgbuf, DCB* problem_dcb);
+bool handleError(INSTANCE* instance, SESSION* session, GWBUF* errmsgbuf, mxs::Endpoint* problem);
 ```
 
 This router-only entrypoint is called if a network error occurs in one of the

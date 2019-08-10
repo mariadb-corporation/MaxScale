@@ -66,10 +66,10 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-void CatSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* reply)
+void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
 {
     auto& backend = *m_current;
-    mxb_assert(backend->backend() == pBackend);
+    mxb_assert(backend->backend() == down.back());
     bool send = false;
 
     backend->process_reply(pPacket);
@@ -107,7 +107,7 @@ void CatSession::clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs:
         // Increment the packet sequence number and send it to the client
         mxb_assert(modutil_count_packets(pPacket) > 0);
         GWBUF_DATA(pPacket)[3] = m_packet_num++;
-        RouterSession::clientReply(pPacket, pBackend, reply);
+        RouterSession::clientReply(pPacket, down, reply);
     }
     else
     {

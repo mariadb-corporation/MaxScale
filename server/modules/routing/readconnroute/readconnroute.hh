@@ -42,9 +42,9 @@ public:
      */
     int routeQuery(GWBUF* queue);
 
-    void clientReply(GWBUF* pPacket, mxs::Endpoint* pBackend, const mxs::Reply* pReply)
+    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* pReply)
     {
-        RouterSession::clientReply(pPacket, pBackend, pReply);
+        RouterSession::clientReply(pPacket, down, pReply);
     }
 
     bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)
