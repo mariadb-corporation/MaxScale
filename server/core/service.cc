@@ -1898,6 +1898,15 @@ void ServiceEndpoint::close()
         a.filter->obj->freeSession(a.instance, a.session);
     }
 
+    // Propagate the close to the downstream endpoints
+    for (auto& a : m_down)
+    {
+        if (a->is_open())
+        {
+            a->close();
+        }
+    }
+
     m_open = false;
 }
 
