@@ -1469,7 +1469,7 @@ static int gw_change_user(DCB* backend,
 
     if (auth_ret != 0)
     {
-        if (service_refresh_users(backend->session->client_dcb->service))
+        if (service_refresh_users(backend->session()->client_dcb->service()))
         {
             /*
              * Try authentication again with new repository data

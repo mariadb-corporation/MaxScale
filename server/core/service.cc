@@ -1174,12 +1174,12 @@ static bool service_refresh_users_cb(void* svc)
 {
     Service* service = static_cast<Service*>(svc);
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-    bool rval;
 
-    worker->execute([&rval, service]() {
-                                rval = service_refresh_users(service);
+    worker->execute([service]() {
+                                service_refresh_users(service);
                              }, mxb::Worker::EXECUTE_AUTO);
-    return rval;
+                             
+    return true;
 }
 
 void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param)
