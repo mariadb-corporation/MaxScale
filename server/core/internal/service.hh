@@ -122,7 +122,7 @@ public:
         return m_monitor != nullptr;
     }
 
-    constexpr uint64_t get_version(service_version_which_t which) const
+    uint64_t get_version(service_version_which_t which) const
     {
         return which == SERVICE_VERSION_MAX ? m_data->version_max : m_data->version_min;
     }

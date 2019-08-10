@@ -1952,7 +1952,7 @@ std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_S
         my_connection->set_endpoints(std::move(connections));
     }
 
-    return my_connection;
+    return std::unique_ptr<mxs::Endpoint>(my_connection.release());
 }
 
 namespace
