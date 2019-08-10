@@ -108,13 +108,19 @@ MXS_SESSION::~MXS_SESSION()
 
 void MXS_SESSION::terminate(GWBUF* error)
 {
-    if (error)
+    if (m_state == State::STARTED)
     {
-        // Write the error to the client before closing the DCB
-        client_dcb->protocol_write(error);
-    }
+        mxb_assert(client_dcb->m_nClose == 0);
+        m_state = State::STOPPING;
 
-    dcb_close(client_dcb);
+        if (error)
+        {
+            // Write the error to the client before closing the DCB
+            client_dcb->protocol_write(error);
+        }
+
+        dcb_close(client_dcb);
+    }
 }
 
 bool session_start(MXS_SESSION* ses)
@@ -1479,6 +1485,7 @@ bool Session::start()
 
 void Session::close()
 {
+    m_state = State::STOPPING;
     m_down->close();
 }
 
