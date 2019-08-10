@@ -1730,7 +1730,7 @@ char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
     return i;
 }
 
-bool modutil_ignorable_ping(DCB* dcb)
+GWBUF* modutil_create_ignorable_ping()
 {
     static uint8_t com_ping_packet[] =
     {
@@ -1738,19 +1738,8 @@ bool modutil_ignorable_ping(DCB* dcb)
     };
 
     GWBUF* buf = gwbuf_alloc_and_load(sizeof(com_ping_packet), com_ping_packet);
-    bool rval = false;
-
-    if (buf)
-    {
-        gwbuf_set_type(buf, GWBUF_TYPE_IGNORABLE);
-
-        if (dcb->protocol_write(buf))
-        {
-            rval = true;
-        }
-    }
-
-    return rval;
+    gwbuf_set_type(buf, GWBUF_TYPE_IGNORABLE);
+    return buf;
 }
 
 const char format_str[] = "COM_UNKNOWN(%02hhx)";

@@ -12,9 +12,10 @@
  */
 #pragma once
 
+#include <algorithm>
+#include <chrono>
 #include <map>
 #include <memory>
-#include <algorithm>
 
 #include <maxscale/backend.hh>
 #include <maxscale/modutil.hh>
@@ -257,6 +258,11 @@ public:
     // Controlled by the session
     ResponseStat& response_stat();
 
+    std::chrono::steady_clock::time_point last_write() const
+    {
+        return m_last_write;
+    }
+
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles;      /**< Internal ID to backend PS handle mapping */
@@ -271,6 +277,8 @@ private:
     bool             m_skip_next = false;
     Error            m_error;
     uint64_t         m_size = 0;/**< Size of the response */
+
+    std::chrono::steady_clock::time_point m_last_write;
 
     /**
      * @param it   Iterator pointing to the command byte of an error packet.

@@ -29,11 +29,10 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_target_node(nullptr)
     , m_prev_target(nullptr)
     , m_config(instance->config())
-    , m_last_keepalive_check(mxs_clock())
-    , m_nbackends(instance->service()->get_children().size())
     , m_session(session)
     , m_sescmd_count(1)
     , m_expected_responses(0)
+    , m_last_keepalive_check(std::chrono::steady_clock::now())
     , m_router(instance)
     , m_sent_sescmd(0)
     , m_recv_sescmd(0)
@@ -50,7 +49,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     {
         int n_conn = 0;
         double pct = (double)m_config.rw_max_slave_conn_percent / 100.0;
-        n_conn = MXS_MAX(floor((double)m_nbackends * pct), 1);
+        n_conn = MXS_MAX(floor((double)m_backends.size() * pct), 1);
         m_config.max_slave_connections = n_conn;
     }
 

@@ -15,6 +15,7 @@
 #include "readwritesplit.hh"
 #include "trx.hh"
 
+#include <chrono>
 #include <string>
 #include <deque>
 
@@ -309,12 +310,12 @@ private:
     mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
     mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
     Config           m_config;                  /**< Configuration for this session */
-    int              m_last_keepalive_check;    /**< When the last ping was done */
-    int              m_nbackends;               /**< Number of backend servers (obsolete) */
     MXS_SESSION*     m_session;                 /**< The client session */
     uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
-    int              m_expected_responses;      /**< Number of expected responses to the current
-                                                 * query */
+    int              m_expected_responses;      /**< Number of expected responses to the current query */
+
+    std::chrono::steady_clock::time_point m_last_keepalive_check;   /**< When the last ping was done */
+
     std::deque<mxs::Buffer> m_query_queue;      /**< Queued commands waiting to be executed */
     RWSplit*                m_router;           /**< The router instance */
     mxs::SessionCommandList m_sescmd_list;      /**< List of executed session commands */

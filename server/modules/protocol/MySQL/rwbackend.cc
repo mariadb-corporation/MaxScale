@@ -18,6 +18,8 @@
 #include <maxscale/router.hh>
 
 using Iter = mxs::Buffer::iterator;
+using Clock = std::chrono::steady_clock;
+using std::chrono::seconds;
 
 namespace maxscale
 {
@@ -30,6 +32,7 @@ RWBackend::RWBackend(mxs::Endpoint* ref)
     , m_opening_cursor(false)
     , m_expected_rows(0)
     , m_local_infile_requested(false)
+    , m_last_write(Clock::now())
 {
 }
 
@@ -39,6 +42,7 @@ RWBackend::~RWBackend()
 
 bool RWBackend::execute_session_command()
 {
+    m_last_write = Clock::now();
     m_command = next_session_command()->get_command();
     bool expect_response = mxs_mysql_command_will_respond(m_command);
     bool rval = mxs::Backend::execute_session_command();
@@ -54,6 +58,7 @@ bool RWBackend::execute_session_command()
 
 bool RWBackend::continue_session_command(GWBUF* buffer)
 {
+    m_last_write = Clock::now();
     return Backend::write(buffer, NO_RESPONSE);
 }
 
@@ -77,6 +82,7 @@ uint32_t RWBackend::get_ps_handle(uint32_t id) const
 
 bool RWBackend::write(GWBUF* buffer, response_type type)
 {
+    m_last_write = Clock::now();
     uint32_t len = mxs_mysql_get_packet_len(buffer);
     bool was_large_query = m_large_query;
     m_large_query = len == MYSQL_PACKET_LENGTH_MAX;

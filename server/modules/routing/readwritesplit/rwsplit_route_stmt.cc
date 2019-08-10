@@ -30,6 +30,8 @@
 
 using namespace maxscale;
 
+using std::chrono::seconds;
+
 /**
  * The functions that support the routing of queries to back end
  * servers. All the functions in this module are internal to the read
@@ -38,37 +40,33 @@ using namespace maxscale;
 
 void RWSplitSession::handle_connection_keepalive(RWBackend* target)
 {
-    //
-    // TODO: Fix this
-    //
+    mxb_assert(target);
+    MXB_AT_DEBUG(size_t nserv = 0);
 
-    // mxb_assert(target);
-    // MXB_AT_DEBUG(int nserv = 0);
-    // /** Each heartbeat is 1/10th of a second */
-    // int64_t keepalive = m_config.connection_keepalive * 10;
-    // int64_t now = mxs_clock();
+    auto now = std::chrono::steady_clock::now();
+    seconds limit {m_config.connection_keepalive};
 
-    // if (now - m_last_keepalive_check > keepalive)
-    // {
-    //     for (const auto& backend : m_raw_backends)
-    //     {
-    //         if (backend->in_use() && backend != target && !backend->is_waiting_result())
-    //         {
-    //             MXB_AT_DEBUG(nserv++);
-    //             int64_t diff = now - backend->dcb()->m_last_read;
+    if (now - m_last_keepalive_check > limit)
+    {
+        m_last_keepalive_check = now;
 
-    //             if (diff > keepalive)
-    //             {
-    //                 MXS_INFO("Pinging %s, idle for %ld seconds",
-    //                          backend->name(),
-    //                          MXS_CLOCK_TO_SEC(diff));
-    //                 modutil_ignorable_ping(backend->dcb());
-    //             }
-    //         }
-    //     }
-    // }
+        for (const auto& backend : m_raw_backends)
+        {
+            if (backend->in_use() && backend != target && !backend->is_waiting_result())
+            {
+                MXB_AT_DEBUG(nserv++);
 
-    // mxb_assert(nserv < m_nbackends);
+                if (now - backend->last_write() > limit)
+                {
+                    MXS_INFO("Pinging %s, idle for over %d seconds", backend->name(),
+                             m_config.connection_keepalive);
+                    backend->write(modutil_create_ignorable_ping(), Backend::NO_RESPONSE);
+                }
+            }
+        }
+    }
+
+    mxb_assert(nserv < m_raw_backends.size());
 }
 
 bool RWSplitSession::prepare_connection(RWBackend* target)
