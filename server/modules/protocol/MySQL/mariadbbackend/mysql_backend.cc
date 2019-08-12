@@ -190,7 +190,7 @@ static bool gw_init_connection(DCB* backend_dcb)
 
 static void gw_finish_connection(DCB* dcb)
 {
-    mxb_assert(dcb->session() || dcb->m_persistentstart);
+    mxb_assert(dcb->ready());
     /** Send COM_QUIT to the backend being closed */
     GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
     mysql_send_com_quit(dcb, 0, quitbuf);
@@ -366,7 +366,9 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
  */
 static int gw_read_backend_event(DCB* dcb)
 {
-    if (dcb->m_persistentstart)
+    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+    if (backend_dcb->is_in_persistent_pool())
     {
         /** If a DCB gets a read event when it's in the persistent pool, it is
          * treated as if it were an error. */
@@ -1017,18 +1019,18 @@ static int gw_write_backend_event(DCB* dcb)
     return rc;
 }
 
-static int handle_persistent_connection(DCB* dcb, GWBUF* queue)
+static int handle_persistent_connection(BackendDCB* dcb, GWBUF* queue)
 {
     MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol_session());
     int rc = 0;
 
-    if (dcb->m_was_persistent)
+    if (dcb->was_persistent())
     {
         mxb_assert(!dcb->m_fakeq && !dcb->m_readq && !dcb->m_delayq && !dcb->m_writeq);
-        mxb_assert(dcb->m_persistentstart == 0);
+        mxb_assert(!dcb->is_in_persistent_pool());
         mxb_assert(protocol->ignore_replies >= 0);
 
-        dcb->m_was_persistent = false;
+        dcb->clear_was_persistent();
         protocol->ignore_replies = 0;
 
         if (dcb->state() != DCB_STATE_POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
@@ -1116,10 +1118,11 @@ static int handle_persistent_connection(DCB* dcb, GWBUF* queue)
 static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
 {
     MySQLProtocol* backend_protocol = static_cast<MySQLProtocol*>(dcb->protocol_session());
+    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
 
-    if (dcb->m_was_persistent || backend_protocol->ignore_replies > 0)
+    if (backend_dcb->was_persistent() || backend_protocol->ignore_replies > 0)
     {
-        return handle_persistent_connection(dcb, queue);
+        return handle_persistent_connection(backend_dcb, queue);
     }
 
     int rc = 0;
@@ -1208,7 +1211,9 @@ static int gw_error_backend_event(DCB* dcb)
 
     if (!session)
     {
-        if (dcb->m_persistentstart == 0)
+        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+        if (!backend_dcb->is_in_persistent_pool())
         {
             /** Not a persistent connection, something is wrong. */
             MXS_ERROR("EPOLLERR event on a non-persistent DCB with no session. "
@@ -1259,7 +1264,9 @@ static int gw_backend_hangup(DCB* dcb)
     mxb_assert(dcb->m_nClose == 0);
     MXS_SESSION* session = dcb->session();
 
-    if (!dcb->m_persistentstart)
+    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+    if (!backend_dcb->is_in_persistent_pool())
     {
         if (session->state() != MXS_SESSION::State::STARTED)
         {
@@ -1314,9 +1321,10 @@ static void backend_set_delayqueue(DCB* dcb, GWBUF* queue)
  */
 static int backend_write_delayqueue(DCB* dcb, GWBUF* buffer)
 {
+    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
     mxb_assert(buffer);
-    mxb_assert(dcb->m_persistentstart == 0);
-    mxb_assert(!dcb->m_was_persistent);
+    mxb_assert(!backend_dcb->is_in_persistent_pool());
+    mxb_assert(!backend_dcb->was_persistent());
 
     if (MYSQL_IS_CHANGE_USER(((uint8_t*)GWBUF_DATA(buffer))))
     {

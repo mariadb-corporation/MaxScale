@@ -126,8 +126,8 @@ public:
      *
      * @return A DCB or NULL if no connection is found
      */
-    DCB* get_persistent_dcb(const std::string& user, const std::string& ip, const std::string& protocol,
-                            int id);
+    BackendDCB* get_persistent_dcb(const std::string& user, const std::string& ip, const std::string& protocol,
+                                   int id);
 
     /**
      * Print server details to a dcb.
@@ -247,7 +247,7 @@ public:
 
     json_t* json_attributes() const;
 
-    DCB** persistent = nullptr;     /**< List of unused persistent connections to the server */
+    BackendDCB** persistent = nullptr;     /**< List of unused persistent connections to the server */
 
 private:
     bool create_server_config(const char* filename) const;

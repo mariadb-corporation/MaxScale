@@ -271,8 +271,11 @@ void DCB::stop_polling_and_shutdown()
     }
 }
 
-static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session)
+//static
+BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* session)
 {
+    Server* server = static_cast<Server*>(s);
+
     DCB* dcb = nullptr;
 
     if (server->persistent_conns_enabled())
@@ -1124,7 +1127,7 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
         && server->persistpoolmax()
         && server->is_running()
         && !dcb->m_dcb_errhandle_called
-        && DCB::persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax())
+        && persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax())
     {
         if (!mxb::atomic::add_limited(&server->pool_stats.n_persistent, 1, (int)server->persistpoolmax()))
         {
@@ -1322,6 +1325,8 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
     dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->m_stats.n_high_water);
     dcb_printf(pdcb, "\t\tNo. of Low Water Events:  %d\n", dcb->m_stats.n_low_water);
 
+    /**
+       TODO: Introduce something like virtual void DCB::print().
     if (dcb->m_persistentstart)
     {
         char buff[20];
@@ -1330,6 +1335,7 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
         strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
         dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
     }
+    */
 }
 
 static bool dprint_all_dcbs_cb(DCB* dcb, void* data)
@@ -1497,6 +1503,9 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
                "\t\tNo. of Low Water Events:  %d\n",
                dcb->m_stats.n_low_water);
 
+    /**
+       TODO: Introduce something like virtual void DCB::print().
+
     if (dcb->m_persistentstart)
     {
         char buff[20];
@@ -1505,6 +1514,7 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
         strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
         dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
     }
+    */
 }
 
 /**
@@ -1856,15 +1866,15 @@ void BackendDCB::hangup(const SERVER* server)
  *                      server related to the given DCB
  * @return              A count of the DCBs remaining in the pool
  */
-int DCB::persistent_clean_count(DCB* dcb, int id, bool cleanall)
+int BackendDCB::persistent_clean_count(BackendDCB* dcb, int id, bool cleanall)
 {
     int count = 0;
     if (dcb && dcb->m_server)
     {
         Server* server = static_cast<Server*>(dcb->m_server);
-        DCB* previousdcb = NULL;
-        DCB* persistentdcb, * nextdcb;
-        DCB* disposals = NULL;
+        BackendDCB* previousdcb = NULL;
+        BackendDCB* persistentdcb, * nextdcb;
+        BackendDCB* disposals = NULL;
 
         persistentdcb = server->persistent[id];
         while (persistentdcb)
@@ -2290,7 +2300,10 @@ public:
             }
             else
             {
-                mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
+                /**
+                   TODO: Fix this. m_persistentstart is now in BackendDCB.
+                   mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
+                */
             }
         }
     }
@@ -2330,7 +2343,10 @@ void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
         }
         else
         {
-            mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
+            /**
+               TODO: Fix this. m_persistentstart is now in BackendDCB.
+               mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
+            */
         }
     }
 }
@@ -2695,16 +2711,14 @@ void poll_fake_hangup_event(DCB* dcb)
  */
 static bool dcb_session_check(DCB* dcb, const char* function)
 {
-    if (dcb->session() || dcb->m_persistentstart)
+    if (dcb->ready())
     {
         return true;
     }
     else
     {
-        MXS_ERROR("%lu [%s] The dcb %p that was about to be processed by %s does not "
-                  "have a non-null session pointer ",
-                  pthread_self(),
-                  __func__,
+        MXS_ERROR("The dcb %p that was about to be processed by %s is not "
+                  "ready for events.",
                   dcb,
                   function);
         return false;
@@ -3012,6 +3026,11 @@ bool ClientDCB::prepare_for_destruction()
     return true;
 }
 
+bool ClientDCB::ready() const
+{
+    return m_session != nullptr;
+}
+
 InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, DCB::Manager* manager)
     : ClientDCB(DCBFD_CLOSED, DCB::Role::INTERNAL, session, nullptr, protocol_api, manager)
 {
@@ -3074,6 +3093,13 @@ BackendDCB::BackendDCB(int fd,
         dcb_add_callback(this, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
         dcb_add_callback(this, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
     }
+}
+
+bool BackendDCB::ready() const
+{
+    // A BackendDCB with a session or residing in the persistent pool
+    // can receive events.
+    return m_session || m_persistentstart > 0;
 }
 
 bool BackendDCB::release_from(MXS_SESSION* session)

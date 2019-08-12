@@ -97,7 +97,7 @@ void ServerManager::server_free(Server* server)
 
         for (int i = 0; i < nthr; i++)
         {
-            DCB::persistent_clean_count(server->persistent[i], i, true);
+            BackendDCB::persistent_clean_count(server->persistent[i], i, true);
         }
         MXS_FREE(server->persistent);
     }

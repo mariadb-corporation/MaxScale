@@ -171,6 +171,13 @@ public:
         return m_state;
     }
 
+    /**
+     * Is the DCB ready for event handling.
+     *
+     * @return True if ready, false otherwise.
+     */
+    virtual bool ready() const = 0;
+
     MXS_SESSION* session() const
     {
         return m_session;
@@ -269,7 +276,6 @@ public:
         m_session = s;
     }
     static void add_event(DCB* dcb, GWBUF* buf, uint32_t ev);
-    static int persistent_clean_count(DCB*, int, bool);   /* Clean persistent and return count */
     // END
 
     bool                    m_dcb_errhandle_called = false;   /**< this can be called only once */
@@ -290,17 +296,11 @@ public:
     uint32_t                m_fake_event = 0;                     /**< Fake event to be delivered to handler */
 
     DCBSTATS m_stats = {};                      /**< DCB related statistics */
-    DCB*     m_nextpersistent = nullptr;          /**< Next DCB in the persistent pool for SERVER */
-    time_t   m_persistentstart = 0;               /**<    0: Not in the persistent pool.
-                                                 *      -1: Evicted from the persistent pool and being closed.
-                                                 *   non-0: Time when placed in the persistent pool.
-                                                 */
     void*          m_data = nullptr;            /**< Client protocol data, owned by client DCB */
     DCB_CALLBACK*  m_callbacks = nullptr;       /**< The list of callbacks for the DCB */
     int64_t        m_last_read = 0;             /**< Last time the DCB received data */
     int64_t        m_last_write = 0;            /**< Last time the DCB sent data */
     SERVER*        m_server = nullptr;          /**< The associated backend server */
-    bool           m_was_persistent = false;      /**< Whether this DCB was in the persistent pool */
     bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
                                                  * release
                                                  * throttle */
@@ -334,6 +334,7 @@ protected:
      */
     virtual bool prepare_for_destruction() = 0;
 
+    void stop_polling_and_shutdown();
 
     dcb_state_t           m_state = DCB_STATE_ALLOC;     /**< Current state */
     MXS_SESSION*          m_session;                     /**< The owning session */
@@ -352,8 +353,6 @@ private:
     GWBUF* basic_read_SSL(int* nsingleread);
 
     int write_SSL(GWBUF* writeq, bool* stop_writing);
-
-    void stop_polling_and_shutdown();
 
     void destroy();
     static void free(DCB* dcb);
@@ -380,6 +379,8 @@ public:
     int ssl_handshake() override;
 
     std::unique_ptr<mxs::AuthenticatorSession> m_auth_session; /**< Client authentication data */
+
+    bool ready() const;
 
 protected:
     // Only for InternalDCB.
@@ -417,6 +418,28 @@ public:
 
     std::unique_ptr<mxs::AuthenticatorBackendSession> m_auth_session; /**< Backend authentication data */
 
+    bool ready() const;
+
+    bool is_in_persistent_pool() const
+    {
+        return m_persistentstart > 0;
+    }
+
+    bool was_persistent() const
+    {
+        return m_was_persistent;
+    }
+
+    void clear_was_persistent()
+    {
+        m_was_persistent = false;
+    }
+
+    static int persistent_clean_count(BackendDCB* dcb, int id, bool cleanall);
+
+    // TODO: Temporarily public.
+    BackendDCB* m_nextpersistent = nullptr; /**< Next DCB in the persistent pool for SERVER */
+
 private:
     BackendDCB(int fd,
                MXS_SESSION* session,
@@ -431,12 +454,20 @@ private:
                               MXS_SESSION* session,
                               DCB::Manager* manager);
 
+    static BackendDCB* take_from_connection_pool(SERVER* server, MXS_SESSION* session);
+
     static bool maybe_add_persistent(BackendDCB* dcb);
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
+
+    time_t      m_persistentstart = 0;      /**<    0: Not in the persistent pool.
+                                             *      -1: Evicted from the persistent pool and being closed.
+                                             *   non-0: Time when placed in the persistent pool.
+                                             */
+    bool m_was_persistent = false;          /**< Whether this DCB was in the persistent pool */
 };
 
 class InternalDCB : public ClientDCB

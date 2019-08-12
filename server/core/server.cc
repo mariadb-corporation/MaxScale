@@ -124,7 +124,7 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
 
     auto protocol_name = params.get_string(CN_PROTOCOL);
     Server* server = new(std::nothrow) Server(name, protocol_name, std::move(ssl));
-    DCB** persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
+    BackendDCB** persistent = (BackendDCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
     if (!server || !persistent)
     {
@@ -182,16 +182,16 @@ Server* Server::create_test_server()
     return new Server(name);
 }
 
-DCB* Server::get_persistent_dcb(const string& user, const string& ip, const string& protocol, int id)
+BackendDCB* Server::get_persistent_dcb(const string& user, const string& ip, const string& protocol, int id)
 {
-    DCB* dcb, * previous = NULL;
     Server* server = this;
     if (server->persistent[id]
-        && DCB::persistent_clean_count(server->persistent[id], id, false)
+        && BackendDCB::persistent_clean_count(server->persistent[id], id, false)
         && server->persistent[id]   // Check after cleaning
         && server->is_running())
     {
-        dcb = server->persistent[id];
+        BackendDCB* dcb = server->persistent[id];
+        BackendDCB* previous = nullptr;
 
         while (dcb)
         {
@@ -257,7 +257,7 @@ public:
         mxb_assert(&rworker == RoutingWorker::get_current());
 
         int thread_id = rworker.id();
-        DCB::persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
+        BackendDCB::persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
     }
 
 private:
