@@ -38,25 +38,21 @@ enum gssapi_auth_state
 /** Report GSSAPI errors */
 void report_error(OM_uint32 major, OM_uint32 minor);
 
-class GSSAPIBackendAuthenticatorSession : public mxs::AuthenticatorBackendSession
+class GSSAPIAuthenticator : public mxs::Authenticator
 {
 public:
-    static GSSAPIBackendAuthenticatorSession* newSession();
+    static GSSAPIAuthenticator* create(char** options);
+    ~GSSAPIAuthenticator() override = default;
+    std::unique_ptr<mxs::AuthenticatorSession> createSession() override;
+    int load_users(Listener* listener) override;
+    void diagnostics(DCB* output, Listener* listener) override;
+    json_t* diagnostics_json(const Listener* listener) override;
+    uint64_t capabilities() const override;
 
-    ~GSSAPIBackendAuthenticatorSession() override;
-    bool extract(DCB* backend, GWBUF* buffer) override;
-    bool ssl_capable(DCB* backend) override;
-    int authenticate(DCB* backend) override;
-
-    gssapi_auth_state state;               /**< Authentication state*/
-    uint8_t*               principal_name;      /**< Principal name */
-    size_t                 principal_name_len;  /**< Length of the principal name */
-    uint8_t                sequence;            /**< The next packet seqence number */
-    sqlite3*               handle;              /**< SQLite3 database handle */
+    char*    principal_name {nullptr}; /**< Service principal name given to the client */
 
 private:
-    bool extract_principal_name(DCB* dcb, GWBUF* buffer);
-    bool send_new_auth_token(DCB* dcb);
+    sqlite3* handle {nullptr};         /**< SQLite3 database handle */
 };
 
 class GSSAPIAuthenticatorSession : public mxs::AuthenticatorSession
@@ -69,14 +65,31 @@ public:
     void free_data(DCB* client) override;
 
     std::unique_ptr<mxs::AuthenticatorBackendSession> newBackendSession() override;
-
-    gssapi_auth_state state;               /**< Authentication state*/
-    uint8_t*               principal_name;      /**< Principal name */
-    size_t                 principal_name_len;  /**< Length of the principal name */
-    uint8_t                sequence;            /**< The next packet seqence number */
-    sqlite3*               handle;              /**< SQLite3 database handle */
+    sqlite3*          handle {nullptr};            /**< SQLite3 database handle */
+    uint8_t           sequence {0};                /**< The next packet seqence number */
 
 private:
     void copy_client_information(DCB* dcb, GWBUF* buffer);
     bool store_client_token(DCB* dcb, GWBUF* buffer);
+
+    gssapi_auth_state state {GSSAPI_AUTH_INIT};    /**< Authentication state*/
+    uint8_t*          principal_name {nullptr};    /**< Principal name */
+};
+
+class GSSAPIAuthenticatorBackendSession : public mxs::AuthenticatorBackendSession
+{
+public:
+    ~GSSAPIAuthenticatorBackendSession() override;
+    bool extract(DCB* backend, GWBUF* buffer) override;
+    bool ssl_capable(DCB* backend) override;
+    int authenticate(DCB* backend) override;
+
+private:
+    bool extract_principal_name(DCB* dcb, GWBUF* buffer);
+    bool send_new_auth_token(DCB* dcb);
+
+    gssapi_auth_state state {GSSAPI_AUTH_INIT};      /**< Authentication state*/
+    uint8_t*          principal_name {nullptr};      /**< Principal name */
+    uint8_t           sequence {0};                  /**< The next packet sequence number */
+    sqlite3*          handle {nullptr};              /**< SQLite3 database handle */
 };
