@@ -1166,6 +1166,42 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
     return false;
 }
 
+std::string BackendDCB::diagnostics() const
+{
+    std::stringstream ss(DCB::diagnostics());
+
+    mxb_assert(m_server);
+
+    if (m_server->address)
+    {
+        ss << "\tServer name/IP:     " << m_server->address << "\n";
+    }
+    if (m_server->port)
+    {
+        ss << "\tPort number:        " << m_server->port << "\n";
+    }
+
+    string statusname = m_server->status_string();
+    if (!statusname.empty())
+    {
+        ss << "\tServer status:            " << statusname << "\n";
+    }
+
+    return ss.str();
+}
+
+json_t* BackendDCB::to_json() const
+{
+    json_t* json = DCB::to_json();
+
+    if (json)
+    {
+        json_object_set_new(json, "server", json_string(m_server->name()));
+    }
+
+    return json;
+}
+
 /**
  * Diagnostic to print a DCB
  *
@@ -1174,48 +1210,7 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
  */
 void printDCB(DCB* dcb)
 {
-    printf("DCB: %p\n", (void*)dcb);
-    printf("\tDCB state:            %s\n", mxs::to_string(dcb->state()));
-    if (dcb->m_remote)
-    {
-        printf("\tConnected to:         %s\n", dcb->m_remote);
-    }
-    if (dcb->m_user)
-    {
-        printf("\tUsername:             %s\n", dcb->m_user);
-    }
-    if (dcb->session()->listener)
-    {
-        printf("\tProtocol:             %s\n", dcb->session()->listener->protocol());
-    }
-    if (dcb->m_writeq)
-    {
-        printf("\tQueued write data:    %u\n", gwbuf_length(dcb->m_writeq));
-    }
-    if (dcb->m_server)
-    {
-        string statusname = dcb->m_server->status_string();
-        if (!statusname.empty())
-        {
-            printf("\tServer status:            %s\n", statusname.c_str());
-        }
-    }
-
-    printf("\tRole:                     %s\n", mxs::to_string(dcb->role()));
-
-    printf("\tStatistics:\n");
-    printf("\t\tNo. of Reads:                       %d\n",
-           dcb->m_stats.n_reads);
-    printf("\t\tNo. of Writes:                      %d\n",
-           dcb->m_stats.n_writes);
-    printf("\t\tNo. of Buffered Writes:             %d\n",
-           dcb->m_stats.n_buffered);
-    printf("\t\tNo. of Accepts:                     %d\n",
-           dcb->m_stats.n_accepts);
-    printf("\t\tNo. of High Water Events:   %d\n",
-           dcb->m_stats.n_high_water);
-    printf("\t\tNo. of Low Water Events:    %d\n",
-           dcb->m_stats.n_low_water);
+    printf("%s", dcb->diagnostics().c_str());
 }
 /**
  * Display an entry from the spinlock statistics data
@@ -1244,6 +1239,78 @@ void printAllDCBs()
     dcb_foreach(printAllDCBs_cb, NULL);
 }
 
+std::string DCB::diagnostics() const
+{
+    std::stringstream ss;
+
+    ss << "DCB: " << (void*)this << "\n"
+       << "\tDCB state:          " << mxs::to_string(m_state) << "\n";
+
+    if (m_session && m_session->service)
+    {
+        ss << "\tService:            " << m_session->service->name() << "\n";
+    }
+    if (m_remote)
+    {
+        ss << "\tConnected to:       " << m_remote << "\n";
+    }
+    if (m_user)
+    {
+        ss << "\tUsername:           " << m_user << "\n";
+    }
+    if (m_session->listener)
+    {
+        ss << "\tProtocol:           " << m_session->listener->protocol() << "\n";
+    }
+    if (m_writeq)
+    {
+        ss << "\tQueued write data:  " << gwbuf_length(m_writeq) << "\n";
+    }
+
+    ss << "\tRole:                     " << mxs::to_string(m_role) << "\n";
+
+    ss << "\tStatistics:\n";
+    ss << "\t\tNo. of Reads:             " << m_stats.n_reads << "\n";
+    ss << "\t\tNo. of Writes:            " << m_stats.n_writes << "\n";
+    ss << "\t\tNo. of Buffered Writes:   " << m_stats.n_buffered << "\n";
+    ss << "\t\tNo. of Accepts:           " << m_stats.n_accepts << "\n";
+    ss << "\t\tNo. of High Water Events: " << m_stats.n_high_water << "\n";
+    ss << "\t\tNo. of Low Water Events:  " << m_stats.n_low_water << "\n";
+
+    /**
+       TODO: Introduce something like virtual void DCB::print().
+    if (m_persistentstart)
+    {
+        char buff[20];
+        struct tm timeinfo;
+        localtime_r(&m_persistentstart, &timeinfo);
+        strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
+        dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
+    }
+    */
+
+    return ss.str();
+}
+
+json_t* DCB::to_json() const
+{
+    json_t* obj = json_object();
+
+    char buf[25];
+    snprintf(buf, sizeof(buf), "%p", this);
+    json_object_set_new(obj, "id", json_string(buf));
+
+    json_t* json = protocol_diagnostics_json();
+
+    if (json)
+    {
+        json_object_set_new(obj, "protocol_diagnostics", json);
+    }
+
+    return obj;
+
+}
+
 /**
  * Diagnostic to print one DCB in the system
  *
@@ -1252,83 +1319,7 @@ void printAllDCBs()
  */
 void dprintOneDCB(DCB* pdcb, DCB* dcb)
 {
-    dcb_printf(pdcb, "DCB: %p\n", (void*)dcb);
-    dcb_printf(pdcb,
-               "\tDCB state:          %s\n",
-               mxs::to_string(dcb->state()));
-    if (dcb->session() && dcb->session()->service)
-    {
-        dcb_printf(pdcb,
-                   "\tService:            %s\n",
-                   dcb->session()->service->name());
-    }
-    if (dcb->m_remote)
-    {
-        dcb_printf(pdcb,
-                   "\tConnected to:       %s\n",
-                   dcb->m_remote);
-    }
-    if (dcb->m_server)
-    {
-        if (dcb->m_server->address)
-        {
-            dcb_printf(pdcb,
-                       "\tServer name/IP:     %s\n",
-                       dcb->m_server->address);
-        }
-        if (dcb->m_server->port)
-        {
-            dcb_printf(pdcb,
-                       "\tPort number:        %d\n",
-                       dcb->m_server->port);
-        }
-    }
-    if (dcb->m_user)
-    {
-        dcb_printf(pdcb,
-                   "\tUsername:           %s\n",
-                   dcb->m_user);
-    }
-    if (dcb->session()->listener)
-    {
-        dcb_printf(pdcb, "\tProtocol:           %s\n", dcb->session()->listener->protocol());
-    }
-    if (dcb->m_writeq)
-    {
-        dcb_printf(pdcb,
-                   "\tQueued write data:  %d\n",
-                   gwbuf_length(dcb->m_writeq));
-    }
-    if (dcb->m_server)
-    {
-        string statusname = dcb->m_server->status_string();
-        if (!statusname.empty())
-        {
-            dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());
-        }
-    }
-
-    dcb_printf(pdcb, "\tRole:                     %s\n", mxs::to_string(dcb->role()));
-
-    dcb_printf(pdcb, "\tStatistics:\n");
-    dcb_printf(pdcb, "\t\tNo. of Reads:             %d\n", dcb->m_stats.n_reads);
-    dcb_printf(pdcb, "\t\tNo. of Writes:            %d\n", dcb->m_stats.n_writes);
-    dcb_printf(pdcb, "\t\tNo. of Buffered Writes:   %d\n", dcb->m_stats.n_buffered);
-    dcb_printf(pdcb, "\t\tNo. of Accepts:           %d\n", dcb->m_stats.n_accepts);
-    dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->m_stats.n_high_water);
-    dcb_printf(pdcb, "\t\tNo. of Low Water Events:  %d\n", dcb->m_stats.n_low_water);
-
-    /**
-       TODO: Introduce something like virtual void DCB::print().
-    if (dcb->m_persistentstart)
-    {
-        char buff[20];
-        struct tm timeinfo;
-        localtime_r(&dcb->m_persistentstart, &timeinfo);
-        strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
-        dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
-    }
-    */
+    dcb_printf(pdcb, "%s", dcb->diagnostics().c_str());
 }
 
 static bool dprint_all_dcbs_cb(DCB* dcb, void* data)
@@ -2755,21 +2746,7 @@ static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* user
 
 json_t* dcb_to_json(DCB* dcb)
 {
-    json_t* obj = json_object();
-
-    char buf[25];
-    snprintf(buf, sizeof(buf), "%p", dcb);
-    json_object_set_new(obj, "id", json_string(buf));
-    json_object_set_new(obj, "server", json_string(dcb->m_server->name()));
-
-    json_t* json = dcb->protocol_diagnostics_json();
-
-    if (json)
-    {
-        json_object_set_new(obj, "protocol_diagnostics", json);
-    }
-
-    return obj;
+    return dcb->to_json();
 }
 
 namespace maxscale

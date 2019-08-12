@@ -152,6 +152,10 @@ public:
         return m_state;
     }
 
+    virtual std::string diagnostics() const;
+
+    virtual json_t* to_json() const;
+
     /**
      * Is the DCB ready for event handling.
      *
@@ -220,9 +224,10 @@ public:
         return m_protocol_api.write(this, pData);
     }
 
-    json_t* protocol_diagnostics_json()
+    json_t* protocol_diagnostics_json() const
     {
-        return m_protocol_api.diagnostics_json ? m_protocol_api.diagnostics_json(this) : nullptr;
+        DCB* pThis = const_cast<DCB*>(this);
+        return m_protocol_api.diagnostics_json ? m_protocol_api.diagnostics_json(pThis) : nullptr;
     }
 
     // Starts the shutdown process, called when a client DCB is closed
@@ -415,6 +420,10 @@ public:
      * @param server  BackendDCBs connected to this server should be closed.
      */
     static void hangup(const SERVER* server);
+
+    std::string diagnostics() const override;
+
+    json_t* to_json() const override;
 
     int ssl_handshake() override;
 
