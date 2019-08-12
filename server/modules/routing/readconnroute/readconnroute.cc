@@ -183,7 +183,7 @@ RCR* RCR::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
     return inst;
 }
 
-RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, SERVER_REF* backend, DCB* dcb,
+RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, SERVER_REF* backend, BackendDCB* dcb,
                        uint32_t bitmask, uint32_t bitvalue)
     : mxs::RouterSession(session)
     , m_instance(inst)
@@ -352,7 +352,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session)
     mxb_assert(worker == mxs::RoutingWorker::get_current());
 
     /** Open the backend connection */
-    DCB* backend_dcb = BackendDCB::connect(candidate->server, session, worker);
+    BackendDCB* backend_dcb = BackendDCB::connect(candidate->server, session, worker);
 
     if (!backend_dcb)
     {
@@ -453,7 +453,7 @@ int RCRSession::routeQuery(GWBUF* queue)
     // Due to the streaming nature of readconnroute, this is not accurate
     mxb::atomic::add(&m_backend->server->stats().packets, 1, mxb::atomic::RELAXED);
 
-    DCB* backend_dcb = m_dcb;
+    BackendDCB* backend_dcb = m_dcb;
     mxb_assert(backend_dcb);
     char* trc = nullptr;
 
@@ -479,7 +479,7 @@ int RCRSession::routeQuery(GWBUF* queue)
 
     MXS_INFO("Routed [%s] to '%s'%s%s",
              STRPACKETTYPE(mysql_command),
-             backend_dcb->m_server->name(),
+             backend_dcb->server()->name(),
              trc ? ": " : ".",
              trc ? trc : "");
     MXS_FREE(trc);

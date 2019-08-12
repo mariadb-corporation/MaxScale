@@ -922,9 +922,12 @@ bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)
     return rval;
 }
 
-bool MariaDBBackendSession::ssl_capable(DCB* backend)
+bool MariaDBBackendSession::ssl_capable(DCB* dcb)
 {
-    return backend->m_server->ssl().context() != nullptr;
+    // TODO: The argument should be a BackendDCB.
+    mxb_assert(dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* backend = static_cast<BackendDCB*>(dcb);
+    return backend->server()->ssl().context() != nullptr;
 }
 
 int MariaDBBackendSession::authenticate(DCB* backend)

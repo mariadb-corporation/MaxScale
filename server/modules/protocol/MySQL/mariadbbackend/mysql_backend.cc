@@ -63,7 +63,7 @@ static int gw_send_change_user_to_backend(char* dbname,
                                           uint8_t* passwd,
                                           DCB* backend,
                                           MySQLProtocol* backend_protocol);
-static void gw_send_proxy_protocol_header(DCB* backend_dcb);
+static void gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
 static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    char* ip,
                                    int iplen,
@@ -175,11 +175,13 @@ static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
     return protocol_session;
 }
 
-static bool gw_init_connection(DCB* backend_dcb)
+static bool gw_init_connection(DCB* dcb)
 {
+    mxb_assert(dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
     bool rv = true;
 
-    if (backend_dcb->m_server->proxy_protocol)
+    if (backend_dcb->server()->proxy_protocol)
     {
         // TODO: The following function needs a return value.
         gw_send_proxy_protocol_header(backend_dcb);
@@ -214,8 +216,10 @@ bool is_error_response(GWBUF* buffer)
  * @param dcb Backend DCB where authentication failed
  * @param buffer Buffer containing the response from the backend
  */
-static void handle_error_response(DCB* dcb, GWBUF* buffer)
+static void handle_error_response(DCB* plain_dcb, GWBUF* buffer)
 {
+    mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
     size_t len = MYSQL_GET_PAYLOAD_LEN(data);
     uint16_t errcode = MYSQL_GET_ERRCODE(data);
@@ -225,7 +229,7 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
 
     MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
               "Msg : %s",
-              dcb->m_server->name(),
+              dcb->server()->name(),
               errcode,
               bufstr);
 
@@ -234,7 +238,7 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
     if (errcode == ER_HOST_IS_BLOCKED)
     {
         auto main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        auto target_server = dcb->m_server;
+        auto target_server = dcb->server();
         main_worker->execute([target_server]() {
                                  MonitorManager::set_server_status(target_server, SERVER_MAINT);
                              }, mxb::Worker::EXECUTE_AUTO);
@@ -243,9 +247,9 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
                   "this server out of maintenance mode. To avoid this problem in the future, set "
                   "'max_connect_errors' to a larger value in the backend server.",
-                  dcb->m_server->name(),
-                  dcb->m_server->address,
-                  dcb->m_server->port);
+                  dcb->server()->name(),
+                  dcb->server()->address,
+                  dcb->server()->port);
     }
     else if (errcode == ER_ACCESS_DENIED_ERROR
              || errcode == ER_DBACCESS_DENIED_ERROR
@@ -364,11 +368,12 @@ static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
  * @param dcb   The backend Descriptor Control Block
  * @return 1 on operation, 0 for no action
  */
-static int gw_read_backend_event(DCB* dcb)
+static int gw_read_backend_event(DCB* plain_dcb)
 {
-    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+    mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
 
-    if (backend_dcb->is_in_persistent_pool())
+    if (dcb->is_in_persistent_pool())
     {
         /** If a DCB gets a read event when it's in the persistent pool, it is
          * treated as if it were an error. */
@@ -1115,14 +1120,15 @@ static int handle_persistent_connection(BackendDCB* dcb, GWBUF* queue)
  * @param queue Queue of buffers to write
  * @return      0 on failure, 1 on success
  */
-static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
+static int gw_MySQLWrite_backend(DCB* plain_dcb, GWBUF* queue)
 {
+    mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     MySQLProtocol* backend_protocol = static_cast<MySQLProtocol*>(dcb->protocol_session());
-    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
 
-    if (backend_dcb->was_persistent() || backend_protocol->ignore_replies > 0)
+    if (dcb->was_persistent() || backend_protocol->ignore_replies > 0)
     {
-        return handle_persistent_connection(backend_dcb, queue);
+        return handle_persistent_connection(dcb, queue);
     }
 
     int rc = 0;
@@ -1135,10 +1141,10 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
         {
             MXS_ERROR("Unable to write to backend '%s' due to "
                       "%s failure. Server in state %s.",
-                      dcb->m_server->name(),
+                      dcb->server()->name(),
                       backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
                       "handshake" : "authentication",
-                      dcb->m_server->status_string().c_str());
+                      dcb->server()->status_string().c_str());
         }
 
         gwbuf_free(queue);
@@ -1161,7 +1167,7 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
             {
                 return gw_change_user(dcb, dcb->session(), queue);
             }
-            else if (cmd == MXS_COM_QUIT && dcb->m_server->persistent_conns_enabled())
+            else if (cmd == MXS_COM_QUIT && dcb->server()->persistent_conns_enabled())
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
                 gwbuf_free(queue);
@@ -1319,12 +1325,13 @@ static void backend_set_delayqueue(DCB* dcb, GWBUF* queue)
  * @param dcb The current backend DCB
  * @return The dcb_write status
  */
-static int backend_write_delayqueue(DCB* dcb, GWBUF* buffer)
+static int backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer)
 {
-    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+    mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     mxb_assert(buffer);
-    mxb_assert(!backend_dcb->is_in_persistent_pool());
-    mxb_assert(!backend_dcb->was_persistent());
+    mxb_assert(!dcb->is_in_persistent_pool());
+    mxb_assert(!dcb->was_persistent());
 
     if (MYSQL_IS_CHANGE_USER(((uint8_t*)GWBUF_DATA(buffer))))
     {
@@ -1337,7 +1344,7 @@ static int backend_write_delayqueue(DCB* dcb, GWBUF* buffer)
 
     int rc = 1;
 
-    if (MYSQL_IS_COM_QUIT(((uint8_t*)GWBUF_DATA(buffer))) && dcb->m_server->persistent_conns_enabled())
+    if (MYSQL_IS_COM_QUIT(((uint8_t*)GWBUF_DATA(buffer))) && dcb->server()->persistent_conns_enabled())
     {
         /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
         gwbuf_free(buffer);
@@ -1759,7 +1766,7 @@ static int gw_send_change_user_to_backend(char* dbname,
  *
  * @param backend_dcb The target dcb.
  */
-static void gw_send_proxy_protocol_header(DCB* backend_dcb)
+static void gw_send_proxy_protocol_header(BackendDCB* backend_dcb)
 {
     // TODO: Add support for chained proxies. Requires reading the client header.
 
@@ -1843,7 +1850,7 @@ static void gw_send_proxy_protocol_header(DCB* backend_dcb)
     {
         MXS_INFO("Sending proxy-protocol header '%s' to backend %s.",
                  proxy_header,
-                 backend_dcb->m_server->name());
+                 backend_dcb->server()->name());
         if (!dcb_write(backend_dcb, headerbuf))
         {
             gwbuf_free(headerbuf);

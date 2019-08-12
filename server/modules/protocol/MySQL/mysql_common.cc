@@ -903,19 +903,19 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client,
  * @param dcb  Backend DCB
  * @return Authentication state after sending handshake response
  */
-mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
+mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb)
 {
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
     if (dcb->session() == NULL
         || (dcb->session()->state() != MXS_SESSION::State::CREATED
             && dcb->session()->state() != MXS_SESSION::State::STARTED)
-        || (dcb->m_server->ssl().context() && dcb->m_ssl_state == SSL_HANDSHAKE_FAILED))
+        || (dcb->server()->ssl().context() && dcb->m_ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
     }
 
-    bool with_ssl = dcb->m_server->ssl().context();
+    bool with_ssl = dcb->server()->ssl().context();
     bool ssl_established = dcb->m_ssl_state == SSL_ESTABLISHED;
 
     MYSQL_session client;
@@ -1338,10 +1338,14 @@ static bool kill_func(DCB* dcb, void* data)
     {
         if (proto->thread_id)
         {
+            // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
+            // TODO: perhaps that could be in the function prototype?
+            BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
             // DCB is connected and we know the thread ID so we can kill it
             std::stringstream ss;
             ss << info->query_base << proto->thread_id;
-            info->targets[dcb->m_server] = ss.str();
+            info->targets[backend_dcb->server()] = ss.str();
         }
         else
         {
@@ -1361,7 +1365,11 @@ static bool kill_user_func(DCB* dcb, void* data)
     if (dcb->role() == DCB::Role::BACKEND
         && strcasecmp(dcb->session()->client_dcb->m_user, info->user.c_str()) == 0)
     {
-        info->targets[dcb->m_server] = info->query_base;
+        // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
+        // TODO: perhaps that could be in the function prototype?
+        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+        info->targets[backend_dcb->server()] = info->query_base;
     }
 
     return true;

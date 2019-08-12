@@ -21,9 +21,9 @@
 class Dcb
 {
 public:
-    typedef std::shared_ptr<DCB> SDCB;
+    typedef std::shared_ptr<BackendDCB> SDCB;
 
-    explicit Dcb(DCB* pDcb);
+    explicit Dcb(BackendDCB* pDcb);
 
     Dcb(const Dcb& rhs)
         : m_sInner(rhs.m_sInner)
@@ -36,12 +36,12 @@ public:
         return *this;
     }
 
-    struct SERVER* server() const
+    SERVER* server() const
     {
-        return (this->m_sInner.get()) ? m_sInner.get()->m_server : NULL;
+        return (this->m_sInner.get()) ? m_sInner.get()->server() : NULL;
     }
 
-    DCB* get() const
+    BackendDCB* get() const
     {
         return m_sInner.get();
     }
@@ -53,6 +53,6 @@ public:
     }
 
 private:
-    static void deleter(DCB* dcb);
+    static void deleter(BackendDCB* dcb);
     SDCB m_sInner;
 };

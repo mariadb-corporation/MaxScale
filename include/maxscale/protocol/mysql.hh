@@ -107,7 +107,8 @@
 
 #define GW_NOINTR_CALL(A) do {errno = 0; A;} while (errno == EINTR)
 #define COM_QUIT_PACKET_SIZE (4 + 1)
-struct DCB;
+class DCB;
+class BackendDCB;
 
 typedef enum
 {
@@ -786,7 +787,7 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client,
 bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer);
 
 /** Send the server handshake response packet to the backend server */
-mxs_auth_state_t gw_send_backend_auth(DCB* dcb);
+mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb);
 
 /** Sends a response for an AuthSwitchRequest to the default auth plugin */
 int send_mysql_native_password_response(DCB* dcb);

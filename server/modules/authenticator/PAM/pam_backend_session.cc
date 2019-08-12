@@ -180,7 +180,10 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
      * Authenticators receive complete packets from protocol.
      */
 
-    const char* srv_name = dcb->m_server->name();
+    mxb_assert(dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+    const char* srv_name = backend_dcb->server()->name();
     if (m_servername.empty())
     {
         m_servername = srv_name;
@@ -281,7 +284,9 @@ int PamBackendSession::authenticate(DCB* dcb)
 
     if (m_state == State::RECEIVED_PROMPT)
     {
-        MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.", dcb->m_server->name());
+        mxb_assert(dcb->role() == DCB::Role::BACKEND);
+        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+        MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.", backend_dcb->server()->name());
         if (send_client_password(dcb))
         {
             m_state = State::PW_SENT;
@@ -302,5 +307,7 @@ int PamBackendSession::authenticate(DCB* dcb)
 
 bool PamBackendSession::ssl_capable(DCB* dcb)
 {
-    return dcb->m_server->ssl().context();
+    mxb_assert(dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+    return backend_dcb->server()->ssl().context();
 }

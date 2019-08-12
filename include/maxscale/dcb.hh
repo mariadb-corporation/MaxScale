@@ -298,7 +298,6 @@ public:
     CALLBACK*      m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
     int64_t        m_last_read = 0;              /**< Last time the DCB received data */
     int64_t        m_last_write = 0;             /**< Last time the DCB sent data */
-    SERVER*        m_server = nullptr;           /**< The associated backend server */
     bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
                                                  * release
                                                  * throttle */
@@ -311,7 +310,6 @@ protected:
         MXS_SESSION* session,
         MXS_PROTOCOL_SESSION* protocol,
         MXS_PROTOCOL_API protocol_api,
-        SERVER* server,
         Manager* manager);
 
     int create_SSL(mxs::SSLContext* ssl);
@@ -425,6 +423,11 @@ public:
 
     json_t* to_json() const override;
 
+    SERVER* server() const
+    {
+        return m_server;
+    }
+
     int ssl_handshake() override;
 
     std::unique_ptr<mxs::AuthenticatorBackendSession> m_auth_session; /**< Backend authentication data */
@@ -452,16 +455,16 @@ public:
     BackendDCB* m_nextpersistent = nullptr; /**< Next DCB in the persistent pool for SERVER */
 
 private:
-    BackendDCB(int fd,
+    BackendDCB(SERVER* server,
+               int fd,
                MXS_SESSION* session,
                MXS_PROTOCOL_SESSION* protocol,
                MXS_PROTOCOL_API protocol_api,
-               SERVER* server,
-               Manager* manager,
-               std::unique_ptr<mxs::AuthenticatorBackendSession> auth_ses);
+               std::unique_ptr<mxs::AuthenticatorBackendSession> auth_ses,
+               Manager* manager);
 
-    static BackendDCB* create(int fd,
-                              SERVER* server,
+    static BackendDCB* create(SERVER* server,
+                              int fd,
                               MXS_SESSION* session,
                               DCB::Manager* manager);
 
@@ -474,11 +477,13 @@ private:
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 
-    time_t      m_persistentstart = 0;      /**<    0: Not in the persistent pool.
-                                             *      -1: Evicted from the persistent pool and being closed.
-                                             *   non-0: Time when placed in the persistent pool.
-                                             */
-    bool m_was_persistent = false;          /**< Whether this DCB was in the persistent pool */
+
+    SERVER* m_server;                  /**< The associated backend server */
+    time_t  m_persistentstart = 0;     /**<    0: Not in the persistent pool.
+                                        *      -1: Evicted from the persistent pool and being closed.
+                                        *   non-0: Time when placed in the persistent pool.
+                                        */
+    bool    m_was_persistent = false;  /**< Whether this DCB was in the persistent pool */
 };
 
 class InternalDCB : public ClientDCB

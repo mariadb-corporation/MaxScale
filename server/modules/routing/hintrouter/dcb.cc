@@ -15,7 +15,7 @@
 #include <maxbase/atomic.hh>
 #include <maxscale/service.hh>
 
-Dcb::Dcb(DCB* pDcb)
+Dcb::Dcb(BackendDCB* pDcb)
     : m_sInner()
 {
     // A null value for m_pDcb is allowed as a special non-existing dcb
@@ -33,7 +33,7 @@ Dcb::Dcb(DCB* pDcb)
     }
 }
 
-void Dcb::deleter(DCB* dcb)
+void Dcb::deleter(BackendDCB* dcb)
 {
     if (dcb)
     {
@@ -42,7 +42,7 @@ void Dcb::deleter(DCB* dcb)
         // TODO: connections number, dcb_close should handle that.
         SERVER_REF* pSref = dcb->service()->dbref;
 
-        while (pSref && (pSref->server != dcb->m_server))
+        while (pSref && (pSref->server != dcb->server()))
         {
             pSref = pSref->next;
         }

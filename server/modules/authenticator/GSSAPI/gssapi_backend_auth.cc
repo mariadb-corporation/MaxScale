@@ -75,11 +75,14 @@ bool GSSAPIAuthenticatorBackendSession::extract_principal_name(DCB* dcb, GWBUF* 
 
     if (databuf[0] != MYSQL_REPLY_AUTHSWITCHREQUEST)
     {
+        mxb_assert(dcb->role() == DCB::Role::BACKEND);
+        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
         /** Server responded with something we did not expect. If it's an OK packet,
          * it's possible that the server authenticated us as the anonymous user. This
          * means that the server is not secure. */
         MXS_ERROR("Server '%s' returned an unexpected authentication response.%s",
-                  dcb->m_server->name(),
+                  backend_dcb->server()->name(),
                   databuf[0] == MYSQL_REPLY_OK ?
                   " Authentication was complete before it even started, "
                   "anonymous users might not be disabled." : "");
@@ -162,7 +165,9 @@ bool GSSAPIAuthenticatorBackendSession::extract(DCB* dcb, GWBUF* buffer)
  */
 bool GSSAPIAuthenticatorBackendSession::ssl_capable(DCB* dcb)
 {
-    return dcb->m_server->ssl().context() != NULL;
+    mxb_assert(dcb->role() == DCB::Role::BACKEND);
+    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+    return backend_dcb->server()->ssl().context() != NULL;
 }
 
 /**

@@ -93,7 +93,7 @@ static const MXS_ENUM_VALUE enum_example[] =
 using std::string;
 using std::cout;
 
-typedef std::vector<DCB*> DCB_VEC;
+typedef std::vector<BackendDCB*> DCB_VEC;
 
 class RRRouter;
 
@@ -103,7 +103,7 @@ class RRRouterSession : public mxs::RouterSession
 public:
 
     // The API functions must be public
-    RRRouterSession(RRRouter*, DCB_VEC&, DCB*, DCB*);
+    RRRouterSession(RRRouter*, DCB_VEC&, BackendDCB*, ClientDCB*);
     ~RRRouterSession();
     void    close();
     int32_t routeQuery(GWBUF* buffer);
@@ -113,14 +113,14 @@ public:
 private:
     bool         m_closed;              /* true when closeSession is called */
     DCB_VEC      m_backend_dcbs;        /* backends */
-    DCB*         m_write_dcb;           /* write backend */
-    DCB*         m_client_dcb;          /* client */
+    BackendDCB*  m_write_dcb;           /* write backend */
+    ClientDCB*   m_client_dcb;          /* client */
     unsigned int m_route_count;         /* how many packets have been routed */
     bool         m_on_transaction;      /* Is the session in transaction mode? */
     unsigned int m_replies_to_ignore;   /* Counts how many replies should be ignored. */
     RRRouter*    m_router;
 
-    void decide_target(GWBUF* querybuf, DCB*& target, bool& route_to_all);
+    void decide_target(GWBUF* querybuf, BackendDCB*& target, bool& route_to_all);
 };
 
 /* Each service using this router will have a router object instance. */
@@ -211,7 +211,7 @@ RRRouter::~RRRouter()
 RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
 {
     DCB_VEC backends;
-    DCB* write_dcb = NULL;
+    BackendDCB* write_dcb = NULL;
     RRRouterSession* rses = NULL;
     try
     {
@@ -225,7 +225,7 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session)
             if (server_ref_is_active(sref) && (backends.size() < m_max_backends))
             {
                 /* Connect to server */
-                DCB* conn = BackendDCB::connect(sref->server, session, worker);
+                BackendDCB* conn = BackendDCB::connect(sref->server, session, worker);
                 if (conn)
                 {
                     /* Success */
@@ -339,7 +339,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
 {
     int rval = 0;
     const bool print = m_router->m_print_on_routing;
-    DCB* target = NULL;
+    BackendDCB* target = NULL;
     bool route_to_all = false;
 
     if (!m_closed)
@@ -355,7 +355,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
         {
             MXS_NOTICE("Routing statement of length %du  to backend '%s'.",
                        gwbuf_length(querybuf),
-                       target->m_server->name());
+                       target->server()->name());
         }
         /* Do not use dcb_write() to output to a dcb. dcb_write() is used only
          * for raw write in the protocol modules. */
@@ -536,7 +536,7 @@ void RRRouterSession::handleError(GWBUF* message,
     }
 }
 
-RRRouterSession::RRRouterSession(RRRouter* router, DCB_VEC& backends, DCB* write, DCB* client)
+RRRouterSession::RRRouterSession(RRRouter* router, DCB_VEC& backends, BackendDCB* write, ClientDCB* client)
     : RouterSession(client->session())
     , m_closed(false)
     , m_route_count(0)
@@ -574,9 +574,9 @@ void RRRouterSession::close()
         m_closed = true;
         for (unsigned int i = 0; i < m_backend_dcbs.size(); i++)
         {
-            DCB* dcb = m_backend_dcbs[i];
+            BackendDCB* dcb = m_backend_dcbs[i];
             SERVER_REF* sref = dcb->service()->dbref;
-            while (sref && (sref->server != dcb->m_server))
+            while (sref && (sref->server != dcb->server()))
             {
                 sref = sref->next;
             }
@@ -598,7 +598,7 @@ void RRRouterSession::close()
     }
 }
 
-void RRRouterSession::decide_target(GWBUF* querybuf, DCB*& target, bool& route_to_all)
+void RRRouterSession::decide_target(GWBUF* querybuf, BackendDCB*& target, bool& route_to_all)
 {
     /* Extract the command type from the SQL-buffer */
     mxs_mysql_cmd_t cmd_type = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));

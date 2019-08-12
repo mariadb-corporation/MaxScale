@@ -29,7 +29,7 @@ class RCR;
 class RCRSession : public mxs::RouterSession
 {
 public:
-    RCRSession(RCR* inst, MXS_SESSION* session, SERVER_REF* backend, DCB* dcb,
+    RCRSession(RCR* inst, MXS_SESSION* session, SERVER_REF* backend, BackendDCB* dcb,
                uint32_t bitmask, uint32_t bitvalue);
     ~RCRSession();
 
@@ -71,7 +71,7 @@ public:
 private:
     RCR*        m_instance;     /**< Router instance */
     SERVER_REF* m_backend;      /**< Backend used by the client session */
-    DCB*        m_dcb;          /**< DCB Connection to the backend      */
+    BackendDCB* m_dcb;          /**< DCB Connection to the backend      */
     DCB*        m_client_dcb;   /**< Client DCB */
     uint32_t    m_bitmask;      /**< Bitmask to apply to server->status */
     uint32_t    m_bitvalue;     /**< Session specific required value of server->status */

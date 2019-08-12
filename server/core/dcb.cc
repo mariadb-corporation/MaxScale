@@ -127,7 +127,6 @@ DCB::DCB(int fd,
          MXS_SESSION* session,
          MXS_PROTOCOL_SESSION* protocol,
          MXS_PROTOCOL_API protocol_api,
-         SERVER* server,
          Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
     , m_fd(fd)
@@ -135,7 +134,6 @@ DCB::DCB(int fd,
     , m_low_water(config_writeq_low_water())
     , m_last_read(mxs_clock())
     , m_last_write(mxs_clock())
-    , m_server(server)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_session(session)
     , m_protocol(protocol)
@@ -303,8 +301,8 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
     return nullptr;
 }
 
-BackendDCB* BackendDCB::create(int fd,
-                               SERVER* srv,
+BackendDCB* BackendDCB::create(SERVER* srv,
+                               int fd,
                                MXS_SESSION* session,
                                DCB::Manager* manager)
 {
@@ -338,8 +336,10 @@ BackendDCB* BackendDCB::create(int fd,
 
             if (new_auth_session)
             {
-                dcb = new (std::nothrow) BackendDCB(fd, session, protocol_session, *protocol_api,
-                                                    srv, manager, std::move(new_auth_session));
+                dcb = new (std::nothrow) BackendDCB(srv,
+                                                    fd, session, protocol_session, *protocol_api,
+                                                    std::move(new_auth_session), manager);
+
                 if (dcb)
                 {
                     session_link_backend_dcb(session, dcb);
@@ -428,7 +428,6 @@ static bool connect_backend(const char* host, int port, int* fd)
  */
 BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager* manager)
 {
-    const char* protocol = srv->protocol().c_str();
     Server* server = static_cast<Server*>(srv);
 
     // TODO: Either
@@ -448,7 +447,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
 
     if (connect_backend(server->address, server->port, &fd))
     {
-        dcb = create(fd, server, session, manager);
+        dcb = create(server, fd, session, manager);
 
         if (dcb)
         {
@@ -532,8 +531,6 @@ int DCB::read(GWBUF** head, int maxbytes)
                           mxs::to_string(m_state),
                           m_fd);
 
-                /*< Assign the target server for the gwbuf */
-                buffer->server = m_server;
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
             }
@@ -1697,13 +1694,19 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 
     for (DCB* dcb : rworker->dcbs())
     {
-        if (dcb->state() == State::POLLING && dcb->m_server && dcb->m_server == server && dcb->m_nClose == 0)
+        if (dcb->state() == State::POLLING && dcb->role() == Role::BACKEND)
         {
-            if (!dcb->m_dcb_errhandle_called)
+            // TODO: Remove the need for downcast.
+            BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+            if (backend_dcb->m_server == server && backend_dcb->m_nClose == 0)
             {
-                this_thread.current_dcb = dcb;
-                static_cast<BackendDCB*>(dcb)->m_protocol_api.hangup(dcb);
-                dcb->m_dcb_errhandle_called = true;
+                if (!backend_dcb->m_dcb_errhandle_called)
+                {
+                    this_thread.current_dcb = backend_dcb;
+                    backend_dcb->m_protocol_api.hangup(dcb);
+                    backend_dcb->m_dcb_errhandle_called = true;
+                }
             }
         }
     }
@@ -2686,9 +2689,10 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
 
     if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
     {
+        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         DCB* client_dcb = dcb->session()->client_dcb;
         MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
-                 "mark is hit", dcb->m_server->name(), client_dcb->m_user, client_dcb->m_remote);
+                 "mark is hit", backend_dcb->server()->name(), client_dcb->m_user, client_dcb->m_remote);
 
         dcb->disable_events();
     }
@@ -2702,9 +2706,10 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
 
     if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
     {
+        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         DCB* client_dcb = dcb->session()->client_dcb;
         MXS_INFO("Low water mark hit for connection to '%s' from '%s'@'%s', accepting new data",
-                 dcb->m_server->name(), client_dcb->m_user, client_dcb->m_remote);
+                 backend_dcb->server()->name(), client_dcb->m_user, client_dcb->m_remote);
 
         if (!dcb->enable_events())
         {
@@ -2808,7 +2813,6 @@ ClientDCB::ClientDCB(int fd,
           session,
           protocol_session,
           protocol_api,
-          nullptr,
           manager)
 {
     if (DCB_THROTTLING_ENABLED(this))
@@ -2895,15 +2899,16 @@ bool InternalDCB::prepare_for_destruction()
     return true;
 }
 
-BackendDCB::BackendDCB(int fd,
+BackendDCB::BackendDCB(SERVER* server,
+                       int fd,
                        MXS_SESSION* session,
                        MXS_PROTOCOL_SESSION* protocol,
                        MXS_PROTOCOL_API protocol_api,
-                       SERVER* server,
-                       DCB::Manager* manager,
-                       std::unique_ptr<mxs::AuthenticatorBackendSession> auth_ses)
-    : DCB(fd, DCB::Role::BACKEND, session, protocol, protocol_api, server, manager)
+                       std::unique_ptr<mxs::AuthenticatorBackendSession> auth_ses,
+                       DCB::Manager* manager)
+    : DCB(fd, DCB::Role::BACKEND, session, protocol, protocol_api, manager)
     , m_auth_session(std::move(auth_ses))
+    , m_server(server)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
