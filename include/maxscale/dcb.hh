@@ -319,13 +319,20 @@ protected:
     int create_SSL(mxs::SSLContext* ssl);
 
     /**
-     * Free the instance from the associated session.
+     * Release the instance from the associated session.
      *
-     * @param session The session to free the DCB from.
+     * @param session The session to release the DCB from.
      *
-     * @return True, if the DCB was freed and can be deleted, false otherwise.
+     * @return True, if the DCB was released and can be deleted, false otherwise.
      */
-    virtual bool was_freed(MXS_SESSION* session) = 0;
+    virtual bool release_from(MXS_SESSION* session) = 0;
+
+    /**
+     * Prepare the instance for destruction.
+     *
+     * @return True if it was prepared and can be destroyed, false otherwise.
+     */
+    virtual bool prepare_for_destruction() = 0;
 
 
     dcb_state_t           m_state = DCB_STATE_ALLOC;     /**< Current state */
@@ -392,7 +399,8 @@ private:
               MXS_PROTOCOL_API protocol_api,
               Manager* manager);
 
-    bool was_freed(MXS_SESSION* session) override;
+    bool release_from(MXS_SESSION* session) override;
+    bool prepare_for_destruction() override;
 };
 
 class BackendDCB : public DCB
@@ -425,7 +433,8 @@ private:
                               MXS_SESSION* session,
                               DCB::Manager* manager);
 
-    bool was_freed(MXS_SESSION* session) override;
+    bool release_from(MXS_SESSION* session) override;
+    bool prepare_for_destruction() override;
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 };

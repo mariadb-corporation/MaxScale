@@ -239,7 +239,7 @@ void DCB::free(DCB* dcb)
         MXS_SESSION* session = dcb->m_session;
         dcb->m_session = NULL;
 
-        if (dcb->was_freed(session))
+        if (dcb->release_from(session))
         {
             delete dcb;
         }
@@ -1002,39 +1002,29 @@ void DCB::close(DCB* dcb)
         // A freshly created dcb that was closed before it was taken into use.
         DCB::free(dcb);
     }
-    /*
-     * If DCB is in persistent pool, mark it as an error and exit
-     */
-    else if (dcb->m_persistentstart > 0)
-    {
-        // A DCB in the persistent pool.
 
-        // TODO: This dcb will now actually be closed when DCB::persistent_clean_count() is
-        // TODO: called by either maybe_add_persistent() - another dcb is added to the
-        // TODO: persistent pool - or server_get_persistent() - get a dcb from the persistent
-        // TODO: pool - is called. There is no reason not to just remove this dcb from the
-        // TODO: persistent pool here and now, and then close it immediately.
-        dcb->m_dcb_errhandle_called = true;
-    }
-    else if (dcb->m_nClose == 0)
+    if (dcb->prepare_for_destruction())
     {
-        dcb->m_nClose = 1;
-
-        if (dcb->m_manager)
+        if (dcb->m_nClose == 0)
         {
-            dcb->m_manager->destroy(dcb);
+            dcb->m_nClose = 1;
+
+            if (dcb->m_manager)
+            {
+                dcb->m_manager->destroy(dcb);
+            }
+            else
+            {
+                dcb->destroy();
+            }
         }
         else
         {
-            dcb->destroy();
+            ++dcb->m_nClose;
+            // TODO: Will this happen on a regular basis?
+            MXS_WARNING("dcb_close(%p) called %u times.", dcb, dcb->m_nClose);
+            mxb_assert(!true);
         }
-    }
-    else
-    {
-        ++dcb->m_nClose;
-        // TODO: Will this happen on a regular basis?
-        MXS_WARNING("dcb_close(%p) called %u times.", dcb, dcb->m_nClose);
-        mxb_assert(!true);
     }
 }
 
@@ -3042,7 +3032,7 @@ ClientDCB::~ClientDCB()
     }
 }
 
-bool ClientDCB::was_freed(MXS_SESSION* session)
+bool ClientDCB::release_from(MXS_SESSION* session)
 {
     /**
      * The client DCB is only freed once all other DCBs that the session
@@ -3052,6 +3042,11 @@ bool ClientDCB::was_freed(MXS_SESSION* session)
      */
     session_put_ref(session);
     return false;
+}
+
+bool ClientDCB::prepare_for_destruction()
+{
+    return true;
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, DCB::Manager* manager)
@@ -3112,10 +3107,31 @@ BackendDCB::BackendDCB(int fd,
     }
 }
 
-bool BackendDCB::was_freed(MXS_SESSION* session)
+bool BackendDCB::release_from(MXS_SESSION* session)
 {
     session_unlink_backend_dcb(session, this);
     return true;
+}
+
+bool BackendDCB::prepare_for_destruction()
+{
+    bool prepared = true;
+
+    if (m_persistentstart > 0)
+    {
+        // A DCB in the persistent pool.
+
+        // TODO: This dcb will now actually be closed when DCB::persistent_clean_count() is
+        // TODO: called by either maybe_add_persistent() - another dcb is added to the
+        // TODO: persistent pool - or server_get_persistent() - get a dcb from the persistent
+        // TODO: pool - is called. There is no reason not to just remove this dcb from the
+        // TODO: persistent pool here and now, and then close it immediately.
+        m_dcb_errhandle_called = true;
+
+        prepared = false;
+    }
+
+    return prepared;
 }
 
 namespace maxscale
