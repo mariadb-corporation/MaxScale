@@ -1072,73 +1072,35 @@ void DCB::destroy()
 #endif
     mxb_assert(m_nClose != 0);
 
-    if (m_role == DCB::Role::BACKEND         // Backend DCB
-        && m_state == DCB_STATE_POLLING      // Being polled
-        && m_persistentstart == 0            /** Not already in (> 0) or being evicted from (-1)
-                                              * the persistent pool. */
-        && m_server)                         // And has a server
+    if (m_state == DCB_STATE_POLLING)
     {
-        /* May be a candidate for persistence, so save user name */
-        const char* user;
-        user = session_get_user(m_session);
-        if (user && strlen(user) && !m_user)
-        {
-            m_user = MXS_STRDUP_A(user);
-        }
-
-        if (maybe_add_persistent(this))
-        {
-            m_nClose = 0;
-        }
+        stop_polling_and_shutdown();
     }
 
-    if (m_nClose != 0)
+    if (m_fd != DCBFD_CLOSED)
     {
-        if (m_state == DCB_STATE_POLLING)
+        // TODO: How could we get this far with a dcb->m_fd <= 0?
+
+        if (::close(m_fd) < 0)
         {
-            stop_polling_and_shutdown();
-        }
-
-        if (m_server && m_persistentstart == 0)
-        {
-            // This is now a DCB::Role::BACKEND_HANDLER.
-            // TODO: Make decisions according to the role and assert
-            // TODO: that what the role implies is preset.
-            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&m_server->stats().n_current, -1,
-                                                     mxb::atomic::RELAXED);
-            mxb_assert(rc > 0);
-        }
-
-        if (m_fd != DCBFD_CLOSED)
-        {
-            // TODO: How could we get this far with a dcb->m_fd <= 0?
-
-            if (::close(m_fd) < 0)
-            {
-                int eno = errno;
-                errno = 0;
-                MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
-                          m_fd,
-                          this,
-                          eno,
-                          mxs_strerror(eno));
-            }
-            else
-            {
-                m_fd = DCBFD_CLOSED;
-
-                MXS_DEBUG("Closed socket %d on dcb %p.", m_fd, this);
-            }
+            int eno = errno;
+            errno = 0;
+            MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
+                      m_fd,
+                      this,
+                      eno,
+                      mxs_strerror(eno));
         }
         else
         {
-            // Only internal DCBs are closed with a fd of -1
-            mxb_assert(m_role == DCB::Role::INTERNAL);
+            MXS_DEBUG("Closed socket %d on dcb %p.", m_fd, this);
         }
 
-        m_state = DCB_STATE_DISCONNECTED;
-        DCB::free(this);
+        m_fd = DCBFD_CLOSED;
     }
+
+    m_state = DCB_STATE_DISCONNECTED;
+    DCB::free(this);
 }
 
 /**
@@ -1149,7 +1111,7 @@ void DCB::destroy()
  *
  */
 //static
-bool DCB::maybe_add_persistent(DCB* dcb)
+bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
 {
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
     Server* server = static_cast<Server*>(dcb->m_server);
@@ -3046,6 +3008,7 @@ bool ClientDCB::release_from(MXS_SESSION* session)
 
 bool ClientDCB::prepare_for_destruction()
 {
+    mxb_assert(m_fd != DCBFD_CLOSED);
     return true;
 }
 
@@ -3089,6 +3052,12 @@ bool InternalDCB::disable_events()
     return true;
 }
 
+bool InternalDCB::prepare_for_destruction()
+{
+    mxb_assert(m_fd == DCBFD_CLOSED);
+    return true;
+}
+
 BackendDCB::BackendDCB(int fd,
                        MXS_SESSION* session,
                        MXS_PROTOCOL_SESSION* protocol,
@@ -3129,6 +3098,32 @@ bool BackendDCB::prepare_for_destruction()
         m_dcb_errhandle_called = true;
 
         prepared = false;
+    }
+    else if (m_state == DCB_STATE_POLLING // Being polled
+             && m_persistentstart == 0    // Not already in (> 0) or being evicted from (-1) from the pool.
+             && m_server)                 // And has a server.
+    {
+        /* May be a candidate for persistence, so save user name */
+        const char* user;
+        user = session_get_user(m_session);
+        if (user && strlen(user) && !m_user)
+        {
+            m_user = MXS_STRDUP_A(user);
+        }
+
+        if (maybe_add_persistent(this))
+        {
+            // Added to the pool, so we pretend close from never having been called
+            // and prevent the instance from being destructed.
+            m_nClose = 0;
+            prepared = false;
+        }
+        else
+        {
+            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&m_server->stats().n_current, -1,
+                                                     mxb::atomic::RELAXED);
+            mxb_assert(rc > 0);
+        }
     }
 
     return prepared;

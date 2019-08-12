@@ -358,8 +358,6 @@ private:
     void destroy();
     static void free(DCB* dcb);
 
-    static bool maybe_add_persistent(DCB* dcb);
-
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     static uint32_t event_handler(DCB* dcb, uint32_t events);
     static uint32_t process_events(DCB* dcb, uint32_t events);
@@ -433,6 +431,8 @@ private:
                               MXS_SESSION* session,
                               DCB::Manager* manager);
 
+    static bool maybe_add_persistent(BackendDCB* dcb);
+
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
@@ -451,6 +451,8 @@ public:
 
 private:
     InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, Manager* manager);
+
+    bool prepare_for_destruction() override;
 };
 
 namespace maxscale
