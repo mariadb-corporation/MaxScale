@@ -136,7 +136,7 @@ public:
                                uint8_t* scramble, size_t scramble_len,
                                uint8_t* output, size_t output_len) override;
 
-    MariaDBBackendSession* newBackendSession() override;
+    std::unique_ptr<mxs::AuthenticatorBackendSession> newBackendSession() override;
     // No fields, as authentication data is managed by the protocol.
 };
 
@@ -147,7 +147,7 @@ public:
     static MYSQL_AUTH* create(char** options);
 
     ~MYSQL_AUTH() override = default;
-    MariaDBAuthenticatorSession* createSession() override;
+    std::unique_ptr<mxs::AuthenticatorSession> createSession() override;
     int load_users(Listener* listener) override;
     void diagnostics(DCB* output, Listener* listener) override;
     json_t* diagnostics_json(const Listener* listener) override;

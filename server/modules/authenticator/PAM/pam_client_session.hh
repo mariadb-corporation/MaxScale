@@ -39,7 +39,7 @@ public:
     bool ssl_capable(DCB* client) override;
     void free_data(DCB* client) override;
 
-    PamBackendSession* newBackendSession() override;
+    std::unique_ptr<mxs::AuthenticatorBackendSession> newBackendSession() override;
 
 private:
     PamClientSession(const PamInstance& instance, SQLite::SSQLite sqlite);

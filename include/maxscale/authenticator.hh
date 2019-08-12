@@ -19,6 +19,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
+#include <memory>
 
 class Listener;
 class SERVER;
@@ -26,11 +27,6 @@ struct DCB;
 struct GWBUF;
 struct json_t;
 struct MXS_SESSION;
-
-namespace maxscale
-{
-class Authenticator;
-}
 
 /**
  * The MXS_AUTHENTICATOR version data. The following should be updated whenever
@@ -59,10 +55,15 @@ class Authenticator;
 #define MXS_AUTH_LOADUSERS_ERROR 1  /**< Temporary error, service is started */
 #define MXS_AUTH_LOADUSERS_FATAL 2  /**< Fatal error, service is not started */
 
+namespace maxscale
+{
+
+class Authenticator;
+
 /**
  * This struct contains the authenticator entrypoint in a shared library.
  */
-struct MXS_AUTHENTICATOR
+struct AUTHENTICATOR_API
 {
     /**
      * Create an authenticator module instance.
@@ -73,6 +74,7 @@ struct MXS_AUTHENTICATOR
     mxs::Authenticator* (* initialize)(char** options);
 };
 
+}
 /**
  * Authentication states
  *
@@ -96,7 +98,7 @@ enum mxs_auth_state_t
     MXS_AUTH_STATE_COMPLETE         /**< Authentication is complete */
 };
 
-mxs::Authenticator* authenticator_init(const char* authenticator, const char* options);
+std::unique_ptr<mxs::Authenticator> authenticator_init(const char* authenticator, const char* options);
 const char* get_default_authenticator(const char* protocol);
 
 namespace maxscale

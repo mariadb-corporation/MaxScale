@@ -68,7 +68,7 @@ public:
     int authenticate(DCB* client) override;
     void free_data(DCB* client) override;
 
-    GSSAPIBackendAuthenticatorSession* newBackendSession() override;
+    std::unique_ptr<mxs::AuthenticatorBackendSession> newBackendSession() override;
 
     gssapi_auth_state state;               /**< Authentication state*/
     uint8_t*               principal_name;      /**< Principal name */

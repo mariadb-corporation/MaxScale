@@ -829,9 +829,9 @@ int MariaDBAuthenticatorSession::reauthenticate(DCB* dcb, const char* user, uint
     return rval;
 }
 
-MariaDBBackendSession* MariaDBAuthenticatorSession::newBackendSession()
+std::unique_ptr<mxs::AuthenticatorBackendSession> MariaDBAuthenticatorSession::newBackendSession()
 {
-    return new(std::nothrow) MariaDBBackendSession();
+    return std::unique_ptr<mxs::AuthenticatorBackendSession>(new(std::nothrow) MariaDBBackendSession());
 }
 
 int diag_cb(void* data, int columns, char** row, char** field_names)
@@ -896,9 +896,9 @@ uint64_t MYSQL_AUTH::capabilities() const
     return CAP_REAUTHENTICATE | CAP_CONC_LOAD_USERS | CAP_BACKEND_AUTH;
 }
 
-MariaDBAuthenticatorSession* MYSQL_AUTH::createSession()
+std::unique_ptr<mxs::AuthenticatorSession> MYSQL_AUTH::createSession()
 {
-    return new(std::nothrow) MariaDBAuthenticatorSession();
+    return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) MariaDBAuthenticatorSession());
 }
 
 bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)

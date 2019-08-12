@@ -33,7 +33,7 @@ public:
     json_t* diagnostics_json(const Listener* listener) override;
 
     uint64_t capabilities() const override;
-    PamClientSession* createSession() override;
+    std::unique_ptr<mxs::AuthenticatorSession> createSession() override;
 
     const std::string m_dbname;     /**< Name of the in-memory database */
 

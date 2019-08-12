@@ -78,9 +78,9 @@ public:
 
     ~MaxAdminAuthenticator() override = default;
 
-    MaxAdminAuthenticatorSession* createSession() override
+    std::unique_ptr<mxs::AuthenticatorSession> createSession() override
     {
-        return new(std::nothrow) MaxAdminAuthenticatorSession();
+        return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) MaxAdminAuthenticatorSession());
     }
 
     int load_users(Listener* listener) override

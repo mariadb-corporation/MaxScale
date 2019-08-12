@@ -37,9 +37,8 @@ public:
 
     virtual ~Authenticator() = default;
 
-    // Create a data structure unique to this DCB, stored in `dcb->authenticator_data`. If a module
-    // does not implement this entry point, `dcb->authenticator_data` will be set to NULL.
-    virtual AuthenticatorSession* createSession() = 0;
+    // Create a client session.
+    virtual std::unique_ptr<AuthenticatorSession> createSession() = 0;
 
     // Load or update authenticator user data
     virtual int load_users(Listener* listener) = 0;
@@ -113,8 +112,7 @@ public:
      *
      * @return Backend session
      */
-    virtual AuthenticatorBackendSession* newBackendSession();
-
+    virtual std::unique_ptr<AuthenticatorBackendSession> newBackendSession();
 };
 
 /**
@@ -150,11 +148,11 @@ public:
         return instance;
     }
 
-    static MXS_AUTHENTICATOR s_api;
+    static AUTHENTICATOR_API s_api;
 };
 
 template<class AuthImplementation>
-MXS_AUTHENTICATOR AuthenticatorApi<AuthImplementation>::s_api =
+AUTHENTICATOR_API AuthenticatorApi<AuthImplementation>::s_api =
 {
     &AuthenticatorApi<AuthImplementation>::createInstance
 };

@@ -34,10 +34,10 @@ using mxs::Authenticator;
  * @param options Authenticator options
  * @return Authenticator instance or NULL on error
  */
-Authenticator* authenticator_init(const char* authenticator, const char* options)
+std::unique_ptr<Authenticator> authenticator_init(const char* authenticator, const char* options)
 {
-    Authenticator* rval = nullptr;
-    auto func = (MXS_AUTHENTICATOR*)load_module(authenticator, MODULE_AUTHENTICATOR);
+    std::unique_ptr<Authenticator> rval;
+    auto func = (mxs::AUTHENTICATOR_API*)load_module(authenticator, MODULE_AUTHENTICATOR);
 
     // Client authenticator modules must have an init-entrypoint.
     if (func && func->initialize)
@@ -68,7 +68,7 @@ Authenticator* authenticator_init(const char* authenticator, const char* options
 
         optarray[optcount] = NULL;
 
-        rval = static_cast<Authenticator*>(func->initialize(optarray));
+        rval.reset(func->initialize(optarray));
     }
     return rval;
 }
@@ -153,7 +153,7 @@ int AuthenticatorSession::reauthenticate(DCB* client, const char* user, uint8_t*
     return MXS_AUTH_STATE_FAILED;
 }
 
-AuthenticatorBackendSession* AuthenticatorSession::newBackendSession()
+std::unique_ptr<AuthenticatorBackendSession> AuthenticatorSession::newBackendSession()
 {
     return nullptr;
 }

@@ -318,11 +318,11 @@ BackendDCB* BackendDCB::create(int fd,
         if (protocol_session)
         {
             // Allocate DCB specific backend-authentication data from the client session.
-            std::unique_ptr<AuthenticatorBackendSession> auth_session;
+            std::unique_ptr<AuthenticatorBackendSession> new_auth_session;
             if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_BACKEND_AUTH)
             {
-                auth_session.reset(session->client_dcb->m_auth_session->newBackendSession());
-                if (!auth_session)
+                new_auth_session = session->client_dcb->m_auth_session->newBackendSession();
+                if (!new_auth_session)
                 {
                     MXS_ERROR("Failed to create authenticator session for backend DCB.");
                 }
@@ -334,13 +334,12 @@ BackendDCB* BackendDCB::create(int fd,
                           session->listener->name(), session->listener->authenticator());
             }
 
-            if (auth_session)
+            if (new_auth_session)
             {
                 dcb = new (std::nothrow) BackendDCB(fd, session, protocol_session, *protocol_api,
-                                                    srv, manager);
+                                                    srv, manager, std::move(new_auth_session));
                 if (dcb)
                 {
-                    dcb->m_auth_session = auth_session.release();
                     session_link_backend_dcb(session, dcb);
                 }
                 else
@@ -3100,8 +3099,10 @@ BackendDCB::BackendDCB(int fd,
                        MXS_PROTOCOL_SESSION* protocol,
                        MXS_PROTOCOL_API protocol_api,
                        SERVER* server,
-                       DCB::Manager* manager)
+                       DCB::Manager* manager,
+                       std::unique_ptr<mxs::AuthenticatorBackendSession> auth_ses)
     : DCB(fd, DCB::Role::BACKEND, session, protocol, protocol_api, server, manager)
+    , m_auth_session(std::move(auth_ses))
 {
     if (DCB_THROTTLING_ENABLED(this))
     {

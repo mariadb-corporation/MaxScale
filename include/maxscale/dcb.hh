@@ -406,7 +406,7 @@ public:
 
     int ssl_handshake() override;
 
-    mxs::AuthenticatorBackendSession* m_auth_session {nullptr}; /**< Backend authentication data */
+    std::unique_ptr<mxs::AuthenticatorBackendSession> m_auth_session; /**< Backend authentication data */
 
 private:
     BackendDCB(int fd,
@@ -414,7 +414,8 @@ private:
                MXS_PROTOCOL_SESSION* protocol,
                MXS_PROTOCOL_API protocol_api,
                SERVER* server,
-               Manager* manager);
+               Manager* manager,
+               std::unique_ptr<mxs::AuthenticatorBackendSession> auth_ses);
 
     static BackendDCB* create(int fd,
                               SERVER* server,

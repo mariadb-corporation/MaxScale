@@ -88,7 +88,7 @@ class GSSAPI_INSTANCE : public mxs::Authenticator
 public:
     static GSSAPI_INSTANCE* create(char** options);
     ~GSSAPI_INSTANCE() override = default;
-    GSSAPIAuthenticatorSession* createSession() override;
+    std::unique_ptr<mxs::AuthenticatorSession> createSession() override;
     int load_users(Listener* listener) override;
     void diagnostics(DCB* output, Listener* listener) override
     {
@@ -173,30 +173,29 @@ GSSAPI_INSTANCE* GSSAPI_INSTANCE::create(char** options)
     return instance;
 }
 
-GSSAPIAuthenticatorSession* GSSAPI_INSTANCE::createSession()
+std::unique_ptr<mxs::AuthenticatorSession> GSSAPI_INSTANCE::createSession()
 {
-    auto rval = new (std::nothrow) GSSAPIAuthenticatorSession();
-
-    if (rval)
+    auto new_ses = new (std::nothrow) GSSAPIAuthenticatorSession();
+    if (new_ses)
     {
-        rval->state = GSSAPI_AUTH_INIT;
-        rval->principal_name = NULL;
-        rval->principal_name_len = 0;
-        rval->sequence = 0;
+        new_ses->state = GSSAPI_AUTH_INIT;
+        new_ses->principal_name = NULL;
+        new_ses->principal_name_len = 0;
+        new_ses->sequence = 0;
 
-        if (sqlite3_open_v2(GSSAPI_DATABASE_NAME, &rval->handle, db_flags, NULL) == SQLITE_OK)
+        if (sqlite3_open_v2(GSSAPI_DATABASE_NAME, &new_ses->handle, db_flags, NULL) == SQLITE_OK)
         {
-            sqlite3_busy_timeout(rval->handle, MXS_SQLITE_BUSY_TIMEOUT);
+            sqlite3_busy_timeout(new_ses->handle, MXS_SQLITE_BUSY_TIMEOUT);
         }
         else
         {
             MXS_ERROR("Failed to open SQLite3 handle.");
-            delete rval;
-            rval = NULL;
+            delete new_ses;
+            new_ses = NULL;
         }
     }
 
-    return rval;
+    return std::unique_ptr<mxs::AuthenticatorSession>(new_ses);
 }
 
 GSSAPIAuthenticatorSession::~GSSAPIAuthenticatorSession()
@@ -549,9 +548,9 @@ void GSSAPIAuthenticatorSession::free_data(DCB* dcb)
     }
 }
 
-GSSAPIBackendAuthenticatorSession* GSSAPIAuthenticatorSession::newBackendSession()
+std::unique_ptr<mxs::AuthenticatorBackendSession> GSSAPIAuthenticatorSession::newBackendSession()
 {
-    return GSSAPIBackendAuthenticatorSession::newSession();
+    return std::unique_ptr<mxs::AuthenticatorBackendSession>(GSSAPIBackendAuthenticatorSession::newSession());
 }
 
 /**

@@ -113,7 +113,7 @@ Listener::Listener(SERVICE* service,
                    const std::string& protocol,
                    const std::string& authenticator,
                    const std::string& auth_opts,
-                   mxs::Authenticator* auth_instance,
+                   std::unique_ptr<mxs::Authenticator> auth_instance,
                    std::unique_ptr<mxs::SSLContext> ssl,
                    const MXS_CONFIG_PARAMETER& params)
     : MXB_POLL_DATA{Listener::poll_handler}
@@ -124,7 +124,7 @@ Listener::Listener(SERVICE* service,
     , m_address(address)
     , m_authenticator(authenticator)
     , m_auth_options(auth_opts)
-    , m_auth_instance(auth_instance)
+    , m_auth_instance(std::move(auth_instance))
     , m_users(nullptr)
     , m_service(service)
     , m_proto_func(*(MXS_PROTOCOL_API*)load_module(protocol.c_str(), MODULE_PROTOCOL))
@@ -239,7 +239,7 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    mxs::Authenticator* auth_instance = authenticator_init(auth, authenticator_options.c_str());
+    auto auth_instance = authenticator_init(auth, authenticator_options.c_str());
     if (!auth_instance)
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for listener '%s'.",
@@ -253,7 +253,7 @@ SListener Listener::create(const std::string& name,
     mxb_assert(proto_mod && auth_mod);
 
     SListener listener(new(std::nothrow) Listener(service, name, address, port, protocol, auth,
-                                                  authenticator_options, auth_instance,
+                                                  authenticator_options, std::move(auth_instance),
                                                   std::move(ssl_info), params));
 
     if (listener)
@@ -591,7 +591,7 @@ const MXS_PROTOCOL_API& Listener::protocol_func() const
 
 mxs::Authenticator* Listener::auth_instance() const
 {
-    return m_auth_instance;
+    return m_auth_instance.get();
 }
 
 const char* Listener::state() const
@@ -810,7 +810,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         client_dcb->m_remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */
-        client_dcb->m_auth_session.reset(m_auth_instance->createSession());
+        client_dcb->m_auth_session = m_auth_instance->createSession();
         if (!client_dcb->m_auth_session)
         {
             MXS_ERROR("Failed to create authenticator session for client DCB");

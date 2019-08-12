@@ -519,9 +519,9 @@ uint64_t PamInstance::capabilities() const
     return Authenticator::CAP_BACKEND_AUTH;
 }
 
-PamClientSession* PamInstance::createSession()
+std::unique_ptr<mxs::AuthenticatorSession> PamInstance::createSession()
 {
-    return PamClientSession::create(*this);
+    return std::unique_ptr<mxs::AuthenticatorSession>(PamClientSession::create(*this));
 }
 
 bool PamInstance::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)

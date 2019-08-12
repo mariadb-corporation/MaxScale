@@ -396,9 +396,9 @@ void PamClientSession::free_data(DCB* client)
     }
 }
 
-PamBackendSession* PamClientSession::newBackendSession()
+std::unique_ptr<mxs::AuthenticatorBackendSession> PamClientSession::newBackendSession()
 {
-    return new(std::nothrow) PamBackendSession();
+    return std::unique_ptr<mxs::AuthenticatorBackendSession>(new(std::nothrow) PamBackendSession());
 }
 
 bool PamClientSession::role_can_access_db(const std::string& role, const std::string& target_db)

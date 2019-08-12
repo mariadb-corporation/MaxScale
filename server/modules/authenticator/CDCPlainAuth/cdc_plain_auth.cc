@@ -105,9 +105,9 @@ public:
 
     ~CDCAuthenticator() override = default;
 
-    CDCAuthenticatorSession* createSession() override
+    std::unique_ptr<mxs::AuthenticatorSession> createSession() override
     {
-        return new(std::nothrow) CDCAuthenticatorSession();
+        return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) CDCAuthenticatorSession());
     }
 
     int load_users(Listener* listener) override

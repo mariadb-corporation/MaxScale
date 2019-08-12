@@ -53,9 +53,9 @@ public:
 
     ~HTTPAuthenticator() override = default;
 
-    HTTPAuthenticatorSession* createSession() override
+    std::unique_ptr<mxs::AuthenticatorSession> createSession() override
     {
-        return new(std::nothrow) HTTPAuthenticatorSession();
+        return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) HTTPAuthenticatorSession());
     }
 
     int load_users(Listener* listener) override
