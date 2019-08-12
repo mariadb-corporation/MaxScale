@@ -535,7 +535,6 @@ void dprintOneDCB(DCB*, DCB*);                                                  
 void dListDCBs(DCB*);                                                           /* List all DCBs in the system
                                                                                  * */
 void dListClients(DCB*);                                                        /* List al the client DCBs */
-const char* gw_dcb_state2string(DCB::State);                                    /* DCB state to string */
 void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); /* DCB version of printf */
 
 /**

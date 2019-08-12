@@ -1175,7 +1175,7 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
 void printDCB(DCB* dcb)
 {
     printf("DCB: %p\n", (void*)dcb);
-    printf("\tDCB state:            %s\n", gw_dcb_state2string(dcb->state()));
+    printf("\tDCB state:            %s\n", mxs::to_string(dcb->state()));
     if (dcb->m_remote)
     {
         printf("\tConnected to:         %s\n", dcb->m_remote);
@@ -1258,7 +1258,7 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
     dcb_printf(pdcb, "DCB: %p\n", (void*)dcb);
     dcb_printf(pdcb,
                "\tDCB state:          %s\n",
-               gw_dcb_state2string(dcb->state()));
+               mxs::to_string(dcb->state()));
     if (dcb->session() && dcb->session()->service)
     {
         dcb_printf(pdcb,
@@ -1360,7 +1360,7 @@ static bool dlist_dcbs_cb(DCB* dcb, void* data)
     dcb_printf(pdcb,
                " %-16p | %-26s | %-18s | %s\n",
                dcb,
-               gw_dcb_state2string(dcb->state()),
+               mxs::to_string(dcb->state()),
                ((dcb->session() && dcb->session()->service) ? dcb->session()->service->name() : ""),
                (dcb->m_remote ? dcb->m_remote : ""));
     return true;
@@ -1422,34 +1422,6 @@ void dListClients(DCB* pdcb)
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
     dcb_foreach(dlist_clients_cb, pdcb);
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n\n");
-}
-
-/**
- * Return a string representation of a DCB state.
- *
- * @param state The DCB state
- * @return String representation of the state
- *
- */
-const char* gw_dcb_state2string(DCB::State state)
-{
-    switch (state)
-    {
-    case DCB::State::ALLOC:
-        return "DCB Allocated";
-
-    case DCB::State::POLLING:
-        return "DCB in the polling loop";
-
-    case DCB::State::NOPOLLING:
-        return "DCB not in polling loop";
-
-    case DCB::State::DISCONNECTED:
-        return "DCB socket closed";
-
-    default:
-        return "DCB (unknown - erroneous)";
-    }
 }
 
 /**
