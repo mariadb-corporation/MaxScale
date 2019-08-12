@@ -1200,12 +1200,9 @@ void printDCB(DCB* dcb)
             printf("\tServer status:            %s\n", statusname.c_str());
         }
     }
-    char* rolename = dcb_role_name(dcb);
-    if (rolename)
-    {
-        printf("\tRole:                     %s\n", rolename);
-        MXS_FREE(rolename);
-    }
+
+    printf("\tRole:                     %s\n", mxs::to_string(dcb->role()));
+
     printf("\tStatistics:\n");
     printf("\t\tNo. of Reads:                       %d\n",
            dcb->m_stats.n_reads);
@@ -1310,12 +1307,9 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
             dcb_printf(pdcb, "\tServer status:            %s\n", statusname.c_str());
         }
     }
-    char* rolename = dcb_role_name(dcb);
-    if (rolename)
-    {
-        dcb_printf(pdcb, "\tRole:                     %s\n", rolename);
-        MXS_FREE(rolename);
-    }
+
+    dcb_printf(pdcb, "\tRole:                     %s\n", mxs::to_string(dcb->role()));
+
     dcb_printf(pdcb, "\tStatistics:\n");
     dcb_printf(pdcb, "\t\tNo. of Reads:             %d\n", dcb->m_stats.n_reads);
     dcb_printf(pdcb, "\t\tNo. of Writes:            %d\n", dcb->m_stats.n_writes);
@@ -2043,40 +2037,6 @@ static int dcb_set_socket_option(int sockfd, int level, int optname, void* optva
         return -1;
     }
     return 0;
-}
-
-/**
- * Convert a DCB role to a string, the returned
- * string has been malloc'd and must be free'd by the caller
- *
- * @param DCB    The DCB to return the role of
- * @return       A string representation of the DCB role
- */
-char* dcb_role_name(DCB* dcb)
-{
-    char* name = (char*)MXS_MALLOC(64);
-
-    if (name)
-    {
-        name[0] = 0;
-        if (DCB::Role::CLIENT == dcb->role())
-        {
-            strcat(name, "Client Request Handler");
-        }
-        else if (DCB::Role::BACKEND == dcb->role())
-        {
-            strcat(name, "Backend Request Handler");
-        }
-        else if (DCB::Role::INTERNAL == dcb->role())
-        {
-            strcat(name, "Internal");
-        }
-        else
-        {
-            strcat(name, "Unknown");
-        }
-    }
-    return name;
 }
 
 /**

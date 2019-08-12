@@ -547,7 +547,6 @@ void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); 
 int dcb_count_by_role(DCB::Role role);
 
 uint64_t dcb_get_session_id(DCB* dcb);
-char*    dcb_role_name(DCB*);               /* Return the name of a role */
 void     dcb_enable_session_timeouts();
 void     dcb_process_timeouts(int thr);
 
