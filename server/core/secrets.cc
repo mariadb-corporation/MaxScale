@@ -403,14 +403,14 @@ char* encrypt_password(const char* path, const char* password)
     int padded_len;
     char* hex_output;
     size_t len = strlen(password);
-    unsigned char encrypted[len + 1];
+    padded_len = ((len / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
+    unsigned char encrypted[padded_len + 1];
 
     if ((keys = secrets_readKeys(path)) == NULL)
     {
         return NULL;
     }
 
-    padded_len = ((len / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
     AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
