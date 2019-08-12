@@ -74,7 +74,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The MySQL client to MaxScale authenticator implementation",
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES, // Authenticator capabilities are in the instance object
-        &mxs::AuthenticatorApi<MYSQL_AUTH>::s_api,
+        &mxs::AuthenticatorApi<MariaDBAuthenticator>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
@@ -115,7 +115,7 @@ static bool open_instance_database(const char* path, sqlite3** handle)
     return true;
 }
 
-sqlite3* get_handle(MYSQL_AUTH* instance)
+sqlite3* get_handle(MariaDBAuthenticator* instance)
 {
     int i = mxs_rworker_get_current_id();
     mxb_assert(i >= 0);
@@ -136,7 +136,7 @@ sqlite3* get_handle(MYSQL_AUTH* instance)
  *
  * @return True if permissions should be checked
  */
-static bool should_check_permissions(MYSQL_AUTH* instance)
+static bool should_check_permissions(MariaDBAuthenticator* instance)
 {
     // Only check permissions when the users are loaded for the first time.
     return instance->check_permissions;
@@ -148,19 +148,13 @@ static bool should_check_permissions(MYSQL_AUTH* instance)
  * @param options Authenticator options
  * @return New MYSQL_AUTH instance or NULL on error
  */
-MYSQL_AUTH* MYSQL_AUTH::create(char** options)
+MariaDBAuthenticator* MariaDBAuthenticator::create(char** options)
 {
-    auto instance = new(std::nothrow) MYSQL_AUTH();
+    auto instance = new(std::nothrow) MariaDBAuthenticator();
     if (instance
         && (instance->handles = static_cast<sqlite3**>(MXS_CALLOC(config_threadcount(), sizeof(sqlite3*)))))
     {
         bool error = false;
-        instance->cache_dir = NULL;
-        instance->inject_service_user = true;
-        instance->skip_auth = false;
-        instance->check_permissions = true;
-        instance->lower_case_table_names = false;
-
         for (int i = 0; options[i]; i++)
         {
             char* value = strchr(options[i], '=');
@@ -292,7 +286,7 @@ int MariaDBAuthenticatorSession::authenticate(DCB* dcb)
                   client_data->user,
                   client_data->db);
 
-        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session()->listener->auth_instance();
+        MariaDBAuthenticator* instance = (MariaDBAuthenticator*)dcb->session()->listener->auth_instance();
         MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol_session());
 
         if (!client_data->correct_authenticator)
@@ -685,7 +679,7 @@ static bool add_service_user(Listener* port)
 
         if (newpw)
         {
-            MYSQL_AUTH* inst = (MYSQL_AUTH*)port->auth_instance();
+            MariaDBAuthenticator* inst = (MariaDBAuthenticator*)port->auth_instance();
             sqlite3* handle = get_handle(inst);
             add_mysql_user(handle, user, "%", "", "Y", newpw);
             add_mysql_user(handle, user, "localhost", "", "Y", newpw);
@@ -724,11 +718,11 @@ static bool service_has_servers(SERVICE* service)
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR and
  * MXS_AUTH_LOADUSERS_FATAL on fatal error
  */
-int MYSQL_AUTH::load_users(Listener* port)
+int MariaDBAuthenticator::load_users(Listener* port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE* service = port->service();
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance();
+    MariaDBAuthenticator* instance = (MariaDBAuthenticator*)port->auth_instance();
     bool first_load = false;
 
     if (should_check_permissions(instance))
@@ -812,7 +806,7 @@ int MariaDBAuthenticatorSession::reauthenticate(DCB* dcb, const char* user, uint
     temp.auth_token = token;
     temp.auth_token_len = token_len;
 
-    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->session()->listener->auth_instance();
+    MariaDBAuthenticator* instance = (MariaDBAuthenticator*)dcb->session()->listener->auth_instance();
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
     if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service()))
@@ -841,9 +835,9 @@ int diag_cb(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-void MYSQL_AUTH::diagnostics(DCB* dcb, Listener* listener)
+void MariaDBAuthenticator::diagnostics(DCB* dcb, Listener* listener)
 {
-    MYSQL_AUTH* instance = this;
+    MariaDBAuthenticator* instance = this;
     sqlite3* handle = get_handle(instance);
     char* err;
 
@@ -870,11 +864,11 @@ int diag_cb_json(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-json_t* MYSQL_AUTH::diagnostics_json(const Listener* listener)
+json_t* MariaDBAuthenticator::diagnostics_json(const Listener* listener)
 {
     json_t* rval = json_array();
 
-    MYSQL_AUTH* instance = this;
+    MariaDBAuthenticator* instance = this;
     char* err;
     sqlite3* handle = get_handle(instance);
 
@@ -891,12 +885,12 @@ json_t* MYSQL_AUTH::diagnostics_json(const Listener* listener)
     return rval;
 }
 
-uint64_t MYSQL_AUTH::capabilities() const
+uint64_t MariaDBAuthenticator::capabilities() const
 {
     return CAP_REAUTHENTICATE | CAP_CONC_LOAD_USERS | CAP_BACKEND_AUTH;
 }
 
-std::unique_ptr<mxs::AuthenticatorSession> MYSQL_AUTH::createSession()
+std::unique_ptr<mxs::AuthenticatorSession> MariaDBAuthenticator::createSession()
 {
     return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) MariaDBAuthenticatorSession());
 }

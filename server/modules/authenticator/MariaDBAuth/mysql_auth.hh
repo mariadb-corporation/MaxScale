@@ -102,6 +102,42 @@ static int db_flags = SQLITE_OPEN_READWRITE
     | SQLITE_OPEN_CREATE
     | SQLITE_OPEN_NOMUTEX;
 
+class MariaDBAuthenticator : public mxs::Authenticator
+{
+public:
+    static MariaDBAuthenticator* create(char** options);
+
+    ~MariaDBAuthenticator() override = default;
+    std::unique_ptr<mxs::AuthenticatorSession> createSession() override;
+    int load_users(Listener* listener) override;
+    void diagnostics(DCB* output, Listener* listener) override;
+    json_t* diagnostics_json(const Listener* listener) override;
+    uint64_t capabilities() const override;
+
+    sqlite3** handles {nullptr};              /**< SQLite3 database handle */
+    char*     cache_dir {nullptr};            /**< Custom cache directory location */
+    bool      inject_service_user {true};     /**< Inject the service user into the list of users */
+    bool      skip_auth {false};              /**< Authentication will always be successful */
+    bool      check_permissions {true};
+    bool      lower_case_table_names {false}; /**< Disable database case-sensitivity */
+};
+
+class MariaDBAuthenticatorSession : public mxs::AuthenticatorSession
+{
+public:
+    ~MariaDBAuthenticatorSession() override = default;
+    bool extract(DCB* client, GWBUF* buffer) override;
+    bool ssl_capable(DCB* client) override;
+    int authenticate(DCB* client) override;
+    void free_data(DCB* client) override;
+    int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
+                       uint8_t* scramble, size_t scramble_len,
+                       uint8_t* output, size_t output_len) override;
+
+    std::unique_ptr<mxs::AuthenticatorBackendSession> newBackendSession() override;
+    // No fields, as authentication data is managed by the protocol.
+};
+
 /** Structure representing the authentication state */
 class MariaDBBackendSession : public mxs::AuthenticatorBackendSession
 {
@@ -124,57 +160,6 @@ private:
     State state {State::NEED_OK};   /**< Authentication state */
 };
 
-class MariaDBAuthenticatorSession : public mxs::AuthenticatorSession
-{
-public:
-    ~MariaDBAuthenticatorSession() override = default;
-    bool extract(DCB* client, GWBUF* buffer) override;
-    bool ssl_capable(DCB* client) override;
-    int authenticate(DCB* client) override;
-    void free_data(DCB* client) override;
-    int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
-                               uint8_t* scramble, size_t scramble_len,
-                               uint8_t* output, size_t output_len) override;
-
-    std::unique_ptr<mxs::AuthenticatorBackendSession> newBackendSession() override;
-    // No fields, as authentication data is managed by the protocol.
-};
-
-// TODO: Rename later
-class MYSQL_AUTH : public mxs::Authenticator
-{
-public:
-    static MYSQL_AUTH* create(char** options);
-
-    ~MYSQL_AUTH() override = default;
-    std::unique_ptr<mxs::AuthenticatorSession> createSession() override;
-    int load_users(Listener* listener) override;
-    void diagnostics(DCB* output, Listener* listener) override;
-    json_t* diagnostics_json(const Listener* listener) override;
-    uint64_t capabilities() const override;
-
-    sqlite3** handles;              /**< SQLite3 database handle */
-    char*     cache_dir;            /**< Custom cache directory location */
-    bool      inject_service_user;  /**< Inject the service user into the list of users */
-    bool      skip_auth;            /**< Authentication will always be successful */
-    bool      check_permissions;
-    bool      lower_case_table_names;   /**< Disable database case-sensitivity */
-};
-
-
-
-/**
- * MySQL user and host data structure
- */
-typedef struct mysql_user_host_key
-{
-    char*              user;
-    struct sockaddr_in ipv4;
-    int                netmask;
-    char*              resource;
-    char               hostname[MYSQL_HOST_MAXLEN + 1];
-} MYSQL_USER_HOST;
-
 /**
  * @brief Get the thread-specific SQLite handle
  *
@@ -182,7 +167,7 @@ typedef struct mysql_user_host_key
  *
  * @return The thread-specific handle
  */
-sqlite3* get_handle(MYSQL_AUTH* instance);
+sqlite3* get_handle(MariaDBAuthenticator* instance);
 
 /**
  * @brief Add new MySQL user to the internal user database
@@ -254,7 +239,7 @@ int replace_mysql_users(Listener* listener, bool skip_local, SERVER** srv);
  *
  * @return MXS_AUTH_SUCCEEDED if the user has access to the database
  */
-int validate_mysql_user(MYSQL_AUTH* instance,
+int validate_mysql_user(MariaDBAuthenticator* instance,
                         DCB* dcb,
                         MYSQL_session* session,
                         uint8_t* scramble,
