@@ -210,7 +210,7 @@ static void blr_start_master(void* data)
     mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(router->client->owner);
     mxb_assert(worker == mxs_rworker_get_current());
 
-    router->client = dcb_create_internal(router->session, worker);
+    router->client = InternalDCB::create(router->session, worker);
     mxb_assert(router->client);
     router->client->m_remote = MXS_STRDUP("127.0.0.1");
 

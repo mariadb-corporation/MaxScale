@@ -196,7 +196,7 @@ DCB::~DCB()
     MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
 
-ClientDCB* dcb_create_client(int fd, MXS_SESSION* session, DCB::Manager* manager)
+ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session, DCB::Manager* manager)
 {
     ClientDCB* dcb = nullptr;
 
@@ -217,7 +217,7 @@ ClientDCB* dcb_create_client(int fd, MXS_SESSION* session, DCB::Manager* manager
     return dcb;
 }
 
-InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager)
+InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
 {
     MXS_PROTOCOL_API protocol_api = session->listener->protocol_func();
 

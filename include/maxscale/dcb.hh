@@ -368,12 +368,9 @@ private:
 class ClientDCB : public DCB
 {
 public:
-    ClientDCB(int fd,
-              MXS_SESSION* session,
-              MXS_PROTOCOL_SESSION* protocol,
-              MXS_PROTOCOL_API protocol_api,
-              Manager* manager);
     ~ClientDCB() override;
+
+    static ClientDCB* create(int fd, MXS_SESSION* session, DCB::Manager* manager);
 
     int ssl_handshake() override;
 
@@ -389,6 +386,12 @@ protected:
               Manager* manager);
 
 private:
+    ClientDCB(int fd,
+              MXS_SESSION* session,
+              MXS_PROTOCOL_SESSION* protocol,
+              MXS_PROTOCOL_API protocol_api,
+              Manager* manager);
+
     bool was_freed(MXS_SESSION* session) override;
 };
 
@@ -430,12 +433,15 @@ private:
 class InternalDCB : public ClientDCB
 {
 public:
-    InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, Manager* manager);
+    static InternalDCB* create(MXS_SESSION* session, DCB::Manager* manager);
 
     int ssl_handshake() override;
 
     bool enable_events() override;
     bool disable_events() override;
+
+private:
+    InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, Manager* manager);
 };
 
 namespace maxscale
@@ -449,11 +455,6 @@ inline bool dcb_write(DCB* dcb, GWBUF* queue)
 {
     return dcb->write(queue);
 }
-
-ClientDCB* dcb_create_client(int fd,
-                             MXS_SESSION* session,
-                             DCB::Manager* manager);
-InternalDCB* dcb_create_internal(MXS_SESSION* session, DCB::Manager* manager);
 
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 {

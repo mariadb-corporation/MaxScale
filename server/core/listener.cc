@@ -796,7 +796,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
     mxb_assert(worker);
 
-    ClientDCB* client_dcb = dcb_create_client(fd, session, worker);
+    ClientDCB* client_dcb = ClientDCB::create(fd, session, worker);
 
     if (!client_dcb)
     {

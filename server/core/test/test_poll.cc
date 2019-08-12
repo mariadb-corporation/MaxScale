@@ -72,11 +72,11 @@ static int test1()
         return 1;
     }
 
-    dcb = dcb_create_client(fd, session, nullptr);
+    dcb = ClientDCB::create(fd, session, nullptr);
 
     if (dcb == NULL)
     {
-        fprintf(stderr, "\nError on function call: dcb_create_client() returned NULL.\n");
+        fprintf(stderr, "\nError on function call: ClientDCB::create() returned NULL.\n");
         return 1;
     }
 

@@ -174,7 +174,7 @@ class ResultSetDCB : public ClientDCB
 {
 public:
     ResultSetDCB(MXS_SESSION* session)
-        : ClientDCB(DCBFD_CLOSED, session, nullptr, MXS_PROTOCOL_API {}, nullptr)
+        : ClientDCB(DCBFD_CLOSED, DCB::Role::CLIENT, session, nullptr, MXS_PROTOCOL_API {}, nullptr)
     {
         m_protocol_api.write = &ResultSetDCB::write;
     }

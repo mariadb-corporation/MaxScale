@@ -54,7 +54,7 @@ static int test1()
     auto listener = Listener::create("listener", "mariadbclient", listener_params);
 
     auto session = new mxs::Session(listener);
-    dcb = dcb_create_internal(session, nullptr);
+    dcb = InternalDCB::create(session, nullptr);
     printDCB(dcb);
     fprintf(stderr, "\t..done\nAllocated dcb.");
     // TODO: Without running workers, the following will hang. As it does not
