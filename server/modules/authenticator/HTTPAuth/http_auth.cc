@@ -46,9 +46,14 @@ public:
     }
 };
 
-class HTTPClientAuthenticator : public mxs::ClientAuthenticator
+class HTTPClientAuthenticator : public mxs::ClientAuthenticatorT<HTTPAuthenticatorModule>
 {
 public:
+    HTTPClientAuthenticator(HTTPAuthenticatorModule* module)
+        : ClientAuthenticatorT(module)
+    {
+    }
+
     ~HTTPClientAuthenticator() override = default;
     bool extract(DCB* client, GWBUF* buffer) override
     {
@@ -74,7 +79,7 @@ public:
 
 std::unique_ptr<mxs::ClientAuthenticator> HTTPAuthenticatorModule::create_client_authenticator()
 {
-    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) HTTPClientAuthenticator());
+    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) HTTPClientAuthenticator(this));
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()

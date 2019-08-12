@@ -1130,10 +1130,12 @@ void update_current_command(DCB* dcb, GWBUF* buffer)
 bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
-    if (session->listener->auth_instance()->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
+    ClientDCB* client_dcb = session->client_dcb;
+    auto& client_auth = client_dcb->m_auth_session;
+    if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
-        MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
-        ClientDCB* client_dcb = session->client_dcb;
+        MySQLProtocol* proto = (MySQLProtocol*)client_dcb->protocol_session();
+
 
         std::vector<uint8_t> orig_payload;
         uint32_t orig_len = gwbuf_length(proto->stored_query);
@@ -1175,7 +1177,7 @@ bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
         proto->charset |= (*it++) << 8;
 
         // Copy the new username to the session data
-        MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
+        MYSQL_session* data = (MYSQL_session*)client_dcb->m_data;
         strcpy(data->user, user.c_str());
         strcpy(data->db, db.c_str());
 
@@ -1184,7 +1186,7 @@ bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
         payload.resize(payloadlen);
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
-        int rc = client_dcb->m_auth_session->reauthenticate(
+        int rc = client_auth->reauthenticate(
             client_dcb, data->user, &payload[0], payload.size(),
             proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
 

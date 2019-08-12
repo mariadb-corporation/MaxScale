@@ -162,7 +162,7 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(char** options)
 
 std::unique_ptr<mxs::ClientAuthenticator> GSSAPIAuthenticatorModule::create_client_authenticator()
 {
-    auto new_ses = new (std::nothrow) GSSAPIClientAuthenticator();
+    auto new_ses = new (std::nothrow) GSSAPIClientAuthenticator(this);
     if (new_ses)
     {
         if (sqlite3_open_v2(GSSAPI_DATABASE_NAME, &new_ses->handle, db_flags, NULL) == SQLITE_OK)
@@ -178,6 +178,11 @@ std::unique_ptr<mxs::ClientAuthenticator> GSSAPIAuthenticatorModule::create_clie
     }
 
     return std::unique_ptr<mxs::ClientAuthenticator>(new_ses);
+}
+
+GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module)
+    : ClientAuthenticatorT(module)
+{
 }
 
 GSSAPIClientAuthenticator::~GSSAPIClientAuthenticator()

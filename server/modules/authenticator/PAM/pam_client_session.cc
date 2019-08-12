@@ -125,23 +125,24 @@ int row_count_cb(int* data, int columns, char** column_vals, char** column_names
 
 }
 
-PamClientAuthenticator::PamClientAuthenticator(const PamAuthenticatorModule& instance, SSQLite sqlite)
-    : m_instance(instance)
-    , m_sqlite(std::move(sqlite))
+PamClientAuthenticator::PamClientAuthenticator(PamAuthenticatorModule* instance, SSQLite sqlite)
+    : ClientAuthenticatorT(instance)
+      , m_sqlite(std::move(sqlite))
 {
 }
 
-PamClientAuthenticator* PamClientAuthenticator::create(const PamAuthenticatorModule& inst)
+std::unique_ptr<mxs::ClientAuthenticator> PamClientAuthenticator::create(PamAuthenticatorModule* inst)
 {
-    PamClientAuthenticator* rval = nullptr;
+    std::unique_ptr<mxs::ClientAuthenticator> rval;
+
     // This handle is only used from one thread, can define no_mutex.
     int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_NOMUTEX;
     string sqlite_error;
-    auto sqlite = SQLite::create(inst.m_dbname, db_flags, &sqlite_error);
+    auto sqlite = SQLite::create(inst->m_dbname, db_flags, &sqlite_error);
     if (sqlite)
     {
         sqlite->set_timeout(1000);
-        rval = new(std::nothrow) PamClientAuthenticator(inst, std::move(sqlite));
+        rval.reset(new(std::nothrow) PamClientAuthenticator(inst, std::move(sqlite)));
     }
     else
     {

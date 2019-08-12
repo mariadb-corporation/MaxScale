@@ -96,9 +96,14 @@ public:
     }
 };
 
-class CDCClientAuthenticator : public mxs::ClientAuthenticator
+class CDCClientAuthenticator : public mxs::ClientAuthenticatorT<CDCAuthenticatorModule>
 {
 public:
+    CDCClientAuthenticator(CDCAuthenticatorModule* module)
+        : ClientAuthenticatorT(module)
+    {
+    }
+
     ~CDCClientAuthenticator() override = default;
     bool extract(DCB* client, GWBUF* buffer) override
     {
@@ -125,7 +130,7 @@ public:
 
 std::unique_ptr<mxs::ClientAuthenticator> CDCAuthenticatorModule::create_client_authenticator()
 {
-    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) CDCClientAuthenticator());
+    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) CDCClientAuthenticator(this));
 }
 
 /**

@@ -70,9 +70,14 @@ public:
     }
 };
 
-class MaxAdminClientAuthenticator : public mxs::ClientAuthenticator
+class MaxAdminClientAuthenticator : public mxs::ClientAuthenticatorT<MaxAdminAuthenticatorModule>
 {
 public:
+    MaxAdminClientAuthenticator(MaxAdminAuthenticatorModule* module)
+        : ClientAuthenticatorT(module)
+    {
+    }
+
     ~MaxAdminClientAuthenticator() override = default;
     bool extract(DCB* client, GWBUF* buffer) override
     {
@@ -99,7 +104,7 @@ public:
 
 std::unique_ptr<mxs::ClientAuthenticator> MaxAdminAuthenticatorModule::create_client_authenticator()
 {
-    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MaxAdminClientAuthenticator());
+    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MaxAdminClientAuthenticator(this));
 }
 
 extern "C"

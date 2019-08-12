@@ -23,14 +23,11 @@
 class PamAuthenticatorModule;
 
 /** Client authenticator PAM-specific session data */
-class PamClientAuthenticator : public mxs::ClientAuthenticator
+class PamClientAuthenticator : public mxs::ClientAuthenticatorT<PamAuthenticatorModule>
 {
 public:
-    PamClientAuthenticator(const PamClientAuthenticator& orig) = delete;
-    PamClientAuthenticator& operator=(const PamClientAuthenticator&) = delete;
-
     using StringVector = std::vector<std::string>;
-    static PamClientAuthenticator* create(const PamAuthenticatorModule& inst);
+    static std::unique_ptr<mxs::ClientAuthenticator> create(PamAuthenticatorModule* instance);
 
     int  authenticate(DCB* client) override;
     bool extract(DCB* dcb, GWBUF* read_buffer) override;
@@ -41,7 +38,7 @@ public:
     std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
 private:
-    PamClientAuthenticator(const PamAuthenticatorModule& instance, SQLite::SSQLite sqlite);
+    PamClientAuthenticator(PamAuthenticatorModule* instance, SQLite::SSQLite sqlite);
     void get_pam_user_services(const DCB* dcb,
                                const MYSQL_session* session,
                                StringVector* services_out);
@@ -58,8 +55,7 @@ private:
         DONE
     };
 
-    const PamAuthenticatorModule&    m_instance;              /**< Authenticator instance */
-    SQLite::SSQLite const m_sqlite;                /**< SQLite3 database handle */
+    SQLite::SSQLite const m_sqlite;   /**< SQLite3 database handle */
 
     State    m_state {State::INIT};   /**< Authentication state */
     uint8_t  m_sequence {0};          /**< The next packet seqence number */

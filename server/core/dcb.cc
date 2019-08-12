@@ -304,18 +304,19 @@ BackendDCB* BackendDCB::create(SERVER* srv,
     MXS_PROTOCOL_API* protocol_api = (MXS_PROTOCOL_API*)load_module(srv->protocol().c_str(), MODULE_PROTOCOL);
     if (protocol_api)
     {
-        DCB* client_dcb = session->client_dcb;
+        auto client_dcb = session->client_dcb;
         MXS_PROTOCOL_SESSION* protocol_session =
             protocol_api->new_backend_session(session, srv, client_dcb->protocol_session(), component);
 
         if (protocol_session)
         {
+            auto& client_auth = client_dcb->m_auth_session;
             // Allocate DCB specific backend-authentication data from the client session.
-            std::unique_ptr<BackendAuthenticator> new_auth_session;
-            if (session->listener->auth_instance()->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
+            std::unique_ptr<BackendAuthenticator> new_backend_auth;
+            if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
             {
-                new_auth_session = session->client_dcb->m_auth_session->create_backend_authenticator();
-                if (!new_auth_session)
+                new_backend_auth = client_auth->create_backend_authenticator();
+                if (!new_backend_auth)
                 {
                     MXS_ERROR("Failed to create authenticator session for backend DCB.");
                 }
@@ -327,11 +328,10 @@ BackendDCB* BackendDCB::create(SERVER* srv,
                           session->listener->name(), session->listener->authenticator());
             }
 
-            if (new_auth_session)
+            if (new_backend_auth)
             {
                 dcb = new(std::nothrow) BackendDCB(srv, fd, session, protocol_session, *protocol_api,
-                                                   std::move(new_auth_session), manager);
-
+                                                   std::move(new_backend_auth), manager);
                 if (dcb)
                 {
                     session_link_backend_dcb(session, dcb);

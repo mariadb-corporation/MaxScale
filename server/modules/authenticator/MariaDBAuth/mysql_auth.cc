@@ -266,6 +266,12 @@ static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session
     *bufdata = '\0';
     return buffer;
 }
+
+MariaDBClientAuthenticator::MariaDBClientAuthenticator(MariaDBAuthenticatorModule* module)
+    : ClientAuthenticatorT(module)
+{
+}
+
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
  *
@@ -883,7 +889,7 @@ uint64_t MariaDBAuthenticatorModule::capabilities() const
 
 std::unique_ptr<mxs::ClientAuthenticator> MariaDBAuthenticatorModule::create_client_authenticator()
 {
-    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MariaDBClientAuthenticator());
+    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MariaDBClientAuthenticator(this));
 }
 
 bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)

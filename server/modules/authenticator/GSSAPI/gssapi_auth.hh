@@ -55,16 +55,17 @@ private:
     sqlite3* handle {nullptr};         /**< SQLite3 database handle */
 };
 
-class GSSAPIClientAuthenticator : public mxs::ClientAuthenticator
+class GSSAPIClientAuthenticator : public mxs::ClientAuthenticatorT<GSSAPIAuthenticatorModule>
 {
 public:
+    GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module);
     ~GSSAPIClientAuthenticator() override;
     bool extract(DCB* client, GWBUF* buffer) override;
     bool ssl_capable(DCB* client) override;
     int authenticate(DCB* client) override;
     void free_data(DCB* client) override;
-
     std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
+
     sqlite3*          handle {nullptr};            /**< SQLite3 database handle */
     uint8_t           sequence {0};                /**< The next packet seqence number */
 

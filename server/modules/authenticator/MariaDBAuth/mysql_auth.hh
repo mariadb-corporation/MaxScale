@@ -122,9 +122,10 @@ public:
     bool      lower_case_table_names {false}; /**< Disable database case-sensitivity */
 };
 
-class MariaDBClientAuthenticator : public mxs::ClientAuthenticator
+class MariaDBClientAuthenticator : public mxs::ClientAuthenticatorT<MariaDBAuthenticatorModule>
 {
 public:
+    MariaDBClientAuthenticator(MariaDBAuthenticatorModule* module);
     ~MariaDBClientAuthenticator() override = default;
     bool extract(DCB* client, GWBUF* buffer) override;
     bool ssl_capable(DCB* client) override;

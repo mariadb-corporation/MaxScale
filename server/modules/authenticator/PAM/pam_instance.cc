@@ -521,7 +521,7 @@ uint64_t PamAuthenticatorModule::capabilities() const
 
 std::unique_ptr<mxs::ClientAuthenticator> PamAuthenticatorModule::create_client_authenticator()
 {
-    return std::unique_ptr<mxs::ClientAuthenticator>(PamClientAuthenticator::create(*this));
+    return PamClientAuthenticator::create(this);
 }
 
 bool PamAuthenticatorModule::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)

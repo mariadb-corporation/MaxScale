@@ -28,6 +28,9 @@ class BackendAuthenticator;
 class AuthenticatorModule
 {
 public:
+    AuthenticatorModule(const AuthenticatorModule&) = delete;
+    AuthenticatorModule& operator=(const AuthenticatorModule&) = delete;
+
     enum Capabilities
     {
          CAP_REAUTHENTICATE = (1 << 1),  /**< Does the module support reauthentication? */
@@ -35,6 +38,7 @@ public:
          CAP_CONC_LOAD_USERS = (1 << 3)  /**< Does the module support concurrent user loading? */
     };
 
+    AuthenticatorModule() = default;
     virtual ~AuthenticatorModule() = default;
 
     // Create a client session.
@@ -72,7 +76,18 @@ public:
 class ClientAuthenticator
 {
 public:
+    ClientAuthenticator(const ClientAuthenticator&) = delete;
+    ClientAuthenticator& operator=(const ClientAuthenticator&) = delete;
+
+    ClientAuthenticator() = default;
     virtual ~ClientAuthenticator() = default;
+
+    /**
+     * Get module runtime capabilities.
+     *
+     * @return Capabilities as a bitfield
+     */
+    virtual uint64_t capabilities() const = 0;
 
     // Extract client or backend data from a buffer and place it in a structure shared at the session
     // level, stored in `dcb->data`. Typically, this is called just before the authenticate-entrypoint.
@@ -115,12 +130,40 @@ public:
     virtual std::unique_ptr<BackendAuthenticator> create_backend_authenticator();
 };
 
+// Helper template which stores the module reference.
+template <class AuthModule>
+class ClientAuthenticatorT : public ClientAuthenticator
+{
+public:
+    /**
+     * Constructor.
+     *
+     * @param module The global module data
+     */
+    ClientAuthenticatorT(AuthModule* module)
+    : m_module(*module)
+    {
+    }
+
+    uint64_t capabilities() const override
+    {
+        return m_module.capabilities();
+    }
+
+private:
+    AuthModule& m_module;
+};
+
 /**
  * The base class for all authenticator backend sessions. Created by the client session.
  */
 class BackendAuthenticator
 {
 public:
+    BackendAuthenticator(const BackendAuthenticator&) = delete;
+    BackendAuthenticator& operator=(const BackendAuthenticator&) = delete;
+
+    BackendAuthenticator() = default;
     virtual ~BackendAuthenticator() = default;
 
     // Extract backend data from a buffer. Typically, this is called just before the authenticate-entrypoint.
