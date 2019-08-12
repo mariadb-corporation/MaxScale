@@ -1673,28 +1673,57 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     bool rval = false;
     if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_REAUTHENTICATE)
     {
-        auto client_dcb = session->client_dcb;
-        uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
-        MySQLProtocol* proto = (MySQLProtocol*)client_dcb->protocol_session();
-        std::vector<uint8_t> payload;
-        payload.resize(payloadlen);
-        gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
+        MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
+        ClientDCB* client_dcb = session->client_dcb;
 
-        // Will contains extra data but the username is null-terminated
-        char user[MYSQL_USER_MAXLEN + 1];
-        gwbuf_copy_data(proto->stored_query, MYSQL_HEADER_LEN + 1, sizeof(user), (uint8_t*)user);
+        std::vector<uint8_t> orig_payload;
+        uint32_t orig_len = gwbuf_length(proto->stored_query);
+        orig_payload.resize(orig_len);
+        gwbuf_copy_data(proto->stored_query, 0, orig_len, orig_payload.data());
 
-        char* end = user + sizeof(user);
+        auto it = orig_payload.begin();
+        it += MYSQL_HEADER_LEN + 1;     // Skip header and command byte
+        auto user_end = std::find(it, orig_payload.end(), '\0');
 
-        if (std::find(user, end, '\0') == end)
+        if (user_end == orig_payload.end())
         {
             mysql_send_auth_error(client_dcb, 3, 0, "Malformed AuthSwitchRequest packet");
             return false;
         }
 
+        std::string user(it, user_end);
+        it = user_end;
+        ++it;
+
+        // Skip the auth token
+        auto token_len = *it++;
+        it += token_len;
+
+        auto db_end = std::find(it, orig_payload.end(), '\0');
+
+        if (db_end == orig_payload.end())
+        {
+            mysql_send_auth_error(client_dcb, 3, 0, "Malformed AuthSwitchRequest packet");
+            return false;
+        }
+
+        std::string db(it, db_end);
+
+        it = db_end;
+        ++it;
+
+        proto->charset = *it++;
+        proto->charset |= (*it++) << 8;
+
         // Copy the new username to the session data
-        MYSQL_session* data = (MYSQL_session*)client_dcb->m_data;
-        strcpy(data->user, user);
+        MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
+        strcpy(data->user, user.c_str());
+        strcpy(data->db, db.c_str());
+
+        std::vector<uint8_t> payload;
+        uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
+        payload.resize(payloadlen);
+        gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
         int rc = client_dcb->m_auth_session->reauthenticate(
             client_dcb, data->user, &payload[0], payload.size(),

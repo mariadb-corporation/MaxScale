@@ -1364,185 +1364,15 @@ static int gw_change_user(DCB* backend,
                           MXS_SESSION* in_session,
                           GWBUF* queue)
 {
-    MYSQL_session* current_session = NULL;
-    MySQLProtocol* backend_protocol = NULL;
-    MySQLProtocol* client_protocol = NULL;
-    char username[MYSQL_USER_MAXLEN + 1] = "";
-    char database[MYSQL_DATABASE_MAXLEN + 1] = "";
-    char current_database[MYSQL_DATABASE_MAXLEN + 1] = "";
-    uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] = "";
-    uint8_t* client_auth_packet = GWBUF_DATA(queue);
-    unsigned int auth_token_len = 0;
-    uint8_t* auth_token = NULL;
-    int rv = -1;
-    int auth_ret = 1;
-
-    current_session = (MYSQL_session*)in_session->client_dcb->m_data;
-    backend_protocol = static_cast<MySQLProtocol*>(backend->protocol_session());
-    client_protocol = static_cast<MySQLProtocol*>(in_session->client_dcb->protocol_session());
-
-    /* now get the user, after 4 bytes header and 1 byte command */
-    client_auth_packet += 5;
-    size_t len = strlen((char*)client_auth_packet);
-    if (len > MYSQL_USER_MAXLEN)
-    {
-        MXS_ERROR("Client sent user name \"%s\",which is %lu characters long, "
-                  "while a maximum length of %d is allowed. Cutting trailing "
-                  "characters.",
-                  (char*)client_auth_packet,
-                  len,
-                  MYSQL_USER_MAXLEN);
-    }
-    strncpy(username, (char*)client_auth_packet, MYSQL_USER_MAXLEN);
-    username[MYSQL_USER_MAXLEN] = 0;
-
-    client_auth_packet += (len + 1);
-
-    /* get the auth token len */
-    memcpy(&auth_token_len, client_auth_packet, 1);
-
-    client_auth_packet++;
-
-    /* allocate memory for token only if auth_token_len > 0 */
-    if (auth_token_len > 0)
-    {
-        auth_token = (uint8_t*)MXS_MALLOC(auth_token_len);
-        mxb_assert(auth_token != NULL);
-
-        if (auth_token == NULL)
-        {
-            return rv;
-        }
-        memcpy(auth_token, client_auth_packet, auth_token_len);
-        client_auth_packet += auth_token_len;
-    }
-
-    /* get new database name */
-    len = strlen((char*)client_auth_packet);
-    if (len > MYSQL_DATABASE_MAXLEN)
-    {
-        MXS_ERROR("Client sent database name \"%s\", which is %lu characters long, "
-                  "while a maximum length of %d is allowed. Cutting trailing "
-                  "characters.",
-                  (char*)client_auth_packet,
-                  len,
-                  MYSQL_DATABASE_MAXLEN);
-    }
-    strncpy(database, (char*)client_auth_packet, MYSQL_DATABASE_MAXLEN);
-    database[MYSQL_DATABASE_MAXLEN] = 0;
-
-    client_auth_packet += (len + 1);
-
-    if (*client_auth_packet)
-    {
-        memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
-    }
-
-    /* save current_database name */
-    strcpy(current_database, current_session->db);
-
-    /*
-     * Now clear database name in dcb as we don't do local authentication on db name for change user.
-     * Local authentication only for user@host and if successful the database name change is sent to backend.
-     */
-    *current_session->db = 0;
-
-    /*
-     * Decode the token and check the password.
-     * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
-     */
-    auto dcb = backend->session()->client_dcb;
-
-    if ((in_session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_REAUTHENTICATE) == 0)
-    {
-        /** Authenticator does not support reauthentication */
-        rv = 0;
-        goto retblock;
-    }
-
-    auth_ret = dcb->m_auth_session->reauthenticate(
-        dcb, username, auth_token, auth_token_len,
-        client_protocol->scramble, sizeof(client_protocol->scramble),
-        client_sha1, sizeof(client_sha1));
-
-    strcpy(current_session->db, current_database);
-
-    if (auth_ret != 0)
-    {
-        if (service_refresh_users(backend->session()->client_dcb->service()))
-        {
-            /*
-             * Try authentication again with new repository data
-             * Note: if no auth client authentication will fail
-             */
-            *current_session->db = 0;
-
-            auth_ret = dcb->m_auth_session->reauthenticate(
-                dcb, username, auth_token, auth_token_len,
-                client_protocol->scramble, sizeof(client_protocol->scramble),
-                client_sha1, sizeof(client_sha1));
-
-            strcpy(current_session->db, current_database);
-        }
-    }
-
-    MXS_FREE(auth_token);
-
-    if (auth_ret != 0)
-    {
-        bool password_set = false;
-        char* message = NULL;
-
-        if (auth_token_len > 0)
-        {
-            // If the length of the authentication token is non-0, then
-            // it means that the client provided a password.
-            password_set = true;
-        }
-
-        /**
-         * Create an error message and make it look like legit reply
-         * from backend server. Then make it look like an incoming event
-         * so that thread gets new task of it, calls clientReply
-         * which filters out duplicate errors from same cause and forward
-         * reply to the client.
-         */
-        message = create_auth_fail_str(username,
-                                       backend->session()->client_dcb->m_remote,
-                                       password_set,
-                                       NULL,
-                                       auth_ret);
-        if (message == NULL)
-        {
-            MXS_ERROR("Creating error message failed.");
-            rv = 0;
-            goto retblock;
-        }
-
-        modutil_reply_auth_error(backend, message, 0);
-        rv = 1;
-    }
-    else
-    {
-        /** This assumes that authentication will succeed. If authentication fails,
-         * the internal session will represent the wrong user. This is wrong and
-         * a check whether the COM_CHANGE_USER succeeded should be done in the
-         * backend protocol reply handling.
-         *
-         * For the time being, it is simpler to assume a COM_CHANGE_USER will always
-         * succeed if the authentication in MaxScale is successful. In practice this
-         * might not be true but these cases are handled by the router modules
-         * and the servers that fail to execute the COM_CHANGE_USER are discarded. */
-        strcpy(current_session->user, username);
-        strcpy(current_session->db, database);
-        memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
-        rv = gw_send_change_user_to_backend(database, username, client_sha1, backend, backend_protocol);
-    }
-
-retblock:
     gwbuf_free(queue);
 
-    return rv;
+    auto current_session = static_cast<MYSQL_session*>(in_session->client_dcb->m_data);
+    auto backend_protocol = static_cast<MySQLProtocol*>(backend->protocol_session());
+
+    return gw_send_change_user_to_backend(current_session->db,
+                                          current_session->user,
+                                          current_session->client_sha1,
+                                          backend, backend_protocol);
 }
 
 /**
@@ -1732,7 +1562,7 @@ static int gw_send_change_user_to_backend(char* dbname,
 
     mses = (MYSQL_session*)backend_protocol->session()->client_dcb->m_data;
     buffer = gw_create_change_user_packet(mses, backend_protocol);
-    rc = backend->protocol_write(buffer);
+    rc = dcb_write(backend, buffer);
 
     if (rc != 0)
     {
