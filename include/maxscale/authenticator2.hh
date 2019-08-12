@@ -19,13 +19,13 @@
 namespace maxscale
 {
 
-class AuthenticatorSession;
-class AuthenticatorBackendSession;
+class ClientAuthenticator;
+class BackendAuthenticator;
 
 /**
  * The base class of all authenticators. Contains the global data for an authenticator module instance.
  */
-class Authenticator
+class AuthenticatorModule
 {
 public:
     enum Capabilities
@@ -35,10 +35,10 @@ public:
          CAP_CONC_LOAD_USERS = (1 << 3)  /**< Does the module support concurrent user loading? */
     };
 
-    virtual ~Authenticator() = default;
+    virtual ~AuthenticatorModule() = default;
 
     // Create a client session.
-    virtual std::unique_ptr<AuthenticatorSession> createSession() = 0;
+    virtual std::unique_ptr<ClientAuthenticator> create_client_authenticator() = 0;
 
     // Load or update authenticator user data
     virtual int load_users(Listener* listener) = 0;
@@ -69,10 +69,10 @@ public:
 /**
  * The base class of authenticator client sessions. Contains session-specific data for an authenticator.
  */
-class AuthenticatorSession
+class ClientAuthenticator
 {
 public:
-    virtual ~AuthenticatorSession() = default;
+    virtual ~ClientAuthenticator() = default;
 
     // Extract client or backend data from a buffer and place it in a structure shared at the session
     // level, stored in `dcb->data`. Typically, this is called just before the authenticate-entrypoint.
@@ -112,16 +112,16 @@ public:
      *
      * @return Backend session
      */
-    virtual std::unique_ptr<AuthenticatorBackendSession> newBackendSession();
+    virtual std::unique_ptr<BackendAuthenticator> create_backend_authenticator();
 };
 
 /**
  * The base class for all authenticator backend sessions. Created by the client session.
  */
-class AuthenticatorBackendSession
+class BackendAuthenticator
 {
 public:
-    virtual ~AuthenticatorBackendSession() = default;
+    virtual ~BackendAuthenticator() = default;
 
     // Extract backend data from a buffer. Typically, this is called just before the authenticate-entrypoint.
     virtual bool extract(DCB* client, GWBUF* buffer) = 0;
@@ -141,9 +141,9 @@ public:
     AuthenticatorApi(const AuthenticatorApi&) = delete;
     AuthenticatorApi& operator=(const AuthenticatorApi&) = delete;
 
-    static Authenticator* createInstance(char** options)
+    static AuthenticatorModule* createInstance(char** options)
     {
-        Authenticator* instance = nullptr;
+        AuthenticatorModule* instance = nullptr;
         MXS_EXCEPTION_GUARD(instance = AuthImplementation::create(options));
         return instance;
     }

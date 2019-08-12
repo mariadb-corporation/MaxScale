@@ -15,13 +15,13 @@
 #include "pam_auth_common.hh"
 #include <maxscale/authenticator2.hh>
 
-class PamBackendSession : public mxs::AuthenticatorBackendSession
+class PamBackendAuthenticator : public mxs::BackendAuthenticator
 {
 public:
-    PamBackendSession(const PamBackendSession& orig) = delete;
-    PamBackendSession& operator=(const PamBackendSession&) = delete;
+    PamBackendAuthenticator(const PamBackendAuthenticator& orig) = delete;
+    PamBackendAuthenticator& operator=(const PamBackendAuthenticator&) = delete;
 
-    PamBackendSession();
+    PamBackendAuthenticator();
     bool extract(DCB* dcb, GWBUF* buffer) override;
     int  authenticate(DCB* dcb) override;
     bool ssl_capable(DCB* dcb) override;

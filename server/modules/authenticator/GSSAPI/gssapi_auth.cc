@@ -83,17 +83,17 @@ static int db_flags = SQLITE_OPEN_READWRITE
     | SQLITE_OPEN_URI
     | SQLITE_OPEN_SHAREDCACHE;
 
-void GSSAPIAuthenticator::diagnostics(DCB* output, Listener* listener)
+void GSSAPIAuthenticatorModule::diagnostics(DCB* output, Listener* listener)
 {
     users_default_diagnostic(output, listener);
 }
 
-json_t* GSSAPIAuthenticator::diagnostics_json(const Listener* listener)
+json_t* GSSAPIAuthenticatorModule::diagnostics_json(const Listener* listener)
 {
     return users_default_diagnostic_json(listener);
 }
 
-uint64_t GSSAPIAuthenticator::capabilities() const
+uint64_t GSSAPIAuthenticatorModule::capabilities() const
 {
     return CAP_BACKEND_AUTH;
 }
@@ -107,9 +107,9 @@ uint64_t GSSAPIAuthenticator::capabilities() const
  * @param options Listener options
  * @return Authenticator instance
  */
-GSSAPIAuthenticator* GSSAPIAuthenticator::create(char** options)
+GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(char** options)
 {
-    auto instance = new(std::nothrow) GSSAPIAuthenticator();
+    auto instance = new(std::nothrow) GSSAPIAuthenticatorModule();
     if (instance)
     {
         if (sqlite3_open_v2(GSSAPI_DATABASE_NAME, &instance->handle, db_flags, NULL) != SQLITE_OK)
@@ -160,9 +160,9 @@ GSSAPIAuthenticator* GSSAPIAuthenticator::create(char** options)
     return instance;
 }
 
-std::unique_ptr<mxs::AuthenticatorSession> GSSAPIAuthenticator::createSession()
+std::unique_ptr<mxs::ClientAuthenticator> GSSAPIAuthenticatorModule::create_client_authenticator()
 {
-    auto new_ses = new (std::nothrow) GSSAPIAuthenticatorSession();
+    auto new_ses = new (std::nothrow) GSSAPIClientAuthenticator();
     if (new_ses)
     {
         if (sqlite3_open_v2(GSSAPI_DATABASE_NAME, &new_ses->handle, db_flags, NULL) == SQLITE_OK)
@@ -177,10 +177,10 @@ std::unique_ptr<mxs::AuthenticatorSession> GSSAPIAuthenticator::createSession()
         }
     }
 
-    return std::unique_ptr<mxs::AuthenticatorSession>(new_ses);
+    return std::unique_ptr<mxs::ClientAuthenticator>(new_ses);
 }
 
-GSSAPIAuthenticatorSession::~GSSAPIAuthenticatorSession()
+GSSAPIClientAuthenticator::~GSSAPIClientAuthenticator()
 {
         sqlite3_close_v2(handle);
         MXS_FREE(principal_name);
@@ -199,7 +199,7 @@ GSSAPIAuthenticatorSession::~GSSAPIAuthenticatorSession()
  * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  * @see https://web.mit.edu/kerberos/krb5-1.5/krb5-1.5.4/doc/krb5-user/What-is-a-Kerberos-Principal_003f.html
  */
-static GWBUF* create_auth_change_packet(GSSAPIAuthenticator* instance, GSSAPIAuthenticatorSession* auth)
+static GWBUF* create_auth_change_packet(GSSAPIAuthenticatorModule* instance, GSSAPIClientAuthenticator* auth)
 {
     size_t principal_name_len = strlen(instance->principal_name);
     size_t plen = sizeof(auth_plugin_name) + 1 + principal_name_len;
@@ -230,7 +230,7 @@ static GWBUF* create_auth_change_packet(GSSAPIAuthenticator* instance, GSSAPIAut
  * @param buffer Buffer containing the key
  * @return True on success, false if memory allocation failed
  */
-bool GSSAPIAuthenticatorSession::store_client_token(DCB* dcb, GWBUF* buffer)
+bool GSSAPIClientAuthenticator::store_client_token(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     uint8_t hdr[MYSQL_HEADER_LEN];
@@ -256,7 +256,7 @@ bool GSSAPIAuthenticatorSession::store_client_token(DCB* dcb, GWBUF* buffer)
  * @param dcb Client DCB
  * @param buffer Buffer containing the first authentication response
  */
-void GSSAPIAuthenticatorSession::copy_client_information(DCB* dcb, GWBUF* buffer)
+void GSSAPIClientAuthenticator::copy_client_information(DCB* dcb, GWBUF* buffer)
 {
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
 }
@@ -268,7 +268,7 @@ void GSSAPIAuthenticatorSession::copy_client_information(DCB* dcb, GWBUF* buffer
  * @param read_buffer Buffer containing the client's response
  * @return True if authentication can continue, false if not
  */
-bool GSSAPIAuthenticatorSession::extract(DCB* dcb, GWBUF* read_buffer)
+bool GSSAPIClientAuthenticator::extract(DCB* dcb, GWBUF* read_buffer)
 {
     int rval = false;
 
@@ -299,7 +299,7 @@ bool GSSAPIAuthenticatorSession::extract(DCB* dcb, GWBUF* read_buffer)
  * @param dcb Client DCB
  * @return True if client supports SSL
  */
-bool GSSAPIAuthenticatorSession::ssl_capable(DCB* dcb)
+bool GSSAPIClientAuthenticator::ssl_capable(DCB* dcb)
 {
     MySQLProtocol* protocol = (MySQLProtocol*)dcb->protocol_session();
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
@@ -417,7 +417,7 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
  * @param princ Client principal name
  * @return True if the user has access to the database
  */
-static bool validate_user(GSSAPIAuthenticatorSession* auth, DCB* dcb, MYSQL_session* session,
+static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_session* session,
                           const char* princ)
 {
     mxb_assert(princ);
@@ -475,11 +475,11 @@ static bool validate_user(GSSAPIAuthenticatorSession* auth, DCB* dcb, MYSQL_sess
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-int GSSAPIAuthenticatorSession::authenticate(DCB* dcb)
+int GSSAPIClientAuthenticator::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
     auto auth = this;
-    GSSAPIAuthenticator* instance = (GSSAPIAuthenticator*)dcb->session()->listener->auth_instance();
+    GSSAPIAuthenticatorModule* instance = (GSSAPIAuthenticatorModule*)dcb->session()->listener->auth_instance();
 
     if (state == GSSAPI_AUTH_INIT)
     {
@@ -519,7 +519,7 @@ int GSSAPIAuthenticatorSession::authenticate(DCB* dcb)
  *
  * @param dcb DCB to free
  */
-void GSSAPIAuthenticatorSession::free_data(DCB* dcb)
+void GSSAPIClientAuthenticator::free_data(DCB* dcb)
 {
     if (dcb->m_data)
     {
@@ -530,10 +530,10 @@ void GSSAPIAuthenticatorSession::free_data(DCB* dcb)
     }
 }
 
-std::unique_ptr<mxs::AuthenticatorBackendSession> GSSAPIAuthenticatorSession::newBackendSession()
+std::unique_ptr<mxs::BackendAuthenticator> GSSAPIClientAuthenticator::create_backend_authenticator()
 {
-    return std::unique_ptr<mxs::AuthenticatorBackendSession>(
-            new (std::nothrow) GSSAPIAuthenticatorBackendSession());
+    return std::unique_ptr<mxs::BackendAuthenticator>(
+            new (std::nothrow) GSSAPIBackendAuthenticator());
 }
 
 /**
@@ -616,7 +616,7 @@ static void add_gssapi_user(sqlite3* handle,
  * @param listener Listener definition
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-int GSSAPIAuthenticator::load_users(Listener* listener)
+int GSSAPIAuthenticatorModule::load_users(Listener* listener)
 {
     const char* user;
     const char* password;
@@ -702,7 +702,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "GSSAPI authenticator",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<GSSAPIAuthenticator>::s_api,
+        &mxs::AuthenticatorApi<GSSAPIAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

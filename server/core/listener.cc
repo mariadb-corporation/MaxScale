@@ -113,7 +113,7 @@ Listener::Listener(SERVICE* service,
                    const std::string& protocol,
                    const std::string& authenticator,
                    const std::string& auth_opts,
-                   std::unique_ptr<mxs::Authenticator> auth_instance,
+                   std::unique_ptr<mxs::AuthenticatorModule> auth_instance,
                    std::unique_ptr<mxs::SSLContext> ssl,
                    const MXS_CONFIG_PARAMETER& params)
     : MXB_POLL_DATA{Listener::poll_handler}
@@ -589,7 +589,7 @@ const MXS_PROTOCOL_API& Listener::protocol_func() const
     return m_proto_func;
 }
 
-mxs::Authenticator* Listener::auth_instance() const
+mxs::AuthenticatorModule* Listener::auth_instance() const
 {
     return m_auth_instance.get();
 }
@@ -810,7 +810,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         client_dcb->m_remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */
-        client_dcb->m_auth_session = m_auth_instance->createSession();
+        client_dcb->m_auth_session = m_auth_instance->create_client_authenticator();
         if (!client_dcb->m_auth_session)
         {
             MXS_ERROR("Failed to create authenticator session for client DCB");

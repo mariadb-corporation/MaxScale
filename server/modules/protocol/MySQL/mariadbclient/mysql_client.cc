@@ -1671,7 +1671,7 @@ void update_current_command(DCB* dcb, GWBUF* buffer)
 static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
-    if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_REAUTHENTICATE)
+    if (session->listener->auth_instance()->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
         MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
         ClientDCB* client_dcb = session->client_dcb;

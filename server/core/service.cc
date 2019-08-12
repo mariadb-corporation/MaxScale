@@ -947,7 +947,7 @@ bool Service::refresh_users()
     // All listeners must support concurrent updating for it to be used.
     for (const auto& listener : listeners)
     {
-        if ((listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_CONC_LOAD_USERS) == 0)
+        if ((listener->auth_instance()->capabilities() & mxs::AuthenticatorModule::CAP_CONC_LOAD_USERS) == 0)
         {
             concurrent_update = false;
             break;

@@ -38,12 +38,12 @@ enum gssapi_auth_state
 /** Report GSSAPI errors */
 void report_error(OM_uint32 major, OM_uint32 minor);
 
-class GSSAPIAuthenticator : public mxs::Authenticator
+class GSSAPIAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
-    static GSSAPIAuthenticator* create(char** options);
-    ~GSSAPIAuthenticator() override = default;
-    std::unique_ptr<mxs::AuthenticatorSession> createSession() override;
+    static GSSAPIAuthenticatorModule* create(char** options);
+    ~GSSAPIAuthenticatorModule() override = default;
+    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
     int load_users(Listener* listener) override;
     void diagnostics(DCB* output, Listener* listener) override;
     json_t* diagnostics_json(const Listener* listener) override;
@@ -55,16 +55,16 @@ private:
     sqlite3* handle {nullptr};         /**< SQLite3 database handle */
 };
 
-class GSSAPIAuthenticatorSession : public mxs::AuthenticatorSession
+class GSSAPIClientAuthenticator : public mxs::ClientAuthenticator
 {
 public:
-    ~GSSAPIAuthenticatorSession() override;
+    ~GSSAPIClientAuthenticator() override;
     bool extract(DCB* client, GWBUF* buffer) override;
     bool ssl_capable(DCB* client) override;
     int authenticate(DCB* client) override;
     void free_data(DCB* client) override;
 
-    std::unique_ptr<mxs::AuthenticatorBackendSession> newBackendSession() override;
+    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
     sqlite3*          handle {nullptr};            /**< SQLite3 database handle */
     uint8_t           sequence {0};                /**< The next packet seqence number */
 
@@ -76,10 +76,10 @@ private:
     uint8_t*          principal_name {nullptr};    /**< Principal name */
 };
 
-class GSSAPIAuthenticatorBackendSession : public mxs::AuthenticatorBackendSession
+class GSSAPIBackendAuthenticator : public mxs::BackendAuthenticator
 {
 public:
-    ~GSSAPIAuthenticatorBackendSession() override;
+    ~GSSAPIBackendAuthenticator() override;
     bool extract(DCB* backend, GWBUF* buffer) override;
     bool ssl_capable(DCB* backend) override;
     int authenticate(DCB* backend) override;

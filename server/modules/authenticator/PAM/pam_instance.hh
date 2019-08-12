@@ -20,20 +20,20 @@
 #include "pam_client_session.hh"
 
 /** The instance class for the client side PAM authenticator, created in pam_auth_init() */
-class PamInstance : public mxs::Authenticator
+class PamAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
-    PamInstance(const PamInstance& orig) = delete;
-    PamInstance& operator=(const PamInstance&) = delete;
+    PamAuthenticatorModule(const PamAuthenticatorModule& orig) = delete;
+    PamAuthenticatorModule& operator=(const PamAuthenticatorModule&) = delete;
 
-    static PamInstance* create(char** options);
+    static PamAuthenticatorModule* create(char** options);
 
     int load_users(Listener* listener) override;
     void diagnostics(DCB* dcb, Listener* listener) override;
     json_t* diagnostics_json(const Listener* listener) override;
 
     uint64_t capabilities() const override;
-    std::unique_ptr<mxs::AuthenticatorSession> createSession() override;
+    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
 
     const std::string m_dbname;     /**< Name of the in-memory database */
 
@@ -41,7 +41,7 @@ public:
 private:
     using QResult = std::unique_ptr<mxq::QueryResult>;
 
-    PamInstance(SQLite::SSQLite dbhandle, const std::string& dbname);
+    PamAuthenticatorModule(SQLite::SSQLite dbhandle, const std::string& dbname);
     bool prepare_tables();
 
     void add_pam_user(const char* user, const char* host, const char* db, bool anydb,

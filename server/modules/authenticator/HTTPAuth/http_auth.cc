@@ -17,10 +17,39 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/users.h>
 
-class HTTPAuthenticatorSession : public mxs::AuthenticatorSession
+class HTTPAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
-    ~HTTPAuthenticatorSession() override = default;
+    static HTTPAuthenticatorModule* create(char** options)
+    {
+        return new(std::nothrow) HTTPAuthenticatorModule();
+    }
+
+    ~HTTPAuthenticatorModule() override = default;
+
+    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
+
+    int load_users(Listener* listener) override
+    {
+        return users_default_loadusers(listener);
+    }
+
+    void diagnostics(DCB* output, Listener* listener) override
+    {
+        users_default_diagnostic(output, listener);
+
+    }
+
+    json_t* diagnostics_json(const Listener* listener) override
+    {
+        return users_default_diagnostic_json(listener);
+    }
+};
+
+class HTTPClientAuthenticator : public mxs::ClientAuthenticator
+{
+public:
+    ~HTTPClientAuthenticator() override = default;
     bool extract(DCB* client, GWBUF* buffer) override
     {
         return true;
@@ -43,40 +72,9 @@ public:
     // No fields, authenticator does nothing.
 };
 
-class HTTPAuthenticator : public mxs::Authenticator
+std::unique_ptr<mxs::ClientAuthenticator> HTTPAuthenticatorModule::create_client_authenticator()
 {
-public:
-    static HTTPAuthenticator* create(char** options)
-    {
-        return new(std::nothrow) HTTPAuthenticator();
-    }
-
-    ~HTTPAuthenticator() override = default;
-
-    std::unique_ptr<mxs::AuthenticatorSession> createSession() override
-    {
-        return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) HTTPAuthenticatorSession());
-    }
-
-    int load_users(Listener* listener) override
-    {
-        return users_default_loadusers(listener);
-    }
-
-    void diagnostics(DCB* output, Listener* listener) override
-    {
-        users_default_diagnostic(output, listener);
-
-    }
-
-    json_t* diagnostics_json(const Listener* listener) override
-    {
-        return users_default_diagnostic_json(listener);
-    }
-};
-
-extern "C"
-{
+    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) HTTPClientAuthenticator());
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
@@ -89,7 +87,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "The MaxScale HTTP authenticator (does nothing)",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<HTTPAuthenticator>::s_api,
+        &mxs::AuthenticatorApi<HTTPAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

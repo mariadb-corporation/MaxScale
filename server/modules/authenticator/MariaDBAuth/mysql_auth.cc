@@ -74,7 +74,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The MySQL client to MaxScale authenticator implementation",
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES, // Authenticator capabilities are in the instance object
-        &mxs::AuthenticatorApi<MariaDBAuthenticator>::s_api,
+        &mxs::AuthenticatorApi<MariaDBAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
@@ -115,7 +115,7 @@ static bool open_instance_database(const char* path, sqlite3** handle)
     return true;
 }
 
-sqlite3* get_handle(MariaDBAuthenticator* instance)
+sqlite3* get_handle(MariaDBAuthenticatorModule* instance)
 {
     int i = mxs_rworker_get_current_id();
     mxb_assert(i >= 0);
@@ -136,7 +136,7 @@ sqlite3* get_handle(MariaDBAuthenticator* instance)
  *
  * @return True if permissions should be checked
  */
-static bool should_check_permissions(MariaDBAuthenticator* instance)
+static bool should_check_permissions(MariaDBAuthenticatorModule* instance)
 {
     // Only check permissions when the users are loaded for the first time.
     return instance->check_permissions;
@@ -148,9 +148,9 @@ static bool should_check_permissions(MariaDBAuthenticator* instance)
  * @param options Authenticator options
  * @return New MYSQL_AUTH instance or NULL on error
  */
-MariaDBAuthenticator* MariaDBAuthenticator::create(char** options)
+MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(char** options)
 {
-    auto instance = new(std::nothrow) MariaDBAuthenticator();
+    auto instance = new(std::nothrow) MariaDBAuthenticatorModule();
     if (instance
         && (instance->handles = static_cast<sqlite3**>(MXS_CALLOC(config_threadcount(), sizeof(sqlite3*)))))
     {
@@ -276,7 +276,7 @@ static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session
  * @return Authentication status
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-int MariaDBAuthenticatorSession::authenticate(DCB* dcb)
+int MariaDBClientAuthenticator::authenticate(DCB* dcb)
 {
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
     MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
@@ -286,7 +286,7 @@ int MariaDBAuthenticatorSession::authenticate(DCB* dcb)
                   client_data->user,
                   client_data->db);
 
-        MariaDBAuthenticator* instance = (MariaDBAuthenticator*)dcb->session()->listener->auth_instance();
+        MariaDBAuthenticatorModule* instance = (MariaDBAuthenticatorModule*)dcb->session()->listener->auth_instance();
         MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol_session());
 
         if (!client_data->correct_authenticator)
@@ -383,7 +383,7 @@ int MariaDBAuthenticatorSession::authenticate(DCB* dcb)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return True on success, false on error
  */
-bool MariaDBAuthenticatorSession::extract(DCB* dcb, GWBUF* buf)
+bool MariaDBClientAuthenticator::extract(DCB* dcb, GWBUF* buf)
 {
     MySQLProtocol* protocol = NULL;
     MYSQL_session* client_data = NULL;
@@ -631,7 +631,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable
  */
-bool MariaDBAuthenticatorSession::ssl_capable(DCB* dcb)
+bool MariaDBClientAuthenticator::ssl_capable(DCB* dcb)
 {
     MySQLProtocol* protocol;
 
@@ -651,7 +651,7 @@ bool MariaDBAuthenticatorSession::ssl_capable(DCB* dcb)
  *
  * @param dcb Request handler DCB connected to the client
  */
-void MariaDBAuthenticatorSession::free_data(DCB* dcb)
+void MariaDBClientAuthenticator::free_data(DCB* dcb)
 {
     MXS_FREE(dcb->m_data);
 }
@@ -678,7 +678,7 @@ static bool add_service_user(Listener* port)
 
         if (newpw)
         {
-            MariaDBAuthenticator* inst = (MariaDBAuthenticator*)port->auth_instance();
+            MariaDBAuthenticatorModule* inst = (MariaDBAuthenticatorModule*)port->auth_instance();
             sqlite3* handle = get_handle(inst);
             add_mysql_user(handle, user, "%", "", "Y", newpw);
             add_mysql_user(handle, user, "localhost", "", "Y", newpw);
@@ -709,11 +709,11 @@ static bool service_has_servers(SERVICE* service)
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR and
  * MXS_AUTH_LOADUSERS_FATAL on fatal error
  */
-int MariaDBAuthenticator::load_users(Listener* port)
+int MariaDBAuthenticatorModule::load_users(Listener* port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE* service = port->service();
-    MariaDBAuthenticator* instance = (MariaDBAuthenticator*)port->auth_instance();
+    MariaDBAuthenticatorModule* instance = (MariaDBAuthenticatorModule*)port->auth_instance();
     bool first_load = false;
 
     if (should_check_permissions(instance))
@@ -784,9 +784,9 @@ int MariaDBAuthenticator::load_users(Listener* port)
     return rc;
 }
 
-int MariaDBAuthenticatorSession::reauthenticate(DCB* dcb, const char* user, uint8_t* token, size_t token_len,
-                                                uint8_t* scramble, size_t scramble_len,
-                                                uint8_t* output_token, size_t output_token_len)
+int MariaDBClientAuthenticator::reauthenticate(DCB* dcb, const char* user, uint8_t* token, size_t token_len,
+                                               uint8_t* scramble, size_t scramble_len,
+                                               uint8_t* output_token, size_t output_token_len)
 {
     MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
     MYSQL_session temp;
@@ -797,7 +797,7 @@ int MariaDBAuthenticatorSession::reauthenticate(DCB* dcb, const char* user, uint
     temp.auth_token = token;
     temp.auth_token_len = token_len;
 
-    MariaDBAuthenticator* instance = (MariaDBAuthenticator*)dcb->session()->listener->auth_instance();
+    MariaDBAuthenticatorModule* instance = (MariaDBAuthenticatorModule*)dcb->session()->listener->auth_instance();
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
     if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service()))
@@ -814,9 +814,9 @@ int MariaDBAuthenticatorSession::reauthenticate(DCB* dcb, const char* user, uint
     return rval;
 }
 
-std::unique_ptr<mxs::AuthenticatorBackendSession> MariaDBAuthenticatorSession::newBackendSession()
+std::unique_ptr<mxs::BackendAuthenticator> MariaDBClientAuthenticator::create_backend_authenticator()
 {
-    return std::unique_ptr<mxs::AuthenticatorBackendSession>(new(std::nothrow) MariaDBBackendSession());
+    return std::unique_ptr<mxs::BackendAuthenticator>(new(std::nothrow) MariaDBBackendSession());
 }
 
 int diag_cb(void* data, int columns, char** row, char** field_names)
@@ -826,9 +826,9 @@ int diag_cb(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-void MariaDBAuthenticator::diagnostics(DCB* dcb, Listener* listener)
+void MariaDBAuthenticatorModule::diagnostics(DCB* dcb, Listener* listener)
 {
-    MariaDBAuthenticator* instance = this;
+    MariaDBAuthenticatorModule* instance = this;
     sqlite3* handle = get_handle(instance);
     char* err;
 
@@ -855,11 +855,11 @@ int diag_cb_json(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-json_t* MariaDBAuthenticator::diagnostics_json(const Listener* listener)
+json_t* MariaDBAuthenticatorModule::diagnostics_json(const Listener* listener)
 {
     json_t* rval = json_array();
 
-    MariaDBAuthenticator* instance = this;
+    MariaDBAuthenticatorModule* instance = this;
     char* err;
     sqlite3* handle = get_handle(instance);
 
@@ -876,14 +876,14 @@ json_t* MariaDBAuthenticator::diagnostics_json(const Listener* listener)
     return rval;
 }
 
-uint64_t MariaDBAuthenticator::capabilities() const
+uint64_t MariaDBAuthenticatorModule::capabilities() const
 {
     return CAP_REAUTHENTICATE | CAP_CONC_LOAD_USERS | CAP_BACKEND_AUTH;
 }
 
-std::unique_ptr<mxs::AuthenticatorSession> MariaDBAuthenticator::createSession()
+std::unique_ptr<mxs::ClientAuthenticator> MariaDBAuthenticatorModule::create_client_authenticator()
 {
-    return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) MariaDBAuthenticatorSession());
+    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MariaDBClientAuthenticator());
 }
 
 bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)

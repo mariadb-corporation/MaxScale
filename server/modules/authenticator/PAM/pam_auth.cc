@@ -133,7 +133,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "PAM authenticator",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<PamInstance>::s_api,
+        &mxs::AuthenticatorApi<PamAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

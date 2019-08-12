@@ -22,7 +22,7 @@
  * @file authenticator.c - Authenticator module functions
  */
 
-using mxs::Authenticator;
+using mxs::AuthenticatorModule;
 
 /**
  * @brief Initialize an authenticator module
@@ -34,9 +34,9 @@ using mxs::Authenticator;
  * @param options Authenticator options
  * @return Authenticator instance or NULL on error
  */
-std::unique_ptr<Authenticator> authenticator_init(const char* authenticator, const char* options)
+std::unique_ptr<AuthenticatorModule> authenticator_init(const char* authenticator, const char* options)
 {
-    std::unique_ptr<Authenticator> rval;
+    std::unique_ptr<AuthenticatorModule> rval;
     auto func = (mxs::AUTHENTICATOR_API*)load_module(authenticator, MODULE_AUTHENTICATOR);
 
     // Client authenticator modules must have an init-entrypoint.
@@ -141,19 +141,19 @@ const char* to_string(mxs_auth_state_t state)
     return rval;
 }
 
-uint64_t Authenticator::capabilities() const
+uint64_t AuthenticatorModule::capabilities() const
 {
     return 0;
 }
 
-int AuthenticatorSession::reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
-                                         uint8_t* scramble, size_t scramble_len,
-                                         uint8_t* output, size_t output_len)
+int ClientAuthenticator::reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
+                                        uint8_t* scramble, size_t scramble_len,
+                                        uint8_t* output, size_t output_len)
 {
     return MXS_AUTH_STATE_FAILED;
 }
 
-std::unique_ptr<AuthenticatorBackendSession> AuthenticatorSession::newBackendSession()
+std::unique_ptr<BackendAuthenticator> ClientAuthenticator::create_backend_authenticator()
 {
     return nullptr;
 }

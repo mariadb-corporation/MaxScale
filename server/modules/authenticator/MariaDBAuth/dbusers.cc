@@ -324,7 +324,7 @@ static int database_cb(void* data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-static bool check_database(MariaDBAuthenticator* instance, sqlite3* handle, const char* database)
+static bool check_database(MariaDBAuthenticatorModule* instance, sqlite3* handle, const char* database)
 {
     bool rval = true;
 
@@ -373,7 +373,7 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-int validate_mysql_user(MariaDBAuthenticator* instance,
+int validate_mysql_user(MariaDBAuthenticatorModule* instance,
                         DCB* dcb,
                         MYSQL_session* session,
                         uint8_t* scramble,
@@ -1172,7 +1172,7 @@ int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service, Listener
 
     char* query = get_users_query(server_version, service->config().enable_root, category);
 
-    MariaDBAuthenticator* instance = (MariaDBAuthenticator*)listener->auth_instance();
+    MariaDBAuthenticatorModule* instance = (MariaDBAuthenticatorModule*)listener->auth_instance();
     int users = 0;
     std::vector<User> userlist;
     std::vector<std::string> dblist;
@@ -1286,7 +1286,7 @@ static int get_users(Listener* listener, bool skip_local, SERVER** srv)
     }
 
     /** Delete the old users */
-    MariaDBAuthenticator* instance = (MariaDBAuthenticator*)listener->auth_instance();
+    MariaDBAuthenticatorModule* instance = (MariaDBAuthenticatorModule*)listener->auth_instance();
     sqlite3* handle = get_handle(instance);
     delete_mysql_users(handle);
 

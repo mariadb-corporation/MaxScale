@@ -22,7 +22,7 @@
  * @param end Pointer to after the end of data
  * @return True if all expected fields were parsed
  */
-bool PamBackendSession::parse_authswitchreq(const uint8_t** data, const uint8_t* end)
+bool PamBackendAuthenticator::parse_authswitchreq(const uint8_t** data, const uint8_t* end)
 {
     const uint8_t* ptr = *data;
     if (ptr >= end)
@@ -83,7 +83,7 @@ bool PamBackendSession::parse_authswitchreq(const uint8_t** data, const uint8_t*
  * @param end Pointer to after the end of data
  * @return True if all expected fields were parsed
  */
-bool PamBackendSession::parse_password_prompt(const uint8_t** data, const uint8_t* end)
+bool PamBackendAuthenticator::parse_password_prompt(const uint8_t** data, const uint8_t* end)
 {
     const uint8_t* ptr = *data;
     if (end - ptr < 2) // Need at least message type + message
@@ -136,7 +136,7 @@ bool PamBackendSession::parse_password_prompt(const uint8_t** data, const uint8_
     return success;
 }
 
-PamBackendSession::PamBackendSession()
+PamBackendAuthenticator::PamBackendAuthenticator()
 {}
 
 /**
@@ -145,7 +145,7 @@ PamBackendSession::PamBackendSession()
  * @param dcb Backend DCB
  * @return True on success, false on error
  */
-bool PamBackendSession::send_client_password(DCB* dcb)
+bool PamBackendAuthenticator::send_client_password(DCB* dcb)
 {
     MYSQL_session* ses = (MYSQL_session*)dcb->session()->client_dcb->m_data;
     size_t buflen = MYSQL_HEADER_LEN + ses->auth_token_len;
@@ -156,7 +156,7 @@ bool PamBackendSession::send_client_password(DCB* dcb)
     return dcb_write(dcb, gwbuf_alloc_and_load(buflen, bufferdata));
 }
 
-bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
+bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 {
     /**
      * The server PAM plugin sends data usually once, at the moment it gets a prompt-type message
@@ -278,7 +278,7 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
     return success;
 }
 
-int PamBackendSession::authenticate(DCB* dcb)
+int PamBackendAuthenticator::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
 
@@ -305,7 +305,7 @@ int PamBackendSession::authenticate(DCB* dcb)
     return rval;
 }
 
-bool PamBackendSession::ssl_capable(DCB* dcb)
+bool PamBackendAuthenticator::ssl_capable(DCB* dcb)
 {
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
     BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);

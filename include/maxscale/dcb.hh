@@ -37,8 +37,8 @@ class SERVER;
 
 namespace maxscale
 {
-class AuthenticatorSession;
-class AuthenticatorBackendSession;
+class ClientAuthenticator;
+class BackendAuthenticator;
 }
 
 #define DCBFD_CLOSED -1
@@ -414,7 +414,7 @@ public:
 
     int ssl_handshake() override;
 
-    std::unique_ptr<mxs::AuthenticatorSession> m_auth_session;      /**< Client authentication data */
+    std::unique_ptr<mxs::ClientAuthenticator> m_auth_session;      /**< Client authentication data */
 
     bool ready() const;
 
@@ -462,7 +462,7 @@ public:
 
     int ssl_handshake() override;
 
-    std::unique_ptr<mxs::AuthenticatorBackendSession> m_auth_session;   /**< Backend authentication data */
+    std::unique_ptr<mxs::BackendAuthenticator> m_auth_session;   /**< Backend authentication data */
 
     bool ready() const;
 
@@ -492,7 +492,7 @@ private:
                MXS_SESSION* session,
                MXS_PROTOCOL_SESSION* protocol,
                MXS_PROTOCOL_API protocol_api,
-               std::unique_ptr<mxs::AuthenticatorBackendSession> auth_ses,
+               std::unique_ptr<mxs::BackendAuthenticator> auth_ses,
                Manager* manager);
 
     static BackendDCB* create(SERVER* server,

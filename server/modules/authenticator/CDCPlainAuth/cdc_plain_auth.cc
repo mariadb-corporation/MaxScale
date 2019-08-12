@@ -68,10 +68,38 @@ static bool cdc_auth_set_client_data(CDC_session* client_data,
                                      int client_auth_packet_size
                                      );
 
-class CDCAuthenticatorSession : public mxs::AuthenticatorSession
+class CDCAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
-    ~CDCAuthenticatorSession() override = default;
+    static CDCAuthenticatorModule* create(char** options)
+    {
+        return new(std::nothrow) CDCAuthenticatorModule();
+    }
+
+    ~CDCAuthenticatorModule() override = default;
+
+    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
+
+    int load_users(Listener* listener) override
+    {
+        return cdc_replace_users(listener);
+    }
+
+    void diagnostics(DCB* output, Listener* listener) override
+    {
+        users_default_diagnostic(output, listener);
+    }
+
+    json_t* diagnostics_json(const Listener* listener) override
+    {
+        return users_default_diagnostic_json(listener);
+    }
+};
+
+class CDCClientAuthenticator : public mxs::ClientAuthenticator
+{
+public:
+    ~CDCClientAuthenticator() override = default;
     bool extract(DCB* client, GWBUF* buffer) override
     {
         return cdc_auth_set_protocol_data(client, buffer);
@@ -95,37 +123,10 @@ public:
     // No fields, data is contained in protocol.
 };
 
-class CDCAuthenticator : public mxs::Authenticator
+std::unique_ptr<mxs::ClientAuthenticator> CDCAuthenticatorModule::create_client_authenticator()
 {
-public:
-    static CDCAuthenticator* create(char** options)
-    {
-        return new(std::nothrow) CDCAuthenticator();
-    }
-
-    ~CDCAuthenticator() override = default;
-
-    std::unique_ptr<mxs::AuthenticatorSession> createSession() override
-    {
-        return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) CDCAuthenticatorSession());
-    }
-
-    int load_users(Listener* listener) override
-    {
-        return cdc_replace_users(listener);
-    }
-
-    void diagnostics(DCB* output, Listener* listener) override
-    {
-        users_default_diagnostic(output, listener);
-
-    }
-
-    json_t* diagnostics_json(const Listener* listener) override
-    {
-        return users_default_diagnostic_json(listener);
-    }
-};
+    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) CDCClientAuthenticator());
+}
 
 /**
  * @brief Add a new CDC user
@@ -231,7 +232,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The CDC client to MaxScale authenticator implementation",
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<CDCAuthenticator>::s_api,
+        &mxs::AuthenticatorApi<CDCAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

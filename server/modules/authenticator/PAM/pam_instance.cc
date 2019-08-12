@@ -31,7 +31,7 @@ using mxq::QueryResult;
  * @param options Listener options
  * @return New client authenticator instance or NULL on error
  */
-PamInstance* PamInstance::create(char** options)
+PamAuthenticatorModule* PamAuthenticatorModule::create(char** options)
 {
     // Name of the in-memory database.
     // TODO: Once Centos6 is no longer needed and Sqlite version 3.7+ can be assumed,
@@ -48,11 +48,11 @@ PamInstance* PamInstance::create(char** options)
     int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
                    SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
     string sqlite_error;
-    PamInstance* instance = nullptr;
+    PamAuthenticatorModule* instance = nullptr;
     auto sqlite = SQLite::create(pam_db_fname, db_flags, &sqlite_error);
     if (sqlite)
     {
-        instance = new PamInstance(std::move(sqlite), pam_db_fname);
+        instance = new PamAuthenticatorModule(std::move(sqlite), pam_db_fname);
         if (!instance->prepare_tables())
         {
             delete instance;
@@ -74,13 +74,13 @@ PamInstance* PamInstance::create(char** options)
  * @param dbname Text-form name of @c dbhandle
  * @param tablename Name of table where authentication data is saved
  */
-PamInstance::PamInstance(SQLite::SSQLite dbhandle, const string& dbname)
+PamAuthenticatorModule::PamAuthenticatorModule(SQLite::SSQLite dbhandle, const string& dbname)
     : m_dbname(dbname)
     , m_sqlite(std::move(dbhandle))
 {
 }
 
-bool PamInstance::prepare_tables()
+bool PamAuthenticatorModule::prepare_tables()
 {
     struct ColDef
     {
@@ -178,8 +178,8 @@ bool PamInstance::prepare_tables()
  * @param pam_service The PAM service used
  * @param proxy  Is the user anonymous with a proxy grant
  */
-void PamInstance::add_pam_user(const char* user, const char* host, const char* db, bool anydb,
-                               const char* pam_service, bool proxy)
+void PamAuthenticatorModule::add_pam_user(const char* user, const char* host, const char* db, bool anydb,
+                                          const char* pam_service, bool proxy)
 {
     /**
      * The insert query template which adds users to the pam_users table.
@@ -245,7 +245,7 @@ void PamInstance::add_pam_user(const char* user, const char* host, const char* d
 /**
  * @brief Delete old users from the database
  */
-void PamInstance::delete_old_users()
+void PamAuthenticatorModule::delete_old_users()
 {
     /** Delete query used to clean up the database before loading new users */
     const string delete_query = "DELETE FROM " + TABLE_USER + ";";
@@ -262,7 +262,7 @@ void PamInstance::delete_old_users()
  *
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-int PamInstance::load_users(Listener* listener)
+int PamAuthenticatorModule::load_users(Listener* listener)
 {
     SERVICE* service = listener->service();
     /** Query that gets all users that authenticate via the pam plugin */
@@ -383,7 +383,7 @@ int PamInstance::load_users(Listener* listener)
     return rval;
 }
 
-void PamInstance::fill_user_arrays(QResult user_res, QResult db_res, QResult roles_mapping_res)
+void PamAuthenticatorModule::fill_user_arrays(QResult user_res, QResult db_res, QResult roles_mapping_res)
 {
     m_sqlite->exec("BEGIN");
     // Delete any previous data.
@@ -463,7 +463,7 @@ void PamInstance::fill_user_arrays(QResult user_res, QResult db_res, QResult rol
     m_sqlite->exec("COMMIT");
 }
 
-void PamInstance::diagnostics(DCB* dcb, Listener* listener)
+void PamAuthenticatorModule::diagnostics(DCB* dcb, Listener* listener)
 {
     json_t* array = diagnostics_json(nullptr);
     mxb_assert(json_is_array(array));
@@ -503,7 +503,7 @@ static int diag_cb_json(json_t* data, int columns, char** row, char** field_name
     return 0;
 }
 
-json_t* PamInstance::diagnostics_json(const Listener* listener)
+json_t* PamAuthenticatorModule::diagnostics_json(const Listener* listener)
 {
     json_t* rval = json_array();
     string select = "SELECT * FROM " + TABLE_USER + ";";
@@ -514,17 +514,17 @@ json_t* PamInstance::diagnostics_json(const Listener* listener)
     return rval;
 }
 
-uint64_t PamInstance::capabilities() const
+uint64_t PamAuthenticatorModule::capabilities() const
 {
-    return Authenticator::CAP_BACKEND_AUTH;
+    return AuthenticatorModule::CAP_BACKEND_AUTH;
 }
 
-std::unique_ptr<mxs::AuthenticatorSession> PamInstance::createSession()
+std::unique_ptr<mxs::ClientAuthenticator> PamAuthenticatorModule::create_client_authenticator()
 {
-    return std::unique_ptr<mxs::AuthenticatorSession>(PamClientSession::create(*this));
+    return std::unique_ptr<mxs::ClientAuthenticator>(PamClientAuthenticator::create(*this));
 }
 
-bool PamInstance::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
+bool PamAuthenticatorModule::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
 {
     bool success = true;
     const char anon_user_query[] = "SELECT host FROM mysql.user WHERE (user = '' AND plugin = 'pam');";

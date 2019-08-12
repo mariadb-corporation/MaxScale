@@ -60,7 +60,7 @@
 using maxscale::RoutingWorker;
 using maxbase::Worker;
 using std::string;
-using mxs::AuthenticatorBackendSession;
+using mxs::BackendAuthenticator;
 
 // #define DCB_LOG_EVENT_HANDLING
 #if defined (DCB_LOG_EVENT_HANDLING)
@@ -311,10 +311,10 @@ BackendDCB* BackendDCB::create(SERVER* srv,
         if (protocol_session)
         {
             // Allocate DCB specific backend-authentication data from the client session.
-            std::unique_ptr<AuthenticatorBackendSession> new_auth_session;
-            if (session->listener->auth_instance()->capabilities() & mxs::Authenticator::CAP_BACKEND_AUTH)
+            std::unique_ptr<BackendAuthenticator> new_auth_session;
+            if (session->listener->auth_instance()->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
             {
-                new_auth_session = session->client_dcb->m_auth_session->newBackendSession();
+                new_auth_session = session->client_dcb->m_auth_session->create_backend_authenticator();
                 if (!new_auth_session)
                 {
                     MXS_ERROR("Failed to create authenticator session for backend DCB.");
@@ -2865,7 +2865,7 @@ BackendDCB::BackendDCB(SERVER* server,
                        MXS_SESSION* session,
                        MXS_PROTOCOL_SESSION* protocol,
                        MXS_PROTOCOL_API protocol_api,
-                       std::unique_ptr<mxs::AuthenticatorBackendSession> auth_ses,
+                       std::unique_ptr<mxs::BackendAuthenticator> auth_ses,
                        DCB::Manager* manager)
     : DCB(fd, DCB::Role::BACKEND, session, protocol, protocol_api, manager)
     , m_auth_session(std::move(auth_ses))

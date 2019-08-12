@@ -41,10 +41,39 @@ static bool max_admin_auth_is_client_ssl_capable(DCB* dcb);
 static int  max_admin_auth_authenticate(DCB* dcb);
 static void max_admin_auth_free_client_data(DCB* dcb);
 
-class MaxAdminAuthenticatorSession : public mxs::AuthenticatorSession
+class MaxAdminAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
-    ~MaxAdminAuthenticatorSession() override = default;
+    static MaxAdminAuthenticatorModule* create(char** options)
+    {
+        return new(std::nothrow) MaxAdminAuthenticatorModule();
+    }
+
+    ~MaxAdminAuthenticatorModule() override = default;
+
+    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
+
+    int load_users(Listener* listener) override
+    {
+        return users_default_loadusers(listener);
+    }
+
+    void diagnostics(DCB* output, Listener* listener) override
+    {
+        users_default_diagnostic(output, listener);
+
+    }
+
+    json_t* diagnostics_json(const Listener* listener) override
+    {
+        return users_default_diagnostic_json(listener);
+    }
+};
+
+class MaxAdminClientAuthenticator : public mxs::ClientAuthenticator
+{
+public:
+    ~MaxAdminClientAuthenticator() override = default;
     bool extract(DCB* client, GWBUF* buffer) override
     {
         return max_admin_auth_set_protocol_data(client, buffer);
@@ -68,37 +97,10 @@ public:
     // No fields, data is contained in protocol.
 };
 
-class MaxAdminAuthenticator : public mxs::Authenticator
+std::unique_ptr<mxs::ClientAuthenticator> MaxAdminAuthenticatorModule::create_client_authenticator()
 {
-public:
-    static MaxAdminAuthenticator* create(char** options)
-    {
-        return new(std::nothrow) MaxAdminAuthenticator();
-    }
-
-    ~MaxAdminAuthenticator() override = default;
-
-    std::unique_ptr<mxs::AuthenticatorSession> createSession() override
-    {
-        return std::unique_ptr<mxs::AuthenticatorSession>(new(std::nothrow) MaxAdminAuthenticatorSession());
-    }
-
-    int load_users(Listener* listener) override
-    {
-        return users_default_loadusers(listener);
-    }
-
-    void diagnostics(DCB* output, Listener* listener) override
-    {
-        users_default_diagnostic(output, listener);
-
-    }
-
-    json_t* diagnostics_json(const Listener* listener) override
-    {
-        return users_default_diagnostic_json(listener);
-    }
-};
+    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MaxAdminClientAuthenticator());
+}
 
 extern "C"
 {
@@ -120,7 +122,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The MaxScale Admin client authenticator implementation",
         "V2.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<MaxAdminAuthenticator>::s_api,
+        &mxs::AuthenticatorApi<MaxAdminAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

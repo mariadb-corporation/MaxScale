@@ -102,7 +102,7 @@ int anon_user_data_cb(UserDataArr* data, int columns, char** column_vals, char**
     return 0;
 }
 
-int string_cb(PamClientSession::StringVector* data, int columns, char** column_vals, char** column_names)
+int string_cb(PamClientAuthenticator::StringVector* data, int columns, char** column_vals, char** column_names)
 {
     mxb_assert(columns == 1);
     if (column_vals[0])
@@ -125,15 +125,15 @@ int row_count_cb(int* data, int columns, char** column_vals, char** column_names
 
 }
 
-PamClientSession::PamClientSession(const PamInstance& instance, SSQLite sqlite)
+PamClientAuthenticator::PamClientAuthenticator(const PamAuthenticatorModule& instance, SSQLite sqlite)
     : m_instance(instance)
     , m_sqlite(std::move(sqlite))
 {
 }
 
-PamClientSession* PamClientSession::create(const PamInstance& inst)
+PamClientAuthenticator* PamClientAuthenticator::create(const PamAuthenticatorModule& inst)
 {
-    PamClientSession* rval = nullptr;
+    PamClientAuthenticator* rval = nullptr;
     // This handle is only used from one thread, can define no_mutex.
     int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_NOMUTEX;
     string sqlite_error;
@@ -141,7 +141,7 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
     if (sqlite)
     {
         sqlite->set_timeout(1000);
-        rval = new(std::nothrow) PamClientSession(inst, std::move(sqlite));
+        rval = new(std::nothrow) PamClientAuthenticator(inst, std::move(sqlite));
     }
     else
     {
@@ -157,8 +157,8 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
  * @param session MySQL session
  * @param services_out Output for services
  */
-void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
-                                             StringVector* services_out)
+void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
+                                                   StringVector* services_out)
 {
     const char* user = session->user;
     const char* host = dcb->m_remote;
@@ -238,7 +238,7 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
  * @see
  * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  */
-Buffer PamClientSession::create_auth_change_packet() const
+Buffer PamClientAuthenticator::create_auth_change_packet() const
 {
     /**
      * The AuthSwitchRequest packet:
@@ -265,7 +265,7 @@ Buffer PamClientSession::create_auth_change_packet() const
     return buffer;
 }
 
-int PamClientSession::authenticate(DCB* dcb)
+int PamClientAuthenticator::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_SSL_COMPLETE;
     MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->m_data);
@@ -349,7 +349,7 @@ int PamClientSession::authenticate(DCB* dcb)
     return rval;
 }
 
-bool PamClientSession::extract(DCB* dcb, GWBUF* buffer)
+bool PamClientAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 {
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &m_sequence);
     m_sequence++;
@@ -379,13 +379,13 @@ bool PamClientSession::extract(DCB* dcb, GWBUF* buffer)
     return rval;
 }
 
-bool PamClientSession::ssl_capable(DCB* client)
+bool PamClientAuthenticator::ssl_capable(DCB* client)
 {
     MySQLProtocol* protocol = (MySQLProtocol*)client->protocol_session();
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 
-void PamClientSession::free_data(DCB* client)
+void PamClientAuthenticator::free_data(DCB* client)
 {
     if (client->m_data)
     {
@@ -396,12 +396,12 @@ void PamClientSession::free_data(DCB* client)
     }
 }
 
-std::unique_ptr<mxs::AuthenticatorBackendSession> PamClientSession::newBackendSession()
+std::unique_ptr<mxs::BackendAuthenticator> PamClientAuthenticator::create_backend_authenticator()
 {
-    return std::unique_ptr<mxs::AuthenticatorBackendSession>(new(std::nothrow) PamBackendSession());
+    return std::unique_ptr<mxs::BackendAuthenticator>(new(std::nothrow) PamBackendAuthenticator());
 }
 
-bool PamClientSession::role_can_access_db(const std::string& role, const std::string& target_db)
+bool PamClientAuthenticator::role_can_access_db(const std::string& role, const std::string& target_db)
 {
     // Roles are tricky since one role may have access to other roles and so on. May need to perform
     // multiple queries.
@@ -453,8 +453,8 @@ bool PamClientSession::role_can_access_db(const std::string& role, const std::st
     return privilege_found;
 }
 
-bool PamClientSession::user_can_access_db(const std::string& user, const std::string& host,
-                                          const std::string& target_db)
+bool PamClientAuthenticator::user_can_access_db(const std::string& user, const std::string& host,
+                                                const std::string& target_db)
 {
     const string sql_fmt = "SELECT 1 FROM " + TABLE_DB
             + " WHERE (user = '%s' AND host = '%s' AND db = '%s');";

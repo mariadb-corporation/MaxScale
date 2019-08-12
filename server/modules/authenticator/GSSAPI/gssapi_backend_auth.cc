@@ -18,7 +18,7 @@
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/server.hh>
 
-GSSAPIAuthenticatorBackendSession::~GSSAPIAuthenticatorBackendSession()
+GSSAPIBackendAuthenticator::~GSSAPIBackendAuthenticator()
 {
     MXS_FREE(principal_name);
 }
@@ -28,7 +28,7 @@ GSSAPIAuthenticatorBackendSession::~GSSAPIAuthenticatorBackendSession()
  * @param dcb Backend DCB
  * @return True on success, false on error
  */
-bool GSSAPIAuthenticatorBackendSession::send_new_auth_token(DCB* dcb)
+bool GSSAPIBackendAuthenticator::send_new_auth_token(DCB* dcb)
 {
     bool rval = false;
     auto auth = this;
@@ -61,7 +61,7 @@ bool GSSAPIAuthenticatorBackendSession::send_new_auth_token(DCB* dcb)
  * @param buffer Buffer containing an AuthSwitchRequest packet
  * @return True on success, false on error
  */
-bool GSSAPIAuthenticatorBackendSession::extract_principal_name(DCB* dcb, GWBUF* buffer)
+bool GSSAPIBackendAuthenticator::extract_principal_name(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     size_t buflen = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
@@ -136,7 +136,7 @@ bool GSSAPIAuthenticatorBackendSession::extract_principal_name(DCB* dcb, GWBUF* 
  * @return True if authentication is ongoing or complete,
  * false if authentication failed.
  */
-bool GSSAPIAuthenticatorBackendSession::extract(DCB* dcb, GWBUF* buffer)
+bool GSSAPIBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     auto auth = this;
@@ -163,7 +163,7 @@ bool GSSAPIAuthenticatorBackendSession::extract(DCB* dcb, GWBUF* buffer)
  * @param dcb Backend DCB
  * @return True if DCB supports SSL
  */
-bool GSSAPIAuthenticatorBackendSession::ssl_capable(DCB* dcb)
+bool GSSAPIBackendAuthenticator::ssl_capable(DCB* dcb)
 {
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
     BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
@@ -176,7 +176,7 @@ bool GSSAPIAuthenticatorBackendSession::ssl_capable(DCB* dcb)
  * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
  * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
  */
-int GSSAPIAuthenticatorBackendSession::authenticate(DCB* dcb)
+int GSSAPIBackendAuthenticator::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
     auto auth = this;
