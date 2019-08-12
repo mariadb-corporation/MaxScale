@@ -65,27 +65,6 @@ class SSLContext;
 }
 
 /**
- * Callback reasons for the DCB callback mechanism.
- */
-typedef enum
-{
-    DCB_REASON_DRAINED,             /*< The write delay queue has drained */
-    DCB_REASON_HIGH_WATER,          /*< Cross high water mark */
-    DCB_REASON_LOW_WATER,           /*< Cross low water mark */
-} DCB_REASON;
-
-/**
- * Callback structure - used to track callbacks registered on a DCB
- */
-typedef struct dcb_callback
-{
-    DCB_REASON reason;          /*< The reason for the callback */
-    int (* cb)(DCB* dcb, DCB_REASON reason, void* userdata);
-    void*                userdata;      /*< User data to be sent in the callback */
-    struct dcb_callback* next;          /*< Next callback for this DCB */
-} DCB_CALLBACK;
-
-/**
  * State of SSL connection
  */
 typedef enum
@@ -148,10 +127,17 @@ public:
 
     enum class State
     {
-        ALLOC,
-        POLLING,
-        DISCONNECTED,
-        NOPOLLING
+        ALLOC,          /*< Created but not added to the poll instance */
+        POLLING,        /*< Added to the poll instance */
+        DISCONNECTED,   /*< Socket closed */
+        NOPOLLING       /*< Removed from the poll instance */
+    };
+
+    enum class Reason
+    {
+        DRAINED,        /*< The write delay queue has drained */
+        HIGH_WATER,     /*< Cross high water mark */
+        LOW_WATER       /*< Cross low water mark */
     };
 
     virtual ~DCB();
@@ -273,6 +259,9 @@ public:
     static void add_event(DCB* dcb, GWBUF* buf, uint32_t ev);
     // END
 
+    int add_callback(Reason, int (*)(DCB*, Reason, void*), void*);
+    int remove_callback(Reason, int (*)(DCB*, Reason, void*), void*);
+
     bool                    m_dcb_errhandle_called = false;   /**< this can be called only once */
     int                     m_fd = DCBFD_CLOSED;                /**< The descriptor */
     SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
@@ -291,11 +280,20 @@ public:
     uint32_t                m_fake_event = 0;                     /**< Fake event to be delivered to handler */
 
     DCBSTATS m_stats = {};                      /**< DCB related statistics */
-    void*          m_data = nullptr;            /**< Client protocol data, owned by client DCB */
-    DCB_CALLBACK*  m_callbacks = nullptr;       /**< The list of callbacks for the DCB */
-    int64_t        m_last_read = 0;             /**< Last time the DCB received data */
-    int64_t        m_last_write = 0;            /**< Last time the DCB sent data */
-    SERVER*        m_server = nullptr;          /**< The associated backend server */
+    void*          m_data = nullptr;              /**< Client protocol data, owned by client DCB */
+
+    struct CALLBACK
+    {
+        Reason           reason;   /*< The reason for the callback */
+        int           (* cb)(DCB* dcb, Reason reason, void* userdata);
+        void*            userdata; /*< User data to be sent in the callback */
+        struct CALLBACK* next;     /*< Next callback for this DCB */
+    };
+
+    CALLBACK*      m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
+    int64_t        m_last_read = 0;              /**< Last time the DCB received data */
+    int64_t        m_last_write = 0;             /**< Last time the DCB sent data */
+    SERVER*        m_server = nullptr;           /**< The associated backend server */
     bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
                                                  * release
                                                  * throttle */
@@ -358,6 +356,8 @@ private:
 
     class FakeEventTask;
     friend class FakeEventTask;
+
+    void call_callback(Reason reason);
 
 private:
     Role         m_role;    /**< The role of the DCB */
@@ -539,8 +539,7 @@ void dListDCBs(DCB*);                                                           
 void dListClients(DCB*);                                                        /* List al the client DCBs */
 const char* gw_dcb_state2string(DCB::State);                                    /* DCB state to string */
 void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); /* DCB version of printf */
-int dcb_add_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
-int dcb_remove_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
+
 /**
  * Return DCB counts filtered by role
  *

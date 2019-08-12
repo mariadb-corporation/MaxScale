@@ -94,7 +94,6 @@ static thread_local struct
 } this_thread;
 }
 
-static void        dcb_call_callback(DCB* dcb, DCB_REASON reason);
 static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int nreadtotal);
 static GWBUF*      dcb_basic_read(DCB* dcb,
@@ -108,8 +107,8 @@ static int    dcb_log_errors_SSL(DCB* dcb, int ret);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 
 static bool     dcb_session_check(DCB* dcb, const char*);
-static int      upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdata);
-static int      downstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdata);
+static int      upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
+static int      downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 
 uint64_t dcb_get_session_id(DCB* dcb)
 {
@@ -176,7 +175,7 @@ DCB::~DCB()
 
     while (m_callbacks)
     {
-        DCB_CALLBACK* tmp = m_callbacks;
+        CALLBACK* tmp = m_callbacks;
         m_callbacks = m_callbacks->next;
         MXS_FREE(tmp);
     }
@@ -827,7 +826,7 @@ bool DCB::write(GWBUF* queue)
 
     if (DCB_ABOVE_HIGH_WATER(this) && !m_high_water_reached)
     {
-        dcb_call_callback(this, DCB_REASON_HIGH_WATER);
+        call_callback(Reason::HIGH_WATER);
         m_high_water_reached = true;
         m_stats.n_high_water++;
     }
@@ -955,7 +954,7 @@ int DCB::drain_writeq()
     if (m_writeq == NULL)
     {
         /* The write queue has drained, potentially need to call a callback function */
-        dcb_call_callback(this, DCB_REASON_DRAINED);
+        call_callback(Reason::DRAINED);
     }
 
     mxb_assert(m_writeqlen >= (uint32_t)total_written);
@@ -963,7 +962,7 @@ int DCB::drain_writeq()
 
     if (m_high_water_reached && DCB_BELOW_LOW_WATER(this))
     {
-        dcb_call_callback(this, DCB_REASON_LOW_WATER);
+        call_callback(Reason::LOW_WATER);
         m_high_water_reached = false;
         m_stats.n_low_water++;
     }
@@ -1134,7 +1133,7 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
             return false;
         }
 
-        DCB_CALLBACK* loopcallback;
+        CALLBACK* loopcallback;
         MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->m_user);
         dcb->m_was_persistent = false;
         dcb->m_persistentstart = time(NULL);
@@ -1702,14 +1701,15 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
  * @param userdata      User data to send in the call
  * @return              Non-zero (true) if the callback was added
  */
-int dcb_add_callback(DCB* dcb,
-                     DCB_REASON reason,
-                     int (* callback)(DCB*, DCB_REASON, void*),
-                     void* userdata)
+int DCB::add_callback(Reason reason,
+                      int (* callback)(DCB*, Reason, void*),
+                      void* userdata)
 {
-    DCB_CALLBACK* cb, * ptr, * lastcb = NULL;
+    CALLBACK* cb;
+    CALLBACK* ptr;
+    CALLBACK* lastcb = NULL;
 
-    if ((ptr = (DCB_CALLBACK*)MXS_MALLOC(sizeof(DCB_CALLBACK))) == NULL)
+    if ((ptr = (CALLBACK*)MXS_MALLOC(sizeof(CALLBACK))) == NULL)
     {
         return 0;
     }
@@ -1717,7 +1717,7 @@ int dcb_add_callback(DCB* dcb,
     ptr->cb = callback;
     ptr->userdata = userdata;
     ptr->next = NULL;
-    cb = dcb->m_callbacks;
+    cb = m_callbacks;
 
     while (cb)
     {
@@ -1733,7 +1733,7 @@ int dcb_add_callback(DCB* dcb,
     }
     if (NULL == lastcb)
     {
-        dcb->m_callbacks = ptr;
+        m_callbacks = ptr;
     }
     else
     {
@@ -1755,14 +1755,14 @@ int dcb_add_callback(DCB* dcb,
  * @param userdata      User data to send in the call
  * @return              Non-zero (true) if the callback was removed
  */
-int dcb_remove_callback(DCB* dcb,
-                        DCB_REASON reason,
-                        int (* callback)(DCB*, DCB_REASON, void*),
-                        void* userdata)
+int DCB::remove_callback(Reason reason,
+                         int (* callback)(DCB*, Reason, void*),
+                         void* userdata)
 {
-    DCB_CALLBACK* cb, * pcb = NULL;
+    CALLBACK* cb;
+    CALLBACK* pcb = NULL;
     int rval = 0;
-    cb = dcb->m_callbacks;
+    cb = m_callbacks;
 
     if (cb == NULL)
     {
@@ -1782,7 +1782,7 @@ int dcb_remove_callback(DCB* dcb,
                 }
                 else
                 {
-                    dcb->m_callbacks = cb->next;
+                    m_callbacks = cb->next;
                 }
 
                 MXS_FREE(cb);
@@ -1803,17 +1803,18 @@ int dcb_remove_callback(DCB* dcb,
  * @param dcb           The DCB to call the callbacks regarding
  * @param reason        The reason that has triggered the call
  */
-static void dcb_call_callback(DCB* dcb, DCB_REASON reason)
+void DCB::call_callback(Reason reason)
 {
-    DCB_CALLBACK* cb, * nextcb;
-    cb = dcb->m_callbacks;
+    CALLBACK* cb;
+    CALLBACK* nextcb;
+    cb = m_callbacks;
 
     while (cb)
     {
         if (cb->reason == reason)
         {
             nextcb = cb->next;
-            cb->cb(dcb, reason, cb->userdata);
+            cb->cb(this, reason, cb->userdata);
             cb = nextcb;
         }
         else
@@ -2816,7 +2817,7 @@ DCB* dcb_get_current()
  * @param userdata Data provided when the callback was added
  * @return Always 0
  */
-static int upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdata)
+static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata)
 {
     DCB* client_dcb = dcb->session()->client_dcb;
     mxb::Worker* worker = static_cast<mxb::Worker*>(client_dcb->owner);
@@ -2824,14 +2825,14 @@ static int upstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdat
     // The fd is removed manually here due to the fact that poll_add_dcb causes the DCB to be added to the
     // worker's list of DCBs but poll_remove_dcb doesn't remove it from it. This is due to the fact that the
     // DCBs are only removed from the list when they are closed.
-    if (reason == DCB_REASON_HIGH_WATER)
+    if (reason == DCB::Reason::HIGH_WATER)
     {
         MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
                  client_dcb->m_user, client_dcb->m_remote);
 
         client_dcb->disable_events();
     }
-    else if (reason == DCB_REASON_LOW_WATER)
+    else if (reason == DCB::Reason::LOW_WATER)
     {
         MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data", client_dcb->m_user,
                  client_dcb->m_remote);
@@ -2898,13 +2899,13 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
  * @param userdata Data provided when the callback was added
  * @return Always 0
  */
-static int downstream_throttle_callback(DCB* dcb, DCB_REASON reason, void* userdata)
+static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata)
 {
-    if (reason == DCB_REASON_HIGH_WATER)
+    if (reason == DCB::Reason::HIGH_WATER)
     {
         dcb_foreach_local(backend_dcb_remove_func, dcb->session());
     }
-    else if (reason == DCB_REASON_LOW_WATER)
+    else if (reason == DCB::Reason::LOW_WATER)
     {
         dcb_foreach_local(backend_dcb_add_func, dcb->session());
     }
@@ -2995,8 +2996,8 @@ ClientDCB::ClientDCB(int fd,
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
-        dcb_add_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
-        dcb_add_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
+        add_callback(Reason::HIGH_WATER, downstream_throttle_callback, NULL);
+        add_callback(Reason::LOW_WATER, downstream_throttle_callback, NULL);
     }
 }
 
@@ -3044,8 +3045,8 @@ InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, DC
     if (DCB_THROTTLING_ENABLED(this))
     {
         // Remove the callbacks that ClientDCB added.
-        dcb_remove_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
-        dcb_remove_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
+        remove_callback(Reason::HIGH_WATER, downstream_throttle_callback, NULL);
+        remove_callback(Reason::LOW_WATER, downstream_throttle_callback, NULL);
     }
 }
 
@@ -3090,8 +3091,8 @@ BackendDCB::BackendDCB(int fd,
     if (DCB_THROTTLING_ENABLED(this))
     {
         // Register upstream throttling callbacks
-        dcb_add_callback(this, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
-        dcb_add_callback(this, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
+        add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);
+        add_callback(Reason::LOW_WATER, upstream_throttle_callback, NULL);
     }
 }
 

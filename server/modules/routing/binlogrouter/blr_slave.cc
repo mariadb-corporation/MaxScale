@@ -111,7 +111,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router,
                       ROUTER_SLAVE* slave,
                       bool large);
 uint8_t*   blr_build_header(GWBUF* pkt, REP_HEADER* hdr);
-int        blr_slave_callback(DCB* dcb, DCB_REASON reason, void* data);
+int        blr_slave_callback(DCB* dcb, DCB::Reason reason, void* data);
 static int blr_slave_fake_rotate(ROUTER_INSTANCE* router,
                                  ROUTER_SLAVE* slave,
                                  BLFILE** filep,
@@ -2224,7 +2224,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
     }
 
     /* Set dcb_callback for the events reading routine */
-    dcb_add_callback(slave->dcb, DCB_REASON_DRAINED, blr_slave_callback, slave);
+    slave->dcb->add_callback(DCB::Reason::DRAINED, blr_slave_callback, slave);
 
     slave->state = BLRS_DUMPING;
 
@@ -3120,7 +3120,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
 }
 
 /**
- * The DCB callback used by the slave to obtain DCB_REASON_LOW_WATER callbacks
+ * The DCB callback used by the slave to obtain DCB::Reason::LOW_WATER callbacks
  * when the server sends all the the queue data for a DCB. This is the mechanism
  * that is used to implement the flow control mechanism for the sending of
  * large quantities of binlog records during the catchup process.
@@ -3129,7 +3129,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
  * @param reason    The reason the callback was called
  * @param data      The user data, in this case the server structure
  */
-int blr_slave_callback(DCB* dcb, DCB_REASON reason, void* data)
+int blr_slave_callback(DCB* dcb, DCB::Reason reason, void* data)
 {
     ROUTER_SLAVE* slave = (ROUTER_SLAVE*)data;
     ROUTER_INSTANCE* router = slave->router;
@@ -3143,7 +3143,7 @@ int blr_slave_callback(DCB* dcb, DCB_REASON reason, void* data)
          */
         return 0;
     }
-    if (reason == DCB_REASON_DRAINED)
+    if (reason == DCB::Reason::DRAINED)
     {
         if (slave->state == BLRS_DUMPING)
         {
@@ -3168,7 +3168,7 @@ int blr_slave_callback(DCB* dcb, DCB_REASON reason, void* data)
         }
     }
 
-    if (reason == DCB_REASON_LOW_WATER)
+    if (reason == DCB::Reason::LOW_WATER)
     {
         if (slave->state == BLRS_DUMPING)
         {
