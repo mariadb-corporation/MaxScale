@@ -57,25 +57,12 @@ typedef struct dcbstats
 
 #define DCBSTATS_INIT {0}
 
-/* DCB states */
-typedef enum
-{
-    DCB_STATE_ALLOC,        /*< Memory allocated but not populated */
-    DCB_STATE_POLLING,      /*< Waiting in the poll loop */
-    DCB_STATE_DISCONNECTED, /*< The socket is now closed */
-    DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
-} dcb_state_t;
-
 namespace maxscale
 {
-
-const char* to_string(dcb_state_t state);
 
 class SSLContext;
 
 }
-
-#define STRDCBSTATE(s) mxs::to_string(s)
 
 /**
  * Callback reasons for the DCB callback mechanism.
@@ -159,6 +146,14 @@ public:
         INTERNAL        /*< Internal DCB not connected to the outside */
     };
 
+    enum class State
+    {
+        ALLOC,
+        POLLING,
+        DISCONNECTED,
+        NOPOLLING
+    };
+
     virtual ~DCB();
 
     Role role() const
@@ -166,7 +161,7 @@ public:
         return m_role;
     }
 
-    dcb_state_t state() const
+    State state() const
     {
         return m_state;
     }
@@ -336,7 +331,7 @@ protected:
 
     void stop_polling_and_shutdown();
 
-    dcb_state_t           m_state = DCB_STATE_ALLOC;     /**< Current state */
+    State                 m_state = State::ALLOC;        /**< Current state */
     MXS_SESSION*          m_session;                     /**< The owning session */
     MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
     MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
@@ -368,6 +363,13 @@ private:
     Role         m_role;    /**< The role of the DCB */
     Manager*     m_manager; /**< The DCB manager to use */
 };
+
+namespace maxscale
+{
+
+const char* to_string(DCB::State state);
+
+}
 
 class ClientDCB : public DCB
 {
@@ -535,7 +537,7 @@ void dprintDCB(DCB*, DCB*);                                                     
 void dListDCBs(DCB*);                                                           /* List all DCBs in the system
                                                                                  * */
 void dListClients(DCB*);                                                        /* List al the client DCBs */
-const char* gw_dcb_state2string(dcb_state_t);                                   /* DCB state to string */
+const char* gw_dcb_state2string(DCB::State);                                    /* DCB state to string */
 void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); /* DCB version of printf */
 int dcb_add_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);
 int dcb_remove_callback(DCB*, DCB_REASON, int (*)(DCB*, DCB_REASON, void*), void*);

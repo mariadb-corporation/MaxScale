@@ -349,11 +349,11 @@ int mysql_send_auth_error(DCB* dcb,
 
     GWBUF* buf;
 
-    if (dcb->state() != DCB_STATE_POLLING)
+    if (dcb->state() != DCB::State::POLLING)
     {
         MXS_DEBUG("dcb %p is in a state %s, and it is not in epoll set anymore. Skip error sending.",
                   dcb,
-                  STRDCBSTATE(dcb->state()));
+                  mxs::to_string(dcb->state()));
         return 0;
     }
     mysql_error_msg = "Access denied!";

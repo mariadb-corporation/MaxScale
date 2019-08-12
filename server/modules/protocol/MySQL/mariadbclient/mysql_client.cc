@@ -1529,14 +1529,14 @@ int gw_write_client_event(DCB* dcb)
 {
     MySQLProtocol* protocol = NULL;
 
-    mxb_assert(dcb->state() != DCB_STATE_DISCONNECTED);
+    mxb_assert(dcb->state() != DCB::State::DISCONNECTED);
 
     if (dcb == NULL)
     {
         goto return_1;
     }
 
-    if (dcb->state() == DCB_STATE_DISCONNECTED)
+    if (dcb->state() == DCB::State::DISCONNECTED)
     {
         goto return_1;
     }

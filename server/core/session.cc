@@ -297,7 +297,7 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
         dcb_printf(dcb,
                    "\tConnected:               %s\n",
                    asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
-        if (print_session->client_dcb->state() == DCB_STATE_POLLING)
+        if (print_session->client_dcb->state() == DCB::State::POLLING)
         {
             dcb_printf(dcb, "\tIdle:                %.0f seconds\n", idle);
         }
@@ -644,7 +644,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     json_object_set_new(attr, "connected", json_string(buf));
 
-    if (session->client_dcb->state() == DCB_STATE_POLLING)
+    if (session->client_dcb->state() == DCB::State::POLLING)
     {
         double idle = (mxs_clock() - session->client_dcb->m_last_read);
         idle = idle > 0 ? idle / 10.f : 0;

@@ -523,7 +523,7 @@ static inline bool session_ok_to_route(DCB* dcb)
 
     if (dcb->session()->state() == MXS_SESSION::State::STARTED
         && dcb->session()->client_dcb != NULL
-        && dcb->session()->client_dcb->state() == DCB_STATE_POLLING
+        && dcb->session()->client_dcb->state() == DCB::State::POLLING
         && (dcb->session()->router_session
             || service_get_capabilities(dcb->session()->service) & RCAP_TYPE_NO_RSESSION))
     {
@@ -976,7 +976,7 @@ static int gw_write_backend_event(DCB* dcb)
 {
     int rc = 1;
 
-    if (dcb->state() != DCB_STATE_POLLING)
+    if (dcb->state() != DCB::State::POLLING)
     {
         /** Don't write to backend if backend_dcb is not in poll set anymore */
         uint8_t* data = NULL;
@@ -998,14 +998,14 @@ static int gw_write_backend_event(DCB* dcb)
                                         "Writing to backend failed due invalid Maxscale state.");
                 MXS_ERROR("Attempt to write buffered data to backend "
                           "failed due internal inconsistent state: %s",
-                          STRDCBSTATE(dcb->state()));
+                          mxs::to_string(dcb->state()));
             }
         }
         else
         {
             MXS_DEBUG("Dcb %p in state %s but there's nothing to write either.",
                       dcb,
-                      STRDCBSTATE(dcb->state()));
+                      mxs::to_string(dcb->state()));
         }
     }
     else
@@ -1033,10 +1033,10 @@ static int handle_persistent_connection(BackendDCB* dcb, GWBUF* queue)
         dcb->clear_was_persistent();
         protocol->ignore_replies = 0;
 
-        if (dcb->state() != DCB_STATE_POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
+        if (dcb->state() != DCB::State::POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
         {
             MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
-                     STRDCBSTATE(dcb->state()), mxs::to_string(protocol->protocol_auth_state));
+                     mxs::to_string(dcb->state()), mxs::to_string(protocol->protocol_auth_state));
             gwbuf_free(queue);
             return 0;
         }
@@ -1221,17 +1221,17 @@ static int gw_error_backend_event(DCB* dcb)
         }
         dcb_close(dcb);
     }
-    else if (dcb->state() != DCB_STATE_POLLING || session->state() != MXS_SESSION::State::STARTED)
+    else if (dcb->state() != DCB::State::POLLING || session->state() != MXS_SESSION::State::STARTED)
     {
         int error;
         int len = sizeof(error);
 
         if (getsockopt(dcb->m_fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
         {
-            if (dcb->state() != DCB_STATE_POLLING)
+            if (dcb->state() != DCB::State::POLLING)
             {
                 MXS_ERROR("DCB in state %s got error '%s'.",
-                          STRDCBSTATE(dcb->state()),
+                          mxs::to_string(dcb->state()),
                           mxs_strerror(errno));
             }
             else

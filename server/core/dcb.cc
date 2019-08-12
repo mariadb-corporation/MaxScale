@@ -232,7 +232,7 @@ InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
 //static
 void DCB::free(DCB* dcb)
 {
-    mxb_assert(dcb->m_state == DCB_STATE_DISCONNECTED || dcb->m_state == DCB_STATE_ALLOC);
+    mxb_assert(dcb->m_state == State::DISCONNECTED || dcb->m_state == State::ALLOC);
 
     if (dcb->m_session)
     {
@@ -530,7 +530,7 @@ int DCB::read(GWBUF** head, int maxbytes)
                 MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
                           nsingleread,
                           this,
-                          STRDCBSTATE(m_state),
+                          mxs::to_string(m_state),
                           m_fd);
 
                 /*< Assign the target server for the gwbuf */
@@ -563,7 +563,7 @@ int dcb_bytes_readable(DCB* dcb)
     {
         MXS_ERROR("ioctl FIONREAD for dcb %p in state %s fd %d failed: %d, %s",
                   dcb,
-                  STRDCBSTATE(dcb->state()),
+                  mxs::to_string(dcb->state()),
                   dcb->m_fd,
                   errno,
                   mxs_strerror(errno));
@@ -636,7 +636,7 @@ static GWBUF* dcb_basic_read(DCB* dcb, int bytesavailable, int maxbytes, int nre
             {
                 MXS_ERROR("Read failed, dcb %p in state %s fd %d: %d, %s",
                           dcb,
-                          STRDCBSTATE(dcb->state()),
+                          mxs::to_string(dcb->state()),
                           dcb->m_fd,
                           errno,
                           mxs_strerror(errno));
@@ -788,7 +788,7 @@ static int dcb_log_errors_SSL(DCB* dcb, int ret)
         MXS_ERROR("SSL operation failed, dcb %p in state "
                   "%s fd %d return code %d. More details may follow.",
                   dcb,
-                  STRDCBSTATE(dcb->state()),
+                  mxs::to_string(dcb->state()),
                   dcb->m_fd,
                   ret);
     }
@@ -866,13 +866,13 @@ static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
          * before router's closeSession is called and that tells that DCB may
          * still be writable.
          */
-        if (dcb->state() != DCB_STATE_ALLOC
-            && dcb->state() != DCB_STATE_POLLING
-            && dcb->state() != DCB_STATE_NOPOLLING)
+        if (dcb->state() != DCB::State::ALLOC
+            && dcb->state() != DCB::State::POLLING
+            && dcb->state() != DCB::State::NOPOLLING)
         {
             MXS_DEBUG("Write aborted to dcb %p because it is in state %s",
                       dcb,
-                      STRDCBSTATE(dcb->state()));
+                      mxs::to_string(dcb->state()));
             gwbuf_free(queue);
             return false;
         }
@@ -895,7 +895,7 @@ static void dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno)
     {
         MXS_ERROR("Write to dcb %p in state %s fd %d failed: %d, %s",
                   dcb,
-                  STRDCBSTATE(dcb->state()),
+                  mxs::to_string(dcb->state()),
                   dcb->m_fd,
                   eno,
                   mxs_strerror(eno));
@@ -982,7 +982,7 @@ int DCB::drain_writeq()
 //static
 void DCB::close(DCB* dcb)
 {
-    mxb_assert(dcb->m_state != DCB_STATE_DISCONNECTED);
+    mxb_assert(dcb->m_state != State::DISCONNECTED);
 #if defined (SS_DEBUG)
     RoutingWorker* current = RoutingWorker::get_current();
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
@@ -1000,7 +1000,7 @@ void DCB::close(DCB* dcb)
      * dcb_close may be called for freshly created dcb, in which case
      * it only needs to be freed.
      */
-    if (dcb->state() == DCB_STATE_ALLOC && dcb->m_fd == DCBFD_CLOSED)
+    if (dcb->state() == State::ALLOC && dcb->m_fd == DCBFD_CLOSED)
     {
         // A freshly created dcb that was closed before it was taken into use.
         DCB::free(dcb);
@@ -1075,7 +1075,7 @@ void DCB::destroy()
 #endif
     mxb_assert(m_nClose != 0);
 
-    if (m_state == DCB_STATE_POLLING)
+    if (m_state == State::POLLING)
     {
         stop_polling_and_shutdown();
     }
@@ -1102,7 +1102,7 @@ void DCB::destroy()
         m_fd = DCBFD_CLOSED;
     }
 
-    m_state = DCB_STATE_DISCONNECTED;
+    m_state = State::DISCONNECTED;
     DCB::free(this);
 }
 
@@ -1524,20 +1524,20 @@ void dprintDCB(DCB* pdcb, DCB* dcb)
  * @return String representation of the state
  *
  */
-const char* gw_dcb_state2string(dcb_state_t state)
+const char* gw_dcb_state2string(DCB::State state)
 {
     switch (state)
     {
-    case DCB_STATE_ALLOC:
+    case DCB::State::ALLOC:
         return "DCB Allocated";
 
-    case DCB_STATE_POLLING:
+    case DCB::State::POLLING:
         return "DCB in the polling loop";
 
-    case DCB_STATE_NOPOLLING:
+    case DCB::State::NOPOLLING:
         return "DCB not in polling loop";
 
-    case DCB_STATE_DISCONNECTED:
+    case DCB::State::DISCONNECTED:
         return "DCB socket closed";
 
     default:
@@ -1674,7 +1674,7 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
             MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
                       mxs::to_string(dcb->role()),
                       dcb->m_remote,
-                      STRDCBSTATE(dcb->state()),
+                      mxs::to_string(dcb->state()),
                       saved_errno,
                       mxs_strerror(saved_errno));
         }
@@ -1831,7 +1831,7 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 
     for (DCB* dcb : rworker->dcbs())
     {
-        if (dcb->state() == DCB_STATE_POLLING && dcb->m_server && dcb->m_server == server && dcb->m_nClose == 0)
+        if (dcb->state() == State::POLLING && dcb->m_server && dcb->m_server == server && dcb->m_nClose == 0)
         {
             if (!dcb->m_dcb_errhandle_called)
             {
@@ -1915,7 +1915,7 @@ int BackendDCB::persistent_clean_count(BackendDCB* dcb, int id, bool cleanall)
         {
             nextdcb = disposals->m_nextpersistent;
             disposals->m_persistentstart = -1;
-            if (DCB_STATE_POLLING == disposals->state())
+            if (State::POLLING == disposals->state())
             {
                 disposals->stop_polling_and_shutdown();
             }
@@ -2226,7 +2226,7 @@ void dcb_process_timeouts(int thr)
 
         for (DCB* dcb : rworker->dcbs())
         {
-            if (dcb->role() == DCB::Role::CLIENT && dcb->state() == DCB_STATE_POLLING)
+            if (dcb->role() == DCB::Role::CLIENT && dcb->state() == DCB::State::POLLING)
             {
                 SERVICE* service = dcb->session()->service;
 
@@ -2383,9 +2383,9 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
 
     /*
      * It isn't obvious that this is impossible
-     * mxb_assert(dcb->state() != DCB_STATE_DISCONNECTED);
+     * mxb_assert(dcb->state() != State::DISCONNECTED);
      */
-    if (DCB_STATE_DISCONNECTED == dcb->state())
+    if (State::DISCONNECTED == dcb->state())
     {
         return rc;
     }
@@ -2758,7 +2758,7 @@ static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* da
 
 bool DCB::enable_events()
 {
-    mxb_assert(m_state == DCB_STATE_ALLOC || m_state == DCB_STATE_NOPOLLING);
+    mxb_assert(m_state == State::ALLOC || m_state == State::NOPOLLING);
 
     bool rv = false;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
@@ -2766,7 +2766,7 @@ bool DCB::enable_events()
 
     if (worker->add_fd(m_fd, THIS_UNIT::poll_events, this))
     {
-        m_state = DCB_STATE_POLLING;
+        m_state = State::POLLING;
         rv = true;
     }
 
@@ -2775,7 +2775,7 @@ bool DCB::enable_events()
 
 bool DCB::disable_events()
 {
-    mxb_assert(m_state == DCB_STATE_POLLING);
+    mxb_assert(m_state == State::POLLING);
     mxb_assert(m_fd != DCBFD_CLOSED || m_role == DCB::Role::INTERNAL);
 
     bool rv = true;
@@ -2783,10 +2783,10 @@ bool DCB::disable_events()
     mxb_assert(worker == RoutingWorker::get_current());
 
     // We unconditionally set the state, even if the actual removal might fail.
-    m_state = DCB_STATE_NOPOLLING;
+    m_state = State::NOPOLLING;
 
     // When BLR creates an internal DCB, it will set its state to
-    // DCB_STATE_NOPOLLING and the fd will be DCBFD_CLOSED.
+    // State::NOPOLLING and the fd will be DCBFD_CLOSED.
     if (m_fd != DCBFD_CLOSED)
     {
 
@@ -3057,16 +3057,16 @@ int InternalDCB::ssl_handshake()
 
 bool InternalDCB::enable_events()
 {
-    mxb_assert(m_state == DCB_STATE_ALLOC || m_state == DCB_STATE_NOPOLLING);
-    m_state = DCB_STATE_POLLING;
+    mxb_assert(m_state == State::ALLOC || m_state == State::NOPOLLING);
+    m_state = State::POLLING;
 
     return true;
 }
 
 bool InternalDCB::disable_events()
 {
-    mxb_assert(m_state == DCB_STATE_NOPOLLING);
-    m_state = DCB_STATE_NOPOLLING;
+    mxb_assert(m_state == State::NOPOLLING);
+    m_state = State::NOPOLLING;
 
     return true;
 }
@@ -3125,7 +3125,7 @@ bool BackendDCB::prepare_for_destruction()
 
         prepared = false;
     }
-    else if (m_state == DCB_STATE_POLLING // Being polled
+    else if (m_state == State::POLLING // Being polled
              && m_persistentstart == 0    // Not already in (> 0) or being evicted from (-1) from the pool.
              && m_server)                 // And has a server.
     {
@@ -3158,25 +3158,25 @@ bool BackendDCB::prepare_for_destruction()
 namespace maxscale
 {
 
-const char* to_string(dcb_state_t state)
+const char* to_string(DCB::State state)
 {
     switch (state)
     {
-    case DCB_STATE_ALLOC:
-        return "DCB_STATE_ALLOC";
+    case DCB::State::ALLOC:
+        return "DCB::State::ALLOC";
 
-    case DCB_STATE_POLLING:
-        return "DCB_STATE_POLLING";
+    case DCB::State::POLLING:
+        return "DCB::State::POLLING";
 
-    case DCB_STATE_DISCONNECTED:
-        return "DCB_STATE_DISCONNECTED";
+    case DCB::State::DISCONNECTED:
+        return "DCB::State::DISCONNECTED";
 
-    case DCB_STATE_NOPOLLING:
-        return "DCB_STATE_NOPOLLING";
+    case DCB::State::NOPOLLING:
+        return "DCB::State::NOPOLLING";
 
     default:
         assert(!true);
-        return "DCB_STATE_UNKNOWN";
+        return "DCB::State::UNKNOWN";
     }
 }
 
