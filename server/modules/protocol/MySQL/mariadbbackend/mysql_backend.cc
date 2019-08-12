@@ -1149,7 +1149,7 @@ static int gw_MySQLWrite_backend(DCB* plain_dcb, GWBUF* queue)
 
             prepare_for_write(dcb, queue);
 
-            if (backend_protocol->reply().command() == MXS_COM_CHANGE_USER)
+            if (backend_protocol->current_command == MXS_COM_CHANGE_USER)
             {
                 return gw_change_user(dcb, dcb->session(), queue);
             }
