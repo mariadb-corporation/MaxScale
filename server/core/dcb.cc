@@ -121,11 +121,11 @@ DCB::DCB(int fd,
          MXS_PROTOCOL_API protocol_api,
          Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
-    , m_high_water(config_writeq_high_water())
-    , m_low_water(config_writeq_low_water())
     , m_last_read(mxs_clock())
     , m_last_write(mxs_clock())
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
+    , m_high_water(config_writeq_high_water())
+    , m_low_water(config_writeq_low_water())
     , m_fd(fd)
     , m_session(session)
     , m_protocol(protocol)
@@ -2415,7 +2415,7 @@ public:
         : m_dcb(dcb)
         , m_buffer(buf)
         , m_ev(ev)
-        , m_uid(dcb->m_uid)
+        , m_uid(dcb->uid())
     {
     }
 

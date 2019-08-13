@@ -140,6 +140,14 @@ public:
     virtual ~DCB();
 
     /**
+     * @return The unique identifier of the DCB.
+     */
+    uint64_t uid() const
+    {
+        return m_uid;
+    };
+
+    /**
      * File descriptor of DCB.
      *
      * Accessing and using the file descriptor directly should only be
@@ -300,8 +308,6 @@ public:
     size_t                  m_protocol_packet_length = 0;        /**< protocol packet length */
     size_t                  m_protocol_bytes_processed = 0;      /**< How many bytes have been read */
     uint64_t                m_writeqlen = 0;                     /**< Bytes in writeq */
-    uint64_t                m_high_water = 0;                    /**< High water mark of write queue */
-    uint64_t                m_low_water = 0;                     /**< Low water mark of write queue */
     GWBUF*                  m_writeq = nullptr;                  /**< Write Data Queue */
     GWBUF*                  m_delayq = nullptr;                  /**< Delay Backend Write Data Queue */
     GWBUF*                  m_readq = nullptr;                   /**< Read queue for incomplete reads */
@@ -310,13 +316,9 @@ public:
 
     void*                   m_data = nullptr;                    /**< Client pcol data, owned by client DCB */
 
-    CALLBACK*               m_callbacks = nullptr;               /**< The list of callbacks for the DCB */
     int64_t                 m_last_read = 0;                     /**< Last time the DCB received data */
     int64_t                 m_last_write = 0;                    /**< Last time the DCB sent data */
-    bool                    m_high_water_reached = false;        /** High water mark reached, to determine
-                                                                  * whether we need to release throttle */
     uint32_t                m_nClose = 0;                        /** How many times dcb_close has been called. */
-    uint64_t                m_uid;                               /**< Unique identifier for this DCB */
 
 protected:
     DCB(int fd,
@@ -353,6 +355,9 @@ protected:
 
     int log_errors_SSL(int ret);
 
+    const uint64_t        m_uid;                         /**< Unique identifier for this DCB */
+    const uint64_t        m_high_water;                  /**< High water mark of write queue */
+    const uint64_t        m_low_water;                   /**< Low water mark of write queue */
     State                 m_state = State::ALLOC;        /**< Current state */
     int                   m_fd;                          /**< The descriptor */
     MXS_SESSION*          m_session;                     /**< The owning session */
@@ -364,6 +369,9 @@ protected:
     bool                  m_ssl_write_want_read = false;
     bool                  m_ssl_write_want_write = false;
     Stats                 m_stats;                       /**< DCB related statistics */
+    CALLBACK*             m_callbacks = nullptr;         /**< The list of callbacks for the DCB */
+    bool                  m_high_water_reached = false;  /** High water mark reached, to determine
+                                                          * whether we need to release throttle */
 
 private:
     friend class Manager;
