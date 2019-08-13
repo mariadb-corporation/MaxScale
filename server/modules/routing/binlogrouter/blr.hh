@@ -760,8 +760,8 @@ struct ROUTER_INSTANCE : public MXS_ROUTER
     /*< MariaDB 10.0 compatibility */
     bool         maxwell_compat;/*< Zendesk's Maxwell compatibility */
     char*        master_uuid;   /*< Set UUID of the master, sent to slaves */
-    DCB*         master;        /*< DCB for master connection */
-    ClientDCB*   client;        /*< DCB for dummy client */
+    BackendDCB*  master;        /*< DCB for master connection */
+    InternalDCB* client;        /*< DCB for dummy client */
     MXS_SESSION* session;       /*< Fake session for master connection */
     unsigned int master_state;  /*< State of the master FSM */
     uint8_t      lastEventReceived;

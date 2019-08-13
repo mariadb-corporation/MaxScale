@@ -77,7 +77,7 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
     socklen_t len = sizeof(struct ucred);
 
     /* Get UNIX client credentials from socket*/
-    if (getsockopt(dcb->m_fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == 0)
+    if (getsockopt(dcb->fd(), SOL_SOCKET, SO_PEERCRED, &ucred, &len) == 0)
     {
         struct passwd pw_entry;
         struct passwd* pw_tmp;
@@ -140,7 +140,7 @@ static bool authenticate_socket(MAXSCALED* protocol, DCB* dcb)
     struct sockaddr address;
     socklen_t address_len = sizeof(address);
 
-    if (getsockname(dcb->m_fd, &address, &address_len) == 0)
+    if (getsockname(dcb->fd(), &address, &address_len) == 0)
     {
         if (address.sa_family == AF_UNIX)
         {

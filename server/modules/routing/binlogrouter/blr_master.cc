@@ -260,7 +260,7 @@ static void blr_start_master(void* data)
 
     router->connect_time = time(0);
 
-    if (setsockopt(router->master->m_fd,
+    if (setsockopt(router->master->fd(),
                    SOL_SOCKET,
                    SO_KEEPALIVE,
                    &keepalive,
@@ -1381,7 +1381,7 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
 {
     if (router->master)
     {
-        if (router->master->m_fd != -1
+        if (router->master->fd() != -1
             && router->master->state() == DCB::State::POLLING)
         {
             blr_close_master_in_main(router);
@@ -1407,7 +1407,7 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
 
     if (router->client)
     {
-        if (router->client->m_fd != -1
+        if (router->client->fd() != -1
             && router->client->state() == DCB::State::POLLING)
         {
             // Is this dead code? dcb->m_fd for internal DCBs is always -1

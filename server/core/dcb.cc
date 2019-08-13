@@ -94,11 +94,8 @@ static thread_local struct
 } this_thread;
 }
 
-static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue);
-static int         dcb_read_no_bytes_available(DCB* dcb, int nreadtotal);
-static void   dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno);
-static int    gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing);
-static int    dcb_log_errors_SSL(DCB* dcb, int ret);
+static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue);
+static int         dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal);
 static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 
 static bool     dcb_session_check(DCB* dcb, const char*);
@@ -124,12 +121,12 @@ DCB::DCB(int fd,
          MXS_PROTOCOL_API protocol_api,
          Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
-    , m_fd(fd)
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
     , m_last_read(mxs_clock())
     , m_last_write(mxs_clock())
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
+    , m_fd(fd)
     , m_session(session)
     , m_protocol(protocol)
     , m_protocol_api(protocol_api)
@@ -456,12 +453,9 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
             }
             else
             {
-                if (dcb->m_fd != DCBFD_CLOSED)
-                {
-                    ::close(dcb->m_fd);
-                }
                 session_unlink_backend_dcb(dcb->session(), dcb);
-                delete dcb;
+
+                DCB::destroy(dcb);
                 dcb = nullptr;
             }
         }
@@ -504,12 +498,12 @@ int DCB::read(GWBUF** head, int maxbytes)
     {
         int bytes_available;
 
-        bytes_available = dcb_bytes_readable(this);
+        bytes_available = bytes_readable();
         if (bytes_available <= 0)
         {
             return bytes_available < 0 ? -1
                                        :/** Handle closed client socket */
-                   dcb_read_no_bytes_available(this, nreadtotal);
+                dcb_read_no_bytes_available(this, m_fd, nreadtotal);
         }
         else
         {
@@ -546,16 +540,16 @@ int DCB::read(GWBUF** head, int maxbytes)
  *
  * @return          -1 on error, otherwise the total number of bytes available
  */
-int dcb_bytes_readable(DCB* dcb)
+int DCB::bytes_readable() const
 {
     int bytesavailable;
 
-    if (-1 == ioctl(dcb->m_fd, FIONREAD, &bytesavailable))
+    if (-1 == ioctl(m_fd, FIONREAD, &bytesavailable))
     {
         MXS_ERROR("ioctl FIONREAD for dcb %p in state %s fd %d failed: %d, %s",
-                  dcb,
-                  mxs::to_string(dcb->state()),
-                  dcb->m_fd,
+                  this,
+                  mxs::to_string(m_state),
+                  m_fd,
                   errno,
                   mxs_strerror(errno));
         return -1;
@@ -570,10 +564,11 @@ int dcb_bytes_readable(DCB* dcb)
  * Determine the return code needed when read has run out of data
  *
  * @param dcb           The DCB to read from
+ * @param fd            File descriptor.
  * @param nreadtotal    Number of bytes that have been read
  * @return              -1 on error, 0 for conditions not treated as error
  */
-static int dcb_read_no_bytes_available(DCB* dcb, int nreadtotal)
+static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal)
 {
     /** Handle closed client socket */
     if (nreadtotal == 0 && DCB::Role::CLIENT == dcb->role())
@@ -583,7 +578,7 @@ static int dcb_read_no_bytes_available(DCB* dcb, int nreadtotal)
         long r = -1;
 
         /* try to read 1 byte, without consuming the socket buffer */
-        r = recv(dcb->m_fd, &c, sizeof(char), MSG_PEEK);
+        r = recv(fd, &c, sizeof(char), MSG_PEEK);
         l_errno = errno;
 
         if (r <= 0
@@ -747,11 +742,11 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
         break;
 
     case SSL_ERROR_SYSCALL:
-        *nsingleread = dcb_log_errors_SSL(this, *nsingleread);
+        *nsingleread = log_errors_SSL(*nsingleread);
         break;
 
     default:
-        *nsingleread = dcb_log_errors_SSL(this, *nsingleread);
+        *nsingleread = log_errors_SSL(*nsingleread);
         break;
     }
     return buffer;
@@ -761,10 +756,11 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
  * Log errors from an SSL operation
  *
  * @param dcb       The DCB of the client
+ * @param fd        The file descriptor.
  * @param ret       Return code from SSL operation if error is SSL_ERROR_SYSCALL
  * @return          -1 if an error found, 0 if no error found
  */
-static int dcb_log_errors_SSL(DCB* dcb, int ret)
+int DCB::log_errors_SSL(int ret)
 {
     char errbuf[MXS_STRERROR_BUFLEN];
     unsigned long ssl_errno;
@@ -778,9 +774,9 @@ static int dcb_log_errors_SSL(DCB* dcb, int ret)
     {
         MXS_ERROR("SSL operation failed, dcb %p in state "
                   "%s fd %d return code %d. More details may follow.",
-                  dcb,
-                  mxs::to_string(dcb->state()),
-                  dcb->m_fd,
+                  this,
+                  mxs::to_string(m_state),
+                  m_fd,
                   ret);
     }
     if (ret && !ssl_errno)
@@ -807,7 +803,7 @@ bool DCB::write(GWBUF* queue)
     mxb_assert(this->owner == RoutingWorker::get_current());
     m_writeqlen += gwbuf_length(queue);
     // The following guarantees that queue is not NULL
-    if (!dcb_write_parameter_check(this, queue))
+    if (!dcb_write_parameter_check(this, m_fd, queue))
     {
         return 0;
     }
@@ -830,17 +826,18 @@ bool DCB::write(GWBUF* queue)
  * Check the parameters for dcb_write
  *
  * @param dcb   The DCB of the client
+ * @param fd    The file descriptor.
  * @param queue Queue of buffers to write
  * @return true if parameters acceptable, false otherwise
  */
-static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
+static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue)
 {
     if (queue == NULL)
     {
         return false;
     }
 
-    if (dcb->m_fd == DCBFD_CLOSED)
+    if (fd == DCBFD_CLOSED)
     {
         MXS_ERROR("Write failed, dcb is closed.");
         gwbuf_free(queue);
@@ -871,28 +868,6 @@ static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue)
     return true;
 }
 
-/**
- * Debug log write failure, except when it is COM_QUIT
- *
- * @param dcb   The DCB of the client
- * @param queue Queue of buffers to write
- * @param eno   Error number for logging
- */
-static void dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno)
-{
-    if (eno != EPIPE
-        && eno != EAGAIN
-        && eno != EWOULDBLOCK)
-    {
-        MXS_ERROR("Write to dcb %p in state %s fd %d failed: %d, %s",
-                  dcb,
-                  mxs::to_string(dcb->state()),
-                  dcb->m_fd,
-                  eno,
-                  mxs_strerror(eno));
-    }
-}
-
 int DCB::drain_writeq()
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
@@ -914,11 +889,11 @@ int DCB::drain_writeq()
         /* The value put into written will be >= 0 */
         if (m_ssl)
         {
-            written = write_SSL(local_writeq, &stop_writing);
+            written = socket_write_SSL(local_writeq, &stop_writing);
         }
         else
         {
-            written = gw_write(this, local_writeq, &stop_writing);
+            written = socket_write(local_writeq, &stop_writing);
         }
         /*
          * If the stop_writing boolean is set, writing has become blocked,
@@ -1440,7 +1415,7 @@ void dcb_printf(DCB* dcb, const char* fmt, ...)
  * @param stop_writing  Set to true if the caller should stop writing, false otherwise
  * @return              Number of written bytes
  */
-int DCB::write_SSL(GWBUF* writeq, bool* stop_writing)
+int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
 {
     int written;
 
@@ -1477,7 +1452,7 @@ int DCB::write_SSL(GWBUF* writeq, bool* stop_writing)
 
     case SSL_ERROR_SYSCALL:
         *stop_writing = true;
-        if (dcb_log_errors_SSL(this, written) < 0)
+        if (log_errors_SSL(written) < 0)
         {
             poll_fake_hangup_event(this);
         }
@@ -1486,7 +1461,7 @@ int DCB::write_SSL(GWBUF* writeq, bool* stop_writing)
     default:
         /* Report error(s) and shutdown the connection */
         *stop_writing = true;
-        if (dcb_log_errors_SSL(this, written) < 0)
+        if (log_errors_SSL(written) < 0)
         {
             poll_fake_hangup_event(this);
         }
@@ -1504,10 +1479,10 @@ int DCB::write_SSL(GWBUF* writeq, bool* stop_writing)
  * @param stop_writing  Set to true if the caller should stop writing, false otherwise
  * @return              Number of written bytes
  */
-static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
+int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
 {
     int written = 0;
-    int fd = dcb->m_fd;
+    int fd = m_fd;
     size_t nbytes = GWBUF_LENGTH(writeq);
     void* buf = GWBUF_DATA(writeq);
     int saved_errno;
@@ -1516,7 +1491,7 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
 
     if (fd != DCBFD_CLOSED)
     {
-        written = write(fd, buf, nbytes);
+        written = ::write(fd, buf, nbytes);
     }
 
     saved_errno = errno;
@@ -1528,9 +1503,9 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
         if (saved_errno != EAGAIN && saved_errno != EWOULDBLOCK && saved_errno != EPIPE)
         {
             MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
-                      mxs::to_string(dcb->role()),
-                      dcb->m_remote,
-                      mxs::to_string(dcb->state()),
+                      mxs::to_string(m_role),
+                      m_remote,
+                      mxs::to_string(m_state),
                       saved_errno,
                       mxs_strerror(saved_errno));
         }
@@ -1888,13 +1863,13 @@ int ClientDCB::ssl_handshake()
 
     case SSL_ERROR_ZERO_RETURN:
         MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user, remote);
-        dcb_log_errors_SSL(this, 0);
+        log_errors_SSL(0);
         poll_fake_hangup_event(this);
         return 0;
 
     case SSL_ERROR_SYSCALL:
         MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
-        if (dcb_log_errors_SSL(this, ssl_rval) < 0)
+        if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(this);
@@ -1907,7 +1882,7 @@ int ClientDCB::ssl_handshake()
 
     default:
         MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
-        if (dcb_log_errors_SSL(this, ssl_rval) < 0)
+        if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(this);
@@ -1965,7 +1940,7 @@ int BackendDCB::ssl_handshake()
 
     case SSL_ERROR_ZERO_RETURN:
         MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote);
-        if (dcb_log_errors_SSL(this, 0) < 0)
+        if (log_errors_SSL(0) < 0)
         {
             poll_fake_hangup_event(this);
         }
@@ -1974,7 +1949,7 @@ int BackendDCB::ssl_handshake()
 
     case SSL_ERROR_SYSCALL:
         MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote);
-        if (dcb_log_errors_SSL(this, ssl_rval) < 0)
+        if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(this);
@@ -1988,7 +1963,7 @@ int BackendDCB::ssl_handshake()
 
     default:
         MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote);
-        if (dcb_log_errors_SSL(this, ssl_rval) < 0)
+        if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(this);

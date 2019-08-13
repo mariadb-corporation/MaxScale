@@ -2369,7 +2369,7 @@ static void errorReply(MXS_ROUTER* instance,
 
     len = sizeof(error);
     if (router->master
-        && getsockopt(router->master->m_fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0
+        && getsockopt(router->master->fd(), SOL_SOCKET, SO_ERROR, &error, &len) == 0
         && error != 0)
     {
         sprintf(msg, "%s, ", mxs_strerror(error));
@@ -2879,7 +2879,8 @@ static void destroyInstance(MXS_ROUTER* instance)
     /* Check whether master connection is active */
     if (inst->master)
     {
-        if (inst->master->m_fd != -1 && inst->master->state() == DCB::State::POLLING)
+        if (inst->master->fd() != -1
+            && inst->master->state() == DCB::State::POLLING)
         {
             blr_master_close(inst);
         }

@@ -139,6 +139,19 @@ public:
 
     virtual ~DCB();
 
+    /**
+     * File descriptor of DCB.
+     *
+     * Accessing and using the file descriptor directly should only be
+     * used as a last resort, as it may break the assumptions of the DCB.
+     *
+     * @return The file descriptor.
+     */
+    int fd() const
+    {
+        return m_fd;
+    }
+
     Role role() const
     {
         return m_role;
@@ -188,6 +201,8 @@ public:
     }
 
     virtual int ssl_handshake() = 0;
+
+    int bytes_readable() const;
 
     /**
      * Read data from the DCB.
@@ -278,7 +293,6 @@ public:
     };
 
     bool                    m_dcb_errhandle_called = false;      /**< this can be called only once */
-    int                     m_fd = DCBFD_CLOSED;                 /**< The descriptor */
     SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN; /**< Current state of SSL if in use */
     char*                   m_remote = nullptr;                  /**< Address of remote end */
     char*                   m_user = nullptr;                    /**< User name for connection */
@@ -314,6 +328,11 @@ protected:
 
     int create_SSL(mxs::SSLContext* ssl);
 
+    static void destroy(DCB* dcb)
+    {
+        dcb->destroy();
+    }
+
     /**
      * Release the instance from the associated session.
      *
@@ -332,7 +351,10 @@ protected:
 
     void stop_polling_and_shutdown();
 
+    int log_errors_SSL(int ret);
+
     State                 m_state = State::ALLOC;        /**< Current state */
+    int                   m_fd;                          /**< The descriptor */
     MXS_SESSION*          m_session;                     /**< The owning session */
     MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
     MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
@@ -351,7 +373,8 @@ private:
     int read_SSL(GWBUF** head);
     GWBUF* basic_read_SSL(int* nsingleread);
 
-    int write_SSL(GWBUF* writeq, bool* stop_writing);
+    int socket_write_SSL(GWBUF* writeq, bool* stop_writing);
+    int socket_write(GWBUF* writeq, bool* stop_writing);
 
     void destroy();
     static void free(DCB* dcb);
@@ -521,7 +544,10 @@ inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 {
     return dcb->read(head, maxbytes);
 }
-int  dcb_bytes_readable(DCB* dcb);
+inline int dcb_bytes_readable(DCB* dcb)
+{
+    return dcb->bytes_readable();
+}
 inline int dcb_drain_writeq(DCB* dcb)
 {
     return dcb->drain_writeq();

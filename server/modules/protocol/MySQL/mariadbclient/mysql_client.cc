@@ -726,7 +726,7 @@ bool ssl_check_data_to_process(DCB* dcb)
     if (dcb->m_ssl_state == SSL_HANDSHAKE_REQUIRED && 1 == dcb->ssl_handshake())
     {
         int b = 0;
-        ioctl(dcb->m_fd, FIONREAD, &b);
+        ioctl(dcb->fd(), FIONREAD, &b);
         if (b != 0)
         {
             return true;
@@ -1436,14 +1436,14 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
     switch (auth_val)
     {
     case MXS_AUTH_NO_SESSION:
-        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->m_fd);
+        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd());
 
         /** Send ERR 1045 to client */
         mysql_send_auth_error(dcb, packet_number, 0, "failed to create new session");
         break;
 
     case MXS_AUTH_FAILED_DB:
-        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->m_fd);
+        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->fd());
         /** Send error 1049 to client */
         message_len = 25 + MYSQL_DATABASE_MAXLEN;
 
@@ -1458,7 +1458,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
         MXS_DEBUG("client is "
                   "not SSL capable for SSL listener. fd %d, "
                   "state = MYSQL_FAILED_AUTH_SSL.",
-                  dcb->m_fd);
+                  dcb->fd());
 
         /** Send ERR 1045 to client */
         mysql_send_auth_error(dcb, packet_number, 0, "Access without SSL denied");
@@ -1467,7 +1467,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
     case MXS_AUTH_SSL_INCOMPLETE:
         MXS_DEBUG("unable to complete SSL authentication. fd %d, "
                   "state = MYSQL_AUTH_SSL_INCOMPLETE.",
-                  dcb->m_fd);
+                  dcb->fd());
 
         /** Send ERR 1045 to client */
         mysql_send_auth_error(dcb,
@@ -1477,7 +1477,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
         break;
 
     case MXS_AUTH_FAILED:
-        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->m_fd);
+        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user,
                                         dcb->m_remote,
@@ -1492,7 +1492,7 @@ static void mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_
         break;
 
     default:
-        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->m_fd);
+        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user,
                                         dcb->m_remote,

@@ -387,7 +387,7 @@ static int gw_read_backend_event(DCB* plain_dcb)
 
     MXS_DEBUG("Read dcb %p fd %d protocol state %d, %s.",
               dcb,
-              dcb->m_fd,
+              dcb->fd(),
               proto->protocol_auth_state,
               mxs::to_string(proto->protocol_auth_state));
 
@@ -1018,7 +1018,7 @@ static int gw_write_backend_event(DCB* dcb)
         MySQLProtocol* backend_protocol = (MySQLProtocol*)dcb->protocol_session();
         mxb_assert(backend_protocol->protocol_auth_state != MXS_AUTH_STATE_PENDING_CONNECT);
         dcb_drain_writeq(dcb);
-        MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->m_fd, rc);
+        MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->fd(), rc);
     }
 
     return rc;
@@ -1158,7 +1158,7 @@ static int gw_MySQLWrite_backend(DCB* plain_dcb, GWBUF* queue)
 
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
                       dcb,
-                      dcb->m_fd,
+                      dcb->fd(),
                       mxs::to_string(backend_protocol->protocol_auth_state));
 
             prepare_for_write(dcb, queue);
@@ -1192,7 +1192,7 @@ static int gw_MySQLWrite_backend(DCB* plain_dcb, GWBUF* queue)
         {
             MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
                       dcb,
-                      dcb->m_fd,
+                      dcb->fd(),
                       mxs::to_string(backend_protocol->protocol_auth_state));
 
             /** Store data until authentication is complete */
@@ -1232,7 +1232,7 @@ static int gw_error_backend_event(DCB* dcb)
         int error;
         int len = sizeof(error);
 
-        if (getsockopt(dcb->m_fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
+        if (getsockopt(dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
         {
             if (dcb->state() != DCB::State::POLLING)
             {
@@ -1278,7 +1278,7 @@ static int gw_backend_hangup(DCB* dcb)
         {
             int error;
             int len = sizeof(error);
-            if (getsockopt(dcb->m_fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
+            if (getsockopt(dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
             {
                 if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
                 {
@@ -1771,7 +1771,7 @@ static void gw_send_proxy_protocol_header(BackendDCB* backend_dcb)
     // TODO: Add support for chained proxies. Requires reading the client header.
 
     const DCB* client_dcb = backend_dcb->session()->client_dcb;
-    const int client_fd = client_dcb->m_fd;
+    const int client_fd = client_dcb->fd();
     const sa_family_t family = client_dcb->m_ip.ss_family;
     const char* family_str = NULL;
 
