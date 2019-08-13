@@ -96,11 +96,6 @@ static thread_local struct
 
 static inline bool dcb_write_parameter_check(DCB* dcb, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int nreadtotal);
-static GWBUF*      dcb_basic_read(DCB* dcb,
-                                  int bytesavailable,
-                                  int maxbytes,
-                                  int nreadtotal,
-                                  int* nsingleread);
 static void   dcb_log_write_failure(DCB* dcb, GWBUF* queue, int eno);
 static int    gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing);
 static int    dcb_log_errors_SSL(DCB* dcb, int ret);
@@ -521,7 +516,7 @@ int DCB::read(GWBUF** head, int maxbytes)
             GWBUF* buffer;
             m_last_read = mxs_clock();
 
-            buffer = dcb_basic_read(this, bytes_available, maxbytes, nreadtotal, &nsingleread);
+            buffer = basic_read(bytes_available, maxbytes, nreadtotal, &nsingleread);
             if (buffer)
             {
                 nreadtotal += nsingleread;
@@ -612,7 +607,7 @@ static int dcb_read_no_bytes_available(DCB* dcb, int nreadtotal)
  * @param nsingleread       To be set as the number of bytes read this time
  * @return                  GWBUF* buffer containing new data, or null.
  */
-static GWBUF* dcb_basic_read(DCB* dcb, int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread)
+GWBUF* DCB::basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread)
 {
     GWBUF* buffer;
     int bufsize = maxbytes == 0 ? bytesavailable : MXS_MIN(bytesavailable, maxbytes - nreadtotal);
@@ -623,17 +618,17 @@ static GWBUF* dcb_basic_read(DCB* dcb, int bytesavailable, int maxbytes, int nre
     }
     else
     {
-        *nsingleread = read(dcb->m_fd, GWBUF_DATA(buffer), bufsize);
-        dcb->m_stats.n_reads++;
+        *nsingleread = ::read(m_fd, GWBUF_DATA(buffer), bufsize);
+        m_stats.n_reads++;
 
         if (*nsingleread <= 0)
         {
             if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK)
             {
                 MXS_ERROR("Read failed, dcb %p in state %s fd %d: %d, %s",
-                          dcb,
-                          mxs::to_string(dcb->state()),
-                          dcb->m_fd,
+                          this,
+                          mxs::to_string(m_state),
+                          m_fd,
                           errno,
                           mxs_strerror(errno));
             }

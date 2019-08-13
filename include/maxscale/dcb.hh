@@ -42,19 +42,6 @@ class AuthenticatorBackendSession;
 
 #define DCBFD_CLOSED -1
 
-/**
- * The statistics gathered on a descriptor control block
- */
-typedef struct dcbstats
-{
-    int n_reads;        /*< Number of reads on this descriptor */
-    int n_writes;       /*< Number of writes on this descriptor */
-    int n_accepts;      /*< Number of accepts on this descriptor */
-    int n_buffered;     /*< Number of buffered writes */
-    int n_high_water;   /*< Number of crosses of high water mark */
-    int n_low_water;    /*< Number of crosses of low water mark */
-} DCBSTATS;
-
 #define DCBSTATS_INIT {0}
 
 namespace maxscale
@@ -118,6 +105,16 @@ public:
         }
     };
 
+    struct Stats
+    {
+        int n_reads = 0;        /*< Number of reads on this descriptor */
+        int n_writes = 0;       /*< Number of writes on this descriptor */
+        int n_accepts = 0;      /*< Number of accepts on this descriptor */
+        int n_buffered = 0;     /*< Number of buffered writes */
+        int n_high_water = 0;   /*< Number of crosses of high water mark */
+        int n_low_water = 0;    /*< Number of crosses of low water mark */
+    };
+
     enum class Role
     {
         CLIENT,         /*< Serves dedicated client */
@@ -169,6 +166,11 @@ public:
     }
 
     SERVICE* service() const;
+
+    const Stats& stats() const
+    {
+        return m_stats;
+    }
 
     MXS_PROTOCOL_SESSION* protocol_session() const
     {
@@ -267,26 +269,6 @@ public:
     int add_callback(Reason, int (*)(DCB*, Reason, void*), void*);
     int remove_callback(Reason, int (*)(DCB*, Reason, void*), void*);
 
-    bool                    m_dcb_errhandle_called = false;   /**< this can be called only once */
-    int                     m_fd = DCBFD_CLOSED;                /**< The descriptor */
-    SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
-    char*                   m_remote = nullptr;                   /**< Address of remote end */
-    char*                   m_user = nullptr;                     /**< User name for connection */
-    struct sockaddr_storage m_ip;                                 /**< remote IPv4/IPv6 address */
-    size_t                  m_protocol_packet_length = 0;         /**< protocol packet length */
-    size_t                  m_protocol_bytes_processed = 0;       /**< How many bytes have been read */
-    uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
-    uint64_t                m_high_water = 0;                     /**< High water mark of write queue */
-    uint64_t                m_low_water = 0;                      /**< Low water mark of write queue */
-    GWBUF*                  m_writeq = nullptr;                 /**< Write Data Queue */
-    GWBUF*                  m_delayq = nullptr;                   /**< Delay Backend Write Data Queue */
-    GWBUF*                  m_readq = nullptr;                  /**< Read queue for incomplete reads */
-    GWBUF*                  m_fakeq = nullptr;                  /**< Fake event queue for generated events */
-    uint32_t                m_fake_event = 0;                     /**< Fake event to be delivered to handler */
-
-    DCBSTATS m_stats = {};                      /**< DCB related statistics */
-    void*          m_data = nullptr;              /**< Client protocol data, owned by client DCB */
-
     struct CALLBACK
     {
         Reason           reason;   /*< The reason for the callback */
@@ -295,14 +277,32 @@ public:
         struct CALLBACK* next;     /*< Next callback for this DCB */
     };
 
-    CALLBACK*      m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
-    int64_t        m_last_read = 0;              /**< Last time the DCB received data */
-    int64_t        m_last_write = 0;             /**< Last time the DCB sent data */
-    bool           m_high_water_reached = false; /** High water mark reached, to determine whether we need to
-                                                 * release
-                                                 * throttle */
-    uint32_t m_nClose = 0;   /** How many times dcb_close has been called. */
-    uint64_t m_uid;         /**< Unique identifier for this DCB */
+    bool                    m_dcb_errhandle_called = false;      /**< this can be called only once */
+    int                     m_fd = DCBFD_CLOSED;                 /**< The descriptor */
+    SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN; /**< Current state of SSL if in use */
+    char*                   m_remote = nullptr;                  /**< Address of remote end */
+    char*                   m_user = nullptr;                    /**< User name for connection */
+    struct sockaddr_storage m_ip;                                /**< remote IPv4/IPv6 address */
+    size_t                  m_protocol_packet_length = 0;        /**< protocol packet length */
+    size_t                  m_protocol_bytes_processed = 0;      /**< How many bytes have been read */
+    uint64_t                m_writeqlen = 0;                     /**< Bytes in writeq */
+    uint64_t                m_high_water = 0;                    /**< High water mark of write queue */
+    uint64_t                m_low_water = 0;                     /**< Low water mark of write queue */
+    GWBUF*                  m_writeq = nullptr;                  /**< Write Data Queue */
+    GWBUF*                  m_delayq = nullptr;                  /**< Delay Backend Write Data Queue */
+    GWBUF*                  m_readq = nullptr;                   /**< Read queue for incomplete reads */
+    GWBUF*                  m_fakeq = nullptr;                   /**< Fake event queue for generated events */
+    uint32_t                m_fake_event = 0;                    /**< Fake event to be delivered to handler */
+
+    void*                   m_data = nullptr;                    /**< Client pcol data, owned by client DCB */
+
+    CALLBACK*               m_callbacks = nullptr;               /**< The list of callbacks for the DCB */
+    int64_t                 m_last_read = 0;                     /**< Last time the DCB received data */
+    int64_t                 m_last_write = 0;                    /**< Last time the DCB sent data */
+    bool                    m_high_water_reached = false;        /** High water mark reached, to determine
+                                                                  * whether we need to release throttle */
+    uint32_t                m_nClose = 0;                        /** How many times dcb_close has been called. */
+    uint64_t                m_uid;                               /**< Unique identifier for this DCB */
 
 protected:
     DCB(int fd,
@@ -341,9 +341,12 @@ protected:
     bool                  m_ssl_read_want_write = false;
     bool                  m_ssl_write_want_read = false;
     bool                  m_ssl_write_want_write = false;
+    Stats                 m_stats;                       /**< DCB related statistics */
 
 private:
     friend class Manager;
+
+    GWBUF* basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread);
 
     int read_SSL(GWBUF** head);
     GWBUF* basic_read_SSL(int* nsingleread);
