@@ -159,6 +159,21 @@ public:
      */
     bool can_be_destroyed() const;
 
+    const MXS_CONFIG_PARAMETER& params() const override
+    {
+        return m_params;
+    }
+
+    void remove_parameter(const std::string& key)
+    {
+        m_params.remove(key);
+    }
+
+    void set_parameter(const std::string& key, const std::string& value)
+    {
+        m_params.set(key, value);
+    }
+
 private:
 
     struct Data
@@ -181,6 +196,8 @@ private:
     mxs::rworker_local<Data>   m_data;
     RateLimits                 m_rate_limits;   // User reload rate limits
     mxs::rworker_local<Config> m_config;
+
+    MXS_CONFIG_PARAMETER m_params;
 
     /**
      * Recalculate internal data
@@ -365,44 +382,6 @@ bool service_server_in_use(const SERVER* server);
  * @return True if at least one service uses the filter
  */
 bool service_filter_in_use(const SFilterDef& filter);
-
-/**
- * @brief Add parameters to a service
- *
- * A copy of @c param is added to @c service.
- *
- * @param service Service where the parameters are added
- * @param param Parameters to add
- */
-void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param);
-
-/**
- * @brief Add parameters to a service
- *
- * A copy of @c param is added to @c service.
- *
- * @param service Service where the parameters are added
- * @param key     Parameter name
- * @param value   Parameter value
- */
-void service_add_parameter(Service* service, const char* key, const char* value);
-
-/**
- * @brief Remove service parameter
- *
- * @param service Service to modify
- * @param key     Parameter to remove
- */
-void service_remove_parameter(Service* service, const char* key);
-
-/**
- * @brief Replace service parameter
- *
- * @param service Service to modify
- * @param key     Parameter name
- * @param value   Parameter value
- */
-void service_replace_parameter(Service* service, const char* key, const char* value);
 
 // Internal search function
 Service* service_internal_find(const char* name);

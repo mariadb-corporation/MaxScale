@@ -175,7 +175,7 @@ RRRouter::RRRouter(SERVICE* service)
 {
     RR_DEBUG("Creating instance.");
     /* Read options specific to round robin router. */
-    const MXS_CONFIG_PARAMETER& params = service->svc_config_param;
+    const MXS_CONFIG_PARAMETER& params = service->params();
     m_max_backends = params.get_integer(MAX_BACKENDS);
     m_write_server = params.get_server(WRITE_BACKEND);
     m_print_on_routing = params.get_bool(PRINT_ON_ROUTING);

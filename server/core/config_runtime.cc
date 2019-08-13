@@ -630,19 +630,20 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
         if (service->router->configureInstance && service->capabilities & RCAP_TYPE_RUNTIME_CONFIG)
         {
             // Stash the old value in case the reconfiguration fails.
-            std::string old_value = service->svc_config_param.get_string(key);
-            service_replace_parameter(service, key.c_str(), value.c_str());
+            std::string old_value = service->params().get_string(key);
+            service->set_parameter(key, value);
+            auto params = service->params();
 
-            if (!service->router->configureInstance(service->router_instance, &service->svc_config_param))
+            if (!service->router->configureInstance(service->router_instance, &params))
             {
                 // Reconfiguration failed, restore the old value of the parameter
                 if (old_value.empty())
                 {
-                    service_remove_parameter(service, key.c_str());
+                    service->remove_parameter(key);
                 }
                 else
                 {
-                    service_replace_parameter(service, key.c_str(), old_value.c_str());
+                    service->set_parameter(key, old_value);
                 }
 
                 rval = false;

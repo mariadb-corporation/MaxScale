@@ -107,12 +107,6 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
-    // Store parameters in the service
-    service_add_parameters(service, params);
-
-    // Store router, used when service is serialized
-    service_replace_parameter(service, CN_ROUTER, router);
-
     service->router_instance = router_api->createInstance(service, params);
 
     if (service->router_instance == NULL)
@@ -202,8 +196,8 @@ Service::Service(const std::string& name,
                  const std::string& router_name,
                  MXS_CONFIG_PARAMETER* params)
     : SERVICE(name, router_name)
-    , m_rate_limits(config_threadcount())
     , m_config(params)
+    , m_params(*params)
 {
     const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
     mxb_assert(module);
@@ -211,10 +205,6 @@ Service::Service(const std::string& name,
 
     router = (MXS_ROUTER_OBJECT*)module->module_object;
     capabilities = module->module_capabilities;
-    client_count = 0;
-    started = time(0);
-    state = SERVICE_STATE_ALLOC;
-    dbref = NULL;
 
     /**
      * At service start last update is set to config->users_refresh_time seconds earlier.
@@ -356,13 +346,13 @@ int serviceStartAllPorts(Service* service)
             }
         }
 
-        if (service->state == SERVICE_STATE_FAILED)
+        if (service->state == SERVICE::State::FAILED)
         {
             listeners = 0;
         }
         else if (listeners)
         {
-            service->state = SERVICE_STATE_STARTED;
+            service->state = SERVICE::State::STARTED;
             service->started = time(0);
         }
     }
@@ -457,7 +447,7 @@ bool serviceStop(SERVICE* service)
             }
         }
 
-        service->state = SERVICE_STATE_STOPPED;
+        service->state = SERVICE::State::STOPPED;
     }
 
     return listeners > 0;
@@ -485,7 +475,7 @@ bool serviceStart(SERVICE* service)
             }
         }
 
-        service->state = SERVICE_STATE_STARTED;
+        service->state = SERVICE::State::STARTED;
     }
 
     return listeners > 0;
@@ -798,19 +788,19 @@ void dprintService(DCB* dcb, SERVICE* svc)
     dcb_printf(dcb, "\tRouter:                              %s\n", service->router_name());
     switch (service->state)
     {
-    case SERVICE_STATE_STARTED:
+    case SERVICE::State::STARTED:
         dcb_printf(dcb, "\tState:                               Started\n");
         break;
 
-    case SERVICE_STATE_STOPPED:
+    case SERVICE::State::STOPPED:
         dcb_printf(dcb, "\tState:                               Stopped\n");
         break;
 
-    case SERVICE_STATE_FAILED:
+    case SERVICE::State::FAILED:
         dcb_printf(dcb, "\tState:                               Failed\n");
         break;
 
-    case SERVICE_STATE_ALLOC:
+    case SERVICE::State::ALLOC:
         dcb_printf(dcb, "\tState:                               Allocated\n");
         break;
     }
@@ -1053,28 +1043,6 @@ static bool service_refresh_users_cb(void* svc)
     return true;
 }
 
-void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param)
-{
-    service->svc_config_param.set_multiple(*param);
-}
-
-void service_add_parameter(Service* service, const char* key, const char* value)
-{
-    MXS_CONFIG_PARAMETER p;
-    p.set(key, value);
-    service_add_parameters(service, &p);
-}
-
-void service_remove_parameter(Service* service, const char* key)
-{
-    service->svc_config_param.remove(key);
-}
-
-void service_replace_parameter(Service* service, const char* key, const char* value)
-{
-    service->svc_config_param.set(key, value);
-}
-
 /**
  * Return the parameter the wervice shoudl use to weight connections
  * by
@@ -1240,7 +1208,7 @@ bool Service::dump_config(const char* filename) const
     const MXS_MODULE* mod = get_module(router_name(), NULL);
     mxb_assert(mod);
 
-    MXS_CONFIG_PARAMETER params_to_print = svc_config_param;
+    MXS_CONFIG_PARAMETER params_to_print = m_params;
     // The next text-mode parameter may not be up-to-date, print them manually. TODO: Fix
     params_to_print.remove(CN_FILTERS);
     params_to_print.remove(CN_SERVERS);
@@ -1388,20 +1356,20 @@ bool service_socket_is_used(const std::string& socket_path)
     return rval;
 }
 
-static const char* service_state_to_string(int state)
+static const char* service_state_to_string(SERVICE::State state)
 {
     switch (state)
     {
-    case SERVICE_STATE_STARTED:
+    case SERVICE::State::STARTED:
         return "Started";
 
-    case SERVICE_STATE_STOPPED:
+    case SERVICE::State::STOPPED:
         return "Stopped";
 
-    case SERVICE_STATE_FAILED:
+    case SERVICE::State::FAILED:
         return "Failed";
 
-    case SERVICE_STATE_ALLOC:
+    case SERVICE::State::ALLOC:
         return "Allocated";
 
     default:
@@ -1415,7 +1383,7 @@ json_t* service_parameters_to_json(const SERVICE* service)
     json_t* rval = json_object();
 
     const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
-    config_add_module_params_json(&service->svc_config_param,
+    config_add_module_params_json(&service->params(),
                                   {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
                                   common_service_params(),
                                   mod->parameters,
@@ -1672,8 +1640,8 @@ bool Service::is_basic_parameter(const std::string& name)
 
 void Service::update_basic_parameter(const std::string& key, const std::string& value)
 {
-    svc_config_param.set(key, value);
-    m_config.assign(Config(&svc_config_param));
+    m_params.set(key, value);
+    m_config.assign(Config(&m_params));
 }
 
 const MXS_MODULE_PARAM* common_service_params()

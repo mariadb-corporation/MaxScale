@@ -82,6 +82,14 @@ class SERVICE : public mxs::Target
 {
 public:
 
+    enum class State
+    {
+        ALLOC,      /**< The service has been allocated */
+        STARTED,    /**< The service has been started */
+        FAILED,     /**< The service failed to start */
+        STOPPED,    /**< The service has been stopped */
+    };
+
     struct Config
     {
         Config(MXS_CONFIG_PARAMETER* params);
@@ -107,21 +115,21 @@ public:
                                  * character. */
     };
 
-    int                  state;             /**< The service state */
-    int                  client_count;      /**< Number of connected clients */
-    mxs_router_object*   router;            /**< The router we are using */
-    mxs_router*          router_instance;   /**< The router instance for this service */
-    SERVER_REF*          dbref;             /**< server references */
-    time_t               started;           /**< The time when the service was started */
-    MXS_CONFIG_PARAMETER svc_config_param;  /**<  list of config params and values */
-    bool                 svc_do_shutdown;   /**< tells the service to exit loops etc. */
-    uint64_t             capabilities;      /**< The capabilities of the service,
-                                             * @see enum routing_capability */
+    State              state {State::ALLOC};        /**< The service state */
+    int                client_count {0};            /**< Number of connected clients */
+    mxs_router_object* router {nullptr};            /**< The router we are using */
+    mxs_router*        router_instance {nullptr};   /**< The router instance for this service */
+    SERVER_REF*        dbref {nullptr};             /**< server references */
+    time_t             started {0};                 /**< The time when the service was started */
+    uint64_t           capabilities {0};            /**< The capabilities of the service,
+                                                     * @see enum routing_capability */
 
     const char* name() const override
     {
         return m_name.c_str();
     }
+
+    virtual const MXS_CONFIG_PARAMETER& params() const = 0;
 
     uint64_t status() const override
     {
@@ -163,7 +171,8 @@ public:
 protected:
     SERVICE(const std::string& name,
             const std::string& router_name)
-        : m_name(name)
+        : started(time(nullptr))
+        , m_name(name)
         , m_router_name(router_name)
     {
     }
@@ -181,11 +190,6 @@ typedef enum count_spec_t
     COUNT_EXACT,
     COUNT_ATMOST
 } count_spec_t;
-
-#define SERVICE_STATE_ALLOC   1         /**< The service has been allocated */
-#define SERVICE_STATE_STARTED 2         /**< The service has been started */
-#define SERVICE_STATE_FAILED  3         /**< The service failed to start */
-#define SERVICE_STATE_STOPPED 4         /**< The service has been stopped */
 
 /**
  * Find a service
