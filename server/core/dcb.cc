@@ -308,7 +308,7 @@ BackendDCB* BackendDCB::create(int fd,
 {
     BackendDCB* dcb = nullptr;
 
-    MXS_PROTOCOL_API* protocol_api = (MXS_PROTOCOL_API*)load_module(protocol_name, MODULE_PROTOCOL);
+    MXS_PROTOCOL_API* protocol_api = (MXS_PROTOCOL_API*)load_module(srv->protocol().c_str(), MODULE_PROTOCOL);
     if (protocol_api)
     {
         DCB* client_dcb = session->client_dcb;
