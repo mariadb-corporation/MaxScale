@@ -108,11 +108,6 @@ Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
-    if (service->config().conn_idle_timeout || service->config().net_write_timeout)
-    {
-        dcb_enable_session_timeouts();
-    }
-
     // Store parameters in the service
     service_add_parameters(service, params);
 

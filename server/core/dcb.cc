@@ -78,7 +78,6 @@ namespace
 
 static struct THIS_UNIT
 {
-    bool                  check_timeouts;   /**< Should session timeouts be checked. */
     std::atomic<uint64_t> uid_generator {0};
 #ifdef EPOLLRDHUP
     static constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
@@ -96,11 +95,11 @@ static thread_local struct
 
 static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal);
-static int    dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
+static int         dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 
-static bool     dcb_session_check(DCB* dcb, const char*);
-static int      upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
-static int      downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
+static bool dcb_session_check(DCB* dcb, const char*);
+static int  upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
+static int  downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 
 uint64_t dcb_get_session_id(DCB* dcb)
 {
@@ -261,7 +260,7 @@ void DCB::stop_polling_and_shutdown()
     }
 }
 
-//static
+// static
 BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* session)
 {
     Server* server = static_cast<Server*>(s);
@@ -330,8 +329,8 @@ BackendDCB* BackendDCB::create(SERVER* srv,
 
             if (new_auth_session)
             {
-                dcb = new (std::nothrow) BackendDCB(srv, fd, session, protocol_session, *protocol_api,
-                                                    std::move(new_auth_session), manager);
+                dcb = new(std::nothrow) BackendDCB(srv, fd, session, protocol_session, *protocol_api,
+                                                   std::move(new_auth_session), manager);
 
                 if (dcb)
                 {
@@ -505,7 +504,7 @@ int DCB::read(GWBUF** head, int maxbytes)
         {
             return bytes_available < 0 ? -1
                                        :/** Handle closed client socket */
-                dcb_read_no_bytes_available(this, m_fd, nreadtotal);
+                   dcb_read_no_bytes_available(this, m_fd, nreadtotal);
         }
         else
         {
@@ -1081,7 +1080,7 @@ void DCB::destroy()
  * @return      bool - whether the DCB was added to the pool
  *
  */
-//static
+// static
 bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
 {
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
@@ -1247,16 +1246,16 @@ std::string DCB::diagnostics() const
     ss << "\t\tNo. of Low Water Events:  " << m_stats.n_low_water << "\n";
 
     /**
-       TODO: Introduce something like virtual void DCB::print().
-    if (m_persistentstart)
-    {
-        char buff[20];
-        struct tm timeinfo;
-        localtime_r(&m_persistentstart, &timeinfo);
-        strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
-        dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
-    }
-    */
+     *  TODO: Introduce something like virtual void DCB::print().
+     *  if (m_persistentstart)
+     *  {
+     *   char buff[20];
+     *   struct tm timeinfo;
+     *   localtime_r(&m_persistentstart, &timeinfo);
+     *   strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
+     *   dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
+     *  }
+     */
 
     return ss.str();
 }
@@ -1277,7 +1276,6 @@ json_t* DCB::to_json() const
     }
 
     return obj;
-
 }
 
 /**
@@ -2006,14 +2004,6 @@ static int dcb_set_socket_option(int sockfd, int level, int optname, void* optva
 }
 
 /**
- * Enable the timing out of idle connections.
- */
-void dcb_enable_session_timeouts()
-{
-    this_unit.check_timeouts = true;
-}
-
-/**
  * Close sessions that have been idle or write to the socket has taken for too long.
  *
  * If the time since a session last sent data is greater than the set connection_timeout
@@ -2023,7 +2013,7 @@ void dcb_enable_session_timeouts()
  */
 void dcb_process_timeouts(int thr)
 {
-    if (this_unit.check_timeouts && mxs_clock() >= this_thread.next_timeout_check)
+    if (mxs_clock() >= this_thread.next_timeout_check)
     {
         /** Because the resolutions of the timeouts is one second, we only need to
          * check them once per second. One heartbeat is 100 milliseconds. */
@@ -2108,9 +2098,9 @@ public:
             else
             {
                 /**
-                   TODO: Fix this. m_persistentstart is now in BackendDCB.
-                   mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
-                */
+                 *  TODO: Fix this. m_persistentstart is now in BackendDCB.
+                 *  mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
+                 */
             }
         }
     }
@@ -2151,9 +2141,9 @@ void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
         else
         {
             /**
-               TODO: Fix this. m_persistentstart is now in BackendDCB.
-               mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
-            */
+             *  TODO: Fix this. m_persistentstart is now in BackendDCB.
+             *  mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
+             */
         }
     }
 }
@@ -2919,9 +2909,9 @@ bool BackendDCB::prepare_for_destruction()
 
         prepared = false;
     }
-    else if (m_state == State::POLLING // Being polled
-             && m_persistentstart == 0    // Not already in (> 0) or being evicted from (-1) from the pool.
-             && m_server)                 // And has a server.
+    else if (m_state == State::POLLING      // Being polled
+             && m_persistentstart == 0      // Not already in (> 0) or being evicted from (-1) from the pool.
+             && m_server)                   // And has a server.
     {
         /* May be a candidate for persistence, so save user name */
         const char* user;
