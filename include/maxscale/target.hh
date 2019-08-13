@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <atomic>
 #include <string>
 #include <mutex>
 
@@ -168,6 +169,15 @@ public:
 private:
     void* m_data {nullptr};
 };
+
+enum class RLagState
+{
+    NONE,
+    BELOW_LIMIT,
+    ABOVE_LIMIT
+};
+
+static constexpr const int RLAG_UNDEFINED = -1;         // Default replication lag value
 
 // A routing target
 class Target
@@ -389,10 +399,20 @@ public:
      */
     void response_time_add(double ave, int num_samples);
 
+    /**
+     * Set replication lag state
+     *
+     * @param new_state The new state
+     * @param max_rlag  The replication lag limit
+     */
+    void set_rlag_state(RLagState new_state, int max_rlag);
+
 protected:
     Stats              m_stats;
     maxbase::EMAverage m_response_time {0.04, 0.35, 500};   /**< Response time calculations for this server */
     std::mutex         m_average_write_mutex;               /**< Protects response time modifications */
+
+    std::atomic<RLagState> m_rlag_state {RLagState::NONE};
 };
 
 class Error

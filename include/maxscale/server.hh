@@ -44,7 +44,6 @@ public:
     static const int MAX_MONUSER_LEN = 512;
     static const int MAX_MONPW_LEN = 512;
     static const int MAX_VERSION_LEN = 256;
-    static const int RLAG_UNDEFINED = -1;   // Default replication lag value
 
     // A mapping from a path to a percentage, e.g.: "/disk" -> 80.
     typedef std::unordered_map<std::string, int32_t> DiskSpaceLimits;
@@ -54,13 +53,6 @@ public:
         MARIADB,
         MYSQL,
         CLUSTRIX
-    };
-
-    enum class RLagState
-    {
-        NONE,
-        BELOW_LIMIT,
-        ABOVE_LIMIT
     };
 
     struct Version
@@ -95,14 +87,13 @@ public:
     PoolStats pool_stats;
     int       persistmax = 0;       /**< Maximum pool size actually achieved since startup */
 
-    int           rlag = RLAG_UNDEFINED;/**< Replication Lag for Master/Slave replication */
-    unsigned long node_ts = 0;          /**< Last timestamp set from M/S monitor module */
+    int           rlag = mxs::RLAG_UNDEFINED;   /**< Replication Lag for Master/Slave replication */
+    unsigned long node_ts = 0;                  /**< Last timestamp set from M/S monitor module */
 
     // Misc fields
-    bool master_err_is_logged = false;      /**< If node failed, this indicates whether it is logged. Only
-                                             * used by rwsplit. TODO: Move to rwsplit */
-    bool      warn_ssl_not_enabled = true;  /**< SSL not used for an SSL enabled server */
-    RLagState rlag_state = RLagState::NONE; /**< Is replication lag above or under limit? Used by rwsplit. */
+    bool master_err_is_logged = false;  /**< If node failed, this indicates whether it is logged. Only
+                                         * used by rwsplit. TODO: Move to rwsplit */
+    bool warn_ssl_not_enabled = true;   /**< SSL not used for an SSL enabled server */
 
     virtual ~SERVER() = default;
 

@@ -288,6 +288,12 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
                 candidates.push_back(backend);
             }
         }
+
+        if (max_rlag != mxs::RLAG_UNDEFINED)
+        {
+            auto state = rlag_ok ? mxs::RLagState::BELOW_LIMIT : mxs::RLagState::ABOVE_LIMIT;
+            backend->target()->set_rlag_state(state, max_rlag);
+        }
     }
 
     // Let the slave selection function pick the best server

@@ -250,7 +250,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     {
         update_trx_statistics();
 
-        auto next_master = get_target_backend(BE_MASTER, NULL, SERVER::RLAG_UNDEFINED);
+        auto next_master = get_target_backend(BE_MASTER, NULL, mxs::RLAG_UNDEFINED);
 
         if (should_replace_master(next_master))
         {
@@ -734,7 +734,7 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
  */
 int RWSplitSession::get_max_replication_lag()
 {
-    int conf_max_rlag = SERVER::RLAG_UNDEFINED;
+    int conf_max_rlag = mxs::RLAG_UNDEFINED;
 
     /** if there is no configured value, then longest possible int is used */
     if (m_config.max_slave_replication_lag > 0)
@@ -1012,7 +1012,7 @@ bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
  */
 bool RWSplitSession::handle_master_is_target(RWBackend** dest)
 {
-    RWBackend* target = get_target_backend(BE_MASTER, NULL, SERVER::RLAG_UNDEFINED);
+    RWBackend* target = get_target_backend(BE_MASTER, NULL, mxs::RLAG_UNDEFINED);
     bool succp = true;
 
     if (target && target == m_current_master)

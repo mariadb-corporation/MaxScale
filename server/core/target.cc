@@ -144,6 +144,30 @@ void Target::response_time_add(double ave, int num_samples)
     m_response_time.add(ave, num_samples);
 }
 
+void Target::set_rlag_state(RLagState new_state, int max_rlag)
+{
+    mxb_assert(new_state != RLagState::NONE);
+
+    auto old_state = m_rlag_state.load(std::memory_order_relaxed);
+
+    if (old_state != new_state
+        && m_rlag_state.compare_exchange_strong(old_state, new_state,
+                                                std::memory_order_acq_rel,
+                                                std::memory_order_relaxed))
+    {
+        if (new_state == RLagState::ABOVE_LIMIT)
+        {
+            MXS_WARNING("Replication lag of '%s' is %ld seconds, which is above the configured limit %is. "
+                        "'%s' is excluded from query routing.", name(), replication_lag(), max_rlag, name());
+        }
+        else if (old_state == RLagState::ABOVE_LIMIT)
+        {
+            MXS_WARNING("Replication lag of '%s' is %ld seconds, which is below the configured limit %is. "
+                        "'%s' is returned to query routing.", name(), replication_lag(), max_rlag, name());
+        }
+    }
+}
+
 Error::operator bool() const
 {
     return m_code != 0;

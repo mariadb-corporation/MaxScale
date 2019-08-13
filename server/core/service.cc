@@ -1971,13 +1971,13 @@ void Service::add_target(mxs::Target* target)
 
 int64_t Service::replication_lag() const
 {
-    int64_t lag = std::numeric_limits<int64_t>::max();
+    int64_t lag = mxs::RLAG_UNDEFINED;
 
     for (auto a : m_data->targets)
     {
         int64_t l = a->replication_lag();
 
-        if (l < lag)
+        if (lag == mxs::RLAG_UNDEFINED || l < lag)
         {
             lag = l;
         }
