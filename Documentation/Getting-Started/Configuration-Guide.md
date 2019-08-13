@@ -1419,6 +1419,12 @@ this might cause conflicts when MariaDB MaxScale tries to authenticate users.
 
 ### `retry_on_failure`
 
+**Note:** This parameter has been removed and is ignored: do not use
+  it. The parameter will be treated as an unknown parameter in the
+  MaxScale 2.6 release. The feature was removed because a failure to start
+  a service is a serious problem that should be solved by the
+  administrator.
+
 The retry_on_failure parameter controls whether MariaDB MaxScale will try to
 restart failed services and accepts a boolean value. This functionality is
 enabled by default to prevent services being permanently disabled if the

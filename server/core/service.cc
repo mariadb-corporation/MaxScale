@@ -80,7 +80,6 @@ static struct
     std::vector<Service*> services;
 } this_unit;
 
-static bool service_internal_restart(mxb::Worker::Call::action_t action, Service* service);
 static bool service_refresh_users_cb(void* svc);
 
 Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
@@ -190,7 +189,6 @@ Service::Config::Config(MXS_CONFIG_PARAMETER* params)
     , enable_root(params->get_bool(CN_ENABLE_ROOT_USER))
     , localhost_match_wildcard_host(params->get_bool(CN_LOCALHOST_MATCH_WILDCARD_HOST))
     , users_from_all(params->get_bool(CN_AUTH_ALL_SERVERS))
-    , retry_start(params->get_bool(CN_RETRY_ON_FAILURE))
     , log_auth_warnings(params->get_bool(CN_LOG_AUTH_WARNINGS))
     , session_track_trx_state(params->get_bool(CN_SESSION_TRACK_TRX_STATE))
     , conn_idle_timeout(params->get_duration<std::chrono::seconds>(CN_CONNECTION_TIMEOUT).count())
@@ -214,8 +212,7 @@ Service::Service(const std::string& name,
     router = (MXS_ROUTER_OBJECT*)module->module_object;
     capabilities = module->module_capabilities;
     client_count = 0;
-    service_stats.started = time(0);
-    service_stats.n_failed_starts = 0;
+    started = time(0);
     state = SERVICE_STATE_ALLOC;
     dbref = NULL;
 
@@ -366,24 +363,7 @@ int serviceStartAllPorts(Service* service)
         else if (listeners)
         {
             service->state = SERVICE_STATE_STARTED;
-            service->service_stats.started = time(0);
-        }
-        else if (service->config().retry_start)
-        {
-            /** Service failed to start any ports. Try again later. */
-            service->service_stats.n_failed_starts++;
-            int retry_after = MXS_MIN(service->service_stats.n_failed_starts * 10,
-                                      service->config().max_retry_interval);
-            MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
-                       service->name(),
-                       retry_after);
-
-            mxb::Worker* worker = mxb::Worker::get_current();
-            mxb_assert(worker);
-            worker->delayed_call(retry_after * 1000, service_internal_restart, service);
-
-            /** This will prevent MaxScale from shutting down if service start is retried later */
-            listeners = 1;
+            service->started = time(0);
         }
     }
     else
@@ -840,7 +820,7 @@ void dprintService(DCB* dcb, SERVICE* svc)
     }
     dcb_printf(dcb,
                "\tStarted:                             %s",
-               asctime_r(localtime_r(&service->service_stats.started, &result), timebuf));
+               asctime_r(localtime_r(&service->started, &result), timebuf));
     dcb_printf(dcb,
                "\tRoot user access:                    %s\n",
                service->config().enable_root ? "Enabled" : "Disabled");
@@ -1179,20 +1159,6 @@ std::unique_ptr<ResultSet> serviceGetList()
 }
 
 /**
- * Function called by the housekeeper thread to retry starting of a service
- * @param data Service to restart
- */
-static bool service_internal_restart(mxb::Worker::Call::action_t action, Service* service)
-{
-    if (action == mxb::Worker::Call::EXECUTE)
-    {
-        serviceStartAllPorts(service);
-    }
-
-    return false;
-}
-
-/**
  * Check that all services have listeners
  * @return True if all services have listeners
  */
@@ -1502,7 +1468,7 @@ json_t* service_attributes(const SERVICE* service)
     struct tm result;
     char timebuf[30];
 
-    asctime_r(localtime_r(&service->service_stats.started, &result), timebuf);
+    asctime_r(localtime_r(&service->started, &result), timebuf);
     mxb::trim(timebuf);
 
     json_object_set_new(attr, "started", json_string(timebuf));

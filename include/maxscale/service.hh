@@ -40,15 +40,6 @@ struct users;
 #define MAX_SERVICE_WEIGHTBY_LEN 1024
 #define MAX_SERVICE_VERSION_LEN  1024
 
-/**
- * The service statistics structure
- */
-typedef struct
-{
-    time_t started;         /**< The time when the service was started */
-    int    n_failed_starts; /**< Number of times this service has failed to start */
-} SERVICE_STATS;
-
 typedef struct server_ref_t
 {
     struct server_ref_t* next;          /**< Next server reference */
@@ -62,8 +53,6 @@ inline bool server_ref_is_active(const SERVER_REF* ref)
 {
     return ref->active && ref->server->server_is_active();
 }
-
-#define SERVICE_MAX_RETRY_INTERVAL 3600     /*< The maximum interval between service start retries */
 
 /** Value of service timeout if timeout checks are disabled */
 #define SERVICE_NO_SESSION_TIMEOUT 0
@@ -106,7 +95,6 @@ public:
         bool        enable_root;                    /**< Allow root user  access */
         bool        localhost_match_wildcard_host;  /**< Match localhost against wildcard */
         bool        users_from_all;                 /**< Load users from all servers */
-        bool        retry_start;                    /**< If starting of the service should be retried later */
         bool        log_auth_warnings;              /**< Log authentication failures and warnings */
         bool        session_track_trx_state;        /**< Get transaction state via session track mechanism */
         int64_t     conn_idle_timeout;              /**< Session timeout in seconds */
@@ -124,7 +112,7 @@ public:
     mxs_router_object*   router;            /**< The router we are using */
     mxs_router*          router_instance;   /**< The router instance for this service */
     SERVER_REF*          dbref;             /**< server references */
-    SERVICE_STATS        service_stats;     /**< The service statistics */
+    time_t               started;           /**< The time when the service was started */
     MXS_CONFIG_PARAMETER svc_config_param;  /**<  list of config params and values */
     bool                 svc_do_shutdown;   /**< tells the service to exit loops etc. */
     uint64_t             capabilities;      /**< The capabilities of the service,
