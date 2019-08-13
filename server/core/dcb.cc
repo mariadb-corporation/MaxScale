@@ -271,7 +271,7 @@ void DCB::stop_polling_and_shutdown()
     }
 }
 
-static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, const char* protocol)
+static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session)
 {
     DCB* dcb = nullptr;
 
@@ -281,7 +281,8 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
         if (const char* user = session_get_user(session))
         {
             auto owner = static_cast<RoutingWorker*>(session->client_dcb->owner);
-            auto dcb = server->get_persistent_dcb(user, session->client_dcb->m_remote, protocol, owner->id());
+            auto dcb = server->get_persistent_dcb(user, session->client_dcb->m_remote,
+                                                  server->protocol().c_str(), owner->id());
 
             if (dcb)
             {
@@ -303,7 +304,6 @@ static DCB* take_from_connection_pool(Server* server, MXS_SESSION* session, cons
 BackendDCB* BackendDCB::create(int fd,
                                SERVER* srv,
                                MXS_SESSION* session,
-                               const char* protocol_name,
                                DCB::Manager* manager)
 {
     BackendDCB* dcb = nullptr;
@@ -435,7 +435,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
     // - remove the DCB from its manager when moved to the pool and assign a new one when it is
     //   taken out from the pool, or
     // - also consider the manager when deciding whether a DCB in the pool can be used or not.
-    if (auto dcb = take_from_connection_pool(server, session, protocol))
+    if (auto dcb = take_from_connection_pool(server, session))
     {
         // TODO: For now, we ignore the problem.
         return static_cast<BackendDCB*>(dcb);     // Reusing a DCB from the connection pool
@@ -447,7 +447,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
 
     if (connect_backend(server->address, server->port, &fd))
     {
-        dcb = create(fd, server, session, protocol, manager);
+        dcb = create(fd, server, session, manager);
 
         if (dcb)
         {
