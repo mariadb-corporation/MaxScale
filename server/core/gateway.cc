@@ -1434,6 +1434,60 @@ int main(int argc, char** argv)
      * the order of the events would be the way they appear to be.
      */
     auto do_startup = [&]() {
+            if (!config_load(cnf_file_path))
+            {
+                const char* fprerr =
+                    "Failed to open, read or process the MaxScale configuration "
+                    "file. Exiting. See the error log for details.";
+                print_log_n_stderr(false, true, fprerr, fprerr, 0);
+                MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
+                          "Exiting.",
+                          cnf_file_path);
+                rc = MAXSCALE_BADCONFIG;
+                maxscale_shutdown();
+                return;
+            }
+
+            if (cnf->config_check)
+            {
+                MXS_NOTICE("Configuration was successfully verified.");
+
+                if (*export_cnf && export_config_file(export_cnf))
+                {
+                    MXS_NOTICE("Configuration exported to '%s'", export_cnf);
+                }
+
+                rc = MAXSCALE_SHUTDOWN;
+                maxscale_shutdown();
+                return;
+            }
+
+            if (cnf->admin_enabled)
+            {
+                bool success = mxs_admin_init();
+
+                if (!success && strcmp(cnf->admin_host, "::") == 0)
+                {
+                    MXS_WARNING("Failed to bind on address '::', attempting to "
+                                "bind on IPv4 address '0.0.0.0'.");
+                    strcpy(cnf->admin_host, "0.0.0.0");
+                    success = mxs_admin_init();
+                }
+
+                if (success)
+                {
+                    MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
+                }
+                else
+                {
+                    const char* logerr = "Failed to initialize admin interface";
+                    print_log_n_stderr(true, true, logerr, logerr, 0);
+                    rc = MAXSCALE_INTERNALERROR;
+                    maxscale_shutdown();
+                    return;
+                }
+            }
+
             if (!service_launch_all())
             {
                 const char* logerr = "Failed to start all MaxScale services. Exiting.";
@@ -2169,37 +2223,11 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    if (!config_load(cnf_file_path))
-    {
-        const char* fprerr =
-            "Failed to open, read or process the MaxScale configuration "
-            "file. Exiting. See the error log for details.";
-        print_log_n_stderr(false, true, fprerr, fprerr, 0);
-        MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
-                  "Exiting.",
-                  cnf_file_path);
-        rc = MAXSCALE_BADCONFIG;
-        goto return_main;
-    }
-
     /* Init MaxScale modules */
     if (!modules_process_init())
     {
         MXS_ERROR("Failed to initialize all modules at startup. Exiting.");
         rc = MAXSCALE_BADCONFIG;
-        goto return_main;
-    }
-
-    if (cnf->config_check)
-    {
-        MXS_NOTICE("Configuration was successfully verified.");
-
-        if (*export_cnf && export_config_file(export_cnf))
-        {
-            MXS_NOTICE("Configuration exported to '%s'", export_cnf);
-        }
-
-        rc = MAXSCALE_SHUTDOWN;
         goto return_main;
     }
 
@@ -2212,31 +2240,6 @@ int main(int argc, char** argv)
         print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
-    }
-
-    if (cnf->admin_enabled)
-    {
-        bool success = mxs_admin_init();
-
-        if (!success && strcmp(cnf->admin_host, "::") == 0)
-        {
-            MXS_WARNING("Failed to bind on address '::', attempting to "
-                        "bind on IPv4 address '0.0.0.0'.");
-            strcpy(cnf->admin_host, "0.0.0.0");
-            success = mxs_admin_init();
-        }
-
-        if (success)
-        {
-            MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
-        }
-        else
-        {
-            const char* logerr = "Failed to initialize admin interface";
-            print_log_n_stderr(true, true, logerr, logerr, 0);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
     }
 
     MXS_NOTICE("MaxScale started with %d worker threads, each with a stack size of %lu bytes.",
