@@ -45,8 +45,8 @@ typedef std::unordered_map<uint32_t, mxs::RWBackend*> ExecMap;
 /**
  * The client session of a RWSplit instance
  */
-class RWSplitSession : public mxs::RouterSession
-                     , private mxs::QueryClassifier::Handler
+class RWSplitSession final : public mxs::RouterSession
+                           , private mxs::QueryClassifier::Handler
 {
     RWSplitSession(const RWSplitSession&) = delete;
     RWSplitSession& operator=(const RWSplitSession&) = delete;
@@ -78,10 +78,6 @@ public:
         RETRYING_ON_MASTER,
         UPDATING_PACKETS
     };
-
-    virtual ~RWSplitSession()
-    {
-    }
 
     /**
      * Create a new router session

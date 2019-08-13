@@ -146,8 +146,11 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 
     mxs::Downstream down;
     down.instance = (mxs_filter*)m_router;
-    down.session = (mxs_filter_session*)this;
     down.routeQuery = (DOWNSTREAMFUNC)RWSplit::routeQuery;
+
+    // The RWSplitSession must first be static_cast into the base class MXS_ROUTER_SESSION since it is a
+    // polymorphic class. This makes the subsequent static_cast in the router template's routeQuery work.
+    down.session = (mxs_filter_session*)static_cast<MXS_ROUTER_SESSION*>(this);
 
     session_delay_routing(session, down, querybuf, delay);
     ++m_retry_duration;
