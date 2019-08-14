@@ -19,15 +19,12 @@
  */
 
 #include <maxscale/ccdefs.hh>
-
-#include <maxbase/jansson.h>
-#include <maxscale/buffer.hh>
 #include <maxscale/target.hh>
 
-
-struct DCB;
+class DCB;
 class SERVER;
-struct MXS_SESSION;
+class GWBUF;
+class MXS_SESSION;
 
 struct MXS_PROTOCOL_SESSION
 {

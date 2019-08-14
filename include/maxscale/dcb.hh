@@ -328,6 +328,9 @@ protected:
      */
     virtual bool prepare_for_destruction() = 0;
 
+    // Get protocol functions
+    virtual const MXS_PROTOCOL_API* protocol_api() const = 0;
+
     void stop_polling_and_shutdown();
 
     int log_errors_SSL(int ret);
@@ -372,9 +375,6 @@ private:
 
     void call_callback(Reason reason);
 
-    // Get protocol functions
-    virtual const MXS_PROTOCOL_API* protocol_api() const = 0;
-
 private:
     Role     m_role;        /**< The role of the DCB */
     Manager* m_manager;     /**< The DCB manager to use */
@@ -392,13 +392,16 @@ public:
     ~ClientDCB() override;
 
     static ClientDCB* create(int fd, MXS_SESSION* session, DCB::Manager* manager);
-
     MXS_PROTOCOL_SESSION* protocol_session() const override;
+    const MXS_PROTOCOL_API* protocol_api() const override;
     int ssl_handshake() override;
     bool ready() const;
     void shutdown() override;
 
     std::unique_ptr<mxs::ClientAuthenticator> m_auth_session;      /**< Client authentication data */
+
+    MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
+    MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
 
 protected:
     // Only for InternalDCB.
@@ -409,9 +412,6 @@ protected:
               MXS_PROTOCOL_API protocol_api,
               Manager* manager);
 
-    MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
-    MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
-
 private:
     ClientDCB(int fd,
               MXS_SESSION* session,
@@ -421,7 +421,6 @@ private:
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
-    const MXS_PROTOCOL_API* protocol_api() const override;
 };
 
 class BackendDCB : public DCB
@@ -431,6 +430,7 @@ public:
                                mxs::Component* upstream);
 
     MXS_PROTOCOL_SESSION* protocol_session() const override;
+    const MXS_PROTOCOL_API* protocol_api() const override;
 
     /**
      * Hangup all BackendDCBs connected to a particular server.
@@ -474,6 +474,9 @@ public:
 
     std::unique_ptr<mxs::BackendAuthenticator> m_auth_session;   /**< Backend authentication data */
 
+    MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
+    MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
+
 private:
     BackendDCB(SERVER* server,
                int fd,
@@ -495,7 +498,6 @@ private:
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
-    const MXS_PROTOCOL_API* protocol_api() const override;
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 
@@ -506,9 +508,6 @@ private:
                                          *   non-0: Time when placed in the persistent pool.
                                          */
     bool m_was_persistent = false;      /**< Whether this DCB was in the persistent pool */
-
-    MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
-    MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
 };
 
 class InternalDCB : public ClientDCB

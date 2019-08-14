@@ -288,7 +288,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
     if (protocol_api)
     {
         auto client_dcb = session->client_dcb;
-        MXS_PROTOCOL_SESSION* protocol_session =
+        auto* protocol_session =
             protocol_api->new_backend_session(session, srv, client_dcb->protocol_session(), component);
 
         if (protocol_session)
@@ -2877,9 +2877,9 @@ BackendDCB::BackendDCB(SERVER* server,
                        DCB::Manager* manager)
     : DCB(fd, DCB::Role::BACKEND, session, manager)
     , m_auth_session(std::move(auth_ses))
-    , m_server(server)
     , m_protocol(protocol)
     , m_protocol_api(protocol_api)
+    , m_server(server)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {

@@ -54,6 +54,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/poll.hh>
 #include <maxbase/atomic.h>
+#include <maxscale/protocol2.hh>
 
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"

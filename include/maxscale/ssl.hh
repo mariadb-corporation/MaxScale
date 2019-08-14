@@ -20,15 +20,15 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <maxscale/protocol.hh>
-#include <maxscale/modinfo.hh>
-
+#include <memory>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/dh.h>
 
-struct DCB;
+#include <maxscale/modinfo.hh>
+
+class DCB;
 class MXS_CONFIG_PARAMETER;
 
 enum ssl_method_type_t
