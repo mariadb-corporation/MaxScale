@@ -420,17 +420,25 @@ class Error
 public:
     Error() = default;
 
+    // Returns true if an error has been set
     explicit operator bool() const;
 
+    // True if the SQLSTATE is 40XXX: a rollback error
     bool is_rollback() const;
 
+    // True if this was an error not in response to a query (connection killed, server shutdown)
     bool is_unexpected_error() const;
 
+    // True if the error was caused by WSREP not being ready for queries
+    bool is_wsrep_error() const;
 
+    // The error code
     uint32_t code() const;
 
+    // The SQL state string (without the leading #)
     const std::string& sql_state() const;
 
+    // The human readable error message
     const std::string& message() const;
 
     template<class InputIterator>
