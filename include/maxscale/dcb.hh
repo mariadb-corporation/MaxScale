@@ -305,8 +305,6 @@ public:
     char*                   m_remote = nullptr;                  /**< Address of remote end */
     char*                   m_user = nullptr;                    /**< User name for connection */
     struct sockaddr_storage m_ip;                                /**< remote IPv4/IPv6 address */
-    size_t                  m_protocol_packet_length = 0;        /**< protocol packet length */
-    size_t                  m_protocol_bytes_processed = 0;      /**< How many bytes have been read */
     uint64_t                m_writeqlen = 0;                     /**< Bytes in writeq */
     GWBUF*                  m_writeq = nullptr;                  /**< Write Data Queue */
     GWBUF*                  m_delayq = nullptr;                  /**< Delay Backend Write Data Queue */

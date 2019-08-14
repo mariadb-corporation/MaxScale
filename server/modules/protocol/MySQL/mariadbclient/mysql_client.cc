@@ -1018,12 +1018,16 @@ static GWBUF* split_and_store(DCB* client_dcb, GWBUF* queue, int offset)
  * This checks if all expected data from the DCB has been read. The values
  * prefixed with @c protocol_ should be manipulated by the protocol modules.
  *
- * @param dcb DCB to check
  * @return True if the DCB protocol is not expecting any data
  */
-static bool protocol_is_idle(DCB* dcb)
+inline bool protocol_is_idle(MySQLProtocol* proto)
 {
-    return dcb->m_protocol_bytes_processed == dcb->m_protocol_packet_length;
+    return proto->client_protocol_bytes_processed == proto->client_protocol_packet_length;
+}
+
+inline bool protocol_is_idle(DCB* dcb)
+{
+    return protocol_is_idle(static_cast<MySQLProtocol*>(dcb->protocol_session()));
 }
 
 /**
@@ -1063,6 +1067,8 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
 
     while (bytes_available)
     {
+        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
+
         if (protocol_is_idle(dcb))
         {
             int pktlen;
@@ -1095,24 +1101,23 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
                 break;
             }
 
-            MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-            if (dcb->m_protocol_packet_length - MYSQL_HEADER_LEN != GW_MYSQL_MAX_PACKET_LEN)
+            if (proto->client_protocol_packet_length - MYSQL_HEADER_LEN != GW_MYSQL_MAX_PACKET_LEN)
             {
                 /** We're processing the first packet of a command */
                 proto->current_command = (mxs_mysql_cmd_t)cmd;
             }
 
-            dcb->m_protocol_packet_length = pktlen + MYSQL_HEADER_LEN;
-            dcb->m_protocol_bytes_processed = 0;
+            proto->client_protocol_packet_length = pktlen + MYSQL_HEADER_LEN;
+            proto->client_protocol_bytes_processed = 0;
         }
 
-        int bytes_needed = dcb->m_protocol_packet_length - dcb->m_protocol_bytes_processed;
+        int bytes_needed = proto->client_protocol_packet_length - proto->client_protocol_bytes_processed;
         int packet_bytes = bytes_needed <= bytes_available ? bytes_needed : bytes_available;
 
         bytes_available -= packet_bytes;
-        dcb->m_protocol_bytes_processed += packet_bytes;
+        proto->client_protocol_bytes_processed += packet_bytes;
         offset += packet_bytes;
-        mxb_assert(dcb->m_protocol_bytes_processed <= dcb->m_protocol_packet_length);
+        mxb_assert(proto->client_protocol_bytes_processed <= proto->client_protocol_packet_length);
     }
 
     mxb_assert(bytes_available >= 0);

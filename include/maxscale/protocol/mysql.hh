@@ -597,6 +597,9 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     uint32_t     num_eof_packets = 0;   /*< Encountered eof packet number, used for check packet type */
     bool         large_query = false;   /*< Whether to ignore the command byte of the next packet*/
 
+    size_t       client_protocol_packet_length = 0;   /**< protocol packet length */
+    size_t       client_protocol_bytes_processed = 0; /**< How many bytes have been read */
+
     SERVER* server() const
     {
         return m_reply.m_server;
