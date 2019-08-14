@@ -20,6 +20,7 @@
 #include <maxscale/clock.h>
 
 using namespace maxscale;
+using namespace std::chrono;
 
 RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends)
     : mxs::RouterSession(session)
@@ -32,7 +33,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_session(session)
     , m_sescmd_count(1)
     , m_expected_responses(0)
-    , m_last_keepalive_check(std::chrono::steady_clock::now())
+    , m_last_keepalive_check(steady_clock::now())
     , m_router(instance)
     , m_sent_sescmd(0)
     , m_recv_sescmd(0)
@@ -1051,11 +1052,11 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
 
         if (!can_continue)
         {
-            // TODO: Fix this
-            // int64_t idle = mxs_clock() - backend->dcb()->m_last_read;
+
+            int idle = duration_cast<seconds>(steady_clock::now() - backend->last_write()).count();
             MXS_ERROR("Lost connection to the master server, closing session.%s "
-                      "Connection has been idle for %.1f seconds. Error caused by: %s",
-                      errmsg.c_str(),    /* (float)idle / 10.f */ 0.0, extract_error(errmsgbuf).c_str());
+                      "Connection has been idle for %d seconds. Error caused by: %s",
+                      errmsg.c_str(), idle, extract_error(errmsgbuf).c_str());
         }
 
         // Decrement the expected response count only if we know we can continue the sesssion.
