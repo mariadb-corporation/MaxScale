@@ -211,15 +211,34 @@ bool PamBackendSession::extract(DCB* dcb, GWBUF* buffer)
     switch (m_state)
     {
         case State::INIT:
-        // Server should have sent the AuthSwitchRequest + 1st prompt
-        if (parse_authswitchreq(&data_ptr, end_ptr)
-            && parse_password_prompt(&data_ptr, end_ptr))
+        // Server should have sent the AuthSwitchRequest. If server version is 10.4, the server may not
+        // send a prompt. Older versions add the first prompt to the same packet.
+        if (parse_authswitchreq(&data_ptr, end_ptr))
         {
-            m_state = State::RECEIVED_PROMPT;
-            success = true;
+            if (end_ptr > data_ptr)
+            {
+                if (parse_password_prompt(&data_ptr, end_ptr))
+                {
+                    m_state = State::RECEIVED_PROMPT;
+                    success = true;
+                }
+                else
+                {
+                    // Password prompt should have been there, but was not.
+                    unexpected_data = true;
+                }
+            }
+            else
+            {
+                // Just the AuthSwitchRequest, this is ok. The server now expects a password so set state
+                // accordingly.
+                m_state = State::RECEIVED_PROMPT;
+                success = true;
+            }
         }
         else
         {
+            // No AuthSwitchRequest, error.
             unexpected_data = true;
         }
         break;
