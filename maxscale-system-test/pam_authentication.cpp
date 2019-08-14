@@ -124,11 +124,24 @@ int main(int argc, char** argv)
         expect_server_status(server_names[3], slave);
     }
 
-    // Helper function for checking PAM-login.
-    auto try_log_in = [&test](const string& user, const string& pass) {
+    // Helper function for checking PAM-login. If db is empty, log to null database.
+    auto try_log_in = [&test](const string& user, const string& pass, const string& database) {
         const char* host = test.maxscales->IP[0];
         int port = test.maxscales->ports[0][0];
-        printf("Trying to log in to [%s]:%i as %s.\n", host, port, user.c_str());
+        const char* db = nullptr;
+        if (!database.empty())
+        {
+            db = database.c_str();
+        }
+
+        if (db)
+        {
+            printf("Trying to log in to [%s]:%i as %s with database %s.\n", host, port, user.c_str(), db);
+        }
+        else
+        {
+            printf("Trying to log in to [%s]:%i as %s.\n", host, port, user.c_str());
+        }
 
         MYSQL* maxconn = mysql_init(NULL);
         test.expect(maxconn, "mysql_init failed");
@@ -137,7 +150,7 @@ int main(int argc, char** argv)
             // Need to set plugin directory so that dialog.so is found.
             const char plugin_path[] = "../connector-c/install/lib/mariadb/plugin";
             mysql_optionsv(maxconn, MYSQL_PLUGIN_DIR, plugin_path);
-            mysql_real_connect(maxconn, host, user.c_str(), pass.c_str(), NULL, port, NULL, 0);
+            mysql_real_connect(maxconn, host, user.c_str(), pass.c_str(), db, port, NULL, 0);
             auto err = mysql_error(maxconn);
             if (*err)
             {
@@ -180,8 +193,8 @@ int main(int argc, char** argv)
         // If ok so far, try logging in with PAM.
         if (test.ok())
         {
-	        cout << "Testing normal PAM user.\n";
-            try_log_in(pam_user, pam_pw);
+            cout << "Testing normal PAM user.\n";
+            try_log_in(pam_user, pam_pw, "");
             test.log_includes(0, pam_message_contents.c_str());
         }
 
@@ -216,14 +229,60 @@ int main(int argc, char** argv)
         if (test.ok())
         {
             // Again, try logging in with the same user.
-	        cout << "Testing anonymous proxy user.\n";
-            try_log_in(pam_user, pam_pw);
+            cout << "Testing anonymous proxy user.\n";
+            try_log_in(pam_user, pam_pw, "");
             test.log_includes(0, pam_message_contents.c_str());
         }
 
         // Remove the created users.
         test.try_query(conn, "DROP USER '%s'@'%%';", dummy_user);
         test.try_query(conn, "DROP USER ''@'%%';");
+    }
+
+    if (test.ok())
+    {
+        // Test roles. Create a user without privileges but with a default role. The role has another role
+        // which finally has the privileges to the db.
+        MYSQL* conn = test.repl->nodes[0];
+        test.try_query(conn, create_pam_user_fmt, pam_user, pam_config_name);
+        const char create_role_fmt[] = "CREATE ROLE %s;";
+        const char grant_role_fmt[] = "GRANT %s TO %s;";
+        const char r1[] = "role1";
+        const char r2[] = "role2";
+        const char r3[] = "role3";
+        const char dbname[] = "empty_db";
+
+        // pam_user->role1->role2->role3->privilege
+        test.try_query(conn, "CREATE OR REPLACE DATABASE %s;", dbname);
+        test.try_query(conn, create_role_fmt, r1);
+        test.try_query(conn, create_role_fmt, r2);
+        test.try_query(conn, create_role_fmt, r3);
+        test.try_query(conn, "GRANT %s TO '%s'@'%%';", r1, pam_user);
+        test.try_query(conn, "SET DEFAULT ROLE %s for '%s'@'%%';", r1, pam_user);
+        test.try_query(conn, grant_role_fmt, r2, r1);
+        test.try_query(conn, grant_role_fmt, r3, r2);
+        test.try_query(conn, "GRANT SELECT ON *.* TO '%s';", r3);
+        test.try_query(conn, "FLUSH PRIVILEGES;");
+        sleep(1);
+        test.repl->sync_slaves();
+        update_users();
+        get_output(test);
+
+        // If ok so far, try logging in with PAM.
+        if (test.ok())
+        {
+            cout << "Testing normal PAM user with role-based privileges.\n";
+            try_log_in(pam_user, pam_pw, dbname);
+            test.log_includes(0, pam_message_contents.c_str());
+        }
+
+        // Remove the created items.
+        test.try_query(conn, "DROP USER '%s'@'%%';", pam_user);
+        test.try_query(conn, "DROP DATABASE %s;", dbname);
+        const char drop_role_fmt[] = "DROP ROLE %s;";
+        test.try_query(conn, drop_role_fmt, r1);
+        test.try_query(conn, drop_role_fmt, r2);
+        test.try_query(conn, drop_role_fmt, r3);
     }
 
     // Cleanup: remove the linux users on the backends and MaxScale node, unload pam plugin.
