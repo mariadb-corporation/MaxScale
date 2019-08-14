@@ -536,8 +536,6 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
         return;
     }
 
-    bref->process_reply(pPacket);
-
     if (m_state & INIT_MAPPING)
     {
         handle_mapping_reply(bref, &pPacket);
@@ -565,7 +563,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
         mxb_assert(m_state == INIT_READY);
         route_queued_query();
     }
-    else if (bref->reply_is_complete())
+    else if (reply->is_complete())
     {
         if (bref->has_session_commands())
         {

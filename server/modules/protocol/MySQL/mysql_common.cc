@@ -1870,7 +1870,10 @@ void MySQLProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
         else
         {
             // This should never happen
-            MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u", cmd, len);
+            MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
+                      cmd, len, m_reply.target()->name());
+            session_dump_statements(session());
+            session_dump_log(session());
             mxb_assert(!true);
         }
         break;

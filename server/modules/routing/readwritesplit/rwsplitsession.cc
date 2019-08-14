@@ -135,6 +135,12 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         /** Gather the information required to make routing decisions */
         if (!m_qc.large_query())
         {
+            if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE
+                && session_is_load_active(m_session))
+            {
+                m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
+            }
+
             m_qc.update_route_info(get_current_target(), querybuf);
         }
 
@@ -305,43 +311,6 @@ static bool connection_was_killed(GWBUF* buffer)
     }
 
     return rval;
-}
-
-static void log_unexpected_response(MXS_SESSION* session,
-                                    RWBackend* backend,
-                                    GWBUF* buffer,
-                                    GWBUF* current_query)
-{
-    if (mxs_mysql_is_err_packet(buffer))
-    {
-        /** This should be the only valid case where the server sends a response
-         * without the client sending one first. MaxScale does not yet advertise
-         * the progress reporting flag so we don't need to handle it. */
-        uint8_t* data = GWBUF_DATA(buffer);
-        size_t len = MYSQL_GET_PAYLOAD_LEN(data);
-        uint16_t errcode = MYSQL_GET_ERRCODE(data);
-        std::string errstr((char*)data + 7, (char*)data + 7 + len - 3);
-
-        mxb_assert(errcode != ER_CONNECTION_KILLED);
-        MXS_WARNING("Server '%s' sent an unexpected error: %hu, %s",
-                    backend->name(),
-                    errcode,
-                    errstr.c_str());
-    }
-    else
-    {
-        std::string sql = current_query ? mxs::extract_sql(current_query, 1024) : "<not available>";
-        MXS_ERROR("Unexpected internal state: received response 0x%02hhx from "
-                  "server '%s' when no response was expected. Command: 0x%02hhx "
-                  "Query: %s",
-                  mxs_mysql_get_command(buffer),
-                  backend->name(),
-                  backend->current_command(),
-                  sql.c_str());
-        session_dump_statements(session);
-        session_dump_log(session);
-        mxb_assert(false);
-    }
 }
 
 GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf, RWBackend* backend)
@@ -574,16 +543,16 @@ void RWSplitSession::close_stale_connections()
     }
 }
 
-bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
+bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error& error)
 {
     mxb_assert(session_trx_is_active(m_pSession) || can_retry_query());
     mxb_assert(m_expected_responses > 0);
 
     bool ok = false;
 
-    MXS_INFO("%s: %s", backend->error().is_rollback() ?
+    MXS_INFO("%s: %s", error.is_rollback() ?
              "Server triggered transaction rollback, replaying transaction" :
-             "WSREP not ready, retrying query", backend->error().message().c_str());
+             "WSREP not ready, retrying query", error.message().c_str());
 
     if (session_trx_is_active(m_pSession))
     {
@@ -591,7 +560,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
     }
     else
     {
-        mxb_assert(backend->error().is_wsrep_error());
+        mxb_assert(error.is_wsrep_error());
 
         if (backend == m_current_master)
         {
@@ -620,30 +589,12 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
-    if (backend->get_reply_state() == REPLY_STATE_DONE
-        && !connection_was_killed(writebuf)
-        && !server_is_shutting_down(writebuf))
-    {
-        /** If we receive an unexpected response from the server, the internal
-         * logic cannot handle this situation. Routing the reply straight to
-         * the client should be the safest thing to do at this point. */
-        log_unexpected_response(m_session, backend, writebuf, m_current_query.get());
-        RouterSession::clientReply(writebuf, down, reply);
-        return;
-    }
-
     if ((writebuf = handle_causal_read_reply(writebuf, backend)) == NULL)
     {
         return;     // Nothing to route, return
     }
 
-    backend->process_reply(writebuf);
-
-    mxb_assert_message(backend->reply_state_str() == reply->to_string(),
-                       "RWBackend: %s != MySQLProtocol: %s",
-                       backend->reply_state_str(), reply->to_string().c_str());
-
-    const RWBackend::Error& error = backend->error();
+    const auto& error = reply->error();
 
     if (error.is_unexpected_error())
     {
@@ -657,7 +608,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         }
     }
 
-    if ((error.is_rollback() || error.is_wsrep_error()) && handle_ignorable_error(backend))
+    if ((error.is_rollback() || error.is_wsrep_error()) && handle_ignorable_error(backend, error))
     {
         // We can ignore this error and treat it as if the connection to the server was broken.
         gwbuf_free(writebuf);
@@ -667,8 +618,10 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     // Track transaction contents and handle ROLLBACK with aggressive transaction load balancing
     manage_transactions(backend, writebuf);
 
-    if (backend->reply_is_complete())
+    if (reply->is_complete())
     {
+        backend->ack_write();
+
         /** Got a complete reply, decrement expected response count */
         m_expected_responses--;
 
@@ -676,7 +629,6 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         session_book_server_response(m_pSession, (SERVER*)backend->target(), m_expected_responses == 0);
 
         mxb_assert(m_expected_responses >= 0);
-        mxb_assert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
 
         if (m_wait_gtid == RETRYING_ON_MASTER)
@@ -712,13 +664,6 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             m_wait_gtid = NONE;
         }
 
-        if (backend->local_infile_requested())
-        {
-            // Server requested a local file, go into data streaming mode
-            m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
-            session_set_load_active(m_pSession, true);
-        }
-
         backend->select_ended();
 
         if (m_otrx_state == OTRX_ROLLBACK)
@@ -734,8 +679,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     else
     {
         MXS_INFO("Reply not yet complete. Waiting for %d replies, got one from %s",
-                 m_expected_responses,
-                 backend->name());
+                 m_expected_responses, backend->name());
     }
 
     // Later on we need to know whether we processed a session command
@@ -985,7 +929,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
     RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
     mxb_assert(backend && backend->in_use());
 
-    if (backend->reply_has_started())
+    if (reply.has_started())
     {
         MXS_ERROR("Server '%s' was lost in the middle of a resultset, cannot continue the session: %s",
                   backend->name(), extract_error(errmsgbuf).c_str());
@@ -1004,7 +948,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
         MXS_INFO("Master '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
         /** The connection to the master has failed */
 
-        bool expected_response = backend->is_waiting_result();
+        bool expected_response = !reply.is_complete();
 
         if (!expected_response)
         {

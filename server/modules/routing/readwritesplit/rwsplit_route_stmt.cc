@@ -1132,7 +1132,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
      *       with proper, per server tracking of which responses need to be sent to the client. This would
      *       also solve MXS-2009 by speeding up session commands.
      */
-    mxb_assert_message(target->get_reply_state() == REPLY_STATE_DONE || m_qc.large_query(),
+    mxb_assert_message(!target->is_waiting_result() || m_qc.large_query(),
                        "Node must be idle when routing queries to it");
 
     MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());

@@ -72,11 +72,8 @@ void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
     mxb_assert(backend->backend() == down.back());
     bool send = false;
 
-    backend->process_reply(pPacket);
-
-    if (backend->reply_is_complete())
+    if (reply->is_complete())
     {
-        mxb_assert(reply->is_complete());
         m_completed++;
         m_current++;
 
@@ -94,9 +91,9 @@ void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
 
     if (m_completed == 0)
     {
-        send = backend->get_reply_state() != REPLY_STATE_DONE;
+        send = reply->state() != mxs::ReplyState::DONE;
     }
-    else if (backend->get_reply_state() == REPLY_STATE_RSET_ROWS
+    else if (reply->state() == mxs::ReplyState::RSET_ROWS
              && mxs_mysql_get_command(pPacket) != MYSQL_REPLY_EOF)
     {
         send = true;
