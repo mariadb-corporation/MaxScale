@@ -1860,14 +1860,14 @@ int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const
     return 1;
 }
 
-bool ServiceEndpoint::handleError(GWBUF* error, mxs::Endpoint* down)
+bool ServiceEndpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
     mxb_assert(m_open);
-    bool ok = m_service->router->handleError(m_service->router_instance, m_router_session, error, down);
+    bool ok = m_service->router->handleError(m_service->router_instance, m_router_session, error, down, reply);
 
     if (!ok)
     {
-        ok = m_up->handleError(error, this);
+        ok = m_up->handleError(error, this, reply);
     }
 
     return ok;

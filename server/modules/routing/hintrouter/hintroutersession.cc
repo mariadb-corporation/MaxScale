@@ -151,7 +151,7 @@ void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down,
     }
 }
 
-bool HintRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)
+bool HintRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     HR_ENTRY();
     return false;

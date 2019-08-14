@@ -589,7 +589,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
     }
 }
 
-bool SchemaRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)
+bool SchemaRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     SRBackend* bref = static_cast<SRBackend*>(pProblem->get_userdata());
     mxb_assert(bref);

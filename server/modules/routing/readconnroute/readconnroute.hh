@@ -47,7 +47,7 @@ public:
         RouterSession::clientReply(pPacket, down, pReply);
     }
 
-    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem)
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
     {
         return false;
     }

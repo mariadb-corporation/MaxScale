@@ -379,7 +379,7 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
 
     bool do_handleError(GWBUF* buffer)
     {
-        return m_component->handleError(buffer, nullptr);
+        return m_component->handleError(buffer, nullptr, m_reply);
     }
 
     //

@@ -477,7 +477,7 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
     //                                   keep_protocol_thread_id, KT_QUERY);
 }
 
-bool SmartRouterSession::handleError(GWBUF* pPacket, mxs::Endpoint* pProblem)
+bool SmartRouterSession::handleError(GWBUF* pPacket, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     auto err_code = mxs_mysql_get_mysql_errno(pPacket);
     MXS_SERROR("handleError(): Lost connection to "

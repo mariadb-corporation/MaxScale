@@ -63,7 +63,7 @@ public:
      * @param pMessage  The error message.
      * @param pProblem  The DCB on which the error occurred.
      */
-    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 private:
 
     MXS_SESSION*               m_session;

@@ -1524,10 +1524,10 @@ int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Re
     return client_dcb->protocol_write(gwbuf_clone(buffer));
 }
 
-bool Session::handleError(GWBUF* error, Endpoint* down)
+bool Session::handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply)
 {
     mxs::ReplyRoute route;
-    clientReply(error, route, nullptr);
+    clientReply(error, route, &reply);
     terminate();
     return false;
 }

@@ -74,7 +74,8 @@ static void    clientReply(MXS_ROUTER* instance,
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       mxs::Endpoint*);
+                       mxs::Endpoint*,
+                       const mxs::Reply& reply);
 
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 static int      blr_load_dbusers(const ROUTER_INSTANCE* router);
@@ -2300,7 +2301,8 @@ static char* extract_message(GWBUF* errpkt)
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
                        GWBUF* message,
-                       mxs::Endpoint* endpoint)
+                       mxs::Endpoint* endpoint,
+                       const mxs::Reply& reply)
 {
     // TODO: Replace with Connector-C
     DCB* backend_dcb = nullptr;

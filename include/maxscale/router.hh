@@ -188,7 +188,8 @@ typedef struct mxs_router_object
     bool (* handleError)(MXS_ROUTER* instance,
                          MXS_ROUTER_SESSION* router_session,
                          GWBUF* errmsgbuf,
-                         mxs::Endpoint* down);
+                         mxs::Endpoint* down,
+                         const mxs::Reply& reply);
 
     /**
      * @brief Called to obtain the capabilities of the router
@@ -332,10 +333,11 @@ public:
      *
      * @param pMessage  The error message.
      * @param pProblem  The DCB on which the error occurred.
+     * @param reply     The reply object for this endpoint
      *
      * @return True if the session can continue, false if the session should be closed
      */
-    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply);
 
     // Sets the upstream component (don't override this in the inherited class)
     void setUpstream(mxs::Upstream* up)
@@ -488,12 +490,13 @@ public:
     static bool handleError(MXS_ROUTER* pInstance,
                             MXS_ROUTER_SESSION* pData,
                             GWBUF* pMessage,
-                            mxs::Endpoint* pProblem)
+                            mxs::Endpoint* pProblem,
+                            const mxs::Reply& pReply)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
         bool rv = false;
-        MXS_EXCEPTION_GUARD(rv = pRouter_session->handleError(pMessage, pProblem));
+        MXS_EXCEPTION_GUARD(rv = pRouter_session->handleError(pMessage, pProblem, pReply));
         return rv;
     }
 

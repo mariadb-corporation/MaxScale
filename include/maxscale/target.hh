@@ -136,7 +136,7 @@ public:
 
     virtual int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply* reply) = 0;
 
-    virtual bool handleError(GWBUF* error, Endpoint* down) = 0;
+    virtual bool handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply) = 0;
 };
 
 // A connectable routing endpoint (a service or a server)

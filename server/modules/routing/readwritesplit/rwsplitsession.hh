@@ -112,7 +112,7 @@ public:
      */
     void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
 
-    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem);
+    bool handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
     mxs::QueryClassifier& qc()
     {

@@ -978,7 +978,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     return can_continue;
 }
 
-bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint)
+bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, const mxs::Reply& reply)
 {
     MXS_SESSION* session = m_session;
     RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());

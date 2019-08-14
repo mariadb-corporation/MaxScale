@@ -816,9 +816,9 @@ int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const 
     return m_up->clientReply(buffer, down, reply);
 }
 
-bool ServerEndpoint::handleError(GWBUF* error, mxs::Endpoint* down)
+bool ServerEndpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
-    return m_up->handleError(error, this);
+    return m_up->handleError(error, this, reply);
 }
 
 std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)

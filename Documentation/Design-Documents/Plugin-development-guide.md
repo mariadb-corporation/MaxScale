@@ -363,7 +363,7 @@ have to wait for the entire data packet to arrive before sending it down the
 processing chain.
 
 ```java
-bool handleError(INSTANCE* instance, SESSION* session, GWBUF* errmsgbuf, mxs::Endpoint* problem);
+bool handleError(INSTANCE* instance, SESSION* session, GWBUF* errmsgbuf, mxs::Endpoint* problem, const mxs::Reply& reply);
 ```
 
 This router-only entrypoint is called if a network error occurs in one of the

@@ -227,7 +227,7 @@ public:
 
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply* reply) override;
 
-    bool handleError(GWBUF* error, mxs::Endpoint* down) override;
+    bool handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 private:
 
