@@ -144,13 +144,16 @@ switchover and rejoin-specific parameters are listed in their own
 ### `assume_unique_hostnames`
 
 Boolean, default: ON. When active, the monitor assumes that server hostnames and
-ports are consistent between the MaxScale configuration file server definitions
-and the "SHOW ALL SLAVES STATUS" outputs of the servers. Specifically, the
-monitor assumes that if server A is replicating from server B, then A must have
-a slave connection with `Master_Host` and `Master_Port` equal to B's address and
-port in the configuration file. If this is not the case, e.g. an IP is used in
-the server while a hostname is given in the file, the monitor will misinterpret
-the topology.
+ports are consistent between the server definitions in the MaxScale
+configuration file  and the "SHOW ALL SLAVES STATUS" outputs of the servers
+themselves. Specifically, the monitor assumes that if server A is replicating
+from server B, then A must have a slave connection with `Master_Host` and
+`Master_Port` equal to B's address and port in the configuration file. If this
+is not the case, e.g. an IP is used in the server while a hostname is given in
+the file, the monitor may misinterpret the topology. In MaxScale 2.4.1, the
+monitor attempts name resolution on the addresses if a simple string comparison
+does not find a match. Using exact matching addresses is, however, more
+reliable.
 
 This setting must be ON to use any cluster operation features such as failover
 or switchover, because MaxScale uses the addresses and ports in the
@@ -340,11 +343,11 @@ selection criteria is as follows in descending priority:
 2. If the new master has unprocessed relay log items, cancel and try again
 later.
 3. Prepare the new master:
-      1. Remove the slave connection the new master used to replicate from the old
-      master.
+      1. Remove the slave connection the new master used to replicate from the
+      old master.
       2. Disable the *read\_only*-flag.
-      3. Enable scheduled server events (if event handling is on). Only events that were
-      enabled on the old master are enabled.
+      3. Enable scheduled server events (if event handling is on). Only events
+      that were enabled on the old master are enabled.
       4. Run the commands in `promotion_sql_file`.
       5. Start replication from external master if one existed.
 4. Redirect all other slaves to replicate from the new master:
@@ -353,15 +356,16 @@ later.
       3. START SLAVE
 5. Check that all slaves are replicating.
 
-Failover is considered successful if steps 1 to 3 succeeded, as the cluster then has at
-least a valid master server.
+Failover is considered successful if steps 1 to 3 succeed, as the cluster then
+has at least a valid master server.
 
 **Switchover** swaps a running master with a running slave. It does the
 following:
 
 1. Prepare the old master for demotion:
       1. Stop any external replication.
-      2. Kill connections from super-users since *read\_only* does not affect them.
+      2. Kill connections from super-users since *read\_only* does not affect
+      them.
       3. Enable the *read\_only*-flag to stop writes.
       4. Disable scheduled server events (if event handling is on).
       5. Run the commands in `demotion_sql_file`.
@@ -400,9 +404,10 @@ operation  proceeds as follows:
  *gtid\_current\_pos*.
 2. Prepare new master:
       1. Disable the *read\_only*-flag.
-      2. Enable scheduled server events (if event handling is on). Events are only enabled
-      if the cluster had a master server when starting the reset-replication operation.
-      Only events that were enabled on the previous master are enabled on the new.
+      2. Enable scheduled server events (if event handling is on). Events are
+      only enabled if the cluster had a master server when starting the
+      reset-replication operation. Only events that were enabled on the previous
+      master are enabled on the new.
 3. Direct other servers to replicate from the new master as in the other
 operations.
 
