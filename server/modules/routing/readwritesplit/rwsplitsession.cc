@@ -579,7 +579,6 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
     mxb_assert(m_expected_responses > 0);
 
     bool ok = false;
-    m_expected_responses--;
 
     MXS_INFO("%s: %s", backend->error().is_rollback() ?
              "Server triggered transaction rollback, replaying transaction" :
@@ -609,6 +608,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
 
     if (ok)
     {
+        m_expected_responses--;
         session_reset_server_bookkeeping(m_pSession);
     }
 
