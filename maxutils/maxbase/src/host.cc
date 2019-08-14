@@ -250,7 +250,9 @@ bool name_lookup(const std::string& host, std::string* addr_out, std::string* er
         {
             // getaddrinfo may return multiple result addresses. Only consider the first.
             char buf[INET6_ADDRSTRLEN];
-            if (inet_ntop(AF_INET6, results->ai_addr, buf, sizeof(buf)))
+            in6_addr* addr = &((sockaddr_in6*)results->ai_addr)->sin6_addr;
+
+            if (inet_ntop(AF_INET6, addr, buf, sizeof(buf)))
             {
                 *addr_out = buf;
                 success = true;
