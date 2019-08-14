@@ -113,12 +113,7 @@ static MXB_WORKER* get_dcb_owner()
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(int fd,
-         Role role,
-         MXS_SESSION* session,
-         MXS_PROTOCOL_SESSION* protocol,
-         MXS_PROTOCOL_API protocol_api,
-         Manager* manager)
+DCB::DCB(int fd, Role role, MXS_SESSION* session, Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
     , m_last_read(mxs_clock())
     , m_last_write(mxs_clock())
@@ -127,8 +122,6 @@ DCB::DCB(int fd,
     , m_low_water(config_writeq_low_water())
     , m_fd(fd)
     , m_session(session)
-    , m_protocol(protocol)
-    , m_protocol_api(protocol_api)
     , m_role(role)
     , m_manager(manager)
 {
@@ -247,17 +240,7 @@ void DCB::free(DCB* dcb)
 void DCB::stop_polling_and_shutdown()
 {
     disable_events();
-
-    /**
-     * close protocol and router session
-     */
-    if (m_protocol_api.finish_connection && m_protocol_api.free_session)    // TODO: Hacks for InternalDCB
-    {
-        shutdown();
-        m_protocol_api.finish_connection(this);
-        m_protocol_api.free_session(m_protocol);
-        m_protocol = nullptr;
-    }
+    shutdown();
 }
 
 // static
@@ -1820,6 +1803,16 @@ int DCB::create_SSL(mxs::SSLContext* ssl)
     return 0;
 }
 
+MXS_PROTOCOL_SESSION* ClientDCB::protocol_session() const
+{
+    return m_protocol;
+}
+
+const MXS_PROTOCOL_API* ClientDCB::protocol_api() const
+{
+    return &m_protocol_api;
+}
+
 /**
  * Accept a SSL connection and do the SSL authentication handshake.
  * This function accepts a client connection to a DCB. It assumes that the SSL
@@ -1893,6 +1886,16 @@ int ClientDCB::ssl_handshake()
             return 0;
         }
     }
+}
+
+MXS_PROTOCOL_SESSION* BackendDCB::protocol_session() const
+{
+    return m_protocol;
+}
+
+const MXS_PROTOCOL_API* BackendDCB::protocol_api() const
+{
+    return &m_protocol_api;
 }
 
 /**
@@ -2214,7 +2217,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             if (dcb_session_check(dcb, "write_ready"))
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.write_ready(%p)", dcb);
-                dcb->m_protocol_api.write_ready(dcb);
+                dcb->protocol_api()->write_ready(dcb);
             }
         }
         else
@@ -2251,7 +2254,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             if (1 == return_code)
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.read(%p)", dcb);
-                dcb->m_protocol_api.read(dcb);
+                dcb->protocol_api()->read(dcb);
             }
         }
     }
@@ -2272,7 +2275,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
         if (dcb_session_check(dcb, "error"))
         {
             DCB_EH_NOTICE("Calling dcb->m_protocol_api.error(%p)", dcb);
-            dcb->m_protocol_api.error(dcb);
+            dcb->protocol_api()->error(dcb);
         }
     }
 
@@ -2295,7 +2298,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             if (dcb_session_check(dcb, "hangup EPOLLHUP"))
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", dcb);
-                dcb->m_protocol_api.hangup(dcb);
+                dcb->protocol_api()->hangup(dcb);
             }
 
             dcb->m_dcb_errhandle_called = true;
@@ -2322,7 +2325,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             if (dcb_session_check(dcb, "hangup EPOLLRDHUP"))
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", dcb);
-                dcb->m_protocol_api.hangup(dcb);
+                dcb->protocol_api()->hangup(dcb);
             }
 
             dcb->m_dcb_errhandle_called = true;
@@ -2744,14 +2747,17 @@ SERVICE* DCB::service() const
     return m_session->service;
 }
 
-void DCB::shutdown()
+void ClientDCB::shutdown()
 {
-    if (m_role == DCB::Role::CLIENT
-        && (m_session->state() == MXS_SESSION::State::STARTED
-            || m_session->state() == MXS_SESSION::State::STOPPING))
+    // Close protocol and router session
+    if ((m_session->state() == MXS_SESSION::State::STARTED
+        || m_session->state() == MXS_SESSION::State::STOPPING))
     {
         session_close(m_session);
     }
+    m_protocol_api.finish_connection(this);
+    m_protocol_api.free_session(m_protocol);
+    m_protocol = nullptr;
 }
 
 ClientDCB::ClientDCB(int fd,
@@ -2769,12 +2775,9 @@ ClientDCB::ClientDCB(int fd,
                      MXS_PROTOCOL_SESSION* protocol_session,
                      MXS_PROTOCOL_API protocol_api,
                      Manager* manager)
-    : DCB(fd,
-          role,
-          session,
-          protocol_session,
-          protocol_api,
-          manager)
+    : DCB(fd, role, session, manager)
+    , m_protocol(protocol_session)
+    , m_protocol_api(protocol_api)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2854,6 +2857,11 @@ bool InternalDCB::disable_events()
     return true;
 }
 
+void InternalDCB::shutdown()
+{
+    // Nothing to do, Internal DCB does not have a protocol nor manages the session.
+}
+
 bool InternalDCB::prepare_for_destruction()
 {
     mxb_assert(m_fd == DCBFD_CLOSED);
@@ -2867,9 +2875,11 @@ BackendDCB::BackendDCB(SERVER* server,
                        MXS_PROTOCOL_API protocol_api,
                        std::unique_ptr<mxs::BackendAuthenticator> auth_ses,
                        DCB::Manager* manager)
-    : DCB(fd, DCB::Role::BACKEND, session, protocol, protocol_api, manager)
+    : DCB(fd, DCB::Role::BACKEND, session, manager)
     , m_auth_session(std::move(auth_ses))
     , m_server(server)
+    , m_protocol(protocol)
+    , m_protocol_api(protocol_api)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2884,6 +2894,14 @@ bool BackendDCB::ready() const
     // A BackendDCB with a session or residing in the persistent pool
     // can receive events.
     return m_session || m_persistentstart > 0;
+}
+
+void BackendDCB::shutdown()
+{
+    // Close protocol and router session
+    m_protocol_api.finish_connection(this);
+    m_protocol_api.free_session(m_protocol);
+    m_protocol = nullptr;
 }
 
 bool BackendDCB::release_from(MXS_SESSION* session)
