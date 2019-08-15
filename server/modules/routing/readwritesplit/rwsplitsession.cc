@@ -765,17 +765,6 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     }
 }
 
-void check_and_log_backend_state(const RWBackend* backend)
-{
-    mxb_assert(backend);
-
-    if (backend->in_use())
-    {
-        MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.", backend->name());
-        mxb_assert(false);
-    }
-}
-
 bool RWSplitSession::start_trx_replay()
 {
     bool rval = false;
@@ -1056,8 +1045,6 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
             can_continue = handle_error_new_connection(session, backend, errmsgbuf);
         }
     }
-
-    check_and_log_backend_state(backend);
 
     return can_continue;
 }
