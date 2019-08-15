@@ -538,6 +538,12 @@ void RWSplitSession::close_stale_connections()
     }
 }
 
+bool is_wsrep_error(const mxs::Error& error)
+{
+    return error.code() == 1047 && error.sql_state() == "08S01"
+           && error.message() == "WSREP has not yet prepared node for application use";
+}
+
 bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error& error)
 {
     mxb_assert(session_trx_is_active(m_pSession) || can_retry_query());
@@ -555,7 +561,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
     }
     else
     {
-        mxb_assert(error.is_wsrep_error());
+        mxb_assert(is_wsrep_error(error));
 
         if (backend == m_current_master)
         {
@@ -603,7 +609,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         }
     }
 
-    if ((error.is_rollback() || error.is_wsrep_error()) && handle_ignorable_error(backend, error))
+    if ((error.is_rollback() || is_wsrep_error(error)) && handle_ignorable_error(backend, error))
     {
         // We can ignore this error and treat it as if the connection to the server was broken.
         gwbuf_free(writebuf);

@@ -205,12 +205,6 @@ bool Error::is_unexpected_error() const
     }
 }
 
-bool Error::is_wsrep_error() const
-{
-    return m_code == 1047 && m_sql_state == "08S01"
-           && m_message == "WSREP has not yet prepared node for application use";
-}
-
 uint32_t Error::code() const
 {
     return m_code;
