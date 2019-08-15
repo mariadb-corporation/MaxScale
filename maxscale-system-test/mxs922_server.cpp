@@ -68,28 +68,6 @@ int main(int argc, char* argv[])
     config.remove_server(1);
     config.destroy_server(1);
 
-
-    test->tprintf("Testing server weights");
-
-    config.reset();
-    sleep(1);
-    test->repl->connect();
-
-    config.alter_server(1, "weight", 1);
-    config.alter_server(2, "weight", 1);
-    config.alter_server(3, "weight", 1000);
-    test->add_result(check_server_id(test, 3), "The server_id values don't match");
-
-    config.alter_server(1, "weight", 1);
-    config.alter_server(2, "weight", 1000);
-    config.alter_server(3, "weight", 1);
-    test->add_result(check_server_id(test, 2), "The server_id values don't match");
-
-    config.alter_server(1, "weight", 1000);
-    config.alter_server(2, "weight", 1);
-    config.alter_server(3, "weight", 1);
-    test->add_result(check_server_id(test, 1), "The server_id values don't match");
-
     config.reset();
     sleep(1);
     test->check_maxscale_alive(0);
